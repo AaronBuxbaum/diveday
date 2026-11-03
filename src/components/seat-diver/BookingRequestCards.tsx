@@ -24,6 +24,8 @@ export function BookingRequestContext({
   sourceLabel,
   personHref,
   personLabel,
+  doneHref,
+  doneLabel,
   className = "",
 }: {
   title: string;
@@ -34,6 +36,9 @@ export function BookingRequestContext({
   sourceLabel: string;
   personHref?: string;
   personLabel?: string;
+  /** Puts the request down: the URL that drops it. */
+  doneHref?: string;
+  doneLabel?: string;
   className?: string;
 }) {
   return (
@@ -52,6 +57,11 @@ export function BookingRequestContext({
         {personHref && personLabel ? (
           <Link href={personHref} className={`${tapTargetLinkClass} text-primary hover:underline`}>
             {personLabel}
+          </Link>
+        ) : null}
+        {doneHref && doneLabel ? (
+          <Link href={doneHref} className={`${tapTargetLinkClass} text-primary hover:underline`}>
+            {doneLabel}
           </Link>
         ) : null}
       </div>

@@ -2,10 +2,11 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { type CheckpointGap, homewardCheckpointGap, isHomewardStage } from "@/lib/checkpoint-gaps";
 import { nowDate } from "@/lib/clock";
+import { departureStage } from "@/lib/trip-phase";
 import type { TripStage, TripStageReading } from "@/lib/trip-stages";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { getTripManifests } from "./manifests";
+import { getTripManifests, listUnaccountedForByTrip } from "./manifests";
 import { diveSites, people, tripDives, tripStageEvents, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -188,4 +189,21 @@ export async function latestTripStagesByTrip(
     });
   }
   return newest;
+}
+
+/** Read departure timing and crew stage with shop-scoped unaccounted-diver
+ * data; the clock alone cannot mark a departure home while someone is missing.
+ */
+export async function readDepartureStage(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  reading: Omit<Parameters<typeof departureStage<TripStageReading>>[0], "unaccountedFor">,
+) {
+  const unaccounted =
+    (await listUnaccountedForByTrip(db, shopId, [tripId])).get(tripId) ?? new Set<string>();
+  return {
+    ...departureStage({ ...reading, unaccountedFor: unaccounted.size > 0 }),
+    unaccounted: unaccounted as ReadonlySet<string>,
+  };
 }

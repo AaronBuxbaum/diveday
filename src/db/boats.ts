@@ -305,7 +305,7 @@ async function recordPaperChanges(
   }
 }
 
-export async function updateBoat(
+export async function editBoat(
   db: AppDb,
   shopId: string,
   boatId: string,
@@ -341,7 +341,7 @@ export type BoatSaveOutcome =
  * is counted, or waits behind the save. The booking transaction still
  * enforces passenger limits at the point of sale.
  */
-export async function updateBoatWithinCertificate(
+export async function editBoatWithinCertificate(
   db: AppDb,
   input: {
     shopId: string;

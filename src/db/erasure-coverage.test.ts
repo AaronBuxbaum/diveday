@@ -251,6 +251,12 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
     "`queueMediaDeletion` (./media-deletions) — every blob the erasure retires goes through the existing durable ledger rather than a second mechanism invented here (ADR 20260723-media-validation-and-deletion)",
   processor_erasure_obligations:
     "`recordProcessorErasureObligations` (./processor-erasure) — what Stripe still holds, written inside the transaction so a crash a millisecond later cannot lose it (ADR 20260803-processor-erasure-obligations)",
+  certifications:
+    "`forgetPremergeCards` (./premerge-cards-cleanup) — the retired level-card table, kept one release after the card ledger (issue #2722)",
+  specialty_certifications:
+    "`forgetPremergeCards` (./premerge-cards-cleanup) — the retired specialty-card table, kept one release after the card ledger (issue #2722)",
+  nitrox_certifications:
+    "`forgetPremergeCards` (./premerge-cards-cleanup) — the retired nitrox-card table, kept one release after the card ledger (issue #2722)",
 };
 
 /**
@@ -343,16 +349,6 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     raises: "stripe_customer",
     why: 'the `cus_…` Stripe minted for that session, recorded so an obligation can name a customer object that actually exists (issue #1621). Null when `customer_creation: "if_required"` created none, and then nothing is owed',
   },
-  "tips.stripe_session_id": {
-    held: "person",
-    raises: "stripe_checkout_session_snapshot",
-    why: "the tipping diver's own Checkout Session — same shape and same manual discharge as a booking checkout's",
-  },
-  "tips.stripe_customer_id": {
-    held: "person",
-    raises: "stripe_customer",
-    why: "the `cus_…` that tip's session created, on the same `if_required` rule as booking_checkouts",
-  },
 
   // --- the shop's own furniture at a processor or provider -----------------
   "orders.stripe_account_id": {
@@ -360,7 +356,6 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     why: "the connected account the order lives on — the shop's, and the scope an obligation is discharged against, never a person's object",
   },
   "booking_checkouts.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
-  "tips.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
   "shop_subscriptions.stripe_customer_id": {
     held: "shop",
     why: "the shop as DiveDay's own billing customer, on DiveDay's account; no diver is behind it",
@@ -408,13 +403,9 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "copy",
     why: "the idempotency ledger's record of which object an attempt produced — a pointer to an object already censused under the table that owns it, never a second one",
   },
-  "booking_payments.provider_ref": {
-    held: "copy",
-    why: "whichever object moved this booking's money, spelled without the vendor's name: `booking_checkouts.stripe_session_id`, `orders.stripe_invoice_id`, the `re_…` a refund returned, or a package entitlement id that is at no processor at all. Each is owed against where it is stored, which is why this column raises nothing of its own",
-  },
   "booking_payment_events.provider_ref": {
     held: "copy",
-    why: "the same pointer on the append-only twin, copied from the mutation that caused the row (`setBookingPayment`, src/db/payments.ts)",
+    why: "whichever object moved this booking's money, spelled without the vendor's name: `booking_checkouts.stripe_session_id`, `orders.stripe_invoice_id`, the `re_…` a refund returned, or a package entitlement id that is at no processor at all. Each is owed against where it is stored, which is why this column raises nothing of its own",
   },
   "orders.stripe_payment_intent_id": {
     held: "copy",
@@ -423,10 +414,6 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
   "booking_checkouts.stripe_payment_intent_id": {
     held: "copy",
     why: "the PaymentIntent behind the session `booking_checkouts.stripe_session_id` already names; same discharge as orders.stripe_payment_intent_id",
-  },
-  "tips.stripe_payment_intent_id": {
-    held: "copy",
-    why: "the PaymentIntent behind the tip's session `tips.stripe_session_id` already names; same discharge as orders.stripe_payment_intent_id",
   },
   "payment_disputes.stripe_payment_intent_id": {
     held: "copy",
@@ -455,7 +442,6 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "copy",
     why: "Stripe's hosted page for the session on this row, and it embeds the `cs_…` it was built from. Expiring that session is what `stripe_session_id` already owes",
   },
-  "tips.checkout_url": { held: "copy", why: "as booking_checkouts.checkout_url" },
   "orders.hosted_invoice_url": {
     held: "copy",
     why: "Stripe's hosted page for the invoice on this row. It renders the diver's name and address, which is precisely what the `stripe_invoice_snapshot` obligation is raised for",
@@ -527,11 +513,10 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "none",
     why: "a display label for the connection, which the schema already states is never a token or a URL secret",
   },
-  "booking_payments.provider": {
+  "booking_payment_events.provider": {
     held: "none",
     why: '"stripe", or null for a manual mark: which system moved the money, not a handle on anything it holds',
   },
-  "booking_payment_events.provider": { held: "none", why: "as booking_payments.provider" },
   "inbound_messages.assist_intent": {
     held: "none",
     why: "Claude's code for what a message asks (cancel, move, question…): a tag from a fixed list, not a handle on anything",
@@ -947,7 +932,7 @@ describe("erasure coverage", () => {
     );
     // A floor, not a target: it catches a census that stopped tagging anything
     // `person`, which would make every assertion below pass over an empty list.
-    expect(declared.length).toBeGreaterThan(5);
+    expect(declared.length).toBeGreaterThan(3);
 
     const enumValues = new Set<string>(processorErasureTarget.enumValues);
     const built = erasureTargetLiterals();

@@ -5,10 +5,11 @@ import { formBuddyTeam } from "@/db/buddy-teams";
 import type { AppDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
+import { seatMarks } from "@/db/roll-call-subject";
 import {
   boats,
   bookings,
-  certifications,
+  cards,
   courses,
   people,
   personRoles,
@@ -67,6 +68,7 @@ export async function operationalStateResponse(request: Request, db: AppDb) {
       .where(
         and(
           eq(rollCallEvents.shopId, shop.id),
+          seatMarks(),
           eq(rollCallEvents.bookingId, seat.bookingId),
           eq(rollCallEvents.checkpoint, "departure"),
         ),
@@ -171,7 +173,8 @@ export async function seedOperationalTrust(
       .returning();
     if (!booking) throw new Error("operational fixture seat missing");
     if (participantType === "diver") {
-      await db.insert(certifications).values({
+      await db.insert(cards).values({
+        kind: "level",
         shopId: shop.id,
         personId: person.id,
         agency: "padi",

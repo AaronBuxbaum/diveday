@@ -13,12 +13,12 @@ import {
   cancelFutureSeriesTrips,
   cancelOffCadenceSeriesTrips,
   createTripSeries,
+  editSeriesCadence,
   getTripWithBooked,
   listOffCadenceSeriesTrips,
   listStaff,
   type NewTripSeries,
   setTripCrew,
-  updateSeriesCadence,
 } from "./trips";
 
 const TZ = "America/New_York";
@@ -90,7 +90,7 @@ describe("calling a run's dates off (in-memory PGlite)", () => {
         }),
       );
       if (!result) throw new Error("series not created");
-      await updateSeriesCadence(
+      await editSeriesCadence(
         db,
         shop.id,
         result.series.id,
@@ -217,7 +217,7 @@ describe("calling a run's dates off (in-memory PGlite)", () => {
       seriesInput({ shopId: shop.id, weekdays: weekdaySetFrom([WED, SAT]) }),
     );
     if (!offCadence) throw new Error("series not created");
-    await updateSeriesCadence(
+    await editSeriesCadence(
       db,
       shop.id,
       offCadence.series.id,
@@ -267,7 +267,7 @@ describe("calling a run's dates off (in-memory PGlite)", () => {
     );
     if (!pastWednesday) throw new Error("expected a departed Wednesday");
 
-    await updateSeriesCadence(
+    await editSeriesCadence(
       db,
       shop.id,
       result.series.id,

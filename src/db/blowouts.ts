@@ -7,13 +7,13 @@ import {
   gt,
   gte,
   inArray,
-  isNull,
   lt,
   lte,
   ne,
   notInArray,
   sql,
 } from "drizzle-orm";
+import { cache } from "react";
 import {
   BLOWOUT_OFFER_HORIZON_DAYS,
   type BlowoutCandidateTrip,
@@ -31,7 +31,9 @@ import {
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { departureMayBeAtSea } from "./aboard-at-sea";
+import { canPersonCallDayBlowout, canPersonRefund } from "./authz";
 import { releasePackageCoverageForBooking } from "./bookings";
+import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices } from "./crew-notices";
@@ -49,11 +51,8 @@ import type { BlowoutCause, BlowoutMessageStatus, PaymentStatus } from "./schema
 import {
   bookingPayments,
   bookings,
-  certifications,
-  nitroxCertifications,
   people,
   shops,
-  specialtyCertifications,
   tripAssignments,
   tripBlowoutDivers,
   tripBlowouts,
@@ -62,7 +61,8 @@ import {
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
-import { rollCallStartedOn, setTripStatus } from "./trips-record";
+import { getTripWithBooked, rollCallStartedOn, setTripStatus } from "./trips-record";
+import { getTripRoster } from "./trips-roster";
 
 /**
  * The blow-out cascade (docs ADR 20260804-blowout-cascade, glossary
@@ -483,50 +483,6 @@ export async function listDayBlowoutDepartures(
   }));
 }
 
-/** One diver's cert evidence at this shop — the same rows the booking gate reads. */
-async function certificationEvidence(db: DbExecutor, shopId: string, personId: string) {
-  const [certificationRows, specialtyRows, nitroxRows] = await queryAll(db, [
-    () =>
-      db
-        .select()
-        .from(certifications)
-        .where(
-          and(
-            eq(certifications.shopId, shopId),
-            eq(certifications.personId, personId),
-            isNull(certifications.deletedAt),
-          ),
-        ),
-    () =>
-      db
-        .select()
-        .from(specialtyCertifications)
-        .where(
-          and(
-            eq(specialtyCertifications.shopId, shopId),
-            eq(specialtyCertifications.personId, personId),
-            isNull(specialtyCertifications.deletedAt),
-          ),
-        ),
-    () =>
-      db
-        .select()
-        .from(nitroxCertifications)
-        .where(
-          and(
-            eq(nitroxCertifications.shopId, shopId),
-            eq(nitroxCertifications.personId, personId),
-            isNull(nitroxCertifications.deletedAt),
-          ),
-        ),
-  ]);
-  return {
-    certifications: certificationRows,
-    specialtyCertifications: specialtyRows,
-    nitroxCertifications: nitroxRows,
-  };
-}
-
 /**
  * Every departure the cascade could offer, with the requirement data the pure
  * filter needs. Gathered once per cascade, not per diver — the trips are the
@@ -693,7 +649,8 @@ async function sendPendingBlowoutMessages(
           ),
         );
       const [evidence, courseSeats] = await queryAll(db, [
-        () => certificationEvidence(db, input.shopId, row.diver.personId),
+        // The same rows the booking gate reads.
+        () => readCertificationEvidence(db, input.shopId, row.diver.personId),
         () => listCourseSeatsInTraining(db, input.shopId, [row.diver.personId]),
       ]);
       const offeredTripIds = qualifyingAlternatives({
@@ -1071,4 +1028,29 @@ export async function weatherCallsInWindow(
     refundedCents: Number(refundRows[0]?.cents ?? 0),
     moved: Number(movedRows[0]?.moved ?? 0),
   };
+}
+
+/** Who may call a whole day off: the day blow-out page's gate (`requireShopSurface`'s `allow`). */
+export { canPersonCallDayBlowout } from "./authz";
+
+/** One read per request: the blow-out page's tab title and its body ask for the same record. */
+export const readTripBlowout = cache(getTripBlowout);
+
+/**
+ * **The blow-out page** in one call (issue #2757): the departure, its blow-out
+ * record if one was called, and what this staffer may do there (call the whole
+ * day off; release refunds). Before the call the page is the confirmation, so
+ * only then is the roster read (empty after it). `null` when the departure is
+ * not this shop's.
+ */
+export async function getBlowoutPage(db: AppDb, shopId: string, tripId: string, personId: string) {
+  const [trip, blowout, callDay, refund] = await Promise.all([
+    getTripWithBooked(db, shopId, tripId),
+    readTripBlowout(db, shopId, tripId),
+    canPersonCallDayBlowout(db, shopId, personId),
+    canPersonRefund(db, shopId, personId),
+  ]);
+  if (!trip) return null;
+  const roster = blowout ? [] : await getTripRoster(db, shopId, tripId);
+  return { trip, blowout, roster, can: { callDay, refund } };
 }

@@ -196,7 +196,7 @@ export const accountStepUps = pgTable(
  * better-auth's `account` model — one row per login provider linked to a
  * user. Required adapter scaffolding, functionally unused here: sign-in goes
  * through a custom credentials plugin that verifies against
- * `user_accounts.hashed_password` directly (src/lib/credentials.ts) and never
+ * `user_accounts.hashed_password` directly (src/db/credentials.ts) and never
  * writes a provider row, and no OAuth provider is configured. Named away from
  * "account" since that word already means a shop's connected Stripe/WhatsApp
  * account elsewhere in this schema.

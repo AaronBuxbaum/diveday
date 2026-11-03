@@ -406,7 +406,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       if (scheme === "light") {
         test("the manifest keeps both capacity warnings distinct", async ({ page, request }) => {
-          const seeded = await request.post("/api/test/seed-trouble-states?manifestOverCapacity=1");
+          const seeded = await request.post(
+            "/api/test/seed-trouble-states?facts=troublePanels,manifestOverCapacity",
+          );
           expect(seeded.ok()).toBe(true);
           const { manifestOverCapacity } = (await seeded.json()) as {
             manifestOverCapacity?: { tripId: string };

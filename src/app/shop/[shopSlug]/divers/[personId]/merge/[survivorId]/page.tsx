@@ -2,11 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AssistReadButton } from "@/components/assists/AssistReadButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { assistsAvailable } from "@/db/assists";
-import { canPersonMergeDiver } from "@/db/authz";
-import { readUnsurePair } from "@/db/desk-assists";
-import { getDiverMergePreview } from "@/db/diver-merge";
-import { getTripWithBooked } from "@/db/trips";
+import { canPersonMergeDiver, getDiverMergePage } from "@/db/diver-merge-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { resolveDiverNotice } from "@/lib/diver-notices";
@@ -48,8 +44,16 @@ export default async function MergeDiverPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
-  const preview = await getDiverMergePreview(db, shop.id, personId, survivorId);
-  if (!preview) notFound();
+  // A refused merge names the departure it collided on (issue #2333). The URL
+  // carries only its id; the words come from this shop's own trip row, so a
+  // crafted link can name nothing the shop does not hold.
+  const conflictTripId =
+    notice === "merge-booking-conflict" ? (uuidParam(trip ?? "") ?? null) : null;
+  // The pair the duplicate check matched on the name alone may get a desk
+  // assist, never once a refusal already says the merge cannot happen.
+  const page = await getDiverMergePage(db, shop.id, personId, survivorId, conflictTripId);
+  if (!page) notFound();
+  const { preview, conflictTrip, canAssist } = page;
   if (preview.refusal === "already_merged") {
     // A stale bookmark or a second tab: go to the record that holds it now.
     redirect(shopPath(shop.slug, "divers", personId));
@@ -58,15 +62,6 @@ export default async function MergeDiverPage({
   // A refusal the preview already states in place is not said twice: the
   // notice only speaks when the page itself shows nothing wrong (a race, or
   // the different-people box left unticked).
-  //
-  // A refused merge names the departure it collided on (issue #2333). The URL
-  // carries only its id; the words come from this shop's own trip row, so a
-  // crafted link can name nothing the shop does not hold.
-  const conflictTripId = notice === "merge-booking-conflict" ? uuidParam(trip ?? "") : null;
-  const conflictTrip =
-    !preview.refusal && conflictTripId
-      ? await getTripWithBooked(db, shop.id, conflictTripId)
-      : null;
   const status = preview.refusal
     ? undefined
     : noticeForForm(
@@ -83,20 +78,9 @@ export default async function MergeDiverPage({
         "merge",
       );
 
-  // Only for a pair the duplicate check matched on the name alone, and never
-  // once a refusal already says the merge cannot happen.
-  const canAssist =
-    !preview.refusal &&
-    (await assistsAvailable(db, shop.id)) &&
-    (await readUnsurePair(db, shop.id, personId, survivorId)) !== null;
-
   return (
     <StaffPage width="reading">
-      <ShopPageHeader
-        eyebrow={preview.source.fullName}
-        eyebrowHref={shopPath(shop.slug, "divers", personId)}
-        title={t("divers.mergePreview.title")}
-      />
+      <ShopPageHeader eyebrow={preview.source.fullName} title={t("divers.mergePreview.title")} />
       {canAssist ? (
         <div className="mt-6">
           <AssistReadButton

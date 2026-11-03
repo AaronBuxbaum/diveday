@@ -5,7 +5,7 @@ import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } fro
 import { raceShop } from "@/test/postgres-shop";
 import { upsertExecutedDive } from "./executed-dives";
 import { courses, people, trips } from "./schema";
-import { updateTrip } from "./trips-record";
+import { editTrip } from "./trips-record";
 import { applyDetailsToFutureSeries, createTripSeries } from "./trips-series";
 
 /** The database boundary, on the same engine used by the real-Postgres CI job. */
@@ -62,7 +62,7 @@ describePostgres("five-dive course constraint", () => {
       .returning();
     if (!trip) throw new Error("trip missing");
     const gate = await holdRowLock(pg, sql`select id from trips where id = ${trip.id} for update`);
-    const shrink = updateTrip(pg.connect(), shop.id, trip.id, { ...base, plannedDives: 4 });
+    const shrink = editTrip(pg.connect(), shop.id, trip.id, { ...base, plannedDives: 4 });
     const record = upsertExecutedDive(pg.connect(), {
       shopId: shop.id,
       tripId: trip.id,
@@ -109,7 +109,7 @@ describePostgres("five-dive course constraint", () => {
     const [source, sibling] = series?.trips ?? [];
     if (!series || !source || !sibling) throw new Error("series missing");
     expect(
-      await updateTrip(pg.db, shop.id, source.id, {
+      await editTrip(pg.db, shop.id, source.id, {
         title: source.title,
         startsAt: source.startsAt,
         endsAt: source.endsAt,
@@ -169,7 +169,7 @@ describePostgres("five-dive course constraint", () => {
       pg,
       sql`select pg_advisory_xact_lock(hashtext('trip_revision_notification'), hashtext(${`${shop.id}:${sibling.id}`}))`,
     );
-    const edit = updateTrip(pg.connect(), shop.id, sibling.id, {
+    const edit = editTrip(pg.connect(), shop.id, sibling.id, {
       title: "Concurrent edit",
       startsAt: sibling.startsAt,
       endsAt: sibling.endsAt,

@@ -7,8 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { canPersonManageTripTags } from "@/db/authz";
-import { countDeparturesByTripLens, listTripLenses } from "@/db/trip-lenses";
+import { canPersonManageTripTags, getTripTagsPage } from "@/db/trip-tags-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
@@ -57,20 +56,16 @@ export default async function TripTagsSettingsPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // The same count as the fleet's: one grouped read beside the words.
-  const [shopLenses, lensDepartures] = await Promise.all([
-    listTripLenses(db, session.user.shopId),
-    countDeparturesByTripLens(db, session.user.shopId),
-  ]);
+  const { lenses: shopLenses, departures: lensDepartures } = await getTripTagsPage(
+    db,
+    session.user.shopId,
+  );
   const banner = noticeFromParam(notice, lensNoticeMessages(t));
 
   return (
     <main className={registerPaneClass()}>
       <FlashParams params={["notice", "lens"]} />
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
-        title={t("lenses.heading")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("lenses.heading")} />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
 
       <DisclosureRowList>

@@ -9,13 +9,13 @@
 import { notFound } from "next/navigation";
 import { loadActiveStaffRoles } from "@/db/authz";
 import type { AppDb } from "@/db/client";
+import { diverRecordIsClear } from "@/db/diver-record";
 import { getMergedIntoPersonId } from "@/db/people";
 import { isStaff } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { diverRecordIsClear } from "./_lib/status-load";
 
 /**
  * Where on the record a form's outcome should put the reader.

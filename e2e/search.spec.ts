@@ -107,7 +107,7 @@ test("the command palette also finds dive sites, courses, and every gated nav de
     // the palette reads the shared destination registry. Not that the nav
     // does: `addBooking` is `navGroup: null` (it is an action, and the board
     // keeps its own button), so no header tab has ever named it.
-    ["Add a booking", /\/bookings\/new$/],
+    ["Add a booking", /\/shop\/blue-mantis\?call=1$/],
   ] as const) {
     await test.step(query, async () => {
       await shortcuts.fill(query);

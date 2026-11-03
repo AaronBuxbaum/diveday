@@ -125,18 +125,6 @@ export const SHOP_READERS_BY_DESIGN = new Map([
     "src/app/api/test/seed-private-shop/route.ts",
     "POST mints a new demo shop; the DELETE teardown is idempotent, answers a real and a missing shop alike ({ ok: true, dropped: false }) and drops only a demo shop",
   ],
-  [
-    "src/app/api/test/seed-trouble-states/gear-states.ts",
-    "a helper handed the shop id its parent route already resolved through requireDemoTenant",
-  ],
-  [
-    "src/app/api/test/seed-trouble-states/states/put-one-unit-out-today.ts",
-    "a state handed the shop id the route already resolved through requireDemoTenant; it names 'shops' only in a docblock that cites an ADR",
-  ],
-  [
-    "src/app/api/test/seed-trouble-states/states/unstaff-tomorrows-departure.ts",
-    "a state handed the shop id the route already resolved through requireDemoTenant; it names 'shops' only in a docblock that cites an ADR",
-  ],
 ]);
 /** A shop lookup, a caller's shop slug, or the `shops` table itself. */
 const shopReachPattern = /getShopBySlug\(|\bshopSlug\b|\bshops\b/;

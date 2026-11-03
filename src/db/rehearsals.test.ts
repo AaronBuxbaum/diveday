@@ -12,13 +12,13 @@ import {
   rehearsalsWithEvidence,
   shopRehearsalIds,
 } from "./rehearsals";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookings,
   executedDives,
   incidentReports,
   people,
   personRoles,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   trips,
@@ -183,10 +183,10 @@ describe("clearFinishedRehearsals", () => {
     const { db, shop } = ctx;
     const ownerId = await ownerOf(db, shop.id);
     const { trip } = await rehearsal(db, shop.id);
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: trip.id,
-      personId: ownerId,
+      ...crewSubject(ownerId),
       recordedByPersonId: ownerId,
       occurredAt: NOW,
       status,
@@ -199,10 +199,10 @@ describe("clearFinishedRehearsals", () => {
     const { db, shop } = ctx;
     const ownerId = await ownerOf(db, shop.id);
     const { trip } = await rehearsal(db, shop.id);
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: trip.id,
-      personId: ownerId,
+      ...crewSubject(ownerId),
       recordedByPersonId: ownerId,
       occurredAt: NOW,
       status: "not_boarded",
@@ -245,10 +245,10 @@ describe("clearFinishedRehearsals", () => {
     const other = await otherShop(db);
     const ownerId = await ownerOf(db, shop.id);
     const { trip } = await rehearsal(db, shop.id);
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: other.id,
       tripId: trip.id,
-      personId: ownerId,
+      ...crewSubject(ownerId),
       recordedByPersonId: ownerId,
       occurredAt: NOW,
       status: "boarded",

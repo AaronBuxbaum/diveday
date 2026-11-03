@@ -5,8 +5,8 @@ import { fileScopedShopContext } from "@/test/db";
 import {
   createCourseForm,
   listCourseForms,
+  recordCourseFormVersion,
   requiredCourseFormsForTrips,
-  saveCourseFormVersion,
   setCourseFormRequirements,
 } from "./course-forms";
 import { activityEvents, bookings, courseFormVersions, people, shops, trips } from "./schema";
@@ -94,7 +94,7 @@ describe("course forms — the medical-screening marker (#2337)", () => {
     const form = await formOn(ctx, false);
     const summary = (await listCourseForms(ctx.db, ctx.shop.id)).find((row) => row.id === form.id);
     if (!summary) throw new Error("form missing");
-    const saved = await saveCourseFormVersion(ctx.db, {
+    const saved = await recordCourseFormVersion(ctx.db, {
       shopId: ctx.shop.id,
       formId: form.id,
       title: summary.title,
@@ -121,14 +121,14 @@ describe("course forms — the medical-screening marker (#2337)", () => {
       body: `${BODY} Reworded.`,
       actorPersonId: ctx.staff.id,
     };
-    expect(await saveCourseFormVersion(ctx.db, base)).toMatchObject({
+    expect(await recordCourseFormVersion(ctx.db, base)).toMatchObject({
       versioned: true,
       marked: false,
     });
     expect((await requiredFor(ctx))[0]).toMatchObject({ medicalScreening: true });
-    expect(await saveCourseFormVersion(ctx.db, { ...base, medicalScreening: false })).toMatchObject(
-      { marked: true },
-    );
+    expect(
+      await recordCourseFormVersion(ctx.db, { ...base, medicalScreening: false }),
+    ).toMatchObject({ marked: true });
     expect((await requiredFor(ctx))[0]?.medicalScreening).toBeUndefined();
   });
 
@@ -158,11 +158,11 @@ describe("course forms — the medical-screening marker (#2337)", () => {
             ),
           )
       ).filter((line) => line.params.form === "Health questionnaire");
-    await saveCourseFormVersion(ctx.db, { ...base, medicalScreening: false });
-    await saveCourseFormVersion(ctx.db, base);
+    await recordCourseFormVersion(ctx.db, { ...base, medicalScreening: false });
+    await recordCourseFormVersion(ctx.db, base);
     expect(await lines()).toHaveLength(0);
-    await saveCourseFormVersion(ctx.db, { ...base, medicalScreening: true });
-    await saveCourseFormVersion(ctx.db, { ...base, medicalScreening: false });
+    await recordCourseFormVersion(ctx.db, { ...base, medicalScreening: true });
+    await recordCourseFormVersion(ctx.db, { ...base, medicalScreening: false });
     const written = await lines();
     expect(written).toHaveLength(2);
     expect(written.map((line) => line.params.marked).sort()).toEqual(["no", "yes"]);
@@ -178,7 +178,7 @@ describe("course forms — the medical-screening marker (#2337)", () => {
       .values({ name: "Other Reef", slug: "other-reef-medical", timezone: "America/New_York" })
       .returning();
     if (!other) throw new Error("other shop insert failed");
-    const saved = await saveCourseFormVersion(ctx.db, {
+    const saved = await recordCourseFormVersion(ctx.db, {
       shopId: other.id,
       formId: form.id,
       title: "Health questionnaire",

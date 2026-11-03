@@ -5,7 +5,7 @@ import type { AppDb } from "@/db/client";
 import { setBookingPayment } from "@/db/payments";
 import { trips } from "@/db/schema";
 import { createTrip, createTripSeries, getTripWithBooked } from "@/db/trips";
-import { updateSeriesCadence } from "@/db/trips-series";
+import { editSeriesCadence } from "@/db/trips-series";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { weekdaySetFrom } from "@/lib/recurrence";
@@ -250,7 +250,7 @@ describe("the run-wide and narrowing cancels", () => {
     async function narrowed() {
       const { series, first, weekday } = await run();
       // Drop the first date's weekday, so its paid diver sits on a dropped date.
-      await updateSeriesCadence(ctx.db, ctx.shop.id, series.series.id, {
+      await editSeriesCadence(ctx.db, ctx.shop.id, series.series.id, {
         intervalWeeks: 1,
         weekdays: weekdaySetFrom([(weekday + 2) % 7]),
         endsOn: null,

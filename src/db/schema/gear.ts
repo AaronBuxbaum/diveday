@@ -169,7 +169,7 @@ export function makeRentalFitProfiles<Extra extends Record<string, AnyPgColumnBu
        *
        * The two checks below hold the suit columns to one suit (issue #1800): a
        * rented drysuit is a dry diver, and a dry diver is not renting a wetsuit.
-       * `saveRentalFit` resolves a post that asks for both before it reaches them.
+       * `recordRentalFit` resolves a post that asks for both before it reaches them.
        */
       divesDry: boolean("dives_dry").notNull().default(false),
       note: text("note"),
@@ -179,7 +179,7 @@ export function makeRentalFitProfiles<Extra extends Record<string, AnyPgColumnBu
        *
        * There is exactly one such something today, and it is why this column
        * exists: since issue 627 the diver's free-text note ("titanium hip, I run
-       * heavy") is its own question on `/ready`, saved by `saveRentalFitNote`,
+       * heavy") is its own question on `/ready`, saved by `recordRentalFitNote`,
        * which will create this row for a diver who has never touched the gear
        * form. `rentalFitLine` and the prep checklist read a null here as "no fit
        * recorded", exactly as they already read a missing row.
@@ -415,7 +415,7 @@ export const gearItems = pgTable(
     /**
      * **Which boat this piece of safety kit lives aboard** — "the AED on
      * Mantis I". Only a safety-kit kind carries one (`SAFETY_KIT_KINDS`,
-     * `src/lib/boat-safety.ts`; `updateGearItem` clears it for any other
+     * `src/lib/boat-safety.ts`; `editGearItem` clears it for any other
      * kind), and it is what lets the departure's pre-departure check name the
      * pads that expire on *that* hull's AED. Null is ordinary: kit kept
      * ashore, or a shop that never said.
@@ -432,7 +432,7 @@ export const gearItems = pgTable(
      * and some manufacturers require it, so this is the shop's fact to hold,
      * not DiveDay's rule.
      *
-     * Only a regulator carries one (`updateGearItem` clears it for any other
+     * Only a regulator carries one (`editGearItem` clears it for any other
      * kind). Null is "the shop has not said", which reads the same as false
      * everywhere. What it changes is narrow: the Gear tab's picker labels a
      * designated regulator on a nitrox diver's row, and `proposeRentalUnits`
@@ -443,7 +443,7 @@ export const gearItems = pgTable(
     /**
      * **A wetsuit's thickness in whole millimetres** (issue #2206; Aaron
      * 2026-10-13): the thickest panel, so a 5/4 is 5. Only a wetsuit carries
-     * one (`updateGearItem` clears it for any other kind); null is "not said".
+     * one (`editGearItem` clears it for any other kind); null is "not said".
      * The Gear tab proposes a wetsuit only when this matches the departure's
      * `trips.wetsuit_thickness_mm` as well as the size, and proposes nothing
      * when either is unknown. A size label like "3mm L" stays free text: this

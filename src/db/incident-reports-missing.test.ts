@@ -5,7 +5,7 @@ import type { AppDb } from "./client";
 import {
   addIncidentPerson,
   fileIncidentReport,
-  saveIncidentDraft,
+  recordIncidentDraft,
   startIncidentReport,
   startMissingDiverReport,
 } from "./incident-reports";
@@ -16,13 +16,8 @@ import {
   OTHER_SHOP,
   OTHER_TRIP,
 } from "./incident-reports-test-fixtures";
-import {
-  incidentReportPeople,
-  incidentReports,
-  rollCallCrewEvents,
-  rollCallEvents,
-  tripAssignments,
-} from "./schema";
+import { crewSubject } from "./roll-call-subject";
+import { incidentReportPeople, incidentReports, rollCallEvents, tripAssignments } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -107,7 +102,7 @@ describe("a missing diver report from the manifest", () => {
       actorPersonId: f.crew.id,
     });
     if (!injury.ok) throw new Error("expected a draft");
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       shopId: shop.id,
       tripId: f.trip.id,
       reportId: injury.reportId,
@@ -178,7 +173,7 @@ describe("a missing diver report from the manifest", () => {
     };
     const first = await startMissingDiverReport(db, input);
     if (!first.ok) throw new Error(`refused: ${first.reason}`);
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       shopId: shop.id,
       tripId: f.trip.id,
       reportId: first.reportId,
@@ -203,7 +198,7 @@ describe("a missing diver report from the manifest", () => {
     const first = await startMissingDiverReport(db, { ...base, actorPersonId: f.crew.id });
     if (!first.ok) throw new Error(`refused: ${first.reason}`);
     const target = { shopId: shop.id, tripId: f.trip.id, reportId: first.reportId };
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...target,
       actorPersonId: f.crew.id,
       fields: { ...complete, kind: "missing_diver", occurredAt: MARKED_AT },
@@ -281,7 +276,7 @@ describe("a missing diver report from the manifest", () => {
     const first = await startMissingDiverReport(db, input);
     if (!first.ok) throw new Error(`refused: ${first.reason}`);
     const target = { shopId: shop.id, tripId: f.trip.id, reportId: first.reportId };
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...target,
       actorPersonId: f.crew.id,
       fields: { ...complete, kind: "missing_diver", occurredAt: at("14:00") },
@@ -338,7 +333,7 @@ describe("a missing diver report from the manifest", () => {
     });
     if (!other.ok) throw new Error("expected a draft");
     const target = { shopId: shop.id, tripId: f.trip.id, reportId: other.reportId };
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...target,
       actorPersonId: f.owner.id,
       fields: { ...complete, kind: "missing_diver" },
@@ -435,10 +430,10 @@ describe("a missing diver report from the manifest", () => {
     const subject = { kind: "crew" as const, personId: f.ashore.id };
     const input = { shopId: shop.id, tripId: f.trip.id, subject, actorPersonId: f.crew.id };
     expect(await startMissingDiverReport(db, input)).toEqual({ ok: false, reason: "not_missing" });
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: f.trip.id,
-      personId: f.ashore.id,
+      ...crewSubject(f.ashore.id),
       recordedByPersonId: f.crew.id,
       status: "not_boarded",
       checkpoint: "after_dive_1",

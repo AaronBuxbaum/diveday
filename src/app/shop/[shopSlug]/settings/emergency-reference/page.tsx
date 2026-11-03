@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { canPersonManageShopSettings } from "@/db/authz";
-import { getDb } from "@/db/client";
-import { shoreAlertConsentRecorderName } from "@/db/shops";
+import {
+  canPersonManageShopSettings,
+  getEmergencyReferencePage,
+} from "@/db/emergency-reference-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
@@ -35,17 +36,16 @@ export default async function EmergencyReferenceSettingsPage({
 }) {
   const { shopSlug } = await params;
   const { notice } = await searchParams;
-  const { shop } = await requireShopSurface(shopSlug, {
+  const { db, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonManageShopSettings,
     refusal: { notice: "settings-not-authorized" },
   });
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const consentByName = await shoreAlertConsentRecorderName(await getDb(), shop);
+  const { consentByName } = await getEmergencyReferencePage(db, shop);
 
   return (
     <SettingsEditorPage
-      shopSlug={shopSlug}
       t={t}
       title={t("settings.main.emergency.heading")}
       banner={noticeFromParam(notice, emergencyReferenceNoticeMessages(t))}

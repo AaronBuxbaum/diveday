@@ -1,4 +1,3 @@
-import { sectionCardClass } from "@/components/ui/card";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -51,10 +50,7 @@ export function surfaceIntervalText(
       });
 }
 
-/**
- * One dive's facts as label and value, in the order both layouts read them:
- * the card list below `md` and the table from `md` up say the same words.
- */
+/** One dive's facts as label and value, in the order the table's columns read them. */
 export function executedDiveFields(
   dive: IncidentExecutedDive,
   locale: string,
@@ -101,10 +97,10 @@ export function executedDiveFields(
 /**
  * The departure log's executed dive records, one per dive the crew logged.
  *
- * **A labeled card per dive below `md`, the table from `md` up** (visual
- * review 2026-10-24, B04). Seven columns at 390px truncated every header to
- * "ACTU SITE" and broke "Sal Moret" mid-name. The card says each label in full
- * beside its value; paper always takes the table, whatever the sheet's width.
+ * **One table, at the sheet's width** (issue #2745). The log is a sheet of
+ * paper on every screen, so a phone scrolls the sheet sideways rather than
+ * reflowing it, and the table never meets the 390px that once truncated its
+ * headers (visual review 2026-10-24, B04).
  */
 export function ExecutedDivesTable({
   dives,
@@ -122,45 +118,23 @@ export function ExecutedDivesTable({
     fields: executedDiveFields(dive, locale, timeZone, t),
   }));
   return (
-    <>
-      <ul data-dive-cards="" className="mt-3 flex flex-col gap-3 md:hidden print:hidden">
-        {rows.map(({ dive, fields }) => (
-          <li
-            key={dive.diveNumber}
-            className={sectionCardClass({ className: "break-inside-avoid" })}
-          >
-            <h3 className="text-base font-semibold">
-              {t("incidentExport.executedDive", { number: dive.diveNumber })}
-            </h3>
-            <dl className="mt-2 grid gap-2 text-sm">
-              {fields.map((field) => (
-                <div key={field.label}>
-                  <dt className="text-muted">{field.label}</dt>
-                  <dd className="font-medium">{field.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </li>
+    <Table shellClassName="mt-3">
+      <THead>
+        <Th>{t("incidentExport.executedDiveNumber")}</Th>
+        {(rows[0]?.fields ?? []).map((field) => (
+          <Th key={field.label}>{field.label}</Th>
         ))}
-      </ul>
-      <Table shellClassName="mt-3 hidden md:block print:block">
-        <THead>
-          <Th>{t("incidentExport.executedDiveNumber")}</Th>
-          {(rows[0]?.fields ?? []).map((field) => (
-            <Th key={field.label}>{field.label}</Th>
-          ))}
-        </THead>
-        <TBody>
-          {rows.map(({ dive, fields }) => (
-            <tr key={dive.diveNumber}>
-              <Th scope="row">{t("incidentExport.executedDive", { number: dive.diveNumber })}</Th>
-              {fields.map((field) => (
-                <Td key={field.label}>{field.value}</Td>
-              ))}
-            </tr>
-          ))}
-        </TBody>
-      </Table>
-    </>
+      </THead>
+      <TBody>
+        {rows.map(({ dive, fields }) => (
+          <tr key={dive.diveNumber}>
+            <Th scope="row">{t("incidentExport.executedDive", { number: dive.diveNumber })}</Th>
+            {fields.map((field) => (
+              <Td key={field.label}>{field.value}</Td>
+            ))}
+          </tr>
+        ))}
+      </TBody>
+    </Table>
   );
 }

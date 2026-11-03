@@ -3,8 +3,6 @@
  * inline in its signature, so the route file stays a page.
  */
 export type BoardSearchParams = {
-  /** Internal marker for the dedicated creation route. */
-  _createPage?: string;
   after?: string;
   builder?: string;
   count?: string; // the number a builder notice names (`builderNoticeMessage`)
@@ -43,22 +41,4 @@ export const BOARD_RESULT_PARAMS = ["builder", "count", "created", "result", "se
 export function clearBoardResultParams(url: URL): URL {
   for (const key of BOARD_RESULT_PARAMS) url.searchParams.delete(key);
   return url;
-}
-
-/** Preserve old add links and their context when moving to the creation page. */
-export function legacyAddHref(shopSlug: string, params: BoardSearchParams): string | null {
-  const { _createPage, add, date, course, requests, site, week } = params;
-  if (_createPage === "1" || !(add || course || requests || site)) return null;
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries({
-    add: add === "full" ? add : undefined,
-    date,
-    course,
-    requests,
-    site,
-    week,
-  })) {
-    if (value) query.set(key, value);
-  }
-  return `/shop/${shopSlug}/schedule/board/new${query.size ? `?${query}` : ""}`;
 }

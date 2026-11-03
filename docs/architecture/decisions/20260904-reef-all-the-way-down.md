@@ -146,7 +146,7 @@ the backlog re-triages after the first pilot boat day stands; this is what that 
   bumped by a change to `starts_at` or to the site list, read by the `.ics` as `SEQUENCE`; the
   thread's "updates itself if the plan moves" line assumes it. **Shipped as recommended** (slice
   16j, issue #1165): the column bumps for a `starts_at` change and for a change to the day's dive
-  sites, in `moveTrip`, `updateTrip`, `applyDetailsToFutureSeries` and the demo refresh, and for
+  sites, in `moveTrip`, `editTrip`, `applyDetailsToFutureSeries` and the demo refresh, and for
   nothing else — a conditions note and a status flip leave it where it is. Both calendar surfaces
   read it as `SEQUENCE`, through `src/lib/trip-calendar.ts`; the rule itself is
   `src/lib/trip-revision.ts`.

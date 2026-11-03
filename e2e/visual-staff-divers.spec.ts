@@ -134,15 +134,15 @@ for (const scheme of ["light", "dark"] as const) {
        * shape of an optional-vs-required row.
        */
       test(`the add-diver form renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/divers/new");
-        await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
+        await page.goto("/shop/blue-mantis/divers?add=1");
+        await page.getByRole("heading", { level: 2, name: "Add a diver" }).waitFor();
         await capture(page, "divers-new", scheme);
       });
 
       test(`a restored add-diver draft renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/divers/new");
+        await page.goto("/shop/blue-mantis/divers?add=1");
         const name = "Ada Lindqvist";
         const saved = page.waitForResponse(
           (response) =>
@@ -157,7 +157,7 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await expect(page).toHaveURL(/\/divers$/);
         expect((await saved).ok()).toBe(true);
-        await page.goto("/shop/blue-mantis/divers/new");
+        await page.goto("/shop/blue-mantis/divers?add=1");
         await expect(page.getByLabel(staffCopy("divers.page.fullNameLabel"))).toHaveValue(name);
         const startOver = page.getByRole("button", {
           name: staffCopy("shared.formDraft.startOver"),
@@ -317,8 +317,8 @@ for (const scheme of ["light", "dark"] as const) {
         // stamp made this capture differ on every run. The reset before each
         // test purges every non-staff person, so the fixed identity is free.
         const name = "Clear Diver";
-        await page.goto("/shop/blue-mantis/divers/new");
-        await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
+        await page.goto("/shop/blue-mantis/divers?add=1");
+        await page.getByRole("heading", { level: 2, name: "Add a diver" }).waitFor();
         await page.getByLabel("Full name").fill(name);
         await page.getByLabel("Email").fill("clear-diver@example.com");
         await page.getByRole("button", { name: "Add diver", exact: true }).click();
@@ -455,8 +455,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a possible duplicate record renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/divers/new");
-        await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
+        await page.goto("/shop/blue-mantis/divers?add=1");
+        await page.getByRole("heading", { level: 2, name: "Add a diver" }).waitFor();
         await page.getByLabel("Full name").fill("Priya Sharma");
         await page.getByLabel("Email").fill("priya.duplicate@example.com");
         // Seeded Priya's own number: a name alone is never offered as a duplicate.
@@ -477,7 +477,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?mergeCandidates=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,mergeCandidates",
+        );
         expect(seeded.ok()).toBe(true);
         const { mergeCandidates } = (await seeded.json()) as {
           mergeCandidates: { sourceId: string; candidateIds: string[] };
@@ -512,8 +514,8 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await page.goto("/shop/blue-mantis/divers/new");
-        await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
+        await page.goto("/shop/blue-mantis/divers?add=1");
+        await page.getByRole("heading", { level: 2, name: "Add a diver" }).waitFor();
         await page.getByLabel("Full name").fill("Priya Sharma");
         await page.getByLabel("Email").fill("priya.duplicate@example.com");
         // Seeded Priya's own number: a name alone is never offered as a duplicate.
@@ -826,7 +828,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels");
         await openDiverProfile(page, "Priya", "Priya Sharma");
         await openDiverFileGroup(page, "Waiver");
         // The ringed button itself, so the capture can never land before the
@@ -847,7 +849,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels");
         await openDiverProfile(page, "Nadia", "Nadia Petrov");
         // The door's fact: a booked diver's card gap opens the group, and the
         // statement inside repeats the words.

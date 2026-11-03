@@ -32,7 +32,7 @@ leaves unset).
 Several `src/db` writer doc-comments (`check-in.ts`, `buddy-teams.ts`, `manifests.ts`,
 `waivers.ts`) already say, in almost identical language, that `setStaffAccountStatus` "revokes
 sign-in and leaves `person_roles` entirely intact" — which is true only of *future* sign-in
-attempts (`src/lib/credentials.ts` refuses a non-active account at the Credentials provider). It
+attempts (`src/db/credentials.ts` refuses a non-active account at the Credentials provider). It
 does not touch a session already issued, because there is no session row to revoke against; the
 JWT itself is the only record.
 

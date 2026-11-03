@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonOverrideGearRequest, loadActiveStaffRoles } from "@/db/authz";
-import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
+import { getRentalFit, recordRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { RENTAL_FIT_TEXT_LIMITS, suitFlagsFromPost } from "@/lib/rentals";
@@ -35,7 +35,7 @@ const profileSchema = z.object({
   // details and try again." on a form where every visible box was right
   // (issue #1062). `.default("")` parses, and then blanks a stored size for
   // every item the shop does not currently offer, which is the destructive
-  // half of the same bug; `saveRentalFit` leaves an absent size alone instead.
+  // half of the same bug; `recordRentalFit` leaves an absent size alone instead.
   bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   drysuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
@@ -66,12 +66,12 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
   }
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(backTo(base, "invalid", "fit"));
-  const saved = await saveRentalFit(db, {
+  const saved = await recordRentalFit(db, {
     shopId: staff.user.shopId,
     personId,
     // An item this shop's catalog has dropped renders no checkbox in
     // `GearAndSizes.tsx`, so it posts nothing and arrives here as `false`.
-    // `saveRentalFit` re-derives the offered set and leaves those columns alone
+    // `recordRentalFit` re-derives the offered set and leaves those columns alone
     // rather than reading the silence as "no" (issue #1755) — which matters
     // most on this writer of the two, because there is a staffer present,
     // correcting a boot size, who would never be told.

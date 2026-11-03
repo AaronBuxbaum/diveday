@@ -6,10 +6,10 @@ import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { createBoat, deleteBoat } from "./boats";
 import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookings,
   people,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripChangeEvents,
@@ -20,6 +20,8 @@ import { boatTripFixture, tripBoatPatch } from "./trip-boat-test-fixtures";
 import { listTripChangeEvents } from "./trip-change-events";
 import {
   createTrip,
+  editTrip,
+  editTripConditions,
   getShopTripTitle,
   getTripRoster,
   getTripWithBooked,
@@ -29,8 +31,6 @@ import {
   setTripCrew,
   tripCrewSpokenLanguages,
   upcomingTripsWithCounts,
-  updateTrip,
-  updateTripConditions,
 } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -97,7 +97,7 @@ describe("trip records (in-memory PGlite)", () => {
     if (!priced) throw new Error("trip not created");
     expect(priced.priceCents).toBe(18_000);
 
-    await updateTrip(db, shop.id, priced.id, {
+    await editTrip(db, shop.id, priced.id, {
       title: priced.title,
       startsAt: priced.startsAt,
       endsAt: priced.endsAt,
@@ -107,7 +107,7 @@ describe("trip records (in-memory PGlite)", () => {
     });
     expect((await getTripWithBooked(db, shop.id, priced.id))?.priceCents).toBe(20_000);
 
-    await updateTrip(db, shop.id, priced.id, {
+    await editTrip(db, shop.id, priced.id, {
       title: priced.title,
       startsAt: priced.startsAt,
       endsAt: priced.endsAt,
@@ -138,11 +138,11 @@ describe("trip records (in-memory PGlite)", () => {
       capacity: trip.capacity,
       plannedDives: trip.plannedDives,
     };
-    await updateTrip(db, shop.id, trip.id, { ...base, wetsuitThicknessMm: 7 });
+    await editTrip(db, shop.id, trip.id, { ...base, wetsuitThicknessMm: 7 });
     expect((await getTripWithBooked(db, shop.id, trip.id))?.wetsuitThicknessMm).toBe(7);
-    await updateTrip(db, shop.id, trip.id, base);
+    await editTrip(db, shop.id, trip.id, base);
     expect((await getTripWithBooked(db, shop.id, trip.id))?.wetsuitThicknessMm).toBe(7);
-    await updateTrip(db, shop.id, trip.id, { ...base, wetsuitThicknessMm: null });
+    await editTrip(db, shop.id, trip.id, { ...base, wetsuitThicknessMm: null });
     expect((await getTripWithBooked(db, shop.id, trip.id))?.wetsuitThicknessMm).toBeNull();
     await expect(
       db.transaction((tx) =>
@@ -164,7 +164,7 @@ describe("trip records (in-memory PGlite)", () => {
     expect(trip.meetingPointLabel).toBeNull();
     expect(trip.meetingPointAddress).toBeNull();
 
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       title: trip.title,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
@@ -177,7 +177,7 @@ describe("trip records (in-memory PGlite)", () => {
     expect(withMeetingPoint?.meetingPointLabel).toBe("North Jetty Marina");
     expect(withMeetingPoint?.meetingPointAddress).toBe("12 Dock Rd");
 
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       title: trip.title,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
@@ -202,7 +202,7 @@ describe("trip records (in-memory PGlite)", () => {
     });
     if (!trip) throw new Error("trip not created");
 
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       title: trip.title,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
@@ -225,7 +225,7 @@ describe("trip records (in-memory PGlite)", () => {
       },
     });
 
-    await updateTripConditions(db, shop.id, trip.id, {
+    await editTripConditions(db, shop.id, trip.id, {
       conditionsSummary: "Calm water",
       visibilityMeters: 18,
     });
@@ -233,7 +233,7 @@ describe("trip records (in-memory PGlite)", () => {
 
     // Re-saving the same facts is not a material change and must not make the
     // ledger look busier than the plan actually was.
-    await updateTripConditions(db, shop.id, trip.id, {
+    await editTripConditions(db, shop.id, trip.id, {
       conditionsSummary: "Calm water",
       visibilityMeters: 18,
     });
@@ -263,7 +263,7 @@ describe("trip records (in-memory PGlite)", () => {
     if (!reef) throw new Error("expected seeded reef trip missing");
     expect(reef.booked).toBe(11);
 
-    const refused = await updateTrip(db, shop.id, reef.id, {
+    const refused = await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -278,7 +278,7 @@ describe("trip records (in-memory PGlite)", () => {
     // Untouched — the capacity in the database still reads the original value.
     expect((await getTripWithBooked(db, shop.id, reef.id))?.capacity).toBe(reef.capacity);
 
-    const accepted = await updateTrip(db, shop.id, reef.id, {
+    const accepted = await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -309,7 +309,7 @@ describe("trip records (in-memory PGlite)", () => {
     await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, entry.booking.id));
     expect((await getTripWithBooked(db, shop.id, reef.id))?.booked).toBe(10);
 
-    const accepted = await updateTrip(db, shop.id, reef.id, {
+    const accepted = await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -321,7 +321,7 @@ describe("trip records (in-memory PGlite)", () => {
 
     // Still a floor, just the honest one: the ten seats somebody is holding.
     expect(
-      await updateTrip(db, shop.id, reef.id, {
+      await editTrip(db, shop.id, reef.id, {
         title: reef.title,
         startsAt: reef.startsAt,
         endsAt: reef.endsAt,
@@ -352,7 +352,7 @@ describe("trip records (in-memory PGlite)", () => {
       occurredAt: nowDate(),
     });
 
-    const refused = await updateTrip(db, shop.id, reef.id, {
+    const refused = await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -367,7 +367,7 @@ describe("trip records (in-memory PGlite)", () => {
     expect((await getTripWithBooked(db, shop.id, reef.id))?.plannedDives).toBe(reef.plannedDives);
 
     // Equal to the recorded history is fine; only going below it is refused.
-    const accepted = await updateTrip(db, shop.id, reef.id, {
+    const accepted = await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -388,17 +388,17 @@ describe("trip records (in-memory PGlite)", () => {
     if (!reef) throw new Error("expected seeded reef trip missing");
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("expected seeded staff missing");
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: reef.id,
-      personId: staff.person.id,
+      ...crewSubject(staff.person.id),
       recordedByPersonId: staff.person.id,
       status: "not_boarded",
       checkpoint: "after_dive_2",
       occurredAt: nowDate(),
     });
 
-    const refused = await updateTrip(db, shop.id, reef.id, {
+    const refused = await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -413,16 +413,16 @@ describe("trip records (in-memory PGlite)", () => {
     expect((await getTripWithBooked(db, shop.id, reef.id))?.plannedDives).toBe(reef.plannedDives);
 
     // A crew result that was undone is no history: the floor lifts.
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: reef.id,
-      personId: staff.person.id,
+      ...crewSubject(staff.person.id),
       recordedByPersonId: staff.person.id,
       status: "cleared",
       checkpoint: "after_dive_2",
       occurredAt: new Date(nowDate().getTime() + 1000),
     });
-    const accepted = await updateTrip(db, shop.id, reef.id, {
+    const accepted = await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -496,7 +496,7 @@ describe("trip records (in-memory PGlite)", () => {
       endsAt: new Date(Date.UTC(2030, 8, 5 + offset, 16)),
     });
     const dayOne = meetingDay(0);
-    const grown = await updateTrip(db, shop.id, trip.id, {
+    const grown = await editTrip(db, shop.id, trip.id, {
       title: trip.title,
       startsAt: dayOne.startsAt,
       endsAt: meetingDay(2).endsAt,
@@ -522,7 +522,7 @@ describe("trip records (in-memory PGlite)", () => {
     );
 
     // Shrinking replaces rather than merges: days 2 and 3 are gone, not orphaned.
-    const shrunk = await updateTrip(db, shop.id, trip.id, {
+    const shrunk = await editTrip(db, shop.id, trip.id, {
       title: trip.title,
       startsAt: dayOne.startsAt,
       endsAt: dayOne.endsAt,
@@ -535,7 +535,7 @@ describe("trip records (in-memory PGlite)", () => {
 
     // Omitting the field leaves the existing days entirely alone — every
     // caller that only edits a price must not silently rewrite a schedule.
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       title: trip.title,
       startsAt: dayOne.startsAt,
       endsAt: dayOne.endsAt,
@@ -585,7 +585,7 @@ describe("editing a departure's boat, mode and public sale", () => {
   it("moves a departure to another hull", async () => {
     const { db, shop, trip, spare } = await boatTrip();
 
-    const outcome = await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id });
+    const outcome = await editTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id });
 
     expect(outcome.ok).toBe(true);
     expect((await getTripWithBooked(db, shop.id, trip.id))?.boatId).toBe(spare.id);
@@ -594,14 +594,14 @@ describe("editing a departure's boat, mode and public sale", () => {
   it("takes a departure off its hull entirely", async () => {
     // "No boat" is a real answer, not a missing one.
     const { db, shop, trip } = await boatTrip();
-    await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: null });
+    await editTrip(db, shop.id, trip.id, { ...patch(trip), boatId: null });
     expect((await getTripWithBooked(db, shop.id, trip.id))?.boatId).toBeNull();
   });
 
   it("turns a boat dive into a shore dive", async () => {
     // What a marginal-weather morning actually becomes.
     const { db, shop, trip } = await boatTrip();
-    await updateTrip(db, shop.id, trip.id, { ...patch(trip), diveMode: "shore", boatId: null });
+    await editTrip(db, shop.id, trip.id, { ...patch(trip), diveMode: "shore", boatId: null });
     const after = await getTripWithBooked(db, shop.id, trip.id);
     expect(after?.diveMode).toBe("shore");
     expect(after?.boatId).toBeNull();
@@ -611,9 +611,9 @@ describe("editing a departure's boat, mode and public sale", () => {
     // A one-way door in both directions until now: a private charter whose
     // group fell through could never be sold publicly.
     const { db, shop, trip } = await boatTrip();
-    await updateTrip(db, shop.id, trip.id, { ...patch(trip), isPrivate: true });
+    await editTrip(db, shop.id, trip.id, { ...patch(trip), isPrivate: true });
     expect((await getTripWithBooked(db, shop.id, trip.id))?.isPrivate).toBe(true);
-    await updateTrip(db, shop.id, trip.id, { ...patch(trip), isPrivate: false });
+    await editTrip(db, shop.id, trip.id, { ...patch(trip), isPrivate: false });
     expect((await getTripWithBooked(db, shop.id, trip.id))?.isPrivate).toBe(false);
   });
 
@@ -621,7 +621,7 @@ describe("editing a departure's boat, mode and public sale", () => {
     // The reason each is `undefined`-guarded: a form without the field must not
     // write a default over the shop's own answer.
     const { db, shop, trip, hull } = await boatTrip();
-    await updateTrip(db, shop.id, trip.id, { ...patch(trip), title: "Renamed" });
+    await editTrip(db, shop.id, trip.id, { ...patch(trip), title: "Renamed" });
     const after = await getTripWithBooked(db, shop.id, trip.id);
     expect(after?.title).toBe("Renamed");
     expect(after?.boatId).toBe(hull.id);
@@ -641,7 +641,7 @@ describe("editing a departure's boat, mode and public sale", () => {
     if (!other) throw new Error("second shop insert failed");
     const theirs = await createBoat(db, other.id, "Their Boat", 12);
 
-    const outcome = await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: theirs.id });
+    const outcome = await editTrip(db, shop.id, trip.id, { ...patch(trip), boatId: theirs.id });
 
     expect(outcome).toMatchObject({ ok: false, reason: "boat_not_found" });
   });
@@ -650,7 +650,7 @@ describe("editing a departure's boat, mode and public sale", () => {
     const { db, shop, trip, spare } = await boatTrip();
     await deleteBoat(db, shop.id, spare.id);
 
-    const outcome = await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id });
+    const outcome = await editTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id });
 
     expect(outcome).toMatchObject({ ok: false, reason: "boat_not_found" });
   });
@@ -666,7 +666,7 @@ describe("editing a departure's boat, mode and public sale", () => {
  * they cannot see. The two negative cases below are as load-bearing as the two
  * positive ones.
  */
-describe("updateTrip and the calendar revision", () => {
+describe("editTrip and the calendar revision", () => {
   async function departure() {
     const { db, shop } = ctx;
     const trip = await createTrip(db, {
@@ -696,7 +696,7 @@ describe("updateTrip and the calendar revision", () => {
     const { db, shop, trip } = await departure();
     expect(trip.revision).toBe(0);
 
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...basePatch(trip),
       startsAt: new Date("2030-09-05T14:00:00.000Z"),
       endsAt: new Date("2030-09-05T18:00:00.000Z"),
@@ -711,7 +711,7 @@ describe("updateTrip and the calendar revision", () => {
     const [first, second] = sites;
     if (!first || !second) throw new Error("seeded shop needs two dive sites");
 
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...basePatch(trip),
       dives: [{ diveSiteId: first.id }, { diveSiteId: second.id }],
     });
@@ -720,14 +720,14 @@ describe("updateTrip and the calendar revision", () => {
 
     // Same two sites, other way round: a different day for the diver reading
     // the entry, so a different revision.
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...basePatch(trip),
       dives: [{ diveSiteId: second.id }, { diveSiteId: first.id }],
     });
     expect(await revisionOf(db, shop.id, trip.id)).toBe(2);
 
     // And re-saving the identical plan is not an edit at all.
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...basePatch(trip),
       dives: [{ diveSiteId: second.id }, { diveSiteId: first.id }],
     });
@@ -737,7 +737,7 @@ describe("updateTrip and the calendar revision", () => {
   it("does not bump for a title, description, price or capacity edit", async () => {
     const { db, shop, trip } = await departure();
 
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...basePatch(trip),
       title: "Revision — renamed on the board",
       description: "Bring a hood, the springs run cold",
@@ -753,9 +753,9 @@ describe("updateTrip and the calendar revision", () => {
     // somebody types the vis at the rail.
     const { db, shop, trip } = await departure();
 
-    await updateTripConditions(db, shop.id, trip.id, { conditionsSummary: "Light chop, vis 40ft" });
-    await updateTripConditions(db, shop.id, trip.id, { conditionsSummary: "Flat, vis 60ft" });
-    await updateTripConditions(db, shop.id, trip.id, { conditionsHold: true });
+    await editTripConditions(db, shop.id, trip.id, { conditionsSummary: "Light chop, vis 40ft" });
+    await editTripConditions(db, shop.id, trip.id, { conditionsSummary: "Flat, vis 60ft" });
+    await editTripConditions(db, shop.id, trip.id, { conditionsHold: true });
 
     expect(await revisionOf(db, shop.id, trip.id)).toBe(0);
   });
@@ -767,7 +767,7 @@ describe("updateTrip and the calendar revision", () => {
  * who made it and when, in the same transaction as the dives; a save that
  * leaves the run as the diver reads it writes none.
  */
-describe("updateTrip and the site-change ledger", () => {
+describe("editTrip and the site-change ledger", () => {
   async function departure() {
     const { db, shop } = ctx;
     const trip = await createTrip(db, {
@@ -802,7 +802,7 @@ describe("updateTrip and the site-change ledger", () => {
   it("writes one entry per site edit, naming who and when, with the run before and after", async () => {
     const { db, shop, trip, sites, actor, patch } = await departure();
     const [a, b, c] = sites;
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...patch,
       dives: [{ diveSiteId: a.id }, { diveSiteId: b.id }],
     });
@@ -811,7 +811,7 @@ describe("updateTrip and the site-change ledger", () => {
 
     // 06:40, the crew's call relayed by the office: the day moves to another site.
     const before = nowDate();
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...patch,
       dives: [{ diveSiteId: c.id }, { diveSiteId: c.id }],
     });
@@ -835,24 +835,24 @@ describe("updateTrip and the site-change ledger", () => {
     const { db, shop, trip, sites, patch } = await departure();
     const [a, b] = sites;
     const plan = { ...patch, dives: [{ diveSiteId: a.id }, { diveSiteId: b.id }] };
-    await updateTrip(db, shop.id, trip.id, plan);
+    await editTrip(db, shop.id, trip.id, plan);
     expect(await siteEntries(db, trip.id)).toHaveLength(1);
 
     // The identical plan again, a title and price edit, and a patch with no dives.
-    await updateTrip(db, shop.id, trip.id, plan);
-    await updateTrip(db, shop.id, trip.id, { ...plan, title: "Renamed", priceCents: 12_000 });
-    await updateTrip(db, shop.id, trip.id, { ...patch, title: "Renamed again" });
+    await editTrip(db, shop.id, trip.id, plan);
+    await editTrip(db, shop.id, trip.id, { ...plan, title: "Renamed", priceCents: 12_000 });
+    await editTrip(db, shop.id, trip.id, { ...patch, title: "Renamed again" });
     expect(await siteEntries(db, trip.id)).toHaveLength(1);
   });
 
   it("writes an entry when the same sites swap order: a different day for the diver", async () => {
     const { db, shop, trip, sites, patch } = await departure();
     const [a, b] = sites;
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...patch,
       dives: [{ diveSiteId: a.id }, { diveSiteId: b.id }],
     });
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...patch,
       dives: [{ diveSiteId: b.id }, { diveSiteId: a.id }],
     });
@@ -866,19 +866,19 @@ describe("updateTrip and the site-change ledger", () => {
   it("writes an entry when a repeated site moves or gains a dive (review of #3061)", async () => {
     const { db, shop, trip, sites, patch } = await departure();
     const [wreck, reef] = sites;
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...patch,
       plannedDives: 3,
       dives: [{ diveSiteId: wreck.id }, { diveSiteId: reef.id }, { diveSiteId: wreck.id }],
     });
     // The wreck's two dives put back to back for the tide.
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...patch,
       plannedDives: 3,
       dives: [{ diveSiteId: wreck.id }, { diveSiteId: wreck.id }, { diveSiteId: reef.id }],
     });
     // And a fourth tank at the reef.
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...patch,
       plannedDives: 4,
       dives: [

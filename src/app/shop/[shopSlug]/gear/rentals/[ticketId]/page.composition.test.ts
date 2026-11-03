@@ -1,12 +1,17 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeSource } from "@/test/route-source";
 
 /**
  * The counter-rental ticket is a Server Component over one read, so these
- * read its source rather than render it, as the trip slip's test does.
+ * read its source rather than render it, as the trip slip's test does. The
+ * slip itself is rendered in `RentalSlip.test.tsx`.
  */
-const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const SOURCE = routeSource(import.meta.dirname, "page.tsx");
+const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+/** The page's one reader (issue #2757): where the ticket's reads now live. */
+const READER = readFileSync(join(process.cwd(), "src/db/counter-rental-ticket-page.ts"), "utf8");
 
 describe("the counter-rental ticket", () => {
   /**
@@ -17,11 +22,11 @@ describe("the counter-rental ticket", () => {
    * from the order the rental is linked to, never computed on the page.
    */
   it("ends with the shared terms and received-by foot, and reads money only from the order", () => {
-    const code = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-    expect(code).toContain("<RentalTicketReceipt terms={shop.rentalTerms} t={t} />");
-    expect(code).toContain("getOrder(db, shop.id, ticket.orderId)");
-    expect(code).toContain("<RentalTicketPayment");
-    expect(code).not.toMatch(/formatMoney|Cents\b|amount/i);
+    expect(CODE).toContain("<RentalSlip");
+    expect(CODE).toContain("terms={shop.rentalTerms}");
+    expect(READER).toContain("getOrder(db, shop.id, ticket.orderId)");
+    expect(CODE).toContain("<RentalTicketPayment");
+    expect(CODE).not.toMatch(/formatMoney|Cents\b|amount/i);
   });
 
   /**
@@ -30,13 +35,29 @@ describe("the counter-rental ticket", () => {
    * on it.
    */
   it("says the person's waiver on screen only, with the send beside it", () => {
-    const line = SOURCE.slice(
-      SOURCE.indexOf("<CounterRentalWaiverLine"),
-      SOURCE.indexOf('aria-labelledby="ticket-units-heading"'),
-    );
-    expect(line).toContain("print:hidden");
+    const screen = CODE.indexOf("screen={");
+    const line = CODE.slice(CODE.indexOf("<CounterRentalWaiverLine"), CODE.indexOf("<RentalSlip"));
+    expect(screen).toBeGreaterThan(-1);
+    expect(CODE.indexOf("<CounterRentalWaiverLine")).toBeGreaterThan(screen);
     expect(line).toContain("personId={ticket.personId}");
     // The send is a counter send from this ticket (issue #2346).
     expect(line).toContain("ticketId={ticket.ticketId}");
+  });
+
+  /**
+   * **Paper is one face** (issue #2745): the slip is a sheet behind
+   * `SheetDocument`, and the counter's acts sit above it on the screen alone,
+   * so nothing on this page is hidden from paper by a class.
+   */
+  it("is a sheet with the counter's acts above it, and no screen-vs-print fork", () => {
+    expect(CODE).toContain("<SheetDocument");
+    const slip = CODE.indexOf("<RentalSlip");
+    for (const act of ["<TankGasCorrections", "<GearReturnPane", "checkOutCounterRentalAction"]) {
+      expect(CODE.indexOf(act), act).toBeGreaterThan(-1);
+      expect(CODE.indexOf(act), act).toBeLessThan(slip);
+    }
+    // Reached from Rent out, not a Print: the dialog waits for the button.
+    expect(CODE).toContain("autoPrint={false}");
+    expect(CODE).not.toMatch(/print:|StaffPage|EyebrowWayUp|PrintButton/);
   });
 });

@@ -54,7 +54,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?monthSightings=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,monthSightings",
+        );
         expect(seeded.ok()).toBe(true);
         await page.goto("/s/blue-mantis");
         await page.getByRole("heading", { name: /^What you might see in / }).waitFor();
@@ -455,7 +457,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,mixedBoat",
+        );
         expect(seeded.ok()).toBe(true);
         const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
         if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");

@@ -116,7 +116,7 @@ The trade-offs:
 
 The decision above left a run's cadence fixed at creation, and that gap closed in the same week: a
 shop that adds Wednesday to its Monday-and-Thursday run should not have to build a second repeating
-trip, or delete one that already has divers on it. `updateSeriesCadence` changes the weekday set,
+trip, or delete one that already has divers on it. `editSeriesCadence` changes the weekday set,
 the interval, and the end date of a running series, from a disclosure on the trip page.
 
 **The anchor date never moves.** It is the cadence's phase, not its start: an every-other-week run

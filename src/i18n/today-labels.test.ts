@@ -30,7 +30,7 @@ import {
  *
  * The quiet-day pair is the whole-page-empty state (principles.md), and its
  * second half is the promise the desk group exists to keep honest — see
- * `spineIsQuiet` in `src/lib/today.ts`.
+ * `spineIsQuiet` in `src/features/today/today.ts`.
  *
  * Plural agreement in both locales is `count-agreement.test.ts`'s job; this
  * file asks only whether the English still says what it was written to say.

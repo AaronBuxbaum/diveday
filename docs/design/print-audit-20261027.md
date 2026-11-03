@@ -10,8 +10,6 @@ Staff review covered 73 route templates and inspected 125 pages from 67 unique P
 | --- | --- |
 | `/shop/[shopSlug]` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/boats` | Prior PDF reviewed |
-| `/shop/[shopSlug]/bookings/new` | Seeded or disposable PDF reviewed before final changes |
-| `/shop/[shopSlug]/bookings/new/[tripId]` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/courses` | Prior PDF reviewed |
 | `/shop/[shopSlug]/courses/[slug]/edit` | Prior PDF reviewed |
 | `/shop/[shopSlug]/dive-sites` | Seeded or disposable PDF reviewed before final changes |

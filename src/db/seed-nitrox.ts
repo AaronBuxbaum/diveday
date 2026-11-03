@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { bookings, importedPaymentHistory, nitroxCertifications, priorVisits } from "./schema";
+import { bookings, cards, importedPaymentHistory, priorVisits } from "./schema";
 import type { Cast } from "./seed-cast";
 import { dateAt } from "./seed-clock";
 import { reviewedBy } from "./seed-review";
@@ -21,8 +21,9 @@ export async function seedNitrox(
   reviewerId: string,
 ): Promise<void> {
   // Two verified EANx cards, one still pending review.
-  await db.insert(nitroxCertifications).values([
+  await db.insert(cards).values([
     {
+      kind: "nitrox" as const,
       shopId,
       personId: cast.priya.id,
       agency: "padi" as const,
@@ -32,6 +33,7 @@ export async function seedNitrox(
       reviewedAt: nowDate(),
     },
     {
+      kind: "nitrox" as const,
       shopId,
       personId: cast.tom.id,
       agency: "ssi" as const,
@@ -41,6 +43,7 @@ export async function seedNitrox(
       reviewedAt: nowDate(),
     },
     {
+      kind: "nitrox" as const,
       shopId,
       personId: cast.lena.id,
       agency: "padi" as const,
@@ -63,6 +66,7 @@ export async function seedNitrox(
       const person = cast.slot(index);
       if (!person) return null;
       return {
+        kind: "nitrox" as const,
         shopId,
         personId: person.id,
         agency: "padi" as const,
@@ -75,9 +79,10 @@ export async function seedNitrox(
       };
     })
     .filter((row) => row !== null);
-  if (duaneNitroxRows.length > 0) await db.insert(nitroxCertifications).values(duaneNitroxRows);
-  await db.insert(nitroxCertifications).values([
+  if (duaneNitroxRows.length > 0) await db.insert(cards).values(duaneNitroxRows);
+  await db.insert(cards).values([
     {
+      kind: "nitrox" as const,
       shopId,
       personId: cast.hana.id,
       agency: "padi" as const,

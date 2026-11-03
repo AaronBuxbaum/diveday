@@ -1,23 +1,28 @@
+import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { buttonClass } from "@/components/ui/button";
 
-/** Schedule on screen; a named shop rota when pinned to a noticeboard. */
+/**
+ * The Crew view's header, and its one door: Print, to the week's rota as a
+ * sheet of the shop's paper (`staffing/print`, issue #2745). The screen is
+ * never the paper; the noticeboard gets the sheet.
+ */
 export function CrewPageHeader({
-  shopName,
+  printHref,
   t,
 }: {
-  shopName: string;
-  t: (key: "schedule.boardTitle" | "schedule.views.crew") => string;
+  /** The rota sheet for the week on screen. */
+  printHref: string;
+  t: (key: "schedule.boardTitle" | "print.sheet.door") => string;
 }) {
   return (
-    <>
-      <div className="print:hidden">
-        <ShopPageHeader title={t("schedule.boardTitle")} />
-      </div>
-      <header className="mb-4 hidden border-b border-border pb-3 print:block">
-        <p className="text-sm font-medium">{shopName}</p>
-        <h1 className={SHELL_TITLE_CLASS}>{t("schedule.views.crew")}</h1>
-      </header>
-    </>
+    <ShopPageHeader
+      title={t("schedule.boardTitle")}
+      actions={
+        <Link href={printHref} className={buttonClass({ variant: "secondary", size: "sm" })}>
+          {t("print.sheet.door")}
+        </Link>
+      }
+    />
   );
 }

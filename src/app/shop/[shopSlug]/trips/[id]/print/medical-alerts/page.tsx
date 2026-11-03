@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { medicalAlertsForPrint } from "@/db/medical-alerts";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
+import { PACKET_PAPER } from "@/lib/print-sheets";
 import { isCrossSiteHeaders } from "@/lib/same-origin";
 import { requireShopSurface } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { AutoPrint } from "../../_components/AutoPrint";
-import { PacketSummary } from "../_components/PacketDocument";
+import { SheetDocument } from "../../../../print/_components/SheetDocument";
 import { PACKET_READY_SELECTOR, PacketReady, TripPacket } from "../_components/TripPacket";
 
 export const metadata: Metadata = {
@@ -33,9 +33,8 @@ export const instant = true;
  * here on the server, never from a page payload, and the print is the read:
  * `medicalAlertsForPrint` writes one `medical_alert_printed` line per diver
  * on the trail before the sheet renders, every print its own line. They
- * reach the composed manifest page under a symbol key no URL can carry
- * (`PRINTED_MEDICAL_ALERTS`). The default packet, the day's paper and the
- * dispute sheet never take them.
+ * reach the manifest sheet as an argument (`TripPacket`), never a URL value.
+ * The default packet, the day's paper and the dispute sheet never take them.
  *
  * Opened only by "Print with medical alerts" (a `window.open` from a form
  * submit, never a prefetching link). A navigation from another site is a 404
@@ -67,28 +66,42 @@ export default async function TripPrintWithMedicalAlertsPage({
   const packet = await TripPacket({
     shopSlug: resolvedParams.shopSlug,
     shop,
+    session,
     tripId,
-    actorPersonId: session.user.personId,
     locale,
     t,
     printedMedicalAlerts: printed.printed,
   });
   if (!packet) notFound();
 
+  // **Its own title, on the paper too** (domain review 1, S3): the sheet in
+  // the crew's hands says it carries the alerts and when they were printed,
+  // so it is never mistaken for the plain packet.
+  const title = (
+    <header className="mb-6 border-b border-border pb-4">
+      <h1 className={SHELL_TITLE_CLASS}>{t("manifest.medicalAlertsPrintedTitle")}</h1>
+      <p className="mt-2 text-muted">
+        {t("print.sheet.printed", {
+          date: formatDateTimeTz(printed.printed.printedAt, locale, shop.timezone),
+        })}
+      </p>
+    </header>
+  );
+
   return (
-    <div className="trip-print-bundle">
-      <AutoPrint readySelector={PACKET_READY_SELECTOR} />
-      <PacketSummary openingPageName={packet.openingPageName}>
-        <p className={EYEBROW_CLASS}>DiveDay</p>
-        <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("manifest.medicalAlertsPrintedTitle")}</h1>
-        <p className="mt-2 text-muted">
-          {t("print.sheet.printed", {
-            date: formatDateTimeTz(printed.printed.printedAt, locale, shop.timezone),
-          })}
-        </p>
-      </PacketSummary>
-      {packet.document}
+    <SheetDocument
+      backHref={shopPath(resolvedParams.shopSlug, "trips", tripId)}
+      paper={PACKET_PAPER}
+      brandDisplayFont={shop.brandDisplayFont}
+      backLabel={t("trips.tabs.divers")}
+      printLabel={t("print.sheet.door")}
+      readySelector={PACKET_READY_SELECTOR}
+      // The words reach the crew's sheet, never this screen (layer 4 security
+      // review, note 1): the screen says only what is printing and when.
+      printOnly={title}
+    >
+      {packet(title)}
       <PacketReady />
-    </div>
+    </SheetDocument>
   );
 }

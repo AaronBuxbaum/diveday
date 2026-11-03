@@ -128,7 +128,6 @@
     "calloutRecent": "Birthday {days, plural, one {# day} other {# days}} ago"
   },
   "printButton": {
-    "label": "Print / save PDF",
     "popupBlocked": "Your browser blocked the print window. Allow pop-ups, then try again."
   },
   "printPacket": {
@@ -695,5 +694,8 @@
     "billingNotAuthorized": "Billing is limited to the owner.",
     "dayBlowoutNotAuthorized": "Calling a whole day off is limited to owners, managers and captains. You can still call one departure from its own page.",
     "activityNotAuthorized": "The activity log is limited to owners and managers."
+  },
+  "addPanel": {
+    "close": "Close"
   }
 }

@@ -28,8 +28,15 @@ function component(file: string): string {
   return routeSource(import.meta.dirname, file);
 }
 
-/** The two signing doors, which moved out of the page into the route's `actions.ts`. */
-const ACTIONS = component("actions.ts");
+/**
+ * The signing form's two acts, which moved out of the page into the route's
+ * `signing.ts`: shared by the waiver link and the diver's thread (issue #2743).
+ */
+const ACTIONS = component("signing.ts");
+/** The form both doors draw (`waiverSigningForm`). */
+const FORM = component("WaiverSigningForm.tsx");
+/** The thread's own door onto the same form (issue #2743). */
+const THREAD = routeSource(`${import.meta.dirname}/../../ready/[token]/waiver`, "page.tsx");
 const RELEASE = component("WaiverRelease.tsx");
 const COMPLETED = component("WaiverCompleted.tsx");
 
@@ -113,10 +120,18 @@ describe("what this slice was forbidden to touch", () => {
  */
 describe("a held seat's release", () => {
   it("returns its held card before the signer on file is read", () => {
-    const held = positionOf('state.state === "held"');
+    // The signer is read only inside the form. The waiver link returns the held
+    // card before it draws it; the thread has no key on a held seat at all and
+    // redirects every state but "available" and "completed" before the form.
+    expect(FORM).toContain("getWaiverSignerOnFile(");
+    expect(FORM).toContain("guardianSignatureRequired(");
+    const held = SOURCE.indexOf('state.state === "held"');
     expect(held).toBeGreaterThan(-1);
-    expect(held).toBeLessThan(positionOf("getWaiverSignerOnFile("));
-    expect(held).toBeLessThan(positionOf("guardianSignatureRequired("));
+    expect(held).toBeLessThan(SOURCE.indexOf("waiverSigningForm({"));
+    const gate = THREAD.indexOf('state.state !== "available" && state.state !== "completed"');
+    expect(gate).toBeGreaterThan(-1);
+    expect(gate).toBeLessThan(THREAD.indexOf("waiverSigningForm({"));
+    for (const page of [SOURCE, THREAD]) expect(page).not.toContain("getWaiverSignerOnFile(");
   });
 });
 
@@ -129,12 +144,12 @@ describe("a held seat's release", () => {
  */
 describe("the diver's own locale", () => {
   it("is recorded only after the draft or the signature is taken", () => {
-    const draft = ACTIONS.slice(ACTIONS.indexOf("export async function saveWaiverDraftAction"));
+    const draft = ACTIONS.slice(ACTIONS.indexOf("export async function saveWaiverDraftThrough"));
     expect(draft.indexOf("if (savedDraft) {")).toBeGreaterThan(-1);
     expect(draft.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(
-      draft.indexOf("const savedDraft = await saveWaiverDraft("),
+      draft.indexOf("const savedDraft = await recordWaiverDraft("),
     );
-    const complete = ACTIONS.slice(ACTIONS.indexOf("export async function completeWaiverAction"));
+    const complete = ACTIONS.slice(ACTIONS.indexOf("export async function completeWaiverThrough"));
     expect(complete.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(
       complete.indexOf("if (!outcome.ok) {"),
     );

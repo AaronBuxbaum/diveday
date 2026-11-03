@@ -20,7 +20,7 @@ import { pageRoutes } from "./source-tree.mjs";
  * defect is not a missing boundary — it is a boundary that paints a picture of
  * a different page. `/s/[shopSlug]/reviews` painted the public schedule's day
  * headers and departure rows at `max-w-6xl` before snapping to a `max-w-4xl`
- * column of review cards; `/shop/[shopSlug]/dive-sites/new` painted the site
+ * column of review cards; the old new-site page painted the site
  * *library* before landing on a narrow form; `/shop/[shopSlug]/trips/[id]/print`
  * painted the Overview tab before landing on a four-document packet.
  *

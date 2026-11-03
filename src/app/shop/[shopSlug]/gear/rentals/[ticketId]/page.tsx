@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { FlashParams } from "@/components/FlashParams";
-import { PrintButton } from "@/components/PrintButton";
-import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
-import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { counterRentalWaiverStandings, getCounterRentalTicket } from "@/db/gear-counter-rentals";
-import { getOrder } from "@/db/orders";
+import { getCounterRentalTicketPage } from "@/db/counter-rental-ticket-page";
 import {
   gearItemKindLabel,
   gearPhaseLabel,
@@ -24,20 +19,23 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { reservationPhase } from "@/lib/gear";
+import { PACKET_PAPER } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeCountParam, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { SheetDocument } from "../../../print/_components/SheetDocument";
+import { sheetPrinted } from "../../../print/_components/ShopSheet";
 import { GearReturnPane } from "../../../trips/[id]/prep/_components/GearReturnPane";
 import { CounterRentalWaiverLine } from "../../_components/CounterRentalWaiverLine";
-import { RentalTicketReceipt } from "../../_components/RentalTicketReceipt";
+import { RentalSlip } from "../../_components/RentalSlip";
 import {
   checkOutCounterRentalAction,
   releaseCounterRentalAction,
   returnCounterRentalAction,
 } from "../actions";
-import { RentalTicketPayment } from "./_components/RentalTicketPayment";
-import { TankGas } from "./_components/TankGas";
+import { payableInvoiceUrl, RentalTicketPayment } from "./_components/RentalTicketPayment";
+import { TankGas, TankGasCorrections } from "./_components/TankGas";
 
 export const instant = true;
 
@@ -82,10 +80,12 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey; counted?
 
 /**
  * **A counter rental's ticket** (ADR 20260815-minimal-gear-register, amended
- * 2026-10-08): who has which tagged units and when they are due back, on screen
- * with the acts that move them, and on paper as the slip the person walks off
- * with. Its foot is the shared `RentalTicketReceipt`, which owns the terms,
- * signature and gear-receipt-not-waiver contract (CR-015).
+ * 2026-10-08): who has which tagged units and when they are due back. The slip
+ * the person walks off with is one sheet of the shop's paper (`RentalSlip`,
+ * issue #2745), and the acts that move the rental sit above it on the screen
+ * alone (`SheetDocument`'s `screen`), so what the counter reviews is what
+ * prints. The slip's foot is the shared `RentalTicketReceipt`, which owns the
+ * terms, signature and gear-receipt-not-waiver contract (CR-015).
  *
  * Unlike the trip slip it carries live rental operations, and what was charged
  * is read from the linked order, on screen and on paper: lines, total, paid or
@@ -112,16 +112,9 @@ export default async function CounterRentalTicketPage({
   const { db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const ticket = await getCounterRentalTicket(db, shop.id, ticketId);
-  if (!ticket) notFound();
-  const [billing, waivers] = await Promise.all([
-    ticket.orderId ? getOrder(db, shop.id, ticket.orderId) : null,
-    counterRentalWaiverStandings(db, {
-      shopId: shop.id,
-      timezone: shop.timezone,
-      personIds: [ticket.personId],
-    }),
-  ]);
+  const page = await getCounterRentalTicketPage(db, shop, ticketId);
+  if (!page) notFound();
+  const { ticket, billing, waivers } = page;
 
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const noticeCount = noticeCountParam(count);
@@ -134,80 +127,76 @@ export default async function CounterRentalTicketPage({
       ? formatCalendarDate(ticket.reservedFrom, locale)
       : `${formatCalendarDate(ticket.reservedFrom, locale)} – ${formatCalendarDate(ticket.reservedUntil, locale)}`;
 
-  return (
-    <StaffPage width="reading">
-      <FlashParams params={["notice", "count"]} />
-      <div id="rental-ticket">
-        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
-          <div>
-            <EyebrowBackLink href={shopPath(shopSlug, "gear")} className="print:hidden">
-              {t(STAFF_DESTINATION_LABEL_KEYS.gear)}
-            </EyebrowBackLink>
-            <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("gear.ticket.eyebrow")}</p>
-            <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{ticket.personName}</h1>
-            <p className="mt-1 text-muted">{window}</p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
-            {ticket.orderId ? (
-              <Link
-                href={shopPath(shopSlug, "orders", ticket.orderId)}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("counterRentals.ticket.order")}
-              </Link>
-            ) : null}
-            <PrintButton label={t("shared.printButton.label")} />
-          </div>
-        </header>
+  const payable = billing ? payableInvoiceUrl(billing.order) : null;
+  const gearHref = shopPath(shopSlug, "gear");
 
-        {banner ? (
-          <div className="print:hidden">
+  return (
+    <SheetDocument
+      backHref={gearHref}
+      paper={PACKET_PAPER}
+      brandDisplayFont={shop.brandDisplayFont}
+      backLabel={t(STAFF_DESTINATION_LABEL_KEYS.gear)}
+      printLabel={t("print.sheet.door")}
+      // Reached from Rent out and the register's Rentals view, never from a
+      // Print: the counter works the rental here first.
+      autoPrint={false}
+      doors={
+        <>
+          {ticket.orderId ? (
+            <Link
+              href={shopPath(shopSlug, "orders", ticket.orderId)}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("counterRentals.ticket.order")}
+            </Link>
+          ) : null}
+          {payable ? (
+            <a
+              href={payable}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("counterRentals.ticket.payment.open")}
+            </a>
+          ) : null}
+        </>
+      }
+      screen={
+        <>
+          <FlashParams params={["notice", "count"]} />
+          {banner ? (
             <StaffNoticeBanner tone={banner.tone}>
               {t(banner.key, { count: noticeCount ?? 0 })}
             </StaffNoticeBanner>
-          </div>
-        ) : null}
-
-        {/* **The person's waiver, informing only** (issue #2261, H-20261008-counter-rental-waiver-informs).
-            Screen only — the slip the person carries away is a receipt for
-            gear, not a note about them. */}
-        <CounterRentalWaiverLine
-          t={t}
-          status={waivers.get(ticket.personId)}
-          personId={ticket.personId}
-          ticketId={ticket.ticketId}
-          shopSlug={shopSlug}
-          locale={locale}
-          timezone={shop.timezone}
-          className="mt-6 print:hidden"
-        />
-
-        <section aria-labelledby="ticket-units-heading" className="mt-8">
-          <h2 id="ticket-units-heading" className={SECTION_TITLE_CLASS}>
-            {t("gear.ticket.unitsHeading")}
-          </h2>
-          {/* The trip slip's subgrid (K-505), with a third column on screen for
-              where each unit stands. */}
+          ) : null}
+          {/* **The person's waiver, informing only** (issue #2261, H-20261008-counter-rental-waiver-informs).
+              On the screen above the slip, never on it: the slip the person
+              carries away is a receipt for gear, not a note about them. */}
+          <CounterRentalWaiverLine
+            t={t}
+            status={waivers.get(ticket.personId)}
+            personId={ticket.personId}
+            ticketId={ticket.ticketId}
+            shopSlug={shopSlug}
+            locale={locale}
+            timezone={shop.timezone}
+          />
+          {/* Where each unit stands, which the slip never says. */}
           <ul
             className={sectionCardClass({
               padding: "none",
               className:
-                "mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 divide-y divide-border overflow-hidden sm:grid-cols-[max-content_minmax(0,1fr)_max-content]",
+                "grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 divide-y divide-border overflow-hidden",
             })}
           >
             {ticket.units.map((unit) => (
               <li
                 key={unit.reservationId}
-                className="col-span-2 grid grid-cols-subgrid items-baseline gap-y-1 px-4 py-3 sm:col-span-3 sm:px-5"
+                className="col-span-2 grid grid-cols-subgrid items-baseline px-4 py-3 sm:px-5"
               >
-                <span className="font-mono text-lg font-medium">{unit.label}</span>
-                <span className="text-muted">
-                  {gearItemKindLabel(t, unit.kind)}
-                  {unit.size ? ` · ${unit.size}` : ""}
-                  {/* The recorded gas prints on the ticket (#2257). */}
-                  {unit.fillO2Percent !== null ? ` · ${tankFillLabel(t, unit.fillO2Percent)}` : ""}
-                </span>
-                <span className="col-start-2 text-sm text-muted sm:col-start-auto print:hidden">
+                <span className="font-mono font-medium">{unit.label}</span>
+                <span className="text-sm text-muted">
                   {gearPhaseLabel(
                     t,
                     reservationPhase({ ...unit, reservedUntil: ticket.reservedUntil }, todayLocal),
@@ -217,66 +206,90 @@ export default async function CounterRentalTicketPage({
               </li>
             ))}
           </ul>
-          <TankGas t={t} ticketId={ticket.ticketId} units={ticket.units} />
-        </section>
-
-        {onWall.length > 0 || out.length > 0 ? (
-          <section className="mt-6 flex flex-col gap-4 print:hidden">
-            {onWall.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <form action={checkOutCounterRentalAction}>
-                  <input type="hidden" name="ticketId" value={ticket.ticketId} />
-                  <SubmitButton pendingLabel={t("gear.prep.handingOver")} className={buttonClass()}>
-                    {t("gear.prep.handOver")}
-                  </SubmitButton>
-                </form>
-                <form action={releaseCounterRentalAction}>
-                  <input type="hidden" name="ticketId" value={ticket.ticketId} />
-                  <SubmitButton
-                    pendingLabel={t("gear.unit.where.releasing")}
-                    className={buttonClass({ variant: "ghost" })}
-                  >
-                    {t("gear.unit.where.release")}
-                  </SubmitButton>
-                </form>
-              </div>
-            ) : null}
-            {out.length > 0 ? (
-              <GearReturnPane
-                fields={{ ticketId: ticket.ticketId }}
-                action={returnCounterRentalAction}
-                labels={{
-                  allGood: t("gear.prep.returnAllGood"),
-                  fitAdjusted: t("gear.prep.returnFitAdjusted"),
-                  serviceConcern: t("gear.prep.returnServiceConcern"),
-                  cancelConcern: t("gear.prep.returnCancelConcern"),
-                  noteLabel: t("gear.prep.returnNoteLabel"),
-                  notePlaceholder: t("gear.prep.returnNotePlaceholder"),
-                }}
-                bench={{
-                  legend: t("gear.prep.returnPullToBench"),
-                  units: out.map((unit) => ({ id: unit.gearItemId, label: unit.label })),
-                }}
-              >
-                {/* Optional, and the only count the dive clock gets for a
-                    counter rental: blank counts nothing (ADR
-                    20260815-minimal-gear-register, amendment 2026-10-08). */}
-                <Field label={t("counterRentals.ticket.divesLabel")} className="max-w-48">
-                  <input
-                    type="number"
-                    name="dives"
-                    min={0}
-                    max={200}
-                    step={1}
-                    inputMode="numeric"
-                    className={controlClass}
-                  />
-                </Field>
-              </GearReturnPane>
-            ) : null}
-          </section>
-        ) : null}
-
+          <TankGasCorrections t={t} ticketId={ticket.ticketId} units={ticket.units} />
+          {onWall.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <form action={checkOutCounterRentalAction}>
+                <input type="hidden" name="ticketId" value={ticket.ticketId} />
+                <SubmitButton pendingLabel={t("gear.prep.handingOver")} className={buttonClass()}>
+                  {t("gear.prep.handOver")}
+                </SubmitButton>
+              </form>
+              <form action={releaseCounterRentalAction}>
+                <input type="hidden" name="ticketId" value={ticket.ticketId} />
+                <SubmitButton
+                  pendingLabel={t("gear.unit.where.releasing")}
+                  className={buttonClass({ variant: "ghost" })}
+                >
+                  {t("gear.unit.where.release")}
+                </SubmitButton>
+              </form>
+            </div>
+          ) : null}
+          {out.length > 0 ? (
+            <GearReturnPane
+              fields={{ ticketId: ticket.ticketId }}
+              action={returnCounterRentalAction}
+              labels={{
+                allGood: t("gear.prep.returnAllGood"),
+                fitAdjusted: t("gear.prep.returnFitAdjusted"),
+                serviceConcern: t("gear.prep.returnServiceConcern"),
+                cancelConcern: t("gear.prep.returnCancelConcern"),
+                noteLabel: t("gear.prep.returnNoteLabel"),
+                notePlaceholder: t("gear.prep.returnNotePlaceholder"),
+              }}
+              bench={{
+                legend: t("gear.prep.returnPullToBench"),
+                units: out.map((unit) => ({ id: unit.gearItemId, label: unit.label })),
+              }}
+            >
+              {/* Optional, and the only count the dive clock gets for a
+                  counter rental: blank counts nothing (ADR
+                  20260815-minimal-gear-register, amendment 2026-10-08). */}
+              <Field label={t("counterRentals.ticket.divesLabel")} className="max-w-48">
+                <input
+                  type="number"
+                  name="dives"
+                  min={0}
+                  max={200}
+                  step={1}
+                  inputMode="numeric"
+                  className={controlClass}
+                />
+              </Field>
+            </GearReturnPane>
+          ) : null}
+        </>
+      }
+    >
+      <RentalSlip
+        shop={shop}
+        shopSlug={shopSlug}
+        printed={sheetPrinted(t, nowDate(), locale, shop.timezone)}
+        holder={ticket.personName}
+        line={window}
+        units={ticket.units.map((unit) => ({
+          id: unit.reservationId,
+          label: unit.label,
+          detail: [
+            gearItemKindLabel(t, unit.kind),
+            unit.size,
+            // The recorded gas prints on the ticket (#2257).
+            unit.fillO2Percent !== null ? tankFillLabel(t, unit.fillO2Percent) : null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        }))}
+        dueBack={t("gear.ticket.dueBack", {
+          date: formatCalendarDate(ticket.reservedUntil, locale),
+        })}
+        terms={shop.rentalTerms}
+        t={t}
+        // Who to call when it breaks, or when it will be late: the slip is the
+        // one page the person carries away.
+        foot={shop.contactPhone}
+      >
+        <TankGas t={t} units={ticket.units} />
         {billing ? (
           <RentalTicketPayment
             order={billing.order}
@@ -285,18 +298,7 @@ export default async function CounterRentalTicketPage({
             t={t}
           />
         ) : null}
-
-        <p className="mt-6 text-lg">
-          {t("gear.ticket.dueBack", { date: formatCalendarDate(ticket.reservedUntil, locale) })}
-        </p>
-        <RentalTicketReceipt terms={shop.rentalTerms} t={t} />
-        {/* Who to call when it breaks, or when it will be late — the slip is
-            the one page the person carries away. */}
-        <p className="mt-8 border-t border-border pt-4 text-sm text-muted">
-          {shop.name}
-          {shop.contactPhone ? ` · ${shop.contactPhone}` : ""}
-        </p>
-      </div>
-    </StaffPage>
+      </RentalSlip>
+    </SheetDocument>
   );
 }

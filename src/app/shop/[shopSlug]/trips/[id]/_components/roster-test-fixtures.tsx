@@ -89,7 +89,7 @@ export function readinessRow(status: "ready" | "blocked", blockers: unknown[] = 
     readiness: { status, blockers },
     paymentStatus: "paid",
     paymentProvider: null,
-    depthAdvisory: null,
+    advisories: [],
   } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
 }
 
@@ -97,14 +97,18 @@ export function readinessRow(status: "ready" | "blocked", blockers: unknown[] = 
 export function deepRow() {
   return {
     ...readinessRow("blocked", [{ code: "certification_missing", params: undefined }]),
-    depthAdvisory: {
-      status: "exceeds",
-      limitDepth: 18,
-      siteDepth: 30,
-      unit: "meters",
-      basis: "certification",
-      level: "open_water",
-    },
+    advisories: [
+      {
+        code: "depth_exceeds_ceiling",
+        params: {
+          limitDepth: 18,
+          siteDepth: 30,
+          unit: "meters",
+          basis: "certification",
+          level: "open_water",
+        },
+      },
+    ],
   } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
 }
 

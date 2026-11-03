@@ -22,6 +22,9 @@ import { violatesUniqueIndex } from "./query-helpers";
 import { people, preDepartureCheckEvents, preDepartureChecklistItems, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
+/** Who may edit the checklist: its page's gate (`requireShopSurface`'s `allow`). */
+export { canPersonManageSafetyChecklist };
+
 export type ChecklistItem = {
   id: string;
   label: string;

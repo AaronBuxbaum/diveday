@@ -47,7 +47,7 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   const stamp = Date.now();
   const diver = `Minor E2E Diver ${stamp}`;
 
-  await page.goto(`/shop/${SHOP}/divers/new`);
+  await page.goto(`/shop/${SHOP}/divers?add=1`);
   await page.getByLabel("Full name").fill(diver);
   await page.getByLabel("Email").fill(`minor-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add diver" }).click();
@@ -164,7 +164,9 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   // both, so the one row this flow needs is seeded rather than built: Lena
   // Fischer, thirteen, with her release taken back out from under her. The
   // seat comes back by id because the queue addresses its departure that way.
-  const seeded = await request.post("/api/test/seed-trouble-states?blockedMinor=1");
+  const seeded = await request.post(
+    "/api/test/seed-trouble-states?facts=troublePanels,blockedMinor",
+  );
   expect(seeded.ok()).toBe(true);
   const { blockedMinor } = (await seeded.json()) as {
     blockedMinor?: { bookingId: string; tripId: string };
@@ -261,7 +263,7 @@ test("the diver record refuses a namesake co-signer and offers no tick", async (
   const stamp = Date.now();
   const diver = `Namesake E2E Diver ${stamp}`;
 
-  await page.goto(`/shop/${SHOP}/divers/new`);
+  await page.goto(`/shop/${SHOP}/divers?add=1`);
   await page.getByLabel("Full name").fill(diver);
   await page.getByLabel("Email").fill(`namesake-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add diver" }).click();

@@ -9,7 +9,7 @@ import {
   getHelpRequestForBooking,
   listHandledHelpRequests,
   listTodayHelpRequests,
-  saveHelpRequest,
+  recordHelpRequest,
   undoHelpRequestCompletion,
 } from "./help-requests";
 import { getReadyPageData } from "./ready";
@@ -73,7 +73,7 @@ async function requestedHelp(db: AppDb, shopId: string) {
   if (!seat || !helper || !actor) throw new Error("expected seeded seat, crew and other staff");
   await withActiveAccount(db, actor.person.id);
   const now = new Date(trip.startsAt.getTime() - 60 * 60 * 1000);
-  const saved = await saveHelpRequest(db, {
+  const saved = await recordHelpRequest(db, {
     shopId,
     bookingId: seat.booking.id,
     kind: "carry_gear",
@@ -137,7 +137,7 @@ describe("day-of help requests", () => {
     await withActiveAccount(db, actor.person.id);
     const now = new Date(trip.startsAt.getTime() - 60 * 60 * 1000);
 
-    const saved = await saveHelpRequest(db, {
+    const saved = await recordHelpRequest(db, {
       shopId: shop.id,
       bookingId: seat.booking.id,
       kind: "carry_gear",
@@ -216,7 +216,7 @@ describe("day-of help requests", () => {
     );
 
     expect(
-      await saveHelpRequest(db, {
+      await recordHelpRequest(db, {
         shopId: shop.id,
         bookingId: seat.booking.id,
         kind: "none",
@@ -241,7 +241,7 @@ describe("day-of help requests", () => {
     if (!seat || !crew || !actor) throw new Error("expected seeded seat and assigned staff");
     await withActiveAccount(db, actor.person.id);
     const now = new Date(trip.startsAt.getTime() - 60 * 60 * 1000);
-    const saved = await saveHelpRequest(db, {
+    const saved = await recordHelpRequest(db, {
       shopId: shop.id,
       bookingId: seat.booking.id,
       kind: "first_timer",
@@ -332,7 +332,7 @@ describe("day-of help requests", () => {
     );
     if (!seat || !crew || !nonCrew) throw new Error("expected seeded crew and non-crew staff");
     await withActiveAccount(db, crew.person.id);
-    const saved = await saveHelpRequest(db, {
+    const saved = await recordHelpRequest(db, {
       shopId: shop.id,
       bookingId: seat.booking.id,
       kind: "carry_gear",
@@ -377,7 +377,7 @@ describe("day-of help requests", () => {
     if (!seat || !helper || !actor) throw new Error("expected seeded seat and assigned staff");
     await withActiveAccount(db, actor.person.id);
 
-    const saved = await saveHelpRequest(db, {
+    const saved = await recordHelpRequest(db, {
       shopId: shop.id,
       bookingId: seat.booking.id,
       kind: "carry_gear",

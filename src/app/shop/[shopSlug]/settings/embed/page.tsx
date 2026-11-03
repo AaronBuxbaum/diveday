@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { canPersonManageShopSettings } from "@/db/authz";
-import { listActiveCourses } from "@/db/courses";
-import { pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { canPersonManageShopSettings, getEmbedSettingsPage } from "@/db/embed-settings-page";
 import { localeEndonym } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { DIVER_LOCALES } from "@/i18n/settings";
@@ -36,7 +34,7 @@ export default async function EmbedSettingsPage({
   params: Promise<{ shopSlug: string }>;
 }) {
   const { shopSlug } = await params;
-  const { session, shop, db } = await requireShopSurface(shopSlug, {
+  const { shop, db } = await requireShopSurface(shopSlug, {
     allow: canPersonManageShopSettings,
     refusal: { notice: "settings-not-authorized" },
   });
@@ -46,7 +44,6 @@ export default async function EmbedSettingsPage({
   const header = (
     <ShopPageHeader
       eyebrow={t("settings.main.eyebrow")}
-      eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
       title={t("settings.embed.title")}
       description={origin ? t("settings.embed.description") : undefined}
       descriptionIsCaption
@@ -62,11 +59,7 @@ export default async function EmbedSettingsPage({
       </main>
     );
   }
-  const { trips } = await pagedUpcomingTripsWithCounts(db, shop.id, {
-    now: nowDate(),
-    limit: 30,
-    publicOnly: true,
-  });
+  const { trips, courses } = await getEmbedSettingsPage(db, shop.id, nowDate());
   const tripChoices = trips.map((trip) => {
     const parts = formatDayParts(trip.startsAt, locale, shop.timezone);
     return {
@@ -78,7 +71,7 @@ export default async function EmbedSettingsPage({
   // the roster's progression order rather than alphabetically — the same order
   // `listActiveCourses` gives every other surface, so a shop picking "Open
   // Water" finds it where it always is.
-  const courseChoices = (await listActiveCourses(db, shop.id)).map((course) => ({
+  const courseChoices = courses.map((course) => ({
     id: course.slug,
     label: course.title,
   }));

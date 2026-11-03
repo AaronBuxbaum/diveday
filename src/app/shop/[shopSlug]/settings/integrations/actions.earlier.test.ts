@@ -7,7 +7,6 @@ import {
   integrationDeliveries,
   shopIntegrations,
   shops,
-  tips,
 } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -19,6 +18,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { insertTip } from "@/test/tips";
 
 const fileCtx = fileScopedShopContext();
 
@@ -72,9 +72,8 @@ async function context() {
   const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
   if (!booking) throw new Error("seeded booking missing");
   // The demo data has checkouts and tips of its own; push them out of the window.
-  await db.update(tips).set({ completedAt: new Date(0) });
   await db.update(bookingCheckouts).set({ completedAt: new Date(0) });
-  await db.insert(tips).values({
+  await insertTip(db, {
     shopId: shop.id,
     bookingId: booking.id,
     status: "paid",

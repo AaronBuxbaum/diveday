@@ -9,12 +9,6 @@
   "emailLabel": "Correo",
   "phoneLabel": "Teléfono",
   "optionalHint": "(opcional)",
-  "noMatchesHeading": "Nadie registrado con ese nombre",
-  "noMatchesAction": "Introdúcelo a mano",
-  "addDiver": "Agregar buceador",
-  "addDiverAction": "Agregar buceador",
-  "addDiverPrompt": "¿No aparece?",
-  "addNewDiverAction": "Agregar buceador",
   "busy": "Alguien más está reservando esta salida ahora mismo. Vuelve a presionar.",
   "tripSummary": "{title} · {date} · {time} · reservas: {booked} de {capacity}"
 }

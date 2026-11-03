@@ -227,3 +227,11 @@
   empty credential file but does not judge whether cards answered the role at the mark. Erasure removes
   version history and boarding observations.
   Crew assignments and other facts still read as the shop's records stand today.
+- **Undo offer** — what a reversible staff removal (a card archived, a note deleted, a diver
+  removed) lands with: a kind and the ids its way back needs, carried in the landing's query
+  (`undo=diver-card&undoPerson=…`) and posted back unchanged by the toast's Undo or the record's
+  restore card to the one `undoAction`. Each kind's inverse is a row of the undo registry
+  (`src/app/actions/undo-registry.ts`), never a server action of its own, and re-runs the live
+  gate of the removal it reverses. The kinds and payloads are in `src/lib/undo.ts`. Not a
+  **held send**: a removal has already happened, and Undo puts it back; a held send has not left
+  yet, and Undo stops it.

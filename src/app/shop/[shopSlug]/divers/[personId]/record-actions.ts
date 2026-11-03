@@ -3,13 +3,14 @@ import { z } from "zod";
 import { anonymizeDiver } from "@/db/anonymize";
 import { canPersonDeleteDiver, canPersonErasePersonalData, canPersonMergeDiver } from "@/db/authz";
 import { DIVER_MERGE_FIELDS, type DiverMergeChoices, mergeDiverRecords } from "@/db/diver-merge";
-import { deleteDiver, getDiverProfile, restoreDiver } from "@/db/divers";
+import { deleteDiver, getDiverProfile } from "@/db/divers";
 import { eraseGuardianEmail } from "@/db/guardian-erasure";
 import { getMergedIntoPersonId } from "@/db/people";
 import { countCrewDeparturesNotHome } from "@/db/trips";
 import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { undoParams } from "@/lib/undo";
 import { uuidParam } from "@/lib/uuid";
 import { backTo, requireDiverActionContext } from "./action-helpers";
 
@@ -118,47 +119,14 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
     roster,
     // No hand-rolled `encodeURIComponent` any more — `noticeUrl` escapes every
     // value it merges.
-    deleted ? noticeUrl(roster, "deleted", { deleted: personId }) : base,
+    deleted
+      ? noticeUrl(
+          roster,
+          "deleted",
+          undoParams({ undo: "diver-removal", undoPerson: personId, undoFrom: "roster" }) ?? {},
+        )
+      : base,
   );
-}
-
-/**
- * Put a removed diver back on the active roster, from their own record.
- *
- * The roster has its own copy of this bound to the undo toast; this is the one
- * that still works tomorrow, once the toast is long gone and the only way back
- * is the `?filter=removed` view and the record it links to. Same owner/manager
- * gate as the removal it reverses (H-20260724-staff-role-reach, ADR 20260724-role-authorization),
- * re-read from the database like every other mutation on this page.
- *
- * `restoreDiver` refuses rather than clobbers when an active diver has since
- * claimed this one's email (CR-008), and refuses an erased record outright —
- * both land here as `restore-refused`, which says what to do about it.
- */
-export async function restorePersonAction(shopSlug: string, personId: string, _formData: FormData) {
-  const context = await requireDiverActionContext(
-    shopSlug,
-    personId,
-    "not-authorized-delete",
-    "restore",
-  );
-  personId = context.personId;
-  const { base, db, staff } = context;
-  if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-delete", "restore"));
-    return;
-  }
-  const restored = await restoreDiver(db, staff.user.shopId, personId);
-  // The two outcomes cannot land in the same place. A refusal leaves the diver
-  // removed, so the restore card — and its `#removed-heading` anchor — are both
-  // still there to receive it. Success removes both: naming the form would put
-  // the confirmation in a card that no longer renders, and the anchor would
-  // scroll to a heading that no longer exists. Success goes to the page notice.
-  if (restored) {
-    revalidateAndRedirect(base, backTo(base, "restored"));
-    return;
-  }
-  revalidateAndRedirect(base, backTo(base, "restore-refused", "restore"));
 }
 
 /**

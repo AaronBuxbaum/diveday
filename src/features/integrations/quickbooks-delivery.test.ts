@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { enqueueIntegrationEvent } from "@/db/integration-events";
-import { saveShopIntegration, upsertIntegrationSyncRecord } from "@/db/integrations";
+import { recordShopIntegration, upsertIntegrationSyncRecord } from "@/db/integrations";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { IntegrationDeliveryDeadlineError } from "./delivery-deadline";
 import { deliverQuickBooksEvent } from "./quickbooks";
@@ -31,7 +31,7 @@ async function connectedIntegration(
   db: Awaited<ReturnType<typeof seededShopContext>>["db"],
   shopId: string,
 ) {
-  const integration = await saveShopIntegration(db, {
+  const integration = await recordShopIntegration(db, {
     shopId,
     provider: "quickbooks",
     credentials: {
@@ -202,7 +202,7 @@ describe("deliverQuickBooksEvent — refund receipts", () => {
   it("returns a retryable failure when token refresh hits its request timeout", async () => {
     const { db, shop } = ctx;
     const connected = await connectedIntegration(db, shop.id);
-    const expired = await saveShopIntegration(db, {
+    const expired = await recordShopIntegration(db, {
       shopId: shop.id,
       provider: "quickbooks",
       credentials: { accessToken: "expired", refreshToken: "refresh", expiresAt: 0 },

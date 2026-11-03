@@ -129,10 +129,7 @@ export function CourseFormsSection({
                   />
                   <ResignImpact impact={resign.get(form.id)} t={t} />
                   <div className="flex flex-wrap items-center gap-3">
-                    <SubmitButton
-                      pendingLabel={t("words.busy.saving")}
-                      className={buttonClass()}
-                    >
+                    <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                       {t("waiversStaff.courseForms.save")}
                     </SubmitButton>
                     <InlineConfirm
@@ -168,10 +165,7 @@ export function CourseFormsSection({
           <form action={saveCourseFormAction} className="flex flex-col gap-5">
             <CourseFormFields idPrefix="new" title="" body="" t={t} />
             <div>
-              <SubmitButton
-                pendingLabel={t("words.busy.saving")}
-                className={buttonClass()}
-              >
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("waiversStaff.courseForms.create")}
               </SubmitButton>
             </div>

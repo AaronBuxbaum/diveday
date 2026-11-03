@@ -224,10 +224,7 @@ export async function DivePackagesSection({
             </select>
           </Field>
           <FieldActions>
-            <SubmitButton
-              pendingLabel={t("words.busy.adding")}
-              className={buttonClass()}
-            >
+            <SubmitButton pendingLabel={t("words.busy.adding")} className={buttonClass()}>
               {t("settings.main.divePackages.submit")}
             </SubmitButton>
           </FieldActions>

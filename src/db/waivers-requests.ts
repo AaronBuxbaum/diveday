@@ -81,22 +81,67 @@ export type IssueWaiverOutcome =
  */
 export async function issueWaiverRequest(
   db: DbExecutor,
-  input: {
-    shopId: string;
-    bookingId?: string;
-    personId?: string;
-    expectedPersonId?: string;
-    expectedTripId?: string;
-    now?: Date;
-  },
+  input: IssueWaiverInput,
 ): Promise<IssueWaiverOutcome> {
+  const outcome = await issueWaiverRecord(db, input, false);
+  if (outcome.ok && outcome.token === null)
+    throw new Error("issueWaiverRequest: a link issue kept a record without its token");
+  return outcome as IssueWaiverOutcome;
+}
+
+type IssueWaiverInput = {
+  shopId: string;
+  bookingId?: string;
+  personId?: string;
+  expectedPersonId?: string;
+  expectedTripId?: string;
+  now?: Date;
+};
+
+export type OpenThreadWaiverOutcome =
+  | { ok: true; recordId: string }
+  | Extract<IssueWaiverOutcome, { ok: false }>;
+
+/**
+ * **Open the seat's release in the diver's own thread** (issue #2743).
+ *
+ * The caller has verified the readiness capability for `bookingId`; the
+ * release is then signed on that same link (`/ready/<token>/waiver`), so no
+ * waiver link is handed to anyone and the token this mints, when it mints, is
+ * never read back.
+ *
+ * The same rules as `issueWaiverRequest` decide whether there is anything to
+ * sign and on which terms, with one difference: a live record on the current
+ * terms is kept **whether or not its token can be read back**. A thread does
+ * not need the token, so a deployment without a sealing key does not supersede
+ * the link a staffer already sent, or the draft typed into it.
+ */
+export async function openWaiverInThread(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; now?: Date },
+): Promise<OpenThreadWaiverOutcome> {
+  const outcome = await issueWaiverRecord(db, input, true);
+  return outcome.ok ? { ok: true, recordId: outcome.recordId } : outcome;
+}
+
+async function issueWaiverRecord(
+  db: DbExecutor,
+  input: IssueWaiverInput,
+  keepLiveRecord: boolean,
+): Promise<
+  IssueWaiverOutcome | { ok: true; token: null; expiresAt: Date; recordId: string; reused: true }
+> {
   if (!input.bookingId && !input.personId) return { ok: false, reason: "person_not_found" };
   const token = createWaiverToken();
   const tokenHash = hashWaiverToken(token);
   const keyResult = secretKeyFromEnvironment();
   const sealingKey = keyResult.status === "ok" ? keyResult.key : null;
 
-  const issue = async (tx: DbExecutor): Promise<IssueWaiverOutcome> => {
+  const issue = async (
+    tx: DbExecutor,
+  ): Promise<
+    IssueWaiverOutcome | { ok: true; token: null; expiresAt: Date; recordId: string; reused: true }
+  > => {
     await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
     const candidate = input.bookingId
       ? await tx
@@ -304,20 +349,36 @@ export async function issueWaiverRequest(
     }
 
     // The link this diver already holds, if it is still one they can sign.
-    const live = sealingKey
-      ? current.find(
-          (record) =>
-            record.status === "pending" &&
-            record.supersededAt === null &&
-            record.expiresAt > now &&
-            record.templateId === template.id &&
-            record.templateVersion === template.version &&
-            record.templateGeneration === template.materialGeneration &&
-            record.tokenSealed,
-        )
-      : undefined;
+    // A thread signs by record, not by token, so it keeps any live record.
+    const live =
+      sealingKey || keepLiveRecord
+        ? current.find(
+            (record) =>
+              record.status === "pending" &&
+              record.supersededAt === null &&
+              record.expiresAt > now &&
+              record.templateId === template.id &&
+              record.templateVersion === template.version &&
+              record.templateGeneration === template.materialGeneration &&
+              (keepLiveRecord || record.tokenSealed),
+          )
+        : undefined;
     const reusedToken =
       live?.tokenSealed && sealingKey ? openSecret(live.tokenSealed, sealingKey) : null;
+    if (live && keepLiveRecord) {
+      const refreshedExpiry = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
+      await tx
+        .update(waiverRecords)
+        .set({ expiresAt: refreshedExpiry })
+        .where(eq(waiverRecords.id, live.id));
+      return {
+        ok: true,
+        token: null,
+        expiresAt: refreshedExpiry,
+        recordId: live.id,
+        reused: true,
+      };
+    }
     if (live && reusedToken) {
       // Same record, same URL, fresh clock: whoever was just handed this link
       // gets the full window to sign, and the copy already pasted somewhere

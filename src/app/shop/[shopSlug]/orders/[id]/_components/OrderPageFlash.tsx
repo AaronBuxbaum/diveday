@@ -1,6 +1,6 @@
 import { FlashParams } from "@/components/FlashParams";
 import { uuidParam } from "@/lib/uuid";
-import { ClearCreatedInvoice } from "../../new/ClearCreatedInvoice";
+import { ClearCreatedInvoice } from "../../_components/ClearCreatedInvoice";
 
 export function OrderPageFlash({ scope, receipt }: { scope: string; receipt?: string }) {
   const completion = uuidParam(receipt);

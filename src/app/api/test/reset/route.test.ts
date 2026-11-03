@@ -19,6 +19,7 @@ const { purgeMintedDemoShops } = await import("@/db/seed");
 const { resetDemoFromSnapshot } = await import("@/db/demo-reset-snapshot");
 const { getShopBySlug } = await import("@/db/shops");
 const { POST } = await import("./route");
+const { moveServerClock } = await import("@/lib/test-clock");
 
 // `execute` is what the route reclaims dead tuples through; a bare object
 // would make that call throw into the route's own catch and the assertion
@@ -101,21 +102,30 @@ describe("POST /api/test/reset — auth gate (specialist-optimization-audit-2026
     );
   });
 
-  it("vacuums only the tables a replay wrote", async () => {
+  it("puts the clock back where the server booted, ahead of the rows", async () => {
+    vi.stubEnv("DIVEDAY_CLOCK", "2026-07-21T13:30:00.000Z");
+    moveServerClock(new Date("2026-07-21T23:00:00.000Z"));
+    expect(process.env.DIVEDAY_CLOCK).toBe("2026-07-21T23:00:00.000Z");
     await POST(resetRequest(`Bearer ${secret}`));
-    expect(vacuumed()).toBe('vacuum public."bookings", public."trips"');
+    expect(process.env.DIVEDAY_CLOCK).toBe("2026-07-21T13:30:00.000Z");
+    expect(process.env.DIVEDAY_CLOCK_BOOT).toBeUndefined();
   });
 
-  it("vacuums everything after a real reset or a purge of minted shops", async () => {
+  it("vacuums and analyzes only the tables a replay wrote", async () => {
+    await POST(resetRequest(`Bearer ${secret}`));
+    expect(vacuumed()).toBe('vacuum (analyze) public."bookings", public."trips"');
+  });
+
+  it("vacuums and analyzes everything after a real reset or a purge of minted shops", async () => {
     vi.mocked(resetDemoFromSnapshot).mockResolvedValue({ mode: "captured", wrote: null });
     await POST(resetRequest(`Bearer ${secret}`));
-    expect(vacuumed()).toBe("vacuum");
+    expect(vacuumed()).toBe("vacuum (analyze)");
 
     FAKE_DB.execute.mockClear();
     vi.mocked(resetDemoFromSnapshot).mockResolvedValue({ mode: "snapshot", wrote: ["trips"] });
     vi.mocked(purgeMintedDemoShops).mockResolvedValue(2);
     await POST(resetRequest(`Bearer ${secret}`));
-    expect(vacuumed()).toBe("vacuum");
+    expect(vacuumed()).toBe("vacuum (analyze)");
   });
 
   it("leaves a shop that is not a demo alone", async () => {

@@ -330,14 +330,13 @@ describe("source sweeps", () => {
    * the staff rental toggles, the ready page's re-entry answers and a
    * departure's required specialties (`mt-3`), each
    * touched by the batch that moved its boxes (K-72 review). The rule's own
-   * wording is that the rest follow as they are touched: the three below have
+   * wording is that the rest follow as they are touched: the two below have
    * not been, and a file leaves this list the day it is. A bordered
    * fieldset's legend (`legendClass`, the notch in its border) is another
    * shape and not this rule's.
    */
   it("captions a group of choices with ChoiceFieldset, not a hand-spelled legend", () => {
     const notYetTouched = new Set([
-      "src/app/shop/[shopSlug]/orders/new/page.tsx",
       "src/components/StarRatingInput.tsx",
       "src/components/RepeatFields.tsx",
     ]);

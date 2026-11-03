@@ -9,7 +9,7 @@ import {
   markMissingSubjectFound,
   openMissingAlerts,
   raiseMissingDiverAlert,
-  saveIncidentDraft,
+  recordIncidentDraft,
   startIncidentReport,
 } from "./incident-reports";
 import { complete, OTHER_SHOP, OTHER_TRIP } from "./incident-reports-test-fixtures";
@@ -230,7 +230,7 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
     const { db, f, target } = await raisedThenBack();
     const writer = { ...target, actorPersonId: f.crew.id };
     await markMissingDiverFound(db, { ...writer, provider: recorder().provider });
-    await saveIncidentDraft(db, { ...writer, fields: { ...complete, kind: "missing_diver" } });
+    await recordIncidentDraft(db, { ...writer, fields: { ...complete, kind: "missing_diver" } });
     expect(await fileIncidentReport(db, { ...writer, provider: recorder().provider })).toEqual({
       ok: true,
     });

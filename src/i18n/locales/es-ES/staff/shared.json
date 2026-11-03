@@ -128,7 +128,6 @@
     "calloutRecent": "Cumpleaños hace {days, plural, one {# día} other {# días}}"
   },
   "printButton": {
-    "label": "Imprimir / guardar PDF",
     "popupBlocked": "El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes y vuelve a intentarlo."
   },
   "printPacket": {
@@ -695,5 +694,8 @@
     "billingNotAuthorized": "La facturación es solo para el propietario.",
     "dayBlowoutNotAuthorized": "Cancelar un día entero está limitado a propietarios, gerentes y capitanes. Aún puedes cancelar una salida desde su propia página.",
     "activityNotAuthorized": "El registro de actividad está limitado a propietarios y gerentes."
+  },
+  "addPanel": {
+    "close": "Cerrar"
   }
 }

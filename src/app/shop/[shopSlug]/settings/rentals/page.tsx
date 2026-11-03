@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { canPersonManageRentalSettings } from "@/db/authz";
-import { getDb } from "@/db/client";
-import { countFitsAskingForDroppedItems } from "@/db/rental-fit";
+import { canPersonManageRentalSettings, getRentalSettingsPage } from "@/db/rental-settings-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
@@ -31,19 +29,18 @@ export default async function RentalItemsSettingsPage({
 }) {
   const { shopSlug } = await params;
   const { notice } = await searchParams;
-  const { shop } = await requireShopSurface(shopSlug, {
+  const { db, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonManageRentalSettings,
     refusal: { notice: "settings-not-authorized" },
   });
-  const [locale, droppedFits] = await Promise.all([
+  const [locale, { droppedFits }] = await Promise.all([
     requestLocale(shop.defaultLocale),
-    countFitsAskingForDroppedItems(await getDb(), shop.id, shop.rentalItems),
+    getRentalSettingsPage(db, shop),
   ]);
   const t = staffTranslator(locale);
 
   return (
     <SettingsEditorPage
-      shopSlug={shopSlug}
       t={t}
       title={t("settings.main.rentals.heading")}
       description={t("settings.main.rentals.detail")}

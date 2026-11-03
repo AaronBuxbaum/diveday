@@ -68,14 +68,12 @@ export async function saveCertificationFromReady(token: string, formData: FormDa
 /**
  * A specialty card the trip demands — Deep, Wreck, Night, Drysuit.
  *
- * The number is **required**, unlike the level declaration a booking form takes:
- * `specialty_certifications.identifier` is `NOT NULL`, because a specialty is a
- * yes/no gate on a materially riskier dive and there is no version of one that
- * is only a claim with no number behind it.
+ * The number is **required**, unlike the level declaration a booking form takes,
+ * because a specialty is a yes/no gate on a materially riskier dive and there is
+ * no version of one that is only a claim with no number behind it.
  *
- * `selfDeclaredAt` is what makes this form safe to offer at all. It is why
- * `specialty_certifications` gained the column on 2026-08-20: without it a row a
- * diver typed is byte-for-byte a staff transcription, and
+ * `selfDeclaredAt` is what makes this form safe to offer at all: without it a
+ * specialty card a diver typed is byte-for-byte a staff transcription, and
  * `reviewSpecialtyCertification`'s ordinary one-tap confirm would promote an
  * invented number to `verified` — the state that clears a depth gate past 18 m.
  * With it, that tap asks the staffer for the card in their hand.

@@ -1,6 +1,7 @@
 import type { CalendarDate } from "./calendar-date";
 import { calendarDateToUtcMidnight, shiftCalendarDate } from "./calendar-date";
 import { HOUR_MS, nowMs } from "./clock";
+import { runtimeMode } from "./runtime-mode";
 import type { TidePrediction } from "./tides";
 import { AsyncTtlCache } from "./ttl-lru";
 
@@ -155,13 +156,7 @@ export async function fetchTidePredictions(
   // blocked fetch could ever produce, and the tide surface timed out on every
   // run. `playwright.config.ts` sets both flags together; `dev-server.mjs` sets
   // only the HTTP one, which the non-production arm still covers.
-  const syntheticTurnsAllowed =
-    process.env.DIVEDAY_E2E === "1" || process.env.NODE_ENV !== "production";
-  if (
-    syntheticTurnsAllowed &&
-    process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" &&
-    fetcher === fetch
-  ) {
+  if (runtimeMode().syntheticFixtures && fetcher === fetch) {
     return fixtureTidePredictions(beginDate);
   }
   const key = `${stationId}:${beginDate}`;

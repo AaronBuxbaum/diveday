@@ -249,6 +249,12 @@ export type StaffDestination = {
   readonly id: StaffDestinationId;
   /** Path below `/shop/<shopSlug>`; `""` is the shop home (Today). */
   readonly suffix: string;
+  /**
+   * An act's panel on its page, as the query that opens it (`add=1`): "add
+   * one" is a panel on the object's own index, never a page of its own
+   * (issue #2737). Only an act carries one; a place is its path.
+   */
+  readonly query?: string;
   /** The nav section this destination lights. */
   readonly section: StaffSection;
   /** Permission required to see it anywhere; absent means everyone. */
@@ -286,8 +292,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     alsoMatch: ["/trips", "/schedule/day"],
   },
   // The global "seat a diver" door: an act, declared here because the
-  // registry is the only place a destination may be declared.
-  { id: "addBooking", suffix: "/bookings/new", section: "schedule" },
+  // registry is the only place a destination may be declared. No departure is
+  // known yet, so it opens the shop home's panel and its picker (#2737).
+  { id: "addBooking", suffix: "?call=1", section: "schedule" },
   { id: "staffing", suffix: "/staffing", section: "schedule" },
   // What crews found aboard after their departures and has not gone home yet
   // (batch 4, J2). Filed with the board because every item belongs to a
@@ -321,10 +328,10 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "workOrders", suffix: "/gear/work-orders", section: "gear" },
   // The act, declared here because the registry is the only place a
   // destination may be declared — the same call `addBooking` makes.
-  { id: "newWorkOrder", suffix: "/gear/work-orders/new", section: "gear" },
+  { id: "newWorkOrder", suffix: "/gear/work-orders", query: "add=1", section: "gear" },
   // The counter-rental door: an act, like "Add a booking" (ADR
   // 20260815-minimal-gear-register, amended 2026-10-08). Any staff, as gear is.
-  { id: "rentOut", suffix: "/gear/rentals/new", section: "gear" },
+  { id: "rentOut", suffix: "/gear", query: "add=rental", section: "gear" },
   // What a shop sets up rather than works.
   { id: "diveSites", suffix: "/dive-sites", section: "settings" },
   // The shop's other registers sit beside the dive sites (issue #2659, glossary
@@ -422,13 +429,12 @@ export function staffShopRoot(shopSlug: string): string {
 /**
  * Everything below `/shop/<shopSlug>` for one destination.
  *
- * It used to append a view query for the one destination that was a *view* of
- * another page rather than a page of its own; no destination is any more, so
- * this is the suffix and nothing else. Consumers still build URLs through it,
- * which is what keeps a path from being hand-written at a call site.
+ * An act adds the query that opens its panel; a place is its suffix and
+ * nothing else. Consumers build URLs through it, which is what keeps a path
+ * from being hand-written at a call site.
  */
 export function staffDestinationSuffix(destination: StaffDestination): string {
-  return destination.suffix;
+  return destination.query ? `${destination.suffix}?${destination.query}` : destination.suffix;
 }
 
 /** A destination's full path for one shop. */

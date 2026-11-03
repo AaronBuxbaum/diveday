@@ -32,15 +32,16 @@ import {
   setTripRecapShoutout,
   unpauseTripRecapAutoSend,
 } from "./recap";
+import { listRollCallGaps } from "./roll-call-gaps";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookings,
-  certifications,
+  cards,
   executedDives,
   notificationDeliveries,
   people,
   priorVisits,
   recapPhotos,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   trips,
@@ -48,7 +49,6 @@ import {
 import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
-import { listRollCallGaps } from "./today";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const ORIGIN = "https://diveday.test";
@@ -461,8 +461,9 @@ describe("the course recap's certification", () => {
     // 2. Pending: sighted but not yet confirmed.
     // 3. Imported: carried in from a spreadsheet, provenance unknown.
     // 4. Verified, this shop's — but issued from another departure.
-    await db.insert(certifications).values([
+    await db.insert(cards).values([
       {
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "padi",
@@ -471,6 +472,7 @@ describe("the course recap's certification", () => {
         status: "pending",
       },
       {
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "padi",
@@ -481,6 +483,7 @@ describe("the course recap's certification", () => {
         issuedFromTripId: session.id,
       },
       {
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "padi",
@@ -490,6 +493,7 @@ describe("the course recap's certification", () => {
         importedAt: nowDate(),
       },
       {
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "padi",
@@ -811,10 +815,10 @@ describe("a departure with somebody not back aboard", () => {
       status: "boarded" | "not_boarded" | "cleared",
       checkpoint: string,
     ) =>
-      ctx.db.insert(rollCallCrewEvents).values({
+      ctx.db.insert(rollCallEvents).values({
         shopId: ctx.shop.id,
         tripId: ctx.reef.id,
-        personId,
+        ...crewSubject(personId),
         recordedByPersonId: staff.person.id,
         status,
         checkpoint,

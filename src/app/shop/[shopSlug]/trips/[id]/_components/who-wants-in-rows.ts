@@ -1,7 +1,7 @@
 import type { DateInterestInReach } from "@/db/interest-dates";
 import type { AnytimeRecipient } from "@/db/interests";
 import type { CertificationSummary } from "@/db/self-declared-cards";
-import type { TripGuests } from "@/db/trips";
+import type { TripGuests } from "@/db/trip-guests";
 import {
   certificationSummaryBelowRequirementText,
   certificationSummaryText,

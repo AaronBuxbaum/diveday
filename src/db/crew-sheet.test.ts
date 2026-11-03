@@ -3,9 +3,10 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { assembleCrewSheet } from "@/lib/crew-sheet";
 import { unseededTestDb } from "@/test/db";
+import { insertTip } from "@/test/tips";
 import type { AppDb } from "./client";
 import { crewSheetForMonth } from "./crew-sheet";
-import { bookings, people, shops, tips, tripAssignments, tripScheduleDays, trips } from "./schema";
+import { bookings, people, shops, tripAssignments, tripScheduleDays, trips } from "./schema";
 
 /**
  * The crew sheet's reader (N-43).
@@ -74,7 +75,7 @@ async function tipOn(
     .values({ bookedAs: "diver", shopId, tripId, personId: person.id })
     .returning();
   if (!booking) throw new Error("booking insert failed");
-  await db.insert(tips).values({
+  await insertTip(db, {
     shopId,
     bookingId: booking.id,
     status: status as "paid" | "pending" | "expired",

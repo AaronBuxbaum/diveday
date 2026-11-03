@@ -16,7 +16,6 @@ import { settingsPaneClass } from "./settings-pane";
  * groups instead, so their list shells are never nested inside another card.
  */
 export function SettingsEditorPage({
-  shopSlug,
   t,
   title,
   description,
@@ -25,7 +24,6 @@ export function SettingsEditorPage({
   unframed = false,
   children,
 }: {
-  shopSlug: string;
   t: StaffTranslator;
   title: string;
   /** What the setting is for, which the hub row showed once it was opened. */
@@ -42,7 +40,6 @@ export function SettingsEditorPage({
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
         title={title}
         description={description}
         descriptionIsCaption

@@ -1085,7 +1085,7 @@ export type SeriesCadenceUpdate = {
  * unusable — an empty weekday set would leave a run that generates nothing while
  * still claiming to repeat.
  */
-export async function updateSeriesCadence(
+export async function editSeriesCadence(
   db: AppDb,
   shopId: string,
   seriesId: string,
@@ -1438,7 +1438,7 @@ export async function applyDetailsToFutureSeries(
       .groupBy(trips.id, boats.id)
       .orderBy(asc(trips.id));
 
-    // Same operational-history invariant updateTrip enforces for a single
+    // Same operational-history invariant editTrip enforces for a single
     // trip (CR-006) — a bulk apply must not silently orphan a sibling's
     // roll-call checkpoints either.
     const siblingIds = siblings.map((sibling) => sibling.id);

@@ -160,7 +160,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
   const diverName = `Cert Test Diver ${e2eNow().getTime()}`;
   const diverEmail = `cert-test-${e2eNow().getTime()}@example.com`;
   await page.getByRole("link", { name: "Add diver" }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill(diverName);
   await page.getByLabel("Email").fill(diverEmail);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -260,7 +260,7 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   request,
 }) => {
   test.setTimeout(30_000);
-  const seeded = await request.post("/api/test/seed-trouble-states");
+  const seeded = await request.post("/api/test/seed-trouble-states?facts=troublePanels");
   expect(seeded.ok()).toBe(true);
 
   // Rowan's seeded self-declared level is the card-sighting path: a bad number

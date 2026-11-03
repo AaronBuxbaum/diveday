@@ -8,8 +8,8 @@ import { flushUrgentCrewNotices, recordCrewNotices } from "@/db/crew-notices";
 import {
   decideCrewAssignmentRequest,
   deleteCrewAvailabilityBlock,
+  recordCrewAvailabilityBlock,
   requestCrewAssignment,
-  saveCrewAvailabilityBlock,
   tripRatioGapNeedsInstructor,
 } from "@/db/crew-requests";
 import { getShopById } from "@/db/shops";
@@ -192,7 +192,7 @@ export async function saveAwayAction(week: string, formData: FormData) {
   const parsed = awaySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(path, "invalid", at));
   const db = await getDb();
-  const outcome = await saveCrewAvailabilityBlock(db, {
+  const outcome = await recordCrewAvailabilityBlock(db, {
     shopId: session.user.shopId,
     personId: parsed.data.personId,
     actorPersonId: session.user.personId,

@@ -13,6 +13,7 @@ import {
   activityEvents,
   bookingCapabilities,
   bookings,
+  cards,
   notificationSendQueue,
   people,
   personRoles,
@@ -165,20 +166,24 @@ export const DIVER_HISTORY_TABLES = movedPersonTables();
 export const STAFF_HISTORY_TABLES = refusedPersonTables();
 export const STAFF_PERSON_ONLY_TABLES = refusedPersonOnlyTables();
 
-function quotedTable(tableName: string) {
-  // The only callers pass the two static lists above; quoting here keeps the
-  // raw SQL identifier separate from all user-controlled values.
-  return `"${tableName}"`;
+function quotedTable(identifier: string) {
+  // The only callers pass names from the static person-columns registry; the
+  // shape check keeps a future registry edit from ever reaching raw SQL.
+  if (!/^[a-z_]+$/.test(identifier)) throw new Error(`Not a SQL identifier: ${identifier}`);
+  return `"${identifier}"`;
 }
 
 async function hasPersonRow(
   db: DbExecutor,
-  tableName: string,
+  refused: { table: string; column: string },
   shopId: string,
   personId: string,
 ): Promise<boolean> {
+  // `crew_person_id` on the roll-call ledger, `person_id` everywhere else: the
+  // registry row names the column, so a staff column with another name is
+  // still asked about rather than queried under the wrong one.
   const result = await db.execute(
-    sql`select 1 from ${sql.raw(quotedTable(tableName))} where "shop_id" = ${shopId} and "person_id" = ${personId} limit 1`,
+    sql`select 1 from ${sql.raw(quotedTable(refused.table))} where "shop_id" = ${shopId} and ${sql.raw(quotedTable(refused.column))} = ${personId} limit 1`,
   );
   return result.rows.length > 0;
 }
@@ -432,20 +437,18 @@ async function medicalFlags(
   };
 }
 
-const CARD_TABLES = [
-  "certifications",
-  "specialty_certifications",
-  "nitrox_certifications",
-] as const satisfies readonly (typeof DIVER_HISTORY_TABLES)[number][];
-
-/** A live certification card or a signed, unerased release on this record. */
+/**
+ * A live card of any kind, or a signed, unerased release, on this record. Every
+ * kind counts: a nitrox card is as much "this record is somebody's file" as a
+ * level card is.
+ */
 async function holdsCardOrRelease(db: DbExecutor, shopId: string, personId: string) {
-  for (const tableName of CARD_TABLES) {
-    const result = await db.execute(
-      sql`select 1 from ${sql.raw(quotedTable(tableName))} where "shop_id" = ${shopId} and "person_id" = ${personId} and "deleted_at" is null limit 1`,
-    );
-    if (result.rows.length > 0) return true;
-  }
+  const [card] = await db
+    .select({ id: cards.id })
+    .from(cards)
+    .where(and(eq(cards.shopId, shopId), eq(cards.personId, personId), isNull(cards.deletedAt)))
+    .limit(1);
+  if (card) return true;
   const [release] = await db
     .select({ id: waiverRecords.id })
     .from(waiverRecords)
@@ -591,10 +594,10 @@ async function assessMerge(
     );
   if (live.some((trip) => !hasReturned(trip.endsAt, now))) return refuse("departure_underway");
 
-  for (const tableName of STAFF_HISTORY_TABLES) {
+  for (const refused of STAFF_HISTORY_TABLES) {
     if (
-      (await hasPersonRow(db, tableName, shopId, source.id)) ||
-      (await hasPersonRow(db, tableName, shopId, survivor.id))
+      (await hasPersonRow(db, refused, shopId, source.id)) ||
+      (await hasPersonRow(db, refused, shopId, survivor.id))
     ) {
       return refuse("staff_record");
     }
@@ -703,7 +706,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
   // A signed course form is the same kind of paper as the release (ADR
   // 20261008-course-forms), so the preview counts it with them.
   releases: ["waiver_records", "course_form_records"],
-  cards: ["certifications", "specialty_certifications", "nitrox_certifications"],
+  cards: ["cards"],
   orders: ["orders", "dive_package_entitlements", "imported_payment_history"],
   notes: ["internal_notes"],
   messages: ["inbound_messages", "staff_replies", "customer_gear_notices"],
@@ -717,7 +720,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "lost_items",
   ],
   history: ["prior_visits", "certification_junior_reviews"],
-  lists: ["interests", "person_courtesy_email_unsubscribe_tokens", "trip_blowout_divers"],
+  lists: ["interests", "capabilities", "trip_blowout_divers"],
 } as const satisfies Record<string, readonly (typeof DIVER_HISTORY_TABLES)[number][]>;
 export type DiverMergeCountGroup = keyof typeof DIVER_MERGE_COUNT_GROUPS;
 
@@ -1077,12 +1080,13 @@ export async function mergeDiverRecords(input: {
       // goes. Sequential, never a fan-out: this is one checked-out client
       // (`scripts/check-db-concurrency.mjs`).
       for (const tableName of SINGLETON_PER_PERSON_TABLES) {
-        const survivorHasOne = await hasPersonRow(tx, tableName, input.shopId, survivor.id);
+        const singleton = { table: tableName, column: "person_id" };
+        const survivorHasOne = await hasPersonRow(tx, singleton, input.shopId, survivor.id);
         if (!survivorHasOne) continue;
         const sourceWins =
           tableName === "rental_fit_profiles" &&
           choices.rentalFit === "source" &&
-          (await hasPersonRow(tx, tableName, input.shopId, source.id));
+          (await hasPersonRow(tx, singleton, input.shopId, source.id));
         await tx.execute(
           sql`delete from ${sql.raw(quotedTable(tableName))} where "shop_id" = ${input.shopId} and "person_id" = ${sourceWins ? survivor.id : source.id}`,
         );
@@ -1110,7 +1114,7 @@ export async function mergeDiverRecords(input: {
         sql`update "interests" as kept set "closed_at" = gone."closed_at", "closed_as" = 'unsubscribed' from "interests" as gone where kept."id" = ${survivorList} and gone."id" = ${sourceList} and gone."closed_as" = 'unsubscribed' and kept."closed_as" is distinct from 'unsubscribed'`,
       );
       await tx.execute(
-        sql`update "interest_unsubscribe_tokens" set "interest_id" = ${survivorList} where "interest_id" = ${sourceList} and exists ${survivorList}`,
+        sql`update "capabilities" set "interest_id" = ${survivorList} where "shop_id" = ${input.shopId} and "interest_id" = ${sourceList} and exists ${survivorList}`,
       );
       await tx.execute(
         sql`update "interests" set "parent_interest_id" = ${survivorList} where "shop_id" = ${input.shopId} and "parent_interest_id" = ${sourceList} and exists ${survivorList}`,

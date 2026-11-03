@@ -1,4 +1,4 @@
-import type { TripPrep } from "@/db/trips";
+import type { TripPrep } from "@/db/trip-prep";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
@@ -23,7 +23,7 @@ export type PrepView = {
    */
   home?: boolean;
   /**
-   * Composed as the trip packet's paper (`PAPER_PACKET`, B03): the lines a
+   * Composed as the trip packet's paper (`TripPacket`, B03): the lines a
    * printed packing list carries, and none of the controls that work them.
    */
   paper?: boolean;

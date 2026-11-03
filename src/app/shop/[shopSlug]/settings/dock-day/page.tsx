@@ -3,8 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceFieldset, ChoiceRow, FormStatus, StickyFormActions } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
-import { canPersonManageShopSettings } from "@/db/authz";
-import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
+import { canPersonManageShopSettings, getDockDayPage } from "@/db/dock-day-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { DeskPayment } from "@/lib/desk-payment";
@@ -66,13 +65,12 @@ export default async function DockDaySettingsPage({
   // shop-wide figure for any dive that visits it, and the preview is drawn
   // from the shop-wide figure alone. Empty for a shop that has overridden
   // nothing, and then the preview says nothing extra.
-  const siteBottomTimeOverrides = await listSiteBottomTimeOverrides(db, shop.id);
+  const { siteBottomTimeOverrides } = await getDockDayPage(db, shop.id);
 
   const banner = noticeFromParam(notice, dockDayNoticeMessages(t));
 
   return (
     <SettingsEditorPage
-      shopSlug={shopSlug}
       t={t}
       title={t("settings.main.dockCall.heading")}
       description={t("settings.main.dockCall.description")}
@@ -128,10 +126,7 @@ export default async function DockDaySettingsPage({
           </ChoiceFieldset>
         </section>
         <StickyFormActions>
-          <SubmitButton
-            pendingLabel={t("words.busy.saving")}
-            className={buttonClass()}
-          >
+          <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
             {t("settings.dockDay.save")}
           </SubmitButton>
           <FormStatus tone={banner?.tone} occurrenceKey={notice}>

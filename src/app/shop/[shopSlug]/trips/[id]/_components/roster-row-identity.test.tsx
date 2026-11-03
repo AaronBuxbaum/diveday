@@ -144,14 +144,18 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     // wear the capsule nor be counted into the shared line.
     const juniorDeep = {
       ...readinessRow("blocked", [{ code: "identity_unconfirmed", params: undefined }]),
-      depthAdvisory: {
-        status: "exceeds",
-        limitDepth: 12,
-        siteDepth: 30,
-        unit: "meters",
-        basis: "junior_age",
-        level: "open_water",
-      },
+      advisories: [
+        {
+          code: "depth_exceeds_ceiling",
+          params: {
+            limitDepth: 12,
+            siteDepth: 30,
+            unit: "meters",
+            basis: "junior_age",
+            level: "open_water",
+          },
+        },
+      ],
     } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
     renderRoster({
       roster: [matched],

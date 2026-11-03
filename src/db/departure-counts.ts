@@ -1,13 +1,15 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { seatSailed } from "@/lib/seat-sailed";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import type { ReadinessResult } from "@/lib/readiness";
 import { type RollCallCheckpoint, rollCallCheckpointOrdinal } from "@/lib/roll-call";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
+import { seatSailed } from "@/lib/seat-sailed";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { listTripsReadiness } from "./readiness";
+import { newestMarkFirst } from "./roll-call-order";
+import { markBookingId, seatMarks } from "./roll-call-subject";
 import { bookings, rollCallEvents, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -35,7 +37,7 @@ export type DepartureCount = Readonly<{
    */
   booked: number;
   /**
-   * **Seats the boat carried**, by `seatSailed` (`src/lib/closeout.ts`), the
+   * **Seats the boat carried**, by `seatSailed` (`src/lib/seat-sailed.ts`), the
    * rule the evening close-out reads: the crew's word at the dock wins, then
    * any standing after-dive word, then the desk's no-show mark.
    *
@@ -139,18 +141,16 @@ export async function departureCounts(
       db
         .select({
           tripId: rollCallEvents.tripId,
-          bookingId: rollCallEvents.bookingId,
+          bookingId: markBookingId(),
           checkpoint: rollCallEvents.checkpoint,
           status: rollCallEvents.status,
         })
         .from(rollCallEvents)
         .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
-        .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, ids)))
-        .orderBy(
-          desc(rollCallEvents.occurredAt),
-          desc(rollCallEvents.createdAt),
-          desc(rollCallEvents.seq),
-        ),
+        .where(
+          and(eq(rollCallEvents.shopId, shopId), seatMarks(), inArray(rollCallEvents.tripId, ids)),
+        )
+        .orderBy(...newestMarkFirst()),
   ]);
   const readiness = await readinessFor(db, shopId, roster, options);
 

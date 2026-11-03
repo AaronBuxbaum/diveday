@@ -7,7 +7,7 @@ import { captureDepartureBoatSafety, departureBoatSafetySnapshot } from "./boat-
 import { deleteBoat } from "./boats";
 import { activityEvents, boats, departureBoatSafetySnapshots, trips } from "./schema";
 import { boatTripFixture, tripBoatPatch } from "./trip-boat-test-fixtures";
-import { getTripWithBooked, listStaff, updateTrip } from "./trips";
+import { editTrip, getTripWithBooked, listStaff } from "./trips";
 
 const ctx = fileScopedShopContext();
 
@@ -22,7 +22,7 @@ describe("boat changes and retained departure safety evidence", () => {
     expect(before?.boatId).toBe(hull.id);
     advanceClock();
     const changedAt = nowDate();
-    expect((await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id })).ok).toBe(
+    expect((await editTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id })).ok).toBe(
       true,
     );
     const after = await departureBoatSafetySnapshot(db, shop.id, trip.id);
@@ -42,8 +42,8 @@ describe("boat changes and retained departure safety evidence", () => {
     await db.update(boats).set({ name: "none" }).where(eq(boats.id, hull.id));
     await captureDepartureBoatSafety(db, shop.id, trip.id);
     const edit = { ...patch(trip), changeActorPersonId: actor.person.id };
-    await updateTrip(db, shop.id, trip.id, { ...edit, boatId: spare.id });
-    await updateTrip(db, shop.id, trip.id, { ...edit, boatId: spare.id });
+    await editTrip(db, shop.id, trip.id, { ...edit, boatId: spare.id });
+    await editTrip(db, shop.id, trip.id, { ...edit, boatId: spare.id });
     const events = () =>
       db
         .select()
@@ -64,9 +64,9 @@ describe("boat changes and retained departure safety evidence", () => {
       snapshot: "refreshed",
     });
     await deleteBoat(db, shop.id, hull.id);
-    expect((await updateTrip(db, shop.id, trip.id, { ...edit, boatId: hull.id })).ok).toBe(false);
+    expect((await editTrip(db, shop.id, trip.id, { ...edit, boatId: hull.id })).ok).toBe(false);
     expect(await events()).toHaveLength(1);
-    await updateTrip(db, shop.id, trip.id, { ...edit, boatId: null });
+    await editTrip(db, shop.id, trip.id, { ...edit, boatId: null });
     expect(await events()).toHaveLength(2);
     expect(
       (await events()).find((event) => (event.params as { hasToBoat?: string }).hasToBoat === "no")
@@ -91,7 +91,7 @@ describe("boat changes and retained departure safety evidence", () => {
       .select()
       .from(departureBoatSafetySnapshots)
       .where(eq(departureBoatSafetySnapshots.tripId, trip.id));
-    await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id });
+    await editTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id });
     expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toEqual(before);
     expect(
       await db
@@ -102,7 +102,7 @@ describe("boat changes and retained departure safety evidence", () => {
     // The next ordinary departure count sees the moved start time too.
     expect(await captureDepartureBoatSafety(db, shop.id, trip.id)).toBe("sailed");
     expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toEqual(before);
-    await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: hull.id });
+    await editTrip(db, shop.id, trip.id, { ...patch(trip), boatId: hull.id });
     expect(await captureDepartureBoatSafety(db, shop.id, trip.id)).toBe("sailed");
     expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toEqual(before);
   });
@@ -110,14 +110,14 @@ describe("boat changes and retained departure safety evidence", () => {
   it("rebinds an unsailed reschedule so passing its old time does not freeze the new departure", async () => {
     const { db, shop, trip } = await boatTrip();
     const originalStart = new Date(nowDate().getTime() + 3_600_000);
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...patch(trip),
       startsAt: originalStart,
       endsAt: new Date(originalStart.getTime() + 4 * 3_600_000),
     });
     await captureDepartureBoatSafety(db, shop.id, trip.id);
     const futureStart = new Date(nowDate().getTime() + 24 * 3_600_000);
-    await updateTrip(db, shop.id, trip.id, {
+    await editTrip(db, shop.id, trip.id, {
       ...patch(trip),
       startsAt: futureStart,
       endsAt: new Date(futureStart.getTime() + 4 * 3_600_000),
@@ -139,9 +139,9 @@ describe("boat changes and retained departure safety evidence", () => {
     const before = await departureBoatSafetySnapshot(db, shop.id, trip.id);
     advanceClock();
     // The invalid schedule-day write runs after both recapture and activity.
-    // updateTrip owns its transaction, including the failing schedule write.
+    // editTrip owns its transaction, including the failing schedule write.
     await expect(
-      updateTrip(db, shop.id, trip.id, {
+      editTrip(db, shop.id, trip.id, {
         ...patch(trip),
         boatId: spare.id,
         changeActorPersonId: actor.person.id,
@@ -169,17 +169,17 @@ describe("boat changes and retained departure safety evidence", () => {
     const before = await departureBoatSafetySnapshot(db, shop.id, trip.id);
     await deleteBoat(db, shop.id, spare.id);
     expect(
-      await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id }),
+      await editTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id }),
     ).toMatchObject({ ok: false });
     expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toEqual(before);
     expect(
-      await updateTrip(db, "00000000-0000-4000-8000-000000000001", trip.id, {
+      await editTrip(db, "00000000-0000-4000-8000-000000000001", trip.id, {
         ...patch(trip),
         boatId: null,
       }),
     ).toEqual({ ok: false, reason: "not_found" });
     expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toEqual(before);
-    await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: null });
+    await editTrip(db, shop.id, trip.id, { ...patch(trip), boatId: null });
     expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toEqual(before);
     expect((await getTripWithBooked(db, shop.id, trip.id))?.boatId).toBeNull();
   });

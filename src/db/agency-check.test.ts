@@ -1,12 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { judgeAgencyPage } from "@/lib/agency-check";
 import { fileScopedShopContext } from "@/test/db";
 import { certificationForAgencyCheck, listAgencyCheckableCards } from "./agency-check";
 import type { AppDb } from "./client";
-import { certifications, people, shops } from "./schema";
+import { cards, people, shops } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
-import { withAgencyChecks } from "./today";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -21,11 +20,12 @@ async function card(
   db: AppDb,
   shopId: string,
   personId: string,
-  values: Partial<typeof certifications.$inferInsert> = {},
+  values: Partial<typeof cards.$inferInsert> = {},
 ) {
   const [row] = await db
-    .insert(certifications)
+    .insert(cards)
     .values({
+      kind: "level",
       shopId,
       personId,
       agency: "ssi",
@@ -89,8 +89,8 @@ describe("listAgencyCheckableCards", () => {
     await recordSelfDeclaredCards(db, { shopId: shop.id, personId, level: "advanced_open_water" });
     const [claim] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, personId));
+      .from(cards)
+      .where(and(eq(cards.personId, personId), eq(cards.kind, "level")));
 
     // SSI can open a manual lookup with just a first name, but that incomplete
     // identity must never turn a returned page into a verified card.
@@ -239,37 +239,3 @@ describe("listAgencyCheckableCards", () => {
  * names the diver, the read fills in the cards, and a row with nothing the
  * extension can check carries no offer at all.
  */
-describe("withAgencyChecks", () => {
-  function row(personId: string | null, id: string) {
-    return {
-      id,
-      kind: "certification" as const,
-      urgency: "soon" as const,
-      subject: "Somebody",
-      context: null,
-      detail: "Certification pending",
-      actionLabel: "Open their record",
-      href: "/shop/blue-mantis/divers/x",
-      dueAt: null,
-      ...(personId ? { agencyCheck: { personId, cards: [] } } : {}),
-    };
-  }
-
-  it("fills in the cards, drops the offer where there are none, and leaves other rows alone", async () => {
-    const { db, shop } = ctx;
-    const checkable = await diver(db, shop.id, "Noa Peleke");
-    const pending = await card(db, shop.id, checkable);
-    const tdiOnly = await diver(db, shop.id, "Tomas Reyes");
-    await card(db, shop.id, tdiOnly, { agency: "tdi", identifier: "T-9" });
-
-    const [withCards, withNone, untouched] = await withAgencyChecks(db, shop.id, [
-      row(checkable, "a"),
-      row(tdiOnly, "b"),
-      row(null, "c"),
-    ]);
-
-    expect(withCards?.agencyCheck?.cards.map((c) => c.certificationId)).toEqual([pending.id]);
-    expect(withNone).not.toHaveProperty("agencyCheck");
-    expect(untouched).toEqual(row(null, "c"));
-  });
-});

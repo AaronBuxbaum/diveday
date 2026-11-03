@@ -75,8 +75,8 @@ import { onlyNotHeld, saysNotCertified, TripNeedsRow, tripNeedsLines } from "./t
 const AWAITING_ANCHOR = "card-awaiting";
 
 /**
- * The one card row every kind renders through, so the three tables cannot
- * drift into three shapes. `state` is `certificationCardRowState`'s — computed
+ * The one card row every kind renders through, so the three kinds of card
+ * cannot drift into three shapes. `state` is `certificationCardRowState`'s — computed
  * once, in the domain layer, because flattening the two display unions is
  * exactly where H-20260725-two-findings-dive-domain gets lost.
  */

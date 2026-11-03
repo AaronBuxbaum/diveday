@@ -29,7 +29,7 @@ notice short of staff spotting a duplicate on the roster.
   common case never touches the constraint), but on an insert that loses the race, it catches the
   unique-violation and re-reads the winner instead of throwing — two concurrent calls for the same
   email always converge on one person, never a throw the caller has to handle.
-- **`createDiver`/`updateDiver`/`restoreDiver` (`src/db/divers.ts`) keep their existing
+- **`createDiver`/`editDiver`/`restoreDiver` (`src/db/divers.ts`) keep their existing
   create-or-refuse contract** (return `null`/`false` on a collision) rather than switching to
   reuse: staff explicitly creating a new diver record, editing one's email, or undeleting one
   should see "that email is already on file," not have their action silently redirected onto a
@@ -78,7 +78,7 @@ notice short of staff spotting a duplicate on the roster.
 
 - Two racing writers for the same email now always converge on one person row; the loser of the
   race pays one extra read, never a lost/duplicated identity.
-- `createDiver`, `updateDiver`, and `restoreDiver` gained a defense-in-depth refusal path they
+- `createDiver`, `editDiver`, and `restoreDiver` gained a defense-in-depth refusal path they
   didn't strictly need under single-writer conditions before, but that is now exercised any time
   their existing read-then-write check itself loses a race.
 - **Escape hatch:** if a shop genuinely needs two active people who happen to share an email
@@ -106,7 +106,7 @@ notice short of staff spotting a duplicate on the roster.
   floor, not a regression. See [H-20260724-one-person-per-email](../../product/human-decisions/README.md) and the
   [identity match key glossary entry](../../product/glossary.md#modeling-notes).
 - **Concurrency-closing path is not exercisable in the current test suite:** the catch-and-reread
-  branch in `findOrCreatePerson`/`createDiver`/`updateDiver`/`restoreDiver`/`commitContactImport`
+  branch in `findOrCreatePerson`/`createDiver`/`editDiver`/`restoreDiver`/`commitContactImport`
   only fires under a genuine race between two open transactions, which PGlite's single-connection
   test database cannot produce (the same acknowledged limitation as `src/db/bookings.ts`'s row
   lock). The insert runs inside a nested transaction (a savepoint via drizzle's `tx.transaction()`)

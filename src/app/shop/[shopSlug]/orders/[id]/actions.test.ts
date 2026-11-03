@@ -30,10 +30,8 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
-vi.mock("@/lib/security-step-up", () => ({
-  hasRequiredStepUp: vi.fn(async () => true),
-  stepUpChallengeUrl: vi.fn(() => "/step-up"),
-}));
+vi.mock("@/db/step-up", () => ({ hasRequiredStepUp: vi.fn(async () => true) }));
+vi.mock("@/lib/security-step-up", () => ({ stepUpChallengeUrl: vi.fn(() => "/step-up") }));
 vi.mock("@/db/orders", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/orders")>();
   return {

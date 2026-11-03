@@ -210,7 +210,7 @@ async function recordDeletedTables(
  * them, and a spec writing any other one needs a private shop too.
  */
 const RESET_KEEPS: Record<string, string> = {
-  certification_junior_reviews: "ON DELETE CASCADE from certifications clears it",
+  certification_junior_reviews: "ON DELETE CASCADE from cards clears it",
   staff_credential_history: "ON DELETE CASCADE from staff credentials clears it",
   account_sign_in_challenges:
     "stable staff pending sign-ins survive a schedule reset; purged accounts cascade them",
@@ -318,7 +318,7 @@ const RESET_PERSON_SCOPED: Record<string, string> = {
  * survivor here is a bug unless it is genuinely shared.
  */
 const CASCADE_KEEPS: Record<string, string> = {
-  certification_junior_reviews: "ON DELETE CASCADE from certifications clears it",
+  certification_junior_reviews: "ON DELETE CASCADE from cards clears it",
   staff_credential_history: "ON DELETE CASCADE from staff credentials clears it",
   platform_backup_progress: "ON DELETE CASCADE from shops clears its scheduler checkpoint",
   booking_payment_events: "ON DELETE CASCADE from bookings clears it",
@@ -505,7 +505,7 @@ async function rowCounts(db: DbExecutor, tables: string[]): Promise<Map<string, 
  *
  * `media_deletion_attempts` used to be a deliberate `RESET_KEEPS` entry —
  * "internal reconciliation ledger, not schedule data", which is true and was
- * not the whole story. `listPendingMediaDeletions` feeds Today an
+ * not the whole story. the media-deletion read (`src/db/unfinished.ts`) feeds Today an
  * `urgency: "now"` row, so a stale attempt written by one test (which is what
  * `/api/test/seed-trouble-states` exists to do) left a "Recap photo" cleanup
  * card on Today for whichever spec Playwright's sharding ran next in that

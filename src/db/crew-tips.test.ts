@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
+import { insertTip } from "@/test/tips";
 import type { AppDb } from "./client";
 import { crewMonth, crewTipShare, tipsByDeparture } from "./crew-tips";
 import {
@@ -11,7 +12,6 @@ import {
   executedDives,
   people,
   shops,
-  tips,
   tripAssignments,
   tripDives,
   tripScheduleDays,
@@ -71,7 +71,7 @@ async function tipOn(
     .values({ bookedAs: "diver", shopId, tripId, personId: diver.id })
     .returning();
   if (!booking) throw new Error("booking insert failed");
-  await db.insert(tips).values({
+  await insertTip(db, {
     shopId,
     bookingId: booking.id,
     status,

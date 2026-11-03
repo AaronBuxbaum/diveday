@@ -20,10 +20,11 @@ every other section stands.
 | Coverage floors | `@vitest/coverage-v8`, ci.yml's `coverage-floors` ([below](#coverage-floors)) | branch coverage of every safety file never falling | a coverage target for the rest of the tree |
 | Nightly and weekly | `simulate-day.yml`, `persona-bots.yml`, ci.yml's schedule | a whole shop day, persona walks, real Postgres against what other branches merged | blocking a PR |
 
-Almost every page in `src/app/` is an `async function Page()` reading the database directly and
-mutating through inline `"use server"` closures, which is the shape Next's own docs say Vitest
-does not support (`node_modules/next/dist/docs/01-app/02-guides/testing/vitest.md`). Such a flow
-belongs in `e2e/`; MSW is for the rare client component that fetches one of our own routes.
+Almost every page in `src/app/` is an `async function Page()` reading the database directly, which
+is the shape Next's own docs say Vitest does not support
+(`node_modules/next/dist/docs/01-app/02-guides/testing/vitest.md`). Its mutations live in sibling
+`*-actions.ts` modules, which a test imports and calls against a real database; the page's own
+flow belongs in `e2e/`. MSW is for the rare client component that fetches one of our own routes.
 
 **Mock the framework edge, never `@/db/*`.** A unit test may replace `next/*` (headers,
 navigation, cache), the session, and provider HTTP (Stripe, email, SMS: `src/test/fakes.ts`). The
@@ -391,7 +392,7 @@ associations and written exemptions for what source inference cannot resolve.
 
 It exists because a page with no test is silent by construction: it produces no failure for anyone
 to notice. A 2026-08-03 evaluation of the test system found three staff pages that had shipped with
-neither an e2e spec nor a visual capture — `/shop/[shopSlug]/orders/new`,
+neither an e2e spec nor a visual capture — the new-order page (now the Orders add panel),
 `/shop/[shopSlug]/dive-sites/catalog`, and `/shop/[shopSlug]/staffing`. All three have since been
 covered. Closing an exemption means writing the missing coverage and deleting its reason in the
 same change.

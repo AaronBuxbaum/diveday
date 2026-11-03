@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { AddPanel } from "@/components/AddPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -14,6 +15,7 @@ import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import { listDeletedWorkOrders, workOrderBoard } from "@/db/work-orders";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
@@ -21,6 +23,11 @@ import { toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../../_components/StaffSectionTabs";
+import {
+  NEW_WORK_ORDER_KEYS,
+  NewWorkOrderPanel,
+  type NewWorkOrderSearch,
+} from "./_components/NewWorkOrderPanel";
 import { WorkOrderBoard } from "./_components/WorkOrderBoard";
 import { restoreWorkOrderAction } from "./actions";
 
@@ -39,7 +46,7 @@ export const metadata: Metadata = { title: "Work orders — DiveDay" };
 /**
  * **The bench** (ADR 20261008-gear-work-orders): every open ticket grouped by
  * status in counter order, the recently collected under them, and one door to
- * open a new one.
+ * open a new one: the bench's own add panel (`?add=1`).
  *
  * It sits beside the register as the Gear section's second tab, because the
  * two are one pillar: a customer's regulator and the shop's own rental
@@ -53,11 +60,14 @@ export default async function WorkOrdersPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; view?: string; undoId?: string }>;
+  searchParams: Promise<
+    { notice?: string; view?: string; undoId?: string; add?: string } & NewWorkOrderSearch
+  >;
 }) {
   const { shopSlug } = await params;
   const search = await searchParams;
-  const { db, shop, session } = await requireShopSurface(shopSlug);
+  const surface = await requireShopSurface(shopSlug);
+  const { db, shop, session } = surface;
   // Gear servicing switched off (the Features page): the bench is gone, the
   // register is where Gear opens, and no ticket is deleted.
   if (!shop.workOrdersEnabled) redirect(shopPath(shopSlug, "gear"));
@@ -73,8 +83,12 @@ export default async function WorkOrdersPage({
   // A view with nothing in it is not a view, the call the register makes: a
   // hand-typed `?view=deleted` with nothing deleted lands on the bench.
   const showDeleted = deleted.length > 0 && (search.view === "deleted" || total === 0);
-  const banner = noticeFromParam(search.notice, NOTICES);
-  const newOrderHref = `/shop/${shopSlug}/gear/work-orders/new`;
+  const benchPath = shopPath(shopSlug, "gear", "work-orders");
+  // Opening a ticket is the bench's own panel (`?add=1`); what it says about
+  // its form, it says beside the form, so the page banner stands down.
+  const adding = addPanelOpen(search.add);
+  const banner = adding ? null : noticeFromParam(search.notice, NOTICES);
+  const newOrderHref = addPanelHref(benchPath);
 
   const chips: FilterChip[] = [];
   if (deleted.length > 0 && total > 0) {
@@ -97,10 +111,9 @@ export default async function WorkOrdersPage({
       <FlashParams params={["notice", "undoId"]} />
       <ShopPageHeader
         eyebrow={t("shared.shopSections.gear")}
-        eyebrowHref={shopPath(shopSlug, "gear")}
         title={t("workOrders.title")}
         actions={
-          total > 0 ? (
+          total > 0 && !adding ? (
             <Link href={newOrderHref} className={buttonClass()}>
               {t("workOrders.new.door")}
             </Link>
@@ -114,6 +127,22 @@ export default async function WorkOrdersPage({
         shop={shop}
         t={t}
       />
+
+      <AddPanel
+        open={adding}
+        title={t("workOrders.new.title")}
+        closeHref={addPanelCloseHref(benchPath, search, NEW_WORK_ORDER_KEYS)}
+        closeLabel={t("shared.addPanel.close")}
+      >
+        <NewWorkOrderPanel
+          surface={surface}
+          shopSlug={shopSlug}
+          board={benchPath}
+          search={search}
+          t={t}
+          locale={locale}
+        />
+      </AddPanel>
 
       {search.notice === "deleted" && search.undoId ? (
         <UndoToast
@@ -178,9 +207,11 @@ export default async function WorkOrdersPage({
           <EmptyState
             title={t("workOrders.empty.heading")}
             action={
-              <Link href={newOrderHref} className={buttonClass()}>
-                {t("workOrders.new.door")}
-              </Link>
+              adding ? undefined : (
+                <Link href={newOrderHref} className={buttonClass()}>
+                  {t("workOrders.new.door")}
+                </Link>
+              )
             }
             className="mt-4"
           />

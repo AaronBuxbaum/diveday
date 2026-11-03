@@ -2,7 +2,7 @@ import { HOUR_MS } from "./clock";
 
 /**
  * **How soon a Today row's work is due**, read off the departure it belongs to.
- * Split from `src/lib/today.ts` so a row builder in `src/db` asks the one
+ * Split from `src/features/today/today.ts` so a row builder in `src/db` asks the one
  * question it needs without taking the whole queue with it.
  */
 

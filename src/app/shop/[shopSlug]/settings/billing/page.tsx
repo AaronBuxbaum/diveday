@@ -6,14 +6,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { canPersonManageBilling } from "@/db/authz";
-import { latestPricingStatement, processedVolumeCents } from "@/db/pricing-volume";
 import {
-  getShopSubscription,
+  canPersonManageBilling,
+  getBillingPage,
+  getBillingPercentMonth,
   holdsLiveSubscription,
   shopPricing,
   subscriptionSnapshot,
-} from "@/db/shop-subscriptions";
+} from "@/db/billing-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { planCopyParams, planMoney } from "@/lib/billing/plan-display";
@@ -89,7 +89,7 @@ export default async function BillingSettingsPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const banner = noticeFromParam(notice, billingNoticeMessages(t));
-  const row = await getShopSubscription(db, shop.id);
+  const { subscription: row } = await getBillingPage(db, shop.id);
   const now = nowDate();
   // The shop's plan and numbers (ADR 20261022-pricing-ab-test): today's flat
   // price for everyone while the pricing test is off. The percent plan is
@@ -142,21 +142,18 @@ export default async function BillingSettingsPage({
   if (percentPlan && !shop.isDemo) {
     const wall = utcToWallTime(now, shop.timezone);
     const month = { year: wall.year, month: wall.month };
-    const [volumeCents, statement] = await Promise.all([
-      processedVolumeCents(
-        db,
-        shop.id,
-        month,
-        shop.timezone,
-        freeTimeEndsAt({
-          now: shopMonthBounds(month, shop.timezone).from,
-          timeZone: shop.timezone,
-          trialEndsAt: trialEndsAt(shop.createdAt),
-          freeTermEndsOn: row?.freeTermEndsOn ?? null,
-        }),
-      ),
-      latestPricingStatement(db, shop.id),
-    ]);
+    const { volumeCents, statement } = await getBillingPercentMonth(
+      db,
+      shop.id,
+      month,
+      shop.timezone,
+      freeTimeEndsAt({
+        now: shopMonthBounds(month, shop.timezone).from,
+        timeZone: shop.timezone,
+        trialEndsAt: trialEndsAt(shop.createdAt),
+        freeTermEndsOn: row?.freeTermEndsOn ?? null,
+      }),
+    );
     percentFacts = {
       volumeCents,
       feeCents: percentFeeCents(volumeCents, terms.basisPoints),
@@ -185,11 +182,7 @@ export default async function BillingSettingsPage({
   return (
     <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
-        title={t("billing.title")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("billing.title")} />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
 
       <SectionCard

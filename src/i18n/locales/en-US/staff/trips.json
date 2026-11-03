@@ -119,6 +119,7 @@
     "bookingRestoreRatio": "Couldn’t undo. The freed seat is taken and this session is at its instructor ratio. Assign another instructor, or use the wait list.",
     "bookingRestoreCancelled": "Couldn’t undo. This trip has been canceled. Reinstate the trip first, then add them back.",
     "diverAdded": "Diver added to the trip",
+    "partySeatAdded": "One requested seat is booked. Add the rest of the party to this departure.",
     "diverAddedConfirmed": "Diver added. Their confirmation is on its way.",
     "diverAddedWaiverUndelivered": "Diver added to the trip, but their waiver wasn’t emailed. Send it or share the link from their row below.",
     "diverAddedIdentityUnconfirmed": "Diver added to the trip, but the seat is held until you confirm it’s the same person. Confirm it on their row below.",
@@ -446,7 +447,16 @@
     "addNewDiverAction": "Add diver",
     "offerSeat": "Offer a seat",
     "offerSeating": "Offering…",
-    "offerSeatAria": "Offer {name} a seat on the departure"
+    "offerSeatAria": "Offer {name} a seat on the departure",
+    "modeLabel": "Booking or walk-in",
+    "modeBooking": "Booking",
+    "modeWalkIn": "Walk-in",
+    "addForRequest": "Add for this request",
+    "addPersonForRequestAria": "Add {name} for this request",
+    "requestLeft": "{count, plural, one {# diver left to seat} other {# divers left to seat}}",
+    "requestDone": "Done with this request",
+    "requestGone": "That request is closed or removed.",
+    "requestNotOffered": "That request wasn’t offered this departure, so seats here won’t answer it."
   },
   "inviteSuggestions": {
     "heading": "Dived {site} with you before",

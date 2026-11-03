@@ -1,7 +1,7 @@
 // i18n-exempt-file: test fixtures; the unit labels and names are seeded data a test reads back.
 
 import { render, within } from "@testing-library/react";
-import type { TripPrep } from "@/db/trips";
+import type { TripPrep } from "@/db/trip-prep";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {

@@ -7,7 +7,7 @@ import { STAFF_MESSAGES } from "./staff-messages";
  * `divers.page.confirmMatchesTitle` is the sentence that teaches a staffer what
  * a tap on a name-match candidate means. It is the only teaching on all three
  * doors that render the prompt — the walk-in panel, the trip's Add-diver
- * section, and `/divers/new`, which shows it with no booking in hand at all.
+ * section, and `/divers?add=1`, which shows it with no booking in hand at all.
  *
  * Until 2026-09-11 it taught the opposite of what the tap does: "Picking one
  * gives this booking that diver's certifications and waiver." That stopped

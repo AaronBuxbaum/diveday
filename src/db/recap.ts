@@ -13,7 +13,6 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { diverTranslator } from "@/i18n/messages";
 import { isStaff } from "@/lib/authz";
 import type { BrandDisplayFontCode } from "@/lib/brand";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -27,6 +26,7 @@ import {
   type Notification,
   type NotificationProvider,
   publicAppUrl,
+  recapText,
   recipientLocale,
 } from "@/lib/notifications";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
@@ -45,6 +45,8 @@ import { shopClock } from "@/lib/shop-clock";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
+import { levelCardLevel } from "./card-columns";
+import { refreshCheckoutFromStripe } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { numberedDiveDay } from "./dive-days";
@@ -58,9 +60,10 @@ import {
 } from "./notifications";
 import { queryAll } from "./query-helpers";
 import { autoFillRecapLine } from "./recap-assist";
+import { tripsWithSomebodyMissing } from "./roll-call-gaps";
 import {
   bookings,
-  certifications,
+  cards,
   notificationDeliveries,
   people,
   priorVisits,
@@ -72,8 +75,7 @@ import {
 } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
-import { tripsWithSomebodyMissing } from "./today";
+import { getLatestTipForBooking } from "./tips";
 import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives, seatNotCancelled } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
@@ -401,14 +403,18 @@ export async function getRecapPageState(
   // itself hasn't said so.
   const tip =
     latestTip?.status === "pending"
-      ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
+      ? await refreshCheckoutFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
       : latestTip;
   return {
     kind: "recap",
     data: {
       ...loaded.data,
       tip: tip
-        ? { status: tip.status, amountCents: tip.amountCents, checkoutUrl: tip.checkoutUrl }
+        ? {
+            status: tip.status === "completed" ? "paid" : tip.status,
+            amountCents: tip.settledTotalCents ?? tip.totalCents,
+            checkoutUrl: tip.checkoutUrl,
+          }
         : null,
     },
   };
@@ -629,7 +635,7 @@ export async function bookingsLeftAtTheDock(
  * real incident, the email lands in an inbox a family may be reading. So while
  * any diver or rostered crew member on a departure has an after-dive
  * `not_boarded` standing — the condition Today raises its missing-diver and
- * missing-crew rows on (`tripsWithSomebodyMissing`, src/db/today.ts)
+ * missing-crew rows on (`tripsWithSomebodyMissing`, src/db/roll-call-gaps.ts)
  * — **every** recap on that departure waits: the email, a staff send, and the
  * page. That covers the diver themselves, whose last word is the not-back one,
  * and the boatmates, whose "welcome back" would be the same email to a group
@@ -792,19 +798,20 @@ async function loadRecapPageData(
     // recap then says out loud.
     row.tripCourseId
       ? db
-          .select({ level: certifications.level, issuedAt: certifications.issuedByShopAt })
-          .from(certifications)
+          .select({ level: levelCardLevel, issuedAt: cards.issuedByShopAt })
+          .from(cards)
           .where(
             and(
-              eq(certifications.shopId, row.shopId),
-              eq(certifications.personId, row.personId),
-              eq(certifications.issuedFromTripId, row.tripId),
-              isNotNull(certifications.issuedByShopAt),
-              eq(certifications.status, "verified"),
-              isNull(certifications.deletedAt),
+              eq(cards.shopId, row.shopId),
+              eq(cards.kind, "level"),
+              eq(cards.personId, row.personId),
+              eq(cards.issuedFromTripId, row.tripId),
+              isNotNull(cards.issuedByShopAt),
+              eq(cards.status, "verified"),
+              isNull(cards.deletedAt),
             ),
           )
-          .orderBy(desc(certifications.issuedByShopAt))
+          .orderBy(desc(cards.issuedByShopAt))
           .limit(1)
       : Promise.resolve([]),
     // Who wrote the next step, for the name under the words. Read only when
@@ -1811,7 +1818,7 @@ async function sendRecaps(
     shopName: string;
     phone: string | null;
     smsBody: string;
-    smsStopLine: string;
+    locale: string;
     notification: Notification;
   }> = [];
   const smsWork: Array<{
@@ -1820,7 +1827,7 @@ async function sendRecaps(
     shopName: string;
     phone: string;
     smsBody: string;
-    smsStopLine: string;
+    locale: string;
   }> = [];
 
   for (const { booking, person, trip, shop } of rows) {
@@ -1847,8 +1854,7 @@ async function sendRecaps(
     // 20260731-per-person-notification-locale). Null falls back to the shop
     // locale, exactly as before the column existed.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
-    const t = diverTranslator(locale);
-    const smsBody = recapUrl ? t("notifications.sms.recap", { shopName: shop.name, recapUrl }) : "";
+    const smsBody = recapUrl ? recapText(locale, { shopName: shop.name, recapUrl }) : "";
 
     if (recapUrl && person.email && !person.courtesyEmailOptOutAt) {
       const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {
@@ -1861,7 +1867,7 @@ async function sendRecaps(
         shopName: shop.name,
         phone,
         smsBody,
-        smsStopLine: t("notifications.sms.stopLine"),
+        locale,
         notification: {
           kind: "trip_recap",
           bookingId: booking.id,
@@ -1884,7 +1890,7 @@ async function sendRecaps(
         shopName: shop.name,
         phone,
         smsBody,
-        smsStopLine: t("notifications.sms.stopLine"),
+        locale,
       });
     } else if (recapUrl && person.email && person.courtesyEmailOptOutAt) {
       // Opted out of courtesy email and no phone to fall back to — not a
@@ -1917,7 +1923,7 @@ async function sendRecaps(
         {
           to: work.phone,
           body: work.smsBody,
-          smsStopLine: work.smsStopLine,
+          locale: work.locale,
           shopName: work.shopName,
         },
         { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
@@ -1940,7 +1946,7 @@ async function sendRecaps(
       {
         to: work.phone,
         body: work.smsBody,
-        smsStopLine: work.smsStopLine,
+        locale: work.locale,
         shopName: work.shopName,
       },
       { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },

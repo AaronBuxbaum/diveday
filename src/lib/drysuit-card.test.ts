@@ -98,7 +98,7 @@ describe("checkDrysuitCard", () => {
     });
 
     it("is not a card: a trip requiring the drysuit specialty still refuses", () => {
-      // The fact lives on the person, never in specialty_certifications, so the
+      // The fact lives on the person, never in `cards` (kind = specialty), so the
       // readiness gate cannot see it. Seen-diving-dry clears a warning only.
       const readiness = calculateReadiness({
         timezone: "UTC",

@@ -187,6 +187,17 @@ describe("FormDraft", () => {
     ]);
   });
 
+  it("a remount in the same document shows the newest input over an older cached draft", async () => {
+    // An add panel's Back reuses the page the router cached before anything
+    // was typed, so the draft it hands in is stale (#2737).
+    const first = renderForm(null);
+    fireEvent.input(screen.getByLabelText("Name"), { target: { value: "Ada" } });
+    first.unmount();
+    await act(async () => {});
+    renderForm(null);
+    expect(screen.getByLabelText("Name")).toHaveValue("Ada");
+  });
+
   it("flushes a pending blur save on unmount instead of cancelling it", async () => {
     const { unmount } = renderForm(null);
     const name = screen.getByLabelText("Name");

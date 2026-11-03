@@ -1,5 +1,4 @@
 import { and, eq, gte, isNull, sql } from "drizzle-orm";
-import { diverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
 import {
   type InboundChannel,
@@ -11,7 +10,11 @@ import {
   whatsAppReplyWindowOpen,
 } from "@/lib/inbox";
 import { log } from "@/lib/log";
-import type { NotificationProvider } from "@/lib/notifications";
+import {
+  type NotificationProvider,
+  staffReplySubject,
+  whatsAppReopenText,
+} from "@/lib/notifications";
 import { recipientLocale, threadableMessageId } from "@/lib/notifications/kinds";
 import type { AppDb } from "./client";
 import { getInboundMessage, lastInboundAt, recordStaffReply } from "./inbound-messages";
@@ -101,31 +104,6 @@ export type SendStaffReplyResult =
       replyId: string;
       reason: "not_configured" | "send_failed";
     };
-
-/**
- * The subject a diver sees on an emailed reply: their own thread's, marked as
- * a reply the way every mail client marks one, or the shop's name when their
- * message carried no subject at all (a WhatsApp forwarded by a client, a mail
- * sent with an empty one).
- *
- * Composed in the *diver's* language, from the diver bundle — a subject line
- * is the one string in this module a person outside the shop reads.
- */
-function replySubject(
-  locale: string,
-  shopName: string,
-  subject: string | null | undefined,
-): string {
-  const t = diverTranslator(locale);
-  const trimmed = subject?.trim();
-  if (!trimmed) return t("notifications.staffReply.subject", { shopName });
-  // A thread already marked as a reply keeps the one marker it has: mail
-  // clients strip theirs before replying for exactly this reason, and
-  // "Re: Re: Re: You're booked" is what happens when nobody does.
-  return /^re\s*:/i.test(trimmed)
-    ? trimmed
-    : t("notifications.staffReply.reSubject", { subject: trimmed });
-}
 
 /**
  * Send one reply from the shop, and record what happened to it.
@@ -250,7 +228,7 @@ export async function sendStaffReply(
       to: message.fromAddress,
       locale,
       shopName: shop.name,
-      subject: replySubject(locale, shop.name, message.subject),
+      subject: staffReplySubject(locale, shop.name, message.subject),
       body,
       // What files the answer into the diver's own thread rather than beside
       // it. Absent on a mail that carried no `Message-ID`, and on one whose
@@ -301,13 +279,6 @@ export async function sendStaffReply(
  */
 const REOPEN_SEND_TIMEOUT_MS = 10_000;
 
-/** The diver-bundle key each approved ask is written under. */
-const REOPEN_MESSAGE_KEY = {
-  answer_ready: "notifications.whatsappReopen.answerReady",
-  question: "notifications.whatsappReopen.question",
-  follow_up: "notifications.whatsappReopen.followUp",
-} as const satisfies Record<WhatsAppReopenMessage, string>;
-
 export type SendWhatsAppReopenInput = {
   shopId: string;
   personId: string;
@@ -339,7 +310,7 @@ export type SendWhatsAppReopenResult =
  * **Ask a diver to write back on WhatsApp**, once Meta's 24-hour window has
  * closed and a typed answer can no longer go.
  *
- * The words are one of {@link REOPEN_MESSAGE_KEY}'s fixed sentences in the
+ * The words are one of `whatsAppReopenText`'s fixed sentences in the
  * diver's language, carried by the shop's approved courtesy template, the same
  * one trip reminders use. When the diver answers, their message opens a fresh
  * window and the composer is back.
@@ -421,7 +392,7 @@ export async function sendWhatsAppReopen(
     if (!provider) return { status: "refused", reason: "whatsapp_not_connected" } as const;
 
     const locale = recipientLocale(person.locale, shop.defaultLocale);
-    const body = diverTranslator(locale)(REOPEN_MESSAGE_KEY[input.message]);
+    const body = whatsAppReopenText(locale, input.message);
     const replyId = crypto.randomUUID();
     const delivery = await provider.send({
       to: replyDestination("whatsapp", message.fromAddress),

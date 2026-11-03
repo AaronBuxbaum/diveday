@@ -11,7 +11,7 @@ shape it was built in. Three separate symptoms, one cause — a row was being us
 whatever else needed capturing, rather than for one question:
 
 - **The emergency contact was asked twice.** The waiver's step 2 asks for it, and the checklist asked
-  again; both write through the same `saveBookingEmergencyContact`. A diver who signed the waiver
+  again; both write through the same `recordBookingEmergencyContact`. A diver who signed the waiver
   first saw a settled "On file" row, and a diver who did not saw two differently-labelled forms for
   one fact. The duplication was noticed and half-closed once already (the row stopped rendering its
   form once a contact existed); the remaining half is that the question does not belong here at all.
@@ -50,7 +50,7 @@ have was the thing standing between them and the boat.
   `<button>` and `<summary>` already is one, so nesting them both toggles the disclosure on click and
   trips axe's `nested-interactive`; and this page is read on a phone, where there is no hover to
   discover. It is the same message key the booking page's hint uses, so the two cannot drift.
-- **The diver's note is its own category**, with its own writer. `saveRentalFitNote` touches the note
+- **The diver's note is its own category**, with its own writer. `recordRentalFitNote` touches the note
   column and the clock and nothing else, so answering it cannot blank sizes set last week, and
   `saveFitFromReady` now passes `note: undefined` so saving sizes cannot blank the note.
   - **This needed a new column, `rental_fit_profiles.fit_stated_at`**, and it is the sharpest edge in
@@ -58,8 +58,8 @@ have was the thing standing between them and the boat.
     had never held: a row that exists without a fit behind it. Every `rents_*` column on it defaults
     to **true**, so a diver who typed one sentence and never opened the gear form would have arrived
     on the boat's packing list renting a BCD, regulator, wetsuit, boots, mask, fins and weights —
-    seven pieces, no sizes, none of them asked for. `fit_stated_at` is stamped by `saveRentalFit`
-    and conspicuously never by `saveRentalFitNote`. **Three** readers had to learn it, because each
+    seven pieces, no sizes, none of them asked for. `fit_stated_at` is stamped by `recordRentalFit`
+    and conspicuously never by `recordRentalFitNote`. **Three** readers had to learn it, because each
     reaches the `rents_*` columns by its own path: `rentalFitLine` and the prep checklist
     (`src/lib/dive-prep.ts`) read a null there exactly as they already read a missing row;
     `rentalFitCompleteness` (`src/lib/rentals.ts`) returns `not_recorded` rather than nagging staff

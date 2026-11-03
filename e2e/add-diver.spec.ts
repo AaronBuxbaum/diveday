@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, settleStaffHydration, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
   daysFromNow,
@@ -76,7 +76,7 @@ async function openNewTripWithWalkIn(page: Page, titlePrefix: string): Promise<s
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
   await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Walk-in Wanda");
   await page.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -164,7 +164,7 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
   const addNew = page.locator('a[href*="waitlist=true"]', { hasText: "Add diver" });
   await expect(addNew).toBeVisible();
   await addNew.click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Waitlist Wally");
   await page.getByLabel("Email").fill(`wally-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to who’s waiting" }).click();
@@ -270,7 +270,7 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
   await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
 
   // One letter off "Marisol Vega", who is in the demo shop's trailing quarter
   // of sailed departures (src/db/seed-history.ts) — so she has a dive day and
@@ -325,9 +325,9 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
  * a deleted test guards nothing.
  */
 test("a crafted returnTo is ignored, before and after the create", async ({ page }) => {
-  const crafted = "/shop/blue-mantis/divers/new?returnTo=https%3A%2F%2Fevil.invalid%2Fsteal";
+  const crafted = "/shop/blue-mantis/divers?add=1&returnTo=https%3A%2F%2Fevil.invalid%2Fsteal";
   await page.goto(crafted);
-  await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Add a diver" })).toBeVisible();
 
   // A name no seeded diver is a trigram match for, so the create lands rather
   // than stopping at the "is this the same person?" prompt.
@@ -421,14 +421,17 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   // The board's primary action is this door's front entrance.
   await page.goto("/shop/blue-mantis/schedule/board");
   await page.getByRole("link", { name: "Add a booking" }).click();
-  await expect(page).toHaveURL(/\/bookings\/new/);
-  await expect(page.getByRole("heading", { level: 1, name: "New booking" })).toBeVisible();
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\?call=1$/);
+  await expect(page.getByRole("heading", { level: 2, name: "Add a booking" })).toBeVisible();
 
   // Slice 9g of ADR 20260827-the-shops-shelves: the picker is one ledger
   // grouped by day. The date is the group heading — said once, above the run
   // it describes — rather than repeated on every row, which is what a flat
   // list has to do because it has nothing to hang it from.
-  const firstDay = page.getByRole("heading", { level: 3 }).first();
+  const firstDay = page
+    .getByRole("region", { name: "Which departure?" })
+    .getByRole("heading", { level: 3 })
+    .first();
   await expect(firstDay).toBeVisible();
   const dayLabel = ((await firstDay.textContent()) ?? "").trim();
   expect(dayLabel).not.toBe("");
@@ -443,7 +446,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await page.getByRole("button", { name: "Search" }).click();
   await page.getByRole("combobox", { name: /Search divers/ }).fill("booking");
   await page.getByRole("option", { name: "Add a booking" }).click();
-  await expect(page).toHaveURL(/\/bookings\/new$/);
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\?call=1$/);
   // The picker opens on today and tomorrow; a departure eight days out is one
   // date away rather than pages of departures away (UX audit 2026-10-07,
   // item 19). A plain GET form, so the chosen day is the URL.
@@ -451,13 +454,14 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await page.getByRole("button", { name: "Show", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`from=${daysFromNow(8)}`));
   await expect(page.getByRole("link", { name: title })).toBeVisible();
-  // The door resolves a chosen trip by id either way.
-  await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
-  await expect(page.getByText(title).first()).toBeVisible();
+  // A departure picked there opens its own add band, focused (#2737).
+  await page.getByRole("link", { name: title }).click();
+  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}\\?add=1`));
+  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeFocused();
 
   // The diver form is a dedicated step shared by all seating doors.
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Phoned In Pat");
   await page.getByLabel("Email").fill("pat@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -470,31 +474,48 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   ).toBeVisible();
 });
 
-test("a refusal from the global door lands on the boat's Divers tab", async ({ page }) => {
-  test.setTimeout(30_000);
+test("a full boat's add band offers the wait list, never a seat", async ({ page }) => {
+  // Two tabs, a trip, a hand entry, a refused stale pick and a reload, each
+  // its own navigation or status wait.
+  test.setTimeout(45_000);
   const title = `Global Door Full ${e2eNow().getTime()}`;
   const tripId = await scheduleTrip(page, title, 9, 1);
 
-  await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
+  // **Two staff, two screens, one seat left** (dock review F6). This screen
+  // opens the band with a returning diver found and leaves it standing...
+  const stale = makeActivitySafe(await page.context().newPage());
+  await stale.goto(`/shop/blue-mantis/trips/${tripId}?add=1&diverq=Priya`);
+  await settleStaffHydration(stale);
+  const stalePick = stale.getByRole("button", { name: "Add Priya Sharma to the trip" });
+  await expect(stalePick).toBeVisible();
+
+  // ...while the other seats someone new and fills the boat.
+  await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("First Aboard Fay");
   await page.getByLabel("Email").fill("fay@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
   await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
-  // The boat is full now. The refusal lands on that departure's Divers tab,
-  // the one place that says why and offers the wait list.
-  await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
-  await page.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
-  await page.getByLabel("Full name").fill("Too Late Theo");
-  await page.getByLabel("Email").fill("theo@example.com");
-  await page.getByRole("button", { name: "Add to trip" }).click();
+  // The stale band still offers the seat it was drawn with. The server is the
+  // refusal of record: the boat is full, and nobody is seated past it.
+  await stalePick.click();
+  await expect(stale.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
+  // Seats only: the Divers tab also lists who wants in, where Priya can stand.
+  const seats = stale.locator('#roster li[id^="booking-"]');
+  await expect(seats.filter({ hasText: "First Aboard Fay" })).toHaveCount(1);
+  await expect(seats.filter({ hasText: "Priya Sharma" })).toHaveCount(0);
+  await stale.close();
 
-  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
-  // Next's own route announcer is also `role="alert"`, so target the banner.
-  await expect(page.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
+  // The boat is full now. The band has one rule for a full boat (#2737): it
+  // offers the wait list, so someone new is taken down as waiting, never
+  // seated past the capacity.
+  await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
+  await expect(page.getByRole("link", { name: "Add diver", exact: true })).toHaveAttribute(
+    "href",
+    /waitlist=true/,
+  );
   await expect(page.getByText(title).first()).toBeVisible();
 });
 

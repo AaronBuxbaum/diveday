@@ -170,7 +170,7 @@ export function registerRemainingExpandedAuditCaptures(
     test.use({ colorScheme: "light", viewport: { width: 1280, height: 800 } });
 
     test("a work order opens the diver's add-piece form", async ({ page }) => {
-      await page.goto("/shop/blue-mantis/gear/work-orders/new?diverq=Diego+Alvarez");
+      await page.goto("/shop/blue-mantis/gear/work-orders?add=1&diverq=Diego+Alvarez");
       await page.getByRole("link", { name: "Diego Alvarez", exact: true }).first().click();
       const piece = page.locator("#add-piece");
       await openIfClosed(piece);
@@ -196,7 +196,7 @@ export function registerRemainingExpandedAuditCaptures(
     test("renting to a diver without a card opens the counter's card-seen form", async ({
       page,
     }) => {
-      await page.goto("/shop/blue-mantis/gear/rentals/new?q=Rowan");
+      await page.goto("/shop/blue-mantis/gear?add=rental&q=Rowan");
       await page.getByRole("link", { name: "Rent to Rowan Feld", exact: true }).click();
       const card = page
         .locator("details")

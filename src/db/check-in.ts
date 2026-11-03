@@ -110,7 +110,7 @@ export type CheckInQueueRow = {
   /**
    * No **usable** emergency contact on this diver's record — the same test
    * Today's Contact rows apply (`missingEmergencyContactByTrip` in
-   * `src/db/today.ts`): a name *and* a phone, because a name with no number
+   * `src/features/today/today-reader.ts`): a name *and* a phone, because a name with no number
    * reads as "on file" and is unreachable in an incident.
    *
    * Never a boarding blocker. It is a nudge the counter can settle in the ten

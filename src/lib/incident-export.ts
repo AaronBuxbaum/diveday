@@ -784,8 +784,8 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
       reviewedAt: iso(card.reviewedAt),
       reviewedByName: card.reviewedByName ?? null,
       imported: card.importedAt !== null,
-      // A specialty card is never self-declared: neither public form asks.
-      selfDeclared: false,
+      // A Deep claim typed on /ready is as much a claim as a typed rung.
+      selfDeclared: isUnsightedSelfDeclaration(card),
     })),
     ...input.nitroxCertifications.map((card) => ({
       kind: "nitrox" as const,

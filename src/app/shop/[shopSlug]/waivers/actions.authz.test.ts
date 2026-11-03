@@ -26,7 +26,7 @@ const ctx = fileScopedShopContext();
  * not a gate, and until this action moved out of its inline `"use server"`
  * closure there was no way to post at it without the page (ADR-0006).
  *
- * `saveWaiverTemplate` has no re-check of its own: it writes the version it is
+ * `recordWaiverTemplate` has no re-check of its own: it writes the version it is
  * handed. The gate line in `./actions.ts` is the only thing between a captain
  * and the text divers sign, so these tests assert the refusal *and* that the
  * current template is untouched behind it.

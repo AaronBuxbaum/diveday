@@ -187,7 +187,7 @@ export type SaveCourseFormOutcome =
  * student enrolled from here on signs these. The same words again write
  * nothing, because a new version asks every student to sign again.
  */
-export async function saveCourseFormVersion(
+export async function recordCourseFormVersion(
   db: AppDb,
   input: {
     shopId: string;

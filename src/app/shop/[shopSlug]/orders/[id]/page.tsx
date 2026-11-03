@@ -10,17 +10,18 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
-import { canPersonExportDisputeSheet, canPersonManageOrders, canPersonRefund } from "@/db/authz";
-import { pendingCounterPayment } from "@/db/counter-payment-hold";
-import { getOrderBookingContext } from "@/db/order-booking";
-import { getOrder, isStaleCounterClaim, isVoidableCounterOrder } from "@/db/orders";
+import {
+  getOrderDetailPage,
+  hasRequiredStepUp,
+  isStaleCounterClaim,
+  pendingCounterPayment,
+} from "@/db/order-detail-page";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { currencySymbol, minorToMajor } from "@/lib/money";
-import { hasRequiredStepUp } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -37,7 +38,6 @@ import { OrderMoreMenu } from "./_components/OrderMoreMenu";
 import { OrderPageFlash } from "./_components/OrderPageFlash";
 import { refundAction } from "./actions";
 import { KIND_KEYS, NOTICES, STATUS_KEYS, undoTooLateText } from "./order-detail-keys";
-import { loadOrderHeader } from "./order-header";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -67,34 +67,24 @@ export default async function OrderDetailPage({
   // written in — a money screen should say "3 Aug" in the shop's own day, not
   // the server's.
   const { session, db, shop } = await requireShopSurface(shopSlug);
-  const order = await getOrder(db, shop.id, id);
-  if (!order) notFound();
+  // Refunds are owner/manager only (H-20260724-staff-role-reach, ADR 20260724-role-authorization);
+  // hide the control from other staff. refundAction re-checks regardless. The
+  // header and the departure a deposit or a trip fee was raised for
+  // (`OrderBookingLine`) come back beside it.
+  const page = await getOrderDetailPage(db, shop.id, id, session.user.personId);
+  if (!page) notFound();
+  const { order, header, booking } = page;
+  const canRefund = page.can.refund;
+  const canDisputeSheet = page.can.disputeSheet;
   const demo = shop.isDemo ?? false;
   const timezone = shop.timezone ?? "UTC";
-  // Refunds are owner/manager only (H-20260724-staff-role-reach, ADR 20260724-role-authorization);
-  // hide the control from other staff. refundAction re-checks regardless.
-  const [canRefund, canDisputeSheet, header, booking] = await Promise.all([
-    canPersonRefund(db, shop.id, session.user.personId),
-    // The dispute sheet needs a seat to describe, so an order raised for none
-    // (a gear sale, a package) has no door to it.
-    order.order.bookingId ? canPersonExportDisputeSheet(db, shop.id, session.user.personId) : false,
-    loadOrderHeader(db, {
-      shopId: shop.id,
-      orderId: order.order.id,
-      personId: session.user.personId,
-    }),
-    // The departure a deposit or a trip fee was raised for (`OrderBookingLine`).
-    order.order.bookingId ? getOrderBookingContext(db, shop.id, order.order.bookingId) : null,
-  ]);
   // Money taken at the counter, or charged to a room (ADR 20261009-counter-payments). It has no
   // Stripe invoice, so none of the Stripe controls below apply; an owner or manager can void it
   // instead, unless it was an invoice settled at the counter, which Stripe holds paid and cannot
   // un-pay.
   const counterCollection =
     order.order.collection === "stripe_invoice" ? null : order.order.collection;
-  const canVoidCounter =
-    isVoidableCounterOrder(order.order) &&
-    (await canPersonManageOrders(db, shop.id, session.user.personId));
+  const canVoidCounter = page.can.voidCounter;
   // What is left to give back, as a number a person types. Read off the order
   // rather than its total, so a second partial refund offers the remainder
   // instead of re-offering the whole charge (issue #699).
@@ -133,7 +123,6 @@ export default async function OrderDetailPage({
       />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.orders)}
-        eyebrowHref={shopPath(shopSlug, "orders")}
         title={order.person.fullName}
         description={order.order.description || t("orders.detail.fallbackDescription")}
         // One overflow for the dispute sheet and Stripe acts on an open invoice.
@@ -380,7 +369,7 @@ export default async function OrderDetailPage({
             the neutral fallback sentence, never the raw query value:
             `?notice=` is attacker-craftable, and this is a money screen — a
             hostile link must not be able to paint its own words into a
-            success-green message (same rule as orders/new's fallback). */}
+            success-green message (same rule as the new-order panel's fallback). */}
         <FormStatus tone={banner?.tone ?? "neutral"} className="mt-2 print:hidden">
           {notice && notice !== "not-authorized"
             ? banner

@@ -7,24 +7,19 @@ import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { captureDepartureBoatSafety } from "./boat-safety";
 import { createBoat } from "./boats";
-import {
-  courses,
-  departureBoatSafetySnapshots,
-  rollCallCrewEvents,
-  tripDives,
-  trips,
-} from "./schema";
+import { crewSubject } from "./roll-call-subject";
+import { courses, departureBoatSafetySnapshots, rollCallEvents, tripDives, trips } from "./schema";
 import { createTripLens, deleteTripLens } from "./trip-lenses";
 import {
   createTrip,
   deleteTrip,
   duplicateTrip,
+  editTrip,
   getTripWithBooked,
   listTripScheduleDays,
   moveTrip,
   pagedUpcomingTripsWithCounts,
   upcomingTripsWithCounts,
-  updateTrip,
 } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -307,10 +302,10 @@ describe("schedule edits after roll-call evidence", () => {
     });
     if (!sailed) throw new Error("failed to create trip");
 
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: sailed.id,
-      personId: staffId,
+      ...crewSubject(staffId),
       recordedByPersonId: staffId,
       status: "boarded",
       checkpoint: "departure",
@@ -584,7 +579,7 @@ describe("a course session is never self-guided", () => {
     // at creation — so the refusal has to read the existing row inside the
     // transaction. A patch that could be trusted for the course would be no
     // guard at all.
-    const result = await updateTrip(db, shop.id, trip.id, {
+    const result = await editTrip(db, shop.id, trip.id, {
       title: "Open Water — session 3",
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,

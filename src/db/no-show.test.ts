@@ -17,7 +17,7 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   bookings,
-  certifications,
+  cards,
   courses,
   interests,
   orderLineItems,
@@ -313,7 +313,7 @@ describe("markBookingNoShow", () => {
 
   /**
    * **The mark is not a roll call, and the after-dive head count rests on
-   * that** (`inAfterDivePopulation`, src/db/today.ts). That reader decides who
+   * that** (`inAfterDivePopulation`, src/features/today/today-reader.ts). That reader decides who
    * is at risk in the water from `roll_call_events` alone, because a walk-away
    * leaves no result at any checkpoint whether or not the desk released their
    * seat. Releasing it writes `bookings.status` and a trail line; the day it
@@ -399,7 +399,7 @@ describe("markBookingNoShow", () => {
   /**
    * **The dock is not the only place the crew says a diver is aboard.** A diver
    * who joined at the second site, or one the crew counted without a dock
-   * result, has no departure event at all — the population `src/db/today.ts`
+   * result, has no departure event at all — the population `src/features/today/today-reader.ts`
    * names at `inAfterDivePopulation`. Reading the departure checkpoint alone
    * left the counter's first and most important refusal silent about exactly
    * those divers, and the counter's window runs six hours past `startsAt`,
@@ -434,7 +434,7 @@ describe("markBookingNoShow", () => {
    * `not_boarded` at an after-dive checkpoint is not "never came": it is "did
    * not come back from the dive", and it is the one row on the manifest that
    * means somebody may still be in the water (`isAccountedForAfterDive` and
-   * `inAfterDivePopulation`, src/db/today.ts; **sailed** in the glossary, which
+   * `inAfterDivePopulation`, src/features/today/today-reader.ts; **sailed** in the glossary, which
    * says that diver sailed and is the one the day is still looking for).
    * Releasing their seat here would put it back on sale — and a wait-list diver
    * into it — while the crew are still counting heads at the rail.
@@ -985,7 +985,8 @@ describe("noShowSalvage", () => {
     });
     if (!rebooked.ok) throw new Error(`booking failed: ${rebooked.reason}`);
     // …and another asks a card they do not hold.
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: personId,
       agency: "padi",
@@ -1056,7 +1057,8 @@ describe("noShowSalvage", () => {
       personId,
     });
     if (!seat.ok) throw new Error(`booking failed: ${seat.reason}`);
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId,
       agency: "padi",

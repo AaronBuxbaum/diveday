@@ -19,25 +19,19 @@ import {
   FormStatus,
 } from "@/components/ui/form";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
-import { listCrewAssignmentRequests, readStaffingWeekAway } from "@/db/crew-requests";
-import { getStaffingView } from "@/db/staffing";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { staffRoleLabels } from "@/i18n/staff-role-labels";
-import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
-import { nowDate } from "@/lib/clock";
 import { CREW_PUBLIC_NAME_MAX, defaultCrewPublicName } from "@/lib/crew-public-name";
 import { formatCalendarDateRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
-import { staffWeek } from "@/lib/staffing-week";
-import { resolveWeekStart, shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
-import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
 import { ScheduleViews } from "../schedule/_components/ScheduleViews";
 import { CrewPageHeader } from "./_components/CrewPageHeader";
 import { staffingGapWords } from "./_components/gap-words";
 import { StaffingWarnings } from "./_components/StaffingWarnings";
 import { StaffingWeek, weekTailRowClass } from "./_components/StaffingWeek";
+import { readStaffingWeek } from "./_components/staffing-week-read";
 import { staffingWeekWords } from "./_components/staffing-week-words";
 import {
   createShiftAction,
@@ -139,22 +133,9 @@ export default async function StaffingPage({
   // member reads dates and copy in their own language, not the shop row's.
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  // Through the clock, not `new Date()`, and through the *shop's* zone, not
-  // the host's: this one value decides which week the page opens on, which
-  // column is Today, and which days are already behind. A raw wall-clock read
-  // here left the one staff surface that ignored DIVEDAY_CLOCK — the seeded
-  // shifts sit at the frozen instant while the window opened on the real
-  // today, which is both an unstable visual baseline and an e2e fixture that
-  // drifts out from under itself. In production `nowDate()` is the native
-  // call, unchanged.
-  const now = nowDate();
-  const today = calendarDateInTimezone(now, shop.timezone);
-  // The same `?week=` grammar the schedule board pages by, over the same dates
-  // (`src/lib/week-board.ts`; ADR 20260827-clearwater-surface-language,
-  // decision 5). Total by construction: a malformed or missing value lands on
-  // the week the shop is in rather than refusing the page.
-  const weekStart = resolveWeekStart(query[WEEK_PARAM], today);
-  const weekEnd = shiftCalendarDate(weekStart, 6);
+  const read = await readStaffingWeek({ db, shop, session, week: query[WEEK_PARAM], t });
+  if (!read) redirect(shopPath(shopSlug, "staffing"));
+  const { today, weekStart, weekEnd, view, blocks, canManage, week } = read;
   // **What the Add-a-shift form opens on: today, when the week on screen
   // contains it.** Defaulting to `weekStart` unconditionally put a Friday
   // afternoon's last-minute crew change — the busy-dock case this page exists
@@ -165,75 +146,11 @@ export default async function StaffingPage({
   // still opens on that week's Monday, which is the only honest answer there.
   // Calendar dates are ISO `YYYY-MM-DD`, so the ordering is the string's.
   const defaultShiftDate = today >= weekStart && today <= weekEnd ? today : weekStart;
-  // The week's boundaries are **shop-local midnights**, turned into instants
-  // here. On a UTC server the naive reading starts the week four or five hours
-  // early and drags the previous Sunday evening's shifts into it.
-  const fromWall = parseWallTime(weekStart, "00:00");
-  const toWall = parseWallTime(shiftCalendarDate(weekStart, 7), "00:00");
-  if (!fromWall || !toWall) redirect(shopPath(shopSlug, "staffing"));
-  // The grid, options and own consent share one roster read; the independent
-  // away/manager read is not part of a transaction-wide snapshot.
-  const [view, { blocks, canManageStaffAccounts: canManage }] = await Promise.all([
-    getStaffingView(
-      db,
-      shop.id,
-      wallTimeToUtc(fromWall, shop.timezone),
-      wallTimeToUtc(toWall, shop.timezone),
-      // The shop's own supervision target, so this week measures a departure
-      // exactly as Today's queue and the trip page do.
-      { diversPerDivemaster: shop.diversPerDivemaster },
-    ),
-    // The whole week's blackouts, whoever's: a person's own draw as quiet
-    // chips in their row, and everybody's are needed to warn on an assignment.
-    // Each note only as this reader may read it (#2673).
-    readStaffingWeekAway(db, shop.id, { from: weekStart, to: weekEnd }, session.user.personId),
-  ]);
-  // Requests hang off the gaps, so they are asked for after the view knows
-  // which departures are short — one query, over the ids that can carry one.
-  const crewRequests = await listCrewAssignmentRequests(
-    db,
-    shop.id,
-    view.gapTrips.map((trip) => trip.tripId),
-  );
   const notice = noticeFromParam(query.notice, notices);
   const onShiftForm =
     canManage && query.notice !== undefined && ADD_SHIFT_NOTICES.has(query.notice);
   const shiftStatus = onShiftForm ? notice : undefined;
   const pageNotice = onShiftForm ? undefined : notice;
-
-  const week = staffWeek({
-    blocks,
-    requests: crewRequests,
-    // Who is reading. `isCrew` is deliberately every staff role: a captain
-    // asking to run Saturday's boat is the ordinary case, and narrowing it to
-    // instructors would rebuild the "only the owner writes here" shape this
-    // slice exists to open (ADR 20260902-crew-requests-and-blackouts).
-    // `holdsInstructorRole` off the signed claims rather than a live read: it
-    // decides one advisory line and nothing else (#1339), and the write it
-    // sits beside is gated where it always was.
-    viewer: {
-      personId: session.user.personId,
-      isCrew: true,
-      holdsInstructorRole: session.user.roles.includes("instructor"),
-    },
-    now,
-    people: view.staff.map((member) => ({
-      personId: member.person.id,
-      name: member.person.fullName,
-      roles: staffRoleLabels(t, member.roles),
-      shifts: member.shifts.map((shift) => ({
-        id: shift.id,
-        startsAt: shift.startsAt,
-        endsAt: shift.endsAt,
-        note: shift.note,
-      })),
-      crewingTrips: member.crewingTrips,
-    })),
-    gaps: view.gapTrips,
-    weekStart,
-    timeZone: shop.timezone,
-    today,
-  });
 
   const gapWords = staffingGapWords(t);
 
@@ -265,12 +182,15 @@ export default async function StaffingPage({
   const saveCrewConsent = saveCrewPublicConsentAction.bind(null, weekStart);
   const deleteAway = deleteAwayAction.bind(null, weekStart);
   return (
-    <StaffPage width="full" className="staffing-print-rota">
+    <StaffPage width="full">
       {/* `week` is a reading of the page and stays in the URL; the rest is
           one-shot chrome. */}
       <FlashParams params={["notice"]} />
       {/* Schedule's Crew view (ADR 20261001-logbook) carries the week across. */}
-      <CrewPageHeader shopName={shop.name} t={t} />
+      <CrewPageHeader
+        printHref={`${shopPath(shopSlug, "staffing", "print")}?${WEEK_PARAM}=${weekStart}`}
+        t={t}
+      />
       <ScheduleViews
         shopSlug={shopSlug}
         crewSchedule
@@ -284,7 +204,7 @@ export default async function StaffingPage({
       />
 
       {pageNotice ? (
-        <div className="mb-6 print:hidden">
+        <div className="mb-6">
           <ShopNotice tone={pageNotice.tone} role={noticeRole(pageNotice.tone)}>
             {t(pageNotice.key)}
           </ShopNotice>
@@ -323,7 +243,6 @@ export default async function StaffingPage({
             locale={locale}
             timeZone={shop.timezone}
             shopSlug={shopSlug}
-            shopName={shop.name}
             canManage={canManage}
             canDecide={canManage}
             deleteShiftAction={deleteShift}
@@ -369,10 +288,7 @@ export default async function StaffingPage({
                   />
                 </Field>
                 <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("words.busy.saving")}
-                    className={buttonClass()}
-                  >
+                  <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                     {t("staffing.addShift.submit")}
                   </SubmitButton>
                   <FormStatus tone={shiftStatus?.tone}>
@@ -481,7 +397,7 @@ export default async function StaffingPage({
           {/* `mt-10`, the gap the credentials keep above themselves too: the
               tail's groups sat 24px and then 40px apart (K-195). */}
           <CompactDisclosureRow
-            className="mt-10 print:hidden"
+            className="mt-10"
             label={t("staffing.crewConsent.rowLabel")}
             value={
               crewConsented
@@ -569,10 +485,7 @@ function AddDoor({
     // row's box, so `last:` closes the list and its rules end where the rows'
     // do. On the page (`div`) it hangs under the week, which has already
     // closed itself, so it draws only its own closing rule (K-195).
-    // `print:hidden`: a door opens a form, and the printed week is the rota.
-    <Tag
-      className={`list-none print:hidden ${Tag === "li" ? ledgerRowBoxClass : weekTailRowClass}`}
-    >
+    <Tag className={`list-none ${Tag === "li" ? ledgerRowBoxClass : weekTailRowClass}`}>
       <AutoOpenDetails id={id} openOnHash={id} open={open} className="group/add scroll-mt-8">
         <summary
           className={buttonClass({

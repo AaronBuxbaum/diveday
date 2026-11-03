@@ -147,7 +147,7 @@
   dive, with nitrox counted only for seats with a verified card. A count, never a fill log
   ([H-20260730-nitrox-fill-station-procedure](../human-decisions/H-20260730-nitrox-fill-station-procedure.md)): each cylinder is still analyzed and signed for at the
   fill station. It shows once today's boats are past their last scheduled return, or on a day
-  with none (`loadOutDue`, `dayLoadOut` in `src/lib/closeout.ts`).
+  with none (`loadOutDue`, `dayLoadOut` in `src/features/today/closeout.ts`).
 - **Back from the boat** — the Gear tab's list, once a departure is home, of every unit that went
   out on it and is still out, one row per unit: **Back**, or **Back with a problem** with words,
   which closes it as a service concern and can pull the unit to Needs service in the same act

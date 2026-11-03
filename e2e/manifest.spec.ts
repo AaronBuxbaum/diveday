@@ -1058,7 +1058,7 @@ test("the manifest offers a per-device push opt-in without asking for permission
   // honest about what it promises, and does *not* request notification
   // permission on load. The subscribe round trip itself needs a real push
   // service, which the fleet has no route to — `DIVEDAY_DISABLE_EXTERNAL_HTTP`
-  // blocks it — so it is covered by unit tests over `savePushSubscription` and
+  // blocks it — so it is covered by unit tests over `recordPushSubscription` and
   // `pushManifestChanged` instead.
 
   // Deny rather than grant: a page that requests permission unprompted would

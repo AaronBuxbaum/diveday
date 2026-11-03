@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
+import { paymentEntries } from "./payments";
 import {
   billableWindow,
   closePricingMonth,
@@ -13,7 +14,7 @@ import {
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   importedPaymentHistory,
   orderLineItems,
@@ -208,14 +209,16 @@ describe("processedVolumeCents", () => {
       .values({ bookedAs: "diver", shopId: shop.shopId, tripId, personId: shop.personId })
       .returning();
     if (!booking) throw new Error("booking insert failed");
-    await db.insert(bookingPayments).values({
-      shopId: shop.shopId,
-      bookingId: booking.id,
-      status: "paid",
-      amountCents: 9_000,
-      currency: "usd",
-      updatedAt: MID_JUNE,
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId: shop.shopId,
+        bookingId: booking.id,
+        status: "paid",
+        amountCents: 9_000,
+        currency: "usd",
+        updatedAt: MID_JUNE,
+      }),
+    );
     await db.insert(importedPaymentHistory).values({
       shopId: shop.shopId,
       personId: shop.personId,

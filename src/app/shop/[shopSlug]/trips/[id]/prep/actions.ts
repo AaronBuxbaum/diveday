@@ -14,7 +14,8 @@ import {
   TRIP_UNIT_RETURN_OUTCOMES,
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
-import { getTripWithBooked, screenGearPicks } from "@/db/trips";
+import { screenGearPicks } from "@/db/trip-prep";
+import { getTripWithBooked } from "@/db/trips";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { GEAR_RETURN_OUTCOMES, tripReservationWindow } from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";

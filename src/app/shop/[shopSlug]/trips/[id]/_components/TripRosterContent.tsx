@@ -12,7 +12,8 @@ import { DisclosureRowList } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { TripGuests } from "@/db/trips";
+import type { BookableDiver } from "@/db/divers";
+import type { TripGuests } from "@/db/trip-guests";
 import { activityLine } from "@/i18n/activity-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
@@ -24,7 +25,8 @@ import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { recordPaperCourseFormAction } from "../course-actions";
-import { AddDiverSection } from "./AddDiverSection";
+import { AddDiverSection, type SeatRequestContext } from "./AddDiverSection";
+import { addBandMode, addBandSeatActions } from "./add-band-mode";
 import { carryTargetLabel } from "./carry-target-label";
 import { DealLeadTime } from "./DealLeadTime";
 import { DepartureNoteSection } from "./DepartureNoteSection";
@@ -32,6 +34,7 @@ import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { MixedTrainingForTrip } from "./MixedTrainingAdvisory";
 import { moveSeatRefusalFor } from "./move-seat-refusal";
+import { OpenAddBand } from "./OpenAddBand";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
 import { TrainingPlanWithDepth } from "./TrainingPlanWithDepth";
@@ -128,11 +131,29 @@ export type TripRosterContentContext = {
   /** The departure is finished: the ledger is its record (`RosterRecord`). */
   record?: RosterRecord;
   /**
-   * The counter can still seat a walk-in: the add-diver search's one door for
-   * someone new is then "Add as a walk-in", a name-only seat for the person
-   * standing at the desk (UX audit 2026-10-07, item 24).
+   * The counter can still seat a walk-in (the arrivals window): the band then
+   * offers the desk the choice of the counter (`addBandMode`), never makes it.
    */
   walkInOpen?: boolean;
+  /**
+   * What the URL asked of the add band. `open` (`?add=1`): it takes the
+   * cursor once the page is drawn (`OpenAddBand`). `counter` (`?counter=1`):
+   * the desk chose to seat walk-ins. `request` (`?request=`): the date request
+   * it was opened from, its card above the band, the id each booking seat
+   * posts, and, when the asker is on file and nothing was typed, that diver as
+   * the band's one match. `requestGone`: the line drawn instead of a card
+   * for a request this shop has no open party for.
+   */
+  addBand?: {
+    open: boolean;
+    counter?: boolean;
+    requestGone?: ReactNode;
+    request?: {
+      context: SeatRequestContext;
+      card: ReactNode;
+      search?: { query: string; candidates: BookableDiver[] };
+    };
+  };
   /**
    * `acceptsNewDivers`, read by the page against its clock: false on a
    * departure that has sailed, is held or is cancelled, and then no add or
@@ -416,7 +437,12 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                 timeZone={timezone}
               />
             ) : null,
-          addDiverGroup: !acceptsDivers ? null : <AddDiverGroup context={context} />,
+          addDiverGroup: !acceptsDivers ? null : (
+            <>
+              <AddDiverGroup context={context} />
+              {context.addBand?.open ? <OpenAddBand /> : null}
+            </>
+          ),
         }}
       />
 
@@ -438,12 +464,21 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
     confirmEmail,
     confirmPhone,
     actions,
-    walkInOpen = false,
   } = context;
-  const { trip, diverCandidates, diverQuery, confirmMatches } = guests;
+  const seatRequest = context.addBand?.request;
+  const { trip, confirmMatches } = guests;
+  const diverQuery = seatRequest?.search?.query ?? guests.diverQuery;
+  const diverCandidates = seatRequest?.search?.candidates ?? guests.diverCandidates;
+  const mode = addBandMode({
+    walkInWindow: context.walkInOpen ?? false,
+    counter: context.addBand?.counter ?? false,
+  });
+  const seatActions = addBandSeatActions(mode, actions);
 
   return (
     <div className="flex flex-col gap-4">
+      {seatRequest?.card}
+      {context.addBand?.requestGone}
       {!isFull(seatsOnSale(trip)) ? (
         <Suspense fallback={null}>
           <MixedTrainingForTrip
@@ -464,12 +499,10 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
           candidates: diverCandidates,
           recentInviteDates: guests.recentInvites,
           tripId: trip.id,
-          addBookingAction: walkInOpen ? actions.walkInAddBookingAction : actions.addBookingAction,
+          addBookingAction: seatActions.addBookingAction,
           addToWaitlistAction: actions.addToWaitlistAction,
           addKnownToWaitlistAction: actions.addKnownToWaitlistAction,
-          addExistingDiverAction: walkInOpen
-            ? actions.walkInAddExistingDiverAction
-            : actions.addExistingDiverAction,
+          addExistingDiverAction: seatActions.addExistingDiverAction,
           offerAction: actions.createDirectTripInvitationAction,
           status: noticeForForm(tripNotice, "add-diver"),
           locale,
@@ -479,7 +512,8 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
           confirmPhone,
           confirmMatches,
           shopRentalItems,
-          walkInOpen,
+          mode,
+          request: seatRequest?.context,
         }}
       />
     </div>

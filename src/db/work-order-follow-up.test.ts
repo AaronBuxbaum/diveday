@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { PAYMENT_CLAIM_STALE_AFTER_MS as CLAIM_MS } from "@/lib/attempts";
 import { nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications";
 import type {
@@ -25,7 +26,6 @@ import {
   refundOrder,
   voidCounterOrder,
 } from "./orders";
-import { STALE_AFTER_MS } from "./payment-operations";
 import { customerGearItems, customerGearNotices, orders, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
@@ -44,7 +44,7 @@ import {
   addCustomerGearItem,
   createWorkOrder,
   deleteCustomerGearItem,
-  saveWorkOrder,
+  recordWorkOrder,
   setWorkOrderStatus,
 } from "./work-orders";
 
@@ -118,7 +118,7 @@ async function readyTicket(db: AppDb, shopId: string, personId: string, pieceId:
   });
   if (!outcome.ok) throw new Error(`ticket refused: ${outcome.reason}`);
   // What the customer is told was done: the words the message carries.
-  await saveWorkOrder(db, {
+  await recordWorkOrder(db, {
     shopId,
     workOrderId: outcome.workOrder.id,
     reportedProblem: "Free-flows at depth",
@@ -1077,7 +1077,7 @@ describe("recording a payment taken at the counter", () => {
   async function strandClaim(db: AppDb, orderId: string) {
     await db
       .update(orders)
-      .set({ counterClaimedAt: new Date(nowDate().getTime() - STALE_AFTER_MS - 1_000) })
+      .set({ counterClaimedAt: new Date(nowDate().getTime() - CLAIM_MS - 1_000) })
       .where(eq(orders.id, orderId));
   }
 

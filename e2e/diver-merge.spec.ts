@@ -12,7 +12,9 @@ for (const activation of ["pointer", "keyboard"] as const) {
     page,
     request,
   }) => {
-    const seeded = await request.post("/api/test/seed-trouble-states?mergeCandidates=1");
+    const seeded = await request.post(
+      "/api/test/seed-trouble-states?facts=troublePanels,mergeCandidates",
+    );
     expect(seeded.ok()).toBe(true);
     const { mergeCandidates } = (await seeded.json()) as {
       mergeCandidates: { sourceId: string; candidateIds: string[] };
@@ -67,8 +69,8 @@ async function addDiver(
   fields: { name: string; email: string; phone: string },
   duplicate = false,
 ): Promise<string> {
-  await page.goto("/shop/blue-mantis/divers/new");
-  await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
+  await page.goto("/shop/blue-mantis/divers?add=1");
+  await page.getByRole("heading", { level: 2, name: "Add a diver" }).waitFor();
   await page.getByLabel("Full name").fill(fields.name);
   await page.getByLabel("Email").fill(fields.email);
   await page.getByLabel("Phone").fill(fields.phone);

@@ -3,8 +3,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { DAY_STATES } from "../src/lib/world.ts";
 import {
+  auditDayStates,
   auditLedger,
+  collectCaptureNames,
   collectRoutes,
   collectWorld,
   deriveCoverage,
@@ -59,13 +62,13 @@ async function fixture({
 
 /** A tree whose ledger is honest, so each test only has to break one thing. */
 const HEALTHY = {
-  routes: ["/", "/shop/[shopSlug]/staffing", "/shop/[shopSlug]/orders/new"],
+  routes: ["/", "/shop/[shopSlug]/staffing", "/shop/[shopSlug]/promos"],
   specs: ["booking.spec.ts", "visual.spec.ts"],
   captures: ["landing"],
   ledger: {
     "//": "note",
     "/": { e2e: ["booking.spec.ts"], visual: ["landing"] },
-    "/shop/[shopSlug]/orders/new": {
+    "/shop/[shopSlug]/promos": {
       e2e: [],
       visual: [],
       exempt: "no coverage yet — needs a spec",
@@ -483,7 +486,7 @@ describe("planLedgerWrite (the ratchet)", () => {
     const result = await plan({ routes: ["/"] });
     expect(Object.keys(result.next)).toEqual(["/"]);
     expect(result.removedRoutes.sort()).toEqual([
-      "/shop/[shopSlug]/orders/new",
+      "/shop/[shopSlug]/promos",
       "/shop/[shopSlug]/staffing",
     ]);
   });
@@ -493,6 +496,39 @@ describe("planLedgerWrite (the ratchet)", () => {
     const written = JSON.parse(serializeLedger(result.next));
     expect(Object.keys(written)[0]).toBe("//");
     expect(ledgerEntries(written)).toEqual(result.next);
+  });
+});
+
+describe("auditDayStates", () => {
+  const captures = new Set(["today-evening"]);
+
+  it("names a state with neither a capture nor a reason", () => {
+    expect(auditDayStates([{ id: "dusk", label: "Dusk" }], captures)).toEqual([
+      expect.stringContaining('day state "dusk": no capture photographs it'),
+    ]);
+  });
+
+  it("names a capture no visual spec takes", () => {
+    expect(
+      auditDayStates([{ id: "dusk", label: "Dusk", capture: "today-dusk" }], captures),
+    ).toEqual([expect.stringContaining('"today-dusk", which no visual spec takes')]);
+  });
+
+  it("refuses a state that is both captured and exempt", () => {
+    const state = { id: "dusk", label: "Dusk", capture: "today-evening", exempt: "why" };
+    expect(auditDayStates([state], captures)).toHaveLength(1);
+  });
+
+  it("accepts a captured state and a written reason", () => {
+    const states = [
+      { id: "a", label: "A", capture: "today-evening" },
+      { id: "b", label: "B", exempt: "An act." },
+    ];
+    expect(auditDayStates(states, captures)).toEqual([]);
+  });
+
+  it("holds the day's real states to the real captures", async () => {
+    expect(auditDayStates(DAY_STATES, await collectCaptureNames(process.cwd()))).toEqual([]);
   });
 });
 

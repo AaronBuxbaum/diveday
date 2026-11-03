@@ -48,6 +48,8 @@ const STAFF_PATHS = [
   "/reports",
   "/promos",
   "/staffing",
+  // The same week as a sheet for the noticeboard.
+  "/staffing/print",
   "/dive-sites",
   // The paper day: one document holding every diver's emergency contact for
   // today, so a cross-tenant read of it is the whole roster at once.
@@ -206,7 +208,7 @@ test("a mistyped id in a staff path segment is a 404, never a 500", async ({ pag
     "/shop/blue-mantis/trips/nope/log",
     "/shop/blue-mantis/divers/nope",
     "/shop/blue-mantis/dive-sites/nope",
-    "/shop/blue-mantis/bookings/new/nope",
+    "/shop/blue-mantis/trips/nope?add=1",
     "/shop/blue-mantis/schedule/blowout/nope",
   ]) {
     const response = await page.goto(path);

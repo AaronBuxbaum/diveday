@@ -30,7 +30,7 @@ import { filesUnder } from "./files-under.mjs";
  * A guarded write passes when `revision` appears in the same literal. One test
  * covers both shapes in the tree: the unconditional `revision: sql`${…} + 1``
  * (`moveTrip`, `refreshDemoShop`) and the conditional spread
- * `...(revisionMoved ? { revision: … } : {})` (`updateTrip`, which moves a boat
+ * `...(revisionMoved ? { revision: … } : {})` (`editTrip`, which moves a boat
  * and renames it in one statement and must only re-alert for the first).
  *
  * A `.set()` that does not touch `startsAt` is not a calendar move and is not
@@ -204,7 +204,7 @@ async function main() {
         .join("\n")}`,
     );
     console.error(
-      "Bump `revision` in the same `.set()` — `moveTrip` (src/db/trips-schedule.ts) shows the unconditional shape, `updateTrip` (src/db/trips-record.ts) the conditional one for a statement that may only be renaming. `trips.revision` is published as the RFC 5545 `SEQUENCE` by both calendar surfaces (src/lib/trip-calendar.ts), so a departure that moves without a bump is an event every subscribed client already believes it has — and a diver standing at the dock at the old time (issue #1165).",
+      "Bump `revision` in the same `.set()` — `moveTrip` (src/db/trips-schedule.ts) shows the unconditional shape, `editTrip` (src/db/trips-record.ts) the conditional one for a statement that may only be renaming. `trips.revision` is published as the RFC 5545 `SEQUENCE` by both calendar surfaces (src/lib/trip-calendar.ts), so a departure that moves without a bump is an event every subscribed client already believes it has — and a diver standing at the dock at the old time (issue #1165).",
     );
     console.error(
       "A write that genuinely moves a departure nobody can subscribe to (an `/api/test/*` fixture re-timing a per-worker test database) says `diveday:allow-flat-revision: <why>` in a comment above it or inside the literal. The reason is not decoration: an exemption with nothing after the colon is refused.",

@@ -13,7 +13,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  *
  * On a **held seat** (`held`, issue #2145) the contact is the seat's own
  * (`bookings.held_emergency_contact_*`), never the matched record's: the same
- * form writes it onto the booking (`saveBookingEmergencyContact`), and the
+ * form writes it onto the booking (`recordBookingEmergencyContact`), and the
  * manifest shows it in place of the withheld one.
  */
 export function SeatEmergencyContact({

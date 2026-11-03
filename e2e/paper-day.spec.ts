@@ -8,9 +8,8 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * is the same component the per-trip packet prints, and `e2e/trips.spec.ts`
  * already pins its three sections — but the two things only a real page can
  * answer: that the day's own door reaches it, and that widening one departure
- * to several did not put a control back on paper. The packet hides every
- * button through one `.trip-print-bundle` rule, and that rule is a backstop
- * whose whole value is that nobody has to remember it.
+ * to several did not put a control back on paper. The packet is sheets
+ * (issue #2745) that render no control at all, so this asks the document.
  */
 test.describe("the paper day", () => {
   signedInAsOwner();
@@ -84,18 +83,14 @@ test.describe("the paper day", () => {
     // printer, and a captain holding page seven has no other way to tell.
     await expect(popup.getByText(/\d{4}/).first()).toBeVisible();
 
-    // Each departure's three sections own different named pages. The name
-    // transition creates the physical break even when break-before is auto
-    // on a section that is its wrapper's first child. Verify the browser's
-    // resolved ownership, then the actual paginated PDF rather than a CSS
-    // break-before value that cannot describe named-page transitions.
+    // Each departure's two sheets own different named pages: the dive plan
+    // and manifest share the first, the packing list has the second. The name
+    // transition creates the physical break. Verify the browser's resolved
+    // ownership, then the actual paginated PDF.
     await popup.emulateMedia({ media: "print" });
-    const sectionPages = await popup.locator(".print-bundle-page").evaluateAll((elements) =>
+    const sectionPages = await popup.locator("[data-packet-section]").evaluateAll((elements) =>
       elements.map((element) => {
-        // Plan/prep wrap their section; the composed manifest owns its name inside it.
-        const owner =
-          element.closest("[data-departure-paper]") ??
-          element.querySelector("[data-departure-paper]");
+        const owner = element.closest("[data-departure-paper]");
         return {
           headingId: element.getAttribute("aria-labelledby"),
           page: owner ? getComputedStyle(owner).page : null,
@@ -109,10 +104,11 @@ test.describe("the paper day", () => {
       const prefix = `print-${name}-`;
       expect(section.headingId).toMatch(new RegExp(`^${prefix}`));
       const tripId = section.headingId?.slice(prefix.length).toLowerCase();
-      const paperName = name === "manifest" ? "manifest-departure" : name;
+      const paperName = name === "manifest" ? "dives" : name;
       expect(section.page).toBe(`departure-${tripId}-${paperName}`);
     }
-    expect(new Set(sectionPages.map((section) => section.page)).size).toBe(sectionPages.length);
+    const sheetCount = new Set(sectionPages.map((section) => section.page)).size;
+    expect(sheetCount).toBe(departures * 2);
     await popup.evaluate(() => document.fonts.ready);
     // Returning to the packet rechecks its staff session. Exercise that check
     // and wait for it: printing while it is pending correctly prints the lock.
@@ -126,9 +122,9 @@ test.describe("the paper day", () => {
     ]);
     await expect(popup.locator("[data-staff-session-lock]")).toHaveCount(0);
     const pdf = await popup.pdf({ format: "Letter", preferCSSPageSize: true });
-    // Every section starts its own sheet; a long section may continue on more.
+    // Every sheet starts its own page; a long one may continue on more.
     const sheets = pdf.toString("latin1").match(/\/Type \/Page\b/g) ?? [];
-    expect(sheets.length).toBeGreaterThanOrEqual(sectionPages.length);
+    expect(sheets.length).toBeGreaterThanOrEqual(sheetCount);
     await popup.emulateMedia({ media: "screen" });
 
     // **No element id is emitted twice.** The manifest and prep pages carry
@@ -181,7 +177,7 @@ test.describe("the paper day", () => {
     // with no name in any of them. Every person the sheet carries is on paper
     // and says who they are.
     const people = await popup
-      .locator(".trip-print-bundle [data-print-content]")
+      .locator(".paper-sheet [data-print-content]")
       .evaluateAll((elements) =>
         elements.map((element) => ({
           onPaper:
@@ -198,20 +194,18 @@ test.describe("the paper day", () => {
     // not print: carried to paper they made every name a 16mm band, and a full
     // boat's roll call ran to extra sheets of the packet a captain counts
     // pages on. On paper the button is its content and 4px a side.
-    const slack = await popup
-      .locator(".trip-print-bundle [data-print-content]")
-      .evaluateAll((elements) =>
-        elements.map((element) => {
-          const tallest = Math.max(
-            0,
-            ...[...element.children].map((child) => child.getBoundingClientRect().height),
-          );
-          return {
-            text: (element as HTMLElement).innerText.trim().slice(0, 30),
-            slack: Math.round(element.getBoundingClientRect().height - tallest),
-          };
-        }),
-      );
+    const slack = await popup.locator(".paper-sheet [data-print-content]").evaluateAll((elements) =>
+      elements.map((element) => {
+        const tallest = Math.max(
+          0,
+          ...[...element.children].map((child) => child.getBoundingClientRect().height),
+        );
+        return {
+          text: (element as HTMLElement).innerText.trim().slice(0, 30),
+          slack: Math.round(element.getBoundingClientRect().height - tallest),
+        };
+      }),
+    );
     expect(slack.filter((person) => person.slack > 10)).toEqual([]);
     await popup.emulateMedia({ media: "screen" });
     await popup.close();

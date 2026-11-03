@@ -1,8 +1,8 @@
 import { acknowledgeCrewAwayAction } from "@/app/shop/[shopSlug]/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import type { TodayAction } from "@/features/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { TodayAction } from "@/lib/today";
 
 /**
  * **"Working it anyway"** on Today's `crew_away` row (issue #2678, decided by

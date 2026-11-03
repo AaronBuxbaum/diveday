@@ -4,6 +4,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
+import { tipsOf } from "@/test/tips";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import {
   bookings,
@@ -11,7 +12,6 @@ import {
   people,
   personRoles,
   shops,
-  tips,
   tripReviews,
   userAccounts,
 } from "./schema";
@@ -67,9 +67,7 @@ describe("createDemoShop", () => {
     // It's seeded: real bookings, and the same friendly staff cast by role.
     const shopBookings = await db.select().from(bookings).where(eq(bookings.shopId, shop.id));
     expect(shopBookings.length).toBeGreaterThan(0);
-    expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBeGreaterThan(
-      0,
-    );
+    expect((await tipsOf(db, shop.id)).length).toBeGreaterThan(0);
     expect(
       (await db.select().from(tripReviews).where(eq(tripReviews.shopId, shop.id))).length,
     ).toBeGreaterThan(0);

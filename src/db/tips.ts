@@ -1,10 +1,9 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { log } from "@/lib/log";
 import { majorToMinor, type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/checkout";
+import { tipCheckout } from "./checkout-purpose";
 import type { AppDb, DbExecutor } from "./client";
-import { enqueueTipIntegrationEvent } from "./integration-events";
 import { boundLockWaits } from "./lock-bounds";
 import {
   idempotencyKeyFor,
@@ -12,7 +11,14 @@ import {
   resolvePaymentOperation,
   startPaymentOperation,
 } from "./payment-operations";
-import { bookings, people, shops, type Tip, tips } from "./schema";
+import {
+  type BookingCheckout,
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookings,
+  people,
+  shops,
+} from "./schema";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 import { checkoutProviderFromEnvironment } from "./stripe-providers";
 
@@ -164,6 +170,7 @@ export async function startTipCheckout(
   const [row] = await db
     .select({
       shopId: bookings.shopId,
+      tripId: bookings.tripId,
       email: people.email,
       status: bookings.status,
       tipsEnabled: shops.tipsEnabled,
@@ -294,19 +301,30 @@ export async function startTipCheckout(
     }
     await recordPaymentOperationStripeObject(tx, intent.id, session.stripeSessionId);
 
+    // A tip is a checkout whose purpose is `tip` (issue #2718): one booking
+    // link, the amount the diver chose as both the per-diver and the total
+    // ask, and none of a fare's deposit, promotion or tax (the
+    // `booking_checkouts_tip_shape` check).
     const [created] = await tx
-      .insert(tips)
+      .insert(bookingCheckouts)
       .values({
         shopId: row.shopId,
-        bookingId: input.bookingId,
+        tripId: row.tripId,
+        purpose: "tip",
         stripeAccountId,
         stripeSessionId: session.stripeSessionId,
         checkoutUrl: session.checkoutUrl,
         currency,
-        amountCents: input.amountCents,
+        amountPerDiverCents: input.amountCents,
+        totalCents: input.amountCents,
         expiresAt: session.expiresAt,
       })
       .returning();
+    if (created) {
+      await tx
+        .insert(bookingCheckoutBookings)
+        .values({ shopId: row.shopId, checkoutId: created.id, bookingId: input.bookingId });
+    }
     await resolvePaymentOperation(tx, intent.id, { status: "succeeded" });
     if (!created?.checkoutUrl) {
       return { ok: false, reason: "checkout_unavailable" };
@@ -315,161 +333,84 @@ export async function startTipCheckout(
   });
 }
 
-/** The most recent tip for this booking, or null — drives the recap page's tip panel. */
+/**
+ * The most recent tip for this booking, or null: drives the recap page's tip
+ * panel. Its lifecycle is a checkout's (`markCheckoutPaidBySessionId`,
+ * `markCheckoutExpiredBySessionId`, `refreshCheckoutFromStripe`), which settle a
+ * tip without touching the seat (issue #2718).
+ */
 export async function getLatestTipForBooking(
   db: DbExecutor,
   shopId: string,
   bookingId: string,
-): Promise<Tip | null> {
+): Promise<BookingCheckout | null> {
   const [row] = await db
-    .select()
-    .from(tips)
-    .where(and(eq(tips.shopId, shopId), eq(tips.bookingId, bookingId)))
-    .orderBy(desc(tips.createdAt))
-    .limit(1);
-  return row ?? null;
-}
-
-/**
- * Record the `cus_…` Stripe created for this tip's session, once Stripe says
- * one exists — the tip-table twin of `recordCheckoutStripeCustomer`
- * (src/db/checkouts.ts), including the write-once `IS NULL` guard that makes a
- * replayed webhook a no-op.
- *
- * Deliberately a second writer rather than one that guesses the table from the
- * session id: a tip and a booking checkout share the Stripe session-id space
- * but must never share a statement (ADR 20260726-post-trip-tipping).
- */
-export async function recordTipStripeCustomer(
-  db: DbExecutor,
-  input: {
-    stripeSessionId: string;
-    stripeCustomerId: string;
-    /** See markTipPaidBySessionId — the same defense-in-depth cross-check. */
-    expectedAccountId?: string;
-  },
-): Promise<boolean> {
-  if (input.stripeCustomerId.trim().length === 0) return false;
-  const [updated] = await db
-    .update(tips)
-    .set({ stripeCustomerId: input.stripeCustomerId })
-    .where(
+    .select({ tip: bookingCheckouts })
+    .from(bookingCheckouts)
+    .innerJoin(
+      bookingCheckoutBookings,
       and(
-        eq(tips.stripeSessionId, input.stripeSessionId),
-        isNull(tips.stripeCustomerId),
-        input.expectedAccountId === undefined
-          ? undefined
-          : eq(tips.stripeAccountId, input.expectedAccountId),
+        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+        eq(bookingCheckoutBookings.shopId, shopId),
+        eq(bookingCheckoutBookings.bookingId, bookingId),
       ),
     )
-    .returning({ id: tips.id });
-  return updated !== undefined;
+    .where(and(eq(bookingCheckouts.shopId, shopId), tipCheckout()))
+    // diveday:allow-time-id-order: picks the one newest tip; nobody is shown a list.
+    .orderBy(desc(bookingCheckouts.createdAt), desc(bookingCheckouts.id))
+    .limit(1);
+  return row?.tip ?? null;
 }
+
+/** A tip as the demo seeds write one: never handed to Stripe. */
+export type SeedTip = {
+  shopId: string;
+  bookingId: string;
+  tripId: string;
+  status: "pending" | "completed" | "expired";
+  stripeAccountId: string;
+  stripeSessionId: string;
+  checkoutUrl: string | null;
+  currency: string;
+  amountCents: number;
+  expiresAt: Date | null;
+  completedAt: Date | null;
+  createdAt: Date;
+};
 
 /**
- * Mark a tip paid from Stripe's own webhook evidence. Idempotent: an
- * already-paid tip is returned unchanged rather than re-stamping
- * `completedAt`. Deliberately does nothing else — no booking-payment
- * cascade, unlike `markCheckoutPaidBySessionId` — a tip never touches that
- * gate.
+ * Write demo tips, each a tip-purpose checkout with its one booking link. The
+ * seeds' only door to a tip: nothing here contacts a provider, enqueues an
+ * integration event or touches the booking-payment gate.
  */
-export async function markTipPaidBySessionId(
-  db: AppDb,
-  stripeSessionId: string,
-  expectedAccountId?: string,
-): Promise<Tip | null> {
-  const [tip] = await db
-    .select()
-    .from(tips)
-    .where(eq(tips.stripeSessionId, stripeSessionId))
-    .limit(1);
-  if (!tip) return null;
-  // Defense-in-depth account cross-check (security review finding) — see
-  // markCheckoutPaidBySessionId in src/db/checkouts.ts.
-  if (expectedAccountId !== undefined && expectedAccountId !== tip.stripeAccountId) {
-    log("tip.paid_account_mismatch", "error", {
-      tipId: tip.id,
-      shopId: tip.shopId,
-      expectedAccountId,
-      tipAccountId: tip.stripeAccountId,
-    });
-    return null;
-  }
-  if (tip.status === "paid") return tip;
-  return db.transaction(async (tx) => {
-    const [updated] = await tx
-      .update(tips)
-      .set({ status: "paid", completedAt: nowDate() })
-      .where(eq(tips.id, tip.id))
-      .returning();
-    if (!updated) return null;
-    // The tip reaches the shop's books as income on its own line (batch 6
-    // item 9, H-20261014-checkouts-reach-the-books), in the same transaction that marks it paid.
-    await enqueueTipIntegrationEvent(tx, { shopId: updated.shopId, tipId: updated.id });
-    return updated;
-  });
-}
-
-/** A Stripe-expired session can no longer be paid; pending → expired. */
-export async function markTipExpiredBySessionId(
-  db: AppDb,
-  stripeSessionId: string,
-  expectedAccountId?: string,
-): Promise<Tip | null> {
-  const [updated] = await db
-    .update(tips)
-    .set({ status: "expired" })
-    .where(
-      and(
-        eq(tips.stripeSessionId, stripeSessionId),
-        eq(tips.status, "pending"),
-        expectedAccountId === undefined ? undefined : eq(tips.stripeAccountId, expectedAccountId),
-      ),
+export async function recordSeedTips(db: DbExecutor, tips: SeedTip[]): Promise<void> {
+  if (tips.length === 0) return;
+  const created = await db
+    .insert(bookingCheckouts)
+    .values(
+      tips.map((tip) => ({
+        shopId: tip.shopId,
+        tripId: tip.tripId,
+        purpose: "tip" as const,
+        status: tip.status,
+        stripeAccountId: tip.stripeAccountId,
+        stripeSessionId: tip.stripeSessionId,
+        checkoutUrl: tip.checkoutUrl,
+        currency: tip.currency,
+        amountPerDiverCents: tip.amountCents,
+        totalCents: tip.amountCents,
+        settledTotalCents: tip.status === "completed" ? tip.amountCents : null,
+        expiresAt: tip.expiresAt,
+        completedAt: tip.completedAt,
+        createdAt: tip.createdAt,
+      })),
     )
-    .returning();
-  return updated ?? null;
-}
-
-/**
- * Ask Stripe directly whether a still-`pending` tip actually settled or
- * expired — the webhook-less fallback the booking-checkout confirmation
- * page already leans on (`refreshCheckoutFromStripe`), for the same reason:
- * a delayed/missed webhook must never leave the recap page showing a dead
- * Checkout link forever, or (worse) a `?tip=paid` return-URL trusted as
- * proof of payment on its own. A non-pending tip, or a Stripe lookup that
- * itself fails, is returned unchanged — the caller only cares whether the
- * *local* row moved.
- */
-export async function refreshTipFromStripe(
-  db: AppDb,
-  shopId: string,
-  tipId: string,
-  checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
-): Promise<Tip | null> {
-  const [row] = await db
-    .select()
-    .from(tips)
-    .where(and(eq(tips.id, tipId), eq(tips.shopId, shopId)))
-    .limit(1);
-  if (!row) return null;
-  if (row.status !== "pending") return row;
-
-  const result = await checkout.retrieveCheckoutSession(row.stripeAccountId, row.stripeSessionId);
-  if (result.status !== "ok") return row;
-  // Same reason as refreshCheckoutFromStripe: this path is the only one that
-  // runs when a webhook never arrives, so it records the Customer id too
-  // (issue #1621).
-  if (result.session.stripeCustomerId) {
-    await recordTipStripeCustomer(db, {
-      stripeSessionId: row.stripeSessionId,
-      stripeCustomerId: result.session.stripeCustomerId,
-    });
-  }
-  if (result.session.paymentStatus === "paid") {
-    return markTipPaidBySessionId(db, row.stripeSessionId);
-  }
-  if (result.session.stripeStatus === "expired") {
-    return markTipExpiredBySessionId(db, row.stripeSessionId);
-  }
-  return row;
+    .returning({ id: bookingCheckouts.id, stripeSessionId: bookingCheckouts.stripeSessionId });
+  const bySession = new Map(tips.map((tip) => [tip.stripeSessionId, tip]));
+  await db.insert(bookingCheckoutBookings).values(
+    created.flatMap(({ id, stripeSessionId }) => {
+      const tip = bySession.get(stripeSessionId);
+      return tip ? [{ shopId: tip.shopId, checkoutId: id, bookingId: tip.bookingId }] : [];
+    }),
+  );
 }

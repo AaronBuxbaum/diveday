@@ -143,7 +143,7 @@ export function CrewRollCall({
   /** A localized, list-formatted buddy-team sentence. */
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
   /**
-   * Composed as the trip packet's paper (`PAPER_PACKET`, B03): each row is
+   * Composed as the trip packet's paper (`TripPacket`, B03): each row is
    * its name line and its printed facts, and neither crew link renders.
    */
   paper?: boolean;

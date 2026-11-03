@@ -1,0 +1,52 @@
+# Stop spending CI on a pull request that is already merged or closed.
+#
+# `ci.yml` cancels a superseded push, but nothing cancels the runs a pull
+# request still has queued or in flight when it merges: with the runner limit
+# the workflow queue is the slow part, so a merged layer's leftover jobs sit in
+# front of the layers above it. This cancels exactly the runs of the closed
+# pull request's own head commit and event. An upper layer of a stack has its
+# own head branch and commit, so retargeting it after the layer below merges
+# never touches its runs.
+#
+# `pull_request_target` so a fork's closed pull request gets a token that can
+# cancel; it checks out nothing and treats the head SHA as data only.
+name: Cancel closed PR runs
+
+on:
+  pull_request_target:
+    types: [closed]
+
+concurrency:
+  group: cancel-closed-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+
+jobs:
+  cancel:
+    name: Cancel queued and running checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Cancel runs for the closed head commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -uo pipefail
+          cancelled=0
+          for status in queued in_progress waiting pending requested; do
+            ids=$(gh api --paginate \
+              "repos/${REPO}/actions/runs?head_sha=${HEAD_SHA}&event=pull_request&status=${status}" \
+              --jq '.workflow_runs[].id')
+            for id in ${ids}; do
+              # A run can finish between the list and the cancel; that is fine.
+              if gh api -X POST "repos/${REPO}/actions/runs/${id}/cancel" > /dev/null 2>&1; then
+                cancelled=$((cancelled + 1))
+              fi
+            done
+          done
+          echo "Cancelled ${cancelled} run(s) of #${PR} at ${HEAD_SHA:0:9}." | tee -a "$GITHUB_STEP_SUMMARY"

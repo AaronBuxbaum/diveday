@@ -24,8 +24,12 @@ schedule builder, date requests, site briefings, bearer-token routes). What they
   cross-tenant miss is `notFound()` (`src/lib/session.test.ts`).
 - **A retired staff URL is deleted, not redirected** (H-20260815-no-legacy); the full rule is in
   [repo checks](../../docs/agents/repo-checks.md#there-is-no-legacy-delete-it).
-- **Server actions**: inline `"use server"` for one page, `src/app/actions/` when shared, a sibling
-  `actions.ts` for a large page; seating a diver through `src/app/actions/seat-diver.ts`.
+- **Server actions**: a sibling `*-actions.ts` with file-level `"use server"`, `src/app/actions/`
+  when shared; inline is the exception and names why (ADR 20260803-invoicing-role-gate). A staff
+  mutation is a `defineAction` declaration (`src/features/server-action`) where its area moved;
+  an Undo is an undo offer (`src/lib/undo.ts`) with a registry inverse. Seating a diver: `src/app/actions/seat-diver.ts`.
+- **Adding one is a panel on its object's index**, opened by `?add=` and landing back there with
+  `?notice=` (`src/components/AddPanel.tsx`, `src/lib/add-panel.ts`); never a `/new` route.
 - **The builder is the one place a trip is created**; another reading of the schedule is a view in
   `schedule/_components/ScheduleViews.tsx`.
 - **A departure is four tabs** drawn by `_components/TripTabs.tsx`; add to a tab, never a fifth surface.

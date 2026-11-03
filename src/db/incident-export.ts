@@ -29,12 +29,14 @@ import { getTripManifests } from "./manifests";
 import { survivingPersonNames } from "./people";
 import { latestPreDepartureChecksForTrip, listChecklistItemsForTrip } from "./pre-departure-check";
 import { listTripReadiness } from "./readiness";
-import { activityEvents, bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
+import { oldestMarkFirst } from "./roll-call-order";
+import { asCrewMark, asSeatMark, crewMarks, seatMarks } from "./roll-call-subject";
+import { activityEvents, bookings, people, rollCallEvents } from "./schema";
 import { getShopById } from "./shops";
 
 /** The newest departure mark owns its capture; a correction never reuses an earlier one. */
 function standingCertificationCaptures(
-  rows: readonly { event: typeof rollCallEvents.$inferSelect }[],
+  rows: readonly { event: typeof rollCallEvents.$inferSelect & { bookingId: string } }[],
 ) {
   const boardingCards = new Map<
     string,
@@ -99,7 +101,7 @@ export async function getIncidentExport(
   if (!manifests || !departure) return null;
 
   const recorders = alias(people, "recorders");
-  const [shop, generator, diverEventRows, crewEventRows, executedDiveRows] = await Promise.all([
+  const [shop, generator, diverEventReads, crewEventReads, executedDiveRows] = await Promise.all([
     getShopById(db, shopId),
     db
       .select({ fullName: people.fullName })
@@ -121,29 +123,23 @@ export async function getIncidentExport(
       .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
       .innerJoin(people, eq(people.id, bookings.personId))
       .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
-      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
+      .where(and(eq(rollCallEvents.shopId, shopId), seatMarks(), eq(rollCallEvents.tripId, tripId)))
       // `seq` last, for a reason sharper here than anywhere else: this
       // document is hashed, so two orderings of the same events produce two
       // different SHA-256 integrity codes for one departure. A tie on
       // transaction time would make the hash a coin toss.
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
     db
-      .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
-      .from(rollCallCrewEvents)
-      .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
-      .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
-      .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
-      .orderBy(
-        asc(rollCallCrewEvents.occurredAt),
-        asc(rollCallCrewEvents.createdAt),
-        asc(rollCallCrewEvents.seq),
-      ),
+      .select({ event: rollCallEvents, subject: people, recorder: recorders })
+      .from(rollCallEvents)
+      .innerJoin(people, eq(people.id, rollCallEvents.crewPersonId))
+      .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
+      .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
+      .orderBy(...oldestMarkFirst()),
     listExecutedDives(db, shopId, tripId),
   ]);
+  const diverEventRows = diverEventReads.map((row) => ({ ...row, event: asSeatMark(row.event) }));
+  const crewEventRows = crewEventReads.map((row) => ({ ...row, event: asCrewMark(row.event) }));
   if (!shop) return null;
   const generatedByName = generator[0]?.fullName;
   if (!generatedByName) return null;
@@ -432,4 +428,20 @@ export async function getIncidentExport(
     generatedAt,
     generatedByName,
   });
+}
+
+/**
+ * **The departure log page**: whether this staffer may generate it at all,
+ * checked against the database rather than the JWT so a demoted owner loses it
+ * at once, and only then the document. `doc` is `null` for another shop's
+ * trip; tenancy is the session's shop, never the URL.
+ */
+export async function getTripLogPage(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  personId: string,
+): Promise<{ allowed: false } | { allowed: true; doc: IncidentExportDocument | null }> {
+  if (!(await canPersonExportIncidentRecord(db, shopId, personId))) return { allowed: false };
+  return { allowed: true, doc: await getIncidentExport(db, shopId, tripId, personId) };
 }

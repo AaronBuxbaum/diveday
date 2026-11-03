@@ -4,7 +4,7 @@
 // important surface they look at gets a screenshot assertion in a
 // `e2e/visual-*.spec.ts`. Nothing enforced it, and the gap was not theoretical: a
 // 2026-08-03 evaluation of the test system found three staff pages that had
-// shipped with neither — `/shop/[shopSlug]/orders/new`,
+// shipped with neither — the new-order page (now the Orders add panel),
 // `/shop/[shopSlug]/dive-sites/catalog`, and `/shop/[shopSlug]/staffing`. A page
 // with no coverage is silent by construction; it produces no failure to notice.
 //
@@ -87,6 +87,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { DAY_STATES } from "../src/lib/world.ts";
 import { filesUnder } from "./files-under.mjs";
 import { isVisualSpec, visualSpecs } from "./visual-specs.mjs";
 
@@ -658,6 +659,33 @@ export function serializeLedger(next) {
   return `{\n  "//": ${JSON.stringify(LEDGER_NOTE)},\n${rows.join(",\n")}\n}\n`;
 }
 
+/**
+ * The day's states (`src/lib/world.ts`, issue #2752) against the captures: a
+ * state names the capture that photographs it, or says in a sentence why none
+ * does. A state with neither, with both, or naming a capture no spec takes is
+ * a violation that names the state.
+ */
+export function auditDayStates(states, captureNames) {
+  const violations = [];
+  for (const state of states) {
+    const exempt = typeof state.exempt === "string" && state.exempt.trim() !== "";
+    if (state.capture && exempt) {
+      violations.push(
+        `day state "${state.id}": names a capture and an \`exempt\` reason; keep one.`,
+      );
+    } else if (!state.capture && !exempt) {
+      violations.push(
+        `day state "${state.id}": no capture photographs it. Add a \`today-*\` capture and name it as \`capture\` in src/lib/world.ts, or write an \`exempt\` reason there.`,
+      );
+    } else if (state.capture && !captureNames.has(state.capture)) {
+      violations.push(
+        `day state "${state.id}": names the capture "${state.capture}", which no visual spec takes. Restore it or point the state at the capture that photographs it.`,
+      );
+    }
+  }
+  return violations;
+}
+
 export function summaryLine(stats) {
   return `route-coverage (static source associations, not runtime proof): ${stats.total} routes — ${stats.e2e} with an e2e spec, ${stats.visual} with a visual capture, ${stats.exempt} exempt with a stated reason`;
 }
@@ -718,6 +746,7 @@ async function main() {
   }
 
   const { violations, stats } = auditLedger(world);
+  violations.push(...auditDayStates(DAY_STATES, await collectCaptureNames(ROOT)));
   if (violations.length > 0) {
     console.error(
       `Route coverage ledger violations:\n${violations.map((v) => `- ${v}`).join("\n")}`,

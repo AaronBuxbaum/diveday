@@ -9,14 +9,16 @@ import {
 } from "@/lib/safety-report";
 import { hasReturned } from "@/lib/trips";
 import { shopMonthBounds } from "@/lib/zoned";
-import type { DbExecutor } from "./client";
+import type { AppDb, DbExecutor } from "./client";
+import { listShopIncidentReports } from "./incident-reports";
 import { queryAll } from "./query-helpers";
+import { oldestMarkFirst } from "./roll-call-order";
+import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
   activityEvents,
   bookings,
   people,
   personRoles,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   trips,
@@ -118,7 +120,7 @@ export async function getSafetyMonth(
       db
         .select({
           tripId: rollCallEvents.tripId,
-          subjectId: rollCallEvents.bookingId,
+          subjectId: markBookingId(),
           checkpoint: rollCallEvents.checkpoint,
           status: rollCallEvents.status,
         })
@@ -126,32 +128,34 @@ export async function getSafetyMonth(
         // A seat cancelled after the boat left keeps its events; they must not
         // answer for a roster it is no longer on (as `listRollCallGaps` reads).
         .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
-        .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
-        .orderBy(
-          asc(rollCallEvents.occurredAt),
-          asc(rollCallEvents.createdAt),
-          asc(rollCallEvents.seq),
-        ),
+        .where(
+          and(
+            eq(rollCallEvents.shopId, shopId),
+            seatMarks(),
+            inArray(rollCallEvents.tripId, tripIds),
+          ),
+        )
+        .orderBy(...oldestMarkFirst()),
     () =>
       db
         .select({
-          tripId: rollCallCrewEvents.tripId,
-          subjectId: rollCallCrewEvents.personId,
-          checkpoint: rollCallCrewEvents.checkpoint,
-          status: rollCallCrewEvents.status,
-          credentialSnapshot: rollCallCrewEvents.credentialSnapshot,
-          credentialSnapshotStartedAt: rollCallCrewEvents.credentialSnapshotStartedAt,
-          credentialSnapshotCapturedAt: rollCallCrewEvents.credentialSnapshotCapturedAt,
+          tripId: rollCallEvents.tripId,
+          subjectId: markCrewPersonId(),
+          checkpoint: rollCallEvents.checkpoint,
+          status: rollCallEvents.status,
+          credentialSnapshot: rollCallEvents.credentialSnapshot,
+          credentialSnapshotStartedAt: rollCallEvents.credentialSnapshotStartedAt,
+          credentialSnapshotCapturedAt: rollCallEvents.credentialSnapshotCapturedAt,
         })
-        .from(rollCallCrewEvents)
+        .from(rollCallEvents)
         .where(
-          and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
+          and(
+            eq(rollCallEvents.shopId, shopId),
+            crewMarks(),
+            inArray(rollCallEvents.tripId, tripIds),
+          ),
         )
-        .orderBy(
-          asc(rollCallCrewEvents.occurredAt),
-          asc(rollCallCrewEvents.createdAt),
-          asc(rollCallCrewEvents.seq),
-        ),
+        .orderBy(...oldestMarkFirst()),
   ]);
 
   const crewIds = [...new Set(crew.map((row) => row.personId))];
@@ -240,4 +244,32 @@ export async function getSafetyYear(
     months.push(await getSafetyMonth(db, shopId, from, to, timeZone, now));
   }
   return summarizeSafetyYear(months);
+}
+
+/**
+ * The safety page's two other reads, kept beside its reader: the Reports gate
+ * (`requireShopSurface`'s `allow`, re-read against the database) and the
+ * earliest departure the page can step back to, which the page needs before
+ * it knows which period it is showing.
+ */
+export { canPersonViewShopReports, earliestReportedTripStart } from "./reporting";
+
+/**
+ * **The safety page's figures for one period** (issue #2757): a year is the sum
+ * of its months, each read by its own rules (review F1); a month is read
+ * directly. Then the period's incident reports as this reader may see them.
+ */
+export async function getSafetyPage(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  period: { year: number | null; from: Date; to: Date; timeZone: string; now: Date },
+) {
+  const { from, to, timeZone, now } = period;
+  const yearMonths =
+    period.year !== null ? await getSafetyYear(db, shopId, period.year, timeZone, now) : null;
+  const safety: SafetyMonth =
+    yearMonths ?? (await getSafetyMonth(db, shopId, from, to, timeZone, now));
+  const incidents = await listShopIncidentReports(db, shopId, personId, from, to);
+  return { yearMonths, safety, incidents };
 }

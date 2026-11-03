@@ -195,9 +195,9 @@ test.describe("staffing", () => {
 
     // One diver aboard, and now the boat needs somebody in the water with them.
     const tripId = await seededTripId(page, "blue-mantis", title);
-    await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
     await page.getByRole("link", { name: "Add diver", exact: true }).click();
-    await page.waitForURL(/\/divers\/new/);
+    await page.waitForURL(/\/divers\?add=1/);
     await page.getByLabel("Full name").fill("Waiting On Crew");
     await page.getByLabel("Email").fill("waiting-on-crew@example.com");
     await page.getByRole("button", { name: "Add to trip" }).click();
@@ -317,7 +317,7 @@ test.describe("a crew member asks to work a short-handed departure", () => {
       await find.fill("Needs A Divemaster");
       await find.press("Enter");
       await owner.getByRole("link", { name: "Add diver", exact: true }).first().click();
-      await owner.waitForURL(/\/divers\/new/);
+      await owner.waitForURL(/\/divers\?add=1/);
       await owner.getByLabel("Full name").fill("Needs A Divemaster");
       await owner.getByLabel("Email").fill(`short-${e2eNow().getTime()}@example.com`);
       await owner.getByRole("button", { name: "Add to trip" }).click();
@@ -404,7 +404,9 @@ test.describe("approving a divemaster onto an intro session over its ratio", () 
     staffStorageState,
   }) => {
     test.setTimeout(60_000);
-    const seeded = await request.post("/api/test/seed-trouble-states?introOverRatio=1");
+    const seeded = await request.post(
+      "/api/test/seed-trouble-states?facts=troublePanels,introOverRatio",
+    );
     expect(seeded.ok()).toBe(true);
     const { introOverRatio } = (await seeded.json()) as {
       introOverRatio?: { tripId: string; title: string; asker: string; date: string };

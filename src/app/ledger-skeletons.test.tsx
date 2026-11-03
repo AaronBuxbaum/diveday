@@ -11,7 +11,6 @@ import { diverTranslator } from "@/i18n/messages";
 import { staffTranslator } from "@/i18n/staff-messages";
 import PublicReviewsLoading from "./s/[shopSlug]/reviews/loading";
 import PublicSiteLoading from "./s/[shopSlug]/sites/[siteSlug]/loading";
-import BookingNewLoading from "./shop/[shopSlug]/bookings/new/loading";
 import CoursesLoading from "./shop/[shopSlug]/courses/loading";
 import DiveSitesLoading from "./shop/[shopSlug]/dive-sites/loading";
 import { DiverFileGroupDisclosure } from "./shop/[shopSlug]/divers/[personId]/_components/DiverFileGroupDisclosure";
@@ -51,7 +50,6 @@ const SKELETONS: [name: string, loadedBy: string, Skeleton: ComponentType][] = [
   ["gear", "GearRegisterLedger", GearLoading],
   ["courses", "CourseRoster", CoursesLoading],
   ["inbox", "InboxRow", InboxLoading],
-  ["booking-new", "DeparturePicker", BookingNewLoading],
   ["dive sites", "SiteLibraryLedger", DiveSitesLoading],
   ["reports", "DepartureLedger", ReportsLoading],
   ["promos", "PromoLedger", PromosLoading],

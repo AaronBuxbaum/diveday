@@ -22,7 +22,7 @@ const routes = [
   "/s/blue-mantis/trips/[id]",
   "/shop/blue-mantis/divers",
   "/shop/blue-mantis/divers/[personId]",
-  "/shop/blue-mantis/divers/new",
+  "/shop/blue-mantis/divers/download",
   "/shop/blue-mantis/trips/[id]",
   "/shop/blue-mantis/trips/[id]/manifest",
 ];
@@ -53,7 +53,9 @@ describe("route shapes", () => {
   });
 
   it("lets a static route win over a dynamic one that also matches", () => {
-    expect(routeFor(routes, "/shop/blue-mantis/divers/new")).toBe("/shop/blue-mantis/divers/new");
+    expect(routeFor(routes, "/shop/blue-mantis/divers/download")).toBe(
+      "/shop/blue-mantis/divers/download",
+    );
   });
 
   it("matches nothing for a path the app does not have", () => {

@@ -1,4 +1,4 @@
-import { getTableName } from "drizzle-orm";
+import { getTableName, is, View } from "drizzle-orm";
 import * as schema from "@/db/schema";
 
 /**
@@ -8,6 +8,9 @@ import * as schema from "@/db/schema";
  * so both read as null.
  */
 function tableNameOf(value: unknown): string | null {
+  // A view (`booking_payments`, the fold of `booking_payment_events`) holds no
+  // rows of its own, so no coverage list has to decide it.
+  if (is(value, View)) return null;
   try {
     const name: unknown = getTableName(value as Parameters<typeof getTableName>[0]);
     return typeof name === "string" ? name : null;

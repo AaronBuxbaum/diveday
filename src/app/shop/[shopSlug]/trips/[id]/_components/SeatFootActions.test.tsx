@@ -31,7 +31,7 @@ describe("the seat's foot row sits on the text column through flush", () => {
 
   it("withholds Create order from a reader who may not raise an invoice (issue #1925)", () => {
     // Payments connected, so the only thing hiding the link is the permission:
-    // `orders/new` would bounce this reader to the Orders index.
+    // `orders?add=1` would bounce this reader to the Orders index.
     renderRoster({ ...fixtures, roster: [ready], paymentsConnected: true, canManageOrders: false });
 
     expect(screen.queryByRole("link", { name: "Create order" })).toBeNull();

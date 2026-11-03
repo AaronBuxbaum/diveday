@@ -1,6 +1,7 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
 import { offlineCopySaved, STAFF_DAY_HEADING, signInAs, signInAsOwner } from "./helpers";
+import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
  * **The evening, on the shop home** — ADR 20260827-clearwater-surface-language,
@@ -163,5 +164,30 @@ test.describe("the evening on the home", () => {
     // about tips on the boats they crewed ("Your boats earned …") is theirs to
     // read, and the demo's history boats carry this captain.
     await expect(page.getByText(/^And .+ in tips\.$/)).toHaveCount(0);
+  });
+});
+
+/**
+ * **The clock as a fact the reset restores** (issue #2761), and the trial for
+ * retiring `seed-evening`: the evening is the morning's shop read at the end of
+ * the shop day, reached by moving the clock rather than the departures. The
+ * pair is serial so the second test provably runs on the server the first one
+ * moved.
+ */
+test.describe("the clock fixture", () => {
+  test.describe.configure({ mode: "serial" });
+
+  test("reads the day as over once the clock reaches the evening", async ({ page, clock }) => {
+    await signInAsOwner(page);
+    await clock.toEvening();
+    await page.goto("/shop/blue-mantis");
+    await expect(page.getByRole("region", { name: "What today made" })).toBeVisible();
+  });
+
+  test("starts the next test back on the frozen clock", async ({ request }) => {
+    const response = await request.get("/api/test/clock");
+    expect(((await response.json()) as { now: string }).now).toBe(
+      new Date(E2E_FROZEN_CLOCK).toISOString(),
+    );
   });
 });

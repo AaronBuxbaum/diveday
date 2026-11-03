@@ -1,5 +1,6 @@
 import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
+import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -23,7 +24,6 @@ import {
   markPaymentOperationUnanswered,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
-  STALE_AFTER_MS,
   startPaymentOperation,
 } from "./payment-operations";
 import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
@@ -112,7 +112,7 @@ export type CreateOrderOutcome =
     };
 
 // Defense-in-depth bounds (CR-016) matching the action-layer zod schema in
-// src/app/shop/[shopSlug]/orders/new/actions.ts, so a caller that bypasses that
+// src/app/shop/[shopSlug]/orders/create-order-actions.ts, so a caller that bypasses that
 // form (a direct createOrder call, a future admin tool) can't persist an
 // out-of-bounds line item either.
 const MAX_LINE_ITEM_QUANTITY = 100;
@@ -683,7 +683,7 @@ export type RecordPaymentOnOrderOutcome =
  * cash as a Stripe payment (`applyInvoicePaid`), and this call then reads the
  * row it finished. A diver's own online payment arriving during the claim
  * waits instead (Stripe delivers it again), because Stripe is about to refuse
- * the mark. The claim is `counter_claimed_at`; one older than `STALE_AFTER_MS`
+ * the mark. The claim is `counter_claimed_at`; one older than `PAYMENT_CLAIM_STALE_AFTER_MS`
  * belonged to a call that died and may be taken again. The mark carries one
  * idempotency key per order, so a retake replays the first call.
  *
@@ -889,7 +889,7 @@ export function isStaleCounterClaim(
   return (
     order.status === "open" &&
     order.counterClaimedAt !== null &&
-    order.counterClaimedAt.getTime() < now.getTime() - STALE_AFTER_MS
+    order.counterClaimedAt.getTime() < now.getTime() - PAYMENT_CLAIM_STALE_AFTER_MS
   );
 }
 
@@ -2580,10 +2580,10 @@ function isRefundableAmount(amountCents: number, remainingCents: number): boolea
  * a database lock across a network round trip. That also keeps
  * `startPaymentOperation`'s durability contract intact (CR-005) — the intent is
  * committed on its own, ahead of the Stripe call it describes, so a crash
- * mid-call still leaves it for `listStuckPaymentOperations` to surface.
+ * mid-call still leaves it for the stuck-payment read (`src/db/unfinished.ts`) to surface.
  *
  * A claim is a guard for the duration of one Stripe round trip, never a
- * permanent lock: an intent still `started` past `STALE_AFTER_MS` belonged to a
+ * permanent lock: an intent still `started` past `PAYMENT_CLAIM_STALE_AFTER_MS` belonged to a
  * process that died and is ignored, exactly as `claimBookingsForCheckout`
  * treats an abandoned checkout claim. Past that horizon Stripe's own
  * over-refund rejection is the gate again — this lock is a second gate in
@@ -2602,14 +2602,14 @@ function isRefundableAmount(amountCents: number, remainingCents: number): boolea
  * (`defaultNow()`), which `DIVEDAY_CLOCK` does not freeze, so a test that wants
  * to age an intent past the horizon has to express the bound against that same
  * clock (`dbNow`, src/test/db.ts). Production passes nothing and gets
- * `nowDate() - STALE_AFTER_MS`, where app and database clocks agree to well
+ * `nowDate() - PAYMENT_CLAIM_STALE_AFTER_MS`, where app and database clocks agree to well
  * inside the five-minute window.
  */
 async function claimOrderRefund(
   db: AppDb,
   shopId: string,
   orderId: string,
-  staleBefore: Date = new Date(nowDate().getTime() - STALE_AFTER_MS),
+  staleBefore: Date = new Date(nowDate().getTime() - PAYMENT_CLAIM_STALE_AFTER_MS),
   amountCents?: number,
 ): Promise<OrderRefundClaim> {
   return db.transaction(async (tx): Promise<OrderRefundClaim> => {

@@ -58,10 +58,8 @@ describe("threadNextKey", () => {
     expect(next("es-ES", "sign", "guardian_signature_missing")).toBe(
       "Siguiente: tu madre, padre o tutor firma la exención",
     );
-    expect(next("en-US", "sign", "waiver_expired")).toBe("Next: get a fresh waiver link");
-    expect(next("es-ES", "sign", "waiver_expired")).toBe(
-      "Siguiente: consigue un enlace nuevo para la exención",
-    );
+    expect(next("en-US", "sign", "waiver_expired")).toBe("Next: sign a fresh waiver");
+    expect(next("es-ES", "sign", "waiver_expired")).toBe("Siguiente: firma una exención nueva");
   });
 
   it.each([
@@ -137,19 +135,10 @@ describe("threadNextKey", () => {
       "Next: ask the shop for your waiver",
       "Siguiente: pide tu exención al centro",
     ],
-    waiver_lapsed: [
-      "Next: get a fresh waiver link",
-      "Siguiente: consigue un enlace nuevo para la exención",
-    ],
-    waiver_runs_out: [
-      "Next: get a fresh waiver link",
-      "Siguiente: consigue un enlace nuevo para la exención",
-    ],
+    waiver_lapsed: ["Next: sign a fresh waiver", "Siguiente: firma una exención nueva"],
+    waiver_runs_out: ["Next: sign a fresh waiver", "Siguiente: firma una exención nueva"],
     waiver_pending: ["Next: sign your waiver", "Siguiente: firma tu exención"],
-    waiver_expired: [
-      "Next: get a fresh waiver link",
-      "Siguiente: consigue un enlace nuevo para la exención",
-    ],
+    waiver_expired: ["Next: sign a fresh waiver", "Siguiente: firma una exención nueva"],
     medical_review: [
       "Next: talk to the shop about your medical answers",
       "Siguiente: habla con el centro sobre tus respuestas médicas",

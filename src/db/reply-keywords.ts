@@ -1,11 +1,13 @@
 import { and, asc, count, desc, eq, gte, isNull, lte, ne } from "drizzle-orm";
-import { diverTranslator } from "@/i18n/messages";
 import { trackEvent } from "@/lib/analytics";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { normalizeEmailAddress, normalizePhoneAddress } from "@/lib/inbox";
 import { log } from "@/lib/log";
-import type { NotificationProvider } from "@/lib/notifications";
+import {
+  type NotificationProvider,
+  type ReplyKeywordAnswer,
+  replyKeywordText,
+} from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import {
   CONFIRMATION_WINDOW_MS,
@@ -64,9 +66,9 @@ import { liveTrip } from "./trips-live";
  * touch, marks the message so the inbox can read a body of one letter, and
  * deliberately leaves it **unanswered** so it stays on the worklist.
  *
- * Words: composed here through `diverTranslator`, the same terminal-renderer
- * exception `reminderSmsBody` takes (ADR 20260731-notification-locale). No
- * downstream surface picks words for a message that has already been sent.
+ * Words: this module answers with a code (`ReplyKeywordAnswer`) and
+ * `src/lib/notifications/reply-keyword-text.ts` words it in the diver's
+ * language (ADR 20260731-notification-locale).
  */
 
 /** What the inbound path did with one message. Codes, for logs and tests. */
@@ -343,13 +345,12 @@ export async function handleInboundReplyKeyword(
   if (onFile !== message.fromAddress) return "unknown_sender";
 
   const locale = recipientLocale(person.locale, shop.defaultLocale);
-  const t = diverTranslator(locale);
-  const answer = async (body: string, marksAnswered: boolean) => {
+  const answer = async (reply: ReplyKeywordAnswer, marksAnswered: boolean) => {
     const sent = await sendStaffReply(db, {
       shopId: input.shopId,
       personId: message.personId as string,
       messageId: message.id,
-      body,
+      body: replyKeywordText({ name: shop.name, timezone: shop.timezone, locale }, reply),
       sentByPersonId: null,
       marksAnswered,
       now,
@@ -367,11 +368,6 @@ export async function handleInboundReplyKeyword(
       });
     }
   };
-  const departure = (booking: CandidateBooking) => ({
-    tripTitle: booking.tripTitle,
-    date: formatShortDate(booking.startsAt, locale, shop.timezone),
-    time: formatTimeRangeTz(booking.startsAt, booking.endsAt, locale, shop.timezone),
-  });
 
   if (parsed.kind === "intent" && parsed.intent === "late") {
     return await handleLate(db, {
@@ -380,21 +376,16 @@ export async function handleInboundReplyKeyword(
       messageId: message.id,
       now,
       answer,
-      t,
-      shopName: shop.name,
     });
   }
   if (parsed.kind === "intent") {
     return parsed.intent === "move"
-      ? await handleMove(db, input.shopId, message.id, answer, t, shop.name)
+      ? await handleMove(db, input.shopId, message.id, answer)
       : await handleCancelRequest(db, {
           shopId: input.shopId,
           message,
           now,
           answer,
-          departure,
-          t,
-          shopName: shop.name,
         });
   }
 
@@ -418,7 +409,7 @@ export async function handleInboundReplyKeyword(
     ),
   );
   if (!matched) {
-    await answer(t("notifications.replyKeyword.codeMismatch", { shopName: shop.name }), false);
+    await answer({ code: "codeMismatch" }, false);
     return "code_mismatch";
   }
 
@@ -435,7 +426,7 @@ export async function handleInboundReplyKeyword(
     // Never distinguished to the diver: the same fail-closed-uniformly rule
     // `selfCancelBooking` states over its own reasons. The seat moved under
     // them between the code and the reply, and the shop is who says what now.
-    await answer(t("notifications.replyKeyword.cancelRefused", { shopName: shop.name }), false);
+    await answer({ code: "cancelRefused" }, false);
     return "cancel_refused";
   }
   await stampIntent(db, input.shopId, message.id, "confirm");
@@ -461,11 +452,8 @@ export async function handleInboundReplyKeyword(
     });
   }
 
-  const named = departure(matched);
   await answer(
-    refund.status === "refunded"
-      ? `${t("notifications.replyKeyword.cancelled", named)} ${t("notifications.replyKeyword.refundOnItsWay")}`
-      : t("notifications.replyKeyword.cancelled", named),
+    { code: "cancelled", departure: matched, refunded: refund.status === "refunded" },
     true,
   );
   // The written record every other cancel path sends, with the money line in
@@ -493,17 +481,18 @@ export async function handleInboundReplyKeyword(
   return "cancelled";
 }
 
+/** Sends one keyword answer; `marksAnswered` takes the message off the worklist. */
+type KeywordAnswerer = (reply: ReplyKeywordAnswer, marksAnswered: boolean) => Promise<void>;
+
 async function handleMove(
   db: AppDb,
   shopId: string,
   messageId: string,
-  answer: (body: string, marksAnswered: boolean) => Promise<void>,
-  t: ReturnType<typeof diverTranslator>,
-  shopName: string,
+  answer: KeywordAnswerer,
 ): Promise<ReplyKeywordOutcome> {
   await stampIntent(db, shopId, messageId, "move");
   // Answered stays false on purpose: a person still has to do this.
-  await answer(t("notifications.replyKeyword.moveHandoff", { shopName }), false);
+  await answer({ code: "moveHandoff" }, false);
   return "handed_off";
 }
 
@@ -521,12 +510,10 @@ async function handleLate(
     personId: string;
     messageId: string;
     now: Date;
-    answer: (body: string, marksAnswered: boolean) => Promise<void>;
-    t: ReturnType<typeof diverTranslator>;
-    shopName: string;
+    answer: KeywordAnswerer;
   },
 ): Promise<ReplyKeywordOutcome> {
-  const { shopId, messageId, answer, t, shopName } = input;
+  const { shopId, messageId, answer } = input;
   await stampIntent(db, shopId, messageId, "late");
   const marked = await markPersonRunningLate(db, {
     shopId,
@@ -534,10 +521,10 @@ async function handleLate(
     now: input.now,
   });
   if (marked.status === "closed") {
-    await answer(t("notifications.replyKeyword.lateNothing", { shopName }), false);
+    await answer({ code: "lateNothing" }, false);
     return "nothing_late";
   }
-  await answer(t("notifications.replyKeyword.lateNoted", { shopName }), true);
+  await answer({ code: "lateNoted" }, true);
   return "running_late";
 }
 
@@ -547,20 +534,17 @@ async function handleCancelRequest(
     shopId: string;
     message: typeof inboundMessages.$inferSelect;
     now: Date;
-    answer: (body: string, marksAnswered: boolean) => Promise<void>;
-    departure: (booking: CandidateBooking) => { tripTitle: string; date: string; time: string };
-    t: ReturnType<typeof diverTranslator>;
-    shopName: string;
+    answer: KeywordAnswerer;
   },
 ): Promise<ReplyKeywordOutcome> {
-  const { shopId, message, now, answer, departure, t, shopName } = input;
+  const { shopId, message, now, answer } = input;
   const personId = message.personId as string;
   const candidates = await cancellableBookings(db, shopId, personId, now);
   if (candidates.length === 0) {
     await stampIntent(db, shopId, message.id, "cancel");
     // Left unanswered: a diver asking to cancel something we cannot find is a
     // person who needs a person.
-    await answer(t("notifications.replyKeyword.nothingToCancel", { shopName }), false);
+    await answer({ code: "nothingToCancel" }, false);
     return "nothing_to_cancel";
   }
 
@@ -573,7 +557,7 @@ async function handleCancelRequest(
     const fromThread = candidates.find((booking) => booking.bookingId === threaded);
     if (!fromThread) {
       await stampIntent(db, shopId, message.id, "cancel");
-      await answer(t("notifications.replyKeyword.ambiguous", { shopName }), false);
+      await answer({ code: "ambiguous" }, false);
       return "ambiguous";
     }
     subject = fromThread;
@@ -602,13 +586,7 @@ async function handleCancelRequest(
     now,
   });
   await answer(
-    party.goes > 0
-      ? t("notifications.replyKeyword.confirmCancelParty", {
-          ...departure(subject),
-          code,
-          count: party.goes,
-        })
-      : t("notifications.replyKeyword.confirmCancel", { ...departure(subject), code }),
+    { code: "confirmCancel", departure: subject, confirmationCode: code, partySeats: party.goes },
     true,
   );
   return "awaiting_confirmation";

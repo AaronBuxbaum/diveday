@@ -5,6 +5,7 @@ import { reservedTestRecipientDelivery } from "@/lib/notifications/provider";
 import { DEMO_MAIL_DOMAIN, deliveryAddressFor, SES_SIMULATOR_DOMAIN } from "@/lib/simulator-email";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { insertTip, tipsOf } from "@/test/tips";
 import { waiverTemplateHistory } from "@/test/waiver-history";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
@@ -17,17 +18,15 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
+  capabilities,
   interests,
-  interestUnsubscribeTokens,
   orders,
   paymentOperationIntents,
   people,
-  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
-  tips,
   todayReadMarkEvents,
   todayReadMarks,
   tripDeskEvents,
@@ -43,7 +42,7 @@ import {
 import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
-import { getCurrentWaiverTemplate, saveWaiverTemplate } from "./waivers";
+import { getCurrentWaiverTemplate, recordWaiverTemplate } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -124,9 +123,7 @@ describe("resetDemoSchedule", () => {
     expect(
       (await db.select().from(orders).where(eq(orders.shopId, shop.id))).length,
     ).toBeGreaterThan(0);
-    expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBeGreaterThan(
-      0,
-    );
+    expect((await tipsOf(db, shop.id)).length).toBeGreaterThan(0);
   });
 
   it("restores the seeded schedule after the playground is churned", async () => {
@@ -211,18 +208,18 @@ describe("resetDemoSchedule", () => {
       .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId: person.id })
       .returning();
     if (!interest) throw new Error("test setup: last-minute interest insert returned no row");
-    await db
-      .insert(interestUnsubscribeTokens)
-      .values({ shopId: shop.id, interestId: interest.id, tokenHash: `hash_${interest.id}` });
+    await db.insert(capabilities).values({
+      purpose: "interest_unsubscribe",
+      shopId: shop.id,
+      interestId: interest.id,
+      tokenHash: `hash_${interest.id}`,
+    });
 
     // Resolving rather than throwing is the whole assertion.
     await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
 
     expect(
-      await db
-        .select()
-        .from(interestUnsubscribeTokens)
-        .where(eq(interestUnsubscribeTokens.shopId, shop.id)),
+      await db.select().from(capabilities).where(eq(capabilities.shopId, shop.id)),
     ).toHaveLength(0);
   });
 
@@ -230,7 +227,7 @@ describe("resetDemoSchedule", () => {
    * The exact same class of regression as the last-minute unsubscribe token
    * test above, this time for the courtesy-email unsubscribe token that
    * shipped with Leo's general self-serve unsubscribe (story-backlog task
-   * 122): `person_courtesy_email_unsubscribe_tokens` references `people`
+   * 122): the courtesy-email unsubscribe capability references `people`
    * directly, so it must be cleared before the people delete or this
    * FK-violates and aborts the reset mid-run.
    */
@@ -238,7 +235,8 @@ describe("resetDemoSchedule", () => {
     const { db, shop } = ctx;
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: seeded shop has no people");
-    await db.insert(personCourtesyEmailUnsubscribeTokens).values({
+    await db.insert(capabilities).values({
+      purpose: "courtesy_email_unsubscribe",
       shopId: shop.id,
       personId: person.id,
       tokenHash: `hash_${person.id}`,
@@ -248,10 +246,7 @@ describe("resetDemoSchedule", () => {
     await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
 
     expect(
-      await db
-        .select()
-        .from(personCourtesyEmailUnsubscribeTokens)
-        .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shop.id)),
+      await db.select().from(capabilities).where(eq(capabilities.shopId, shop.id)),
     ).toHaveLength(0);
   });
 
@@ -349,7 +344,7 @@ describe("resetDemoSchedule", () => {
     expect(before?.version).toBe(seededHistory.length);
     expect(seededHistory.length).toBeGreaterThan(1);
 
-    const edited = await saveWaiverTemplate(db, {
+    const edited = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: before?.title ?? "",
       body: "Leaked release text from a previous spec.",
@@ -460,7 +455,7 @@ describe("resetDemoSchedule", () => {
       email: "tessa@example.com",
     });
     if (!outcome.ok) throw new Error("setup booking failed");
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       currency: "usd",
       bookingId: outcome.bookingId,
@@ -471,7 +466,7 @@ describe("resetDemoSchedule", () => {
 
     // No FK violation here is the real assertion — tips must go before bookings.
     await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
-    expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBe(0);
+    expect((await tipsOf(db, shop.id)).length).toBe(0);
   });
 
   it("clears issued booking capabilities so a churned playground resets cleanly", async () => {

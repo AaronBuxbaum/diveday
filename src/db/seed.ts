@@ -13,6 +13,7 @@ import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { deleteDemoSafetyTrail } from "./incident-reports";
+import { deletePremergeCards } from "./premerge-cards-cleanup";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   accountSecurity,
@@ -28,13 +29,13 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
   bookingReferrals,
   bookings,
   buddyTeamEvents,
   buddyTeamMembers,
   calendarFeeds,
-  certifications,
+  capabilities,
+  cards,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -58,11 +59,9 @@ import {
   integrationEvents,
   integrationOauthStates,
   interests,
-  interestUnsubscribeTokens,
   internalNotes,
   marineLifeRequests,
   mediaDeletionAttempts,
-  nitroxCertifications,
   notificationDeliveries,
   notificationSendQueue,
   orderLineItems,
@@ -70,7 +69,6 @@ import {
   paymentDisputes,
   paymentOperationIntents,
   people,
-  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   platformBackupProgress,
   preDepartureCheckEvents,
@@ -88,13 +86,11 @@ import {
   shopStripeAccounts,
   shops,
   shopTextTranslations,
-  specialtyCertifications,
   staffCredentials,
   staffReplies,
   staffShifts,
   stripePayouts,
   stripeRefundFailures,
-  tips,
   todayReadMarks,
   tripAssignments,
   tripBlowoutDivers,
@@ -361,11 +357,16 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
 }
 
 /**
+ * The demo's dusk boat, by title and clock, for the close-out's carry-over read
+ * (`src/features/today/closeout-reader.ts`), which lives outside `src/db`.
+ */
+export { DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "./seed-clock";
+/**
  * The colour a branded minted shop wears: mantis green, chosen because it is
  * not the product's teal and dark enough for white text as typed. Exported for
  * `e2e/storefront-brand.spec.ts`, which proves the storefront wears it.
  */
-export { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
+export { AT_SEA_DUSK_TITLE, MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 export { DEMO_SHOP_BRAND } from "./seed-shop-brand";
 
 /**
@@ -393,6 +394,24 @@ export const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
  * playground never touches these, so a signed-in demo session survives a reset
  * (docs ADR 20260718-demo-mode).
  */
+/**
+ * The named shapes a seeded shop comes in, written once: the unit-test template's
+ * `lean` and `history` variants (`src/test/db-template-build.ts`) are these two
+ * names, and `empty` is no seed at all. A shape is the set of scenario groups the
+ * orchestrator runs, so a caller names a shape instead of threading a flag.
+ */
+export const SEED_SHAPES = {
+  lean: { history: false },
+  history: { history: true },
+} as const;
+
+export type SeedShape = keyof typeof SEED_SHAPES;
+
+/** Seed the canonical demo in a named shape. */
+export async function seedShape(db: DbExecutor, shape: SeedShape): Promise<void> {
+  await seedDemo(db, SEED_SHAPES[shape]);
+}
+
 export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {}): Promise<void> {
   const [shop] = await db
     .insert(shops)
@@ -453,7 +472,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // Its seeded invoices carry the matching `tax_cents` (seed-history.ts).
       //
       // Turning it on is what makes the staff invoice form ask for a customer
-      // billing address, so `orders/new` prefills the demo's own address for
+      // billing address, so `orders?add=1` prefills the demo's own address for
       // it — see that page. `e2e/tax.spec.ts` drives freshly minted shops
       // precisely so it never depends on this one's setting, and the "a shop
       // starts with tax off" case still has a fixture: a minted demo.
@@ -646,7 +665,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
  * Sal) so the demo banner and role switcher read identically, but their emails
  * are namespaced under the unique slug so they never collide on the global
  * `user_accounts.email` index. Sign-in for every role goes through the `isDemo`
- * bypass token (src/lib/credentials.ts), so no real password is minted or stored.
+ * bypass token (src/db/credentials.ts), so no real password is minted or stored.
  *
  * Demo names carry no random suffix any more (src/lib/demo-identity.ts): the
  * visitor sees a slug and a sign-in address a real shop could have. That trades
@@ -669,7 +688,7 @@ const DEMO_IDENTITY_ATTEMPTS = 5;
  * identity on a name collision — never patching the slug alone, since every
  * staff email is derived from it and would otherwise disagree with the shop.
  */
-async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false) {
+async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false, isDemo = true) {
   let lastError: unknown;
   for (let attempt = 0; attempt < DEMO_IDENTITY_ATTEMPTS; attempt += 1) {
     // A pinned identity has nothing to retry *to* — it is the caller's own
@@ -749,7 +768,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
             },
             nitroxCents: 1200,
           },
-          isDemo: true,
+          isDemo,
           hasShoreDiving: true,
           hasPoolDiving: true,
           ...(brand ? MINTED_DEMO_BRAND : {}),
@@ -776,8 +795,11 @@ export async function createDemoShop(
    * the storefront brand spec.
    * Left off, a minted shop is blank shop-wide config, as every behavioural
    * spec expects.
+   *
+   * `demo: false` mints a real-shaped shop (issue #2783) for the e2e harness, so the first-run
+   * checklist, trial row and payments row render. Only `fixtureSignIn` lets its staff in.
    */
-  opts: { history?: boolean; slug?: string; brand?: boolean } = {},
+  opts: { history?: boolean; slug?: string; brand?: boolean; demo?: boolean } = {},
 ): Promise<{ slug: string; ownerEmail: string }> {
   // Aggregate storage cap (security review, finding 1): the per-IP rate limit
   // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
@@ -786,7 +808,7 @@ export async function createDemoShop(
   // ceiling — the canonical demo and real shops are never eligible (see below).
   await enforceMintedDemoCap(db);
 
-  const { shop, identity } = await insertDemoShop(db, opts.slug, opts.brand);
+  const { shop, identity } = await insertDemoShop(db, opts.slug, opts.brand, opts.demo !== false);
 
   await db.insert(boats).values([
     {
@@ -911,6 +933,8 @@ export async function seedDemoSchedule(
   shopId: string,
   opts: { history?: boolean } = {},
 ): Promise<void> {
+  // History is one decision, made by the caller's shape (`SEED_SHAPES`), read here by name.
+  const withHistory = opts.history !== false;
   // Look the instructors up by **name**, not by a hardcoded email and no longer
   // by role. The name is the one key both shops share: a minted demo carries
   // per-shop-unique emails, and since DOM-M7 the shop has two instructors, so
@@ -1071,11 +1095,11 @@ export async function seedDemoSchedule(
   // 20260907-two-way-inbox). After the divers, since every row but the
   // stranger's names one.
   await seedInbox(db, shopId, customers, instructor.id);
-  await seedFrontDesk(db, shopId, cast, tripRows, bookingRows, opts.history !== false);
+  await seedFrontDesk(db, shopId, cast, tripRows, bookingRows, withHistory);
   // The trailing quarter of already-sailed trips that gives owner reporting
   // something to report. Off for the lean unit-test template and for trial
   // shops (see callers); on for the demo shop and the e2e fleet.
-  if (opts.history !== false) {
+  if (withHistory) {
     await seedHistory(db, shopId, instructor.id);
     await seedRecentRecaps(db, shopId);
     if (shopRow?.isDemo) {
@@ -1176,7 +1200,7 @@ export async function seedDemoSchedule(
   // before a discount blast are actually rendered somewhere
   // (src/db/seed-self-declared.ts). Neither holds a seat, so no readiness count,
   // roster or head count moves. Rides the history flag like the list itself.
-  await seedSelfDeclaredJoiners(db, shopId, opts.history !== false);
+  await seedSelfDeclaredJoiners(db, shopId, withHistory);
   // Adds-only and late, like the two scenarios above: it stamps a column on
   // seats that already exist and gates nothing, so no readiness count, head
   // count or roster membership moves (ADR
@@ -1243,15 +1267,15 @@ export async function seedDemoSchedule(
   // seeded (src/db/seed-boat-at-sea.ts, market sheet 2026-10-22, item 1):
   // after every scenario that seats a diver, since she takes regulars with no
   // seat from today on, and before the stage taps, which she carries too.
-  if (opts.history !== false) await seedBoatAtSea(db, shopId);
+  if (withHistory) await seedBoatAtSea(db, shopId);
   // What a booth visitor is shown (src/db/seed-booth.ts, market sheet
   // 2026-10-22, item 4): a dive card, a weather call, two cards the shop
   // issued, a mask left behind. After the boat at sea, which takes regulars
   // with no seat from today on, and before the course forms are worded, which
   // sign for every student already booked.
-  if (opts.history !== false) await seedBoothStories(db, shopId);
+  if (withHistory) await seedBoothStories(db, shopId);
   if (captainId) await seedTripStage(db, shopId, captainId);
-  await seedTripLegs(db, shopId, opts.history !== false);
+  await seedTripLegs(db, shopId, withHistory);
 
   // A synthetic, status-only medical-review hold on a future departure gives
   // the demo and staff training a real fail-closed waiver path without storing
@@ -1268,7 +1292,7 @@ export async function seedDemoSchedule(
   // real ones, so they ask readiness the question the counter would (UX
   // review 2026-10-13, item 3). No waiver row is written, so it may sit
   // before the evidence pass below.
-  if (opts.history !== false && reef) {
+  if (withHistory && reef) {
     await seedDeskHandoff(db, shopId, {
       trip: reef,
       roster: bookingRows,
@@ -1281,7 +1305,7 @@ export async function seedDemoSchedule(
   // already booked, so no seeded seat changes readiness
   // (src/db/seed-course-form-wording.ts, fourth review, item 53). Rides the
   // history flag, so the lean template keeps its forms empty.
-  if (opts.history !== false) {
+  if (withHistory) {
     await seedCourseFormWording(db, shopId, { recordedByPersonId: instructor.id });
   }
 
@@ -1289,7 +1313,7 @@ export async function seedDemoSchedule(
   // Saturday asks its standing crew about every other boat already on the
   // board: the shop's weekly run (src/db/seed-weekly-run.ts, fourth review,
   // item 51). Rides the history flag, so the lean template keeps its board.
-  if (opts.history !== false) {
+  if (withHistory) {
     // The owner skippers it and two guides lead the water, enough for the
     // twelve seats at the shop's ratio. A standing crew asked of a date they
     // are busy on is left off it, and a free instructor or divemaster takes
@@ -1345,7 +1369,7 @@ export async function seedDemoSchedule(
   // every boat day and the shop's word on the ones seeded after the first pass
   // (src/db/seed-hulls.ts, src/db/seed-lenses.ts), so Reports' "By boat" and
   // "By kind of trip" add up to the month (market sheet 2026-10-22, item 2).
-  if (opts.history !== false) {
+  if (withHistory) {
     await seedHulls(db, shopId);
     await seedLenses(db, shopId);
   }
@@ -1536,16 +1560,11 @@ export async function clearDemoSchedule(
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
-  await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
   // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
-  // Tips reference bookings, so they must go before them — same FK this
-  // cascade's sibling (deleteDemoShopCascade) already fixed (Codex finding:
-  // this reset path had its own, separate child-first list and was missed).
-  await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
@@ -1586,7 +1605,7 @@ export async function clearDemoSchedule(
   // **A stuck media deletion is not schedule data, and it still has to go.**
   // The seed creates none, so clearing them restores exactly the seeded state —
   // and leaving them made the reset non-restoring in the one direction that
-  // shows: `listPendingMediaDeletions` feeds Today an `urgency: "now"` row, so
+  // shows: the media-deletion read (`src/db/unfinished.ts`) feeds Today an `urgency: "now"` row, so
   // a test that seeded a stale attempt (`/api/test/seed-trouble-states`) left a
   // "Recap photo" cleanup card on Today for whichever spec Playwright's
   // sharding ran next in that worker. That surfaced as three visual captures —
@@ -1600,26 +1619,19 @@ export async function clearDemoSchedule(
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
-  // The last-minute list's unsubscribe links name an interest by foreign key, so
-  // they go before the interests. Added with Leo's self-serve unsubscribe (docs ADR
+  // The unsubscribe capabilities name an interest or a person by foreign key, so
+  // they go before the interests and the people. Added with Leo's self-serve unsubscribe (docs ADR
   // 20260731-self-serve-unsubscribe) but not to this ordering once, which made
   // every `/api/test/reset` throw 23503 mid-run and leave the demo shop
   // half-reset — the e2e fleet then failed in whichever spec happened to read
   // the wreckage next, which is why the flake moved around between runs.
-  await db.delete(interestUnsubscribeTokens).where(eq(interestUnsubscribeTokens.shopId, shopId));
+  await db.delete(capabilities).where(eq(capabilities.shopId, shopId));
   await db.delete(interests).where(eq(interests.shopId, shopId));
   // References trips (last-minute-deal blasts) and the interests that carry a deal's
   // `promo_id`, so it goes after them and before the trips/people deletes below
   // or this FK-violates and aborts the whole reset mid-run (docs ADR
   // 20260727-last-minute-fill-promos).
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
-  // References people (courtesy-email opt-out tokens minted for waitlist
-  // invites and trip recaps), so it must go before the people deletes below
-  // or this FK-violates and aborts the whole reset mid-run — the same class
-  // of bug the last-minute-list unsubscribe token comment above already walks.
-  await db
-    .delete(personCourtesyEmailUnsubscribeTokens)
-    .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
   // The blow-out cascade's two tables, innermost first: the per-diver rows
   // reference both `bookings` and `trip_blowouts`, and the cascade row
   // references `trips`. Missing from this ordering when the cascade shipped,
@@ -1672,9 +1684,9 @@ export async function clearDemoSchedule(
   await db.delete(marineLifeRequests).where(eq(marineLifeRequests.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
-  await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
-  await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
-  await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  // Every kind of card at once: the reset clears the shop's whole ledger.
+  await db.delete(cards).where(eq(cards.shopId, shopId));
+  await deletePremergeCards(db, shopId);
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
 
   // Everyone except the staff seeded once at shop creation (`staffDefs`, by
@@ -2023,6 +2035,7 @@ async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promis
   if (owedRoles.length > 0) await db.insert(personRoles).values(owedRoles);
 }
 
+export { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
 export { demoTodayDepartureStart } from "./seed-clock";
 /**
  * The demo-shop lifecycle, re-exported so `@/db/seed` stays the one import for

@@ -1192,7 +1192,7 @@ jobs:
       db: ${{ steps.filter.outputs.db }}
       pixel_probe: ${{ steps.filter.outputs.pixel_probe }}
       safety: ${{ steps.filter.outputs.safety }}
-      browser: ${{ steps.filter.outputs.browser }}
+      browser: ${{ steps.superseded.outputs.browser || steps.filter.outputs.browser }}
       runner: ${{ steps.runner.outputs.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1317,7 +1317,7 @@ jobs:
             # chain (~110 of a run's ~170 runner-minutes) have nothing to
             # answer. They skip exactly as on a docs-only change; the unit
             # shards, safeguards and the coverage floors still run. Fails open:
-            # a push to main and anything else is `true`.
+            # a push to main is `true` unless a newer main commit exists (see `superseded`).
             if [ -n "${IS_PR}" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -Ev '[.]test[.](ts|tsx|mts|mjs)$' || true)" ]; then
               echo "browser=false" >> "$GITHUB_OUTPUT"
               echo "Only unit-test files changed — the build, Playwright, fast lane and visual jobs are skipped; the unit shards still run." >> "$GITHUB_STEP_SUMMARY"
@@ -1328,6 +1328,29 @@ jobs:
             echo "code=false" >> "$GITHUB_OUTPUT"
             echo "browser=false" >> "$GITHUB_OUTPUT"
             echo "Only docs, Markdown or \`.claude/\` changed — the build, the unit, Playwright and visual shards and the reg-suit compare are skipped. The safeguards, lint, typecheck and the unit files that quote a document path still ran. The next code commit's visual baseline resolves past this one (scripts/wait-for-baseline.mjs). Re-running a completed capture on the same commit publishes a new versioned snapshot." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      # A push to `main` that a newer main commit has already replaced does not
+      # need the browser half. A stack merged bottom-up lands N commits in a
+      # minute, and each one's run is a full ~170 runner-minutes on the account's
+      # job cap; the per-commit lane above keeps them from cancelling one another
+      # but does nothing about the pile. Only the browser jobs (build, Playwright,
+      # visual capture and compare) are dropped, so `visual-publish` publishes no
+      # snapshot for this commit; the next main commit's baseline walks past it to
+      # the nearest ancestor that did publish (scripts/wait-for-baseline.mjs),
+      # the same way it already does for a docs-only commit. The newest commit
+      # in a burst still runs everything. Every code change in the burst already
+      # passed the full gate on its own pull request. Fails open: no newer main,
+      # or a fetch that fails, leaves `browser` as the filter said.
+      - id: superseded
+        if: ${{ github.event_name == 'push' }}
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          git fetch --no-tags --depth=200 origin main || exit 0
+          tip=$(git rev-parse origin/main) || exit 0
+          if [ "${tip}" != "${GITHUB_SHA}" ] && git merge-base --is-ancestor "${GITHUB_SHA}" "${tip}"; then
+            echo "browser=false" >> "$GITHUB_OUTPUT"
+            echo "Main has moved on to ${tip:0:9}: the build, Playwright and visual jobs are skipped for ${GITHUB_SHA:0:9}; the newest main commit runs them and its baseline walks past this one (scripts/wait-for-baseline.mjs)." >> "$GITHUB_STEP_SUMMARY"
           fi
       # Where the safeguards, lint, typecheck and unit jobs run: Aaron's Mac
       # when one of its runners is online, GitHub-hosted otherwise

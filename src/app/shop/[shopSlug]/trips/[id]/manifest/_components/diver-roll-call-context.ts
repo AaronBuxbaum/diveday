@@ -74,11 +74,11 @@ export type DiverRollCallContext = {
    * The words a packet printed **with** the medical alerts carries (issue
    * #2990), by booking id, and who printed them when. Only the "Print with
    * medical alerts" route sets it, through a key no URL can carry
-   * (`PRINTED_MEDICAL_ALERTS`); absent on the screen and on every other print.
+   * (`TripPacket`); absent on the screen and on every other print.
    */
   printedMedicalAlerts?: PrintedMedicalAlerts;
   /**
-   * Composed as the trip packet's paper (`PAPER_PACKET`, B03): each row is
+   * Composed as the trip packet's paper (`TripPacket`, B03): each row is
    * its name line and its printed facts, with no sheet behind the name and no
    * mark to tap. Absent on the live manifest.
    */

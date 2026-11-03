@@ -56,9 +56,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // never a dormancy timer.
   "people",
   "person_roles",
-  "certifications",
-  "specialty_certifications",
-  "nitrox_certifications",
+  "cards",
   "rental_fit_profiles",
   "prior_visits",
   "prior_gear_assignments",
@@ -146,13 +144,11 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // trail among these and it has a window (7 years); the rows here are the
   // seats, orders and tips that trail is about.
   "bookings",
-  "booking_payments",
   "booking_referrals",
   "booking_checkouts",
   "booking_checkout_bookings",
   "orders",
   "order_line_items",
-  "tips",
   // A card dispute on one of those orders or checkouts: one mutable row per dispute,
   // kept current by Stripe (ADR 20261009-stripe-reversals-reach-diveday). Not a trail.
   "payment_disputes",
@@ -174,8 +170,10 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds",
-  "interest_unsubscribe_tokens",
-  "person_courtesy_email_unsubscribe_tokens",
+  // The two unsubscribe purposes never expire and are never spent; a row goes
+  // with its interest or person (erasure, demo teardown). A purpose with an
+  // expiry brings `capabilities` a window when it moves here (issue #2710).
+  "capabilities",
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.
   "notification_rate_limit_state",

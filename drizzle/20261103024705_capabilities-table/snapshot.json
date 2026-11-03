@@ -1,0 +1,567 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "4bb4ebec-d98b-40c7-9981-ad6325847ec3",
+  "prevIds": [
+    "d5ffaed8-ed8f-4648-b646-0e878d4d73b5",
+    "b9f2e9dd-f26c-4863-94d6-7eecda28b03c"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "capability_purpose"
+      ],
+      "writes": [
+        "s|enum|public.capability_purpose",
+        "n|enum|public.capability_purpose",
+        "e|enum|public.capability_purpose",
+        "n|type|public.capability_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|tbl|public.capabilities",
+        "n|tbl|public.capabilities",
+        "e|tbl|public.capabilities",
+        "n|rel|public.capabilities",
+        "n|type|public.capabilities",
+        "n|rel|public.capabilities_pkey",
+        "n|rel|public.capabilities_token_hash_key"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.capability_purpose"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "person_courtesy_email_unsubscribe_tokens"
+      ],
+      "writes": [
+        "s|tbl|public.person_courtesy_email_unsubscribe_tokens",
+        "n|tbl|public.person_courtesy_email_unsubscribe_tokens",
+        "e|tbl|public.person_courtesy_email_unsubscribe_tokens",
+        "n|rel|public.person_courtesy_email_unsubscribe_tokens",
+        "n|type|public.person_courtesy_email_unsubscribe_tokens"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "interest_unsubscribe_tokens"
+      ],
+      "writes": [
+        "s|tbl|public.interest_unsubscribe_tokens",
+        "n|tbl|public.interest_unsubscribe_tokens",
+        "e|tbl|public.interest_unsubscribe_tokens",
+        "n|rel|public.interest_unsubscribe_tokens",
+        "n|type|public.interest_unsubscribe_tokens"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "capabilities",
+        "capabilities_person_idx"
+      ],
+      "writes": [
+        "s|idx|public.capabilities_person_idx",
+        "n|idx|public.capabilities_person_idx",
+        "e|idx|public.capabilities_person_idx",
+        "n|rel|public.capabilities_person_idx"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "capabilities",
+        "capabilities_interest_idx"
+      ],
+      "writes": [
+        "s|idx|public.capabilities_interest_idx",
+        "n|idx|public.capabilities_interest_idx",
+        "e|idx|public.capabilities_interest_idx",
+        "n|rel|public.capabilities_interest_idx"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.interest_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|fk|public.capabilities.capabilities_shop_id_shops_id_fkey",
+        "n|fk|public.capabilities.capabilities_shop_id_shops_id_fkey",
+        "e|fk|public.capabilities.capabilities_shop_id_shops_id_fkey",
+        "n|con|public.capabilities.capabilities_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.capabilities.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|fk|public.capabilities.capabilities_person_id_people_id_fkey",
+        "n|fk|public.capabilities.capabilities_person_id_people_id_fkey",
+        "e|fk|public.capabilities.capabilities_person_id_people_id_fkey",
+        "n|con|public.capabilities.capabilities_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.capabilities.person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|fk|public.capabilities.capabilities_shop_interest_fkey",
+        "n|fk|public.capabilities.capabilities_shop_interest_fkey",
+        "e|fk|public.capabilities.capabilities_shop_interest_fkey",
+        "n|con|public.capabilities.capabilities_shop_interest_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|col|public.capabilities.shop_id",
+        "n|col|public.capabilities.interest_id",
+        "n|col|public.interests.shop_id",
+        "n|col|public.interests.id",
+        "e|uniqueness|public.interests.id.shop_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "capabilities",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "capability_purpose",
+        "values": [
+          "interest_unsubscribe",
+          "courtesy_email_unsubscribe"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "purpose",
+        "type": "capability_purpose",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "interest_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "token_hash",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "issued_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_person_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_interest_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "interest_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_shop_interest_fkey",
+        "nameExplicit": true,
+        "columns": [
+          "shop_id",
+          "interest_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "interests",
+        "columnsTo": [
+          "shop_id",
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_token_hash_key",
+        "nameExplicit": false,
+        "columns": [
+          "token_hash"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_subject_by_purpose",
+        "value": "(\"purpose\" = 'interest_unsubscribe' and \"interest_id\" is not null and \"person_id\" is null)\n        or (\"purpose\" = 'courtesy_email_unsubscribe' and \"person_id\" is not null and \"interest_id\" is null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"interest_unsubscribe_tokens\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens\",\"person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens\",\"token_hash\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens\",\"issued_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"interest_unsubscribe_tokens\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"interest_unsubscribe_tokens\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"interest_unsubscribe_tokens\",\"interest_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"interest_unsubscribe_tokens\",\"token_hash\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"interest_unsubscribe_tokens\",\"issued_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"interest_unsubscribe_tokens_interest_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens\",\"person_courtesy_email_unsubscribe_tokens_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens\",\"person_courtesy_email_unsubscribe_tokens_IiziwZo2Y62C_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"interest_unsubscribe_tokens\",\"interest_unsubscribe_tokens_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"interest_unsubscribe_tokens\",\"interest_unsubscribe_tokens_interest_id_interests_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens\",\"person_courtesy_email_unsubscribe_tokens_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"interest_unsubscribe_tokens\",\"interest_unsubscribe_tokens_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "uniques\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens\",\"person_courtesy_email_unsubscribe_tokens_token_hash_key\"]"
+    },
+    {
+      "op": "drop",
+      "key": "uniques\u0000[\"public\",\"interest_unsubscribe_tokens\",\"interest_unsubscribe_tokens_token_hash_key\"]"
+    }
+  ]
+}

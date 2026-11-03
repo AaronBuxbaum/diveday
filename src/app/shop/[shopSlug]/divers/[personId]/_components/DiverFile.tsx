@@ -1,3 +1,4 @@
+import type { loadDiverGear } from "@/db/diver-record";
 import type { personThread } from "@/db/inbound-messages";
 import type { LastKnownDive } from "@/db/last-dive";
 import type { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
@@ -7,7 +8,6 @@ import type { DiverNotice } from "@/lib/diver-notices";
 import type { splitDiverStatus } from "@/lib/diver-status";
 import { noticeForForm } from "@/lib/staff-notices";
 import { counterRentalFormPath } from "../../../gear/rentals/rental-form";
-import type { loadDiverGear } from "../_lib/gear-load";
 import { ActivitySection } from "./ActivitySection";
 import { CertificationsGroup } from "./CertificationsGroup";
 import { ConversationWithAssists } from "./ConversationWithAssists";

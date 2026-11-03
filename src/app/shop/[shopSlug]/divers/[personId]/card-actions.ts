@@ -13,7 +13,6 @@ import {
 import {
   createNitroxCertification,
   deleteNitroxCertification,
-  restoreNitroxCertification,
   reviewNitroxCertification,
   unreviewNitroxCertification,
 } from "@/db/nitrox";
@@ -26,8 +25,6 @@ import {
   deleteCertification,
   deleteSpecialtyCertification,
   type LevelCardSighting,
-  restoreCertification,
-  restoreSpecialtyCertification,
   reviewCertification,
   reviewSpecialtyCertification,
   unreviewCertification,
@@ -40,6 +37,7 @@ import { formValue, readForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { unreviewedCardState } from "@/lib/readiness";
 import { noticeUrl } from "@/lib/staff-notices";
+import { undoParams } from "@/lib/undo";
 import { backTo, requireDiverActionContext, successUrl } from "./action-helpers";
 import { cardForm, cardIdFromForm } from "./card-form";
 
@@ -376,10 +374,14 @@ export async function deleteCertificationAction(
   // carries the id + type so a single tap restores it (no confirm dialog).
   revalidateAndRedirect(
     base,
-    deleted
+    deleted && certificationId
       ? noticeUrl(base, "card-deleted", {
-          undo: certificationId,
-          cardType: "level",
+          ...undoParams({
+            undo: "diver-card",
+            undoPerson: personId,
+            undoCard: certificationId,
+            cardType: "level",
+          }),
           by: removedBy ?? undefined,
         })
       : backTo(base, "invalid", "cards"),
@@ -416,10 +418,14 @@ export async function deleteSpecialtyAction(
     : null;
   revalidateAndRedirect(
     base,
-    deleted
+    deleted && certificationId
       ? noticeUrl(base, "card-deleted", {
-          undo: certificationId,
-          cardType,
+          ...undoParams({
+            undo: "diver-card",
+            undoPerson: personId,
+            undoCard: certificationId,
+            cardType,
+          }),
           by: removedBy ?? undefined,
         })
       : backTo(base, "invalid", "cards"),
@@ -428,35 +434,6 @@ export async function deleteSpecialtyAction(
 
 const cardTypeSchema = z.enum(["level", "specialty", "nitrox"]);
 type CardType = z.infer<typeof cardTypeSchema>;
-
-/**
- * Undo a card archive from the land-then-undo toast. Dispatches by the card
- * type stamped into the toast, restoring the exact card that was archived; a
- * re-entered card that now owns the same number blocks the restore rather than
- * being clobbered (readiness.ts).
- */
-export async function restoreCardAction(shopSlug: string, personId: string, formData: FormData) {
-  const fields = readForm(cardForm, formData);
-  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
-  personId = context.personId;
-  const { base, db, staff } = context;
-  const certificationId = cardIdFromForm(formData);
-  const cardType = cardTypeSchema.safeParse(fields.cardType);
-  if (!certificationId || !cardType.success) redirect(base);
-  const input = { shopId: staff.user.shopId, certificationId };
-  const restored =
-    cardType.data === "level"
-      ? await restoreCertification(db, input)
-      : cardType.data === "specialty"
-        ? await restoreSpecialtyCertification(db, input)
-        : await restoreNitroxCertification(db, input);
-  // Every card now lives in one group, so an undo that could not land says so
-  // beside the list it failed to return to — whichever table it came from.
-  revalidateAndRedirect(
-    base,
-    backTo(base, restored ? "card-restored" : "card-restore-conflict", "cards"),
-  );
-}
 
 /**
  * What the one-tap review did, for the control that posted it. A **value**,

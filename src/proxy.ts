@@ -57,6 +57,7 @@ import {
   REFERRAL_COOKIE_MAX_AGE,
   REFERRAL_COOKIE_PATH,
 } from "@/lib/referrals";
+import { runtimeMode } from "@/lib/runtime-mode";
 import { readSessionCookieCache } from "@/lib/session-cookie-cache";
 
 const STAFF_PREFIX = "/shop";
@@ -248,7 +249,7 @@ function rememberBuddyReferral(req: NextRequest, res: Response): void {
   res.cookies.set(BUDDY_COOKIE, encodeBuddyCookie(shopSlug, referralId), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.DIVEDAY_E2E !== "1",
+    secure: runtimeMode().secureSessionCookies,
     path: BUDDY_COOKIE_PATH,
     maxAge: BUDDY_COOKIE_MAX_AGE,
   });
@@ -274,7 +275,7 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
   res.cookies.set(REFERRAL_COOKIE, encodeReferralCookie(shopSlug, partner), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.DIVEDAY_E2E !== "1",
+    secure: runtimeMode().secureSessionCookies,
     path: REFERRAL_COOKIE_PATH,
     maxAge: REFERRAL_COOKIE_MAX_AGE,
   });
@@ -314,7 +315,7 @@ function rememberPricingArm(
     res.cookies.set(PRICING_ARM_COOKIE, decision.arm, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.DIVEDAY_E2E !== "1",
+      secure: runtimeMode().secureSessionCookies,
       path: "/",
       maxAge: PRICING_ARM_COOKIE_MAX_AGE,
     });

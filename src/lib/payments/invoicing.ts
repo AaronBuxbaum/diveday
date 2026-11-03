@@ -134,7 +134,7 @@ export type MarkInvoicePaidResult = {
 
 /**
  * How long the out-of-band mark waits for Stripe. Well under the counter
- * claim's horizon (`STALE_AFTER_MS`, five minutes), so a call is over before a
+ * claim's horizon (`PAYMENT_CLAIM_STALE_AFTER_MS`, five minutes), so a call is over before a
  * second tap can retake the claim it is answering for.
  */
 export const MARK_PAID_TIMEOUT_MS = 30_000;

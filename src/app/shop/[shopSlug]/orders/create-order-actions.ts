@@ -1,0 +1,187 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { canPersonManageOrders } from "@/db/authz";
+import { getDb } from "@/db/client";
+import { createOrder, type NewOrderLineItem } from "@/db/orders";
+import { orderLineItemKind } from "@/db/schema";
+import { hasRequiredStepUp } from "@/db/step-up";
+import { getShopCurrency, getShopTaxEnabled } from "@/db/stripe-accounts";
+import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { addPanelHref } from "@/lib/add-panel";
+import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
+import { majorToMinor } from "@/lib/money";
+import { revalidateAndRedirect } from "@/lib/navigation";
+import { customerAddressFromForm } from "@/lib/payments/customer-address-form";
+import type { InvoiceCustomerAddress } from "@/lib/payments/invoicing";
+import { stepUpChallengeUrl } from "@/lib/security-step-up";
+import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import {
+  invoiceAttemptFromForm,
+  invoiceRowIsBlank,
+  invoiceTargetFromKey,
+  orderRowsFromForm,
+} from "./_lib/order-form";
+
+// Bounds match the house convention for a bounded dollar-to-cents amount
+// (courses edit action: .max(100_000)) and an explicit integer quantity
+// range (trip capacity/party-size actions: .int().min().max()) — CR-016.
+const dollarsSchema = z.coerce.number().nonnegative().max(100_000);
+const quantitySchema = z.coerce.number().int().min(1).max(100);
+const lineDescriptionSchema = z.string().trim().min(1).max(200);
+// The ids are uuid columns: without this, a crafted post reaches Postgres as
+// a 22P02 cast error (an unhandled 500) instead of the invalid-notice redirect
+// every other bad input gets. Same 200-char bound the line items carry, at
+// both layers (createOrder re-checks) — the client maxLength is advisory.
+const personIdSchema = z.string().uuid();
+const bookingIdSchema = z.string().uuid().nullable();
+const orderDescriptionSchema = z.string().trim().max(200);
+// Sourced from the pg enum, not a hand-typed literal list, so it can never
+// drift from what the database will actually accept.
+const lineItemKindSchema = z.enum(orderLineItemKind.enumValues);
+
+/**
+ * The order's own fields, plus its line rows (`description-0`, `kind-0`,
+ * `quantity-0`, `unitAmount-0` …) on the catch-all, each read as `FormData.get`
+ * read it; the schemas above hold every value to its bounds.
+ */
+const orderForm = z
+  .object({ personId: text(), bookingId: trimmedText(), description: text() })
+  .catchall(formValue());
+
+/**
+ * Raise an invoice for a diver.
+ *
+ * The Orders index's own module rather than an inline `"use server"` closure (AGENTS.md
+ * layout rule for a large page) so the gate below is reachable by a test: an
+ * inline closure can only be exercised through the page that renders it, which
+ * is exactly the layer a POST straight at the action skips.
+ * See `./actions.authz.test.ts` and ADR 20260803-invoicing-role-gate.
+ */
+export async function createOrderAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  // `shopPath`, not a template: the slug rides in on the session but is still
+  // an ordinary string being spliced into a redirect target, and every segment
+  // it builds is escaped (src/lib/staff-notices.ts).
+  const orders = shopPath(session.user.shopSlug, "orders");
+  // The Orders index with its add panel open: where a refusal lands, beside the form.
+  const newOrder = addPanelHref(orders);
+  // Billing a diver is owner/manager work (H-20260724-staff-role-reach, ADR 20260724-role-authorization):
+  // an invoice goes out with the shop's name on it, on the shop's own connected
+  // Stripe account, and lands in the shop's books. Re-checked against live roles
+  // here, not just hidden from the page — a form post from a captain's browser
+  // reaches this action regardless of what was rendered (ADR-0006). The landing
+  // is the Orders index with the reason, the same door this page's other refusal
+  // uses: a captain can still read orders, so bouncing them to Today would be
+  // further than the refusal warrants.
+  if (!(await canPersonManageOrders(db, session.user.shopId, session.user.personId))) {
+    revalidateAndRedirect(orders, noticeUrl(orders, "not-authorized"));
+  }
+  if (!(await hasRequiredStepUp(db, session, "money"))) {
+    redirect(stepUpChallengeUrl(session.user.shopSlug, "money", newOrder));
+  }
+
+  // Refusals keep the actual route target, using only bounded UUID prefills.
+  // These fields restore display context; the person/booking billing gates remain below.
+  const target = invoiceTargetFromKey(formData.get("invoiceTarget"));
+  const refusedOrder = (reason: string) =>
+    noticeUrl(newOrder, reason, {
+      bookingId: target?.bookingId ?? undefined,
+      personId: target?.personId ?? undefined,
+    });
+  const form = readForm(orderForm, formData);
+  const parsedPersonId = personIdSchema.safeParse(form.personId);
+  const parsedBookingId = bookingIdSchema.safeParse(form.bookingId || null);
+  const parsedDescription = orderDescriptionSchema.safeParse(form.description);
+  if (!parsedPersonId.success || !parsedBookingId.success || !parsedDescription.success) {
+    redirect(refusedOrder("invalid"));
+  }
+  const personId = parsedPersonId.data;
+  const bookingId = parsedBookingId.data;
+  const description = parsedDescription.data || null;
+
+  // Staff type a major-unit price ("129.00"); the invoice is billed in an
+  // integer count of the shop currency's minor unit. The multiplier is the
+  // currency's own, never a literal 100 — ¥5000 typed is 5000 stored, not
+  // 500000 (docs ADR 20260731-shop-currency). `createOrder` reads the same
+  // shop setting for the invoice itself, so the two can't disagree.
+  const currency = await getShopCurrency(db, session.user.shopId);
+  const taxEnabled = await getShopTaxEnabled(db, session.user.shopId);
+  // Parsed, but **not refused here**. `createOrder` runs the identical check
+  // as its first gate and answers `tax_location_required`, which `noticeUrl`
+  // normalises to the same notice this used to redirect with — so a second
+  // copy bought nothing and cost the one case that is not a plain refusal: a
+  // demo shop, which bills itself when no usable address is supplied
+  // (`demoShopBillingAddress`). Refusing up here meant that fallback could
+  // never be reached from the form it exists for.
+  const customerAddress: InvoiceCustomerAddress | undefined = taxEnabled
+    ? customerAddressFromForm(formData)
+    : undefined;
+
+  const lineItems: NewOrderLineItem[] = [];
+  const rows = orderRowsFromForm(formData);
+  if (!rows) redirect(refusedOrder("invalid"));
+  for (const row of rows) {
+    if (invoiceRowIsBlank(row)) continue;
+    const itemDescription = lineDescriptionSchema.safeParse(row.description);
+    const kind = lineItemKindSchema.safeParse(row.kind);
+    const quantity = quantitySchema.safeParse(row.quantity);
+    const dollars = dollarsSchema.safeParse(
+      row.unitAmount.trim() === "" ? Number.NaN : row.unitAmount,
+    );
+    // A filled-in row with an out-of-bounds value fails the whole submission
+    // rather than silently dropping the row — a staff member who typed four
+    // line items should never end up with a three-line invoice unexplained.
+    if (!itemDescription.success || !kind.success || !quantity.success || !dollars.success) {
+      redirect(refusedOrder("invalid"));
+    }
+    lineItems.push({
+      kind: kind.data,
+      description: itemDescription.data,
+      quantity: quantity.data,
+      unitAmountCents: majorToMinor(dollars.data, currency),
+    });
+  }
+
+  if (!personId || lineItems.length === 0) {
+    redirect(refusedOrder("invalid"));
+  }
+
+  const result = await createOrder(db, {
+    shopId: session.user.shopId,
+    personId,
+    createdByPersonId: session.user.personId,
+    bookingId,
+    description,
+    customerAddress,
+    lineItems,
+  });
+
+  if (!result.ok) {
+    // Every reason lands back on the form with the reason, including the
+    // `not_authorized` `createOrder` raises when its own live-role check refuses
+    // a submission the gate above admitted (roles changed mid-flight): the page
+    // that form lives on runs the same check on render, so it re-lands them on
+    // Orders with the explanation. No special case needed here.
+    //
+    // `createOrder` answers in its own domain casing (`not_authorized`,
+    // `not_connected`, `stripe_failed`); `noticeUrl` normalises that to the one
+    // kebab spelling the page's `NOTICE_KEYS` holds, so this passes the reason
+    // straight through rather than hand-translating it.
+    redirect(refusedOrder(result.reason));
+  }
+  // `createOrder` enqueued an `order.created` event for every connected
+  // integration. Drain it after this response rather than waiting for the
+  // hourly cron (ADR 20260919-integration-delivery-is-write-driven).
+  // `after` still runs when the redirect below throws, which is how a Server
+  // Function ends.
+  dispatchIntegrationsAfterResponse();
+  const completedAttempt = invoiceAttemptFromForm(formData);
+  const completion = completedAttempt
+    ? `?invoiceCreated=${encodeURIComponent(completedAttempt)}`
+    : "";
+  revalidateAndRedirect(orders, `${orders}/${result.order.id}${completion}`);
+}

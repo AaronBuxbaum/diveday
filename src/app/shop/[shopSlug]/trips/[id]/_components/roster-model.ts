@@ -19,6 +19,7 @@ import type { CalendarDate } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import type { ElearningQuery } from "@/lib/elearning-check";
+import { depthAdvisoryIn } from "@/lib/findings";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { isDiver } from "@/lib/participant-types";
 import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
@@ -63,7 +64,7 @@ export type RosterTrip = {
   requiresPayment: boolean;
   /**
    * Whether the shop has a Stripe account that can actually take money.
-   * `orders/new` refuses without one, so the per-seat "Create order" link
+   * `orders?add=1` refuses without one, so the per-seat "Create order" link
    * is withheld rather than a click that bounces straight back.
    */
   paymentsConnected: boolean;
@@ -78,7 +79,7 @@ export type RosterTrip = {
   /**
    * Whether this staffer may raise an invoice (`canPersonManageOrders`). The
    * per-seat "Create order" needs this *and* `paymentsConnected`: without it
-   * `orders/new` bounces the reader to the Orders index (issue #1925). Hiding
+   * `orders?add=1` bounces the reader to the Orders index (issue #1925). Hiding
    * the link is a courtesy; the route and its action refuse on their own.
    */
   canManageOrders: boolean;
@@ -609,12 +610,12 @@ export function groupRoster({
     const held =
       Boolean(booking.identityUnconfirmedAt) ||
       Boolean(row?.readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));
-    return held ? undefined : row?.depthAdvisory;
+    return held ? undefined : depthAdvisoryIn(row?.advisories);
   };
   const advisorySentenceCounts = new Map<string, number>();
   for (const { booking } of roster) {
     const depthAdvisory = seatDepthAdvisory(booking);
-    if (depthAdvisory?.status === "exceeds" || depthAdvisory?.status === "verification_required") {
+    if (depthAdvisory) {
       const text = depthWarningText(t, depthAdvisory);
       advisorySentenceCounts.set(text, (advisorySentenceCounts.get(text) ?? 0) + 1);
     }
@@ -645,7 +646,7 @@ export function groupRoster({
       Boolean(booking.identityUnconfirmedAt) ||
       Boolean(readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));
     // A name with no number reads as "on file" but is unreachable in an
-    // incident — same both-fields rule Today's nudge uses (src/db/today.ts).
+    // incident — same both-fields rule Today's nudge uses (src/features/today/today-reader.ts).
     const hasEmergencyContact = Boolean(
       person.emergencyContactName && person.emergencyContactPhone,
     );
@@ -676,10 +677,7 @@ export function groupRoster({
   const isSettled = (entry: RosterEntry): boolean => {
     const { booking } = entry;
     const depth = seatDepthAdvisory(booking);
-    const depthText =
-      depth?.status === "exceeds" || depth?.status === "verification_required"
-        ? depthWarningText(t, depth)
-        : null;
+    const depthText = depth ? depthWarningText(t, depth) : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
     return (
       deskTasksClear(entry) &&

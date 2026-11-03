@@ -98,11 +98,11 @@ const SKIPPED_FILES = new Set(
 );
 
 /**
- * The trouble route's per-fact state files: the route's own functions, moved out
- * one to a file (issue #3670), so the same exemption as `route.ts` above holds.
- * Each one stages a departure for a capture and is handed a demo shop's id.
+ * The test fixture's facts (issue #2759): the trouble route's own functions, one
+ * to a file, so the same exemption as `route.ts` above holds. Each one stages a
+ * departure for a capture and is handed a demo shop's id.
  */
-const SKIPPED_DIRECTORY = path.normalize("src/app/api/test/seed-trouble-states/states/");
+const SKIPPED_DIRECTORY = path.normalize("src/db/facts/");
 
 /**
  * Every guarded read of `trips` in one file, and which of them prove nothing.

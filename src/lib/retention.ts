@@ -130,6 +130,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "trip_stage_events",
   "buddy_team_events",
   "roll_call_events",
+  // Retired by issue #2700 (crew marks are roll_call_events rows); dropped next release.
   "roll_call_crew_events",
   "booking_arrival_events",
   "pre_departure_check_events",
@@ -247,10 +248,10 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    */
   booking_capabilities: 90,
   /**
-   * 2555 days (7 years). The local money ledger DATA-M3 exists to provide;
-   * matched to the ordinary financial-records horizon rather than to anything
-   * operational, because the whole point of the table is that it outlives the
-   * mutable `booking_payments` row it records. Listed here rather than left
+   * 2555 days (7 years). A booking's money as entries (DATA-M3, issue #2716);
+   * the `booking_payments` view is their fold, so this is also how long a
+   * booking's payment state is kept. Matched to the ordinary financial-records
+   * horizon rather than to anything operational. Listed here rather than left
    * unbounded so that "how long is a shop's money history kept?" has an answer
    * in the same table as every other trail.
    */

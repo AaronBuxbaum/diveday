@@ -13,7 +13,7 @@ test("the new departure field keeps its initial focus after session verification
   page,
 }) => {
   await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
+  await page.goto("/shop/blue-mantis/schedule/board?add=full");
   await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
   await expect(page.getByLabel("What is it")).toBeFocused();
 });

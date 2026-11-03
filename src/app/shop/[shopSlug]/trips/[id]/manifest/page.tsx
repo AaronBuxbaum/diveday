@@ -7,9 +7,7 @@ import { SkipLink } from "@/components/SkipLink";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { nowDate } from "@/lib/clock";
 import { scopedHash } from "@/lib/element-id";
-import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
@@ -19,54 +17,33 @@ import { TripPageHeader } from "../_components/TripPageHeader";
 import { TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
-import { bindManifestActions } from "./_components/bound-actions";
-import { buddyBuilderView } from "./_components/buddy-builder-view";
 import { CancelledRollCallBanner } from "./_components/CancelledRollCallBanner";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CheckpointSwitch } from "./_components/CheckpointSwitch";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall } from "./_components/DiverRollCall";
 import { DockDesk } from "./_components/DockDesk";
-import { departureBoatSafetySection } from "./_components/departure-boat-safety";
 import { ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { executedDiveLogView } from "./_components/executed-dive-copy";
 import { headCountView } from "./_components/head-count-view";
 import { ManifestDeviceSettings } from "./_components/ManifestDeviceSettings";
 import { ManifestMilestones } from "./_components/ManifestMilestones";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
-import { ManifestPaper } from "./_components/ManifestPaper";
 import { manifestCanAssist } from "./_components/manifest-assist";
-import {
-  catchUpStripView,
-  emergencyReferenceCopy,
-  offlineManifestManagerCopy,
-} from "./_components/manifest-copy";
-import { readManifestPage } from "./_components/manifest-reads";
-import { type ManifestSearchParams, PAPER_PACKET } from "./_components/manifest-search-params";
+import { catchUpStripView, offlineManifestManagerCopy } from "./_components/manifest-copy";
+import type { ManifestSearchParams } from "./_components/manifest-search-params";
 import { manifestSpecies } from "./_components/manifest-species";
+import { readManifestView } from "./_components/manifest-view";
 import { offlineManifestPayload } from "./_components/offline-payload";
-import { openCheckpoint } from "./_components/open-checkpoint";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
-import {
-  PrintedBoatPaper,
-  printedBoatProcedureCopy,
-  printedKitRegister,
-} from "./_components/PrintedBoatProcedure";
+import { PrintedBoatPaper } from "./_components/PrintedBoatProcedure";
 import { PrintedSoulsOnBoard } from "./_components/PrintedSoulsOnBoard";
-import { manifestPaperIdentity } from "./_components/paper-identity";
-import { personTrailIndex } from "./_components/person-trail";
-import { preDepartureCheckView } from "./_components/pre-departure-check-view";
-import { rollCallCopies } from "./_components/roll-call-copy";
-import { manifestRollCallProps } from "./_components/roll-call-props";
 import { SeenGroup } from "./_components/SeenGroup";
-import { manifestNoteThreads } from "./_components/StaffNotes";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import { seenGroupView } from "./_components/seen-group-view";
-import { stageStripProps } from "./_components/stage-strip-props";
 import { TripPlanSection } from "./_components/TripPlanSection";
 import { tripPlanRows } from "./_components/trip-plan-rows";
-import type { ManifestActionContext } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -93,61 +70,69 @@ export default async function TripManifestPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const {
-    checkpoint: requestedCheckpoint,
-    buddyError,
-    buddies,
-    idPrefix: requestedIdPrefix,
-    [PAPER_PACKET]: paper,
-  } = await searchParams;
-  const idPrefix = uuidParam(requestedIdPrefix ?? "") ?? undefined;
+  const { checkpoint: requestedCheckpoint, buddyError, buddies } = await searchParams;
   const { db, shop, session } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+  // The readers and views this tab shares with the packet's manifest sheet.
+  const view = await readManifestView({
+    db,
+    shop,
+    session,
+    shopSlug,
+    tripId,
+    requestedCheckpoint,
+    buddyError,
+    locale,
+    t,
+  });
+  if (view.status === "missing") notFound();
+  // A checkpoint this plan lacks leaves the address bar, never opening the dock (#2508).
+  if (view.status === "stale") redirect(shopPath(shopSlug, "trips", tripId, "manifest"));
   const {
-    completeManifests,
     buddyTeamsList,
-    partyPlan,
-    bookingNotes,
-    diverNotes,
     boatCheck,
     plannedDives,
     executedDives,
     liveDiveSites,
     catchUp,
     diveIntents,
-    stageStrip,
     meetingPoint,
     vessel,
-    kitRecord,
     siteHistory,
     cancelled,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
     reader,
-  } = await readManifestPage(db, shop.id, tripId, session.user.personId);
+    completeManifests,
+    offlineSnapshot,
+    departureManifest,
+    boatSafety,
+    checkpoint,
+    isDeparture,
+    manifest,
+    actionContext,
+    actions,
+    buddy,
+    emergencyCopy,
+    emergencyReference,
+    rollCall,
+    boatPaper,
+    checklistProps,
+    stage,
+    dockDesk,
+    paperIdentity,
+  } = view;
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
-  const departureManifest = completeManifests?.[0];
-  if (!departureManifest || !completeManifests || !boatCheck.offlineSnapshot) notFound();
-  const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t, locale);
-
-  const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
-  // A checkpoint this plan lacks leaves the address bar, never opening the dock (#2508).
-  if ("stale" in opened) redirect(shopPath(shopSlug, "trips", tripId, "manifest"));
-  const { checkpoint, isDeparture, manifest } = opened;
-  const todayTrailBySubject = personTrailIndex(completeManifests, locale, shop.timezone, t);
   // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
   // ADR 20260804-crew-roll-call-is-per-person). This used to be written inline
   // here and again in OfflineManifestView as `totalDivers > 0 && awaiting === 0`,
   // which counted booked divers only — so a checkpoint could read complete with
   // a divemaster still in the water.
   const completeness = manifest.completeness;
-
-  const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
-  const actions = bindManifestActions(actionContext, reader, await searchParams);
   const seen = seenGroupView({
     checkpoint,
     actionContext,
@@ -163,104 +148,17 @@ export default async function TripManifestPage({
     t,
   });
   const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);
-  const checklist = preDepartureCheckView({
-    ...boatCheck,
-    snagActions: vessel ? { note: actions.noteSnag, answer: actions.answerSnag } : undefined,
-    locale,
-    timeZone: shop.timezone,
-    t,
-  });
-  const buddy = buddyBuilderView({ manifest, buddyTeamsList, buddyError, partyPlan, locale, t });
-  const notesByBooking = manifestNoteThreads(bookingNotes, diverNotes);
-  const emergencyCopy = emergencyReferenceCopy(t);
-  // This departure's own boat on every copy of the card, the shop line only without one (item 11).
-  const emergencyReference = emergencyReferenceForDeparture(shop.emergencyReference, vessel);
-  const rollCall = manifestRollCallProps({
-    idPrefix,
-    manifest,
-    checkpoint,
-    isDeparture,
-    shopSlug,
-    tripId,
-    locale,
-    timezone: shop.timezone,
-    notesByBooking,
-    todayTrailBySubject,
-    rollCallClosed: cancelled === "closed",
-    actions,
-    copies: rollCallCopies(t, shopSlug, tripId),
-    buddyTeamLabel: buddy.buddyTeamLabel,
-    t,
-  });
-  const printedBoatPaper = (
-    <PrintedBoatPaper
-      idPrefix={idPrefix}
-      reference={emergencyReference}
-      emergencyCopy={emergencyCopy}
-      copy={printedBoatProcedureCopy(t)}
-      kitRegister={printedKitRegister(kitRecord, t, locale)}
-    />
-  );
-  const checklistProps = {
-    idPrefix,
-    action: actions.preDepartureCheck,
-    atDeparture: isDeparture,
-    ...checklist,
-  };
-  const stage = stageStripProps(t, {
-    manifests: completeManifests,
-    shopSlug,
-    ...stageStrip,
-    now: nowDate(),
-    timeZone: shop.timezone,
-    locale,
-  });
-  const dockDesk = {
-    t,
-    shop,
-    tripId,
-    isDeparture,
-    trip: departureManifest.trip,
-    stage: stageStrip.stage,
-    seats: manifest.divers,
-  };
-  const paperProps = manifestPaperIdentity(
-    shop,
-    departureManifest.trip,
-    vessel,
-    checkpoint,
-    locale,
-    t,
-  );
-  if (paper) {
-    return (
-      <DeparturePaperIdentity {...paperProps}>
-        <ManifestPaper
-          cancelled={cancelled}
-          manifest={manifest}
-          vesselName={vessel?.name ?? null}
-          boatSafety={boatSafety ? { idPrefix, ...boatSafety } : null}
-          checklist={checklistProps}
-          rollCall={rollCall}
-          boatPaper={printedBoatPaper}
-          stage={stage}
-          dockDesk={dockDesk}
-          t={t}
-        />
-      </DeparturePaperIdentity>
-    );
-  }
+  const printedBoatPaper = <PrintedBoatPaper {...boatPaper} />;
 
   return (
-    <DeparturePaperIdentity {...paperProps}>
+    <DeparturePaperIdentity {...paperIdentity}>
       <div className="boat-mode">
         <SkipLink
-          href={scopedHash(idPrefix, "roll-call-list")}
+          href={scopedHash(undefined, "roll-call-list")}
           label={t("manifest.skipToRollCall")}
           level="page"
         />
         <TripPageHeader
-          boardHref={shopPath(shopSlug, "schedule", "board")}
           backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
           trip={manifest.trip}
           locale={locale}
@@ -295,11 +193,7 @@ export default async function TripManifestPage({
           at all to somebody who has never worked this departure — so on most
           openings of most manifests this line costs the page no pixels. */}
         {catchUpStrip ? (
-          <CatchUpStrip
-            idPrefix={idPrefix}
-            {...catchUpStrip}
-            dismissAction={actions.markTripCaughtUp}
-          />
+          <CatchUpStrip {...catchUpStrip} dismissAction={actions.markTripCaughtUp} />
         ) : null}
         {/* **The count leads** (ADR 20260827-the-departure-is-two-working-surfaces,
           decision 2: the count is "always on screen"). This is the page's only
@@ -310,7 +204,6 @@ export default async function TripManifestPage({
           at the rail was a list of phone numbers for a call that has never been
           placed from this app. */}
         <SummaryPanel
-          idPrefix={idPrefix}
           checkpoint={checkpoint}
           isDeparture={isDeparture}
           rollCallComplete={completeness.complete}
@@ -347,7 +240,7 @@ export default async function TripManifestPage({
             the boat-check items are a "one tap away" concern). It used to stand
             fully expanded *above* the checkpoint switch, five full-width buttons
             between the masthead and the head count at every checkpoint. */}
-          {boatSafety ? <BoatSafetyNotices idPrefix={idPrefix} {...boatSafety} /> : null}
+          {boatSafety ? <BoatSafetyNotices {...boatSafety} /> : null}
           <PreDepartureCheckList {...checklistProps} />
           {/* The page's job, as high as it can go: the divers, immediately under
             the panel that counts them. It used to be the *last* section, below
@@ -368,7 +261,6 @@ export default async function TripManifestPage({
             same question. */}
           {isDeparture ? (
             <TripPlanSection
-              idPrefix={idPrefix}
               heading={t("manifest.planChange.heading")}
               {...tripPlanRows(t, shop, plannedDives, meetingPoint, siteHistory, locale)}
             />
@@ -376,7 +268,6 @@ export default async function TripManifestPage({
 
           {!isDeparture ? (
             <ExecutedDiveLog
-              idPrefix={idPrefix}
               {...executedDiveLogView({
                 plannedDives,
                 executedDives,
@@ -396,7 +287,7 @@ export default async function TripManifestPage({
 
           {/* **The living reef**: what the crew saw, away from roll call and head count. It
             gates nothing, reaches the public trip page, and is gone while sightings are off. */}
-          {!isDeparture && seen ? <SeenGroup idPrefix={idPrefix} {...seen} /> : null}
+          {!isDeparture && seen ? <SeenGroup {...seen} /> : null}
 
           {/* **The numbers a crew dials during** are a rare reference, behind the
             manifest-local ellipsis on a phone and a quiet footer line on desktop
@@ -409,7 +300,6 @@ export default async function TripManifestPage({
             worked at the rail. Below the lists, still expanded — the teams
             themselves ride on each member's row where roll call can see them. */}
           <BuddyTeamsPanel
-            idPrefix={idPrefix}
             defaultOpen={buddies === "open"}
             intentLine={staffDiveIntentLine(t, diveIntents, locale)}
             buddyTeamsList={buddyTeamsList}
@@ -431,10 +321,9 @@ export default async function TripManifestPage({
             mechanism exists to prevent — and the component that computes that state is the only
             thing that can render it. The rest of the group rides in as its children. */}
           <OfflineManifestManager
-            idPrefix={idPrefix}
             locale={locale}
             payload={offlineManifestPayload({
-              snapshot: boatCheck.offlineSnapshot,
+              snapshot: offlineSnapshot,
               shop: { ...shop, emergencyReference },
               ...boatCheck,
               boatSafety,

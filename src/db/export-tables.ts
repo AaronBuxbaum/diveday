@@ -1,7 +1,9 @@
 import { and, asc, count, eq, inArray, type SQL } from "drizzle-orm";
 import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { CsvValue, ExportTable } from "@/lib/export";
+import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
+import { oldestMarkFirst } from "./roll-call-order";
 import {
   activityEvents,
   boatSnags,
@@ -10,10 +12,9 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPaymentEvents,
-  bookingPayments,
   buddyTeamMembers,
+  cards,
   certificationJuniorReviews,
-  certifications,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -38,7 +39,6 @@ import {
   incidentReports,
   interests,
   internalNotes,
-  nitroxCertifications,
   notificationDeliveries,
   orderLineItems,
   orders,
@@ -48,14 +48,11 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
-  rollCallCrewEvents,
   rollCallEvents,
   shopPromoCodes,
   shopTextTranslations,
-  specialtyCertifications,
   staffCredentialHistory,
   staffCredentials,
-  tips,
   tripChangeEvents,
   tripHelpRequests,
   tripLastMinutePromos,
@@ -272,24 +269,13 @@ export const EXPORT_TABLES = {
     order: [asc(tripHelpRequests.createdAt), asc(tripHelpRequests.id)],
     scope: { shopColumn: tripHelpRequests.shopId },
   },
-  tips: {
-    table: tips,
-    order: [asc(tips.createdAt), asc(tips.id)],
-    scope: { shopColumn: tips.shopId, bookingColumn: tips.bookingId },
-  },
-  bookingPayments: {
-    table: bookingPayments,
-    order: [],
-    scope: { shopColumn: bookingPayments.shopId, bookingColumn: bookingPayments.bookingId },
-  },
-  // The history behind those current rows. `booking_payments` folds into
-  // bookings.csv as one payment_* column set — the state as it stands —
-  // and refunds overwrite it in place, so without this file the bundle
-  // carries a balance and no story. Oldest first, so a reader replaying
-  // the file in order arrives at the folded row.
+  // A booking's money, as its entries (issue #2716). The newest entry per
+  // booking also folds into bookings.csv as its payment_* columns — the
+  // state as it stands. Oldest first in write order, so a reader replaying
+  // the file in order arrives at that folded state.
   bookingPaymentEvents: {
     table: bookingPaymentEvents,
-    order: [asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.id)],
+    order: [asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.seq)],
     scope: {
       shopColumn: bookingPaymentEvents.shopId,
       bookingColumn: bookingPaymentEvents.bookingId,
@@ -371,15 +357,11 @@ export const EXPORT_TABLES = {
     // `seq`, not `id`: the id is a random uuid, so two events sharing an
     // `occurred_at` came out in a different order every export — of the one
     // file a shop is meant to be able to diff against last week's.
-    order: [asc(rollCallEvents.occurredAt), asc(rollCallEvents.seq)],
+    order: [...oldestMarkFirst()],
+    // Both halves, seat and crew: the shop bundle splits them into
+    // roll_call_events.csv and roll_call_crew_events.csv by `subject_kind`
+    // (`splitRollCallRows`), and a diver's scope by booking reads seats only.
     scope: { shopColumn: rollCallEvents.shopId, bookingColumn: rollCallEvents.bookingId },
-  },
-  // The crew half: who, not just how many. Same oldest-first ordering, same
-  // append-only replay rule as the diver events.
-  rollCallCrewEvents: {
-    table: rollCallCrewEvents,
-    order: [asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.seq)],
-    scope: { shopColumn: rollCallCrewEvents.shopId },
   },
   // Buddy teams standing at export time — not a history: dissolving a team
   // deletes the rows, and the trail that outlives them (`buddy_team_events`)
@@ -393,10 +375,12 @@ export const EXPORT_TABLES = {
     order: [],
     scope: { shopColumn: buddyTeamMembers.shopId },
   },
-  certifications: {
-    table: certifications,
-    order: [asc(certifications.createdAt), asc(certifications.id)],
-    scope: { shopColumn: certifications.shopId, personColumn: certifications.personId },
+  // Every kind of card, in one file (issue #2722): `kind` says which, and
+  // `level`/`specialty` carry the rung or the specialty.
+  cards: {
+    table: cards,
+    order: [asc(cards.createdAt), asc(cards.id)],
+    scope: { shopColumn: cards.shopId, personColumn: cards.personId },
   },
   certificationJuniorReviews: {
     table: certificationJuniorReviews,
@@ -405,19 +389,6 @@ export const EXPORT_TABLES = {
       shopColumn: certificationJuniorReviews.shopId,
       personColumn: certificationJuniorReviews.personId,
     },
-  },
-  specialtyCertifications: {
-    table: specialtyCertifications,
-    order: [asc(specialtyCertifications.createdAt), asc(specialtyCertifications.id)],
-    scope: {
-      shopColumn: specialtyCertifications.shopId,
-      personColumn: specialtyCertifications.personId,
-    },
-  },
-  nitroxCertifications: {
-    table: nitroxCertifications,
-    order: [asc(nitroxCertifications.createdAt), asc(nitroxCertifications.id)],
-    scope: { shopColumn: nitroxCertifications.shopId, personColumn: nitroxCertifications.personId },
   },
   waiverTemplates: {
     table: waiverTemplates,
@@ -694,6 +665,59 @@ export async function readScoped<K extends ExportTableKey>(
     );
   }
   throw new Error(`export: ${key} has no diver scope`);
+}
+
+/**
+ * **The tips file's rows**: every post-trip tip in the scope, one row per tip
+ * with the booking it was left on. A tip is a `booking_checkouts` row whose
+ * purpose is `tip` (issue #2718), so this reads that table through its one
+ * booking link rather than through `readScoped`; a diver scope reads only
+ * tips left on the diver's own bookings.
+ */
+export async function readTipRows(db: DbExecutor, scope: ExportScope) {
+  if (scope.kind === "diver" && scope.bookingIds.length === 0) return [];
+  return (
+    db
+      .select({
+        id: bookingCheckouts.id,
+        bookingId: bookingCheckoutBookings.bookingId,
+        status: bookingCheckouts.status,
+        currency: bookingCheckouts.currency,
+        amountCents: tipAmountCents,
+        stripeSessionId: bookingCheckouts.stripeSessionId,
+        expiresAt: bookingCheckouts.expiresAt,
+        completedAt: bookingCheckouts.completedAt,
+        createdAt: bookingCheckouts.createdAt,
+      })
+      .from(bookingCheckouts)
+      .innerJoin(
+        bookingCheckoutBookings,
+        and(
+          eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+          eq(bookingCheckoutBookings.shopId, scope.shopId),
+        ),
+      )
+      .where(
+        and(
+          eq(bookingCheckouts.shopId, scope.shopId),
+          tipCheckout(),
+          scope.kind === "diver"
+            ? inArray(bookingCheckoutBookings.bookingId, [...scope.bookingIds])
+            : undefined,
+        ),
+      )
+      // diveday:allow-time-id-order: a file's row order, the same rule as every EXPORT_TABLES entry.
+      .orderBy(asc(bookingCheckouts.createdAt), asc(bookingCheckouts.id))
+  );
+}
+
+/** How many tips a shop's bundle holds — the settings page's cheap view. */
+export async function countShopTips(db: DbExecutor, shopId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(bookingCheckouts)
+    .where(and(eq(bookingCheckouts.shopId, shopId), tipCheckout()));
+  return row?.n ?? 0;
 }
 
 /** How many rows {@link readScoped} would return for a shop — the settings page's cheap view. */

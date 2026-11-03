@@ -12,7 +12,6 @@ import {
   SITE_FORM_SECTION_ORDER,
 } from "./shop/[shopSlug]/dive-sites/_components/site-form-sections";
 import DiveSiteLoading from "./shop/[shopSlug]/dive-sites/[id]/loading";
-import NewDiveSiteLoading from "./shop/[shopSlug]/dive-sites/new/loading";
 
 afterEach(cleanup);
 
@@ -28,12 +27,6 @@ const SKELETONS: [
   open: () => number,
   closed: () => number,
 ][] = [
-  [
-    "the new dive site",
-    NewDiveSiteLoading,
-    () => SITE_FORM_OPEN_SECTIONS.size,
-    () => SITE_FORM_SECTION_ORDER.length - SITE_FORM_OPEN_SECTIONS.size,
-  ],
   [
     "a dive site's briefing",
     DiveSiteLoading,
@@ -75,24 +68,24 @@ function headerSkeleton(container: HTMLElement): Element | null {
  * and the header and whole form jumped up as the editor streamed in.
  */
 describe("a dive-site editor's loading header", () => {
-  it.each([
-    ["the new dive site", NewDiveSiteLoading],
-    ["a dive site's briefing", DiveSiteLoading],
-  ] as const)("draws %s's back link once, as the header's own eyebrow", (_name, Skeleton) => {
-    const { container } = render(<Skeleton />);
-    const pulse = container.querySelector(".animate-pulse");
-    const header = headerSkeleton(container);
-    expect(header).not.toBeNull();
-    expect(pulse?.firstElementChild).toBe(header);
-    expect(container.querySelector(".h-5.w-36")).toBeNull();
-    // Above the title bar, the eyebrow and nothing else.
-    const bars = [...(pulse?.querySelectorAll("div") ?? [])];
-    const title = bars.findIndex((bar) => bar.classList.contains("h-11"));
-    expect(bars.slice(0, title).filter((bar) => /(^|\s)h-\d/.test(bar.className))).toEqual([
-      header?.firstElementChild,
-    ]);
-    expect(header?.firstElementChild).toHaveClass("h-4");
-  });
+  it.each([["a dive site's briefing", DiveSiteLoading]] as const)(
+    "draws %s's back link once, as the header's own eyebrow",
+    (_name, Skeleton) => {
+      const { container } = render(<Skeleton />);
+      const pulse = container.querySelector(".animate-pulse");
+      const header = headerSkeleton(container);
+      expect(header).not.toBeNull();
+      expect(pulse?.firstElementChild).toBe(header);
+      expect(container.querySelector(".h-5.w-36")).toBeNull();
+      // Above the title bar, the eyebrow and nothing else.
+      const bars = [...(pulse?.querySelectorAll("div") ?? [])];
+      const title = bars.findIndex((bar) => bar.classList.contains("h-11"));
+      expect(bars.slice(0, title).filter((bar) => /(^|\s)h-\d/.test(bar.className))).toEqual([
+        header?.firstElementChild,
+      ]);
+      expect(header?.firstElementChild).toHaveClass("h-4");
+    },
+  );
 });
 
 /**

@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import { staffTranslator } from "@/i18n/staff-messages";
 import { type PricingConfig, pricingPlanForKey } from "@/lib/billing/pricing-plans";
 import { nowDate } from "@/lib/clock";
 import { shopDefaultsForTimeZone } from "@/lib/curated-defaults";
@@ -27,6 +26,11 @@ export type ShopSignup = {
   ownerName: string;
   ownerEmail: string;
   ownerPassword: string;
+  /**
+   * The first pre-departure line, in the shop's language: the oxygen question
+   * (#2301). The caller words it; this module only writes it.
+   */
+  firstChecklistLine: string;
 };
 
 export type ShopSignupRefusal = "setup_link_closed" | "shop_slug_taken" | "email_taken";
@@ -187,7 +191,7 @@ export async function createSignedUpShop(
       // informs, never gates (ADR 20260824-pre-departure-safety-check).
       await tx.insert(preDepartureChecklistItems).values({
         shopId: shop.id,
-        label: staffTranslator(shop.defaultLocale)("settings.safetyChecklist.defaultLine"),
+        label: signup.firstChecklistLine,
         sortOrder: 0,
       });
 

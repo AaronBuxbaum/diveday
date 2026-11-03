@@ -4,11 +4,12 @@ import { rollCallCheckpoints } from "@/lib/manifests";
 import { demoEmail } from "@/lib/simulator-email";
 import { utcToWallTime } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
+import { paymentEntries } from "./payments";
 import {
   boats,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
-  certifications,
+  cards,
   type DiveSpecialty,
   diveSites,
   orderLineItems,
@@ -16,7 +17,6 @@ import {
   people,
   personRoles,
   rollCallEvents,
-  tips,
   tripAssignments,
   tripDives,
   tripLenses,
@@ -30,6 +30,7 @@ import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt, withinDeskHours } from "./seed-c
 import { LAST_YEAR_SAILINGS } from "./seed-last-year";
 import { paperRelease, signingNames } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
+import { recordSeedTips, type SeedTip } from "./tips";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 /**
@@ -224,17 +225,7 @@ export async function seedHistory(
   await db
     .insert(personRoles)
     .values(histPeople.map((person) => ({ personId: person.id, role: "diver" as const })));
-  await db.insert(certifications).values(
-    histPeople.map((person, i) => ({
-      shopId,
-      personId: person.id,
-      agency: i % 2 === 0 ? ("padi" as const) : ("ssi" as const),
-      level: i % 3 === 0 ? ("advanced_open_water" as const) : ("open_water" as const),
-      identifier: `HIST-${String(i + 1).padStart(4, "0")}`,
-      status: "verified" as const,
-      ...reviewedBy(createdByPersonId),
-    })),
-  );
+  await insertHistoryCards(db, shopId, histPeople, createdByPersonId);
 
   // The bookable pool is exactly the history-only cohort (see above): large
   // enough that a wrapping slice fills even a 12-seat boat with distinct divers,
@@ -760,7 +751,7 @@ export async function seedHistory(
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
-  if (payments.length > 0) await db.insert(bookingPayments).values(payments);
+  if (payments.length > 0) await db.insert(bookingPaymentEvents).values(paymentEntries(payments));
 
   // Signed releases for the divers who boarded, on paper at the desk (`withinDeskHours`).
   const signedName = await signingNames(db, shopId);
@@ -900,32 +891,7 @@ export async function seedHistory(
     );
   }
 
-  // Tip history gives the export and diver recap surfaces more than an empty
-  // state: a couple settled, one is still waiting at checkout, and one
-  // expired. These are fabricated demo Stripe references only; no provider is
-  // contacted and tips never affect the booking-payment gate.
-  const tipRows = plans
-    .map((plan, i) => {
-      const booking = bookingRows[i];
-      if (!booking || plan.status !== "checked_in") return null;
-      const state = i % 11 === 0 ? "expired" : i % 7 === 0 ? "pending" : "paid";
-      const createdAt = new Date(plan.createdAt.getTime() + 2 * 60 * 60 * 1000);
-      return {
-        shopId,
-        bookingId: booking.id,
-        status: state as "pending" | "paid" | "expired",
-        stripeAccountId: "acct_demo",
-        stripeSessionId: `cs_tip_demo_${shopId}_${i + 1}`,
-        checkoutUrl: state === "pending" ? "https://checkout.stripe.com/c/pay/demo-tip" : null,
-        currency: "usd",
-        amountCents: i % 3 === 0 ? 2_500 : 1_500,
-        expiresAt: state === "pending" ? new Date(createdAt.getTime() + DAY_MS) : null,
-        completedAt: state === "paid" ? new Date(createdAt.getTime() + 15 * 60 * 1000) : null,
-        createdAt,
-      };
-    })
-    .filter((row): row is NonNullable<typeof row> => row !== null);
-  if (tipRows.length > 0) await db.insert(tips).values(tipRows);
+  await recordSeedTips(db, demoTipRows(shopId, plans, bookingRows));
 
   // Reviews from divers who actually sailed: `DEMO_REVIEWS` below.
   // The written reviews go on different departures, so the public list reads
@@ -1160,3 +1126,58 @@ export function daysBookedAhead(startsAt: Date, seat: number): number {
 const WEEKEND_DAYS_AHEAD = [28, 21, 18, 14, 12, 10, 9, 7, 6, 5, 4, 3] as const;
 const FRIDAY_DAYS_AHEAD = [12, 9, 7, 6, 5, 4, 3, 2, 2, 1, 1, 0] as const;
 const MIDWEEK_DAYS_AHEAD = [6, 4, 3, 2, 1, 1, 1, 0, 0, 0, 0, 0] as const;
+
+/**
+ * Tip history for the export and recap: settled, still at checkout, and
+ * expired. Fake Stripe references; no provider is contacted, no seat paid.
+ */
+function demoTipRows(
+  shopId: string,
+  plans: readonly { status: string; createdAt: Date }[],
+  bookingRows: readonly { id: string; tripId: string }[],
+): SeedTip[] {
+  return plans
+    .map((plan, i) => {
+      const booking = bookingRows[i];
+      if (!booking || plan.status !== "checked_in") return null;
+      const state: SeedTip["status"] =
+        i % 11 === 0 ? "expired" : i % 7 === 0 ? "pending" : "completed";
+      const createdAt = new Date(plan.createdAt.getTime() + 2 * 60 * 60 * 1000);
+      return {
+        shopId,
+        bookingId: booking.id,
+        tripId: booking.tripId,
+        status: state,
+        stripeAccountId: "acct_demo",
+        stripeSessionId: `cs_tip_demo_${shopId}_${i + 1}`,
+        checkoutUrl: state === "pending" ? "https://checkout.stripe.com/c/pay/demo-tip" : null,
+        currency: "usd",
+        amountCents: i % 3 === 0 ? 2_500 : 1_500,
+        expiresAt: state === "pending" ? new Date(createdAt.getTime() + DAY_MS) : null,
+        completedAt: state === "completed" ? new Date(createdAt.getTime() + 15 * 60 * 1000) : null,
+        createdAt,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+}
+
+/** One verified level card for each of the history cohort, reviewed by the seed's staffer. */
+async function insertHistoryCards(
+  db: DbExecutor,
+  shopId: string,
+  histPeople: readonly { id: string }[],
+  createdByPersonId: string,
+) {
+  await db.insert(cards).values(
+    histPeople.map((person, i) => ({
+      kind: "level" as const,
+      shopId,
+      personId: person.id,
+      agency: i % 2 === 0 ? ("padi" as const) : ("ssi" as const),
+      level: i % 3 === 0 ? ("advanced_open_water" as const) : ("open_water" as const),
+      identifier: `HIST-${String(i + 1).padStart(4, "0")}`,
+      status: "verified" as const,
+      ...reviewedBy(createdByPersonId),
+    })),
+  );
+}

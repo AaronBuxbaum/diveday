@@ -7,6 +7,7 @@ import { medicalWarningChips, rollCallLabelText } from "@/i18n/manifest-labels";
 import { presenceText } from "@/i18n/presence-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { depthAdvisoryIn } from "@/lib/findings";
 import { formatDateTimeTz } from "@/lib/format";
 import { type RollCallCheckpoint, rollCallLabel, type TripManifest } from "@/lib/manifests";
 import { DiverFacts, diverBlockerText } from "./DiverFacts";
@@ -46,6 +47,7 @@ export function DiverRowPrint({
   t: StaffTranslator;
 }) {
   const { rc, ready, diverStatus, impliedNotBoarded, capsuleKind, medicalDays } = state;
+  const depthAdvisory = depthAdvisoryIn(diver.advisories);
   const quietFacts = [
     !diver.minor && diver.age !== null && diver.age !== undefined
       ? t("manifest.age", { age: diver.age })
@@ -132,11 +134,10 @@ export function DiverRowPrint({
           })}
         </ul>
       )}
-      {diver.depthAdvisory?.status === "exceeds" ||
-      diver.depthAdvisory?.status === "verification_required" ? (
+      {depthAdvisory ? (
         <p className="mt-2 flex items-start gap-2 text-base">
           <StatusMark variant="warning" size="md" />
-          <span>{depthWarningText(t, diver.depthAdvisory)}</span>
+          <span>{depthWarningText(t, depthAdvisory)}</span>
         </p>
       ) : null}
       {/* The audit line **in full** — the screen's compact

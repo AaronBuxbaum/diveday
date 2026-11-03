@@ -1,14 +1,13 @@
 import { and, desc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getDayCloseout } from "@/db/closeout";
 import { listFitAdjustedReturns } from "@/db/gear";
 import { getTripManifest } from "@/db/manifests";
-import { bookings, rollCallCrewEvents, rollCallEvents, type Shop, trips } from "@/db/schema";
+import { listRollCallGaps } from "@/db/roll-call-gaps";
+import { bookings, rollCallEvents, type Shop, trips } from "@/db/schema";
 import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "@/db/seed-boat-at-sea";
-import { listRollCallGaps } from "@/db/today";
 import { listStaff } from "@/db/trips";
+import { assembleEveningClose, getDayCloseout } from "@/features/today";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose } from "@/lib/closeout";
 import { shopDayBounds } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
 
@@ -88,9 +87,9 @@ async function shopRollCallCount(
       .from(rollCallEvents)
       .where(eq(rollCallEvents.shopId, shopId)),
     db
-      .select({ id: rollCallCrewEvents.id })
-      .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.shopId, shopId)),
+      .select({ id: rollCallEvents.id })
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.shopId, shopId)),
   ]);
   return divers.length + crew.length;
 }
@@ -264,7 +263,7 @@ describe("POST /api/test/seed-evening", () => {
   /**
    * **The crew half, which the first version of this route missed entirely.**
    *
-   * No seed in the repository writes a `roll_call_crew_events` row, so a route
+   * No seed in the repository writes a crew mark (`roll_call_events`, `subject_kind = 'crew'`), so a route
    * that took "the crew roster is whoever already has a result" found nobody
    * and wrote nothing — while the demo's departures all have crew *assigned*.
    * The day then reached `allHome` on the shop home with every one of its

@@ -31,6 +31,34 @@ export const ROLL_CALL_EVENT_STATUSES = ["boarded", "not_boarded", "cleared"] as
 
 export type RollCallEventStatus = (typeof ROLL_CALL_EVENT_STATUSES)[number];
 
+/**
+ * Who a roll-call mark is about. A `seat` is a paid booking; a `crew` subject
+ * is an assigned crew member, a roster line that never becomes a booking (ADR
+ * 20260804-crew-roll-call-is-per-person). Both halves of a head count are one
+ * ledger, `roll_call_events` (issue #2700): the same checkpoint, the same
+ * newest-wins read, the same `cleared` undo and the same `seq` tiebreak.
+ */
+export const ROLL_CALL_SUBJECT_KINDS = ["seat", "crew"] as const;
+
+export type RollCallSubjectKind = (typeof ROLL_CALL_SUBJECT_KINDS)[number];
+
+/**
+ * Oldest first on `occurredAt`, then `createdAt`, then `seq`: the one order of roll-call marks
+ * (ADR 20260815-roll-call-order-is-a-property-of-the-data). The SQL twin is
+ * `src/db/roll-call-order.ts`. `seq` is required: a reader that did not select it would tie
+ * two same-transaction taps and let the first one seen win.
+ */
+export function compareMarkOrder(
+  a: { occurredAt: Date; createdAt: Date; seq: number },
+  b: { occurredAt: Date; createdAt: Date; seq: number },
+): number {
+  return (
+    a.occurredAt.getTime() - b.occurredAt.getTime() ||
+    a.createdAt.getTime() - b.createdAt.getTime() ||
+    a.seq - b.seq
+  );
+}
+
 export type RollCallState = "awaiting" | "boarded" | "not_boarded";
 
 /**
@@ -97,8 +125,8 @@ export type RollCallRecord = {
    */
   note?: string | null;
   /**
-   * The stored event this result came from (`roll_call_events` or
-   * `roll_call_crew_events` id). Lets a list tell whether two results are the
+   * The stored event this result came from (a `roll_call_events` id, seat
+   * or crew). Lets a list tell whether two results are the
    * same event without comparing formatted text. Absent on results never
    * stored; a carried-forward (`implied`) result keeps its source event's id.
    */
@@ -119,9 +147,9 @@ export type RollCallRecord = {
  *   and the checkpoint must stay open.
  *
  * This predicate is the single place that split lives on the manifest side.
- * `src/db/today.ts` states the same rule for the work queue (see
+ * `src/features/today/today-reader.ts` states the same rule for the work queue (see
  * `isAccountedForAfterDive` there); the two are asserted against each other on
- * one trip in src/db/today.test.ts so they can never drift apart again.
+ * one trip in src/features/today/today-reader.test.ts so they can never drift apart again.
  */
 /**
  * How long a roll-call note may be. One bound, shared by the form, the two
@@ -194,7 +222,7 @@ export function rollCallNoteAllowed(
  * dive-domain-expert review found two of them disagreeing (issue #1704):
  * `onTheWaterByRollCall` and the seat reclaim in **both** `recordRollCall` and
  * `recordCrewRollCall` (src/db/manifests.ts), `inAfterDivePopulation`
- * (src/db/today.ts), and `seatSailed` (src/lib/seat-sailed.ts). The two reclaims
+ * (src/features/today/today-reader.ts), and `seatSailed` (src/lib/seat-sailed.ts). The two reclaims
  * are one predicate for one reason: the reader that refuses the desk consults
  * both trails, so a mirror act on only one of them is a promise the reader
  * makes and the writer does not keep (issue #1686). A sixth, the fly-safe

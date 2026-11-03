@@ -544,7 +544,7 @@ describe("rentalFitCompleteness", () => {
 
 describe("offeredRentalFitFields / NOTHING_RENTED", () => {
   it("names only the columns the shop's current catalog can answer", () => {
-    // What lets `saveRentalFit` tell a box the diver unticked from a question
+    // What lets `recordRentalFit` tell a box the diver unticked from a question
     // no form ever put to them (issue #1755). An unchecked HTML checkbox posts
     // nothing, so the post alone cannot separate the two and the catalog has to.
     const fields = offeredRentalFitFields(["wetsuit", "drysuit"]);

@@ -68,7 +68,7 @@ export function diverSearchPrefill(query: string): {
 }
 
 /**
- * Builds the URL to the dedicated create-diver page (/shop/[shopSlug]/divers/new)
+ * Builds the URL to the roster's add-diver panel (`/shop/[shopSlug]/divers?add=1`)
  * prefilled with the query (name or email) and contextual params (tripId, surface, etc.).
  */
 export function newDiverHref(
@@ -87,7 +87,7 @@ export function newDiverHref(
     extra?: Record<string, string | undefined>;
   },
 ): string {
-  const search = new URLSearchParams();
+  const search = new URLSearchParams({ add: "1" });
   if (params?.query) {
     const prefill = diverSearchPrefill(params.query);
     if (prefill.email) search.set("email", prefill.email);
@@ -107,6 +107,5 @@ export function newDiverHref(
       if (v !== undefined) search.set(k, v);
     }
   }
-  const base = `/shop/${shopSlug}/divers/new`;
-  return search.size > 0 ? `${base}?${search.toString()}` : base;
+  return `/shop/${shopSlug}/divers?${search.toString()}`;
 }

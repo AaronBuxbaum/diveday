@@ -15,7 +15,7 @@ import { filesUnder } from "./files-under.mjs";
  * same way on both sides. It did not. By 2026-08-15 three meanings existed in
  * *both* casings at once (`not_authorized`/`not-authorized`,
  * `payment_not_connected`/`payment-not-connected`,
- * `demo_disabled`/`demo-disabled`), and `orders/new/page.tsx` emitted two
+ * `demo_disabled`/`demo-disabled`), and the new-order page emitted two
  * casings of one concept on adjacent lines of a single ternary because the two
  * destination pages' maps had been written by different hands.
  *
@@ -369,7 +369,7 @@ const isNoticeDefinition = (value) =>
  * a `tone` and a `key`. The type is part of the shape because `{ tone, key }`
  * alone is also a badge: the blow-out page's `MESSAGE_BADGE` is keyed by a
  * delivery status (`no_email`) in a `BadgeTone`, and is not a notice map. Never
- * by key spelling, which is the whole trap: `src/lib/today.ts`,
+ * by key spelling, which is the whole trap: `src/features/today/today.ts`,
  * `src/i18n/card-labels.ts` and several more hold domain-enum maps keyed in
  * snake_case on purpose. A map declared in another file, or built at runtime,
  * is out of reach of a per-file scan and goes unjudged.

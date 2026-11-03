@@ -1,5 +1,4 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
-import { diverTranslator } from "@/i18n/messages";
 import { type CalendarDate, calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
@@ -247,19 +246,18 @@ export async function sendWorkOrderReadyNotice(
   }
 
   if (phone) {
-    const t = diverTranslator(locale);
     const senders = providers.whatsAppProviders ?? (await whatsAppProvidersForShops(db, [shop.id]));
     const whatsapp = senders.get(shop.id) ?? null;
     const { channel, delivery } = await sendCourtesyMessage(
       {
         to: phone,
-        body: workOrderReadyText(t, locale, {
+        body: workOrderReadyText(locale, {
           shopName: shop.name,
           ticketNumber: workOrder.number,
           pieces,
           workPerformed,
         }),
-        smsStopLine: t("notifications.sms.stopLine"),
+        locale,
         shopName: shop.name,
       },
       {
@@ -774,7 +772,6 @@ export async function sendDueServiceReminders(
     }
 
     const locale = recipientLocale(person.locale, shop.defaultLocale);
-    const t = diverTranslator(locale);
     const named: CustomerGearPiece = {
       kind: piece.kind,
       ...(piece.brandModel?.trim() ? { brandModel: piece.brandModel.trim().slice(0, 120) } : {}),
@@ -832,13 +829,13 @@ export async function sendDueServiceReminders(
         const { channel, delivery } = await sendCourtesyMessage(
           {
             to: phone as string,
-            body: gearServiceDueText(t, locale, {
+            body: gearServiceDueText(locale, {
               shopName: shop.name,
               piece: named,
               clock: date.clock,
               dueOn: date.dueOn,
             }),
-            smsStopLine: t("notifications.sms.stopLine"),
+            locale,
             shopName: shop.name,
           },
           { sms: smsProvider, whatsapp: whatsAppProviders.get(shop.id) ?? null },

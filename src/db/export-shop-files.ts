@@ -10,15 +10,14 @@ import {
   BOOKING_PAYMENT_EVENTS_CSV,
   BOOKINGS_CSV,
   BUDDY_PAIRS_CSV,
+  CARDS_CSV,
   CERTIFICATION_JUNIOR_REVIEWS_CSV,
-  CERTIFICATIONS_CSV,
   COURSE_FORM_RECORDS_CSV,
   CUSTOMER_GEAR_ITEMS_CSV,
   DIVE_PACKAGE_ENTITLEMENTS_CSV,
   GEAR_RESERVATIONS_CSV,
   IMPORTED_PAYMENT_HISTORY_CSV,
   INTERESTS_CSV,
-  NITROX_CERTIFICATIONS_CSV,
   NOTIFICATION_DELIVERIES_CSV,
   ORDER_LINE_ITEMS_CSV,
   ORDERS_CSV,
@@ -27,7 +26,6 @@ import {
   RENTAL_FIT_CSV,
   REVIEW_MODERATION_EVENTS_CSV,
   ROLL_CALL_EVENTS_CSV,
-  SPECIALTY_CERTIFICATIONS_CSV,
   shopFile,
   TIPS_CSV,
   TRIP_REVIEWS_CSV,
@@ -539,7 +537,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "crew_public_name",
       "courtesy_email_opt_out_at",
       // The diver's own "I'm not certified yet", which is a statement
-      // about them and not a card — it has no row in certifications.csv
+      // about them and not a card — it has no row in cards.csv
       // to travel in, so it travels here or not at all (ADR
       // 20260814-self-declared-cards).
       "no_certification_declared_at",
@@ -556,7 +554,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "adult_attested_at",
       "adult_attested_by_person_id",
       // A staffer's "seen diving dry", and whose (#2136). Staff-observed,
-      // never a card: it has no row in specialty_certifications.csv.
+      // never a card: it has no row in cards.csv.
       "drysuit_experience_seen_at",
       "drysuit_experience_seen_by_person_id",
       "drysuit_experience_seen_note",
@@ -625,10 +623,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["people.csv"],
   },
-  shopFile(CERTIFICATIONS_CSV),
+  shopFile(CARDS_CSV),
   shopFile(CERTIFICATION_JUNIOR_REVIEWS_CSV),
-  shopFile(SPECIALTY_CERTIFICATIONS_CSV),
-  shopFile(NITROX_CERTIFICATIONS_CSV),
   {
     file: "trips.csv",
     header: [
@@ -1260,6 +1256,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "trip_title",
       "trip_starts_at",
       "status",
+      "purpose",
       "stripe_session_id",
       "customer_email",
       "promo_code_id",
@@ -1291,6 +1288,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         tripTitle.get(row.tripId),
         tripStartsAt.get(row.tripId),
         row.status,
+        row.purpose,
         row.stripeSessionId,
         row.customerEmail,
         row.promoCodeId,

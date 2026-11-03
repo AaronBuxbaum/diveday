@@ -1,4 +1,5 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
+import { asNitroxCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { isDiver } from "@/lib/participant-types";
 import {
@@ -17,7 +18,14 @@ import {
   type CertificationReviewRefusal,
   reviewNoteFor,
 } from "./readiness";
-import { bookings, type CertificationAgency, nitroxCertifications, people, shops } from "./schema";
+import {
+  bookings,
+  type CertificationAgency,
+  cards,
+  type NitroxCertification,
+  people,
+  shops,
+} from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 
 export type NewNitroxCertification = {
@@ -49,15 +57,17 @@ export async function createNitroxCertification(db: AppDb, input: NewNitroxCerti
   if (!person) return null;
   try {
     const [certification] = await db
-      .insert(nitroxCertifications)
+      .insert(cards)
       .values({
+        kind: "nitrox",
         shopId: input.shopId,
         personId: input.personId,
         agency: input.agency,
         identifier: input.identifier.trim(),
         ...(input.selfDeclaredAt ? { selfDeclaredAt: input.selfDeclaredAt } : {}),
       })
-      .returning();
+      .returning()
+      .then((rows) => rows.map(asNitroxCard));
     return certification ?? null;
   } catch (error) {
     if (isUniqueConstraintViolation(error)) return null;
@@ -97,7 +107,7 @@ export async function reviewNitroxCertification(
     agencyChecked?: boolean;
   },
 ): Promise<
-  | { ok: true; certification: typeof nitroxCertifications.$inferSelect }
+  | { ok: true; certification: NitroxCertification }
   | { ok: false; reason: CertificationReviewRefusal }
 > {
   const reviewedByPersonId = input.reviewedByPersonId
@@ -108,26 +118,27 @@ export async function reviewNitroxCertification(
   }
   const [existing] = await db
     .select({
-      id: nitroxCertifications.id,
-      status: nitroxCertifications.status,
-      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
+      id: cards.id,
+      status: cards.status,
+      selfDeclaredAt: cards.selfDeclaredAt,
       // A shop-issued row is numberless too, and this confirm is what
       // authorizes a fill — so it asks for the card (issue #975).
-      issuedByShopAt: nitroxCertifications.issuedByShopAt,
+      issuedByShopAt: cards.issuedByShopAt,
       // The agency's words a check filed the card with (layer 3), kept by a
       // confirm that brings none of its own.
-      reviewNote: nitroxCertifications.reviewNote,
+      reviewNote: cards.reviewNote,
       // A card an agency check listed with no number of its own is confirmed
       // through the sighting too (`needsCardSighting`).
-      identifier: nitroxCertifications.identifier,
-      listedFromCertificationId: nitroxCertifications.listedFromCertificationId,
+      identifier: cards.identifier,
+      listedFromCertificationId: cards.listedFromCertificationId,
     })
-    .from(nitroxCertifications)
+    .from(cards)
     .where(
       and(
-        eq(nitroxCertifications.id, input.certificationId),
-        eq(nitroxCertifications.shopId, input.shopId),
-        isNull(nitroxCertifications.deletedAt),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, "nitrox"),
+        isNull(cards.deletedAt),
       ),
     )
     .limit(1);
@@ -140,7 +151,7 @@ export async function reviewNitroxCertification(
 
   try {
     const [certification] = await db
-      .update(nitroxCertifications)
+      .update(cards)
       .set({
         status: input.status,
         reviewNote: reviewNoteFor(input.reviewNote) ?? existing.reviewNote,
@@ -153,14 +164,16 @@ export async function reviewNitroxCertification(
       })
       .where(
         and(
-          eq(nitroxCertifications.id, input.certificationId),
-          eq(nitroxCertifications.shopId, input.shopId),
+          eq(cards.id, input.certificationId),
+          eq(cards.shopId, input.shopId),
+          eq(cards.kind, "nitrox"),
           // A deleted card never comes back through a review — same rule the
           // specialty path applies, and this one authorizes a gas fill.
-          isNull(nitroxCertifications.deletedAt),
+          isNull(cards.deletedAt),
         ),
       )
-      .returning();
+      .returning()
+      .then((rows) => rows.map(asNitroxCard));
     if (!certification) return { ok: false, reason: "not_found" };
     // Open and primed manifests re-read (issue #2613).
     await publishManifestEventsForPerson(db, input.shopId, certification.personId);
@@ -207,26 +220,27 @@ export async function reverseNitroxReview(
 ): Promise<{ ok: true; personId: string } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
-      personId: nitroxCertifications.personId,
-      status: nitroxCertifications.status,
-      reviewedAt: nitroxCertifications.reviewedAt,
-      agencyCheckedAt: nitroxCertifications.agencyCheckedAt,
-      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
-      issuedByShopAt: nitroxCertifications.issuedByShopAt,
-      importedAt: nitroxCertifications.importedAt,
+      personId: cards.personId,
+      status: cards.status,
+      reviewedAt: cards.reviewedAt,
+      agencyCheckedAt: cards.agencyCheckedAt,
+      selfDeclaredAt: cards.selfDeclaredAt,
+      issuedByShopAt: cards.issuedByShopAt,
+      importedAt: cards.importedAt,
       // A listed card (layer 3): its note is the agency's words, never the
       // review's, and stays; and at an agency that numbers each card its
       // number may be a sighting (`unreviewedCardState`).
-      listedFromCertificationId: nitroxCertifications.listedFromCertificationId,
-      agency: nitroxCertifications.agency,
-      reviewNote: nitroxCertifications.reviewNote,
+      listedFromCertificationId: cards.listedFromCertificationId,
+      agency: cards.agency,
+      reviewNote: cards.reviewNote,
     })
-    .from(nitroxCertifications)
+    .from(cards)
     .where(
       and(
-        eq(nitroxCertifications.id, input.certificationId),
-        eq(nitroxCertifications.shopId, input.shopId),
-        isNull(nitroxCertifications.deletedAt),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, "nitrox"),
+        isNull(cards.deletedAt),
       ),
     )
     .limit(1);
@@ -243,7 +257,7 @@ export async function reverseNitroxReview(
   });
   if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
-    .update(nitroxCertifications)
+    .update(cards)
     .set({
       status: target.status,
       reviewNote: existing.listedFromCertificationId ? existing.reviewNote : null,
@@ -253,13 +267,14 @@ export async function reverseNitroxReview(
     })
     .where(
       and(
-        eq(nitroxCertifications.id, input.certificationId),
-        eq(nitroxCertifications.shopId, input.shopId),
-        isNull(nitroxCertifications.deletedAt),
-        eq(nitroxCertifications.reviewedAt, input.reviewedAt),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, "nitrox"),
+        isNull(cards.deletedAt),
+        eq(cards.reviewedAt, input.reviewedAt),
       ),
     )
-    .returning({ id: nitroxCertifications.id });
+    .returning({ id: cards.id });
   return row ? { ok: true, personId: existing.personId } : { ok: false, reason: "stale" };
 }
 
@@ -275,19 +290,20 @@ export async function deleteNitroxCertification(
   input: { shopId: string; certificationId: string; deletedByPersonId?: string },
 ) {
   const [row] = await db
-    .update(nitroxCertifications)
+    .update(cards)
     .set({
       deletedAt: nowDate(),
       ...(input.deletedByPersonId ? { deletedByPersonId: input.deletedByPersonId } : {}),
     })
     .where(
       and(
-        eq(nitroxCertifications.id, input.certificationId),
-        eq(nitroxCertifications.shopId, input.shopId),
-        isNull(nitroxCertifications.deletedAt),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, "nitrox"),
+        isNull(cards.deletedAt),
       ),
     )
-    .returning({ id: nitroxCertifications.id });
+    .returning({ id: cards.id });
   return Boolean(row);
 }
 
@@ -301,38 +317,41 @@ export async function restoreNitroxCertification(
 ) {
   const [deleted] = await db
     .select()
-    .from(nitroxCertifications)
+    .from(cards)
     .where(
       and(
-        eq(nitroxCertifications.id, input.certificationId),
-        eq(nitroxCertifications.shopId, input.shopId),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, "nitrox"),
       ),
     )
     .limit(1);
   if (!deleted || deleted.deletedAt === null) return false;
   const [conflict] = await db
-    .select({ id: nitroxCertifications.id })
-    .from(nitroxCertifications)
+    .select({ id: cards.id })
+    .from(cards)
     .where(
       and(
-        eq(nitroxCertifications.shopId, input.shopId),
-        eq(nitroxCertifications.agency, deleted.agency),
-        sql`lower(${nitroxCertifications.identifier}) = lower(${deleted.identifier})`,
-        isNull(nitroxCertifications.deletedAt),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, "nitrox"),
+        eq(cards.agency, deleted.agency),
+        sql`lower(${cards.identifier}) = lower(${deleted.identifier})`,
+        isNull(cards.deletedAt),
       ),
     )
     .limit(1);
   if (conflict) return false;
   const [row] = await db
-    .update(nitroxCertifications)
+    .update(cards)
     .set({ deletedAt: null, deletedByPersonId: null })
     .where(
       and(
-        eq(nitroxCertifications.id, input.certificationId),
-        eq(nitroxCertifications.shopId, input.shopId),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, "nitrox"),
       ),
     )
-    .returning({ id: nitroxCertifications.id });
+    .returning({ id: cards.id });
   return Boolean(row);
 }
 
@@ -348,17 +367,18 @@ export async function restoreNitroxCertification(
  * carved this out; every fill-gate read must share this exact predicate.
  */
 export const authorizesNitroxFill = and(
-  eq(nitroxCertifications.status, "verified"),
-  isNull(nitroxCertifications.deletedAt),
-  sql`(${nitroxCertifications.importedAt} is null or ${nitroxCertifications.reviewedAt} is not null)`,
+  eq(cards.kind, "nitrox"),
+  eq(cards.status, "verified"),
+  isNull(cards.deletedAt),
+  sql`(${cards.importedAt} is null or ${cards.reviewedAt} is not null)`,
 );
 
 /** The set of personIds whose nitrox card authorizes a fill — the gate, in bulk. */
 export async function verifiedNitroxPersonIds(db: AppDb, shopId: string): Promise<Set<string>> {
   const rows = await db
-    .select({ personId: nitroxCertifications.personId })
-    .from(nitroxCertifications)
-    .where(and(eq(nitroxCertifications.shopId, shopId), authorizesNitroxFill));
+    .select({ personId: cards.personId })
+    .from(cards)
+    .where(and(eq(cards.shopId, shopId), authorizesNitroxFill));
   return new Set(rows.map((r) => r.personId));
 }
 
@@ -381,9 +401,9 @@ export async function verifiedNitroxPersonIds(db: AppDb, shopId: string): Promis
  */
 export async function nitroxCardOnFilePersonIds(db: AppDb, shopId: string): Promise<Set<string>> {
   const rows = await db
-    .select({ personId: nitroxCertifications.personId })
-    .from(nitroxCertifications)
-    .where(and(eq(nitroxCertifications.shopId, shopId), isNull(nitroxCertifications.deletedAt)));
+    .select({ personId: cards.personId })
+    .from(cards)
+    .where(and(eq(cards.shopId, shopId), eq(cards.kind, "nitrox"), isNull(cards.deletedAt)));
   return new Set(rows.map((r) => r.personId));
 }
 
@@ -445,12 +465,13 @@ export async function setBookingNitrox(
     let certified = true;
     if (wantsNitrox) {
       const [card] = await tx
-        .select({ id: nitroxCertifications.id })
-        .from(nitroxCertifications)
+        .select({ id: cards.id })
+        .from(cards)
         .where(
           and(
-            eq(nitroxCertifications.shopId, input.shopId),
-            eq(nitroxCertifications.personId, booking.personId),
+            eq(cards.shopId, input.shopId),
+            eq(cards.kind, "nitrox"),
+            eq(cards.personId, booking.personId),
             authorizesNitroxFill,
           ),
         )

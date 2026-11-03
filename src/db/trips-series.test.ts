@@ -11,11 +11,11 @@ import { callTripBlowout, getTripBlowout } from "./blowouts";
 import { createBookingParty } from "./bookings";
 import { listDiveSites } from "./dive-sites";
 import { getBookingPayment, setBookingPayment } from "./payments";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookings,
   courses,
   people,
-  rollCallCrewEvents,
   rollCallEvents,
   tripRequirements,
   tripSeries,
@@ -29,6 +29,8 @@ import {
   createTrip,
   createTripSeries,
   deleteTrip,
+  editSeriesCadence,
+  editTrip,
   getLatestSeriesInstance,
   getSeriesStandingCrew,
   getTripCrewAssignments,
@@ -47,8 +49,6 @@ import {
   setSeriesStandingCrew,
   setTripCrew,
   setTripStatus,
-  updateSeriesCadence,
-  updateTrip,
 } from "./trips";
 
 /**
@@ -379,7 +379,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     const [first, second] = result.trips;
     if (!first || !second) throw new Error("expected two instances");
 
-    await updateTrip(db, shop.id, first.id, {
+    await editTrip(db, shop.id, first.id, {
       title: "Weeknight Shore Dive — Full Moon",
       startsAt: first.startsAt,
       endsAt: first.endsAt,
@@ -429,7 +429,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
       { bookedAs: "diver", shopId: shop.id, tripId: crowded.id, personId: p2.id },
     ]);
 
-    await updateTrip(db, shop.id, source.id, {
+    await editTrip(db, shop.id, source.id, {
       title: "Sunday Reef — Deep Edition",
       startsAt: source.startsAt,
       endsAt: source.endsAt,
@@ -485,7 +485,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
       dives: [{ diveSiteId: siteOne.id }, { diveSiteId: siteTwo.id }],
     };
 
-    await updateTrip(db, shop.id, source.id, {
+    await editTrip(db, shop.id, source.id, {
       title: source.title,
       startsAt: source.startsAt,
       endsAt: source.endsAt,
@@ -493,7 +493,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     });
     // One sibling is already running exactly these sites, so the apply changes
     // nothing about its day.
-    await updateTrip(db, shop.id, alreadyThere.id, {
+    await editTrip(db, shop.id, alreadyThere.id, {
       title: alreadyThere.title,
       startsAt: alreadyThere.startsAt,
       endsAt: alreadyThere.endsAt,
@@ -549,7 +549,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
       occurredAt: now,
     });
 
-    await updateTrip(db, shop.id, source.id, {
+    await editTrip(db, shop.id, source.id, {
       title: source.title,
       startsAt: source.startsAt,
       endsAt: source.endsAt,
@@ -588,17 +588,17 @@ describe("recurring trip series (in-memory PGlite)", () => {
     if (!source || !sailed) throw new Error("expected two instances");
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seed staff missing");
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: sailed.id,
-      personId: staff.person.id,
+      ...crewSubject(staff.person.id),
       recordedByPersonId: staff.person.id,
       status: "boarded",
       checkpoint: "after_dive_2",
       occurredAt: now,
     });
 
-    await updateTrip(db, shop.id, source.id, {
+    await editTrip(db, shop.id, source.id, {
       title: source.title,
       startsAt: source.startsAt,
       endsAt: source.endsAt,
@@ -915,7 +915,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     if (!result) throw new Error("series not created");
     const before = await occurrenceDatesOf(db, result.series.id);
 
-    const updated = await updateSeriesCadence(
+    const updated = await editSeriesCadence(
       db,
       shop.id,
       result.series.id,
@@ -942,7 +942,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     const before = await occurrenceDatesOf(db, result.series.id);
 
     // Drop Wednesday. The Wednesdays already on the board are ordinary trips.
-    const updated = await updateSeriesCadence(
+    const updated = await editSeriesCadence(
       db,
       shop.id,
       result.series.id,
@@ -974,7 +974,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
       .insert(bookings)
       .values({ bookedAs: "diver", shopId: shop.id, tripId: wednesday.id, personId: diver.id });
 
-    await updateSeriesCadence(
+    await editSeriesCadence(
       db,
       shop.id,
       result.series.id,
@@ -996,7 +996,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     );
     if (!result) throw new Error("series not created");
 
-    await updateSeriesCadence(
+    await editSeriesCadence(
       db,
       shop.id,
       result.series.id,
@@ -1015,7 +1015,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
     if (!result) throw new Error("series not created");
     expect(
-      await updateSeriesCadence(db, shop.id, result.series.id, {
+      await editSeriesCadence(db, shop.id, result.series.id, {
         intervalWeeks: 1,
         weekdays: 0,
         endsOn: null,

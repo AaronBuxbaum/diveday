@@ -1,6 +1,6 @@
 import { HOUR_MS, MINUTE_MS } from "./clock";
-import { AFTER_DIVE_GAP_REASONS } from "./closeout";
-import type { RollCallGapReason } from "./today";
+import type { RollCallGapReason } from "./roll-call-gaps";
+import { AFTER_DIVE_GAP_REASONS } from "./roll-call-gaps";
 
 /**
  * **A roll call still open after the boat should be home** (batch 6, item 6).
@@ -17,7 +17,7 @@ import type { RollCallGapReason } from "./today";
  * anything.
  *
  * "Open" is never decided here. The hourly pass asks the one detector the
- * Today queue and the close-out read (`listRollCallGaps`, src/db/today.ts) and
+ * Today queue and the close-out read (`listRollCallGaps`, src/db/roll-call-gaps.ts) and
  * keeps only its after-dive reasons ({@link AFTER_DIVE_GAP_REASONS}): a dock
  * count left unfinished is paperwork, and an alert that fires on paperwork is
  * an alert nobody reads by the second week.

@@ -192,7 +192,9 @@ export function DiverList({
     if (debounce.current) return;
     setTyped(query);
   }, [query]);
+  // An open add panel (`?add=1`) owns the focus instead (`AddPanelFocus`).
   useEffect(() => {
+    if (document.querySelector("[data-add-panel-heading]")) return;
     searchRef.current?.focus({ preventScroll: true });
   }, []);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
@@ -355,7 +357,8 @@ export function DiverList({
               </form>
             ) : (
               <Link
-                href={`/shop/${shopSlug}/divers/new`}
+                href={`/shop/${shopSlug}/divers?add=1`}
+                scroll={false}
                 // Nothing is pending — the box is empty — but a timer from the
                 // text the staffer just cleared could still be, and landing
                 // after this tap would put that search back in the URL behind

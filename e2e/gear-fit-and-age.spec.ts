@@ -89,7 +89,9 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    const seeded = await request.post("/api/test/seed-trouble-states?droppedRental=1");
+    const seeded = await request.post(
+      "/api/test/seed-trouble-states?facts=troublePanels,droppedRental",
+    );
     expect(seeded.ok()).toBe(true);
     const { droppedRental } = (await seeded.json()) as { droppedRental?: { fullName: string } };
     if (!droppedRental) throw new Error("seed-trouble-states found no fit to contradict");
@@ -284,7 +286,7 @@ test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail o
     // a live shop starts from — and books exactly as before.
     await page.goto(`${tripPath}`);
     await page.getByRole("link", { name: "Add diver" }).click();
-    await page.waitForURL(/\/divers\/new/);
+    await page.waitForURL(/\/divers\?add=1/);
     await page.getByLabel("Full name").fill(`Ageless Diver ${stamp}`);
     await page.getByLabel("Email").fill(`ageless-${stamp}@example.com`);
     await page.getByRole("button", { name: "Add to trip" }).click();

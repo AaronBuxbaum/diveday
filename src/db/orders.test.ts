@@ -18,7 +18,7 @@ import {
   seededStaffPersonId,
 } from "@/test/staff-session";
 import { createBooking } from "./bookings";
-import { updateCourse } from "./courses";
+import { editCourse } from "./courses";
 import { countSpendableDives, createDivePackage, deleteDivePackage } from "./dive-packages";
 import {
   countOpenTripOrders,
@@ -57,7 +57,7 @@ import {
 } from "./schema";
 import { setShopCurrency, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { editTrip, getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`). The racing-refund test and the
@@ -890,7 +890,7 @@ describe("orders", () => {
   /**
    * The other half of the same guard: a claim is a short-lived guard for one
    * Stripe round trip, never a permanent lock a crashed process can leave on
-   * an order forever. Same self-healing rule (and the same `STALE_AFTER_MS`
+   * an order forever. Same self-healing rule (and the same `PAYMENT_CLAIM_STALE_AFTER_MS`
    * horizon) `claimBookingsForCheckout` already applies to a booking's
    * checkout claim. Past that horizon Stripe's over-refund rejection is the
    * gate again, which is exactly where this started — the local lock is a
@@ -1321,7 +1321,7 @@ describe("orders", () => {
       trip: { id: reef.id, priceCents: 9500 },
     });
 
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -1348,7 +1348,7 @@ describe("orders", () => {
     });
     if (!enrolled.ok) throw new Error(`expected enrollment to succeed: ${enrolled.reason}`);
 
-    await updateCourse(db, shop.id, courseSession.course?.id ?? "", {
+    await editCourse(db, shop.id, courseSession.course?.id ?? "", {
       priceCents: 14_900,
       eLearningPriceCents: 10_000,
     });

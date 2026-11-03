@@ -11,9 +11,8 @@ import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { canPersonManageStaffAccounts } from "@/db/authz";
-import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
-import { listStaffCredentials } from "@/db/staff-credentials";
+import type { StaffMember } from "@/db/staff-accounts";
+import { canPersonManageStaffAccounts, getTeamSettingsPage } from "@/db/team-settings-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
@@ -448,9 +447,8 @@ export default async function TeamSettingsPage({
     refusal: { notice: "team-not-authorized" },
   });
 
-  const [staff, credentials, years] = await Promise.all([
-    listShopStaff(db, shop.id),
-    listStaffCredentials(db, shop.id),
+  const [{ staff, credentials }, years] = await Promise.all([
+    getTeamSettingsPage(db, shop.id),
     readStaffYears(db, shop, nowDate()),
   ]);
   const locale = await requestLocale(shop.defaultLocale);
@@ -502,7 +500,6 @@ export default async function TeamSettingsPage({
       />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.team.title")}
         description={
           needReview > 0

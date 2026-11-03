@@ -3,6 +3,7 @@ import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
+import { deletePremergeCards } from "./premerge-cards-cleanup";
 import {
   accountSecurity,
   accountSessions,
@@ -18,13 +19,13 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
   bookingReferrals,
   bookings,
   buddyTeamEvents,
   buddyTeamMembers,
   calendarFeeds,
-  certifications,
+  capabilities,
+  cards,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -51,11 +52,9 @@ import {
   integrationEvents,
   integrationOauthStates,
   interests,
-  interestUnsubscribeTokens,
   internalNotes,
   marineLifeRequests,
   mediaDeletionAttempts,
-  nitroxCertifications,
   notificationDeliveries,
   notificationSendQueue,
   orderLineItems,
@@ -63,7 +62,6 @@ import {
   paymentDisputes,
   paymentOperationIntents,
   people,
-  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
@@ -74,9 +72,9 @@ import {
   recapPhotos,
   recapPulses,
   rentalFitProfiles,
+  retiredRollCallCrewEvents,
   reviewModerationEvents,
   reviewReplies,
-  rollCallCrewEvents,
   rollCallEvents,
   shopBackupDeliveries,
   shopBackupDeliveryClaims,
@@ -90,13 +88,11 @@ import {
   shops,
   shopTextTranslations,
   shopWhatsappAccounts,
-  specialtyCertifications,
   staffCredentials,
   staffReplies,
   staffShifts,
   stripePayouts,
   stripeRefundFailures,
-  tips,
   tripAssignments,
   tripBlowoutDivers,
   tripBlowouts,
@@ -203,8 +199,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(divePackages).where(eq(divePackages.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
-  await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
-  await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
   // lever W) — two of them, and neither is deleted first — so it goes before them.
@@ -215,8 +209,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // Each report takes its people rows with it (cascade): a raised report
   // points at its subject's row, so that row cannot go first.
   await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
-  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
+  // diveday:roll-call-both-subjects: the demo shop's whole ledger goes, seat and crew.
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // Retired by #2700 and dropped next release; until then it may still hold rows naming the shop.
+  await db.delete(retiredRollCallCrewEvents).where(eq(retiredRollCallCrewEvents.shopId, shopId));
   // Events before the shop's own item list they reference.
   // A snag names its boat, its departures and its checklist line, none cascading.
   await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
@@ -251,14 +247,11 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos),
-  // including the unsubscribe tokens that reference the interests.
-  await db.delete(interestUnsubscribeTokens).where(eq(interestUnsubscribeTokens.shopId, shopId));
+  // including the unsubscribe capabilities that reference the interests and
+  // the people (both purposes go in one delete, before either parent).
+  await db.delete(capabilities).where(eq(capabilities.shopId, shopId));
   await db.delete(interests).where(eq(interests.shopId, shopId));
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
-  // References people, same reasoning as resetDemoSchedule above.
-  await db
-    .delete(personCourtesyEmailUnsubscribeTokens)
-    .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(executedDives).where(inArray(executedDives.tripId, tripIds));
@@ -310,11 +303,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
 
   // People-scoped records and the shop's own catalog/config.
-  // Nitrox and specialty rows first: a card an agency check listed points at
-  // the level card whose page listed it (`listed_from_certification_id`).
-  await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
-  await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
-  await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  // Every kind of card at once: the reset clears the shop's whole ledger.
+  await db.delete(cards).where(eq(cards.shopId, shopId));
+  await deletePremergeCards(db, shopId);
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));

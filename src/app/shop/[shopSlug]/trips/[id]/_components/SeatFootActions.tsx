@@ -55,7 +55,7 @@ export function SeatFootActions({
             "Connect payments" door). */}
         {offersCreateOrder ? (
           <Link
-            href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
+            href={`/shop/${shopSlug}/orders?add=1&personId=${person.id}&bookingId=${booking.id}`}
             className={buttonClass({ variant: "link", size: "sm", flush: true })}
           >
             {t("trips.roster.createOrder")}

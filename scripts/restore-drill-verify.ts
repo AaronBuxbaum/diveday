@@ -32,15 +32,15 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import type { AppDb } from "@/db/client";
 import { withExplicitSslMode } from "@/db/connection-string";
+import { verifyCredentials } from "@/db/credentials";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { getTripManifest } from "@/db/manifests";
 import { people, personRoles, shops, trips, userAccounts } from "@/db/schema";
 import { liveTrip } from "@/db/trips-live";
 import { listShopDayDepartures } from "@/db/trips-queries";
+import { tomorrowNoon } from "@/features/today";
 import { isStaff, type Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { tomorrowNoon } from "@/lib/closeout";
-import { verifyCredentials } from "@/lib/credentials";
 import { DEMO_BYPASS_PASSWORD, demoBypassEnabled } from "@/lib/demo-bypass";
 
 type Departure = { id: string; startsAt: Date };

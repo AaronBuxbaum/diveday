@@ -230,7 +230,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   const tripPath = await tripPathByTitle(page, SHOP, title);
   await page.goto(`${tripPath}`);
   await page.getByRole("link", { name: "Add diver" }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill(diverName);
   await page.getByLabel("Email").fill(`contact-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -268,7 +268,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   ).toBeVisible();
 
   // The diver's own record reads the same value straight through
-  // `updateDiver`/`saveBookingEmergencyContact` sharing the same columns —
+  // `editDiver`/`recordBookingEmergencyContact` sharing the same columns —
   // one write path regardless of who fills it in.
   await card.getByRole("link", { name: diverName }).click();
   await page.getByText("Contact details", { exact: true }).click();
@@ -696,7 +696,7 @@ test.describe("the divers search on a phone", () => {
     // quick-add with nothing to add from.
     const openForm = page.getByRole("link", { name: "Add diver" });
     await expect(openForm).toBeVisible();
-    await expect(openForm).toHaveAttribute("href", "/shop/blue-mantis/divers/new");
+    await expect(openForm).toHaveAttribute("href", "/shop/blue-mantis/divers?add=1");
     const before = await search.boundingBox();
 
     await search.fill("Nora");

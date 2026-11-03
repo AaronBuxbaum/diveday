@@ -1,4 +1,5 @@
-import { and, desc, eq, gte, inArray, isNull, lt, or, type SQL, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, or, sql } from "drizzle-orm";
+import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { log } from "@/lib/log";
@@ -6,6 +7,7 @@ import { capturedPaymentStatuses, isCapturedPaymentStatus } from "@/lib/payment-
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
+import { fareCheckout } from "./checkout-purpose";
 import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { checkoutRefundKey, enqueueCheckoutIntegrationEvent } from "./integration-events";
@@ -17,7 +19,6 @@ import {
   markPaymentOperationUnanswered,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
-  STALE_AFTER_MS,
   startPaymentOperation,
 } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
@@ -29,7 +30,6 @@ import {
   bookingPayments,
   bookings,
   paymentOperationIntents,
-  people,
   trips,
 } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
@@ -137,10 +137,10 @@ type BookingRefundClaim<Outcome> =
  * outside is the Stripe call itself: the transaction commits **before** the
  * network round trip, never around it, which keeps `startPaymentOperation`'s
  * durability contract intact (CR-005) — a crash mid-call still leaves a
- * committed intent for `listStuckPaymentOperations` to surface.
+ * committed intent for the stuck-payment read (`src/db/unfinished.ts`) to surface.
  *
  * A claim is a guard for the duration of one Stripe round trip, never a
- * permanent lock: an intent still `started` past `STALE_AFTER_MS` belonged to a
+ * permanent lock: an intent still `started` past `PAYMENT_CLAIM_STALE_AFTER_MS` belonged to a
  * process that died and is ignored, exactly as `claimBookingsForCheckout` and
  * `claimOrderRefund` treat theirs. The one exception is a stale intent carrying
  * a `stripeObjectId` — that column is written the moment Stripe confirms a
@@ -171,7 +171,8 @@ async function claimBookingRefund<Outcome>(
     payment: BookingPayment | null,
   ) => Promise<BookingRefundDecision<Outcome>>,
 ): Promise<BookingRefundClaim<Outcome>> {
-  const staleBefore = input.staleBefore ?? new Date(nowDate().getTime() - STALE_AFTER_MS);
+  const staleBefore =
+    input.staleBefore ?? new Date(nowDate().getTime() - PAYMENT_CLAIM_STALE_AFTER_MS);
   const refundIntentsForThisBooking = and(
     eq(paymentOperationIntents.shopId, input.shopId),
     eq(paymentOperationIntents.bookingId, input.bookingId),
@@ -256,6 +257,7 @@ async function checkoutHasUnreconciledReversal(
         awaitingStripeReconciliation(),
         eq(bookingCheckouts.stripeSessionId, plan.providerRef),
         eq(bookingCheckouts.stripeAccountId, plan.stripeAccountId),
+        fareCheckout(),
       ),
     )
     .limit(1);
@@ -264,7 +266,7 @@ async function checkoutHasUnreconciledReversal(
 
 /**
  * **Hand a Stripe reversal to a human**, on the queue every stuck Stripe call
- * already uses (`listStuckPaymentOperations`: the Orders index and Today).
+ * already uses (the stuck-payment read (`src/db/unfinished.ts`): the Orders index and Today).
  *
  * Written as a `started` refund intent against the order or checkout, carrying
  * the charge id as its Stripe object so the shop can find it in the dashboard.
@@ -347,6 +349,7 @@ async function countCheckoutRefund(
       and(
         eq(bookingCheckouts.stripeSessionId, plan.providerRef),
         eq(bookingCheckouts.stripeAccountId, plan.stripeAccountId),
+        fareCheckout(),
       ),
     )
     .returning({
@@ -492,9 +495,8 @@ export async function refundBookingOnCancellation(
         provider: "stripe",
         providerRef: result.refundId ?? plan.providerRef,
         note: "Auto-refunded on cancellation within the free window",
-        // The capture this reverses is overwritten in `booking_payments`; the
-        // append-only trail is where it survives (ADR
-        // 20260803-booking-payment-events).
+        // An entry of its own: the capture this reverses stays in the
+        // booking's entries (ADR 20260803-booking-payment-events).
         operation: "cancellation_refund",
       });
       // After the seat, never before it: the seat-then-checkout order (#2335).
@@ -505,7 +507,7 @@ export async function refundBookingOnCancellation(
   }
   // Resolved `failed` only when Stripe answered *and* said no. A call that got
   // no answer stays `started`, marked unanswered, because the reversal may
-  // exist: `claimBookingRefund` refuses on it and `listStuckPaymentOperations`
+  // exist: `claimBookingRefund` refuses on it and the stuck-payment read (`src/db/unfinished.ts`)
   // shows it to a human. A reversal Stripe confirmed has its id recorded above,
   // and a crash before this line leaves the intent for the same two.
   if (result.status === "unanswered") {
@@ -696,7 +698,7 @@ export async function refundBookingOnShopCancellation(
  * `queued`. Everything else reads exactly as {@link refundBookingOnShopCancellation}
  * would answer it, so the diver's mail is right for an unpaid seat, a package
  * dive and a seat already refunded. The queue itself is the derivable list of
- * captured seats on cancelled departures ({@link listOwedShopCancellationRefunds}).
+ * captured seats on cancelled departures (the `shop_cancellation_refund` kind of `src/db/unfinished.ts`).
  */
 export async function queueBookingRefundOnShopCancellation(
   db: AppDb,
@@ -757,129 +759,6 @@ export function shopCancellationPaymentStory(
  * a diver whose person row was erased, is unreachable but has just as much money
  * with the shop. Money comes back whether or not anyone can be told.
  */
-/**
- * How long a captured payment must have been sitting before an owed refund is
- * loud enough for Today. A day.
- *
- * The clock this measures is `trips.cancelled_at` — when the shop called the
- * departure off, which is when the money became owed. That is the rule the name
- * has always implied, and until 2026-08-14 it was not the rule the code ran:
- * the bound compared against `booking_payments.updated_at`, which for these rows
- * is when the diver *paid*. The two come apart in both directions. A Saturday
- * charter everyone paid for weeks ago was instantly past the bound, so the delay
- * did not exist; a walk-in who paid cash on Friday morning for a Friday-evening
- * dive that blew out that afternoon stayed hidden until Saturday, even though it
- * is the freshest and most-likely-to-be-asked-about money on the list.
- *
- * `cancelled_at` is a fact about the departure, not a state about the money —
- * there is still no "we tried to refund and failed at T" flag, and there must
- * not be one: this queue is derivable on purpose so that a staffer handing back
- * cash by hand leaves nothing to reconcile with Stripe.
- *
- * A trip cancelled before that column existed has a null, and a null is treated
- * as **stale**: it has been owed for a while by definition, and failing toward
- * showing the money is the right direction to fail.
- */
-export const OWED_REFUND_STALE_AFTER_MS = 24 * 60 * 60 * 1000;
-
-/** How many owed refunds one read will return. A panel, not a ledger. */
-const OWED_REFUND_LIMIT = 50;
-
-/** One seat whose departure the shop cancelled and whose money never went back. */
-export type OwedShopCancellationRefund = {
-  bookingId: string;
-  tripId: string;
-  tripTitle: string;
-  tripStartsAt: Date;
-  diverName: string;
-  /** Null for a counter mark that recorded no amount — staff know what they took. */
-  amountCents: number | null;
-  currency: string;
-  /** Only the deposit was ever captured, so only the deposit is owed back. */
-  depositOnly: boolean;
-  /** When this money was last touched; see `OWED_REFUND_STALE_AFTER_MS`. */
-  since: Date;
-};
-
-/**
- * Money the shop owes divers for departures it cancelled and could not refund
- * automatically.
- *
- * There is no `refund_owed` column and there should not be one. This residue is
- * *derivable* — a seat still holding a capture on a trip that no longer exists —
- * and a stored flag would have to be reconciled with Stripe every time a staff
- * member handed the cash back, which is exactly the drift a queue like this is
- * meant to remove.
- *
- * The predicate mirrors `refundBookingsForShopCancelledTrip`'s own set, seat for
- * seat, so this lists precisely what that cascade left behind and nothing else.
- * In particular it excludes a **cancelled booking**, and that exclusion is
- * load-bearing rather than incidental: a diver who cancelled inside no window
- * forfeited their fare and still reads `paid`, and the shop does not owe them
- * anything just because the departure was later called off
- * (ADR 20260813-shop-cancellation-refunds-itself).
- *
- * A seat that *was* refunded reads `refunded`, not `paid`, so it never appears —
- * the obvious way to get this wrong.
- *
- * Bounded and shop-scoped, like every other back-office reader. Newest money
- * first, so the seat a shop is most likely to be asked about is on top.
- */
-export async function listOwedShopCancellationRefunds(
-  db: AppDb,
-  shopId: string,
-  options: { olderThan?: Date; limit?: number } = {},
-): Promise<OwedShopCancellationRefund[]> {
-  const rows = await db
-    .select({
-      bookingId: bookings.id,
-      tripId: trips.id,
-      tripTitle: trips.title,
-      tripStartsAt: trips.startsAt,
-      diverName: people.fullName,
-      amountCents: bookingPayments.amountCents,
-      currency: bookingPayments.currency,
-      paymentStatus: bookingPayments.status,
-      // When the money became owed, which is when the shop called the trip off
-      // -- not when the diver paid. `cancelledAt` is null only for departures
-      // cancelled before that column existed, and those fall back to the
-      // payment stamp so the panel still has a date to show.
-      since: sql<Date>`coalesce(${trips.cancelledAt}, ${bookingPayments.updatedAt})`,
-    })
-    .from(bookingPayments)
-    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookingPayments.shopId, shopId),
-        inArray(bookingPayments.status, [...capturedPaymentStatuses]),
-        eq(trips.status, "cancelled"),
-        // The forfeit carve-out — see the doc comment above.
-        seatNotCancelled,
-        // Bounded on the cancellation, with a NULL treated as **stale**: a trip
-        // cancelled before this column existed has been owed for a while by
-        // definition, and failing toward showing the money is the right
-        // direction to fail.
-        ...(options.olderThan
-          ? [
-              or(
-                isNull(trips.cancelledAt),
-                lt(trips.cancelledAt, options.olderThan),
-              ) as SQL<unknown>,
-            ]
-          : []),
-      ),
-    )
-    .orderBy(desc(sql`coalesce(${trips.cancelledAt}, ${bookingPayments.updatedAt})`))
-    .limit(options.limit ?? OWED_REFUND_LIMIT);
-
-  return rows.map(({ paymentStatus, ...row }) => ({
-    ...row,
-    depositOnly: paymentStatus === "deposit_paid",
-  }));
-}
-
 export async function refundBookingsForShopCancelledTrip(
   db: AppDb,
   input: { shopId: string; tripId: string },
@@ -1072,7 +951,7 @@ async function countPaidAfterCloseRefund(
     const [current] = await tx
       .select()
       .from(bookingCheckouts)
-      .where(eq(bookingCheckouts.id, checkoutId))
+      .where(and(eq(bookingCheckouts.id, checkoutId), fareCheckout()))
       .for("update");
     if (current?.paidAfterCloseCents === null || current === undefined) {
       return { status: "not_found" };
@@ -1098,7 +977,7 @@ async function countPaidAfterCloseRefund(
     await tx
       .update(bookingCheckouts)
       .set({ refundedCents: reversedTotal })
-      .where(eq(bookingCheckouts.id, current.id));
+      .where(and(eq(bookingCheckouts.id, current.id), fareCheckout()));
     return { status: "checkout_refunded" };
   });
 }
@@ -1108,7 +987,8 @@ async function applyStripeChargeRefund(
   input: ExternalRefundInput,
   lookup?: PaymentSourceLookup,
 ): Promise<ExternalRefundOutcome> {
-  const staleBefore = input.staleBefore ?? new Date(nowDate().getTime() - STALE_AFTER_MS);
+  const staleBefore =
+    input.staleBefore ?? new Date(nowDate().getTime() - PAYMENT_CLAIM_STALE_AFTER_MS);
   const target = await findStripePaymentTarget(
     db,
     { stripeAccountId: input.stripeAccountId, paymentIntentId: input.paymentIntentId },
@@ -1145,6 +1025,7 @@ async function applyStripeChargeRefund(
   const covered = await db
     .select({ bookingId: bookingCheckoutBookings.bookingId })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the links of the fare findStripePaymentTarget returned
     .where(
       and(
         eq(bookingCheckoutBookings.shopId, checkout.shopId),
@@ -1164,7 +1045,7 @@ async function applyStripeChargeRefund(
     const [current] = await tx
       .select()
       .from(bookingCheckouts)
-      .where(eq(bookingCheckouts.id, checkout.id))
+      .where(and(eq(bookingCheckouts.id, checkout.id), fareCheckout()))
       .for("update");
     if (!current) return { status: "not_found" };
     const captured = current.settledTotalCents ?? current.totalCents;
@@ -1175,7 +1056,7 @@ async function applyStripeChargeRefund(
     await tx
       .update(bookingCheckouts)
       .set({ refundedCents: current.refundedCents + delta })
-      .where(eq(bookingCheckouts.id, current.id));
+      .where(and(eq(bookingCheckouts.id, current.id), fareCheckout()));
     await enqueueCheckoutRefundEvent(
       tx,
       { id: current.id, shopId: current.shopId, refundedCents: current.refundedCents + delta },

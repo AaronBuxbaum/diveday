@@ -4,16 +4,7 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { DownloadAcknowledgmentLink } from "@/components/DownloadAcknowledgmentLink";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
-import { UndoToast } from "@/components/UndoToast";
-import { diverPackageBalance } from "@/db/dive-packages";
-import { listDiverMergeCandidates } from "@/db/diver-merge";
-import { getDiverProfile } from "@/db/divers";
-import { listGuardianEmails } from "@/db/guardian-erasure";
-import { personThread } from "@/db/inbound-messages";
-import { lastKnownDive } from "@/db/last-dive";
-import { openLostItemsByPerson } from "@/db/lost-items";
-import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { getDiverRecord } from "@/db/diver-record";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -22,7 +13,9 @@ import { diverStanding } from "@/lib/diver-standing";
 import { splitDiverStatus } from "@/lib/diver-status";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
+import { readUndoOffer } from "@/lib/undo";
 import { uuidParam } from "@/lib/uuid";
+import { OfferedUndo } from "../../_components/OfferedUndo";
 import { BookActivity } from "./_components/BookActivity";
 import { DiverFile } from "./_components/DiverFile";
 import { DiverHeader } from "./_components/DiverHeader";
@@ -32,14 +25,7 @@ import { DiverStory } from "./_components/DiverStory";
 import { FoundItemLine } from "./_components/FoundItemLine";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
-import { loadBookingDepartures } from "./_lib/book-activity";
-import { loadDiverGear } from "./_lib/gear-load";
-import { canRaiseInvoiceFor } from "./_lib/invoice-door";
-import { loadDiverRecordGates } from "./_lib/record-gates";
-import { DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
-import { diverStatusRows } from "./_lib/status-load";
-import { restoreCardAction } from "./card-actions";
-import { restoreDiverNoteAction } from "./note-actions";
+import { bookingPageNumber, DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -92,8 +78,12 @@ export default async function DiverDetailPage({
   params: Promise<{ shopSlug: string; personId: string }>;
   searchParams: Promise<{
     notice?: string;
+    /** The Undo the last removal offered (`src/lib/undo.ts`), with its payload fields. */
     undo?: string;
+    undoPerson?: string;
+    undoCard?: string;
     cardType?: string;
+    undoFrom?: string;
     by?: string;
     /** Signed, verified against this route's own `personId` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
@@ -102,7 +92,7 @@ export default async function DiverDetailPage({
     /** Which card a box-level refusal is about — see `DiverNotice.cardId`. */
     card?: string;
     edit?: string;
-    /** The deleted diver note's text, carried by the land-then-undo redirect. */
+    /** The deleted diver note's text, carried by its Undo offer. */
     noteBody?: string;
     /** Which page of the Activity group is being read, independent of the booking picker. */
     activity?: string;
@@ -116,83 +106,50 @@ export default async function DiverDetailPage({
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(personId)) notFound();
   const query = await searchParams;
-  const { notice, undo, cardType, by, gate, form, card, edit, noteBody, activity, bookingPage } =
-    query;
+  const { notice, by, gate, form, card, edit, activity, bookingPage } = query;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  // `includeRemoved`: a removed diver's record has to stay reachable, because
-  // this page is where the way back lives once the roster's undo toast is gone
-  // (`RestoreDiver`). It is a visibility affordance for staff and nothing more —
-  // removal still holds everywhere it matters, and this page drops the controls
-  // that would put a removed person back into shop work by the back door.
-  const diver = shop
-    ? await getDiverProfile(db, shop.id, personId, { includeRemoved: true })
-    : null;
-  if (!shop || !diver) notFound();
-  // A merged-away record is intentionally still a pointer, not a second
-  // profile. Follow it before loading any of the old record's sections so a
-  // stale bookmark cannot make a staffer act on the source row again.
-  if (diver.person.mergedIntoPersonId) {
-    redirect(shopPath(shopSlug, "divers", diver.person.mergedIntoPersonId));
-  }
-  const removed = Boolean(diver.person.deletedAt);
   const now = nowDate();
-  const [
-    { canDelete, canMerge, canOverrideFit, canErase, canExport, canOpenClearance, canManageOrders },
-    stripeAccount,
+  // Shop-scoped from the session, never the slug (`getDiverRecord`). A removed
+  // diver's record stays reachable: it is where the way back lives
+  // (`RestoreDiver`), and this page drops the controls that would put a removed
+  // person back into shop work by the back door.
+  const record = await getDiverRecord(db, shop, personId, {
+    viewerPersonId: session.user.personId,
+    activityPage: Number.parseInt(activity ?? "", 10),
+    bookingPage: bookingPageNumber(bookingPage),
+    now,
+  });
+  if (!record) notFound();
+  // A merged-away record is a pointer, not a second profile: follow it.
+  if (record.kind === "merged") redirect(shopPath(shopSlug, "divers", record.mergedInto));
+  const {
+    diver,
+    removed,
+    can: {
+      canDelete,
+      canMerge,
+      canOverrideFit,
+      canErase,
+      canExport,
+      canOpenClearance,
+      canManageOrders,
+    },
+    paymentsConnected,
+    collectHasSomewhereToGo,
     notes,
     activityPage,
     thread,
     gear,
     packages,
-  ] = await Promise.all([
-    loadDiverRecordGates(db, shop.id, session.user.personId),
-    getShopStripeAccount(db, shop.id),
-    listDiverRecordNotes(db, shop.id, personId),
-    // Shop-scoped from the session, never the slug, like every read on this
-    // page. A non-numeric `?activity=` reads as page 1 and the query clamps
-    // anything past the end, so a stale bookmark lands on the last real page.
-    pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
-    // What this diver wrote and what the shop wrote back, interleaved by time.
-    personThread(db, shop.id, personId),
-    loadDiverGear(db, shop, personId, { removed }),
-    diverPackageBalance(db, shop.id, personId, now),
-  ]);
-  // `orders/new` refuses outright without a payable account, so the story's
-  // foot simply omits "New invoice" rather than offering a link that bounces.
-  // Connecting payments is a Settings errand and left this page with the ADR.
-  const paymentsConnected = canAcceptPayments(stripeAccount);
-  // **The one place the ledger's "Collect" act has nowhere to go.** With no
-  // order raised, that act is `#the-story`, whose only act is the very link the
-  // line above may have removed — so the row keeps its sentence and loses its
-  // fix (issue #1926). Asked through `canRaiseInvoiceFor` so this page and the
-  // story below cannot answer it differently.
-  const collectHasSomewhereToGo = canRaiseInvoiceFor(diver, {
-    canManageOrders,
-    paymentsConnected,
-  });
-  // Reads that need the gates above, so they could not ride the `Promise.all`
-  // that produced them; concurrent with each other instead of serial.
-  const [mergeCandidates, status, departures, guardianEmails, found, lastDive] = await Promise.all([
-    canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
-    // The readiness of the departure this diver is next on, read through the
-    // entry the Today queue and the manifest already use — never a second
-    // detector (`_lib/status-load.ts`).
-    diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
-    loadBookingDepartures(db, shop.id, personId, bookingPage, now),
-    // The co-signing guardians' addresses, for the owner's control that erases
-    // one on the guardian's request (H-20261007-guardian-email-erasure). Nobody else is shown them here.
-    canErase ? listGuardianEmails(db, shop.id, personId) : [],
-    openLostItemsByPerson(db, shop.id, [personId]), // found items, under the header
-    lastKnownDive(db, {
-      shopId: shop.id,
-      personId,
-      timezone: shop.timezone,
-      now,
-      recorded: diver.person.lastDiveOn,
-    }),
-  ]);
+    mergeCandidates,
+    status,
+    departures,
+    guardianEmails,
+    found,
+    lastDive,
+  } = record;
   /**
    * The page's `?notice=` resolved once, to words *and* to the group those
    * words belong beside. Each group is handed its own below with
@@ -216,14 +173,20 @@ export default async function DiverDetailPage({
   // seat to change on its departure).
   const gaps = splitDiverStatus(status);
   const pageNotice = noticeForForm(diverNotice, "page");
-  // A card deletion with its undo capability has one outcome: the toast. The
-  // `card-deleted` notice remains a cards fallback for an old or malformed link
-  // that has no undo payload, but showing both on the normal path repeats the
-  // same confirmation in two places.
-  const cardRemovalUndo = notice === "card-deleted" && undo && cardType;
-  const cardsStatus = cardRemovalUndo ? undefined : noticeForForm(diverNotice, "cards");
-  const diverNoteRemovalUndo = notice === "note-deleted" && noteBody;
-  const notesStatus = diverNoteRemovalUndo ? undefined : noticeForForm(diverNotice, "notes");
+  // A removal that offered Undo has one outcome: the toast. The `card-deleted`
+  // and `note-deleted` notices remain their sections' fallback for an old or
+  // malformed link that carries no offer, but showing both on the normal path
+  // repeats the same confirmation in two places. Only this record's own
+  // offers are drawn here.
+  const offered = readUndoOffer(query);
+  const undo =
+    offered?.undoPerson === personId &&
+    ((offered.undo === "diver-card" && notice === "card-deleted") ||
+      (offered.undo === "diver-note" && notice === "note-deleted"))
+      ? offered
+      : null;
+  const cardsStatus = undo?.undo === "diver-card" ? undefined : noticeForForm(diverNotice, "cards");
+  const notesStatus = undo?.undo === "diver-note" ? undefined : noticeForForm(diverNotice, "notes");
   // **The record's one earned moment**, and the only accent ink this page may
   // carry (20260827-clearwater-surface-language, decision 11). Derived by the
   // action that redirected here — from a post-mutation `buildDiverStatus` that
@@ -237,7 +200,6 @@ export default async function DiverDetailPage({
       <FlashParams params={DIVER_RECORD_FLASH_PARAMS} />
       <DiverHeader
         diver={diver}
-        shopSlug={shopSlug}
         t={t}
         standing={standing}
         locale={locale}
@@ -291,26 +253,8 @@ export default async function DiverDetailPage({
           status={noticeForForm(diverNotice, "restore")}
         />
       ) : null}
-      {cardRemovalUndo ? (
-        <UndoToast
-          message={t("divers.notices.cardRemovedToast", {
-            name: by ?? t("divers.certifications.noCertificationClearedByUnknown"),
-          })}
-          action={restoreCardAction.bind(null, shopSlug, personId)}
-          fields={{ certificationId: undo, cardType }}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
-          undoLabel={t("shared.undoToast.undo")}
-          dismissLabel={t("shared.undoToast.dismiss")}
-        />
-      ) : diverNoteRemovalUndo ? (
-        <UndoToast
-          message={t("divers.notices.noteDeleted")}
-          action={restoreDiverNoteAction.bind(null, shopSlug, personId)}
-          fields={{ body: noteBody }}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
-          undoLabel={t("shared.undoToast.undo")}
-          dismissLabel={t("shared.undoToast.dismiss")}
-        />
+      {undo ? (
+        <OfferedUndo shopSlug={shopSlug} offer={undo} by={by} t={t} />
       ) : (
         <NoticeBanner notice={pageNotice} />
       )}

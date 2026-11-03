@@ -285,7 +285,7 @@ describe("forgetThisReadyPage", () => {
     }
   });
 
-  it("leaves the cache alone when the worker answers that it could not forget", async () => {
+  it("drops this page's own copy when the worker answers that it could not forget", async () => {
     stubPage("/ready/mine");
     const { entries, deletedCaches } = await storageWith(["/ready/mine"]);
     vi.stubGlobal("navigator", {
@@ -295,8 +295,8 @@ describe("forgetThisReadyPage", () => {
         },
       },
     });
-    expect(await forgetThisReadyPage()).toBe(false);
-    expect(entries.size).toBe(1);
+    expect(await forgetThisReadyPage()).toBe(true);
+    expect(entries.size).toBe(0);
     expect(deletedCaches).toEqual([]);
   });
 

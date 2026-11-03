@@ -841,7 +841,7 @@ export function WeekBoard({
             const addButton =
               canConfigure && !day.isPast ? (
                 <Link
-                  href={`/shop/${shopSlug}/schedule/board/new?date=${encodeURIComponent(day.dateIso)}&week=${encodeURIComponent(day.dateIso)}`}
+                  href={`/shop/${shopSlug}/schedule/board?add=1&date=${encodeURIComponent(day.dateIso)}&week=${encodeURIComponent(day.dateIso)}`}
                   aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
                   className={buttonClass({
                     variant: "ghost",

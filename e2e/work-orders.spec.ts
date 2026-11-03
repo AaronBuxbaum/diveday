@@ -107,7 +107,7 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: "New work order" }).first().click();
     // The diver comes from the same person search the rest of the staff
     // surfaces use; `?diverq=` is the state that search leaves behind.
-    await page.goto("/shop/blue-mantis/gear/work-orders/new?diverq=Diego+Alvarez");
+    await page.goto("/shop/blue-mantis/gear/work-orders?add=1&diverq=Diego+Alvarez");
     await page.getByRole("link", { name: "Diego Alvarez" }).first().click();
     const chooseAgain = page.getByRole("link", { name: "Choose somebody else" });
     await expect(chooseAgain).toBeVisible();
@@ -386,7 +386,7 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-trouble-states?bench=1");
+    await request.post("/api/test/seed-trouble-states?facts=troublePanels,bench");
     await request.post("/api/test/seed-stripe-account");
     await page.goto("/shop/blue-mantis/gear/work-orders");
     await page

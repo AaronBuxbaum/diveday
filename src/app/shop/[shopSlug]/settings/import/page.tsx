@@ -168,11 +168,7 @@ export default async function ImportPage({
   return (
     <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
-        title={t("settings.data.title")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.data.title")} />
 
       <DataTabs t={t} shopSlug={shopSlug} current="import" />
 

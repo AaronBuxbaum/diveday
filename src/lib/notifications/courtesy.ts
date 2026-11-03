@@ -1,3 +1,4 @@
+import { diverTranslator } from "@/i18n/messages";
 import { log } from "@/lib/log";
 import { NOTIFICATION_PROVIDER_TIMEOUT_MS } from "./provider";
 
@@ -74,12 +75,13 @@ export type CourtesyMessage = {
  */
 export type CourtesySend = CourtesyMessage & {
   /**
-   * "Reply STOP to opt out." in the diver's language, appended to the SMS and
-   * never to WhatsApp (ADR 20261007-sms-stop-and-help). Required so no caller
-   * can send a text without it: carriers filter a sender whose texts never say
-   * how to stop them, and STOP on WhatsApp means nothing.
+   * The diver's language. The SMS ends with "Reply STOP to opt out." in it, and
+   * WhatsApp never does (ADR 20261007-sms-stop-and-help). This renderer words
+   * the line itself, so no caller can send a text without it: carriers filter a
+   * sender whose texts never say how to stop them, and STOP on WhatsApp means
+   * nothing.
    */
-  smsStopLine: string;
+  locale: string | null | undefined;
 };
 
 export interface CourtesyProvider {
@@ -133,7 +135,8 @@ export async function sendCourtesyMessage(
   providers: CourtesyProviders,
   options?: { signal?: AbortSignal },
 ): Promise<CourtesyResult> {
-  const { smsStopLine, ...courtesy } = message;
+  const { locale, ...courtesy } = message;
+  const smsStopLine = diverTranslator(locale)("notifications.sms.stopLine");
   const whatsAppDelivery = providers.whatsapp
     ? await providers.whatsapp.send(
         courtesy.whatsAppBody ? { ...courtesy, body: courtesy.whatsAppBody } : courtesy,

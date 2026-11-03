@@ -62,7 +62,7 @@
 - **Close-out** — the shop home's evening state (ADR 20260827-clearwater-surface-language,
   decision 4): once every departure of the shop day has settled, each station reads its end state
   in strict precedence off the same roll-call evidence Today chases, then the clock, and only then
-  the crew's own **trip stage** (`departureStatus`, `src/lib/closeout.ts`), and the day's takings
+  the crew's own **trip stage** (`departureStatus`, `src/features/today/closeout.ts`), and the day's takings
   read beneath them. **A stage settles a station the clock would leave open, and never reopens one
   the clock has closed** (issue #1480): inside the late-arrival hour a live `home` reads `all_home`,
   because a crew member tapping Home at the rail is the statement that buffer was standing in for
@@ -90,7 +90,7 @@
   time is it at this shop" for a request: the instant, the shop's zone, its calendar date
   (`today`), the exact UTC pair around that date (`day`), its wall-clock time and whether a guest
   message may go out now. `requireShopSurface` mints one beside the shop row, and a domain function takes a clock
-  rather than a loose `now` and time zone (Today's reads in `src/db/today.ts` first).
+  rather than a loose `now` and time zone (Today's reads in `src/features/today/today-reader.ts` first).
   "Today's departures" is `startsAt` inside `clock.day`, exactly, with no looser scan beside it.
 - **Shop tick** — the one hourly pass (`/api/cron/shop-tick`, `0 * * * *`) that serves every shop
   cadence: the minimum-head-count decision, pre-trip reminders, held sends, gear service reminders,
@@ -1204,8 +1204,9 @@
 - **Crew roll-call event** — the crew half of a head count: a named staff member said one **assigned crew
   member** is aboard, not aboard, or cleared, at one checkpoint. Same append-only history, same
   supersession, and the same two meanings of "not boarded" as a diver's roll-call event; the subject
-  is a person on the trip's crew list rather than a booking, which is why it is its own table
-  (`roll_call_crew_events`) and `roll_call_events.booking_id` stays `NOT NULL`. It exists because a
+  is a person on the trip's crew list rather than a booking. It is a `roll_call_events` row with
+  `subject_kind = 'crew'` and `crew_person_id` set, beside the seat rows, and a check refuses a row
+  about nobody (ADR 20261103-one-roll-call-ledger). It exists because a
   count **names nobody**: "3 of 3 aboard" cannot tell the boat that the third body is the deckhand
   rather than the divemaster who has not surfaced — which is why it is now the *only* crew evidence
   a checkpoint reads. A trip with **no crew assigned is not exempt**: an empty crew list holds the
@@ -1396,8 +1397,8 @@
   wins. That is what lets a crew member who marks the wrong row and corrects it within the same
   millisecond keep the correction, on the screen and after the sync alike — and it is a rule with
   two halves that have to agree, so changing either one alone is a bug. On the server side that
-  order is now a property of the rows rather than of the clock's resolution: `roll_call_events` and
-  `roll_call_crew_events` carry a monotonic `seq` that is the final ordering key everywhere they are
+  order is now a property of the rows rather than of the clock's resolution: `roll_call_events`, seat
+  and crew alike, carries a monotonic `seq` that is the final ordering key everywhere it is
   read, because `created_at` is *transaction* time and a synced offline batch ties on it exactly.
   A **rejected** device event is the one asymmetric case: it may never *downgrade* a "not back
   aboard" that a non-rejected source states — silently demoting a missing diver to "awaiting" is the
@@ -1791,12 +1792,12 @@
   [20260816-imported-payment-history-is-evidence](../../architecture/decisions/20260816-imported-payment-history-is-evidence.md).
 - **Payment event** — one recorded *transition* of a booking's payment state: what it moved to,
   what it moved from, the amount and currency at that moment, and which operation caused it. The
-  append-only trail (`booking_payment_events`) beside the single mutable `booking_payments` row,
-  which carries only where the money stands now and which a refund overwrites in place. Written
-  inside the same transaction as the mutation it records, so the two commit or roll back together.
+  booking's money is these entries (`booking_payment_events`); where the money stands now is the
+  newest one, which the `booking_payments` view folds out, and a refund appends rather than
+  overwriting the capture it reverses (issue #2716).
   "Transition, not write" is the load-bearing distinction: a webhook redelivered twice appends
   nothing the second time, and a refused write appends nothing at all, so a row here always means
-  the state genuinely changed — otherwise the money ledger would slowly become a delivery log.
+  something material changed (the same mark by another staffer counts) — otherwise the money ledger would slowly become a delivery log.
 - **Retention window** — how long one append-only table's rows are kept before the weekly prune
   deletes them. Set per table in `RETENTION_DAYS` (`src/lib/retention.ts`), which is the only place
   a human edits. Most windows are a preference; `stripe_webhook_events` is not — its rows are the
@@ -1896,7 +1897,7 @@
   while somebody is missing**: while any diver or rostered crew member on the departure has an
   after-dive "not back aboard" standing — exactly while Today raises its missing-diver or
   missing-crew row, read through the same function (`tripsWithSomebodyMissing`,
-  `src/db/today.ts`) — every recap on that departure waits: the email, a staff send (which says
+  `src/features/today/today-reader.ts`) — every recap on that departure waits: the email, a staff send (which says
   "Recaps are held until the roll call is corrected"), `/recap`, and the after-dive `/ready`. The
   page answers with the **waiting** state, which says only that the recap is not ready yet; the
   four writers on it (photo, tip, review, pulse) refuse while it is closed (`recapClosedReason`).
@@ -2231,3 +2232,15 @@
   assist works the same without it. Code: `runAssist` in `src/db/assists.ts`; on screen, the
   controls in `src/components/assists/` (`AssistDraftButton` and its siblings). Not "AI": the copy
   names Claude.
+- **Unfinished work** — work DiveDay or the shop still has to finish for someone, in one grammar
+  (issue #2703): `pending` until it is done or attested, `in_flight` while a call is out, then
+  `done` or `failed` with a reason. Each ledger keeps its own status word and `src/lib/attempts.ts`
+  places it (`LEDGER_STATES`); the rule for when each kind is stuck, and when Today raises it, is
+  `ATTEMPT_RULES`. Five kinds today: payment operations still in flight past five minutes, media
+  deletes that failed or died mid-call, processor erasures still owed to a diver, a
+  shop-cancellation refund (a seat still holding its money on a departure the shop called off,
+  except a diver who cancelled and forfeited), and a **failed refund**. One reader,
+  `listUnfinished` / `readUnfinished` in `src/db/unfinished.ts`, answers for all of them; each
+  surface shows its own kinds in its own words (Orders the money, Settings' Data group the erasure
+  halves, Today the stuck payments, failed deletes and day-old cancellation refunds). The
+  notification send queue is not one of them: its parked rows go to operator logging (#1826).

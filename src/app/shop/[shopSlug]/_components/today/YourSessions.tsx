@@ -1,5 +1,5 @@
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
-import type { CrewedSessionSummary } from "@/db/today";
+import type { CrewedSessionSummary } from "@/features/today";
 import { awayDatesText } from "@/i18n/away-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";

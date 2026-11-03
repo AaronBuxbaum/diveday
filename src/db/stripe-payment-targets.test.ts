@@ -2,12 +2,9 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, orders, people, tips } from "./schema";
-import {
-  findStripePaymentTarget,
-  PaymentSourceLookupFailed,
-  recordTipPaymentIntent,
-} from "./stripe-payment-targets";
+import { insertTip } from "@/test/tips";
+import { bookings, orders, people } from "./schema";
+import { findStripePaymentTarget, PaymentSourceLookupFailed } from "./stripe-payment-targets";
 
 const ctx = fileScopedShopContext();
 
@@ -124,22 +121,16 @@ describe("findStripePaymentTarget", () => {
     const { db, shop } = ctx;
     const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
     if (!booking) throw new Error("seeded booking missing");
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       status: "paid",
       stripeAccountId: "acct_demo",
       stripeSessionId: "cs_tip_target",
+      stripePaymentIntentId: "pi_tip",
       currency: "usd",
       amountCents: 2_000,
     });
-    expect(
-      await recordTipPaymentIntent(db, {
-        stripeSessionId: "cs_tip_target",
-        paymentIntentId: "pi_tip",
-        expectedAccountId: "acct_demo",
-      }),
-    ).toBe(true);
     const { lookup, calls } = lookupAnswering({ status: "failed" });
 
     expect(
@@ -156,7 +147,7 @@ describe("findStripePaymentTarget", () => {
     const { db, shop } = ctx;
     const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
     if (!booking) throw new Error("seeded booking missing");
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       status: "paid",

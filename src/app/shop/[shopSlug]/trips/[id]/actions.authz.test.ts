@@ -4,14 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createBooking } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
-import {
-  activityEvents,
-  bookings,
-  certifications,
-  courses,
-  tripRequirements,
-  trips,
-} from "@/db/schema";
+import { activityEvents, bookings, cards, courses, tripRequirements, trips } from "@/db/schema";
 import { shopClock } from "@/lib/shop-clock";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
@@ -399,9 +392,9 @@ describe("certifying from an intro session's roster", () => {
     if (!seat?.courseId) throw new Error("seeded shop has no booked course session");
     await db.update(courses).set({ isIntroCourse: true }).where(eq(courses.id, seat.courseId));
     const cardsBefore = await db
-      .select({ id: certifications.id })
-      .from(certifications)
-      .where(eq(certifications.personId, seat.personId));
+      .select({ id: cards.id })
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, seat.personId)));
     signIn(shop, owner);
     const formData = new FormData();
     formData.set("bookingId", seat.bookingId);
@@ -414,9 +407,9 @@ describe("certifying from an intro session's roster", () => {
 
     expect(to).toContain("notice=certify-failed");
     const cardsAfter = await db
-      .select({ id: certifications.id })
-      .from(certifications)
-      .where(eq(certifications.personId, seat.personId));
+      .select({ id: cards.id })
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, seat.personId)));
     expect(cardsAfter).toHaveLength(cardsBefore.length);
   });
 });
@@ -841,7 +834,7 @@ describe("money on the trip page", () => {
    * Three consequences, none of them cosmetic: reported revenue rises on money
    * that was returned (`COLLECTED_PAYMENT_STATUSES`), the row stops pointing at
    * the real Stripe refund, and the seat re-enters
-   * `listOwedShopCancellationRefunds` — whose own docstring calls a `paid` row
+   * the owed-refund read (`src/db/unfinished.ts`) — whose own docstring calls a `paid` row
    * on a cancelled trip "the obvious way to get this wrong".
    *
    * Found by `security-reviewer` after #714 shipped.

@@ -17,8 +17,7 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { canPersonManageBoats } from "@/db/authz";
-import { countDeparturesByBoat, listBoats } from "@/db/boats";
+import { canPersonManageBoats, getBoatsPage } from "@/db/boats-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -82,10 +81,10 @@ export default async function BoatsSettingsPage({
   // **How much history each hull carries**, so the confirm can say so before a
   // shop taps Delete: one grouped read beside the fleet, where it used to be
   // one count per hull after it.
-  const [shopBoats, boatDepartures] = await Promise.all([
-    listBoats(db, session.user.shopId),
-    countDeparturesByBoat(db, session.user.shopId),
-  ]);
+  const { boats: shopBoats, departures: boatDepartures } = await getBoatsPage(
+    db,
+    session.user.shopId,
+  );
   // Refusals stay beside the editor they name, including Add. An unscoped
   // or unknown-row refusal still has a banner, so a forged ID cannot silence it.
   const certificateError = boatCertificateError(t, query, locale);
@@ -107,11 +106,7 @@ export default async function BoatsSettingsPage({
       <FlashParams
         params={["notice", "boat", "capacity", "passengers", "limit", "count", "dates"]}
       />
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
-        title={t("boats.heading")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("boats.heading")} />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
 
       <DisclosureRowList>

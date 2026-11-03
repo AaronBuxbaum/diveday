@@ -3,27 +3,27 @@ import { describe, expect, it, vi } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { fileScopedShopContext } from "@/test/db";
+import { insertTip, tipsOf } from "@/test/tips";
 import { anonymizeDiver } from "./anonymize";
 import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
-import { saveShopIntegration } from "./integrations";
+import { recordShopIntegration } from "./integrations";
 import { recordRollCall } from "./manifests";
-import { listOwedProcessorErasures } from "./processor-erasure";
+import { paymentEntries } from "./payments";
 import {
   authProviderAccounts,
   authVerifications,
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPaymentEvents,
-  bookingPayments,
   bookings,
+  capabilities,
   formDrafts,
   gearItems,
   gearReservations,
   importedPaymentHistory,
   integrationEvents,
   interests,
-  interestUnsubscribeTokens,
   mediaDeletionAttempts,
   orderLineItems,
   orders,
@@ -34,7 +34,6 @@ import {
   recapPulses,
   rollCallEvents,
   shops,
-  tips,
   tripLastMinutePromos,
   trips,
   userAccounts,
@@ -43,6 +42,7 @@ import {
   waiverTemplates,
 } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
+import { listUnfinished } from "./unfinished";
 
 const fileCtx = fileScopedShopContext({ history: true });
 
@@ -413,7 +413,7 @@ describe("anonymizeDiver — the integration outbox (issue #1016)", () => {
    */
   it("leaves no name or email in an order event's payload", async () => {
     const { db, shop, owner } = await erasureFixtures();
-    await saveShopIntegration(db, {
+    await recordShopIntegration(db, {
       shopId: shop.id,
       provider: "zapier",
       credentials: { webhookUrl: "https://hooks.zapier.com/hooks/catch/123456/abcdef" },
@@ -638,14 +638,16 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     ]);
 
     // 4. The payment note, on the row and in the append-only trail behind it.
-    await db.insert(bookingPayments).values({
-      shopId: shop.id,
-      bookingId: booking.id,
-      status: "paid",
-      amountCents: 18000,
-      currency: "usd",
-      note: "Kwame paid cash at the counter",
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId: shop.id,
+        bookingId: booking.id,
+        status: "paid",
+        amountCents: 18000,
+        currency: "usd",
+        note: "Kwame paid cash at the counter",
+      }),
+    );
     await db.insert(bookingPaymentEvents).values({
       shopId: shop.id,
       bookingId: booking.id,
@@ -687,9 +689,12 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       promoId: promo.id,
       offeredAt: new Date("2026-03-01T12:00:00.000Z"),
     });
-    await db
-      .insert(interestUnsubscribeTokens)
-      .values({ shopId: shop.id, interestId: anytime.id, tokenHash: "kwame-token-hash" });
+    await db.insert(capabilities).values({
+      purpose: "interest_unsubscribe",
+      shopId: shop.id,
+      interestId: anytime.id,
+      tokenHash: "kwame-token-hash",
+    });
 
     // 6. A staff-typed invoice line, and the hosted pages Stripe mints.
     const [order] = await db
@@ -715,7 +720,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       description: "Two tanks for Kwame Mensah",
       unitAmountCents: 18000,
     });
-    await db.insert(tips).values({
+    const tipRow = await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       stripeAccountId: "acct_test",
@@ -810,10 +815,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     // token that named the interest goes first.
     expect(await db.select().from(interests).where(eq(interests.personId, diver.id))).toEqual([]);
     expect(
-      await db
-        .select()
-        .from(interestUnsubscribeTokens)
-        .where(eq(interestUnsubscribeTokens.tokenHash, "kwame-token-hash")),
+      await db.select().from(capabilities).where(eq(capabilities.tokenHash, "kwame-token-hash")),
     ).toEqual([]);
 
     const [waiver] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
@@ -838,9 +840,9 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     expect(line?.unitAmountCents).toBe(18000);
 
     // The hosted tip page renders the address it was minted with.
-    const [tip] = await db.select().from(tips).where(eq(tips.bookingId, booking.id));
+    const tip = (await tipsOf(db, shop.id)).find((row) => row.id === tipRow.id);
     expect(tip?.checkoutUrl).toBeNull();
-    expect(tip?.amountCents).toBe(2000);
+    expect(tip?.totalCents).toBe(2000);
 
     // The receipt document itself, retired through the same durable ledger
     // every other blob deletion uses rather than a second mechanism.
@@ -1165,7 +1167,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       stripeAccountId: "acct_test",
@@ -1196,7 +1198,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       expect.stringContaining(":customer-delete"),
     );
     // The session is the manual half: nothing automated reaches it.
-    const owed = await listOwedProcessorErasures(db, shop.id);
+    const owed = await listUnfinished(db, shop.id, "processor_erasure");
     expect(owed.map((row) => row.target)).toEqual(["stripe_checkout_session_snapshot"]);
   });
 
@@ -1219,7 +1221,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       stripeAccountId: "acct_test",
@@ -1454,7 +1456,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       stripeCustomerId: "cus_rina",
       stripeInvoiceId: "in_rina",
     });
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       stripeAccountId: "acct_test",

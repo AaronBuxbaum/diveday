@@ -6,6 +6,8 @@
  * (`day.spec.ts`) does the driving and hands its findings back here.
  */
 
+import { DAY_STATES as WORLD_DAY_STATES } from "../../src/lib/world.ts";
+
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 
@@ -27,28 +29,32 @@ export const RECAP_FLOOR_MS = 4 * HOUR_MS;
 export const EVENING_AFTER_MS = 2 * HOUR_MS;
 
 /**
- * Every state the day must reach, in the order it is reached. The ids are the
- * transcript's vocabulary and the screenshot names; `day.spec.ts` walks this
- * list and refuses to skip a state, so a day that cannot reach one fails at it
- * by name.
+ * Every state the day must reach, in the order it is reached: the list lives in
+ * `src/lib/world.ts`, which `pnpm check:route-coverage` reads too (issue #2752).
+ * `day.spec.ts` walks it and refuses to skip a state, so a day that cannot reach
+ * one fails at it by name.
  */
-export const DAY_STATES = Object.freeze([
-  { id: "shop-open", label: "The shop opens on a fresh day" },
-  { id: "seat-booked", label: "A diver books a seat on the public page" },
-  { id: "waiver-signed", label: "The diver signs the waiver from the link" },
-  { id: "card-added", label: "The diver adds their certification card from the link" },
-  { id: "card-verified", label: "The counter sights the card and verifies it" },
-  { id: "checked-in", label: "The counter checks the diver in" },
-  { id: "boarding", label: "The crew says the boat is boarding" },
-  { id: "roll-call-departure", label: "Roll call before departure" },
-  { id: "underway", label: "Underway" },
-  { id: "roll-call-after-dives", label: "Roll call after every dive" },
-  { id: "heading-in", label: "Heading in" },
-  { id: "home", label: "Home" },
-  { id: "evening", label: "Every boat is home" },
-  { id: "recap-sent", label: "The recap pass sends the diver's recap" },
-  { id: "recap-read", label: "The diver reads the recap" },
-]);
+const DAY_LABELS = Object.freeze({
+  "shop-open": "The shop opens on a fresh day",
+  "seat-booked": "A diver books a seat on the public page",
+  "waiver-signed": "The diver signs the waiver from the link",
+  "card-added": "The diver adds their certification card from the link",
+  "card-verified": "The counter sights the card and verifies it",
+  "checked-in": "The counter checks the diver in",
+  boarding: "The crew says the boat is boarding",
+  "roll-call-departure": "Roll call before departure",
+  underway: "Underway",
+  "roll-call-after-dives": "Roll call after every dive",
+  "heading-in": "Heading in",
+  home: "Home",
+  evening: "Every boat is home",
+  "recap-sent": "The recap pass sends the diver's recap",
+  "recap-read": "The diver reads the recap",
+});
+
+export const DAY_STATES = Object.freeze(
+  WORLD_DAY_STATES.map(({ id }) => Object.freeze({ id, label: DAY_LABELS[id] })),
+);
 
 /**
  * When each state of the day happens on the simulated clock.

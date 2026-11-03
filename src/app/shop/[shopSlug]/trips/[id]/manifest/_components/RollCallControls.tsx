@@ -154,7 +154,7 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
  * printed page break.
  *
  * **On paper the first and last rows carry the card's corner themselves.** The
- * print packets lift every `overflow` clip on purpose (`.trip-print-bundle *`
+ * print packets lift every `overflow` clip on purpose (`.paper-sheet *`
  * in globals.css — a clipped box on paper is content that does not exist), so
  * the card's rounded corner stops cutting the rows, and the stripe and the
  * row's fill stood square across the curve: 14px of stripe past it at each end

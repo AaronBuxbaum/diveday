@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import {
-  listPendingMediaDeletions,
   queueAndAttemptMediaDeletion,
   queueMediaDeletion,
   resolveMediaDeletion,
@@ -10,6 +9,7 @@ import {
   retryPendingMediaDeletions,
 } from "./media-deletions";
 import { diveSites, mediaDeletionAttempts, shops } from "./schema";
+import { listUnfinished } from "./unfinished";
 
 const ok = async () => ({ ok: true as const });
 const failing = async () => ({ ok: false as const, error: "blob delete failed: 500" });
@@ -36,7 +36,9 @@ describe("queueMediaDeletion (managed-URL guard, CR-012 review finding)", () => 
     });
     expect(bundled).toBeNull();
     expect(external).toBeNull();
-    expect(await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000))).toEqual([]);
+    expect(
+      await listUnfinished(db, shop.id, "media_deletion", { olderThan: await dbNowPlus(db, 1000) }),
+    ).toEqual([]);
   });
 
   it("still queues a genuine Blob URL", async () => {
@@ -103,7 +105,9 @@ describe("queueAndAttemptMediaDeletion", () => {
       },
       ok,
     );
-    const pending = await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000));
+    const pending = await listUnfinished(db, shop.id, "media_deletion", {
+      olderThan: await dbNowPlus(db, 1000),
+    });
     expect(pending).toEqual([]);
   });
 
@@ -118,7 +122,9 @@ describe("queueAndAttemptMediaDeletion", () => {
       },
       failing,
     );
-    const pending = await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000));
+    const pending = await listUnfinished(db, shop.id, "media_deletion", {
+      olderThan: await dbNowPlus(db, 1000),
+    });
     expect(pending).toHaveLength(1);
     expect(pending[0]?.status).toBe("failed");
     expect(pending[0]?.lastError).toContain("blob delete failed");
@@ -136,11 +142,13 @@ describe("queueAndAttemptMediaDeletion", () => {
       },
     );
     expect(called).toBe(false);
-    expect(await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000))).toEqual([]);
+    expect(
+      await listUnfinished(db, shop.id, "media_deletion", { olderThan: await dbNowPlus(db, 1000) }),
+    ).toEqual([]);
   });
 });
 
-describe("listPendingMediaDeletions", () => {
+describe("unfinished media deletions", () => {
   it("surfaces a pending row that has sat unresolved past the staleness window", async () => {
     const { db, shop } = ctx;
     await queueMediaDeletion(db, {
@@ -149,11 +157,15 @@ describe("listPendingMediaDeletions", () => {
       url: "https://diveday-media.s3.us-east-1.amazonaws.com/courses/stuck.jpg",
     });
     // Not yet old enough to count as stuck — the process could still be mid-attempt.
-    expect(await listPendingMediaDeletions(db, shop.id, new Date(0))).toEqual([]);
+    expect(await listUnfinished(db, shop.id, "media_deletion", { olderThan: new Date(0) })).toEqual(
+      [],
+    );
     // …and a bound just past the write does surface it. Measured on the
     // *database's* clock, which is what stamped `created_at` (a `defaultNow()`
     // column the app clock cannot freeze) — see `dbNow` in src/test/db.ts.
-    const pending = await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000));
+    const pending = await listUnfinished(db, shop.id, "media_deletion", {
+      olderThan: await dbNowPlus(db, 1000),
+    });
     expect(pending).toHaveLength(1);
     expect(pending[0]?.status).toBe("pending");
   });
@@ -169,7 +181,9 @@ describe("listPendingMediaDeletions", () => {
       },
       ok,
     );
-    expect(await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000))).toEqual([]);
+    expect(
+      await listUnfinished(db, shop.id, "media_deletion", { olderThan: await dbNowPlus(db, 1000) }),
+    ).toEqual([]);
   });
 
   it("scopes to the requesting shop", async () => {
@@ -184,7 +198,9 @@ describe("listPendingMediaDeletions", () => {
       kind: "recap_photo",
       url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/e.jpg",
     });
-    expect(await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000))).toEqual([]);
+    expect(
+      await listUnfinished(db, shop.id, "media_deletion", { olderThan: await dbNowPlus(db, 1000) }),
+    ).toEqual([]);
   });
 });
 
@@ -200,11 +216,15 @@ describe("retryMediaDeletion", () => {
       },
       failing,
     );
-    const [stuck] = await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000));
+    const [stuck] = await listUnfinished(db, shop.id, "media_deletion", {
+      olderThan: await dbNowPlus(db, 1000),
+    });
     if (!stuck) throw new Error("setup: expected a stuck attempt");
 
     expect(await retryMediaDeletion(db, shop.id, stuck.id, ok)).toBe(true);
-    expect(await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000))).toEqual([]);
+    expect(
+      await listUnfinished(db, shop.id, "media_deletion", { olderThan: await dbNowPlus(db, 1000) }),
+    ).toEqual([]);
   });
 
   it("does not retry another shop's attempt", async () => {
@@ -266,7 +286,9 @@ describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
     );
     const result = await retryPendingMediaDeletions(db, 50, await dbNowPlus(db, 1000), ok);
     expect(result).toEqual({ attempted: 2, succeeded: 2 });
-    expect(await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000))).toEqual([]);
+    expect(
+      await listUnfinished(db, shop.id, "media_deletion", { olderThan: await dbNowPlus(db, 1000) }),
+    ).toEqual([]);
   });
 
   it("respects the bound instead of retrying an unbounded batch", async () => {
@@ -285,7 +307,9 @@ describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
     const result = await retryPendingMediaDeletions(db, 2, await dbNowPlus(db, 1000), ok);
     expect(result.attempted).toBe(2);
     // One attempt was left untouched by the bounded run.
-    expect(await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000))).toHaveLength(1);
+    expect(
+      await listUnfinished(db, shop.id, "media_deletion", { olderThan: await dbNowPlus(db, 1000) }),
+    ).toHaveLength(1);
   });
 
   it("leaves a still-failing attempt failed rather than losing track of it", async () => {
@@ -301,7 +325,9 @@ describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
     );
     const result = await retryPendingMediaDeletions(db, 50, await dbNowPlus(db, 1000), failing);
     expect(result).toEqual({ attempted: 1, succeeded: 0 });
-    expect(await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000))).toHaveLength(1);
+    expect(
+      await listUnfinished(db, shop.id, "media_deletion", { olderThan: await dbNowPlus(db, 1000) }),
+    ).toHaveLength(1);
   });
 });
 

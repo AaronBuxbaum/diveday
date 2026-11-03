@@ -294,13 +294,12 @@ describe("buildTripManifest", () => {
     expect(isRollCallCheckpoint("after_dive_3", 2)).toBe(false);
     // Bounded at both ends, and the bound is load-bearing off this file: the
     // departure log's roster and crew tables are three columns plus one per
-    // checkpoint, and they pick their scroll floor from a two-branch map over
-    // that count (`rollCallTableMinWidth`, trips/[id]/log/_components/
-    // roll-call-columns.ts, issue #1052), and their printed checkpoint width
-    // from another (`rollCallCheckpointPrintClass`, beside it). Two to six
-    // checkpoints is five to nine columns, so neither map has a missing case. Widening this clamp without widening that map would put
-    // a ninth column back at a floor sized for eight — which renders, and looks
-    // exactly like the crush issue #1035 fixed.
+    // checkpoint, and they pick their checkpoint width from a two-branch map
+    // over that count (`rollCallCheckpointClass`, trips/[id]/log/_components/
+    // roll-call-columns.ts, issue #1052), and print more than five as
+    // segments of two (`DepartureRoster`). Two to six checkpoints is five to
+    // nine columns, so neither has a missing case. Widening this clamp without
+    // widening them would put a seventh checkpoint on a sheet sized for six.
     expect(rollCallCheckpoints(1)).toHaveLength(2);
     expect(rollCallCheckpoints(4)).toHaveLength(5);
     expect(rollCallCheckpoints(5)).toHaveLength(6);
@@ -322,6 +321,7 @@ describe("buildTripManifest", () => {
       status: "boarded",
       occurredAt,
       createdAt: occurredAt,
+      seq: 0,
     });
 
     expect(maxRecordedDiveNumber([])).toBe(0);
@@ -341,6 +341,15 @@ describe("buildTripManifest", () => {
     ).toBe(4);
   });
 
+  const mark = (bookingId: string, checkpoint: string, status: string, at: Date) => ({
+    bookingId,
+    checkpoint,
+    status,
+    occurredAt: at,
+    createdAt: at,
+    seq: 0,
+  });
+
   it("ignores a checkpoint whose latest event for that diver is a clear — the mis-tap-then-undo case (dive-domain-expert review finding, CR-006)", () => {
     const t0 = new Date("2026-06-01T10:00:00Z");
     const t1 = new Date("2026-06-01T10:05:00Z");
@@ -350,27 +359,9 @@ describe("buildTripManifest", () => {
     // edit down to 2.
     expect(
       maxRecordedDiveNumber([
-        {
-          bookingId: "b1",
-          checkpoint: "after_dive_3",
-          status: "boarded",
-          occurredAt: t0,
-          createdAt: t0,
-        },
-        {
-          bookingId: "b1",
-          checkpoint: "after_dive_3",
-          status: "cleared",
-          occurredAt: t1,
-          createdAt: t1,
-        },
-        {
-          bookingId: "b1",
-          checkpoint: "after_dive_2",
-          status: "boarded",
-          occurredAt: t0,
-          createdAt: t0,
-        },
+        mark("b1", "after_dive_3", "boarded", t0),
+        mark("b1", "after_dive_3", "cleared", t1),
+        mark("b1", "after_dive_2", "boarded", t0),
       ]),
     ).toBe(2);
 
@@ -378,27 +369,9 @@ describe("buildTripManifest", () => {
     // means dive 3 really did happen — the checkpoint counts.
     expect(
       maxRecordedDiveNumber([
-        {
-          bookingId: "b1",
-          checkpoint: "after_dive_3",
-          status: "boarded",
-          occurredAt: t0,
-          createdAt: t0,
-        },
-        {
-          bookingId: "b1",
-          checkpoint: "after_dive_3",
-          status: "cleared",
-          occurredAt: t1,
-          createdAt: t1,
-        },
-        {
-          bookingId: "b2",
-          checkpoint: "after_dive_3",
-          status: "boarded",
-          occurredAt: t0,
-          createdAt: t0,
-        },
+        mark("b1", "after_dive_3", "boarded", t0),
+        mark("b1", "after_dive_3", "cleared", t1),
+        mark("b2", "after_dive_3", "boarded", t0),
       ]),
     ).toBe(3);
   });

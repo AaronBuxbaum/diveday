@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { readFormDraft, saveFormDraft } from "@/db/form-drafts";
+import { readFormDraft, recordFormDraft } from "@/db/form-drafts";
 import { formDrafts } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -63,7 +63,7 @@ describe("Make a request", () => {
       match: null,
     });
     const to = await redirectedTo(() => requestFromMessageAction(form(MESSAGE_ID)));
-    expect(to).toBe(`/shop/${shop.slug}/bookings/new?outcome=date-request#call`);
+    expect(to).toBe(`/shop/${shop.slug}?call=1&outcome=date-request#call`);
     // Read inside the session's shop, whatever the form posted.
     expect(bookingAskFromMessage).toHaveBeenCalledWith(db, {
       shopId: shop.id,
@@ -99,7 +99,7 @@ describe("Make a request", () => {
 
   it("preserves an unfinished call draft and explains why it did not overwrite it", async () => {
     const { db, shop, owner } = await signedIn();
-    await saveFormDraft(db, {
+    await recordFormDraft(db, {
       shopId: shop.id,
       personId: owner,
       form: "took_a_call",

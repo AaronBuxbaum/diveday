@@ -10,7 +10,7 @@ import { demoRoleEmail } from "@/db/people";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { auth, getAuth } from "@/lib/auth";
-import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
+import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
 import { demoLandingFrom, demoLandingPath } from "@/lib/demo-landings";
 import { DEMO_ROLE_IDS, type DemoRoleId } from "@/lib/demo-roles";
 import {
@@ -31,6 +31,7 @@ import { publicSchedulePath } from "@/lib/public-routes";
 import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/lib/quiet-demo-device";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { runtimeMode } from "@/lib/runtime-mode";
 import { requireStaffSession } from "@/lib/session";
 // A plain module, deliberately not a second server action — see its own file
 // comment: exporting it from here would publish it as an unauthenticated
@@ -88,7 +89,7 @@ async function takeDemoSeat(shopId: string): Promise<void> {
   (await cookies()).set(DEMO_SEAT_COOKIE, signDemoSeat(shopId), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: runtimeMode().secureCookies,
     path: "/",
     maxAge: DEMO_SEAT_MAX_AGE_SECONDS,
   });
@@ -109,7 +110,7 @@ async function wearVisitorShopName(shopId: string, typed: unknown): Promise<void
   jar.set(DEMO_SHOP_NAME_COOKIE, value, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: runtimeMode().secureCookies,
     path: DEMO_SHOP_NAME_COOKIE_PATH,
     maxAge: DEMO_SHOP_NAME_MAX_AGE_SECONDS,
   });

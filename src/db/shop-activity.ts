@@ -487,6 +487,7 @@ async function writeShopActivity(
     const [checkout] = await db
       .select({ tripId: bookingCheckouts.tripId })
       .from(bookingCheckouts)
+      // diveday:any-checkout-purpose: names the departure of a checkout already refunded by id
       .where(and(eq(bookingCheckouts.id, write.checkoutId), eq(bookingCheckouts.shopId, shopId)))
       .limit(1);
     if (!checkout) return false;

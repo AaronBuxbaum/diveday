@@ -19,8 +19,10 @@ function daysFromNow(days: number): Date {
 
 function certification(overrides: Partial<Certification> = {}): Certification {
   return {
+    kind: "level",
     status: "verified",
     level: "open_water",
+    specialty: null,
     expiresAt: null,
     ...overrides,
   } as Certification;

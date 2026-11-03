@@ -38,6 +38,7 @@ import type { NotificationProvider } from "@/lib/notifications";
 import { OFFLINE_EVENT_SKEW_MS } from "@/lib/offline-events";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { listDiveSites } from "./dive-sites";
 import {
   type MissingDiverAllClearOutcome,
   sendMissingDiverAlerts,
@@ -61,7 +62,7 @@ import {
   incidentReports,
   people,
   personRoles,
-  rollCallCrewEvents,
+  retiredRollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   trips,
@@ -756,7 +757,7 @@ async function lockForWrite(
 }
 
 /** Save a draft's fields. A filed report is refused: it changes only by addendum. */
-export async function saveIncidentDraft(
+export async function recordIncidentDraft(
   db: AppDb,
   input: WriteTarget & { fields: IncidentDraftFields },
 ): Promise<{ ok: true } | { ok: false; reason: IncidentWriteRefusal }> {
@@ -1556,8 +1557,10 @@ export async function deleteDemoSafetyTrail(db: DbExecutor, shopId: string): Pro
   // Each report takes its people rows with it (cascade): a raised report
   // points at its subject's row, so that row cannot go first.
   await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
-  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
+  // diveday:roll-call-both-subjects: the demo shop's whole ledger goes, seat and crew.
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // Retired by #2700 and dropped next release; until then it may still hold rows naming the shop.
+  await db.delete(retiredRollCallCrewEvents).where(eq(retiredRollCallCrewEvents.shopId, shopId));
 }
 
 /**
@@ -1587,4 +1590,31 @@ export async function listIncidentShopStaffChoices(
     )
     .orderBy(asc(people.fullName), asc(people.id));
   return rows.filter((row) => !onCrew.has(row.personId));
+}
+
+/**
+ * **One incident report's page**: the report as this reader may see it, and —
+ * only while it is a draft they may write — the pickers its form offers (the
+ * shop's sites, the seats, crew and staff of its departure). `null` when the
+ * report is not this shop's, not readable by this person, or not on `tripId`.
+ */
+export async function getIncidentReportPage(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  reportId: string,
+  personId: string,
+) {
+  const report = await getIncidentReport(db, shopId, reportId, personId);
+  if (!report || report.tripId !== tripId) return null;
+  const editing = report.status === "draft" && report.mayWrite;
+  const [diveSites, seats, crew, shopStaff] = editing
+    ? await Promise.all([
+        listDiveSites(db, shopId),
+        listIncidentSeatChoices(db, shopId, tripId),
+        listIncidentCrewChoices(db, shopId, tripId),
+        listIncidentShopStaffChoices(db, shopId, tripId),
+      ])
+    : [[], [], [], []];
+  return { report, editing, choices: { diveSites, seats, crew, shopStaff } };
 }

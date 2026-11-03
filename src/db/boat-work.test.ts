@@ -1,10 +1,10 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { readBoatWork } from "./boat-work";
-import { bookings, nitroxCertifications, shops } from "./schema";
+import { bookings, cards, shops } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();
@@ -25,7 +25,7 @@ async function wantingNitrox() {
   if (!entry) throw new Error("demo booking missing");
   await db.update(bookings).set({ wantsNitrox: true }).where(eq(bookings.id, entry.booking.id));
   // The demo diver may already hold a card: this file decides what they hold.
-  await db.delete(nitroxCertifications).where(eq(nitroxCertifications.personId, entry.person.id));
+  await db.delete(cards).where(and(eq(cards.kind, "nitrox"), eq(cards.personId, entry.person.id)));
   return { db, shop, trip, entry };
 }
 
@@ -40,8 +40,9 @@ async function ungated(seat: Seat) {
   return work.get(seat.trip.id)?.ungatedNitrox.map((diver) => diver.fullName) ?? [];
 }
 
-function card(seat: Seat, overrides: Partial<typeof nitroxCertifications.$inferInsert> = {}) {
-  return seat.db.insert(nitroxCertifications).values({
+function card(seat: Seat, overrides: Partial<typeof cards.$inferInsert> = {}) {
+  return seat.db.insert(cards).values({
+    kind: "nitrox",
     shopId: seat.shop.id,
     personId: seat.entry.person.id,
     agency: "padi",
@@ -85,9 +86,9 @@ describe("readBoatWork: ungated nitrox", () => {
     expect(await ungated(seat)).toEqual([seat.entry.person.fullName]);
 
     await seat.db
-      .update(nitroxCertifications)
+      .update(cards)
       .set({ reviewedAt: nowDate() })
-      .where(eq(nitroxCertifications.personId, seat.entry.person.id));
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, seat.entry.person.id)));
     expect(await ungated(seat)).toEqual([]);
   });
 
@@ -113,7 +114,7 @@ describe("readBoatWork: ungated nitrox", () => {
     await card(seat, { identifier: "NX-A" });
     await card(seat, { identifier: "NX-B", agency: "ssi" });
     expect(await ungated(seat)).toEqual([]);
-    await seat.db.delete(nitroxCertifications);
+    await seat.db.delete(cards).where(eq(cards.kind, "nitrox"));
     await card(seat, { identifier: "NX-C", status: "pending", reviewedAt: null });
     await card(seat, { identifier: "NX-D", agency: "ssi", status: "pending", reviewedAt: null });
     expect(await ungated(seat)).toEqual([seat.entry.person.fullName]);

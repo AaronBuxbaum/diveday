@@ -1,9 +1,5 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { PrintButton } from "@/components/PrintButton";
-import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
-import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getWorkOrderDetail } from "@/db/work-orders";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
@@ -11,9 +7,13 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
+import { PACKET_PAPER } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { SheetDocument } from "../../../../print/_components/SheetDocument";
+import { ShopSheet, sheetPrinted } from "../../../../print/_components/ShopSheet";
+import { ClaimTag } from "./_components/ClaimTag";
 
 export const instant = true;
 
@@ -32,6 +32,10 @@ export const metadata: Metadata = { title: "Claim tag — DiveDay" };
  * *what we have, what you told us, and when to come back* — which is why the
  * page is a list of pieces, one sentence and one date, under the ticket's
  * number, with the shop's phone at the foot for the call that asks after it.
+ *
+ * One sheet of the shop's paper (issue #2745), the same on screen as on paper:
+ * the way back and Print sit above it, and `AutoPrint` opens the dialog,
+ * because the ticket's door said "Print claim tag".
  */
 export default async function ClaimTagPage({
   params,
@@ -60,99 +64,53 @@ export default async function ClaimTagPage({
   // but nothing goes on paper for a job the shop has taken back off the bench.
   if (detail.workOrder.deletedAt !== null) notFound();
 
-  const order = shopPath(shopSlug, "gear", "work-orders", workOrderId);
   const subject = detail.personName ?? detail.gearItemLabel ?? t("workOrders.tag.eyebrow");
 
   return (
-    <div
-      id="work-order-tag"
-      className="mx-4 my-6 max-w-3xl rounded-panel border border-border bg-surface p-6 sm:mx-auto sm:my-10 sm:p-10 print:m-0 print:max-w-none print:rounded-none print:border-0 print:p-8"
+    <SheetDocument
+      backHref={shopPath(shopSlug, "gear", "work-orders", workOrderId)}
+      paper={PACKET_PAPER}
+      brandDisplayFont={shop.brandDisplayFont}
+      backLabel={t("workOrders.detail.eyebrow")}
+      printLabel={t("print.sheet.door")}
     >
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
-        <div>
-          {/* On screen the eyebrow is the way back to the ticket the counter
-              tapped in from; on paper it is the tag's own name instead, because
-              the sheet a diver walks off with has to say what it is and has no
-              navigation. */}
-          <EyebrowBackLink href={order} className="print:hidden">
-            {t("workOrders.detail.eyebrow")}
-          </EyebrowBackLink>
-          <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("workOrders.tag.eyebrow")}</p>
-          <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{subject}</h1>
-          <p className="mt-1 text-muted">
-            {/* The ticket number is what the diver reads down the phone, so
-                it leads the line. */}
-            <span className="font-medium text-foreground tabular-nums">
-              {t("workOrders.number", { number: detail.workOrder.number })}
-            </span>
-            {" · "}
-            {t("workOrders.detail.receivedOn", {
-              date: formatShortDate(detail.workOrder.receivedAt, locale, shop.timezone),
-            })}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
-          <PrintButton label={t("shared.printButton.label")} />
-        </div>
-      </header>
-
-      <section aria-labelledby="claim-tag-pieces-heading" className="mt-8">
-        <h2 id="claim-tag-pieces-heading" className={SECTION_TITLE_CLASS}>
-          {t("workOrders.tag.piecesHeading")}
-        </h2>
-        <ul
-          className={sectionCardClass({
-            padding: "none",
-            className:
-              "mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 divide-y divide-border overflow-hidden",
-          })}
-        >
-          {detail.pieces.length > 0 ? (
-            detail.pieces.map((piece) => (
-              <li
-                key={piece.id}
-                className="col-span-2 grid grid-cols-subgrid items-baseline px-4 py-3 sm:px-5"
-              >
-                <span className="font-medium text-lg">{gearItemKindLabel(t, piece.kind)}</span>
-                <span className="text-muted">
-                  {[piece.brandModel, piece.serialNumber].filter(Boolean).join(" · ")}
-                </span>
-              </li>
-            ))
-          ) : (
-            <li className="col-span-2 grid grid-cols-subgrid items-baseline px-4 py-3 sm:px-5">
-              <span className="font-medium font-mono text-lg">{detail.gearItemLabel}</span>
-              <span className="text-muted">
-                {detail.gearItemKind ? gearItemKindLabel(t, detail.gearItemKind) : ""}
-              </span>
-            </li>
-          )}
-        </ul>
-      </section>
-
-      <section aria-labelledby="claim-tag-problem-heading" className="mt-8">
-        <h2 id="claim-tag-problem-heading" className={SECTION_TITLE_CLASS}>
-          {t("workOrders.tag.problemHeading")}
-        </h2>
-        <p className="mt-3 whitespace-pre-line">{detail.workOrder.reportedProblem}</p>
-      </section>
-
-      {detail.workOrder.promisedOn ? (
-        <p className="mt-6 text-lg">
-          {t("workOrders.tag.promised", {
-            date: formatCalendarDate(detail.workOrder.promisedOn, locale),
-          })}
-        </p>
-      ) : null}
-      <p className="mt-8 border-t border-border pt-4 text-muted text-sm">
-        {shop.name}
-        {shop.contactPhone ? (
-          <>
-            {" · "}
-            {t("workOrders.tag.phone", { phone: shop.contactPhone })}
-          </>
-        ) : null}
-      </p>
-    </div>
+      <ShopSheet
+        paper={PACKET_PAPER}
+        shop={shop}
+        shopSlug={shopSlug}
+        name={t("workOrders.tag.eyebrow")}
+        printed={sheetPrinted(t, nowDate(), locale, shop.timezone)}
+      >
+        <ClaimTag
+          t={t}
+          subject={subject}
+          number={detail.workOrder.number}
+          receivedOn={formatShortDate(detail.workOrder.receivedAt, locale, shop.timezone)}
+          pieces={
+            detail.pieces.length > 0
+              ? detail.pieces.map((piece) => ({
+                  id: piece.id,
+                  name: gearItemKindLabel(t, piece.kind),
+                  detail: [piece.brandModel, piece.serialNumber].filter(Boolean).join(" · "),
+                }))
+              : [
+                  {
+                    id: workOrderId,
+                    name: detail.gearItemLabel ?? "",
+                    detail: detail.gearItemKind ? gearItemKindLabel(t, detail.gearItemKind) : "",
+                    tag: true,
+                  },
+                ]
+          }
+          problem={detail.workOrder.reportedProblem}
+          promised={
+            detail.workOrder.promisedOn
+              ? formatCalendarDate(detail.workOrder.promisedOn, locale)
+              : null
+          }
+          phone={shop.contactPhone}
+        />
+      </ShopSheet>
+    </SheetDocument>
   );
 }

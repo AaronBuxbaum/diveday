@@ -11,7 +11,7 @@ import { listTripReadiness } from "./readiness";
 import {
   activityEvents,
   bookings,
-  certifications,
+  cards,
   tripDeskEvents,
   tripRequirements,
   trips,
@@ -137,7 +137,8 @@ async function openWaterCard(db: AppDb, shopId: string, bookingId: string) {
     .from(bookings)
     .where(eq(bookings.id, bookingId));
   if (!row) throw new Error("booking missing");
-  await db.insert(certifications).values({
+  await db.insert(cards).values({
+    kind: "level",
     shopId,
     personId: row.personId,
     agency: "padi",
@@ -162,7 +163,8 @@ async function cardAt(db: AppDb, shopId: string, bookingId: string, level: "adva
     .from(bookings)
     .where(eq(bookings.id, bookingId));
   if (!row) throw new Error("booking missing");
-  await db.insert(certifications).values({
+  await db.insert(cards).values({
+    kind: "level",
     shopId,
     personId: row.personId,
     agency: "padi",

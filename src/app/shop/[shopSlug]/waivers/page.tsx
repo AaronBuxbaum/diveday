@@ -7,21 +7,17 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { canPersonManageWaiverTemplates } from "@/db/authz";
-import { courseFormResignImpact, listCourseForms } from "@/db/course-forms";
 import {
-  getCurrentWaiverTemplate,
-  getSignedWaiverRecordForShop,
-  listWaiverIntegrityAudit,
+  canPersonManageWaiverTemplates,
+  getWaiversPage,
   signedRecordViewParam,
-  standingWaiverExposure,
-} from "@/db/waivers";
+} from "@/db/waivers-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, shopPath } from "@/lib/staff-notices";
+import type { NoticeTone } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
 import { BlankReleaseLink } from "./_components/BlankReleaseLink";
@@ -136,24 +132,14 @@ export default async function WaiversPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [current, atRisk, highlighted, auditPage, courseForms, resign] = await Promise.all([
-    getCurrentWaiverTemplate(db, shop.id),
-    // What publishing a new version would cost, in signatures. Read on every
-    // render so the choice below can state it *before* the tap — the count in
-    // the notice afterwards is the same number, and arrives too late to change
-    // a mind (issue #720).
-    standingWaiverExposure(db, shop.id),
-    record ? getSignedWaiverRecordForShop(db, shop.id, record) : null,
-    // A non-numeric or missing `?page=` reads as page 1; the query clamps it
-    // into range so a bookmarked page past the end lands on the last real one.
-    listWaiverIntegrityAudit(db, shop.id, {
-      page: Number.parseInt(page ?? "", 10),
-      query,
-      view,
-    }),
-    listCourseForms(db, shop.id),
-    courseFormResignImpact(db, shop.id),
-  ]);
+  // What publishing a new version would cost is read on every render so the
+  // choice can state it *before* the tap (issue #720). A non-numeric or missing
+  // `?page=` reads as page 1; the query clamps it into range.
+  const { current, atRisk, highlighted, auditPage, courseForms, resign } = await getWaiversPage(
+    db,
+    shop.id,
+    { record, page: Number.parseInt(page ?? "", 10), query, view },
+  );
   const courseFormNotice = courseFormNoticeFor(notice, formParam, t);
   const sampleRelease = isSampleRelease(current?.body);
 
@@ -225,7 +211,6 @@ export default async function WaiversPage({
       <FlashParams params={["notice", "count", "form"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("waiversStaff.title")}
         // The version line is a fact about the release the page is named
         // after, so it rides under the title where a reader meets it before

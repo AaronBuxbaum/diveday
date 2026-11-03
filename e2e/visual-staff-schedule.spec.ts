@@ -195,19 +195,19 @@ for (const scheme of ["light", "dark"] as const) {
       const openWalkInForm = async (page: Page) => {
         const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
         await page.goto(walkInFormPath("blue-mantis", tripId));
-        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Add a diver", level: 2 }).waitFor();
       };
 
       /**
-       * **"Took a call"** (N-22), folded into Add a booking as its last
-       * disclosure, on the branch that shows the most: the date request, whose
-       * extra block is the only part of this form that is not the caller's own
-       * three boxes. Opened by its `#call` hash and the branch chosen from the
-       * URL rather than by clicking, so the picture cannot depend on a click
-       * landing before the shot.
+       * **"Took a call"** (N-22), the last disclosure of the shop home's Add a
+       * booking panel (`?call=1`, #2737), on the branch that shows the most:
+       * the date request, whose extra block is the only part of this form that
+       * is not the caller's own three boxes. Opened by its `#call` hash and the
+       * branch chosen from the URL rather than by clicking, so the picture
+       * cannot depend on a click landing before the shot.
        */
       test(`the desk phone's door renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/bookings/new?outcome=date-request#call");
+        await page.goto("/shop/blue-mantis?call=1&outcome=date-request#call");
         await page.getByRole("heading", { name: "Log a call" }).waitFor();
         await page.getByLabel("What they asked about").waitFor();
         await page.locator("#call").scrollIntoViewIfNeeded();
@@ -237,42 +237,31 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-walk-in-party", scheme);
       });
 
-      // The global Add-booking door, both halves: the departure picker — one
-      // ledger grouped by day since slice 9g of ADR
-      // 20260827-the-shops-shelves, seats-left on every row — and the diver
-      // step once a boat is chosen (returning-diver search + hand entry). Two
-      // captures and two tests — the picker and the diver form never share a
-      // screen, so one shot would leave half the surface with no baseline at
-      // all, and one *test* would let a broken picker take the diver form's
-      // baseline with it.
+      // "Add a booking" with no boat chosen (#2737): the shop home's panel,
+      // its departure picker one ledger grouped by day (slice 9g of ADR
+      // 20260827-the-shops-shelves), seats-left on every row. A row opens that
+      // departure's own Divers tab with the add band focused (`?add=1`), the
+      // one place a diver is seated; that band is the second capture. Two
+      // tests, so a broken picker cannot take the band's baseline with it.
       test(`the Add-booking departure picker renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/bookings/new");
-        await page.getByRole("heading", { name: "New booking", level: 1 }).waitFor();
-        // The day headings are the composition; wait for the first one rather
-        // than for the h1, which paints with the static shell.
-        await page.getByRole("heading", { level: 3 }).first().waitFor();
-        await capture(page, "booking-new", scheme);
+        await page.goto("/shop/blue-mantis?call=1");
+        // The day headings are the composition; wait for the first one.
+        await page
+          .getByRole("region", { name: "Which departure?" })
+          .getByRole("heading")
+          .first()
+          .waitFor();
+        await capture(page, "add-booking-panel", scheme);
       });
 
       test(`the Add-booking diver step renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/bookings/new");
-        await page.getByRole("heading", { name: "New booking", level: 1 }).waitFor();
-        // The whole row is the door and its accessible name is the departure's
-        // title — the seats-left fact rides beside it rather than inside the
-        // link, so it is the row that is clicked here.
-        //
-        // **Scoped to the picker.** This page opens with "Relevant requests"
-        // above the departures, and those rows are `<li>`s too — so an
-        // unscoped `listitem` query took the first *date request*, whose link
-        // is `?request=<id>` on this same page and can never satisfy the
-        // `waitForURL` below. The capture then burned its whole budget and
-        // took the shard down with it, which is worse than a wrong picture:
-        // reg-suit skips its compare when a shard fails and reports green over
-        // nothing compared.
+        await page.goto("/shop/blue-mantis?call=1");
+        // **Scoped to the picker**: "Relevant requests" above it are list rows
+        // too, whose links reopen this panel and never reach a departure.
         await page
           .getByRole("region", { name: "Which departure?" })
           .getByRole("listitem")
@@ -280,11 +269,15 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link")
           .first()
           .click();
-        await page.waitForURL(/\/bookings\/new\/[^/?]+$/);
-        await page.getByRole("link", { name: "Add diver", exact: true }).click();
-        await page.waitForURL(/\/divers\/new/);
-        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
-        await capture(page, "booking-new-diver", scheme);
+        await page.waitForURL(/\/trips\/[^/?]+\?add=1/);
+        const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+        await expect(find).toBeFocused();
+        await find.fill("Priya");
+        await find.press("Enter");
+        // The answer is drawn by the server: a match, or the hand-entry prompt
+        // naming what was typed. Either says the name inside the band.
+        await expect(page.locator("#add-a-booking")).toContainText("Priya");
+        await capture(page, "trip-add-band", scheme);
       });
 
       /**
@@ -302,7 +295,7 @@ for (const scheme of ["light", "dark"] as const) {
       const addPanelSettled = async (page: Page) => {
         // Confirms the click navigated to the panel; direct panel captures
         // already start at this URL.
-        await page.waitForURL(/\/schedule\/board\/new/);
+        await page.waitForURL(/\/schedule\/board\?(.*&)?add=/);
         const courseSelect = page.locator('select[name="courseId"]');
         // Ensure the detached wait below cannot pass before the select mounts.
         await courseSelect.waitFor({ state: "attached" });
@@ -532,7 +525,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?moveBlocked=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,moveBlocked",
+        );
         expect(seeded.ok()).toBe(true);
         const { moveBlocked } = (await seeded.json()) as {
           moveBlocked?: { tripId: string; title: string };
@@ -579,7 +574,9 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,mixedBoat",
+        );
         expect(seeded.ok()).toBe(true);
         const { mixedBoat } = (await seeded.json()) as {
           mixedBoat?: { tripId: string; snorkeler: string; rider: string };
@@ -669,8 +666,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the expanded add-a-departure panel renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
-        await page.getByRole("heading", { name: "Add a departure", level: 1 }).waitFor();
+        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.getByLabel("What is it").waitFor();
         await page.getByRole("button", { name: "Fewer options" }).waitFor();
         await addPanelSettled(page);
         await capture(page, "schedule-builder-add-full", scheme);
@@ -684,7 +681,7 @@ for (const scheme of ["light", "dark"] as const) {
       // generates stable.
       test(`the repeating-trip panel renders true to the design (${scheme})`, async ({ page }) => {
         const title = "Standing Saturday charter";
-        await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
+        await page.goto("/shop/blue-mantis/schedule/board?add=full");
         await page.getByLabel("What is it").fill(title);
         await page.getByLabel("Date").fill(daysFromNow(4));
         await page.getByLabel("Departs").fill("08:00");
