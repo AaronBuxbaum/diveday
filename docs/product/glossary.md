@@ -21,6 +21,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Assistant Instructor (AI)
 - Bundled nitrox
 - C-card
+- Card ledger
 - Card sighting
 - Certification summary
 - Certifications issued here

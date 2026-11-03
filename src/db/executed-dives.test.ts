@@ -19,7 +19,7 @@ import { markBookingNoShow } from "./no-show";
 import {
   bookingArrivalEvents,
   bookings,
-  certifications,
+  cards,
   diveSiteCreatures,
   diveSites,
   executedDives,
@@ -716,7 +716,8 @@ describe("peopleWhoDivedBefore", () => {
     ctx: Awaited<ReturnType<typeof twoDays>>,
     bookingId: string,
   ): Promise<void> {
-    await ctx.db.insert(certifications).values({
+    await ctx.db.insert(cards).values({
+      kind: "level",
       shopId: ctx.shop.id,
       personId: ctx.personId,
       agency: "padi",

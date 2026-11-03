@@ -7,8 +7,9 @@ import {
   drysuitExperienceRecordable,
 } from "@/lib/drysuit-card";
 import { loadActiveStaffRoles } from "./authz";
+import { specialtyCardSpecialty } from "./card-columns";
 import type { AppDb, DbExecutor } from "./client";
-import { activityEvents, people, rentalFitProfiles, specialtyCertifications } from "./schema";
+import { activityEvents, cards, people, rentalFitProfiles } from "./schema";
 import { livePerson } from "./trips-live";
 
 /**
@@ -16,7 +17,7 @@ import { livePerson } from "./trips-live";
  * 2026-10-13; domain review A4/A5, security review X2/X3): the one writer of
  * `people.drysuit_experience_seen_*`. It clears the roster's drysuit-card
  * advisory (`checkDrysuitCard`) and nothing else — it is not a card, never
- * touches `specialty_certifications`, and no readiness or admission gate
+ * touches `cards` (kind = specialty), and no readiness or admission gate
  * reads it.
  *
  * Every precondition lives here, not only in the diver record's UI: the
@@ -105,17 +106,18 @@ export async function recordDrysuitExperienceSeen(
         ),
       )
       .limit(1);
-    const cards = await tx
-      .select({ specialty: specialtyCertifications.specialty })
-      .from(specialtyCertifications)
+    const specialtyCards = await tx
+      .select({ specialty: specialtyCardSpecialty })
+      .from(cards)
       .where(
         and(
-          eq(specialtyCertifications.personId, input.personId),
-          eq(specialtyCertifications.shopId, input.shopId),
-          isNull(specialtyCertifications.deletedAt),
+          eq(cards.kind, "specialty"),
+          eq(cards.personId, input.personId),
+          eq(cards.shopId, input.shopId),
+          isNull(cards.deletedAt),
         ),
       );
-    if (!drysuitExperienceRecordable(fit?.divesDry === true, cards)) {
+    if (!drysuitExperienceRecordable(fit?.divesDry === true, specialtyCards)) {
       return { ok: false, reason: "not_recordable" } as const;
     }
 

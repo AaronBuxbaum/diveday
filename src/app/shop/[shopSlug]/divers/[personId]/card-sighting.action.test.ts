@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { certifications, nitroxCertifications, people } from "@/db/schema";
+import { cards, people } from "@/db/schema";
 import { recordSelfDeclaredCards } from "@/db/self-declared-cards";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -77,8 +77,8 @@ async function claimedLevel(db: AppDb, shopId: string, personId: string) {
   await recordSelfDeclaredCards(db, { shopId, personId, level: "instructor" });
   const [card] = await db
     .select()
-    .from(certifications)
-    .where(eq(certifications.personId, personId));
+    .from(cards)
+    .where(and(eq(cards.kind, "level"), eq(cards.personId, personId)));
   if (!card) throw new Error("self-declaration wrote no card");
   return card;
 }
@@ -87,8 +87,8 @@ async function claimedNitrox(db: AppDb, shopId: string, personId: string) {
   await recordSelfDeclaredCards(db, { shopId, personId, nitrox: true });
   const [card] = await db
     .select()
-    .from(nitroxCertifications)
-    .where(eq(nitroxCertifications.personId, personId));
+    .from(cards)
+    .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, personId)));
   if (!card) throw new Error("self-declaration wrote no nitrox card");
   return card;
 }
@@ -138,7 +138,10 @@ describe("a card sighting whose number is not a card number", () => {
       `/shop/${shop.slug}/divers/${personId}?notice=card-number-implausible&form=cards&card=${card.id}#certifications`,
     );
     // And nothing was written: the claim is still a claim.
-    const [after] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [after] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(after?.status).toBe("pending");
     expect(after?.level).toBe("instructor");
     expect(after?.identifier).toBeNull();
@@ -166,8 +169,8 @@ describe("a card sighting whose number is not a card number", () => {
     );
     const [after] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, card.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.id, card.id)));
     expect(after?.status).toBe("pending");
     expect(after?.identifier).toBeNull();
   });
@@ -191,7 +194,10 @@ describe("a card sighting whose number is not a card number", () => {
     expect(to).toBe(
       `/shop/${shop.slug}/divers/${personId}?notice=verified&form=cards#certifications`,
     );
-    const [after] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [after] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(after?.status).toBe("verified");
     expect(after?.identifier).toBe("SSI-4471");
     // The rung the staffer read off the card, never the diver's own claim.
@@ -223,7 +229,10 @@ describe("a card sighting whose number is not a card number", () => {
     expect(to).toBe(
       `/shop/${shop.slug}/divers/${personId}?notice=card-sighting-required&form=cards#certifications`,
     );
-    const [after] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [after] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     // Not the posted agency, not the posted number, not `verified`: a partial
     // object here would be a card half-transcribed from a form nobody finished.
     expect(after?.status).toBe("pending");
@@ -234,7 +243,7 @@ describe("a card sighting whose number is not a card number", () => {
 });
 
 /**
- * `certificationId` goes straight into `eq(certifications.id, …)`. Postgres does
+ * `certificationId` goes straight into `eq(cards.id, …)`. Postgres does
  * not coerce a malformed uuid literal — it raises — so each of these was a 500
  * where the action's own refusal belongs one line later.
  */
@@ -298,7 +307,10 @@ describe("clearing a wrong 'not certified yet'", () => {
     expect(row?.noCertificationDeclaredAt).not.toBeNull();
     // And no card came into existence anywhere.
     expect(
-      await db.select().from(certifications).where(eq(certifications.personId, personId)),
+      await db
+        .select()
+        .from(cards)
+        .where(and(eq(cards.kind, "level"), eq(cards.personId, personId))),
     ).toHaveLength(0);
   });
 
@@ -383,7 +395,10 @@ describe("clearing a wrong 'not certified yet'", () => {
     );
 
     expect(to).toBe(`/shop/${shop.slug}/divers/${personId}?notice=not-authorized-cards`);
-    const [after] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [after] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(after?.status).toBe("pending");
     expect(after?.identifier).toBeNull();
   });

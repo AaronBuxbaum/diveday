@@ -14,7 +14,7 @@ import { getBookingReadiness } from "./readiness";
 import {
   bookingCapabilities,
   bookings,
-  certifications,
+  cards,
   courses,
   people,
   personRoles,
@@ -694,7 +694,8 @@ describe("claimPartySeat", () => {
       email: "cass@example.com",
     });
     if (!carded) throw new Error("diver setup failed");
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: carded.id,
       agency: "padi",
@@ -730,7 +731,8 @@ describe("claimPartySeat", () => {
     const { db, shop, open } = await seededContext();
     const { lead, memberOne } = await bookParty(db, shop.id, open.id);
     await demandOf(db, shop.id, open.id, "advanced_open_water");
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: lead.personId,
       agency: "padi",
@@ -765,7 +767,8 @@ describe("claimPartySeat", () => {
       email: "rita@example.com",
     });
     if (!carded) throw new Error("diver setup failed");
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: carded.id,
       agency: "padi",
@@ -837,7 +840,8 @@ describe("claimPartySeat", () => {
     });
     if (!organizer || !student) throw new Error("diver setup failed");
     for (const person of [organizer, student]) {
-      await db.insert(certifications).values({
+      await db.insert(cards).values({
+        kind: "level",
         shopId: shop.id,
         personId: person.id,
         agency: "padi",

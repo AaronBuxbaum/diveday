@@ -47,19 +47,18 @@ import { ingestImageUrl } from "@/lib/storage/ingest-url";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { readActiveStaffRoles } from "./authz";
+import { specialtyCardSpecialty } from "./card-columns";
 import type { AppDb } from "./client";
 import { createPerson } from "./people";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
-  certifications,
+  cards,
   importedPaymentHistory,
   internalNotes,
-  nitroxCertifications,
   people,
   priorVisits,
   rentalFitProfiles,
   shops,
-  specialtyCertifications,
   waiverRecords,
 } from "./schema";
 import { getCurrentWaiverTemplate } from "./waivers";
@@ -361,12 +360,12 @@ export async function commitContactImport(
     // they are not (`security-reviewer` finding).
     const liveCerts = await tx
       .select({
-        agency: certifications.agency,
-        identifier: certifications.identifier,
-        personId: certifications.personId,
+        agency: cards.agency,
+        identifier: cards.identifier,
+        personId: cards.personId,
       })
-      .from(certifications)
-      .where(and(eq(certifications.shopId, shopId), isNull(certifications.deletedAt)));
+      .from(cards)
+      .where(and(eq(cards.shopId, shopId), eq(cards.kind, "level"), isNull(cards.deletedAt)));
     // A self-declared row has no card number at all, so it can neither collide
     // with an incoming one nor prove a diver is already carded — it drops out
     // of the dedupe map rather than keying it on an empty string, which would
@@ -378,20 +377,18 @@ export async function commitContactImport(
     );
 
     // Keyed on the specialty too, matching
-    // specialty_certifications_shop_agency_specialty_identifier_unique: an agency
+    // cards_specialty_shop_agency_specialty_identifier_unique: an agency
     // number identifies the diver, so one number legitimately carries a diver's
     // Deep *and* Wreck cards (ADR 20260725-import-specialty-cards).
     const liveSpecialty = await tx
       .select({
-        agency: specialtyCertifications.agency,
-        specialty: specialtyCertifications.specialty,
-        identifier: specialtyCertifications.identifier,
-        personId: specialtyCertifications.personId,
+        agency: cards.agency,
+        specialty: specialtyCardSpecialty,
+        identifier: cards.identifier,
+        personId: cards.personId,
       })
-      .from(specialtyCertifications)
-      .where(
-        and(eq(specialtyCertifications.shopId, shopId), isNull(specialtyCertifications.deletedAt)),
-      );
+      .from(cards)
+      .where(and(eq(cards.shopId, shopId), eq(cards.kind, "specialty"), isNull(cards.deletedAt)));
     // Numberless rows drop out, the same way the nitrox map below drops its
     // own: a row with no identifier is a card nobody has read a number off —
     // a shop-issued one awaiting its agency number (issue #975) — and it
@@ -404,12 +401,12 @@ export async function commitContactImport(
 
     const liveNitrox = await tx
       .select({
-        agency: nitroxCertifications.agency,
-        identifier: nitroxCertifications.identifier,
-        personId: nitroxCertifications.personId,
+        agency: cards.agency,
+        identifier: cards.identifier,
+        personId: cards.personId,
       })
-      .from(nitroxCertifications)
-      .where(and(eq(nitroxCertifications.shopId, shopId), isNull(nitroxCertifications.deletedAt)));
+      .from(cards)
+      .where(and(eq(cards.shopId, shopId), eq(cards.kind, "nitrox"), isNull(cards.deletedAt)));
     // Numberless self-declared rows drop out here for the same reason.
     const seenNitrox = new Map(
       liveNitrox
@@ -742,10 +739,11 @@ async function writeEvidence(
       // the shop's own system already checked — unless the row itself says
       // otherwise, in which case `prepare` already downgraded it to `pending`.
       const inserted = await tx
-        .insert(certifications)
+        .insert(cards)
         .values({
           shopId,
           personId,
+          kind: "level",
           agency: row.cert.agency,
           level: row.cert.level,
           identifier: row.cert.identifier,
@@ -756,7 +754,7 @@ async function writeEvidence(
           importedFromLabel: row.cert.sourceLabel,
         })
         .onConflictDoNothing()
-        .returning({ id: certifications.id });
+        .returning({ id: cards.id });
       if (inserted.length > 0) summary.cardsAdded += 1;
       else summary.cardsSkippedExisting += 1;
     }
@@ -778,10 +776,11 @@ async function writeEvidence(
     // express it, and weakening it would lose the fact that the prior system did
     // check this card.
     const inserted = await tx
-      .insert(specialtyCertifications)
+      .insert(cards)
       .values({
         shopId,
         personId,
+        kind: "specialty",
         agency: card.agency,
         specialty: card.specialty,
         identifier: card.identifier,
@@ -790,7 +789,7 @@ async function writeEvidence(
         importedFromLabel: card.sourceLabel,
       })
       .onConflictDoNothing()
-      .returning({ id: specialtyCertifications.id });
+      .returning({ id: cards.id });
     if (inserted.length > 0) summary.specialtyAdded += 1;
     else summary.specialtySkippedExisting += 1;
   }
@@ -806,10 +805,11 @@ async function writeEvidence(
       // verified nitrox card authorizes enriched-air requests; the imported
       // marker keeps it distinguishable and fills are re-checked at fill time.
       const inserted = await tx
-        .insert(nitroxCertifications)
+        .insert(cards)
         .values({
           shopId,
           personId,
+          kind: "nitrox",
           agency: row.nitrox.agency,
           identifier: row.nitrox.identifier,
           status: row.nitrox.status,
@@ -817,7 +817,7 @@ async function writeEvidence(
           importedFromLabel: row.nitrox.sourceLabel,
         })
         .onConflictDoNothing()
-        .returning({ id: nitroxCertifications.id });
+        .returning({ id: cards.id });
       if (inserted.length > 0) summary.nitroxAdded += 1;
       else summary.nitroxSkippedExisting += 1;
     }

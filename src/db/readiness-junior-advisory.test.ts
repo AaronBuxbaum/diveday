@@ -8,7 +8,7 @@ import {
   reviewCertification,
   upsertTripRequirements,
 } from "./readiness";
-import { certifications, diveSites, people, shops } from "./schema";
+import { cards, diveSites, people, shops } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();
@@ -41,9 +41,11 @@ it("keeps the junior advisory when a young diver has no verified card or site de
   const { db, shop, reef, seat } = await fixture();
   await db.update(people).set({ dateOfBirth: "2015-01-01" }).where(eq(people.id, seat.person.id));
   await db
-    .update(certifications)
+    .update(cards)
     .set({ status: "pending" })
-    .where(and(eq(certifications.shopId, shop.id), eq(certifications.personId, seat.person.id)));
+    .where(
+      and(eq(cards.shopId, shop.id), eq(cards.personId, seat.person.id), eq(cards.kind, "level")),
+    );
   const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
     (row) => row.booking.id === seat.booking.id,
   );
@@ -67,9 +69,11 @@ it("keeps age and supervision checks visible without a verified card, birthday, 
   });
   await db.update(people).set({ dateOfBirth: null }).where(eq(people.id, seat.person.id));
   await db
-    .update(certifications)
+    .update(cards)
     .set({ status: "pending" })
-    .where(and(eq(certifications.shopId, shop.id), eq(certifications.personId, seat.person.id)));
+    .where(
+      and(eq(cards.shopId, shop.id), eq(cards.personId, seat.person.id), eq(cards.kind, "level")),
+    );
   const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
     (row) => row.booking.id === seat.booking.id,
   );
@@ -89,13 +93,13 @@ it("keeps the PADI junior advisory when date of birth and site depth are missing
   if (!staff) throw new Error("staff missing");
   await db.update(people).set({ dateOfBirth: null }).where(eq(people.id, seat.person.id));
   await db
-    .update(certifications)
+    .update(cards)
     .set({
       juniorStatus: "junior",
       juniorStatusVerifiedAt: nowDate(),
       juniorStatusVerifiedByPersonId: staff.person.id,
     })
-    .where(eq(certifications.id, card.id));
+    .where(and(eq(cards.id, card.id), eq(cards.kind, "level")));
   const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
     (row) => row.booking.id === seat.booking.id,
   );
@@ -110,9 +114,9 @@ it("keeps unclassified PADI Advanced card and age checks visible without gating 
   const { db, shop, reef, seat, card } = await fixture();
   await db.update(people).set({ dateOfBirth: null }).where(eq(people.id, seat.person.id));
   await db
-    .update(certifications)
+    .update(cards)
     .set({ level: "advanced_open_water" })
-    .where(eq(certifications.id, card.id));
+    .where(and(eq(cards.id, card.id), eq(cards.kind, "level")));
   for (const depth of [25, null]) {
     await db.update(diveSites).set({ maxDepthMeters: depth }).where(eq(diveSites.shopId, shop.id));
     const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
@@ -130,9 +134,9 @@ it("keeps unclassified PADI card evidence visible for a known adult without gati
   const { db, shop, reef, seat, card } = await fixture();
   await db.update(people).set({ dateOfBirth: "1990-01-01" }).where(eq(people.id, seat.person.id));
   await db
-    .update(certifications)
+    .update(cards)
     .set({ level: "advanced_open_water" })
-    .where(eq(certifications.id, card.id));
+    .where(and(eq(cards.id, card.id), eq(cards.kind, "level")));
   for (const depth of [12, 25, null]) {
     await db.update(diveSites).set({ maxDepthMeters: depth }).where(eq(diveSites.shopId, shop.id));
     const diver = (await listTripReadiness(db, shop.id, reef.id)).find(

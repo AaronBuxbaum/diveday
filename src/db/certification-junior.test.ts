@@ -6,7 +6,7 @@ import { recordJuniorCardStatus } from "./certification-junior";
 import { createDiver } from "./divers";
 import { loadDiverExportBundleInput } from "./export";
 import { createCertification, reviewCertification } from "./readiness";
-import { certificationJuniorReviews, certifications, people } from "./schema";
+import { cards, certificationJuniorReviews, people } from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -58,7 +58,10 @@ describe("junior card sighting", () => {
     expect(await recordJuniorCardStatus(db, { ...input, juniorStatus: "full" })).toMatchObject({
       ok: true,
     });
-    const [current] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [current] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.id, card.id), eq(cards.kind, "level")));
     expect(current).toMatchObject({
       juniorStatus: "full",
       juniorStatusVerifiedByPersonId: staff.id,
@@ -95,7 +98,10 @@ describe("junior card sighting", () => {
       ok: false,
     });
     expect(await recordJuniorCardStatus(db, input)).toMatchObject({ ok: false });
-    const [current] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [current] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.id, card.id), eq(cards.kind, "level")));
     expect(current).toMatchObject({ status: "pending", juniorStatus: null });
   });
 
@@ -124,7 +130,10 @@ describe("junior card sighting", () => {
         .from(certificationJuniorReviews)
         .where(eq(certificationJuniorReviews.personId, diver.id)),
     ).toEqual([]);
-    const [current] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [current] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.id, card.id), eq(cards.kind, "level")));
     expect(current?.juniorStatus).toBeNull();
   });
 
@@ -162,5 +171,36 @@ describe("junior card sighting", () => {
     expect(history?.rows).toHaveLength(1);
     expect(JSON.stringify(history)).toContain(card.id);
     expect(JSON.stringify(history)).not.toContain(otherCard.id);
+  });
+
+  it("records junior status on a level card only, never on a nitrox card keyed by its id", async () => {
+    const { db, shop, diver, staff } = await setup();
+    const [gas] = await db
+      .insert(cards)
+      .values({
+        kind: "nitrox",
+        shopId: shop.id,
+        personId: diver.id,
+        agency: "naui",
+        identifier: `JN-${diver.id}`,
+        status: "verified",
+        reviewedAt: new Date("2026-10-01T00:00:00Z"),
+      })
+      .returning();
+    if (!gas) throw new Error("nitrox card missing");
+    expect(
+      await recordJuniorCardStatus(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        certificationId: gas.id,
+        byPersonId: staff.id,
+        juniorStatus: "junior",
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+    const reviews = await db
+      .select()
+      .from(certificationJuniorReviews)
+      .where(eq(certificationJuniorReviews.certificationId, gas.id));
+    expect(reviews).toHaveLength(0);
   });
 });

@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { asLevelCard, asNitroxCard, asSpecialtyCard, splitCardsByKind } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
@@ -51,17 +52,21 @@ import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./
 import { publishManifestEventsForPerson } from "./manifest-events";
 import { paymentsByBooking } from "./payments";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
-import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
+import type {
+  Certification,
+  CertificationAgency,
+  DiveSpecialty,
+  NitroxCertification,
+  SpecialtyCertification,
+} from "./schema";
 import {
   bookings,
+  cards,
   certificationAgency,
-  certifications,
   courses,
   diveSites,
-  nitroxCertifications,
   people,
   shops,
-  specialtyCertifications,
   tripDives,
   tripRequirements,
   trips,
@@ -349,9 +354,10 @@ export async function createCertification(db: AppDb, input: NewCertification) {
         .for("no key update");
       if (!person) return null;
       const [certification] = await tx
-        .insert(certifications)
-        .values({ ...input, identifier: input.identifier.trim() })
-        .returning();
+        .insert(cards)
+        .values({ ...input, kind: "level", identifier: input.identifier.trim() })
+        .returning()
+        .then((rows) => rows.map(asLevelCard));
       return certification ?? null;
     });
   } catch (error) {
@@ -363,7 +369,7 @@ export async function createCertification(db: AppDb, input: NewCertification) {
 /**
  * `courses.agency` is shop-typed free text (`normalizeAgency` in
  * src/lib/course-ratios.ts is its lowercase/trim twin for ratio matching);
- * `certifications.agency` is the fixed enum every readiness gate reads. A
+ * `cards.agency` is the fixed enum every readiness gate reads. A
  * shop that typed "PADI ", a typo, or an agency DiveDay's enum does not carry
  * (SEI, for one) must still get a real row rather than an uncaught cast
  * failure — `other` is the enum's own bucket for exactly this (see its
@@ -406,7 +412,7 @@ export type NewShopIssuedCertification = {
  * like a stranger's."
  *
  * Lands `verified` immediately, with no card number required —
- * `certifications.issuedByShopAt`'s doc comment carries the full reasoning
+ * `cards.issuedByShopAt`'s doc comment carries the full reasoning
  * and the dive-domain-expert sign-off. A card number, when the agency's own
  * processing produces one, has no path back onto this row yet — this only
  * ever inserts, and today's other capture path (`createCertification`) only
@@ -554,15 +560,16 @@ export async function issueShopCertification(
     // a rung the diver already holds — verified, imported, or shop-issued
     // earlier — is redundant regardless of how the existing one arrived.
     const [existing] = await tx
-      .select({ id: certifications.id })
-      .from(certifications)
+      .select({ id: cards.id })
+      .from(cards)
       .where(
         and(
-          eq(certifications.shopId, input.shopId),
-          eq(certifications.personId, input.personId),
-          eq(certifications.level, input.level),
-          eq(certifications.status, "verified"),
-          isNull(certifications.deletedAt),
+          eq(cards.kind, "level"),
+          eq(cards.shopId, input.shopId),
+          eq(cards.personId, input.personId),
+          eq(cards.level, input.level),
+          eq(cards.status, "verified"),
+          isNull(cards.deletedAt),
         ),
       )
       .limit(1);
@@ -570,8 +577,9 @@ export async function issueShopCertification(
     const now = nowDate();
     try {
       const [certification] = await tx
-        .insert(certifications)
+        .insert(cards)
         .values({
+          kind: "level",
           shopId: input.shopId,
           personId: input.personId,
           agency: agencyFromCourseAgency(course.agency),
@@ -588,7 +596,8 @@ export async function issueShopCertification(
           reviewedAt: now,
           reviewedByPersonId: issuedByPersonId,
         })
-        .returning();
+        .returning()
+        .then((rows) => rows.map(asLevelCard));
       return certification ?? null;
     } catch (error) {
       if (isUniqueConstraintViolation(error)) return null;
@@ -603,7 +612,7 @@ export async function issueShopCertification(
  *
  * Every other pending card got here because a staffer already held something
  * and typed its number, so one tap ("Mark certified") is the whole review. A
- * self-declared row (`certifications.selfDeclaredAt`) has no number at all and
+ * self-declared row (`cards.selfDeclaredAt`) has no number at all and
  * would otherwise inherit that one tap — promoting a stranger's typing to
  * `verified`, which is what readiness and the fill gate read.
  *
@@ -658,22 +667,23 @@ export async function reviewCertification(
   // an update that silently matched nothing is a different failure to report.
   const [existing] = await db
     .select({
-      id: certifications.id,
-      status: certifications.status,
-      selfDeclaredAt: certifications.selfDeclaredAt,
+      id: cards.id,
+      status: cards.status,
+      selfDeclaredAt: cards.selfDeclaredAt,
     })
-    .from(certifications)
+    .from(cards)
     .where(
       and(
-        eq(certifications.id, input.certificationId),
-        eq(certifications.shopId, input.shopId),
+        eq(cards.kind, "level"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
         // A deleted card never comes back through a review, matching both
         // siblings (`reviewSpecialtyCertification`, `reviewNitroxCertification`
         // — a prior `security-reviewer` finding). It matters more now that the
         // self-declaration surface tells staff the right answer to a bad claim
         // is often to delete it: without this, replaying that form's POST would
         // restore the deleted row to the roster as `verified`.
-        isNull(certifications.deletedAt),
+        isNull(cards.deletedAt),
       ),
     )
     .limit(1);
@@ -684,7 +694,7 @@ export async function reviewCertification(
     isUnsightedSelfDeclaration(existing) &&
     (input.agencyChecked || !sighting?.identifier.trim())
   ) {
-    // Also enforced by `certifications_identifier_present_unless_self_declared`
+    // Also enforced by `cards_identifier_present_unless_unsighted`
     // in the database, which would reject the update outright. This refusal
     // exists so the surface can say *what to do* instead of surfacing a
     // constraint violation.
@@ -698,7 +708,7 @@ export async function reviewCertification(
 
   try {
     const [certification] = await db
-      .update(certifications)
+      .update(cards)
       .set({
         status: input.status,
         reviewNote: reviewNoteFor(input.reviewNote),
@@ -721,12 +731,14 @@ export async function reviewCertification(
       })
       .where(
         and(
-          eq(certifications.id, input.certificationId),
-          eq(certifications.shopId, input.shopId),
-          isNull(certifications.deletedAt),
+          eq(cards.kind, "level"),
+          eq(cards.id, input.certificationId),
+          eq(cards.shopId, input.shopId),
+          isNull(cards.deletedAt),
         ),
       )
-      .returning();
+      .returning()
+      .then((rows) => rows.map(asLevelCard));
     if (!certification) return { ok: false, reason: "not_found" };
     // Open and primed manifests re-read (issue #2613).
     await publishManifestEventsForPerson(db, input.shopId, certification.personId);
@@ -780,20 +792,21 @@ export async function reverseCertificationReview(
 ): Promise<{ ok: true; personId: string } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
-      personId: certifications.personId,
-      status: certifications.status,
-      reviewedAt: certifications.reviewedAt,
-      agencyCheckedAt: certifications.agencyCheckedAt,
-      selfDeclaredAt: certifications.selfDeclaredAt,
-      issuedByShopAt: certifications.issuedByShopAt,
-      importedAt: certifications.importedAt,
+      personId: cards.personId,
+      status: cards.status,
+      reviewedAt: cards.reviewedAt,
+      agencyCheckedAt: cards.agencyCheckedAt,
+      selfDeclaredAt: cards.selfDeclaredAt,
+      issuedByShopAt: cards.issuedByShopAt,
+      importedAt: cards.importedAt,
     })
-    .from(certifications)
+    .from(cards)
     .where(
       and(
-        eq(certifications.id, input.certificationId),
-        eq(certifications.shopId, input.shopId),
-        isNull(certifications.deletedAt),
+        eq(cards.kind, "level"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        isNull(cards.deletedAt),
       ),
     )
     .limit(1);
@@ -805,7 +818,7 @@ export async function reverseCertificationReview(
   });
   if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
-    .update(certifications)
+    .update(cards)
     .set({
       status: target.status,
       reviewNote: null,
@@ -815,16 +828,17 @@ export async function reverseCertificationReview(
     })
     .where(
       and(
-        eq(certifications.id, input.certificationId),
-        eq(certifications.shopId, input.shopId),
-        isNull(certifications.deletedAt),
+        eq(cards.kind, "level"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        isNull(cards.deletedAt),
         // The review that was offered, still: a review landing between the read
         // above and this write matches no row (issue #2612).
-        eq(certifications.reviewedAt, input.reviewedAt),
-        ...(input.reversingAgencyCheck ? [] : [isNull(certifications.agencyCheckedAt)]),
+        eq(cards.reviewedAt, input.reviewedAt),
+        ...(input.reversingAgencyCheck ? [] : [isNull(cards.agencyCheckedAt)]),
       ),
     )
-    .returning({ id: certifications.id });
+    .returning({ id: cards.id });
   return row ? { ok: true, personId: existing.personId } : { ok: false, reason: "stale" };
 }
 
@@ -855,26 +869,27 @@ export async function reverseSpecialtyReview(
 ): Promise<{ ok: true; personId: string } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
-      personId: specialtyCertifications.personId,
-      status: specialtyCertifications.status,
-      reviewedAt: specialtyCertifications.reviewedAt,
-      agencyCheckedAt: specialtyCertifications.agencyCheckedAt,
-      selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
-      issuedByShopAt: specialtyCertifications.issuedByShopAt,
-      importedAt: specialtyCertifications.importedAt,
+      personId: cards.personId,
+      status: cards.status,
+      reviewedAt: cards.reviewedAt,
+      agencyCheckedAt: cards.agencyCheckedAt,
+      selfDeclaredAt: cards.selfDeclaredAt,
+      issuedByShopAt: cards.issuedByShopAt,
+      importedAt: cards.importedAt,
       // A listed card (layer 3): its note is the agency's words, never the
       // review's, and stays; and at an agency that numbers each card its
       // number may be a sighting (`unreviewedCardState`).
-      listedFromCertificationId: specialtyCertifications.listedFromCertificationId,
-      agency: specialtyCertifications.agency,
-      reviewNote: specialtyCertifications.reviewNote,
+      listedFromCertificationId: cards.listedFromCertificationId,
+      agency: cards.agency,
+      reviewNote: cards.reviewNote,
     })
-    .from(specialtyCertifications)
+    .from(cards)
     .where(
       and(
-        eq(specialtyCertifications.id, input.certificationId),
-        eq(specialtyCertifications.shopId, input.shopId),
-        isNull(specialtyCertifications.deletedAt),
+        eq(cards.kind, "specialty"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        isNull(cards.deletedAt),
       ),
     )
     .limit(1);
@@ -890,7 +905,7 @@ export async function reverseSpecialtyReview(
   });
   if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
-    .update(specialtyCertifications)
+    .update(cards)
     .set({
       status: target.status,
       reviewNote: existing.listedFromCertificationId ? existing.reviewNote : null,
@@ -900,13 +915,14 @@ export async function reverseSpecialtyReview(
     })
     .where(
       and(
-        eq(specialtyCertifications.id, input.certificationId),
-        eq(specialtyCertifications.shopId, input.shopId),
-        isNull(specialtyCertifications.deletedAt),
-        eq(specialtyCertifications.reviewedAt, input.reviewedAt),
+        eq(cards.kind, "specialty"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        isNull(cards.deletedAt),
+        eq(cards.reviewedAt, input.reviewedAt),
       ),
     )
-    .returning({ id: specialtyCertifications.id });
+    .returning({ id: cards.id });
   return row ? { ok: true, personId: existing.personId } : { ok: false, reason: "stale" };
 }
 
@@ -921,19 +937,20 @@ export async function deleteCertification(
   input: { shopId: string; certificationId: string; deletedByPersonId?: string },
 ) {
   const [row] = await db
-    .update(certifications)
+    .update(cards)
     .set({
       deletedAt: nowDate(),
       ...(input.deletedByPersonId ? { deletedByPersonId: input.deletedByPersonId } : {}),
     })
     .where(
       and(
-        eq(certifications.id, input.certificationId),
-        eq(certifications.shopId, input.shopId),
-        isNull(certifications.deletedAt),
+        eq(cards.kind, "level"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        isNull(cards.deletedAt),
       ),
     )
-    .returning({ id: certifications.id });
+    .returning({ id: cards.id });
   return Boolean(row);
 }
 
@@ -950,9 +967,13 @@ export async function restoreCertification(
 ) {
   const [deleted] = await db
     .select()
-    .from(certifications)
+    .from(cards)
     .where(
-      and(eq(certifications.id, input.certificationId), eq(certifications.shopId, input.shopId)),
+      and(
+        eq(cards.kind, "level"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+      ),
     )
     .limit(1);
   if (!deleted || deleted.deletedAt === null) return false;
@@ -967,34 +988,38 @@ export async function restoreCertification(
       if (!person) return false;
       const [current] = await tx
         .select()
-        .from(certifications)
+        .from(cards)
         .where(
           and(
-            eq(certifications.id, input.certificationId),
-            eq(certifications.shopId, input.shopId),
-            eq(certifications.personId, person.id),
+            eq(cards.kind, "level"),
+            eq(cards.id, input.certificationId),
+            eq(cards.shopId, input.shopId),
+            eq(cards.personId, person.id),
           ),
         )
         .limit(1);
       if (!current || current.deletedAt === null) return false;
       const [conflict] = await tx
-        .select({ id: certifications.id })
-        .from(certifications)
+        .select({ id: cards.id })
+        .from(cards)
         .where(
           and(
-            eq(certifications.shopId, input.shopId),
-            eq(certifications.agency, current.agency),
-            sql`lower(${certifications.identifier}) = lower(${current.identifier})`,
-            isNull(certifications.deletedAt),
+            eq(cards.kind, "level"),
+            eq(cards.shopId, input.shopId),
+            eq(cards.agency, current.agency),
+            sql`lower(${cards.identifier}) = lower(${current.identifier})`,
+            isNull(cards.deletedAt),
           ),
         )
         .limit(1);
       if (conflict) return false;
       const [row] = await tx
-        .update(certifications)
+        .update(cards)
         .set({ deletedAt: null, deletedByPersonId: null })
-        .where(and(eq(certifications.id, current.id), eq(certifications.shopId, input.shopId)))
-        .returning({ id: certifications.id });
+        .where(
+          and(eq(cards.kind, "level"), eq(cards.id, current.id), eq(cards.shopId, input.shopId)),
+        )
+        .returning({ id: cards.id });
       return Boolean(row);
     });
   } catch (error) {
@@ -1032,9 +1057,10 @@ export async function createSpecialtyCertification(db: AppDb, input: NewSpecialt
   if (!person) return null;
   try {
     const [certification] = await db
-      .insert(specialtyCertifications)
-      .values({ ...input, identifier: input.identifier.trim() })
-      .returning();
+      .insert(cards)
+      .values({ ...input, kind: "specialty", identifier: input.identifier.trim() })
+      .returning()
+      .then((rows) => rows.map(asSpecialtyCard));
     return certification ?? null;
   } catch (error) {
     if (isUniqueConstraintViolation(error)) return null;
@@ -1100,7 +1126,7 @@ export type NewShopIssuedSpecialty = {
 export async function issueShopSpecialtyCertification(
   db: AppDb,
   input: NewShopIssuedSpecialty,
-): Promise<typeof specialtyCertifications.$inferSelect | null> {
+): Promise<SpecialtyCertification | null> {
   const issuedByPersonId = await activeCertificationReviewerId(
     db,
     input.shopId,
@@ -1114,22 +1140,24 @@ export async function issueShopSpecialtyCertification(
     // re-issuing one the diver already has is redundant, and a second pending
     // row would give a staffer two identical things to confirm.
     const [existing] = await tx
-      .select({ id: specialtyCertifications.id })
-      .from(specialtyCertifications)
+      .select({ id: cards.id })
+      .from(cards)
       .where(
         and(
-          eq(specialtyCertifications.shopId, input.shopId),
-          eq(specialtyCertifications.personId, input.personId),
-          eq(specialtyCertifications.specialty, input.specialty),
-          isNull(specialtyCertifications.deletedAt),
+          eq(cards.kind, "specialty"),
+          eq(cards.shopId, input.shopId),
+          eq(cards.personId, input.personId),
+          eq(cards.specialty, input.specialty),
+          isNull(cards.deletedAt),
         ),
       )
       .limit(1);
     if (existing) return null;
     try {
       const [certification] = await tx
-        .insert(specialtyCertifications)
+        .insert(cards)
         .values({
+          kind: "specialty",
           shopId: input.shopId,
           personId: input.personId,
           agency: agencyFromCourseAgency(context.courseAgency),
@@ -1148,7 +1176,8 @@ export async function issueShopSpecialtyCertification(
           // still has to, and those columns are what "Confirmed by {name} on
           // {date}" reads from.
         })
-        .returning();
+        .returning()
+        .then((rows) => rows.map(asSpecialtyCard));
       return certification ?? null;
     } catch (error) {
       if (isUniqueConstraintViolation(error)) return null;
@@ -1166,7 +1195,7 @@ export async function issueShopSpecialtyCertification(
 export async function issueShopNitroxCertification(
   db: AppDb,
   input: Omit<NewShopIssuedSpecialty, "specialty">,
-): Promise<typeof nitroxCertifications.$inferSelect | null> {
+): Promise<NitroxCertification | null> {
   const issuedByPersonId = await activeCertificationReviewerId(
     db,
     input.shopId,
@@ -1177,21 +1206,23 @@ export async function issueShopNitroxCertification(
     const context = await shopIssuedCourseContext(tx, input);
     if (!context) return null;
     const [existing] = await tx
-      .select({ id: nitroxCertifications.id })
-      .from(nitroxCertifications)
+      .select({ id: cards.id })
+      .from(cards)
       .where(
         and(
-          eq(nitroxCertifications.shopId, input.shopId),
-          eq(nitroxCertifications.personId, input.personId),
-          isNull(nitroxCertifications.deletedAt),
+          eq(cards.kind, "nitrox"),
+          eq(cards.shopId, input.shopId),
+          eq(cards.personId, input.personId),
+          isNull(cards.deletedAt),
         ),
       )
       .limit(1);
     if (existing) return null;
     try {
       const [certification] = await tx
-        .insert(nitroxCertifications)
+        .insert(cards)
         .values({
+          kind: "nitrox",
           shopId: input.shopId,
           personId: input.personId,
           agency: agencyFromCourseAgency(context.courseAgency),
@@ -1201,7 +1232,8 @@ export async function issueShopNitroxCertification(
           issuedFromTripId: input.tripId,
           issuedByPersonId,
         })
-        .returning();
+        .returning()
+        .then((rows) => rows.map(asNitroxCard));
       return certification ?? null;
     } catch (error) {
       if (isUniqueConstraintViolation(error)) return null;
@@ -1320,7 +1352,7 @@ export async function reviewSpecialtyCertification(
     agencyChecked?: boolean;
   },
 ): Promise<
-  | { ok: true; certification: typeof specialtyCertifications.$inferSelect }
+  | { ok: true; certification: SpecialtyCertification }
   | { ok: false; reason: CertificationReviewRefusal }
 > {
   const reviewedByPersonId = input.reviewedByPersonId
@@ -1333,27 +1365,28 @@ export async function reviewSpecialtyCertification(
   // than an update that silently matched no rows.
   const [existing] = await db
     .select({
-      id: specialtyCertifications.id,
-      status: specialtyCertifications.status,
-      selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
+      id: cards.id,
+      status: cards.status,
+      selfDeclaredAt: cards.selfDeclaredAt,
       // A shop-issued row is numberless too, and its confirm is the tap that
       // opens the depth gate — so it asks for the card exactly as a
       // self-declaration's does (issue #975).
-      issuedByShopAt: specialtyCertifications.issuedByShopAt,
+      issuedByShopAt: cards.issuedByShopAt,
       // The agency's words a check filed the card with (layer 3), kept by a
       // confirm that brings none of its own.
-      reviewNote: specialtyCertifications.reviewNote,
+      reviewNote: cards.reviewNote,
       // A card an agency check listed with no number of its own is confirmed
       // through the sighting too (`needsCardSighting`).
-      identifier: specialtyCertifications.identifier,
-      listedFromCertificationId: specialtyCertifications.listedFromCertificationId,
+      identifier: cards.identifier,
+      listedFromCertificationId: cards.listedFromCertificationId,
     })
-    .from(specialtyCertifications)
+    .from(cards)
     .where(
       and(
-        eq(specialtyCertifications.id, input.certificationId),
-        eq(specialtyCertifications.shopId, input.shopId),
-        isNull(specialtyCertifications.deletedAt),
+        eq(cards.kind, "specialty"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        isNull(cards.deletedAt),
       ),
     )
     .limit(1);
@@ -1369,7 +1402,7 @@ export async function reviewSpecialtyCertification(
   }
 
   const [certification] = await db
-    .update(specialtyCertifications)
+    .update(cards)
     .set({
       status: input.status,
       reviewNote: reviewNoteFor(input.reviewNote) ?? existing.reviewNote,
@@ -1382,15 +1415,17 @@ export async function reviewSpecialtyCertification(
     })
     .where(
       and(
-        eq(specialtyCertifications.id, input.certificationId),
-        eq(specialtyCertifications.shopId, input.shopId),
+        eq(cards.kind, "specialty"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
         // Never re-verify a deleted card: this is the mutation that opens a
         // specialty (depth) gate, and a deleted card is out of every readiness
         // read by design (`security-reviewer` finding).
-        isNull(specialtyCertifications.deletedAt),
+        isNull(cards.deletedAt),
       ),
     )
-    .returning();
+    .returning()
+    .then((rows) => rows.map(asSpecialtyCard));
   if (!certification) return { ok: false, reason: "not_found" };
   await publishManifestEventsForPerson(db, input.shopId, certification.personId);
   return { ok: true, certification };
@@ -1417,19 +1452,20 @@ export async function deleteSpecialtyCertification(
   input: { shopId: string; certificationId: string; deletedByPersonId?: string },
 ) {
   const [row] = await db
-    .update(specialtyCertifications)
+    .update(cards)
     .set({
       deletedAt: nowDate(),
       ...(input.deletedByPersonId ? { deletedByPersonId: input.deletedByPersonId } : {}),
     })
     .where(
       and(
-        eq(specialtyCertifications.id, input.certificationId),
-        eq(specialtyCertifications.shopId, input.shopId),
-        isNull(specialtyCertifications.deletedAt),
+        eq(cards.kind, "specialty"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        isNull(cards.deletedAt),
       ),
     )
-    .returning({ id: specialtyCertifications.id });
+    .returning({ id: cards.id });
   return Boolean(row);
 }
 
@@ -1440,38 +1476,41 @@ export async function restoreSpecialtyCertification(
 ) {
   const [deleted] = await db
     .select()
-    .from(specialtyCertifications)
+    .from(cards)
     .where(
       and(
-        eq(specialtyCertifications.id, input.certificationId),
-        eq(specialtyCertifications.shopId, input.shopId),
+        eq(cards.kind, "specialty"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
       ),
     )
     .limit(1);
   if (!deleted || deleted.deletedAt === null) return false;
   const [conflict] = await db
-    .select({ id: specialtyCertifications.id })
-    .from(specialtyCertifications)
+    .select({ id: cards.id })
+    .from(cards)
     .where(
       and(
-        eq(specialtyCertifications.shopId, input.shopId),
-        eq(specialtyCertifications.agency, deleted.agency),
-        sql`lower(${specialtyCertifications.identifier}) = lower(${deleted.identifier})`,
-        isNull(specialtyCertifications.deletedAt),
+        eq(cards.kind, "specialty"),
+        eq(cards.shopId, input.shopId),
+        eq(cards.agency, deleted.agency),
+        sql`lower(${cards.identifier}) = lower(${deleted.identifier})`,
+        isNull(cards.deletedAt),
       ),
     )
     .limit(1);
   if (conflict) return false;
   const [row] = await db
-    .update(specialtyCertifications)
+    .update(cards)
     .set({ deletedAt: null, deletedByPersonId: null })
     .where(
       and(
-        eq(specialtyCertifications.id, input.certificationId),
-        eq(specialtyCertifications.shopId, input.shopId),
+        eq(cards.kind, "specialty"),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
       ),
     )
-    .returning({ id: specialtyCertifications.id });
+    .returning({ id: cards.id });
   return Boolean(row);
 }
 
@@ -1888,50 +1927,39 @@ export async function listTripsReadiness(
   // run one after another on its one client (`./query-helpers`).
   const evidence = () =>
     queryAll(db, [
+      // One read of the ledger, every kind (issue #2722), sorted by
+      // `splitCardsByKind` into the three lists the gates take.
       () =>
         db
           .select()
-          .from(certifications)
+          .from(cards)
           .where(
             and(
-              eq(certifications.shopId, shopId),
-              inArray(certifications.personId, personIds),
-              isNull(certifications.deletedAt),
+              eq(cards.shopId, shopId),
+              inArray(cards.personId, personIds),
+              isNull(cards.deletedAt),
             ),
-          ),
-      () =>
-        db
-          .select()
-          .from(specialtyCertifications)
-          .where(
-            and(
-              eq(specialtyCertifications.shopId, shopId),
-              inArray(specialtyCertifications.personId, personIds),
-              isNull(specialtyCertifications.deletedAt),
-            ),
-          ),
-      () =>
-        db
-          .select()
-          .from(nitroxCertifications)
-          .where(
-            and(
-              eq(nitroxCertifications.shopId, shopId),
-              inArray(nitroxCertifications.personId, personIds),
-              isNull(nitroxCertifications.deletedAt),
-            ),
-          ),
+          )
+          .then(splitCardsByKind),
       () => listSignedWaiversByPerson(db, shopId, personIds),
       () => listCourseSeatsInTraining(db, shopId, personIds),
     ]);
-  const noEvidence: Awaited<ReturnType<typeof evidence>> = [[], [], [], new Map(), []];
+  const noEvidence: Awaited<ReturnType<typeof evidence>> = [splitCardsByKind([]), new Map(), []];
   // Seats staff marked as a training dive (issue #2275): read only when a
   // mark exists, so an ordinary fun dive still pays nothing here.
   const markedSeats = markedSeatsOf(waiverRows, courseByTrip);
   const [
     paymentByBooking,
     [courseFormsByTrip, courseFormSignatures, trainingMarks],
-    [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson, courseSeatRows],
+    [
+      {
+        certifications: certificationRows,
+        specialtyCertifications: specialtyRows,
+        nitroxCertifications: nitroxRows,
+      },
+      signedWaiversByPerson,
+      courseSeatRows,
+    ],
   ] = await queryAll(db, [
     () => paymentsByBooking(db, shopId, bookingIds),
     async () => {

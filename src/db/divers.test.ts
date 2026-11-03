@@ -36,14 +36,13 @@ import {
   bookings,
   buddyTeamEvents,
   calendarFeeds,
-  certifications,
+  cards,
   courses,
   executedDives,
   interests,
   interestUnsubscribeTokens,
   internalNotes,
   mediaDeletionAttempts,
-  nitroxCertifications,
   notificationDeliveries,
   notificationSendQueue,
   orders,
@@ -55,7 +54,6 @@ import {
   rentalFitProfiles,
   rollCallEvents,
   shops,
-  specialtyCertifications,
   tripLastMinutePromos,
   tripReviews,
   trips,
@@ -781,7 +779,7 @@ describe("roster search and pagination", () => {
    * carries that count: the ledger's rows are a name, an exceptional badge and
    * one quiet fact (ADR 20260827-people-not-lists), and the chip is what says
    * why every row in this view is here. So the expectation is read straight
-   * off the three card tables instead of off the row, which is the stronger
+   * off `cards` (every kind) instead of off the row, which is the stronger
    * assertion anyway — it no longer proves the filter against a number the
    * same module computed.
    */
@@ -807,15 +805,23 @@ describe("roster search and pagination", () => {
         }
       }
     };
-    collect(await db.select().from(certifications).where(eq(certifications.shopId, shop.id)));
     collect(
       await db
         .select()
-        .from(specialtyCertifications)
-        .where(eq(specialtyCertifications.shopId, shop.id)),
+        .from(cards)
+        .where(and(eq(cards.kind, "level"), eq(cards.shopId, shop.id))),
     );
     collect(
-      await db.select().from(nitroxCertifications).where(eq(nitroxCertifications.shopId, shop.id)),
+      await db
+        .select()
+        .from(cards)
+        .where(and(eq(cards.kind, "specialty"), eq(cards.shopId, shop.id))),
+    );
+    collect(
+      await db
+        .select()
+        .from(cards)
+        .where(and(eq(cards.kind, "nitrox"), eq(cards.shopId, shop.id))),
     );
 
     const flagged = await listDiverSummaries(db, shop.id, {
@@ -831,11 +837,11 @@ describe("roster search and pagination", () => {
     const targetId = [...waiting][0];
     if (!targetId) throw new Error("expected a diver with a waiting card");
     const reviewed = nowDate();
-    for (const table of [certifications, specialtyCertifications, nitroxCertifications]) {
+    for (const kind of ["level", "specialty", "nitrox"] as const) {
       await db
-        .update(table)
+        .update(cards)
         .set({ status: "verified", reviewedAt: reviewed })
-        .where(eq(table.personId, targetId));
+        .where(and(eq(cards.kind, kind), eq(cards.personId, targetId)));
     }
     const after = await listDiverSummaries(db, shop.id, {
       filter: "needs_attention",
@@ -1186,7 +1192,8 @@ describe("diver erasure", () => {
       .set({ integrityHash: computeWaiverIntegrityHash(beforeSeal), integrityVersion: 1 })
       .where(eq(waiverRecords.id, issued.recordId));
 
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: diver.id,
       agency: "padi",
@@ -1196,7 +1203,8 @@ describe("diver erasure", () => {
       importedFromLabel: "Old Shop CRM",
       status: "verified",
     });
-    await db.insert(specialtyCertifications).values({
+    await db.insert(cards).values({
+      kind: "specialty",
       shopId: shop.id,
       personId: diver.id,
       agency: "padi",
@@ -1205,7 +1213,8 @@ describe("diver erasure", () => {
       reviewNote: "Elena shared her digital certification record",
       status: "verified",
     });
-    await db.insert(nitroxCertifications).values({
+    await db.insert(cards).values({
+      kind: "nitrox",
       shopId: shop.id,
       personId: diver.id,
       agency: "padi",
@@ -1539,8 +1548,8 @@ describe("diver erasure", () => {
 
     const [levelCard] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, diver.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, diver.id)));
     expect(levelCard?.identifier).not.toContain("ELENA");
     expect(levelCard).toMatchObject({
       reviewNote: null,
@@ -1555,15 +1564,15 @@ describe("diver erasure", () => {
 
     const [specialtyCard] = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.personId, diver.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "specialty"), eq(cards.personId, diver.id)));
     expect(specialtyCard?.identifier).not.toContain("ELENA");
     expect(specialtyCard).toMatchObject({ reviewNote: null });
 
     const [nitroxCard] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.personId, diver.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, diver.id)));
     expect(nitroxCard?.identifier).not.toContain("ELENA");
     expect(nitroxCard).toMatchObject({ reviewNote: null, importedFromLabel: null });
 
@@ -1942,7 +1951,8 @@ describe("diver erasure", () => {
       phone: "+1 305 555 0199",
     });
     if (!bystander) throw new Error("bystander insert failed");
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: bystander.id,
       agency: "padi",
@@ -1961,8 +1971,8 @@ describe("diver erasure", () => {
     expect(bea).toMatchObject({ fullName: "Bystander Bea", email: "bea@example.com" });
     const [beaCard] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, bystander.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, bystander.id)));
     expect(beaCard).toMatchObject({ identifier: "PADI-BEA-1", deletedAt: null });
   });
 

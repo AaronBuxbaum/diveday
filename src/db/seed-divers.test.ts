@@ -3,14 +3,7 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness } from "./readiness";
-import {
-  bookings,
-  nitroxCertifications,
-  people,
-  specialtyCertifications,
-  tripRequirements,
-  waiverRecords,
-} from "./schema";
+import { bookings, cards, people, tripRequirements, waiverRecords } from "./schema";
 import { birthDateTurning } from "./seed-clock";
 
 describe("seeded imported-card states", () => {
@@ -32,8 +25,8 @@ describe("seeded imported-card states", () => {
 
     const specialty = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.personId, hana.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "specialty"), eq(cards.personId, hana.id)));
     expect(specialty).toHaveLength(1);
     // Verified (the prior system checked it) but unreviewed — which is exactly
     // the pair `specialtyBlocker` holds a depth gate on.
@@ -47,8 +40,8 @@ describe("seeded imported-card states", () => {
 
     const nitrox = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.personId, hana.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, hana.id)));
     expect(nitrox).toHaveLength(1);
     expect(nitrox[0]).toMatchObject({ status: "verified", reviewedAt: null });
     expect(nitrox[0].importedAt).toBeInstanceOf(Date);

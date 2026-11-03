@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { judgeAgencyPage } from "@/lib/agency-check";
 import { fileScopedShopContext } from "@/test/db";
 import { certificationForAgencyCheck, listAgencyCheckableCards } from "./agency-check";
 import type { AppDb } from "./client";
-import { certifications, people, shops } from "./schema";
+import { cards, people, shops } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { withAgencyChecks } from "./today";
 
@@ -21,11 +21,12 @@ async function card(
   db: AppDb,
   shopId: string,
   personId: string,
-  values: Partial<typeof certifications.$inferInsert> = {},
+  values: Partial<typeof cards.$inferInsert> = {},
 ) {
   const [row] = await db
-    .insert(certifications)
+    .insert(cards)
     .values({
+      kind: "level",
       shopId,
       personId,
       agency: "ssi",
@@ -89,8 +90,8 @@ describe("listAgencyCheckableCards", () => {
     await recordSelfDeclaredCards(db, { shopId: shop.id, personId, level: "advanced_open_water" });
     const [claim] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, personId));
+      .from(cards)
+      .where(and(eq(cards.personId, personId), eq(cards.kind, "level")));
 
     // SSI can open a manual lookup with just a first name, but that incomplete
     // identity must never turn a returned page into a verified card.

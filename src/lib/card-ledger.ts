@@ -1,9 +1,4 @@
-import type {
-  Card,
-  Certification,
-  NitroxCertification,
-  SpecialtyCertification,
-} from "@/db/schema";
+import type { Card, Certification, NitroxCertification, SpecialtyCertification } from "@/db/schema";
 
 /**
  * **One ledger, three shapes** (issue #2722). Every diver card is a `cards` row
@@ -32,7 +27,8 @@ export function isNitroxCard(card: Card): card is NitroxCertification {
  * judge a rung from a nitrox card.
  */
 export function asLevelCard(card: Card): Certification {
-  if (!isLevelCard(card)) throw new Error(`Card ${card.id} is a ${card.kind} card, not a level card.`);
+  if (!isLevelCard(card))
+    throw new Error(`Card ${card.id} is a ${card.kind} card, not a level card.`);
   return card;
 }
 

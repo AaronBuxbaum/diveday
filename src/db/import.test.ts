@@ -12,10 +12,9 @@ import { canPersonImportShopData, commitContactImport } from "./import";
 import { saveRentalFit } from "./rental-fit";
 import {
   bookings,
-  certifications,
+  cards,
   importedPaymentHistory,
   internalNotes,
-  nitroxCertifications,
   orders,
   people,
   personRoles,
@@ -23,7 +22,6 @@ import {
   rentalFitProfiles,
   rollCallEvents,
   shops,
-  specialtyCertifications,
   trips,
   userAccounts,
   waiverRecords,
@@ -83,8 +81,8 @@ describe("commitContactImport", () => {
 
     const [card] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, person.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, person.id)));
     // Imported cards land verified (the prior system checked them), flagged
     // imported with the prior-shop label, and reviewedAt null so the diver UI
     // surfaces a one-tap confirm. This is the line (ADR 20260724-import-verified-cards).
@@ -305,8 +303,8 @@ describe("commitContactImport", () => {
     if (!person) throw new Error("person not created");
     const [card] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.personId, person.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
     // Verified on import (fills are re-checked at fill time), flagged imported,
     // reviewedAt null so it surfaces the one-tap confirm.
     expect(card).toMatchObject({ identifier: "NX-9001", status: "verified", reviewedAt: null });
@@ -327,8 +325,8 @@ describe("commitContactImport", () => {
     if (!person) throw new Error("person not created");
     const [card] = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.personId, person.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "specialty"), eq(cards.personId, person.id)));
     // Verified because the prior system checked it, flagged imported, and
     // reviewedAt null — which is exactly what `specialtyBlocker` holds the deep
     // gate on until a staffer taps confirm (ADR 20260725-import-specialty-cards).
@@ -362,12 +360,12 @@ describe("commitContactImport", () => {
 
     const person = await personByEmail(db, shop.id, "molly.import@example.com");
     if (!person) throw new Error("person not created");
-    const cards = await db
+    const cardRows = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.personId, person.id));
-    expect(cards.map((c) => c.specialty).sort()).toEqual(["deep", "wreck"]);
-    expect(cards.every((c) => c.identifier === "PADI-5150")).toBe(true);
+      .from(cards)
+      .where(and(eq(cards.kind, "specialty"), eq(cards.personId, person.id)));
+    expect(cardRows.map((c) => c.specialty).sort()).toEqual(["deep", "wreck"]);
+    expect(cardRows.every((c) => c.identifier === "PADI-5150")).toBe(true);
   });
 
   it("brings in every card of a one-row-per-card certification file", async () => {
@@ -396,13 +394,13 @@ describe("commitContactImport", () => {
     if (!person) throw new Error("person not created");
     const specialties = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.personId, person.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "specialty"), eq(cards.personId, person.id)));
     expect(specialties.map((c) => c.specialty).sort()).toEqual(["deep", "night"]);
     const levels = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, person.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, person.id)));
     expect(levels).toHaveLength(1);
   });
 
@@ -437,7 +435,10 @@ describe("commitContactImport", () => {
     const second = await personByEmail(db, shop.id, "second.import@example.com");
     if (!second) throw new Error("second person not created");
     expect(
-      await db.select().from(certifications).where(eq(certifications.personId, second.id)),
+      await db
+        .select()
+        .from(cards)
+        .where(and(eq(cards.kind, "level"), eq(cards.personId, second.id))),
     ).toHaveLength(0);
   });
 
@@ -451,7 +452,8 @@ describe("commitContactImport", () => {
       .insert(people)
       .values({ shopId: rival.id, fullName: "Rival Rae", email: "shared.import@example.com" })
       .returning();
-    await db.insert(specialtyCertifications).values({
+    await db.insert(cards).values({
+      kind: "specialty",
       shopId: rival.id,
       personId: rivalDiver.id,
       agency: "padi",
@@ -476,8 +478,8 @@ describe("commitContactImport", () => {
     expect(ours?.id).not.toBe(rivalDiver.id);
     const rivalCards = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.personId, rivalDiver.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "specialty"), eq(cards.personId, rivalDiver.id)));
     expect(rivalCards).toHaveLength(1);
   });
 
@@ -493,8 +495,8 @@ describe("commitContactImport", () => {
     if (!person) throw new Error("person not created");
     const [card] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, person.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, person.id)));
     // Pending, but still flagged imported: provenance is a fact either way.
     expect(card).toMatchObject({ status: "pending", identifier: "OW-4004" });
     expect(card.importedAt).toBeInstanceOf(Date);

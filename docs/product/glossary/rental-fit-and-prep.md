@@ -149,8 +149,8 @@
   only the recorder, a manager or the owner may clear it, and each act leaves a line on the
   diver's activity trail. It quiets the roster's drysuit-card advisory for a **Dives dry** diver
   with no drysuit card on file at all, and nothing else (a card awaiting review keeps the
-  advisory up: confirming the card is the fix): it is staff-observed, **never a card**, has no row in
-  `specialty_certifications`, and no readiness, admission or counter-rental gate reads it, so a trip
+  advisory up: confirming the card is the fix): it is staff-observed, **never a card**, has no row on
+  the **Card ledger**, and no readiness, admission or counter-rental gate reads it, so a trip
   or site requiring the drysuit specialty still refuses. Recorded and cleared only from the
   diver record's certifications group; no diver-facing form, `/ready` included, can set it.
 - **Gear register** — the shop's own rental fleet as physical units (`gear_items`), opt-in **by

@@ -25,17 +25,7 @@ import {
   upsertTripRequirements,
 } from "./readiness";
 import { readinessFixturesFor } from "./readiness-test-fixtures";
-import {
-  certifications,
-  courses,
-  diveSites,
-  nitroxCertifications,
-  people,
-  shops,
-  specialtyCertifications,
-  tripAssignments,
-  trips,
-} from "./schema";
+import { cards, courses, diveSites, people, shops, tripAssignments, trips } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import {
   createTrip,
@@ -52,9 +42,9 @@ async function activeCertificationIds(
   shopId: string,
 ) {
   const rows = await db
-    .select({ id: certifications.id })
-    .from(certifications)
-    .where(and(eq(certifications.shopId, shopId), isNull(certifications.deletedAt)));
+    .select({ id: cards.id })
+    .from(cards)
+    .where(and(eq(cards.kind, "level"), eq(cards.shopId, shopId), isNull(cards.deletedAt)));
   return rows.map((row) => row.id);
 }
 
@@ -64,11 +54,9 @@ async function activeSpecialtyCertificationIds(
   shopId: string,
 ) {
   const rows = await db
-    .select({ id: specialtyCertifications.id })
-    .from(specialtyCertifications)
-    .where(
-      and(eq(specialtyCertifications.shopId, shopId), isNull(specialtyCertifications.deletedAt)),
-    );
+    .select({ id: cards.id })
+    .from(cards)
+    .where(and(eq(cards.kind, "specialty"), eq(cards.shopId, shopId), isNull(cards.deletedAt)));
   return rows.map((row) => row.id);
 }
 
@@ -264,7 +252,7 @@ describe("trip readiness (in-memory PGlite)", () => {
   });
 
   it("refuses the one-tap confirm on a specialty card the diver typed, and takes it on a sighting", async () => {
-    // The reason `specialty_certifications` gained `self_declared_at` at all.
+    // The reason specialty cards (`cards`, kind = specialty) carry `self_declared_at` at all.
     // Without the stamp a row a diver typed on their readiness link is
     // byte-for-byte a staff transcription, so this tap would promote an
     // invented number to `verified` — the state that clears a depth gate past
@@ -346,8 +334,9 @@ describe("trip readiness (in-memory PGlite)", () => {
       requiresPayment: false,
     });
     const [imported] = await db
-      .insert(specialtyCertifications)
+      .insert(cards)
       .values({
+        kind: "specialty",
         shopId: shop.id,
         personId: rosterEntry.person.id,
         agency: "padi",
@@ -434,11 +423,9 @@ describe("trip readiness (in-memory PGlite)", () => {
     const nitroxHolders = new Set(
       (
         await db
-          .select({ personId: nitroxCertifications.personId })
-          .from(nitroxCertifications)
-          .where(
-            and(eq(nitroxCertifications.shopId, shop.id), isNull(nitroxCertifications.deletedAt)),
-          )
+          .select({ personId: cards.personId })
+          .from(cards)
+          .where(and(eq(cards.kind, "nitrox"), eq(cards.shopId, shop.id), isNull(cards.deletedAt)))
       ).map((r) => r.personId),
     );
     const entry = roster.find((r) => !nitroxHolders.has(r.person.id));
@@ -849,11 +836,9 @@ describe("site cert gate across the whole itinerary (DOM-C1)", () => {
     const nitroxHolders = new Set(
       (
         await db
-          .select({ personId: nitroxCertifications.personId })
-          .from(nitroxCertifications)
-          .where(
-            and(eq(nitroxCertifications.shopId, shop.id), isNull(nitroxCertifications.deletedAt)),
-          )
+          .select({ personId: cards.personId })
+          .from(cards)
+          .where(and(eq(cards.kind, "nitrox"), eq(cards.shopId, shop.id), isNull(cards.deletedAt)))
       ).map((r) => r.personId),
     );
     const entry = roster.find((r) => !nitroxHolders.has(r.person.id));
@@ -1026,7 +1011,7 @@ describe("tripRequirementSummaries — the gate every card on a page shows", () 
 
 /**
  * Issue #717. The one path from "this shop taught and ran this course" to a
- * `certifications` row this shop's own booking gate reads — a per-student tap
+ * level card (`cards`, kind = level) this shop's own booking gate reads — a per-student tap
  * on a course session's own roster, never automatic.
  */
 describe("issueShopCertification (issue #717)", () => {
@@ -1209,8 +1194,8 @@ describe("issueShopCertification (issue #717)", () => {
     expect(second).toBeNull();
     const rows = await db
       .select()
-      .from(certifications)
-      .where(and(eq(certifications.shopId, shop.id), eq(certifications.personId, personId)));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.shopId, shop.id), eq(cards.personId, personId)));
     expect(rows).toHaveLength(1);
   });
 

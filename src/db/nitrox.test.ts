@@ -12,7 +12,7 @@ import {
   unreviewNitroxCertification,
   verifiedNitroxPersonIds,
 } from "./nitrox";
-import { bookings, nitroxCertifications, people } from "./schema";
+import { bookings, cards, people } from "./schema";
 import { setShopRentalItems } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
 import { getTripPrep } from "./trips-prep";
@@ -137,8 +137,9 @@ describe("nitrox certification workflow", () => {
     // confirm (ADR 20260724-import-verified-cards, dive-domain-expert carve-out).
     const { db, shopId, bookingId, personId } = await context();
     const [card] = await db
-      .insert(nitroxCertifications)
+      .insert(cards)
       .values({
+        kind: "nitrox",
         shopId,
         personId,
         agency: "padi",
@@ -387,8 +388,8 @@ describe("unreviewNitroxCertification", () => {
   async function card(db: AppDb, id: string) {
     const [row] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, id));
+      .from(cards)
+      .where(and(eq(cards.id, id), eq(cards.kind, "nitrox")));
     if (!row) throw new Error("card vanished");
     return row;
   }
@@ -430,8 +431,9 @@ describe("unreviewNitroxCertification", () => {
   it("returns an imported card to imported-and-unconfirmed, which authorizes no fill", async () => {
     const ctx = await context();
     const [imported] = await ctx.db
-      .insert(nitroxCertifications)
+      .insert(cards)
       .values({
+        kind: "nitrox",
         shopId: ctx.shopId,
         personId: ctx.personId,
         agency: "padi",
@@ -483,9 +485,9 @@ describe("unreviewNitroxCertification", () => {
     const ctx = await context();
     const sighted = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
     await ctx.db
-      .update(nitroxCertifications)
+      .update(cards)
       .set({ selfDeclaredAt: new Date("2026-07-01T00:00:00Z") })
-      .where(eq(nitroxCertifications.id, sighted.id));
+      .where(and(eq(cards.id, sighted.id), eq(cards.kind, "nitrox")));
     expect(
       await unreviewNitroxCertification(ctx.db, {
         shopId: ctx.shopId,
@@ -509,5 +511,49 @@ describe("unreviewNitroxCertification", () => {
         reviewedAt: (await card(ctx.db, unreviewed.id)).reviewedAt ?? new Date(0),
       }),
     ).toEqual({ ok: false, reason: "not_reviewed" });
+  });
+});
+
+describe("nitrox reads only nitrox cards (issue #2722)", () => {
+  it("a verified level card never authorizes a fill, and a nitrox action keyed on its id touches nothing", async () => {
+    const { db, shopId, personId, bookingId } = await context();
+    await setShopRentalItems(db, shopId, ["nitrox"]);
+    const [level] = await db
+      .insert(cards)
+      .values({
+        kind: "level",
+        shopId,
+        personId,
+        agency: "padi",
+        level: "advanced_open_water",
+        identifier: "AOW-2722",
+        status: "pending",
+      })
+      .returning();
+    if (!level) throw new Error("level card insert failed");
+
+    // A nitrox review handed the level card's id finds no nitrox card.
+    expect(
+      await reviewNitroxCertification(db, {
+        shopId,
+        certificationId: level.id,
+        status: "verified",
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+    expect(await deleteNitroxCertification(db, { shopId, certificationId: level.id })).toBe(false);
+    const [after] = await db.select().from(cards).where(eq(cards.id, level.id));
+    expect(after).toMatchObject({ status: "pending", reviewedAt: null, deletedAt: null });
+
+    // Verified, the level card still is not a nitrox card.
+    await db
+      .update(cards)
+      .set({ status: "verified", reviewedAt: new Date("2026-10-01T00:00:00Z") })
+      .where(and(eq(cards.id, level.id), eq(cards.kind, "level")));
+    expect((await verifiedNitroxPersonIds(db, shopId)).has(personId)).toBe(false);
+    expect(await setBookingNitrox(db, { shopId, bookingId, wantsNitrox: true })).toEqual({
+      ok: true,
+      wantsNitrox: true,
+      certified: false,
+    });
   });
 });

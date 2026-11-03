@@ -1,12 +1,14 @@
 import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
 import { DAY_MS } from "@/lib/clock";
+import { levelCardLevel, specialtyCardSpecialty } from "./card-columns";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import {
-  certifications,
-  nitroxCertifications,
+  type Card,
+  type Certification,
+  cards,
   people,
-  specialtyCertifications,
+  type SpecialtyCertification,
   trips,
 } from "./schema";
 import { livePerson } from "./trips-live";
@@ -16,8 +18,8 @@ import { livePerson } from "./trips-live";
  * told the agency about a card it issued. It records the shop's own act and
  * issues nothing; the agency sends its own card. Every card the shop issues
  * can carry it: a level card, an Enriched Air card and a specialty card, each
- * in its own table with the same two columns and the same
- * `*_processed_only_when_issued` check (dive-domain review F4).
+ * a `cards` row of its kind, with the same two columns and the one
+ * `cards_processed_only_when_issued` check (dive-domain review F4).
  */
 export const CARD_KINDS = ["level", "nitrox", "specialty"] as const;
 
@@ -27,27 +29,16 @@ export function isCardKind(value: unknown): value is CardKind {
   return typeof value === "string" && (CARD_KINDS as readonly string[]).includes(value);
 }
 
-type CardTable =
-  | typeof certifications
-  | typeof nitroxCertifications
-  | typeof specialtyCertifications;
-
-const CARD_TABLES: Record<CardKind, CardTable> = {
-  level: certifications,
-  nitrox: nitroxCertifications,
-  specialty: specialtyCertifications,
-};
-
 /** What the card certifies, as codes for its line on the list. */
 export type CardWhat =
-  | { kind: "level"; level: (typeof certifications.$inferSelect)["level"] }
+  | { kind: "level"; level: Certification["level"] }
   | { kind: "nitrox" }
-  | { kind: "specialty"; specialty: (typeof specialtyCertifications.$inferSelect)["specialty"] };
+  | { kind: "specialty"; specialty: SpecialtyCertification["specialty"] };
 
 export type IssuedCard = {
   kind: CardKind;
   certificationId: string;
-  agency: (typeof certifications.$inferSelect)["agency"];
+  agency: Card["agency"];
   issuedAt: Date;
   processedAt: Date | null;
 };
@@ -64,25 +55,25 @@ export async function issuedCardsForTrip(
 ): Promise<Map<string, IssuedCard>> {
   const byPerson = new Map<string, IssuedCard>();
   for (const kind of CARD_KINDS) {
-    const table = CARD_TABLES[kind];
     const rows = await db
       .select({
-        personId: table.personId,
-        certificationId: table.id,
-        agency: table.agency,
-        issuedAt: table.issuedByShopAt,
-        processedAt: table.processedWithAgencyAt,
+        personId: cards.personId,
+        certificationId: cards.id,
+        agency: cards.agency,
+        issuedAt: cards.issuedByShopAt,
+        processedAt: cards.processedWithAgencyAt,
       })
-      .from(table)
+      .from(cards)
       .where(
         and(
-          eq(table.shopId, shopId),
-          eq(table.issuedFromTripId, tripId),
-          isNotNull(table.issuedByShopAt),
-          isNull(table.deletedAt),
+          eq(cards.shopId, shopId),
+          eq(cards.kind, kind),
+          eq(cards.issuedFromTripId, tripId),
+          isNotNull(cards.issuedByShopAt),
+          isNull(cards.deletedAt),
         ),
       )
-      .orderBy(asc(table.createdAt));
+      .orderBy(asc(cards.createdAt));
     for (const row of rows) {
       if (!row.issuedAt || byPerson.has(row.personId)) continue;
       byPerson.set(row.personId, {
@@ -115,9 +106,8 @@ export async function setCardProcessed(
     tripId?: string;
   },
 ): Promise<boolean> {
-  const table = CARD_TABLES[input.kind];
   const updated = await db
-    .update(table)
+    .update(cards)
     .set(
       input.processed
         ? { processedWithAgencyAt: input.now, processedByPersonId: input.actorPersonId }
@@ -125,14 +115,16 @@ export async function setCardProcessed(
     )
     .where(
       and(
-        eq(table.id, input.certificationId),
-        eq(table.shopId, input.shopId),
-        isNotNull(table.issuedByShopAt),
-        isNull(table.deletedAt),
-        input.tripId ? eq(table.issuedFromTripId, input.tripId) : undefined,
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        // The id came from a form: it is not proof of which kind it names.
+        eq(cards.kind, input.kind),
+        isNotNull(cards.issuedByShopAt),
+        isNull(cards.deletedAt),
+        input.tripId ? eq(cards.issuedFromTripId, input.tripId) : undefined,
       ),
     )
-    .returning({ id: table.id });
+    .returning({ id: cards.id });
   return updated.length > 0;
 }
 
@@ -147,21 +139,22 @@ export type CardToProcess = IssuedCard & {
 };
 
 /** The person and session joins every list query shares, each naming the shop (security N7). */
-function waitingOn(table: CardTable, shopId: string) {
+function waitingOn(kind: CardKind, shopId: string) {
   return and(
-    eq(table.shopId, shopId),
-    isNotNull(table.issuedByShopAt),
-    isNull(table.processedWithAgencyAt),
-    isNull(table.deletedAt),
+    eq(cards.shopId, shopId),
+    eq(cards.kind, kind),
+    isNotNull(cards.issuedByShopAt),
+    isNull(cards.processedWithAgencyAt),
+    isNull(cards.deletedAt),
     livePerson(),
     isNull(people.anonymizedAt),
   );
 }
 
-const personJoin = (table: CardTable, shopId: string) =>
-  and(eq(people.id, table.personId), eq(people.shopId, shopId));
-const sessionJoin = (table: CardTable, shopId: string) =>
-  and(eq(trips.id, table.issuedFromTripId), eq(trips.shopId, shopId));
+const personJoin = (shopId: string) =>
+  and(eq(people.id, cards.personId), eq(people.shopId, shopId));
+const sessionJoin = (shopId: string) =>
+  and(eq(trips.id, cards.issuedFromTripId), eq(trips.shopId, shopId));
 
 /**
  * Every card the shop issued and has not marked processed, of every kind and
@@ -176,52 +169,52 @@ export async function listCardsToProcess(db: DbExecutor, shopId: string): Promis
     () =>
       db
         .select({
-          certificationId: certifications.id,
-          agency: certifications.agency,
-          issuedAt: certifications.issuedByShopAt,
-          level: certifications.level,
+          certificationId: cards.id,
+          agency: cards.agency,
+          issuedAt: cards.issuedByShopAt,
+          level: levelCardLevel,
           personId: people.id,
           fullName: people.fullName,
           courseId: trips.courseId,
         })
-        .from(certifications)
-        .innerJoin(people, personJoin(certifications, shopId))
+        .from(cards)
+        .innerJoin(people, personJoin(shopId))
         // diveday:allow-deleted-trips: a card earned on a session since deleted is still the diver's to submit.
-        .leftJoin(trips, sessionJoin(certifications, shopId))
-        .where(waitingOn(certifications, shopId)),
+        .leftJoin(trips, sessionJoin(shopId))
+        .where(waitingOn("level", shopId)),
     () =>
       db
         .select({
-          certificationId: nitroxCertifications.id,
-          agency: nitroxCertifications.agency,
-          issuedAt: nitroxCertifications.issuedByShopAt,
+          certificationId: cards.id,
+          agency: cards.agency,
+          issuedAt: cards.issuedByShopAt,
           personId: people.id,
           fullName: people.fullName,
           courseId: trips.courseId,
         })
-        .from(nitroxCertifications)
-        .innerJoin(people, personJoin(nitroxCertifications, shopId))
+        .from(cards)
+        .innerJoin(people, personJoin(shopId))
         // diveday:allow-deleted-trips: a card earned on a session since deleted is still the diver's to submit.
-        .leftJoin(trips, sessionJoin(nitroxCertifications, shopId))
-        .where(waitingOn(nitroxCertifications, shopId)),
+        .leftJoin(trips, sessionJoin(shopId))
+        .where(waitingOn("nitrox", shopId)),
     () =>
       db
         .select({
-          certificationId: specialtyCertifications.id,
-          agency: specialtyCertifications.agency,
-          issuedAt: specialtyCertifications.issuedByShopAt,
-          specialty: specialtyCertifications.specialty,
+          certificationId: cards.id,
+          agency: cards.agency,
+          issuedAt: cards.issuedByShopAt,
+          specialty: specialtyCardSpecialty,
           personId: people.id,
           fullName: people.fullName,
           courseId: trips.courseId,
         })
-        .from(specialtyCertifications)
-        .innerJoin(people, personJoin(specialtyCertifications, shopId))
+        .from(cards)
+        .innerJoin(people, personJoin(shopId))
         // diveday:allow-deleted-trips: a card earned on a session since deleted is still the diver's to submit.
-        .leftJoin(trips, sessionJoin(specialtyCertifications, shopId))
-        .where(waitingOn(specialtyCertifications, shopId)),
+        .leftJoin(trips, sessionJoin(shopId))
+        .where(waitingOn("specialty", shopId)),
   ]);
-  const cards: CardToProcess[] = [];
+  const list: CardToProcess[] = [];
   const add = (
     row: {
       certificationId: string;
@@ -235,7 +228,7 @@ export async function listCardsToProcess(db: DbExecutor, shopId: string): Promis
     what: CardWhat,
   ) => {
     if (!row.issuedAt) return;
-    cards.push({
+    list.push({
       kind,
       what,
       certificationId: row.certificationId,
@@ -253,7 +246,7 @@ export async function listCardsToProcess(db: DbExecutor, shopId: string): Promis
     add(row, "specialty", { kind: "specialty", specialty: row.specialty });
   }
   // Oldest first; a tie keeps the order stable by name, then id.
-  return cards.sort(
+  return list.sort(
     (a, b) =>
       a.issuedAt.getTime() - b.issuedAt.getTime() ||
       (a.fullName < b.fullName ? -1 : a.fullName > b.fullName ? 1 : 0) ||

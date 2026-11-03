@@ -1,4 +1,5 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
+import { asLevelCard } from "@/lib/card-ledger";
 import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
 import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
@@ -40,7 +41,7 @@ import {
   type RentalFitItem,
   toDiverRentalFit,
 } from "./rental-fit";
-import { bookings, certifications, people, shops, trips } from "./schema";
+import { bookings, cards, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWithBookedOnce, listTripScheduleDays } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
@@ -532,7 +533,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       // Any live card, verified or not: whether a course student has dives to
       // log (`packsLogbook`, issue #2795). In this row rather than a query of
       // its own, so the page stays inside its round-trip budget.
-      holdsAnyCertification: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.deletedAt} is null)`,
+      holdsAnyCertification: sql<boolean>`exists (select 1 from ${cards} where ${cards.kind} = 'level' and ${cards.shopId} = ${bookings.shopId} and ${cards.personId} = ${bookings.personId} and ${cards.deletedAt} is null)`,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -881,14 +882,16 @@ export async function carriedPreparationForDiver(
   const [levelCards, signedWaivers, waiverTemplate, signerRows, declared] = await Promise.all([
     db
       .select()
-      .from(certifications)
+      .from(cards)
       .where(
         and(
-          eq(certifications.shopId, input.shopId),
-          eq(certifications.personId, input.personId),
-          isNull(certifications.deletedAt),
+          eq(cards.kind, "level"),
+          eq(cards.shopId, input.shopId),
+          eq(cards.personId, input.personId),
+          isNull(cards.deletedAt),
         ),
-      ),
+      )
+      .then((rows) => rows.map(asLevelCard)),
     listSignedWaiversByPerson(db, input.shopId, [input.personId]),
     getCurrentWaiverGeneration(db, input.shopId),
     // The guardian rule (src/lib/guardian.ts): a minor's solo signature is not
