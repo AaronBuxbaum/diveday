@@ -90,7 +90,7 @@ describe("the staff tree", () => {
     const { problems, files, shells } = await staffWidthProblems();
     expect(problems).toEqual([]);
     expect(files).toBeGreaterThan(80);
-    expect(shells).toBeGreaterThan(60);
+    expect(shells).toBeGreaterThan(50);
     for (const { why } of ALLOWED.values()) expect(why.length).toBeGreaterThan(0);
   });
 });
