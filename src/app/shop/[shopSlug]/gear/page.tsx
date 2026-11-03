@@ -9,13 +9,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
-import {
-  countGearItemsByKind,
-  gearRegisterGroups,
-  listDeletedGearItems,
-  listGearServiceDueRows,
-} from "@/db/gear";
-import { countGearRentalHolders, listGearRentals } from "@/db/gear-rentals";
+import { getGearRegisterPage } from "@/db/gear-register-page";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -37,6 +31,7 @@ import {
   restoreGearItemAction,
   returnGearReservationAction,
 } from "./actions";
+import * as rentOut from "./rentals/_components/RentOutPanel";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
@@ -105,18 +100,15 @@ export default async function GearRegisterPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{
-    notice?: string;
-    page?: string;
-    kind?: string;
-    view?: string;
-    undoId?: string;
-  }>;
+  searchParams: Promise<rentOut.RegisterSearch>;
 }) {
   const { shopSlug } = await params;
   const search = await searchParams;
-  const { notice, page, kind: kindParam } = search;
-  const { db, shop, session } = await requireShopSurface(shopSlug);
+  const surface = await requireShopSurface(shopSlug);
+  const { db, shop, session } = surface;
+  const rentingOut = rentOut.rentOutOpen(search); // its notices are said beside its steps
+  const { page, kind: kindParam } = search;
+  const notice = rentingOut ? undefined : search.notice;
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
@@ -134,21 +126,14 @@ export default async function GearRegisterPage({
   // Every open rental by who holds it, trip and counter alike. Its chip states
   // a count, so the count is read on every request; the list only when asked.
   const rentalsView = search.view === "rentals";
-  const [groups, deletedPage, countsByKind, serviceDue, rentalHolders, rentalsPage] =
-    await Promise.all([
-      gearRegisterGroups(db, shop.id, {
-        todayLocal,
-        kind,
-        page: deletedView || serviceView || rentalsView ? 1 : wantedPage,
-      }),
-      listDeletedGearItems(db, shop.id, { page: deletedView ? wantedPage : 1 }),
-      countGearItemsByKind(db, shop.id),
-      listGearServiceDueRows(db, shop.id, { todayLocal }),
-      countGearRentalHolders(db, shop.id),
-      rentalsView
-        ? listGearRentals(db, shop.id, { todayLocal, page: wantedPage, timezone: shop.timezone })
-        : Promise.resolve(null),
-    ]);
+  const { groups, deletedPage, countsByKind, serviceDue, rentalHolders, rentalsPage } =
+    await getGearRegisterPage(db, shop.id, {
+      todayLocal,
+      kind,
+      view: deletedView ? "deleted" : serviceView ? "service" : rentalsView ? "rentals" : "groups",
+      page: wantedPage,
+      timezone: shop.timezone,
+    });
   const fleetTotal = [...countsByKind.values()].reduce((sum, value) => sum + value, 0);
   // A view with nothing in it is not a view: an empty Deleted list falls back
   // to the fleet rather than rendering a heading over nothing. A shop that has
@@ -278,14 +263,14 @@ export default async function GearRegisterPage({
   );
   return (
     <StaffPage width="full">
-      <FlashParams params={["notice", "undoId"]} />
+      <FlashParams params={["notice", "undoId", "unit"]} />
       <ShopPageHeader
         title={t("gear.title")}
         // Rent out, then the page's primary "Add a unit"; the empty register
         // keeps its one door in the card below.
         actions={
           fleetTotal > 0 ? (
-            <RegisterHeaderActions shopSlug={shopSlug} t={t} addUnitControl={addUnitControl} />
+            <RegisterHeaderActions {...{ shopSlug, t, addUnitControl, rentingOut }} />
           ) : undefined
         }
       />
@@ -298,6 +283,8 @@ export default async function GearRegisterPage({
         shop={shop}
         t={t}
       />
+
+      <rentOut.RegisterRentOutPanel {...{ surface, shopSlug, search, t, locale }} />
 
       {notice === "deleted" && search.undoId ? (
         <UndoToast

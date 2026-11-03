@@ -38,7 +38,7 @@ export async function todayCatchUpScenario(browser: Browser, owner: Page, worker
       (response) =>
         response.request().method() === "POST" &&
         response.request().headers()["next-action"] !== undefined &&
-        new URL(response.url()).pathname === "/shop/blue-mantis/divers/new" &&
+        new URL(response.url()).pathname === "/shop/blue-mantis/divers" &&
         response.headers()["x-action-redirect"]?.includes(`/trips/${tripId}`) === true,
     );
     await owner.getByRole("button", { name: "Add to boat" }).click();

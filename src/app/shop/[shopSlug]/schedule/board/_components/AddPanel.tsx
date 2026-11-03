@@ -166,7 +166,6 @@ export function AddPanel({
   initialSite,
   requestPlan,
   startExpanded,
-  standalone = false,
   onCancel,
 }: {
   builder: AddPanelBuilder;
@@ -176,7 +175,6 @@ export function AddPanel({
   requestPlan?: BuilderRequestPlan | null;
   /** Opened straight into its full depth — a link that meant the whole form. */
   startExpanded: boolean;
-  standalone?: boolean;
   onCancel: () => void;
 }) {
   const {
@@ -246,11 +244,7 @@ export function AddPanel({
       onInputCapture={markPatternEdited}
       onChangeCapture={markPatternEdited}
       columns={1}
-      className={
-        standalone
-          ? "mt-3 gap-y-4"
-          : "mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
-      }
+      className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       {returnWeek ? <input type="hidden" name="boardWeek" value={returnWeek} /> : null}
       <span ref={patternAnchor} className="contents" />

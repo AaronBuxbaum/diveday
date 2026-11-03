@@ -8,16 +8,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { getMonthDeparturesWithEmptySeats } from "@/db/open-seats";
-import { getMonthMoneyDetail } from "@/db/report-lines";
-import {
-  canPersonViewShopReports,
-  crewCountsByTrip,
-  earliestImportedFinancialHistoryDate,
-  earliestReportedTripStart,
-  getMonthlyReport,
-  pagedMonthlyReportTrips,
-} from "@/db/reporting";
+import { canPersonViewShopReports, getReportsFloor, getReportsMonth } from "@/db/reports-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -164,8 +155,7 @@ export default async function ReportsPage({
   // real rather than querying the year 1. An imported payment/refund is a
   // genuine financial fact even without a DiveDay departure, so its earliest
   // eligible source day also moves this floor.
-  const earliestTripStart = await earliestReportedTripStart(db, shop.id);
-  const earliestImportedFinancialDate = await earliestImportedFinancialHistoryDate(
+  const { earliestTripStart, earliestImportedFinancialDate } = await getReportsFloor(
     db,
     shop.id,
     currency,
@@ -234,26 +224,28 @@ export default async function ReportsPage({
   // Both months ride one Promise.all; the month under way also reads its sailed half (item 22).
   const shopMoney = { currency, timeZone: tz };
   const [
-    input,
-    tripPage,
-    baselineInput,
-    moneyDetail,
-    emptySeats,
-    sailedInput,
+    {
+      report: input,
+      tripPage,
+      baseline: baselineInput,
+      moneyDetail,
+      emptySeats,
+      sailed: sailedInput,
+      crewCounts,
+    },
     owner,
     monthSummary,
   ] = await Promise.all([
-    getMonthlyReport(db, shop.id, monthStart, monthEnd, shopMoney),
-    pagedMonthlyReportTrips(db, shop.id, monthStart, monthEnd, {
+    getReportsMonth(db, shop.id, {
+      month: current,
+      start: monthStart,
+      end: monthEnd,
+      now,
       page: Number.parseInt(page ?? "", 10),
+      shopMoney,
+      baselineWindow,
+      underWay,
     }),
-    baselineWindow
-      ? getMonthlyReport(db, shop.id, baselineWindow.start, baselineWindow.end, shopMoney)
-      : Promise.resolve(null),
-    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, shopMoney, current),
-    // The departures that left with empty seats (issue #2424), on the debrief's own rule.
-    getMonthDeparturesWithEmptySeats(db, shop.id, { startUtc: monthStart, endUtc: monthEnd }, now),
-    underWay ? getMonthlyReport(db, shop.id, monthStart, now, shopMoney) : null,
     readMonthOwner(db, shop, { startUtc: monthStart, endUtc: monthEnd }),
     readMonthDays(db, shop.id, tz, current, now),
   ]);
@@ -269,17 +261,6 @@ export default async function ReportsPage({
       : null;
   const { trips } = tripPage;
   const hasMonthlyActivity = monthHasActivity(report);
-  // How many crew were assigned per departure on this page — the number
-  // only, never a cost (issue #700). Scoped to the ledger's own page of
-  // trips, the same bound every other per-trip figure on this page already
-  // keeps to.
-  const crewCounts = trips.length
-    ? await crewCountsByTrip(
-        db,
-        shop.id,
-        trips.map((trip) => trip.tripId),
-      )
-    : new Map<string, number>();
 
   const baselineMonthLabel = baselineMonth ? monthLabel(baselineMonth, locale) : null;
 

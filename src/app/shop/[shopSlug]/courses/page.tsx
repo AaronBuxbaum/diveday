@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
@@ -12,17 +11,8 @@ import { buttonClass } from "@/components/ui/button";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
 import { SearchField } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
-import { canPersonConfigureTrips } from "@/db/authz";
-import { getDb } from "@/db/client";
-import {
-  COURSE_LIST_VIEWS,
-  type CourseListView,
-  courseListViewParam,
-  coursesAwaitingFormText,
-  pagedCourses,
-} from "@/db/courses";
-import { getShopBySlug } from "@/db/shops";
-import { nextSessionStartByCourse } from "@/db/trips";
+import type { CourseListView } from "@/db/courses";
+import { COURSE_LIST_VIEWS, courseListViewParam, getCoursesPage } from "@/db/courses-page";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -30,7 +20,7 @@ import { courseTotalCents } from "@/lib/courses";
 import { formatMoneyScanned, formatShortDate, joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { CourseFollowUps, LadderNotice } from "./_components/CourseFollowUps";
 import { CourseRoster, type CourseRosterRow } from "./_components/CourseRoster";
 
@@ -79,7 +69,6 @@ export default async function CoursesPage({
   searchParams: Promise<{ page?: string; q?: string; view?: string; notice?: string }>;
 }) {
   await connection(); // visibility can change between requests — render per request
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { page, q, view: viewParam, notice } = await searchParams;
   // **Find a course in one line** (third UX review, item 35): 55 courses over
@@ -87,18 +76,9 @@ export default async function CoursesPage({
   const query = q?.trim() ?? "";
   const view = courseListViewParam(viewParam);
   const narrowed = Boolean(query || view);
-  const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
-  if (!shop) notFound();
-  // This page is the one staff surface that resolves its shop from the URL slug
-  // rather than from `session.user.shopId`, and it then hands that URL-supplied
-  // `shop.id` to a permission check joined against the *session's* personId. The
-  // cross-tenant refusal in this segment's `layout.tsx` already covers the case,
-  // but the outer wall is never allowed to be the only layer (ADR-0006, quoted
-  // atop src/lib/authz.ts) — a layout is one refactor away from not running
-  // before its page. For a staffer on their own shop the two ids are equal and
-  // nothing below changes.
-  if (shop.id !== session.user.shopId) notFound();
+  // The session's own shop, refused (`notFound()`) when the URL names another:
+  // the permission check below joins the session's personId against it.
+  const { db, shop, session } = await requireShopSurface(shopSlug);
 
   const locale = await requestLocale(shop.defaultLocale);
   const st = staffTranslator(locale);
@@ -107,42 +87,27 @@ export default async function CoursesPage({
   // range so a bookmarked page past the end lands on the last real one. The
   // rows arrive agency-major, then in progression order — the sort the ledger's
   // groups are cut from.
-  const coursePage = await pagedCourses(db, shop.id, {
-    page: Number.parseInt(page ?? "", 10),
-    query,
-    view,
-  });
+  //
+  // Scheduling is owner/manager/instructor work, so the button is absent —
+  // not disabled — for anyone else (AGENTS.md: gate by not rendering). The
+  // new-trip page re-checks against live roles either way.
+  //
+  // **The one live fact on a page of standing ones** (ADR 20260919-one-idea,
+  // decision I · Tide, slice 23g — "a course is sessions on days"): when each
+  // course next runs, one query for the whole page rather than one per row.
+  //
+  // The agency's forms a template set up with no text yet: nobody signs
+  // them until the shop pastes the wording in. Said once above the list,
+  // shop-wide, with a door to the first (UX review 2026-10-10, item 16);
+  // under every row it was the same amber sentence nearly twenty times.
+  const { coursePage, can, nextSessions, formsAwaitingText } = await getCoursesPage(
+    db,
+    shop.id,
+    session.user.personId,
+    { page: Number.parseInt(page ?? "", 10), query, view },
+  );
   const courseList = coursePage.courses;
-  // Together rather than in sequence: only the second needs the page of
-  // courses, and the permission read does not, so awaiting them one after the
-  // other would buy a serial round trip for nothing.
-  const [canSchedule, nextSessions, formsAwaitingText] = await Promise.all([
-    // Scheduling is owner/manager/instructor work, so the button is absent —
-    // not disabled — for anyone else (AGENTS.md: gate by not rendering). The
-    // new-trip page re-checks against live roles either way.
-    canPersonConfigureTrips(db, shop.id, session.user.personId),
-    // **The one live fact on a page of standing ones** (ADR 20260919-one-idea,
-    // decision I · Tide, slice 23g — "a course is sessions on days"). Until
-    // this, a diver reading `/s/<shop>/courses/<slug>` could see when a course
-    // next ran and the shop teaching it could not: the roster said what is
-    // taught, never when. One query for the whole page rather than one per row.
-    //
-    // `"shop"` and not `"storefront"`: a course booked out to one family is
-    // scheduled, and the staffer who scheduled it must not read "Not scheduled"
-    // on the morning it runs. The storefront's own call stays public-scoped,
-    // because a diver cannot turn up to a private session.
-    nextSessionStartByCourse(
-      db,
-      shop.id,
-      courseList.map((course) => course.id),
-      "shop",
-    ),
-    // The agency's forms a template set up with no text yet: nobody signs
-    // them until the shop pastes the wording in. Said once above the list,
-    // shop-wide, with a door to the first (UX review 2026-10-10, item 16);
-    // under every row it was the same amber sentence nearly twenty times.
-    coursesAwaitingFormText(db, shop.id),
-  ]);
+  const canSchedule = can.schedule;
   const base = `/shop/${shopSlug}/courses`;
   // The search and the view travel with every page turn and chip.
   const listHref = ({

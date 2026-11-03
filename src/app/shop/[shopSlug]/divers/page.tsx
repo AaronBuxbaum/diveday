@@ -3,17 +3,15 @@ import { after } from "next/server";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { OfferedUndo } from "@/app/shop/[shopSlug]/_components/OfferedUndo";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { AddPanel } from "@/components/AddPanel";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice } from "@/components/ShopNotice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { loadActiveStaffRoles } from "@/db/authz";
-import { listDiverMergeDuplicateIds } from "@/db/diver-merge";
-import { isDiverFilter, isDiverSort, listDiverSummaries } from "@/db/divers";
-import { rosterFacts } from "@/db/roster-facts";
+import { getDiversPage } from "@/db/divers-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { canDeleteDiver, canExportShopData, canImportShopData, canMergeDiver } from "@/lib/authz";
+import { addPanelOpen } from "@/lib/add-panel";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
@@ -22,6 +20,7 @@ import { rosterLetter, rosterRowFact } from "@/lib/roster-rows";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { readUndoOffer, UNDO_PARAMS } from "@/lib/undo";
+import { AddDiverPanel, type AddDiverSearch, addDiverCloseHref } from "./_components/AddDiverPanel";
 import { DiverList, type RosterBadge, type RosterRow } from "./_components/DiverList";
 import { RosterOrderLine, rosterHref } from "./_components/RosterOrderLine";
 
@@ -67,22 +66,30 @@ export default async function DiversPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{
-    notice?: string;
-    /** The removal's Undo offer (`src/lib/undo.ts`). */
-    undo?: string;
-    undoPerson?: string;
-    undoFrom?: string;
-    q?: string;
-    page?: string;
-    filter?: string;
-    sort?: string;
-  }>;
+  searchParams: Promise<
+    AddDiverSearch & {
+      /** `1`: the add-diver panel is open (`AddDiverPanel`). */
+      add?: string;
+      notice?: string;
+      /** The removal's Undo offer (`src/lib/undo.ts`). */
+      undo?: string;
+      undoPerson?: string;
+      undoFrom?: string;
+      q?: string;
+      page?: string;
+      filter?: string;
+      sort?: string;
+    }
+  >;
 }) {
   const { shopSlug } = await params;
   const flash = await searchParams;
   const { notice, q, page, filter: filterParam, sort: sortParam } = flash;
-  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const surface = await requireShopSurface(shopSlug);
+  const { session, db, shop } = surface;
+  // "Add a diver" is the roster's own panel (`?add=1`); what it says about its
+  // form, it says beside the form, so the page banner stands down.
+  const adding = addPanelOpen(flash.add);
   reportRenderQueries("/shop/[shopSlug]/divers", after);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -106,40 +113,23 @@ export default async function DiversPage({
   // that was six sequential database round trips on a cold Vercel request,
   // making the otherwise bounded roster occasionally cross the five-second
   // runtime limit.
-  const liveRoles = await loadActiveStaffRoles(db, shop.id, session.user.personId);
-  const canDelete = liveRoles !== null && canDeleteDiver(liveRoles);
-  const canImport = liveRoles !== null && canImportShopData(liveRoles);
-  const canMerge = liveRoles !== null && canMergeDiver(liveRoles);
-  const canDownload = liveRoles !== null && canExportShopData(liveRoles);
-  const sort = isDiverSort(sortParam) ? sortParam : "name";
-  const requested = isDiverFilter(filterParam) ? filterParam : "all";
-  const filter = requested === "removed" && !canDelete ? "all" : requested;
-  // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
-  // range, so a search that narrows the roster never strands the reader on a
-  // page the new result set does not have.
-  const now = nowDate();
-  const [diverPage, possibleDuplicateIds] = await Promise.all([
-    listDiverSummaries(db, shop.id, {
-      query,
-      page: Number.parseInt(page ?? "", 10),
-      filter,
-      sort,
-      // "Diving today" is the shop's own calendar day, not the server's.
-      timeZone: shop.timezone,
-      now,
-    }),
-    canMerge ? listDiverMergeDuplicateIds(db, shop.id) : Promise.resolve([]),
-  ]);
-  // Second, because it takes the ids the first one just returned: the four
-  // roster facts are all `inArray`-bounded to this page rather than read over
-  // the whole roster (`rosterFacts`, src/db/roster-facts.ts).
-  const duplicateIds = new Set<string>(possibleDuplicateIds);
-  const facts = await rosterFacts(
-    db,
-    shop.id,
-    diverPage.divers.map((diver) => diver.id),
-    { now },
-  );
+  const {
+    can: { delete: canDelete, import: canImport, download: canDownload },
+    sort,
+    filter,
+    diverPage,
+    duplicateIds,
+    facts,
+  } = await getDiversPage(db, shop, session.user.personId, {
+    query,
+    // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
+    // range, so a search that narrows the roster never strands the reader on a
+    // page the new result set does not have.
+    page: Number.parseInt(page ?? "", 10),
+    filter: filterParam,
+    sort: sortParam,
+    now: nowDate(),
+  });
   /** The roster's URL with the search, view and order kept and only `page` swapped. */
   const roster = shopPath(shopSlug, "divers");
   const pageHref = (target: number) => rosterHref(roster, { query, filter, sort, page: target });
@@ -229,7 +219,7 @@ export default async function DiversPage({
     fact: factFor(diver.id, diver.lastDivedAt),
   }));
 
-  const banner = noticeFromParam(notice, NOTICES);
+  const banner = adding ? null : noticeFromParam(notice, NOTICES);
   const noticeText = banner ? t(banner.key) : null;
   const noticeIsError = banner?.tone === "danger";
   /**
@@ -248,6 +238,15 @@ export default async function DiversPage({
           been read is nobody's business and nothing's input. */}
       <FlashParams params={["notice", ...UNDO_PARAMS]} />
       <ShopPageHeader title={t("divers.page.title")} />
+
+      <AddPanel
+        open={adding}
+        title={t("divers.page.newDiverTitle")}
+        closeHref={addDiverCloseHref(shopSlug, flash)}
+        closeLabel={t("shared.addPanel.close")}
+      >
+        <AddDiverPanel surface={surface} shopSlug={shopSlug} search={flash} t={t} locale={locale} />
+      </AddPanel>
 
       {undoRemoval ? (
         <OfferedUndo shopSlug={shopSlug} offer={undoRemoval} t={t} />
@@ -278,7 +277,8 @@ export default async function DiversPage({
         }
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
         canRestore={canDelete}
-        quickAddAction={createDiverFromSearchAction}
+        // The open panel is the add; the toolbar draws no second door to it.
+        quickAddAction={adding ? null : createDiverFromSearchAction}
         pager={
           <div className="print:hidden">
             <Pager

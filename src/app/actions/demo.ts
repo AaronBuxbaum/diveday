@@ -10,7 +10,7 @@ import { demoRoleEmail } from "@/db/people";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { auth, getAuth } from "@/lib/auth";
-import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
+import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
 import { demoLandingFrom, demoLandingPath } from "@/lib/demo-landings";
 import { DEMO_ROLE_IDS, type DemoRoleId } from "@/lib/demo-roles";
 import {

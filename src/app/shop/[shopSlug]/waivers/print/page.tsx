@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { canPersonManageWaiverTemplates } from "@/db/authz";
-import { getCurrentWaiverTemplate } from "@/db/waivers";
+import { canPersonManageWaiverTemplates, getCurrentWaiverTemplate } from "@/db/waivers";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";

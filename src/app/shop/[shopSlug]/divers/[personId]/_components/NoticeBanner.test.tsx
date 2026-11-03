@@ -173,7 +173,7 @@ describe("NoticeBanner", () => {
   });
 
   /**
-   * The dead-button bug: `orders/new` bounces a shop with no payable Stripe
+   * The dead-button bug: `orders?add=1` bounces a shop with no payable Stripe
    * account back here with `?notice=payment-not-connected`. Before this code
    * existed in the map, that render produced nothing at all — the "New
    * payment" button visibly did nothing, every time, on every day-one shop.

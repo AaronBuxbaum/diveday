@@ -96,7 +96,7 @@ describe("shopPath", () => {
 });
 
 /**
- * The mirror of `shopPath`, and the one `divers/new` was missing: it read
+ * The mirror of `shopPath`, and the one `divers?add=1` was missing: it read
  * `?returnTo=` off the query with nothing but a `trim()`, rendered it as the
  * back link's href, and after a successful create passed it to
  * `revalidateAndRedirect` as both the `revalidatePath` key and the redirect

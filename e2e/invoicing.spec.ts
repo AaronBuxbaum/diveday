@@ -4,7 +4,7 @@ import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { counterPath, openBookingActions, seededTripId } from "./helpers";
 
 /**
- * Staff invoicing — `/shop/[shopSlug]/orders/new`, the front desk's "bill this
+ * Staff invoicing — `/shop/[shopSlug]/orders?add=1`, the front desk's "bill this
  * diver" form. It shipped with no e2e or visual coverage at all (the
  * 2026-08-03 test-system evaluation found it, hence the exemption
  * `scripts/route-coverage.json` carried for this route until this spec landed).
@@ -35,7 +35,7 @@ import { counterPath, openBookingActions, seededTripId } from "./helpers";
  */
 
 const staffCopy = staffTranslator("en-US");
-const NEW_ORDER = "/shop/blue-mantis/orders/new";
+const NEW_ORDER = "/shop/blue-mantis/orders?add=1";
 // `${fullName} — ${email}`, both deterministic in the seed (src/db/seed.ts).
 const CUSTOMER = "Priya Sharma — priya.sharma@mail.example";
 // A seeded departure with divers on it, so the roster has a seat to open.
@@ -126,15 +126,13 @@ test.describe("as owner", () => {
     page,
   }) => {
     // No /api/test/seed-stripe-account here: the demo shop starts unconnected,
-    // and `canAcceptPayments` is what the page checks before rendering a single
-    // field. An invoice form for a shop with nowhere to send the money would be
-    // a dead end, so the route lands back on Orders and says why — with the
-    // connect path offered — instead of silently dumping on the divers list
-    // (the explained-landing rule every payment gate now follows). FlashParams
-    // strips the query, so assert the banner, not the URL param.
+    // and `canAcceptPayments` is what the index checks before opening its add
+    // panel. An invoice form for a shop with nowhere to send the money would be
+    // a dead end, so the panel stays shut and the index says why (the
+    // explained-landing rule every payment gate now follows).
     await page.goto(NEW_ORDER);
-    await expect(page).toHaveURL(/\/shop\/blue-mantis\/orders$/);
     await expect(page.getByText(/Payments aren’t connected yet/).first()).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "New order" })).toHaveCount(0);
   });
 
   test("an owner builds an invoice and it gets as far as Stripe, which this fleet can't reach", async ({
@@ -147,7 +145,7 @@ test.describe("as owner", () => {
     await request.post("/api/test/seed-stripe-account");
 
     await page.goto(NEW_ORDER);
-    await expect(page.getByRole("heading", { level: 1, name: "New order" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "New order" })).toBeVisible();
 
     await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
     await page.getByLabel("Order note").fill("Two-tank reef trip + rental set");
@@ -171,8 +169,8 @@ test.describe("as owner", () => {
     await expect(page.getByRole("alert").filter({ hasText: "Stripe" })).toContainText(
       "Stripe couldn’t create that invoice. Try again in a moment.",
     );
-    await expect(page).toHaveURL(/\/orders\/new/);
-    await expect(page.getByRole("heading", { level: 1, name: "New order" })).toBeVisible();
+    await expect(page).toHaveURL(/\/orders\?add=1/);
+    await expect(page.getByRole("heading", { level: 2, name: "New order" })).toBeVisible();
   });
 
   /**
@@ -202,7 +200,7 @@ test.describe("as owner", () => {
 
     await expect(page.getByRole("link", { name: "New invoice" })).toHaveAttribute(
       "href",
-      `/shop/blue-mantis/orders/new?personId=${personId}`,
+      `/shop/blue-mantis/orders?add=1&personId=${personId}`,
     );
   });
 
@@ -221,13 +219,13 @@ test.describe("as owner", () => {
     await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
     await expect(page.getByRole("link", { name: "New order" }).first()).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/orders/new",
+      "/shop/blue-mantis/orders?add=1",
     );
 
     const seat = await openFirstSeat(page);
     await expect(seat.getByRole("link", { name: "Create order" })).toHaveAttribute(
       "href",
-      /\/shop\/blue-mantis\/orders\/new\?personId=[0-9a-f-]+&bookingId=[0-9a-f-]+$/,
+      /\/shop\/blue-mantis\/orders\?add=1&personId=[0-9a-f-]+&bookingId=[0-9a-f-]+$/,
     );
   });
 
@@ -472,10 +470,8 @@ test.describe("as captain", () => {
     await request.post("/api/test/seed-stripe-account");
     await page.goto(NEW_ORDER);
 
-    await expect(page).toHaveURL(/\/shop\/blue-mantis\/orders$/);
-    // FlashParams strips the query, so assert the banner, not the URL param.
     await expect(page.getByText(/limited to owners and managers/).first()).toBeVisible();
-    await expect(page.getByRole("heading", { level: 1, name: "New order" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 2, name: "New order" })).toHaveCount(0);
   });
 
   /**

@@ -77,10 +77,21 @@ async function activeLinkedSeats(
  */
 export async function lockDateRequestOffer(
   tx: DbExecutor,
-  input: { shopId: string; tripId: string; requestId: string; excludeBookingId?: string },
+  input: {
+    shopId: string;
+    tripId: string;
+    requestId: string;
+    excludeBookingId?: string;
+    /**
+     * A new link to the request: a closed request takes none, so a stale form
+     * cannot seat someone against a request the band already calls gone. A seat
+     * already linked (restored, moved, re-seated) keeps its closed request.
+     */
+    newLink?: boolean;
+  },
 ): Promise<{ offerId: string; requestId: string; partySize: number } | DateRequestBookingRefusal> {
   const [request] = await tx
-    .select({ id: interests.id })
+    .select({ id: interests.id, closedAt: interests.closedAt })
     .from(interests)
     .where(
       and(
@@ -145,6 +156,9 @@ export async function lockDateRequestOffer(
     excludeBookingId: input.excludeBookingId,
   });
   if (linked >= (offer.partySize ?? 1)) return "date_request_party_full";
+  // After the party check, so a seat past a completed party still reads as
+  // the party being full rather than the request being gone.
+  if (input.newLink && request.closedAt) return "date_request_offer_unavailable";
   return { offerId: offer.id, requestId: request.id, partySize: offer.partySize ?? 1 };
 }
 
@@ -222,4 +236,32 @@ export async function moveDateRequestOfferBooking(
     )
     .returning({ bookingId: dateRequestOfferBookings.bookingId });
   return updated !== undefined;
+}
+
+/**
+ * How far a request's party is seated on one offered departure, for the
+ * departure's add band: the seats held by active bookings, out of the offer's
+ * party. Null when the request was never offered this departure. A read only;
+ * the seat itself counts again under the locks (`lockDateRequestOffer`).
+ */
+export async function dateRequestPartyOnDeparture(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; requestId: string },
+): Promise<{ seated: number; partySize: number } | null> {
+  const [offer] = await db
+    .select({ id: interests.id, partySize: interests.partySize })
+    .from(interests)
+    .where(
+      and(
+        eq(interests.shopId, input.shopId),
+        eq(interests.scope, "departure"),
+        eq(interests.tripId, input.tripId),
+        eq(interests.parentInterestId, input.requestId),
+        isNotNull(interests.offeredAt),
+      ),
+    )
+    .limit(1);
+  if (!offer) return null;
+  const seated = await activeLinkedSeats(db, { shopId: input.shopId, offerId: offer.id });
+  return { seated, partySize: offer.partySize ?? 1 };
 }

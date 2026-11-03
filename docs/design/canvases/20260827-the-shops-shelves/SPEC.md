@@ -263,7 +263,7 @@ listed rows' scope.
 
 Everything else: courses roster rows gain price + duration facts (the ledger's meta), and the
 add-booking picker takes day groups. Its second step —
-`/shop/[shopSlug]/bookings/new/[tripId]`, pick the diver — restyles onto 8a's person-row
+pick the diver (now the departure's add band, `/trips/[id]?add=1`, #2737) — restyles onto 8a's person-row
 vocabulary in the same PR as the add-booking restyle; no behavior change.
 
 **Tests**: `e2e/promo-codes.spec.ts` retargets for the merged codes ledger.

@@ -906,7 +906,7 @@ test("a diver without a booking can receive an independent waiver from their rec
   // the slow budget rather than racing the hold against the default.
   test.slow();
   const stamp = Date.now();
-  await page.goto("/shop/blue-mantis/divers/new");
+  await page.goto("/shop/blue-mantis/divers?add=1");
   await page.getByLabel("Full name").fill(`Unscheduled E2E Diver ${stamp}`);
   await page.getByLabel("Email").fill(`unscheduled-${stamp}@example.com`);
   await page.getByLabel("Phone").fill("+13055550188");

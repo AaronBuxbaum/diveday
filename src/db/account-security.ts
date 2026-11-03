@@ -23,6 +23,7 @@ import {
   accountStepUps,
   userAccounts,
 } from "./schema";
+import { getAccountIdForPerson } from "./user-accounts";
 
 const STEP_UP_TTL_MS = 15 * 60 * 1000;
 
@@ -433,4 +434,20 @@ export async function hasStepUp(
     )
     .limit(1);
   return Boolean(row);
+}
+
+/**
+ * The security page's question in one call: the person's account and, when
+ * there is one, its second factor, sessions and pending secret. Null when the
+ * person has no account.
+ */
+export async function getAccountSecurityPage(db: AppDb, personId: string) {
+  const accountId = await getAccountIdForPerson(db, personId);
+  if (!accountId) return null;
+  const [security, sessions, secret] = await Promise.all([
+    getAccountSecurity(db, accountId),
+    listAccountSessions(db, accountId),
+    getTotpSecret(db, accountId),
+  ]);
+  return { accountId, security, sessions, secret };
 }

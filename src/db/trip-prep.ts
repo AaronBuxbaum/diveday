@@ -31,7 +31,10 @@ import {
   type TripGearAssignment,
 } from "./gear";
 import { counterRentalsHeldDuring } from "./gear-counter-rentals";
+import { listTripUnitsToCheckIn } from "./gear-returns";
 import { listTripPrepDivers } from "./rental-fit";
+import { meetingWindowsByTrip } from "./trip-meeting-windows";
+import { latestTripStage, readDepartureStage } from "./trip-stages";
 import { getTripCrewAssignments, listStaff } from "./trips-crew";
 import { getTripWithBooked } from "./trips-record";
 
@@ -437,4 +440,57 @@ export async function screenGearPicks<P extends GearPick>(
     kept.push(pick);
   }
   return { kept, refused: picks.length - kept.length, needsCare, held, alreadyHeld };
+}
+
+/**
+ * **The prep tab in one call** (issue #2757): the packing list, then the
+ * crew's word for the header chip and whether the boat has left the dock (the
+ * clock alone cannot mark a departure home while someone is missing), and,
+ * once home, every unit still out on this boat (fifth-loop ideas, item 5).
+ * `null` when there is no such departure in this shop.
+ */
+export async function getTripPrepPage(db: AppDb, shop: TripPrepShop, tripId: string, now: Date) {
+  const [prep, stageReading] = await Promise.all([
+    getTripPrep(db, shop, tripId),
+    latestTripStage(db, shop.id, tripId),
+  ]);
+  if (!prep) return null;
+  const { trip } = prep;
+  const {
+    shown: shownStage,
+    sailed,
+    finished,
+  } = await readDepartureStage(db, shop.id, tripId, {
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    now,
+    timeZone: shop.timezone,
+    stage: stageReading,
+    cancelled: trip.status === "cancelled",
+    meetingWindows: (await meetingWindowsByTrip(db, [trip])).get(tripId),
+  });
+  const backFromBoat = finished ? await listTripUnitsToCheckIn(db, shop.id, tripId) : [];
+  return { prep, shownStage, sailed, finished, backFromBoat };
+}
+
+/**
+ * **One diver's rental slip** off the packing list: the departure, the diver's
+ * row on it and the units assigned to their seat. Tenancy is the session's
+ * shop, never the slug: a trip of another shop, a booking of another trip, or
+ * a seat with nothing assigned (released in another tab) is `null`.
+ */
+export async function getRentalTicket(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+) {
+  const trip = await getTripWithBooked(db, shopId, tripId);
+  if (!trip) return null;
+  const divers = await listTripPrepDivers(db, shopId, tripId);
+  const diver = divers.find((row) => row.bookingId === bookingId);
+  if (!diver) return null;
+  const assignments = (await listTripGearAssignments(db, shopId, tripId)).get(bookingId) ?? [];
+  if (assignments.length === 0) return null;
+  return { trip, diver, assignments };
 }

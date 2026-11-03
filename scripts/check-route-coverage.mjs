@@ -4,7 +4,7 @@
 // important surface they look at gets a screenshot assertion in a
 // `e2e/visual-*.spec.ts`. Nothing enforced it, and the gap was not theoretical: a
 // 2026-08-03 evaluation of the test system found three staff pages that had
-// shipped with neither — `/shop/[shopSlug]/orders/new`,
+// shipped with neither — the new-order page (now the Orders add panel),
 // `/shop/[shopSlug]/dive-sites/catalog`, and `/shop/[shopSlug]/staffing`. A page
 // with no coverage is silent by construction; it produces no failure to notice.
 //

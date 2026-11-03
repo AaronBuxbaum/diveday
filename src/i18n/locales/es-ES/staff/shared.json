@@ -703,5 +703,8 @@
     "billingNotAuthorized": "La facturación es solo para el propietario.",
     "dayBlowoutNotAuthorized": "Cancelar un día entero está limitado a propietarios, gerentes y capitanes. Aún puedes cancelar una salida desde su propia página.",
     "activityNotAuthorized": "El registro de actividad está limitado a propietarios y gerentes."
+  },
+  "addPanel": {
+    "close": "Cerrar"
   }
 }

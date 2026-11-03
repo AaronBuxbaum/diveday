@@ -31,7 +31,7 @@ fleet depends on one stable canonical demo (`blue-mantis`) reached via `DEV_STAF
   inserts the shop `isDemo: true`; creates an owner + instructor/divemaster/captain with
   **per-shop-unique** generated emails and accounts; seeds the schedule via the already
   `shopId`-parameterized `seedDemoSchedule`; then signs the visitor into the generated owner using
-  the existing `isDemo` bypass token (`src/lib/credentials.ts`), so no generated password is stored
+  the existing `isDemo` bypass token (`src/db/credentials.ts`), so no generated password is stored
   or transmitted.
 - **The canonical `blue-mantis` demo is retained** as the deterministic test fixture: `seedIfEmpty`
   still seeds it in every environment, `DEV_STAFF_LOGINS`/`DEMO_SHOP_SLUG` still resolve to it, and

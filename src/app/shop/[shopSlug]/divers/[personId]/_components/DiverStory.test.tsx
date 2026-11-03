@@ -302,7 +302,7 @@ describe("the story's bounds and its foot", () => {
   });
 
   /**
-   * `orders/new` refuses outright without a payable Stripe account, so the act
+   * `orders?add=1` refuses outright without a payable Stripe account, so the act
    * is simply absent rather than a link that bounces — and connecting payments
    * left the person page with the ADR.
    */
@@ -313,12 +313,12 @@ describe("the story's bounds and its foot", () => {
     renderStory(diver({ bookings: [AHEAD] }), true);
     expect(screen.getByRole("link", { name: "New invoice" })).toHaveAttribute(
       "href",
-      "/shop/reef-shop/orders/new?personId=person-1",
+      "/shop/reef-shop/orders?add=1&personId=person-1",
     );
   });
 
   /**
-   * **The surface agreeing with the door.** `orders/new` gates on
+   * **The surface agreeing with the door.** `orders?add=1` gates on
    * `canPersonManageOrders` and bounces a staffer without it to the Orders
    * index with `notice=not-authorized` — so the link offered a captain an act
    * they cannot perform, and answered by taking the person off the screen

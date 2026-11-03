@@ -11,6 +11,7 @@ import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { formatShortDate } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
+import { callPanelHref } from "@/lib/took-a-call";
 
 /**
  * Where a diver is up to, in staff words. `src/db` returns the code and this
@@ -160,10 +161,7 @@ export function RequestLedgerRow({
       className="max-sm:items-baseline"
       trailing={
         <RowMenu label={t("requests.moreFor", { name })} panelClassName="w-60">
-          <Link
-            href={`${shopPath(shopSlug, "bookings", "new")}?request=${encodeURIComponent(request.id)}`}
-            className={actionLink}
-          >
+          <Link href={callPanelHref(shopSlug, { request: request.id })} className={actionLink}>
             {t("requests.createBooking")}
           </Link>
           {replyHref ? (

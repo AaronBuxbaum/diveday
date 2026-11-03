@@ -12,13 +12,14 @@ import type { AppDb } from "@/db/client";
 import { canPersonExportShopData } from "@/db/export";
 import { sendNotification } from "@/db/notifications";
 import { recordShopActivity } from "@/db/shop-activity";
+import { hasRequiredStepUp } from "@/db/step-up";
 import { toDiverLocale } from "@/i18n/settings";
 import { bookkeeperAddress } from "@/lib/bookkeeper";
 import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
+import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 

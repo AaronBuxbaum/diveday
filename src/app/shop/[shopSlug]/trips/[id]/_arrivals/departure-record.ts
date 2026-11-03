@@ -4,11 +4,10 @@ import {
   listAfterDiveRollCallByTrip,
   listCountedAboardBlockedByTrip,
   listDepartureRollCallByTrip,
-  listUnaccountedForByTrip,
 } from "@/db/manifests";
 import type { SailedRollCall } from "@/db/sailed-rebooking";
-import type { latestTripStage } from "@/db/trip-stages";
-import { departureStage, type MeetingWindow } from "@/lib/trip-phase";
+import { type latestTripStage, readDepartureStage } from "@/db/trip-stages";
+import type { MeetingWindow } from "@/lib/trip-phase";
 import type { RosterRecord } from "../_components/roster-model";
 import { buildArrivalDesk } from "./arrival-desk";
 import { sailedRebookBelow } from "./sailed-rebook-below";
@@ -90,20 +89,3 @@ export async function departureRollCall(
 }
 
 type StageReading = Awaited<ReturnType<typeof latestTripStage>>;
-
-/** Read departure timing and crew stage with shop-scoped unaccounted-diver
- * data; the clock alone cannot mark a departure home while someone is missing.
- */
-export async function readDepartureStage(
-  db: AppDb,
-  shopId: string,
-  tripId: string,
-  reading: Omit<Parameters<typeof departureStage<NonNullable<StageReading>>>[0], "unaccountedFor">,
-) {
-  const unaccounted =
-    (await listUnaccountedForByTrip(db, shopId, [tripId])).get(tripId) ?? new Set<string>();
-  return {
-    ...departureStage({ ...reading, unaccountedFor: unaccounted.size > 0 }),
-    unaccounted: unaccounted as ReadonlySet<string>,
-  };
-}

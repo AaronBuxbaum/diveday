@@ -27,7 +27,7 @@ ownerTest(
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
     await page.getByRole("link", { name: "Add diver" }).click();
-    await page.waitForURL(/\/divers\/new/);
+    await page.waitForURL(/\/divers\?add=1/);
     await page.getByLabel("Full name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(email);
     await page.getByRole("button", { name: "Add to trip" }).click();

@@ -8,9 +8,11 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { listShopIncidentReports } from "@/db/incident-reports";
-import { canPersonViewShopReports, earliestReportedTripStart } from "@/db/reporting";
-import { getSafetyMonth, getSafetyYear } from "@/db/safety-report";
+import {
+  canPersonViewShopReports,
+  earliestReportedTripStart,
+  getSafetyPage,
+} from "@/db/safety-report";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -25,7 +27,6 @@ import {
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear, formatMonthDay, formatTimeZoneName } from "@/lib/format";
-import type { SafetyMonth, SafetyYear } from "@/lib/safety-report";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -96,11 +97,18 @@ export default async function SafetyReportPage({
 
   const { from, to } = year ? year.bounds(tz) : shopMonthBounds(current, tz);
   // The year is the sum of its months, each read by its own rules (review F1).
-  const yearMonths: SafetyYear | null = year
-    ? await getSafetyYear(db, shop.id, year.number, tz, now)
-    : null;
-  const safety: SafetyMonth = yearMonths ?? (await getSafetyMonth(db, shop.id, from, to, tz, now));
-  const incidents = await listShopIncidentReports(db, shop.id, session.user.personId, from, to);
+  const { yearMonths, safety, incidents } = await getSafetyPage(
+    db,
+    shop.id,
+    session.user.personId,
+    {
+      year: year ? year.number : null,
+      from,
+      to,
+      timeZone: tz,
+      now,
+    },
+  );
   // A draft is unfinished and can still be discarded, so the figure counts
   // filed reports and names the drafts beside them (review F4).
   const draftReports = incidents.filter((report) => report.status === "draft").length;

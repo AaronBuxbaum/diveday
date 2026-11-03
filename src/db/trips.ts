@@ -20,9 +20,9 @@
  * | `./trip-primary-site.ts` | `tripPrimarySiteId`, the one projection of `trip_dives` to "the trip's site" |
  * | `./trips-queries.ts` | reading the board: schedule lists, aggregates, calendar feeds |
  *
- * The trip page's surface readers (`trip-overview.ts`, `trip-guests.ts`,
- * `trip-prep.ts` and their `trip-shared-reads.ts`) are not part of the
- * aggregate: they answer one page each and are imported by name.
+ * The trip page's surface readers (`trip-page.ts`, over `trip-overview.ts`,
+ * `trip-guests.ts` and their `trip-shared-reads.ts`; `trip-prep.ts`) are not
+ * part of the aggregate: they answer one page each and are imported by name.
  *
  * Nothing outside `src/db` imports a `trips-*` sibling directly
  * (`check:architecture`); the db siblings import each other by file so the

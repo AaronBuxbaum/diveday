@@ -1,4 +1,5 @@
-import { expect, vi } from "vitest";
+import { beforeEach, expect, vi } from "vitest";
+import { forgetAllFormDrafts } from "@/components/form-draft-memory";
 import { DB_TEST_TIMEOUT_MS, needsDatabaseTimeout } from "./db-timeout";
 
 if (typeof window !== "undefined") {
@@ -45,3 +46,8 @@ process.env.TZ = "UTC";
 if (needsDatabaseTimeout(expect.getState().testPath)) {
   vi.setConfig({ testTimeout: DB_TEST_TIMEOUT_MS, hookTimeout: DB_TEST_TIMEOUT_MS });
 }
+
+// FormDraft remembers typed input for the life of a document; a test is a new document.
+beforeEach(() => {
+  forgetAllFormDrafts();
+});

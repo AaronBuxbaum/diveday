@@ -13,6 +13,7 @@ import {
   notInArray,
   sql,
 } from "drizzle-orm";
+import { cache } from "react";
 import {
   BLOWOUT_OFFER_HORIZON_DAYS,
   type BlowoutCandidateTrip,
@@ -30,6 +31,7 @@ import {
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { departureMayBeAtSea } from "./aboard-at-sea";
+import { canPersonCallDayBlowout, canPersonRefund } from "./authz";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
@@ -59,7 +61,8 @@ import {
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
-import { rollCallStartedOn, setTripStatus } from "./trips-record";
+import { getTripWithBooked, rollCallStartedOn, setTripStatus } from "./trips-record";
+import { getTripRoster } from "./trips-roster";
 
 /**
  * The blow-out cascade (docs ADR 20260804-blowout-cascade, glossary
@@ -1025,4 +1028,29 @@ export async function weatherCallsInWindow(
     refundedCents: Number(refundRows[0]?.cents ?? 0),
     moved: Number(movedRows[0]?.moved ?? 0),
   };
+}
+
+/** Who may call a whole day off: the day blow-out page's gate (`requireShopSurface`'s `allow`). */
+export { canPersonCallDayBlowout } from "./authz";
+
+/** One read per request: the blow-out page's tab title and its body ask for the same record. */
+export const readTripBlowout = cache(getTripBlowout);
+
+/**
+ * **The blow-out page** in one call (issue #2757): the departure, its blow-out
+ * record if one was called, and what this staffer may do there (call the whole
+ * day off; release refunds). Before the call the page is the confirmation, so
+ * only then is the roster read (empty after it). `null` when the departure is
+ * not this shop's.
+ */
+export async function getBlowoutPage(db: AppDb, shopId: string, tripId: string, personId: string) {
+  const [trip, blowout, callDay, refund] = await Promise.all([
+    getTripWithBooked(db, shopId, tripId),
+    readTripBlowout(db, shopId, tripId),
+    canPersonCallDayBlowout(db, shopId, personId),
+    canPersonRefund(db, shopId, personId),
+  ]);
+  if (!trip) return null;
+  const roster = blowout ? [] : await getTripRoster(db, shopId, tripId);
+  return { trip, blowout, roster, can: { callDay, refund } };
 }

@@ -143,7 +143,7 @@ test("a departure that filled is left alone, and stops mentioning its minimum", 
   await find.fill("Meets The Minimum");
   await find.press("Enter");
   await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Meets The Minimum");
   await page.getByLabel("Email").fill(`meets-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();

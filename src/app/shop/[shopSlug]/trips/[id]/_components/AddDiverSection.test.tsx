@@ -68,7 +68,7 @@ describe("AddDiverSection", () => {
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Add diver" }).at(-1)).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?surface=departure&tripId=trip-1",
+      "/shop/blue-mantis/divers?add=1&surface=departure&tripId=trip-1",
     );
   });
 
@@ -84,23 +84,118 @@ describe("AddDiverSection", () => {
       addExistingDiverAction: action,
       locale: "en-US",
       timeZone: "America/Cancun",
-      walkInOpen: true,
+      mode: "counter" as const,
     };
     const { rerender } = render(<AddDiverSection context={{ ...props, query: "" }} />);
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Add as a walk-in" })).toBeNull();
+    // The choice rides the search, which `add` (a flash param) does not.
+    const search = screen.getByRole("searchbox").closest("form");
+    expect(search?.querySelector('input[type="hidden"][name="counter"]')).toHaveValue("1");
 
     rerender(<AddDiverSection context={{ ...props, query: "Zed Quill" }} />);
     expect(screen.getByRole("link", { name: "Add as a walk-in" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?name=Zed+Quill&surface=departure&walkIn=true&tripId=trip-1",
+      "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&walkIn=true&tripId=trip-1",
     );
     // A phone booking for tomorrow is not a walk-in: its door stays beside.
     expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?name=Zed+Quill&surface=departure&tripId=trip-1",
+      "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&tripId=trip-1",
     );
+  });
+
+  /**
+   * **Inside the arrivals window a door that means a booking makes one** (desk
+   * review F1): the band is a booking until the desk picks "Walk-in" on it.
+   */
+  it("is a booking inside the window until the desk picks the counter on the band", () => {
+    const props = {
+      shopSlug: "blue-mantis",
+      tripId: "trip-1",
+      full: false,
+      candidates: [],
+      addBookingAction: action,
+      addToWaitlistAction: action,
+      addKnownToWaitlistAction: action,
+      addExistingDiverAction: action,
+      locale: "en-US",
+      timeZone: "America/Cancun",
+      mode: "booking" as const,
+    };
+    const { container, rerender } = render(<AddDiverSection context={{ ...props, query: "" }} />);
+    const choice = screen.getByRole("navigation", { name: "Booking or walk-in" });
+    expect(choice).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Walk-in" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-1?add=1&counter=1",
+    );
+    expect(container.querySelector('input[name="counter"]')).toBeNull();
+
+    // Before a search, the search's own door is the one way to someone new.
+    expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
+
+    rerender(<AddDiverSection context={{ ...props, query: "Zed Quill" }} />);
+    // Someone new is a booking first; the walk-in stays one explicit tap away.
+    // An empty result carries both doors, so the search's own is not drawn
+    // beside it as a second "Add diver" (visual triage, #2737).
+    const links = screen.getAllByRole("link", { name: /^(Add diver|Add as a walk-in)$/ });
+    expect(links.map((link) => link.textContent)).toEqual(["Add diver", "Add as a walk-in"]);
+  });
+
+  /** Round-2 review, finding 2: under a results list, Booking books first. */
+  it("offers a booking first under a results list in Booking mode", () => {
+    const candidate = {
+      person: { id: "person-1", fullName: "Avery Diaz", email: "avery@example.com" },
+      rentalFit: null,
+    } as unknown as BookableDiver;
+    render(
+      <AddDiverSection
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: false,
+          query: "Avery",
+          candidates: [candidate],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+          mode: "booking",
+        }}
+      />,
+    );
+    // The search's own "Add diver", then under the list: book, then walk in.
+    const links = screen.getAllByRole("link", { name: /^(Add diver|Add as a walk-in)$/ });
+    expect(links.map((link) => link.textContent)).toEqual([
+      "Add diver",
+      "Add diver",
+      "Add as a walk-in",
+    ]);
+  });
+
+  it("draws no choice outside the window", () => {
+    render(
+      <AddDiverSection
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: false,
+          query: "",
+          candidates: [],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+        }}
+      />,
+    );
+    expect(screen.queryByRole("navigation", { name: "Booking or walk-in" })).toBeNull();
   });
 
   it("offers waitlist addition directly when trip is full", () => {
@@ -126,7 +221,7 @@ describe("AddDiverSection", () => {
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?surface=departure&tripId=trip-1&waitlist=true",
+      "/shop/blue-mantis/divers?add=1&surface=departure&tripId=trip-1&waitlist=true",
     );
   });
 
@@ -212,8 +307,10 @@ describe("AddDiverSection", () => {
 
     expect(screen.getByRole("link", { name: "Add to who’s waiting" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?name=Zed+Quill&surface=departure&tripId=trip-1&waitlist=true",
+      "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&tripId=trip-1&waitlist=true",
     );
+    // The empty result is the door; the search does not draw a second one.
+    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
   });
 
   it("offers direct add-diver link with prefill when no matches are found", () => {
@@ -236,9 +333,9 @@ describe("AddDiverSection", () => {
     );
 
     expect(screen.getByText("No returning diver matches “Nobody Here”.")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Add diver" })[1]).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?name=Nobody+Here&surface=departure&tripId=trip-1",
+      "/shop/blue-mantis/divers?add=1&name=Nobody+Here&surface=departure&tripId=trip-1",
     );
   });
 
@@ -484,4 +581,189 @@ describe("AddDiverSection spacing", () => {
       }
     },
   );
+});
+
+/**
+ * **A band opened from a date request** (#2737): what the retired
+ * pick-the-diver page carried. Every seat the band can make posts the
+ * request, so the seat closes it; a search keeps it; a request from somebody
+ * not on file prefills the new diver.
+ */
+describe("AddDiverSection opened from a date request", () => {
+  const REQUEST = "6f1c2c9e-1111-4000-8000-000000000001";
+  const candidate = {
+    person: { id: "person-1", fullName: "Avery Diver", email: "avery@example.com" },
+    rentalFit: null,
+  } as unknown as BookableDiver;
+  const base = {
+    shopSlug: "blue-mantis",
+    tripId: "trip-1",
+    full: false,
+    addBookingAction: action,
+    addToWaitlistAction: action,
+    addKnownToWaitlistAction: action,
+    addExistingDiverAction: action,
+    locale: "en-US",
+    timeZone: "America/Cancun",
+  };
+
+  function requestFields(container: HTMLElement) {
+    return Array.from(
+      container.querySelectorAll<HTMLInputElement>('input[type="hidden"][name="request"]'),
+    ).map((input) => input.value);
+  }
+
+  it("posts the request with the pick, and keeps it through a search", () => {
+    const { container } = render(
+      <AddDiverSection
+        context={{ ...base, query: "Avery", candidates: [candidate], request: { id: REQUEST } }}
+      />,
+    );
+    const pick = screen.getByRole("button", { name: /Add Avery Diver/ }).closest("form");
+    expect(pick?.querySelector('input[name="request"]')).toHaveValue(REQUEST);
+    const search = screen.getByRole("searchbox").closest("form");
+    expect(search?.querySelector('input[name="request"]')).toHaveValue(REQUEST);
+    expect(requestFields(container).every((value) => value === REQUEST)).toBe(true);
+  });
+
+  it("posts the request from the name-match prompt's every answer", () => {
+    const { container } = render(
+      <AddDiverSection
+        context={{
+          ...base,
+          query: "",
+          candidates: [],
+          request: { id: REQUEST },
+          confirmName: "Avery Diver",
+          confirmEmail: "avery@example.com",
+          confirmMatches: [
+            { id: "person-1", fullName: "Avery Diver", email: "avery@example.com" },
+          ] as unknown as SimilarDiver[],
+        }}
+      />,
+    );
+    const forms = Array.from(container.querySelectorAll("form")).filter(
+      (form) => form.querySelector('input[name="fullName"], input[name="personId"]') !== null,
+    );
+    expect(forms.length).toBeGreaterThan(1);
+    for (const form of forms) {
+      expect(form.querySelector('input[name="request"]')).toHaveValue(REQUEST);
+    }
+  });
+
+  it("prefills someone new from a request by somebody not on file", () => {
+    render(
+      <AddDiverSection
+        context={{
+          ...base,
+          query: "",
+          candidates: [],
+          request: {
+            id: REQUEST,
+            prefill: {
+              fullName: "Imani Okafor",
+              email: "imani@example.com",
+              phone: "+13055550101",
+            },
+          },
+        }}
+      />,
+    );
+    const href =
+      screen.getByRole("link", { name: "Add for this request" }).getAttribute("href") ?? "";
+    const query = new URL(href, "https://diveday.test").searchParams;
+    expect(query.get("name")).toBe("Imani Okafor");
+    expect(query.get("email")).toBe("imani@example.com");
+    expect(query.get("phone")).toBe("+13055550101");
+    expect(query.get("request")).toBe(REQUEST);
+    expect(query.get("tripId")).toBe("trip-1");
+  });
+
+  it("asks each pick whether it is for the request", () => {
+    render(
+      <AddDiverSection
+        context={{ ...base, query: "Avery", candidates: [candidate], request: { id: REQUEST } }}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Add Avery Diver for this request" }),
+    ).toBeInTheDocument();
+  });
+
+  /** Dock review F2: an open request never hides the counter's door. */
+  it("keeps the walk-in door beside a request, carrying none of it", () => {
+    render(
+      <AddDiverSection
+        context={{
+          ...base,
+          mode: "booking",
+          query: "Sam Counter",
+          candidates: [],
+          request: { id: REQUEST, prefill: { fullName: "Imani Okafor" } },
+        }}
+      />,
+    );
+    const walkIn = screen.getByRole("link", { name: "Add as a walk-in" }).getAttribute("href");
+    const query = new URL(walkIn ?? "", "https://diveday.test").searchParams;
+    expect(query.get("walkIn")).toBe("true");
+    expect(query.get("request")).toBeNull();
+    expect(query.get("name")).toBe("Sam Counter");
+    expect(screen.getByRole("link", { name: "Walk-in" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-1?add=1&counter=1",
+    );
+  });
+
+  /**
+   * Round-2 review, finding 1: a door for someone new that carries the
+   * request says so, exactly like a pick. Label and payload agree.
+   */
+  it("names every new-person door that carries the request", () => {
+    render(
+      <AddDiverSection
+        context={{
+          ...base,
+          mode: "booking",
+          query: "Sam New",
+          candidates: [],
+          request: { id: REQUEST },
+        }}
+      />,
+    );
+    const doors = screen.getAllByRole("link", { name: "Add for this request" });
+    expect(doors.length).toBeGreaterThan(0);
+    for (const door of doors) {
+      const query = new URL(door.getAttribute("href") ?? "", "https://diveday.test").searchParams;
+      expect(query.get("request")).toBe(REQUEST);
+    }
+    // No door for someone new carries the request under another name.
+    for (const link of screen.getAllByRole("link")) {
+      const href = link.getAttribute("href") ?? "";
+      if (!href.includes("/divers?") || href.includes("waitlist=true")) continue;
+      const query = new URL(href, "https://diveday.test").searchParams;
+      if (query.get("request")) expect(link).toHaveAccessibleName("Add for this request");
+    }
+  });
+
+  it("keeps the request on the Booking choice", () => {
+    render(
+      <AddDiverSection
+        context={{ ...base, mode: "booking", query: "", candidates: [], request: { id: REQUEST } }}
+      />,
+    );
+    const nav = screen.getByRole("navigation", { name: "Booking or walk-in" });
+    const booking = Array.from(nav.querySelectorAll("a, [aria-current]")).find((el) =>
+      el.textContent?.includes("Booking"),
+    );
+    const href = booking?.getAttribute("href");
+    if (href) expect(href).toBe(`/shop/blue-mantis/trips/trip-1?add=1&request=${REQUEST}`);
+  });
+
+  it("carries no request field when the band was not opened from one", () => {
+    const { container } = render(
+      <AddDiverSection context={{ ...base, query: "Avery", candidates: [candidate] }} />,
+    );
+    expect(requestFields(container)).toEqual([]);
+    expect(screen.getByRole("button", { name: /Add Avery Diver/ })).toBeInTheDocument();
+  });
 });

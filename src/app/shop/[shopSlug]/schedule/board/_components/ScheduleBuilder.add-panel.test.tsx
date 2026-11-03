@@ -15,7 +15,6 @@ import {
   MORE,
   PRICE,
   resetScheduleBuilderFixtures,
-  routerPush,
   routerReplace,
   useSearchParams,
   weekFrom,
@@ -502,7 +501,7 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
 });
 
 describe("ScheduleBuilder panel focus management (accessibility audit §3)", () => {
-  it("opens the dated creation page when a day is chosen", async () => {
+  it("opens the board's add panel on the day that was chosen", async () => {
     const days: FixtureDay[] = [
       {
         dateIso: "2026-08-01",
@@ -532,11 +531,12 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
     );
     expect(screen.getByRole("link", { name: "Add a departure on Sat, Aug 1" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/schedule/board/new?date=2026-08-01&week=2026-08-01",
+      "/shop/blue-mantis/schedule/board?add=1&date=2026-08-01&week=2026-08-01",
     );
   });
 
-  it("returns to the selected week when creation is cancelled", async () => {
+  it("returns to the selected week when the add panel is cancelled", async () => {
+    useSearchParams.mockReturnValue(new URLSearchParams("add=1&week=2026-07-27"));
     render(
       <ScheduleBuilder
         context={{
@@ -552,13 +552,14 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
           more: MORE,
           initialCourse: null,
           openAdd: "quick",
-          createPage: true,
           returnWeek: "2026-07-27",
         }}
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(routerPush).toHaveBeenCalledWith("/shop/blue-mantis/schedule/board?week=2026-07-27");
+    expect(routerReplace).toHaveBeenCalledWith("/shop/blue-mantis/schedule/board?week=2026-07-27", {
+      scroll: false,
+    });
   });
 
   it("moves focus into the move panel's date field on open, and back to the row's actions control on cancel", async () => {

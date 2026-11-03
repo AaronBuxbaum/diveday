@@ -4,8 +4,7 @@ import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components
 import { ShopStat } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { canPersonExportIncidentRecord } from "@/db/authz";
-import { getIncidentExport } from "@/db/incident-export";
+import { getTripLogPage } from "@/db/incident-export";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -93,12 +92,12 @@ export default async function IncidentExportPage({
   // is the gate — the page refuses however it was reached. The landing is the
   // shop home with a reason on it: a refusal that teleports you somewhere
   // silently reads as a broken button (task 82).
-  if (!(await canPersonExportIncidentRecord(db, shop.id, session.user.personId))) {
-    redirect(noticeUrl(shopPath(shopSlug), "log-not-authorized"));
-  }
+  //
   // Tenancy is the session's shop, never the URL: another shop's trip id — or
   // a stale slug — resolves to null and 404s.
-  const doc = await getIncidentExport(db, shop.id, tripId, session.user.personId);
+  const page = await getTripLogPage(db, shop.id, tripId, session.user.personId);
+  if (!page.allowed) redirect(noticeUrl(shopPath(shopSlug), "log-not-authorized"));
+  const { doc } = page;
   if (!doc) notFound();
 
   const dateTime = (isoString: string) =>

@@ -72,7 +72,7 @@ async function seatNewcomerWithPendingCard(page: Page, departure: RegExp, prefix
   const newcomer = `${prefix} ${prefix === "Rory" ? "Quill" : "Bracken"}${stamp}`;
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill(newcomer);
   await page.getByLabel("Email").fill(`${prefix.toLowerCase()}-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -195,7 +195,7 @@ test("without the extension the Divers tab offers no check at all", async ({ pag
 async function newDiverWithPendingCard(page: Page) {
   const stamp = Date.now();
   const name = `Wren Talbot${stamp}`;
-  await page.goto(`/shop/${SHOP}/divers/new`);
+  await page.goto(`/shop/${SHOP}/divers?add=1`);
   await page.getByLabel("Full name").fill(name);
   await page.getByLabel("Email").fill(`wren-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add diver" }).click();

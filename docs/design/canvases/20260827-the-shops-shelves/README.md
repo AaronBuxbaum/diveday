@@ -66,7 +66,7 @@ the component named in the row carry the ADR id in their doc comments, as does t
 | 9g — the mapped surfaces (courses roster, promos, add-booking) | shipped | `src/app/shop/[shopSlug]/courses/_components/CourseRoster.tsx` | `CourseRoster.test.tsx`, `PromoLedger.test.tsx`, `DeparturePicker.test.tsx`, `promo-codes.test.ts`, `courses.test.ts`, `shop-promos.test.ts` |
 
 (The other two components are `src/app/shop/[shopSlug]/promos/_components/PromoLedger.tsx` and
-`src/app/shop/[shopSlug]/bookings/new/_components/DeparturePicker.tsx`; all three carry the ADR id
+`src/app/shop/[shopSlug]/_components/call/DeparturePicker.tsx` (the home's `?call=1` panel since #2737); all three carry the ADR id
 in their doc comments, as does `src/components/seat-diver/PersonCandidateList.tsx`, so
 `pnpm check:design-canvases` is satisfied when the row flips to `shipped`. Note the canvas README's
 row still reads "courses roster, promos, team, add-booking" — Team shipped separately as 9h, and

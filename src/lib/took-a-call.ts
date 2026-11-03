@@ -95,3 +95,22 @@ export function callRefusal(outcome: CallOutcome, capture: CallCapture): CallRef
   if (callOutcomeNeeds(outcome, "interest") && !present(capture.interest)) return "interest";
   return null;
 }
+
+/**
+ * **Where "Add a booking" opens when no departure is known** (#2737): the shop
+ * home's panel, `?call=1`, holding the departure picker ("customer is on the
+ * phone, which boat?") and the call form under it. A door that knows the
+ * departure opens that boat's add band instead (`/trips/<id>?add=1`).
+ *
+ * `extra` rides after `call=1` in order; an `undefined` value is left out. A
+ * `hash` of `call` lands on the call form itself.
+ */
+export function callPanelHref(
+  shopSlug: string,
+  extra: Record<string, string | undefined> = {},
+  hash?: "call",
+): string {
+  const query = new URLSearchParams({ call: "1" });
+  for (const [key, value] of Object.entries(extra)) if (value !== undefined) query.set(key, value);
+  return `/shop/${encodeURIComponent(shopSlug)}?${query.toString()}${hash ? `#${hash}` : ""}`;
+}

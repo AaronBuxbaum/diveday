@@ -135,7 +135,7 @@ describe("the map covers the whole hub", () => {
 });
 
 describe("the selection model", () => {
-  it.each(["/dive-sites/new", "/dive-sites/site-123", "/dive-sites/site-123/edit"])(
+  it.each(["/dive-sites/site-123", "/dive-sites/site-123/edit"])(
     "keeps a nested dive-site page under its existing rail row: %s",
     (path) => {
       expect(
@@ -215,7 +215,6 @@ describe("the selection model", () => {
 
 describe("the rail as it renders", () => {
   it.each([
-    ["/dive-sites/new", "diveSites"],
     ["/dive-sites/site-123", "diveSites"],
     ["/dive-sites/site-123/edit", "diveSites"],
     ["/me/calendar", "Settings sections"],

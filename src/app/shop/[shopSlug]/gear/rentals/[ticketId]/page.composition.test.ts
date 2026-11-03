@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { routeSource } from "@/test/route-source";
 
@@ -8,6 +10,8 @@ import { routeSource } from "@/test/route-source";
  */
 const SOURCE = routeSource(import.meta.dirname, "page.tsx");
 const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+/** The page's one reader (issue #2757): where the ticket's reads now live. */
+const READER = readFileSync(join(process.cwd(), "src/db/counter-rental-ticket-page.ts"), "utf8");
 
 describe("the counter-rental ticket", () => {
   /**
@@ -20,7 +24,7 @@ describe("the counter-rental ticket", () => {
   it("ends with the shared terms and received-by foot, and reads money only from the order", () => {
     expect(CODE).toContain("<RentalSlip");
     expect(CODE).toContain("terms={shop.rentalTerms}");
-    expect(CODE).toContain("getOrder(db, shop.id, ticket.orderId)");
+    expect(READER).toContain("getOrder(db, shop.id, ticket.orderId)");
     expect(CODE).toContain("<RentalTicketPayment");
     expect(CODE).not.toMatch(/formatMoney|Cents\b|amount/i);
   });

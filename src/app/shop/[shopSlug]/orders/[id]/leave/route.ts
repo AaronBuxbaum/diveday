@@ -3,9 +3,9 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { commitCounterPaymentHold } from "@/db/counter-payment-hold";
 import { getShopById } from "@/db/shops";
+import { hasRequiredStepUp } from "@/db/step-up";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { isCrossSiteHeaders } from "@/lib/same-origin";
-import { hasRequiredStepUp } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 

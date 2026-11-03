@@ -1,7 +1,6 @@
 {
   "new": {
     "title": "Nuevo pedido",
-    "cancel": "Cancelar",
     "notice": {
       "invalid": "Elige un cliente y al menos una línea con un importe.",
       "notConnected": "Conecta una cuenta de Stripe en los ajustes del centro antes de crear un pedido.",

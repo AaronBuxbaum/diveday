@@ -43,12 +43,12 @@ Postgres/PGlite this app already runs. No new infrastructure.
   carries all seven of the account model's token/scope/password columns, nullable and empty, and
   `user_accounts.hashed_password` is nullable because Better Auth never writes it. Whoever enables
   an OAuth provider inherits those columns already in place — including `password`, which is Better
-  Auth's own place for a credentials hash and must stay empty while `src/lib/credentials.ts` reads
+  Auth's own place for a credentials hash and must stay empty while `src/db/credentials.ts` reads
   `user_accounts.hashed_password`.
 - **Credential verification stays ours.** A custom Better Auth plugin
   (`diveDayCredentialsPlugin`, `src/lib/auth.ts`) ports the old Credentials provider's
   `authorize()` body unchanged — rate limiting, the account-enumeration timing defense
-  (`src/lib/credentials.ts`'s decoy-hash compare), and the demo-bypass containment
+  (`src/db/credentials.ts`'s decoy-hash compare), and the demo-bypass containment
   (`src/lib/demo-bypass.ts`) all untouched — and calls Better Auth's own
   `internalAdapter.createSession` + `setSessionCookie` primitives on success, the same ones its
   built-in `/sign-in/email` endpoint uses internally. Not the built-in endpoint itself: its

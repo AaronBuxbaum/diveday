@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
-import { canPersonConfigureTrips } from "@/db/authz";
-import { listBoats, listBoatsForHistory } from "@/db/boats";
-import { readFormDraft } from "@/db/form-drafts";
-import { listDateInterestsByIds, listOpenDateInterestsForDates } from "@/db/interest-dates";
-import { openAfterDiveRollCalls } from "@/db/roll-call-gaps";
-import { upcomingScheduleRange, weekBoard } from "@/db/trips";
+import { getScheduleBoardPage } from "@/db/schedule-board-page";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -18,13 +12,12 @@ import { nowDate } from "@/lib/clock";
 import { toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
-import { resolveWeekStart, weekDates } from "@/lib/week-board";
+import { resolveWeekStart } from "@/lib/week-board";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { resolveRescheduleNoticeSnapshot } from "../../_components/RescheduleNotice";
 import { ScheduleViews } from "../_components/ScheduleViews";
 import { BoardPageShell } from "./_components/BoardPageShell";
-import { requestedCourseAndSite, weekAroundRead } from "./_components/board-reads";
-import { type BoardSearchParams, legacyAddHref } from "./_components/board-search-params";
+import type { BoardSearchParams } from "./_components/board-search-params";
 import { boardWeekView } from "./_components/board-week-view";
 import {
   builderPriceInput,
@@ -90,9 +83,6 @@ export default async function ScheduleBoardPage({
   const actionResultKey =
     query.result ??
     (builder ? [builder, count, created, series].filter(Boolean).join(":") : undefined);
-  const createPage = query._createPage === "1";
-  const legacyHref = legacyAddHref(shopSlug, query);
-  if (legacyHref) redirect(legacyHref);
   const requestIds = [
     ...new Set(
       (requests ?? "")
@@ -116,14 +106,11 @@ export default async function ScheduleBoardPage({
   // lands on the one the shop is in rather than refusing the page (`src/lib/week-board.ts`).
   const weekStartIso = resolveWeekStart(week, todayIso);
   const returnWeek = week ? weekStartIso : undefined;
-  const boardHref = `/shop/${shopSlug}/schedule/board${returnWeek ? `?week=${returnWeek}` : ""}`;
 
-  // The upcoming stream is keyset-paged; the week grid is a separate bounded read. Builder
-  // catalog options load lazily when the closed-by-default add panel opens.
-  // Dependent reads are batched below.
-  const canConfigureRead = canPersonConfigureTrips(db, shop.id, session.user.personId);
-  const weekRead = weekBoard(db, shop.id, weekStartIso, tz, now);
-  const [
+  // The upcoming stream, the week grid and what it is read beside, the fleet, the week's date
+  // requests, and the add panel's draft and requested course, site and requests, in one wave
+  // (`getScheduleBoardPage`). Builder catalog options load lazily when the add panel opens.
+  const {
     draft,
     range,
     canConfigure,
@@ -133,42 +120,16 @@ export default async function ScheduleBoardPage({
     weekAsks,
     boatsEverOwned,
     weekAround,
-    { requestedCourse, requestedSite },
+    requestedCourse,
+    requestedSite,
     requestRows,
-  ] = await Promise.all([
-    // The reader's own half-typed add panel, if they left one in the last day (ADR
-    // 20260906-before-you-ask, decision 3).
-    readFormDraft(db, shop.id, session.user.personId, "add_departure", now),
-    upcomingScheduleRange(db, shop.id, now),
-    canConfigureRead,
-    // Returned departures with open roll calls are a separate batched backward read; the upcoming
-    // stream cannot include them. Read on every cursor page because the independently addressed
-    // `?week=` grid still needs them when the stream is paged. The stream shows them only on page
-    // one (`streamRollCalls` below).
-    openAfterDiveRollCalls(db, shop.id, now),
-    listBoats(db, shop.id),
-    // Bounded `xl` week-grid read (ADR 20260827-clearwater-surface-language, decision 5); unlike
-    // the upcoming stream, it includes departures earlier in the selected week.
-    weekRead,
-    // Requests are bounded to the displayed week (ADR 20260919-one-idea, slice 23f); the separate
-    // requests page reads them unbounded.
-    listOpenDateInterestsForDates(db, shop.id, weekDates(weekStartIso)),
-    // **Names come from every hull the shop has ever had, not just the live ones.** A departure
-    // that sailed on a boat the shop has since deleted must still say which vessel — that is the
-    // whole reason deleting one is a stamp rather than a delete (ADR
-    // 20260820-every-delete-is-soft). `shopBoats` stays live: it is the picker and the fleet count,
-    // and a deleted hull is not a boat this shop has.
-    listBoatsForHistory(db, shop.id),
-    weekAroundRead(db, shop, weekRead, weekStartIso, now),
-    requestedCourseAndSite(db, shop.id, { course, site }),
-    // Request IDs only feed the add panel, so require its live configuration role and keep the
-    // lookup scoped to this shop. Readers without that role receive no request rows.
-    requestIds.length > 0
-      ? canConfigureRead.then((allowed) =>
-          allowed ? listDateInterestsByIds(db, shop.id, requestIds) : [],
-        )
-      : [],
-  ]);
+  } = await getScheduleBoardPage(db, shop, session.user.personId, {
+    weekStartIso,
+    now,
+    course,
+    site,
+    requestIds,
+  });
   const addDraft = draftForForm(draft, locale, shop.timezone);
   const boatMap = new Map(boatsEverOwned.map((boat) => [boat.id, boat.name]));
   const hasUpcoming = range.first !== null;
@@ -193,11 +154,7 @@ export default async function ScheduleBoardPage({
   // `?course=` always implies an open panel: it would otherwise land on a board
   // that silently swallowed the course the link named.
   const addPanelState =
-    add === "full"
-      ? "expanded"
-      : createPage || add || requestedCourse || requestedSite
-        ? "quick"
-        : "closed";
+    add === "full" ? "expanded" : add || requestedCourse || requestedSite ? "quick" : "closed";
 
   const initialCourse: BuilderInitialCourse | null = requestedCourse
     ? {
@@ -253,27 +210,23 @@ export default async function ScheduleBoardPage({
 
   return (
     <BoardPageShell
-      createPage={createPage}
-      boardHref={boardHref}
       hasUpcoming={hasUpcoming}
       canConfigure={canConfigure}
       shopSlug={shopSlug}
       returnWeek={returnWeek}
       st={st}
     >
-      {!createPage ? (
-        <ScheduleViews
-          shopSlug={shopSlug}
-          crewSchedule={shop.crewScheduleEnabled}
-          current="week"
-          week={weekStartIso}
-          copy={{
-            label: st("schedule.views.label"),
-            week: st("schedule.views.week"),
-            crew: st("schedule.views.crew"),
-          }}
-        />
-      ) : null}
+      <ScheduleViews
+        shopSlug={shopSlug}
+        crewSchedule={shop.crewScheduleEnabled}
+        current="week"
+        week={weekStartIso}
+        copy={{
+          label: st("schedule.views.label"),
+          week: st("schedule.views.week"),
+          crew: st("schedule.views.crew"),
+        }}
+      />
 
       {/* The four-tile overview row is gone on purpose: "Departures 46 /
           Booked 196" aggregated a horizon nobody acts on as a number, and on
@@ -288,7 +241,7 @@ export default async function ScheduleBoardPage({
         resultKey={actionResultKey}
       />
 
-      {!createPage && !hasUpcoming ? (
+      {!hasUpcoming ? (
         <EmptyState
           title={t("schedule.noUpcomingStaff")}
           body={t("schedule.noTripsStaff")}
@@ -302,7 +255,7 @@ export default async function ScheduleBoardPage({
           action={
             canConfigure ? (
               <Link
-                href={`/shop/${shopSlug}/schedule/board/new${returnWeek ? `?week=${returnWeek}` : ""}`}
+                href={`/shop/${shopSlug}/schedule/board?add=1${returnWeek ? `&week=${returnWeek}` : ""}`}
                 scroll={false}
                 className={buttonClass()}
               >
@@ -337,9 +290,8 @@ export default async function ScheduleBoardPage({
           initialSite,
           requestPlan,
           openAdd: addPanelState,
-          createPage,
           returnWeek,
-          week: createPage ? null : builderWeek,
+          week: builderWeek,
           actions: {
             add: addDepartureAction.bind(null, shopSlug),
             move: moveDepartureAction.bind(null, shopSlug),

@@ -8,6 +8,7 @@ import { headers as nextHeaders } from "next/headers";
 import { cache } from "react";
 import { z } from "zod";
 import { type DbExecutor, getDb } from "@/db/client";
+import type { VerifiedUser } from "@/db/credentials";
 import {
   accountSessions,
   authProviderAccounts,
@@ -23,7 +24,6 @@ import { trackEvent } from "@/lib/analytics";
 import { authSecret } from "@/lib/auth-secret";
 import { isStaff, type Role } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
-import type { VerifiedUser } from "@/lib/credentials";
 import { log } from "@/lib/log";
 import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications/app-url";
 import {

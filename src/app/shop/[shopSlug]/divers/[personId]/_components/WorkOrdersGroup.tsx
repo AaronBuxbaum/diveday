@@ -9,6 +9,7 @@ import type { DiverWorkOrderRow } from "@/db/work-orders";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { workOrderStatusLabel, workOrderStatusTone } from "@/i18n/work-order-labels";
+import { ADD_ONE, addPanelHref } from "@/lib/add-panel";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { shopPath } from "@/lib/staff-notices";
 import { isOpenWorkOrderStatus } from "@/lib/work-orders";
@@ -77,7 +78,9 @@ export function WorkOrdersGroup({
       : kinds.length > 0
         ? kinds.join(" · ")
         : t("workOrders.diver.gearEmpty");
-  const newOrderHref = `${shopPath(shopSlug, "gear", "work-orders", "new")}?personId=${personId}`;
+  const newOrderHref = addPanelHref(shopPath(shopSlug, "gear", "work-orders"), ADD_ONE, {
+    personId,
+  });
   const pieceIds = new Set(pieces.map((piece) => piece.id));
   // A ticket whose pieces have all been deleted still belongs on the record.
   const unfiled = orders.filter((order) => !order.pieceIds.some((id) => pieceIds.has(id)));
