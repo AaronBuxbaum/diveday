@@ -355,7 +355,8 @@ export function DiverList({
               </form>
             ) : (
               <Link
-                href={`/shop/${shopSlug}/divers/new`}
+                href={`/shop/${shopSlug}/divers?add=1`}
+                scroll={false}
                 // Nothing is pending — the box is empty — but a timer from the
                 // text the staffer just cleared could still be, and landing
                 // after this tap would put that search back in the URL behind

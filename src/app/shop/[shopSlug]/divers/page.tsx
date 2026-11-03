@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { OfferedUndo } from "@/app/shop/[shopSlug]/_components/OfferedUndo";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { AddPanel } from "@/components/AddPanel";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice } from "@/components/ShopNotice";
@@ -13,6 +14,7 @@ import { isDiverFilter, isDiverSort, listDiverSummaries } from "@/db/divers";
 import { rosterFacts } from "@/db/roster-facts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { addPanelOpen } from "@/lib/add-panel";
 import { canDeleteDiver, canExportShopData, canImportShopData, canMergeDiver } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
@@ -22,6 +24,7 @@ import { rosterLetter, rosterRowFact } from "@/lib/roster-rows";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { readUndoOffer, UNDO_PARAMS } from "@/lib/undo";
+import { AddDiverPanel, type AddDiverSearch, addDiverCloseHref } from "./_components/AddDiverPanel";
 import { DiverList, type RosterBadge, type RosterRow } from "./_components/DiverList";
 import { RosterOrderLine, rosterHref } from "./_components/RosterOrderLine";
 
@@ -67,22 +70,30 @@ export default async function DiversPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{
-    notice?: string;
-    /** The removal's Undo offer (`src/lib/undo.ts`). */
-    undo?: string;
-    undoPerson?: string;
-    undoFrom?: string;
-    q?: string;
-    page?: string;
-    filter?: string;
-    sort?: string;
-  }>;
+  searchParams: Promise<
+    AddDiverSearch & {
+      /** `1`: the add-diver panel is open (`AddDiverPanel`). */
+      add?: string;
+      notice?: string;
+      /** The removal's Undo offer (`src/lib/undo.ts`). */
+      undo?: string;
+      undoPerson?: string;
+      undoFrom?: string;
+      q?: string;
+      page?: string;
+      filter?: string;
+      sort?: string;
+    }
+  >;
 }) {
   const { shopSlug } = await params;
   const flash = await searchParams;
   const { notice, q, page, filter: filterParam, sort: sortParam } = flash;
-  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const surface = await requireShopSurface(shopSlug);
+  const { session, db, shop } = surface;
+  // "Add a diver" is the roster's own panel (`?add=1`); what it says about its
+  // form, it says beside the form, so the page banner stands down.
+  const adding = addPanelOpen(flash.add);
   reportRenderQueries("/shop/[shopSlug]/divers", after);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -229,7 +240,7 @@ export default async function DiversPage({
     fact: factFor(diver.id, diver.lastDivedAt),
   }));
 
-  const banner = noticeFromParam(notice, NOTICES);
+  const banner = adding ? null : noticeFromParam(notice, NOTICES);
   const noticeText = banner ? t(banner.key) : null;
   const noticeIsError = banner?.tone === "danger";
   /**
@@ -248,6 +259,15 @@ export default async function DiversPage({
           been read is nobody's business and nothing's input. */}
       <FlashParams params={["notice", ...UNDO_PARAMS]} />
       <ShopPageHeader title={t("divers.page.title")} />
+
+      <AddPanel
+        open={adding}
+        title={t("divers.page.newDiverTitle")}
+        closeHref={addDiverCloseHref(shopSlug, flash)}
+        closeLabel={t("shared.addPanel.close")}
+      >
+        <AddDiverPanel surface={surface} shopSlug={shopSlug} search={flash} t={t} locale={locale} />
+      </AddPanel>
 
       {undoRemoval ? (
         <OfferedUndo shopSlug={shopSlug} offer={undoRemoval} t={t} />

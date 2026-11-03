@@ -45,7 +45,7 @@ export async function loadDiverRecordGates(db: AppDb, shopId: string, actorPerso
     // live roles before it signs anything.
     canPersonReadMedicalClearanceDocument(db, shopId, actorPersonId),
     // Raising an invoice against this diver (#1920). Three gates already stand
-    // behind the link (`orders/new`'s own `allow:`, its action's re-check, and
+    // behind the link (`orders?add=1`'s own `allow:`, its action's re-check, and
     // `src/db/orders.ts` refusing at the write), so it was never a hole, only a
     // door a captain could not walk through. `src/db/authz.ts` states the rule
     // it broke: the UI hides the control when the permission is false, so a

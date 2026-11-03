@@ -14,7 +14,7 @@ export function isStepUpPurpose(value: string | null | undefined): value is Step
 /**
  * Only return paths inside the current shop can be resumed after a challenge.
  *
- * The body moved to `safeShopReturnPath` when `divers/new` turned out to accept
+ * The body moved to `safeShopReturnPath` when `divers?add=1` turned out to accept
  * a `?returnTo=` with no check at all; the name stays because the step-up
  * callers read better for it, and one implementation means the next surface to
  * accept a return path cannot re-derive a weaker one.

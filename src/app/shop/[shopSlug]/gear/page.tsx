@@ -37,6 +37,7 @@ import {
   restoreGearItemAction,
   returnGearReservationAction,
 } from "./actions";
+import * as rentOut from "./rentals/_components/RentOutPanel";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
@@ -105,18 +106,15 @@ export default async function GearRegisterPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{
-    notice?: string;
-    page?: string;
-    kind?: string;
-    view?: string;
-    undoId?: string;
-  }>;
+  searchParams: Promise<rentOut.RegisterSearch>;
 }) {
   const { shopSlug } = await params;
   const search = await searchParams;
-  const { notice, page, kind: kindParam } = search;
-  const { db, shop, session } = await requireShopSurface(shopSlug);
+  const surface = await requireShopSurface(shopSlug);
+  const { db, shop, session } = surface;
+  const rentingOut = rentOut.rentOutOpen(search); // its notices are said beside its steps
+  const { page, kind: kindParam } = search;
+  const notice = rentingOut ? undefined : search.notice;
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
@@ -278,14 +276,14 @@ export default async function GearRegisterPage({
   );
   return (
     <StaffPage width="full">
-      <FlashParams params={["notice", "undoId"]} />
+      <FlashParams params={["notice", "undoId", "unit"]} />
       <ShopPageHeader
         title={t("gear.title")}
         // Rent out, then the page's primary "Add a unit"; the empty register
         // keeps its one door in the card below.
         actions={
           fleetTotal > 0 ? (
-            <RegisterHeaderActions shopSlug={shopSlug} t={t} addUnitControl={addUnitControl} />
+            <RegisterHeaderActions {...{ shopSlug, t, addUnitControl, rentingOut }} />
           ) : undefined
         }
       />
@@ -298,6 +296,8 @@ export default async function GearRegisterPage({
         shop={shop}
         t={t}
       />
+
+      <rentOut.RegisterRentOutPanel {...{ surface, shopSlug, search, t, locale }} />
 
       {notice === "deleted" && search.undoId ? (
         <UndoToast

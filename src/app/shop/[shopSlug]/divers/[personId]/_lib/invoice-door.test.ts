@@ -25,7 +25,7 @@ describe("whether a reader could raise an invoice at all", () => {
   });
 
   it("says no to a reader the shop has not trusted with orders", () => {
-    // The live `src/db/authz.ts` answer, which `orders/new` has always
+    // The live `src/db/authz.ts` answer, which `orders?add=1` has always
     // enforced and the link learned to ask in #1920.
     expect(canRaiseInvoiceFor(diver(), { canManageOrders: false, paymentsConnected: true })).toBe(
       false,

@@ -4,7 +4,7 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { signInAs } from "./helpers";
 
 const staff = staffTranslator("en-US");
-const newDiver = "/shop/blue-mantis/divers/new";
+const newDiver = "/shop/blue-mantis/divers?add=1";
 
 signedInAsOwner();
 

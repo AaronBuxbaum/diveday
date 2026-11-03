@@ -381,8 +381,8 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   await beginWalk(page);
   await tabUntil(page, /"Add diver"/, { limit: 25, where: "diver search" });
   await page.keyboard.press("Enter");
-  await page.waitForURL(/\/divers\/new\?/);
-  await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeFocused();
+  await page.waitForURL(/\/divers\?add=1&/);
+  await expect(page.getByRole("heading", { level: 2, name: "Add a diver" })).toBeFocused();
 
   await beginWalk(page);
   await recordAnnouncements(page);

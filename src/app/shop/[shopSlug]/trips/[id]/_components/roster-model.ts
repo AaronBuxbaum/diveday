@@ -63,7 +63,7 @@ export type RosterTrip = {
   requiresPayment: boolean;
   /**
    * Whether the shop has a Stripe account that can actually take money.
-   * `orders/new` refuses without one, so the per-seat "Create order" link
+   * `orders?add=1` refuses without one, so the per-seat "Create order" link
    * is withheld rather than a click that bounces straight back.
    */
   paymentsConnected: boolean;
@@ -78,7 +78,7 @@ export type RosterTrip = {
   /**
    * Whether this staffer may raise an invoice (`canPersonManageOrders`). The
    * per-seat "Create order" needs this *and* `paymentsConnected`: without it
-   * `orders/new` bounces the reader to the Orders index (issue #1925). Hiding
+   * `orders?add=1` bounces the reader to the Orders index (issue #1925). Hiding
    * the link is a courtesy; the route and its action refuse on their own.
    */
   canManageOrders: boolean;

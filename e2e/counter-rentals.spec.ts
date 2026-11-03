@@ -24,14 +24,14 @@ async function startRentalForCustomer(page: Page, { fromRegister = false } = {})
   if (fromRegister) {
     await page.goto("/shop/blue-mantis/gear");
     await page.getByRole("link", { name: "Rent out", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Rent out" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Rent out" })).toBeVisible();
     await page.getByLabel("Search by name, email, or phone").fill("Priya");
     await page.getByRole("button", { name: "Find a returning diver" }).click();
     await expect(page).toHaveURL((url) => url.searchParams.get("q") === "Priya");
     // The native GET loads a new document; wait for React before choosing a result.
     await settleStaffHydration(page);
   } else {
-    await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+    await page.goto("/shop/blue-mantis/gear?add=rental&q=Priya");
   }
   await page.getByRole("link", { name: `Rent to ${CUSTOMER}` }).click();
   // The window defaults to today; the free units for it are listed at once.

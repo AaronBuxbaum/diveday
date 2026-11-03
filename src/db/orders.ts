@@ -112,7 +112,7 @@ export type CreateOrderOutcome =
     };
 
 // Defense-in-depth bounds (CR-016) matching the action-layer zod schema in
-// src/app/shop/[shopSlug]/orders/new/actions.ts, so a caller that bypasses that
+// src/app/shop/[shopSlug]/orders/create-order-actions.ts, so a caller that bypasses that
 // form (a direct createOrder call, a future admin tool) can't persist an
 // out-of-bounds line item either.
 const MAX_LINE_ITEM_QUANTITY = 100;

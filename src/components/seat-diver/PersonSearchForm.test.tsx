@@ -25,7 +25,7 @@ describe("PersonSearchForm", () => {
         query=""
         label="Find a returning diver"
         placeholder="Name, email, or phone"
-        addDiverHref="/shop/blue-mantis/divers/new"
+        addDiverHref="/shop/blue-mantis/divers?add=1"
         addDiverLabel="Add diver"
       />,
     );

@@ -21,6 +21,7 @@ import {
 import { getShopById } from "@/db/shops";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { addPanelHref } from "@/lib/add-panel";
 import { trackEvent } from "@/lib/analytics";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowMs } from "@/lib/clock";
@@ -287,7 +288,7 @@ function waiverSendPath(
   if (payload.surface === "counter") {
     return payload.ticketId
       ? shopPath(slug, "gear", "rentals", payload.ticketId)
-      : shopPath(slug, "gear", "rentals", "new");
+      : addPanelHref(shopPath(slug, "gear"), "rental");
   }
   return shopPath(slug, "divers", ...(payload.personId ? [payload.personId] : []));
 }

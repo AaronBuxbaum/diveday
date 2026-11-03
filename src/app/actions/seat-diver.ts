@@ -448,7 +448,8 @@ export async function seatWalkInPartyAction(shopSlug: string, formData: FormData
   const parsed = parseForm(newDiverSchema, formData);
   const raw = rawLanding(formData);
   const tripId = parsed.ok ? parsed.data.tripId : String(raw.tripId ?? "");
-  const formPath = `${shopPath(shopSlug, "divers", "new")}?${new URLSearchParams({
+  const formPath = `${shopPath(shopSlug, "divers")}?${new URLSearchParams({
+    add: "1",
     surface: "departure",
     walkIn: "true",
     tripId,

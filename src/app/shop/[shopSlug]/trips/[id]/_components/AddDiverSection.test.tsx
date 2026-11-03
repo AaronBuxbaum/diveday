@@ -68,7 +68,7 @@ describe("AddDiverSection", () => {
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Add diver" }).at(-1)).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?surface=departure&tripId=trip-1",
+      "/shop/blue-mantis/divers?add=1&surface=departure&tripId=trip-1",
     );
   });
 
@@ -94,12 +94,12 @@ describe("AddDiverSection", () => {
     rerender(<AddDiverSection context={{ ...props, query: "Zed Quill" }} />);
     expect(screen.getByRole("link", { name: "Add as a walk-in" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?name=Zed+Quill&surface=departure&walkIn=true&tripId=trip-1",
+      "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&walkIn=true&tripId=trip-1",
     );
     // A phone booking for tomorrow is not a walk-in: its door stays beside.
     expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?name=Zed+Quill&surface=departure&tripId=trip-1",
+      "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&tripId=trip-1",
     );
   });
 
@@ -126,7 +126,7 @@ describe("AddDiverSection", () => {
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?surface=departure&tripId=trip-1&waitlist=true",
+      "/shop/blue-mantis/divers?add=1&surface=departure&tripId=trip-1&waitlist=true",
     );
   });
 
@@ -212,7 +212,7 @@ describe("AddDiverSection", () => {
 
     expect(screen.getByRole("link", { name: "Add to who’s waiting" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?name=Zed+Quill&surface=departure&tripId=trip-1&waitlist=true",
+      "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&tripId=trip-1&waitlist=true",
     );
   });
 
@@ -238,7 +238,7 @@ describe("AddDiverSection", () => {
     expect(screen.getByText("No returning diver matches “Nobody Here”.")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Add diver" })[1]).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?name=Nobody+Here&surface=departure&tripId=trip-1",
+      "/shop/blue-mantis/divers?add=1&name=Nobody+Here&surface=departure&tripId=trip-1",
     );
   });
 

@@ -76,7 +76,7 @@ async function openNewTripWithWalkIn(page: Page, titlePrefix: string): Promise<s
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
   await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Walk-in Wanda");
   await page.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -164,7 +164,7 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
   const addNew = page.locator('a[href*="waitlist=true"]', { hasText: "Add diver" });
   await expect(addNew).toBeVisible();
   await addNew.click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Waitlist Wally");
   await page.getByLabel("Email").fill(`wally-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to who’s waiting" }).click();
@@ -270,7 +270,7 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
   await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
 
   // One letter off "Marisol Vega", who is in the demo shop's trailing quarter
   // of sailed departures (src/db/seed-history.ts) — so she has a dive day and
@@ -325,9 +325,9 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
  * a deleted test guards nothing.
  */
 test("a crafted returnTo is ignored, before and after the create", async ({ page }) => {
-  const crafted = "/shop/blue-mantis/divers/new?returnTo=https%3A%2F%2Fevil.invalid%2Fsteal";
+  const crafted = "/shop/blue-mantis/divers?add=1&returnTo=https%3A%2F%2Fevil.invalid%2Fsteal";
   await page.goto(crafted);
-  await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Add a diver" })).toBeVisible();
 
   // A name no seeded diver is a trigram match for, so the create lands rather
   // than stopping at the "is this the same person?" prompt.
@@ -457,7 +457,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
 
   // The diver form is a dedicated step shared by all seating doors.
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Phoned In Pat");
   await page.getByLabel("Email").fill("pat@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -477,7 +477,7 @@ test("a refusal from the global door lands on the boat's Divers tab", async ({ p
 
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("First Aboard Fay");
   await page.getByLabel("Email").fill("fay@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -487,7 +487,7 @@ test("a refusal from the global door lands on the boat's Divers tab", async ({ p
   // the one place that says why and offers the wait list.
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Too Late Theo");
   await page.getByLabel("Email").fill("theo@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();

@@ -18,6 +18,7 @@ import {
   updateWorkOrderLine,
   type WorkOrderCareInput,
 } from "@/db/work-orders";
+import { ADD_ONE, addPanelHref } from "@/lib/add-panel";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { parseForm, single } from "@/lib/form-parse";
@@ -76,11 +77,11 @@ const pieceSchema = z.object({
   brandModel: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.brandModel),
   serialNumber: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.serialNumber),
   note: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.itemNote),
-  /** Where to land afterwards: the new-ticket form, or the diver's record. */
-  returnTo: z.enum(["new", "diver"]).optional(),
+  /** Where to land afterwards: the bench's add panel, or the diver's record. */
+  returnTo: z.enum(["add", "diver"]).optional(),
 });
 
-/** Record a piece of a diver's own gear, from the new-ticket form or their record. */
+/** Record a piece of a diver's own gear, from the bench's add panel or their record. */
 export async function addCustomerGearItemAction(formData: FormData) {
   const { session, board, diver } = await requireWorkOrderSurface();
   const parsed = pieceSchema.safeParse(Object.fromEntries(formData));
@@ -90,7 +91,7 @@ export async function addCustomerGearItemAction(formData: FormData) {
   const back =
     returnTo === "diver"
       ? diver(input.personId)
-      : `${board}/new?personId=${encodeURIComponent(input.personId)}`;
+      : addPanelHref(board, ADD_ONE, { personId: input.personId });
   const outcome = await addCustomerGearItem(await getDb(), {
     shopId: session.user.shopId,
     ...input,
@@ -144,16 +145,16 @@ const newOrderSchema = z.object({
 });
 
 /**
- * The new-ticket form for the subject the staffer already chose, so a refusal
- * does not send them back to pick the customer or the unit again. Only an id
- * that parses rides along.
+ * The bench's add panel, open on the subject the staffer already chose, so a
+ * refusal does not send them back to pick the customer or the unit again.
+ * Only an id that parses rides along.
  */
 function newOrderPath(board: string, formData: FormData): string {
   const personId = z.uuid().safeParse(formData.get("personId"));
-  if (personId.success) return `${board}/new?personId=${personId.data}`;
+  if (personId.success) return addPanelHref(board, ADD_ONE, { personId: personId.data });
   const unitId = z.uuid().safeParse(formData.get("gearItemId"));
-  if (unitId.success) return `${board}/new?unitId=${unitId.data}`;
-  return `${board}/new`;
+  if (unitId.success) return addPanelHref(board, ADD_ONE, { unitId: unitId.data });
+  return addPanelHref(board);
 }
 
 /** Open a ticket. The one door that creates one. */

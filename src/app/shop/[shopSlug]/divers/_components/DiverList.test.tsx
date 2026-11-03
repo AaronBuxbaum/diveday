@@ -146,7 +146,7 @@ describe("DiverList empty state", () => {
     expect(screen.getByText("No divers on file yet")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new",
+      "/shop/blue-mantis/divers?add=1",
     );
   });
 
@@ -237,7 +237,7 @@ describe("DiverList empty state", () => {
     expect(screen.queryByRole("button", { name: "Add diver" })).toBeNull();
     expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new",
+      "/shop/blue-mantis/divers?add=1",
     );
 
     fireEvent.change(search, { target: { value: "Nora" } });

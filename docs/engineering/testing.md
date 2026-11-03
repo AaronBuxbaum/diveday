@@ -392,7 +392,7 @@ associations and written exemptions for what source inference cannot resolve.
 
 It exists because a page with no test is silent by construction: it produces no failure for anyone
 to notice. A 2026-08-03 evaluation of the test system found three staff pages that had shipped with
-neither an e2e spec nor a visual capture — `/shop/[shopSlug]/orders/new`,
+neither an e2e spec nor a visual capture — the new-order page (now the Orders add panel),
 `/shop/[shopSlug]/dive-sites/catalog`, and `/shop/[shopSlug]/staffing`. All three have since been
 covered. Closing an exemption means writing the missing coverage and deleting its reason in the
 same change.

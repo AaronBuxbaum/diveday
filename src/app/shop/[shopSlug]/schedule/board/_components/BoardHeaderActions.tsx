@@ -30,7 +30,7 @@ export function BoardHeaderActions({
     <>
       {canConfigure ? (
         <Link
-          href={`/shop/${shopSlug}/schedule/board/new${week ? `?week=${encodeURIComponent(week)}` : ""}`}
+          href={`/shop/${shopSlug}/schedule/board?add=1${week ? `&week=${encodeURIComponent(week)}` : ""}`}
           data-board-add
           scroll={false}
           className={buttonClass()}

@@ -380,7 +380,7 @@ export default async function OrderDetailPage({
             the neutral fallback sentence, never the raw query value:
             `?notice=` is attacker-craftable, and this is a money screen — a
             hostile link must not be able to paint its own words into a
-            success-green message (same rule as orders/new's fallback). */}
+            success-green message (same rule as the new-order panel's fallback). */}
         <FormStatus tone={banner?.tone ?? "neutral"} className="mt-2 print:hidden">
           {notice && notice !== "not-authorized"
             ? banner

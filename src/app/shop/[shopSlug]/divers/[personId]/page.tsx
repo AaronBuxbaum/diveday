@@ -161,7 +161,7 @@ export default async function DiverDetailPage({
     loadDiverGear(db, shop, personId, { removed }),
     diverPackageBalance(db, shop.id, personId, now),
   ]);
-  // `orders/new` refuses outright without a payable account, so the story's
+  // `orders?add=1` refuses outright without a payable account, so the story's
   // foot simply omits "New invoice" rather than offering a link that bounces.
   // Connecting payments is a Settings errand and left this page with the ADR.
   const paymentsConnected = canAcceptPayments(stripeAccount);

@@ -229,7 +229,7 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   await expect(page.getByText(/No returning diver matches/)).toBeVisible();
 
   await page.getByRole("link", { name: "Add as a walk-in" }).click();
-  await page.waitForURL(/\/divers\/new\?.*walkIn=true/);
+  await page.waitForURL(/\/divers\?add=1&.*walkIn=true/);
   await page.getByLabel("Full name").fill("Walk-in Test Diver");
   // Email and phone are left blank on purpose — the whole point of this flow.
   await page.getByRole("button", { name: "Add to boat" }).click();
@@ -261,7 +261,7 @@ test("a counter walk-in family is seated together from one form", async ({ page 
   await find.fill("Zzyzx No Such Diver");
   await find.press("Enter");
   await page.getByRole("link", { name: "Add as a walk-in" }).click();
-  await page.waitForURL(/\/divers\/new\?.*walkIn=true/);
+  await page.waitForURL(/\/divers\?add=1&.*walkIn=true/);
 
   await page.getByLabel("Full name").first().fill("Quillon Brightwater");
   await page.getByRole("button", { name: "Add another person" }).click();
@@ -413,7 +413,7 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   await find.fill("Fills The Boat");
   await find.press("Enter");
   await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Fills The Boat");
   await page.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -908,7 +908,7 @@ test("a phone number read off a diver's record finds their seat at the counter",
  * rather than answering with nothing.
  */
 test("Today's arrival search says who is on file but not arriving today", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/divers/new");
+  await page.goto("/shop/blue-mantis/divers?add=1");
   await page.getByLabel("Full name").fill("Zephyrine Quayside");
   await page.getByRole("button", { name: "Add diver" }).click();
   await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);

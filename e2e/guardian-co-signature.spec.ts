@@ -47,7 +47,7 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   const stamp = Date.now();
   const diver = `Minor E2E Diver ${stamp}`;
 
-  await page.goto(`/shop/${SHOP}/divers/new`);
+  await page.goto(`/shop/${SHOP}/divers?add=1`);
   await page.getByLabel("Full name").fill(diver);
   await page.getByLabel("Email").fill(`minor-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add diver" }).click();
@@ -261,7 +261,7 @@ test("the diver record refuses a namesake co-signer and offers no tick", async (
   const stamp = Date.now();
   const diver = `Namesake E2E Diver ${stamp}`;
 
-  await page.goto(`/shop/${SHOP}/divers/new`);
+  await page.goto(`/shop/${SHOP}/divers?add=1`);
   await page.getByLabel("Full name").fill(diver);
   await page.getByLabel("Email").fill(`namesake-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add diver" }).click();

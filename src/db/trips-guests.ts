@@ -541,7 +541,7 @@ export async function getTripGuests(
      * wears the capsule; afterwards it would only be noise on a finished roster.
      */
     courseMaterialsOpen: nowDate().getTime() < trip.endsAt.getTime(),
-    // `orders/new` refuses without a payable account, so each seat's "Create
+    // `orders?add=1` refuses without a payable account, so each seat's "Create
     // order" link points at connecting one instead of at a door that bounces.
     paymentsConnected: canAcceptPayments(stripeAccount),
     demand: demandRecommendation({

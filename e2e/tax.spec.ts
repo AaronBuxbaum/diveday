@@ -107,9 +107,9 @@ test.describe("Stripe Tax opt-in", () => {
     );
     expect(connected.ok()).toBe(true);
 
-    const newOrder = `/shop/${privateShop.slug}/orders/new`;
+    const newOrder = `/shop/${privateShop.slug}/orders?add=1`;
     await page.goto(newOrder);
-    await expect(page.getByRole("heading", { level: 1, name: "New order" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "New order" })).toBeVisible();
     await expect(page.getByRole("group", { name: "Customer billing address" })).toHaveCount(0);
 
     await setTax(page, privateShop.slug, true);

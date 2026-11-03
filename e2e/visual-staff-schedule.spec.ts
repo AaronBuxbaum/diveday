@@ -195,7 +195,7 @@ for (const scheme of ["light", "dark"] as const) {
       const openWalkInForm = async (page: Page) => {
         const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
         await page.goto(walkInFormPath("blue-mantis", tripId));
-        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Add a diver", level: 2 }).waitFor();
       };
 
       /**
@@ -282,8 +282,8 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.waitForURL(/\/bookings\/new\/[^/?]+$/);
         await page.getByRole("link", { name: "Add diver", exact: true }).click();
-        await page.waitForURL(/\/divers\/new/);
-        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
+        await page.waitForURL(/\/divers\?add=1/);
+        await page.getByRole("heading", { name: "Add a diver", level: 2 }).waitFor();
         await capture(page, "booking-new-diver", scheme);
       });
 
@@ -302,7 +302,7 @@ for (const scheme of ["light", "dark"] as const) {
       const addPanelSettled = async (page: Page) => {
         // Confirms the click navigated to the panel; direct panel captures
         // already start at this URL.
-        await page.waitForURL(/\/schedule\/board\/new/);
+        await page.waitForURL(/\/schedule\/board\?(.*&)?add=/);
         const courseSelect = page.locator('select[name="courseId"]');
         // Ensure the detached wait below cannot pass before the select mounts.
         await courseSelect.waitFor({ state: "attached" });
@@ -669,8 +669,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the expanded add-a-departure panel renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
-        await page.getByRole("heading", { name: "Add a departure", level: 1 }).waitFor();
+        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.getByLabel("What is it").waitFor();
         await page.getByRole("button", { name: "Fewer options" }).waitFor();
         await addPanelSettled(page);
         await capture(page, "schedule-builder-add-full", scheme);
@@ -684,7 +684,7 @@ for (const scheme of ["light", "dark"] as const) {
       // generates stable.
       test(`the repeating-trip panel renders true to the design (${scheme})`, async ({ page }) => {
         const title = "Standing Saturday charter";
-        await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
+        await page.goto("/shop/blue-mantis/schedule/board?add=full");
         await page.getByLabel("What is it").fill(title);
         await page.getByLabel("Date").fill(daysFromNow(4));
         await page.getByLabel("Departs").fill("08:00");

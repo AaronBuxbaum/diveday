@@ -34,6 +34,7 @@ import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { orderLedgerRow } from "./_components/ledger-row";
+import { newOrderDoorFor, OrdersAddPanel } from "./_components/NewOrderPanel";
 import {
   FACT_SEPARATOR,
   NOTICE_ROWS,
@@ -51,6 +52,7 @@ import { OwedLine } from "./_components/OwedLine";
 import { MoneyOwedQueues } from "./_components/OwedMoneyQueues";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 import { PayoutLines, readBackOffice } from "./_components/PayoutLines";
+import type { OrdersSearch } from "./_lib/orders-search";
 import { type OrdersHrefOverrides, orderIndexFilter, ordersIndexHref } from "./order-index-filter";
 
 // This page's loading.tsx can paint before its reads; no request read sits above it.
@@ -123,46 +125,30 @@ export default async function OrdersIndexPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{
-    status?: string;
-    personId?: string;
-    /** The toolbar's one search box — diver name, departure title, order note. */
-    q?: string;
-    /** One departure's orders — the trip pulse's awaiting-payment fact links here. */
-    tripId?: string;
-    seats?: string;
-    from?: string;
-    to?: string;
-    range?: string;
-    page?: string;
-    importedPage?: string;
-    notice?: string;
-  }>;
+  searchParams: Promise<OrdersSearch>;
 }) {
   const { shopSlug } = await params;
+  const search = await searchParams;
   const { status, personId, q, tripId, seats, from, to, range, page, importedPage, notice } =
-    await searchParams;
+    search;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const banner = noticeFromParam(notice, NOTICES);
-  // The destination re-checks payment setup; hiding this door avoids a dead end.
+  // The panel re-checks payment setup; hiding this door avoids a dead end.
   const paymentsConnected = canAcceptPayments(await getShopStripeAccount(db, session.user.shopId));
 
-  // Unconfirmed Stripe operations are money work and remain conspicuous here.
-  //
   // Keep the DB-backed permissions separate: reconciliation is payment-manager
   // only, order creation has its own gate, and exports follow report access.
-  // Unauthorized staff never trigger the privileged reconciliation read; each
-  // destination also enforces its own permission.
   const [canReconcilePayments, canManageOrders, canExportOrders] = await Promise.all([
     canPersonManagePaymentSettings(db, session.user.shopId, session.user.personId),
     canPersonManageOrders(db, session.user.shopId, session.user.personId),
     canPersonViewShopReports(db, session.user.shopId, session.user.personId),
   ]);
+  const door = newOrderDoorFor(shopSlug, search.add, canManageOrders, paymentsConnected);
+  const banner = door.adding ? null : noticeFromParam(door.refusal ?? notice, NOTICES);
   // Reuse one permission-gated door in both the header and empty state.
-  const newOrderDoor = canManageOrders ? (
-    <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
+  const newOrderDoor = door.href ? (
+    <Link href={door.href} className={buttonClass()}>
       {t("orders.index.newOrder")}
     </Link>
   ) : null;
@@ -303,6 +289,10 @@ export default async function OrdersIndexPage({
       />
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
+      <OrdersAddPanel
+        open={door.adding}
+        {...{ surface: { db, shop, session }, shopSlug, search, t, locale }}
+      />
 
       {!paymentsConnected && canReconcilePayments && !shop.isDemo ? (
         <PaymentsSetupCard

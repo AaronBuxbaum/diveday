@@ -64,7 +64,7 @@ export async function getShopTaxEnabled(db: DbExecutor, shopId: string): Promise
  * on so its report has something to report and its settings row shows the
  * feature at all (src/db/seed.ts), and the invoices it raises are counter sales
  * whose location genuinely *is* the shop. So it falls back to its own address
- * rather than refusing, and `orders/new` prefills the same fields for the same
+ * rather than refusing, and `orders?add=1` prefills the same fields for the same
  * reason.
  *
  * `is_demo` is the whole gate. A real shop with tax on and no address supplied

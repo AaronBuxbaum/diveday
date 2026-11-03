@@ -102,7 +102,7 @@ for (const scheme of ["light", "dark"] as const) {
       // Opening a ticket, with the diver chosen: the pieces of theirs on file
       // as the checklist of what came in, and the job block under it.
       test(`the new work-order form renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/gear/work-orders/new?diverq=Diego+Alvarez");
+        await page.goto("/shop/blue-mantis/gear/work-orders?add=1&diverq=Diego+Alvarez");
         await page.getByRole("link", { name: "Diego Alvarez" }).first().click();
         await page.getByRole("heading", { level: 2, name: "The job" }).waitFor();
         await capture(page, "work-order-new", scheme);
@@ -210,7 +210,7 @@ for (const scheme of ["light", "dark"] as const) {
       // and how they pay. Priya has signed nothing, so the person step also
       // holds the unsigned waiver line and its Send waiver (issue #2346).
       test(`the rent-out form renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.goto("/shop/blue-mantis/gear?add=rental&q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
         await page.getByRole("group", { name: "Kind of gear" }).waitFor();
         // Two picks and a payment, so the bill, its total and the bar are in frame.
@@ -233,7 +233,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       test(`a counter tank offers air when nitrox is unconfirmed (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Lena");
+        await page.goto("/shop/blue-mantis/gear?add=rental&q=Lena");
         await page.getByRole("link", { name: "Rent to Lena Fischer" }).click();
         await page
           .getByRole("group", { name: "Kind of gear" })
@@ -254,7 +254,7 @@ for (const scheme of ["light", "dark"] as const) {
       // signed nothing at blue-mantis, so the frame also holds the unsigned
       // waiver line and its Send waiver (issue #2261, H-20261008-counter-rental-waiver-informs).
       test(`a counter rental's ticket renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.goto("/shop/blue-mantis/gear?add=rental&q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
         for (const [kind, label] of [
           ["Mask", /^Mask #1\b/],
@@ -278,7 +278,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a counter tank rental keeps its gas correction controls level (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.goto("/shop/blue-mantis/gear?add=rental&q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
         await page
           .getByRole("group", { name: "Kind of gear" })
@@ -445,8 +445,8 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         await request.post("/api/test/seed-stripe-account");
-        await page.goto("/shop/blue-mantis/orders/new");
-        await page.getByRole("heading", { level: 1, name: "New order" }).waitFor();
+        await page.goto("/shop/blue-mantis/orders?add=1");
+        await page.getByRole("heading", { level: 2, name: "New order" }).waitFor();
         await capture(page, "orders-new", scheme);
         await page.getByRole("button", { name: "Add another item", exact: true }).click();
         await page

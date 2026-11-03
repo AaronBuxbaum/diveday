@@ -32,7 +32,7 @@ import { tripPath } from "./roster-booking";
  * be applied once the unit is known — these are the loose outer guards, and
  * `saveConditionsAction` re-reads the shop and re-checks against the shop-unit
  * bounds before converting to the canonical Celsius/metres that get stored.
- * Same shape the dive-site depth entry uses (`shop/[shopSlug]/dive-sites/new`).
+ * Same shape the dive-site depth entry uses (`dive-sites?add=1`).
  */
 const conditionsSchema = z.object({
   conditionsHold: z.string().optional(),

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
 import { EmptyState } from "@/components/EmptyState";
@@ -24,7 +23,7 @@ import { resolveRescheduleNoticeSnapshot } from "../../_components/RescheduleNot
 import { ScheduleViews } from "../_components/ScheduleViews";
 import { BoardPageShell } from "./_components/BoardPageShell";
 import { requestedCourseAndSite, weekAroundRead } from "./_components/board-reads";
-import { type BoardSearchParams, legacyAddHref } from "./_components/board-search-params";
+import type { BoardSearchParams } from "./_components/board-search-params";
 import { boardWeekView } from "./_components/board-week-view";
 import {
   builderPriceInput,
@@ -90,9 +89,6 @@ export default async function ScheduleBoardPage({
   const actionResultKey =
     query.result ??
     (builder ? [builder, count, created, series].filter(Boolean).join(":") : undefined);
-  const createPage = query._createPage === "1";
-  const legacyHref = legacyAddHref(shopSlug, query);
-  if (legacyHref) redirect(legacyHref);
   const requestIds = [
     ...new Set(
       (requests ?? "")
@@ -116,7 +112,6 @@ export default async function ScheduleBoardPage({
   // lands on the one the shop is in rather than refusing the page (`src/lib/week-board.ts`).
   const weekStartIso = resolveWeekStart(week, todayIso);
   const returnWeek = week ? weekStartIso : undefined;
-  const boardHref = `/shop/${shopSlug}/schedule/board${returnWeek ? `?week=${returnWeek}` : ""}`;
 
   // The upcoming stream is keyset-paged; the week grid is a separate bounded read. Builder
   // catalog options load lazily when the closed-by-default add panel opens.
@@ -193,11 +188,7 @@ export default async function ScheduleBoardPage({
   // `?course=` always implies an open panel: it would otherwise land on a board
   // that silently swallowed the course the link named.
   const addPanelState =
-    add === "full"
-      ? "expanded"
-      : createPage || add || requestedCourse || requestedSite
-        ? "quick"
-        : "closed";
+    add === "full" ? "expanded" : add || requestedCourse || requestedSite ? "quick" : "closed";
 
   const initialCourse: BuilderInitialCourse | null = requestedCourse
     ? {
@@ -253,27 +244,23 @@ export default async function ScheduleBoardPage({
 
   return (
     <BoardPageShell
-      createPage={createPage}
-      boardHref={boardHref}
       hasUpcoming={hasUpcoming}
       canConfigure={canConfigure}
       shopSlug={shopSlug}
       returnWeek={returnWeek}
       st={st}
     >
-      {!createPage ? (
-        <ScheduleViews
-          shopSlug={shopSlug}
-          crewSchedule={shop.crewScheduleEnabled}
-          current="week"
-          week={weekStartIso}
-          copy={{
-            label: st("schedule.views.label"),
-            week: st("schedule.views.week"),
-            crew: st("schedule.views.crew"),
-          }}
-        />
-      ) : null}
+      <ScheduleViews
+        shopSlug={shopSlug}
+        crewSchedule={shop.crewScheduleEnabled}
+        current="week"
+        week={weekStartIso}
+        copy={{
+          label: st("schedule.views.label"),
+          week: st("schedule.views.week"),
+          crew: st("schedule.views.crew"),
+        }}
+      />
 
       {/* The four-tile overview row is gone on purpose: "Departures 46 /
           Booked 196" aggregated a horizon nobody acts on as a number, and on
@@ -288,7 +275,7 @@ export default async function ScheduleBoardPage({
         resultKey={actionResultKey}
       />
 
-      {!createPage && !hasUpcoming ? (
+      {!hasUpcoming ? (
         <EmptyState
           title={t("schedule.noUpcomingStaff")}
           body={t("schedule.noTripsStaff")}
@@ -302,7 +289,7 @@ export default async function ScheduleBoardPage({
           action={
             canConfigure ? (
               <Link
-                href={`/shop/${shopSlug}/schedule/board/new${returnWeek ? `?week=${returnWeek}` : ""}`}
+                href={`/shop/${shopSlug}/schedule/board?add=1${returnWeek ? `&week=${returnWeek}` : ""}`}
                 scroll={false}
                 className={buttonClass()}
               >
@@ -337,9 +324,8 @@ export default async function ScheduleBoardPage({
           initialSite,
           requestPlan,
           openAdd: addPanelState,
-          createPage,
           returnWeek,
-          week: createPage ? null : builderWeek,
+          week: builderWeek,
           actions: {
             add: addDepartureAction.bind(null, shopSlug),
             move: moveDepartureAction.bind(null, shopSlug),
