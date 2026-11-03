@@ -132,6 +132,8 @@ const rows = [
   { table: "staff_credentials", column: "person_id", kind: "crew", merge: "refuse" },
   { table: "account_sessions", column: "person_id", kind: "login", merge: "refuse" },
   { table: "calendar_feeds", column: "person_id", kind: "login", merge: "refuse" },
+  { table: "roll_call_events", column: "crew_person_id", kind: "crew", merge: "refuse" },
+  // Retired by issue #2700 (no reader or writer); dropped next release.
   { table: "roll_call_crew_events", column: "person_id", kind: "crew", merge: "refuse" },
   { table: "push_subscriptions", column: "person_id", kind: "login", merge: "refuse" },
   // The staffing week's own two tables (issue #1235). Both are written by, and
@@ -1058,10 +1060,10 @@ export function singletonPersonTables(): SingletonPersonTable[] {
 }
 
 /** Staff tables scoped by shop whose rows on either side refuse the merge. */
-export function refusedPersonTables(): RefusedPersonTable[] {
+export function refusedPersonTables(): { table: RefusedPersonTable; column: string }[] {
   return rows
     .filter((row) => row.merge === "refuse" && !("withoutShop" in row))
-    .map((row) => row.table) as RefusedPersonTable[];
+    .map((row) => ({ table: row.table as RefusedPersonTable, column: row.column }));
 }
 
 /** Staff tables with no `shop_id` whose rows on either side refuse the merge. */

@@ -10,12 +10,13 @@ import {
 import { cancelBooking, createBooking } from "./bookings";
 import { createDiver } from "./divers";
 import { getBookingReadiness } from "./readiness";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookings,
   certifications,
   courses,
   diveSites,
-  rollCallCrewEvents,
+  rollCallEvents,
   tripAssignments,
   tripDives,
   tripRequirements,
@@ -339,10 +340,10 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     const ctx = await advancedCharter();
     await teachesAndAboard(ctx);
     await markSeat(ctx);
-    await ctx.db.insert(rollCallCrewEvents).values({
+    await ctx.db.insert(rollCallEvents).values({
       shopId: ctx.shop.id,
       tripId: ctx.charter.id,
-      personId: ctx.instructor,
+      ...crewSubject(ctx.instructor),
       recordedByPersonId: ctx.owner,
       status: "not_boarded",
       checkpoint: "departure",

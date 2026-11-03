@@ -7,10 +7,10 @@ import { aboardAtSeaBookingIds } from "./aboard-at-sea";
 import * as bookingCapabilitiesModule from "./booking-capabilities";
 import { cancelBooking, createBooking, createBookingParty, selfCancelBooking } from "./bookings";
 import type { AppDb } from "./client";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookingCapabilities,
   bookings,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripAssignments,
@@ -463,8 +463,10 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-20261015-aboard-
     minutesAgo: number,
     checkpoint = "departure",
   ) {
-    await db.insert(rollCallCrewEvents).values({
-      ...crew,
+    await db.insert(rollCallEvents).values({
+      shopId: crew.shopId,
+      tripId: crew.tripId,
+      ...crewSubject(crew.personId),
       recordedByPersonId: crew.personId,
       status,
       checkpoint,

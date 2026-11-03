@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
@@ -70,6 +70,8 @@ import { type CreatePersonInput, createPerson, findOrCreatePerson } from "./peop
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "./readiness";
+import { newestMarkFirst } from "./roll-call-order";
+import { seatMarks } from "./roll-call-subject";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -2208,7 +2210,13 @@ export async function moveBooking(
     const [rolled] = await tx
       .select({ id: rollCallEvents.id })
       .from(rollCallEvents)
-      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.bookingId, booking.id)))
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
+          eq(rollCallEvents.bookingId, booking.id),
+        ),
+      )
       .limit(1);
     if (rolled) return { ok: false, reason: "roll_call_started" };
 
@@ -2610,16 +2618,13 @@ async function boardedAtDeparture(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.bookingId, bookingId),
         eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    )
+    .orderBy(...newestMarkFirst())
     .limit(1);
   return newest?.status === "boarded";
 }

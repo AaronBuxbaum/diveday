@@ -16,13 +16,8 @@ import {
   OTHER_SHOP,
   OTHER_TRIP,
 } from "./incident-reports-test-fixtures";
-import {
-  incidentReportPeople,
-  incidentReports,
-  rollCallCrewEvents,
-  rollCallEvents,
-  tripAssignments,
-} from "./schema";
+import { crewSubject } from "./roll-call-subject";
+import { incidentReportPeople, incidentReports, rollCallEvents, tripAssignments } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -435,10 +430,10 @@ describe("a missing diver report from the manifest", () => {
     const subject = { kind: "crew" as const, personId: f.ashore.id };
     const input = { shopId: shop.id, tripId: f.trip.id, subject, actorPersonId: f.crew.id };
     expect(await startMissingDiverReport(db, input)).toEqual({ ok: false, reason: "not_missing" });
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: f.trip.id,
-      personId: f.ashore.id,
+      ...crewSubject(f.ashore.id),
       recordedByPersonId: f.crew.id,
       status: "not_boarded",
       checkpoint: "after_dive_1",

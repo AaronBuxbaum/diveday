@@ -246,10 +246,9 @@ export function PersonSheet({
           them on a phone (K-266). The sheet itself is portalled, so nothing
           else shares this row. */}
       <div className="flex items-center">
-        {/* `data-print-content`: the trigger's content is the person, and the
-            packet's print backstop hides every other button (`globals.css`,
-            `.trip-print-bundle`). The caret is the control part, so it alone
-            stays off paper. */}
+        {/* `data-print-content`: the trigger's content is the person, so a
+            printed screen keeps it. The caret is the control part, so it
+            alone stays off paper. */}
         <button
           ref={triggerRef}
           type="button"

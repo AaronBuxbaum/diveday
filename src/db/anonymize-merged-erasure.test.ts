@@ -4,7 +4,8 @@ import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { getDiverMergePreview, mergeDiverRecords } from "./diver-merge";
 import { recordCrewRollCall } from "./manifests";
-import { people, personRoles, rollCallCrewEvents, shops, tripAssignments, trips } from "./schema";
+import { crewSubject } from "./roll-call-subject";
+import { people, personRoles, rollCallEvents, shops, tripAssignments, trips } from "./schema";
 
 const fileCtx = fileScopedShopContext({ history: true });
 
@@ -165,10 +166,10 @@ describe("anonymizeDiver — a third-party roll-call note that names the diver",
       });
       expect(written).toMatchObject({ ok: true });
     }
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: otherShop.id,
       tripId: otherTrip.id,
-      personId: otherPerson.id,
+      ...crewSubject(otherPerson.id),
       recordedByPersonId: otherPerson.id,
       status: "not_boarded",
       checkpoint: "after_dive_1",
@@ -182,12 +183,10 @@ describe("anonymizeDiver — a third-party roll-call note that names the diver",
     });
     expect(result.ok).toBe(true);
     const sameShopEvents = await db
-      .select({ note: rollCallCrewEvents.note })
-      .from(rollCallCrewEvents)
-      .where(
-        and(eq(rollCallCrewEvents.shopId, shop.id), eq(rollCallCrewEvents.tripId, shopTrip.id)),
-      )
-      .orderBy(rollCallCrewEvents.id);
+      .select({ note: rollCallEvents.note })
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.shopId, shop.id), eq(rollCallEvents.tripId, shopTrip.id)))
+      .orderBy(rollCallEvents.id);
     // Erasure removes the person's own data, not other people's sentences that
     // mention them (owner, 2026-11-01).
     expect(sameShopEvents.map((event) => event.note).sort()).toEqual(
@@ -200,14 +199,9 @@ describe("anonymizeDiver — a third-party roll-call note that names the diver",
       ].sort(),
     );
     const [foreignEvent] = await db
-      .select({ note: rollCallCrewEvents.note })
-      .from(rollCallCrewEvents)
-      .where(
-        and(
-          eq(rollCallCrewEvents.shopId, otherShop.id),
-          eq(rollCallCrewEvents.tripId, otherTrip.id),
-        ),
-      );
+      .select({ note: rollCallEvents.note })
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.shopId, otherShop.id), eq(rollCallEvents.tripId, otherTrip.id)));
     expect(foreignEvent?.note).toBe("Last saw Bob with Rose Chen at the stern.");
     const [unrelatedNamesake] = await db
       .select({ fullName: people.fullName })

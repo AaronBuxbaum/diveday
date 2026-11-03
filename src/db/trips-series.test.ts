@@ -11,11 +11,11 @@ import { callTripBlowout, getTripBlowout } from "./blowouts";
 import { createBookingParty } from "./bookings";
 import { listDiveSites } from "./dive-sites";
 import { getBookingPayment, setBookingPayment } from "./payments";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookings,
   courses,
   people,
-  rollCallCrewEvents,
   rollCallEvents,
   tripRequirements,
   tripSeries,
@@ -588,10 +588,10 @@ describe("recurring trip series (in-memory PGlite)", () => {
     if (!source || !sailed) throw new Error("expected two instances");
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seed staff missing");
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: sailed.id,
-      personId: staff.person.id,
+      ...crewSubject(staff.person.id),
       recordedByPersonId: staff.person.id,
       status: "boarded",
       checkpoint: "after_dive_2",

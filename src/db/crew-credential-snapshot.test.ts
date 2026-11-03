@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { recordCrewRollCall } from "./manifests";
-import { people, personRoles, rollCallCrewEvents, tripAssignments } from "./schema";
+import { people, personRoles, rollCallEvents, tripAssignments } from "./schema";
 import { changeStaffCredential, createStaffCredential } from "./staff-credentials";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -44,12 +44,12 @@ describe("crew credential evidence on live boarding marks", () => {
     ).toMatchObject({ ok: true });
     const [event] = await db
       .select()
-      .from(rollCallCrewEvents)
+      .from(rollCallEvents)
       .where(
         and(
-          eq(rollCallCrewEvents.shopId, shop.id),
-          eq(rollCallCrewEvents.tripId, trip.id),
-          eq(rollCallCrewEvents.personId, staff.person.id),
+          eq(rollCallEvents.shopId, shop.id),
+          eq(rollCallEvents.tripId, trip.id),
+          eq(rollCallEvents.crewPersonId, staff.person.id),
         ),
       );
     const observed = event as unknown as {
@@ -112,15 +112,15 @@ describe("crew credential evidence on live boarding marks", () => {
     expect(renewed?.renewsAt).toBe("2027-07-20");
     const [event] = await db
       .select()
-      .from(rollCallCrewEvents)
+      .from(rollCallEvents)
       .where(
         and(
-          eq(rollCallCrewEvents.shopId, shop.id),
-          eq(rollCallCrewEvents.tripId, trip.id),
-          eq(rollCallCrewEvents.personId, staff.person.id),
+          eq(rollCallEvents.shopId, shop.id),
+          eq(rollCallEvents.tripId, trip.id),
+          eq(rollCallEvents.crewPersonId, staff.person.id),
         ),
       )
-      .orderBy(desc(rollCallCrewEvents.seq))
+      .orderBy(desc(rollCallEvents.seq))
       .limit(1);
     expect(event?.credentialSnapshot).toEqual(
       expect.arrayContaining([
@@ -155,12 +155,12 @@ describe("crew credential evidence on live boarding marks", () => {
     ).toMatchObject({ ok: true });
     const [event] = await db
       .select()
-      .from(rollCallCrewEvents)
+      .from(rollCallEvents)
       .where(
         and(
-          eq(rollCallCrewEvents.shopId, shop.id),
-          eq(rollCallCrewEvents.tripId, trip.id),
-          eq(rollCallCrewEvents.personId, staff.person.id),
+          eq(rollCallEvents.shopId, shop.id),
+          eq(rollCallEvents.tripId, trip.id),
+          eq(rollCallEvents.crewPersonId, staff.person.id),
         ),
       );
     expect(event?.credentialSnapshot).toBeNull();
@@ -213,10 +213,8 @@ describe("crew credential evidence on live boarding marks", () => {
     ).toMatchObject({ ok: true });
     const [event] = await db
       .select()
-      .from(rollCallCrewEvents)
-      .where(
-        and(eq(rollCallCrewEvents.shopId, shop.id), eq(rollCallCrewEvents.personId, person.id)),
-      );
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.shopId, shop.id), eq(rollCallEvents.crewPersonId, person.id)));
     expect(event?.credentialSnapshot).toBeNull();
     expect(event?.credentialSnapshotStartedAt).toBeNull();
     expect(event?.credentialSnapshotCapturedAt).toBeNull();
@@ -233,10 +231,8 @@ describe("crew credential evidence on live boarding marks", () => {
     ).toMatchObject({ ok: true });
     const events = await db
       .select()
-      .from(rollCallCrewEvents)
-      .where(
-        and(eq(rollCallCrewEvents.shopId, shop.id), eq(rollCallCrewEvents.personId, person.id)),
-      );
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.shopId, shop.id), eq(rollCallEvents.crewPersonId, person.id)));
     expect(events).toHaveLength(2);
     expect(
       events.every(

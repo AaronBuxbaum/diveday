@@ -23,7 +23,7 @@ export type PrepView = {
    */
   home?: boolean;
   /**
-   * Composed as the trip packet's paper (`PAPER_PACKET`, B03): the lines a
+   * Composed as the trip packet's paper (`TripPacket`, B03): the lines a
    * printed packing list carries, and none of the controls that work them.
    */
   paper?: boolean;

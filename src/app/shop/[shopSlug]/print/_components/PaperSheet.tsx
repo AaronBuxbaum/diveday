@@ -13,10 +13,11 @@ import { PRINT_SHEET_BOX_MM, type PrintSheetPaper } from "@/lib/print-sheets";
  *   route declares, so what is drawn here is the page that comes out of the
  *   printer. It is a floor — a sheet whose content outgrows its paper takes a
  *   second page rather than cutting a word off.
- * - **The band's colour, as a value rather than a token.** `@media print`
- *   redefines `--primary` to repaint the app monochrome, so a band drawn from
- *   the token would print grey. The caller resolves the colour — the shop's
- *   derived brand — and it arrives here as a custom property on the element.
+ * - **The paper face.** Inside a sheet the semantic tokens are the sheet's
+ *   own (`--sheet-*`, `globals.css`), on screen and on paper alike, so what a
+ *   staffer reviews before printing is the page that comes out and nothing
+ *   is repainted for print. The band's colour arrives as a value — the shop's
+ *   derived brand, resolved by the caller — as a custom property here.
  *
  * The fold line is not decoration: paper outlives the morning it was printed,
  * and the date plus the storefront's address is how a diver holding it can
@@ -57,10 +58,14 @@ export function PaperSheet({
       lang={lang}
       style={
         {
-          width: `${box.width}mm`,
+          // A packet's sheet is the paper's width at most: it prints inside
+          // whatever gutter its page keeps, and never wider than either paper.
+          width: box.height === null ? "100%" : `${box.width}mm`,
+          maxWidth: box.height === null ? `${box.width}mm` : undefined,
           // A floor: a sheet that outgrows its paper takes a second page rather
-          // than losing a word.
-          minHeight: `${box.height}mm`,
+          // than losing a word. A packet's sheet has none; it runs as long as
+          // its roster.
+          minHeight: box.height === null ? undefined : `${box.height}mm`,
           "--sheet-band": tone.band,
           "--sheet-band-ink": tone.bandInk,
         } as CSSProperties

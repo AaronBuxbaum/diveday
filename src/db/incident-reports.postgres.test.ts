@@ -5,11 +5,12 @@ import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import type { AppDb } from "./client";
 import { startIncidentReport, startMissingDiverReport } from "./incident-reports";
+import { crewSubject } from "./roll-call-subject";
 import {
   incidentReports,
   people,
   personRoles,
-  rollCallCrewEvents,
+  rollCallEvents,
   shops,
   tripAssignments,
   trips,
@@ -84,10 +85,10 @@ async function twoMoreCrew(
     ids.push(person.id);
   }
   const [second, missing] = ids as [string, string];
-  await db.insert(rollCallCrewEvents).values({
+  await db.insert(rollCallEvents).values({
     shopId: at.shopId,
     tripId: at.tripId,
-    personId: missing,
+    ...crewSubject(missing),
     recordedByPersonId: at.crewId,
     status: "not_boarded",
     checkpoint: "after_dive_1",
