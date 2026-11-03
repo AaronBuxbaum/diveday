@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, settleStaffHydration, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
   daysFromNow,
@@ -475,10 +475,21 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
 });
 
 test("a full boat's add band offers the wait list, never a seat", async ({ page }) => {
-  test.setTimeout(30_000);
+  // Two tabs, a trip, a hand entry, a refused stale pick and a reload, each
+  // its own navigation or status wait.
+  test.setTimeout(45_000);
   const title = `Global Door Full ${e2eNow().getTime()}`;
   const tripId = await scheduleTrip(page, title, 9, 1);
 
+  // **Two staff, two screens, one seat left** (dock review F6). This screen
+  // opens the band with a returning diver found and leaves it standing...
+  const stale = makeActivitySafe(await page.context().newPage());
+  await stale.goto(`/shop/blue-mantis/trips/${tripId}?add=1&diverq=Priya`);
+  await settleStaffHydration(stale);
+  const stalePick = stale.getByRole("button", { name: "Add Priya Sharma to the trip" });
+  await expect(stalePick).toBeVisible();
+
+  // ...while the other seats someone new and fills the boat.
   await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\?add=1/);
@@ -486,6 +497,16 @@ test("a full boat's add band offers the wait list, never a seat", async ({ page 
   await page.getByLabel("Email").fill("fay@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
   await expect(page.getByRole("status")).toContainText("Diver added to the trip");
+
+  // The stale band still offers the seat it was drawn with. The server is the
+  // refusal of record: the boat is full, and nobody is seated past it.
+  await stalePick.click();
+  await expect(stale.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
+  // Seats only: the Divers tab also lists who wants in, where Priya can stand.
+  const seats = stale.locator('#roster li[id^="booking-"]');
+  await expect(seats.filter({ hasText: "First Aboard Fay" })).toHaveCount(1);
+  await expect(seats.filter({ hasText: "Priya Sharma" })).toHaveCount(0);
+  await stale.close();
 
   // The boat is full now. The band has one rule for a full boat (#2737): it
   // offers the wait list, so someone new is taken down as waiting, never

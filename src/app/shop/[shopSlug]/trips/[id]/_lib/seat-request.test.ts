@@ -2,8 +2,16 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { getBookableDiver } from "@/db/divers";
 import { askForDate } from "@/db/interests";
-import { people, personRoles, shops } from "@/db/schema";
+import {
+  bookings,
+  dateRequestOfferBookings,
+  interests,
+  people,
+  personRoles,
+  shops,
+} from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { readSeatRequest } from "./seat-request";
 
@@ -68,7 +76,7 @@ describe("readSeatRequest", () => {
       request: id,
       typed: "",
     });
-    if (read === null || read === "missing") throw new Error("request not read");
+    if (read === null || read === "gone") throw new Error("request not read");
     expect(read.row.id).toBe(id);
     expect(read.row.partySize).toBe(2);
     expect(read.candidate?.person.id).toBe(diver.id);
@@ -89,7 +97,7 @@ describe("readSeatRequest", () => {
       request: id,
       typed: "Somebody else",
     });
-    if (read === null || read === "missing") throw new Error("request not read");
+    if (read === null || read === "gone") throw new Error("request not read");
     expect(read.candidate).toBeNull();
   });
 
@@ -108,7 +116,7 @@ describe("readSeatRequest", () => {
       request: id,
       typed: "",
     });
-    if (read === null || read === "missing") throw new Error("request not read");
+    if (read === null || read === "gone") throw new Error("request not read");
     expect(read.candidate).toBeNull();
     expect(read.row).toMatchObject({
       personId: null,
@@ -118,7 +126,13 @@ describe("readSeatRequest", () => {
     });
   });
 
-  it("never reads another shop's request, however exact the id", async () => {
+  /**
+   * **A request that is gone is one answer, whatever made it so** (dock review
+   * F5): another shop's id, a deleted or erased row, junk, or a closed request
+   * all read `"gone"`, so the page cannot be used to probe which ids exist, and
+   * a stale link never takes the desk's Divers tab down with a 404.
+   */
+  it("reads another shop's request exactly as it reads one nobody has", async () => {
     const trip = await firstTrip();
     const other = await otherShop();
     const { id } = await askForDate(ctx.db, {
@@ -127,6 +141,37 @@ describe("readSeatRequest", () => {
       name: "Their Customer",
       email: "their.customer@example.com",
     });
+    const read = (request: string) =>
+      readSeatRequest(ctx.db, { shopId: ctx.shop.id, tripId: trip.id, request, typed: "" });
+    const theirs = await read(id);
+    const nobodys = await read("6f1c2c9e-0000-4000-8000-000000000000");
+    expect(theirs).toBe("gone");
+    expect(theirs).toEqual(nobodys);
+  });
+
+  it.each([
+    ["junk", "not-a-uuid"],
+    ["an injection attempt", "' or 1=1 --"],
+    ["a well-formed id nobody has", "6f1c2c9e-0000-4000-8000-000000000000"],
+  ])("answers %s as gone", async (_name, request) => {
+    const trip = await firstTrip();
+    expect(
+      await readSeatRequest(ctx.db, { shopId: ctx.shop.id, tripId: trip.id, request, typed: "" }),
+    ).toBe("gone");
+  });
+
+  it("answers a closed request as gone", async () => {
+    const trip = await firstTrip();
+    const { id } = await askForDate(ctx.db, {
+      shopId: ctx.shop.id,
+      interest: "Reef",
+      name: "Closed Asker",
+      email: "closed.asker@example.com",
+    });
+    await ctx.db
+      .update(interests)
+      .set({ closedAt: nowDate(), closedAs: "booked" })
+      .where(eq(interests.id, id));
     expect(
       await readSeatRequest(ctx.db, {
         shopId: ctx.shop.id,
@@ -134,17 +179,72 @@ describe("readSeatRequest", () => {
         request: id,
         typed: "",
       }),
-    ).toBe("missing");
+    ).toBe("gone");
   });
 
-  it.each([
-    ["junk", "not-a-uuid"],
-    ["an injection attempt", "' or 1=1 --"],
-    ["a well-formed id nobody has", "6f1c2c9e-0000-4000-8000-000000000000"],
-  ])("answers %s as missing", async (_name, request) => {
+  /** An offered party of `partySize` on `tripId`, `seated` of them already booked onto it. */
+  async function offeredParty(tripId: string, partySize: number, seated: number) {
+    const { id } = await askForDate(ctx.db, {
+      shopId: ctx.shop.id,
+      interest: "Wreck",
+      name: "Party Lead",
+      email: "party.lead@example.com",
+      partySize,
+    });
+    const [offer] = await ctx.db
+      .insert(interests)
+      .values({
+        shopId: ctx.shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId,
+        parentInterestId: id,
+        partySize,
+        offeredAt: nowDate(),
+      })
+      .returning();
+    if (!offer) throw new Error("setup: offer missing");
+    for (let index = 0; index < seated; index += 1) {
+      const [person] = await ctx.db
+        .insert(people)
+        .values({ shopId: ctx.shop.id, fullName: `Party Member ${index}` })
+        .returning();
+      if (!person) throw new Error("setup: person missing");
+      const [booking] = await ctx.db
+        .insert(bookings)
+        .values({ shopId: ctx.shop.id, tripId, personId: person.id, bookedAs: "diver" })
+        .returning();
+      if (!booking) throw new Error("setup: booking missing");
+      await ctx.db
+        .insert(dateRequestOfferBookings)
+        .values({ shopId: ctx.shop.id, interestId: offer.id, bookingId: booking.id });
+    }
+    return id;
+  }
+
+  it("counts who is already seated from the party, so the card says how many are left", async () => {
     const trip = await firstTrip();
+    const id = await offeredParty(trip.id, 3, 1);
+    const read = await readSeatRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      tripId: trip.id,
+      request: id,
+      typed: "",
+    });
+    if (read === null || read === "gone") throw new Error("request not read");
+    expect(read).toMatchObject({ seated: 1, partySize: 3 });
+  });
+
+  it("lets go of a party once every seat is taken", async () => {
+    const trip = await firstTrip();
+    const id = await offeredParty(trip.id, 2, 2);
     expect(
-      await readSeatRequest(ctx.db, { shopId: ctx.shop.id, tripId: trip.id, request, typed: "" }),
-    ).toBe("missing");
+      await readSeatRequest(ctx.db, {
+        shopId: ctx.shop.id,
+        tripId: trip.id,
+        request: id,
+        typed: "",
+      }),
+    ).toBe("gone");
   });
 });

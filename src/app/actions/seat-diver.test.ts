@@ -114,12 +114,15 @@ describe("every refusal lands on the boat with its own words", () => {
     expect(await landing()).toBe(`/shop/blue-mantis/trips/${TRIP_ID}?notice=${notice}`);
   });
 
-  it.each(refusals)("%s answers the counter in the same words", async (reason, notice) => {
-    vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason } as never);
-    expect(await landing(form(), "walk-in")).toBe(
-      `/shop/blue-mantis/trips/${TRIP_ID}?notice=${notice}`,
-    );
-  });
+  it.each(refusals)(
+    "%s answers the counter in the same words, still at the counter",
+    async (reason, notice) => {
+      vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason } as never);
+      expect(await landing(form(), "walk-in")).toBe(
+        `/shop/blue-mantis/trips/${TRIP_ID}?notice=${notice}&counter=1`,
+      );
+    },
+  );
 
   it("carries the boat's certification refusal as a gate signed for this departure only", async () => {
     const refusal = {
@@ -203,7 +206,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
   it.each(closed)("%s", async (_name, trip) => {
     vi.mocked(getTripWithBooked).mockResolvedValue(trip as never);
     expect(await landing(form(), "walk-in")).toBe(
-      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable`,
+      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable&counter=1`,
     );
     expect(seatDiver).not.toHaveBeenCalled();
   });
@@ -214,7 +217,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     data.set("tripId", TRIP_ID);
     data.set("fullName", "Dana Walker");
     await expect(seatNewDiverAction("walk-in", "blue-mantis", data)).rejects.toThrow(
-      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable`,
+      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable&counter=1`,
     );
     expect(seatDiver).not.toHaveBeenCalled();
   });
@@ -261,6 +264,61 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     );
   });
 
+  it.each([
+    [{ identityUnconfirmed: true, waiver: "not_delivered" }, "diver-added-identity-unconfirmed"],
+    [{ identityUnconfirmed: false, waiver: "not_delivered" }, "diver-added-waiver-undelivered"],
+    [{ identityUnconfirmed: false, waiver: "failed" }, "diver-added-waiver-undelivered"],
+  ] as const)(
+    "a party seat with %j still says %s, with the row and the request",
+    async (outcome, notice) => {
+      const bookingId = "55555555-5555-4555-8555-555555555555";
+      const requestId = "66666666-6666-4666-8666-666666666666";
+      vi.mocked(seatDiver).mockResolvedValue({
+        ok: true,
+        personId: DIVER_ID,
+        bookingId,
+        dateRequestPartyComplete: false,
+        confirmation: "skipped",
+        ...outcome,
+      } as never);
+      await expect(landing(form({ request: requestId }))).resolves.toBe(
+        `/shop/blue-mantis/trips/${TRIP_ID}?notice=${notice}&bid=${bookingId}&add=1&request=${requestId}`,
+      );
+    },
+  );
+
+  it("never links a walk-in to a request, and keeps the counter for the next one", async () => {
+    const bookingId = "55555555-5555-4555-8555-555555555555";
+    const requestId = "66666666-6666-4666-8666-666666666666";
+    vi.mocked(seatDiver).mockResolvedValue({
+      ok: true,
+      personId: DIVER_ID,
+      bookingId,
+      identityUnconfirmed: false,
+      waiver: "not_needed",
+      confirmation: "skipped",
+    } as never);
+    await expect(landing(form({ request: requestId }), "walk-in")).resolves.toBe(
+      `/shop/blue-mantis/trips/${TRIP_ID}?notice=walkin-added&bid=${bookingId}&counter=1`,
+    );
+    expect(seatDiver).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ entry: "walk_in", dateRequestInterestId: undefined }),
+    );
+  });
+
+  it("answers a walk-in's name prompt at the counter, with no request", async () => {
+    const requestId = "66666666-6666-4666-8666-666666666666";
+    vi.mocked(findSimilarDivers).mockResolvedValueOnce([{ id: DIVER_ID }] as never);
+    const data = new FormData();
+    data.set("tripId", TRIP_ID);
+    data.set("fullName", "Dana Walker");
+    data.set("request", requestId);
+    await expect(seatNewDiverAction("walk-in", "blue-mantis", data)).rejects.toThrow(
+      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?confirmName=Dana+Walker&counter=1#hand-entry`,
+    );
+  });
+
   it("returns to the trip after the last requested party member is seated", async () => {
     const bookingId = "55555555-5555-4555-8555-555555555555";
     const requestId = "66666666-6666-4666-8666-666666666666";
@@ -304,12 +362,12 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     );
   });
 
-  it("does not close the explicit request when seating is refused", async () => {
+  it("keeps the request and the open band when seating is refused, so the party can go on", async () => {
     const requestId = "66666666-6666-4666-8666-666666666666";
     vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason: "trip_full" } as never);
 
     await expect(landing(form({ request: requestId }))).resolves.toBe(
-      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-full`,
+      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-full&add=1&request=${requestId}`,
     );
     expect(seatDiver).toHaveBeenCalledWith(
       expect.anything(),

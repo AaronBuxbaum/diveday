@@ -454,7 +454,15 @@
     "addNewDiverAction": "Add diver",
     "offerSeat": "Offer a seat",
     "offerSeating": "Offering…",
-    "offerSeatAria": "Offer {name} a seat on the departure"
+    "offerSeatAria": "Offer {name} a seat on the departure",
+    "modeLabel": "Booking or walk-in",
+    "modeBooking": "Booking",
+    "modeWalkIn": "Walk-in",
+    "addForRequest": "Add for this request",
+    "addPersonForRequestAria": "Add {name} for this request",
+    "requestLeft": "{count, plural, one {# diver left to seat} other {# divers left to seat}}",
+    "requestDone": "Done with this request",
+    "requestGone": "That request is closed or removed."
   },
   "inviteSuggestions": {
     "heading": "Dived {site} with you before",

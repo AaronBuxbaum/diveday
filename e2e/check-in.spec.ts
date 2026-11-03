@@ -163,8 +163,17 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   await expect(firstTap).toBeVisible();
   expect((await firstTap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
 
-  // "Add a diver" is one search field at the counter; someone new is offered by
-  // its empty result (UX audit item 24), so no door stands beside it.
+  // Inside the window the band starts as a booking, with its "Add diver"
+  // door, and the desk chooses the counter on the band (#2737).
+  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Add diver", exact: true })).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Booking or walk-in" })
+    .getByRole("link", { name: "Walk-in" })
+    .click();
+  await page.waitForURL(/[?&]counter=1/);
+  // At the counter "Add a diver" is one search field; someone new is offered
+  // by its empty result (UX audit item 24), so no door stands beside it.
   await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Add diver", exact: true })).toHaveCount(0);
 
@@ -240,7 +249,9 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   // The bare Divers-tab URL, asserted rather than a `?notice=` this page
   // erases: `toHaveURL` retries, so this waits for `FlashParams` to strip the
   // code and proves it actually did — a looser pattern would pass either way.
-  await expect(page).toHaveURL(counter);
+  // A walk-in lands back at the counter (`counter=1`), so the next pick is a
+  // walk-in too until the desk chooses Booking.
+  await expect(page).toHaveURL(`${counter}?counter=1`);
   await expect(
     page.getByText("Added to this boat’s list, but their waiver wasn’t emailed."),
   ).toBeVisible();
@@ -330,7 +341,8 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   // Back on this boat's Divers tab, with the notice's code already stripped —
   // so the render the row is acted on below is the settled one, not one a
   // navigation is about to replace (and with it the confirm's client state).
-  await expect(page).toHaveURL(counter);
+  // Still at the counter: the prompt was answered in the counter's mode.
+  await expect(page).toHaveURL(`${counter}?counter=1`);
 
   const row = deskRow(page, "Zoe Bennett");
   await expect(row.getByText("Blocked", { exact: true })).toBeVisible();
@@ -407,8 +419,8 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   const tripId = page.url().match(/\/trips\/([^/?#]+)/)?.[1];
   if (!tripId) throw new Error("could not read the trip id from the URL");
 
-  // Inside the arrivals window "Add a diver" is one search field, and a booked
-  // seat is its empty result's "Add diver" (UX audit item 24).
+  // Inside the arrivals window the band is a booking until the desk picks
+  // Walk-in on it, so a booked seat is its "Add diver" (#2737).
   const find = page.getByRole("searchbox", { name: "Find a returning diver" });
   await find.fill("Fills The Boat");
   await find.press("Enter");
@@ -431,7 +443,7 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   // A refusal lands on the boat's Divers tab, where the add-diver form says
   // why and the wait list is one tap away.
   await expect(page).toHaveURL(
-    new RegExp(`/shop/blue-mantis/trips/${tripId}(?:\\?notice=diver-full)?$`),
+    new RegExp(`/shop/blue-mantis/trips/${tripId}\\?(?:notice=diver-full&)?counter=1$`),
   );
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered

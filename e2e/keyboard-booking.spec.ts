@@ -143,7 +143,9 @@ async function snapshotFocus(page: Page): Promise<FocusStop | null> {
     const name = (el.getAttribute("aria-label") ?? (labelled || el.textContent) ?? "")
       .replace(/\s+/g, " ")
       .trim();
-    const target = el instanceof HTMLAnchorElement && el.href ? new URL(el.href).pathname : null;
+    // Path and query: the departure door is told apart by its `?add=1`.
+    const url = el instanceof HTMLAnchorElement && el.href ? new URL(el.href) : null;
+    const target = url ? `${url.pathname}${url.search}` : null;
     return {
       label: `${el.tagName.toLowerCase()}${role ? `[${role}]` : ""} "${name.slice(0, 60)}"${
         target ? ` → ${target}` : ""

@@ -10,8 +10,7 @@ import { useEffect } from "react";
  *
  * Focus goes to the panel's heading, not its first field: on a phone a field
  * would raise the keyboard over the form before anyone has read it. A field
- * that already holds focus (a refusal's `FieldErrorFocus`, which mounts after
- * this) keeps it.
+ * inside the panel that already holds focus keeps it.
  */
 export function AddPanelFocus({ panelId, closeHref }: { panelId: string; closeHref: string }) {
   const router = useRouter();
@@ -19,7 +18,10 @@ export function AddPanelFocus({ panelId, closeHref }: { panelId: string; closeHr
   useEffect(() => {
     const panel = document.getElementById(panelId);
     if (!panel) return;
-    if (document.activeElement && document.activeElement !== document.body) return;
+    // Only a field inside the panel keeps focus. Anything else is the link
+    // that opened it, which Next leaves focused inside the previous route's
+    // hidden <Activity> tree after a client navigation.
+    if (panel.contains(document.activeElement)) return;
     panel.querySelector<HTMLElement>("[data-add-panel-heading]")?.focus({ preventScroll: true });
     if (panel.getBoundingClientRect().top < 0) panel.scrollIntoView({ block: "start" });
   }, [panelId]);

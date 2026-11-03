@@ -153,7 +153,8 @@ async function holdsWalkInOpen(landing: SeatLanding, shopId: string): Promise<bo
  * than an appended query param: a server-action redirect to the page it was
  * already on, with a second query param, left the client router on the page it
  * held and the submit button spinning. Every door's refusal lands on a route
- * with a path segment of its own (the boat, the diver) and a query-less URL.
+ * with a path segment of its own (the boat, the diver), led by its notice; what
+ * follows is only the band's kept mode (`bandKept`).
  */
 function refuse(
   surface: SeatSurface,
@@ -173,6 +174,7 @@ function refuse(
    * form (security review finding).
    */
   gate?: TripAdmissionRefusal,
+  requestId?: string | null,
 ): never {
   const back = surface.refusedPath(landing);
   const scope = gate ? surface.gateScope(landing) : null;
@@ -183,8 +185,26 @@ function refuse(
     // word, which is what the `? … : ""` concatenation here used to guard.
     noticeUrl(back, notice, {
       gate: gate && scope ? signTripAdmissionGate(gate, scope) : undefined,
+      ...bandKept(surface, landing, requestId ?? null),
     }),
   );
+}
+
+/**
+ * What the departure's add band was doing, kept on the landing so the next
+ * seat is made the same way: the counter (`counter=1`), which the desk chose
+ * on the band and which a seat or a refusal must not quietly drop, or a date
+ * request's party still being seated (`add=1&request=`). A walk-in is never a
+ * request, so the counter carries none. Nothing on the diver's record.
+ */
+function bandKept(
+  surface: SeatSurface,
+  landing: SeatLanding,
+  requestId: string | null,
+): Record<string, string> {
+  if (surface !== SEAT_SURFACES.departure) return {};
+  if (landing.walkIn) return { counter: "1" };
+  return requestId ? { add: "1", request: requestId } : {};
 }
 
 /**
@@ -214,6 +234,9 @@ async function seat(
   // fault: the staffer reads "tap again" on the page they were on, rather than
   // a crash page with the diver still at the counter. Anything else still
   // throws. The redirect is outside the `try`, since `redirect` throws too.
+  // A walk-in answers no request: the counter's seat is someone at the desk,
+  // and a request is somebody who asked ahead (dive-domain review, #2737).
+  const request = landing.walkIn ? null : (requestId ?? null);
   if (!(await holdsWalkInOpen(landing, actor.shopId))) {
     refuse(surface, landing, surface.refusalNotice.trip_unavailable);
   }
@@ -227,19 +250,32 @@ async function seat(
     entry: door.entry,
     refusals: door.refusals,
     participantType,
-    dateRequestInterestId: requestId ?? undefined,
+    dateRequestInterestId: request ?? undefined,
   }).catch(busyOnLockWait);
-  if (outcome === "busy") refuse(surface, landing, SEAT_BUSY_NOTICE);
+  if (outcome === "busy") refuse(surface, landing, SEAT_BUSY_NOTICE, undefined, request);
   const result = outcome;
-  if (!result.ok) refuse(surface, landing, surface.refusalNotice[result.reason], result.refusal);
+  if (!result.ok) {
+    refuse(surface, landing, surface.refusalNotice[result.reason], result.refusal, request);
+  }
+  const owesWork = result.identityUnconfirmed
+    ? door.seatedIdentityUnconfirmedNotice
+    : result.waiver === "not_delivered" || result.waiver === "failed"
+      ? door.seatedWaiverUndeliveredNotice
+      : null;
   // Keep the request context in front of the staffer until every requested
   // seat has been linked to this offered departure. The booking transaction
-  // serializes the count and closes the parent on the final seat.
-  if (requestId && result.dateRequestPartyComplete === false) {
+  // serializes the count and closes the parent on the final seat. A held seat
+  // or an unsent waiver still outranks "add the rest": the party goes on, but
+  // the row it names is pointed at (`bid`), as on every other seat.
+  if (request && result.dateRequestPartyComplete === false) {
     const tripPath = shopPath(landing.shopSlug, "trips", landing.tripId);
     return revalidateAndRedirect(
       tripPath,
-      noticeUrl(tripPath, "party-seat-added", { add: "1", request: requestId }),
+      noticeUrl(tripPath, owesWork ?? "party-seat-added", {
+        bid: owesWork ? result.bookingId : undefined,
+        add: "1",
+        request,
+      }),
     );
   }
   const settled: SeatLanding = { ...landing, personId: result.personId };
@@ -268,17 +304,14 @@ async function seat(
   //
   // Last, a seat whose confirmation went out says so (fourth
   // UX review, item 3): "Diver added. Their confirmation is on its way."
-  const notice = result.identityUnconfirmed
-    ? door.seatedIdentityUnconfirmedNotice
-    : result.waiver === "not_delivered" || result.waiver === "failed"
-      ? door.seatedWaiverUndeliveredNotice
-      : result.confirmation === "sent"
-        ? door.seatedConfirmationSentNotice
-        : door.seatedNotice;
+  const notice =
+    owesWork ??
+    (result.confirmation === "sent" ? door.seatedConfirmationSentNotice : door.seatedNotice);
   revalidateAndRedirect(
     path,
     noticeUrl(path, notice, {
       bid: surface.carriesBookingId ? result.bookingId : undefined,
+      ...bandKept(surface, settled, null),
     }),
   );
 }
@@ -325,7 +358,9 @@ export async function seatExistingDiverAction(
     personId: parsed.ok ? parsed.data.personId : String(raw.personId ?? ""),
     walkIn,
   };
-  if (!parsed.ok) refuse(surface, landing, surface.invalidNotice);
+  if (!parsed.ok) {
+    refuse(surface, landing, surface.invalidNotice, undefined, answeredRequestId(formData));
+  }
   await seat(
     surface,
     landing,
@@ -365,7 +400,7 @@ export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, f
     walkIn,
   };
   if (!parsed.ok || (surface.email === "required" && !landing.walkIn && !email)) {
-    refuse(surface, landing, surface.invalidNotice);
+    refuse(surface, landing, surface.invalidNotice, undefined, answeredRequestId(formData));
   }
   if (!(await holdsWalkInOpen(landing, session.user.shopId))) {
     refuse(surface, landing, surface.refusalNotice.trip_unavailable);
@@ -381,12 +416,13 @@ export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, f
       search.set("confirmName", parsed.data.fullName);
       if (parsed.data.email) search.set("confirmEmail", parsed.data.email);
       if (parsed.data.phone) search.set("confirmPhone", parsed.data.phone);
-      // The prompt is answered on the same band, so the request it was opened
-      // from rides along and the seat it makes still closes that request.
-      const requestId = answeredRequestId(formData);
-      if (requestId) {
-        search.set("add", "1");
-        search.set("request", requestId);
+      // The prompt is answered on the same band, in the same mode: the
+      // counter's stays at the counter, and a request's rides along so the
+      // seat it makes still closes that request.
+      for (const [key, value] of Object.entries(
+        bandKept(surface, landing, answeredRequestId(formData)),
+      )) {
+        search.set(key, value);
       }
 
       const [path, query] = back.split("?");

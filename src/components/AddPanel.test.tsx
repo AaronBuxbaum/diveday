@@ -40,6 +40,46 @@ describe("AddPanel", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Add a diver" })).toHaveFocus();
   });
 
+  /**
+   * The link that opened the panel stays focused inside the previous route,
+   * which Next keeps mounted as a hidden <Activity> tree. That is not the
+   * staffer working somewhere else, so the panel still takes focus
+   * (keyboard-booking.spec.ts, leg 4).
+   */
+  it("takes focus from the link that opened it, left behind on the previous page", () => {
+    // Not `hidden` here: jsdom will not focus inside a hidden subtree, while
+    // Chrome keeps focus on a link whose route was hidden after the tap.
+    const previous = document.createElement("div");
+    const link = document.createElement("a");
+    link.href = "/shop/reef/divers?add=1";
+    link.textContent = "Add diver";
+    previous.append(link);
+    document.body.append(previous);
+    link.focus();
+    try {
+      render(
+        <AddPanel open title="Add a diver" closeHref="/shop/reef/divers" closeLabel="Close">
+          <input aria-label="Name" />
+        </AddPanel>,
+      );
+      expect(screen.getByRole("heading", { level: 2, name: "Add a diver" })).toHaveFocus();
+    } finally {
+      previous.remove();
+    }
+  });
+
+  it("leaves focus on a field inside the panel that already holds it", () => {
+    function Focused() {
+      return <input aria-label="Name" ref={(input) => input?.focus()} />;
+    }
+    render(
+      <AddPanel open title="Add a diver" closeHref="/shop/reef/divers" closeLabel="Close">
+        <Focused />
+      </AddPanel>,
+    );
+    expect(screen.getByRole("textbox", { name: "Name" })).toHaveFocus();
+  });
+
   it("shuts on Escape from inside the panel, onto the close URL", () => {
     render(
       <AddPanel open title="Add a diver" closeHref="/shop/reef/divers" closeLabel="Close">

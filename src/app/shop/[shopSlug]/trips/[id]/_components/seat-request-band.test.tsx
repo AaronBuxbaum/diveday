@@ -1,10 +1,18 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BookableDiver } from "@/db/divers";
 import type { DateInterestRow } from "@/db/interest-dates";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { seatRequestBand } from "./seat-request-band";
+import { addBandFor, seatRequestBand } from "./seat-request-band";
+
+vi.mock("next/navigation", () => ({
+  notFound: () => {
+    throw new Error("NOT_FOUND");
+  },
+}));
+vi.mock("../_lib/seat-request", () => ({ readSeatRequest: vi.fn() }));
+const { readSeatRequest } = await import("../_lib/seat-request");
 
 afterEach(cleanup);
 
@@ -21,9 +29,12 @@ const ROW = {
   partySize: 3,
 } as DateInterestRow;
 
+const TRIP = "6f1c2c9e-2222-4000-8000-000000000002";
+const WHERE = { shopSlug: "blue-mantis", tripId: TRIP, t };
+
 describe("seatRequestBand", () => {
   it("prefills someone not on file and names who asked, for how many", () => {
-    const band = seatRequestBand({ row: ROW, candidate: null }, { shopSlug: "blue-mantis", t });
+    const band = seatRequestBand({ row: ROW, candidate: null, seated: 0, partySize: 3 }, WHERE);
     expect(band.context).toEqual({
       id: ROW.id,
       prefill: { fullName: "Imani Okafor", email: "imani@example.com", phone: "+13055550101" },
@@ -31,7 +42,9 @@ describe("seatRequestBand", () => {
     expect(band.search).toBeUndefined();
     render(<div>{band.card}</div>);
     expect(screen.getByText(t("bookings.new.fromRequest"))).toBeInTheDocument();
-    expect(screen.getByText(`(${t("requests.divers", { count: 3 })})`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`(${t("trips.addDiver.requestLeft", { count: 3 })})`),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: t("bookings.new.viewRequests") })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/requests",
@@ -44,8 +57,13 @@ describe("seatRequestBand", () => {
       rentalFit: null,
     } as unknown as BookableDiver;
     const band = seatRequestBand(
-      { row: { ...ROW, personId: "person-1", name: "Avery Diver" }, candidate },
-      { shopSlug: "blue-mantis", t },
+      {
+        row: { ...ROW, personId: "person-1", name: "Avery Diver" },
+        candidate,
+        seated: 0,
+        partySize: 3,
+      },
+      WHERE,
     );
     expect(band.context).toEqual({ id: ROW.id, prefill: undefined });
     expect(band.search).toEqual({ query: "Avery Diver", candidates: [candidate] });
@@ -53,6 +71,53 @@ describe("seatRequestBand", () => {
     expect(screen.getByRole("link", { name: t("requests.viewDiver") })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers/person-1",
+    );
+  });
+
+  it("says how many are left to seat, not how many asked", () => {
+    const band = seatRequestBand({ row: ROW, candidate: null, seated: 1, partySize: 3 }, WHERE);
+    render(<div>{band.card}</div>);
+    expect(
+      screen.getByText(`(${t("trips.addDiver.requestLeft", { count: 2 })})`),
+    ).toBeInTheDocument();
+  });
+
+  it("prefills the asker for the party's first seat only", () => {
+    const band = seatRequestBand({ row: ROW, candidate: null, seated: 1, partySize: 3 }, WHERE);
+    expect(band.context).toEqual({ id: ROW.id, prefill: undefined });
+  });
+
+  it("lets the desk put the request down, keeping the band open", () => {
+    const band = seatRequestBand({ row: ROW, candidate: null, seated: 0, partySize: 3 }, WHERE);
+    render(<div>{band.card}</div>);
+    expect(screen.getByRole("link", { name: t("trips.addDiver.requestDone") })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/trips/${TRIP}?add=1`,
+    );
+  });
+});
+
+describe("addBandFor", () => {
+  const db = {} as never;
+  const where = { shop: { id: "shop-1" }, shopSlug: "blue-mantis", tripId: TRIP, t };
+
+  it("keeps the page when the request is gone, and says so in place of the card", async () => {
+    vi.mocked(readSeatRequest).mockResolvedValue("gone");
+    const band = await addBandFor(db, where, { add: "1", request: ROW.id });
+    expect(band).toMatchObject({ open: true, counter: false });
+    expect(band.request).toBeUndefined();
+    render(<div>{band.requestGone}</div>);
+    expect(screen.getByText(t("trips.addDiver.requestGone"))).toBeInTheDocument();
+  });
+
+  it("is the counter only when the desk chose it, and the counter answers no request", async () => {
+    vi.mocked(readSeatRequest).mockClear();
+    expect(await addBandFor(db, where, { add: "1" })).toMatchObject({ counter: false });
+    const counter = await addBandFor(db, where, { counter: "1", request: ROW.id });
+    expect(counter).toEqual({ open: false, counter: true });
+    expect(readSeatRequest).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ request: ROW.id }),
     );
   });
 });

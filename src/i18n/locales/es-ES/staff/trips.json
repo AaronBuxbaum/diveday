@@ -454,7 +454,15 @@
     "addNewDiverAction": "Agregar buceador",
     "offerSeat": "Ofrecer una plaza",
     "offerSeating": "Ofreciendo…",
-    "offerSeatAria": "Ofrecer a {name} una plaza en la salida"
+    "offerSeatAria": "Ofrecer a {name} una plaza en la salida",
+    "modeLabel": "Reserva o mostrador",
+    "modeBooking": "Reserva",
+    "modeWalkIn": "En el mostrador",
+    "addForRequest": "Agregar para esta petición",
+    "addPersonForRequestAria": "Agregar a {name} para esta petición",
+    "requestLeft": "{count, plural, one {Queda # buceador por agregar} other {Quedan # buceadores por agregar}}",
+    "requestDone": "Terminar con esta petición",
+    "requestGone": "Esa petición está cerrada o se eliminó."
   },
   "inviteSuggestions": {
     "heading": "Ya bucearon en {site} contigo",

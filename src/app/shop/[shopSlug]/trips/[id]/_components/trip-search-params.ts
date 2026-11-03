@@ -32,6 +32,12 @@ export type TripPageSearchParams = {
    */
   request?: string;
   /**
+   * `1`: the desk chose the counter on the add band, so its seats are
+   * walk-ins (`addBandMode`). Kept, not flashed: the counter stays the
+   * counter from one walk-in to the next.
+   */
+  counter?: string;
+  /**
    * A refused Paid mark's status, amount (in cents) and method, so the sheet
    * reopens holding them (issue #2607). Read through `readMarkRetry`, never raw.
    */
