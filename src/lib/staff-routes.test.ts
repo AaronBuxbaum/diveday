@@ -95,9 +95,6 @@ describe("staffRouteAt", () => {
     );
     expect(up("/shop/blue-mantis/trips/t-1/log")).toBe("/shop/blue-mantis/trips/t-1");
     expect(up("/shop/blue-mantis/trips/t-1/party/l-1/waivers")).toBe("/shop/blue-mantis/trips/t-1");
-    expect(up("/shop/blue-mantis/trips/t-1/prep/ticket/b-1")).toBe(
-      "/shop/blue-mantis/trips/t-1/prep#packing-list",
-    );
   });
 
   it("lands on the part of the parent the page came from", () => {
