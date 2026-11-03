@@ -683,6 +683,13 @@ const rows = [
     why: "who called the roll",
   },
   {
+    table: "deals",
+    column: "created_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who wrote the code or sent the deal",
+  },
+  {
     table: "shop_promo_codes",
     column: "created_by_person_id",
     kind: "actor",

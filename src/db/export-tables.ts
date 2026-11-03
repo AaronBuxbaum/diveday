@@ -24,6 +24,7 @@ import {
   customerGearItems,
   customerGearReminderSettings,
   dateRequestOfferBookings,
+  deals,
   departureBoatSafetySnapshots,
   divePackageEntitlements,
   divePackages,
@@ -49,13 +50,11 @@ import {
   recapPhotos,
   rentalFitProfiles,
   rollCallEvents,
-  shopPromoCodes,
   shopTextTranslations,
   staffCredentialHistory,
   staffCredentials,
   tripChangeEvents,
   tripHelpRequests,
-  tripLastMinutePromos,
   tripLenses,
   tripRequirements,
   tripSeries,
@@ -135,10 +134,12 @@ export const EXPORT_TABLES = {
     order: [asc(recapPhotos.createdAt), asc(recapPhotos.id)],
     scope: { shopColumn: recapPhotos.shopId, bookingColumn: recapPhotos.bookingId },
   },
-  shopPromoCodes: {
-    table: shopPromoCodes,
-    order: [asc(shopPromoCodes.createdAt), asc(shopPromoCodes.id)],
-    scope: { shopColumn: shopPromoCodes.shopId },
+  // Both kinds of deal: the shop bundle splits them into shop_promo_codes.csv
+  // and trip_last_minute_promos.csv by `trip_id` (ADR 20261103-a-deal-is-one-row).
+  deals: {
+    table: deals,
+    order: [asc(deals.createdAt), asc(deals.id)],
+    scope: { shopColumn: deals.shopId },
   },
   // The shop's own price list of prepaid packages, and every dive a diver
   // has bought and not yet taken (ADR
@@ -193,11 +194,6 @@ export const EXPORT_TABLES = {
     table: dateRequestOfferBookings,
     order: [asc(dateRequestOfferBookings.interestId), asc(dateRequestOfferBookings.bookingId)],
     scope: { shopColumn: dateRequestOfferBookings.shopId },
-  },
-  tripLastMinutePromos: {
-    table: tripLastMinutePromos,
-    order: [asc(tripLastMinutePromos.createdAt), asc(tripLastMinutePromos.id)],
-    scope: { shopColumn: tripLastMinutePromos.shopId },
   },
   orders: {
     table: orders,

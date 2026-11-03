@@ -170,7 +170,7 @@ const WAIVER_TONE_INK = {
  * **The waiver, as one row**: where the release stands, why, and the routes to
  * get it signed.
  *
- * The four standings come from `shopWaiverStatus`; `failed` is the delivery
+ * The four standings come from `shopWaiverStanding`; `failed` is the delivery
  * outcome sitting orthogonal to them (`src/i18n/waiver-labels.ts` explains the
  * asymmetry). A failure never renders mute: with no `detail` supplied the row
  * states the delivery failure itself, because "Not signed" in red with no

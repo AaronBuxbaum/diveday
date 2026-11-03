@@ -3,7 +3,7 @@ import type { WaiverRecord } from "@/db/schema";
 import {
   bookingRecordLapsed,
   releaseLapseForBooking,
-  shopWaiverStatus,
+  shopWaiverStanding,
   WAIVER_SIGNATURE_VALIDITY_MS,
 } from "./waivers";
 
@@ -114,29 +114,29 @@ describe("bookingRecordLapsed", () => {
   });
 });
 
-describe("shopWaiverStatus through a departure", () => {
+describe("shopWaiverStanding through a departure", () => {
   const input = { personSignedWaivers: [release()], currentTemplateVersion: 1, now };
 
   it("says the release runs out before the trip, with the date it ends", () => {
-    const status = shopWaiverStatus({ ...input, through: endsAt });
+    const status = shopWaiverStanding({ ...input, through: endsAt });
     expect(status).toMatchObject({
-      state: "current",
+      state: "signed",
       runsOutBeforeTrip: true,
       expiresAt: new Date(signedAt.getTime() + WAIVER_SIGNATURE_VALIDITY_MS),
     });
   });
 
   it("is plain signed when no trip is named, or the release outlasts it", () => {
-    expect(shopWaiverStatus(input)).toMatchObject({ state: "current", runsOutBeforeTrip: false });
+    expect(shopWaiverStanding(input)).toMatchObject({ state: "signed", runsOutBeforeTrip: false });
     expect(
-      shopWaiverStatus({ ...input, through: new Date(now.getTime() + 5 * DAY) }),
-    ).toMatchObject({ state: "current", runsOutBeforeTrip: false });
+      shopWaiverStanding({ ...input, through: new Date(now.getTime() + 5 * DAY) }),
+    ).toMatchObject({ state: "signed", runsOutBeforeTrip: false });
   });
 
   it("never reads earlier than now: a past 'through' changes nothing", () => {
     expect(
-      shopWaiverStatus({ ...input, through: new Date(now.getTime() - 5 * DAY) }),
-    ).toMatchObject({ state: "current", runsOutBeforeTrip: false });
+      shopWaiverStanding({ ...input, through: new Date(now.getTime() - 5 * DAY) }),
+    ).toMatchObject({ state: "signed", runsOutBeforeTrip: false });
   });
 
   it("names the physician's year when it ends first", () => {
@@ -148,14 +148,14 @@ describe("shopWaiverStatus through a departure", () => {
       medicalClearedAt: new Date(now.getTime() - 99 * DAY),
       medicalClearanceEvaluatedOn: evaluatedOn,
     });
-    const status = shopWaiverStatus({
+    const status = shopWaiverStanding({
       personSignedWaivers: [cleared],
       currentTemplateVersion: 1,
       now,
       through: endsAt,
     });
-    expect(status).toMatchObject({ state: "current", runsOutBeforeTrip: true });
-    if (status.state !== "current") throw new Error("unreachable");
+    expect(status).toMatchObject({ state: "signed", runsOutBeforeTrip: true });
+    if (status.state !== "signed") throw new Error("unreachable");
     expect(status.expiresAt.getTime()).toBe(
       Date.parse(`${evaluatedOn}T00:00:00.000Z`) + WAIVER_SIGNATURE_VALIDITY_MS,
     );
@@ -164,12 +164,12 @@ describe("shopWaiverStatus through a departure", () => {
   it("is expired, not 'runs out', once the release has already aged out", () => {
     const old = new Date(now.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - DAY);
     expect(
-      shopWaiverStatus({
+      shopWaiverStanding({
         personSignedWaivers: [release({ signedAt: old, completedAt: old })],
         currentTemplateVersion: 1,
         now,
         through: endsAt,
       }),
-    ).toMatchObject({ state: "expired" });
+    ).toMatchObject({ state: "lapsed" });
   });
 });

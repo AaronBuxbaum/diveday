@@ -7,7 +7,7 @@ import { waiverRowStateText, waiverRowStateTone } from "@/i18n/waiver-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
 import { shopPath } from "@/lib/staff-notices";
-import { medicalWarningDays, type ShopWaiverStatus } from "@/lib/waivers";
+import { medicalWarningDays, type ShopWaiverStanding } from "@/lib/waivers";
 import { WaiverSendControl } from "../../_components/today/WaiverSendControl";
 
 /**
@@ -39,7 +39,7 @@ export function CounterRentalWaiverLine({
   className = "",
 }: {
   t: StaffTranslator;
-  status: ShopWaiverStatus | undefined;
+  status: ShopWaiverStanding | undefined;
   personId: string;
   /** The rental's ticket, once there is one; absent on the new-rental form. */
   ticketId?: string;
@@ -51,7 +51,7 @@ export function CounterRentalWaiverLine({
   if (!status) return null;
   const sectionClass = `flex flex-wrap items-center justify-between gap-3 ${className}`.trim();
 
-  if (status.state === "current") {
+  if (status.state === "signed") {
     const medical = status.medical;
     const refusal = medical?.overriddenRefusal ?? null;
     const referralAt = medical?.overriddenReferralAt ?? null;

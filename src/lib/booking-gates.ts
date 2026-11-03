@@ -1,16 +1,12 @@
-import type { Certification } from "@/db/schema";
-import { checkMinimumAge } from "./age";
-import type { CalendarDate } from "./calendar-date";
-import type { CertificationLevel } from "./certification-levels";
 import { offeredParticipantTypes, type ParticipantType } from "./participant-types";
-import { hasVerifiedCertificationAtLeast } from "./readiness";
 
 /**
  * **The booking door's own refusals, as pure decisions.** `createBookingRecord`
  * (`src/db/bookings.ts`) reads the rows under the trip lock and asks these;
  * nothing here reads the database, so each rule is tested on its own in
  * `booking-gates.test.ts` rather than only through a seeded booking
- * (fourth review, row 39).
+ * (fourth review, row 39). A course session's own gates (staffing, card, age,
+ * ratio) are `decideCourseAdmission` in `course-admission.ts`.
  *
  * These decide who may *buy* a seat. Who may board is `calculateReadiness`,
  * and admission may never refuse someone readiness would clear (AGENTS.md).
@@ -45,62 +41,6 @@ export function participantTypeRefusal(input: {
     return "participant_type_unavailable";
   }
   return null;
-}
-
-/**
- * A course's enrollment gates, in the order they apply.
- *
- * **The card gate fails closed.** A course that needs an existing card admits
- * only a diver whose verified card meets it; a walk-in with no record yet has
- * none, and a self-assertion never reserves a seat. Staff can sight the card,
- * and the same public form then admits the diver.
- *
- * **The age gate fails open, and is staff's alone** (H-20260724-certification-levels-agency-rules). Measured on the day
- * the course runs. A diver with no date of birth on file, or no record yet,
- * books as before, because nothing collects one at booking and failing closed
- * would lock out everyone already on the books. The anonymous form never
- * refuses on someone else's date of birth (`BookingRequest.actor`); an under-age
- * seat it sells surfaces as a readiness blocker instead.
- */
-export function courseEnrollmentRefusal(input: {
-  actor: BookingActor;
-  course: { minimumCertificationLevel: CertificationLevel | null; minimumAge: number | null };
-  /** Null when the booking has no person row yet (a walk-in, written later). */
-  diver: { cards: readonly Certification[]; dateOfBirth: CalendarDate | null } | null;
-  /** The course day in the shop's calendar; needed only for the age gate. */
-  courseDate: CalendarDate | null;
-}): "course_prerequisite" | "course_min_age" | null {
-  const { course, diver } = input;
-  if (course.minimumCertificationLevel) {
-    if (!diver) return "course_prerequisite";
-    if (!hasVerifiedCertificationAtLeast(diver.cards, course.minimumCertificationLevel)) {
-      return "course_prerequisite";
-    }
-  }
-  if (
-    input.actor !== "public" &&
-    course.minimumAge &&
-    diver?.dateOfBirth &&
-    input.courseDate &&
-    checkMinimumAge(diver.dateOfBirth, course.minimumAge, input.courseDate).status === "under"
-  ) {
-    return "course_min_age";
-  }
-  return null;
-}
-
-/**
- * The in-water ratio cap a staffed course session carries, after the boat's
- * own limits have passed. Null cap means the session carries no ratio and the
- * trip's capacity alone decides (`courseRatioKind`, `src/lib/course-ratios.ts`).
- */
-export function courseRatioRefusal(
-  seatsAboard: number,
-  entryLevelSeatCap: number | null,
-): "course_ratio_full" | null {
-  return entryLevelSeatCap !== null && seatsAboard >= entryLevelSeatCap
-    ? "course_ratio_full"
-    : null;
 }
 
 /** How a booking attached itself to a person on something short of proof (H-20260724-one-person-per-email). */

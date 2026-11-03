@@ -8,6 +8,7 @@ import {
   verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
+import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 import { fileScopedShopContext } from "@/test/db";
 import * as bookingCapabilitiesModule from "./booking-capabilities";
 import {
@@ -2729,12 +2730,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     expect(outcome).toEqual({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: {
-        requiredLevel: "advanced_open_water",
-        missingSpecialties: [],
-        nitroxRequired: false,
-        heldLevel: "open_water",
-      },
+      refusal: [levelShort("advanced_open_water", "open_water")],
     });
     // Refused means refused: no seat, and nothing half-written.
     const rows = await db
@@ -2790,7 +2786,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     ).toMatchObject({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: { missingSpecialties: ["deep"] },
+      refusal: [noSpecialty("deep")],
     });
   });
 
@@ -2827,11 +2823,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     ).toMatchObject({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: {
-        requiredLevel: "advanced_open_water",
-        missingSpecialties: ["deep"],
-        heldLevel: "open_water",
-      },
+      refusal: [levelShort("advanced_open_water", "open_water"), noSpecialty("deep")],
     });
   });
 
@@ -2867,10 +2859,9 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     // The booker clears the boat's requirement on her own answer; the second
     // diver does not, and is advised on theirs rather than on hers.
     expect(outcome.bookings[0]?.admissionAdvisory).toBeUndefined();
-    expect(outcome.bookings[1]?.admissionAdvisory).toMatchObject({
-      requiredLevel: "rescue",
-      heldLevel: "open_water",
-    });
+    expect(outcome.bookings[1]?.admissionAdvisory).toMatchObject([
+      levelShort("rescue", "open_water"),
+    ]);
 
     // And each claim landed on its own person, which is what the verify queue
     // works from before the dive date.
@@ -2912,10 +2903,9 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     if (!outcome.ok) throw new Error("expected the seat to be sold");
     // Sold, and the unmet requirement handed back rather than thrown away, so
     // a caller can say what the trip asks.
-    expect(outcome.bookings[0]?.admissionAdvisory).toMatchObject({
-      requiredLevel: "rescue",
-      heldLevel: "open_water",
-    });
+    expect(outcome.bookings[0]?.admissionAdvisory).toMatchObject([
+      levelShort("rescue", "open_water"),
+    ]);
     const roster = await getTripRoster(db, shop.id, open.id);
     expect(roster.map((r) => r.person.fullName)).toContain("Cass Marlin");
   });
@@ -3033,7 +3023,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
       ok: false,
       reason: "trip_prerequisite",
       failedIndex: 1,
-      refusal: { requiredLevel: "rescue", heldLevel: "open_water" },
+      refusal: [levelShort("rescue", "open_water")],
     });
     // All-or-nothing: the first diver's seat rolls back with the second's refusal.
     const roster = await getTripRoster(db, shop.id, open.id);
@@ -3145,7 +3135,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     ).toMatchObject({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: { requiredLevel: "rescue", heldLevel: "open_water" },
+      refusal: [levelShort("rescue", "open_water")],
     });
   });
 
@@ -3173,7 +3163,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     ).toMatchObject({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: { heldLevel: "open_water" },
+      refusal: [{ code: "certification_insufficient", params: { heldLevel: "open_water" } }],
     });
   });
 
@@ -3196,7 +3186,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     ).toMatchObject({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: { nitroxRequired: true },
+      refusal: [NO_NITROX],
     });
   });
 

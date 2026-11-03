@@ -20,7 +20,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { asLevelCard, asNitroxCard, asSpecialtyCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { minorDeclaredOnLiveUpcomingSeat } from "@/lib/guardian";
-import { shopWaiverStatus, waiverClockInstant } from "@/lib/waivers";
+import { shopWaiverStanding, waiverClockInstant } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { friendsBroughtBy } from "./buddy-referrals";
 import type { AppDb, DbExecutor } from "./client";
@@ -1048,7 +1048,7 @@ export async function getDiverProfile(
     bookingRows.map((row) => ({ ...row.booking, trip: row.trip })),
     waiverNow,
   );
-  const waiver = shopWaiverStatus({
+  const waiver = shopWaiverStanding({
     personSignedWaivers: signedWaivers.get(personId) ?? [],
     currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
     signer: {

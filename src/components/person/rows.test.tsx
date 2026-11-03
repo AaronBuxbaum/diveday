@@ -220,7 +220,7 @@ describe("CertificationCardRow — provenance", () => {
 
 describe("WaiverStateRow", () => {
   it("gives every state a word", () => {
-    for (const state of ["current", "expired", "none", "medical_review", "failed"] as const) {
+    for (const state of ["signed", "lapsed", "none", "medical_review", "failed"] as const) {
       const { container } = render(<WaiverStateRow as="div" t={t} state={state} />);
       expect(container.textContent?.trim().length, state).toBeGreaterThan(0);
       cleanup();
@@ -230,7 +230,7 @@ describe("WaiverStateRow", () => {
   it("distinguishes a lapsed signature from one that never existed", () => {
     // Two different conversations at the desk, and the record's own card said
     // "Not signed" about both until the shared vocabulary landed.
-    const { container: expired } = render(<WaiverStateRow as="div" t={t} state="expired" />);
+    const { container: expired } = render(<WaiverStateRow as="div" t={t} state="lapsed" />);
     const expiredWord = expired.textContent;
     cleanup();
     const { container: none } = render(<WaiverStateRow as="div" t={t} state="none" />);
@@ -245,13 +245,13 @@ describe("WaiverStateRow", () => {
 
   it("lets the caller's own sentence stand when it has one", () => {
     render(
-      <WaiverStateRow as="div" t={t} state="current" detail="signed Wed, Aug 26 · release v4" />,
+      <WaiverStateRow as="div" t={t} state="signed" detail="signed Wed, Aug 26 · release v4" />,
     );
     expect(screen.getByText("signed Wed, Aug 26 · release v4")).toBeTruthy();
   });
 
   it("wears no color and no pill when the release is current", () => {
-    const { container } = render(<WaiverStateRow as="div" t={t} state="current" />);
+    const { container } = render(<WaiverStateRow as="div" t={t} state="signed" />);
     expect(badgeIn(container)).toBeNull();
     expect(container.innerHTML).not.toMatch(/text-warning|text-danger/);
   });

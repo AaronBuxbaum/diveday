@@ -34,7 +34,7 @@ function diver(overrides: Overrides = {}): DiverProfile {
       emergencyContactPhone: "+13055550177",
       ...overrides.person,
     },
-    waiver: overrides.waiver ?? { state: "current" },
+    waiver: overrides.waiver ?? { state: "signed" },
     waiverRequest: "not_sent",
     bookings: overrides.bookings ?? [],
     certifications: overrides.certifications ?? [],
@@ -124,7 +124,7 @@ describe("what earns a row", () => {
   });
 
   it("tells a lapsed signature from one that was never given", () => {
-    const rows = buildDiverStatus(diver({ waiver: { state: "expired" } as never }), null, {
+    const rows = buildDiverStatus(diver({ waiver: { state: "lapsed" } as never }), null, {
       now: NOW,
     });
     expect(rows[0]?.sentence).toEqual({ key: "divers.status.waiverExpired" });
@@ -153,7 +153,7 @@ describe("what earns a row", () => {
     const rows = buildDiverStatus(
       diver({
         waiver: {
-          state: "current",
+          state: "signed",
           medical: { overriddenReferralAt: new Date("2026-06-02T15:00:00.000Z") },
         } as never,
       }),
@@ -173,7 +173,7 @@ describe("what earns a row", () => {
     const rows = buildDiverStatus(
       diver({
         waiver: {
-          state: "current",
+          state: "signed",
           medical: {
             overriddenReferralAt: null,
             overriddenRefusal: { recordId: "w-refused", at: new Date("2026-06-02T15:00:00.000Z") },
@@ -193,7 +193,7 @@ describe("what earns a row", () => {
 
   it("says nothing about a current release with no referral behind it", () => {
     const rows = buildDiverStatus(
-      diver({ waiver: { state: "current", medical: { overriddenReferralAt: null } } as never }),
+      diver({ waiver: { state: "signed", medical: { overriddenReferralAt: null } } as never }),
       null,
       { now: NOW },
     );

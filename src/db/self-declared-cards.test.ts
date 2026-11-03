@@ -4,6 +4,7 @@ import { asLevelCard, asNitroxCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { calculateReadiness, isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { decideTripAdmission } from "@/lib/trip-admission";
+import { levelShort } from "@/test/admission-refusals";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
@@ -1209,8 +1210,7 @@ describe("self-declared cards and the booking gate", () => {
     // trip's requirement and the shop's contact address.
     expect(decision.admitted).toBe(false);
     if (decision.admitted) return;
-    expect(decision.refusal.requiredLevel).toBe("advanced_open_water");
-    expect(decision.refusal.heldLevel).toBe("open_water");
+    expect(decision.refusal).toEqual([levelShort("advanced_open_water", "open_water")]);
   });
 
   it("still admits a diver who has said nothing at all — H-20260724-certification-levels-agency-rules's fail-open promise", async () => {

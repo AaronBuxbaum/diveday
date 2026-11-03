@@ -1,0 +1,79 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "cf90c22c-dd77-4a45-b5ac-36470b620cda",
+  "prevIds": [
+    "4e9294f7-9cb5-45fd-9c4e-799518beae38"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "interests"
+      ],
+      "writes": [
+        "s|fk|public.interests.interests_promo_id_trip_last_minute_promos_id_fkey",
+        "n|fk|public.interests.interests_promo_id_trip_last_minute_promos_id_fkey",
+        "e|fk|public.interests.interests_promo_id_trip_last_minute_promos_id_fkey",
+        "n|con|public.interests.interests_promo_id_trip_last_minute_promos_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "e|col|public.interests.promo_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "interests"
+      ],
+      "writes": [
+        "s|fk|public.interests.interests_promo_id_deals_id_fkey",
+        "n|fk|public.interests.interests_promo_id_deals_id_fkey",
+        "e|fk|public.interests.interests_promo_id_deals_id_fkey",
+        "n|con|public.interests.interests_promo_id_deals_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|tbl|public.deals",
+        "n|sch|public",
+        "n|col|public.interests.promo_id",
+        "n|col|public.deals.id",
+        "e|uniqueness|public.deals.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "interests_promo_id_deals_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "promo_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "deals",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"interests\",\"interests_promo_id_trip_last_minute_promos_id_fkey\"]"
+    }
+  ]
+}

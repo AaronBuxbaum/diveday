@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 import type { TripAdmissionRefusal } from "./trip-admission";
 import { encodeTripAdmissionRefusal } from "./trip-admission";
 import {
@@ -26,34 +27,25 @@ const tripA: TripAdmissionGateScope = { kind: "trip", id: TRIP_A };
 const tripB: TripAdmissionGateScope = { kind: "trip", id: TRIP_B };
 const diver: TripAdmissionGateScope = { kind: "diver", id: DIVER };
 
-const levelRefusal: TripAdmissionRefusal = {
-  requiredLevel: "advanced_open_water",
-  heldLevel: "open_water",
-  missingSpecialties: [],
-  nitroxRequired: false,
-};
+const levelRefusal: TripAdmissionRefusal = [levelShort("advanced_open_water", "open_water")];
 
-const specialtyRefusal: TripAdmissionRefusal = {
-  requiredLevel: null,
-  heldLevel: null,
-  missingSpecialties: ["deep"],
-  nitroxRequired: false,
-};
+const specialtyRefusal: TripAdmissionRefusal = [noSpecialty("deep")];
 
 describe("a signed gate round-trips for the scope it was minted for", () => {
   const cases: TripAdmissionRefusal[] = [
     levelRefusal,
     specialtyRefusal,
-    { requiredLevel: null, heldLevel: null, missingSpecialties: [], nitroxRequired: true },
-    {
-      requiredLevel: "rescue",
-      heldLevel: "instructor",
-      missingSpecialties: ["wreck", "night", "drysuit"],
-      nitroxRequired: true,
-    },
+    [NO_NITROX],
+    [
+      levelShort("rescue", "advanced_open_water"),
+      noSpecialty("wreck"),
+      noSpecialty("night"),
+      noSpecialty("drysuit"),
+      NO_NITROX,
+    ],
   ];
 
-  it.each(cases)("%o survives the redirect", (refusal) => {
+  it.each(cases)("%o survives the redirect", (...refusal) => {
     expect(verifyTripAdmissionGate(signTripAdmissionGate(refusal, tripA), tripA)).toEqual(refusal);
   });
 
@@ -72,23 +64,26 @@ describe("a signed gate round-trips for the scope it was minted for", () => {
 
   it("leaves the codes readable in the URL, so a staff bug report is debuggable", () => {
     expect(signTripAdmissionGate(levelRefusal, tripA)).toMatch(
-      /^advanced_open_water~open_water~~0\.[\w-]+$/,
+      /^certification_insufficient-advanced_open_water-open_water\.[\w-]+$/,
     );
   });
 });
 
 /**
  * The attack the signature exists to stop: a hand-written value that names a
- * requirement no gate ever raised. `~~deep~0` renders "…their Deep card isn't
+ * requirement no gate ever raised. `specialty_missing-deep` renders "…their Deep card isn't
  * on file", which is exactly the sentence that sends a staffer to the
  * certifications form.
  */
 describe("an unsigned value is not a refusal", () => {
   const forged: Array<[string, string]> = [
-    ["~~deep~0", "a fabricated missing-specialty refusal"],
-    ["advanced_open_water~open_water~~0", "a fabricated level refusal"],
-    ["~~~1", "a fabricated nitrox refusal"],
-    ["instructor~~wreck-night~1", "a fabricated everything-at-once refusal"],
+    ["specialty_missing-deep", "a fabricated missing-specialty refusal"],
+    ["certification_insufficient-advanced_open_water-open_water", "a fabricated level refusal"],
+    ["nitrox_missing", "a fabricated nitrox refusal"],
+    [
+      "certification_missing-instructor~specialty_missing-wreck~specialty_missing-night~nitrox_missing",
+      "a fabricated everything-at-once refusal",
+    ],
   ];
 
   it.each(forged)("refuses %s (%s)", (value) => {
@@ -150,10 +145,10 @@ describe("hostile and malformed query values are refused, never thrown on", () =
     [[signTripAdmissionGate(levelRefusal, tripA)], "a genuine value wrapped in an array"],
     [".", "a bare separator"],
     [".abc", "a signature with no codes"],
-    ["advanced_open_water~open_water~~0.", "codes with an empty signature"],
-    ["cave~~~0.AAAA", "an unknown level under a signature"],
-    ["~~~0.AAAA", "a refusal that demands nothing"],
-    ["constructor~~~1.AAAA", "a prototype-walking level"],
+    ["certification_insufficient-advanced_open_water-open_water.", "codes with an empty signature"],
+    ["certification_missing-cave.AAAA", "an unknown level under a signature"],
+    ["waiver_pending.AAAA", "a readiness code the sale never raises"],
+    ["constructor.AAAA", "a prototype-walking code"],
   ];
 
   it.each(hostile)("refuses %o (%s)", (value) => {
@@ -167,11 +162,14 @@ describe("hostile and malformed query values are refused, never thrown on", () =
    * naming a requirement the trip does not have is worse than a generic one.
    */
   it("refuses a well-signed value whose codes the codec rejects", () => {
-    const demandsNothing = signTripAdmissionGate(
-      { requiredLevel: null, heldLevel: null, missingSpecialties: [], nitroxRequired: false },
-      tripA,
-    );
-    expect(demandsNothing).toMatch(/^~~~0\./);
+    const demandsNothing = signTripAdmissionGate([], tripA);
+    expect(demandsNothing).toMatch(/^\./);
     expect(verifyTripAdmissionGate(demandsNothing, tripA)).toBeNull();
+    // A boarding blocker the sale never raises, signed: still not a refusal.
+    const boardingOnly = signTripAdmissionGate([{ code: "waiver_pending" }], tripA);
+    expect(verifyTripAdmissionGate(boardingOnly, tripA)).toBeNull();
+    // Signed, but out of ladder order: the decoder still refuses it.
+    const outOfOrder = signTripAdmissionGate([...specialtyRefusal, ...levelRefusal], tripA);
+    expect(verifyTripAdmissionGate(outOfOrder, tripA)).toBeNull();
   });
 });

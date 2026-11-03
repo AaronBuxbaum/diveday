@@ -56,8 +56,13 @@ It refuses when **both** of these hold:
    enriched-air card exists.
 
 The refusal is a code with structured detail, never a sentence: `trip_prerequisite`, carrying
-`{ requiredLevel, missingSpecialties, nitroxRequired, heldLevel }` so a staffer can see *which*
-requirement failed and *what the diver holds*. Words come from the message bundles as usual.
+the evidence ladder's own blockers at the sale threshold (`standing(…, "sale")` in
+`src/lib/readiness.ts`; issue #2706): `certification_insufficient` with the required and held
+level, `certification_missing` with the required level, one `specialty_missing` per absent card,
+and `nitrox_missing`. A staffer sees *which* requirement failed and *what the diver holds*, and
+on the same evidence readiness holds the diver on the same demand item, because a `verified`
+clear is also a `sale` clear (not always with the same code: a pending Open Water card on an
+Advanced trip is `certification_insufficient` at the sale and `certification_missing` at the boat). Words come from the message bundles as usual.
 
 Three deliberate choices inside that rule:
 
@@ -146,12 +151,13 @@ doors get their own notice, the counter's `coarse` collapse folds it into `walki
 notice maps on the trip page, the global add-booking page, and the diver record, and the
 `booking_blocked` reason union in `src/lib/analytics.ts`.
 
-**The structured refusal reaches the words** (added 2026-08-03). The `{requiredLevel,
-missingSpecialties, nitroxRequired, heldLevel}` payload above is this decision's stated
+**The structured refusal reaches the words** (added 2026-08-03). The blocker list above is
+this decision's stated
 justification for carrying detail at all, and it initially reached no UI: `seatDiver` kept only the
 code and every surface rendered one static sentence. It now rides the staff redirect as a single
-`gate=` param (`encodeTripAdmissionRefusal` / `decodeTripAdmissionRefusal`, codes only, rejected
-wholesale if anything is unrecognized) and resolves through
+`gate=` param (`encodeTripAdmissionRefusal` / `decodeTripAdmissionRefusal`, blocker codes only in
+ladder order, rejected wholesale if anything is unrecognized, out of order or repeated; signed as
+`diveday-trip-admission-gate:v2`) and resolves through
 `tripAdmissionRefusalText` (`src/i18n/readiness-labels.ts`). This matters beyond precision: the one
 sentence said *"Add the missing card above"*, and on a **level** refusal there is no missing card —
 telling a staffer to add one points them at the certifications form as the way past a safety gate,

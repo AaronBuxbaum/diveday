@@ -224,8 +224,8 @@ const BOAT_WORK_CODES = everyCodeOf<BoatWorkCode>({
 
 const WAIVER_ROW_STATES = everyCodeOf<WaiverRowState>({
   none: true,
-  current: true,
-  expired: true,
+  signed: true,
+  lapsed: true,
   guardian_missing: true,
   medical_review: true,
   medical_not_cleared: true,

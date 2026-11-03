@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
+import { levelShort, NO_NITROX, noLevel, noSpecialty } from "@/test/admission-refusals";
 import { diverTranslator } from "./messages";
 import {
   tripAdmissionRefusalText,
@@ -20,21 +21,8 @@ import { staffTranslator } from "./staff-messages";
 const t = staffTranslator("en-US");
 const tEs = staffTranslator("es-ES");
 
-function refusal(overrides: Partial<TripAdmissionRefusal> = {}): TripAdmissionRefusal {
-  return {
-    requiredLevel: null,
-    heldLevel: null,
-    missingSpecialties: [],
-    nitroxRequired: false,
-    ...overrides,
-  };
-}
-
 describe("tripAdmissionRefusalText — a level refusal", () => {
-  const levelRefusal = refusal({
-    requiredLevel: "advanced_open_water",
-    heldLevel: "open_water",
-  });
+  const levelRefusal: TripAdmissionRefusal = [levelShort("advanced_open_water", "open_water")];
 
   it("names both the requirement and what the diver actually holds", () => {
     const text = tripAdmissionRefusalText(t, levelRefusal, "en-US");
@@ -52,7 +40,7 @@ describe("tripAdmissionRefusalText — a level refusal", () => {
   });
 
   it("says something true when nothing on the record reaches the bar", () => {
-    const text = tripAdmissionRefusalText(t, refusal({ requiredLevel: "rescue" }), "en-US");
+    const text = tripAdmissionRefusalText(t, [noLevel("rescue")], "en-US");
     expect(text).toContain("Rescue Diver");
     expect(text).not.toContain("{held}");
   });
@@ -64,18 +52,18 @@ describe("tripAdmissionRefusalText — a level refusal", () => {
 
 describe("tripAdmissionRefusalText — a card refusal", () => {
   it("says the card is simply not on the record, which is where 'add it' is right", () => {
-    const text = tripAdmissionRefusalText(t, refusal({ missingSpecialties: ["deep"] }), "en-US");
+    const text = tripAdmissionRefusalText(t, [noSpecialty("deep")], "en-US");
     expect(text).toContain("Deep");
     expect(text).toContain("none on this diver’s record");
     // A specialty refusal never names a ladder rung — the diver's level is not
-    // what is wrong (`heldLevel` is nulled for exactly this reason).
+    // what is wrong (a card blocker carries no rung).
     expect(text).not.toContain("Open Water");
   });
 
   it("lists several missing cards as one locale-appropriate phrase", () => {
     const text = tripAdmissionRefusalText(
       t,
-      refusal({ missingSpecialties: ["deep", "night"], nitroxRequired: true }),
+      [noSpecialty("deep"), noSpecialty("night"), NO_NITROX],
       "en-US",
     );
     expect(text).toContain("Deep, Night, and Nitrox");
@@ -85,11 +73,7 @@ describe("tripAdmissionRefusalText — a card refusal", () => {
   it("renders both sentences when the ladder and a card both fail", () => {
     const text = tripAdmissionRefusalText(
       t,
-      refusal({
-        requiredLevel: "advanced_open_water",
-        heldLevel: "open_water",
-        missingSpecialties: ["deep"],
-      }),
+      [levelShort("advanced_open_water", "open_water"), noSpecialty("deep")],
       "en-US",
     );
     expect(text).toContain("Advanced Open Water");
@@ -97,7 +81,7 @@ describe("tripAdmissionRefusalText — a card refusal", () => {
   });
 
   it("falls back to the generic sentence rather than an empty banner", () => {
-    expect(tripAdmissionRefusalText(t, refusal(), "en-US")).toBe(t("shared.tripAdmission.generic"));
+    expect(tripAdmissionRefusalText(t, [], "en-US")).toBe(t("shared.tripAdmission.generic"));
   });
 });
 

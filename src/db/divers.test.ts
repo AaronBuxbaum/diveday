@@ -40,6 +40,7 @@ import {
   capabilities,
   cards,
   courses,
+  deals,
   executedDives,
   interests,
   internalNotes,
@@ -54,7 +55,6 @@ import {
   rentalFitProfiles,
   rollCallEvents,
   shops,
-  tripLastMinutePromos,
   tripReviews,
   trips,
   userAccounts,
@@ -1146,18 +1146,18 @@ describe("diver erasure", () => {
     // the address it was sent to (issue #1607). Inserted by hand because
     // `sendLastMinutePromo` would send real messages; the row is what matters.
     const [promo] = await db
-      .insert(tripLastMinutePromos)
+      .insert(deals)
       .values({
         shopId: shop.id,
         tripId: trip.id,
-        status: "sent",
+        status: "active",
         discountPercent: 20,
         code: `ERASURE${nowMs()}`,
         expiresAt: new Date("2099-01-01T00:00:00.000Z"),
         recipientCount: 1,
         createdByPersonId: ownerId,
       })
-      .returning({ id: tripLastMinutePromos.id });
+      .returning({ id: deals.id });
     if (!promo) throw new Error("promo insert failed");
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,

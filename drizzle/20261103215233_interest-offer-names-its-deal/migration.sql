@@ -1,0 +1,3 @@
+-- diveday:allow-destructive drop-constraint interests.interests_promo_id_trip_last_minute_promos_id_fkey: repointed at deals in the next statement; every trip_last_minute_promos row was copied to deals with its id by the previous migration and the forwarding trigger copies any the serving release writes, so every promo_id already names a deal (issue #2720)
+ALTER TABLE "interests" DROP CONSTRAINT "interests_promo_id_trip_last_minute_promos_id_fkey";--> statement-breakpoint
+ALTER TABLE "interests" ADD CONSTRAINT "interests_promo_id_deals_id_fkey" FOREIGN KEY ("promo_id") REFERENCES "deals"("id");

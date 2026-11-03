@@ -582,7 +582,11 @@
   whose date range covers the trip. The diver redeems it by typing the code on the booking form; it
   is validated against that specific trip before being handed to Stripe Checkout, so a code issued
   for one trip cannot discount a different one. See
-  [20260727-last-minute-fill-promos](../../architecture/decisions/20260727-last-minute-fill-promos.md).
+  [20260727-last-minute-fill-promos](../../architecture/decisions/20260727-last-minute-fill-promos.md). Stored as a **deal** with its trip set.
+- **Deal** — one discount a shop minted on its own Stripe account: a `deals` row. With no trip it
+  is a shop-wide promo code staff wrote; with a trip it is a **last-minute deal**. A checkout that
+  applied one names it by `deal_id`, and a completed one is a redemption. See
+  [20261103-a-deal-is-one-row](../../architecture/decisions/20261103-a-deal-is-one-row.md).
 - **Thin boat** — a departure in the next 14 days (`THIN_BOATS_HORIZON_DAYS`) that could use
   divers: short of the minimum it must reach to run while that call is still ahead, or, with no
   minimum, less than half of its sellable seats sold (`thinBoatNeed`, `src/lib/thin-boats.ts`).
@@ -1576,6 +1580,18 @@
   (`recordInPersonWaiver`), a party panel's "signed" and the diver record ("Runs out <date>, before
   the trip"), so the diver can sign again the day the roster blocks them. Cards, payment and age
   keep their own instants, and admission still never refuses a seat for it. See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
+- **Waiver standing** — the one word for where a release stands, read from its signature and
+  clearance stamps by one derivation (`waiverStanding` for a record, `shopWaiverStanding` for the
+  diver at the shop, issue #2705): `none`, `awaiting_signature`, `link_expired`, `signed`,
+  `lapsed`, `guardian_missing`, `medical_review` or `medical_not_cleared`. Readiness, the roster,
+  the diver record and the counter all speak this one list. The roster still reads a seat's one
+  record where the diver record reads the diver, so a lapsed release or a minor's solo signature can
+  still differ between the two (issue #3775). Record-level `signed` means the record is a clean
+  signature; whether it still stands is the resolver's question. The record's stored `status` (`pending`, `completed`, `medical_review`) is never shown
+  as a word, but it is still read: `medical_review` marks a referral, and the medical hold gate
+  reads it, so a signature stamp alone never makes a record `signed`. A cleared referral keeps
+  `medical_review` and stands as `signed`. The departure log prints its own frozen codes, mapped from the standing, because its
+  words are sealed in the log's content hash.
 - **Medical hold** — a signed release the medical questionnaire **referred** to a physician and no
   physician has cleared: an open referral, or one the physician refused. It is the record's status
   (`medical_review`), never the stored answers, because a paper or status-only hold stores none and

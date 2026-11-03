@@ -418,7 +418,7 @@ the counter nobody does, and the unit is gone for days.
 - **The counter says the person's waiver, and never waits on it** (H-20261008-counter-rental-waiver-informs, issue #2261; this
   bullet called it a known gap until 2026-10-10). The one shop-wide waiver (CR-015) is signed once
   and belongs to the person, whichever booking or person-scoped link it was signed on, so the
-  counter reads the same `shopWaiverStatus` the diver record does
+  counter reads the same `shopWaiverStanding` the diver record does
   (`counterRentalWaiverStandings`). The ticket and the Rentals list say the standing when it is
   short of signed, and the ticket offers the person's waiver link where a link is the fix; a
   medical hold is said with no link. Screen only, and `createCounterRental` never reads it: the

@@ -1,4 +1,5 @@
 import { type BeforeSend, track as vercelTrack } from "@vercel/analytics/server";
+import type { BookingRefusal } from "@/db/bookings";
 import { redactCapabilityUrl } from "./capability-urls";
 import type { DemoRoleId } from "./demo-roles";
 import type { FunnelSource } from "./funnel";
@@ -89,21 +90,8 @@ export type AnalyticsEvent =
        */
       name: "booking_blocked";
       source: "diver" | "staff";
-      reason:
-        | "trip_unavailable"
-        | "course_unstaffed"
-        | "person_not_found"
-        | "course_prerequisite"
-        | "course_min_age"
-        | "trip_prerequisite"
-        | "trip_full"
-        | "divers_full"
-        | "participant_type_unavailable"
-        | "course_ratio_full"
-        | "already_booked"
-        | "date_request_offer_unavailable"
-        | "date_request_departure_conflict"
-        | "date_request_party_full";
+      /** The sale's own refusal code, read off its union rather than copied. */
+      reason: BookingRefusal["reason"];
     }
   | {
       /** A diver joined a full trip's wait list instead of booking outright. */

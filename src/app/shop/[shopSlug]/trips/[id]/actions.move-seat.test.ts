@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { noLevel } from "@/test/admission-refusals";
 import { redirectedTo, staffSession } from "@/test/staff-session";
 
 /**
@@ -110,12 +111,7 @@ describe("moveSeatAction", () => {
       {
         ok: false as const,
         reason: "trip_prerequisite" as const,
-        refusal: {
-          requiredLevel: "rescue" as const,
-          missingSpecialties: [],
-          nitroxRequired: false,
-          heldLevel: null,
-        },
+        refusal: [noLevel("rescue")],
       },
       "seat-move-prerequisite",
     ],

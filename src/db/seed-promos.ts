@@ -5,8 +5,8 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  deals,
   people,
-  shopPromoCodes,
 } from "./schema";
 import { at } from "./seed-clock";
 
@@ -22,7 +22,7 @@ async function seedPromosInTransaction(
   booking: { id: string; tripId: string } | undefined,
 ): Promise<void> {
   await db
-    .insert(shopPromoCodes)
+    .insert(deals)
     .values([
       {
         shopId,
@@ -53,8 +53,8 @@ async function seedPromosInTransaction(
 
   const [reef10] = await db
     .select()
-    .from(shopPromoCodes)
-    .where(and(eq(shopPromoCodes.shopId, shopId), eq(shopPromoCodes.code, "REEF10")))
+    .from(deals)
+    .where(and(eq(deals.shopId, shopId), eq(deals.code, "REEF10")))
     .limit(1);
   if (!reef10) throw new Error("seedPromos: REEF10 promo missing after insert");
 
@@ -88,7 +88,7 @@ async function seedPromosInTransaction(
       stripeAccountId: "acct_demo",
       stripeSessionId,
       customerEmail: source.email,
-      promoCodeId: reef10.id,
+      dealId: reef10.id,
       promoCode: reef10.code,
       appliedDiscountPercent: reef10.discountPercent,
       currency: "usd",

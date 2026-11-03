@@ -113,7 +113,7 @@ function signatureTime(record: WaiverRecord): number {
  * physician said no stays exactly as blocked as one nobody has heard from. The
  * refusal changes what the surfaces *say* — an answer arrived, stop chasing —
  * and nothing about who boards. Anything that wants that distinction asks
- * {@link waiverState}, which is presentation; this one is the gate.
+ * {@link waiverStanding}, which is presentation; this one is the gate.
  */
 export function isUnresolvedMedicalHold(
   record: Pick<WaiverRecord, "status" | "supersededAt" | "medicalClearedAt">,
@@ -494,8 +494,8 @@ export function effectiveReleaseForRiderSeat(input: {
  * terms the shop has since changed, or superseded by a fresh link on another of
  * the diver's seats (the evidence carries that one only from the signer's own
  * seat, `listSignedWaiversByPerson`). A send on one seat never turns another
- * seat's lapse into "not sent". The same reading {@link shopWaiverStatus} gives
- * the diver record as `expired`.
+ * seat's lapse into "not sent". The same reading {@link shopWaiverStanding} gives
+ * the diver record as `lapsed`.
  *
  * It names the blocker and nothing more. The seat is blocked whichever it is;
  * a lapsed signature asks the diver to sign again, where an unsent release asks
@@ -577,6 +577,36 @@ export function bookingRecordLapsed(
 }
 
 /**
+ * **The one word list for where a waiver stands** (issue #2705). Every surface
+ * that names a waiver's standing (readiness, the roster, the diver record, the
+ * counter, the incident log) reads it through {@link waiverStanding} or
+ * {@link shopWaiverStanding}, so the same release can never be called two
+ * things on two screens. The stored `status` column is never a word a surface
+ * shows, but it is still an input: `medical_review` is what marks a referral,
+ * and the gates (`isUnclearedReferral`, `isUnresolvedMedicalHold`) read it. A
+ * signature stamp alone never makes a record `signed`.
+ *
+ * - `none`: nothing stands and no link is out.
+ * - `awaiting_signature`: a link is out and unsigned.
+ * - `link_expired`: a link went out and ran past its life unsigned.
+ * - `signed`: a clean signature (or a cleared referral) that stands.
+ * - `lapsed`: signed here before, and the signature no longer stands (aged
+ *   out, against changed terms, or replaced by a fresh link). Sign again.
+ * - `guardian_missing`: signed and current, by a minor alone.
+ * - `medical_review`: a referral waits on a physician; fails closed.
+ * - `medical_not_cleared`: the physician answered no; fails closed.
+ */
+export type WaiverStanding =
+  | "none"
+  | "awaiting_signature"
+  | "link_expired"
+  | "signed"
+  | "lapsed"
+  | "guardian_missing"
+  | "medical_review"
+  | "medical_not_cleared";
+
+/**
  * Where a diver stands with **the shop**, independent of any one booking.
  *
  * A release is signed once and carries across every booking the diver has here
@@ -588,11 +618,11 @@ export function bookingRecordLapsed(
  * dates and nothing else from the signed evidence — never the medical answers,
  * which stay on the waiver surfaces that exist to review them.
  */
-export type ShopWaiverStatus =
+export type ShopWaiverStanding =
   | { state: "none" }
   /** Signed, clean, against current terms, and inside the validity window. */
   | {
-      state: "current";
+      state: "signed";
       /** The signed record itself, so the diver record can open it (UX review 2026-10-10, item 27). */
       recordId: string;
       signedAt: Date;
@@ -611,11 +641,11 @@ export type ShopWaiverStatus =
    * window, or given against terms the shop has since edited. Either way the
    * diver signs again, and `signedAt` says how long ago they last did.
    */
-  | { state: "expired"; signedAt: Date }
+  | { state: "lapsed"; signedAt: Date }
   /**
    * Signed, current — and given by a minor alone (ADR
    * 20260907-guardian-co-signature). Not "Signed": readiness blocks on it, and
-   * the way out is the same as `expired`'s, a fresh link that asks for both
+   * the way out is the same as `lapsed`'s, a fresh link that asks for both
    * signatures. `signedAt` says when the solo signature was given.
    */
   | { state: "guardian_missing"; signedAt: Date }
@@ -656,7 +686,7 @@ export type ShopWaiverStatus =
  * this shop, superseded ones excluded but for an uncleared referral and a
  * clean signature a fresh link replaced (`listSignedWaiversByPerson`).
  */
-export function shopWaiverStatus(input: {
+export function shopWaiverStanding(input: {
   personSignedWaivers: readonly WaiverRecord[];
   currentTemplateVersion: number | null;
   /**
@@ -673,7 +703,7 @@ export function shopWaiverStatus(input: {
    * `runsOutBeforeTrip`, the same answer the roster gives that seat.
    */
   through?: Date;
-}): ShopWaiverStatus {
+}): ShopWaiverStanding {
   const now = input.now ?? nowDate();
   const timeZone = input.signer?.timezone ?? "UTC";
   const standsAt = (record: WaiverRecord, at: Date) =>
@@ -692,7 +722,8 @@ export function shopWaiverStatus(input: {
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   if (hold) {
     const at = new Date(signatureTime(hold));
-    return hold.medicalClearanceDeclinedAt
+    // The word is the record's own standing, read through the one derivation.
+    return waiverStanding(hold, now) === "medical_not_cleared" && hold.medicalClearanceDeclinedAt
       ? {
           state: "medical_not_cleared",
           at,
@@ -715,7 +746,7 @@ export function shopWaiverStatus(input: {
 
   if (clean) {
     return {
-      state: "current",
+      state: "signed",
       recordId: clean.id,
       signedAt: new Date(signatureTime(clean)),
       expiresAt: new Date(signatureTime(clean) + WAIVER_SIGNATURE_VALIDITY_MS),
@@ -729,7 +760,7 @@ export function shopWaiverStatus(input: {
     const evaluatedAt = clearanceEvaluatedAt(cleanNow);
     const signatureEnds = signatureTime(cleanNow) + WAIVER_SIGNATURE_VALIDITY_MS;
     return {
-      state: "current",
+      state: "signed",
       recordId: cleanNow.id,
       signedAt: new Date(signatureTime(cleanNow)),
       expiresAt: new Date(
@@ -747,36 +778,42 @@ export function shopWaiverStatus(input: {
   const lapsed = input.personSignedWaivers
     .filter(isCleanCompletion)
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
-  if (lapsed) return { state: "expired", signedAt: new Date(signatureTime(lapsed)) };
+  if (lapsed) return { state: "lapsed", signedAt: new Date(signatureTime(lapsed)) };
 
   return { state: "none" };
 }
 
-export type WaiverState =
-  | "not_sent"
+/** What {@link waiverStanding} can say of one record, without the diver's other evidence. */
+export type RecordWaiverStanding = Extract<
+  WaiverStanding,
+  | "none"
   | "awaiting_signature"
-  | "expired"
-  | "complete"
+  | "link_expired"
+  | "signed"
   | "medical_review"
-  /** Referred, answered, and the answer was no (issue #1283). Blocked, and not waiting on anyone. */
-  | "medical_not_cleared";
+  | "medical_not_cleared"
+>;
 
-/** Presentational state stays derived so an expired pending record fails closed. */
-export function waiverState(record: WaiverRecord | null, now: Date = nowDate()): WaiverState {
-  if (!record) return "not_sent";
-  if (record.status === "completed") return "complete";
-  // A cleared referral is a complete release: the diver signed, the answers
-  // were reviewed by a physician, and a staff member recorded it. The record
-  // keeps saying `medical_review` because that is what happened to it.
-  if (record.status === "medical_review") {
-    if (record.medicalClearedAt) return "complete";
-    // A refusal is not a third kind of pending. It blocks exactly as the hold
-    // above it does — `isUnresolvedMedicalHold` does not read this column —
-    // and says so in its own words so nobody reads "waiting" and goes chasing
-    // an answer that has already arrived (issue #1283).
+/**
+ * **One record's standing**, from the record alone (issue #2705). Callers hand
+ * in the record a resolver already chose (`effectiveWaiverForBooking`,
+ * `effectiveReleaseForRiderSeat`), so currency is not asked again here; an
+ * unsigned link fails closed once its life runs out.
+ */
+export function waiverStanding(
+  record: WaiverRecord | null,
+  now: Date = nowDate(),
+): RecordWaiverStanding {
+  if (!record) return "none";
+  if (isCleanCompletion(record)) return "signed";
+  // A refusal is not a third kind of pending. It blocks exactly as the hold
+  // does (`isUnresolvedMedicalHold` does not read the refusal) and says so in
+  // its own word, so nobody reads "waiting" and goes chasing an answer that
+  // has already arrived (issue #1283).
+  if (isUnclearedReferral(record)) {
     return record.medicalClearanceDeclinedAt ? "medical_not_cleared" : "medical_review";
   }
-  return record.expiresAt <= now ? "expired" : "awaiting_signature";
+  return record.expiresAt <= now ? "link_expired" : "awaiting_signature";
 }
 
 export type MedicalWaiverMark = {
@@ -863,7 +900,7 @@ export type MedicalWaiverMark = {
  * The most recent unresolved referral a standing clean signature sits on top of.
  *
  * Exported because two surfaces need the same answer from different starting
- * points — the diver record via {@link shopWaiverStatus}, the boat manifest via
+ * points — the diver record via {@link shopWaiverStanding}, the boat manifest via
  * the readiness row — and a second derivation of a safety fact is a second
  * chance to derive it differently.
  *

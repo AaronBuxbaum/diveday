@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Certification, TripRequirement } from "@/db/schema";
+import { levelShort, noSpecialty } from "@/test/admission-refusals";
 import {
   type CertificationLevel,
   type CertRequirementSource,
@@ -65,14 +66,17 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
         siteRequirement: null,
         evidence: openWater,
       }),
-    ).toMatchObject({ admitted: false, refusal: { requiredLevel: "advanced_open_water" } });
+    ).toMatchObject({
+      admitted: false,
+      refusal: [{ params: { requiredLevel: "advanced_open_water" } }],
+    });
     expect(
       decideTripAdmission({
         requirement: requirement({ minimumCertificationLevel: "rescue" }),
         siteRequirement: null,
         evidence: { ...openWater, trainingDives: [aow] },
       }),
-    ).toMatchObject({ admitted: false, refusal: { requiredLevel: "rescue" } });
+    ).toMatchObject({ admitted: false, refusal: [{ params: { requiredLevel: "rescue" } }] });
     // An intro session, or a course certifying nothing, sells no level at all.
     for (const course of [dsd, { ...aow, certifiesLevel: null }]) {
       expect(
@@ -81,7 +85,10 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
           siteRequirement: null,
           evidence: { ...openWater, trainingDives: [course] },
         }),
-      ).toMatchObject({ admitted: false, refusal: { requiredLevel: "advanced_open_water" } });
+      ).toMatchObject({
+        admitted: false,
+        refusal: [{ params: { requiredLevel: "advanced_open_water" } }],
+      });
     }
   });
 
@@ -94,7 +101,7 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
       }),
     ).toMatchObject({
       admitted: false,
-      refusal: { requiredLevel: null, missingSpecialties: ["deep"] },
+      refusal: [noSpecialty("deep")],
     });
   });
 
@@ -131,12 +138,7 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
         }),
       ).toEqual({
         admitted: false,
-        refusal: {
-          requiredLevel: "advanced_open_water",
-          missingSpecialties: [],
-          nitroxRequired: false,
-          heldLevel: "open_water",
-        },
+        refusal: [levelShort("advanced_open_water", "open_water")],
       });
     },
   );
