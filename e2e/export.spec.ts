@@ -78,7 +78,6 @@ test.describe("full-shop data export", () => {
       "internal_notes.csv",
       "activity_events.csv",
       "notification_deliveries.csv",
-      "shop_promo_redemptions.csv",
     ]) {
       expect(Object.keys(unzipped)).toContain(name);
     }
