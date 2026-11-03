@@ -11,7 +11,6 @@ import {
   PublicShopChromePlaceholder,
   PublicShopFooterSection,
 } from "@/app/s/[shopSlug]/_components/PublicShopShell";
-import { LazyStaffActivity } from "./LazyStaffActivity";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ShopSearchField } from "@/components/ShopSearchField";
 import { buttonClass } from "@/components/ui/button";
@@ -32,6 +31,7 @@ import {
 import { shopSwitchesOn } from "@/lib/shop-features";
 import { staffHomeSlug } from "@/lib/staff-home";
 import { shopPath } from "@/lib/staff-notices";
+import { LazyStaffActivity } from "./LazyStaffActivity";
 
 /**
  * The app-wide backstop for `notFound()` — a stale email link, a typo'd URL,
