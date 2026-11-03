@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { after } from "next/server";
 import { Fragment } from "react";
-import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
-import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDayPrintPage } from "@/db/day-print-page";
 import { dayLoadOutLine } from "@/i18n/load-out-labels";
 import { requestLocale } from "@/i18n/request";
@@ -12,19 +11,21 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { tomorrowNoon } from "@/lib/closeout";
-import { formatDateTimeTz, formatDateWithYear } from "@/lib/format";
+import { formatDateWithYear } from "@/lib/format";
+import { PACKET_PAPER } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { settleWithLimit } from "@/lib/settle-with-limit";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { AutoPrint } from "../trips/[id]/_components/AutoPrint";
-import { TRIP_SHELL_CLASS } from "../trips/[id]/_components/trip-shell";
+import { formatPaperDateTime } from "../trips/[id]/_components/DeparturePaperIdentity";
 import { keptSheets } from "../trips/[id]/print/_components/kept-sheets";
-import { firstPacketPageName, PacketSummary } from "../trips/[id]/print/_components/PacketDocument";
 import {
   PACKET_READY_SELECTOR,
   PacketReady,
+  PacketSheet,
   TripPacket,
 } from "../trips/[id]/print/_components/TripPacket";
+import { SheetDocument } from "./_components/SheetDocument";
 
 export const metadata: Metadata = {
   title: "Day packet — DiveDay",
@@ -47,11 +48,11 @@ const DEPARTURES_IN_FLIGHT = 3;
  * **The paper day** (N-54): every departure of the shop's own calendar day as
  * one printable document, so a dead tablet costs a printer rather than the day.
  *
- * It is the trip packet, widened. Each departure contributes the same three
- * sections {@link TripPacket} renders for one — the dive plan, the manifest
- * (which carries the roster's waiver and readiness state and the shop's
- * emergency reference card) and the morning packing list — in clock order,
- * each on its own sheet. Nothing here reads the database for facts a departure
+ * It is the trip packet, widened. The day's own sheet first (which day, how
+ * many boats, the load-out), then each departure's two sheets {@link
+ * TripPacket} renders for one — the dive plan over the manifest (which carries
+ * the roster's waiver and readiness state and the shop's emergency reference
+ * card), and the morning packing list — in clock order. Nothing here reads the database for facts a departure
  * already knows how to state: the day is a list of trip ids and everything
  * under a heading comes from the same readers the screen used.
  *
@@ -130,7 +131,7 @@ export default async function ShopDayPrintPage({
       shopSlug,
       shop,
       tripId: departure.id,
-      actorPersonId: session.user.personId,
+      session,
       locale,
       t,
     }),
@@ -153,69 +154,71 @@ export default async function ShopDayPrintPage({
     trackEvent({ name: "day_print_opened", surface: "day_spine", departures: sheets.length }),
   );
 
+  const printed = `${t("print.sheet.printed", { date: formatPaperDateTime(now, locale, shop.timezone) })} · ${shop.timezone}`;
+  const dayTitle = t(
+    tomorrow ? "shared.printPacket.dayTitleTomorrow" : "shared.printPacket.dayTitle",
+  );
+
+  const summary = (
+    <header className="mb-6 border-b border-border pb-4">
+      <h1 className={SECTION_TITLE_CLASS}>{dayTitle}</h1>
+      <p className="mt-2 text-muted">
+        {t("shared.printPacket.daySubtitle", {
+          // `sheets.length`, never `departures.length`: this number is the
+          // only thing that tells a captain holding page seven that a boat
+          // is missing from the stack.
+          count: sheets.length,
+          date: formatDateWithYear(dayAt, locale, shop.timezone),
+        })}
+      </p>
+      {loadOut ? <p className="mt-1 tabular-nums">{dayLoadOutLine(t, loadOut)}</p> : null}
+      {loadOut && loadOut.tanks.nitrox > 0 ? (
+        <p className="mt-1 text-sm text-muted">{t("tripPrep.nitroxCountNote")}</p>
+      ) : null}
+    </header>
+  );
+
   return (
-    // The trip layout's shell, which this route is not under: without it the
-    // packet had no `<main>` and printed with no gutter at all.
-    <main className={TRIP_SHELL_CLASS}>
-      <div className="trip-print-bundle" data-paper-screen>
-        <AutoPrint readySelector={PACKET_READY_SELECTOR} />
-        <PacketSummary openingPageName={firstPacketPageName(sheets)}>
-          <p className={EYEBROW_CLASS}>DiveDay</p>
-          <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>
-            {t(tomorrow ? "shared.printPacket.dayTitleTomorrow" : "shared.printPacket.dayTitle")}
-          </h1>
-          {/* The sheet has to say which day it is and how many boats it covers:
-            paper outlives the morning it was printed, and a captain holding
-            page 7 has no other way to know a boat is missing from it. */}
-          <p className="mt-2 text-muted">
-            {t("shared.printPacket.daySubtitle", {
-              // `sheets.length`, never `departures.length`: this number is the
-              // only thing that tells a captain holding page seven that a boat
-              // is missing from the stack.
-              count: sheets.length,
-              date: formatDateWithYear(dayAt, locale, shop.timezone),
-            })}
-          </p>
-          {loadOut ? <p className="mt-1 tabular-nums">{dayLoadOutLine(t, loadOut)}</p> : null}
-          {loadOut && loadOut.tanks.nitrox > 0 ? (
-            <p className="mt-1 text-sm text-muted">{t("tripPrep.nitroxCountNote")}</p>
-          ) : null}
-          <p className="mt-1 text-muted">
-            {t("print.sheet.printed", {
-              date: formatDateTimeTz(now, locale, shop.timezone),
-            })}
-          </p>
-          {tomorrow ? null : (
-            <Link
-              href={`${shopPath(shopSlug, "print")}?day=tomorrow`}
-              className={buttonClass({
-                variant: "secondary",
-                size: "sm",
-                className: "mt-3 print:hidden",
-              })}
-            >
-              {t("shared.printPacket.dayDoorTomorrow")}
-            </Link>
-          )}
-        </PacketSummary>
-        {/* **A `Fragment`, not a wrapper div.** The page breaks between sheets
-          are `globals.css`'s `.print-bundle-page:first-of-type { break-before:
-          auto }`, which exempts the *first* section of its parent — so a
-          per-departure wrapper made every departure's dive plan a first child
-          and printed it on the back of the previous boat's packing list.
-          `display: contents` does not help: it is a layout value and selectors
-          still match the real tree. Keeping every section a sibling is what
-          makes exactly one of them the first. */}
-        {sheets.map((sheet) => (
-          <Fragment key={sheet.id}>{sheet.packet.document}</Fragment>
-        ))}
-        {sheets.length === 0 ? (
-          <p>
+    <SheetDocument
+      backHref={shopPath(shopSlug)}
+      paper={PACKET_PAPER}
+      brandDisplayFont={shop.brandDisplayFont}
+      backLabel={t(STAFF_DESTINATION_LABEL_KEYS.today)}
+      printLabel={t("print.sheet.door")}
+      readySelector={PACKET_READY_SELECTOR}
+      doors={
+        tomorrow ? null : (
+          <Link
+            href={`${shopPath(shopSlug, "print")}?day=tomorrow`}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("shared.printPacket.dayDoorTomorrow")}
+          </Link>
+        )
+      }
+    >
+      {/* **Which day, how many boats, and the load-out**, at the head of
+          the first sheet (or on a sheet of its own on an empty day). Paper
+          outlives the morning it was printed, and a captain holding page 7
+          has no other way to know a boat is missing from the stack. */}
+      {sheets.length === 0 ? (
+        <PacketSheet
+          shop={{ name: shop.name, brandColor: shop.brandColor }}
+          shopSlug={shopSlug}
+          name={dayTitle}
+          printed={printed}
+        >
+          {summary}
+          <p className="mt-4">
             {t(tomorrow ? "shared.printPacket.dayEmptyTomorrow" : "shared.printPacket.dayEmpty")}
           </p>
-        ) : null}
-        <PacketReady />
-      </div>
-    </main>
+        </PacketSheet>
+      ) : (
+        sheets.map((sheet, index) => (
+          <Fragment key={sheet.id}>{sheet.packet(index === 0 ? summary : undefined)}</Fragment>
+        ))
+      )}
+      <PacketReady />
+    </SheetDocument>
   );
 }

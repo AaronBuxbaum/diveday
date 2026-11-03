@@ -2,7 +2,8 @@
 
 - **Status:** Accepted; decisions 3, 4 and 5 amended by
   [20260804-crew-roll-call-is-per-person](20260804-crew-roll-call-is-per-person.md), which retires
-  the count-level attestation and leaves the per-person model as the whole crew half
+  the count-level attestation and leaves the per-person model as the whole crew half; decision 1
+  (the separate table) amended by [20261103-one-roll-call-ledger](20261103-one-roll-call-ledger.md)
 - **Date:** 2026-08-03
 
 ## Context

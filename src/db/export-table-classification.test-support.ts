@@ -9,6 +9,7 @@
  * its export fate fails the coverage test below.
  */
 export const EXCLUDED_TABLES = [
+  "roll_call_crew_events", // retired by #2700: crew marks are roll_call_events rows, exported as roll_call_crew_events.csv
   "retention_prune_state", // global scheduler cursor, no tenant or personal data
   "platform_backup_progress", // one shop-scoped scheduler checkpoint, not portable shop data
   "shop_backup_delivery_claims", // one per-shop scheduler lease, not portable shop data

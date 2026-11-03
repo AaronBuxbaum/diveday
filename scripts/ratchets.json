@@ -738,7 +738,6 @@
       {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
@@ -813,7 +812,6 @@
       {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
@@ -826,15 +824,8 @@
         }
       },
       {
-        "why": "Merge CI coverage updates with the independently shortened safety test baselines",
-        "files": {
-          "src/lib/manifests.test.ts": "1053 -> 1054"
-        }
-      },
-      {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
@@ -847,15 +838,8 @@
         }
       },
       {
-        "why": "merge current main into PR #3132",
-        "files": {
-          "src/lib/manifests.test.ts": "1053 -> 1054"
-        }
-      },
-      {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
@@ -879,7 +863,6 @@
       {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
@@ -894,7 +877,6 @@
       {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
@@ -909,61 +891,6 @@
       {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
-          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
-          "src/db/bookings.test.ts": "3384 -> 3418",
-          "src/db/checkouts.test.ts": "2839 -> 2912",
-          "src/db/closeout.test.ts": "0 -> 903",
-          "src/db/courses.test.ts": "1659 -> 1719",
-          "src/db/orders.test.ts": "3097 -> 3163",
-          "src/db/recap.test.ts": "2114 -> 2138",
-          "src/lib/staffing-week.test.ts": "979 -> 1115",
-          "src/lib/waivers.test.ts": "1188 -> 1205"
-        }
-      },
-      {
-        "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
-        "files": {
-          "src/db/seat-claims.test.ts": "1047 -> 1094",
-          "src/db/waiver-issue.test.ts": "1051 -> 1178",
-          "src/lib/trip-admission.test.ts": "918 -> 984",
-          "src/lib/waivers.test.ts": "1205 -> 1402"
-        }
-      },
-      {
-        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
-        "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
-          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
-          "src/db/bookings.test.ts": "3384 -> 3418",
-          "src/db/checkouts.test.ts": "2839 -> 2912",
-          "src/db/closeout.test.ts": "0 -> 903",
-          "src/db/courses.test.ts": "1659 -> 1719",
-          "src/db/orders.test.ts": "3097 -> 3163",
-          "src/db/recap.test.ts": "2114 -> 2138",
-          "src/lib/staffing-week.test.ts": "979 -> 1115",
-          "src/lib/waivers.test.ts": "1188 -> 1205"
-        }
-      },
-      {
-        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
-        "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
-          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
-          "src/db/bookings.test.ts": "3384 -> 3418",
-          "src/db/checkouts.test.ts": "2839 -> 2912",
-          "src/db/closeout.test.ts": "0 -> 903",
-          "src/db/courses.test.ts": "1659 -> 1719",
-          "src/db/orders.test.ts": "3097 -> 3163",
-          "src/db/recap.test.ts": "2114 -> 2138",
-          "src/lib/staffing-week.test.ts": "979 -> 1115",
-          "src/lib/waivers.test.ts": "1188 -> 1205"
-        }
-      },
-      {
-        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
-        "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
@@ -987,7 +914,6 @@
       {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
@@ -1002,7 +928,57 @@
       {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
-          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/closeout.test.ts": "0 -> 903",
+          "src/db/courses.test.ts": "1659 -> 1719",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/db/recap.test.ts": "2114 -> 2138",
+          "src/lib/staffing-week.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
+        }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/closeout.test.ts": "0 -> 903",
+          "src/db/courses.test.ts": "1659 -> 1719",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/db/recap.test.ts": "2114 -> 2138",
+          "src/lib/staffing-week.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
+        }
+      },
+      {
+        "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
+        "files": {
+          "src/db/seat-claims.test.ts": "1047 -> 1094",
+          "src/db/waiver-issue.test.ts": "1051 -> 1178",
+          "src/lib/trip-admission.test.ts": "918 -> 984",
+          "src/lib/waivers.test.ts": "1205 -> 1402"
+        }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/closeout.test.ts": "0 -> 903",
+          "src/db/courses.test.ts": "1659 -> 1719",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/db/recap.test.ts": "2114 -> 2138",
+          "src/lib/staffing-week.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
+        }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
@@ -1037,7 +1013,7 @@
         }
       }
     ],
-    "src/app/api/offline-manifests/sync/route.test.ts": 955,
+    "src/app/api/offline-manifests/sync/route.test.ts": 952,
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1312,
     "src/app/api/webhooks/stripe/route.test.ts": 1850,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
@@ -1067,7 +1043,7 @@
     "src/db/export.test.ts": 1182,
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1013,
-    "src/db/manifests.test.ts": 3592,
+    "src/db/manifests.test.ts": 3587,
     "src/db/no-show.test.ts": 1156,
     "src/db/notifications.test.ts": 1864,
     "src/db/orders.test.ts": 3174,
@@ -1095,7 +1071,7 @@
     "src/lib/dive-prep.test.ts": 1935,
     "src/lib/import.test.ts": 1403,
     "src/lib/incident-export.test.ts": 1067,
-    "src/lib/manifests.test.ts": 1054,
+    "src/lib/manifests.test.ts": 1028,
     "src/lib/notifications/email.test.ts": 1096,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
@@ -1129,7 +1105,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 350,
     "src/db/checkouts.ts#startBookingCheckout": 303,
-    "src/db/export.ts#loadShopExportContext": 307,
+    "src/db/export.ts#loadShopExportContext": 306,
     "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 645,
@@ -1189,7 +1165,6 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 410,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 578,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 583,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 472,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 477
   },
   "tokens": {

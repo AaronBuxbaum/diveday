@@ -1,13 +1,8 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { DbExecutor } from "./client";
-import {
-  bookings,
-  incidentReportPeople,
-  people,
-  rollCallCrewEvents,
-  rollCallEvents,
-  tripAssignments,
-} from "./schema";
+import { oldestMarkFirst } from "./roll-call-order";
+import { crewMarks, seatMarks } from "./roll-call-subject";
+import { bookings, incidentReportPeople, people, rollCallEvents, tripAssignments } from "./schema";
 
 /**
  * **Who is missing, as the roll call says** (issue #2694): the subject of a
@@ -80,37 +75,31 @@ export async function afterDiveEvents(
       .where(
         and(
           eq(rollCallEvents.shopId, input.shopId),
+          seatMarks(),
           eq(rollCallEvents.tripId, input.tripId),
           eq(rollCallEvents.bookingId, subject.bookingId),
           ne(rollCallEvents.checkpoint, "departure"),
         ),
       )
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      );
+      .orderBy(...oldestMarkFirst());
   }
   return tx
     .select({
-      checkpoint: rollCallCrewEvents.checkpoint,
-      status: rollCallCrewEvents.status,
-      occurredAt: rollCallCrewEvents.occurredAt,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+      occurredAt: rollCallEvents.occurredAt,
     })
-    .from(rollCallCrewEvents)
+    .from(rollCallEvents)
     .where(
       and(
-        eq(rollCallCrewEvents.shopId, input.shopId),
-        eq(rollCallCrewEvents.tripId, input.tripId),
-        eq(rollCallCrewEvents.personId, subject.personId),
-        ne(rollCallCrewEvents.checkpoint, "departure"),
+        eq(rollCallEvents.shopId, input.shopId),
+        crewMarks(),
+        eq(rollCallEvents.tripId, input.tripId),
+        eq(rollCallEvents.crewPersonId, subject.personId),
+        ne(rollCallEvents.checkpoint, "departure"),
       ),
     )
-    .orderBy(
-      asc(rollCallCrewEvents.occurredAt),
-      asc(rollCallCrewEvents.createdAt),
-      asc(rollCallCrewEvents.seq),
-    );
+    .orderBy(...oldestMarkFirst());
 }
 
 /** Whether the subject is on this departure: a seat booked on it, or its crew. */

@@ -1,7 +1,8 @@
 import { inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBoat } from "@/db/boats";
-import { rollCallCrewEvents, trips } from "@/db/schema";
+import { crewSubject } from "@/db/roll-call-subject";
+import { rollCallEvents, trips } from "@/db/schema";
 import { createTrip } from "@/db/trips";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
@@ -36,10 +37,10 @@ describe("boat-clash trouble state", () => {
     if (!host || !mover) throw new Error("boat-clash regression trips were not created");
 
     const staffId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: mover.id,
-      personId: staffId,
+      ...crewSubject(staffId),
       recordedByPersonId: staffId,
       status: "boarded",
       checkpoint: "departure",

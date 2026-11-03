@@ -11,7 +11,7 @@ export function SheetLoading({ paper }: { paper: PrintSheetPaper }) {
     <div className="paper-sheet-frame animate-pulse">
       <div
         className="flex flex-col border border-border bg-surface"
-        style={{ width: `${box.width}mm`, minHeight: `${box.height}mm` }}
+        style={{ width: `${box.width}mm`, minHeight: `${box.height ?? box.width}mm` }}
       >
         <div className="h-12 w-full bg-surface-sunken" />
         <div className="flex-1 space-y-3 p-5">

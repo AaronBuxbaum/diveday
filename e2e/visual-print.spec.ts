@@ -304,29 +304,18 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/print`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
-    // **Three composed headers, and none of their chrome on paper.** This used
-    // to count the two tab strips the composed surfaces brought with them;
-    // slice 23c deleted the strip (ADR 20260919-one-idea), and what each
-    // header carries now is its way back up — "Schedule" on the packet's own,
-    // "Trip" on the manifest's and the prep list's. `TripPageHeader` marks all
-    // three `print:hidden` for exactly this reason, and a paper sheet with a
-    // link on it is the regression.
-    // **The packet's chrome stays off paper.** This used to count the two tab
-    // strips the composed surfaces brought with them; slice 23c deleted the
-    // strip (ADR 20260919-one-idea), and the packet now composes paper rows
-    // with no controls (visual review 2026-10-24, B03), so the rental-ticket
-    // door and the composed headers' way back up are gone. What is left is
-    // the packet's own "‹ Schedule", and the rule is the assertion: every link
-    // in the packet that is not a person's name is off paper. A name prints:
-    // it is a fact on the sheet (the prep lists' divers), a link on screen
-    // only.
+    // **The packet's chrome stays off paper.** The packet is sheets (issue
+    // #2745) whose only links are people's names (a fact on the sheet, a link
+    // on screen only); the way back and the second Print sit above the
+    // sheets and never print.
     //
     // A CSS locator, deliberately: `getByRole` reads the accessibility tree,
     // `display:none` is not in it, and a role locator here finds nothing and
     // passes for the wrong reason.
-    const chrome = page.locator('.trip-print-bundle a:not([href*="/divers/"])');
-    await expect(chrome).not.toHaveCount(0);
-    for (const link of await chrome.all()) await expect(link).not.toBeVisible();
+    await expect(
+      page.locator('.paper-sheet-frame a:not([href*="/divers/"])').filter({ visible: true }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Divers" }).first()).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "trip-packet");
   });
