@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/group-label";
+import { LayerScrim } from "@/components/ui/layer";
 import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import type { SearchResults } from "@/db/search";
 import type { GearItemStatus } from "@/lib/gear";
@@ -673,18 +674,7 @@ export function CommandPalette({
             // containing block for `position: fixed` descendants — a portal escapes
             // that so the backdrop covers the full viewport instead of just the
             // header's own box.
-            // Click-away backdrop; Escape and the toggle button also close it.
-            // biome-ignore lint/a11y/noStaticElementInteractions: presentational backdrop
-            <div
-              // A wash, not a curtain: `backdrop-blur-sm` over a 30% scrim
-              // left the page behind unreadable, which takes away the sense of
-              // the palette floating over your own work (issue #773).
-              className={`fixed inset-0 z-50 flex items-start justify-center bg-foreground/25 px-4 pt-[12vh] backdrop-blur-[2px] ${closing ? "animate-fade-out" : "animate-fade-in"}`}
-              role="presentation"
-              onClick={(event) => {
-                if (event.target === event.currentTarget) setOpen(false);
-              }}
-            >
+            <LayerScrim anchor="top" closing={closing} onDismiss={() => setOpen(false)}>
               <div
                 ref={dialogRef}
                 role="dialog"
@@ -817,7 +807,7 @@ export function CommandPalette({
                 </div>
                 <PaletteLegend copy={copy} />
               </div>
-            </div>,
+            </LayerScrim>,
             document.body,
           )
         : null}

@@ -1,5 +1,3 @@
-import { PREP_SECTION_ID } from "./element-id";
-
 /**
  * **The route tree is the registry; a page's parent is its URL's parent**
  * (issue #2748, `docs/design/principles.md` §10).
@@ -121,7 +119,6 @@ export const STAFF_ROUTES = {
   "trips/[id]/manifest": { face: true },
   "trips/[id]/party/[leadId]/waivers": {},
   "trips/[id]/prep": { face: true },
-  "trips/[id]/prep/ticket/[bookingId]": { upHash: `#${PREP_SECTION_ID}` },
   "trips/[id]/print": { face: true },
   // The medical alerts are the packet with other words: its way up is the packet's.
   "trips/[id]/print/medical-alerts": { face: true },

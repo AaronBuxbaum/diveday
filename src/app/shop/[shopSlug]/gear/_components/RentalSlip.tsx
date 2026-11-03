@@ -10,7 +10,7 @@ export type RentalSlipUnit = { id: string; label: string; detail: string };
 
 /**
  * **A rental ticket on the shop's paper** (issue #2745), shared by the trip
- * slip (`trips/[id]/prep/ticket/[bookingId]`) and the counter ticket
+ * slip (`trips/[id]/prep?diver=`) and the counter ticket
  * (`gear/rentals/[ticketId]`): who has the gear, the unit tags, the one date
  * that matters, then the shared foot (`RentalTicketReceipt`).
  *

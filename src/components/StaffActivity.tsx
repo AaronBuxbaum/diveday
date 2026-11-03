@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { buttonClass } from "@/components/ui/button";
+import { LAYER_LOCK_CLASS } from "@/components/ui/layer";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
@@ -160,7 +161,7 @@ export function StaffActivity({
       ? createPortal(
           <div
             ref={dialogRef}
-            className="fixed inset-0 z-50 grid place-items-center bg-surface p-6"
+            className={LAYER_LOCK_CLASS}
             data-staff-session-lock
             role="alertdialog"
             aria-modal="true"
