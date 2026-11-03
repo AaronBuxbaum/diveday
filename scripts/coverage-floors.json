@@ -45,6 +45,7 @@
   "src/db/refunds.ts": 84.18,
   "src/db/roll-call-alerts.ts": 82.6,
   "src/db/roll-call-history.ts": 50,
+  "src/db/roll-call-order.ts": 75,
   "src/db/roll-call-subject.ts": 75,
   "src/db/schema/certifications.ts": 100,
   "src/db/schema/erasure.ts": 100,
