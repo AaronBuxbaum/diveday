@@ -121,6 +121,7 @@ import {
   cards,
   certificationJuniorReviews,
   courseFormRecords,
+  crewAvailabilityBlocks,
   customerGearItems,
   emailBounces,
   formDrafts,
@@ -137,6 +138,7 @@ import {
   personRoles,
   priorGearAssignments,
   priorVisits,
+  pushSubscriptions,
   recapPhotos,
   recapPulses,
   retiredRollCallCrewEvents,
@@ -148,6 +150,7 @@ import {
   staffCredentialHistory,
   staffCredentials,
   staffReplies,
+  staffShifts,
   tripReviews,
   userAccounts,
   waiverDeliveries,
@@ -825,6 +828,26 @@ async function scrubPersonRecord(
     })
     .where(and(eq(staffCredentials.shopId, shopId), eq(staffCredentials.personId, personId)));
 
+  // A device a former staffer opted in: its endpoint and keys are a login of
+  // theirs. Leaving a staff role clears it already; this holds whatever missed it.
+  await tx
+    .delete(pushSubscriptions)
+    .where(and(eq(pushSubscriptions.shopId, shopId), eq(pushSubscriptions.personId, personId)));
+
+  // A former staffer is erasable, and the note on their own hours or days away
+  // is their own words (often health or family). The dates stay: they are the
+  // shop's record of who was rostered.
+  await tx
+    .update(staffShifts)
+    .set({ note: null })
+    .where(and(eq(staffShifts.shopId, shopId), eq(staffShifts.personId, personId)));
+  await tx
+    .update(crewAvailabilityBlocks)
+    .set({ note: null })
+    .where(
+      and(eq(crewAvailabilityBlocks.shopId, shopId), eq(crewAvailabilityBlocks.personId, personId)),
+    );
+
   return [];
 }
 
@@ -1084,14 +1107,17 @@ const SCHEMA_TABLES = new Map<string, PgTable>(
 
 /**
  * The registry's plain deletes (`erasedPersonRowDeletes`, `./person-columns`):
- * every row of this shop that names the person in a column whose fate is a
- * bare `delete`. A table or column the schema no longer has throws, which rolls
+ * every row of this shop that names the person, or a record merged into them,
+ * in a column whose fate is a bare `delete`. A table or column the schema no longer has throws, which rolls
  * the erasure back rather than reporting one that skipped a table.
  */
 async function deleteRegisteredPersonRows(
   tx: AppTransaction,
   ctx: ScrubSectionContext,
 ): Promise<void> {
+  // The records merged into this one too: a writer that still held a merged-away
+  // id can have left the person's own rows on the shell (security review of #3799).
+  const chain = [ctx.personId, ...(await mergedIntoChain(tx, ctx.shopId, ctx.personId))];
   for (const { table: name, column: columnName } of erasedPersonRowDeletes()) {
     // `registeredTable` is the one write `erasure-coverage.test.ts` reads by name
     // rather than by schema identifier: it stands for every registry delete.
@@ -1104,7 +1130,7 @@ async function deleteRegisteredPersonRows(
     }
     await tx
       .delete(registeredTable)
-      .where(and(eq(shopColumn, ctx.shopId), eq(personColumn, ctx.personId)));
+      .where(and(eq(shopColumn, ctx.shopId), inArray(personColumn, chain)));
   }
 }
 
