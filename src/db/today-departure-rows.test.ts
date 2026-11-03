@@ -10,7 +10,7 @@ import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { askAnytime } from "./interests";
 import { setBookingNitrox } from "./nitrox";
-import { boats, bookings, interests, nitroxCertifications, orders, people, shops } from "./schema";
+import { boats, bookings, cards, interests, orders, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { getDepartureNeeds } from "./today-departure-needs";
@@ -498,12 +498,13 @@ describe("departure rows on the queue, read through getTodayWork", () => {
 
     // The card is pulled (archived) after the request was already accepted.
     await db
-      .update(nitroxCertifications)
+      .update(cards)
       .set({ deletedAt: nowDate() })
       .where(
         and(
-          eq(nitroxCertifications.shopId, shop.id),
-          eq(nitroxCertifications.personId, certified.person.id),
+          eq(cards.shopId, shop.id),
+          eq(cards.kind, "nitrox"),
+          eq(cards.personId, certified.person.id),
         ),
       );
 

@@ -48,10 +48,7 @@ export async function readCertificationEvidenceFor(
     .from(cards)
     .where(and(eq(cards.shopId, shopId), inArray(cards.personId, ids), isNull(cards.deletedAt)));
   for (const id of ids) {
-    byPerson.set(
-      id,
-      splitCardsByKind(rows.filter((row) => row.personId === id)),
-    );
+    byPerson.set(id, splitCardsByKind(rows.filter((row) => row.personId === id)));
   }
   return byPerson;
 }

@@ -440,5 +440,6 @@ script again.
 | 20261102-stripe-sdk-adapters | Call Stripe through the official… |
 | 20261102-website-assist-public-suffix-list | Read the Public Suffix List… |
 | 20261103-advisory-is-a-finding | Record an advisory as a… |
+| 20261103-one-card-ledger | Keep every diver card in… |
 
 <!-- adr-index:end -->

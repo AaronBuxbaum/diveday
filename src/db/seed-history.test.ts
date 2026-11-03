@@ -6,7 +6,7 @@ import { getTripManifest } from "./manifests";
 import { getMonthlyReport } from "./reporting";
 import {
   bookings,
-  certifications,
+  cards,
   diveSites,
   rollCallEvents,
   tripAssignments,
@@ -99,13 +99,13 @@ describe("seeded history manifests", () => {
       // Every dive's site, not just the first: a deep second tank still refuses.
       .innerJoin(tripDives, eq(tripDives.tripId, tripsTable.id))
       .innerJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
-      .innerJoin(certifications, eq(certifications.personId, bookings.personId))
+      .innerJoin(cards, and(eq(cards.personId, bookings.personId), eq(cards.kind, "level")))
       .where(
         and(
           eq(tripsTable.shopId, shop.id),
           eq(tripsTable.description, HISTORY_DESCRIPTION),
           eq(rollCallEvents.status, "boarded"),
-          eq(certifications.level, "open_water"),
+          eq(cards.level, "open_water"),
         ),
       );
     expect(boardedOpenWater.length).toBeGreaterThan(0);

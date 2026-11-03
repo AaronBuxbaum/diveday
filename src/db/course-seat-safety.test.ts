@@ -3,14 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { charterContext } from "@/test/training-mark-context";
 import { createCertification, getBookingReadiness, reviewCertification } from "./readiness";
-import {
-  certifications,
-  courses,
-  diveSites,
-  specialtyCertifications,
-  tripDives,
-  tripRequirements,
-} from "./schema";
+import { cards, courses, diveSites, tripDives, tripRequirements } from "./schema";
 import { changeTripCrew } from "./trips-crew";
 
 const fileCtx = fileScopedShopContext();
@@ -58,21 +51,23 @@ describe("an Advanced course seat on a Deep-gated site", () => {
         ),
       );
     await ctx.db
-      .update(certifications)
+      .update(cards)
       .set({ status: "pending" })
       .where(
         and(
-          eq(certifications.shopId, ctx.shop.id),
-          eq(certifications.personId, ctx.course.personId),
+          eq(cards.shopId, ctx.shop.id),
+          eq(cards.kind, "level"),
+          eq(cards.personId, ctx.course.personId),
         ),
       );
     await ctx.db
-      .update(specialtyCertifications)
+      .update(cards)
       .set({ status: "pending" })
       .where(
         and(
-          eq(specialtyCertifications.shopId, ctx.shop.id),
-          eq(specialtyCertifications.personId, ctx.course.personId),
+          eq(cards.shopId, ctx.shop.id),
+          eq(cards.kind, "specialty"),
+          eq(cards.personId, ctx.course.personId),
         ),
       );
     const card = await createCertification(ctx.db, {

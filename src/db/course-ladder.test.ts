@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getCourseLadder, ladderInviteRefusal } from "./course-ladder";
-import { bookings, certifications, courses, people, personRoles, trips } from "./schema";
+import { bookings, cards, courses, people, personRoles, trips } from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -87,8 +87,9 @@ describe("getCourseLadder", () => {
         email: "instructor@ladder.example",
       })
       .returning();
-    await db.insert(certifications).values(
+    await db.insert(cards).values(
       [cy, di].map((p) => ({
+        kind: "level" as const,
         shopId: shop.id,
         personId: p.id,
         agency: "padi" as const,
@@ -194,7 +195,8 @@ describe("getCourseLadder", () => {
         personId: p.id,
       })),
     );
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: eve.id,
       agency: "ssi",
@@ -203,8 +205,9 @@ describe("getCourseLadder", () => {
       identifier: "SSI-1",
     });
     // Gus, Hal and Ida certified Open Water here; Gus also has an imported Rescue card.
-    await db.insert(certifications).values(
+    await db.insert(cards).values(
       [gus, hal, ida].map((p) => ({
+        kind: "level" as const,
         shopId: shop.id,
         personId: p.id,
         agency: "padi" as const,
@@ -214,7 +217,8 @@ describe("getCourseLadder", () => {
         issuedFromTripId: pastEntry.id,
       })),
     );
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: gus.id,
       agency: "naui",

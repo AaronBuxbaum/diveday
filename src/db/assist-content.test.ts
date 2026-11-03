@@ -21,13 +21,11 @@ import {
 } from "./review-assists";
 import {
   assistResults,
-  certifications,
+  cards,
   diveSites,
   incidentReports,
-  nitroxCertifications,
   people,
   shops,
-  specialtyCertifications,
   tripReviews,
   tripSightings,
   trips,
@@ -592,9 +590,10 @@ describe("the same-person read", () => {
       ])
       .returning({ id: people.id });
     if (!a || !b) throw new Error("people were not inserted");
-    await ctx.db.insert(certifications).values([
+    await ctx.db.insert(cards).values([
       // A card removed as wrong, and a claim nobody checked: neither is a level held.
       {
+        kind: "level",
         shopId: ctx.shop.id,
         personId: a.id,
         agency: "padi",
@@ -603,8 +602,16 @@ describe("the same-person read", () => {
         status: "verified",
         deletedAt: now,
       },
-      { shopId: ctx.shop.id, personId: a.id, agency: "padi", level: "rescue", identifier: "R-1" },
       {
+        kind: "level",
+        shopId: ctx.shop.id,
+        personId: a.id,
+        agency: "padi",
+        level: "rescue",
+        identifier: "R-1",
+      },
+      {
+        kind: "level",
         shopId: ctx.shop.id,
         personId: b.id,
         agency: "padi",
@@ -627,12 +634,8 @@ describe("the card photo read", () => {
   };
 
   async function cardRows() {
-    const [levels, specialties, nitrox] = await Promise.all([
-      ctx.db.select({ id: certifications.id }).from(certifications),
-      ctx.db.select({ id: specialtyCertifications.id }).from(specialtyCertifications),
-      ctx.db.select({ id: nitroxCertifications.id }).from(nitroxCertifications),
-    ]);
-    return levels.length + specialties.length + nitrox.length;
+    // Every kind of card at once: a read writes none of them.
+    return (await ctx.db.select({ id: cards.id }).from(cards)).length;
   }
 
   it("answers form values only, writes no card, and reads a doubtful photo as nothing", async () => {

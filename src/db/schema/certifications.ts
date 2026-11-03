@@ -316,7 +316,6 @@ export const cards = pgTable(
   ],
 );
 
-
 /** Every staff sighting/correction is retained with the card until erasure. */
 export const certificationJuniorReviews = pgTable(
   "certification_junior_reviews",

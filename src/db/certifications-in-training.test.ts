@@ -11,7 +11,7 @@ import {
   listTripReadiness,
   upsertTripRequirements,
 } from "./readiness";
-import { type certificationLevel, certifications, courses, tripAssignments, trips } from "./schema";
+import { cards, type certificationLevel, courses, tripAssignments, trips } from "./schema";
 import { createTrip, listStaff } from "./trips";
 
 /**
@@ -119,7 +119,8 @@ describe("a fun dive after the course that certifies for it", () => {
     ]);
 
     // The card the instructor issues is what clears it, as for anyone else.
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: student.personId,
       agency: "padi",
@@ -152,7 +153,8 @@ describe("a fun dive after the course that certifies for it", () => {
         name,
       });
       if (!seat.ok) throw new Error(`seed booking refused: ${seat.reason}`);
-      await db.insert(certifications).values({
+      await db.insert(cards).values({
+        kind: "level",
         shopId: shop.id,
         personId: seat.personId,
         agency: "padi",

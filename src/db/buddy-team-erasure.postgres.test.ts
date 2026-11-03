@@ -11,7 +11,7 @@ import {
 import {
   bookings,
   buddyTeamEvents,
-  certifications,
+  cards,
   people,
   personRoles,
   shops,
@@ -68,8 +68,9 @@ async function fixture(operation: Operation) {
     .returning();
   const members = seats.map((seat) => ({ kind: "diver" as const, bookingId: seat.id }));
   const [card] = await pg.db
-    .insert(certifications)
+    .insert(cards)
     .values({
+      kind: "level",
       shopId: shop.id,
       personId: first.id,
       agency: "padi",

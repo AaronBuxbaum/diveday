@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import {
-  certifications,
+  cards,
   interests,
   people,
-  specialtyCertifications,
   tripRequirements,
 } from "./schema";
 import { getTripGuests } from "./trip-guests";
@@ -114,7 +113,8 @@ describe("getTripGuests", () => {
           .values({ shopId: shop.id, fullName, email: `${fullName.split(" ")[0]}@example.com` })
           .returning();
         if (!person) throw new Error("setup: person missing");
-        await db.insert(certifications).values({
+        await db.insert(cards).values({
+          kind: "level",
           shopId: shop.id,
           personId: person.id,
           agency: "padi",
@@ -123,7 +123,8 @@ describe("getTripGuests", () => {
           status: "verified",
         });
         if (night) {
-          await db.insert(specialtyCertifications).values({
+          await db.insert(cards).values({
+            kind: "specialty",
             shopId: shop.id,
             personId: person.id,
             agency: "padi",

@@ -14,6 +14,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { asLevelCard } from "@/lib/card-ledger";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { offerMailClass } from "@/lib/interests";
@@ -46,7 +47,7 @@ import { sendNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
 import {
   bookings,
-  certifications,
+  cards,
   courses,
   dateRequestOfferBookings,
   type Interest,
@@ -1015,17 +1016,21 @@ export async function departureOpenToDiver(
     // The students, its divers: a priced rider is a passenger (G5 of #2226).
     if (seatCap !== null && held.divers >= seatCap) return false;
     if (course.minimumCertificationLevel) {
-      const cards = await db
+      const levelCards = await db
         .select()
-        .from(certifications)
+        .from(cards)
         .where(
           and(
-            eq(certifications.shopId, input.shopId),
-            eq(certifications.personId, input.personId),
-            isNull(certifications.deletedAt),
+            eq(cards.kind, "level"),
+            eq(cards.shopId, input.shopId),
+            eq(cards.personId, input.personId),
+            isNull(cards.deletedAt),
           ),
-        );
-      if (!hasVerifiedCertificationAtLeast(cards, course.minimumCertificationLevel)) return false;
+        )
+        .then((rows) => rows.map(asLevelCard));
+      if (!hasVerifiedCertificationAtLeast(levelCards, course.minimumCertificationLevel)) {
+        return false;
+      }
     }
   }
 

@@ -8,7 +8,7 @@ import {
   boats,
   bookingPayments,
   bookings,
-  certifications,
+  cards,
   type DiveSpecialty,
   diveSites,
   orderLineItems,
@@ -224,17 +224,7 @@ export async function seedHistory(
   await db
     .insert(personRoles)
     .values(histPeople.map((person) => ({ personId: person.id, role: "diver" as const })));
-  await db.insert(certifications).values(
-    histPeople.map((person, i) => ({
-      shopId,
-      personId: person.id,
-      agency: i % 2 === 0 ? ("padi" as const) : ("ssi" as const),
-      level: i % 3 === 0 ? ("advanced_open_water" as const) : ("open_water" as const),
-      identifier: `HIST-${String(i + 1).padStart(4, "0")}`,
-      status: "verified" as const,
-      ...reviewedBy(createdByPersonId),
-    })),
-  );
+  await insertHistoryCards(db, shopId, histPeople, createdByPersonId);
 
   // The bookable pool is exactly the history-only cohort (see above): large
   // enough that a wrapping slice fills even a 12-seat boat with distinct divers,
@@ -1160,3 +1150,24 @@ export function daysBookedAhead(startsAt: Date, seat: number): number {
 const WEEKEND_DAYS_AHEAD = [28, 21, 18, 14, 12, 10, 9, 7, 6, 5, 4, 3] as const;
 const FRIDAY_DAYS_AHEAD = [12, 9, 7, 6, 5, 4, 3, 2, 2, 1, 1, 0] as const;
 const MIDWEEK_DAYS_AHEAD = [6, 4, 3, 2, 1, 1, 1, 0, 0, 0, 0, 0] as const;
+
+/** One verified level card for each of the history cohort, reviewed by the seed's staffer. */
+async function insertHistoryCards(
+  db: DbExecutor,
+  shopId: string,
+  histPeople: readonly { id: string }[],
+  createdByPersonId: string,
+) {
+  await db.insert(cards).values(
+    histPeople.map((person, i) => ({
+      kind: "level" as const,
+      shopId,
+      personId: person.id,
+      agency: i % 2 === 0 ? ("padi" as const) : ("ssi" as const),
+      level: i % 3 === 0 ? ("advanced_open_water" as const) : ("open_water" as const),
+      identifier: `HIST-${String(i + 1).padStart(4, "0")}`,
+      status: "verified" as const,
+      ...reviewedBy(createdByPersonId),
+    })),
+  );
+}

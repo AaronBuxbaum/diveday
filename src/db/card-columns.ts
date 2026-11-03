@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
-import { cards } from "./schema";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import type { DiveSpecialty } from "./schema";
+import { cards } from "./schema";
 
 /**
  * **`cards.level` and `cards.specialty` typed for a query that already filters

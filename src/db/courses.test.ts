@@ -26,14 +26,7 @@ import {
   pullCourseTemplateUpdates,
   setCourseVisibility,
 } from "./courses";
-import {
-  certifications,
-  courses,
-  people,
-  shops,
-  tripAssignments,
-  tripRequirements,
-} from "./schema";
+import { cards, courses, people, shops, tripAssignments, tripRequirements } from "./schema";
 import { courseTemplateDisplayTitle } from "./seed-catalog";
 import { listShopsForSitemap } from "./shops";
 import {
@@ -850,14 +843,15 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       db: AppDb,
       shopId: string,
       slug: string,
-      card: Partial<typeof certifications.$inferInsert> = {},
+      card: Partial<typeof cards.$inferInsert> = {},
     ) {
       const [person] = await db
         .insert(people)
         .values({ shopId, fullName: `Card Diver ${slug}`, email: `card-${slug}@example.com` })
         .returning();
       if (!person) throw new Error("failed to insert card-state diver");
-      await db.insert(certifications).values({
+      await db.insert(cards).values({
+        kind: "level",
         shopId,
         personId: person.id,
         agency: "padi",

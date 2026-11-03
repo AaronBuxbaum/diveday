@@ -10,7 +10,7 @@ import { ensureDepartureInterest, listDepartureInterests } from "./interests";
 import {
   activityEvents,
   bookings,
-  certifications,
+  cards,
   interests,
   people,
   personRoles,
@@ -469,7 +469,8 @@ describe("seat offers", () => {
       const personId = await freshDiver(ctx.db, ctx.shop.id);
       // An Open Water card on file, so admission judges them (a diver the shop
       // knows nothing about is admitted blind, H-20260724-certification-levels-agency-rules) and finds them short.
-      await ctx.db.insert(certifications).values({
+      await ctx.db.insert(cards).values({
+        kind: "level",
         shopId: ctx.shop.id,
         personId,
         agency: "padi",

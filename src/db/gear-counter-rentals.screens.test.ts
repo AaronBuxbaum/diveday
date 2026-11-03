@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowMs } from "@/lib/clock";
@@ -29,15 +29,7 @@ import {
   TODAY,
   unit,
 } from "./gear-counter-rentals-test-fixtures";
-import {
-  certifications,
-  type GearItemKindValue,
-  orders,
-  people,
-  personRoles,
-  specialtyCertifications,
-  userAccounts,
-} from "./schema";
+import { cards, type GearItemKindValue, orders, people, personRoles, userAccounts } from "./schema";
 import { createTrip } from "./trips-create";
 import {
   completeWaiver,
@@ -82,7 +74,8 @@ describe("the card rule: life support needs a verified card", () => {
   it("refuses a regulator on a self-declared card, or one still waiting for review", async () => {
     const { db, shop } = await rentalShop();
     const claimed = await person(db, shop.id, "Says Advanced", undefined, { card: false });
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: claimed.id,
       agency: "padi",
@@ -91,7 +84,8 @@ describe("the card rule: life support needs a verified card", () => {
       status: "pending",
     });
     const captured = await person(db, shop.id, "Card Pending", undefined, { card: false });
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: captured.id,
       agency: "ssi",
@@ -106,6 +100,25 @@ describe("the card rule: life support needs a verified card", () => {
       reason: "not_certified",
     });
     expect(await lend(db, shop.id, captured.id, [bcd.id])).toEqual({
+      ok: false,
+      reason: "not_certified",
+    });
+  });
+
+  it("refuses a regulator on a verified nitrox card alone: it is no level card (issue #2722)", async () => {
+    const { db, shop } = await rentalShop();
+    const gasOnly = await person(db, shop.id, "Nitrox Only", undefined, { card: false });
+    await db.insert(cards).values({
+      kind: "nitrox",
+      shopId: shop.id,
+      personId: gasOnly.id,
+      agency: "padi",
+      identifier: "EANX-2722",
+      status: "verified",
+      reviewedAt: new Date("2026-10-01T12:00:00Z"),
+    });
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+    expect(await lend(db, shop.id, gasOnly.id, [reg.id])).toEqual({
       ok: false,
       reason: "not_certified",
     });
@@ -156,7 +169,8 @@ describe("the card rule: life support needs a verified card", () => {
       reason: "no_drysuit_card",
     });
     // A self-declared drysuit card is somebody's word, and clears nothing.
-    await db.insert(specialtyCertifications).values({
+    await db.insert(cards).values({
+      kind: "specialty",
       shopId: shop.id,
       personId: diver.id,
       agency: "padi",
@@ -201,8 +215,8 @@ describe("the card rule: life support needs a verified card", () => {
     ).toEqual({ ok: true });
     const [card] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, walkIn.id));
+      .from(cards)
+      .where(and(eq(cards.personId, walkIn.id), eq(cards.kind, "level")));
     expect(card).toMatchObject({ status: "verified", reviewedByPersonId: dana.id });
     expect(card?.reviewedAt).toBeInstanceOf(Date);
 

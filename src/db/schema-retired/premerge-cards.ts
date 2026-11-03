@@ -1,6 +1,5 @@
 import { sql } from "drizzle-orm";
 import { check, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { appNowTimestamp } from "../schema/columns";
 import {
   certificationAgency,
   certificationLevel,
@@ -8,8 +7,8 @@ import {
   diveSpecialty,
   people,
   shops,
-} from "../schema/core";
-import { trips } from "../schema/trips";
+  trips,
+} from "../schema";
 
 /**
  * **The three card tables `cards` replaced, kept declared for one release only**
@@ -35,31 +34,31 @@ export const premergeCertifications = pgTable(
       .references(() => people.id),
     agency: certificationAgency("agency").notNull(),
     level: certificationLevel("level").notNull(),
-        identifier: text("identifier"),
-        declaredIdentifier: text("declared_identifier"),
-        status: certificationStatus("status").notNull().default("pending"),
+    identifier: text("identifier"),
+    declaredIdentifier: text("declared_identifier"),
+    status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
-        reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
-        agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
-        importedAt: timestamp("imported_at", { withTimezone: true }),
+    reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
+    agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
+    importedAt: timestamp("imported_at", { withTimezone: true }),
     importedFromLabel: text("imported_from_label"),
-        selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
-        issuedByShopAt: timestamp("issued_by_shop_at", { withTimezone: true }),
-        issuedFromTripId: uuid("issued_from_trip_id").references(() => trips.id, {
+    selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
+    issuedByShopAt: timestamp("issued_by_shop_at", { withTimezone: true }),
+    issuedFromTripId: uuid("issued_from_trip_id").references(() => trips.id, {
       onDelete: "set null",
     }),
-        issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
-        processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
-        processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
-        juniorStatus: text("junior_status").$type<"junior" | "full">(),
+    issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
+    processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
+    processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
+    juniorStatus: text("junior_status").$type<"junior" | "full">(),
     juniorStatusVerifiedAt: timestamp("junior_status_verified_at", { withTimezone: true }),
     juniorStatusVerifiedByPersonId: uuid("junior_status_verified_by_person_id").references(
       () => people.id,
     ),
-        deletedAt: timestamp("deleted_at", { withTimezone: true }),
-        deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: appNowTimestamp("created_at").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("certifications_person_id_idx").on(table.personId),
@@ -102,28 +101,28 @@ export const premergeSpecialtyCertifications = pgTable(
       .references(() => people.id),
     agency: certificationAgency("agency").notNull(),
     specialty: diveSpecialty("specialty").notNull(),
-        identifier: text("identifier"),
-        status: certificationStatus("status").notNull().default("pending"),
+    identifier: text("identifier"),
+    status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
-        reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
-        agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
-        importedAt: timestamp("imported_at", { withTimezone: true }),
+    reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
+    agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
+    importedAt: timestamp("imported_at", { withTimezone: true }),
     importedFromLabel: text("imported_from_label"),
-        selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
-        issuedByShopAt: timestamp("issued_by_shop_at", { withTimezone: true }),
-        issuedFromTripId: uuid("issued_from_trip_id").references(() => trips.id, {
+    selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
+    issuedByShopAt: timestamp("issued_by_shop_at", { withTimezone: true }),
+    issuedFromTripId: uuid("issued_from_trip_id").references(() => trips.id, {
       onDelete: "set null",
     }),
-        issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
-        processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
-        processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
-        listedFromCertificationId: uuid("listed_from_certification_id").references(
+    issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
+    processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
+    processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
+    listedFromCertificationId: uuid("listed_from_certification_id").references(
       () => premergeCertifications.id,
     ),
-        deletedAt: timestamp("deleted_at", { withTimezone: true }),
-        deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: appNowTimestamp("created_at").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("specialty_certifications_shop_person_idx").on(table.shopId, table.personId),
@@ -155,28 +154,28 @@ export const premergeNitroxCertifications = pgTable(
       .notNull()
       .references(() => people.id),
     agency: certificationAgency("agency").notNull(),
-        identifier: text("identifier"),
+    identifier: text("identifier"),
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
-        reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
-        agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
-        importedAt: timestamp("imported_at", { withTimezone: true }),
+    reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
+    agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
+    importedAt: timestamp("imported_at", { withTimezone: true }),
     importedFromLabel: text("imported_from_label"),
-        selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
-        issuedByShopAt: timestamp("issued_by_shop_at", { withTimezone: true }),
-        issuedFromTripId: uuid("issued_from_trip_id").references(() => trips.id, {
+    selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
+    issuedByShopAt: timestamp("issued_by_shop_at", { withTimezone: true }),
+    issuedFromTripId: uuid("issued_from_trip_id").references(() => trips.id, {
       onDelete: "set null",
     }),
-        issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
-        processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
-        processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
-        listedFromCertificationId: uuid("listed_from_certification_id").references(
+    issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
+    processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
+    processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
+    listedFromCertificationId: uuid("listed_from_certification_id").references(
       () => premergeCertifications.id,
     ),
-        deletedAt: timestamp("deleted_at", { withTimezone: true }),
-        deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: appNowTimestamp("created_at").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("nitrox_certifications_shop_person_idx").on(table.shopId, table.personId),
@@ -196,3 +195,10 @@ export const premergeNitroxCertifications = pgTable(
     ),
   ],
 );
+
+/** The tables above by name, for the guards that read the live database's catalog. */
+export const PREMERGE_CARD_TABLES: readonly string[] = [
+  "certifications",
+  "specialty_certifications",
+  "nitrox_certifications",
+];

@@ -1,10 +1,10 @@
 import { randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
 import { anonymizeDiver } from "@/db/anonymize";
 import type { AppDb } from "@/db/client";
 import { mergeDiverRecords } from "@/db/diver-merge";
-import { certifications, people, personRoles, shops, userAccounts } from "@/db/schema";
+import { cards, people, personRoles, shops, userAccounts } from "@/db/schema";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { redirectedTo, staffSession } from "@/test/staff-session";
 
@@ -108,8 +108,9 @@ describePostgres("diver erasure racing a merge", () => {
       status: "active",
     });
     const [card] = await pg.db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId: source.id,
         agency: "padi",
@@ -117,7 +118,7 @@ describePostgres("diver erasure racing a merge", () => {
         identifier: `CARD-${suffix}`,
         status: "verified",
       })
-      .returning({ id: certifications.id });
+      .returning({ id: cards.id });
     if (!card) throw new Error("card fixture missing");
 
     const gate = pauseBeforeLock(pg.connect());
@@ -150,9 +151,9 @@ describePostgres("diver erasure racing a merge", () => {
       .from(people)
       .where(eq(people.id, survivor.id));
     const [keptCard] = await pg.db
-      .select({ personId: certifications.personId, identifier: certifications.identifier })
-      .from(certifications)
-      .where(eq(certifications.id, card.id));
+      .select({ personId: cards.personId, identifier: cards.identifier })
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(outcome).toMatchObject({ ok: false, reason: "merged", survivorId: survivor.id });
     expect(kept?.anonymizedAt).toBeNull();
     expect(kept?.email).not.toBeNull();
@@ -193,8 +194,9 @@ describePostgres("diver erasure racing a merge", () => {
       status: "active",
     });
     const [card] = await pg.db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId: source.id,
         agency: "padi",
@@ -202,7 +204,7 @@ describePostgres("diver erasure racing a merge", () => {
         identifier: `CARD-${suffix}`,
         status: "verified",
       })
-      .returning({ id: certifications.id });
+      .returning({ id: cards.id });
     if (!card) throw new Error("card fixture missing");
     const gate = pauseBeforeLock(pg.connect());
     vi.mocked(getDb).mockResolvedValueOnce(gate.db).mockResolvedValue(pg.db);
@@ -234,9 +236,9 @@ describePostgres("diver erasure racing a merge", () => {
       .from(people)
       .where(eq(people.id, survivor.id));
     const [keptCard] = await pg.db
-      .select({ identifier: certifications.identifier })
-      .from(certifications)
-      .where(eq(certifications.id, card.id));
+      .select({ identifier: cards.identifier })
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(notice).toContain("notice=merged-record-moved");
     expect(kept?.anonymizedAt).toBeNull();
     expect(kept?.email).not.toBeNull();
@@ -277,8 +279,9 @@ describePostgres("diver erasure racing a merge", () => {
       status: "active",
     });
     const [card] = await pg.db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId: source.id,
         agency: "padi",
@@ -286,7 +289,7 @@ describePostgres("diver erasure racing a merge", () => {
         identifier: `CARD-${suffix}`,
         status: "verified",
       })
-      .returning({ id: certifications.id });
+      .returning({ id: cards.id });
     if (!card) throw new Error("card fixture missing");
     const gate = pauseBeforeLock(pg.connect());
     vi.mocked(getDb).mockResolvedValueOnce(gate.db).mockResolvedValue(pg.db);
@@ -351,8 +354,9 @@ describePostgres("diver erasure racing a merge", () => {
       status: "active",
     });
     const [card] = await pg.db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId: source.id,
         agency: "padi",
@@ -360,7 +364,7 @@ describePostgres("diver erasure racing a merge", () => {
         identifier: `CARD-${suffix}`,
         status: "verified",
       })
-      .returning({ id: certifications.id });
+      .returning({ id: cards.id });
     if (!card) throw new Error("card fixture missing");
     const gate = pauseBeforeLock(pg.connect());
     vi.mocked(getDb).mockResolvedValueOnce(gate.db).mockResolvedValue(pg.db);

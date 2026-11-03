@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { proposalKey } from "@/lib/gear-proposals";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, gearItems, nitroxCertifications } from "./schema";
+import { bookings, gearItems, cards } from "./schema";
 import { getTripPrep, screenGearPicks } from "./trip-prep";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -38,8 +38,8 @@ describe("regulator proposals read the approved nitrox, not the request", () => 
       .set({ wantsNitrox: true })
       .where(eq(bookings.id, row.diver.bookingId));
     await db
-      .delete(nitroxCertifications)
-      .where(eq(nitroxCertifications.personId, row.diver.personId));
+      .delete(cards)
+      .where(and(eq(cards.personId, row.diver.personId), eq(cards.kind, "nitrox")));
     return {
       db,
       shop,
@@ -61,7 +61,8 @@ describe("regulator proposals read the approved nitrox, not the request", () => 
 
   it("proposes the designated regulator once the card is verified", async () => {
     const { db, shop, tripId, bookingId, personId, designatedId } = await setUp();
-    await db.insert(nitroxCertifications).values({
+    await db.insert(cards).values({
+      kind: "nitrox",
       shopId: shop.id,
       personId,
       agency: "padi",

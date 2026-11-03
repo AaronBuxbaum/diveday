@@ -10,7 +10,7 @@ import {
   bookings,
   buddyTeamEvents,
   buddyTeamMembers,
-  certifications,
+  cards,
   type DiveSpecialty,
   diveSites,
   executedDives,
@@ -306,13 +306,14 @@ async function seatTheDivers(
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(eq(bookings.shopId, shopId), gte(trips.startsAt, today.from)));
   const carded = db
-    .select({ personId: certifications.personId })
-    .from(certifications)
+    .select({ personId: cards.personId })
+    .from(cards)
     .where(
       and(
-        eq(certifications.shopId, shopId),
-        eq(certifications.status, "verified"),
-        isNull(certifications.deletedAt),
+        eq(cards.shopId, shopId),
+        eq(cards.kind, "level"),
+        eq(cards.status, "verified"),
+        isNull(cards.deletedAt),
       ),
     );
   const candidates = await db

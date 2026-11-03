@@ -15,7 +15,7 @@ import * as schema from "./schema";
 import {
   activityEvents,
   bookings,
-  certifications,
+  cards,
   courses,
   interests,
   internalNotes,
@@ -482,8 +482,9 @@ describe("full-shop export dataset", () => {
       .insert(people)
       .values({ shopId: shop.id, fullName: "Lapsed Card Lee", email: "lee@example.com" })
       .returning();
-    await db.insert(certifications).values([
+    await db.insert(cards).values([
       {
+        kind: "level",
         shopId: shop.id,
         personId: diver.id,
         agency: "padi",
@@ -492,6 +493,7 @@ describe("full-shop export dataset", () => {
         status: "pending",
       },
       {
+        kind: "level",
         shopId: shop.id,
         personId: diver.id,
         agency: "padi",
@@ -504,7 +506,8 @@ describe("full-shop export dataset", () => {
       .insert(people)
       .values({ shopId: shop.id, fullName: "Only Expired Erin", email: "erin@example.com" })
       .returning();
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: onlyPending.id,
       agency: "ssi",
@@ -572,7 +575,8 @@ describe("full-shop export dataset", () => {
         noCertificationDeclaredAt: declaredAt,
       })
       .returning();
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: carded.id,
       agency: "padi",
@@ -601,7 +605,8 @@ describe("full-shop export dataset", () => {
         noCertificationDeclaredAt: declaredAt,
       })
       .returning();
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: changedMind.id,
       agency: "other",
