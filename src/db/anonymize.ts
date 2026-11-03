@@ -100,6 +100,7 @@ import {
   bookings,
   buddyTeamEvents,
   calendarFeeds,
+  capabilities,
   certificationJuniorReviews,
   certifications,
   courseFormRecords,
@@ -111,7 +112,6 @@ import {
   inboundMessages,
   incidentReportPeople,
   interests,
-  interestUnsubscribeTokens,
   internalNotes,
   lostItems,
   nitroxCertifications,
@@ -120,7 +120,6 @@ import {
   orderLineItems,
   orders,
   people,
-  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   priorGearAssignments,
   priorVisits,
@@ -1071,18 +1070,25 @@ async function scrubPersonOnlyRows(
   await tx
     .delete(rentalFitProfiles)
     .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
-  // An anytime interest's unsubscribe tokens name it by foreign key, so they go
-  // here, before `scrubInterests` deletes the interest, or that delete would raise
+  // Every capability that opens something of this person's: their own
+  // (courtesy-email unsubscribe) and their interests' (last-minute-list
+  // unsubscribe). The interest ones name it by foreign key, so they go here,
+  // before `scrubInterests` deletes the interest, or that delete would raise
   // 23503 and roll back every other redaction with it.
-  await tx.delete(interestUnsubscribeTokens).where(
-    and(
-      eq(interestUnsubscribeTokens.shopId, shopId),
-      inArray(
-        interestUnsubscribeTokens.interestId,
-        tx
-          .select({ id: interests.id })
-          .from(interests)
-          .where(and(eq(interests.shopId, shopId), eq(interests.personId, personId))),
+  // The person branch is not shop-filtered: whatever shop a row names, a link
+  // that opens this person goes with them (security review of #2710, F1).
+  await tx.delete(capabilities).where(
+    or(
+      eq(capabilities.personId, personId),
+      and(
+        eq(capabilities.shopId, shopId),
+        inArray(
+          capabilities.interestId,
+          tx
+            .select({ id: interests.id })
+            .from(interests)
+            .where(and(eq(interests.shopId, shopId), eq(interests.personId, personId))),
+        ),
       ),
     ),
   );
@@ -1091,10 +1097,6 @@ async function scrubPersonOnlyRows(
   await tx
     .delete(lostItems)
     .where(and(eq(lostItems.shopId, shopId), eq(lostItems.personId, personId)));
-
-  await tx
-    .delete(personCourtesyEmailUnsubscribeTokens)
-    .where(eq(personCourtesyEmailUnsubscribeTokens.personId, personId));
 
   // Staff prose about a person is personal data end to end, and the body column
   // carries a non-blank check, so there is nothing to redact it *to*.

@@ -10,7 +10,7 @@ import { expect, test } from "./fixtures";
  * opted out of courtesy email.
  *
  * `/api/test/seed-courtesy-email-unsubscribe-token` mints a real
- * `person_courtesy_email_unsubscribe_tokens` row (test-only, gated
+ * `courtesy_email_unsubscribe` capability (test-only, gated
  * identically to `/api/test/reset`) so this drives the actual
  * `/unsubscribe/[token]` page and server action, since the real send flow
  * can't reach a live email in e2e and the token is otherwise only ever

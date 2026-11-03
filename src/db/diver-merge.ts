@@ -721,7 +721,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "lost_items",
   ],
   history: ["prior_visits", "certification_junior_reviews"],
-  lists: ["interests", "person_courtesy_email_unsubscribe_tokens", "trip_blowout_divers"],
+  lists: ["interests", "capabilities", "trip_blowout_divers"],
 } as const satisfies Record<string, readonly (typeof DIVER_HISTORY_TABLES)[number][]>;
 export type DiverMergeCountGroup = keyof typeof DIVER_MERGE_COUNT_GROUPS;
 
@@ -1115,7 +1115,7 @@ export async function mergeDiverRecords(input: {
         sql`update "interests" as kept set "closed_at" = gone."closed_at", "closed_as" = 'unsubscribed' from "interests" as gone where kept."id" = ${survivorList} and gone."id" = ${sourceList} and gone."closed_as" = 'unsubscribed' and kept."closed_as" is distinct from 'unsubscribed'`,
       );
       await tx.execute(
-        sql`update "interest_unsubscribe_tokens" set "interest_id" = ${survivorList} where "interest_id" = ${sourceList} and exists ${survivorList}`,
+        sql`update "capabilities" set "interest_id" = ${survivorList} where "shop_id" = ${input.shopId} and "interest_id" = ${sourceList} and exists ${survivorList}`,
       );
       await tx.execute(
         sql`update "interests" set "parent_interest_id" = ${survivorList} where "shop_id" = ${input.shopId} and "parent_interest_id" = ${sourceList} and exists ${survivorList}`,

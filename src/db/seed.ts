@@ -34,6 +34,7 @@ import {
   buddyTeamEvents,
   buddyTeamMembers,
   calendarFeeds,
+  capabilities,
   certifications,
   courseFormRecords,
   courseFormRequirements,
@@ -58,7 +59,6 @@ import {
   integrationEvents,
   integrationOauthStates,
   interests,
-  interestUnsubscribeTokens,
   internalNotes,
   marineLifeRequests,
   mediaDeletionAttempts,
@@ -70,7 +70,6 @@ import {
   paymentDisputes,
   paymentOperationIntents,
   people,
-  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   platformBackupProgress,
   preDepartureCheckEvents,
@@ -1595,26 +1594,19 @@ export async function clearDemoSchedule(
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
-  // The last-minute list's unsubscribe links name an interest by foreign key, so
-  // they go before the interests. Added with Leo's self-serve unsubscribe (docs ADR
+  // The unsubscribe capabilities name an interest or a person by foreign key, so
+  // they go before the interests and the people. Added with Leo's self-serve unsubscribe (docs ADR
   // 20260731-self-serve-unsubscribe) but not to this ordering once, which made
   // every `/api/test/reset` throw 23503 mid-run and leave the demo shop
   // half-reset — the e2e fleet then failed in whichever spec happened to read
   // the wreckage next, which is why the flake moved around between runs.
-  await db.delete(interestUnsubscribeTokens).where(eq(interestUnsubscribeTokens.shopId, shopId));
+  await db.delete(capabilities).where(eq(capabilities.shopId, shopId));
   await db.delete(interests).where(eq(interests.shopId, shopId));
   // References trips (last-minute-deal blasts) and the interests that carry a deal's
   // `promo_id`, so it goes after them and before the trips/people deletes below
   // or this FK-violates and aborts the whole reset mid-run (docs ADR
   // 20260727-last-minute-fill-promos).
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
-  // References people (courtesy-email opt-out tokens minted for waitlist
-  // invites and trip recaps), so it must go before the people deletes below
-  // or this FK-violates and aborts the whole reset mid-run — the same class
-  // of bug the last-minute-list unsubscribe token comment above already walks.
-  await db
-    .delete(personCourtesyEmailUnsubscribeTokens)
-    .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
   // The blow-out cascade's two tables, innermost first: the per-diver rows
   // reference both `bookings` and `trip_blowouts`, and the cascade row
   // references `trips`. Missing from this ordering when the cascade shipped,

@@ -22,37 +22,9 @@ import { trips } from "./trips";
 /**
  * Outbound and inbound messaging: deliveries, the send queue, rate limits,
  * inbound messages and staff replies, WhatsApp senders, SMS opt-outs, push
- * subscriptions and the unsubscribe/confirmation tokens.
+ * subscriptions and the confirmation tokens. The email-unsubscribe links are
+ * rows of `capabilities` (`./capabilities.ts`).
  */
-
-/**
- * A diver-facing, self-serve bearer link to opt one person out of courtesy
- * email, every courtesy kind `people.courtesyEmailOptOutAt` governs: wait-list
- * openings, post-trip recaps, checkout reminders and cold staff invitations, as
- * listed on `issuePersonCourtesyEmailUnsubscribeToken` in
- * `src/db/courtesy-email.ts` (docs features/story-backlog.md "Leo — self-serve
- * email unsubscribe"). Same
- * shape and reasoning as `interestUnsubscribeTokens`: a fresh token per
- * send rather than one stable token per person, never expires, and consuming
- * it is an idempotent write (only ever sets `courtesyEmailOptOutAt`) — kept as
- * a separate table rather than folded into `interestUnsubscribeTokens`
- * because it resolves to a person, not an anytime interest.
- */
-export const personCourtesyEmailUnsubscribeTokens = pgTable(
-  "person_courtesy_email_unsubscribe_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    personId: uuid("person_id")
-      .notNull()
-      .references(() => people.id),
-    tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: appNowTimestamp("issued_at").notNull(),
-  },
-  (table) => [index("person_courtesy_email_unsubscribe_tokens_person_idx").on(table.personId)],
-);
 
 /**
  * A one-time bearer link that proves a shop controls the front-desk address it

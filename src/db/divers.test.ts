@@ -35,11 +35,11 @@ import {
   bookings,
   buddyTeamEvents,
   calendarFeeds,
+  capabilities,
   certifications,
   courses,
   executedDives,
   interests,
-  interestUnsubscribeTokens,
   internalNotes,
   mediaDeletionAttempts,
   nitroxCertifications,
@@ -47,7 +47,6 @@ import {
   notificationSendQueue,
   orders,
   people,
-  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   priorVisits,
   recapPhotos,
@@ -1445,12 +1444,14 @@ describe("diver erasure", () => {
       .update(interests)
       .set({ promoId: promo.id, parentInterestId: listInterest.id, offeredAt: erasureNow })
       .where(and(eq(interests.personId, diver.id), eq(interests.scope, "departure")));
-    await db.insert(interestUnsubscribeTokens).values({
+    await db.insert(capabilities).values({
+      purpose: "interest_unsubscribe",
       shopId: shop.id,
       interestId: listInterest.id,
       tokenHash: "elena-unsub-hash",
     });
-    await db.insert(personCourtesyEmailUnsubscribeTokens).values({
+    await db.insert(capabilities).values({
+      purpose: "courtesy_email_unsubscribe",
       shopId: shop.id,
       personId: diver.id,
       tokenHash: "elena-courtesy-hash",
@@ -1574,14 +1575,11 @@ describe("diver erasure", () => {
       await db.select().from(internalNotes).where(eq(internalNotes.personId, diver.id)),
     ).toHaveLength(0);
     expect(await db.select().from(interests).where(eq(interests.personId, diver.id))).toEqual([]);
-    expect(await db.select().from(interestUnsubscribeTokens)).toHaveLength(0);
+    expect(await db.select().from(capabilities)).toHaveLength(0);
     // Who a deal went to is the departure row it was copied onto, deleted whole
     // with the diver (the interests assertion above): no address is kept anywhere on it.
     expect(
-      await db
-        .select()
-        .from(personCourtesyEmailUnsubscribeTokens)
-        .where(eq(personCourtesyEmailUnsubscribeTokens.personId, diver.id)),
+      await db.select().from(capabilities).where(eq(capabilities.personId, diver.id)),
     ).toHaveLength(0);
     expect(
       await db.select().from(recapPhotos).where(eq(recapPhotos.bookingId, bookingId)),
