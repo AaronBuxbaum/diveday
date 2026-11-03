@@ -277,6 +277,21 @@ describe("a future-dated signature (issue #3781)", () => {
     ).toBe("medical_review");
   });
 
+  it("is not current at any instant when the claimed date is past when it was written", () => {
+    // A roster read for a departure beyond the claimed date passes that
+    // departure as `now`; the claim is still later than the shop received it.
+    const departure = ahead(40 * DAY);
+    expect(isCompletedWaiverCurrent(importedAhead(), 1, departure)).toBe(false);
+    expect(
+      effectiveWaiverForBooking({
+        bookingWaiver: null,
+        personSignedWaivers: [importedAhead()],
+        currentTemplateVersion: 1,
+        now: departure,
+      }),
+    ).toBeNull();
+  });
+
   it("ages from when it was written, never from the claimed date", () => {
     const written = new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1);
     const record = completedWaiver({
