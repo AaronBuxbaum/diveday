@@ -204,6 +204,7 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
     nitrox_imported_pending: t("settings.import.issues.nitroxImportedPending"),
     nitrox_no_card_number: t("settings.import.issues.nitroxNoCardNumber"),
     waiver_date_invalid: t.raw("settings.import.issues.waiverDateInvalid"),
+    waiver_date_future: t.raw("settings.import.issues.waiverDateFuture"),
     waiver_imported: t("settings.import.issues.waiverImported"),
     dob_invalid: t.raw("settings.import.issues.dobInvalid"),
     visit_date_unreadable: t.raw("settings.import.issues.visitDateUnreadable"),

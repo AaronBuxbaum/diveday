@@ -21,7 +21,12 @@ import {
 import { countParticipants, type ParticipantCounts } from "./participant-types";
 import { isUnsightedSelfDeclaration } from "./readiness";
 import { isTurnAwayReason, type TurnAwayReason } from "./turn-away";
-import { type RecordWaiverStanding, type WaiverStateFields, waiverStanding } from "./waivers";
+import {
+  isUnclearedReferral,
+  type RecordWaiverStanding,
+  type WaiverStateFields,
+  waiverStanding,
+} from "./waivers";
 
 /**
  * Incident-ready export: one departure's recorded safety evidence, assembled
@@ -121,8 +126,10 @@ export type IncidentWaiverStatus = {
    * The governing record's state after the sign-once rule — the same
    * `effectiveWaiverForBooking` resolution every readiness surface uses, so
    * this document can never call signed what the boarding gate called
-   * missing. A superseded-only or absent record reads `not_sent`: a stated
-   * absence, never a blank and never a stale "signed".
+   * missing. A superseded signature or an absent record reads `not_sent`:
+   * a stated absence, never a blank and never a stale "signed". A superseded
+   * referral no physician cleared (a retired refusal) still governs, and
+   * prints as the hold it is (issue #3774).
    */
   state: IncidentWaiverState;
   signedAt: string | null;
@@ -273,6 +280,13 @@ export type IncidentRosterEntry = {
   certificationsAtCapture: IncidentCertificationEvidence[] | null;
   /** Null only on a held seat (`identityWithheld`): withheld, never a stated absence. */
   waiver: IncidentWaiverStatus | null;
+  /**
+   * The governing record is a superseded referral no physician cleared, a
+   * retired refusal most often (issue #3774). Logs sealed under versions 1 to
+   * 3 printed such a seat `not_sent`, so those recipes hash it that way;
+   * never printed and never sealed. Absent on every other row.
+   */
+  waiverSupersededHold?: true;
 };
 
 /** One seat the desk turned away (`IncidentExportDocument.turnedAway`). */
@@ -498,10 +512,12 @@ export type IncidentLogReport = {
  * log printed before roster changes and incident reports joined the document;
  * version 2 hashes both, and the version itself. Version 3 seals boarding
  * certification evidence, while current cards are printed outside the seal.
+ * Version 4 prints a seat governed by a retired refusal as the refusal, where
+ * every earlier version printed `not_sent` (issue #3774).
  * A printout carries its version, so the previous recipes remain available.
  */
-export const INCIDENT_EXPORT_HASH_VERSION = 3;
-export type IncidentExportHashVersion = 1 | 2 | 3;
+export const INCIDENT_EXPORT_HASH_VERSION = 4;
+export type IncidentExportHashVersion = 1 | 2 | 3 | 4;
 
 export type IncidentExportDocument = {
   meta: {
@@ -841,26 +857,15 @@ function waiverStatus(
   // a superseded completion — but if a caller ever hands one in anyway, it is
   // a signature that no longer stands and must read as the stated absence, not
   // as signed evidence on a document handed to an insurer.
-  const state = record?.supersededAt
-    ? "not_sent"
-    : INCIDENT_WAIVER_CODES[waiverStanding(record, now)];
-  if (!record || state === "not_sent") {
-    return {
-      state: "not_sent",
-      signedAt: null,
-      templateTitle: null,
-      templateVersion: null,
-      signatureMethod: null,
-      recordedByName: null,
-      medicalClearedAt: null,
-      medicalClearedByName: null,
-      medicalClearanceDeclinedAt: null,
-      medicalClearanceDeclinedByName: null,
-      medicalClearanceEvaluatedOn: null,
-      medicalClearancePhysicianName: null,
-      medicalClearanceDocumentOnFile: false,
-    };
-  }
+  //
+  // A superseded referral no physician cleared is not that: superseding moved
+  // the hold off a seat and answered nothing, so it still governs (a retired
+  // refusal, issue #3774) and prints as the hold, with its evidence.
+  const state =
+    record?.supersededAt && !isUnclearedReferral(record)
+      ? "not_sent"
+      : INCIDENT_WAIVER_CODES[waiverStanding(record, now)];
+  if (!record || state === "not_sent") return NOT_SENT_WAIVER;
   return {
     state,
     signedAt: iso(record.signedAt ?? record.completedAt),
@@ -886,6 +891,28 @@ function waiverStatus(
       : null,
     medicalClearanceDocumentOnFile: Boolean(answered(record) && record.medicalClearanceDocumentUrl),
   };
+}
+
+/** The stated absence: no waiver stands for this seat. */
+const NOT_SENT_WAIVER: IncidentWaiverStatus = {
+  state: "not_sent",
+  signedAt: null,
+  templateTitle: null,
+  templateVersion: null,
+  signatureMethod: null,
+  recordedByName: null,
+  medicalClearedAt: null,
+  medicalClearedByName: null,
+  medicalClearanceDeclinedAt: null,
+  medicalClearanceDeclinedByName: null,
+  medicalClearanceEvaluatedOn: null,
+  medicalClearancePhysicianName: null,
+  medicalClearanceDocumentOnFile: false,
+};
+
+/** A superseded referral no physician cleared: what versions 1 to 3 printed as `not_sent`. */
+function isSupersededHold(record: WaiverStateFields | null | undefined): boolean {
+  return record?.supersededAt ? isUnclearedReferral(record) : false;
 }
 
 /** A physician answered this record, either way. The evidence columns hang off this, not off the verdict. */
@@ -1093,6 +1120,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
           evidence?.waiverMedicalClearedByName,
           evidence?.waiverMedicalClearanceDeclinedByName,
         ),
+        ...(isSupersededHold(evidence?.waiver) ? { waiverSupersededHold: true as const } : {}),
       };
     });
 
@@ -1326,6 +1354,9 @@ function holdsVersion2Facts(
  * number itself, so no version-2 code can pass for a version-1 one. Version 3
  * excludes mutable current cards and seals the boarding snapshot, including
  * explicit unavailability; earlier versions refuse a captured snapshot.
+ * Version 4 seals a seat governed by a superseded referral no physician
+ * cleared as that hold; asked for 1 to 3, such a seat hashes as the `not_sent`
+ * those versions printed (issue #3774).
  *
  * Version 2 also leaves out **when the log was made and for whom**: the page
  * builds it as it is read, by whoever reads it, so sealing either made every
@@ -1346,12 +1377,16 @@ export function incidentExportContentHash(
     roster: body.roster.map((row) => {
       const {
         bookingId: _bookingId,
+        waiverSupersededHold,
         certificationsStartedAt,
         certificationsCapturedAt,
         certificationsAtCapture,
-        ...entry
+        ...current
       } = row;
-      if (version !== 3) return entry;
+      // Versions 1 to 3 printed a retired refusal's seat as the absence.
+      const entry =
+        version < 4 && waiverSupersededHold ? { ...current, waiver: NOT_SENT_WAIVER } : current;
+      if (version < 3) return entry;
       const { certifications: _currentCards, ...historical } = entry;
       return {
         ...historical,

@@ -93,9 +93,28 @@ export function needsMedicalReview(answers: MedicalAnswers): boolean {
  */
 export const WAIVER_SIGNATURE_VALIDITY_MS = 365 * 24 * 60 * 60 * 1000;
 
-/** When a record's signature happened, for recency comparisons. */
+/**
+ * How far ahead of the clock a signing date may sit and still stand (issue
+ * #3781). An imported or paper date is a calendar day read at UTC midnight,
+ * which in a zone fourteen hours ahead of UTC is still the shop's today; a
+ * date past that is one the shop has not reached, and fails closed.
+ */
+export const SIGNATURE_FUTURE_TOLERANCE_MS = 14 * 60 * 60 * 1000;
+
+/**
+ * When a record's signature happened, for recency comparisons and its year:
+ * the earlier of the signing date it claims and the instant the signature
+ * reached the shop (`completedAt`, from the app's clock), so a claimed date
+ * can never sort a record ahead of evidence written after it (issue #3781).
+ * Link creation (`createdAt`) is only the fallback for a record with neither
+ * stamp: a link goes out before it is signed, so it would date the signature
+ * too early.
+ */
 function signatureTime(record: WaiverRecord): number {
-  return (record.signedAt ?? record.completedAt ?? record.createdAt).getTime();
+  const stamps = [record.signedAt, record.completedAt].flatMap((stamp) =>
+    stamp ? [stamp.getTime()] : [],
+  );
+  return stamps.length > 0 ? Math.min(...stamps) : record.createdAt.getTime();
 }
 
 /**
@@ -283,7 +302,11 @@ export function isSignatureCurrent(
   }
   const signedAt = record.signedAt ?? record.completedAt;
   if (!signedAt) return false;
-  return signedAt.getTime() + WAIVER_SIGNATURE_VALIDITY_MS > now.getTime();
+  // A date the shop has not reached is not a signature yet, whoever wrote it
+  // (issue #3781). The year runs from {@link signatureTime}, which a claimed
+  // date can only move earlier.
+  if (signedAt.getTime() > now.getTime() + SIGNATURE_FUTURE_TOLERANCE_MS) return false;
+  return signatureTime(record) + WAIVER_SIGNATURE_VALIDITY_MS > now.getTime();
 }
 
 /**
