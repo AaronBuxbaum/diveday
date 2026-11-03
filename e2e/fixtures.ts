@@ -268,6 +268,7 @@ export const test = base.extend<
     privateShop: PrivateShop;
     privateShopSlug: string | null;
     privateShopBrand: boolean;
+    privateShopDemo: boolean;
   },
   { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
 >({
@@ -564,6 +565,15 @@ export const test = base.extend<
    */
   privateShopBrand: [false, { option: true }],
 
+  /**
+   * Mint a **real-shaped shop** (`isDemo: false`) instead of a visitor's
+   * playground (issue #2783): the first-run checklist, orientation, trial row
+   * and payments row render on it, and so can be tested and photographed. The
+   * harness signs its owner in through `fixtureSignIn`. Set it with
+   * `test.use({ privateShopDemo: false })`.
+   */
+  privateShopDemo: [true, { option: true }],
+
   clock: async ({ request, context, workerBaseURL }, use) => {
     const to = async (instant: Date | string) => {
       const at = new Date(instant);
@@ -586,13 +596,17 @@ export const test = base.extend<
     });
   },
 
-  privateShop: async ({ demoReset, request, page, privateShopSlug, privateShopBrand }, use) => {
+  privateShop: async (
+    { demoReset, request, page, privateShopSlug, privateShopBrand, privateShopDemo },
+    use,
+  ) => {
     // Named only for ordering: the reset purges the *previous* test's minted
     // shop, and it has to have run before this one mints its replacement.
     void demoReset;
     const mint = new URLSearchParams();
     if (privateShopSlug) mint.set("slug", privateShopSlug);
     if (privateShopBrand) mint.set("brand", "1");
+    if (!privateShopDemo) mint.set("demo", "0");
     const query = mint.toString();
     const response = await request.post(
       query ? `/api/test/seed-private-shop?${query}` : "/api/test/seed-private-shop",

@@ -8,6 +8,7 @@ import {
 } from "@/lib/quiet-demo-device";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { runtimeMode } from "@/lib/runtime-mode";
 
 const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
   const response = NextResponse.redirect(new URL("/", url), { headers: NO_STORE });
   response.cookies.set(QUIET_DEMO_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: runtimeMode().secureCookies,
     sameSite: "lax",
     path: "/",
     maxAge: QUIET_DEMO_COOKIE_MAX_AGE,

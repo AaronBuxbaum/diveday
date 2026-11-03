@@ -1,4 +1,5 @@
 import { isDemoAccountEmail } from "@/lib/demo-identity";
+import { runtimeMode } from "@/lib/runtime-mode";
 
 /**
  * The demo sign-in bypass, and *only* the demo sign-in bypass.
@@ -113,7 +114,10 @@ export function demoBypassAccepted(
   env: RuntimeEnv = process.env,
 ): boolean {
   if (!demoBypassEnabled(env)) return false;
-  if (!candidate.shopIsDemo) return false;
+  // A visitor's playground, or the e2e harness's fixture shop (issue #2783; ADR
+  // 20260803-demo-bypass-containment condition 2 is "isDemo or harness"). The harness arm is
+  // off whenever DATABASE_URL is set; the email namespace below is untouched.
+  if (!candidate.shopIsDemo && !runtimeMode(env).fixtureSignIn) return false;
   if (!isDemoAccountEmail(candidate.accountEmail)) return false;
   return candidate.password === DEMO_BYPASS_PASSWORD;
 }

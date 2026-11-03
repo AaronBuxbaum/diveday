@@ -75,6 +75,7 @@ const checks = [
   ["roll-call-subject", "check-roll-call-subject.mjs"],
   ["slug-actions", "check-slug-actions.mjs"],
   ["env-reads", "check-env-reads.mjs"],
+  ["harness-env", "check-harness-env.mjs"],
   ["action-pins", "check-action-pins.mjs"],
   ["trip-revision", "check-trip-revision.mjs"],
   ["time-id-order", "check-time-id-order.mjs"],
