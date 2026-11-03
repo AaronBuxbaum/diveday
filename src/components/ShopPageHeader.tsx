@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { FoldedPageTitle } from "@/components/chrome/FoldedPageTitle";
+import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { tapTargetOverhangClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { GREETING_TITLE_CLASS, PAGE_TITLE_CLASS } from "@/components/ui/typography";
@@ -139,7 +140,7 @@ export function EyebrowBackLink({
 
 export function ShopPageHeader({
   eyebrow,
-  eyebrowHref,
+  returnTo,
   title,
   description,
   descriptionIsCaption = false,
@@ -157,14 +158,16 @@ export function ShopPageHeader({
 }: {
   eyebrow?: string;
   /**
-   * Turns the eyebrow into the page's way back up — a breadcrumb, not a second
-   * strip of chrome. The settings sub-pages use it: their eyebrow already read
-   * "Settings", so the word that named the parent becomes the door to it, in
-   * the page's own column and at the page's own width. What it replaced was a
-   * full grouped-pill nav card above every sub-page's `<h1>`, repeating a
-   * directory the hub renders better one tap away.
+   * Below depth 1 the eyebrow is the page's way back up, a breadcrumb rather
+   * than a second strip of chrome, and its href is read off the URL by
+   * `EyebrowWayUp` (`src/lib/staff-routes.ts`): the words name the parent, the
+   * route tree says where it is. At depth 1 the same words stand unlinked.
+   *
+   * `returnTo` only when a query says the page was opened from somewhere that
+   * is not its parent, or `null` where the page has no way up at all: an
+   * embedded page, whose frame has no parent to go to (`EyebrowWayUp`).
    */
-  eyebrowHref?: string;
+  returnTo?: string | null;
   title: string;
   description?: string;
   /**
@@ -238,11 +241,7 @@ export function ShopPageHeader({
               </div>
             </div>
           ) : null}
-          {eyebrow && eyebrowHref ? (
-            <EyebrowBackLink href={eyebrowHref}>{eyebrow}</EyebrowBackLink>
-          ) : eyebrow ? (
-            <p className={EYEBROW_CLASS}>{eyebrow}</p>
-          ) : null}
+          {eyebrow ? <EyebrowWayUp returnTo={returnTo}>{eyebrow}</EyebrowWayUp> : null}
           {/* One size at every width. Below `sm` this used to step down to
               `text-3xl` from a time when the staff header wrapped its tabs
               across two or three rows on a phone and the title was competing

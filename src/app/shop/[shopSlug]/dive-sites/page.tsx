@@ -26,7 +26,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { CatalogView } from "./_components/CatalogView";
 import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";
 import { CatalogDoor, SiteLibraryLedger } from "./_components/SiteLibraryLedger";
@@ -172,7 +172,6 @@ export default async function DiveSitesPage({
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("diveSites.list.title")}
         // An empty library gets no header action: the empty card below is
         // already the whole page, and it carries both doors. Two identical

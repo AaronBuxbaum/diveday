@@ -1071,7 +1071,7 @@
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
-    "src/app/api/webhooks/stripe/route.replay.test.ts": 1308,
+    "src/app/api/webhooks/stripe/route.replay.test.ts": 1307,
     "src/app/api/webhooks/stripe/route.test.ts": 1782,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1075,
@@ -1107,7 +1107,7 @@
     "src/db/participant-types.test.ts": 1195,
     "src/db/readiness.test.ts": 1446,
     "src/db/recap.test.ts": 2138,
-    "src/db/refunds.test.ts": 1151,
+    "src/db/refunds.test.ts": 1150,
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1384,
@@ -1166,7 +1166,7 @@
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 351,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 307,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 353,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 352,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 309,
     "src/db/reporting.ts#getMonthlyReport": 319,
@@ -1229,16 +1229,16 @@
     "src/app/page.tsx": 440,
     "src/app/s/[shopSlug]/page.tsx": 645,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 466,
-    "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
+    "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 576,
     "src/app/shop/[shopSlug]/orders/page.tsx": 596,
     "src/app/shop/[shopSlug]/page.tsx": 617,
     "src/app/shop/[shopSlug]/promos/page.tsx": 564,
     "src/app/shop/[shopSlug]/reports/page.tsx": 493,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 581,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 580,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 590,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 473,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 493
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 472,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 492
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

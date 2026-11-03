@@ -76,7 +76,6 @@ export default async function SafetyChecklistPage({
     <main className={registerPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.safetyChecklist.title")}
         titleClassName={
           locale === "es-ES"

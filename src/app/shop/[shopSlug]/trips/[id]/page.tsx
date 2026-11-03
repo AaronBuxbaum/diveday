@@ -263,7 +263,6 @@ export default async function ManageTripPage({
         <TripPageHeader
           paperIdentity={`${shop.name} · ${formatDateWithYear(trip.startsAt, locale, shop.timezone)} · ${shop.timezone}`}
           className=""
-          boardHref={shopPath(shopSlug, "schedule", "board")}
           backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
           trip={trip}
           locale={locale}

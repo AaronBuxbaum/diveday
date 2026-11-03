@@ -12,7 +12,10 @@ import { OfflineManifestView } from "./OfflineManifestView";
 import { envelope, FROZEN_MS, identityResponse, setOnline } from "./offline-manifest/view-fixtures";
 
 let searchParams = new URLSearchParams();
-vi.mock("next/navigation", () => ({ useSearchParams: () => searchParams }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/offline-manifest",
+  useSearchParams: () => searchParams,
+}));
 vi.mock("@/lib/offline-manifest-store", async () => ({
   OfflineManifestError: (
     await vi.importActual<typeof import("@/lib/offline-manifest-store")>(

@@ -1579,7 +1579,7 @@ export async function clearDemoSchedule(
   // **A stuck media deletion is not schedule data, and it still has to go.**
   // The seed creates none, so clearing them restores exactly the seeded state —
   // and leaving them made the reset non-restoring in the one direction that
-  // shows: `listPendingMediaDeletions` feeds Today an `urgency: "now"` row, so
+  // shows: the media-deletion read (`src/db/unfinished.ts`) feeds Today an `urgency: "now"` row, so
   // a test that seeded a stale attempt (`/api/test/seed-trouble-states`) left a
   // "Recap photo" cleanup card on Today for whichever spec Playwright's
   // sharding ran next in that worker. That surfaced as three visual captures —

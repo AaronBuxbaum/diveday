@@ -147,3 +147,10 @@ found two related problems in `src/lib/storage/index.ts` and its callers:
   wall-clock time passing.
 - `media_deletion_attempts` is an internal reconciliation ledger, not a shop record — excluded from
   the full-shop export (`src/db/export.test.ts`), same reasoning as `payment_operation_intents`.
+
+## Amendment 2026-11-03: one reader for unfinished work (issue #2703)
+
+The owner-visible list is now the `media_deletion` kind of `listUnfinished`
+(`src/db/unfinished.ts`): a `failed` row at any age and a `pending` row past
+`ATTEMPT_RULES.media_deletion`'s five minutes (`src/lib/attempts.ts`). `listPendingMediaDeletions`
+and `STALE_PENDING_AFTER_MS` are gone; the scheduled retry reads the same filter.

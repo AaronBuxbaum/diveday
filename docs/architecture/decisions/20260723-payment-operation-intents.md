@@ -126,3 +126,10 @@ instead of converging on the first.
   `shopId` on every query, belt-and-suspenders alongside every caller already validating a
   referenced row's shop before recording it on an intent — so a future `kind` or caller that forgets
   that check still can't leak another shop's trip title or customer name onto the panel.
+
+## Amendment 2026-11-03: one reader for unfinished work (issue #2703)
+
+The reconciliation read is now the `payment_operation` kind of `listUnfinished`
+(`src/db/unfinished.ts`), and the five-minute window is `ATTEMPT_RULES.payment_operation` in
+`src/lib/attempts.ts` (`PAYMENT_CLAIM_STALE_AFTER_MS` for the claims). `listStuckPaymentOperations`
+and `STALE_AFTER_MS` are gone; what this ADR says of them holds for their replacements.

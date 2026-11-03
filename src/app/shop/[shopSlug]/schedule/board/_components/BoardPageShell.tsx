@@ -28,7 +28,7 @@ export function BoardPageShell({
     <StaffPage width={createPage ? "reading" : "full"}>
       <ShopPageHeader
         eyebrow={createPage ? st("schedule.boardTitle") : undefined}
-        eyebrowHref={createPage ? boardHref : undefined}
+        returnTo={createPage ? boardHref : undefined}
         title={st(createPage ? "schedule.builder.addDeparture" : "schedule.boardTitle")}
         actions={
           !createPage && hasUpcoming ? (

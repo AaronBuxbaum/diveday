@@ -1,18 +1,17 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowMs } from "@/lib/clock";
+import { DAY_MS, nowMs } from "@/lib/clock";
 import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/checkout";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
+import type { AppDb } from "./client";
 import { askAnytime } from "./interests";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, listBookingPaymentEvents, setBookingPayment } from "./payments";
 import {
-  listOwedShopCancellationRefunds,
-  OWED_REFUND_STALE_AFTER_MS,
   refundBookingOnCancellation,
   refundBookingOnShopCancellation,
   refundBookingsForShopCancelledTrip,
@@ -24,6 +23,7 @@ import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode } from "./trip-promos";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { listUnfinished, type UnfinishedOptions } from "./unfinished";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -783,7 +783,7 @@ describe("refundBookingsForShopCancelledTrip", () => {
  * a shop owes and, before this reader, had no screen anywhere that said so
  * (ADR 20260813-shop-cancellation-refunds-itself).
  */
-describe("listOwedShopCancellationRefunds", () => {
+describe("owed shop-cancellation refunds", () => {
   /** A paid party on a departure the shop then called off, with no refund run. */
   async function cancelledDepartureContext() {
     const context = await paidBookingContext(48);
@@ -800,14 +800,15 @@ describe("listOwedShopCancellationRefunds", () => {
    * `refundBookingsForShopCancelledTrip`'s test counts the roster rather than
    * the party. Asserting the whole list would be asserting the seed.
    */
-  async function owedIds(...args: Parameters<typeof listOwedShopCancellationRefunds>) {
-    return (await listOwedShopCancellationRefunds(...args)).map((row) => row.bookingId);
+  async function owedIds(db: AppDb, shopId: string, options?: UnfinishedOptions) {
+    const owed = await listUnfinished(db, shopId, "shop_cancellation_refund", options);
+    return owed.map((row) => row.bookingId);
   }
 
   it("lists a seat still holding its money on a departure the shop canceled", async () => {
     const { db, shop, bookingIds } = await cancelledDepartureContext();
 
-    const owed = await listOwedShopCancellationRefunds(db, shop.id);
+    const owed = await listUnfinished(db, shop.id, "shop_cancellation_refund");
 
     expect(owed.map((row) => row.bookingId)).toEqual(expect.arrayContaining(bookingIds));
     const party = owed.find((row) => row.bookingId === bookingIds[0]);
@@ -833,7 +834,7 @@ describe("listOwedShopCancellationRefunds", () => {
       providerRef: "re_goodwill",
     });
 
-    const owed = await listOwedShopCancellationRefunds(db, shop.id);
+    const owed = await listUnfinished(db, shop.id, "shop_cancellation_refund");
 
     expect(owed.map((row) => row.bookingId)).toContain(bookingIds[0]);
     expect(owed.find((row) => row.bookingId === bookingIds[0])).toMatchObject({
@@ -874,7 +875,7 @@ describe("listOwedShopCancellationRefunds", () => {
   it("says nothing about a departure that is still sailing", async () => {
     // Paid seats on a scheduled trip are just paid seats.
     const { db, shop } = await paidBookingContext(48);
-    expect(await listOwedShopCancellationRefunds(db, shop.id)).toEqual([]);
+    expect(await listUnfinished(db, shop.id, "shop_cancellation_refund")).toEqual([]);
   });
 
   it("holds back a departure the shop only just canceled, for Today's sake", async () => {
@@ -893,20 +894,18 @@ describe("listOwedShopCancellationRefunds", () => {
       .set({ cancelledAt: new Date(nowMs()) })
       .where(eq(trips.id, reef.id));
 
-    expect(
-      await owedIds(db, shop.id, { olderThan: new Date(nowMs() - OWED_REFUND_STALE_AFTER_MS) }),
-    ).not.toContain(bookingIds[0]);
+    expect(await owedIds(db, shop.id, { olderThan: new Date(nowMs() - DAY_MS) })).not.toContain(
+      bookingIds[0],
+    );
     // Unbounded, the panel still shows it.
     expect(await owedIds(db, shop.id)).toContain(bookingIds[0]);
 
     await db
       .update(trips)
-      .set({ cancelledAt: new Date(nowMs() - 2 * OWED_REFUND_STALE_AFTER_MS) })
+      .set({ cancelledAt: new Date(nowMs() - 2 * DAY_MS) })
       .where(eq(trips.id, reef.id));
 
-    const stale = await owedIds(db, shop.id, {
-      olderThan: new Date(nowMs() - OWED_REFUND_STALE_AFTER_MS),
-    });
+    const stale = await owedIds(db, shop.id, { olderThan: new Date(nowMs() - DAY_MS) });
     expect(stale).toEqual(expect.arrayContaining(bookingIds));
   });
 
@@ -923,12 +922,12 @@ describe("listOwedShopCancellationRefunds", () => {
       .where(eq(bookingPaymentEvents.bookingId, bookingIds[0] as string));
     await db
       .update(trips)
-      .set({ cancelledAt: new Date(nowMs() - 2 * OWED_REFUND_STALE_AFTER_MS) })
+      .set({ cancelledAt: new Date(nowMs() - 2 * DAY_MS) })
       .where(eq(trips.id, reef.id));
 
-    expect(
-      await owedIds(db, shop.id, { olderThan: new Date(nowMs() - OWED_REFUND_STALE_AFTER_MS) }),
-    ).toContain(bookingIds[0]);
+    expect(await owedIds(db, shop.id, { olderThan: new Date(nowMs() - DAY_MS) })).toContain(
+      bookingIds[0],
+    );
   });
 
   it("treats a departure canceled before the column existed as already stale", async () => {
@@ -937,9 +936,9 @@ describe("listOwedShopCancellationRefunds", () => {
     const { db, shop, bookingIds, reef } = await cancelledDepartureContext();
     await db.update(trips).set({ cancelledAt: null }).where(eq(trips.id, reef.id));
 
-    expect(
-      await owedIds(db, shop.id, { olderThan: new Date(nowMs() - OWED_REFUND_STALE_AFTER_MS) }),
-    ).toEqual(expect.arrayContaining(bookingIds));
+    expect(await owedIds(db, shop.id, { olderThan: new Date(nowMs() - DAY_MS) })).toEqual(
+      expect.arrayContaining(bookingIds),
+    );
   });
 
   it("clears the stamp when a canceled departure is put back on the board", async () => {
@@ -948,12 +947,12 @@ describe("listOwedShopCancellationRefunds", () => {
     const { db, shop, reef } = await cancelledDepartureContext();
     const restored = await setTripStatus(db, shop.id, reef.id, "scheduled");
     expect(restored?.cancelledAt).toBeNull();
-    expect(await listOwedShopCancellationRefunds(db, shop.id)).toEqual([]);
+    expect(await listUnfinished(db, shop.id, "shop_cancellation_refund")).toEqual([]);
   });
 
   it("is bounded, so one bad weekend cannot render an unbounded list", async () => {
     const { db, shop } = await cancelledDepartureContext();
-    expect(await listOwedShopCancellationRefunds(db, shop.id, { limit: 1 })).toHaveLength(1);
+    expect(await owedIds(db, shop.id, { limit: 1 })).toHaveLength(1);
   });
 });
 

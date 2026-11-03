@@ -111,11 +111,7 @@ export default async function WhatsAppSettingsPage({
 
   return (
     <main className={settingsPaneClass()}>
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
-        title={t("whatsapp.title")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("whatsapp.title")} />
 
       {banner ? (
         <p

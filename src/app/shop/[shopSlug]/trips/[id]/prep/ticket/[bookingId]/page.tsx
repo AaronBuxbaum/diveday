@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { PrintButton } from "@/components/PrintButton";
-import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { listTripGearAssignments } from "@/db/gear";
@@ -11,10 +12,8 @@ import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
-import { PREP_SECTION_ID } from "@/lib/element-id";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { RentalTicketReceipt } from "../../../../../gear/_components/RentalTicketReceipt";
 
@@ -69,10 +68,6 @@ export default async function RentalTicketPage({
     (latest, assignment) => (assignment.reservedUntil > latest ? assignment.reservedUntil : latest),
     assignments[0]?.reservedUntil ?? "",
   );
-  // Back to where the counter tapped in: the departure's assignments section
-  // (dive-domain review 20260920).
-  const backTo = `${shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}`;
-
   return (
     <div id="rental-ticket">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
@@ -80,9 +75,7 @@ export default async function RentalTicketPage({
           {/* On screen the eyebrow is the way back to the packing list (principle
               10, issue #823); on paper it names the slip, which has no
               navigation. */}
-          <EyebrowBackLink href={backTo} className="print:hidden">
-            {t("trips.surfaces.trip")}
-          </EyebrowBackLink>
+          <EyebrowWayUp className="print:hidden">{t("trips.surfaces.trip")}</EyebrowWayUp>
           <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("gear.ticket.eyebrow")}</p>
           <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{diver.fullName}</h1>
           <p className="mt-1 text-muted">

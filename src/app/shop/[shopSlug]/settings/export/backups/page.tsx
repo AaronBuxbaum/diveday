@@ -101,11 +101,7 @@ export default async function BackupsSettingsPage({
 
   return (
     <main className={settingsPaneClass()}>
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
-        title={t("settings.data.title")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.data.title")} />
 
       <DataTabs t={t} shopSlug={session.user.shopSlug} current="backups" />
 

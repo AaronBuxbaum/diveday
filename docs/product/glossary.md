@@ -344,6 +344,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Turned away
 - Unaccounted for
 - Under 18
+- Unfinished work
 - Wait list
 - Wait-list party
 - Wait-list roll

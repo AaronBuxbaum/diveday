@@ -79,7 +79,6 @@ export default async function EditCoursePage({
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const course = await getCourseBySlug(db, shop.id, slug);
   if (!course) notFound();
-  const back = `/shop/${shopSlug}/courses`;
   const locale = await requestLocale(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
   const t = staffTranslator(locale);
@@ -194,7 +193,6 @@ export default async function EditCoursePage({
       <div>
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.courses)}
-          eyebrowHref={back}
           title={course.title}
           actions={
             offersSchedule ? (
