@@ -268,12 +268,12 @@ export async function CallPanel({
     // Not a card: what it holds are cards and a ledger, and a card around
     // cards is a box drawn twice.
     <section
-      id="add-a-booking"
-      aria-labelledby="add-a-booking-title"
+      id="call-panel"
+      aria-labelledby="call-panel-title"
       className="scroll-mt-24 print:hidden"
     >
       <div className="flex items-center justify-between gap-3">
-        <h2 id="add-a-booking-title" className={SECTION_TITLE_CLASS}>
+        <h2 id="call-panel-title" className={SECTION_TITLE_CLASS}>
           {t(STAFF_DESTINATION_LABEL_KEYS.addBooking)}
         </h2>
         <Link href={shopPath(shopSlug)} className={buttonClass({ variant: "ghost", size: "sm" })}>
