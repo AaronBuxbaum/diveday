@@ -717,7 +717,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       description: "Two tanks for Kwame Mensah",
       unitAmountCents: 18000,
     });
-    await insertTip(db, {
+    const tipRow = await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       stripeAccountId: "acct_test",
@@ -840,7 +840,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     expect(line?.unitAmountCents).toBe(18000);
 
     // The hosted tip page renders the address it was minted with.
-    const [tip] = await tipsOf(db, shop.id);
+    const tip = (await tipsOf(db, shop.id)).find((row) => row.id === tipRow.id);
     expect(tip?.checkoutUrl).toBeNull();
     expect(tip?.totalCents).toBe(2000);
 
