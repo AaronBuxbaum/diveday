@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import { bookings, certifications, people, personRoles, type trips, waiverRecords } from "./schema";
+import { bookings, cards, people, personRoles, type trips, waiverRecords } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { paperRelease } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
@@ -172,8 +172,9 @@ async function seedHeldDiver(
 
   await db.insert(personRoles).values({ personId: diver.id, role: "diver" }).onConflictDoNothing();
   await db
-    .insert(certifications)
+    .insert(cards)
     .values({
+      kind: "level",
       shopId,
       personId: diver.id,
       agency: "padi",

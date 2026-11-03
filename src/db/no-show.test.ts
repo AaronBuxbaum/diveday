@@ -17,7 +17,7 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   bookings,
-  certifications,
+  cards,
   courses,
   interests,
   orderLineItems,
@@ -985,7 +985,8 @@ describe("noShowSalvage", () => {
     });
     if (!rebooked.ok) throw new Error(`booking failed: ${rebooked.reason}`);
     // …and another asks a card they do not hold.
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: personId,
       agency: "padi",
@@ -1056,7 +1057,8 @@ describe("noShowSalvage", () => {
       personId,
     });
     if (!seat.ok) throw new Error(`booking failed: ${seat.reason}`);
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId,
       agency: "padi",

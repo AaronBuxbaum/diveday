@@ -13,6 +13,7 @@ import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { deleteDemoSafetyTrail } from "./incident-reports";
+import { deletePremergeCards } from "./premerge-cards-cleanup";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   accountSecurity,
@@ -35,7 +36,7 @@ import {
   buddyTeamMembers,
   calendarFeeds,
   capabilities,
-  certifications,
+  cards,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -62,7 +63,6 @@ import {
   internalNotes,
   marineLifeRequests,
   mediaDeletionAttempts,
-  nitroxCertifications,
   notificationDeliveries,
   notificationSendQueue,
   orderLineItems,
@@ -87,7 +87,6 @@ import {
   shopStripeAccounts,
   shops,
   shopTextTranslations,
-  specialtyCertifications,
   staffCredentials,
   staffReplies,
   staffShifts,
@@ -1664,9 +1663,9 @@ export async function clearDemoSchedule(
   await db.delete(marineLifeRequests).where(eq(marineLifeRequests.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
-  await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
-  await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
-  await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  // Every kind of card at once: the reset clears the shop's whole ledger.
+  await db.delete(cards).where(eq(cards.shopId, shopId));
+  await deletePremergeCards(db, shopId);
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
 
   // Everyone except the staff seeded once at shop creation (`staffDefs`, by

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
@@ -9,6 +9,7 @@ import {
   participantTypeRefusal,
 } from "@/lib/booking-gates";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
+import { asLevelCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
@@ -70,13 +71,15 @@ import { type CreatePersonInput, createPerson, findOrCreatePerson } from "./peop
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "./readiness";
+import { newestMarkFirst } from "./roll-call-order";
+import { seatMarks } from "./roll-call-subject";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPayments,
   bookings,
   buddyTeamMembers,
-  certifications,
+  cards,
   courses,
   gearItemKind,
   gearReservations,
@@ -1518,18 +1521,20 @@ async function courseEnrollmentFor(
   startsAt: Date,
 ): Promise<"course_prerequisite" | "course_min_age" | null> {
   if (!course.minimumCertificationLevel && !course.minimumAge) return null;
-  const cards =
+  const levelCards =
     person && course.minimumCertificationLevel
       ? await tx
           .select()
-          .from(certifications)
+          .from(cards)
           .where(
             and(
-              eq(certifications.shopId, req.shopId),
-              eq(certifications.personId, person.id),
-              isNull(certifications.deletedAt),
+              eq(cards.kind, "level"),
+              eq(cards.shopId, req.shopId),
+              eq(cards.personId, person.id),
+              isNull(cards.deletedAt),
             ),
           )
+          .then((rows) => rows.map(asLevelCard))
       : [];
   let courseDate: string | null = null;
   if (req.actor !== "public" && course.minimumAge && person?.dateOfBirth) {
@@ -1544,7 +1549,7 @@ async function courseEnrollmentFor(
   return courseEnrollmentRefusal({
     actor: req.actor,
     course,
-    diver: person ? { cards, dateOfBirth: person.dateOfBirth } : null,
+    diver: person ? { cards: levelCards, dateOfBirth: person.dateOfBirth } : null,
     courseDate,
   });
 }
@@ -1998,17 +2003,19 @@ async function courseGateRefusal(
   startsAt: Date,
 ): Promise<"course_prerequisite" | "course_min_age" | null> {
   if (!course || (!course.minimumCertificationLevel && !course.minimumAge)) return null;
-  const cards = course.minimumCertificationLevel
+  const levelCards = course.minimumCertificationLevel
     ? await tx
         .select()
-        .from(certifications)
+        .from(cards)
         .where(
           and(
-            eq(certifications.shopId, shopId),
-            eq(certifications.personId, personId),
-            isNull(certifications.deletedAt),
+            eq(cards.kind, "level"),
+            eq(cards.shopId, shopId),
+            eq(cards.personId, personId),
+            isNull(cards.deletedAt),
           ),
         )
+        .then((rows) => rows.map(asLevelCard))
     : [];
   const [row] = await tx
     .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
@@ -2022,7 +2029,7 @@ async function courseGateRefusal(
   return courseEnrollmentRefusal({
     actor: "staff",
     course,
-    diver: { cards, dateOfBirth: row?.dateOfBirth ?? null },
+    diver: { cards: levelCards, dateOfBirth: row?.dateOfBirth ?? null },
     courseDate: row ? calendarDateInTimezone(startsAt, row.timezone) : null,
   });
 }
@@ -2207,7 +2214,13 @@ export async function moveBooking(
     const [rolled] = await tx
       .select({ id: rollCallEvents.id })
       .from(rollCallEvents)
-      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.bookingId, booking.id)))
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
+          eq(rollCallEvents.bookingId, booking.id),
+        ),
+      )
       .limit(1);
     if (rolled) return { ok: false, reason: "roll_call_started" };
 
@@ -2609,16 +2622,13 @@ async function boardedAtDeparture(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.bookingId, bookingId),
         eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    )
+    .orderBy(...newestMarkFirst())
     .limit(1);
   return newest?.status === "boarded";
 }

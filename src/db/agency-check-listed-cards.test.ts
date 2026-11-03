@@ -1,8 +1,9 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import {
+  certificationForAgencyCheck,
   listAgencyCheckableCards,
   listedCardForAgencyCheck,
   undoAgencyCheck,
@@ -10,13 +11,7 @@ import {
 import type { AppDb } from "./client";
 import { reviewNitroxCertification, unreviewNitroxCertification } from "./nitrox";
 import { reviewSpecialtyCertification, unreviewSpecialtyCertification } from "./readiness";
-import {
-  certifications,
-  nitroxCertifications,
-  people,
-  shops,
-  specialtyCertifications,
-} from "./schema";
+import { cards, people, shops } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -41,11 +36,11 @@ async function nitrox(
   db: AppDb,
   shopId: string,
   personId: string,
-  values: Partial<typeof nitroxCertifications.$inferInsert> = {},
+  values: Partial<typeof cards.$inferInsert> = {},
 ) {
   const [row] = await db
-    .insert(nitroxCertifications)
-    .values({ shopId, personId, agency: "ssi", identifier: "N-4471", ...values })
+    .insert(cards)
+    .values({ kind: "nitrox", shopId, personId, agency: "ssi", identifier: "N-4471", ...values })
     .returning();
   if (!row) throw new Error("failed to insert a nitrox card");
   return row;
@@ -55,11 +50,19 @@ async function specialty(
   db: AppDb,
   shopId: string,
   personId: string,
-  values: Partial<typeof specialtyCertifications.$inferInsert> = {},
+  values: Partial<typeof cards.$inferInsert> = {},
 ) {
   const [row] = await db
-    .insert(specialtyCertifications)
-    .values({ shopId, personId, agency: "ssi", specialty: "deep", identifier: "N-4471", ...values })
+    .insert(cards)
+    .values({
+      kind: "specialty",
+      shopId,
+      personId,
+      agency: "ssi",
+      specialty: "deep",
+      identifier: "N-4471",
+      ...values,
+    })
     .returning();
   if (!row) throw new Error("failed to insert a specialty card");
   return row;
@@ -71,13 +74,14 @@ const checked = (shopId: string, personId: string, certificationId: string) => (
   certificationId,
 });
 
-describe("listAgencyCheckableCards with the other card tables", () => {
+describe("listAgencyCheckableCards with the other card kinds", () => {
   it("offers a pending nitrox and a pending specialty card after the level ladder, only when asked", async () => {
     const { db, shop } = ctx;
     const personId = await diver(db, shop.id, "Lena Ortiz");
     const [level] = await db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "ssi",
@@ -116,8 +120,9 @@ describe("listAgencyCheckableCards with the other card tables", () => {
     const { db, shop } = ctx;
     const personId = await diver(db, shop.id, "Mara Quinn");
     const [level] = await db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "ssi",
@@ -288,12 +293,12 @@ describe("an agency check's review of a nitrox or specialty card", () => {
     }
     const [gasAfter] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, gas.id));
+      .from(cards)
+      .where(and(eq(cards.id, gas.id), eq(cards.kind, "nitrox")));
     const [deepAfter] = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.id, deep.id));
+      .from(cards)
+      .where(and(eq(cards.id, deep.id), eq(cards.kind, "specialty")));
     for (const after of [gasAfter, deepAfter]) {
       expect(after).toMatchObject({
         status: "pending",
@@ -331,8 +336,8 @@ describe("an agency check's review of a nitrox or specialty card", () => {
     ).toEqual({ ok: false, reason: "card_sighting_required" });
     const [after] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, claim.id));
+      .from(cards)
+      .where(and(eq(cards.id, claim.id), eq(cards.kind, "nitrox")));
     expect(after).toMatchObject({ status: "pending", reviewedAt: null, agencyCheckedAt: null });
   });
 
@@ -370,9 +375,9 @@ describe("an agency check's review of a nitrox or specialty card", () => {
       }),
     ).toEqual({ ok: false, reason: "agency_checked" });
     const [still] = await db
-      .select({ status: nitroxCertifications.status })
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, gas.id));
+      .select({ status: cards.status })
+      .from(cards)
+      .where(and(eq(cards.id, gas.id), eq(cards.kind, "nitrox")));
     expect(still?.status).toBe("verified");
   });
 
@@ -408,9 +413,9 @@ describe("an agency check's review of a nitrox or specialty card", () => {
     expect(await undo(personId, gas.id, "specialty")).toEqual({ ok: false });
     expect(await undo(personId, oneTap.id, "specialty")).toEqual({ ok: false });
     const [kept] = await db
-      .select({ status: specialtyCertifications.status })
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.id, oneTap.id));
+      .select({ status: cards.status })
+      .from(cards)
+      .where(and(eq(cards.id, oneTap.id), eq(cards.kind, "specialty")));
     expect(kept?.status).toBe("verified");
     expect(await undo(personId, gas.id, "nitrox")).toEqual({ ok: true, archived: 0 });
   });
@@ -419,8 +424,15 @@ describe("an agency check's review of a nitrox or specialty card", () => {
     const { db, shop } = ctx;
     const personId = await diver(db, shop.id, "Ines Vega");
     const [level] = await db
-      .insert(certifications)
-      .values({ shopId: shop.id, personId, agency: "ssi", level: "open_water", identifier: "L-1" })
+      .insert(cards)
+      .values({
+        kind: "level",
+        shopId: shop.id,
+        personId,
+        agency: "ssi",
+        level: "open_water",
+        identifier: "L-1",
+      })
       .returning();
     const imported = await nitrox(db, shop.id, personId, {
       status: "verified",
@@ -455,12 +467,12 @@ describe("an agency check's review of a nitrox or specialty card", () => {
     });
     const [importedAfter] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, imported.id));
+      .from(cards)
+      .where(and(eq(cards.id, imported.id), eq(cards.kind, "nitrox")));
     const [listedAfter] = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.id, listed.id));
+      .from(cards)
+      .where(and(eq(cards.id, listed.id), eq(cards.kind, "specialty")));
     // Imported: verified and unreviewed, which is "awaiting a staff confirm".
     expect(importedAfter).toMatchObject({
       status: "verified",
@@ -487,9 +499,9 @@ describe("an agency check's review of a nitrox or specialty card", () => {
     });
     // A staffer's own review afterwards replaces the check's: no agency stamp remains.
     await db
-      .update(nitroxCertifications)
+      .update(cards)
       .set({ agencyCheckedAt: null })
-      .where(eq(nitroxCertifications.id, gas.id));
+      .where(and(eq(cards.id, gas.id), eq(cards.kind, "nitrox")));
     expect(
       await undoAgencyCheck(db, {
         ...checked(shop.id, personId, gas.id),
@@ -497,5 +509,70 @@ describe("an agency check's review of a nitrox or specialty card", () => {
         cardType: "nitrox",
       }),
     ).toEqual({ ok: false });
+  });
+});
+
+describe("an id names a card of one kind (issue #2722)", () => {
+  it("never checks, offers or undoes a card of another kind through a path keyed on its id", async () => {
+    const { db, shop } = ctx;
+    const personId = await diver(db, shop.id, "Ines Kind");
+    const [level] = await db
+      .insert(cards)
+      .values({
+        kind: "level",
+        shopId: shop.id,
+        personId,
+        agency: "ssi",
+        level: "open_water",
+        identifier: "K-1",
+        status: "verified",
+        reviewedAt: new Date("2026-10-01T00:00:00Z"),
+        agencyCheckedAt: new Date("2026-10-01T00:00:00Z"),
+      })
+      .returning();
+    if (!level) throw new Error("failed to insert a level card");
+    const gas = await nitrox(db, shop.id, personId, {
+      identifier: "K-2",
+      status: "verified",
+      reviewedAt: new Date("2026-10-01T00:00:00Z"),
+      agencyCheckedAt: new Date("2026-10-01T00:00:00Z"),
+    });
+    const deep = await specialty(db, shop.id, personId, { identifier: "K-3" });
+
+    // A pending specialty card is not a pending nitrox card, nor the reverse.
+    expect(
+      await listedCardForAgencyCheck(db, {
+        ...checked(shop.id, personId, deep.id),
+        cardType: "nitrox",
+      }),
+    ).toBeNull();
+    // A pending specialty card is not a level card the ladder's check may judge.
+    expect(await certificationForAgencyCheck(db, checked(shop.id, personId, deep.id))).toBeNull();
+    // A level card's id is no nitrox or specialty card.
+    expect(
+      await listedCardForAgencyCheck(db, {
+        ...checked(shop.id, personId, level.id),
+        cardType: "specialty",
+      }),
+    ).toBeNull();
+
+    // A nitrox card's check is not undone as a specialty or a level card.
+    const undoneBy = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    expect(
+      await undoAgencyCheck(db, {
+        ...checked(shop.id, personId, gas.id),
+        undoneByPersonId: undoneBy,
+        cardType: "specialty",
+      }),
+    ).toEqual({ ok: false });
+    expect(
+      await undoAgencyCheck(db, {
+        ...checked(shop.id, personId, gas.id),
+        undoneByPersonId: undoneBy,
+      }),
+    ).toEqual({ ok: false });
+    const [after] = await db.select().from(cards).where(eq(cards.id, gas.id));
+    expect(after).toMatchObject({ status: "verified", deletedAt: null });
+    expect(after?.agencyCheckedAt).not.toBeNull();
   });
 });

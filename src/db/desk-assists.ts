@@ -1,8 +1,9 @@
 import { and, asc, eq, inArray, isNull, max, min } from "drizzle-orm";
 import type { SamePersonRecord } from "@/lib/assists/same-person";
 import { matchRestsOnNameAlone } from "@/lib/diver-duplicates";
+import { levelCardLevel } from "./card-columns";
 import type { AppDb } from "./client";
-import { bookings, certifications, people, rentalFitProfiles, shops, trips } from "./schema";
+import { bookings, cards, people, rentalFitProfiles, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 
@@ -71,19 +72,20 @@ export async function readUnsurePair(
   const survivor = rows.find((row) => row.id === survivorId);
   if (!source || !survivor || !matchRestsOnNameAlone(source, survivor)) return null;
 
-  const cards = await db
-    .select({ personId: certifications.personId, level: certifications.level })
-    .from(certifications)
+  const levelCards = await db
+    .select({ personId: cards.personId, level: levelCardLevel })
+    .from(cards)
     .where(
       and(
-        eq(certifications.shopId, shopId),
-        inArray(certifications.personId, [sourceId, survivorId]),
+        eq(cards.shopId, shopId),
+        eq(cards.kind, "level"),
+        inArray(cards.personId, [sourceId, survivorId]),
         // A removed card or an unchecked claim is not a level the diver holds.
-        isNull(certifications.deletedAt),
-        eq(certifications.status, "verified"),
+        isNull(cards.deletedAt),
+        eq(cards.status, "verified"),
       ),
     )
-    .orderBy(asc(certifications.level));
+    .orderBy(asc(cards.level));
   const visits = await db
     .select({ personId: bookings.personId, first: min(trips.startsAt), last: max(trips.startsAt) })
     .from(bookings)
@@ -106,7 +108,9 @@ export async function readUnsurePair(
       phone: person.phone,
       dateOfBirth: person.dateOfBirth,
       certifications: [
-        ...new Set(cards.filter((card) => card.personId === person.id).map((card) => card.level)),
+        ...new Set(
+          levelCards.filter((card) => card.personId === person.id).map((card) => card.level),
+        ),
       ],
       firstSeen: month(seen?.first ?? null),
       lastSeen: month(seen?.last ?? null),

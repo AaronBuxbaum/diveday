@@ -4,10 +4,8 @@ export const EXPECTED_FILES = [
   "trip_lenses.csv",
   "contacts.csv",
   "people.csv",
-  "certifications.csv",
+  "cards.csv",
   "certification_junior_reviews.csv",
-  "specialty_certifications.csv",
-  "nitrox_certifications.csv",
   "trips.csv",
   "trip_change_events.csv",
   "trip_stage_events.csv",
@@ -94,10 +92,8 @@ export const EXPORTED_TABLES = [
   "boats",
   "trip_lenses",
   "people",
-  "certifications",
+  "cards",
   "certification_junior_reviews",
-  "specialty_certifications",
-  "nitrox_certifications",
   "trips",
   "trip_change_events",
   "trip_stage_events",
@@ -132,7 +128,6 @@ export const EXPORTED_TABLES = [
   "trip_last_minute_promos",
   "booking_arrival_events",
   "roll_call_events",
-  "roll_call_crew_events",
   "buddy_team_members",
   "waiver_templates",
   "waiver_materiality_decisions",
@@ -171,3 +166,9 @@ export const EXPORTED_TABLES = [
   "shop_promo_codes",
   "courses",
 ];
+
+/**
+ * One ledger, two files (issue #2700): `subject_kind` is which file a row lands
+ * in, and a crew row's `crew_person_id` is roll_call_crew_events.csv's `person_id`.
+ */
+export const ROLL_CALL_SPLIT = ["subject_kind", "crew_person_id"];

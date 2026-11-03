@@ -33,6 +33,7 @@ import { and, asc, count, eq, getTableColumns, inArray, isNull, or } from "drizz
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { canExportShopData } from "@/lib/authz";
+import { splitCardsByKind } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import {
   type DiverExportBundleInput,
@@ -56,6 +57,7 @@ import {
   type ShopExportScope,
 } from "./export-tables";
 import { shopRehearsalIds } from "./rehearsals";
+import { countRollCallMarks, splitRollCallRows } from "./roll-call-subject";
 import {
   bookingReferrals,
   bookings,
@@ -274,9 +276,11 @@ async function readCrewAwayRows(tx: AppTransaction, scope: ShopExportScope) {
  * it names from this.
  */
 async function loadCardExportRows(tx: AppTransaction, scope: ShopExportScope | DiverExportScope) {
-  const certificationRows = await readScoped(tx, "certifications", scope);
+  // One read of every kind (issue #2722): `cards.csv` writes them all, and the
+  // rollups below sort them by kind.
+  const cardRows = await readScoped(tx, "cards", scope);
   const juniorReviewRows = await readScoped(tx, "certificationJuniorReviews", scope);
-  return { certificationRows, juniorReviewRows };
+  return { cardRows, juniorReviewRows, ...splitCardsByKind(cardRows) };
 }
 
 async function loadShopExportContext(tx: AppTransaction, shopId: string) {
@@ -506,9 +510,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const arrivalRows = await readScoped(tx, "bookingArrivalEvents", scope);
 
-  const rollCallRows = await readScoped(tx, "rollCallEvents", scope);
-
-  const crewRollCallRows = await readScoped(tx, "rollCallCrewEvents", scope);
+  const rollCallMarks = splitRollCallRows(await readScoped(tx, "rollCallEvents", scope));
 
   // **`buddy_teams.csv` is a file a person reads** (H-20260916-tiebreaker-user-visible-list, issue #1795): teams
   // in the panel's order — formation time, then the members' names, then
@@ -524,10 +526,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     },
   );
 
-  const cardRows = await loadCardExportRows(tx, scope);
-  const specialtyRows = await readScoped(tx, "specialtyCertifications", scope);
-
-  const nitroxRows = await readScoped(tx, "nitroxCertifications", scope);
+  const cardExport = await loadCardExportRows(tx, scope);
 
   const templateRows = await readScoped(tx, "waiverTemplates", scope);
 
@@ -573,40 +572,32 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   // Per-person rollups for contacts.csv. Archived cards never represent a
   // diver in a migration file; archived people still export, marked.
-  const cardsByPerson = new Map<string, typeof cardRows.certificationRows>();
-  for (const card of cardRows.certificationRows) {
+  const cardsByPerson = new Map<string, typeof cardExport.certifications>();
+  for (const card of cardExport.certifications) {
     if (card.deletedAt) continue;
     cardsByPerson.set(card.personId, [...(cardsByPerson.get(card.personId) ?? []), card]);
   }
   const nitroxVerified = new Set(
-    nitroxRows
+    cardExport.nitroxCertifications
       .filter((card) => card.status === "verified" && !card.deletedAt)
       .map((card) => card.personId),
   );
   const fitByPerson = new Map(rentalFitRows.map((row) => [row.personId, row]));
   /**
-   * **People a card the shop actually holds refutes** — the same three-table
+   * **People a card the shop actually holds refutes** — the same per-kind
    * test `listCertificationSummaries` applies before it will render "Not
    * certified yet — unverified", restated here rather than called because
    * that reader takes an `inArray` of person ids and a long-lived shop's
    * lifetime roster would blow PostgreSQL's bind-parameter limit (the same
    * reason `personRoles` above is joined rather than filtered by id list).
    *
-   * A still-unsighted self-declaration is not a card, on any of the three:
-   * a diver who declared a rung and later said they hold nothing has made
-   * two statements and neither is evidence. A specialty row settles it
-   * outright — `specialty_certifications` has no `self_declared_at` at all,
-   * so every live row in it is a card a staffer captured or a CSV brought in.
+   * A still-unsighted self-declaration of any kind is not a card: a diver who
+   * declared a rung and later said they hold nothing has made two statements
+   * and neither is evidence.
    */
   const cardedPeople = new Set<string>();
-  for (const card of cardRows.certificationRows) {
+  for (const card of cardExport.cardRows) {
     if (!card.deletedAt && !isUnsightedSelfDeclaration(card)) cardedPeople.add(card.personId);
-  }
-  for (const card of nitroxRows) {
-    if (!card.deletedAt && !isUnsightedSelfDeclaration(card)) cardedPeople.add(card.personId);
-  }
-  for (const card of specialtyRows) {
-    if (!card.deletedAt) cardedPeople.add(card.personId);
   }
 
   const waiversByPerson = new Map<string, typeof waiverRows>();
@@ -692,12 +683,12 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     activityRows,
     notificationRows,
     arrivalRows,
-    rollCallRows,
-    crewRollCallRows,
+    rollCallRows: rollCallMarks.seats,
+    crewRollCallRows: rollCallMarks.crew,
     buddyPairRows,
-    ...cardRows,
-    specialtyRows,
-    nitroxRows,
+    cardRows: cardExport.cardRows,
+    certificationRows: cardExport.certifications,
+    juniorReviewRows: cardExport.juniorReviewRows,
     templateRows,
     waiverMaterialityRows,
     waiverRows,
@@ -922,12 +913,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     : [];
   const trainingPlanStaffName = new Map(planStaff.map((row) => [row.id, row.fullName]));
 
-  const certificationRows = await readScoped(tx, "certifications", scope);
-  const juniorReviewRows = await readScoped(tx, "certificationJuniorReviews", scope);
-
-  const specialtyRows = await readScoped(tx, "specialtyCertifications", scope);
-
-  const nitroxRows = await readScoped(tx, "nitroxCertifications", scope);
+  const { cardRows, juniorReviewRows } = await loadCardExportRows(tx, scope);
 
   const interestRows = await readScoped(tx, "interests", scope);
   // A wait-list row names a departure the diver holds no seat on, so its title
@@ -955,7 +941,8 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
 
   const arrivalRows = await readScoped(tx, "bookingArrivalEvents", scope);
 
-  const rollCallRows = await readScoped(tx, "rollCallEvents", scope);
+  // Scoped by booking, so seats only; the split types them as such.
+  const { seats: rollCallRows } = splitRollCallRows(await readScoped(tx, "rollCallEvents", scope));
 
   // Either this diver's own seat, or — if they are also a staff member —
   // a team they were recorded as crewing. Two rows can never collide: a
@@ -1139,10 +1126,8 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     paymentByBooking,
     personName,
     trainingPlanStaffName,
-    certificationRows,
+    cardRows,
     juniorReviewRows,
-    specialtyRows,
-    nitroxRows,
     interestRows,
     paymentEventRows,
     checkoutBookingRows,
@@ -1215,14 +1200,12 @@ export async function loadShopExportCounts(
     // One flat import-ready row per person, so the count mirrors people.csv.
     "contacts.csv": peopleCount,
     "people.csv": peopleCount,
-    "certifications.csv": await countShopScoped(db, "certifications", shopId),
+    "cards.csv": await countShopScoped(db, "cards", shopId),
     "certification_junior_reviews.csv": await countShopScoped(
       db,
       "certificationJuniorReviews",
       shopId,
     ),
-    "specialty_certifications.csv": await countShopScoped(db, "specialtyCertifications", shopId),
-    "nitrox_certifications.csv": await countShopScoped(db, "nitroxCertifications", shopId),
     // diveday:allow-deleted-trips: this counts what the bundle above writes, and
     // the bundle writes every row the shop owns. A count that filtered would
     // disagree with its own file.
@@ -1301,8 +1284,8 @@ export async function loadShopExportCounts(
     ),
     "trip_last_minute_promos.csv": await countShopScoped(db, "tripLastMinutePromos", shopId),
     "booking_arrival_events.csv": await countShopScoped(db, "bookingArrivalEvents", shopId),
-    "roll_call_events.csv": await countShopScoped(db, "rollCallEvents", shopId),
-    "roll_call_crew_events.csv": await countShopScoped(db, "rollCallCrewEvents", shopId),
+    "roll_call_events.csv": await countRollCallMarks(db, shopId, "seat"),
+    "roll_call_crew_events.csv": await countRollCallMarks(db, shopId, "crew"),
     "buddy_teams.csv": await countShopScoped(db, "buddyTeamMembers", shopId),
     "waiver_templates.csv": await countShopScoped(db, "waiverTemplates", shopId),
     "waiver_materiality_decisions.csv": await countShopScoped(

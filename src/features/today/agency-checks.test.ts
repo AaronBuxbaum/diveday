@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
-import { certifications, people } from "@/db/schema";
+import { cards, people } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import { withAgencyChecks } from "./index";
 
@@ -17,11 +17,12 @@ async function card(
   db: AppDb,
   shopId: string,
   personId: string,
-  values: Partial<typeof certifications.$inferInsert> = {},
+  values: Partial<typeof cards.$inferInsert> = {},
 ) {
   const [row] = await db
-    .insert(certifications)
+    .insert(cards)
     .values({
+      kind: "level",
       shopId,
       personId,
       agency: "ssi",

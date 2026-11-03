@@ -3,6 +3,7 @@ import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { CsvValue, ExportTable } from "@/lib/export";
 import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
+import { oldestMarkFirst } from "./roll-call-order";
 import {
   activityEvents,
   boatSnags,
@@ -13,8 +14,8 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   buddyTeamMembers,
+  cards,
   certificationJuniorReviews,
-  certifications,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -39,7 +40,6 @@ import {
   incidentReports,
   interests,
   internalNotes,
-  nitroxCertifications,
   notificationDeliveries,
   orderLineItems,
   orders,
@@ -49,11 +49,9 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
-  rollCallCrewEvents,
   rollCallEvents,
   shopPromoCodes,
   shopTextTranslations,
-  specialtyCertifications,
   staffCredentialHistory,
   staffCredentials,
   tripChangeEvents,
@@ -366,15 +364,11 @@ export const EXPORT_TABLES = {
     // `seq`, not `id`: the id is a random uuid, so two events sharing an
     // `occurred_at` came out in a different order every export — of the one
     // file a shop is meant to be able to diff against last week's.
-    order: [asc(rollCallEvents.occurredAt), asc(rollCallEvents.seq)],
+    order: [...oldestMarkFirst()],
+    // Both halves, seat and crew: the shop bundle splits them into
+    // roll_call_events.csv and roll_call_crew_events.csv by `subject_kind`
+    // (`splitRollCallRows`), and a diver's scope by booking reads seats only.
     scope: { shopColumn: rollCallEvents.shopId, bookingColumn: rollCallEvents.bookingId },
-  },
-  // The crew half: who, not just how many. Same oldest-first ordering, same
-  // append-only replay rule as the diver events.
-  rollCallCrewEvents: {
-    table: rollCallCrewEvents,
-    order: [asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.seq)],
-    scope: { shopColumn: rollCallCrewEvents.shopId },
   },
   // Buddy teams standing at export time — not a history: dissolving a team
   // deletes the rows, and the trail that outlives them (`buddy_team_events`)
@@ -388,10 +382,12 @@ export const EXPORT_TABLES = {
     order: [],
     scope: { shopColumn: buddyTeamMembers.shopId },
   },
-  certifications: {
-    table: certifications,
-    order: [asc(certifications.createdAt), asc(certifications.id)],
-    scope: { shopColumn: certifications.shopId, personColumn: certifications.personId },
+  // Every kind of card, in one file (issue #2722): `kind` says which, and
+  // `level`/`specialty` carry the rung or the specialty.
+  cards: {
+    table: cards,
+    order: [asc(cards.createdAt), asc(cards.id)],
+    scope: { shopColumn: cards.shopId, personColumn: cards.personId },
   },
   certificationJuniorReviews: {
     table: certificationJuniorReviews,
@@ -400,19 +396,6 @@ export const EXPORT_TABLES = {
       shopColumn: certificationJuniorReviews.shopId,
       personColumn: certificationJuniorReviews.personId,
     },
-  },
-  specialtyCertifications: {
-    table: specialtyCertifications,
-    order: [asc(specialtyCertifications.createdAt), asc(specialtyCertifications.id)],
-    scope: {
-      shopColumn: specialtyCertifications.shopId,
-      personColumn: specialtyCertifications.personId,
-    },
-  },
-  nitroxCertifications: {
-    table: nitroxCertifications,
-    order: [asc(nitroxCertifications.createdAt), asc(nitroxCertifications.id)],
-    scope: { shopColumn: nitroxCertifications.shopId, personColumn: nitroxCertifications.personId },
   },
   waiverTemplates: {
     table: waiverTemplates,

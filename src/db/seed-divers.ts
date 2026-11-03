@@ -1,12 +1,6 @@
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import {
-  certifications,
-  type DiveSpecialty,
-  people,
-  personRoles,
-  specialtyCertifications,
-} from "./schema";
+import { cards, type DiveSpecialty, people, personRoles } from "./schema";
 import { buildCast, type Cast, customerDefs } from "./seed-cast";
 import { birthDateTurning, dateAt, nextCreatedAt } from "./seed-clock";
 import { reviewedBy } from "./seed-review";
@@ -63,8 +57,9 @@ export async function seedDivers(
     .insert(personRoles)
     .values(customers.map((person) => ({ personId: person.id, role: "diver" as const })));
 
-  await db.insert(certifications).values(
+  await db.insert(cards).values(
     customers.slice(0, 10).map((person, i) => ({
+      kind: "level" as const,
       shopId,
       personId: person.id,
       agency: i % 2 === 0 ? ("padi" as const) : ("ssi" as const),
@@ -192,6 +187,7 @@ export async function seedDivers(
       const person = customers[cert.index];
       if (!person) return null;
       return {
+        kind: "level" as const,
         shopId,
         personId: person.id,
         agency: cert.agency,
@@ -209,13 +205,14 @@ export async function seedDivers(
       };
     })
     .filter((row) => row !== null);
-  if (laterCertRows.length > 0) await db.insert(certifications).values(laterCertRows);
+  if (laterCertRows.length > 0) await db.insert(cards).values(laterCertRows);
 
   // Specialty evidence: Tom is the AOW diver, fully carded for the demanding
   // trips; Lena has a Deep card still awaiting verification so the pending
   // gate is visible on a roster.
-  await db.insert(specialtyCertifications).values([
+  await db.insert(cards).values([
     {
+      kind: "specialty" as const,
       shopId,
       personId: cast.tom.id,
       agency: "padi" as const,
@@ -226,6 +223,7 @@ export async function seedDivers(
       createdAt: nextCreatedAt(),
     },
     {
+      kind: "specialty" as const,
       shopId,
       personId: cast.tom.id,
       agency: "padi" as const,
@@ -236,6 +234,7 @@ export async function seedDivers(
       createdAt: nextCreatedAt(),
     },
     {
+      kind: "specialty" as const,
       shopId,
       personId: cast.tom.id,
       agency: "padi" as const,
@@ -246,6 +245,7 @@ export async function seedDivers(
       createdAt: nextCreatedAt(),
     },
     {
+      kind: "specialty" as const,
       shopId,
       personId: cast.lena.id,
       agency: "ssi" as const,
@@ -282,6 +282,7 @@ export async function seedDivers(
       const person = customers[plan.index];
       if (!person) return null;
       return {
+        kind: "specialty" as const,
         shopId,
         personId: person.id,
         agency: "padi" as const,
@@ -294,7 +295,7 @@ export async function seedDivers(
     })
     .filter((row) => row !== null);
   if (extendedSpecialtyRows.length > 0) {
-    await db.insert(specialtyCertifications).values(extendedSpecialtyRows);
+    await db.insert(cards).values(extendedSpecialtyRows);
   }
 
   // The imported-card states, on Hana Kobayashi — the diver whose
@@ -307,8 +308,9 @@ export async function seedDivers(
   // requires a staffer to attest they have seen the card. Both are what stands
   // between a spreadsheet cell and a depth gate or a gas fill, so both should be
   // protected from a silent regression.
-  await db.insert(specialtyCertifications).values([
+  await db.insert(cards).values([
     {
+      kind: "specialty" as const,
       shopId,
       personId: cast.hana.id,
       agency: "padi" as const,

@@ -2,10 +2,11 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { cancelBooking } from "@/db/bookings";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "@/db/manifests";
+import { crewSubject } from "@/db/roll-call-subject";
 import { boardAtDeparture, HOUR, returnedTrip } from "@/db/roll-call-test-fixtures";
 import {
-  rollCallCrewEvents as rollCallCrewEventsTable,
   rollCallEvents as rollCallEventsTable,
+  rollCallEvents as rollCallMarksTable,
   tripAssignments,
 } from "@/db/schema";
 import { listStaff } from "@/db/trips";
@@ -419,11 +420,11 @@ describe("unclosed roll call (DOM-H3)", () => {
       await db
         .insert(tripAssignments)
         .values(personIds.map((personId) => ({ tripId: input.tripId, personId })));
-      await db.insert(rollCallCrewEventsTable).values(
+      await db.insert(rollCallMarksTable).values(
         personIds.map((personId) => ({
           shopId: input.shopId,
           tripId: input.tripId,
-          personId,
+          ...crewSubject(personId),
           recordedByPersonId: personIds[0] ?? personId,
           status: "boarded" as const,
           checkpoint: "departure",

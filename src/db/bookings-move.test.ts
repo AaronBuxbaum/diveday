@@ -16,7 +16,7 @@ import { listTripActivity } from "./operations";
 import {
   activityEvents,
   bookings,
-  certifications,
+  cards,
   courses,
   dateRequestOfferBookings,
   inboundMessages,
@@ -254,7 +254,8 @@ describe("moveBooking", () => {
     const { db, shop, from, to, seat } = await setup();
     // A diver with no card on file is admitted blind (H-20260724-certification-levels-agency-rules); one with an Open
     // Water card is measured against it.
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: seat.personId,
       agency: "padi",

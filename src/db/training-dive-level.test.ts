@@ -10,12 +10,13 @@ import {
 import { cancelBooking, createBooking } from "./bookings";
 import { createDiver } from "./divers";
 import { getBookingReadiness } from "./readiness";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookings,
-  certifications,
+  cards,
   courses,
   diveSites,
-  rollCallCrewEvents,
+  rollCallEvents,
   tripAssignments,
   tripDives,
   tripRequirements,
@@ -57,7 +58,9 @@ async function advancedCharter(): Promise<CharterContext> {
       sourceTemplateSlug: null,
     })
     .where(eq(courses.id, ctx.course.courseId));
-  await ctx.db.delete(certifications).where(eq(certifications.personId, ctx.course.personId));
+  await ctx.db
+    .delete(cards)
+    .where(and(eq(cards.kind, "level"), eq(cards.personId, ctx.course.personId)));
   return ctx;
 }
 
@@ -76,7 +79,8 @@ async function continuingEdCharter(): Promise<CharterContext> {
     .update(courses)
     .set({ minimumCertificationLevel: "open_water", certifiesLevel: "advanced_open_water" })
     .where(eq(courses.id, ctx.course.courseId));
-  await ctx.db.insert(certifications).values({
+  await ctx.db.insert(cards).values({
+    kind: "level",
     shopId: ctx.shop.id,
     personId: ctx.course.personId,
     agency: "padi",
@@ -339,10 +343,10 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     const ctx = await advancedCharter();
     await teachesAndAboard(ctx);
     await markSeat(ctx);
-    await ctx.db.insert(rollCallCrewEvents).values({
+    await ctx.db.insert(rollCallEvents).values({
       shopId: ctx.shop.id,
       tripId: ctx.charter.id,
-      personId: ctx.instructor,
+      ...crewSubject(ctx.instructor),
       recordedByPersonId: ctx.owner,
       status: "not_boarded",
       checkpoint: "departure",
@@ -683,7 +687,8 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
       diveNumber: 1,
       diveSiteId: site.id,
     });
-    await ctx.db.insert(certifications).values({
+    await ctx.db.insert(cards).values({
+      kind: "level",
       shopId: ctx.shop.id,
       personId: candidate.id,
       agency: "padi",
@@ -738,7 +743,8 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
         email: "odile-2731@example.com",
       });
       if (!stranger) throw new Error("diver setup failed");
-      await ctx.db.insert(certifications).values({
+      await ctx.db.insert(cards).values({
+        kind: "level",
         shopId: ctx.shop.id,
         personId: stranger.id,
         agency: "padi",

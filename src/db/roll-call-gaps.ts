@@ -9,7 +9,7 @@
  * It sits below Today (`src/features/today`) because those substrate callers
  * need it, and nothing in `src/db` may import a feature.
  */
-import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { isTurnedAwayOffBoat, isTurnedAwaySeat, rollCallCheckpoints } from "@/lib/manifests";
@@ -17,14 +17,9 @@ import type { RollCallGapReason } from "@/lib/roll-call-gaps";
 import { inAfterDivePopulation, isAccountedForAfterDive } from "@/lib/roll-call-population";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb } from "./client";
-import {
-  bookings,
-  courses,
-  rollCallCrewEvents,
-  rollCallEvents,
-  tripAssignments,
-  trips,
-} from "./schema";
+import { oldestMarkFirst } from "./roll-call-order";
+import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
+import { bookings, courses, rollCallEvents, tripAssignments, trips } from "./schema";
 import { seatNotCancelled } from "./trips";
 import { liveTrip } from "./trips-live";
 
@@ -288,7 +283,7 @@ export async function listRollCallGaps(
       .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled)),
     db
       .select({
-        bookingId: rollCallEvents.bookingId,
+        bookingId: markBookingId(),
         checkpoint: rollCallEvents.checkpoint,
         status: rollCallEvents.status,
         occurredAt: rollCallEvents.occurredAt,
@@ -298,25 +293,27 @@ export async function listRollCallGaps(
       // boat left keeps its event rows, and they must not answer for a roster
       // it is no longer on.
       .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
-      .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
+          inArray(rollCallEvents.tripId, tripIds),
+        ),
+      )
       // `seq` is the final key for the same reason `src/db/manifests.ts` gives:
       // `created_at` is transaction time, so a batched write inside one
       // transaction leaves the order arbitrary — and Today's missing-diver row
       // and the manifest must never disagree about who is still in the water.
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
     db
       .select({
-        tripId: rollCallCrewEvents.tripId,
-        personId: rollCallCrewEvents.personId,
-        checkpoint: rollCallCrewEvents.checkpoint,
-        status: rollCallCrewEvents.status,
-        occurredAt: rollCallCrewEvents.occurredAt,
+        tripId: rollCallEvents.tripId,
+        personId: markCrewPersonId(),
+        checkpoint: rollCallEvents.checkpoint,
+        status: rollCallEvents.status,
+        occurredAt: rollCallEvents.occurredAt,
       })
-      .from(rollCallCrewEvents)
+      .from(rollCallEvents)
       // The crew counterpart of the cancelled-booking guard above: a person
       // taken off the roster keeps their event rows, and they must not answer
       // for a crew list they are no longer on. (`changeTripCrew` refuses to
@@ -325,18 +322,18 @@ export async function listRollCallGaps(
       .innerJoin(
         tripAssignments,
         and(
-          eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
-          eq(tripAssignments.personId, rollCallCrewEvents.personId),
+          eq(tripAssignments.tripId, rollCallEvents.tripId),
+          eq(tripAssignments.personId, rollCallEvents.crewPersonId),
         ),
       )
       .where(
-        and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          crewMarks(),
+          inArray(rollCallEvents.tripId, tripIds),
+        ),
       )
-      .orderBy(
-        asc(rollCallCrewEvents.occurredAt),
-        asc(rollCallCrewEvents.createdAt),
-        asc(rollCallCrewEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
   ]);
 
   // Seats the desk turned away: off the boat at any checkpoint nobody at the

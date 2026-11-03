@@ -8,7 +8,6 @@ import {
   boats,
   buddyTeamMembers,
   people,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   tripDives,
@@ -92,7 +91,11 @@ describe("the boat at sea", () => {
       .select({ bookingId: rollCallEvents.bookingId })
       .from(rollCallEvents)
       .where(
-        and(eq(rollCallEvents.tripId, trip.id), eq(rollCallEvents.checkpoint, "after_dive_2")),
+        and(
+          eq(rollCallEvents.tripId, trip.id),
+          eq(rollCallEvents.subjectKind, "seat"),
+          eq(rollCallEvents.checkpoint, "after_dive_2"),
+        ),
       );
     const roster = readinessIds(await listTripReadiness(db, shop.id, trip.id));
     const down = roster.filter((id) => !counted.some((row) => row.bookingId === id));
@@ -107,12 +110,13 @@ describe("the boat at sea", () => {
   it("keeps a guide down with the last pair, her own count still open", async () => {
     const { db, trip } = await boatAtSea();
     const counted = await db
-      .select({ personId: rollCallCrewEvents.personId })
-      .from(rollCallCrewEvents)
+      .select({ personId: rollCallEvents.crewPersonId })
+      .from(rollCallEvents)
       .where(
         and(
-          eq(rollCallCrewEvents.tripId, trip.id),
-          eq(rollCallCrewEvents.checkpoint, "after_dive_2"),
+          eq(rollCallEvents.tripId, trip.id),
+          eq(rollCallEvents.subjectKind, "crew"),
+          eq(rollCallEvents.checkpoint, "after_dive_2"),
         ),
       );
     const guides = await db
@@ -148,14 +152,14 @@ describe("the boat at sea", () => {
       .from(tripAssignments)
       .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.tripRole, "divemaster")));
     const [guideBack] = await db
-      .select({ at: rollCallCrewEvents.occurredAt })
-      .from(rollCallCrewEvents)
+      .select({ at: rollCallEvents.occurredAt })
+      .from(rollCallEvents)
       .where(
         and(
-          eq(rollCallCrewEvents.tripId, trip.id),
-          eq(rollCallCrewEvents.checkpoint, "after_dive_2"),
+          eq(rollCallEvents.tripId, trip.id),
+          eq(rollCallEvents.checkpoint, "after_dive_2"),
           inArray(
-            rollCallCrewEvents.personId,
+            rollCallEvents.crewPersonId,
             guides.map((guide) => guide.personId),
           ),
         ),
@@ -165,7 +169,11 @@ describe("the boat at sea", () => {
       .select({ at: rollCallEvents.occurredAt })
       .from(rollCallEvents)
       .where(
-        and(eq(rollCallEvents.tripId, trip.id), eq(rollCallEvents.checkpoint, "after_dive_2")),
+        and(
+          eq(rollCallEvents.tripId, trip.id),
+          eq(rollCallEvents.subjectKind, "seat"),
+          eq(rollCallEvents.checkpoint, "after_dive_2"),
+        ),
       );
     const upWithOrBefore = divers.filter((row) => row.at.getTime() <= guideBack.at.getTime());
     expect(upWithOrBefore).toHaveLength(6);
@@ -179,9 +187,9 @@ describe("the boat at sea", () => {
       .from(rollCallEvents)
       .where(eq(rollCallEvents.tripId, trip.id));
     const crew = await db
-      .select({ at: rollCallCrewEvents.occurredAt })
-      .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.tripId, trip.id));
+      .select({ at: rollCallEvents.occurredAt })
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.tripId, trip.id));
     for (const row of [...divers, ...crew]) expect(row.at.getTime()).toBeLessThanOrEqual(now);
   });
 

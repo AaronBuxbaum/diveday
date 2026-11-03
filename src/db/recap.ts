@@ -45,6 +45,7 @@ import { shopClock } from "@/lib/shop-clock";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
+import { levelCardLevel } from "./card-columns";
 import { refreshCheckoutFromStripe } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
@@ -62,7 +63,7 @@ import { autoFillRecapLine } from "./recap-assist";
 import { tripsWithSomebodyMissing } from "./roll-call-gaps";
 import {
   bookings,
-  certifications,
+  cards,
   notificationDeliveries,
   people,
   priorVisits,
@@ -797,19 +798,20 @@ async function loadRecapPageData(
     // recap then says out loud.
     row.tripCourseId
       ? db
-          .select({ level: certifications.level, issuedAt: certifications.issuedByShopAt })
-          .from(certifications)
+          .select({ level: levelCardLevel, issuedAt: cards.issuedByShopAt })
+          .from(cards)
           .where(
             and(
-              eq(certifications.shopId, row.shopId),
-              eq(certifications.personId, row.personId),
-              eq(certifications.issuedFromTripId, row.tripId),
-              isNotNull(certifications.issuedByShopAt),
-              eq(certifications.status, "verified"),
-              isNull(certifications.deletedAt),
+              eq(cards.shopId, row.shopId),
+              eq(cards.kind, "level"),
+              eq(cards.personId, row.personId),
+              eq(cards.issuedFromTripId, row.tripId),
+              isNotNull(cards.issuedByShopAt),
+              eq(cards.status, "verified"),
+              isNull(cards.deletedAt),
             ),
           )
-          .orderBy(desc(certifications.issuedByShopAt))
+          .orderBy(desc(cards.issuedByShopAt))
           .limit(1)
       : Promise.resolve([]),
     // Who wrote the next step, for the name under the words. Read only when

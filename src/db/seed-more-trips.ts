@@ -6,7 +6,7 @@ import {
   boats,
   bookingPayments,
   bookings,
-  certifications,
+  cards,
   type DiveSpecialty,
   executedDives,
   interests,
@@ -15,7 +15,6 @@ import {
   personRoles,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
-  rollCallCrewEvents,
   rollCallEvents,
   type TripAssignmentRole,
   tripAssignments,
@@ -801,13 +800,14 @@ async function reviewedCardHolders(
   const holders = new Set(
     (
       await db
-        .select({ personId: certifications.personId })
-        .from(certifications)
+        .select({ personId: cards.personId })
+        .from(cards)
         .where(
           and(
-            eq(certifications.shopId, shopId),
-            eq(certifications.status, "verified"),
-            isNotNull(certifications.reviewedAt),
+            eq(cards.shopId, shopId),
+            eq(cards.kind, "level"),
+            eq(cards.status, "verified"),
+            isNotNull(cards.reviewedAt),
           ),
         )
     ).map((row) => row.personId),
@@ -918,7 +918,8 @@ async function seedDawnBoatRecord(
     checkpoints.map((checkpoint, index) => ({
       shopId,
       tripId: trip.id,
-      personId,
+      subjectKind: "crew" as const,
+      crewPersonId: personId,
       recordedByPersonId: recorderId,
       status: "boarded" as const,
       checkpoint,
@@ -926,7 +927,7 @@ async function seedDawnBoatRecord(
       occurredAt: dawnCheckpointAt(trip, index),
     })),
   );
-  if (crewRows.length > 0) await db.insert(rollCallCrewEvents).values(crewRows);
+  if (crewRows.length > 0) await db.insert(rollCallEvents).values(crewRows);
 
   // Both tanks logged at the reef's ordinary depth, each dive ending a few
   // minutes before the after-dive count that closes it.

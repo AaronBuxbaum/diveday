@@ -8,7 +8,7 @@ import {
   recordRollCall,
   rollCallOpenOnTrip,
 } from "./manifests";
-import { rollCallCrewEvents, rollCallEvents, shops, tripAssignments, trips } from "./schema";
+import { rollCallEvents, shops, tripAssignments, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();
@@ -32,7 +32,7 @@ async function reefDeparture() {
   if (!staff) throw new Error("demo staff missing");
   // Start from a departure nobody has counted on, whatever the seed recorded.
   await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id));
-  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id));
+  await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id));
   await db
     .insert(tripAssignments)
     .values({ tripId: reef.id, personId: staff.person.id })

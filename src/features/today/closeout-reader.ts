@@ -1,16 +1,17 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "@/db/manifests";
 import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "@/db/recap";
 import { listRollCallGaps } from "@/db/roll-call-gaps";
+import { newestMarkFirst, oldestMarkFirst } from "@/db/roll-call-order";
+import { crewMarks, markCrewPersonId, seatMarks } from "@/db/roll-call-subject";
 import {
   bookings,
   diveSites,
   executedDives,
   notificationDeliveries,
   people,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   tripDives,
@@ -24,7 +25,7 @@ import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DayLoadOut } from "@/lib/closeout-kinds";
 import type { CrewRollCallSubject } from "@/lib/manifests";
-import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
+import { carryForwardNotBoarded, compareMarkOrder, rollCallCheckpoints } from "@/lib/roll-call";
 import { seatSailed } from "@/lib/seat-sailed";
 import { settleWithLimit } from "@/lib/settle-with-limit";
 import { shopDayBounds, shopDaysBounds } from "@/lib/zoned";
@@ -213,27 +214,27 @@ async function dayTrips(
     // walks it in.
     db
       .select({
-        tripId: rollCallCrewEvents.tripId,
-        personId: rollCallCrewEvents.personId,
-        checkpoint: rollCallCrewEvents.checkpoint,
-        status: rollCallCrewEvents.status,
+        tripId: rollCallEvents.tripId,
+        personId: markCrewPersonId(),
+        checkpoint: rollCallEvents.checkpoint,
+        status: rollCallEvents.status,
       })
-      .from(rollCallCrewEvents)
+      .from(rollCallEvents)
       .innerJoin(
         tripAssignments,
         and(
-          eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
-          eq(tripAssignments.personId, rollCallCrewEvents.personId),
+          eq(tripAssignments.tripId, rollCallEvents.tripId),
+          eq(tripAssignments.personId, rollCallEvents.crewPersonId),
         ),
       )
       .where(
-        and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          crewMarks(),
+          inArray(rollCallEvents.tripId, tripIds),
+        ),
       )
-      .orderBy(
-        asc(rollCallCrewEvents.occurredAt),
-        asc(rollCallCrewEvents.createdAt),
-        asc(rollCallCrewEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
     // **D24** — dives whose actual site was not the planned one. A dive with no
     // planned site is deliberately not a change: there was no plan to depart
     // from, and "the plan changed" would be the surface inventing one.
@@ -587,6 +588,7 @@ export async function listHeadCountCloses(
         checkpoint: rollCallEvents.checkpoint,
         occurredAt: rollCallEvents.occurredAt,
         createdAt: rollCallEvents.createdAt,
+        seq: rollCallEvents.seq,
         closedBy: people.fullName,
       })
       .from(rollCallEvents)
@@ -594,39 +596,34 @@ export async function listHeadCountCloses(
       .where(
         and(
           eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
           inArray(rollCallEvents.tripId, [...tripIds]),
           ne(rollCallEvents.status, "cleared"),
         ),
       )
-      .orderBy(
-        desc(rollCallEvents.occurredAt),
-        desc(rollCallEvents.createdAt),
-        desc(rollCallEvents.seq),
-      ),
+      .orderBy(...newestMarkFirst()),
     crewClosedTripIds.length === 0
       ? []
       : db
           .select({
-            tripId: rollCallCrewEvents.tripId,
-            checkpoint: rollCallCrewEvents.checkpoint,
-            occurredAt: rollCallCrewEvents.occurredAt,
-            createdAt: rollCallCrewEvents.createdAt,
+            tripId: rollCallEvents.tripId,
+            checkpoint: rollCallEvents.checkpoint,
+            occurredAt: rollCallEvents.occurredAt,
+            createdAt: rollCallEvents.createdAt,
+            seq: rollCallEvents.seq,
             closedBy: people.fullName,
           })
-          .from(rollCallCrewEvents)
-          .innerJoin(people, eq(people.id, rollCallCrewEvents.recordedByPersonId))
+          .from(rollCallEvents)
+          .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
           .where(
             and(
-              eq(rollCallCrewEvents.shopId, shopId),
-              inArray(rollCallCrewEvents.tripId, crewClosedTripIds),
-              ne(rollCallCrewEvents.status, "cleared"),
+              eq(rollCallEvents.shopId, shopId),
+              crewMarks(),
+              inArray(rollCallEvents.tripId, crewClosedTripIds),
+              ne(rollCallEvents.status, "cleared"),
             ),
           )
-          .orderBy(
-            desc(rollCallCrewEvents.occurredAt),
-            desc(rollCallCrewEvents.createdAt),
-            desc(rollCallCrewEvents.seq),
-          ),
+          .orderBy(...newestMarkFirst()),
   ]);
   const closingCheckpoint = new Map(
     tripRows.map((trip) => [trip.id, rollCallCheckpoints(trip.plannedDives).at(-1) ?? "departure"]),
@@ -642,10 +639,7 @@ export async function listHeadCountCloses(
   };
   const diverLast = newestPerTrip(diverRows);
   const crewLast = newestPerTrip(crewRows);
-  const crewIsLater = (crew: Mark, diver: Mark) =>
-    crew.occurredAt.getTime() !== diver.occurredAt.getTime()
-      ? crew.occurredAt > diver.occurredAt
-      : crew.createdAt > diver.createdAt;
+  const crewIsLater = (crew: Mark, diver: Mark) => compareMarkOrder(crew, diver) > 0;
   for (const tripId of new Set([...diverLast.keys(), ...crewLast.keys()])) {
     const diver = diverLast.get(tripId);
     const crew = crewLast.get(tripId);
@@ -674,6 +668,7 @@ export async function listNotBackAfterDive(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         inArray(rollCallEvents.tripId, [...tripIds]),
         eq(rollCallEvents.status, "not_boarded"),
         ne(rollCallEvents.checkpoint, "departure"),

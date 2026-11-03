@@ -23,7 +23,7 @@ import {
   bookings,
   buddyTeamEvents,
   buddyTeamMembers,
-  certifications,
+  cards,
   courses,
   people,
   shops,
@@ -619,10 +619,10 @@ export async function planPartyTeams(
           declaredMinorAt: bookings.minorDeclaredAt,
           fullName: people.fullName,
           dateOfBirth: people.dateOfBirth,
-          verifiedCard: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.status} = 'verified' and ${certifications.deletedAt} is null)`,
+          verifiedCard: sql<boolean>`exists (select 1 from ${cards} where ${cards.shopId} = ${bookings.shopId} and ${cards.personId} = ${bookings.personId} and ${cards.kind} = 'level' and ${cards.status} = 'verified' and ${cards.deletedAt} is null)`,
           certifications: sql<
             NonNullable<PartyMember["certifications"]>
-          >`coalesce((select json_agg(json_build_object('agency', ${certifications.agency}, 'juniorStatus', ${certifications.juniorStatus})) from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.status} = 'verified' and ${certifications.deletedAt} is null), '[]'::json)`,
+          >`coalesce((select json_agg(json_build_object('agency', ${cards.agency}, 'juniorStatus', ${cards.juniorStatus})) from ${cards} where ${cards.shopId} = ${bookings.shopId} and ${cards.personId} = ${bookings.personId} and ${cards.kind} = 'level' and ${cards.status} = 'verified' and ${cards.deletedAt} is null), '[]'::json)`,
         })
         .from(bookings)
         .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
@@ -754,18 +754,19 @@ export async function formPartyTeams(
           .for("no key update", { noWait: true });
         if (lockedPeople.length) {
           await tx
-            .select({ id: certifications.id })
-            .from(certifications)
+            .select({ id: cards.id })
+            .from(cards)
             .where(
               and(
-                eq(certifications.shopId, input.shopId),
+                eq(cards.shopId, input.shopId),
+                eq(cards.kind, "level"),
                 inArray(
-                  certifications.personId,
+                  cards.personId,
                   lockedPeople.map((person) => person.id),
                 ),
               ),
             )
-            .orderBy(asc(certifications.id))
+            .orderBy(asc(cards.id))
             .for("update", { noWait: true });
         }
         const plan = await planPartyTeams(tx, input.shopId, input.tripId);

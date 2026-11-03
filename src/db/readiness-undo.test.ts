@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -20,7 +20,7 @@ import {
   upsertTripRequirements,
 } from "./readiness";
 import type { DiveSpecialty } from "./schema";
-import { certifications, shops, specialtyCertifications } from "./schema";
+import { cards, shops } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();
@@ -38,17 +38,17 @@ async function readinessContext() {
 /** The instant a card was last reviewed, which an Undo is offered for (issue #2612). */
 async function levelReviewedAt(db: AppDb, id: string): Promise<Date> {
   const [row] = await db
-    .select({ reviewedAt: certifications.reviewedAt })
-    .from(certifications)
-    .where(eq(certifications.id, id));
+    .select({ reviewedAt: cards.reviewedAt })
+    .from(cards)
+    .where(and(eq(cards.kind, "level"), eq(cards.id, id)));
   return row?.reviewedAt ?? new Date(0);
 }
 
 async function specialtyReviewedAt(db: AppDb, id: string): Promise<Date> {
   const [row] = await db
-    .select({ reviewedAt: specialtyCertifications.reviewedAt })
-    .from(specialtyCertifications)
-    .where(eq(specialtyCertifications.id, id));
+    .select({ reviewedAt: cards.reviewedAt })
+    .from(cards)
+    .where(and(eq(cards.kind, "specialty"), eq(cards.id, id)));
   return row?.reviewedAt ?? new Date(0);
 }
 
@@ -192,7 +192,10 @@ describe("undoing a card review (unreviewCertification / unreviewSpecialtyCertif
       }),
     ).toEqual({ ok: false, reason: "not_found" });
 
-    const [level] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [level] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(level).toMatchObject({ status: "verified" });
     expect(level?.reviewedAt).not.toBeNull();
     expect((await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.status).toBe("ready");
@@ -257,8 +260,8 @@ describe("undoing a card review (unreviewCertification / unreviewSpecialtyCertif
     expect((await specialtyReviewedAt(db, specialty.id)).getTime()).toBeGreaterThan(0);
     const [stillLevel] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.id, level.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, level.id)));
     expect(stillLevel?.status).toBe("verified");
   });
 
@@ -284,7 +287,10 @@ describe("undoing a card review (unreviewCertification / unreviewSpecialtyCertif
     expect(
       await unreviewCertification(db, { shopId: shop.id, certificationId: card.id, reviewedAt }),
     ).toEqual({ ok: false, reason: "agency_checked" });
-    const [kept] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [kept] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(kept).toMatchObject({ status: "verified", reviewNote: "PADI page lists this diver." });
     expect(kept?.agencyCheckedAt).not.toBeNull();
 
@@ -296,7 +302,10 @@ describe("undoing a card review (unreviewCertification / unreviewSpecialtyCertif
         reversingAgencyCheck: true,
       }),
     ).toMatchObject({ ok: true });
-    const [undone] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [undone] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(undone).toMatchObject({ status: "pending", reviewNote: null, agencyCheckedAt: null });
   });
 
@@ -323,9 +332,9 @@ describe("undoing a card review (unreviewCertification / unreviewSpecialtyCertif
       status: "verified",
     });
     await db
-      .update(certifications)
+      .update(cards)
       .set({ issuedByShopAt: nowDate() })
-      .where(eq(certifications.id, issued.id));
+      .where(and(eq(cards.kind, "level"), eq(cards.id, issued.id)));
 
     expect(
       await unreviewCertification(db, {
@@ -334,7 +343,10 @@ describe("undoing a card review (unreviewCertification / unreviewSpecialtyCertif
         reviewedAt: await levelReviewedAt(db, issued.id),
       }),
     ).toEqual({ ok: false, reason: "sighted_card" });
-    const [still] = await db.select().from(certifications).where(eq(certifications.id, issued.id));
+    const [still] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, issued.id)));
     expect(still?.reviewedAt).not.toBeNull();
 
     expect(

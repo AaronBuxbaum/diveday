@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { countDeparturesByBoat, createBoat } from "./boats";
 import { createBooking } from "./bookings";
-import { bookings, rollCallCrewEvents, rollCallEvents, tripAssignments, trips } from "./schema";
+import { crewSubject } from "./roll-call-subject";
+import { bookings, rollCallEvents, tripAssignments, trips } from "./schema";
 import { countDeparturesByTripLens, createTripLens } from "./trip-lenses";
 import { getTripRoster, listStaff } from "./trips";
 import { createTrip } from "./trips-create";
@@ -118,10 +119,10 @@ describe("boat and trip-tag deletion counts", () => {
       .insert(tripAssignments)
       .values({ tripId: crewAfterDive.trip.id, personId: staff.person.id })
       .onConflictDoNothing();
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: crewAfterDive.trip.id,
-      personId: staff.person.id,
+      ...crewSubject(staff.person.id),
       recordedByPersonId: staff.person.id,
       status: "not_boarded",
       checkpoint: "after_dive_1",
@@ -136,11 +137,11 @@ describe("boat and trip-tag deletion counts", () => {
       .insert(tripAssignments)
       .values({ tripId: crewCleared.trip.id, personId: staff.person.id })
       .onConflictDoNothing();
-    await db.insert(rollCallCrewEvents).values([
+    await db.insert(rollCallEvents).values([
       {
         shopId: shop.id,
         tripId: crewCleared.trip.id,
-        personId: staff.person.id,
+        ...crewSubject(staff.person.id),
         recordedByPersonId: staff.person.id,
         status: "boarded",
         checkpoint: "departure",
@@ -149,7 +150,7 @@ describe("boat and trip-tag deletion counts", () => {
       {
         shopId: shop.id,
         tripId: crewCleared.trip.id,
-        personId: staff.person.id,
+        ...crewSubject(staff.person.id),
         recordedByPersonId: staff.person.id,
         status: "cleared",
         checkpoint: "departure",

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, lt, lte, notExists, or } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, lt, lte, notExists, or } from "drizzle-orm";
 import { listAgencyCheckableCards } from "@/db/agency-check";
 import {
   blockedOnNextBoatDay,
@@ -37,6 +37,8 @@ import { listOpenPaymentDisputes } from "@/db/payment-disputes";
 import { listTripsReadiness } from "@/db/readiness";
 import { readReviewsAwaitingModeration } from "@/db/reviews";
 import { listRollCallGaps } from "@/db/roll-call-gaps";
+import { newestMarkFirst } from "@/db/roll-call-order";
+import { markBookingId, seatMarks } from "@/db/roll-call-subject";
 import {
   boats,
   bookings,
@@ -567,7 +569,7 @@ async function boardedAfterLastDive(
   const rows = await db
     .select({
       tripId: rollCallEvents.tripId,
-      bookingId: rollCallEvents.bookingId,
+      bookingId: markBookingId(),
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
     })
@@ -575,17 +577,14 @@ async function boardedAfterLastDive(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         inArray(
           rollCallEvents.tripId,
           departures.map((trip) => trip.id),
         ),
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    );
+    .orderBy(...newestMarkFirst());
   const seen = new Set<string>();
   for (const row of rows) {
     if (row.checkpoint !== lastCheckpoint.get(row.tripId)) continue;

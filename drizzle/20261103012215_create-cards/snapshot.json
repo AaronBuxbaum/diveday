@@ -1,0 +1,1398 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "84e72da0-3cf7-49cf-a779-60cd96b5dbfa",
+  "prevIds": [
+    "d5ffaed8-ed8f-4648-b646-0e878d4d73b5",
+    "b9f2e9dd-f26c-4863-94d6-7eecda28b03c"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "card_kind"
+      ],
+      "writes": [
+        "s|enum|public.card_kind",
+        "n|enum|public.card_kind",
+        "e|enum|public.card_kind",
+        "n|type|public.card_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "cards"
+      ],
+      "writes": [
+        "s|tbl|public.cards",
+        "n|tbl|public.cards",
+        "e|tbl|public.cards",
+        "n|rel|public.cards",
+        "n|type|public.cards",
+        "n|rel|public.cards_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.card_kind",
+        "n|enum|public.certification_agency",
+        "n|enum|public.certification_level",
+        "n|enum|public.dive_specialty",
+        "n|enum|public.certification_status"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "cards",
+        "cards_person_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.cards_person_id_idx",
+        "n|idx|public.cards_person_id_idx",
+        "e|idx|public.cards_person_id_idx",
+        "n|rel|public.cards_person_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|col|public.cards.person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "cards",
+        "cards_shop_person_kind_idx"
+      ],
+      "writes": [
+        "s|idx|public.cards_shop_person_kind_idx",
+        "n|idx|public.cards_shop_person_kind_idx",
+        "e|idx|public.cards_shop_person_kind_idx",
+        "n|rel|public.cards_shop_person_kind_idx"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|col|public.cards.shop_id",
+        "n|col|public.cards.person_id",
+        "n|col|public.cards.kind"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "cards",
+        "cards_junior_status_verifier_idx"
+      ],
+      "writes": [
+        "s|idx|public.cards_junior_status_verifier_idx",
+        "n|idx|public.cards_junior_status_verifier_idx",
+        "e|idx|public.cards_junior_status_verifier_idx",
+        "n|rel|public.cards_junior_status_verifier_idx"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|col|public.cards.junior_status_verified_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "cards",
+        "cards_processed_by_person_idx"
+      ],
+      "writes": [
+        "s|idx|public.cards_processed_by_person_idx",
+        "n|idx|public.cards_processed_by_person_idx",
+        "e|idx|public.cards_processed_by_person_idx",
+        "n|rel|public.cards_processed_by_person_idx"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|col|public.cards.processed_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "cards",
+        "cards_level_shop_agency_identifier_unique"
+      ],
+      "writes": [
+        "s|idx|public.cards_level_shop_agency_identifier_unique",
+        "n|idx|public.cards_level_shop_agency_identifier_unique",
+        "e|idx|public.cards_level_shop_agency_identifier_unique",
+        "n|rel|public.cards_level_shop_agency_identifier_unique"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|col|public.cards.shop_id",
+        "n|col|public.cards.agency"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "cards",
+        "cards_specialty_shop_agency_specialty_identifier_unique"
+      ],
+      "writes": [
+        "s|idx|public.cards_specialty_shop_agency_specialty_identifier_unique",
+        "n|idx|public.cards_specialty_shop_agency_specialty_identifier_unique",
+        "e|idx|public.cards_specialty_shop_agency_specialty_identifier_unique",
+        "n|rel|public.cards_specialty_shop_agency_specialty_identifier_unique"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|col|public.cards.shop_id",
+        "n|col|public.cards.agency",
+        "n|col|public.cards.specialty"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "cards",
+        "cards_nitrox_shop_agency_identifier_unique"
+      ],
+      "writes": [
+        "s|idx|public.cards_nitrox_shop_agency_identifier_unique",
+        "n|idx|public.cards_nitrox_shop_agency_identifier_unique",
+        "e|idx|public.cards_nitrox_shop_agency_identifier_unique",
+        "n|rel|public.cards_nitrox_shop_agency_identifier_unique"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|col|public.cards.shop_id",
+        "n|col|public.cards.agency"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "cards"
+      ],
+      "writes": [
+        "s|fk|public.cards.cards_shop_id_shops_id_fkey",
+        "n|fk|public.cards.cards_shop_id_shops_id_fkey",
+        "e|fk|public.cards.cards_shop_id_shops_id_fkey",
+        "n|con|public.cards.cards_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.cards.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "cards"
+      ],
+      "writes": [
+        "s|fk|public.cards.cards_person_id_people_id_fkey",
+        "n|fk|public.cards.cards_person_id_people_id_fkey",
+        "e|fk|public.cards.cards_person_id_people_id_fkey",
+        "n|con|public.cards.cards_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.cards.person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "cards"
+      ],
+      "writes": [
+        "s|fk|public.cards.cards_reviewed_by_person_id_people_id_fkey",
+        "n|fk|public.cards.cards_reviewed_by_person_id_people_id_fkey",
+        "e|fk|public.cards.cards_reviewed_by_person_id_people_id_fkey",
+        "n|con|public.cards.cards_reviewed_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.cards.reviewed_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "cards"
+      ],
+      "writes": [
+        "s|fk|public.cards.cards_issued_from_trip_id_trips_id_fkey",
+        "n|fk|public.cards.cards_issued_from_trip_id_trips_id_fkey",
+        "e|fk|public.cards.cards_issued_from_trip_id_trips_id_fkey",
+        "n|con|public.cards.cards_issued_from_trip_id_trips_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.cards.issued_from_trip_id",
+        "n|col|public.trips.id",
+        "e|uniqueness|public.trips.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "cards"
+      ],
+      "writes": [
+        "s|fk|public.cards.cards_issued_by_person_id_people_id_fkey",
+        "n|fk|public.cards.cards_issued_by_person_id_people_id_fkey",
+        "e|fk|public.cards.cards_issued_by_person_id_people_id_fkey",
+        "n|con|public.cards.cards_issued_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.cards.issued_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "cards"
+      ],
+      "writes": [
+        "s|fk|public.cards.cards_processed_by_person_id_people_id_fkey",
+        "n|fk|public.cards.cards_processed_by_person_id_people_id_fkey",
+        "e|fk|public.cards.cards_processed_by_person_id_people_id_fkey",
+        "n|con|public.cards.cards_processed_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.cards.processed_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "cards"
+      ],
+      "writes": [
+        "s|fk|public.cards.cards_listed_from_certification_id_cards_id_fkey",
+        "n|fk|public.cards.cards_listed_from_certification_id_cards_id_fkey",
+        "e|fk|public.cards.cards_listed_from_certification_id_cards_id_fkey",
+        "n|con|public.cards.cards_listed_from_certification_id_cards_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|col|public.cards.listed_from_certification_id",
+        "n|col|public.cards.id",
+        "e|uniqueness|public.cards.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "cards"
+      ],
+      "writes": [
+        "s|fk|public.cards.cards_junior_status_verified_by_person_id_people_id_fkey",
+        "n|fk|public.cards.cards_junior_status_verified_by_person_id_people_id_fkey",
+        "e|fk|public.cards.cards_junior_status_verified_by_person_id_people_id_fkey",
+        "n|con|public.cards.cards_junior_status_verified_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.cards.junior_status_verified_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "cards"
+      ],
+      "writes": [
+        "s|fk|public.cards.cards_deleted_by_person_id_people_id_fkey",
+        "n|fk|public.cards.cards_deleted_by_person_id_people_id_fkey",
+        "e|fk|public.cards.cards_deleted_by_person_id_people_id_fkey",
+        "n|con|public.cards.cards_deleted_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.cards.deleted_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "cards",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "card_kind",
+        "values": [
+          "level",
+          "specialty",
+          "nitrox"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "kind",
+        "type": "card_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "agency",
+        "type": "certification_agency",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "level",
+        "type": "certification_level",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "specialty",
+        "type": "dive_specialty",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "identifier",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "declared_identifier",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "status",
+        "type": "certification_status",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'pending'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "review_note",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "reviewed_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "reviewed_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "agency_checked_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "imported_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "imported_from_label",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "self_declared_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "issued_by_shop_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "issued_from_trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "issued_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "processed_with_agency_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "processed_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "listed_from_certification_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "junior_status",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "junior_status_verified_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "junior_status_verified_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "deleted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "deleted_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_person_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_shop_person_kind_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "kind",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_junior_status_verifier_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "junior_status_verified_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_processed_by_person_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "processed_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"processed_by_person_id\" is not null",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_level_shop_agency_identifier_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "agency",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "lower(\"identifier\")",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"deleted_at\" is null and \"kind\" = 'level'",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_specialty_shop_agency_specialty_identifier_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "agency",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "specialty",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "lower(\"identifier\")",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"deleted_at\" is null and \"kind\" = 'specialty'",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_nitrox_shop_agency_identifier_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "agency",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "lower(\"identifier\")",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"deleted_at\" is null and \"kind\" = 'nitrox'",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_reviewed_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "reviewed_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_issued_from_trip_id_trips_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "issued_from_trip_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "trips",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_issued_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "issued_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_processed_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "processed_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_listed_from_certification_id_cards_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "listed_from_certification_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "cards",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_junior_status_verified_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "junior_status_verified_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_deleted_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "deleted_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_kind_shape",
+        "value": "(\"kind\" = 'level' and \"level\" is not null and \"specialty\" is null) or (\"kind\" = 'specialty' and \"specialty\" is not null and \"level\" is null) or (\"kind\" = 'nitrox' and \"level\" is null and \"specialty\" is null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_declared_identifier_level_only",
+        "value": "\"declared_identifier\" is null or \"kind\" = 'level'",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_listed_from_not_level",
+        "value": "\"listed_from_certification_id\" is null or \"kind\" <> 'level'",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_junior_status_level_only",
+        "value": "\"junior_status\" is null or \"kind\" = 'level'",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_junior_status_valid",
+        "value": "\"junior_status\" is null or \"junior_status\" in ('junior', 'full')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_junior_status_evidence",
+        "value": "(\"junior_status\" is null and \"junior_status_verified_at\" is null and \"junior_status_verified_by_person_id\" is null) or (\"junior_status\" is not null and \"junior_status_verified_at\" is not null and \"junior_status_verified_by_person_id\" is not null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_processed_only_when_issued",
+        "value": "\"processed_with_agency_at\" is null or \"issued_by_shop_at\" is not null",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "cards_identifier_present_unless_unsighted",
+        "value": "(\"identifier\" is not null and length(btrim(\"identifier\", E' \\t\\n\\r\\f\\v')) > 0) or (\"self_declared_at\" is not null and \"status\" = 'pending') or (\"issued_by_shop_at\" is not null and (\"kind\" = 'level' or \"status\" = 'pending')) or (\"listed_from_certification_id\" is not null and \"kind\" <> 'level' and \"status\" = 'pending')",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

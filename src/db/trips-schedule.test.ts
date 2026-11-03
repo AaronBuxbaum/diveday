@@ -7,13 +7,8 @@ import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { captureDepartureBoatSafety } from "./boat-safety";
 import { createBoat } from "./boats";
-import {
-  courses,
-  departureBoatSafetySnapshots,
-  rollCallCrewEvents,
-  tripDives,
-  trips,
-} from "./schema";
+import { crewSubject } from "./roll-call-subject";
+import { courses, departureBoatSafetySnapshots, rollCallEvents, tripDives, trips } from "./schema";
 import { createTripLens, deleteTripLens } from "./trip-lenses";
 import {
   createTrip,
@@ -307,10 +302,10 @@ describe("schedule edits after roll-call evidence", () => {
     });
     if (!sailed) throw new Error("failed to create trip");
 
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: sailed.id,
-      personId: staffId,
+      ...crewSubject(staffId),
       recordedByPersonId: staffId,
       status: "boarded",
       checkpoint: "departure",

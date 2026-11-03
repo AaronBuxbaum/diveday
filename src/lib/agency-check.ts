@@ -269,8 +269,8 @@ export const LISTED_CARD_WORDING: Record<
  * **A level card that certifies enriched air with it.** GUE's Recreational
  * Diver 1 includes nitrox, so the page's own level line offers a nitrox card,
  * and borrowing the level card's number is right: it is the only number the
- * diver holds for it (the `nitrox_certifications` unique index says why that
- * is no collision).
+ * diver holds for it (the ledger's unique indexes are keyed per kind, and
+ * `cards_nitrox_shop_agency_identifier_unique` says why that is no collision).
  */
 export const BUNDLED_NITROX: Partial<Record<CheckableAgency, readonly string[]>> = {
   gue: ["Recreational Diver 1"],

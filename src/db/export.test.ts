@@ -10,12 +10,12 @@ import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
 import { canPersonExportShopData, loadShopExportBundleInput } from "./export";
 import { EXCLUDED_TABLES } from "./export-table-classification.test-support";
-import { EXPECTED_FILES, EXPORTED_TABLES } from "./export-test-fixtures";
+import { EXPECTED_FILES, EXPORTED_TABLES, ROLL_CALL_SPLIT } from "./export-test-fixtures";
 import * as schema from "./schema";
 import {
   activityEvents,
   bookings,
-  certifications,
+  cards,
   courses,
   interests,
   internalNotes,
@@ -45,6 +45,7 @@ const FOLDED_TABLES = [
  */
 const SHOP_SCOPED = "shop_id";
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
+  roll_call_events: ROLL_CALL_SPLIT,
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: [
     "jurisdiction",
@@ -432,8 +433,7 @@ describe("full-shop export dataset", () => {
     expect(rollCall.header).toContain("client_event_id");
     expect(rollCall.header).toContain("offline_snapshot_saved_at");
     const crewRollCall = table(input, "roll_call_crew_events.csv");
-    expect(crewRollCall.header).toContain("source");
-    expect(crewRollCall.header).toContain("client_event_id");
+    expect(crewRollCall.header).toEqual(expect.arrayContaining(["source", "client_event_id"]));
   });
 
   it("flattens each person into an import-ready contacts row", async () => {
@@ -482,8 +482,9 @@ describe("full-shop export dataset", () => {
       .insert(people)
       .values({ shopId: shop.id, fullName: "Lapsed Card Lee", email: "lee@example.com" })
       .returning();
-    await db.insert(certifications).values([
+    await db.insert(cards).values([
       {
+        kind: "level",
         shopId: shop.id,
         personId: diver.id,
         agency: "padi",
@@ -492,6 +493,7 @@ describe("full-shop export dataset", () => {
         status: "pending",
       },
       {
+        kind: "level",
         shopId: shop.id,
         personId: diver.id,
         agency: "padi",
@@ -504,7 +506,8 @@ describe("full-shop export dataset", () => {
       .insert(people)
       .values({ shopId: shop.id, fullName: "Only Expired Erin", email: "erin@example.com" })
       .returning();
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: onlyPending.id,
       agency: "ssi",
@@ -572,7 +575,8 @@ describe("full-shop export dataset", () => {
         noCertificationDeclaredAt: declaredAt,
       })
       .returning();
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: carded.id,
       agency: "padi",
@@ -601,7 +605,8 @@ describe("full-shop export dataset", () => {
         noCertificationDeclaredAt: declaredAt,
       })
       .returning();
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: changedMind.id,
       agency: "other",
