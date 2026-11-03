@@ -1393,3 +1393,6 @@ export async function canPersonExportShopData(
   const roles = await readActiveStaffRoles(db, shopId, personId);
   return roles !== null && canExportShopData(roles);
 }
+
+/** The backups page's page depth, so that page reads through this one module. */
+export { PAGE_SIZE } from "./paging";

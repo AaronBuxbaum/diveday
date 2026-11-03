@@ -12,10 +12,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { assistsAvailable } from "@/db/assists";
-import { latestServiceClocks } from "@/db/gear";
-import { listStaff } from "@/db/trips";
-import { getWorkOrderDetail } from "@/db/work-orders";
+import { getWorkOrderPage } from "@/db/work-order-page";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -108,18 +105,12 @@ export default async function WorkOrderPage({
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const currency = toShopCurrency(shop.currency);
 
-  const [detail, staff] = await Promise.all([
-    getWorkOrderDetail(db, shop.id, workOrderId, { todayLocal }),
-    listStaff(db, shop.id),
-  ]);
-  if (!detail) notFound();
+  // With a shop unit's last reading of each clock, so the Work done form can
+  // carry the fleet's own interval forward instead of a convention.
+  const page = await getWorkOrderPage(db, shop.id, workOrderId, { todayLocal });
+  if (!page) notFound();
+  const { detail, staff, clocks } = page;
   const { workOrder } = detail;
-  // A shop unit's last reading of each clock, so the Work done form can carry
-  // the fleet's own interval forward instead of a convention.
-  const clocks = workOrder.gearItemId
-    ? ((await latestServiceClocks(db, shop.id, [workOrder.gearItemId])).get(workOrder.gearItemId) ??
-      [])
-    : [];
   const deleted = workOrder.deletedAt !== null;
   const outcome = workOrder.outcome as WorkOrderOutcome | null;
   const localLineRefusal = isLineAddRefusal(notice, form, deleted);
@@ -204,11 +195,7 @@ export default async function WorkOrderPage({
           formOpen={["empty-problem", "invalid-date", "unknown-technician"].includes(notice ?? "")}
           locale={locale}
           t={t}
-          draftNote={
-            !deleted && (await assistsAvailable(db, shop.id))
-              ? draftBenchNoteAction.bind(null, shopSlug)
-              : undefined
-          }
+          draftNote={page.can.draftNote ? draftBenchNoteAction.bind(null, shopSlug) : undefined}
         />
 
         {detail.pieces.length > 0 ? (

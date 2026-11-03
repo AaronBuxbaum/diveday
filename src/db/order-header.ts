@@ -1,16 +1,16 @@
-import type { AppDb } from "@/db/client";
-import { counterRentalTicketIdForOrder } from "@/db/gear-counter-rentals";
+import type { AppDb } from "./client";
+import { counterRentalTicketIdForOrder } from "./gear-counter-rentals";
 import {
   type LostPaymentDispute,
   listLostDisputes,
   listOpenPaymentDisputes,
   type OpenPaymentDispute,
-} from "@/db/payment-disputes";
-import { canPersonViewShopReports } from "@/db/reporting";
+} from "./payment-disputes";
+import { canPersonViewShopReports } from "./reporting";
 
 /**
  * What the order header reads beyond the order row: the counter-rental ticket an invoice billed
- * for, and an undecided card dispute against it. Read by the page beside its own reads, so the
+ * for, and an undecided card dispute against it. Read by the order page's reader beside its other reads, so the
  * header's components only render (the page is the one place that reads).
  *
  * The dispute is withheld from anyone who may not read the shop's money — the same reader Today

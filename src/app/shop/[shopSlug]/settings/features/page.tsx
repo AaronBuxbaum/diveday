@@ -7,12 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceRow, FormStatus, StickyFormActions } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
-import { assistDarkReasonFor } from "@/db/assists";
-import {
-  canPersonManagePaymentSettings,
-  canPersonManageShopSettings,
-  canPersonManageStaffAccounts,
-} from "@/db/authz";
+import { canPersonManageShopSettings, getFeaturesPage } from "@/db/features-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
@@ -153,16 +148,13 @@ export default async function FeaturesPage({
     refusal: { notice: "settings-not-authorized" },
   });
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  // Never the reason the page fails: a dark-reason read that throws comes back
+  // "unread", which shows no line and no notes box.
+  const { can, dark } = await getFeaturesPage(db, shop.id, session.user.personId);
   const gates = new Set<FeatureRowGate>(["settings"]);
-  if (await canPersonManagePaymentSettings(db, session.user.shopId, session.user.personId)) {
-    gates.add("payments");
-  }
-  if (await canPersonManageStaffAccounts(db, session.user.shopId, session.user.personId)) {
-    gates.add("team");
-  }
+  if (can.payments) gates.add("payments");
+  if (can.team) gates.add("team");
   const banner = noticeFromParam(notice, noticeMessages(t));
-  // Never the reason the page fails: a read that throws shows no line and no notes box.
-  const dark = await assistDarkReasonFor(db, shop.id).catch(() => "unread" as const);
   const darkKey = dark === "unread" ? null : darkWhileOnKey(dark);
   const base = `/shop/${session.user.shopSlug}`;
 

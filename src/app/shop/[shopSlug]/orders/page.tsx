@@ -10,14 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
-import { canPersonManageOrders, canPersonManagePaymentSettings } from "@/db/authz";
-import { listImportedPaymentHistory } from "@/db/imported-payment-history";
-import { ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
-import { getShopPersonName } from "@/db/people";
-import { canPersonViewShopReports } from "@/db/reporting";
-import { orderStatus } from "@/db/schema";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { getShopTripTitle } from "@/db/trips";
+import { getOrdersIndex, ORDER_DEFAULT_RANGE_DAYS, ORDER_STATUSES } from "@/db/orders-index";
 import { ORDER_STATUS_KEYS } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -50,7 +43,7 @@ import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { OwedLine } from "./_components/OwedLine";
 import { MoneyOwedQueues } from "./_components/OwedMoneyQueues";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
-import { PayoutLines, readBackOffice } from "./_components/PayoutLines";
+import { PayoutLines } from "./_components/PayoutLines";
 import { type OrdersHrefOverrides, orderIndexFilter, ordersIndexHref } from "./order-index-filter";
 
 // This page's loading.tsx can paint before its reads; no request read sits above it.
@@ -146,32 +139,6 @@ export default async function OrdersIndexPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const banner = noticeFromParam(notice, NOTICES);
-  // The destination re-checks payment setup; hiding this door avoids a dead end.
-  const paymentsConnected = canAcceptPayments(await getShopStripeAccount(db, session.user.shopId));
-
-  // Unconfirmed Stripe operations are money work and remain conspicuous here.
-  //
-  // Keep the DB-backed permissions separate: reconciliation is payment-manager
-  // only, order creation has its own gate, and exports follow report access.
-  // Unauthorized staff never trigger the privileged reconciliation read; each
-  // destination also enforces its own permission.
-  const [canReconcilePayments, canManageOrders, canExportOrders] = await Promise.all([
-    canPersonManagePaymentSettings(db, session.user.shopId, session.user.personId),
-    canPersonManageOrders(db, session.user.shopId, session.user.personId),
-    canPersonViewShopReports(db, session.user.shopId, session.user.personId),
-  ]);
-  // Reuse one permission-gated door in both the header and empty state.
-  const newOrderDoor = canManageOrders ? (
-    <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
-      {t("orders.index.newOrder")}
-    </Link>
-  ) : null;
-  const { stuckPaymentOperations, payouts, ...queues } = await readBackOffice(
-    db,
-    shop,
-    canReconcilePayments,
-  );
-
   // Page and CSV use the same URL filter so they describe the same orders.
   const {
     filter: orderFilter,
@@ -189,34 +156,58 @@ export default async function OrdersIndexPage({
   const showAll = selectedRange === "all";
   const customRange = selectedRange === "custom";
 
-  const ledger = await pagedOrdersByDay(
-    db,
-    shop.id,
-    shop.timezone,
-    orderFilter,
-    // A non-numeric or missing `?page=` reads as page 1 rather than NaN;
-    // `offsetPage` clamps it into range either way.
-    { page: Number.parseInt(page ?? "", 10) },
-  );
-  const orderPage = ledger.page;
-  // Imported history has no local trip or order status: honor diver and explicit
-  // date filters, omit the live-order default window, and hide it for trip views.
-  const importedHistoryPage = tripFilter
-    ? null
-    : await listImportedPaymentHistory(
-        db,
-        shop.id,
-        {
-          personId: personFilter,
-          // The one search box reaches the diver's name here too. Imported
-          // records carry no departure, so the trip half of the search simply
-          // has nothing to match — the same honest narrowing `?tripId=` gets.
-          personQuery: personFilter ? undefined : trimmedQuery,
-          from: customRange && from && isValidCalendarDate(from) ? from : undefined,
-          to: customRange && to && isValidCalendarDate(to) ? to : undefined,
+  // The destination re-checks payment setup; hiding the new-order door avoids a
+  // dead end. Unconfirmed Stripe operations are money work and remain
+  // conspicuous here.
+  //
+  // Keep the DB-backed permissions separate: reconciliation is payment-manager
+  // only, order creation has its own gate, and exports follow report access.
+  // Unauthorized staff never trigger the privileged reconciliation read; each
+  // destination also enforces its own permission.
+  //
+  // A non-numeric or missing `?page=` reads as page 1 rather than NaN;
+  // `offsetPage` clamps it into range either way. The filter labels resolve
+  // independently so empty results still name the filter; the trip lookup is
+  // shop-scoped.
+  const {
+    paymentsConnected,
+    can,
+    backOffice: { stuckPaymentOperations, payouts, ...queues },
+    ledger,
+    importedHistoryPage,
+    filteredPersonName,
+    filteredTripTitle,
+  } = await getOrdersIndex(db, shop, session.user.personId, {
+    filter: orderFilter,
+    page: Number.parseInt(page ?? "", 10),
+    // Imported history has no local trip or order status: honor diver and explicit
+    // date filters, omit the live-order default window, and hide it for trip views.
+    imported: tripFilter
+      ? null
+      : {
+          filter: {
+            personId: personFilter,
+            // The one search box reaches the diver's name here too. Imported
+            // records carry no departure, so the trip half of the search simply
+            // has nothing to match — the same honest narrowing `?tripId=` gets.
+            personQuery: personFilter ? undefined : trimmedQuery,
+            from: customRange && from && isValidCalendarDate(from) ? from : undefined,
+            to: customRange && to && isValidCalendarDate(to) ? to : undefined,
+          },
+          page: Number.parseInt(importedPage ?? "", 10),
         },
-        { page: Number.parseInt(importedPage ?? "", 10) },
-      );
+    personFilter,
+    tripFilter,
+  });
+  const canReconcilePayments = can.reconcilePayments;
+  const canExportOrders = can.exportOrders;
+  // Reuse one permission-gated door in both the header and empty state.
+  const newOrderDoor = can.manageOrders ? (
+    <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
+      {t("orders.index.newOrder")}
+    </Link>
+  ) : null;
+  const orderPage = ledger.page;
   const hasImportedHistory = Boolean(importedHistoryPage && importedHistoryPage.total > 0);
 
   const hrefWith = (overrides: OrdersHrefOverrides, path = "orders") =>
@@ -236,12 +227,6 @@ export default async function OrdersIndexPage({
       path,
     );
 
-  // Resolve filter labels independently so empty results still name the filter.
-  const filteredPersonName = personFilter
-    ? await getShopPersonName(db, shop.id, personFilter)
-    : null;
-  // Shop-scope the trip lookup; an empty result still names its departure.
-  const filteredTripTitle = tripFilter ? await getShopTripTitle(db, shop.id, tripFilter) : null;
   const hasFilters = Boolean(
     statusFilter ||
       personFilter ||
@@ -394,7 +379,7 @@ export default async function OrdersIndexPage({
             searchPlaceholder: t("orders.index.filters.searchPlaceholder"),
             statusLabel: t("orders.index.filters.statusLabel"),
             statusAll: t("orders.index.filters.statusAll"),
-            statuses: orderStatus.enumValues.map((value) => ({
+            statuses: ORDER_STATUSES.map((value) => ({
               value,
               label: ORDER_STATUS_KEYS[value] ? t(ORDER_STATUS_KEYS[value]) : value,
             })),

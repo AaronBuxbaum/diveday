@@ -5,12 +5,8 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
-import { canPersonViewShopActivity } from "@/db/authz";
-import {
-  listShopActivityPeople,
-  pagedShopActivity,
-  type ShopActivityLine,
-} from "@/db/shop-activity";
+import type { ShopActivityLine } from "@/db/shop-activity";
+import { canPersonViewShopActivity, getShopActivityPage } from "@/db/shop-activity-page";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "@/i18n/activity-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -94,20 +90,12 @@ export default async function ShopActivityPage({
     ? wallTimeToUtc({ ...toDay, day: toDay.day + 1, hour: 0, minute: 0 }, shop.timezone)
     : null;
 
-  const [log, staff] = await Promise.all([
-    pagedShopActivity(
-      db,
-      shop.id,
-      {
-        actorPersonId: personId,
-        kind,
-        from: from ?? undefined,
-        to: to ?? undefined,
-      },
-      { page: Number.parseInt(query.page ?? "", 10) },
-    ),
-    listShopActivityPeople(db, shop.id),
-  ]);
+  const { log, staff } = await getShopActivityPage(
+    db,
+    shop.id,
+    { actorPersonId: personId, kind, from: from ?? undefined, to: to ?? undefined },
+    { page: Number.parseInt(query.page ?? "", 10) },
+  );
 
   const filtered = Boolean(personId || kind || fromDay || toDay);
   const basePath = shopPath(shopSlug, "settings", "activity");
