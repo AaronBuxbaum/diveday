@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { blockerLabelCopy } from "@/i18n/today-labels";
 import { blockerFixFor } from "./blockers";
 import { resolveCopy } from "./copy";
 import type { ReadinessBlocker } from "./readiness";
 
 const t = staffTranslator("en-US");
-const words = (fix: ReturnType<typeof blockerFixFor>) => (fix ? resolveCopy(t, fix.label) : null);
+const words = (fix: ReturnType<typeof blockerFixFor>) =>
+  fix ? resolveCopy(t, blockerLabelCopy(fix.label)) : null;
 
 const ctx = {
   shopSlug: "reef-co",
@@ -21,7 +23,7 @@ describe("blockerFixFor", () => {
     const fix = blockerFixFor(blockers, ctx);
     expect(words(fix)).toBe("Open Priya’s record");
     expect(fix).toEqual({
-      label: { key: "today.pointingLabel.diver", params: { name: "Priya" } },
+      label: { how: "point", target: "diver", fullName: "Priya Sharma" },
       href: "/shop/reef-co/divers/person-1",
       sendsWaiver: false,
       bookingId: "booking-1",
@@ -33,7 +35,7 @@ describe("blockerFixFor", () => {
     const fix = blockerFixFor(blockers, ctx);
     expect(words(fix)).toBe("Send waiver");
     expect(fix).toEqual({
-      label: { key: "today.blockerAction.sendWaiver" },
+      label: { how: "send", code: "waiver_not_sent" },
       href: "/shop/reef-co/trips/trip-1#booking-booking-1",
       sendsWaiver: true,
       bookingId: "booking-1",

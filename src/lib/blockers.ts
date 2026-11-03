@@ -1,9 +1,4 @@
-import {
-  blockerActionLabelCopy,
-  pointingLabelCopy,
-  type WaiverBatchCode,
-} from "@/i18n/today-labels";
-import type { Copy } from "./copy";
+import type { WaiverBatchCode } from "@/i18n/today-labels";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import { KIND_SEVERITY, type TodayActionKind } from "./today-kinds";
 
@@ -136,13 +131,23 @@ export function primaryBlocker(blockers: readonly ReadinessBlocker[]): Readiness
  * the palette's fixes (`blockerFixFor`, `src/lib/palette-answer.ts`) read it
  * from the substrate too, and nothing in `src/lib` may import a feature.
  */
+/**
+ * Which words a blocked row's one action wears, as a fact and not a sentence: a waiver row
+ * sends in place and keeps the verb for its code; every other row only points at the surface
+ * that clears it. `blockerLabelCopy` (`src/i18n/today-labels.ts`) turns it into a `Copy` and
+ * the renderer resolves that, so nothing in `src/lib` imports a translator or a key table.
+ */
+export type BlockerLabelRef =
+  | { how: "send"; code: ReadinessBlockerCode }
+  | { how: "point"; target: "trip" | "diver"; fullName: string };
+
 export type BlockerDestination = {
   blocker: ReadinessBlocker;
   kind: TodayActionKind;
   target: "trip" | "diver";
   sendsWaiver: boolean;
-  /** The words, as a key the renderer resolves: this module decides the fix, not the language. */
-  label: Copy;
+  /** The words, as a reference the renderer resolves: this module decides the fix, not the language. */
+  label: BlockerLabelRef;
   href: string;
 };
 
@@ -170,8 +175,8 @@ export function blockerDestination(
     // Waiver rows send in place, so they keep the verb; a card row only opens
     // the person record, so it points instead of pretending to act.
     label: sendsWaiver
-      ? blockerActionLabelCopy(blocker.code)
-      : pointingLabelCopy(target, ctx.fullName),
+      ? { how: "send", code: blocker.code }
+      : { how: "point", target, fullName: ctx.fullName },
     href:
       target === "diver"
         ? `/shop/${ctx.shopSlug}/divers/${ctx.personId}`
@@ -186,7 +191,7 @@ export function blockerDestination(
  * "Open roster") rather than pretending to act.
  */
 export type BlockerFix = {
-  label: Copy;
+  label: BlockerLabelRef;
   href: string;
   sendsWaiver: boolean;
   bookingId: string;
@@ -201,8 +206,8 @@ export type BlockerFix = {
  * and what it says, so the counter and the Today queue cannot drift apart about
  * a diver they both show.
  *
- * The label is a `Copy`, not a sentence: the caller that renders it owns the
- * locale (`resolveCopy`), so nothing here defaults to English.
+ * The label is a reference, not a sentence: the caller that renders it owns the
+ * locale (`blockerLabelCopy`, then `resolveCopy`), so nothing here defaults to English.
  */
 export function blockerFixFor(
   blockers: readonly ReadinessBlocker[],
