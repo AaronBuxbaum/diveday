@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { crewSubject } from "./roll-call-subject";
 import {
   executedDives,
   people,
@@ -70,7 +71,7 @@ describePostgres("the demo boat at sea under a doubled pass", () => {
     const mark = (personId: string, checkpoint: string, hoursAgo: number) => ({
       shopId: shop.id,
       tripId: trip.id,
-      personId,
+      ...crewSubject(personId),
       recordedByPersonId: captain.id,
       status: "boarded" as const,
       checkpoint,
