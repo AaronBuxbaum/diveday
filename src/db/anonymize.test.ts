@@ -8,7 +8,6 @@ import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { saveShopIntegration } from "./integrations";
 import { recordRollCall } from "./manifests";
-import { listOwedProcessorErasures } from "./processor-erasure";
 import {
   authProviderAccounts,
   authVerifications,
@@ -43,6 +42,7 @@ import {
   waiverTemplates,
 } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
+import { listUnfinished } from "./unfinished";
 
 const fileCtx = fileScopedShopContext({ history: true });
 
@@ -1196,7 +1196,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       expect.stringContaining(":customer-delete"),
     );
     // The session is the manual half: nothing automated reaches it.
-    const owed = await listOwedProcessorErasures(db, shop.id);
+    const owed = await listUnfinished(db, shop.id, "processor_erasure");
     expect(owed.map((row) => row.target)).toEqual(["stripe_checkout_session_snapshot"]);
   });
 

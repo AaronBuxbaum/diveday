@@ -105,7 +105,7 @@ export async function undoHeldSend(
     .select({ runAt: notificationSendQueue.nextAttemptAt, status: notificationSendQueue.status })
     .from(notificationSendQueue)
     .where(heldRowOf(shopId, id));
-  if (!row || row.status !== "queued" || isHeldSendDue(row.runAt, now, 0)) return false;
+  if (row?.status !== "queued" || isHeldSendDue(row.runAt, now, 0)) return false;
   // `queued` again in the delete itself: a claim that landed between the read
   // and this line has already started the send, and Undo must not pretend.
   const deleted = await db
@@ -173,7 +173,7 @@ export async function claimHeldSend(
     .select({ runAt: notificationSendQueue.nextAttemptAt, status: notificationSendQueue.status })
     .from(notificationSendQueue)
     .where(heldRowOf(shopId, id));
-  if (!row || row.status !== "queued") return { status: "gone" };
+  if (row?.status !== "queued") return { status: "gone" };
   if (!options.early && !isHeldSendDue(row.runAt, now)) return { status: "pending" };
   const [claimed] = await claimRow(db, heldRowOf(shopId, id));
   if (!claimed) return { status: "gone" };

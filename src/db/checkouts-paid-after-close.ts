@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
+import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
@@ -10,7 +11,6 @@ import {
   markPaymentOperationUnanswered,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
-  STALE_AFTER_MS,
   startPaymentOperation,
 } from "./payment-operations";
 import {
@@ -162,7 +162,8 @@ export async function refundPaidAfterCloseCheckout(
   checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
   options: { staleBefore?: Date } = {},
 ): Promise<PaidAfterCloseRefundOutcome> {
-  const staleBefore = options.staleBefore ?? new Date(nowDate().getTime() - STALE_AFTER_MS);
+  const staleBefore =
+    options.staleBefore ?? new Date(nowDate().getTime() - PAYMENT_CLAIM_STALE_AFTER_MS);
   const claim = await db.transaction(async (tx) => {
     const [row] = await tx
       .select()

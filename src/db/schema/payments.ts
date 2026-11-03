@@ -659,7 +659,7 @@ export const orders = pgTable(
      * When an open invoice was claimed for counter money and Stripe has not yet
      * answered the out-of-band mark (`recordPaymentOnOpenOrder`). Set with the
      * claim, cleared when the claim is settled or given back; a stamp older
-     * than `STALE_AFTER_MS` belonged to a call that died.
+     * than `PAYMENT_CLAIM_STALE_AFTER_MS` belonged to a call that died.
      */
     counterClaimedAt: timestamp("counter_claimed_at", { withTimezone: true }),
     /** The room a `room_charge` order was charged to, as the front desk names it. */
@@ -1319,7 +1319,7 @@ export const paymentOperationKind = pgEnum("payment_operation_kind", [
  * order/checkout/payment row was written" leaves behind. `succeeded`/`failed`
  * mean the Stripe call itself returned; a row still `started` past a short
  * staleness window is exactly the "indeterminate operation" CR-005 exists to
- * surface (`listStuckPaymentOperations`, src/db/payment-operations.ts).
+ * surface (`listUnfinished`, src/db/unfinished.ts).
  */
 export const paymentOperationStatus = pgEnum("payment_operation_status", [
   "started",

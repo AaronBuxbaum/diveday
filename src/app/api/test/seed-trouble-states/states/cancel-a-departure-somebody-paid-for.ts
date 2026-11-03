@@ -4,7 +4,7 @@ import { bookingPayments, bookings, trips } from "@/db/schema";
 
 /**
  * **Somebody is owed money**: a departure the shop cancelled that still
- * carries a paid seat. `listOwedShopCancellationRefunds` joins a paid
+ * carries a paid seat. the owed-refund read (`src/db/unfinished.ts`) joins a paid
  * booking_payment to a `cancelled` trip whose booking is *not* cancelled (the
  * forfeit carve-out), so cancelling the trip is the whole edit.
  *

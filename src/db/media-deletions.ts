@@ -1,4 +1,5 @@
-import { and, eq, lt, or, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { stuckBefore } from "@/lib/attempts";
 import { nowDate } from "@/lib/clock";
 import {
   type DeleteImageResult,
@@ -8,6 +9,7 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { diveSitePhotoStillHeld } from "./dive-site-photos";
 import { type MediaDeletionAttempt, type MediaDeletionKind, mediaDeletionAttempts } from "./schema";
+import { unfinishedMediaDeletionWhere } from "./unfinished";
 
 /** Injectable so tests can assert both delete outcomes without a real Blob token. */
 type DeleteFn = (url: string) => Promise<DeleteImageResult>;
@@ -122,43 +124,8 @@ export async function queueAndAttemptMediaDeletion(
   await attemptMediaDeletion(db, attempt, deleteFn);
 }
 
-/**
- * A `pending` row created before this cutoff means the process that queued it
- * died before ever resolving it — indistinguishable, for retry purposes, from
- * a `failed` row (CR-012's "provider-delete failure is owner-visible and
- * retryable" case covers both). Defaults to five minutes ago; injectable so
- * tests don't depend on real wall-clock time passing. Exported so
- * `src/db/today.ts` can build the same cutoff from its own `now` (task 157)
- * instead of reading the live clock the way `listPendingMediaDeletions`'s
- * default argument does. (That default is what the Settings panel reads with.)
- */
-export const STALE_PENDING_AFTER_MS = 5 * 60 * 1000;
-
-function defaultStaleBefore(): Date {
-  return new Date(nowDate().getTime() - STALE_PENDING_AFTER_MS);
-}
-
-function stuckDeletionWhere(staleBefore: Date) {
-  return or(
-    eq(mediaDeletionAttempts.status, "failed"),
-    and(
-      eq(mediaDeletionAttempts.status, "pending"),
-      lt(mediaDeletionAttempts.createdAt, staleBefore),
-    ),
-  );
-}
-
-/** Attempts an owner needs to see and can retry — the panel in Settings' "Data" group. */
-export async function listPendingMediaDeletions(
-  db: AppDb,
-  shopId: string,
-  staleBefore: Date = defaultStaleBefore(),
-): Promise<MediaDeletionAttempt[]> {
-  return db
-    .select()
-    .from(mediaDeletionAttempts)
-    .where(and(eq(mediaDeletionAttempts.shopId, shopId), stuckDeletionWhere(staleBefore)))
-    .orderBy(mediaDeletionAttempts.createdAt);
+function defaultStaleBefore(): Date | null {
+  return stuckBefore("media_deletion", nowDate());
 }
 
 /** Retry one attempt by id, scoped to the shop — the owner-visible "Retry" action. */
@@ -188,13 +155,13 @@ export async function retryMediaDeletion(
 export async function retryPendingMediaDeletions(
   db: AppDb,
   limit = 50,
-  staleBefore: Date = defaultStaleBefore(),
+  staleBefore: Date | null = defaultStaleBefore(),
   deleteFn: DeleteFn = deleteStoredImageTracked,
 ): Promise<{ attempted: number; succeeded: number }> {
   const rows = await db
     .select()
     .from(mediaDeletionAttempts)
-    .where(stuckDeletionWhere(staleBefore))
+    .where(unfinishedMediaDeletionWhere(staleBefore))
     .limit(limit);
   let succeeded = 0;
   for (const row of rows) {

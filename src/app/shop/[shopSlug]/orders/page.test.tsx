@@ -142,7 +142,7 @@ function toolbarProps(element: unknown) {
 /**
  * An intent that started long enough ago to count as never having resolved.
  * Anchored to `nowDate()`, not the wall clock: the unit-test harness freezes
- * `DIVEDAY_CLOCK`, and `listStuckPaymentOperations` measures staleness against
+ * `DIVEDAY_CLOCK`, and the stuck-payment read (`src/db/unfinished.ts`) measures staleness against
  * that frozen instant — a real `Date.now()` here is a full fortnight in its
  * future and reads as an operation that started moments ago.
  */
@@ -384,7 +384,7 @@ describe("the failed-refunds queue", () => {
  * Both back-office notices with a row on a departure: an unconfirmed Stripe
  * checkout for a trip, and money owed on a trip the shop called off with its
  * paid seats still paid. The seeded shop's paid seats are real money once
- * their departure is cancelled, which is all `listOwedShopCancellationRefunds`
+ * their departure is cancelled, which is all the owed-refund read (`src/db/unfinished.ts`)
  * asks.
  */
 async function troubleOnADeparture(db: AppDb, session: DiveDaySession) {
