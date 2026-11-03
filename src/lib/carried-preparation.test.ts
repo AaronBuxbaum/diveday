@@ -88,7 +88,7 @@ describe("carriedPreparation", () => {
   });
 
   /**
-   * `expired` means they sign again and `medical_review` is an open question,
+   * `lapsed` means they sign again and `medical_review` is an open question,
    * not a thing kept. Neither is reassuring to read on the day a trip was
    * called off, and neither is true.
    */

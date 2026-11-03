@@ -78,7 +78,7 @@ function waiverDetail(
     return guardian ? `${goodUntil} · ${guardianCoSignedText(t, guardian)}` : goodUntil;
   }
   // Signed and current, by the diver alone, on a day they were a minor (ADR
-  // 20260907-guardian-co-signature): the fix is a fresh link, like `expired`.
+  // 20260907-guardian-co-signature): the fix is a fresh link, like `lapsed`.
   if (diver.waiver.state === "guardian_missing") {
     return t("divers.stats.waiverGuardianMissing", { date: date(diver.waiver.signedAt) });
   }
@@ -204,7 +204,7 @@ export function WaiverGroup({
   // carries the asymmetry; this is the one place the record composes it.
   //
   // It only reaches a diver who has signed *nothing*, which used to mean
-  // "anything but `current`". A minor's solo signature is the second state
+  // "anything but `signed`". A minor's solo signature is the second state
   // that is a signed release (ADR 20260907-guardian-co-signature), and letting
   // a stale pending link overwrite its word read "Not signed" over a record
   // whose own line underneath said the diver had signed it that morning.

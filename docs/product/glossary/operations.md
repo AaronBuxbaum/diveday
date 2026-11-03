@@ -1580,10 +1580,13 @@
   clearance stamps by one derivation (`waiverStanding` for a record, `shopWaiverStanding` for the
   diver at the shop, issue #2705): `none`, `awaiting_signature`, `link_expired`, `signed`,
   `lapsed`, `guardian_missing`, `medical_review` or `medical_not_cleared`. Readiness, the roster,
-  the diver record and the counter all ask it, so one release is never called two things on two
-  screens. The record's stored `status` (`pending`, `completed`, `medical_review`) is where the
-  record was parked, history only: a cleared referral keeps `medical_review` and stands as
-  `signed`. The departure log prints its own frozen codes, mapped from the standing, because its
+  the diver record and the counter all speak this one list. The roster still reads a seat's one
+  record where the diver record reads the diver, so a lapsed release or a minor's solo signature can
+  still differ between the two (issue #3775). Record-level `signed` means the record is a clean
+  signature; whether it still stands is the resolver's question. The record's stored `status` (`pending`, `completed`, `medical_review`) is never shown
+  as a word, but it is still read: `medical_review` marks a referral, and the medical hold gate
+  reads it, so a signature stamp alone never makes a record `signed`. A cleared referral keeps
+  `medical_review` and stands as `signed`. The departure log prints its own frozen codes, mapped from the standing, because its
   words are sealed in the log's content hash.
 - **Medical hold** — a signed release the medical questionnaire **referred** to a physician and no
   physician has cleared: an open referral, or one the physician refused. It is the record's status

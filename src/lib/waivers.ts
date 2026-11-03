@@ -495,7 +495,7 @@ export function effectiveReleaseForRiderSeat(input: {
  * the diver's seats (the evidence carries that one only from the signer's own
  * seat, `listSignedWaiversByPerson`). A send on one seat never turns another
  * seat's lapse into "not sent". The same reading {@link shopWaiverStanding} gives
- * the diver record as `expired`.
+ * the diver record as `lapsed`.
  *
  * It names the blocker and nothing more. The seat is blocked whichever it is;
  * a lapsed signature asks the diver to sign again, where an unsent release asks
@@ -581,8 +581,10 @@ export function bookingRecordLapsed(
  * that names a waiver's standing (readiness, the roster, the diver record, the
  * counter, the incident log) reads it through {@link waiverStanding} or
  * {@link shopWaiverStanding}, so the same release can never be called two
- * things on two screens. The stored `status` column is where a record was
- * parked; it is history, never a word a surface shows.
+ * things on two screens. The stored `status` column is never a word a surface
+ * shows, but it is still an input: `medical_review` is what marks a referral,
+ * and the gates (`isUnclearedReferral`, `isUnresolvedMedicalHold`) read it. A
+ * signature stamp alone never makes a record `signed`.
  *
  * - `none`: nothing stands and no link is out.
  * - `awaiting_signature`: a link is out and unsigned.

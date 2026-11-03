@@ -48,7 +48,7 @@ export function carriedPreparation(input: {
   hasRentalFit: boolean;
 }): CarriedPreparation[] {
   const carried: CarriedPreparation[] = [];
-  // `current` and nothing else. `expired` means they sign again, and
+  // `signed` and nothing else. `lapsed` means they sign again, and
   // `medical_review` is an open question rather than a thing kept — neither is
   // reassuring to read on the day a trip was called off.
   if (input.waiver.state === "signed") carried.push("waiver");
