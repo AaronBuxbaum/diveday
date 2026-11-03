@@ -299,6 +299,15 @@ describe("waiver records (in-memory PGlite)", () => {
     expect(key?.recordId).toBe(sent.recordId);
   });
 
+  it("opens nothing in the thread for a seat on a canceled trip", async () => {
+    const { db, shop, trip, booking } = await waiverContext();
+    await setTripStatus(db, shop.id, trip.id, "cancelled");
+    expect(await openWaiverInThread(db, { shopId: shop.id, bookingId: booking.id, now })).toEqual({
+      ok: false,
+      reason: "booking_unavailable",
+    });
+  });
+
   it("starts a fresh release for the thread once the old one has run out", async () => {
     const { db, shop, booking } = await waiverContext();
     const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
