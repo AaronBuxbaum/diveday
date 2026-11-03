@@ -12,11 +12,10 @@ the workflow for applying it.
 
 ## Before writing
 
-1. Run `pnpm task:context brand-voice`.
-2. Read `docs/design/brand.md` end to end.
-3. Read `docs/design/principles.md` and `docs/product/vision.md` for the underlying experience.
-4. For public or sales copy, read `docs/product/marketing.md` and apply its claims policy.
-5. If the request concerns the implemented visual system, inspect the current source anchors:
+1. Read `docs/design/brand.md` end to end.
+2. Read `docs/design/principles.md` and `docs/product/vision.md` for the underlying experience.
+3. For public or sales copy, read `docs/product/marketing.md` and apply its claims policy.
+4. If the request concerns the implemented visual system, inspect the current source anchors:
    `src/app/globals.css`, `src/app/layout.tsx`, and `src/components/Logo.tsx`.
 
 ## Procedure

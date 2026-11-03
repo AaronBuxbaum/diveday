@@ -8,6 +8,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
+import { GUARDS } from "./rules-registry.mjs";
 import {
   isTimeout,
   readBounded,
@@ -193,12 +194,10 @@ describe("the network stays out of check:repo", () => {
   /**
    * `check-follow-ups.mjs` reads the live tracker through `gh`. Inside `check:repo` it made
    * the tracker a property of every branch: one malformed issue (#2036) turned every open pull
-   * request red. It runs on a schedule instead (.github/workflows/follow-ups.yml). Read as
-   * text, not imported: `check-repo.mjs` is entirely top-level, so importing it would run
-   * every check inside this unit test.
+   * request red. It runs on a schedule instead (.github/workflows/follow-ups.yml). The list it
+   * spawns is `GUARDS` in `scripts/rules-registry.mjs`.
    */
   it("does not spawn check-follow-ups.mjs", () => {
-    const source = readFileSync(path.join(HERE, "check-repo.mjs"), "utf8");
-    expect(source).not.toContain('"check-follow-ups.mjs"');
+    expect(GUARDS.map(([, script]) => script)).not.toContain("check-follow-ups.mjs");
   });
 });

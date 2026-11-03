@@ -1,16 +1,21 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
-import { allowedSpotStrings, findSpotWords } from "./check-seat-word.mjs";
+import { allowances, findRefusedWords } from "./check-vocabulary.mjs";
 
 /** The key paths the check objected to in one bundle. */
-function flagged(bundle, file = "trips.json") {
-  return findSpotWords(bundle, { file }).violations.map((violation) => violation.keyPath);
+function flagged(bundle, file = "staff/trips.json") {
+  return findRefusedWords(bundle, { locale: "en-US", file }).violations.map(
+    (violation) => violation.keyPath,
+  );
 }
 
 describe("everyone says seat", () => {
   it("reads nested keys and counts every string it passed", () => {
-    const result = findSpotWords({ a: { b: { c: "3 seats left" } }, d: "Full", e: 7 });
+    const result = findRefusedWords(
+      { a: { b: { c: "3 seats left" } }, d: "Full", e: 7 },
+      { locale: "en-US" },
+    );
     expect(result.strings).toBe(2);
     expect(result.violations).toEqual([]);
   });
@@ -43,7 +48,7 @@ describe("everyone says seat", () => {
 
   it("lets the allowed string through only in its own file and key", () => {
     const hint = { form: { locationHint: "The dock, the boat deck, a spot on the reef." } };
-    expect(flagged(hint, "incidents.json")).toEqual([]);
+    expect(flagged(hint, "staff/incidents.json")).toEqual([]);
     expect(flagged(hint, "trips.json")).toEqual(["form.locationHint"]);
   });
 
@@ -58,22 +63,31 @@ describe("everyone says seat", () => {
       marineLife: { species: { "lane-snapper": { description: "a dark spot high on the flank" } } },
     };
     expect(flagged(guide, "diver.json")).toEqual([]);
-    expect(flagged(guide, "trips.json")).toEqual(["marineLife.species.lane-snapper.description"]);
+    expect(flagged(guide, "staff/trips.json")).toEqual([
+      "marineLife.species.lane-snapper.description",
+    ]);
     expect(flagged({ marineLife: { heading: "3 spots left" } }, "diver.json")).toEqual([
       "marineLife.heading",
     ]);
   });
 
-  it("names only allowed strings that still exist and still say spot", async () => {
-    for (const entry of allowedSpotStrings) {
+  it("is never read in the words bundle, which holds no capacity word", () => {
+    expect(flagged({ busy: "3 spots" }, "words.json")).toEqual([]);
+  });
+
+  it("names only allowed strings that still exist and still say the refused word", async () => {
+    for (const { locales, entry } of allowances()) {
       const [file, keyPath] = entry.split(":");
-      const where =
-        file === "diver.json" || file.startsWith("content/")
-          ? `../src/i18n/locales/en-US/${file}`
-          : `../src/i18n/locales/en-US/staff/${file}`;
-      const bundle = JSON.parse(await readFile(new URL(where, import.meta.url), "utf8"));
-      const value = keyPath.split(".").reduce((node, key) => node?.[key], bundle);
-      expect(value, entry).toMatch(/\bspots?\b/i);
+      for (const locale of locales) {
+        const where = `../src/i18n/locales/${locale}/${file}`;
+        const bundle = JSON.parse(await readFile(new URL(where, import.meta.url), "utf8"));
+        const value = keyPath
+          .replace(/\.$/, "")
+          .split(".")
+          .reduce((node, key) => node?.[key], bundle);
+        expect(value, entry).toBeDefined();
+        if (!keyPath.endsWith(".")) expect(value, entry).toMatch(/\bspots?\b/i);
+      }
     }
   });
 });

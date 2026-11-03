@@ -47,6 +47,8 @@ schedule builder, date requests, site briefings, bearer-token routes). What they
 
 ## Rules
 
+- **A surface draws its empty, loading, validation, error and success states**, not only the
+  happy path.
 - **Semantic tokens only**, no raw hex or palette classes: `pnpm check:tokens` (ADR-0004).
 - **Fields, buttons, controls and panels go through the wrappers**; never a `text-<colour>` into
   `buttonClass()` (`button.test.ts`); sections space with `space-y-10`.
