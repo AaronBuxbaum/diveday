@@ -4,7 +4,7 @@ import { nowMs } from "@/lib/clock";
 import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
 import { acknowledgeCrewAway } from "./crew-away-acknowledgements";
-import { saveCrewAvailabilityBlock } from "./crew-requests";
+import { recordCrewAvailabilityBlock } from "./crew-requests";
 import { getTodayWork } from "./today";
 import { createTrip, listStaff, setTripCrew } from "./trips";
 
@@ -40,7 +40,7 @@ describe("crew rostered while away", () => {
       ]),
     ).toBe(true);
     const day = calendarDateInTimezone(startsAt, shop.timezone);
-    const saved = await saveCrewAvailabilityBlock(db, {
+    const saved = await recordCrewAvailabilityBlock(db, {
       shopId: shop.id,
       personId: instructor.id,
       actorPersonId: instructor.id,

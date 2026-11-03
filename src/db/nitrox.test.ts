@@ -14,8 +14,8 @@ import {
 } from "./nitrox";
 import { bookings, nitroxCertifications, people } from "./schema";
 import { setShopRentalItems } from "./shops";
+import { getTripPrep } from "./trip-prep";
 import { upcomingTripsWithCounts } from "./trips";
-import { getTripPrep } from "./trips-prep";
 
 async function context() {
   const { db, shop } = fileCtx;

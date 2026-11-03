@@ -9,7 +9,7 @@ import type { AppDb } from "./client";
 import {
   fileIncidentReport,
   getIncidentReport,
-  saveIncidentDraft,
+  recordIncidentDraft,
   startIncidentReport,
 } from "./incident-reports";
 import {
@@ -98,7 +98,7 @@ async function draft(fields: IncidentDraftFields, tripId?: string) {
   const target = { shopId: shop.id, tripId: tripId ?? trip.id, actorPersonId: owner.id };
   const started = await startIncidentReport(db, target);
   if (!started.ok) throw new Error("start refused");
-  const saved = await saveIncidentDraft(db, { ...target, reportId: started.reportId, fields });
+  const saved = await recordIncidentDraft(db, { ...target, reportId: started.reportId, fields });
   if (!saved.ok) throw new Error("save refused");
   return { db, shop, trip, owner, target: { ...target, reportId: started.reportId } };
 }

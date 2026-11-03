@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { isDiverRemoved, updateDiver } from "@/db/divers";
+import { editDiver, isDiverRemoved } from "@/db/divers";
 import { sendStaffReply, sendWhatsAppReopen } from "@/db/staff-reply";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { isValidCalendarDate } from "@/lib/calendar-date";
@@ -59,7 +59,7 @@ export async function savePersonAction(shopSlug: string, personId: string, formD
   // (`resolveDiverNotice`).
   if (!parsed.success) redirect(backTo(base, "invalid", "details"));
   const { adultAttested, ...fields } = parsed.data;
-  const saved = await updateDiver(db, {
+  const saved = await editDiver(db, {
     shopId: staff.user.shopId,
     personId,
     ...fields,

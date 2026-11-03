@@ -12,7 +12,7 @@ import { drainNotificationRetries, sendNotification } from "./notifications";
 import { notificationSendQueue, shops, trips } from "./schema";
 import { setShopAddress } from "./shops";
 import { createTrip } from "./trips";
-import { updateTrip } from "./trips-record";
+import { editTrip } from "./trips-record";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -45,7 +45,7 @@ async function fixture() {
     plannedDives: 2,
   });
   if (!trip) throw new Error("trip missing");
-  const rescheduled = await updateTrip(pg.connect(), shop.id, trip.id, {
+  const rescheduled = await editTrip(pg.connect(), shop.id, trip.id, {
     title: trip.title,
     startsAt: new Date(trip.startsAt.getTime() + HOUR_MS),
     endsAt: new Date(trip.endsAt.getTime() + HOUR_MS),
@@ -155,7 +155,7 @@ describePostgres("queued reschedule revision fence", () => {
           `Retry exited before provider: ${JSON.stringify({ summary: race.summary, rows })}`,
         );
       }
-      move = updateTrip(pg.connect(), shop.id, trip.id, {
+      move = editTrip(pg.connect(), shop.id, trip.id, {
         title: trip.title,
         startsAt: updateStart(trip.startsAt, 2),
         endsAt: updateStart(trip.endsAt, 2),
@@ -249,7 +249,7 @@ describePostgres("queued reschedule revision fence", () => {
   it("suppresses the retry when the newer trip revision commits first", async () => {
     const { pg, shop, trip } = await fixture();
     await expect(
-      updateTrip(pg.connect(), shop.id, trip.id, {
+      editTrip(pg.connect(), shop.id, trip.id, {
         title: trip.title,
         startsAt: updateStart(trip.startsAt, 2),
         endsAt: updateStart(trip.endsAt, 2),
@@ -285,7 +285,7 @@ describePostgres("queued reschedule revision fence", () => {
     const { pg, shop, trip } = await fixture();
     const edit = patch as { endsAt?: Date; meetingPointLabel?: string };
     await expect(
-      updateTrip(pg.connect(), shop.id, trip.id, {
+      editTrip(pg.connect(), shop.id, trip.id, {
         title: trip.title,
         startsAt: trip.startsAt,
         endsAt: edit.endsAt ?? trip.endsAt,

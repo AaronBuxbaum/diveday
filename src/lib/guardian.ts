@@ -66,7 +66,7 @@ export type GuardianSignature = {
  *
  * Two doors cannot reach this blank by default (H-20261007-held-seat-split-into): a held seat split
  * into a new diver (`splitBookingIdentity`) and a stored date emptied on the
- * diver record (`updateDiver`, issue #2167) are refused unless the staffer
+ * diver record (`editDiver`, issue #2167) are refused unless the staffer
  * gives a date or says the person is 18 or older (`people.adult_attested_at`).
  * So a blank date here is either nobody's question or a staffer's "adult",
  * and both read as an adult; a date, when one lands, is what is measured.

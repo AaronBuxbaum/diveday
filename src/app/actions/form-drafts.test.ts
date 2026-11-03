@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { readFormDraft, saveFormDraft } from "@/db/form-drafts";
+import { readFormDraft, recordFormDraft } from "@/db/form-drafts";
 import { people, shops } from "@/db/schema";
 import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
@@ -64,7 +64,7 @@ describe("draft originating identity", () => {
       const actions = actionsFrom(origin);
       currentSession = origin;
       await actions.save("new_diver", [["fullName", "First saved input"]]);
-      await saveFormDraft(ctx.db, {
+      await recordFormDraft(ctx.db, {
         shopId: replacement.user.shopId,
         personId: replacement.user.personId,
         form: "new_diver",
@@ -102,7 +102,7 @@ describe("draft originating identity", () => {
     const actions = actionsFrom(origin);
     currentSession = origin;
     await actions.save("new_diver", [["fullName", "First saved input"]]);
-    await saveFormDraft(ctx.db, {
+    await recordFormDraft(ctx.db, {
       shopId: replacement.user.shopId,
       personId: replacement.user.personId,
       form: "new_diver",

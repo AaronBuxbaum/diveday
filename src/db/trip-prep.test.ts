@@ -20,9 +20,9 @@ import {
   rentalFitProfiles,
   shops,
 } from "./schema";
+import { getTripPrep, screenGearPicks } from "./trip-prep";
 import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
-import { getTripPrep, screenGearPicks } from "./trips-prep";
 
 /** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
 const SETUP_PICK = { proposed: false, assignAnyway: true } as const;

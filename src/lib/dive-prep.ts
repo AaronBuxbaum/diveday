@@ -242,7 +242,7 @@ export type PrepPiece = {
    * offers it.** The piece stays on the list and says so.
    *
    * Dropping it silently would be the write side's own bug moved one layer
-   * down (`saveRentalFit`, issue #1755): the diver's answer was never
+   * down (`recordRentalFit`, issue #1755): the diver's answer was never
    * retracted, and a packing list that quietly loses a piece tells the packer
    * nothing while the fit behind it still records one. So the list
    * over-includes and names the reason, which is a loose end a staffer can

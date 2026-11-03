@@ -26,6 +26,7 @@ import { flySafeToldUncorrected } from "./fly-safe-correction";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
 import { ratingCredentialsByPerson } from "./staff-credentials";
 import { crewShiftCoverage } from "./staffing";
+import type { TripSharedReads } from "./trip-shared-reads";
 import { boatClashes } from "./trips-clashes";
 import { crewClashes, getTripCrewAssignments, listStaff } from "./trips-crew";
 import {
@@ -35,7 +36,6 @@ import {
   listTripScheduleDays,
 } from "./trips-record";
 import { getTripSeriesSummary, listOffCadenceSeriesTrips } from "./trips-series";
-import type { TripSharedReads } from "./trips-shared-reads";
 
 /**
  * Everything the trip's Overview page is about, in one call — the third of the
@@ -77,7 +77,7 @@ export async function getTripOverview(
   now: Date = nowDate(),
   /**
    * The five reads the trip page shares with `getTripGuests`
-   * (`./trips-shared-reads`), when the caller has them in hand or in flight.
+   * (`./trip-shared-reads`), when the caller has them in hand or in flight.
    * Omitted, this reads its own, as the print packet's call does.
    */
   sharedReads?: TripSharedReads | null | Promise<TripSharedReads | null>,

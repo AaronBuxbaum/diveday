@@ -167,7 +167,7 @@ async function holdsAgeGatedSeat(db: DbExecutor, shopId: string, personId: strin
   return Boolean(seat);
 }
 
-export async function updateDiver(
+export async function editDiver(
   db: AppDb,
   input: {
     shopId: string;
@@ -186,7 +186,7 @@ export async function updateDiver(
     /**
      * Staff-entered directly on the diver record (task 144 — Today used to say
      * "ask at the counter" with no field to type it into). Undefined leaves it
-     * untouched; "" clears it — unlike `saveBookingEmergencyContact`'s
+     * untouched; "" clears it — unlike `recordBookingEmergencyContact`'s
      * blanks-never-overwrite rule for the diver-facing capture on /ready and
      * /waivers, a staffer correcting a wrong entry here must be able to blank it.
      */
@@ -365,9 +365,9 @@ export async function restoreDiver(db: AppDb, shopId: string, personId: string) 
 /**
  * Whether this diver is currently removed from the active roster.
  *
- * A one-column read, for telling two `updateDiver` refusals apart on the
+ * A one-column read, for telling two `editDiver` refusals apart on the
  * failure path: "a live diver already owns that email" and "this record is
- * removed, and `updateDiver` will not touch a removed row" both come back as
+ * removed, and `editDiver` will not touch a removed row" both come back as
  * null, and reporting the second as the first told a staffer to go and fix an
  * email conflict that does not exist.
  */

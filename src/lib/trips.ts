@@ -18,7 +18,7 @@ import { HOUR_MS } from "@/lib/clock";
  * `find-my-booking`, `crew-requests`, `thread-steps`, the diver record's
  * status split, and `COUNTER_DEPARTED_BUFFER_MS` at the walk-in counter) plus
  * six bare literals compared inline in `bookings`, `blowouts`, `today`,
- * `trips-overview` and the diver-facing departure page.
+ * `trip-overview` and the diver-facing departure page.
  *
  * What makes that worth a paragraph is *how* it stayed correct. Every one of
  * the nine carried a docstring, and each cited a **different** sibling as the

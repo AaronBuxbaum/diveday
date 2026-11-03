@@ -85,7 +85,7 @@ export async function ownedDiveSitePhotos(
  * ones a save taking them off `siteId` may delete from storage (issue #2078).
  * Call it *after* that save has written, so a copy or an import that landed in
  * between is read as a holder rather than having its photo deleted under it.
- * (Not inside the save's transaction: `updateDiveSiteForForm` opens its own.
+ * (Not inside the save's transaction: `editDiveSiteForForm` opens its own.
  * What is left is the gap between this read and the deletion, a concurrent
  * copy of a site whose photo was removed in the same instant.)
  *

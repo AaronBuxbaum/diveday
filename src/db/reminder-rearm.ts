@@ -10,7 +10,7 @@ import { bookings, notificationDeliveries } from "./schema";
  * and cadence (`sendDueReminders`), so a diver reminded the night before the
  * old date heard nothing the night before the new one, and that is the
  * message that carries the meeting time. Called inside the transaction that
- * moves the start (`moveTrip`, `updateTrip`), whether or not anyone is then
+ * moves the start (`moveTrip`, `editTrip`), whether or not anyone is then
  * told about the move, so an Undo on the reschedule notice cannot leave a
  * diver without the reminder for the date they now sail.
  *

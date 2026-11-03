@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { CONNECTION_PROVIDERS } from "@/lib/connections";
 import { fileScopedShopContext } from "@/test/db";
 import { readShopConnections } from "./connections";
-import { disconnectShopIntegration, saveShopIntegration } from "./integrations";
+import { disconnectShopIntegration, recordShopIntegration } from "./integrations";
 
 const ctx = fileScopedShopContext();
 
 function connectZapier(shopId: string) {
-  return saveShopIntegration(ctx.db, {
+  return recordShopIntegration(ctx.db, {
     shopId,
     provider: "zapier",
     credentials: { hookUrl: "https://hooks.zapier.com/hooks/catch/1/abc/" },

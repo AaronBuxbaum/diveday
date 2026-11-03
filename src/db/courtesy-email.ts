@@ -1,8 +1,8 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
-import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
+import { issueCapability, verifyCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
-import { interests, people, personCourtesyEmailUnsubscribeTokens, shops } from "./schema";
+import { interests, people, shops } from "./schema";
 
 /**
  * Mints a fresh, non-expiring bearer link opting one person out of courtesy
@@ -18,13 +18,11 @@ export async function issuePersonCourtesyEmailUnsubscribeToken(
   db: AppDb,
   input: { shopId: string; personId: string },
 ): Promise<string> {
-  const token = createBearerToken();
-  await db.insert(personCourtesyEmailUnsubscribeTokens).values({
+  return issueCapability(db, {
+    purpose: "courtesy_email_unsubscribe",
     shopId: input.shopId,
-    personId: input.personId,
-    tokenHash: hashBearerToken(token),
+    subjectId: input.personId,
   });
-  return token;
 }
 
 /**
@@ -81,24 +79,25 @@ export async function resolveCourtesyEmailUnsubscribeToken(
   db: DbExecutor,
   token: string,
 ): Promise<CourtesyEmailUnsubscribeContext | null> {
+  const capability = await verifyCapability(db, { purpose: "courtesy_email_unsubscribe", token });
+  if (!capability) return null;
   const [row] = await db
     .select({
-      tokenShopId: personCourtesyEmailUnsubscribeTokens.shopId,
       personShopId: people.shopId,
       shopName: shops.name,
       personId: people.id,
       courtesyEmailOptOutAt: people.courtesyEmailOptOutAt,
     })
-    .from(personCourtesyEmailUnsubscribeTokens)
-    .innerJoin(people, eq(people.id, personCourtesyEmailUnsubscribeTokens.personId))
+    .from(people)
     .innerJoin(shops, eq(shops.id, people.shopId))
-    .where(eq(personCourtesyEmailUnsubscribeTokens.tokenHash, hashBearerToken(token)))
+    // diveday:allow-deleted-people: a by-id read of the person the link was minted for; a removed record can still be opted out, which only stops mail.
+    .where(eq(people.id, capability.subjectId))
     .limit(1);
   if (!row) return null;
   // Defense in depth, mirroring `resolveInterestUnsubscribeToken`: nothing
-  // legitimate can cause the token's own shopId to drift from its person's, but
-  // a resolved identity must never be trusted past that check.
-  if (row.tokenShopId !== row.personShopId) return null;
+  // legitimate can cause the capability's own shopId to drift from its
+  // person's, but a resolved identity must never be trusted past that check.
+  if (capability.shopId !== row.personShopId) return null;
   return {
     shopId: row.personShopId,
     shopName: row.shopName,

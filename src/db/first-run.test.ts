@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { liveReleaseIsSample, loadFirstRunFacts } from "./first-run";
-import { saveWaiverTemplate } from "./waivers-templates";
+import { recordWaiverTemplate } from "./waivers-templates";
 
 const ctx = fileScopedShopContext();
 
@@ -19,11 +19,11 @@ const BARE = {
 describe("loadFirstRunFacts", () => {
   it("counts the release as done only once it is the shop's own words", async () => {
     const { db, shop } = ctx;
-    await saveWaiverTemplate(db, { shopId: shop.id, body: DEFAULT_WAIVER_BODY, material: true });
+    await recordWaiverTemplate(db, { shopId: shop.id, body: DEFAULT_WAIVER_BODY, material: true });
     const sample = await loadFirstRunFacts(db, { id: shop.id, ...BARE }, null);
     expect(sample.steps.releaseDone).toBe(false);
 
-    await saveWaiverTemplate(db, {
+    await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: "Our own release, in our own words.",
       material: true,
@@ -35,7 +35,7 @@ describe("loadFirstRunFacts", () => {
 
   it("reads the shop row's steps and leaves the guided rows out of the count", async () => {
     const { db, shop } = ctx;
-    await saveWaiverTemplate(db, { shopId: shop.id, body: DEFAULT_WAIVER_BODY, material: true });
+    await recordWaiverTemplate(db, { shopId: shop.id, body: DEFAULT_WAIVER_BODY, material: true });
     const facts = await loadFirstRunFacts(
       db,
       {
@@ -81,9 +81,9 @@ describe("loadFirstRunFacts", () => {
 describe("liveReleaseIsSample", () => {
   it("is true while divers sign the sample, and false once the shop's own words are live", async () => {
     const { db, shop } = ctx;
-    await saveWaiverTemplate(db, { shopId: shop.id, body: DEFAULT_WAIVER_BODY, material: true });
+    await recordWaiverTemplate(db, { shopId: shop.id, body: DEFAULT_WAIVER_BODY, material: true });
     expect(await liveReleaseIsSample(db, shop.id)).toBe(true);
-    await saveWaiverTemplate(db, { shopId: shop.id, body: "Our own words.", material: true });
+    await recordWaiverTemplate(db, { shopId: shop.id, body: "Our own words.", material: true });
     expect(await liveReleaseIsSample(db, shop.id)).toBe(false);
   });
 });

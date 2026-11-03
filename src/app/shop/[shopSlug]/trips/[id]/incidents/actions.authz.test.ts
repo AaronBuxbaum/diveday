@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import {
   fileIncidentReport,
-  saveIncidentDraft,
+  recordIncidentDraft,
   startIncidentReport,
   startMissingDiverReport,
 } from "@/db/incident-reports";
@@ -202,7 +202,7 @@ describe("incident report actions refuse staff who may not write", () => {
     });
     if (!started.ok) throw new Error(`refused: ${started.reason}`);
     const target = { shopId: shop.id, tripId, reportId: started.reportId, actorPersonId: owner };
-    await saveIncidentDraft(db, { ...target, fields: { ...complete, kind: "missing_diver" } });
+    await recordIncidentDraft(db, { ...target, fields: { ...complete, kind: "missing_diver" } });
     expect(await fileIncidentReport(db, target)).toEqual({ ok: true });
     await db.insert(tripAssignments).values({ tripId, personId: captain });
     signIn(db, shop, captain);

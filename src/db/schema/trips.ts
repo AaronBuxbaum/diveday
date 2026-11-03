@@ -578,7 +578,7 @@ export const trips = pgTable(
      *
      * **Exactly two edits bump it**: a change to `starts_at`, and a change to
      * the list of dive sites the day visits (`src/lib/trip-revision.ts` holds
-     * that rule, with no database in it). `moveTrip`, `updateTrip`,
+     * that rule, with no database in it). `moveTrip`, `editTrip`,
      * `applyDetailsToFutureSeries` and the demo refresh are the writers.
      *
      * **Nothing else does**, and the omissions are the point. A conditions

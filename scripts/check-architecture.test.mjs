@@ -160,17 +160,22 @@ describe("the seams", () => {
     ]);
   });
 
-  it("sends everything outside src/db through the trips barrel", async () => {
+  it("sends everything outside src/db through the trips and seed barrels", async () => {
     const root = await fixture({
-      "src/app/trip/page.tsx": 'import { getTripOverview } from "@/db/trips-overview";\n',
-      "src/components/Roster.tsx": 'import type { TripGuests } from "@/db/trips-guests";\n',
-      "src/app/trip/ok.tsx": 'import { getTripOverview } from "@/db/trips";\n',
+      "src/app/trip/page.tsx": 'import { getTripRecord } from "@/db/trips-record";\n',
+      "src/components/Roster.tsx": 'import type { TripRoster } from "@/db/trips-roster";\n',
+      "src/app/trip/ok.tsx": 'import { getTripRecord } from "@/db/trips";\n',
+      "src/app/trip/reader.tsx": 'import { getTripOverview } from "@/db/trip-overview";\n',
       "src/db/today.ts": 'import { listStaff } from "./trips-crew";\n',
       "src/app/trip/other.tsx": 'import { x } from "@/db/trip-promos";\n',
+      "src/features/tick.ts": 'import { bringHome } from "@/db/seed-boat-at-sea";\n',
+      "src/features/tick-ok.ts": 'import { bringHome } from "@/db/seed";\n',
+      "src/db/seed.ts": 'export { bringHome } from "./seed-boat-at-sea";\n',
     });
     expect(flat(await collectViolations(root)).sort()).toEqual([
-      expect.stringContaining("src/app/trip/page.tsx: imports @/db/trips-overview"),
-      expect.stringContaining("src/components/Roster.tsx: imports @/db/trips-guests"),
+      expect.stringContaining("src/app/trip/page.tsx: imports @/db/trips-record"),
+      expect.stringContaining("src/components/Roster.tsx: imports @/db/trips-roster"),
+      expect.stringContaining("src/features/tick.ts: imports @/db/seed-boat-at-sea"),
     ]);
   });
 });
@@ -321,5 +326,39 @@ describe("server-only modules stay out of client bundles", () => {
         '"use client";\nimport type { canReceiveText } from "@/lib/phone-line-type";\nimport { CALLING_CODES } from "@/lib/phone";\n',
     });
     expect(flat(await collectViolations(root))).toEqual([]);
+  });
+});
+
+describe("a staff page reads through one reader", () => {
+  it("refuses a staff page that value-imports a second db module", async () => {
+    const root = await fixture({
+      "src/app/shop/[shopSlug]/orders/page.tsx":
+        'import { getOrdersIndex } from "@/db/orders-index";\nimport { canPersonManageOrders } from "@/db/authz";\n',
+      "src/app/shop/[shopSlug]/boats/page.tsx":
+        'import { getBoatsPage } from "@/db/boats-page";\nimport type { Boat } from "@/db/boats";\n',
+      "src/app/shop/[shopSlug]/boats/actions.ts":
+        'import { editBoat } from "@/db/boats";\nimport { canPersonConfigureTrips } from "@/db/authz";\n',
+      "src/app/s/[shopSlug]/page.tsx": 'import { a } from "@/db/a";\nimport { b } from "@/db/b";\n',
+    });
+    expect(flat(await collectViolations(root))).toEqual([
+      expect.stringContaining(
+        "src/app/shop/[shopSlug]/orders/page.tsx: reads @/db/authz, @/db/orders-index",
+      ),
+    ]);
+  });
+});
+
+describe("a table module writes by transition", () => {
+  it("refuses an exported update or save in src/db and nothing else", async () => {
+    const root = await fixture({
+      "src/db/boats.ts":
+        "export async function updateBoat() {}\nexport function saveBoatNote() {}\nexport async function editBoat() {}\nfunction updateLocal() {}\n",
+      "src/db/boats.test.ts": "export async function updateBoat() {}\n",
+      "src/lib/boats.ts": "export function updateBoat() {}\n",
+    });
+    expect(flat(await collectViolations(root)).sort()).toEqual([
+      expect.stringContaining("src/db/boats.ts: exports saveBoatNote"),
+      expect.stringContaining("src/db/boats.ts: exports updateBoat"),
+    ]);
   });
 });

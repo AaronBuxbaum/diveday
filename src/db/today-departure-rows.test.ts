@@ -16,9 +16,9 @@ import { getTodayWork } from "./today";
 import { getDepartureNeeds } from "./today-departure-needs";
 import { pushDepartureRows } from "./today-departure-rows";
 import { NOW, rowsContext, rowsNaming } from "./today-rows-test-fixtures";
+import { getTripOverview } from "./trip-overview";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { listStaff } from "./trips-crew";
-import { getTripOverview } from "./trips-overview";
 import { setWelcomeConsent } from "./welcome-cues";
 
 const emptyWave = {

@@ -8,7 +8,7 @@ import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "./boats";
 import { createGearItem, recordGearService, reserveGearUnit, returnGearReservation } from "./gear";
-import { saveRentalFit } from "./rental-fit";
+import { recordRentalFit } from "./rental-fit";
 import {
   boats as boatsTable,
   bookings as bookingsTable,
@@ -157,7 +157,7 @@ describe("rental fits on the queue, read through getTodayWork", () => {
     // the packer would still have had no wetsuit, boot, fin or weight number
     // to load from. The row must stay.
     for (const entry of roster) {
-      await saveRentalFit(db, {
+      await recordRentalFit(db, {
         shopId: shop.id,
         personId: entry.person.id,
         ...rents,
@@ -168,7 +168,7 @@ describe("rental fits on the queue, read through getTodayWork", () => {
     expect(rowsNaming(stillPartial.actions, reef.id, "rental size").length).toBeGreaterThan(0);
 
     for (const entry of roster) {
-      await saveRentalFit(db, {
+      await recordRentalFit(db, {
         shopId: shop.id,
         personId: entry.person.id,
         ...rents,

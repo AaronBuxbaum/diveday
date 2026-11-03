@@ -4,8 +4,8 @@ import { fileScopedShopContext } from "@/test/db";
 import { getBookingPickupTime } from "./bookings";
 import { getTripManifest } from "./manifests";
 import { bookings, shops } from "./schema";
+import { getTripPrep } from "./trip-prep";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
-import { getTripPrep } from "./trips-prep";
 
 const ctx = fileScopedShopContext();
 

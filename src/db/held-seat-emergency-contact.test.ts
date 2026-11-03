@@ -8,7 +8,7 @@ import { confirmBookingIdentity, createBooking, splitBookingIdentity } from "./b
 import { getTripManifest } from "./manifests";
 import { bookings, people } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
-import { saveBookingEmergencyContact } from "./waivers";
+import { recordBookingEmergencyContact } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -82,7 +82,7 @@ describe("a held seat's emergency contact", () => {
   it("writes the desk's contact on the booking, never on the matched record", async () => {
     const { db, shop, marisol, bookingId } = await heldSeat();
     expect(
-      await saveBookingEmergencyContact(db, {
+      await recordBookingEmergencyContact(db, {
         shopId: shop.id,
         bookingId,
         name: "Rosa Vega",
@@ -105,7 +105,7 @@ describe("a held seat's emergency contact", () => {
   it("refuses a bearer link and a half-filled pair, writing nothing anywhere", async () => {
     const { db, shop, marisol, bookingId } = await heldSeat();
     expect(
-      await saveBookingEmergencyContact(db, {
+      await recordBookingEmergencyContact(db, {
         shopId: shop.id,
         bookingId,
         name: "Rosa Vega",
@@ -114,7 +114,7 @@ describe("a held seat's emergency contact", () => {
       }),
     ).toBe(false);
     expect(
-      await saveBookingEmergencyContact(db, {
+      await recordBookingEmergencyContact(db, {
         shopId: shop.id,
         bookingId,
         name: "Rosa Vega",
@@ -129,7 +129,7 @@ describe("a held seat's emergency contact", () => {
 
   it("shows the seat's own contact on the manifest and the crew phone's copy in place of the withheld one", async () => {
     const { db, shop, trip, bookingId } = await heldSeat();
-    await saveBookingEmergencyContact(db, {
+    await recordBookingEmergencyContact(db, {
       shopId: shop.id,
       bookingId,
       name: "Rosa Vega",
@@ -157,7 +157,7 @@ describe("a held seat's emergency contact", () => {
 
   it("goes onto the new record at a split, and off the booking", async () => {
     const { db, shop, marisol, bookingId, staff } = await heldSeat();
-    await saveBookingEmergencyContact(db, {
+    await recordBookingEmergencyContact(db, {
       shopId: shop.id,
       bookingId,
       name: "Rosa Vega",
@@ -187,7 +187,7 @@ describe("a held seat's emergency contact", () => {
   /** The desk's contact for the person on the seat, recorded while it is held. */
   async function recordHeld(bookingId: string, name = "Rosa Vega", phone = "+34 600 333 444") {
     const { db, shop } = ctx;
-    await saveBookingEmergencyContact(db, {
+    await recordBookingEmergencyContact(db, {
       shopId: shop.id,
       bookingId,
       name,

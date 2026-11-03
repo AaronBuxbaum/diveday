@@ -21,7 +21,7 @@ import { setBookingNitrox } from "./nitrox";
 import { setBookingPayment } from "./payments";
 import { listTripReadiness } from "./readiness";
 import { getReadyPageData } from "./ready";
-import { saveRentalFit } from "./rental-fit";
+import { recordRentalFit } from "./rental-fit";
 import {
   activityEvents,
   bookingCheckoutBookings,
@@ -1143,7 +1143,7 @@ describe("the manifest packs each seat its own kit", () => {
       .from(bookings)
       .where(eq(bookings.id, snorkeler.bookingId));
     if (!row) throw new Error("booking missing");
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId: shop.id,
       personId: row.personId,
       rentsBcd: true,

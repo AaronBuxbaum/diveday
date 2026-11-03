@@ -25,7 +25,7 @@ import {
   deletePushSubscription,
   isDeviceSubscribed,
   isDeviceSubscribedAnywhere,
-  savePushSubscription,
+  recordPushSubscription,
 } from "@/db/push-subscriptions";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
 import { deleteTripSighting, recordTripSighting } from "@/db/trip-sightings";
@@ -456,7 +456,7 @@ function buddyErrorCode(reason: BuddyTeamRefusal): string {
 // Web Push opt-in for this device (ADR 20260804-manifest-web-push). Both
 // actions re-derive the shop from the session rather than trusting anything
 // the client sent, so one shop's staff can never register or drop a
-// subscription against another's trip; `savePushSubscription` additionally
+// subscription against another's trip; `recordPushSubscription` additionally
 // refuses a trip that isn't theirs.
 export async function subscribePushAction(
   tripId: string,
@@ -469,7 +469,7 @@ export async function subscribePushAction(
   const staff = await requireStaffSession();
   const parsed = pushSubscriptionSchema.safeParse(input);
   if (!parsed.success) return { ok: false };
-  const outcome = await savePushSubscription(await getDb(), {
+  const outcome = await recordPushSubscription(await getDb(), {
     shopId: staff.user.shopId,
     tripId,
     personId: staff.user.personId,

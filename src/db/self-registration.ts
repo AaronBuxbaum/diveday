@@ -7,7 +7,7 @@ import type { SelfDeclaredAgency, SelfDeclaredLevel } from "@/lib/self-registrat
 import type { AppDb } from "./client";
 import { createPerson, findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
-import { saveRentalFit } from "./rental-fit";
+import { recordRentalFit } from "./rental-fit";
 import { people } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { issueAndDeliverPersonWaiver } from "./waiver-issue";
@@ -147,7 +147,7 @@ export async function registerDiverAtShop(
 
   // **Only for a person this submission created.**
   //
-  // `saveRentalFit` upserts and writes all seven `rents*` flags, so handing it
+  // `recordRentalFit` upserts and writes all seven `rents*` flags, so handing it
   // a matched person let anyone holding a diver's email address wipe their
   // stated fit — every flag to `false`, their size replaced, `fitStatedAt`
   // refreshed so it still read as freshly stated. The boat's packing list then
@@ -158,7 +158,7 @@ export async function registerDiverAtShop(
   // A returning diver correcting their sizes does it the way they already
   // could: the shop's own record, or the counter.
   if (created && input.fit) {
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId: input.shopId,
       personId,
       // Sizes without a claim about what they rent: the diver is telling the

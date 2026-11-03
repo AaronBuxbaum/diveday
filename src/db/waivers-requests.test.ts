@@ -5,7 +5,7 @@ import { waiverRecords } from "./schema";
 import { setTripStatus } from "./trips";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import { saveWaiverTemplate } from "./waivers-templates";
+import { recordWaiverTemplate } from "./waivers-templates";
 import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -106,7 +106,7 @@ describe("waiver records (in-memory PGlite)", () => {
     const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!first.ok) throw new Error("expected the first link to issue");
 
-    await saveWaiverTemplate(db, {
+    await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "Revised release: different terms entirely.",
@@ -231,7 +231,7 @@ describe("waiver records (in-memory PGlite)", () => {
       now,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    const newer = await saveWaiverTemplate(db, {
+    const newer = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "A materially different v2 release long enough to be valid.",

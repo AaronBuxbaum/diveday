@@ -14,6 +14,7 @@ export * from "./activity";
 export * from "./assists";
 export * from "./billing";
 export * from "./bookings";
+export * from "./capabilities";
 export * from "./certifications";
 export * from "./core";
 export * from "./course-forms";

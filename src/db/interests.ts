@@ -1,5 +1,4 @@
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { courseRatioRefusal } from "@/lib/booking-gates";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -22,6 +21,7 @@ import { unionRequirements } from "@/lib/requirement";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { courseStudentSeatCap } from "./bookings";
+import { issueCapability, verifyCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { lockDateRequestOffer, recordDateRequestOfferBooking } from "./date-request-offer-bookings";
 import { findOrCreatePerson } from "./people";
@@ -31,7 +31,6 @@ import {
   type DiveSpecialty,
   type Interest,
   interests,
-  interestUnsubscribeTokens,
   type Person,
   people,
   personRoles,
@@ -1088,20 +1087,19 @@ export async function listAnytimeInterestsCovering(
  * Mints a fresh, non-expiring bearer link for one anytime interest (Leo — self-serve
  * email unsubscribe). Called once per deal blast, per recipient, so every
  * last-minute-deal email carries its own working unsubscribe link even if an
- * earlier email's link is later relied on too — see `interestUnsubscribeTokens` for
- * why this never expires and is never single-use.
+ * earlier email's link is later relied on too. A row of `capabilities`
+ * (`interest_unsubscribe`); `CAPABILITY_POLICY` says why it never expires and is
+ * never single-use.
  */
 export async function issueInterestUnsubscribeToken(
   db: DbExecutor,
   input: { shopId: string; interestId: string },
 ): Promise<string> {
-  const token = createBearerToken();
-  await db.insert(interestUnsubscribeTokens).values({
+  return issueCapability(db, {
+    purpose: "interest_unsubscribe",
     shopId: input.shopId,
-    interestId: input.interestId,
-    tokenHash: hashBearerToken(token),
+    subjectId: input.interestId,
   });
-  return token;
 }
 
 export type InterestUnsubscribeContext = {
@@ -1122,24 +1120,24 @@ export async function resolveInterestUnsubscribeToken(
   db: DbExecutor,
   token: string,
 ): Promise<InterestUnsubscribeContext | null> {
+  const capability = await verifyCapability(db, { purpose: "interest_unsubscribe", token });
+  if (!capability) return null;
   const [row] = await db
     .select({
-      tokenShopId: interestUnsubscribeTokens.shopId,
       interestShopId: interests.shopId,
       shopName: shops.name,
       interestId: interests.id,
       closedAt: interests.closedAt,
     })
-    .from(interestUnsubscribeTokens)
-    .innerJoin(interests, eq(interests.id, interestUnsubscribeTokens.interestId))
+    .from(interests)
     .innerJoin(shops, eq(shops.id, interests.shopId))
-    .where(eq(interestUnsubscribeTokens.tokenHash, hashBearerToken(token)))
+    .where(eq(interests.id, capability.subjectId))
     .limit(1);
   if (!row) return null;
   // Defense in depth, mirroring verifyBookingCapability: nothing legitimate can
-  // cause the token's own shopId to drift from its interest's, but a resolved
-  // identity must never be trusted past that check.
-  if (row.tokenShopId !== row.interestShopId) return null;
+  // cause the capability's own shopId to drift from its interest's, but a
+  // resolved identity must never be trusted past that check.
+  if (capability.shopId !== row.interestShopId) return null;
   return {
     shopId: row.interestShopId,
     shopName: row.shopName,

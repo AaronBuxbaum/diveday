@@ -26,11 +26,11 @@ import {
 import { setShopDockDayRhythm } from "./shops";
 import { recordSmsKeyword } from "./sms-opt-outs";
 import {
+  editTrip,
+  editTripConditions,
   listStaff,
   moveTrip,
   upcomingTripsWithCounts,
-  updateTrip,
-  updateTripConditions,
 } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -385,7 +385,7 @@ describe("sendDueReminders", () => {
   it("texts the night-before conditions and contact; the email leaves them to the thread", async () => {
     const { db, shop, reef, bookingId, personId, inWeekBucket } = await reminderContext();
     await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
-    await updateTripConditions(db, shop.id, reef.id, {
+    await editTripConditions(db, shop.id, reef.id, {
       conditionsSummary: "Warm and glassy — a perfect first-dive day",
       waterTemperatureC: 27,
       visibilityMeters: 20,
@@ -426,7 +426,7 @@ describe("sendDueReminders", () => {
     // will disagree with the trip page it links to.
     const { db, shop, reef, personId } = await reminderContext();
     await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
-    await updateTripConditions(db, shop.id, reef.id, {
+    await editTripConditions(db, shop.id, reef.id, {
       waterTemperatureC: 27,
       visibilityMeters: 20,
     });
@@ -490,7 +490,7 @@ describe("sendDueReminders", () => {
  */
 describe("a moved departure's reminders", () => {
   const DAY = 24 * 60 * 60 * 1000;
-  /** The minimum patch `updateTrip` takes: everything as it stands. */
+  /** The minimum patch `editTrip` takes: everything as it stands. */
   const tripPatchOf = (trip: typeof trips.$inferSelect) => ({
     title: trip.title,
     startsAt: trip.startsAt,
@@ -547,7 +547,7 @@ describe("a moved departure's reminders", () => {
     expect(await rowsFor(db, bookingId)).toHaveLength(1);
 
     const [trip] = await db.select().from(trips).where(eq(trips.id, reef.id));
-    const outcome = await updateTrip(db, shop.id, reef.id, {
+    const outcome = await editTrip(db, shop.id, reef.id, {
       ...tripPatchOf(trip),
       startsAt: new Date(reef.startsAt.getTime() + 2 * DAY),
       endsAt: new Date(trip.endsAt.getTime() + 2 * DAY),
@@ -567,7 +567,7 @@ describe("a moved departure's reminders", () => {
       appOrigin: null,
     });
     const [trip] = await db.select().from(trips).where(eq(trips.id, reef.id));
-    const outcome = await updateTrip(db, shop.id, reef.id, {
+    const outcome = await editTrip(db, shop.id, reef.id, {
       ...tripPatchOf(trip),
       title: "Renamed reef",
     });

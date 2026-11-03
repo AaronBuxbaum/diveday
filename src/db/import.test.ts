@@ -9,7 +9,7 @@ import { prepareContactImport } from "@/test/import-fixture";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { canPersonImportShopData, commitContactImport } from "./import";
-import { saveRentalFit } from "./rental-fit";
+import { recordRentalFit } from "./rental-fit";
 import {
   bookings,
   certifications,
@@ -209,7 +209,7 @@ describe("commitContactImport", () => {
     const person = await personByEmail(db, shop.id, "steph.import@example.com");
     if (!person) throw new Error("person not created");
     // The diver's own answer, given on their gear form.
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId: shop.id,
       personId: person.id,
       rentsWetsuit: true,

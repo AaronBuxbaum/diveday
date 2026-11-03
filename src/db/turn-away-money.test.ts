@@ -22,7 +22,7 @@ import {
   trips,
 } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { listStaff, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { editTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 import { turnBookingAway } from "./turn-away";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -85,7 +85,7 @@ describe("a seat the desk turned away", () => {
       payoutsEnabled: true,
       detailsSubmitted: true,
     });
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -235,7 +235,7 @@ describe("a checkout opened before the seat was released", () => {
       payoutsEnabled: true,
       detailsSubmitted: true,
     });
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,

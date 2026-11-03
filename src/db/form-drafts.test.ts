@@ -5,8 +5,8 @@ import {
   discardFormDraft,
   listFreshFormDrafts,
   readFormDraft,
-  saveFormDraft,
-  saveFormDraftIfVacant,
+  recordFormDraft,
+  recordFormDraftIfVacant,
 } from "./form-drafts";
 import { people, personRoles } from "./schema";
 
@@ -32,8 +32,8 @@ describe("form drafts", () => {
     const { db, shop, personId } = await fixture();
     const input = { shopId: shop.id, personId, form: "took_a_call" as const, now };
     const outcomes = await Promise.all([
-      saveFormDraftIfVacant(db, { ...input, fields: [["fullName", "First Diver"]] }),
-      saveFormDraftIfVacant(db, { ...input, fields: [["fullName", "Second Diver"]] }),
+      recordFormDraftIfVacant(db, { ...input, fields: [["fullName", "First Diver"]] }),
+      recordFormDraftIfVacant(db, { ...input, fields: [["fullName", "Second Diver"]] }),
     ]);
     expect(outcomes.sort()).toEqual(["exists", "saved"]);
     expect(["First Diver", "Second Diver"]).toContain(
@@ -44,10 +44,10 @@ describe("form drafts", () => {
   it("replaces an expired draft", async () => {
     const { db, shop, personId } = await fixture();
     const input = { shopId: shop.id, personId, form: "took_a_call" as const, now };
-    await saveFormDraft(db, { ...input, fields: [["fullName", "Earlier caller"]] });
+    await recordFormDraft(db, { ...input, fields: [["fullName", "Earlier caller"]] });
     const later = new Date(now.getTime() + 25 * 60 * 60 * 1000);
     expect(
-      await saveFormDraftIfVacant(db, {
+      await recordFormDraftIfVacant(db, {
         ...input,
         now: later,
         fields: [["fullName", "New caller"]],
@@ -59,7 +59,7 @@ describe("form drafts", () => {
   });
   it("keeps what was typed, one row per person and form, and reads it back fresh", async () => {
     const { db, shop, personId } = await fixture();
-    await saveFormDraft(db, {
+    await recordFormDraft(db, {
       shopId: shop.id,
       personId,
       form: "new_diver",
@@ -70,7 +70,7 @@ describe("form drafts", () => {
         ["cardNumber", "4242"],
       ],
     });
-    await saveFormDraft(db, {
+    await recordFormDraft(db, {
       shopId: shop.id,
       personId,
       form: "new_diver",
@@ -94,7 +94,7 @@ describe("form drafts", () => {
 
   it("drops a draft after a day, and a form of blanks clears one", async () => {
     const { db, shop, personId } = await fixture();
-    await saveFormDraft(db, {
+    await recordFormDraft(db, {
       shopId: shop.id,
       personId,
       form: "add_departure",
@@ -106,7 +106,7 @@ describe("form drafts", () => {
     expect(await listFreshFormDrafts(db, shop.id, personId, later)).toEqual([]);
 
     expect(
-      await saveFormDraft(db, {
+      await recordFormDraft(db, {
         shopId: shop.id,
         personId,
         form: "add_departure",
@@ -119,7 +119,7 @@ describe("form drafts", () => {
 
   it("is one person's, and Start over discards it", async () => {
     const { db, shop, personId } = await fixture();
-    await saveFormDraft(db, {
+    await recordFormDraft(db, {
       shopId: shop.id,
       personId,
       form: "new_diver",

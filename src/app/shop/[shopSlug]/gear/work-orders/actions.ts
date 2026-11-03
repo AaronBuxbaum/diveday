@@ -10,12 +10,12 @@ import {
   deleteCustomerGearItem,
   deleteWorkOrder,
   deleteWorkOrderLine,
+  editWorkOrderLine,
+  recordWorkOrder,
   recordWorkOrderWork,
   restoreCustomerGearItem,
   restoreWorkOrder,
-  saveWorkOrder,
   setWorkOrderStatus,
-  updateWorkOrderLine,
   type WorkOrderCareInput,
 } from "@/db/work-orders";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -246,7 +246,7 @@ export async function saveWorkOrderAction(formData: FormData) {
   if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
 
   const landing = order(parsed.data.workOrderId);
-  const outcome = await saveWorkOrder(await getDb(), {
+  const outcome = await recordWorkOrder(await getDb(), {
     shopId: session.user.shopId,
     workOrderId: parsed.data.workOrderId,
     reportedProblem: parsed.data.reportedProblem,
@@ -450,7 +450,7 @@ export async function updateWorkOrderLineAction(formData: FormData) {
     );
   }
 
-  const outcome = await updateWorkOrderLine(db, {
+  const outcome = await editWorkOrderLine(db, {
     shopId: session.user.shopId,
     workOrderLineId: parsed.data.workOrderLineId,
     kind: parsed.data.kind,

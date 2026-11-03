@@ -44,7 +44,7 @@ export async function readAssistResult(
   return (await readAssistResults(db, shopId, feature, [subjectKey])).get(subjectKey) ?? null;
 }
 
-export async function saveAssistResult(
+export async function recordAssistResult(
   db: AppDb,
   input: {
     shopId: string;

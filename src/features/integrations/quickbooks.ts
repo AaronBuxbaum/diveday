@@ -4,7 +4,7 @@ import {
   getIntegrationSyncRecord,
   markIntegrationHealthy,
   readIntegrationCredentials,
-  saveShopIntegration,
+  recordShopIntegration,
   upsertIntegrationSyncRecord,
 } from "@/db/integrations";
 import type { IntegrationCredentials, IntegrationEvent, ShopIntegration } from "@/db/schema";
@@ -254,7 +254,7 @@ async function refreshQuickBooksCredentials(
   const expiresIn = typeof payload?.expires_in === "number" ? payload.expires_in : null;
   if (!accessToken || !refreshToken || !expiresIn) return null;
   const next = { accessToken, refreshToken, expiresAt: nowMs() + expiresIn * 1000 };
-  await saveShopIntegration(db, {
+  await recordShopIntegration(db, {
     shopId: integration.shopId,
     provider: "quickbooks",
     credentials: next,

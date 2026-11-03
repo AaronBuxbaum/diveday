@@ -10,13 +10,13 @@ export {
   consumeIntegrationOAuthState,
   createIntegrationOAuthState,
   disconnectShopIntegration,
+  editShopIntegrationSettings,
   getShopIntegration,
   type IntegrationCredentialResult,
   type IntegrationKeyRefusal,
   listShopIntegrations,
   readIntegrationCredentials,
-  saveShopIntegration,
-  updateShopIntegrationSettings,
+  recordShopIntegration,
 } from "@/db/integrations";
 export {
   dispatchIntegrationsAfterResponse,

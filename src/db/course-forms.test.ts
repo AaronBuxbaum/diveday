@@ -21,8 +21,8 @@ import {
   getCourseFormsForBooking,
   listCourseFormRequirements,
   listCourseForms,
+  recordCourseFormVersion,
   recordPaperCourseForm,
-  saveCourseFormVersion,
   setCourseFormRequirements,
   signCourseForm,
 } from "./course-forms";
@@ -198,7 +198,7 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     ).toMatchObject({ ok: false });
 
     // The staffer pastes the wording in: now it is asked, and owed.
-    await saveCourseFormVersion(ctx.db, {
+    await recordCourseFormVersion(ctx.db, {
       shopId: ctx.shop.id,
       formId: form.id,
       title: form.title,
@@ -374,7 +374,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
     expect(form.version).toBe(1);
 
     expect(
-      await saveCourseFormVersion(ctx.db, {
+      await recordCourseFormVersion(ctx.db, {
         shopId: ctx.shop.id,
         formId: form.id,
         title: ` ${form.title} `,
@@ -384,7 +384,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
     ).toEqual({ ok: true, versioned: false, marked: false });
 
     expect(
-      await saveCourseFormVersion(ctx.db, {
+      await recordCourseFormVersion(ctx.db, {
         shopId: ctx.shop.id,
         formId: form.id,
         title: form.title,
@@ -402,7 +402,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
     const other = await otherShop(ctx.db);
 
     expect(
-      await saveCourseFormVersion(ctx.db, {
+      await recordCourseFormVersion(ctx.db, {
         shopId: other.id,
         formId: form.id,
         title: "Hijacked",
@@ -523,7 +523,7 @@ describe("course forms — signing and readiness (in-memory PGlite)", () => {
       signerName: ctx.seat.fullName,
       agreed: true,
     });
-    await saveCourseFormVersion(ctx.db, {
+    await recordCourseFormVersion(ctx.db, {
       shopId: ctx.shop.id,
       formId: form.id,
       title: form.title,
@@ -992,7 +992,7 @@ describe("course forms — mid-course edits (in-memory PGlite)", () => {
       }),
     ).toMatchObject({ ok: true });
     // The shop edits the form now, mid-course.
-    await saveCourseFormVersion(ctx.db, {
+    await recordCourseFormVersion(ctx.db, {
       shopId: ctx.shop.id,
       formId: form.id,
       title: form.title,
@@ -1014,7 +1014,7 @@ describe("course forms — mid-course edits (in-memory PGlite)", () => {
     const form = await requireOneForm(ctx);
     await requiredSinceBefore(ctx, form.id, 3);
     await retime(ctx, -1, 1);
-    await saveCourseFormVersion(ctx.db, {
+    await recordCourseFormVersion(ctx.db, {
       shopId: ctx.shop.id,
       formId: form.id,
       title: form.title,

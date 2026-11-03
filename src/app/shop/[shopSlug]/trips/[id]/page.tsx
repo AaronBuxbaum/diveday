@@ -11,9 +11,11 @@ import { FormStatus } from "@/components/ui/form";
 import { canPersonRefund, canPersonRetireMedicalRefusal } from "@/db/authz";
 import { listBoats } from "@/db/boats";
 import { getDepartureNeeds } from "@/db/today-departure-needs";
+import { getTripGuests } from "@/db/trip-guests";
 import { listTripLenses } from "@/db/trip-lenses";
+import { getTripOverview } from "@/db/trip-overview";
+import { loadTripSharedReads } from "@/db/trip-shared-reads";
 import { latestTripStage } from "@/db/trip-stages";
-import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -132,7 +134,7 @@ export default async function ManageTripPage({
     staffGates,
   ] = await Promise.all([
     // Both read the trip, its requirements, readiness and prep list; started
-    // once here and handed to each (`src/db/trips-shared-reads.ts`).
+    // once here and handed to each (`src/db/trip-shared-reads.ts`).
     getTripOverview(db, shop, tripId, session.user.personId, undefined, sharedReads),
     getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName }, sharedReads),
     // The fleet, for the Details form's hull select. Live hulls only: this is

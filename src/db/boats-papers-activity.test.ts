@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { createBoat, updateBoatWithinCertificate } from "./boats";
+import { createBoat, editBoatWithinCertificate } from "./boats";
 import { activityEvents } from "./schema";
 import { listStaff } from "./trips";
 
@@ -47,7 +47,7 @@ describe("boat papers activity", () => {
       certifiedPassengers: 12,
       inspectionDueOn: "2030-06-01",
     });
-    const saved = await updateBoatWithinCertificate(db, {
+    const saved = await editBoatWithinCertificate(db, {
       shopId: shop.id,
       boatId: boat.id,
       name: "Logged Hull",
@@ -78,7 +78,7 @@ describe("boat papers activity", () => {
       coiExpiresOn: "2031-01-01",
     });
     const save = (coiExpiresOn: string | null, capacity: number) =>
-      updateBoatWithinCertificate(db, {
+      editBoatWithinCertificate(db, {
         shopId: shop.id,
         boatId: boat.id,
         name: "Quiet Hull",
@@ -107,7 +107,7 @@ describe("boat papers activity", () => {
     const { db, shop } = ctx;
     const staff = await actor();
     const boat = await createBoat(db, shop.id, "Refused Hull", 10);
-    const saved = await updateBoatWithinCertificate(db, {
+    const saved = await editBoatWithinCertificate(db, {
       shopId: shop.id,
       boatId: boat.id,
       name: "Refused Hull",

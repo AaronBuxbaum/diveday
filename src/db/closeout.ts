@@ -35,9 +35,9 @@ import {
 import { DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "./seed-clock";
 import { AT_SEA_DUSK_TITLE } from "./seed-identifiers";
 import { listRollCallGaps } from "./today";
+import { getTripPrep, type TripPrepShop } from "./trip-prep";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { liveTrip, notRehearsal } from "./trips-live";
-import { getTripPrep, type TripPrepShop } from "./trips-prep";
 import { listShopDayDepartures, seatNotCancelled } from "./trips-queries";
 
 /**

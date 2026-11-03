@@ -1,7 +1,7 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { discardFormDraft, saveFormDraft } from "@/db/form-drafts";
+import { discardFormDraft, recordFormDraft } from "@/db/form-drafts";
 import type { DiveDaySession } from "@/lib/auth";
 import { isFormDraftKind } from "@/lib/form-drafts";
 import { requireStaffSession } from "@/lib/session";
@@ -32,7 +32,7 @@ export async function saveFormDraftAction(
   if (!isFormDraftKind(form)) return;
   const session = await requireStaffSession();
   if (!sameOrigin(origin, session)) return;
-  await saveFormDraft(await getDb(), {
+  await recordFormDraft(await getDb(), {
     shopId: session.user.shopId,
     personId: session.user.personId,
     form,

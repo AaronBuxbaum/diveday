@@ -56,7 +56,7 @@ in the app.
 `needs_staff_fit`, deliberately distinct from both "own kit" and "not asked". Collapsing it into
 either is how a diver ends up kitted from a size the shop doesn't have.
 
-**The flag is sticky.** `saveRentalFit` does not clear it; only the explicit "fit resolved" action
+**The flag is sticky.** `recordRentalFit` does not clear it; only the explicit "fit resolved" action
 does. A stale flag costs one extra look at the dock; a wrongly-cleared one puts a diver in gear
 nobody checked, so the asymmetry is resolved in favour of the boring failure.
 

@@ -20,8 +20,8 @@ import { notificationDeliveryStatus } from "./notifications";
  * carries (`/unsubscribe/<token>`). It lives on the claim rather than in a
  * token table of its own because a send and its link are one thing: one row,
  * one token, never expiring (an expired opt-out would leave somebody unable to
- * stop the mail, the reasoning `person_courtesy_email_unsubscribe_tokens`
- * gives), and consuming it is an idempotent write to
+ * stop the mail, the reasoning `CAPABILITY_POLICY` gives the
+ * `courtesy_email_unsubscribe` capability), and consuming it is an idempotent write to
  * `user_accounts.weekly_digest`. Rows age out with H-20260730-evidence-retention-period-deletion's retention prune.
  *
  * Both foreign keys cascade: a claim means nothing once its shop or person is

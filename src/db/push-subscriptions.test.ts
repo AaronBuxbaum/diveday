@@ -9,7 +9,7 @@ import {
   deletePushSubscriptionsById,
   isDeviceSubscribed,
   isDeviceSubscribedAnywhere,
-  savePushSubscription,
+  recordPushSubscription,
 } from "./push-subscriptions";
 import { pushSubscriptions } from "./schema";
 
@@ -40,11 +40,11 @@ beforeEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("savePushSubscription", () => {
+describe("recordPushSubscription", () => {
   it("refuses a trip that belongs to another shop", async () => {
     const { db, shop } = await context();
     const personId = await staffPersonId(db, shop.id);
-    const outcome = await savePushSubscription(db, {
+    const outcome = await recordPushSubscription(db, {
       shopId: shop.id,
       tripId: "11111111-1111-1111-1111-111111111111",
       personId,
@@ -68,8 +68,8 @@ describe("savePushSubscription", () => {
       p256dh: "p",
       auth: "a",
     };
-    expect(await savePushSubscription(db, input)).toEqual({ ok: true });
-    expect(await savePushSubscription(db, { ...input, p256dh: "rotated" })).toEqual({ ok: true });
+    expect(await recordPushSubscription(db, input)).toEqual({ ok: true });
+    expect(await recordPushSubscription(db, { ...input, p256dh: "rotated" })).toEqual({ ok: true });
 
     const rows = await db
       .select()
@@ -91,13 +91,13 @@ describe("savePushSubscription", () => {
       p256dh: "p",
       auth: "a",
     };
-    await savePushSubscription(db, input);
+    await recordPushSubscription(db, input);
     const now = trip.startsAt;
     await claimDuePushTargets(db, shop.id, trip.id, now);
 
     // Re-subscribing must not hand back an immediate extra push, or a device
     // that reconnects in a loop becomes a way to bypass the throttle.
-    await savePushSubscription(db, { ...input, p256dh: "rotated" });
+    await recordPushSubscription(db, { ...input, p256dh: "rotated" });
     expect(await claimDuePushTargets(db, shop.id, trip.id, now)).toEqual([]);
   });
 });
@@ -106,7 +106,7 @@ describe("claimDuePushTargets", () => {
   async function subscribed() {
     const { db, shop, trip } = await context();
     const personId = await staffPersonId(db, shop.id);
-    await savePushSubscription(db, {
+    await recordPushSubscription(db, {
       shopId: shop.id,
       tripId: trip.id,
       personId,
@@ -160,7 +160,7 @@ describe("deletePushSubscription", () => {
   it("deletes only within the caller's own shop", async () => {
     const { db, shop, trip } = await context();
     const personId = await staffPersonId(db, shop.id);
-    await savePushSubscription(db, {
+    await recordPushSubscription(db, {
       shopId: shop.id,
       tripId: trip.id,
       personId,
@@ -188,7 +188,7 @@ describe("deletePushSubscriptionsById", () => {
     // the table, so the empty case is asserted rather than assumed.
     const { db, shop, trip } = await context();
     const personId = await staffPersonId(db, shop.id);
-    await savePushSubscription(db, {
+    await recordPushSubscription(db, {
       shopId: shop.id,
       tripId: trip.id,
       personId,
@@ -205,7 +205,7 @@ describe("deletePushSubscriptionsById", () => {
     const { db, shop, trip } = await context();
     const personId = await staffPersonId(db, shop.id);
     for (const endpoint of [ENDPOINT, OTHER_ENDPOINT]) {
-      await savePushSubscription(db, {
+      await recordPushSubscription(db, {
         shopId: shop.id,
         tripId: trip.id,
         personId,
@@ -243,7 +243,7 @@ describe("per-trip subscription state", () => {
     // "on" with no row behind it — and could not turn it on without first
     // turning the morning trip off.
     const { db, shop, morning, afternoon, personId } = await twoTrips();
-    await savePushSubscription(db, {
+    await recordPushSubscription(db, {
       shopId: shop.id,
       tripId: morning.id,
       personId,
@@ -258,7 +258,7 @@ describe("per-trip subscription state", () => {
 
   it("never reports another shop's row as this device's", async () => {
     const { db, shop, morning, personId } = await twoTrips();
-    await savePushSubscription(db, {
+    await recordPushSubscription(db, {
       shopId: shop.id,
       tripId: morning.id,
       personId,
@@ -277,7 +277,7 @@ describe("per-trip subscription state", () => {
     // origin-wide subscription and silently kill the second boat.
     const { db, shop, morning, afternoon, personId } = await twoTrips();
     for (const trip of [morning, afternoon]) {
-      await savePushSubscription(db, {
+      await recordPushSubscription(db, {
         shopId: shop.id,
         tripId: trip.id,
         personId,

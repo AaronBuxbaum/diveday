@@ -12,16 +12,15 @@ import {
   bookingCheckouts,
   bookings,
   buddyTeamEvents,
+  capabilities,
   crewAssignmentRequests,
   divePackageEntitlements,
   divePackages,
   gearItems,
   gearReservations,
   interests,
-  interestUnsubscribeTokens,
   orders,
   people,
-  personCourtesyEmailUnsubscribeTokens,
   shops,
   tripBlowoutDivers,
   tripBlowouts,
@@ -207,7 +206,7 @@ describe("deleteDemoShopCascade", () => {
 
   /**
    * The reset endpoint the whole e2e fleet depends on was throwing 23503 on
-   * this exact FK: `last_minute_list_unsubscribe_tokens` (now `interest_unsubscribe_tokens`) shipped with Leo's
+   * this exact FK: `last_minute_list_unsubscribe_tokens` (now an `interest_unsubscribe` capability) shipped with Leo's
    * self-serve unsubscribe but was never added to either delete ordering. A
    * half-completed reset left the demo shop wrecked, and the browser suite then
    * failed in whichever spec read it next — which is why the flake appeared to
@@ -224,21 +223,19 @@ describe("deleteDemoShopCascade", () => {
       .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId: person.id })
       .returning();
     if (!interest) throw new Error("test setup: last-minute interest insert returned no row");
-    await db
-      .insert(interestUnsubscribeTokens)
-      .values({ shopId: shop.id, interestId: interest.id, tokenHash: `hash_${interest.id}` });
+    await db.insert(capabilities).values({
+      purpose: "interest_unsubscribe",
+      shopId: shop.id,
+      interestId: interest.id,
+      tokenHash: `hash_${interest.id}`,
+    });
 
     // No FK violation here is the real assertion — tokens must go before interests.
     await deleteDemoShopCascade(db, shop.id);
 
     expect(await findShop(db, slug)).toBeUndefined();
     expect(
-      (
-        await db
-          .select()
-          .from(interestUnsubscribeTokens)
-          .where(eq(interestUnsubscribeTokens.shopId, shop.id))
-      ).length,
+      (await db.select().from(capabilities).where(eq(capabilities.shopId, shop.id))).length,
     ).toBe(0);
   });
 
@@ -338,7 +335,7 @@ describe("deleteDemoShopCascade", () => {
    * The exact same class of bug the last-minute unsubscribe token test above
    * regression-tests, this time for the courtesy-email unsubscribe token that
    * shipped with Leo's general self-serve unsubscribe (story-backlog task
-   * 122): `person_courtesy_email_unsubscribe_tokens` references `people`
+   * 122): the courtesy-email unsubscribe capability references `people`
    * directly (not through an entry), so it must be deleted before people or
    * the whole reset FK-violates and aborts mid-run.
    */
@@ -348,7 +345,8 @@ describe("deleteDemoShopCascade", () => {
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
-    await db.insert(personCourtesyEmailUnsubscribeTokens).values({
+    await db.insert(capabilities).values({
+      purpose: "courtesy_email_unsubscribe",
       shopId: shop.id,
       personId: person.id,
       tokenHash: `hash_${person.id}`,
@@ -359,12 +357,7 @@ describe("deleteDemoShopCascade", () => {
 
     expect(await findShop(db, slug)).toBeUndefined();
     expect(
-      (
-        await db
-          .select()
-          .from(personCourtesyEmailUnsubscribeTokens)
-          .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shop.id))
-      ).length,
+      (await db.select().from(capabilities).where(eq(capabilities.shopId, shop.id))).length,
     ).toBe(0);
   });
 

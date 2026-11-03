@@ -44,8 +44,8 @@ import {
   issueWaiverRequest,
   recordInPersonWaiver,
   recordMedicalEvaluation,
+  recordWaiverTemplate,
   retireMedicalRefusal,
-  saveWaiverTemplate,
 } from "./waivers";
 
 // ---------------------------------------------------------------------------
@@ -440,7 +440,7 @@ describe("counterRentalWaiverStandings", () => {
 
   it("says a never-signed person has no waiver, and the rental goes out anyway", async () => {
     const { db, shop } = await rentalShop();
-    await saveWaiverTemplate(db, { shopId: shop.id, title: "Release", body: "The terms." });
+    await recordWaiverTemplate(db, { shopId: shop.id, title: "Release", body: "The terms." });
     const ana = await person(db, shop.id, "Ana Walk-In");
     const reg = await unit(db, shop.id, "Reg #1", "regulator");
 
@@ -466,7 +466,7 @@ describe("counterRentalWaiverStandings", () => {
 
   it("reads a release the person signed, with no booking anywhere", async () => {
     const { db, shop } = await rentalShop();
-    await saveWaiverTemplate(db, { shopId: shop.id, title: "Release", body: "The terms." });
+    await recordWaiverTemplate(db, { shopId: shop.id, title: "Release", body: "The terms." });
     const ana = await person(db, shop.id, "Ana Walk-In");
     const desk = await staffer(db, shop.id);
     const signed = await recordInPersonWaiver(db, {
@@ -493,7 +493,7 @@ describe("counterRentalWaiverStandings", () => {
    */
   it("carries a physician's earlier refusal under a later clean release", async () => {
     const { db, shop } = await rentalShop();
-    await saveWaiverTemplate(db, { shopId: shop.id, title: "Release", body: "The terms." });
+    await recordWaiverTemplate(db, { shopId: shop.id, title: "Release", body: "The terms." });
     const desk = await staffer(db, shop.id);
     const startsAt = new Date(nowMs() + 3 * 24 * 3_600_000);
     const trip = await createTrip(db, {
