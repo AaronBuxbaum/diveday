@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { after } from "next/server";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
+import { OfferedUndo } from "@/app/shop/[shopSlug]/_components/OfferedUndo";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
@@ -21,9 +22,9 @@ import type { AboardBlockerKind } from "@/lib/readiness";
 import { rosterLetter, rosterRowFact } from "@/lib/roster-rows";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { readUndoOffer, UNDO_PARAMS } from "@/lib/undo";
 import { DiverList, type RosterBadge, type RosterRow } from "./_components/DiverList";
 import { RosterOrderLine, rosterHref } from "./_components/RosterOrderLine";
-import { restoreDiverAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -69,7 +70,10 @@ export default async function DiversPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{
     notice?: string;
-    deleted?: string;
+    /** The removal's Undo offer (`src/lib/undo.ts`). */
+    undo?: string;
+    undoPerson?: string;
+    undoFrom?: string;
     q?: string;
     page?: string;
     filter?: string;
@@ -77,7 +81,8 @@ export default async function DiversPage({
   }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, deleted, q, page, filter: filterParam, sort: sortParam } = await searchParams;
+  const flash = await searchParams;
+  const { notice, q, page, filter: filterParam, sort: sortParam } = flash;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   reportRenderQueries("/shop/[shopSlug]/divers", after);
   const locale = await requestLocale(shop.defaultLocale);
@@ -230,32 +235,23 @@ export default async function DiversPage({
   const noticeIsError = banner?.tone === "danger";
   /**
    * Removal is a land-then-undo action like every other reversible one in the
-   * app, so it wears the app's undo affordance (`UndoToast`) rather than the
-   * bespoke banner-plus-outlined-button this page grew: a success banner that
-   * stayed until the next navigation, with a green-tinted secondary button
-   * beside it that looked like nothing else in the product. The banner below is
-   * still the fallback for a `?notice=deleted` that arrives with no id to undo
-   * (a hand-typed or truncated URL), which the toast has nothing to act on.
+   * app, so it wears the app's undo affordance rather than a banner. The banner
+   * below is still the fallback for a `?notice=deleted` that arrives with no
+   * offer to act on (a hand-typed or truncated URL).
    */
-  const undoRemoval = notice === "deleted" && deleted ? deleted : null;
+  const offered = readUndoOffer(flash);
+  const undoRemoval = notice === "deleted" && offered?.undo === "diver-removal" ? offered : null;
 
   return (
     <StaffPage width="full">
-      {/* `deleted` goes with `notice`: it carries the id the undo toast acts on,
+      {/* The offer goes with `notice`: it carries the id the undo toast acts on,
           and a person id left sitting in the address bar after the toast has
           been read is nobody's business and nothing's input. */}
-      <FlashParams params={["notice", "deleted"]} />
+      <FlashParams params={["notice", ...UNDO_PARAMS]} />
       <ShopPageHeader title={t("divers.page.title")} />
 
       {undoRemoval ? (
-        <UndoToast
-          message={t("divers.page.removedToast")}
-          action={restoreDiverAction}
-          fields={{ personId: undoRemoval }}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
-          undoLabel={t("shared.undoToast.undo")}
-          dismissLabel={t("shared.undoToast.dismiss")}
-        />
+        <OfferedUndo shopSlug={shopSlug} offer={undoRemoval} t={t} />
       ) : noticeText ? (
         <ShopNotice tone={noticeIsError ? "danger" : "success"} className="mt-6">
           <p role="status">{noticeText}</p>

@@ -383,6 +383,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Staff credential
 - Supervision claim
 - Surface interval
+- Undo offer
 - What you might see
 
 ## Rental fit and prep

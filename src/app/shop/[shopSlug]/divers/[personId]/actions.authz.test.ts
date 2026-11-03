@@ -166,7 +166,7 @@ describe("removing a diver from the roster", () => {
     const to = await redirectedTo(() => deletePersonAction(shop.slug, diver, new FormData()));
 
     expect(to).toBe(
-      `/shop/${shop.slug}/divers?notice=deleted&deleted=${encodeURIComponent(diver)}`,
+      `/shop/${shop.slug}/divers?notice=deleted&undo=diver-removal&undoPerson=${diver}&undoFrom=roster`,
     );
     expect((await personRow(db, diver)).deletedAt).not.toBeNull();
   });

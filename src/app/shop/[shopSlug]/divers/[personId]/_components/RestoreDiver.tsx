@@ -1,9 +1,10 @@
+import { undoAction } from "@/app/actions/undo";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { restorePersonAction } from "../record-actions";
+import { undoParams } from "@/lib/undo";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
 /**
@@ -59,10 +60,17 @@ export function RestoreDiver({
       </div>
       <p className="mt-2 max-w-2xl text-sm text-muted">{t("divers.removed.body")}</p>
       {canRestore ? (
+        // The same Undo the roster's toast offers right after the removal
+        // (`src/lib/undo.ts`), still here once that toast is long gone.
         <form
-          action={restorePersonAction.bind(null, shopSlug, personId)}
+          action={undoAction.bind(null, shopSlug)}
           className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2"
         >
+          {Object.entries(
+            undoParams({ undo: "diver-removal", undoPerson: personId, undoFrom: "record" }) ?? {},
+          ).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} />
+          ))}
           <SubmitButton pendingLabel={t("divers.removed.restoring")} className={buttonClass()}>
             {t("divers.removed.restore")}
           </SubmitButton>

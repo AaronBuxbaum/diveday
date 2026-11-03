@@ -4,7 +4,6 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { DownloadAcknowledgmentLink } from "@/components/DownloadAcknowledgmentLink";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
-import { UndoToast } from "@/components/UndoToast";
 import { diverPackageBalance } from "@/db/dive-packages";
 import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
@@ -22,7 +21,9 @@ import { diverStanding } from "@/lib/diver-standing";
 import { splitDiverStatus } from "@/lib/diver-status";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
+import { readUndoOffer } from "@/lib/undo";
 import { uuidParam } from "@/lib/uuid";
+import { OfferedUndo } from "../../_components/OfferedUndo";
 import { BookActivity } from "./_components/BookActivity";
 import { DiverFile } from "./_components/DiverFile";
 import { DiverHeader } from "./_components/DiverHeader";
@@ -38,8 +39,6 @@ import { canRaiseInvoiceFor } from "./_lib/invoice-door";
 import { loadDiverRecordGates } from "./_lib/record-gates";
 import { DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
 import { diverStatusRows } from "./_lib/status-load";
-import { restoreCardAction } from "./card-actions";
-import { restoreDiverNoteAction } from "./note-actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -92,8 +91,12 @@ export default async function DiverDetailPage({
   params: Promise<{ shopSlug: string; personId: string }>;
   searchParams: Promise<{
     notice?: string;
+    /** The Undo the last removal offered (`src/lib/undo.ts`), with its payload fields. */
     undo?: string;
+    undoPerson?: string;
+    undoCard?: string;
     cardType?: string;
+    undoFrom?: string;
     by?: string;
     /** Signed, verified against this route's own `personId` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
@@ -102,7 +105,7 @@ export default async function DiverDetailPage({
     /** Which card a box-level refusal is about — see `DiverNotice.cardId`. */
     card?: string;
     edit?: string;
-    /** The deleted diver note's text, carried by the land-then-undo redirect. */
+    /** The deleted diver note's text, carried by its Undo offer. */
     noteBody?: string;
     /** Which page of the Activity group is being read, independent of the booking picker. */
     activity?: string;
@@ -116,8 +119,7 @@ export default async function DiverDetailPage({
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(personId)) notFound();
   const query = await searchParams;
-  const { notice, undo, cardType, by, gate, form, card, edit, noteBody, activity, bookingPage } =
-    query;
+  const { notice, by, gate, form, card, edit, activity, bookingPage } = query;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -216,14 +218,20 @@ export default async function DiverDetailPage({
   // seat to change on its departure).
   const gaps = splitDiverStatus(status);
   const pageNotice = noticeForForm(diverNotice, "page");
-  // A card deletion with its undo capability has one outcome: the toast. The
-  // `card-deleted` notice remains a cards fallback for an old or malformed link
-  // that has no undo payload, but showing both on the normal path repeats the
-  // same confirmation in two places.
-  const cardRemovalUndo = notice === "card-deleted" && undo && cardType;
-  const cardsStatus = cardRemovalUndo ? undefined : noticeForForm(diverNotice, "cards");
-  const diverNoteRemovalUndo = notice === "note-deleted" && noteBody;
-  const notesStatus = diverNoteRemovalUndo ? undefined : noticeForForm(diverNotice, "notes");
+  // A removal that offered Undo has one outcome: the toast. The `card-deleted`
+  // and `note-deleted` notices remain their sections' fallback for an old or
+  // malformed link that carries no offer, but showing both on the normal path
+  // repeats the same confirmation in two places. Only this record's own
+  // offers are drawn here.
+  const offered = readUndoOffer(query);
+  const undo =
+    offered?.undoPerson === personId &&
+    ((offered.undo === "diver-card" && notice === "card-deleted") ||
+      (offered.undo === "diver-note" && notice === "note-deleted"))
+      ? offered
+      : null;
+  const cardsStatus = undo?.undo === "diver-card" ? undefined : noticeForForm(diverNotice, "cards");
+  const notesStatus = undo?.undo === "diver-note" ? undefined : noticeForForm(diverNotice, "notes");
   // **The record's one earned moment**, and the only accent ink this page may
   // carry (20260827-clearwater-surface-language, decision 11). Derived by the
   // action that redirected here — from a post-mutation `buildDiverStatus` that
@@ -291,26 +299,8 @@ export default async function DiverDetailPage({
           status={noticeForForm(diverNotice, "restore")}
         />
       ) : null}
-      {cardRemovalUndo ? (
-        <UndoToast
-          message={t("divers.notices.cardRemovedToast", {
-            name: by ?? t("divers.certifications.noCertificationClearedByUnknown"),
-          })}
-          action={restoreCardAction.bind(null, shopSlug, personId)}
-          fields={{ certificationId: undo, cardType }}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
-          undoLabel={t("shared.undoToast.undo")}
-          dismissLabel={t("shared.undoToast.dismiss")}
-        />
-      ) : diverNoteRemovalUndo ? (
-        <UndoToast
-          message={t("divers.notices.noteDeleted")}
-          action={restoreDiverNoteAction.bind(null, shopSlug, personId)}
-          fields={{ body: noteBody }}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
-          undoLabel={t("shared.undoToast.undo")}
-          dismissLabel={t("shared.undoToast.dismiss")}
-        />
+      {undo ? (
+        <OfferedUndo shopSlug={shopSlug} offer={undo} by={by} t={t} />
       ) : (
         <NoticeBanner notice={pageNotice} />
       )}
