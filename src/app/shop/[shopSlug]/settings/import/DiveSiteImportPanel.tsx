@@ -2,8 +2,9 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import type { NoticeTone } from "@/components/ui/tone";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { CsvFileInput } from "../_components/CsvFileInput";
 import { restoreDiveSitesAction } from "./dive-site-actions";
 

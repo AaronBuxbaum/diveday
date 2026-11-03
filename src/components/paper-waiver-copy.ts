@@ -1,8 +1,8 @@
+import type { NoticeTone } from "@/components/ui/tone";
 import { staffGuardianRelationshipOptions } from "@/i18n/guardian-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { GuardianRelationship } from "@/lib/guardian";
 import type { PaperWaiverRefusal } from "@/lib/paper-waiver-form";
-import type { NoticeTone } from "@/lib/staff-notices";
 
 /**
  * Words for `PaperWaiverControl`, resolved server-side and passed down as plain

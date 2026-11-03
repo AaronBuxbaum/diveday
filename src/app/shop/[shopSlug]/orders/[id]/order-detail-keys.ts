@@ -1,8 +1,8 @@
+import type { NoticeTone } from "@/components/ui/tone";
 import type { RecordPaymentOnOrderOutcome } from "@/db/orders";
 import type { Order, OrderLineItemKind, OrderStatus } from "@/db/schema";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
-import type { NoticeTone } from "@/lib/staff-notices";
 
 /** The order detail page's words, by key: its status, its line kinds, its notices. */
 

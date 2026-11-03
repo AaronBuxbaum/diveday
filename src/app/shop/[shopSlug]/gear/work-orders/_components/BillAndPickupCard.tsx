@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FormStatus } from "@/components/ui/form";
+import type { NoticeTone } from "@/components/ui/tone";
 import type { DbExecutor } from "@/db/client";
 import type { CustomerGearNotice, WorkOrder } from "@/db/schema";
 import { billAndPickupFacts } from "@/db/work-order-follow-up";
@@ -17,7 +18,7 @@ import {
 import { ownerOrManagerWords, type StaffWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { workOrderBillAllowsAnother } from "@/lib/work-order-follow-up";
 import {
   recordBenchPaymentAction,

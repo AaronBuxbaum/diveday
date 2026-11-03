@@ -4,6 +4,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { GROUP_META_CLASS, GroupLabel, type GroupLabelElement } from "@/components/ui/group-label";
+import type { ToneName } from "./tone";
 
 /**
  * Shared ledger composition: group labels, native `<details>` disclosure, and
@@ -191,7 +192,7 @@ export function LedgerGroup({
   );
 }
 
-export type LedgerRowKindTone = "danger" | "warning" | "neutral";
+export type LedgerRowKindTone = Extract<ToneName, "danger" | "warning" | "neutral">;
 
 /**
  * **The kind's column** (pixel-craft class 3): a fixed width every row's kind

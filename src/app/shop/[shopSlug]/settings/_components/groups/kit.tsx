@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { ShopNotice } from "@/components/ShopNotice";
 import { GroupLabel } from "@/components/ui/group-label";
+import { ShopNotice } from "@/components/ui/outcome";
+import { noticeRole } from "@/components/ui/tone";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { requireShopSurface } from "@/lib/session";
-import { type NoticeMessage, noticeRole } from "@/lib/staff-notices";
+import type { NoticeMessage } from "@/lib/staff-notices";
 import { SETTINGS_GROUPS, type SectionId } from "../../settings-groups";
 
 /**

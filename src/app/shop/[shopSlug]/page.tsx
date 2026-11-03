@@ -27,6 +27,7 @@ import { hasTodayWorkToShow } from "@/app/shop/[shopSlug]/_components/today/toda
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
 import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { FlashParams } from "@/components/FlashParams";
+import type { NoticeTone } from "@/components/ui/tone";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
 import {
   assembleDaySpine,
@@ -51,7 +52,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
-import { type NoticeCodeOf, type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 import { utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
 import { CallPanelSlot } from "./_components/call/CallPanelSlot";

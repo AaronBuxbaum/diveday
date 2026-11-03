@@ -3,9 +3,9 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Copyable } from "@/components/Copyable";
-import { ShopNotice } from "@/components/ShopNotice";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { ShopNotice } from "@/components/ui/outcome";
 import { calendarFeedAction } from "./actions";
 import {
   type CalendarFeedCopy,

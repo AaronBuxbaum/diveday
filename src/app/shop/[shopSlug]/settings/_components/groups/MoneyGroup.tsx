@@ -1,8 +1,8 @@
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { InsetGroup } from "@/components/ui/ledger";
+import { ShopNotice } from "@/components/ui/outcome";
 import { canAcceptPayments, type getShopStripeAccount } from "@/db/stripe-accounts";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { disconnectAction, refreshAction } from "../../money-actions";

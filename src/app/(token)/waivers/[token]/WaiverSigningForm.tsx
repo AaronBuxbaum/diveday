@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopNotice";
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { ShopNotice } from "@/components/ui/outcome";
 import type { AppDb } from "@/db/client";
 import { medicalAlertPrefill } from "@/db/medical-alerts";
 import type { waiverRecords } from "@/db/schema";

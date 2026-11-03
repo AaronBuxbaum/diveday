@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
+import type { NoticeTone } from "@/components/ui/tone";
 import { getAccountSecurityPage } from "@/db/account-security";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -23,7 +24,7 @@ import { openSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { isStepUpPurpose, type StepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS, staffDestination } from "@/lib/staff-destinations";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { staffPageClass } from "../../_components/staff-page";
 import { AccountSessionsList } from "./_components/AccountSessionsList";
 import {

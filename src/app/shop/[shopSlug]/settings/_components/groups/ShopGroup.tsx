@@ -1,10 +1,10 @@
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
+import { ShopNotice } from "@/components/ui/outcome";
 import type { stripeCurrencyMismatch } from "@/db/stripe-accounts";
 import { currencyOptions } from "@/i18n/currency-labels";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
