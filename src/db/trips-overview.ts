@@ -12,7 +12,6 @@ import {
 } from "@/lib/crew-roles";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { divemasterRatioGap, inWaterDivemasterCount } from "@/lib/divemaster-ratio";
-import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { summarizeTripDiveSites } from "@/lib/trip-dives";
 import { hasReturned } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
@@ -21,9 +20,9 @@ import { tripBlowoutCause } from "./blowouts";
 import { type BoatWork, boatWorkFor, readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { listCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
+import { type DepartureCount, departureCounts } from "./departure-counts";
 import { listDiveSites } from "./dive-sites";
 import { flySafeToldUncorrected } from "./fly-safe-correction";
-import { listDepartureBoardedByTrip } from "./manifests";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
 import { ratingCredentialsByPerson } from "./staff-credentials";
 import { crewShiftCoverage } from "./staffing";
@@ -145,7 +144,7 @@ export async function getTripOverview(
     diverLanguages,
     pulseReadiness,
     pulseWork,
-    pulseBoardedByTrip,
+    pulseCounts,
     crewEvidence,
     offCadence,
     clashes,
@@ -167,10 +166,10 @@ export async function getTripOverview(
     tripBlowoutCause(db, shop.id, tripId),
     bookedDiverLanguages(db, shop.id, tripId),
     // The pulse's facts, read only while the trip is still ahead. All go through
-    // the readers their destination surfaces already trust — the roster's own
-    // blocked predicate, the prep list's own completeness rule, and the
-    // manifest's own boarded reader — so the counts on this strip can never
-    // disagree with the pages it links to.
+    // the readers their destination surfaces already trust — the departure's
+    // one head count (`./departure-counts`, issue #2785) and the prep list's own
+    // completeness rule — so the counts on this strip can never disagree with
+    // the pages it links to.
     pulseReadinessRead,
     // The boat's work — sizes, nitrox, contacts, open orders — through the
     // one reader Today's rows for this boat read (`./boat-work`), over the
@@ -181,9 +180,16 @@ export async function getTripOverview(
         ? readBoatWork(db, shop.id, new Map([[tripId, rows.map((row) => row.booking.id)]]))
         : new Map<string, BoatWork>(),
     ),
-    pulseNeeded
-      ? listDepartureBoardedByTrip(db, shop.id, [tripId])
-      : new Map<string, Set<string>>(),
+    // The head count over the same readiness rows, so its `blocked` is the
+    // roster chip's own count of them.
+    pulseReadinessRead.then((rows) =>
+      pulseNeeded
+        ? departureCounts(db, shop.id, [tripId], {
+            now,
+            readiness: new Map(rows.map((row) => [row.booking.id, row.readiness])),
+          })
+        : new Map<string, DepartureCount>(),
+    ),
     crewEvidenceRead,
     offCadenceRead,
     // Who on this crew is on another departure whose hours overlap this one,
@@ -216,8 +222,8 @@ export async function getTripOverview(
   // prep list's own rule).
   const work = boatWorkFor(pulseWork, tripId);
   const pulse = {
-    blocked: pulseReadiness.filter((row) => rosterRowIsBlocked(row.readiness)).length,
-    boarded: pulseBoardedByTrip.get(tripId)?.size ?? 0,
+    blocked: pulseCounts.get(tripId)?.blocked ?? 0,
+    boarded: pulseCounts.get(tripId)?.boarded ?? 0,
     /** The boat's work as counts, for `boatWorkItems` (src/lib/boat-work.ts). */
     work: {
       missingSize: work.missingSize.length,

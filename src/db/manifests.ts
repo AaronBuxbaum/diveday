@@ -587,14 +587,17 @@ export async function listUnaccountedForByTrip(
   const seen = new Set<string>();
   const latest = new Map<string, { tripId: string; missing: number; back: number }>();
   for (const row of rows) {
-    const key = `${row.bookingId}\u0000${row.checkpoint}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
     // The query already dropped the departure checkpoint; anything that is not
     // an after-dive one has no ordinal and is not read.
-    if (row.status === "cleared" || !row.checkpoint.startsWith("after_dive_")) continue;
+    if (!row.checkpoint.startsWith("after_dive_")) continue;
     const ordinal = rollCallCheckpointOrdinal(row.checkpoint as RollCallCheckpoint);
-    if (!Number.isFinite(ordinal)) continue;
+    if (!Number.isInteger(ordinal) || ordinal < 1) continue;
+    // Keyed on the checkpoint's place, not its spelling: "after_dive_02" and
+    // "after_dive_2" are one checkpoint, and only the newest word at it stands.
+    const key = `${row.bookingId}\u0000${ordinal}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (row.status === "cleared") continue;
     const seat = latest.get(row.bookingId) ?? { tripId: row.tripId, missing: 0, back: 0 };
     if (row.status === "not_boarded") seat.missing = Math.max(seat.missing, ordinal);
     else seat.back = Math.max(seat.back, ordinal);

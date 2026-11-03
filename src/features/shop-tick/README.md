@@ -4,7 +4,9 @@ Every shop cadence, once an hour: the scans `/api/cron/shop-tick` runs (issue #2
 promise a fixed UTC hour cannot keep across zones, decided per shop in the shop's own day: the
 minimum-head-count decision, pre-trip reminders, held sends, gear service reminders, recaps, crew
 notices, the stale roll-call alert, the missing-diver alert's retry and the desk's trailing ping.
-The demo shops' boats at sea come home first, so no alert reads a demo boat as overdue.
+The demo shops' boats at sea come home first, so no alert reads a demo boat as overdue. The minimum-head-count decision runs next, so no reminder goes out for a departure the same tick cancels. The other scans then run side by side.
+
+A `?scan=<name>` rerun runs only those scans and never checks in to the hourly monitor. An unknown name is a 400 before anything runs.
 
 Module shape: [20260730-feature-module-contracts](../../../docs/architecture/decisions/20260730-feature-module-contracts.md).
 

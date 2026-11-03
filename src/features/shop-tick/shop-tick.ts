@@ -97,8 +97,17 @@ async function runScan<Scan extends ShopTickScan>(
 }
 
 /**
- * Runs the named scans (all of them by default) at one instant. The demo
- * boats come home first; the rest run side by side, each isolated.
+ * The scans that run one after another, in this order, before the rest. The
+ * demo boats come home before any alert reads a demo boat as overdue. The
+ * minimum-head-count decision commits before the reminders read the day, so a
+ * diver whose departure was just cancelled is never also told "see you
+ * tomorrow" by the same tick.
+ */
+const RUN_FIRST: readonly ShopTickScan[] = ["demo-boats-at-sea", "minimum-seats"];
+
+/**
+ * Runs the named scans (all of them by default) at one instant: the
+ * `RUN_FIRST` scans in order, then the rest side by side, each isolated.
  */
 export async function runShopTick(
   db: AppDb,
@@ -109,8 +118,8 @@ export async function runShopTick(
   const record = async <Scan extends ShopTickScan>(scan: Scan) => {
     (summary as Record<Scan, unknown>)[scan] = await runScan(scan, db, now);
   };
-  if (scans.includes("demo-boats-at-sea")) await record("demo-boats-at-sea");
-  await Promise.all(scans.filter((scan) => scan !== "demo-boats-at-sea").map(record));
+  for (const scan of RUN_FIRST) if (scans.includes(scan)) await record(scan);
+  await Promise.all(scans.filter((scan) => !RUN_FIRST.includes(scan)).map(record));
   return summary;
 }
 
