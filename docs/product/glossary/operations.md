@@ -62,7 +62,7 @@
 - **Close-out** — the shop home's evening state (ADR 20260827-clearwater-surface-language,
   decision 4): once every departure of the shop day has settled, each station reads its end state
   in strict precedence off the same roll-call evidence Today chases, then the clock, and only then
-  the crew's own **trip stage** (`departureStatus`, `src/lib/closeout.ts`), and the day's takings
+  the crew's own **trip stage** (`departureStatus`, `src/features/today/closeout.ts`), and the day's takings
   read beneath them. **A stage settles a station the clock would leave open, and never reopens one
   the clock has closed** (issue #1480): inside the late-arrival hour a live `home` reads `all_home`,
   because a crew member tapping Home at the rail is the statement that buffer was standing in for
@@ -90,7 +90,7 @@
   time is it at this shop" for a request: the instant, the shop's zone, its calendar date
   (`today`), the exact UTC pair around that date (`day`), its wall-clock time and whether a guest
   message may go out now. `requireShopSurface` mints one beside the shop row, and a domain function takes a clock
-  rather than a loose `now` and time zone (Today's reads in `src/db/today.ts` first).
+  rather than a loose `now` and time zone (Today's reads in `src/features/today/today-reader.ts` first).
   "Today's departures" is `startsAt` inside `clock.day`, exactly, with no looser scan beside it.
 - **Shop tick** — the one hourly pass (`/api/cron/shop-tick`, `0 * * * *`) that serves every shop
   cadence: the minimum-head-count decision, pre-trip reminders, held sends, gear service reminders,
@@ -1896,7 +1896,7 @@
   while somebody is missing**: while any diver or rostered crew member on the departure has an
   after-dive "not back aboard" standing — exactly while Today raises its missing-diver or
   missing-crew row, read through the same function (`tripsWithSomebodyMissing`,
-  `src/db/today.ts`) — every recap on that departure waits: the email, a staff send (which says
+  `src/features/today/today-reader.ts`) — every recap on that departure waits: the email, a staff send (which says
   "Recaps are held until the roll call is corrected"), `/recap`, and the after-dive `/ready`. The
   page answers with the **waiting** state, which says only that the recap is not ready yet; the
   four writers on it (photo, tip, review, pulse) refuse while it is closed (`recapClosedReason`).

@@ -128,7 +128,7 @@ export async function queueAndAttemptMediaDeletion(
  * a `failed` row (CR-012's "provider-delete failure is owner-visible and
  * retryable" case covers both). Defaults to five minutes ago; injectable so
  * tests don't depend on real wall-clock time passing. Exported so
- * `src/db/today.ts` can build the same cutoff from its own `now` (task 157)
+ * `src/features/today/today-reader.ts` can build the same cutoff from its own `now` (task 157)
  * instead of reading the live clock the way `listPendingMediaDeletions`'s
  * default argument does. (That default is what the Settings panel reads with.)
  */

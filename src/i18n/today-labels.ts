@@ -7,14 +7,14 @@ import { formatDateTimeTz, formatRelativeDay, formatShortDate, formatWeekday } f
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
+import type { RollCallGapReason } from "@/lib/roll-call-gaps";
 import type { TemperatureUnit } from "@/lib/temperature-units";
-import type { RollCallGapReason } from "@/lib/today";
 import type { TodayActionKind } from "@/lib/today-kinds";
 import { awayDatesText } from "./away-labels";
 import { SPECIALTY_KEYS } from "./readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
-/** Every `TodayActionKind` chip, to its label key. Tone stays in `src/lib/today.ts` (not copy). */
+/** Every `TodayActionKind` chip, to its label key. Tone stays in `src/features/today/today.ts` (not copy). */
 export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   roll_call_missing_diver: "today.actionKind.rollCallMissingDiver",
   roll_call_missing_crew: "today.actionKind.rollCallMissingCrew",
@@ -119,7 +119,7 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
 /**
  * A blocked row's action-button word, the verb when one tap sends in place
  * ("Send waiver"), as a `Copy` the renderer resolves. Used by the Today queue
- * (`src/lib/today.ts`) through `blockerDestination`, the one blocker→fix rule.
+ * (`src/features/today/today.ts`) through `blockerDestination`, the one blocker→fix rule.
  */
 export function blockerActionLabelCopy(code: ReadinessBlockerCode): Copy {
   return { key: BLOCKER_ACTION_LABEL_KEYS[code] };
@@ -300,7 +300,7 @@ export function diverAlsoText(t: StaffTranslator, lead: string, others: readonly
 
 /**
  * "Ana, Ben and 6 others" — enough to recognise the group, short enough to
- * scan. Here rather than in `src/lib/today.ts` because the joining words are
+ * scan. Here rather than in `src/features/today/today.ts` because the joining words are
  * *words*: that version baked " and ", "other" and "others" into a string a
  * page renders verbatim, so a Spanish reader got English conjunctions inside an
  * otherwise translated sentence.
@@ -324,7 +324,7 @@ export function nameListText(t: StaffTranslator, names: readonly string[], shown
   });
 }
 
-/** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
+/** The remaining `src/features/today/today-reader.ts` action rows, resolved through the same bundle-only rule. */
 
 /** One diver's sizes job: a blank size, or nobody has asked about their kit yet. */
 export function missingFitNamedDetailText(t: StaffTranslator, unasked: boolean): string {
@@ -709,7 +709,7 @@ const MEDIA_DELETION_KIND_KEYS: Record<MediaDeletionKind, StaffMessageKey> = {
   payment_receipt: "today.opsAlert.mediaKind.paymentReceipt",
 };
 
-/** A stuck operation's kind word, standalone — `src/db/today.ts` uses this for the row's `subject`. */
+/** A stuck operation's kind word, standalone — `src/features/today/today-reader.ts` uses this for the row's `subject`. */
 export function stuckOperationKindText(
   t: StaffTranslator,
   operationKind: PaymentOperationKind,
@@ -717,7 +717,7 @@ export function stuckOperationKindText(
   return t(STUCK_OPERATION_KIND_KEYS[operationKind]);
 }
 
-/** A failed deletion's media kind word, standalone — `src/db/today.ts` uses this for the row's `subject`. */
+/** A failed deletion's media kind word, standalone — `src/features/today/today-reader.ts` uses this for the row's `subject`. */
 export function mediaDeletionKindText(t: StaffTranslator, mediaKind: MediaDeletionKind): string {
   return t(MEDIA_DELETION_KIND_KEYS[mediaKind]);
 }

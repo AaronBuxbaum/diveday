@@ -253,9 +253,9 @@ from today's crew-first ordering.
 **Data.**
 
 ```ts
-// src/lib/today.ts — NEW assembly over the existing reader, no new detector:
+// src/features/today/today.ts — NEW assembly over the existing reader, no new detector:
 export type DayStationRow = {
-  kind: TodayActionKind;                       // existing union (src/lib/today.ts)
+  kind: TodayActionKind;                       // existing union (src/features/today/today.ts)
   tone: "danger" | "warning" | "neutral";      // ACTION_KIND_META's existing map
   sentence: string;                            // existing row copy (message keys unchanged)
   action: { labelKey: string; href: string };  // the existing per-kind action
@@ -273,13 +273,13 @@ export type DaySpine = {
   tomorrow: { stations: DayStation[]; jobs: number }; // the disclosure body's data
   week: { jobs: number };                      // the link row's count
 };
-export function assembleDaySpine(work: TodayWork /* src/db/today.ts, from getTodayWork */,
+export function assembleDaySpine(work: TodayWork /* src/features/today/today-reader.ts, from getTodayWork */,
   tomorrow: TodayWork /* a sibling getTodayWork call for tomorrow's shop-day */): DaySpine;
 ```
 
 The mapping rule, not a re-detection: a `TodayAction` that names a `tripId` files under that trip's
 station; one with none files under `desk`. `DayStation`'s site/boat/price fields require extending
-`getTodayWork`'s departures query in `src/db/today.ts` — select the departure's dive-site name (via
+`getTodayWork`'s departures query in `src/features/today/today-reader.ts` — select the departure's dive-site name (via
 `trip_dives`), `boats.name` (through `trips.boatId`) and `trips.priceCents` into
 `DepartureSummary` — an extension of the existing reader, never a second query at the surface;
 `crewNames` is the existing `DepartureSummary.crew`. The Tomorrow disclosure's data is a second
@@ -319,7 +319,7 @@ sentence "No boats today, and nothing is waiting on you."
 | Test | Where | Pins |
 | --- | --- | --- |
 | A departure's title renders exactly once at row weight (station header owns it; no row repeats it) | new `src/app/shop/[shopSlug]/_components/today/DaySpine.test.tsx` | decision 4 / principle 9 |
-| Rows with no `tripId` land in the desk group; severity order within a station is danger→warning→quiet | `src/lib/today.test.ts` (extend, on `assembleDaySpine`) | decision 4 |
+| Rows with no `tripId` land in the desk group; severity order within a station is danger→warning→quiet | `src/features/today/today.test.ts` (extend, on `assembleDaySpine`) | decision 4 |
 | The two good-news moments still render on their exact conditions | existing `TodayQueue.test.tsx` assertions move, not drop | principles §3 |
 | e2e: J1 — verify + send-waiver from the station rows, no navigation to a second destination for the sweep itself | extend the home's existing spec | J1 |
 | `?view=departures` 308s home | route test beside the redirect | route contract |
@@ -332,7 +332,7 @@ entry drops its "recomposition proposed" marker when this ships.
 
 ## 6d — The evening reading, and the fold (H-20260827-close-out-remain-own)
 
-**Scope.** The same page, later in the day; then the route fold. Composes from `src/lib/closeout.ts`'s
+**Scope.** The same page, later in the day; then the route fold. Composes from `src/features/today/closeout.ts`'s
 existing assembly — **no second detector** (the ADR that built close-out already demands this).
 
 **Behavior contract.**
@@ -351,7 +351,7 @@ existing assembly — **no second detector** (the ADR that built close-out alrea
   immediately, undo toast — H-20260822-close-out-leftovers-resolved), then one primary "Close the day" → `closeDay(...)` with the
   existing snapshot (`buildCloseoutSnapshot`), then the Tomorrow band. No caption rides the
   closing act. **No acknowledgement gate**
-  (ADR alternative) — a domain change, not just a UI one: `closeDay` (`src/db/closeout.ts`) deletes
+  (ADR alternative) — a domain change, not just a UI one: `closeDay` (`src/features/today/closeout-reader.ts`) deletes
   its `acknowledged` input and the `CloseoutAcknowledgementRequired` throw, and the UI's
   `mustAcknowledge` consumer goes with them — H-20260822-close-out-leftovers-resolved/H-20260815-no-legacy make the gate legacy, and the snapshot
   already records what was still open. The closeout tests that pin the throw are rewritten to pin
@@ -390,7 +390,7 @@ panel; a boat with a not-back diver renders the plain sentence.
 | --- | --- |
 | Route | `/shop/[shopSlug]/close-out` → permanent 308 Route Handler to the home, preserving `?notice=` (the codes re-home; `noticeForForm` routes them to the closing block) |
 | Registry | `closeOut` leaves `STAFF_DESTINATIONS`; the dock renders four destinations + More; `STAFF_DESTINATION_LABEL_KEYS`/`TITLE_KEYS` drop the id; ⌘K keeps a "Close the day" **command** pointing at the home's closing block anchor (`/#close-day`) so the palette still answers the phrase |
-| Files | `close-out/page.tsx` (1,001 lines), its `loading.tsx` and components delete — there is no legacy (H-20260815-no-legacy); `src/lib/closeout.ts` / `src/db/closeout.ts` stay as the home's readers, minus `closeDay`'s `acknowledged` input and the `CloseoutAcknowledgementRequired` class, which delete here |
+| Files | `close-out/page.tsx` (1,001 lines), its `loading.tsx` and components delete — there is no legacy (H-20260815-no-legacy); `src/features/today/closeout.ts` / `src/features/today/closeout-reader.ts` stay as the home's readers, minus `closeDay`'s `acknowledged` input and the `CloseoutAcknowledgementRequired` class, which delete here |
 | Coverage | `scripts/route-coverage.json` drops the route (`--write` refuses drops, so the entry is removed by hand with the PR explaining it); the close-out e2e spec rewrites against the home; its visual captures move to evening-state home captures |
 | Trouble states | `seed-trouble-states` additions for the evening state if any panel here only renders on failure (recap send failure keeps its current notice path) |
 

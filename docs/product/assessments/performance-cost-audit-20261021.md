@@ -218,7 +218,7 @@ DB method or every business invariant.
 Existing safeguards worth preserving:
 
 - `src/db/query-budgets.test.ts:38-137` protects batched readiness, constant-query paged orders,
-  and a Today statement ceiling. `src/db/staff-render-cost.test.ts:551-718` additionally pins
+  and a Today statement ceiling. `src/app/shop/[shopSlug]/staff-render-cost.test.ts:551-718` additionally pins
   gate/chrome/Today/trip/public-trip/ready counts and phase ceilings. These are ceilings, not
   current measurements; Today is allowed 74 statements in that test and the trip render 68.
 - `src/db/query-helpers.ts:30-37` runs query fan-out concurrently on a pool and sequentially in
@@ -388,7 +388,7 @@ messages so idle repeat scans are visible. Effort M/L.
 
 **Confirmed duplication.** `src/db/weekly-digest.ts:305-323` calls `getTodayWork` twice with
 only `includeOpsAlerts` different. Both share readiness evidence, which is good, but each
-runs the main Today wave (`src/db/today.ts:1655-1800`), including common roll-call, boat-work,
+runs the main Today wave (`src/features/today/today-reader.ts:1655-1800`), including common roll-call, boat-work,
 waitlist, staffing, reviews, inbox, and equipment reads. This runs inside a cron, so React
 request-cache assumptions should not be used to claim cross-call deduplication.
 

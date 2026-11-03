@@ -119,9 +119,9 @@ export type RollCallRecord = {
  *   and the checkpoint must stay open.
  *
  * This predicate is the single place that split lives on the manifest side.
- * `src/db/today.ts` states the same rule for the work queue (see
+ * `src/features/today/today-reader.ts` states the same rule for the work queue (see
  * `isAccountedForAfterDive` there); the two are asserted against each other on
- * one trip in src/db/today.test.ts so they can never drift apart again.
+ * one trip in src/features/today/today-reader.test.ts so they can never drift apart again.
  */
 /**
  * How long a roll-call note may be. One bound, shared by the form, the two
@@ -194,7 +194,7 @@ export function rollCallNoteAllowed(
  * dive-domain-expert review found two of them disagreeing (issue #1704):
  * `onTheWaterByRollCall` and the seat reclaim in **both** `recordRollCall` and
  * `recordCrewRollCall` (src/db/manifests.ts), `inAfterDivePopulation`
- * (src/db/today.ts), and `seatSailed` (src/lib/seat-sailed.ts). The two reclaims
+ * (src/features/today/today-reader.ts), and `seatSailed` (src/lib/seat-sailed.ts). The two reclaims
  * are one predicate for one reason: the reader that refuses the desk consults
  * both trails, so a mirror act on only one of them is a promise the reader
  * makes and the writer does not keep (issue #1686). A sixth, the fly-safe

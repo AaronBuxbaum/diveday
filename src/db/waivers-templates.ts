@@ -382,7 +382,7 @@ export async function standingWaiverExposure(
         // `status = 'cancelled'` and leaves the bookings alone until staff
         // work the cascade per seat, so without this a called-off Saturday
         // still counts a boatload of divers as boarding — the same filter
-        // `src/db/today.ts` carries, and for the same reason.
+        // `src/features/today/today-reader.ts` carries, and for the same reason.
         eq(trips.status, "scheduled"),
         gte(trips.startsAt, window.from),
         lte(trips.startsAt, window.to),

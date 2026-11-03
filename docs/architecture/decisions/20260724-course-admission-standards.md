@@ -208,7 +208,7 @@ scope and machinery around that figure, not the figure itself.
 - Which booking-cap ratio (if any) a session carries is decided by `courseRatioKind()`,
   with `courseRatioRule()`/`courseSeatCapacity()` on top of it — consumed by booking and staffing
   advisory callers (`src/db/bookings.ts` for both `createBookingRecord` and `restoreBooking`, and
-  `courseCrewGap`'s consumers in `src/db/staffing.ts`, `src/db/today.ts`, and the trip Overview
+  `courseCrewGap`'s consumers in `src/db/staffing.ts`, `src/features/today/today-reader.ts`, and the trip Overview
   page). The predicate was previously written inline in three of those, which is how it would
   drift again.
 - **Every seat-granting write answers to the cap, including undo.** `restoreBooking` (the undo of a

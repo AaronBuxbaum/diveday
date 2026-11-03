@@ -1,14 +1,16 @@
 // i18n-exempt-file: test fixture; only the day spine's tests import it, and its words are seeded data.
 import { render } from "@testing-library/react";
 import type { FirstBooking } from "@/db/first-booking";
-import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { assembleEveningClose, type CloseoutDeparture, type DayLoadOut } from "@/lib/closeout";
 import {
   assembleDaySpine,
+  assembleEveningClose,
+  type CloseoutDeparture,
   type FactOfScale,
   type SpineDeparture,
   type TodayAction,
-} from "@/lib/today";
+} from "@/features/today";
+import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
+import type { DayLoadOut } from "@/lib/closeout-kinds";
 import type { CrewReading } from "./CrewLines";
 import { DaySpine, type EveningReading, type SpineDraft } from "./DaySpine";
 

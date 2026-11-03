@@ -330,7 +330,7 @@ export async function getStaffingView(
   }));
 
   // Today's own reader, not a second one: `courseCrewCountsByTrip`
-  // (src/db/today.ts) is what `instructor_missing` is computed from, and it
+  // (src/features/today/today-reader.ts) is what `instructor_missing` is computed from, and it
   // counts in-water crew by the one definition every ratio gate shares
   // (`countInWaterCrew`, src/lib/crew-roles.ts) — a divemaster rostered as
   // this trip's captain is not their own assistant here either. It is the

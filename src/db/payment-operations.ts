@@ -164,7 +164,7 @@ export function idempotencyKeyFor(intentId: string, step?: string): string {
 }
 
 /**
- * Exported so `src/db/today.ts` can build the same "stuck" cutoff from its own
+ * Exported so `src/features/today/today-reader.ts` can build the same "stuck" cutoff from its own
  * `now` parameter (task 157) — Today's queue must not read the live clock
  * directly (see `src/lib/clock.ts`), so it can't call `listStuckPaymentOperations`
  * with its default argument the way Reports does.

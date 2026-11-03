@@ -32,6 +32,7 @@ import {
   setTripRecapShoutout,
   unpauseTripRecapAutoSend,
 } from "./recap";
+import { listRollCallGaps } from "./roll-call-gaps";
 import {
   bookings,
   certifications,
@@ -48,7 +49,6 @@ import {
 import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
-import { listRollCallGaps } from "./today";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const ORIGIN = "https://diveday.test";

@@ -225,7 +225,7 @@ type CloseOutcome =
  * A **no-show** — `not_boarded` at the dock with nothing after it — is a
  * recorded answer, so it stands. It is not an open count: it is a closed one
  * whose answer was "they never came", and `inAfterDivePopulation`
- * (`src/db/today.ts`) leaves those bookings out of every after-dive scan, so
+ * (`src/features/today/today-reader.ts`) leaves those bookings out of every after-dive scan, so
  * nothing is waiting on them. A diver marked not-boarded at the dock who
  * nevertheless carries a later result is a different person entirely — they
  * joined at the second site — and they *are* in that population, so they are

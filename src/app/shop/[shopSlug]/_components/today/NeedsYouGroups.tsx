@@ -2,15 +2,15 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
-import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatTime } from "@/lib/format";
-import { shopPath } from "@/lib/staff-notices";
 import {
   foldBoatRows,
   groupByDeparture,
   type NeedsYouReading,
   type TodayAction,
-} from "@/lib/today";
+} from "@/features/today";
+import type { StaffTranslator } from "@/i18n/staff-messages";
+import { formatTime } from "@/lib/format";
+import { shopPath } from "@/lib/staff-notices";
 import { rankBoatRows } from "./spine-reading";
 
 /**

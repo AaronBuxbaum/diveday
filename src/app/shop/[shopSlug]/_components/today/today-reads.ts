@@ -2,7 +2,6 @@ import { readArrivalLookup } from "@/db/arrival-elsewhere";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { sharedInHorizonReadiness } from "@/db/blockers";
 import type { AppDb } from "@/db/client";
-import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
 import { shopFirstBooking } from "@/db/first-booking";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
@@ -10,15 +9,25 @@ import { canPersonViewShopReports } from "@/db/reporting";
 import { seasonScale } from "@/db/season-scale";
 import type { shopByIdCached } from "@/db/shops";
 import { shopStripeAccountForRender } from "@/db/stripe-accounts";
-import { getShopDayDepartures, getTodayWork } from "@/db/today";
 import { countShopTrips } from "@/db/trips";
 import { isOrientationDismissed } from "@/db/user-accounts";
+import {
+  assembleEveningClose,
+  type DayCloseoutState,
+  type DaySpine,
+  getDayCloseout,
+  getShopDayDepartures,
+  getTodayWork,
+  listHeadCountCloses,
+  type roleLensFor,
+  shopHasSailedBefore,
+  spineJobCount,
+  tomorrowNoon,
+} from "@/features/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { assembleEveningClose, type DayCloseoutState, tomorrowNoon } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { seasonStartInstant } from "@/lib/season";
 import { shopClock } from "@/lib/shop-clock";
-import { type DaySpine, type roleLensFor, spineJobCount } from "@/lib/today";
 import type { shopDayBounds } from "@/lib/zoned";
 import { readDayMoney } from "./day-money";
 

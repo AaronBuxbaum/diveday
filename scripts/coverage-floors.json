@@ -51,7 +51,7 @@
   "src/db/schema/waivers.ts": 100,
   "src/db/seat-diver.ts": 78.94,
   "src/db/standing-sailed-roll-call.ts": 100,
-  "src/db/today-roll-call-rows.ts": 80,
+  "src/features/today/today-roll-call-rows.ts": 80,
   "src/db/waiver-issue.ts": 70.66,
   "src/db/waiver-record-columns.ts": 100,
   "src/db/waiver-refile.ts": 100,

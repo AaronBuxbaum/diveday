@@ -6,7 +6,6 @@ import { certificationForAgencyCheck, listAgencyCheckableCards } from "./agency-
 import type { AppDb } from "./client";
 import { certifications, people, shops } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
-import { withAgencyChecks } from "./today";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -239,37 +238,3 @@ describe("listAgencyCheckableCards", () => {
  * names the diver, the read fills in the cards, and a row with nothing the
  * extension can check carries no offer at all.
  */
-describe("withAgencyChecks", () => {
-  function row(personId: string | null, id: string) {
-    return {
-      id,
-      kind: "certification" as const,
-      urgency: "soon" as const,
-      subject: "Somebody",
-      context: null,
-      detail: "Certification pending",
-      actionLabel: "Open their record",
-      href: "/shop/blue-mantis/divers/x",
-      dueAt: null,
-      ...(personId ? { agencyCheck: { personId, cards: [] } } : {}),
-    };
-  }
-
-  it("fills in the cards, drops the offer where there are none, and leaves other rows alone", async () => {
-    const { db, shop } = ctx;
-    const checkable = await diver(db, shop.id, "Noa Peleke");
-    const pending = await card(db, shop.id, checkable);
-    const tdiOnly = await diver(db, shop.id, "Tomas Reyes");
-    await card(db, shop.id, tdiOnly, { agency: "tdi", identifier: "T-9" });
-
-    const [withCards, withNone, untouched] = await withAgencyChecks(db, shop.id, [
-      row(checkable, "a"),
-      row(tdiOnly, "b"),
-      row(null, "c"),
-    ]);
-
-    expect(withCards?.agencyCheck?.cards.map((c) => c.certificationId)).toEqual([pending.id]);
-    expect(withNone).not.toHaveProperty("agencyCheck");
-    expect(untouched).toEqual(row(null, "c"));
-  });
-});

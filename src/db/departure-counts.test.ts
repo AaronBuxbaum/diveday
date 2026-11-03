@@ -6,8 +6,8 @@ import { fileScopedShopContext } from "@/test/db";
 import { departureCounts } from "./departure-counts";
 import { listDepartureBoardedByTrip, listUnaccountedForByTrip } from "./manifests";
 import { listTripsReadiness } from "./readiness";
+import { HOUR, returnedTrip } from "./roll-call-test-fixtures";
 import { bookings as bookingsTable, rollCallEvents, trips as tripsTable } from "./schema";
-import { HOUR, returnedTrip } from "./today-roll-call-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

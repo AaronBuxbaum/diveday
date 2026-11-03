@@ -2,7 +2,7 @@
  * **Who an after-dive head count is counting, and what closes it** — the one
  * rule for divers and crew alike (glossary, "Unaccounted for").
  *
- * The predicates the Today queue reads (`src/db/today.ts` imports them):
+ * The predicates the Today queue reads (`src/features/today/today-reader.ts` imports them):
  * somebody is in the after-dive count once they were boarded at the dock, or
  * once anybody recorded any result for them at a later checkpoint. A seat or a crew member with no mark anywhere is not, because a
  * walk-away is never written down at the rail. Only "boarded" closes a count.

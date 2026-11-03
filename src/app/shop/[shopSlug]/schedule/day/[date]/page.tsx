@@ -5,14 +5,18 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { canPersonExportIncidentRecord } from "@/db/authz";
-import { getDayCloseout, listHeadCountCloses, listNotBackAfterDive } from "@/db/closeout";
+import {
+  assembleEveningClose,
+  getDayCloseout,
+  listHeadCountCloses,
+  listNotBackAfterDive,
+  pastDayStationNotes,
+} from "@/features/today";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate, isShopDayParam } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose } from "@/lib/closeout";
 import { formatWeekday } from "@/lib/format";
-import { pastDayStationNotes } from "@/lib/past-day-notes";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { shopDaysBounds } from "@/lib/zoned";
