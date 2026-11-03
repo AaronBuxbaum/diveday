@@ -28,8 +28,9 @@ makes a diver `blocked`** (H-20260724-certification-levels-agency-rules; ADRs 20
 - **Status reads the table and fails closed.** `calculateReadiness` returns `findingsStatus(blockers)`;
   a code the table does not know blocks.
 
-Each finding has a subject, `booking` or `departure`. Departure findings (crew, ratio, minimum seats,
-pre-departure) render on the trip's own row and never join a diver's readiness. Each module keeps
+Each advisory type has a subject, `BookingAdvisory` or `DepartureAdvisory`. Departure findings (crew,
+ratio, minimum seats, pre-departure) are meant for the trip's own row and never join a diver's
+readiness. Each module keeps
 computing its own answer; one adapter per module turns that answer into a finding or null. The depth
 advisory is the first carried end to end: `listTripReadiness` returns `advisories`, and the roster,
 manifest, printout and offline copy read it through `depthAdvisoryIn`.
@@ -42,7 +43,7 @@ manifest, printout and offline copy read it through `depthAdvisoryIn`.
 
 ## Consequences
 
-A new advisory is one code, one table row, one adapter and its words. H-51 (whether the pre-departure
+A new advisory is one code, one table row, one adapter and its words. H-20261025-shop-authored-pre-departure (whether the pre-departure
 check gates) stays a real decision: gating it would be a departure-level result, which this table
 names but does not evaluate. The other surfaces still render recency, crew, ratio, seats and the
 checklist from their modules' own shapes; moving each to its finding is mechanical and can follow

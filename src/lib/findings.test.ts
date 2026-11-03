@@ -14,9 +14,7 @@ import {
   divemasterFinding,
   FINDING_STRICTNESS,
   type FindingCode,
-  findingSubject,
   findingsStatus,
-  isAdvisory,
   minimumSeatsFinding,
   preDepartureFinding,
   recencyFinding,
@@ -100,19 +98,6 @@ describe("the strictness table", () => {
       Extract<keyof ReadinessInput, "advisories" | "depthAdvisory" | "lastDivedBand">
     >().toBeNever();
   });
-
-  it("says every blocker is about a booking, and each advisory names its subject", () => {
-    for (const code of BLOCKER_CODES) expect(findingSubject(code)).toBe("booking");
-    const departure = ADVISORY_CODES.filter((code) => findingSubject(code) === "departure");
-    expect(departure).toEqual([
-      "course_no_instructor",
-      "course_over_ratio",
-      "divemaster_under_target",
-      "minimum_seats_due",
-      "minimum_seats_short",
-      "pre_departure_unchecked",
-    ]);
-  });
 });
 
 describe("findingsStatus: advisories never gate boarding", () => {
@@ -153,12 +138,6 @@ describe("findingsStatus: advisories never gate boarding", () => {
       expect(findingsStatus([{ code }])).toBe("blocked");
       expect(findingsStatus([...everyAdvisory(), { code }])).toBe("blocked");
     }
-  });
-
-  it("does not treat a forged object as an advisory", () => {
-    expect(isAdvisory({ code: "toString" })).toBe(false);
-    expect(isAdvisory({ code: "medical_review" })).toBe(false);
-    for (const finding of everyAdvisory()) expect(isAdvisory(finding)).toBe(true);
   });
 });
 

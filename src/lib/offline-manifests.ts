@@ -5,8 +5,9 @@ import type { BoatSafetySection } from "./boat-safety";
 import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import type { DepartureEmergencyReference } from "./emergency-reference";
-// Dependency-free too (type-only imports), for the same reason.
+// Its one runtime import, `./dive-recency`, imports nothing at runtime.
 import { depthAdvisoryIn } from "./findings";
+// Dependency-free too (type-only imports), for the same reason.
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { TrainingMarkCleared, TripManifest } from "./manifests";
 // Same reasoning as the roll-call import above: dependency-free, so a value

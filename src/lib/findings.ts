@@ -35,7 +35,7 @@ import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessStatus } from "./
  *    edit: the table's type is built from the two unions, so the code has to
  *    leave `AdvisoryCode` and join `ReadinessBlockerCode`, with its evaluator
  *    moving into `calculateReadiness`. That is a decision for the owner and an
- *    ADR (H-20260724-certification-levels-agency-rules for depth; H-51 for the
+ *    ADR (H-20260724-certification-levels-agency-rules for depth; H-20261025-shop-authored-pre-departure for the
  *    pre-departure check), never a refactor.
  * 3. **By status.** `findingsStatus` reads the table, fails closed (a code it
  *    does not know blocks) and is what `calculateReadiness` returns as status.
@@ -46,9 +46,10 @@ import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessStatus } from "./
  * and `course_over_ratio` is what is left to say about a session crewed below
  * it afterwards.
  *
- * **Subject.** A finding is about one booking or about a whole departure
- * (`FINDING_SUBJECT`). A departure finding renders on the trip's own row,
- * never beside a diver's name, and never joins a diver's readiness.
+ * **Subject.** A finding is about one booking (`BookingAdvisory`, beside a
+ * seat's readiness) or about a whole departure (`DepartureAdvisory`), which is
+ * meant for the trip's own row and never joins a diver's readiness. The types
+ * keep the two apart; no runtime table is needed.
  *
  * Its only runtime import is `dive-recency.ts`, itself import-free, so the
  * offline manifest can read it without pulling the readiness pipeline in.
@@ -124,35 +125,19 @@ export const FINDING_STRICTNESS: { readonly [C in ReadinessBlockerCode]: "blocks
   depth_verification_required: "informs",
   // Currency is a briefing and a buddy pairing, not a refusal (ADR 20260821).
   recency_notable: "informs",
-  // The agency cap refuses the sale; aboard, the crew decides.
+  // Enrolment is refused upstream; a session that later loses its instructor
+  // must not enter the water. Staff act on it; the software holds no seats.
   course_no_instructor: "informs",
+  // The in-water ratio still binds: the crew restores it (another instructor,
+  // an assistant where one counts, or split groups) before the dive.
   course_over_ratio: "informs",
   // The shop's own target binds nothing (ADR 20260820-shop-divemaster-ratio).
   divemaster_under_target: "informs",
   // The sweep cancels a short departure; no diver is held for it.
   minimum_seats_due: "informs",
   minimum_seats_short: "informs",
-  // Informs, never gates (ADR 20260824-pre-departure-safety-check; H-51 open).
+  // Informs, never gates (ADR 20260824-pre-departure-safety-check; H-20261025-shop-authored-pre-departure open).
   pre_departure_unchecked: "informs",
-};
-
-export type FindingSubject = "booking" | "departure";
-
-/** Who a finding is about. Every blocker is about a booking. */
-export function findingSubject(code: FindingCode): FindingSubject {
-  return code in ADVISORY_SUBJECT ? ADVISORY_SUBJECT[code as AdvisoryCode] : "booking";
-}
-
-const ADVISORY_SUBJECT: Record<AdvisoryCode, FindingSubject> = {
-  depth_exceeds_ceiling: "booking",
-  depth_verification_required: "booking",
-  recency_notable: "booking",
-  course_no_instructor: "departure",
-  course_over_ratio: "departure",
-  divemaster_under_target: "departure",
-  minimum_seats_due: "departure",
-  minimum_seats_short: "departure",
-  pre_departure_unchecked: "departure",
 };
 
 export type DepthAdvisory =
@@ -233,10 +218,6 @@ export function findingsStatus(findings: readonly { code: string }[]): Readiness
     if (strictness !== "informs") return "blocked";
   }
   return "ready";
-}
-
-export function isAdvisory(finding: { code: string }): finding is Advisory {
-  return (ADVISORY_CODES as readonly string[]).includes(finding.code);
 }
 
 /* -------------------------------------------------------------------------- */

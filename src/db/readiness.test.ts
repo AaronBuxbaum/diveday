@@ -773,11 +773,10 @@ describe("depth advisory (H-20260724-certification-levels-agency-rules — a war
   });
 
   it("never turns that warning into a blocker — the diver still boards", async () => {
-    // A 30 m trip under an 18 m card produces an advisory and the very readiness
-    // a shallow trip does. An instructor may keep this diver shallower on purpose.
+    // An instructor may keep this diver shallower on purpose (more: readiness-advisories.test.ts).
     const { diver } = await withAllSiteDepths(30);
     expect(diver.advisories.map((advisory) => advisory.code)).toEqual(["depth_exceeds_ceiling"]);
-    expect((await withAllSiteDepths(10)).diver.readiness).toEqual(diver.readiness);
+    expect(diver.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
   });
 
   it("takes the deepest site the trip visits, not just the first", async () => {
