@@ -8,18 +8,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/group-label";
-import { canPersonManageShopSettings } from "@/db/authz";
-import { listOpenRecapPulses, type OpenRecapPulse } from "@/db/recap-pulses";
-import {
-  countStaffReviewGroups,
-  getShopReviewAggregate,
-  listShopReviewsForStaff,
-  MAX_BULK_PUBLISH,
-  REVIEW_MODERATION_REASONS,
-  type ReviewModerationReason,
-  type StaffReview,
-  staffReviewNarrow,
-} from "@/db/reviews";
+import type { ReviewModerationReason, StaffReview } from "@/db/reviews";
+import { getReviewsPage, REVIEW_MODERATION_REASONS, staffReviewNarrow } from "@/db/reviews-page";
 import { STAFF_PULSE_CATEGORY_KEYS } from "@/i18n/next-dive-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -132,7 +122,6 @@ export default async function ReviewsPage({
   const { session, db, shop } = await requireShopSurface(shopSlug);
   // Who may read the private pulses, and the way out while reviews are off.
   const canReadPulses = await pulseReaderOrInbox(db, shop, session.user.personId);
-  const canManageSettings = await canPersonManageShopSettings(db, shop.id, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone ?? "UTC";
   // The current calendar month in the shop's own timezone — "this month" means
@@ -142,37 +131,28 @@ export default async function ReviewsPage({
     { year: nowWall.year, month: nowWall.month, day: 1, hour: 0, minute: 0 },
     timezone,
   );
-  const [waitingPage, moderatedPage, aggregate, monthAggregate, groups, openPulses] =
-    await Promise.all([
-      // **The worklist is read whole, not paged.** It is the reason to open this
-      // page, and a queue split across pages is a queue you cannot see the end
-      // of. `MAX_BULK_PUBLISH` is the ceiling because it is also the ceiling on
-      // what one pass may release (`src/db/reviews.ts`) — the rows on screen and
-      // the rows the header act touches are the same set by construction.
-      listShopReviewsForStaff(db, session.user.shopId, {
-        scope: "waiting",
-        limit: MAX_BULK_PUBLISH,
-        narrow,
-      }),
-      // A non-numeric or missing `?page=` reads as page 1; the query clamps it
-      // into range so a bookmarked page past the end lands on the last real one.
-      listShopReviewsForStaff(db, session.user.shopId, {
-        page: Number.parseInt(page ?? "", 10),
-        scope: "moderated",
-        narrow,
-      }),
-      getShopReviewAggregate(db, session.user.shopId),
-      getShopReviewAggregate(db, session.user.shopId, { since: monthStart }),
-      countStaffReviewGroups(db, session.user.shopId, narrow),
-      // **What divers asked this shop to fix, privately** (D40, issue #1200).
-      // Never a review and never public: nothing here reaches the aggregate,
-      // the public list, or the suppression share (src/db/recap-pulses.ts).
-      // Owner/manager only, and unread rather than merely unrendered for
-      // everybody else (issue #1410).
-      canReadPulses
-        ? listOpenRecapPulses(db, session.user.shopId)
-        : Promise.resolve<OpenRecapPulse[]>([]),
-    ]);
+  // **The worklist is read whole, not paged.** It is the reason to open this
+  // page, and a queue split across pages is a queue you cannot see the end
+  // of. `MAX_BULK_PUBLISH` is the ceiling because it is also the ceiling on
+  // what one pass may release (`src/db/reviews.ts`) — the rows on screen and
+  // the rows the header act touches are the same set by construction.
+  //
+  // A non-numeric or missing `?page=` reads as page 1; the query clamps it
+  // into range so a bookmarked page past the end lands on the last real one.
+  //
+  // **What divers asked this shop to fix, privately** (D40, issue #1200).
+  // Never a review and never public: nothing here reaches the aggregate,
+  // the public list, or the suppression share (src/db/recap-pulses.ts).
+  // Owner/manager only, and unread rather than merely unrendered for
+  // everybody else (issue #1410).
+  const { can, waitingPage, moderatedPage, aggregate, monthAggregate, groups, openPulses } =
+    await getReviewsPage(db, session.user.shopId, session.user.personId, {
+      narrow,
+      page: Number.parseInt(page ?? "", 10),
+      monthStart,
+      canReadPulses,
+    });
+  const canManageSettings = can.manageSettings;
   // Whether DiveDay has stopped publishing this shop's rating as a machine-readable claim. Not
   // the same as "the rating is unrepresentative": a shop with no reviews at all is also not
   // representative and has nothing to be told about (src/lib/reviews.ts).
