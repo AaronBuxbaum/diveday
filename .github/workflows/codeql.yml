@@ -3,15 +3,13 @@ name: CodeQL
 # Once a day, not on every push to main. GitHub's "default setup" scans each
 # push and cannot be scheduled, so this advanced-setup workflow replaces it
 # (default setup must be off in Settings → Code security, or both run).
-# It also scans pull requests into main, and runs by hand from the Run workflow
+# It never runs on a pull request, and can be run by hand from the Run workflow
 # button. A schedule or a manual run never reaches a PR, so scripts/base-ci.mjs
 # does not hold a branch to its red (docs/agents/verifying.md).
 on:
   schedule:
     # 05:30 UTC, ahead of the other nightly work (e2e-nightly 06:00).
     - cron: "30 5 * * *"
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
