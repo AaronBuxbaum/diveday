@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/group-label";
+import { LayerScrim } from "@/components/ui/layer";
 import { SHEET_PANEL_CLASS, SheetHeader } from "@/components/ui/sheet";
 import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import { motionMs } from "@/lib/motion";
@@ -138,14 +139,7 @@ export function PersonSheet({
   });
 
   const overlay = mounted ? (
-    // biome-ignore lint/a11y/noStaticElementInteractions: the backdrop is a presentational click-away surface
-    <div
-      className={`fixed inset-0 z-50 flex items-end bg-foreground/30 backdrop-blur-sm print:hidden ${closing ? "animate-fade-out" : "animate-fade-in"}`}
-      role="presentation"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) close();
-      }}
-    >
+    <LayerScrim anchor="bottom" closing={closing} onDismiss={close}>
       <section
         ref={sheetRef}
         id={sheetId}
@@ -233,7 +227,7 @@ export function PersonSheet({
 
         <div className="mt-4">{children}</div>
       </section>
-    </div>
+    </LayerScrim>
   ) : null;
 
   return (
