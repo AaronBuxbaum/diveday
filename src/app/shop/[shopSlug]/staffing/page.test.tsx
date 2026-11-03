@@ -10,7 +10,15 @@ const staffingView = vi.hoisted(() => vi.fn());
 const duplicateStaffRead = vi.hoisted(() => vi.fn());
 const awayRead = vi.hoisted(() => vi.fn());
 
-vi.mock("@/db/staffing", () => ({ getStaffingView: staffingView }));
+// The page's one reader (issue #2757), assembled from the same two reads it
+// makes, so the roster still comes from the staffing view alone.
+vi.mock("@/db/staffing", () => ({
+  getStaffingPage: vi.fn(async () => ({
+    view: await staffingView(),
+    ...(await awayRead()),
+    crewRequests: [],
+  })),
+}));
 vi.mock("@/db/trips", () => ({ listStaff: duplicateStaffRead }));
 vi.mock("@/db/crew-requests", () => ({
   listCrewAssignmentRequests: vi.fn(async () => []),

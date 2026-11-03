@@ -6,10 +6,7 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
-import { assistsAvailable } from "@/db/assists";
-import { pagedInboxMessages } from "@/db/inbound-messages";
-import { awaitsTriage, triageInboundMessagesSafely } from "@/db/inbox-assists";
-import { inboxSeats } from "@/db/inbox-seats";
+import { awaitsTriage, getInboxPage, triageInboundMessagesSafely } from "@/db/inbox-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -90,24 +87,17 @@ export default async function InboxPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
-  // A non-numeric or missing `?page=` reads as page 1; the query clamps it
-  // into range, so a bookmarked page past the end lands on the last real one.
-  const [messages, assists] = await Promise.all([
-    pagedInboxMessages(db, shop.id, { page: Number.parseInt(page ?? "", 10) }),
-    assistsAvailable(db, shop.id),
-  ]);
   // One clock for the read and the stamps: "Today, 7:00 AM" and the seat it
   // links to are the same today (fourth review, item 45).
   const now = nowDate();
-  // The departures each message could be about (UX review 2026-10-13, item 19;
-  // fourth review, item 32): the late-window seats, or the seats they held when
-  // they wrote.
-  const seats = await inboxSeats(
-    db,
-    shop.id,
-    messages.rows.map((row) => row.message),
+  // A non-numeric or missing `?page=` reads as page 1; the query clamps it
+  // into range, so a bookmarked page past the end lands on the last real one.
+  // The seats are the departures each message could be about (UX review
+  // 2026-10-13, item 19; fourth review, item 32).
+  const { messages, assists, seats } = await getInboxPage(db, shop.id, {
+    page: Number.parseInt(page ?? "", 10),
     now,
-  );
+  });
   // While the shop's assists are on, a message Claude read as urgent leads its
   // group; the rest keep `pagedInboxMessages`' order (the sort is stable).
   const waiting = messages.rows

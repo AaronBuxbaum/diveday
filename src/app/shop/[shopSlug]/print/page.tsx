@@ -4,9 +4,7 @@ import { after } from "next/server";
 import { Fragment } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { getDb } from "@/db/client";
-import { readDayLoadOut } from "@/db/closeout";
-import { listShopDayDepartures } from "@/db/trips";
+import { getDayPrintPage } from "@/db/day-print-page";
 import { dayLoadOutLine } from "@/i18n/load-out-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -92,17 +90,13 @@ export default async function ShopDayPrintPage({
 }) {
   const { shopSlug } = await params;
   const tomorrow = (await searchParams).day === "tomorrow";
-  const { shop, session } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const now = nowDate();
-  const db = await getDb();
   // Any instant inside the day to print: now, or noon on the shop's next day.
   const dayAt = tomorrow ? tomorrowNoon(now, shop.timezone) : now;
-  const [departures, loadOut] = await Promise.all([
-    listShopDayDepartures(db, shop.id, shop.timezone, dayAt),
-    readDayLoadOut(db, shop, dayAt, now),
-  ]);
+  const { departures, loadOut } = await getDayPrintPage(db, shop, dayAt, now);
   // **A few boats at a time, and `settled` rather than `all`.**
   //
   // The ceiling first, because it is the newer half (issue #1598). Each packet

@@ -10,8 +10,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { LedgerRow } from "@/components/ui/ledger";
 import { ListItemActions } from "@/components/ui/list-item-actions";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { canPersonManageSafetyChecklist } from "@/db/authz";
-import { listChecklistItems } from "@/db/pre-departure-check";
+import { canPersonManageSafetyChecklist, listChecklistItems } from "@/db/pre-departure-check";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";

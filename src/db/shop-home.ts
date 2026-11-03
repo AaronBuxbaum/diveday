@@ -1,58 +1,48 @@
-import { readArrivalLookup } from "@/db/arrival-elsewhere";
-import { canPersonExportIncidentRecord } from "@/db/authz";
-import { sharedInHorizonReadiness } from "@/db/blockers";
-import type { AppDb } from "@/db/client";
-import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
-import { shopFirstBooking } from "@/db/first-booking";
-import { listFreshFormDrafts } from "@/db/form-drafts";
-import { shopHasEverTakenAnOrder } from "@/db/orders";
-import { canPersonViewShopReports } from "@/db/reporting";
-import { seasonScale } from "@/db/season-scale";
-import type { shopByIdCached } from "@/db/shops";
-import { shopStripeAccountForRender } from "@/db/stripe-accounts";
-import { getShopDayDepartures, getTodayWork } from "@/db/today";
-import { countShopTrips } from "@/db/trips";
-import { isOrientationDismissed } from "@/db/user-accounts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { Role } from "@/lib/authz";
 import { assembleEveningClose, type DayCloseoutState, tomorrowNoon } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { seasonStartInstant } from "@/lib/season";
 import { shopClock } from "@/lib/shop-clock";
-import { type DaySpine, type roleLensFor, spineJobCount } from "@/lib/today";
-import type { shopDayBounds } from "@/lib/zoned";
+import { roleLensFor } from "@/lib/today";
+import { shopDayBounds } from "@/lib/zoned";
+import { readArrivalLookup } from "./arrival-elsewhere";
+import { canPersonExportIncidentRecord } from "./authz";
+import { sharedInHorizonReadiness } from "./blockers";
+import { type AppDb, getDb } from "./client";
+import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "./closeout";
 import { readDayMoney } from "./day-money";
+import { shopFirstBooking } from "./first-booking";
+import { loadFirstRunFacts } from "./first-run";
+import { listFreshFormDrafts } from "./form-drafts";
+import { shopHasEverTakenAnOrder } from "./orders";
+import { canPersonViewShopReports } from "./reporting";
+import { seasonScale } from "./season-scale";
+import { shopByIdCached } from "./shops";
+import { shopStripeAccountForRender } from "./stripe-accounts";
+import { getShopDayDepartures, getTodayWork } from "./today";
+import { countShopTrips } from "./trips";
+import { isOrientationDismissed } from "./user-accounts";
+
+export { daySummaryBlocked } from "./blockers";
+export { canAcceptPayments } from "./stripe-accounts";
 
 /** The day's closeout plus the demo's separate previous dusk station. */
-export function assembleTodayEveningClose(
+function assembleTodayEveningClose(
   closeout: Pick<DayCloseoutState, "departures" | "tomorrow" | "carryover">,
   now: Date,
 ) {
   return assembleEveningClose(closeout.departures, now, closeout.tomorrow, closeout.carryover);
 }
 
-/** Whether Today has a boat, task, previous demo close, or instructor session to show. */
-export function hasTodayWorkToShow(
-  spine: DaySpine,
-  eveningClose: ReturnType<typeof assembleEveningClose>,
-  lens: ReturnType<typeof roleLensFor>,
-  hasSessions: boolean,
-) {
-  return (
-    spineJobCount(spine) > 0 ||
-    spine.stations.length > 0 ||
-    eveningClose.carryover != null ||
-    (lens === "sessions" && hasSessions)
-  );
-}
-
-type Shop = NonNullable<Awaited<ReturnType<typeof shopByIdCached>>>;
+export type HomeShop = NonNullable<Awaited<ReturnType<typeof shopByIdCached>>>;
 
 /**
  * **Today's first wave of reads**, started together because each needs only the shop, the reader
  * and the clock; the second wave needs their answers. A read a later branch may discard is still
  * started here — each is bounded, and that branch is mostly a first run with no rows.
  */
-export async function readTodayFirstWave({
+async function readTodayFirstWave({
   db,
   shop,
   personId,
@@ -62,7 +52,7 @@ export async function readTodayFirstWave({
   season,
 }: {
   db: AppDb;
-  shop: Shop;
+  shop: HomeShop;
   personId: string;
   now: Date;
   arrivalQuery: string;
@@ -145,7 +135,7 @@ export async function readTodayFirstWave({
  * against the database rather than the session's roles so a demotion takes effect at once).
  * **The day's money** (`readDayMoney`) is gated on `canReadShopMoney` and the day closing.
  */
-export async function readTodaySecondWave({
+async function readTodaySecondWave({
   db,
   shop,
   shopSlug,
@@ -161,7 +151,7 @@ export async function readTodaySecondWave({
   dayBounds,
 }: {
   db: AppDb;
-  shop: Shop;
+  shop: HomeShop;
   shopSlug: string;
   personId: string;
   roles: Parameters<typeof getTodayWork>[10];
@@ -220,4 +210,79 @@ export async function readTodaySecondWave({
       }),
     ]);
   return { work, tomorrowDepartures, headCountCloses, canOpenLog, sailedBefore, dayMoney };
+}
+
+/**
+ * The session's shop row, once per render (`shopByIdCached`), with the handle
+ * every read below takes. `shop` is `null` when the row is gone; the page
+ * answers that with `notFound()`.
+ */
+export async function getHomeShop(shopId: string) {
+  const db = await getDb();
+  return { db, shop: await shopByIdCached(db, shopId) };
+}
+
+/**
+ * **The shop home's whole question in one call** (issue #2757): the first wave
+ * (needs only the shop, the reader and the clock), the second wave (needs its
+ * answers), and the reads only a first-run shop makes, as a third wave. What
+ * the page draws in between — the role lens, the evening close and the shop's
+ * calendar day — comes back with them, since each wave reads it too.
+ *
+ * `firstRun` is `null` unless the shop has never had a departure and none sails
+ * today (`nextDeparture` is the cheap prefilter; the count decides). A demo
+ * shop is never asked: its count is `null`.
+ */
+export async function getShopHome(
+  db: AppDb,
+  shop: HomeShop,
+  input: {
+    shopSlug: string;
+    personId: string;
+    roles: readonly Role[];
+    now: Date;
+    arrivalQuery: string;
+    orientationRole: string | null;
+    t: StaffTranslator;
+    locale: string;
+  },
+) {
+  const { now, personId } = input;
+  const season = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
+  const first = await readTodayFirstWave({
+    db,
+    shop,
+    personId,
+    now,
+    arrivalQuery: input.arrivalQuery,
+    orientationRole: input.orientationRole,
+    season,
+  });
+  // The lens (20260721-role-aware-landing): a captain or divemaster's Today filters to boat work
+  // and badges the boat they crew; an instructor's leads with their sessions.
+  const lens = roleLensFor(input.roles);
+  const eveningClose = assembleTodayEveningClose(first.closeout, now);
+  // **The shop's own calendar day**, as the two UTC instants that bracket it, computed once for
+  // every reader that wants it.
+  const dayBounds = shopDayBounds(now, shop.timezone);
+  const second = await readTodaySecondWave({
+    db,
+    shop,
+    shopSlug: input.shopSlug,
+    personId,
+    roles: input.roles,
+    now,
+    lens,
+    t: input.t,
+    locale: input.locale,
+    canReadShopMoney: first.canReadShopMoney,
+    evidence: first.evidence,
+    eveningClose,
+    dayBounds,
+  });
+  const firstRun =
+    !second.work.nextDeparture && first.shopTripCount === 0
+      ? await loadFirstRunFacts(db, shop, first.stripeAccount)
+      : null;
+  return { ...first, ...second, season, lens, eveningClose, dayBounds, firstRun };
 }

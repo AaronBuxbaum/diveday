@@ -12,8 +12,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { counterRentalWaiverStandings, getCounterRentalTicket } from "@/db/gear-counter-rentals";
-import { getOrder } from "@/db/orders";
+import { getCounterRentalTicketPage } from "@/db/counter-rental-ticket-page";
 import {
   gearItemKindLabel,
   gearPhaseLabel,
@@ -113,16 +112,9 @@ export default async function CounterRentalTicketPage({
   const { db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const ticket = await getCounterRentalTicket(db, shop.id, ticketId);
-  if (!ticket) notFound();
-  const [billing, waivers] = await Promise.all([
-    ticket.orderId ? getOrder(db, shop.id, ticket.orderId) : null,
-    counterRentalWaiverStandings(db, {
-      shopId: shop.id,
-      timezone: shop.timezone,
-      personIds: [ticket.personId],
-    }),
-  ]);
+  const page = await getCounterRentalTicketPage(db, shop, ticketId);
+  if (!page) notFound();
+  const { ticket, billing, waivers } = page;
 
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const noticeCount = noticeCountParam(count);

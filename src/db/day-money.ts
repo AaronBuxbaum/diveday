@@ -1,11 +1,18 @@
-import type { CrewReading } from "@/app/shop/[shopSlug]/_components/today/CrewLines";
-import type { DbExecutor } from "@/db/client";
-import { crewMonth, crewTipShare, tipsByDeparture } from "@/db/crew-tips";
-import { getMonthlyReport } from "@/db/reporting";
 import { nowDate } from "@/lib/clock";
 import { type DayTakings, dayTakings } from "@/lib/closeout";
 import { summarizeMonth } from "@/lib/reporting";
 import { shiftInstantByCalendarDays, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
+import type { DbExecutor } from "./client";
+import { type CrewMonth, crewMonth, crewTipShare, tipsByDeparture } from "./crew-tips";
+import { queryAll } from "./query-helpers";
+import { getMonthlyReport } from "./reporting";
+
+/**
+ * The reader's own crew lines on Today, read by `readDayMoney`: their share of
+ * the paid tips on the boats they crewed this week, and their month on the
+ * boats so far (null before they have crewed one).
+ */
+export type CrewReading = { tipsCents: number; month: (CrewMonth & { month: number }) | null };
 
 /**
  * **The Today page's money reads**, in one round trip of the second wave.
@@ -46,16 +53,17 @@ export async function readDayMoney(
   const week = { from: shiftInstantByCalendarDays(day.from, -6, shop.timezone), to: day.to };
   const wall = utcToWallTime(day.from, shop.timezone);
   const month = shopMonthBounds({ year: wall.year, month: wall.month }, shop.timezone);
-  const [report, boatTips, tipsCents, season] = await Promise.all([
-    reader.withTakings
-      ? getMonthlyReport(db, shop.id, day.from, day.to, {
-          currency: shop.currency,
-          timeZone: shop.timezone,
-        })
-      : null,
-    reader.withTakings ? tipsByDeparture(db, shop.id, day) : [],
-    crewTipShare(db, shop.id, reader.personId, week),
-    crewMonth(db, shop.id, reader.personId, { from: month.from, now: nowDate() }),
+  const [report, boatTips, tipsCents, season] = await queryAll(db, [
+    async () =>
+      reader.withTakings
+        ? getMonthlyReport(db, shop.id, day.from, day.to, {
+            currency: shop.currency,
+            timeZone: shop.timezone,
+          })
+        : null,
+    async () => (reader.withTakings ? tipsByDeparture(db, shop.id, day) : []),
+    () => crewTipShare(db, shop.id, reader.personId, week),
+    () => crewMonth(db, shop.id, reader.personId, { from: month.from, now: nowDate() }),
   ]);
   return {
     takings: report ? dayTakings(summarizeMonth(report), boatTips) : null,

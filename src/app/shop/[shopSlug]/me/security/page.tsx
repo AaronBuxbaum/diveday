@@ -9,8 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
-import { getAccountSecurity, getTotpSecret, listAccountSessions } from "@/db/account-security";
-import { getAccountIdForPerson } from "@/db/user-accounts";
+import { getAccountSecurityPage } from "@/db/account-security";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -68,12 +67,13 @@ export default async function SecurityPage({
   const { shopSlug } = await params;
   const query = await searchParams;
   const { db, shop, session } = await requireShopSurface(shopSlug);
-  const accountId = await getAccountIdForPerson(db, session.user.personId);
+  const account = await getAccountSecurityPage(db, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const purpose: StepUpPurpose | null = isStepUpPurpose(query.purpose) ? query.purpose : null;
   const returnTo = safeStepUpReturnPath(shopSlug, query.returnTo);
-  if (!accountId) return null;
+  if (!account) return null;
+  const { accountId, security, sessions, secret } = account;
   const recoveryCodes = await (async () => {
     const value = (await cookies()).get("diveday_totp_recovery_codes")?.value;
     const key = secretKeyFromEnvironment();
@@ -92,11 +92,6 @@ export default async function SecurityPage({
       return [] as string[];
     }
   })();
-  const [security, sessions, secret] = await Promise.all([
-    getAccountSecurity(db, accountId),
-    listAccountSessions(db, accountId),
-    getTotpSecret(db, accountId),
-  ]);
   const notice = noticeFromParam<{ tone: NoticeTone; text: string }>(query.notice, {
     "enrollment-started": {
       tone: "success",

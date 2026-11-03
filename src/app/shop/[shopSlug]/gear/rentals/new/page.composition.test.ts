@@ -8,6 +8,8 @@ import { describe, expect, it } from "vitest";
  */
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
 const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+/** The page's one reader (issue #2757): where the form's reads now live. */
+const READER = readFileSync(join(process.cwd(), "src/db/counter-rental-new-page.ts"), "utf8");
 
 describe("the new-rental form", () => {
   /**
@@ -16,7 +18,7 @@ describe("the new-rental form", () => {
    * It informs and never gates: the rent-out submit knows nothing of it.
    */
   it("says the picked person's waiver beside their cards, and never gates on it", () => {
-    expect(CODE).toMatch(/counterRentalWaiverStandings\(db, \{[\s\S]*?personIds: \[personId\]/);
+    expect(READER).toMatch(/counterRentalWaiverStandings\(db, \{[\s\S]*?personIds: \[personId\]/);
     const cards = CODE.slice(CODE.indexOf("cards={"), CODE.indexOf("/>\n        {person ? ("));
     expect(cards).toContain("<RentalCardSeen");
     expect(cards).toContain("<CounterRentalWaiverLine");

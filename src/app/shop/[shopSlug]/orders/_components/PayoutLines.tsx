@@ -1,64 +1,10 @@
 import { ShopNotice } from "@/components/ShopNotice";
-import { listPaidAfterCloseCheckouts } from "@/db/checkouts-paid-after-close";
-import type { AppDb } from "@/db/client";
-import { latestShopPayouts, type ShopPayout } from "@/db/payouts";
-import { type RoomChargeTotal, roomChargesByHotel } from "@/db/room-charges";
-import { listUnattributedRefunds } from "@/db/unattributed-refunds";
-import { readUnfinished } from "@/db/unfinished";
+import type { ShopPayout } from "@/db/payouts";
+import type { RoomChargeTotal } from "@/db/room-charges";
 import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { nowDate } from "@/lib/clock";
 import { monthNames } from "@/lib/format";
-import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { RoomChargesLine } from "./RoomChargesLine";
-
-/** Reads stored recovery and payout data for payment-settings managers; unattributed refunds stay separate (ADRs 20260813-shop-cancellation-refunds-itself and 20261012-payouts-reach-diveday). */
-export async function readBackOffice(
-  db: AppDb,
-  shop: { id: string; timezone: string },
-  visible: boolean,
-) {
-  const shopId = shop.id;
-  if (!visible) {
-    return {
-      stuckPaymentOperations: [],
-      owedRefunds: [],
-      paidAfterClose: [],
-      failedRefunds: [],
-      unattributedRefunds: [],
-      payouts: { paid: null, failed: null, roomCharges: null },
-    };
-  }
-  // Owners and managers use monthly room totals to settle with the front desk (fifth-loop ideas, item 57).
-  const wall = utcToWallTime(nowDate(), shop.timezone);
-  const month = { year: wall.year, month: wall.month };
-  const { from, to } = shopMonthBounds(month, shop.timezone);
-  const [unfinished, paidAfterClose, unattributedRefunds, latest, totals] = await Promise.all([
-    readUnfinished(db, shopId, {
-      payment_operation: { withoutUnattributedRefunds: true },
-      shop_cancellation_refund: {},
-      failed_refund: {},
-    }),
-    listPaidAfterCloseCheckouts(db, shopId),
-    listUnattributedRefunds(db, shopId),
-    latestShopPayouts(db, shopId),
-    roomChargesByHotel(db, shopId, from, to),
-  ]);
-  const {
-    payment_operation: stuckPaymentOperations,
-    shop_cancellation_refund: owedRefunds,
-    failed_refund: failedRefunds,
-  } = unfinished;
-  const payouts = { ...latest, roomCharges: { month: month.month, totals } };
-  return {
-    stuckPaymentOperations,
-    owedRefunds,
-    paidAfterClose,
-    failedRefunds,
-    unattributedRefunds,
-    payouts,
-  };
-}
 
 /** Shows failed payouts as warnings and the latest paid payout as a quiet bank-statement reference. */
 export function PayoutLines({

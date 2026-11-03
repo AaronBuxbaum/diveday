@@ -7,17 +7,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
-import { canPersonManageOrders } from "@/db/authz";
-import { listDiverSummaries } from "@/db/divers";
-import { countGearItems, listAvailableGearUnits } from "@/db/gear";
-import {
-  counterRentalCards,
-  counterRentalHasNitroxFillCard,
-  counterRentalPerson,
-  counterRentalUnitLabel,
-  counterRentalWaiverStandings,
-} from "@/db/gear-counter-rentals";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { getCounterRentalNewPage } from "@/db/counter-rental-new-page";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -108,43 +98,20 @@ export default async function RentOutPage({
   const windowRefusal = checkCounterRentalWindow({ from, until, todayLocal });
 
   const noticeUnitId = uuidParam(search.unit);
-  const [person, fleetSize, matches, cards, nitroxCard, noticeUnit, waivers] = await Promise.all([
-    personId ? counterRentalPerson(db, shop.id, personId) : null,
-    countGearItems(db, shop.id),
-    !personId && query
-      ? listDiverSummaries(db, shop.id, { query, limit: 6, timeZone: shop.timezone })
-      : null,
-    personId ? counterRentalCards(db, shop.id, personId) : null,
-    personId ? counterRentalHasNitroxFillCard(db, shop.id, personId) : false,
-    // The URL carries a unit id, never words: the label is this shop's own,
-    // looked up here, and an id that is not one falls back to the unnamed line.
-    noticeUnitId ? counterRentalUnitLabel(db, shop.id, noticeUnitId) : null,
-    // Said while the person is still at the counter, not one screen later on
-    // the ticket (issue #2346); informing only, never a gate (H-20261008-counter-rental-waiver-informs).
-    personId
-      ? counterRentalWaiverStandings(db, {
-          shopId: shop.id,
-          timezone: shop.timezone,
-          personIds: [personId],
-        })
-      : null,
-  ]);
-  const [units, canManageOrders, paymentsReady] = person
-    ? await Promise.all([
-        windowRefusal
-          ? []
-          : listAvailableGearUnits(db, shop.id, {
-              from,
-              until,
-              todayLocal,
-              serviceAsOf: until,
-              includeUnavailable: true,
-            }),
-        canPersonManageOrders(db, shop.id, session.user.personId),
-        (async () => canAcceptPayments(await getShopStripeAccount(db, shop.id)))(),
-      ])
-    : [[], false, false];
-  const canInvoice = canManageOrders && paymentsReady;
+  // The URL carries a unit id, never words: the label is this shop's own, and
+  // an id that is not one falls back to the unnamed line. The waiver standing
+  // is informing only, never a gate (H-20261008-counter-rental-waiver-informs).
+  const { person, fleetSize, matches, cards, nitroxCard, noticeUnit, waivers, units, can } =
+    await getCounterRentalNewPage(db, shop, {
+      actorPersonId: session.user.personId,
+      personId,
+      query,
+      noticeUnitId,
+      window: { from, until, todayLocal },
+      windowRefused: Boolean(windowRefusal),
+    });
+  const canInvoice = can.invoice;
+  const { manageOrders: canManageOrders, paymentsReady } = can;
 
   const notice = noticeFromParam(search.notice, NOTICES);
   const noticeText = notice

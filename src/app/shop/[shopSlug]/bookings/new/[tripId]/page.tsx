@@ -10,17 +10,12 @@ import {
 } from "@/components/seat-diver/BookingRequestCards";
 import { SelectedTripCard } from "@/components/seat-diver/SelectedTripCard";
 import { FormStatus } from "@/components/ui/form";
-import { findSimilarDivers, getBookableDiver, listBookableDivers } from "@/db/divers";
-import {
-  type DateInterestRow,
-  listDateInterestsByIds,
-  listOpenDateInterestsForDates,
-} from "@/db/interest-dates";
-import { getTripWithBooked } from "@/db/trips";
+import type { DateInterestRow } from "@/db/interest-dates";
+import { getBookingForTripPage } from "@/db/new-booking-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
-import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
+import { formatCalendarDate } from "@/lib/calendar-date";
+import { dateRequestMatchFor } from "@/lib/date-requests";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -79,7 +74,6 @@ export default async function NewBookingDiverPage({
   if (!uuidParam(tripId)) notFound();
   const { diverq, request, confirmName, confirmEmail, confirmPhone, notice } = await searchParams;
   const { db, shop } = await requireShopSurface(shopSlug);
-  const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const seatNotice = noticeFromParam(notice, {
@@ -91,25 +85,19 @@ export default async function NewBookingDiverPage({
   const requestId = request ? uuidParam(request) : null;
 
   // Read by id, not from the picker's page of options: a departure sitting past
-  // the first page is still a legitimate place to stand.
-  const trip = await getTripWithBooked(db, shop.id, tripId);
-  if (trip?.status !== "scheduled") notFound();
+  // the first page is still a legitimate place to stand. The date requests are
+  // read for whoever can open this page (issue #1679), scoped to `shop.id`, so
+  // a `?request=` id cannot reach another tenant.
   const query = diverq?.trim() ?? "";
-  const tripDate = calendarDateInTimezone(trip.startsAt, shop.timezone);
-  const lookupDates = Array.from({ length: FLEXIBLE_WINDOW_DAYS * 2 + 1 }, (_unused, index) =>
-    shiftCalendarDate(tripDate, index - FLEXIBLE_WINDOW_DAYS),
-  );
-  // Read for whoever can open this page, since 2026-09-16 (issue #1679). It
-  // was behind `canPersonViewShopReports` as the downstream half of the gate
-  // on `/requests`; that page is ungated now, so the check protected nothing
-  // and only emptied the hand-off — a captain following "Create booking" from
-  // a request got no prefilled diver and no matching-request cards. Still
-  // scoped to `shop.id`, so a `?request=` id cannot reach another tenant.
-  const [requestRows, relevantRows]: [DateInterestRow[], DateInterestRow[]] = await Promise.all([
-    requestId ? listDateInterestsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
-    listOpenDateInterestsForDates(db, shop.id, lookupDates),
-  ]);
-  const requestContext: DateInterestRow | null = requestRows[0] ?? null;
+  const page = await getBookingForTripPage(db, shop, tripId, {
+    confirmName,
+    requestId,
+    query,
+    anonymousName: t("requests.anonymous"),
+  });
+  if (!page) notFound();
+  const { confirmMatches, trip, tripDate, requestContext, relevantRows, searchQuery, candidates } =
+    page;
   const requestSubject = (row: DateInterestRow) =>
     row.courseTitle
       ? t("requests.aboutCourse", { course: row.courseTitle })
@@ -128,15 +116,6 @@ export default async function NewBookingDiverPage({
     dateLabel: formatCalendarDate(tripDate, locale),
     href: `/shop/${shopSlug}/bookings/new/${trip.id}?request=${encodeURIComponent(row.id)}`,
   }));
-  const requestPersonSearch = requestContext?.personId && !query ? requestName(requestContext) : "";
-  const searchQuery = query || requestPersonSearch;
-  const requestCandidate =
-    requestContext?.personId && !query
-      ? await getBookableDiver(db, shop.id, trip.id, requestContext.personId)
-      : null;
-  const candidates = requestCandidate
-    ? [requestCandidate]
-    : await listBookableDivers(db, shop.id, trip.id, { query: searchQuery });
   const requestQuery = requestContext ? `?request=${encodeURIComponent(requestContext.id)}` : "";
   return (
     <StaffPage width="reading">

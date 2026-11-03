@@ -1,4 +1,5 @@
 import type { listOpenDateInterestsForDates } from "@/db/interest-dates";
+import type { LastYearWeek, WeekCrew } from "@/db/schedule-board-page";
 import type { openAfterDiveRollCalls } from "@/db/today";
 import type { weekBoard } from "@/db/trips";
 // `instant = true` asserts that navigating *into* this page paints
@@ -34,7 +35,6 @@ import {
 } from "@/lib/week-board";
 import { weekSeatTally } from "@/lib/week-seats";
 import { toTimeInputValue, utcToWallTime } from "@/lib/zoned";
-import type { LastYearWeek, weekCrewRead } from "./board-reads";
 import type { BuilderWeek, WeekEntry, WeekSpan } from "./WeekBoard";
 
 /**
@@ -130,7 +130,7 @@ export function boardWeekView({
   weekRows: Awaited<ReturnType<typeof weekBoard>>;
   weekAsks: Awaited<ReturnType<typeof listOpenDateInterestsForDates>>;
   openRollCalls: Awaited<ReturnType<typeof openAfterDiveRollCalls>>;
-  crewByTrip: Awaited<ReturnType<typeof weekCrewRead>>;
+  crewByTrip: WeekCrew;
   boatMap: Map<string, string>;
   shop: { hasBoatDiving: boolean; crewScheduleEnabled: boolean };
   boatCount: number;

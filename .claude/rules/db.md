@@ -43,8 +43,8 @@ barrels, bookings, seating, retention, integrations). What they do not say:
 - **A surface reader** (`src/db/<surface>.ts`, e.g. `today.ts`, `closeout.ts`) answers one page's
   question in one call. Every staff `page.tsx` reads through `requireShopSurface` plus exactly one
   `@/db/*` module, its reader; permissions and constants the page needs come back from it
-  (`check-architecture.mjs` rule 6). The trip page's readers (`trip-overview.ts`, `trip-guests.ts`,
-  `trip-prep.ts`) are not in the `@/db/trips` barrel, which holds only the departure aggregate. It detects nothing of its own (a rule lives in `src/lib`, once) and returns
+  (`check-architecture.mjs` rule 6). The trip page's readers (`trip-page.ts`, over `trip-overview.ts` and
+  `trip-guests.ts`; `trip-prep.ts`) are not in the `@/db/trips` barrel, which holds only the departure aggregate. It detects nothing of its own (a rule lives in `src/lib`, once) and returns
   codes and data, not a sentence: `src/db` may not value-import `@/i18n/messages` or
   `@/i18n/staff-messages`, and `src/lib` may not value-import `drizzle-orm` (`scripts/check-architecture.mjs`
   seams; files that still do are banked in `scripts/ratchets.json`, and a new one fails). An outbound

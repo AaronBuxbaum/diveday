@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
  * read its source rather than render it, as the trip slip's test does.
  */
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+/** The page's one reader (issue #2757): where the ticket's reads now live. */
+const READER = readFileSync(join(process.cwd(), "src/db/counter-rental-ticket-page.ts"), "utf8");
 
 describe("the counter-rental ticket", () => {
   /**
@@ -19,7 +21,7 @@ describe("the counter-rental ticket", () => {
   it("ends with the shared terms and received-by foot, and reads money only from the order", () => {
     const code = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
     expect(code).toContain("<RentalTicketReceipt terms={shop.rentalTerms} t={t} />");
-    expect(code).toContain("getOrder(db, shop.id, ticket.orderId)");
+    expect(READER).toContain("getOrder(db, shop.id, ticket.orderId)");
     expect(code).toContain("<RentalTicketPayment");
     expect(code).not.toMatch(/formatMoney|Cents\b|amount/i);
   });
