@@ -337,7 +337,7 @@ export async function listDepartureBoardedByTrip(
  * apart needs the result, not the count.
  *
  * `not_boarded` **at departure** means "never left the dock" — benign, and
- * genuinely accounted for. That is the narrow reading `src/db/today.ts` sets
+ * genuinely accounted for. That is the narrow reading `src/features/today/today-reader.ts` sets
  * out at `isAccountedForAfterDive`, and it holds only because this query is
  * pinned to `checkpoint = "departure"`. The same status at an after-dive
  * checkpoint means the opposite and must never be read through this function.
@@ -536,7 +536,7 @@ async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds:
  * `not_boarded` ("did not come back") and no later after-dive checkpoint has
  * its newest word `boarded`. The latest checkpoint speaks, the rule
  * `homewardCheckpointGap` and Today's missing-diver row (`listRollCallGaps`,
- * `src/db/today.ts`) keep too: a diver missing after dive 1 and counted aboard
+ * `src/features/today/today-reader.ts`) keep too: a diver missing after dive 1 and counted aboard
  * after dive 2 is back, and one missing after dive 1 whom nobody has counted
  * since is still not.
  *
@@ -723,7 +723,7 @@ export async function departureRollCallForBooking(
  * shop record. Reading it here would make every walk-away permanently
  * un-markable, which is the failure direction that stops a shop doing its work
  * rather than the one that endangers a diver. The rule is the one
- * `src/db/today.ts` already writes down at `isAccountedForAfterDive` and
+ * `src/features/today/today-reader.ts` already writes down at `isAccountedForAfterDive` and
  * `inAfterDivePopulation` (DOM-H3), consumed rather than restated: exactly the
  * population that reader counts as at risk in the water is the population the
  * desk may not call absent.
@@ -1060,8 +1060,8 @@ export async function getTripManifests(
   const trainingAttributionByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.trainingSiteAttributionUnknown] as const),
   );
-  const depthByBooking = new Map(
-    readinessRows.map((row) => [row.booking.id, row.depthAdvisory] as const),
+  const advisoriesByBooking = new Map(
+    readinessRows.map((row) => [row.booking.id, row.advisories] as const),
   );
   // When/how each diver's medical currency was last established, for spotting a
   // stale medical. Digital and staff-attested paper reviews both resolve here;
@@ -1289,7 +1289,7 @@ export async function getTripManifests(
         }),
         tripEndsAt: trip.endsAt,
       }),
-      depthAdvisory: depthByBooking.get(booking.id),
+      advisories: advisoriesByBooking.get(booking.id),
       // Said whether or not the shop still offers hotel pickups (the Features
       // page): switching the offer off stops new ones, and a diver already
       // promised a pickup is still collected.
@@ -1383,7 +1383,7 @@ export async function getTripManifest(
  * and wrong for a retraction, which is not an opinion about the diver at all:
  * it says "the thing I said is not a thing anybody said". A device holding a
  * copy up to a fortnight old could therefore unsay a *different* device's "did
- * not come back from the dive", and `src/db/today.ts` would drop that diver
+ * not come back from the dive", and `src/features/today/today-reader.ts` would drop that diver
  * from its `notBackAboard` count with it.
  *
  * So a retraction names the event it undoes and applies only while that event

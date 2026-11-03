@@ -333,7 +333,7 @@ export function GearAndSizes({
                   pendingLabel={t("divers.rentalFit.saving")}
                   className={buttonClass({ variant: "secondary" })}
                 >
-                  {t("divers.rentalFit.saveRentalFit")}
+                  {t("divers.rentalFit.recordRentalFit")}
                 </SubmitButton>
                 <DiverFormStatus status={editorOutcome ? status : undefined} />
               </FieldActions>

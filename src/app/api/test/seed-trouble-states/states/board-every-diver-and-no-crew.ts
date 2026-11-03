@@ -1,7 +1,7 @@
 import { and, eq, gte, inArray } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { recordRollCall } from "@/db/manifests";
-import { bookings, certifications, people, personRoles, trips } from "@/db/schema";
+import { bookings, cards, people, personRoles, trips } from "@/db/schema";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS } from "@/lib/clock";
@@ -99,7 +99,8 @@ export async function boardEveryDiverAndNoCrew(
     // diver half has to be clean — verify her card the way a front desk would,
     // and board her through the same writer, rather than reaching past the
     // gate with a direct write.
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId,
       personId: seat.personId,
       agency: "padi" as const,

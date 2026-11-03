@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { TripPrep } from "@/db/trips";
+import type { TripPrep } from "@/db/trip-prep";
 import { PrepTanks, tanksLine } from "./PrepTanks";
 import { heldPrep, prepFor, t, viewOf } from "./prep-test-fixtures";
 

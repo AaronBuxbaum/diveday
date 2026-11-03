@@ -9,7 +9,7 @@ import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats, listBoatsForHistory } from "@/db/boats";
 import { readFormDraft } from "@/db/form-drafts";
 import { listDateInterestsByIds, listOpenDateInterestsForDates } from "@/db/interest-dates";
-import { openAfterDiveRollCalls } from "@/db/today";
+import { openAfterDiveRollCalls } from "@/db/roll-call-gaps";
 import { upcomingScheduleRange, weekBoard } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";

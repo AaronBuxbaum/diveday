@@ -169,7 +169,7 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
     tripCount: input.trips.length,
     seatsOffered,
     seatsBooked,
-    // updateTrip (CR-006) now refuses to cut capacity below the booking
+    // editTrip (CR-006) now refuses to cut capacity below the booking
     // count, so this shouldn't happen in practice — the cap is defensive
     // insurance for the fill-rate contract [0, 1], matching the per-trip
     // rate, which already caps the same way.

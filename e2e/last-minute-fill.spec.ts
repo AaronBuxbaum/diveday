@@ -104,7 +104,7 @@ test("a diver joins the last-minute list from the shop's schedule page", async (
 });
 
 // /api/test/seed-interest-unsubscribe-token mints a real
-// interest_unsubscribe_tokens row (test-only, gated identically to
+// interest_unsubscribe capability (test-only, gated identically to
 // /api/test/reset) so this drives the actual /unsubscribe/[token] page and
 // server action, since the real send flow can't reach a live email in e2e
 // (Stripe always fails first — see the tests below) and the token is

@@ -147,7 +147,7 @@ describe("the diver's own locale", () => {
     const draft = ACTIONS.slice(ACTIONS.indexOf("export async function saveWaiverDraftThrough"));
     expect(draft.indexOf("if (savedDraft) {")).toBeGreaterThan(-1);
     expect(draft.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(
-      draft.indexOf("const savedDraft = await saveWaiverDraft("),
+      draft.indexOf("const savedDraft = await recordWaiverDraft("),
     );
     const complete = ACTIONS.slice(ACTIONS.indexOf("export async function completeWaiverThrough"));
     expect(complete.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(

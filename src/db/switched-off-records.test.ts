@@ -5,13 +5,13 @@ import { fakeEmail } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import {
   createDiveSite,
+  editDiveSiteForForm,
   importGlobalDiveSiteTemplate,
   listDiveSiteCreatures,
   listGlobalDiveSiteTemplates,
   listSiteFieldGuides,
   pullDiveSiteTemplateUpdates,
   undoDiveSiteTemplateUpdate,
-  updateDiveSiteForForm,
 } from "./dive-sites";
 import { upsertExecutedDive } from "./executed-dives";
 import { deliverSeatOffer, offerDepartureToDiver } from "./interest-offers";
@@ -39,7 +39,8 @@ import {
   shops,
   trips,
 } from "./schema";
-import { createTrip, getTripGuests, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripGuests } from "./trip-guests";
+import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **A switched-off feature keeps what it holds** (ADR
@@ -232,7 +233,7 @@ describe("field guide switched off", () => {
     await db.update(shops).set({ fieldGuideEnabled: false }).where(eq(shops.id, shop.id));
     // The form drew no field-guide section, so the parse hands over an empty
     // list and a blank heading; a hand-built post could carry anything.
-    await updateDiveSiteForForm(db, shop.id, site.id, {
+    await editDiveSiteForForm(db, shop.id, site.id, {
       shopId: shop.id,
       name: "Switch Reef",
       fieldGuideTipsHeading: "",
@@ -299,7 +300,7 @@ describe("field guide switched off", () => {
 
   it("writes the guide from the form while on", async () => {
     const { db, shop, site } = await guidedSite();
-    await updateDiveSiteForForm(db, shop.id, site.id, {
+    await editDiveSiteForForm(db, shop.id, site.id, {
       shopId: shop.id,
       name: "Switch Reef",
       fieldGuideTipsHeading: "",

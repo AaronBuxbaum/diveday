@@ -26,7 +26,7 @@ import {
   shopBooking,
   TODAY,
 } from "./gear-test-fixtures";
-import { saveRentalFit } from "./rental-fit";
+import { recordRentalFit } from "./rental-fit";
 import { bookings, gearReservations } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -113,7 +113,7 @@ describe("listFitAdjustedReturns", () => {
       .from(bookings)
       .where(eq(bookings.id, bookingId));
     if (!booking) throw new Error("booking missing");
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId: shop.id,
       personId: booking.personId,
       rentsBcd: true,
@@ -166,7 +166,7 @@ describe("listFitAdjustedReturns", () => {
       .from(bookings)
       .where(eq(bookings.id, bookingId));
     if (!booking) throw new Error("booking missing");
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId: shop.id,
       personId: booking.personId,
       rentsBcd: true,
@@ -277,7 +277,7 @@ describe("listFitAdjustedReturns", () => {
     personId: string,
     drysuitSize: string | undefined,
   ) {
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId,
       personId,
       rentsBcd: false,

@@ -1,8 +1,8 @@
 import type { AppDb } from "@/db/client";
 import { listTripUnitsToCheckIn } from "@/db/gear";
 import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
+import { getTripPrep } from "@/db/trip-prep";
 import { latestTripStage } from "@/db/trip-stages";
-import { getTripPrep } from "@/db/trips";
 import type { requireShopSurface } from "@/lib/session";
 import { readDepartureStage } from "../../_arrivals/departure-record";
 

@@ -7,7 +7,7 @@ import { anonymizeDiver } from "./anonymize";
 import { tipCheckout } from "./checkout-purpose";
 import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
-import { saveShopIntegration } from "./integrations";
+import { recordShopIntegration } from "./integrations";
 import { recordRollCall } from "./manifests";
 import {
   authProviderAccounts,
@@ -17,13 +17,13 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   bookings,
+  capabilities,
   formDrafts,
   gearItems,
   gearReservations,
   importedPaymentHistory,
   integrationEvents,
   interests,
-  interestUnsubscribeTokens,
   mediaDeletionAttempts,
   orderLineItems,
   orders,
@@ -413,7 +413,7 @@ describe("anonymizeDiver — the integration outbox (issue #1016)", () => {
    */
   it("leaves no name or email in an order event's payload", async () => {
     const { db, shop, owner } = await erasureFixtures();
-    await saveShopIntegration(db, {
+    await recordShopIntegration(db, {
       shopId: shop.id,
       provider: "zapier",
       credentials: { webhookUrl: "https://hooks.zapier.com/hooks/catch/123456/abcdef" },
@@ -687,9 +687,12 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       promoId: promo.id,
       offeredAt: new Date("2026-03-01T12:00:00.000Z"),
     });
-    await db
-      .insert(interestUnsubscribeTokens)
-      .values({ shopId: shop.id, interestId: anytime.id, tokenHash: "kwame-token-hash" });
+    await db.insert(capabilities).values({
+      purpose: "interest_unsubscribe",
+      shopId: shop.id,
+      interestId: anytime.id,
+      tokenHash: "kwame-token-hash",
+    });
 
     // 6. A staff-typed invoice line, and the hosted pages Stripe mints.
     const [order] = await db
@@ -822,10 +825,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     // token that named the interest goes first.
     expect(await db.select().from(interests).where(eq(interests.personId, diver.id))).toEqual([]);
     expect(
-      await db
-        .select()
-        .from(interestUnsubscribeTokens)
-        .where(eq(interestUnsubscribeTokens.tokenHash, "kwame-token-hash")),
+      await db.select().from(capabilities).where(eq(capabilities.tokenHash, "kwame-token-hash")),
     ).toEqual([]);
 
     const [waiver] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));

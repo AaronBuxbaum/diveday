@@ -11,7 +11,7 @@ import {
   completeWaiver,
   getWaiverForToken,
   getWaiverTemplateQuestions,
-  saveWaiverDraft,
+  recordWaiverDraft,
   type WaiverKey,
 } from "@/db/waivers";
 import { requestFirstHandLocale } from "@/i18n/request";
@@ -353,7 +353,7 @@ export async function saveWaiverDraftThrough(door: SigningDoor, formData: FormDa
         phone: contact.data.emergencyContactPhone,
       })
     : undefined;
-  const savedDraft = await saveWaiverDraft(db, door.key, {
+  const savedDraft = await recordWaiverDraft(db, door.key, {
     signerName: parsed.data.signerName,
     acknowledged: parsed.data.acknowledged === "on",
     medicalAnswers: answers,
@@ -451,7 +451,7 @@ export async function completeWaiverThrough(
     // signature-card refusals below keep the diver's own answers.
     if (answers) {
       const typed = signatureSchema.safeParse(Object.fromEntries(formData));
-      await saveWaiverDraft(await getDb(), door.key, {
+      await recordWaiverDraft(await getDb(), door.key, {
         signerName: typed.success ? typed.data.signerName : undefined,
         acknowledged: typed.success && typed.data.acknowledged === "on",
         medicalAnswers: answers,
@@ -498,10 +498,10 @@ export async function completeWaiverThrough(
     // scratch server-side. Without saving a draft first, that redirect
     // would silently wipe every medical answer, the emergency contact, and
     // the typed name the diver just entered — worse than the refusal
-    // itself. `saveWaiverDraft` no-ops when the link is no longer
+    // itself. `recordWaiverDraft` no-ops when the link is no longer
     // signable (expired/unavailable), so this is safe on every reason.
     const db = await getDb();
-    await saveWaiverDraft(db, door.key, {
+    await recordWaiverDraft(db, door.key, {
       signerName: parsed.data.signerName,
       acknowledged: parsed.data.acknowledged === "on",
       medicalAnswers: answers,

@@ -5,7 +5,7 @@ import { createBooking } from "./bookings";
 import { readCertificationEvidence } from "./certification-evidence";
 import { bookedDepartures, nextDiveForBooking } from "./next-dive";
 import { createCertification, upsertTripRequirements } from "./readiness";
-import { bookings, certifications, courses, people, tripAssignments, trips } from "./schema";
+import { bookings, cards, courses, people, tripAssignments, trips } from "./schema";
 import { createTripLens } from "./trip-lenses";
 import { createTrip, listStaff } from "./trips";
 
@@ -335,9 +335,9 @@ describe("nextDiveForBooking — a diver in training (issue #2058)", () => {
       identifier: "OW-ID",
     });
     await db
-      .update(certifications)
+      .update(cards)
       .set({ status: "verified" })
-      .where(eq(certifications.personId, diver.id));
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, diver.id)));
 
     // A private session, so the card does not suggest the course itself.
     const session = await createTrip(db, {

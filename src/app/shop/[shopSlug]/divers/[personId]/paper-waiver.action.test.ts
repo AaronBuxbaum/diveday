@@ -1,16 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import {
-  bookings,
-  certifications,
-  nitroxCertifications,
-  orders,
-  people,
-  personRoles,
-  specialtyCertifications,
-  waiverRecords,
-} from "@/db/schema";
+import { bookings, cards, orders, people, personRoles, waiverRecords } from "@/db/schema";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -104,9 +95,9 @@ async function context() {
  * first to prove the swap fires only when nothing is waiting.
  */
 async function clearEverythingElse(db: AppDb, shopId: string, personId: string) {
-  await db.delete(certifications).where(eq(certifications.personId, personId));
-  await db.delete(specialtyCertifications).where(eq(specialtyCertifications.personId, personId));
-  await db.delete(nitroxCertifications).where(eq(nitroxCertifications.personId, personId));
+  await db.delete(cards).where(and(eq(cards.kind, "level"), eq(cards.personId, personId)));
+  await db.delete(cards).where(and(eq(cards.kind, "specialty"), eq(cards.personId, personId)));
+  await db.delete(cards).where(and(eq(cards.kind, "nitrox"), eq(cards.personId, personId)));
   await db.delete(orders).where(eq(orders.personId, personId));
   await db.delete(bookings).where(eq(bookings.personId, personId));
   await db

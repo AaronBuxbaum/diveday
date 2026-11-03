@@ -16,11 +16,12 @@ import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { courseLadderSince, ladderExclusion, nextCourseFor } from "@/lib/course-ladder";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { levelCardLevel } from "./card-columns";
 import type { DbExecutor } from "./client";
 import { listCatalogInProgressionOrder } from "./courses";
 import { physicianReferrals, recentlyInvitedPeople } from "./invite-suggestions";
 import { queryAll } from "./query-helpers";
-import { bookings, certifications, courses, people, trips } from "./schema";
+import { bookings, cards, courses, people, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 import {
   liveBookingJoin,
@@ -115,17 +116,18 @@ export async function getCourseLadder(
             )
         : await db
             .selectDistinct({ personId: people.id, fullName: people.fullName })
-            .from(certifications)
-            .innerJoin(trips, eq(trips.id, certifications.issuedFromTripId))
-            .innerJoin(people, eq(people.id, certifications.personId))
+            .from(cards)
+            .innerJoin(trips, eq(trips.id, cards.issuedFromTripId))
+            .innerJoin(people, eq(people.id, cards.personId))
             .where(
               and(
-                eq(certifications.shopId, shopId),
+                eq(cards.shopId, shopId),
+                eq(cards.kind, "level"),
                 eq(trips.shopId, shopId),
                 eq(trips.courseId, course.id),
-                isNull(certifications.deletedAt),
-                isNotNull(certifications.issuedByShopAt),
-                gte(certifications.issuedByShopAt, since),
+                isNull(cards.deletedAt),
+                isNotNull(cards.issuedByShopAt),
+                gte(cards.issuedByShopAt, since),
                 livePerson(),
                 isNull(people.mergedIntoPersonId),
               ),
@@ -232,16 +234,17 @@ async function ladderFacts(
 ): Promise<LadderFacts> {
   const facts: LadderFacts = new Map();
   if (personIds.length === 0) return facts;
-  const [cards, births] = await queryAll(db, [
+  const [levelRows, births] = await queryAll(db, [
     () =>
       db
-        .select({ personId: certifications.personId, level: certifications.level })
-        .from(certifications)
+        .select({ personId: cards.personId, level: levelCardLevel })
+        .from(cards)
         .where(
           and(
-            eq(certifications.shopId, shopId),
-            inArray(certifications.personId, personIds),
-            isNull(certifications.deletedAt),
+            eq(cards.shopId, shopId),
+            eq(cards.kind, "level"),
+            inArray(cards.personId, personIds),
+            isNull(cards.deletedAt),
           ),
         ),
     () =>
@@ -251,7 +254,7 @@ async function ladderFacts(
         .where(and(eq(people.shopId, shopId), inArray(people.id, personIds), livePerson())),
   ]);
   for (const row of births) facts.set(row.id, { heldLevels: [], dateOfBirth: row.dateOfBirth });
-  for (const card of cards) {
+  for (const card of levelRows) {
     const entry = facts.get(card.personId) ?? { heldLevels: [], dateOfBirth: null };
     entry.heldLevels.push(card.level);
     facts.set(card.personId, entry);

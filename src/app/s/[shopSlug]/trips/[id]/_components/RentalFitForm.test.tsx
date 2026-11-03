@@ -619,7 +619,7 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
     // incomplete on purpose, so the hands-on fitting path picks the diver up.
     // Pinned so the next reader knows the clearing is a decision and not the
     // bug above wearing a different hat — an empty string reaches
-    // `saveRentalFit` as a present key and nulls the column, which is the
+    // `recordRentalFit` as a present key and nulls the column, which is the
     // visible gap, not the silent overwrite.
     const { container } = renderDrysuit({ drysuitSize: offGrid });
     fireEvent.change(drysuitSelect(container), { target: { value: "" } });

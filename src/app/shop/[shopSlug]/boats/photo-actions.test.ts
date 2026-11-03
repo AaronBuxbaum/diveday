@@ -30,7 +30,7 @@ vi.mock("@/db/shops", () => ({ getShopById: async () => ({ timezone: "UTC" }) })
 vi.mock("@/db/boats", () => ({
   createBoat: vi.fn(),
   deleteBoat: vi.fn(),
-  updateBoatWithinCertificate: mocks.save,
+  editBoatWithinCertificate: mocks.save,
   replaceBoatPhoto: mocks.replace,
 }));
 vi.mock("@/db/media-deletions", () => ({ queueAndAttemptMediaDeletion: mocks.queue }));

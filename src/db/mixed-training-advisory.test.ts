@@ -12,7 +12,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
-import { createTrip, listStaff, setTripCrew, updateTrip } from "./trips";
+import { createTrip, editTrip, listStaff, setTripCrew } from "./trips";
 
 const ctx = fileScopedShopContext();
 
@@ -142,7 +142,7 @@ describe("mixed training advisory", () => {
     const { db, shop, a, b, instructor } = await fixture();
     await db.delete(tripAssignments).where(eq(tripAssignments.tripId, b.id));
     const move = (start: Date, end: Date) =>
-      updateTrip(db, shop.id, b.id, {
+      editTrip(db, shop.id, b.id, {
         title: b.title,
         startsAt: start,
         endsAt: end,

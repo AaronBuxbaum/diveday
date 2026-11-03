@@ -756,7 +756,7 @@ async function lockForWrite(
 }
 
 /** Save a draft's fields. A filed report is refused: it changes only by addendum. */
-export async function saveIncidentDraft(
+export async function recordIncidentDraft(
   db: AppDb,
   input: WriteTarget & { fields: IncidentDraftFields },
 ): Promise<{ ok: true } | { ok: false; reason: IncidentWriteRefusal }> {

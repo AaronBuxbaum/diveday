@@ -13,7 +13,7 @@
  *
  * **The trail is a record of who was seen, never of who dived.** A standing
  * `arrived` row says the desk saw the person; the boat carrying them is the
- * roll call's word, and `seatSailed` (src/lib/closeout.ts) is the rule that
+ * roll call's word, and `seatSailed` (src/features/today/closeout.ts) is the rule that
  * reads it. Nothing here may be spent as evidence about the water.
  */
 

@@ -98,14 +98,18 @@ describe("the rider's riding-only capsule", () => {
         rider({
           age: 13,
           minor: true,
-          depthAdvisory: {
-            status: "exceeds",
-            limitDepth: 18,
-            siteDepth: 30,
-            unit: "meters",
-            basis: "certification",
-            level: "open_water",
-          },
+          advisories: [
+            {
+              code: "depth_exceeds_ceiling",
+              params: {
+                limitDepth: 18,
+                siteDepth: 30,
+                unit: "meters",
+                basis: "certification",
+                level: "open_water",
+              },
+            },
+          ],
           birthday: { status: "today" },
         } as unknown as Partial<TripManifest["divers"][number]>),
       ],

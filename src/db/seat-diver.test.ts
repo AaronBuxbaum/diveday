@@ -20,7 +20,7 @@ vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
 import {
   activityEvents,
   bookings,
-  certifications,
+  cards,
   people,
   personRoles,
   tripRequirements,
@@ -788,7 +788,8 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
 describe("seatDiver trip admission (the boat's own cert gate reaches every staff door)", () => {
   /** Put one verified card on file, so the shop has actually adjudicated this diver. */
   async function card(db: AppDb, shopId: string, personId: string, level: CertificationLevel) {
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId,
       personId,
       agency: "padi",

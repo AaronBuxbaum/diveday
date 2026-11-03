@@ -16,7 +16,7 @@ import { AGENCY_KEYS } from "./shared";
  * a staffer already held something and typed its number, so the tap only records
  * that the number checked out. A **self-declared** card (a diver named their own
  * level on one of the three public forms that ask —
- * `certifications.selfDeclaredAt`) has no number *the shop holds* and would
+ * `cards.selfDeclaredAt`) has no number *the shop holds* and would
  * otherwise inherit that same tap, promoting a stranger's typing to `verified` —
  * the state readiness and the nitrox fill gate read. A number the diver typed
  * beside their level lands in `declaredIdentifier` and changes nothing here: it
@@ -27,7 +27,7 @@ import { AGENCY_KEYS } from "./shared";
  * number, **and say which rung the card shows**. That is the moment the diver's
  * claim stops being the evidence. It is enforced twice behind this form —
  * `reviewCertification` refuses without a number, and so does the database's own
- * `certifications_identifier_present_unless_self_declared`, which since
+ * `cards_identifier_present_unless_unsighted`, which since
  * 2026-08-15 refuses a blank one and not merely a NULL (it read
  * `identifier is not null`, and `''` satisfies that, so this sentence used to
  * overstate what the constraint held).
@@ -55,7 +55,7 @@ export function CardSightingForm({
   t: StaffTranslator;
   action: (formData: FormData) => void;
   certificationId: string;
-  /** `nitrox` routes the shared specialty action to the nitrox table. */
+  /** `nitrox` routes the shared specialty action to the nitrox cards (`cards`, kind = nitrox). */
   cardType?: "nitrox";
   /**
    * The rung the diver claimed, prefilling the level select. Absent on the

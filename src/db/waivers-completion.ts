@@ -289,7 +289,7 @@ type SaveWaiverDraftInput = {
   now?: Date;
 };
 
-export async function saveWaiverDraft(
+export async function recordWaiverDraft(
   db: AppDb,
   token: WaiverKey,
   input: SaveWaiverDraftInput,
@@ -341,7 +341,7 @@ async function saveWaiverDraftLocked(
     if (state.record.bookingId)
       await saveEmergencyContact(db, state.record.bookingId, input.emergencyContact);
     else
-      await savePersonEmergencyContact(db, {
+      await recordPersonEmergencyContact(db, {
         shopId: state.record.shopId,
         personId: state.record.personId,
         ...input.emergencyContact,
@@ -550,7 +550,7 @@ export async function getEmergencyContactForPerson(
  * that can say so to a person check the pair themselves first, so the refusal
  * arrives as words rather than as a save that quietly did not happen.
  */
-export async function saveBookingEmergencyContact(
+export async function recordBookingEmergencyContact(
   db: AppDb,
   input: {
     shopId: string;
@@ -609,7 +609,7 @@ export async function saveBookingEmergencyContact(
     // `bookings.person_id` points at a person inside it. This is the write a
     // bearer-token page reaches, so a row that ever goes wrong that way is
     // non-exploitable instead of merely unlikely — the same predicate
-    // `savePersonEmergencyContact` below makes.
+    // `recordPersonEmergencyContact` below makes.
     .where(and(eq(people.id, booking.personId), eq(people.shopId, input.shopId)))
     .returning({ id: people.id });
   return Boolean(updated);
@@ -617,9 +617,9 @@ export async function saveBookingEmergencyContact(
 
 /**
  * Save a person-level emergency contact when the waiver has no booking context.
- * Same pair-or-nothing rule as `saveBookingEmergencyContact`.
+ * Same pair-or-nothing rule as `recordBookingEmergencyContact`.
  */
-export async function savePersonEmergencyContact(
+export async function recordPersonEmergencyContact(
   db: DbExecutor,
   input: { shopId: string; personId: string; name?: string; phone?: string },
 ): Promise<boolean> {
@@ -906,7 +906,7 @@ async function completeWaiverLocked(
       if (state.record.bookingId) {
         await saveEmergencyContact(db, state.record.bookingId, input.emergencyContact);
       } else {
-        await savePersonEmergencyContact(db, {
+        await recordPersonEmergencyContact(db, {
           shopId: state.record.shopId,
           personId: state.record.personId,
           name: input.emergencyContact.name,

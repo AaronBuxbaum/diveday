@@ -12,7 +12,7 @@ import type { diveRecencyBand } from "@/db/schema";
  *
  * Currency is not a card. It does not expire, nothing verifies it, and no rung
  * on `CertificationLevel` can express it — which is why it lives here and on
- * `bookings.last_dived_band` rather than anywhere near `certifications`.
+ * `bookings.last_dived_band` rather than anywhere near `cards`.
  *
  * **Nothing in this file gates anything.** There is no `blocks()`, no rank
  * comparison, and no minimum. A shop seeing "Advanced Open Water · last dived

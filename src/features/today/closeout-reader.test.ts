@@ -1,0 +1,903 @@
+import { and, eq } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import { standingArrivalStatus } from "@/db/arrival-provenance";
+import type { AppDb } from "@/db/client";
+import { recordRollCall } from "@/db/manifests";
+import { markBookingNoShow } from "@/db/no-show";
+import { getTripOpenSeatsDebrief } from "@/db/open-seats";
+import { addCrewRecapPhoto } from "@/db/recap";
+import { crewSubject } from "@/db/roll-call-subject";
+import {
+  bookingArrivalEvents,
+  bookings as bookingsTable,
+  people,
+  rollCallEvents,
+  tripAssignments,
+  trips as tripsTable,
+} from "@/db/schema";
+import { DEMO_COMPLETED_TRIP_TITLE } from "@/db/seed-more-trips";
+import { recordTripStage } from "@/db/trip-stages";
+import { listStaff } from "@/db/trips";
+import { nowMs } from "@/lib/clock";
+import { rollCallCheckpoints } from "@/lib/roll-call";
+import { fileScopedShopContext } from "@/test/db";
+import { assembleEveningClose } from "./closeout";
+import { getDayCloseout, listHeadCountCloses } from "./closeout-reader";
+
+const HOUR = 60 * 60 * 1000;
+
+/**
+ * The seed counts the finished dawn boat's crew at every checkpoint (UX review
+ * 2026-10-13, item 40). The tests that need a crew nobody has counted yet
+ * start by taking that record back off, inside their own rolled-back
+ * transaction.
+ */
+async function uncountDawnBoatCrew(db: AppDb, shopId: string): Promise<void> {
+  const [dawn] = await db
+    .select({ id: tripsTable.id })
+    .from(tripsTable)
+    .where(and(eq(tripsTable.shopId, shopId), eq(tripsTable.title, DEMO_COMPLETED_TRIP_TITLE)));
+  if (dawn) await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, dawn.id));
+}
+
+describe("day close-out (in-memory PGlite)", () => {
+  // One hydration for the file, one rolled-back transaction per test. Every
+  // test here reads the evening and writes only the rows it then reads back;
+  // none races, none asserts that two `defaultNow()` stamps differ (each trail
+  // it reads carries an explicit `occurredAt`), and the writers it calls
+  // (`markBookingNoShow`, `recordRollCall`, `recordTripStage`) open a
+  // savepoint under the wrapper, which is all they need here. Fourteen fresh
+  // hydrations timed out at 60s on a contended runner (issue #1820).
+  const shared = fileScopedShopContext();
+
+  it("assembles today's state on the shop's own day", async () => {
+    const { db, shop } = shared;
+
+    const now = new Date(nowMs() + 60 * 60 * 1000); // 10:30 AM
+    const state = await getDayCloseout(db, shop.id, shop.timezone, now);
+    expect(state.shopDay).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // The seed always has a boat sailing today (demoTodayDepartureStart).
+    expect(state.departures.length).toBeGreaterThan(0);
+  });
+
+  it("seeds a completed local-day dive", async () => {
+    const { db, shop } = shared;
+    const now = new Date(nowMs() + 60 * 60 * 1000); // 10:30 AM
+    const state = await getDayCloseout(db, shop.id, shop.timezone, now);
+    const completed = state.departures.find(
+      (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+    );
+
+    expect(completed).toMatchObject({
+      status: "all_home",
+      ended: true,
+      booked: 8,
+    });
+  });
+
+  it("carries a crew photo onto its departure's settled station", async () => {
+    const { db, shop } = shared;
+    const state = await getDayCloseout(db, shop.id, shop.timezone);
+    const completed = state.departures.find(
+      (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+    );
+    const [staff] = await listStaff(db, shop.id);
+    if (!completed || !staff) throw new Error("completed trip and staff fixture required");
+
+    const added = await addCrewRecapPhoto(db, {
+      shopId: shop.id,
+      tripId: completed.tripId,
+      uploadedByPersonId: staff.person.id,
+      imageUrl: "https://img/crew-closeout.jpg",
+      now: new Date(nowMs()),
+    });
+    if (!added.ok) throw new Error("crew photo should be accepted for a completed trip");
+
+    const refreshed = await getDayCloseout(db, shop.id, shop.timezone);
+    expect(
+      refreshed.departures.find((departure) => departure.tripId === completed.tripId)?.crewPhotos,
+    ).toContainEqual(expect.objectContaining(added.photo));
+  });
+
+  it("reads the unreconciled head count that is still open", async () => {
+    const { db, shop } = shared;
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+
+    // A boat that sailed this morning and tied up two hours ago, with one
+    // diver counted aboard at the dock and never counted back after dive one
+    // — the day-with-an-unreconciled-roll-call shape.
+    const endsAt = new Date(nowMs() - 2 * HOUR);
+    const [trip] = await db
+      .insert(tripsTable)
+      .values({
+        shopId: shop.id,
+        title: "Returned Two-Tank — Molasses",
+        startsAt: new Date(endsAt.getTime() - 4 * HOUR),
+        endsAt,
+        capacity: 12,
+        plannedDives: 1,
+        priceCents: 13000,
+      })
+      .returning();
+    if (!trip) throw new Error("fixture trip insert returned no row");
+    const [diver] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id))
+      .limit(1);
+    if (!diver) throw new Error("seed has no people");
+    const [booking] = await db
+      .insert(bookingsTable)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: diver.id,
+        status: "checked_in" as const,
+      })
+      .returning();
+    if (!booking) throw new Error("fixture booking insert returned no row");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded" as const,
+      checkpoint: "departure",
+      source: "live" as const,
+      occurredAt: trip.startsAt,
+    });
+
+    const state = await getDayCloseout(db, shop.id, shop.timezone);
+    const returned = state.departures.find((d) => d.tripId === trip.id);
+    expect(returned?.status).toBe("unreconciled");
+    expect(returned?.gapReason).toBe("after_dive_uncounted");
+  });
+
+  /**
+   * **The evening reads the assigned crew, not whoever has a result** (issue
+   * #1346). `listRollCallGaps` counts only crew who already carry one, which
+   * is why a shop that has never tapped a crew roll call could reach "all
+   * boats are home" over a boat whose manifest said `crew_awaiting`.
+   */
+  describe("the crew the evening counts", () => {
+    const crewOfCompletedTrip = async () => {
+      const { db, shop } = shared;
+      await uncountDawnBoatCrew(db, shop.id);
+      const now = new Date(nowMs() + HOUR);
+      const state = await getDayCloseout(db, shop.id, shop.timezone, now);
+      const completed = state.departures.find(
+        (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+      );
+      if (!completed) throw new Error("seeded completed trip missing");
+      return { db, shop, now, completed };
+    };
+
+    it("names every rostered crew member, with no result until somebody records one", async () => {
+      const { db, completed } = await crewOfCompletedTrip();
+      const assigned = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, completed.tripId));
+
+      expect(completed.crew).toHaveLength(assigned.length);
+      expect(assigned.length).toBeGreaterThan(0);
+      // With the seeded crew count taken off, absence is what the evening
+      // sees, and absence is awaiting, never accounted for.
+      expect(completed.crew.every((member) => member.rollCall === undefined)).toBe(true);
+      expect(assembleEveningClose([completed]).allHome).toBe(false);
+    });
+
+    it("takes the last write per person, so an undone tap satisfies nothing", async () => {
+      const { db, shop, now, completed } = await crewOfCompletedTrip();
+      const [staff] = await listStaff(db, shop.id);
+      if (!staff) throw new Error("seed staff missing");
+      const assigned = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, completed.tripId));
+      const checkpoints = rollCallCheckpoints(completed.plannedDives);
+
+      const boarded = assigned.flatMap((crew, index) =>
+        checkpoints.map((checkpoint, step) => ({
+          shopId: shop.id,
+          tripId: completed.tripId,
+          ...crewSubject(crew.personId),
+          recordedByPersonId: staff.person.id,
+          status: "boarded" as const,
+          checkpoint,
+          source: "live" as const,
+          occurredAt: new Date(completed.startsAt.getTime() + (step * 10 + index) * 60_000),
+        })),
+      );
+      await db.insert(rollCallEvents).values(boarded);
+
+      const counted = await getDayCloseout(db, shop.id, shop.timezone, now);
+      const withCrew = counted.departures.find(
+        (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+      );
+      expect(assembleEveningClose([withCrew ?? completed]).stations[0]?.crewAccountedFor).toBe(
+        true,
+      );
+
+      // One person's closing result is then cleared, which every reader of
+      // this trail collapses to "no result".
+      const firstCrew = assigned[0];
+      const closing = checkpoints.at(-1);
+      if (!firstCrew || !closing) throw new Error("no crew or checkpoint");
+      await db.insert(rollCallEvents).values({
+        shopId: shop.id,
+        tripId: completed.tripId,
+        ...crewSubject(firstCrew.personId),
+        recordedByPersonId: staff.person.id,
+        status: "cleared",
+        checkpoint: closing,
+        source: "live",
+        occurredAt: new Date(completed.endsAt.getTime()),
+      });
+
+      const undone = await getDayCloseout(db, shop.id, shop.timezone, now);
+      const afterUndo = undone.departures.find(
+        (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+      );
+      if (!afterUndo) throw new Error("seeded completed trip missing");
+      expect(assembleEveningClose([afterUndo]).stations[0]?.crewAccountedFor).toBe(false);
+    });
+
+    it("is tenant-safe: another shop's day never reaches this roster", async () => {
+      const { db, shop, now } = await crewOfCompletedTrip();
+      const other = await getDayCloseout(
+        db,
+        "00000000-0000-4000-8000-000000000000",
+        shop.timezone,
+        now,
+      );
+      expect(other.departures).toEqual([]);
+    });
+  });
+
+  /**
+   * **Who closed the head count is whoever made the last mark, diver or crew**
+   * (issue #2331). The read used to take diver marks only, so a crew member's
+   * own back-aboard mark coming last credited whoever made the last diver mark.
+   */
+  describe("the head count's close", () => {
+    const closingFixture = async () => {
+      const { db, shop } = shared;
+      await uncountDawnBoatCrew(db, shop.id);
+      const now = new Date(nowMs() + HOUR);
+      const state = await getDayCloseout(db, shop.id, shop.timezone, now);
+      const completed = state.departures.find(
+        (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+      );
+      if (!completed) throw new Error("seeded completed trip missing");
+      const staff = await listStaff(db, shop.id);
+      const [diverMarker, crewMarker] = staff;
+      if (!diverMarker || !crewMarker || diverMarker.person.id === crewMarker.person.id) {
+        throw new Error("two staff fixtures required");
+      }
+      const [seat] = await db
+        .select({ id: bookingsTable.id })
+        .from(bookingsTable)
+        .where(eq(bookingsTable.tripId, completed.tripId))
+        .limit(1);
+      const [crew] = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, completed.tripId))
+        .limit(1);
+      if (!seat || !crew) throw new Error("a seat and a crew assignment required");
+      const closing = rollCallCheckpoints(completed.plannedDives).at(-1) ?? "departure";
+      // Later than anything the seed wrote, so these two marks are the last.
+      const late = (minutes: number) => new Date(completed.endsAt.getTime() + minutes * 60_000);
+      type MarkOptions = {
+        checkpoint?: string;
+        status?: "boarded" | "not_boarded" | "cleared";
+        recordedBy?: string;
+      };
+      const diverMark = (occurredAt: Date, createdAt?: Date, options: MarkOptions = {}) =>
+        db.insert(rollCallEvents).values({
+          shopId: shop.id,
+          tripId: completed.tripId,
+          bookingId: seat.id,
+          recordedByPersonId: options.recordedBy ?? diverMarker.person.id,
+          status: options.status ?? "boarded",
+          checkpoint: options.checkpoint ?? closing,
+          occurredAt,
+          ...(createdAt ? { createdAt } : {}),
+        });
+      const crewMark = (occurredAt: Date, createdAt?: Date, options: MarkOptions = {}) =>
+        db.insert(rollCallEvents).values({
+          shopId: shop.id,
+          tripId: completed.tripId,
+          ...crewSubject(crew.personId),
+          recordedByPersonId: options.recordedBy ?? crewMarker.person.id,
+          status: options.status ?? "boarded",
+          checkpoint: options.checkpoint ?? closing,
+          occurredAt,
+          ...(createdAt ? { createdAt } : {}),
+        });
+      const read = async (crewClosed = true) =>
+        (await listHeadCountCloses(db, shop.id, [{ tripId: completed.tripId, crewClosed }])).get(
+          completed.tripId,
+        );
+      return { db, shop, completed, diverMarker, crewMarker, late, diverMark, crewMark, read };
+    };
+
+    it("names the crew member who made the last mark when a crew mark came last", async () => {
+      const { diverMarker, crewMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await diverMark(late(60));
+      await crewMark(late(65));
+      expect(await read()).toEqual({ closedAt: late(65), closedBy: crewMarker.person.fullName });
+      expect(diverMarker.person.fullName).not.toBe(crewMarker.person.fullName);
+    });
+
+    /**
+     * **While the crew are still open, the line is the divers' alone**
+     * (dive-domain review of #2331). The station then says "8 of 8 back by
+     * {time}", a claim about divers, so the last diver mark answers it: the
+     * last diver back at 2:31 by Keiko, not a crew mark at 2:40 by Tom while
+     * another crew member is still uncounted.
+     */
+    it("keeps the last diver mark while the crew are not all accounted for", async () => {
+      const { db, shop, completed, diverMarker, late, diverMark, crewMark } =
+        await closingFixture();
+      await diverMark(late(31));
+      await crewMark(late(40));
+      // The evening's own answer, not a flag set by hand: one crew mark among
+      // several leaves the crew half open.
+      const state = await getDayCloseout(db, shop.id, shop.timezone, late(45));
+      const departure = state.departures.find((entry) => entry.tripId === completed.tripId);
+      if (!departure) throw new Error("completed trip missing");
+      const station = assembleEveningClose([departure], late(45)).stations[0];
+      if (!station) throw new Error("no station");
+      expect(station.crewAccountedFor).toBe(false);
+      const closes = await listHeadCountCloses(db, shop.id, [
+        { tripId: station.tripId, crewClosed: station.crewAccountedFor },
+      ]);
+      expect(closes.get(completed.tripId)).toEqual({
+        closedAt: late(31),
+        closedBy: diverMarker.person.fullName,
+      });
+    });
+
+    it("names the diver mark's recorder when a diver mark came last", async () => {
+      const { diverMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await crewMark(late(60));
+      await diverMark(late(65));
+      expect(await read()).toEqual({ closedAt: late(65), closedBy: diverMarker.person.fullName });
+    });
+
+    it("breaks a tie on the clock by the row written later", async () => {
+      const { crewMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await diverMark(late(60), late(61));
+      await crewMark(late(60), late(62));
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: crewMarker.person.fullName });
+    });
+
+    it("reads a trip whose only marks are crew marks", async () => {
+      const { db, shop, completed, crewMarker, late, crewMark } = await closingFixture();
+      await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, completed.tripId));
+      await crewMark(late(60));
+      const closes = await listHeadCountCloses(db, shop.id, [
+        { tripId: completed.tripId, crewClosed: true },
+      ]);
+      expect(closes.get(completed.tripId)).toEqual({
+        closedAt: late(60),
+        closedBy: crewMarker.person.fullName,
+      });
+    });
+
+    /**
+     * **The close is the final checkpoint's, not the last mark anywhere**
+     * (#2536). A mis-tap fixed on the dock checkpoint at 4:10 by the office
+     * manager, or a retraction, says nothing about who closed the final head
+     * count or when.
+     */
+    it("ignores a later correction on an earlier checkpoint", async () => {
+      const { diverMarker, crewMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await crewMark(late(55));
+      await diverMark(late(60));
+      await diverMark(late(130), undefined, {
+        checkpoint: "departure",
+        recordedBy: crewMarker.person.id,
+      });
+      await crewMark(late(140), undefined, {
+        checkpoint: "departure",
+        recordedBy: diverMarker.person.id,
+      });
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: diverMarker.person.fullName });
+      expect(await read(false)).toEqual({
+        closedAt: late(60),
+        closedBy: diverMarker.person.fullName,
+      });
+    });
+
+    it("ignores a retraction on an earlier checkpoint", async () => {
+      const { diverMarker, crewMarker, late, diverMark, read } = await closingFixture();
+      await diverMark(late(60));
+      await diverMark(late(130), undefined, {
+        checkpoint: "departure",
+        status: "cleared",
+        recordedBy: crewMarker.person.id,
+      });
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: diverMarker.person.fullName });
+    });
+
+    it("never counts a retraction at the final checkpoint as the close", async () => {
+      const { diverMarker, crewMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await crewMark(late(55));
+      await diverMark(late(60));
+      await diverMark(late(70), undefined, { status: "cleared", recordedBy: crewMarker.person.id });
+      await crewMark(late(75), undefined, { status: "cleared", recordedBy: diverMarker.person.id });
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: diverMarker.person.fullName });
+    });
+
+    it("never reads another shop's marks", async () => {
+      const { db, completed, late, crewMark } = await closingFixture();
+      await crewMark(late(60));
+      const closes = await listHeadCountCloses(db, "00000000-0000-4000-8000-000000000000", [
+        { tripId: completed.tripId, crewClosed: true },
+      ]);
+      expect(closes.size).toBe(0);
+    });
+  });
+
+  /**
+   * **What the evening counts as having been aboard** (issue #1689).
+   *
+   * The homecoming sentence used to sum the roster, so a diver a staffer
+   * marked absent at the desk went out *and* came home. Both numbers moved
+   * together, which is why arithmetic alone never caught it — `out === back`
+   * held over a boat whose own records said one of those souls never sailed.
+   */
+  describe("the divers the evening counts as sailed", () => {
+    /**
+     * A boat that left five hours ago and tied up two: sailed, home, and
+     * still inside the counter's own backward reach, so
+     * `markBookingNoShow` — the product's only writer of that status — is
+     * the thing under test rather than a hand-written row.
+     */
+    const boatThatSailedShort = async () => {
+      const { db, shop } = shared;
+      const [staff] = await listStaff(db, shop.id);
+      if (!staff) throw new Error("seed staff missing");
+      const now = new Date(nowMs() + HOUR);
+      const [trip] = await db
+        .insert(tripsTable)
+        .values({
+          shopId: shop.id,
+          title: "Sailed Short — Molasses",
+          startsAt: new Date(now.getTime() - 5 * HOUR),
+          endsAt: new Date(now.getTime() - 2 * HOUR),
+          capacity: 12,
+          plannedDives: 1,
+          priceCents: 13000,
+        })
+        .returning();
+      if (!trip) throw new Error("fixture trip insert returned no row");
+      const divers = await db
+        .select({ id: people.id })
+        .from(people)
+        .where(eq(people.shopId, shop.id))
+        .limit(3);
+      if (divers.length < 3) throw new Error("seed has too few people");
+      return { db, shop, staff, now, trip, divers };
+    };
+
+    const seat = async (
+      db: Awaited<ReturnType<typeof boatThatSailedShort>>["db"],
+      values: { shopId: string; tripId: string; personId: string; status: "booked" | "checked_in" },
+    ) => {
+      const [booking] = await db
+        .insert(bookingsTable)
+        .values({ bookedAs: "diver", ...values })
+        .returning();
+      if (!booking) throw new Error("fixture booking insert returned no row");
+      return booking;
+    };
+
+    const departureOf = async (
+      ctx: Awaited<ReturnType<typeof boatThatSailedShort>>,
+      tripId: string,
+    ) => {
+      const state = await getDayCloseout(ctx.db, ctx.shop.id, ctx.shop.timezone, ctx.now);
+      const departure = state.departures.find((row) => row.tripId === tripId);
+      if (!departure) throw new Error("fixture departure missing from today's closeout");
+      return departure;
+    };
+
+    it("drops a seat the desk marked no-show, and leaves the roster and the shelf alone", async () => {
+      const ctx = await boatThatSailedShort();
+      const { db, shop, staff, now, trip, divers } = ctx;
+      const sailing = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[0].id,
+        status: "booked",
+      });
+      const absent = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[1].id,
+        status: "booked",
+      });
+
+      const before = await departureOf(ctx, trip.id);
+      expect([before.booked, before.sailed]).toEqual([2, 2]);
+
+      const marked = await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: absent.id,
+        recordedByPersonId: staff.person.id,
+        now,
+      });
+      if (!marked.ok) throw new Error(`no-show refused: ${marked.reason}`);
+
+      const after = await departureOf(ctx, trip.id);
+      // The roster is untouched — two people bought seats on this boat, and
+      // that stays true tonight. One of them was aboard.
+      expect([after.booked, after.sailed]).toEqual([2, 1]);
+      const evening = assembleEveningClose([after], now);
+      expect([evening.divers, evening.back]).toEqual([1, 1]);
+      // **The debrief still reads the seats.** Ten of twelve went unsold, and
+      // narrowing the shared count would have quietly made it eleven. It lives
+      // on the departure's Details tab now, read off the same bookings.
+      const debrief = await getTripOpenSeatsDebrief(db, shop.id, trip.id, shop.timezone, now);
+      expect(debrief?.openSeats).toBe(10);
+      expect(sailing.status).toBe("booked");
+    });
+
+    it("keeps a checked-in diver out of the count once the desk says they never came", async () => {
+      // **The adversarial case, and it lands the opposite way round from the
+      // one #1558 imagined.** This booking has a standing `arrived` row: a
+      // staffer tapped them in at the desk, and `markBookingNoShow` leaves
+      // that trail alone on purpose. The mark is still the later human
+      // statement — made by somebody looking at the empty space — so it is
+      // the one the count follows, exactly as the dive-day readers were
+      // changed to do on 2026-09-11 (`standingArrivalStatus`,
+      // src/db/arrival-provenance.ts). A sighting at the desk at 06:40 is not
+      // a body on the boat at 06:50.
+      //
+      // The rail is the statement that *does* outrank it, and it needs no
+      // reader here: boarding a diver marked absent takes the booking back to
+      // what it was before the release, `checked_in` when the desk had seen
+      // them and `booked` otherwise (`reclaimReleasedSeat`,
+      // src/db/manifests.ts), so a diver the crew counted is never sitting at
+      // `no_show` when the evening reads it.
+      const ctx = await boatThatSailedShort();
+      const { db, shop, staff, now, trip, divers } = ctx;
+      await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[0].id,
+        status: "booked",
+      });
+      const seen = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[1].id,
+        status: "checked_in",
+      });
+      await db.insert(bookingArrivalEvents).values({
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: seen.id,
+        recordedByPersonId: staff.person.id,
+        status: "arrived",
+        source: "live",
+        occurredAt: new Date(now.getTime() - 6 * HOUR),
+      });
+      expect(await standingArrivalStatus(db, shop.id, trip.id, seen.id)).toBe("arrived");
+
+      const marked = await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: seen.id,
+        recordedByPersonId: staff.person.id,
+        now,
+      });
+      if (!marked.ok) throw new Error(`no-show refused: ${marked.reason}`);
+      // The sighting is still on the trail; it simply does not answer this
+      // question.
+      expect(await standingArrivalStatus(db, shop.id, trip.id, seen.id)).toBe("arrived");
+
+      const after = await departureOf(ctx, trip.id);
+      expect([after.booked, after.sailed]).toEqual([2, 1]);
+      expect(assembleEveningClose([after], now).divers).toBe(1);
+    });
+
+    /**
+     * **The load-bearing case, and the one the first fix of #1689 missed**
+     * (review finding 1).
+     *
+     * This is what closing the dock count looks like at a busy dock: the crew
+     * tap "Not boarded" for the diver who never showed, and nobody at the desk
+     * ever does the "Not here?" tap. `bookings.status` stays `booked`, so a
+     * count that reads status alone put that diver out *and* home — and
+     * because the crew *did* finish their count there is no gap, the station
+     * reads `all_home`, and the evening said so over a boat that carried one.
+     */
+    it("drops a seat the crew marked not boarded at the dock, with no desk mark at all", async () => {
+      const ctx = await boatThatSailedShort();
+      const { db, shop, staff, now, trip, divers } = ctx;
+      const aboard = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[0].id,
+        status: "booked",
+      });
+      const ashore = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[1].id,
+        status: "booked",
+      });
+
+      // The diver the crew left ashore, through the product's own writer —
+      // that tap is what this case is about. It needs no readiness fixture: a
+      // `not_boarded` is never gated, because refusing to record that somebody
+      // is *not* on the boat has no safe direction.
+      const left = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: ashore.id,
+        recordedByPersonId: staff.person.id,
+        status: "not_boarded",
+        occurredAt: new Date(trip.startsAt.getTime() + 60_000),
+      });
+      if (!left.ok) throw new Error(`roll call refused: ${left.reason}`);
+      // And the diver who sailed, written straight in: `recordRollCall` gates
+      // a `boarded` at departure on readiness, and a waiver fixture would only
+      // make this case about a rule it is not testing. What it does need is the
+      // dock count *closed*, so that nothing else on the row is holding the
+      // station open.
+      await db.insert(rollCallEvents).values(
+        rollCallCheckpoints(trip.plannedDives).map((checkpoint, step) => ({
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId: aboard.id,
+          recordedByPersonId: staff.person.id,
+          status: "boarded" as const,
+          checkpoint,
+          source: "live" as const,
+          occurredAt: new Date(trip.startsAt.getTime() + (step + 1) * 60_000),
+        })),
+      );
+
+      const after = await departureOf(ctx, trip.id);
+      // Nobody was marked absent at the desk, so a status-only count still
+      // reads two.
+      const [absent] = await db
+        .select({ status: bookingsTable.status })
+        .from(bookingsTable)
+        .where(eq(bookingsTable.id, ashore.id));
+      expect(absent?.status).toBe("booked");
+      expect([after.booked, after.sailed]).toEqual([2, 1]);
+      // No gap, so the station settles clean — which is exactly why the number
+      // had to be right: there is nothing else on this row to catch it.
+      expect(after.status).toBe("all_home");
+      const evening = assembleEveningClose([after], now);
+      expect([evening.divers, evening.back]).toEqual([1, 1]);
+      const debrief = await getTripOpenSeatsDebrief(db, shop.id, trip.id, shop.timezone, now);
+      expect(debrief?.openSeats).toBe(10);
+    });
+
+    /**
+     * **A diver who did not come back from a dive sailed** — the adversarial
+     * twin of the case above, and the reason the dock result is read through a
+     * departure-pinned reader.
+     *
+     * `not_boarded` means two opposite things by checkpoint: "never left the
+     * dock" at `departure`, and "did not return to the boat" after a dive
+     * (DOM-H3). Reading the second as the first would take the missing diver
+     * out of the count that says somebody is still in the water — the worst
+     * failure this surface has.
+     */
+    it("keeps a diver the crew marked not back aboard after a dive in the count", async () => {
+      const ctx = await boatThatSailedShort();
+      const { db, shop, staff, now, trip, divers } = ctx;
+      const booking = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[0].id,
+        status: "booked",
+      });
+      await db.insert(rollCallEvents).values({
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.person.id,
+        status: "boarded" as const,
+        checkpoint: "departure",
+        source: "live" as const,
+        occurredAt: new Date(trip.startsAt.getTime() + 60_000),
+      });
+      // The alarm, through the writer that raises it.
+      const missing = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.person.id,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+        occurredAt: new Date(trip.startsAt.getTime() + 2 * 60_000),
+      });
+      if (!missing.ok) throw new Error(`roll call refused: ${missing.reason}`);
+
+      const after = await departureOf(ctx, trip.id);
+      expect([after.booked, after.sailed]).toEqual([1, 1]);
+      // They sailed, and they are the one the day is still looking for.
+      expect([after.status, after.gapReason]).toEqual(["unreconciled", "missing_diver"]);
+      const evening = assembleEveningClose([after], now);
+      expect([evening.divers, evening.stations[0]?.back]).toEqual([1, 0]);
+      expect(evening.allHome).toBe(false);
+    });
+
+    /**
+     * **The safety claim the count rests on, asserted at this layer** (review
+     * finding 4).
+     *
+     * `seatSailed` drops a `no_show` seat that has no dock result, which is
+     * only safe because a `no_show` can never stand over a diver the crew
+     * recorded aboard: `noShowGate` refuses `already_boarded` ahead of every
+     * other condition, and a boarding that arrives second takes the released
+     * seat straight back. Nothing asserted that here, and the whole of `sailed`
+     * leans on it.
+     *
+     * The argument was written for the boarded half alone, and a
+     * dive-domain-expert review found the other half missing on both sides
+     * (issue #1704): the gate now also refuses `already_missing_after_dive`,
+     * and `reclaimReleasedSeat` also fires for an after-dive `not_boarded`. The
+     * test below it asserts the second half of the same claim.
+     */
+    it("counts a released seat again the moment the crew board that diver", async () => {
+      const ctx = await boatThatSailedShort();
+      const { db, shop, staff, now, trip, divers } = ctx;
+      await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[0].id,
+        status: "booked",
+      });
+      const released = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[1].id,
+        status: "booked",
+      });
+      const marked = await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: released.id,
+        recordedByPersonId: staff.person.id,
+        now,
+      });
+      if (!marked.ok) throw new Error(`no-show refused: ${marked.reason}`);
+      expect((await departureOf(ctx, trip.id)).sailed).toBe(1);
+
+      // The rail contradicts the desk, and the rail wins. At `after_dive_1`
+      // deliberately: that is `inAfterDivePopulation`'s own case — a diver the
+      // crew counted without a dock result — it is the checkpoint the counter
+      // used to be blind to (`onTheWaterByRollCall`), and readiness gates a
+      // `boarded` only at departure, so the real writer runs here with no
+      // waiver fixture standing in front of it.
+      const boarded = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: released.id,
+        recordedByPersonId: staff.person.id,
+        status: "boarded",
+        checkpoint: "after_dive_1",
+        occurredAt: new Date(trip.startsAt.getTime() + 60_000),
+      });
+      if (!boarded.ok) throw new Error(`roll call refused: ${boarded.reason}`);
+
+      const [reclaimed] = await db
+        .select({ status: bookingsTable.status })
+        .from(bookingsTable)
+        .where(eq(bookingsTable.id, released.id));
+      expect(reclaimed?.status).toBe("booked");
+      expect((await departureOf(ctx, trip.id)).sailed).toBe(2);
+    });
+
+    /**
+     * **The state the evening was wrong about** (dive-domain-expert review,
+     * issue #1704). One seat, no dock result, the desk's mark, and then the
+     * crew recording the diver as not back aboard after a dive.
+     *
+     * `seatSailed` read the dock alone, fell through to `!noShow`, and answered
+     * "did not sail" — so this boat reported "0 divers out, 0 back" while the
+     * day was raising a top-severity missing-diver row about the same person,
+     * and the clamp on the homecoming line hid the `-1`. Two things now hold
+     * it: the crew's after-dive statement outranks the dock's *silence* in the
+     * count, and the mark itself no longer survives the tap.
+     *
+     * Reachable on an ordinary morning: the desk's door is open for six hours
+     * after departure, and an offline after-dive tap syncs hours after it was
+     * made.
+     */
+    it("counts a diver the desk wrote off and the crew then reported missing", async () => {
+      const ctx = await boatThatSailedShort();
+      const { db, shop, staff, now, trip, divers } = ctx;
+      const released = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[0].id,
+        status: "booked",
+      });
+      const marked = await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: released.id,
+        recordedByPersonId: staff.person.id,
+        now,
+      });
+      if (!marked.ok) throw new Error(`no-show refused: ${marked.reason}`);
+      expect((await departureOf(ctx, trip.id)).sailed).toBe(0);
+
+      const missing = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: released.id,
+        recordedByPersonId: staff.person.id,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+        occurredAt: new Date(trip.startsAt.getTime() + 60_000),
+      });
+      if (!missing.ok) throw new Error(`roll call refused: ${missing.reason}`);
+
+      // The mark is gone, because the crew's statement means the diver sailed.
+      const [reclaimed] = await db
+        .select({ status: bookingsTable.status })
+        .from(bookingsTable)
+        .where(eq(bookingsTable.id, released.id));
+      expect(reclaimed?.status).toBe("booked");
+
+      const after = await departureOf(ctx, trip.id);
+      expect([after.booked, after.sailed]).toEqual([1, 1]);
+      expect([after.status, after.gapReason]).toEqual(["unreconciled", "missing_diver"]);
+      const evening = assembleEveningClose([after], now);
+      expect([evening.divers, evening.stations[0]?.back]).toEqual([1, 0]);
+      expect(evening.allHome).toBe(false);
+    });
+  });
+
+  it("settles a departure the return buffer still calls still out, once the crew tap Home", async () => {
+    // **Issue #1480, through the plumbing.** The promotion is decided in
+    // `src/features/today/closeout.ts`, but it only ever fires if the db half actually
+    // carries the crew's last tap onto the departure — this is the test that
+    // catches that being forgotten.
+    const { db, shop } = shared;
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+
+    // Due back five minutes ago: `hasReturned` says no for another 55.
+    const endsAt = new Date(nowMs() - 5 * 60 * 1000);
+    const [trip] = await db
+      .insert(tripsTable)
+      .values({
+        shopId: shop.id,
+        title: "Just In — Molasses & French",
+        startsAt: new Date(endsAt.getTime() - 4 * HOUR),
+        endsAt,
+        capacity: 12,
+        plannedDives: 2,
+        priceCents: 13000,
+      })
+      .returning();
+    if (!trip) throw new Error("fixture trip insert returned no row");
+
+    const before = await getDayCloseout(db, shop.id, shop.timezone);
+    expect(before.departures.find((d) => d.tripId === trip.id)?.status).toBe("still_out");
+
+    const tap = await recordTripStage(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      stage: "home",
+      recordedByPersonId: staff.person.id,
+    });
+    if (!tap.ok) throw new Error(`stage refused: ${tap.reason}`);
+
+    const after = await getDayCloseout(db, shop.id, shop.timezone);
+    expect(after.departures.find((d) => d.tripId === trip.id)?.status).toBe("all_home");
+  });
+});

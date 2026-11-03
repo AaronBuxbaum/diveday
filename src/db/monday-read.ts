@@ -7,7 +7,7 @@ import {
 } from "@/lib/assists/monday-read";
 import { sourceDigest } from "@/lib/assists/shop-translate";
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
-import { readAssistResult, saveAssistResult } from "./assist-results";
+import { readAssistResult, recordAssistResult } from "./assist-results";
 import { type AssistOptions, runAssistOutcome } from "./assists";
 import type { AppDb } from "./client";
 
@@ -49,7 +49,7 @@ export async function mondayReadFor(
   // A refused or unusable answer is stored as no sentences, so the hourly
   // pass asks once for this week, grade and language.
   const answer = value ?? { sentences: [] };
-  await saveAssistResult(db, {
+  await recordAssistResult(db, {
     shopId: input.shopId,
     feature: MONDAY_READ_FEATURE,
     subjectKey,

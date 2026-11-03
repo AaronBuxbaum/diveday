@@ -10,6 +10,7 @@ import { getShopById } from "@/db/shops";
 import {
   createIntegrationOAuthState,
   disconnectShopIntegration,
+  editShopIntegrationSettings,
   getShopIntegration,
   INTEGRATION_PROVIDER_REGISTRY,
   integrationCallbackUrl,
@@ -19,12 +20,11 @@ import {
   quickBooksAuthorizationUrl,
   quickBooksConfigFromEnvironment,
   readIntegrationCredentials,
-  saveShopIntegration,
+  recordShopIntegration,
   sendZapierTest,
   shopifyAuthorizationUrl,
   shopifyConfigFromEnvironment,
   syncShopifyCatalog,
-  updateShopIntegrationSettings,
 } from "@/features/integrations";
 import { formValue, parseForm, readForm, single, text, trimmedText } from "@/lib/form-parse";
 import { type NoticeRedirect, revalidateWithNotice } from "@/lib/navigation";
@@ -137,7 +137,7 @@ export async function saveZapierIntegrationAction(formData: FormData): Promise<v
   if (!url || eventTypes.length === 0) done(path, "invalid");
   if (storageNotice) done(path, storageNotice);
   try {
-    await saveShopIntegration(db, {
+    await recordShopIntegration(db, {
       shopId: session.user.shopId,
       provider: "zapier",
       credentials: { webhookUrl: url },
@@ -158,7 +158,7 @@ export async function updateZapierEventsAction(formData: FormData): Promise<void
   if (eventTypes.length === 0) done(path, "invalid");
   const row = await getShopIntegration(db, session.user.shopId, "zapier");
   if (!row) done(path, "failed");
-  await updateShopIntegrationSettings(db, {
+  await editShopIntegrationSettings(db, {
     shopId: session.user.shopId,
     provider: "zapier",
     settings: { ...row.settings, eventTypes },
@@ -172,7 +172,7 @@ export async function updateQuickBooksSettingsAction(formData: FormData): Promis
   if (incomeAccountId && !/^\d{1,32}$/.test(incomeAccountId)) done(path, "invalid");
   const row = await getShopIntegration(db, session.user.shopId, "quickbooks");
   if (!row) done(path, "failed");
-  await updateShopIntegrationSettings(db, {
+  await editShopIntegrationSettings(db, {
     shopId: session.user.shopId,
     provider: "quickbooks",
     settings: {

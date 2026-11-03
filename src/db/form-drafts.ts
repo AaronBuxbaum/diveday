@@ -20,7 +20,7 @@ import { formDrafts } from "./schema";
 export type FormDraft = { form: FormDraftKind; fields: DraftFields; savedAt: Date };
 
 /** Create a generated draft only if a staffer's fresh draft is not already present. */
-export async function saveFormDraftIfVacant(
+export async function recordFormDraftIfVacant(
   db: DbExecutor,
   input: {
     shopId: string;
@@ -45,7 +45,7 @@ export async function saveFormDraftIfVacant(
   return saved ? "saved" : "exists";
 }
 
-export async function saveFormDraft(
+export async function recordFormDraft(
   db: DbExecutor,
   input: {
     shopId: string;

@@ -45,7 +45,7 @@ which ordering is chosen.
 - **Unpriced gear stays out of checkout**, exactly as `quoteRentalFit` already models: an item the
   shop hasn't priced online is never added to a line item, surfaced instead as "settled at the shop"
   the same way the post-booking form already reports `unpricedKinds`.
-- **The rental fit itself is saved through the existing `saveRentalFit` path** (`src/db/rental-fit.ts`),
+- **The rental fit itself is saved through the existing `recordRentalFit` path** (`src/db/rental-fit.ts`),
   now called at booking time instead of only post-booking; the post-booking form still exists for a
   diver who skipped the step or wants to change their mind later.
 - **Each diver's quoted gear subtotal is snapshotted onto their `booking_checkout_bookings` row**

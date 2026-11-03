@@ -23,7 +23,7 @@ import {
 } from "./schema";
 import { sendRescheduleNotices } from "./trip-rescheduled";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
-import { updateTrip, updateTripSection } from "./trips-record";
+import { editTrip, editTripSection } from "./trips-record";
 
 function barrier() {
   let resolve!: () => void;
@@ -112,19 +112,19 @@ describePostgres("reschedule and handoff notice fences", () => {
         fenceHeld.resolve();
         await releaseFence.promise;
       });
-      let write: ReturnType<typeof updateTrip> | ReturnType<typeof updateTripSection> | undefined;
+      let write: ReturnType<typeof editTrip> | ReturnType<typeof editTripSection> | undefined;
       try {
         await Promise.race([fenceHeld.promise, holdDispatchFence]);
         write =
           scope === "full"
-            ? updateTrip(pg.connect(), shop.id, trip.id, {
+            ? editTrip(pg.connect(), shop.id, trip.id, {
                 title: trip.title,
                 startsAt: trip.startsAt,
                 endsAt: trip.endsAt,
                 capacity: trip.capacity,
                 plannedDives: trip.plannedDives,
               })
-            : updateTripSection(pg.connect(), shop.id, trip.id, { title: "Section edit" });
+            : editTripSection(pg.connect(), shop.id, trip.id, { title: "Section edit" });
         await waitForLockWaiters(pg.db, 1);
 
         // The write must be parked on the advisory fence, before it owns the

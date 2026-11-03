@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
-import { discardFormDraft, saveFormDraft } from "@/db/form-drafts";
+import { discardFormDraft, recordFormDraft } from "@/db/form-drafts";
 import { askForDate } from "@/db/interests";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/lib/form-parse";
@@ -91,7 +91,7 @@ export async function tookACallAction(shopSlug: string, formData: FormData): Pro
   // caller's details were gone. They are kept as the draft instead, and the
   // form reopens on a date request, the door that is still open.
   if (outcome === "waitlist" && !shop.waitlistEnabled) {
-    await saveFormDraft(db, {
+    await recordFormDraft(db, {
       shopId: shop.id,
       personId: session.user.personId,
       form: "took_a_call",

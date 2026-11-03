@@ -10,7 +10,7 @@ import {
   createCourseForm,
   getCourseFormsForBooking,
   listCourseForms,
-  saveCourseFormVersion,
+  recordCourseFormVersion,
   setCourseFormRequirements,
 } from "@/db/course-forms";
 import { bookings, courseFormRecords, people, shops, tripAssignments, trips } from "@/db/schema";
@@ -275,7 +275,7 @@ describe("signing a course form from the link", () => {
 
   it("refuses the displayed form after its instructor roster changes", async () => {
     const ctx = await enrolled();
-    await saveCourseFormVersion(ctx.db, {
+    await recordCourseFormVersion(ctx.db, {
       shopId: ctx.shop.id,
       formId: ctx.formIds[0] ?? "",
       title: "Course form 1",
@@ -388,7 +388,7 @@ describe("signing a course form from the link", () => {
   it("refuses words the shop changed while the page was open", async () => {
     const ctx = await enrolled();
     const [stale] = await owed(ctx);
-    await saveCourseFormVersion(ctx.db, {
+    await recordCourseFormVersion(ctx.db, {
       shopId: ctx.shop.id,
       formId: ctx.formIds[0] ?? "",
       title: "Course form 1",

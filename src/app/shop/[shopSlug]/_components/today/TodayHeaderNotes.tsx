@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
-import type { getTodayWork } from "@/db/today";
+import type { getTodayWork } from "@/features/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";
 

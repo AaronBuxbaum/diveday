@@ -81,7 +81,7 @@ export type InPersonWaiverOutcome =
          * Refused at the writer rather than left to the surfaces
          * (`dive-domain-expert` review of issue #1696). The counter only hid its
          * control because `identity` outranks `waiver` in `KIND_SEVERITY`
-         * (`src/lib/today.ts`) and `blockerFixFor` offers one fix at a time —
+         * (`src/features/today/today.ts`) and `blockerFixFor` offers one fix at a time —
          * re-rank that table for an unrelated reason and the control comes back
          * — and the roster's `PaperWaiverControl` never consulted the flag at
          * all, so that door was open. The fix for a diver standing there with

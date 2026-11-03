@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { confirmCarriedFacts } from "@/db/bookings";
 import { setBookingNitrox } from "@/db/nitrox";
-import { saveRentalFit } from "@/db/rental-fit";
+import { recordRentalFit } from "@/db/rental-fit";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { seatRentalAnswer } from "@/lib/participant-types";
 import { nitroxAvailableOn, RENTAL_FIT_TEXT_LIMITS, suitFlagsFromPost } from "@/lib/rentals";
@@ -35,7 +35,7 @@ const fitSchema = z.object({
   // divers could make with "Check the details and try again." on a form where
   // every visible box was right. `.default("")` parses and then blanks a
   // stored size for every item the shop does not currently offer, which is the
-  // destructive half of the same bug; `saveRentalFit` leaves an absent size
+  // destructive half of the same bug; `recordRentalFit` leaves an absent size
   // alone instead (`src/db/rental-fit.ts`).
   bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
@@ -56,12 +56,12 @@ export async function saveFitFromReady(token: string, formData: FormData) {
   // A snorkeler's form shows surface kit only (ADR 20261007-participant-types).
   const said = (kind: string, posted: string | undefined) =>
     seatRentalAnswer(ctx.data.participantType, kind, posted);
-  const saved = await saveRentalFit(ctx.db, {
+  const saved = await recordRentalFit(ctx.db, {
     shopId: ctx.data.shop.id,
     personId: ctx.data.person.id,
     // An item the shop's catalog has dropped renders no checkbox in
     // `RentalFitForm`, so it posts nothing and arrives here as `false`.
-    // `saveRentalFit` re-derives the offered set and leaves those columns alone
+    // `recordRentalFit` re-derives the offered set and leaves those columns alone
     // rather than reading the silence as "no" (issue #1755) — the same posture
     // the nitrox request takes below, and the mirror of the absent-size rule.
     rentsBcd: said("bcd", parsed.data.bcd),
@@ -91,7 +91,7 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     bootSize: parsed.data.bootSize,
     finSize: parsed.data.finSize,
     weightPreference: parsed.data.weightPreference,
-    // Deliberately absent, and `saveRentalFit` reads that absence as "leave the
+    // Deliberately absent, and `recordRentalFit` reads that absence as "leave the
     // stored note alone": the note is `saveDayOfDetailsFromReady`'s to write since issue
     // 627, so a diver nudging a boot size here must not silently delete words
     // the crew is relying on.

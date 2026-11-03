@@ -2,12 +2,13 @@ import { and, asc, desc, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
+import { levelCardLevel } from "./card-columns";
 import type { DbExecutor } from "./client";
 import {
   boats,
   bookingPayments,
   bookings,
-  certifications,
+  cards,
   courses,
   type DiveSpecialty,
   divePackageEntitlements,
@@ -113,14 +114,15 @@ async function castIds(
 /** The history cohort with their verified level, in the cohort's own order. */
 async function historyCohort(db: DbExecutor, shopId: string): Promise<Cohort> {
   const rows = await db
-    .select({ id: people.id, fullName: people.fullName, level: certifications.level })
+    .select({ id: people.id, fullName: people.fullName, level: levelCardLevel })
     .from(people)
     .innerJoin(
-      certifications,
+      cards,
       and(
-        eq(certifications.personId, people.id),
-        eq(certifications.status, "verified"),
-        isNull(certifications.deletedAt),
+        eq(cards.personId, people.id),
+        eq(cards.kind, "level"),
+        eq(cards.status, "verified"),
+        isNull(cards.deletedAt),
       ),
     )
     .where(
@@ -784,7 +786,8 @@ async function seedShopCertified(
       createdAt: paidAt,
       updatedAt: paidAt,
     });
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId,
       personId: student.id,
       agency: course.agency === "ssi" ? "ssi" : "padi",

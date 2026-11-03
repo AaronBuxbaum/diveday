@@ -16,6 +16,7 @@ import {
   courseFormGaps,
   type RequiredCourseForm,
 } from "./course-forms";
+import { findingsStatus } from "./findings";
 import { guardianSignatureMissing } from "./guardian";
 import { isDiver, isHeldToMedical, type ParticipantType } from "./participant-types";
 import {
@@ -593,8 +594,8 @@ export function validVerifiedCertification(certification: Certification): boolea
  * and it counts like any other. That is why this is a *pair* of conditions and
  * not just `selfDeclaredAt !== null`.
  *
- * Shaped structurally rather than over `Certification` so the nitrox table's
- * identical rows go through the same one definition.
+ * Shaped structurally rather than over `Certification` so a nitrox or
+ * specialty card goes through the same one definition.
  */
 export function isUnsightedSelfDeclaration(card: {
   selfDeclaredAt?: Date | string | null;
@@ -616,16 +617,16 @@ export function isUnsightedSelfDeclaration(card: {
  * agency and the number off a card**, because that promotion is what opens a
  * depth gate past 18 m or authorizes an enriched-air fill.
  *
- * The level table has no second kind. A shop-issued *level* card lands
+ * A level card has no second path. A shop-issued *level* card lands
  * `verified` on the instructor's tap and never passes through here (ADR
  * 20260824-shop-issued-certification-is-verified); the stricter treatment of
- * specialty and nitrox is deliberate and is this table's own precedent — even
+ * specialty and nitrox is deliberate and is those cards' own precedent — even
  * an imported row does not clear its own gate without a staffer confirming it
  * ("a spreadsheet cell is not a card sighting", ADR
  * 20260725-import-specialty-cards).
  *
- * Structural rather than over a row type, like its sibling, so the specialty
- * and nitrox tables go through one definition.
+ * Structural rather than over a row type, like its sibling, so specialty and
+ * nitrox cards go through one definition.
  */
 export function needsCardSighting(card: {
   selfDeclaredAt?: Date | string | null;
@@ -733,7 +734,7 @@ export function unreviewedCardState(card: {
  * never reverses an agency-checked review, as the agency check's own Undo
  * never reverses a one-tap one. Null means the Undo may proceed.
  *
- * Structural, like {@link unreviewedCardState}, so all three tables share it.
+ * Structural, like {@link unreviewedCardState}, so every kind of card shares it.
  * Run it after that decision: a card with no review at all is `not_reviewed`,
  * not stale.
  */
@@ -949,7 +950,7 @@ function specialtyBlocker(
 
 /**
  * Nitrox is a yes/no gate cleared only by a verified enriched-air card. Its
- * evidence lives in nitrox_certifications (which also gates the mix request), and those
+ * evidence is a nitrox card (`cards`, kind = nitrox; it also gates the mix request), and those
  * cards carry no expiry — so there is no expired state, only missing/pending.
  */
 function nitroxBlocker(
@@ -1284,5 +1285,8 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       blockers.push({ code: status === "refunded" ? "payment_refunded" : "payment_due" });
     }
   }
-  return { status: blockers.length === 0 ? "ready" : "blocked", blockers };
+  // By the strictness table (`src/lib/findings.ts`), which fails closed. Every
+  // code `blockers` can hold is tabled "blocks", so this is `blockers.length`
+  // spelled through the one place strictness is recorded.
+  return { status: findingsStatus(blockers), blockers };
 }

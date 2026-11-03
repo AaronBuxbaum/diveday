@@ -10,7 +10,7 @@ import {
   getShopIntegration,
   listShopIntegrations,
   readIntegrationCredentials,
-  saveShopIntegration,
+  recordShopIntegration,
   upsertIntegrationSyncRecord,
 } from "./integrations";
 import {
@@ -36,7 +36,7 @@ async function connectQuickBooks(
   shopId: string,
   token = "access-1",
 ) {
-  return saveShopIntegration(db, {
+  return recordShopIntegration(db, {
     shopId,
     provider: "quickbooks",
     credentials: credentials(token),

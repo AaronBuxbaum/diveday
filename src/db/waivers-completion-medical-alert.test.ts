@@ -7,9 +7,9 @@ import { anonymizeDiver } from "./anonymize";
 import { tripAdmissionFor } from "./bookings";
 import { listTripReadiness } from "./readiness";
 import { bookings, people, personRoles, waiverRecords } from "./schema";
-import { completeWaiver, getWaiverForToken, saveWaiverDraft } from "./waivers-completion";
+import { completeWaiver, getWaiverForToken, recordWaiverDraft } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import { saveWaiverTemplate } from "./waivers-templates";
+import { recordWaiverTemplate } from "./waivers-templates";
 import {
   clearAnswers,
   medicalReferralAnswers,
@@ -265,7 +265,7 @@ describe("the medical alert for the crew on the waiver", () => {
   it("keeps the draft through Save and finish later, leaves it alone when the field is absent, and clears it on signing", async () => {
     const { db, person, token } = await link();
     expect(
-      await saveWaiverDraft(db, token, {
+      await recordWaiverDraft(db, token, {
         acknowledged: false,
         medicalAnswers: clearAnswers,
         medicalAlert: ` ${alert} `,
@@ -274,17 +274,17 @@ describe("the medical alert for the crew on the waiver", () => {
     ).toBe(true);
     expect((await recordFor(db, token)).draftMedicalAlert).toBe(alert);
     // A save that did not carry the section leaves the draft as it was.
-    await saveWaiverDraft(db, token, { acknowledged: false, medicalAnswers: clearAnswers, now });
+    await recordWaiverDraft(db, token, { acknowledged: false, medicalAnswers: clearAnswers, now });
     expect((await recordFor(db, token)).draftMedicalAlert).toBe(alert);
     // A draft the signature would refuse is mended, not refused or lost.
-    await saveWaiverDraft(db, token, {
+    await recordWaiverDraft(db, token, {
       acknowledged: false,
       medicalAnswers: clearAnswers,
       medicalAlert: "a".repeat(MEDICAL_ALERT_MAX + 1),
       now,
     });
     expect((await recordFor(db, token)).draftMedicalAlert).toBe("a".repeat(MEDICAL_ALERT_MAX));
-    await saveWaiverDraft(db, token, {
+    await recordWaiverDraft(db, token, {
       acknowledged: false,
       medicalAnswers: clearAnswers,
       medicalAlert: alert,
@@ -313,7 +313,7 @@ describe("the medical alert for the crew on the waiver", () => {
     });
     // New terms the shop calls material: the signature lapses and the seat
     // takes a fresh one, the ordinary way a diver signs again.
-    await saveWaiverTemplate(first.db, {
+    await recordWaiverTemplate(first.db, {
       shopId: first.shop.id,
       body: `${first.template.body}\n\nNew terms.`,
       material: true,
@@ -374,7 +374,7 @@ describe("the medical alert for the crew on the waiver", () => {
 
   it("strips an unsigned draft alert on erasure", async () => {
     const { db, person, shop, token } = await link();
-    await saveWaiverDraft(db, token, {
+    await recordWaiverDraft(db, token, {
       acknowledged: false,
       medicalAnswers: clearAnswers,
       medicalAlert: alert,

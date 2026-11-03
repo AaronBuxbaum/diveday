@@ -16,7 +16,7 @@ and navigation, or one shared Today that reorders and prefixes itself.
 
 ## Decision
 
-- **One Today for everyone; role picks a lens over it.** `roleLensFor(roles)` in `src/lib/today.ts`
+- **One Today for everyone; role picks a lens over it.** `roleLensFor(roles)` in `src/features/today/today.ts`
   maps roles to a lens: owner/manager → none (they triage everything), instructor → **sessions**,
   divemaster/captain → **boat**. Instructor wins over boat roles for people holding both, matching
   the demo switcher's precedence.

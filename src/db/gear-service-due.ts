@@ -29,7 +29,7 @@ import { gearItems } from "./schema";
  * have left the register able to answer "what is due for service?" only for
  * the fifty units on the current wall page — while the page's own description
  * still promised the answer. Today's queue keeps the urgent half (six days,
- * `src/db/today.ts`); this keeps the month, which is where a tank's visual
+ * `src/features/today/today-reader.ts`); this keeps the month, which is where a tank's visual
  * inspection and hydro — clocks a fill station enforces — are caught before
  * they strand a boat.
  *

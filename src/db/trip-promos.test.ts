@@ -7,7 +7,7 @@ import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { askAnytime, askForDeparture } from "./interests";
-import { people, specialtyCertifications } from "./schema";
+import { cards, people } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   getActiveTripPromoByCode,
@@ -222,7 +222,8 @@ describe("the deal: an offer with a discount (in-memory PGlite)", () => {
     // (dive-domain review of #2656, m1).
     const [wren] = await db.select().from(people).where(eq(people.email, "wren@example.com"));
     if (!wren) throw new Error("expected Wren's record");
-    await db.insert(specialtyCertifications).values({
+    await db.insert(cards).values({
+      kind: "specialty",
       shopId: shop.id,
       personId: wren.id,
       agency: "padi",

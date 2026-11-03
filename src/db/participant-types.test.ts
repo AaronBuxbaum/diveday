@@ -21,13 +21,13 @@ import { setBookingNitrox } from "./nitrox";
 import { setBookingPayment } from "./payments";
 import { listTripReadiness } from "./readiness";
 import { getReadyPageData } from "./ready";
-import { saveRentalFit } from "./rental-fit";
+import { recordRentalFit } from "./rental-fit";
 import {
   activityEvents,
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
-  certifications,
+  cards,
   courses,
   gearItems,
   gearReservations,
@@ -510,7 +510,8 @@ async function openWaterCard(db: AppDb, shopId: string, bookingId: string) {
     .from(bookings)
     .where(eq(bookings.id, bookingId));
   if (!row) throw new Error("booking missing");
-  await db.insert(certifications).values({
+  await db.insert(cards).values({
+    kind: "level",
     shopId,
     personId: row.personId,
     agency: "padi",
@@ -817,7 +818,8 @@ async function cardAt(db: AppDb, shopId: string, bookingId: string, level: "adva
     .from(bookings)
     .where(eq(bookings.id, bookingId));
   if (!row) throw new Error("booking missing");
-  await db.insert(certifications).values({
+  await db.insert(cards).values({
+    kind: "level",
     shopId,
     personId: row.personId,
     agency: "padi",
@@ -1143,7 +1145,7 @@ describe("the manifest packs each seat its own kit", () => {
       .from(bookings)
       .where(eq(bookings.id, snorkeler.bookingId));
     if (!row) throw new Error("booking missing");
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId: shop.id,
       personId: row.personId,
       rentsBcd: true,

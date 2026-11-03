@@ -11,6 +11,7 @@ import { tripPrimarySiteId } from "./trip-primary-site";
 import {
   countShopTrips,
   createTrip,
+  editTrip,
   listShopDayDepartures,
   nextSessionStartByCourse,
   offsetUpcomingTripsWithCounts,
@@ -21,7 +22,6 @@ import {
   upcomingScheduleRange,
   upcomingScheduleStats,
   upcomingTripsWithCounts,
-  updateTrip,
   weekBoard,
 } from "./trips";
 
@@ -723,7 +723,7 @@ describe("tripPrimarySiteId — the one site the forecast and calendar feed read
     });
     if (!trip) throw new Error("trip not created");
 
-    const outcome = await updateTrip(db, shop.id, trip.id, {
+    const outcome = await editTrip(db, shop.id, trip.id, {
       title: trip.title,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
@@ -763,11 +763,11 @@ describe("tripPrimarySiteId — the one site the forecast and calendar feed read
       plannedDives: 2,
     };
 
-    const sameStart = await updateTrip(db, shop.id, trip.id, patch);
+    const sameStart = await editTrip(db, shop.id, trip.id, patch);
     if (!sameStart.ok) throw new Error("update refused");
     expect(sameStart.startMoved).toBe(false);
 
-    const later = await updateTrip(db, shop.id, trip.id, {
+    const later = await editTrip(db, shop.id, trip.id, {
       ...patch,
       startsAt: new Date("2030-08-15T13:00:00Z"),
     });

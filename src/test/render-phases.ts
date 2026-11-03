@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 
 /**
  * **The render-cost tripwires' two instruments**, shared by the staff renders
- * (`src/db/staff-render-cost.test.ts`) and the diver pages whose reads live in
+ * (`src/app/shop/[shopSlug]/staff-render-cost.test.ts`) and the diver pages whose reads live in
  * `src/app` (`src/app/diver-render-cost.test.ts`): a printed count for the PR
  * description, and a database that answers in rounds so a replay can count the
  * phases a render waits through.

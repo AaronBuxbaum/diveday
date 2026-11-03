@@ -231,7 +231,7 @@ export function ChangedFacts({
       ) : null}
       <FactRow label={t("waiver.emergencyContact")} value={contactValue} changeWord={changeWord}>
         {/* The waiver's own two fields and its own bounds, deliberately: this
-            writes through the same `saveBookingEmergencyContact`, which never
+            writes through the same `recordBookingEmergencyContact`, which never
             lets a blank overwrite what is on file and takes the two boxes only
             as a pair (`readEmergencyContact`). */}
         <form action={actions.saveContact}>

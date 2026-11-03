@@ -41,7 +41,7 @@ describe("openSeatsDebrief", () => {
     // where the seat-not-turned-up-for failure is answered.
     //
     // This is the assertion to change if that reading is ever revisited —
-    // `sailed` is on the row beside this one in src/lib/closeout.ts.
+    // `sailed` is on the row beside this one in src/features/today/closeout.ts.
     const tenSoldOneNoShow = openSeatsDebrief(input({ booked: 10, dealSent: false }), now);
     expect(tenSoldOneNoShow?.openSeats).toBe(2);
   });

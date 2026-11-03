@@ -6,7 +6,7 @@ import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { upcomingTripsWithCounts, updateTrip } from "./trips";
+import { editTrip, upcomingTripsWithCounts } from "./trips";
 import {
   claimStripeWebhookEvent,
   hasNewerAccountUpdate,
@@ -31,7 +31,7 @@ async function paidCheckoutContext() {
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  await updateTrip(db, shop.id, reef.id, {
+  await editTrip(db, shop.id, reef.id, {
     title: reef.title,
     startsAt: reef.startsAt,
     endsAt: reef.endsAt,

@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -13,7 +13,7 @@ import {
   planPartyTeams,
 } from "./buddy-teams";
 import type { AppDb } from "./client";
-import { bookings, certifications, courses, people, shops } from "./schema";
+import { bookings, cards, courses, people, shops } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -30,13 +30,18 @@ async function buddyContext() {
   const [staff] = await listStaff(db, shop.id);
   if (!staff) throw new Error("demo staff missing");
   await db
-    .update(certifications)
+    .update(cards)
     .set({
       juniorStatus: "full",
       juniorStatusVerifiedAt: nowDate(),
       juniorStatusVerifiedByPersonId: staff.person.id,
     })
-    .where(inArray(certifications.personId, [a.person.id, b.person.id, c.person.id]));
+    .where(
+      and(
+        eq(cards.kind, "level"),
+        inArray(cards.personId, [a.person.id, b.person.id, c.person.id]),
+      ),
+    );
   return { db, shop, trip, a, b, c, staff: staff.person };
 }
 
@@ -177,7 +182,8 @@ describe("which parties one tap leaves for the divemaster", () => {
       if (!person) throw new Error("person not created");
       const card = member.card ?? true;
       if (card !== false) {
-        await db.insert(certifications).values({
+        await db.insert(cards).values({
+          kind: "level",
           shopId,
           personId: person.id,
           agency: "padi",

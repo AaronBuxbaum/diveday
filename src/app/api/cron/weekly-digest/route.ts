@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { sendDueWeeklyDigests } from "@/db/weekly-digest";
+import { sendDueWeeklyDigests } from "@/features/weekly-digest";
 import { nowDate } from "@/lib/clock";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";

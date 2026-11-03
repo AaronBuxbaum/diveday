@@ -44,7 +44,7 @@ import {
   addCustomerGearItem,
   createWorkOrder,
   deleteCustomerGearItem,
-  saveWorkOrder,
+  recordWorkOrder,
   setWorkOrderStatus,
 } from "./work-orders";
 
@@ -118,7 +118,7 @@ async function readyTicket(db: AppDb, shopId: string, personId: string, pieceId:
   });
   if (!outcome.ok) throw new Error(`ticket refused: ${outcome.reason}`);
   // What the customer is told was done: the words the message carries.
-  await saveWorkOrder(db, {
+  await recordWorkOrder(db, {
     shopId,
     workOrderId: outcome.workOrder.id,
     reportedProblem: "Free-flows at depth",

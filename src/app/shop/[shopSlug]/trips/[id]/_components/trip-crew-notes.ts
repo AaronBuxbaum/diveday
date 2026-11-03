@@ -1,4 +1,4 @@
-import type { getTripOverview } from "@/db/trips";
+import type { getTripOverview } from "@/db/trip-overview";
 import { overRatioWarningText } from "@/i18n/crew-gap-labels";
 import { languageNameIn } from "@/i18n/language-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";

@@ -322,7 +322,7 @@ describe("elearningCheckAction", () => {
 describe("the course roster's eLearning check", () => {
   it("is offered only at a shop that turned PADI checks on", async () => {
     const { db, shop, tripId, bookingId } = await context();
-    const { getTripGuests } = await import("@/db/trips-guests");
+    const { getTripGuests } = await import("@/db/trip-guests");
 
     const on = await getTripGuests(db, { ...shop, padiChecksEnabled: true }, tripId);
     const off = await getTripGuests(db, { ...shop, padiChecksEnabled: false }, tripId);

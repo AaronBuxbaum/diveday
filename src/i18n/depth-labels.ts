@@ -1,40 +1,37 @@
-import type { DepthCeilingCheck } from "@/lib/depth-ceiling";
 import type { DepthUnit } from "@/lib/depth-units";
 import { siteDepthInUnit } from "@/lib/dive-site-depth";
+import type { DepthAdvisory } from "@/lib/findings";
 import type { StaffTranslator } from "./staff-messages";
 
 /**
- * The staff-facing sentence for a depth advisory. `src/lib/depth-ceiling.ts`
- * returns numbers, a unit code, and which rule set the ceiling; the words are
- * chosen here (AGENTS.md — domain returns codes, the UI picks the copy).
+ * The staff-facing sentence for a depth advisory, a finding at strictness zero
+ * (`src/lib/findings.ts`). Its params carry numbers, a unit code, and which rule
+ * set the ceiling; the words are chosen here (AGENTS.md — domain returns codes, the UI picks the copy).
  *
  * Both numbers arrive already converted to the shop's unit, so this only has to
  * choose a template and drop in "m" or "ft".
  */
-export function depthWarningText(
-  t: StaffTranslator,
-  advisory: Extract<DepthCeilingCheck, { status: "exceeds" | "verification_required" }>,
-): string {
+export function depthWarningText(t: StaffTranslator, finding: DepthAdvisory): string {
   const messages: string[] = [];
-  if (advisory.status === "exceeds") {
+  if (finding.code === "depth_exceeds_ceiling") {
     const values = {
-      site: advisory.siteDepth,
-      limit: advisory.limitDepth,
-      unit: t(advisory.unit === "feet" ? "shared.depth.feet" : "shared.depth.meters"),
+      site: finding.params.siteDepth,
+      limit: finding.params.limitDepth,
+      unit: t(finding.params.unit === "feet" ? "shared.depth.feet" : "shared.depth.meters"),
     };
     messages.push(
-      advisory.verificationReasons && advisory.basis !== "junior_card"
+      finding.params.verificationReasons && finding.params.basis !== "junior_card"
         ? t("trips.roster.depthWarningUnconfirmed", values)
-        : advisory.basis === "junior_age"
+        : finding.params.basis === "junior_age"
           ? t("trips.roster.depthWarningJunior", values)
-          : advisory.basis === "junior_card"
+          : finding.params.basis === "junior_card"
             ? t("trips.roster.depthWarningJuniorCard", values)
-            : advisory.basis === "no_card"
+            : finding.params.basis === "no_card"
               ? t("trips.roster.depthWarningNoCard", values)
               : t("trips.roster.depthWarning", values),
     );
   }
-  for (const reason of advisory.verificationReasons ?? []) {
+  for (const reason of finding.params.verificationReasons ?? []) {
     messages.push(
       t(
         reason === "card_status"
@@ -46,14 +43,12 @@ export function depthWarningText(
   return messages.join(" ");
 }
 
-/** The advisory's visible text, or null when no check is needed. */
+/** The advisory's visible text, or null when there is none. */
 export function depthWarningOrNull(
   t: StaffTranslator,
-  advisory: DepthCeilingCheck | null | undefined,
+  advisory: DepthAdvisory | null | undefined,
 ): string | null {
-  return advisory?.status === "exceeds" || advisory?.status === "verification_required"
-    ? depthWarningText(t, advisory)
-    : null;
+  return advisory ? depthWarningText(t, advisory) : null;
 }
 
 /**

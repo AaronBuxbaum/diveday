@@ -1,11 +1,11 @@
-import type { CloseoutDepartureStatus, CloseoutPlanChange, OpenCount } from "@/lib/closeout";
+import type { CloseoutDepartureStatus, CloseoutPlanChange, OpenCount } from "@/lib/closeout-kinds";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { PlanChangeReason } from "@/lib/plan-change";
-import type { RollCallGapReason } from "@/lib/today";
+import type { RollCallGapReason } from "@/lib/roll-call-gaps";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
- * The day's closing words, keyed by the codes `src/lib/closeout.ts` produces —
+ * The day's closing words, keyed by the codes `src/features/today/closeout.ts` produces —
  * the same split `src/i18n/today-labels.ts` keeps for the queue: the lib
  * decides *what* is true, this file says where the words live, and the surface
  * does the `t()` call.
@@ -16,7 +16,7 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * every hour and whose summary sentence is the spine's own.
  */
 
-/** The state word beside a settled station's mark. Tone stays in `src/lib/closeout.ts`. */
+/** The state word beside a settled station's mark. Tone stays in `src/features/today/closeout.ts`. */
 export const CLOSEOUT_STATUS_KEYS: Record<CloseoutDepartureStatus, StaffMessageKey> = {
   all_home: "closeout.departures.status.allHome",
   unreconciled: "closeout.departures.status.unreconciled",
@@ -71,7 +71,7 @@ export function closeoutDepartureDetailText(
   switch (departure.status) {
     case "still_out": {
       // A count still being taken keeps its dive and each half's open count
-      // (src/lib/closeout.ts, `countStillBeingTaken`), so the station says it
+      // (src/features/today/closeout.ts, `countStillBeingTaken`), so the station says it
       // is open and who is still to mark: people and crew, never folded.
       const open = departure.openCount;
       if (open && departure.diveNumber >= 1 && open.people + open.crew > 0) {

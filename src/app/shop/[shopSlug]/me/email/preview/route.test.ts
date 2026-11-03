@@ -13,10 +13,10 @@ vi.mock("@/lib/session", () => ({
   isLiveShopStaff: vi.fn(async () => true),
 }));
 vi.mock("@/lib/notifications/app-url", () => ({ publicAppUrl: vi.fn(() => null) }));
-vi.mock("@/db/weekly-digest", () => ({ previewWeeklyDigest: vi.fn() }));
+vi.mock("@/features/weekly-digest", () => ({ previewWeeklyDigest: vi.fn() }));
 
 const { requireShopSurface } = await import("@/lib/session");
-const { previewWeeklyDigest } = await import("@/db/weekly-digest");
+const { previewWeeklyDigest } = await import("@/features/weekly-digest");
 const { GET } = await import("./route");
 
 describe("the Monday email preview", () => {

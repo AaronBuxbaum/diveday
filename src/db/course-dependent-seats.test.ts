@@ -7,7 +7,7 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { chartersRelyingOnCourseSeats } from "./course-dependent-seats";
 import { upsertTripRequirements } from "./readiness";
-import { bookings, certifications, courses, people, tripAssignments } from "./schema";
+import { bookings, cards, courses, people, tripAssignments } from "./schema";
 import { createTrip, listStaff } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -32,7 +32,8 @@ async function verifiedOpenWaterDiver(db: AppDb, shopId: string) {
     .values({ shopId, fullName: `Student ${seq}`, email: `carried-${seq}@example.com` })
     .returning({ id: people.id });
   if (!person) throw new Error("person insert failed");
-  await db.insert(certifications).values({
+  await db.insert(cards).values({
+    kind: "level",
     shopId,
     personId: person.id,
     agency: "padi",
