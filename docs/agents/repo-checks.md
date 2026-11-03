@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 69 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs every guard concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -14,9 +14,22 @@ here rather than there because every session loads AGENTS.md in full and almost 
 this. A session that does need it is one whose check just went red, and it arrives already holding
 the guard's name.
 
-## The full roster
+## The rules index
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, seat-status, person-door, event-scope, roll-call-subject, slug-action, env-reads, harness-env, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks), Open-Graph-site, sentry-imports, assist-prompt, infra-ASCII, CI-change-detection, runner-image, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
+The repository's written rules are one layer with one index, `scripts/rules-registry.mjs`. A rule
+has one of two holders: a **guard**, a `scripts/check-*.mjs` that `pnpm check:repo` spawns (the
+index's `GUARDS` table is the list it spawns), or a **rule test**, a source-text test the Vitest
+`guards` project collects and `pnpm test:guards` runs. Each row's sentence is the first sentence
+of its holder's header comment and its sources are the ADRs, human decisions and issues that
+header cites, so a rule is written once, beside the code that holds it.
+
+`node scripts/check-repo.mjs --list` prints the index. `pnpm check:agents` refuses a holder that
+is missing, opens with no header sentence, or cites a decision that does not exist, and a
+`check-*.mjs` that is not in `GUARDS`. No document states how many rules there are: a stated
+count goes stale the day a guard is added, and the index is the count.
+
+Adding a rule is one act: write the holder with its header sentence, and add a guard's line to
+`GUARDS` (a rule test is found by the `guards` project on its own).
 
 ## The guards worth reading about
 

@@ -19,8 +19,10 @@ names what enforces it; the reasoning and incidents are in
   and reasoning: [docs/agents/session-hooks.md](../../docs/agents/session-hooks.md).
 - **A guard gets a test beside it** (`scripts/check-<name>.test.mjs`, `scripts/<name>.test.mjs` for
   a hook), "leaves alone" cases included; `pnpm agent:health` lists the ones without.
-- **A guard is spawned by `scripts/check-repo.mjs`** or it never runs: `pnpm check:agents` fails on
-  one missing from the table, or a `check:repo` row naming the wrong count.
+- **A rule is one row in `scripts/rules-registry.mjs`**: a guard is a line in its `GUARDS` table,
+  which `pnpm check:repo` spawns, and a rule test is found by the Vitest `guards` project. Its
+  holder opens with the sentence it holds; `pnpm check:agents` refuses a guard missing from
+  `GUARDS`, a holder with no header sentence, or a cited ADR that does not exist. State no counts.
 - **Ratchets turn one way**: `--write` banks a fall, `--absorb "<why>"` records a rise with its
   reason. `locale`'s count never reaches zero; name a deliberate one in `DELIBERATELY_IDENTICAL`.
 - **The agent layer is checked** by `scripts/check-agents.mjs`: skill frontmatter, the skill index,

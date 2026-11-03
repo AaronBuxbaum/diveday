@@ -7,17 +7,15 @@ import path from "node:path";
 import process from "node:process";
 
 import {
-  GUARD_COUNT_SITES,
   gitignoredPaths,
-  guardCountProblems,
   linkedSkillProblems,
   missingDocPaths,
   providerSkillProblems,
-  spawnedGuardCount,
   vendoredSkillProblems,
 } from "./agent-layer.mjs";
 import { listDirs } from "./check-context-budget.mjs";
 import { findLaunchProblems } from "./mcp-launch-guard.mjs";
+import { registryProblems, rulesRegistry } from "./rules-registry.mjs";
 
 const ROOT = process.cwd();
 const problems = [];
@@ -334,7 +332,7 @@ for (const script of [
 // 7. Every guard on disk actually runs. A scripts/check-*.mjs that check-repo.mjs
 // doesn't spawn is a ratchet nobody turns — it would pass review as "checked"
 // while never executing in `pnpm check`.
-const checkRepoSource = await readFile(path.join(ROOT, "scripts/check-repo.mjs"), "utf8");
+const checkRepoSource = await readFile(path.join(ROOT, "scripts/rules-registry.mjs"), "utf8");
 // A guard that reads the network instead of the tree runs on a schedule, never per branch:
 // `check-follow-ups.mjs` reads the live tracker, and inside check:repo one malformed issue
 // turned every open pull request red (#2036). It still has to run somewhere, so its
@@ -361,7 +359,7 @@ const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(
     !file.endsWith(".test.mjs") &&
     file !== "check-repo.mjs" &&
     // Opt-in / env-shaped checks that check-repo runs are listed in its own
-    // `checks` table. Two standing exceptions: the e2e build probe, which needs
+    // `GUARDS` table (scripts/rules-registry.mjs). Two standing exceptions: the e2e build probe, which needs
     // a completed `pnpm e2e:build` to have anything to inspect, and check-all,
     // which is the orchestrator one level *above* check-repo — it spawns this
     // file, so requiring this file to spawn it would be a cycle.
@@ -369,17 +367,15 @@ const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(
     file !== "check-all.mjs" &&
     !(file in SCHEDULED_GUARDS),
 );
-// Every place that states the `pnpm check:repo` count states the one check-repo.mjs spawns.
-const guardCountTexts = {};
-for (const { file } of GUARD_COUNT_SITES) {
-  guardCountTexts[file] = await readFile(path.join(ROOT, file), "utf8").catch(() => "");
-}
-problems.push(...guardCountProblems(guardCountTexts, spawnedGuardCount(checkRepoSource)));
+// The rules registry (scripts/rules-registry.mjs) is the one index of the written rules: every
+// guard and every rule test has a holder that exists, opens with the sentence it holds, and cites
+// only decisions that exist. No document states a count; the index is the count.
+problems.push(...registryProblems(await rulesRegistry(ROOT), ROOT));
 
 for (const file of checkScripts) {
   if (!checkRepoSource.includes(`"${file}"`))
     problems.push(
-      `scripts/check-repo.mjs: ${file} exists but is never spawned — wire it into the checks table or it will never run`,
+      `scripts/check-repo.mjs: ${file} exists but is never spawned — add it to GUARDS in scripts/rules-registry.mjs or it will never run`,
     );
 }
 
