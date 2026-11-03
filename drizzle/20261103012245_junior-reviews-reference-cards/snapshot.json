@@ -1,0 +1,79 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "e915d916-1218-4c5d-a853-89862a7c365a",
+  "prevIds": [
+    "58b44cc1-f73a-4eff-b2b6-2aaae797c4de"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "certification_junior_reviews"
+      ],
+      "writes": [
+        "s|fk|public.certification_junior_reviews.certification_junior_reviews_fhxDHj1bkYkh_fkey",
+        "n|fk|public.certification_junior_reviews.certification_junior_reviews_fhxDHj1bkYkh_fkey",
+        "e|fk|public.certification_junior_reviews.certification_junior_reviews_fhxDHj1bkYkh_fkey",
+        "n|con|public.certification_junior_reviews.certification_junior_reviews_fhxDHj1bkYkh_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.certification_junior_reviews",
+        "n|sch|public",
+        "e|col|public.certification_junior_reviews.certification_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "certification_junior_reviews"
+      ],
+      "writes": [
+        "s|fk|public.certification_junior_reviews.certification_junior_reviews_certification_id_cards_id_fkey",
+        "n|fk|public.certification_junior_reviews.certification_junior_reviews_certification_id_cards_id_fkey",
+        "e|fk|public.certification_junior_reviews.certification_junior_reviews_certification_id_cards_id_fkey",
+        "n|con|public.certification_junior_reviews.certification_junior_reviews_certification_id_cards_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.certification_junior_reviews",
+        "n|sch|public",
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|col|public.certification_junior_reviews.certification_id",
+        "n|col|public.cards.id",
+        "e|uniqueness|public.cards.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_junior_reviews_certification_id_cards_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "certification_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "cards",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"certification_junior_reviews\",\"certification_junior_reviews_fhxDHj1bkYkh_fkey\"]"
+    }
+  ]
+}
