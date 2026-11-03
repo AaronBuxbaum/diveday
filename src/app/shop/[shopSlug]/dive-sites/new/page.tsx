@@ -53,7 +53,6 @@ export default function NewDiveSitePage({ params }: { params: Promise<{ shopSlug
 
 async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
-  const back = `/shop/${shopSlug}/dive-sites`;
   const { db, shop } = await requireShopSurface(shopSlug);
   const canAssist = await assistsAvailable(db, shop.id);
   const locale = await requestLocale(shop.defaultLocale);
@@ -73,7 +72,6 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       <div>
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
-          eyebrowHref={back}
           title={t("diveSites.new.title")}
           description={t("diveSites.new.description")}
           descriptionIsCaption

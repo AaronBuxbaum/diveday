@@ -16,11 +16,12 @@ import { createBookingParty } from "./bookings";
 import { recordRollCall } from "./manifests";
 import { drainNotificationRetries } from "./notifications";
 import { setBookingPayment } from "./payments";
-import { listOwedShopCancellationRefunds, refundBookingsForShopCancelledTrip } from "./refunds";
+import { refundBookingsForShopCancelledTrip } from "./refunds";
 import { crewNotices, notificationSendQueue, people, trips as tripsTable } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { createTrip, upcomingTripsWithCounts } from "./trips";
 import { changeTripCrew, listStaff } from "./trips-crew";
+import { listUnfinished } from "./unfinished";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -455,7 +456,7 @@ describe("callTripBlowout — what the message says", () => {
         checkout: fakeCheckout(),
         refunds: "queue",
       });
-      const owed = await listOwedShopCancellationRefunds(ctx.db, ctx.shop.id);
+      const owed = await listUnfinished(ctx.db, ctx.shop.id, "shop_cancellation_refund");
       expect(owed.map((row) => row.bookingId)).toEqual([ctx.bookingIds[0]]);
 
       let refundCalls = 0;
@@ -478,7 +479,7 @@ describe("callTripBlowout — what the message says", () => {
       );
       expect(again.get(ctx.bookingIds[0])?.status).toBe("already_refunded");
       expect(refundCalls).toBe(1);
-      expect(await listOwedShopCancellationRefunds(ctx.db, ctx.shop.id)).toEqual([]);
+      expect(await listUnfinished(ctx.db, ctx.shop.id, "shop_cancellation_refund")).toEqual([]);
     });
 
     it("still says nothing about money to an unpaid diver", async () => {

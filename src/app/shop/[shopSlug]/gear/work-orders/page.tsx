@@ -97,7 +97,6 @@ export default async function WorkOrdersPage({
       <FlashParams params={["notice", "undoId"]} />
       <ShopPageHeader
         eyebrow={t("shared.shopSections.gear")}
-        eyebrowHref={shopPath(shopSlug, "gear")}
         title={t("workOrders.title")}
         actions={
           total > 0 ? (

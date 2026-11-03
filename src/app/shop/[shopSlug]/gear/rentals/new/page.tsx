@@ -271,7 +271,6 @@ export default async function RentOutPage({
       <FlashParams params={["notice", "unit"]} />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.gear)}
-        eyebrowHref={shopPath(shopSlug, "gear")}
         title={t("counterRentals.new.title")}
       />
 

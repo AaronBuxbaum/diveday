@@ -94,7 +94,6 @@ import {
   staffShifts,
   stripePayouts,
   stripeRefundFailures,
-  tips,
   todayReadMarks,
   tripAssignments,
   tripBlowoutDivers,
@@ -1542,10 +1541,6 @@ export async function clearDemoSchedule(
   // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
   // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
-  // Tips reference bookings, so they must go before them — same FK this
-  // cascade's sibling (deleteDemoShopCascade) already fixed (Codex finding:
-  // this reset path had its own, separate child-first list and was missed).
-  await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
@@ -1586,7 +1581,7 @@ export async function clearDemoSchedule(
   // **A stuck media deletion is not schedule data, and it still has to go.**
   // The seed creates none, so clearing them restores exactly the seeded state —
   // and leaving them made the reset non-restoring in the one direction that
-  // shows: `listPendingMediaDeletions` feeds Today an `urgency: "now"` row, so
+  // shows: the media-deletion read (`src/db/unfinished.ts`) feeds Today an `urgency: "now"` row, so
   // a test that seeded a stale attempt (`/api/test/seed-trouble-states`) left a
   // "Recap photo" cleanup card on Today for whichever spec Playwright's
   // sharding ran next in that worker. That surfaced as three visual captures —

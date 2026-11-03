@@ -21,12 +21,7 @@ export default async function BookkeeperSettingsPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   return (
-    <SettingsEditorPage
-      shopSlug={shopSlug}
-      t={t}
-      title={t("reports.bookkeeper.label")}
-      banner={undefined}
-    >
+    <SettingsEditorPage t={t} title={t("reports.bookkeeper.label")} banner={undefined}>
       <MonthEndSection shopSlug={shopSlug} locale={locale} timeZone={shop.timezone} t={t} />
     </SettingsEditorPage>
   );

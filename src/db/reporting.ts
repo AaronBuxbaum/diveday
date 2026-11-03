@@ -30,6 +30,7 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { shopDaysBounds, shopMonthBounds, wallTimeToUtc } from "@/lib/zoned";
 import { readActiveStaffRoles } from "./authz";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
+import { fareCheckout, tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { queryAll } from "./query-helpers";
@@ -44,7 +45,6 @@ import {
   importedPaymentHistory,
   orders,
   shops,
-  tips,
   tripAssignments,
   tripDives,
   tripLenses,
@@ -402,6 +402,7 @@ export async function getMonthlyReport(
         eq(bookingCheckouts.shopId, shopId),
         eq(bookingCheckouts.isDeposit, true),
         eq(bookingCheckouts.status, "completed"),
+        fareCheckout(),
         eq(bookingPayments.status, "paid"),
       ),
     )
@@ -420,6 +421,7 @@ export async function getMonthlyReport(
         eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
         eq(bookingCheckouts.shopId, shopId),
         eq(bookingCheckouts.status, "completed"),
+        fareCheckout(),
       ),
     )
     .innerJoin(
@@ -450,6 +452,7 @@ export async function getMonthlyReport(
         eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
         eq(bookingCheckouts.shopId, shopId),
         eq(bookingCheckouts.status, "completed"),
+        fareCheckout(),
       ),
     )
     .innerJoin(
@@ -600,24 +603,33 @@ export async function getMonthlyReport(
   // happened to tap the recap link, so a tip left the morning after a June
   // charter belongs to June's boat.
   //
-  // Only `paid`: a pending Stripe session is money nobody has, and an expired
-  // one is money nobody will get. Tips are a separate flow from the booking
-  // payment gate — their own table, their own Stripe session, 100% to the shop
-  // (docs ADR 20260726-post-trip-tipping) — so this can never double-count
-  // against the revenue sums above, and it is returned as its own figure
-  // rather than added into them.
+  // Only `completed`: a pending Stripe session is money nobody has, and an
+  // expired one is money nobody will get. Tips never reach the booking payment
+  // gate — their own checkout purpose, their own Stripe session, 100% to the
+  // shop (docs ADR 20260726-post-trip-tipping) — and every fare figure above
+  // names `fareCheckout()`, so this can never double-count against them; it
+  // is returned as its own figure rather than added into them.
   //
   // Summed without a currency filter, exactly as `booking_payments` is two
-  // queries above. `tips.currency` is per-row and a shop can change currency
+  // queries above. A checkout's `currency` is per-row and a shop can change currency
   // (docs ADR 20260731-shop-currency), so this report is single-currency by
   // assumption throughout — a pre-existing limitation of the whole page, not
   // one tips introduce.
   const [tipTotals] = await db
-    .select({ total: sum(tips.amountCents), tipCount: count(tips.id) })
-    .from(tips)
-    .innerJoin(bookings, and(eq(bookings.id, tips.bookingId), eq(bookings.shopId, shopId)))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(inWindow, eq(tips.shopId, shopId), eq(tips.status, "paid")));
+    .select({
+      total: sum(tipAmountCents),
+      tipCount: count(bookingCheckouts.id),
+    })
+    .from(bookingCheckouts)
+    .innerJoin(trips, eq(trips.id, bookingCheckouts.tripId))
+    .where(
+      and(
+        inWindow,
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "completed"),
+        tipCheckout(),
+      ),
+    );
 
   // **How many seats arrived on a partner link this month** — a count, and
   // deliberately not a list of who.

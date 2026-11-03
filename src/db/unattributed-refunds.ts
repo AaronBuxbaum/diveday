@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
 import { isUuid } from "@/lib/uuid";
 import { lockSeatsInOrder } from "./checkouts";
+import { fareCheckout } from "./checkout-purpose";
 import type { AppDb } from "./client";
 import { heldUnattributedRefund } from "./payment-operations";
 import { setBookingPayment } from "./payments";
@@ -97,6 +98,7 @@ export async function listUnattributedRefunds(
         eq(paymentOperationIntents.status, "started"),
         heldUnattributedRefund(),
         gt(paymentOperationIntents.amountCents, 0),
+        fareCheckout(),
       ),
     )
     .orderBy(
@@ -118,6 +120,7 @@ export async function listUnattributedRefunds(
       providerRef: bookingPayments.providerRef,
     })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the seats of a fare read above
     .innerJoin(
       bookings,
       and(
@@ -208,12 +211,19 @@ export async function attributeUnattributedRefund(
     const [checkout] = await tx
       .select()
       .from(bookingCheckouts)
-      .where(and(eq(bookingCheckouts.id, peek.checkoutId), eq(bookingCheckouts.shopId, shopId)))
+      .where(
+        and(
+          eq(bookingCheckouts.id, peek.checkoutId),
+          eq(bookingCheckouts.shopId, shopId),
+          fareCheckout(),
+        ),
+      )
       .limit(1);
     if (!checkout) return { status: "not_found" };
     const [covered] = await tx
       .select({ bookingId: bookingCheckoutBookings.bookingId })
       .from(bookingCheckoutBookings)
+      // diveday:any-checkout-purpose: the seats of a fare read above
       .where(
         and(
           eq(bookingCheckoutBookings.shopId, shopId),

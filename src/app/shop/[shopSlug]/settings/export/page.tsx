@@ -85,7 +85,6 @@ export default async function DataOutSettingsPage({
     <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("settings.data.title")}
         actions={
           <DownloadAcknowledgmentLink

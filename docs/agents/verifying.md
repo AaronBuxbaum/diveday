@@ -69,7 +69,7 @@ cancelled, and 90 failed jobs inside them. Classified from their annotations and
 | --- | --- | --- |
 | 47 Playwright | a spec the change broke: a deleted sentence a spec still quoted (`sightings`), a moved seeded shift (`staffing`), a second "Crew schedule" destination (`search`), a recounted reviews line, a folded editor with two "Location" fields | yes, by running that spec; the checklist said "one spec", and nothing told the author which |
 | 23 unit | tests that read source from disk (`form.test.tsx`, `button.test.ts`, `EntryShell.test.tsx`, the erasure and rehearsal coverage scans), and the export snapshot after a seed change | yes, but `vitest --changed` cannot select a test that imports nothing it checks |
-| 9 safeguards | the `guards` Vitest project (`eyebrow-way-up`, `focus-ring`), and four pull request bodies | yes; no local step ran either |
+| 9 safeguards | the `guards` Vitest project (`staff-routes`, `focus-ring`), and four pull request bodies | yes; no local step ran either |
 | 2 typecheck | fixtures a merge from the layer below broke | yes; the layer's checks had run before the merge |
 | 5 visual, 2 reg-suit | one capture that timed out on a moved heading | yes: the gate runs the captures a diff names, in light mode (`selectCaptures`, `scripts/e2e-affected.mjs`) |
 | 2 build | Google Fonts unreachable at build time | no: infrastructure |

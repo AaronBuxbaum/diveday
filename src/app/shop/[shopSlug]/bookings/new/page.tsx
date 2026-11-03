@@ -281,7 +281,6 @@ export default async function NewBookingPage({
           forbids — with a second back link to the board underneath it. */}
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-        eyebrowHref={shopPath(shopSlug, "schedule", "board")}
         title={t("bookings.new.title")}
       />
 

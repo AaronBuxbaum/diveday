@@ -133,7 +133,6 @@ export default async function OrderDetailPage({
       />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.orders)}
-        eyebrowHref={shopPath(shopSlug, "orders")}
         title={order.person.fullName}
         description={order.order.description || t("orders.detail.fallbackDescription")}
         // One overflow for the dispute sheet and Stripe acts on an open invoice.

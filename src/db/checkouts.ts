@@ -12,7 +12,12 @@ import { allocateSettledTotal } from "@/lib/payments/settlement";
 import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
-import { checkoutPaidKey, enqueueCheckoutIntegrationEvent } from "./integration-events";
+import { fareCheckout, tipCheckout } from "./checkout-purpose";
+import {
+  checkoutPaidKey,
+  enqueueCheckoutIntegrationEvent,
+  enqueueTipIntegrationEvent,
+} from "./integration-events";
 import { boundLockWaits } from "./lock-bounds";
 import {
   claimBookingsForCheckout,
@@ -380,7 +385,7 @@ export async function startBookingCheckout(
 
   // Durable evidence this attempt exists, written and committed before
   // Stripe is ever called (CR-005) — a crash mid-attempt still leaves this
-  // row for reconciliation (listStuckPaymentOperations) instead of no trace
+  // row for reconciliation (the `payment_operation` kind of `src/db/unfinished.ts`) instead of no trace
   // at all.
   const intent = await startPaymentOperation(db, {
     shopId: input.shopId,
@@ -737,6 +742,7 @@ export async function retirePendingCheckoutIfRepriced(
         tripCents: bookingCheckoutBookings.tripCents,
       })
       .from(bookingCheckoutBookings)
+      // diveday:any-checkout-purpose: the links of a checkout already read as a fare
       .innerJoin(bookings, eq(bookings.id, bookingCheckoutBookings.bookingId))
       .where(
         and(
@@ -764,6 +770,7 @@ export async function retirePendingCheckoutIfRepriced(
   const [{ diverCount }] = await db
     .select({ diverCount: sql<number>`count(*)` })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the links of a checkout already read as a fare
     .where(eq(bookingCheckoutBookings.checkoutId, existing.id));
   if (
     quotesCurrentTripCharge(existing, {
@@ -824,6 +831,8 @@ async function retireOverlappingPendingCheckouts(
       and(
         eq(bookingCheckouts.shopId, shopId),
         eq(bookingCheckouts.status, "pending"),
+        // A seat's new quote never withdraws a diver's open tip.
+        fareCheckout(),
         inArray(bookingCheckoutBookings.bookingId, bookingIds),
       ),
     );
@@ -833,6 +842,7 @@ async function retireOverlappingPendingCheckouts(
 async function retireStaleCheckout(db: AppDb, existing: BookingCheckout): Promise<void> {
   await db
     .update(bookingCheckouts)
+    // diveday:any-checkout-purpose: retires a pending fare already read by its id
     .set({ status: "expired" })
     .where(and(eq(bookingCheckouts.id, existing.id), eq(bookingCheckouts.status, "pending")));
   log("checkout.retired_stale_quote", "info", {
@@ -872,6 +882,7 @@ async function checkoutCoversExactly(
   const linked = await db
     .select({ bookingId: bookingCheckoutBookings.bookingId })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the links of a checkout already read as a fare
     // Shop-scoped like every other read in this file. The checkout was resolved
     // under the shop scope and its links are same-shop by construction, so no
     // result moves — the predicate is here so the rule holds by inspection.
@@ -899,6 +910,9 @@ async function latestCheckoutForBookingIds(
       and(
         eq(bookingCheckoutBookings.shopId, shopId),
         inArray(bookingCheckoutBookings.bookingId, bookingIds),
+        // A seat's payment panel, party receipt and reuse check read its fare;
+        // a later tip on the same booking is not its checkout (issue #2718).
+        fareCheckout(),
       ),
     )
     .orderBy(desc(bookingCheckouts.createdAt))
@@ -937,6 +951,7 @@ export async function settledPartyPayment(
   const covered = await db
     .select({ bookingId: bookingCheckoutBookings.bookingId, status: bookings.status })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the links of a checkout already read as a fare
     .innerJoin(
       bookings,
       and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
@@ -1047,6 +1062,7 @@ export async function recordCheckoutStripeCustomer(
   if (input.stripeCustomerId.trim().length === 0) return false;
   const [updated] = await db
     .update(bookingCheckouts)
+    // diveday:any-checkout-purpose: a Stripe session-id write, the same fact on a fare or a tip
     .set({ stripeCustomerId: input.stripeCustomerId })
     .where(
       and(
@@ -1074,6 +1090,7 @@ export async function recordCheckoutPaymentIntent(
   if (input.paymentIntentId.trim().length === 0) return false;
   const [updated] = await db
     .update(bookingCheckouts)
+    // diveday:any-checkout-purpose: a Stripe session-id write, the same fact on a fare or a tip
     .set({ stripePaymentIntentId: input.paymentIntentId })
     .where(
       and(
@@ -1104,6 +1121,7 @@ export async function expirePendingCheckoutsForBooking(
   const linked = tx
     .select({ id: bookingCheckoutBookings.checkoutId })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the update below names the fare
     .where(
       and(
         eq(bookingCheckoutBookings.shopId, shopId),
@@ -1117,6 +1135,8 @@ export async function expirePendingCheckoutsForBooking(
       and(
         eq(bookingCheckouts.shopId, shopId),
         eq(bookingCheckouts.status, "pending"),
+        // The seat's quote, not a tip the diver opened on its recap.
+        fareCheckout(),
         inArray(bookingCheckouts.id, linked),
       ),
     );
@@ -1141,6 +1161,7 @@ export async function lockCheckoutSeatsBySessionId(
   const seats = await tx
     .select({ bookingId: bookingCheckoutBookings.bookingId })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: locks whichever seat the session covers; a tip's one seat is harmless to lock
     .innerJoin(
       bookingCheckouts,
       and(
@@ -1237,6 +1258,7 @@ export async function markCheckoutPaidBySessionId(
     const [checkout] = await tx
       .select()
       .from(bookingCheckouts)
+      // diveday:any-checkout-purpose: the one session lookup, which branches on purpose just below
       .where(eq(bookingCheckouts.stripeSessionId, stripeSessionId))
       .limit(1)
       .for("update");
@@ -1255,6 +1277,13 @@ export async function markCheckoutPaidBySessionId(
         checkoutAccountId: checkout.stripeAccountId,
       });
       return null;
+    }
+
+    // A tip settles nothing but itself (ADR 20260726-post-trip-tipping, issue
+    // #2718): no seat, no payment gate, no party receipt. Checked on the locked
+    // row, before any line below that reads the covered bookings.
+    if (checkout.purpose === "tip") {
+      return settleTipCheckout(tx, checkout, settledTotalCents);
     }
 
     // Anything besides `pending`/`completed` (most commonly `expired`) means
@@ -1291,7 +1320,7 @@ export async function markCheckoutPaidBySessionId(
                 ? settledTotalCents
                 : checkout.totalCents,
           })
-          .where(eq(bookingCheckouts.id, checkout.id));
+          .where(and(eq(bookingCheckouts.id, checkout.id), fareCheckout()));
       }
       logPaidDisqualified(checkout, checkout.status);
       return null;
@@ -1363,7 +1392,7 @@ export async function markCheckoutPaidBySessionId(
               await tx
                 .update(bookingCheckouts)
                 .set({ settledTotalCents: settledCents, taxCents })
-                .where(eq(bookingCheckouts.id, checkout.id))
+                .where(and(eq(bookingCheckouts.id, checkout.id), fareCheckout()))
                 .returning()
             )[0] ?? null)
           : checkout
@@ -1378,7 +1407,11 @@ export async function markCheckoutPaidBySessionId(
               })
               // Belt to the lock's braces: only a still-pending row completes.
               .where(
-                and(eq(bookingCheckouts.id, checkout.id), eq(bookingCheckouts.status, "pending")),
+                and(
+                  eq(bookingCheckouts.id, checkout.id),
+                  eq(bookingCheckouts.status, "pending"),
+                  fareCheckout(),
+                ),
               )
               .returning()
           )[0] ?? null);
@@ -1396,6 +1429,7 @@ export async function markCheckoutPaidBySessionId(
         passThroughCents: bookingCheckoutBookings.passThroughCents,
       })
       .from(bookingCheckoutBookings)
+      // diveday:any-checkout-purpose: the links of a checkout already read as a fare
       .where(eq(bookingCheckoutBookings.checkoutId, checkout.id));
 
     // What each diver actually paid, not what they were quoted. The session's
@@ -1442,6 +1476,7 @@ export async function markCheckoutPaidBySessionId(
     for (const { bookingId, gearCents } of linked) {
       await tx
         .update(bookingCheckoutBookings)
+        // diveday:any-checkout-purpose: the links of a checkout already read as a fare
         .set({ taxCents: taxAllocation.get(bookingId) ?? 0 })
         .where(
           and(
@@ -1506,6 +1541,38 @@ export async function markCheckoutPaidBySessionId(
 }
 
 /**
+ * Settle a post-trip tip from Stripe's evidence, under the checkout's row lock.
+ * Idempotent: a completed tip is returned unchanged. Unlike a fare, an
+ * `expired` tip still settles — DiveDay never retires a tip locally, so
+ * `expired` only ever repeats Stripe's word, and Stripe charging the card is
+ * the later, truer one. The settled figure is Stripe's own `amount_total`,
+ * never more than the amount the diver chose. The tip reaches the shop's books
+ * as income on its own line in the same transaction (batch 6 item 9,
+ * H-20261014-checkouts-reach-the-books).
+ */
+async function settleTipCheckout(
+  tx: AppTransaction,
+  checkout: BookingCheckout,
+  settledTotalCents: number | null | undefined,
+): Promise<BookingCheckout | null> {
+  if (checkout.status === "completed") return checkout;
+  const reported =
+    typeof settledTotalCents === "number" &&
+    Number.isInteger(settledTotalCents) &&
+    settledTotalCents >= 0
+      ? Math.min(settledTotalCents, checkout.totalCents)
+      : checkout.totalCents;
+  const [updated] = await tx
+    .update(bookingCheckouts)
+    .set({ status: "completed", completedAt: nowDate(), settledTotalCents: reported })
+    .where(and(eq(bookingCheckouts.id, checkout.id), tipCheckout()))
+    .returning();
+  if (!updated) return null;
+  await enqueueTipIntegrationEvent(tx, { shopId: updated.shopId, tipId: updated.id });
+  return updated;
+}
+
+/**
  * Stripe reported this session's **delayed-notification payment failed**
  * (`checkout.session.async_payment_failed`, PAY-L1). Without this handler the
  * row sat `pending` forever: the session had already emitted
@@ -1544,6 +1611,7 @@ export async function markCheckoutPaymentFailedBySessionId(
 ): Promise<BookingCheckout | null> {
   const [updated] = await db
     .update(bookingCheckouts)
+    // diveday:any-checkout-purpose: a failed payment closes a fare or a tip alike
     .set({ status: "expired", asyncPaymentFailedAt: nowDate() })
     .where(
       and(
@@ -1569,6 +1637,7 @@ export async function markCheckoutExpiredBySessionId(
 ): Promise<BookingCheckout | null> {
   const [updated] = await db
     .update(bookingCheckouts)
+    // diveday:any-checkout-purpose: Stripe expiring a session closes a fare or a tip alike
     .set({ status: "expired" })
     .where(
       and(
@@ -1601,6 +1670,7 @@ export async function refreshCheckoutFromStripe(
   const [row] = await db
     .select()
     .from(bookingCheckouts)
+    // diveday:any-checkout-purpose: the fallback refresh serves the confirmation page's fare and the recap's tip
     .where(and(eq(bookingCheckouts.id, checkoutId), eq(bookingCheckouts.shopId, shopId)))
     .limit(1);
   if (!row) return null;

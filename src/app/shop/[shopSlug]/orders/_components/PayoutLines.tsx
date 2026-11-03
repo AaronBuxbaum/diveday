@@ -1,12 +1,10 @@
 import { ShopNotice } from "@/components/ShopNotice";
 import { listPaidAfterCloseCheckouts } from "@/db/checkouts-paid-after-close";
 import type { AppDb } from "@/db/client";
-import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { latestShopPayouts, type ShopPayout } from "@/db/payouts";
-import { listFailedRefunds } from "@/db/refund-failures";
-import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { type RoomChargeTotal, roomChargesByHotel } from "@/db/room-charges";
 import { listUnattributedRefunds } from "@/db/unattributed-refunds";
+import { readUnfinished } from "@/db/unfinished";
 import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -35,23 +33,22 @@ export async function readBackOffice(
   const wall = utcToWallTime(nowDate(), shop.timezone);
   const month = { year: wall.year, month: wall.month };
   const { from, to } = shopMonthBounds(month, shop.timezone);
-  const [
-    stuckPaymentOperations,
-    owedRefunds,
-    paidAfterClose,
-    failedRefunds,
-    unattributedRefunds,
-    latest,
-    totals,
-  ] = await Promise.all([
-    listStuckPaymentOperations(db, shopId, undefined, { withoutUnattributedRefunds: true }),
-    listOwedShopCancellationRefunds(db, shopId),
+  const [unfinished, paidAfterClose, unattributedRefunds, latest, totals] = await Promise.all([
+    readUnfinished(db, shopId, {
+      payment_operation: { withoutUnattributedRefunds: true },
+      shop_cancellation_refund: {},
+      failed_refund: {},
+    }),
     listPaidAfterCloseCheckouts(db, shopId),
-    listFailedRefunds(db, shopId),
     listUnattributedRefunds(db, shopId),
     latestShopPayouts(db, shopId),
     roomChargesByHotel(db, shopId, from, to),
   ]);
+  const {
+    payment_operation: stuckPaymentOperations,
+    shop_cancellation_refund: owedRefunds,
+    failed_refund: failedRefunds,
+  } = unfinished;
   const payouts = { ...latest, roomCharges: { month: month.month, totals } };
   return {
     stuckPaymentOperations,
