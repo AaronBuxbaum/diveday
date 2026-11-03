@@ -12,8 +12,7 @@ is unknown rather than zero.
 | Need | Command / artifact |
 | --- | --- |
 | Start or resume any provider | `pnpm agent:bootstrap --provider codex` (`claude` or `other`) |
-| Retrieve focused contracts | `pnpm task:context --path src/components/ui/button.ts` |
-| Retrieve a composition | `pnpm task:context --recipe row-actions` |
+| Retrieve a composition | `docs/design/recipes/index.json`, then `node scripts/visual-recipes.mjs row-actions --plan` |
 | Exercise the production recipe | `node scripts/visual-recipes.mjs row-actions` |
 | Save or inspect durable state | `pnpm task:state <prepared-state.json>` / `pnpm task:state` |
 | Plan changed UI evidence | `pnpm visual:review --grep <capture-title> --plan` |

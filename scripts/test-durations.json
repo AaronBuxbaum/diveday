@@ -189,7 +189,6 @@
   "scripts/sync-github-cdk-ci-environment.test.mjs": 277,
   "scripts/sync-github-cdk-ci-vars.test.mjs": 170,
   "scripts/sync-github-secrets.test.mjs": 312,
-  "scripts/task-context.test.mjs": 123,
   "scripts/task-metrics.test.mjs": 81,
   "scripts/test-affected.test.mjs": 124,
   "scripts/tracker.test.mjs": 136,

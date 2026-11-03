@@ -108,6 +108,5 @@ All skill bodies live in `.agents/skills/`; Claude directories are symlinks. Loc
   names each one the sync brought back, and the fix is to re-apply that wording.
 - `pnpm check:agents` (part of `check:repo`/`check`) fails on drift: a skill missing from this
   index, an index entry with no skill, frontmatter whose name doesn't match its directory or with
-  no description, an unmentioned reviewer agent, a `task:context` area pointing at a doc that
-  doesn't exist, a rules file without `paths:` or naming a path that doesn't exist, or a hook
+  no description, an unmentioned reviewer agent, a rules file without `paths:` or naming a path that doesn't exist, or a hook
   script that is missing or not wired. A red check means fix the stale reference in the same change.

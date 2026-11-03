@@ -31,7 +31,6 @@ in [route-map.md](route-map.md).
 | Command | What |
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000, supervised by `scripts/dev-server.mjs`. Wait for its **`dev: serving … — warmed in Ns`**; Next's `✓ Ready` lands ~26s earlier and means only "listening". The supervisor restarts an OOM-bound `next dev` before the kernel does and says so. One dev server per *checkout*: the lock is `.next/dev/lock`, so `--port` does not buy a second (ADR 20260903-the-dev-server-is-supervised; the **run** skill) |
-| `pnpm task:context <area>` | bounded paths, invariants, and validation for a task; with no area, the list of areas |
 | `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push`, `pnpm e2e <spec>`, `pnpm check` | the pre-commit and pre-push checklist, and which of them CI runs instead, is the **verify** skill; the reasoning is [verifying.md](verifying.md) |
 | `pnpm lint:fix` | Biome autofix |
 | `pnpm agent:doctor` | Node against `.nvmrc`, `gh`, `origin/main`'s age, `node_modules`, stray processes, remote branches with no open PR and the stack, each with its fix; a row only a human can change (the Node, the branches) is `info` and stays out of the two-line summary the session-start block carries |

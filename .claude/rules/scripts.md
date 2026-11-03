@@ -24,7 +24,7 @@ names what enforces it; the reasoning and incidents are in
 - **Ratchets turn one way**: `--write` banks a fall, `--absorb "<why>"` records a rise with its
   reason. `locale`'s count never reaches zero; name a deliberate one in `DELIBERATELY_IDENTICAL`.
 - **The agent layer is checked** by `scripts/check-agents.mjs`: skill frontmatter, the skill index,
-  `task:context` paths, every backticked path in `AGENTS.md`, these rules, `docs/agents/`, the
+  every backticked path in `AGENTS.md`, these rules, `docs/agents/`, the
   local skills and the reviewer agents, hook and allowlist
   commands, and `.mcp.json` launches.
 - **Always-loaded context is budgeted** by `scripts/check-context-budget.mjs` (`AGENTS.md`,

@@ -10,9 +10,8 @@ and tests are the provider-neutral source of truth; each rule's full text:
 1. The **path-scoped rule** in `.claude/rules/` for each area you touch (`db`, `domain`,
    `surfaces`, `i18n`, `e2e`, `infra`, `docs`, `scripts`). Claude Code loads it when you read a
    matching file; another provider reads it first. None is optional.
-2. `pnpm task:context <area>` when the task matches one.
-3. [docs/README.md](docs/README.md): only the documents needed.
-4. The Next.js warning below, before framework work.
+2. [docs/README.md](docs/README.md): only the documents needed.
+3. The Next.js warning below, before framework work.
 
 ## Context economy
 
@@ -58,8 +57,7 @@ Core rows; every other area (auth, DB client, domain logic, glossary, ADRs) is i
 
 Playbooks have one source in `.agents/skills/`, mirrored into Claude by symlinks; use the
 [skill index](.claude/skills/README.md). Start or resume with `pnpm agent:bootstrap --provider codex`
-(or `claude` / `other`); it reports repository capabilities. Use `pnpm task:context --path
-<changed-path>` for bounded contracts and `pnpm task:state` for durable handoffs.
+(or `claude` / `other`); it reports repository capabilities. Use `pnpm task:state` for durable handoffs.
 [Provider contract](docs/agents/provider-contract.md).
 
 ## Parallel work

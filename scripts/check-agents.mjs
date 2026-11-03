@@ -1,5 +1,5 @@
 // Keeps the agent layer in sync: skills on disk vs the skill index and AGENTS.md,
-// skill/agent frontmatter, and task:context doc references. Many short-lived parallel
+// and skill/agent frontmatter. Many short-lived parallel
 // sessions rely on these being accurate; drift here silently misroutes every one of them.
 import { existsSync } from "node:fs";
 import { access, lstat, readdir, readFile, realpath } from "node:fs/promises";
@@ -18,7 +18,6 @@ import {
 } from "./agent-layer.mjs";
 import { listDirs } from "./check-context-budget.mjs";
 import { findLaunchProblems } from "./mcp-launch-guard.mjs";
-import { areas } from "./task-context-data.mjs";
 
 const ROOT = process.cwd();
 const problems = [];
@@ -121,27 +120,6 @@ for (const file of agentFiles) {
     );
   if (!skillIndex.includes(agentName))
     problems.push(`.claude/skills/README.md: reviewer agent "${agentName}" is not mentioned`);
-}
-
-// 4. task:context areas point at files that exist — docs, code, and tests alike.
-// `code`/`tests` used to be allowed to be "planned", which made a renamed-away
-// module indistinguishable from an intended one: the nitrox area pointed
-// sessions at a src/lib/nitrox.ts that never existed. An area entry is a claim
-// about where the work lives; add the path when the file does exist.
-for (const [areaName, area] of Object.entries(areas)) {
-  for (const [kind, items] of [
-    ["doc", area.docs],
-    ["code", area.code],
-    ["test", area.tests],
-  ]) {
-    for (const item of items ?? []) {
-      try {
-        await access(path.join(ROOT, item));
-      } catch {
-        problems.push(`task-context area "${areaName}": ${kind} path ${item} does not exist`);
-      }
-    }
-  }
 }
 
 // 5. AGENTS.md's route map is the primary navigation surface every session reads first — a
@@ -436,5 +414,5 @@ if (problems.length > 0) {
 }
 
 console.log(
-  `agents: ${skillDirs.length} skills (${linkedSkills.size} linked in from .agents/skills), ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${Object.keys(areas).length} task-context areas, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync, ${handoffDocs.length} handoff docs' paths resolve`,
+  `agents: ${skillDirs.length} skills (${linkedSkills.size} linked in from .agents/skills), ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync, ${handoffDocs.length} handoff docs' paths resolve`,
 );

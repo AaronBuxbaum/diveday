@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, seat-status, person-door, event-scope, roll-call-subject, slug-action, env-reads, harness-env, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, assist-prompt, infra-ASCII, CI-change-detection, runner-image, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, seat-status, person-door, event-scope, roll-call-subject, slug-action, env-reads, harness-env, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks), Open-Graph-site, sentry-imports, assist-prompt, infra-ASCII, CI-change-detection, runner-image, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
 
 ## The guards worth reading about
 
@@ -838,7 +838,7 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
   `gear_reservations_no_overlap` **exclusion constraint** (btree_gist, hand-added SQL in the
   migration, raced for real in `gear-reservations.postgres.test.ts`): catch 23P01 via
   `violatesExclusionConstraint`, never pre-check availability as truth. Service clocks are the
-  newest `gear_service_events` row per kind and **inform, never gate**. `pnpm task:context gear`.
+  newest `gear_service_events` row per kind and **inform, never gate**.
 - **Buddy teams**: `src/db/buddy-teams.ts` (its table is `buddy_team_members`; every word a human
   reads says "team"). A team is two or more, a member is a booking **or** a crew person, and
   every act appends to `buddy_team_events` — informs, never gates (ADR 20260804-buddy-teams).
@@ -1185,7 +1185,7 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
   `name` matches its directory and a `description` (the only part every session pays for), a skill
   linked in from `.agents/skills/` included; every local skill is in `.claude/skills/README.md` and
   mentioned in `AGENTS.md`, and every linked one has a `skills-lock.json` entry and keeps the local
-  lines a sync would undo (`VENDORED_SKILL_OVERRIDES`); every reviewer agent is in the index; every `task:context` path exists; every backticked repo path in `AGENTS.md` and in
+  lines a sync would undo (`VENDORED_SKILL_OVERRIDES`); every reviewer agent is in the index; every backticked repo path in `AGENTS.md` and in
   `.claude/rules/*.md` exists, and in the handoff docs (`docs/agents/*.md`, the local skills'
   `SKILL.md`, `.claude/agents/*.md`) too, except on a line telling history ("(was …)", "until
   2026-…") or naming a gitignored output — ten live instructions there pointed at moved files on
