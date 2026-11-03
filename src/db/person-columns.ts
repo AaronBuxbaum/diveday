@@ -1,5 +1,5 @@
 /**
- * **Every column that references `people`, and what a diver merge does with it**
+ * **Every column that references `people`, and what a merge and an erasure do with it**
  * (issue #2724).
  *
  * One row per column, so the person's data story reads in one place and a column
@@ -7,8 +7,8 @@
  * (`person-columns.test.ts`: every foreign key to `people`, and every column
  * named `%person_id`, has a row; every row names a live column). `kind` says who
  * the column names, and `merge` says what `mergeDiverRecords` does with it. The
- * erasure (`anonymize.ts`), the export and the reap each keep their own lists
- * for now and follow into this registry one at a time; this is the first slice.
+ * erasure follows in `erase` below; the export and the reap keep their own
+ * lists for now and follow into this registry one at a time.
  *
  * ## `kind`
  *
@@ -38,12 +38,36 @@
  * - `delete`: dropped on merge. A sealed retry that names the source cannot
  *   transfer its authority to the survivor.
  *
- * Every erasure-, export- and reap-shaped fate stays in its own module until its
- * slice lands; adding one here before then would be a second list nobody reads.
+ * ## `erase` (the second slice)
+ *
+ * What `anonymizeDiver` (`anonymize.ts`) does to a row because *this column*
+ * names the person being erased.
+ *
+ * - `delete`: the row goes. With no `eraseIn` it is a plain one, `shop_id` and
+ *   this column, and the erasure runs it from this registry
+ *   (`erasedPersonRowDeletes`): a new table of a person's own rows needs one
+ *   line here and no hand-written statement.
+ * - `scrub`: the row stays and its personal content is redacted by the sweep
+ *   `eraseIn` names (the row is evidence: a signed release, a seat, a ticket).
+ * - `null`: the row stays and this column is cleared by the sweep `eraseIn`
+ *   names (an erased former staffer's name on somebody else's training plan).
+ * - `keep`: left as it is. A pointer at an erased person discloses nothing: the
+ *   name joined at read is the anonymized one. An `actor` column is `keep`
+ *   unless it says otherwise; any other kind states it, and its reason is
+ *   `eraseWhy` or the table's entry in `erasure-coverage-keeps.test-support.ts`.
+ *
+ * Scope (Aaron, 2026-11-01, #3437): the erasure removes the person's own data.
+ * Their name in somebody else's free text is not this registry's to find.
+ * `erasure-coverage.test.ts` holds every fate to the code: a named sweep must
+ * exist and write the table, and a `keep` table the erasure writes must say why.
+ *
+ * Export- and reap-shaped fates stay in their own modules until their slices
+ * land; adding one here before then would be a second list nobody reads.
  */
 
 export type PersonColumnKind = "subject" | "actor" | "crew" | "login";
 export type PersonColumnMerge = "move" | "refuse" | "leave" | "delete";
+export type PersonColumnErase = "delete" | "scrub" | "null" | "keep";
 
 export type PersonColumn = {
   table: string;
@@ -56,6 +80,12 @@ export type PersonColumn = {
   singleton?: true;
   /** `refuse` only: the table has no `shop_id`, so the check is by person alone. */
   withoutShop?: true;
+  /** What erasing the person this column names does to the row; `keep` when absent on an `actor`. */
+  erase?: PersonColumnErase;
+  /** The `anonymize.ts` sweep that does it. Absent on a plain `delete`, which the registry runs. */
+  eraseIn?: string;
+  /** `keep` only, when the table's entry in the erasure keep-list does not already say why. */
+  eraseWhy?: string;
 };
 
 const rows = [
@@ -64,109 +94,329 @@ const rows = [
   // 20261008-work-order-follow-up). It follows the gear and the tickets to the
   // survivor, or the survivor's ticket would read as never announced and the
   // next pass would remind them a second time about a date already covered.
-  { table: "customer_gear_notices", column: "person_id", kind: "subject", merge: "move" },
-  { table: "bookings", column: "person_id", kind: "subject", merge: "move" },
-  { table: "internal_notes", column: "person_id", kind: "subject", merge: "move" },
-  { table: "interests", column: "person_id", kind: "subject", merge: "move" },
+  {
+    table: "customer_gear_notices",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "keep",
+  },
+  {
+    table: "bookings",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubBookingRows",
+  },
+  { table: "internal_notes", column: "person_id", kind: "subject", merge: "move", erase: "delete" },
+  {
+    table: "interests",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubInterests",
+  },
   // A courtesy-email unsubscribe link (`purpose = 'courtesy_email_unsubscribe'`)
   // follows the person, so a link the source was mailed still opts the kept
   // record out. Rows of other purposes leave `person_id` null.
-  { table: "capabilities", column: "person_id", kind: "subject", merge: "move" },
-  { table: "dive_package_entitlements", column: "person_id", kind: "subject", merge: "move" },
-  { table: "orders", column: "person_id", kind: "subject", merge: "move" },
-  { table: "waiver_records", column: "person_id", kind: "subject", merge: "move" },
+  {
+    table: "capabilities",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "delete",
+    eraseIn: "scrubPersonOnlyRows",
+  },
+  {
+    table: "dive_package_entitlements",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "keep",
+  },
+  {
+    table: "orders",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubOrders",
+  },
+  {
+    table: "waiver_records",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubWaiverRecords",
+  },
   // A signed course form, on the booking that moves with it (ADR
   // 20261008-course-forms). `person_id` is inside its seal, so it moves
   // through `refileCourseFormRecords`, which re-seals only a record that
   // verified before the move; its unique key is per booking, so the two
   // sides cannot collide.
-  { table: "course_form_records", column: "person_id", kind: "subject", merge: "move" },
-  { table: "cards", column: "person_id", kind: "subject", merge: "move" },
-  { table: "certification_junior_reviews", column: "person_id", kind: "subject", merge: "move" },
-  { table: "prior_visits", column: "person_id", kind: "subject", merge: "move" },
-  { table: "imported_payment_history", column: "person_id", kind: "subject", merge: "move" },
+  {
+    table: "course_form_records",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubCourseFormRecords",
+  },
+  {
+    table: "cards",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubCertificationEvidence",
+  },
+  {
+    table: "certification_junior_reviews",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "delete",
+    eraseIn: "scrubCertificationEvidence",
+  },
+  {
+    table: "prior_visits",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubImportedHistory",
+  },
+  {
+    table: "imported_payment_history",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubImportedHistory",
+  },
   {
     table: "rental_fit_profiles",
     column: "person_id",
     kind: "subject",
     merge: "move",
+    erase: "delete",
     singleton: true,
   },
   // A bookingless counter rental names the diver directly (the other shape
   // names a booking, which this merge moves anyway). Leaving it behind put the
   // unit on a removed diver's record: the survivor's prep page showed no gear
   // and the reservation still held the window.
-  { table: "gear_reservations", column: "person_id", kind: "subject", merge: "move" },
+  {
+    table: "gear_reservations",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubGearRegister",
+  },
   // A diver's own gear on file, and the service tickets about it (ADR
   // 20261008-gear-work-orders). Both name the diver directly, and both are
   // the diver's — the shop is holding the regulator of whoever the survivor
   // is. Leaving them behind would hide a ticket the shop is still working
   // from the record the counter now opens.
-  { table: "customer_gear_items", column: "person_id", kind: "subject", merge: "move" },
-  { table: "work_orders", column: "person_id", kind: "subject", merge: "move" },
-  { table: "prior_gear_assignments", column: "person_id", kind: "subject", merge: "move" },
-  { table: "trip_reviews", column: "person_id", kind: "subject", merge: "move" },
+  {
+    table: "customer_gear_items",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubBench",
+  },
+  {
+    table: "work_orders",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubBench",
+  },
+  {
+    table: "prior_gear_assignments",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubImportedHistory",
+  },
+  {
+    table: "trip_reviews",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubReviews",
+  },
   // The private half of the same act (ADR 20260904-reef-all-the-way-down,
   // D40): the diver's own word about how the day went, on the booking they
   // sat in. It moves for the reason the review above it does — it is the
   // diver's, not the shop's — and it cannot collide, because the live-row
   // unique index is per *booking*, and the bookings move with them.
-  { table: "recap_pulses", column: "person_id", kind: "subject", merge: "move" },
-  { table: "trip_blowout_divers", column: "person_id", kind: "subject", merge: "move" },
+  {
+    table: "recap_pulses",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubPrivateWord",
+  },
+  {
+    table: "trip_blowout_divers",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "keep",
+  },
   // The diver's own messages and the shop's answers to them (ADR
   // 20260907-two-way-inbox). A merge is the shop saying two records are one
   // person, and a conversation with that person belongs on the record that
   // survives — otherwise the survivor's thread opens on silence while the
   // "running late" the crew acted on sits on a record nobody opens.
-  { table: "inbound_messages", column: "person_id", kind: "subject", merge: "move" },
-  { table: "staff_replies", column: "person_id", kind: "subject", merge: "move" },
+  {
+    table: "inbound_messages",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubInbox",
+  },
+  {
+    table: "staff_replies",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "scrub",
+    eraseIn: "scrubInbox",
+  },
   // Something the crew found aboard with this diver's name on it (batch 4,
   // J2). It is the diver's, so it follows them: the survivor is who gets told.
-  { table: "lost_items", column: "person_id", kind: "subject", merge: "move" },
+  { table: "lost_items", column: "person_id", kind: "subject", merge: "move", erase: "delete" },
   // ---- Refused: a staff record on either side stops the merge.
-  { table: "staff_shifts", column: "person_id", kind: "crew", merge: "refuse" },
-  { table: "staff_credentials", column: "person_id", kind: "crew", merge: "refuse" },
-  { table: "account_sessions", column: "person_id", kind: "login", merge: "refuse" },
-  { table: "calendar_feeds", column: "person_id", kind: "login", merge: "refuse" },
-  { table: "roll_call_events", column: "crew_person_id", kind: "crew", merge: "refuse" },
+  { table: "staff_shifts", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
+  {
+    table: "staff_credentials",
+    column: "person_id",
+    kind: "crew",
+    merge: "refuse",
+    erase: "scrub",
+    eraseIn: "scrubPersonRecord",
+  },
+  {
+    table: "account_sessions",
+    column: "person_id",
+    kind: "login",
+    merge: "refuse",
+    erase: "delete",
+    eraseIn: "scrubDiverLogin",
+  },
+  {
+    table: "calendar_feeds",
+    column: "person_id",
+    kind: "login",
+    merge: "refuse",
+    erase: "scrub",
+    eraseIn: "scrubStandingCredentials",
+  },
+  {
+    table: "roll_call_events",
+    column: "crew_person_id",
+    kind: "crew",
+    merge: "refuse",
+    erase: "scrub",
+    eraseIn: "scrubPersonRecord",
+  },
   // Retired by issue #2700 (no reader or writer); dropped next release.
-  { table: "roll_call_crew_events", column: "person_id", kind: "crew", merge: "refuse" },
-  { table: "push_subscriptions", column: "person_id", kind: "login", merge: "refuse" },
+  {
+    table: "roll_call_crew_events",
+    column: "person_id",
+    kind: "crew",
+    merge: "refuse",
+    erase: "scrub",
+    eraseIn: "scrubPersonRecord",
+  },
+  {
+    table: "push_subscriptions",
+    column: "person_id",
+    kind: "login",
+    merge: "refuse",
+    erase: "keep",
+  },
   // The staffing week's own two tables (issue #1235). Both are written by, and
   // about, somebody who crews boats — a days-away block or an ask for a
   // departure — so either side of a merge holding one is a staff record and the
   // merge is refused, exactly as a seeded shift refuses it.
-  { table: "crew_availability_blocks", column: "person_id", kind: "crew", merge: "refuse" },
-  { table: "crew_assignment_requests", column: "person_id", kind: "crew", merge: "refuse" },
+  {
+    table: "crew_availability_blocks",
+    column: "person_id",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
+  {
+    table: "crew_assignment_requests",
+    column: "person_id",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
   // "Working it anyway" on a departure (issue #2678): its subject is somebody
   // on a crew, so a record holding one is a staff record and the merge is refused.
-  { table: "crew_away_acknowledgements", column: "person_id", kind: "crew", merge: "refuse" },
+  {
+    table: "crew_away_acknowledgements",
+    column: "person_id",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
   // Where a *staffer* had read up to in a departure's shift catch-up (issues
   // #1202, #1187). Same shape as `push_subscriptions` above it: written by, and
   // about, somebody who works the boats, so either side of a merge holding one
   // is a staff record and the merge is refused rather than carried across.
-  { table: "trip_read_marks", column: "person_id", kind: "crew", merge: "refuse" },
-  { table: "today_read_marks", column: "person_id", kind: "crew", merge: "refuse" },
+  { table: "trip_read_marks", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
+  { table: "today_read_marks", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
   // The Monday email's claims (`src/db/weekly-digest.ts`). Only somebody with
   // a staff login is ever sent one, so a record holding one is a staff record
   // and the merge is refused, like the calendar feed above.
-  { table: "weekly_digest_sends", column: "person_id", kind: "crew", merge: "refuse" },
+  {
+    table: "weekly_digest_sends",
+    column: "person_id",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
   // Crew news waiting to be told (ADR 20261009-crew-hear-about-their-boats).
   // Only somebody on a crew is ever its subject, so either side of a merge
   // holding one is a staff record and the merge is refused.
-  { table: "crew_notices", column: "person_id", kind: "crew", merge: "refuse" },
+  { table: "crew_notices", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
   // A staffer named in an incident report (ADR 20261012-incident-reports). A
   // diver is named there by booking, which moves with the seat; only staff are
   // named by person, so a record holding one is a staff record.
-  { table: "incident_report_people", column: "person_id", kind: "crew", merge: "refuse" },
+  {
+    table: "incident_report_people",
+    column: "person_id",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+    eraseWhy:
+      "a staffer named in a report, the shop's liability record; a diver is named by seat, which the booking sweep reaches, and an outsider by the name `scrubIncidentReports` matches",
+  },
   // A repeating trip's standing crew (`trip_series_crew`): only staff sail on
   // it, so a record holding one is a staff record and the merge is refused.
-  { table: "trip_series_crew", column: "person_id", kind: "crew", merge: "refuse" },
+  { table: "trip_series_crew", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
   {
     table: "trip_assignments",
     column: "person_id",
     kind: "crew",
     merge: "refuse",
+    erase: "scrub",
+    eraseIn: "scrubTrainingPlans",
     withoutShop: true,
   },
   {
@@ -174,6 +424,8 @@ const rows = [
     column: "person_id",
     kind: "login",
     merge: "refuse",
+    erase: "scrub",
+    eraseIn: "scrubDiverLogin",
     withoutShop: true,
   },
   // ---- Left where it is, on purpose: bare `person_id` columns the merge does not touch.
@@ -182,6 +434,8 @@ const rows = [
     column: "person_id",
     kind: "subject",
     merge: "leave",
+    erase: "delete",
+    eraseIn: "scrubPersonRecord",
     why: "a role belongs to the identity, not to its history",
   },
   {
@@ -189,6 +443,7 @@ const rows = [
     column: "person_id",
     kind: "login",
     merge: "leave",
+    erase: "keep",
     why: "ephemeral staff OAuth state, consumed within minutes",
   },
   {
@@ -196,6 +451,7 @@ const rows = [
     column: "person_id",
     kind: "subject",
     merge: "leave",
+    erase: "keep",
     why: "provenance for an erasure, and anonymized rows never merge",
   },
   {
@@ -225,6 +481,8 @@ const rows = [
     column: "actor_person_id",
     kind: "actor",
     merge: "leave",
+    erase: "scrub",
+    eraseIn: "scrubActivityEvents",
     why: "who did it \u2014 attribution, not diver history",
   },
   {
@@ -232,6 +490,8 @@ const rows = [
     column: "subject_person_id",
     kind: "subject",
     merge: "leave",
+    erase: "scrub",
+    eraseIn: "scrubActivityEvents",
     why: "an event trail records who it happened to at the time",
   },
   {
@@ -239,6 +499,8 @@ const rows = [
     column: "fly_safe_acknowledged_by_person_id",
     kind: "actor",
     merge: "leave",
+    erase: "null",
+    eraseIn: "scrubBookingRows",
     why: "which staffer resolved the flying-guidance follow-up",
   },
   {
@@ -260,6 +522,8 @@ const rows = [
     column: "training_plan_by_person_id",
     kind: "actor",
     merge: "leave",
+    erase: "null",
+    eraseIn: "scrubTrainingPlans",
     why: "planning records involving a merged person are cleared",
   },
   {
@@ -267,6 +531,8 @@ const rows = [
     column: "training_plan_instructor_person_id",
     kind: "actor",
     merge: "leave",
+    erase: "null",
+    eraseIn: "scrubTrainingPlans",
     why: "planning records involving a merged person are cleared",
   },
   {
@@ -274,6 +540,8 @@ const rows = [
     column: "training_plan_by_person_id",
     kind: "actor",
     merge: "leave",
+    erase: "null",
+    eraseIn: "scrubTrainingPlans",
     why: "planning records involving a merged person are cleared",
   },
   {
@@ -281,6 +549,8 @@ const rows = [
     column: "training_plan_instructor_person_id",
     kind: "actor",
     merge: "leave",
+    erase: "null",
+    eraseIn: "scrubTrainingPlans",
     why: "planning records involving a merged person are cleared",
   },
   {
@@ -309,6 +579,7 @@ const rows = [
     column: "crew_person_id",
     kind: "crew",
     merge: "leave",
+    erase: "keep",
     why: "a crew member on a team, refused as a staff record",
   },
   {
@@ -568,6 +839,8 @@ const rows = [
     column: "merged_into_person_id",
     kind: "subject",
     merge: "leave",
+    erase: "scrub",
+    eraseIn: "scrubPersonRecord",
     why: "the merge pointer itself \u2014 structural, and what makes the shell resolve",
   },
   {
@@ -743,6 +1016,7 @@ const rows = [
     column: "subject_person_id",
     kind: "subject",
     merge: "leave",
+    erase: "keep",
     why: "an event trail records who it happened to at the time",
   },
   {
@@ -750,6 +1024,7 @@ const rows = [
     column: "helper_person_id",
     kind: "crew",
     merge: "leave",
+    erase: "keep",
     why: "which crew member the desk confirmed would help; staff assignment attribution stays with that person",
   },
   {
@@ -834,6 +1109,7 @@ const rows = [
     column: "technician_person_id",
     kind: "crew",
     merge: "leave",
+    erase: "keep",
     why: "which technician the ticket was handed to",
   },
   {
@@ -855,6 +1131,9 @@ const rows = [
     column: "technician_person_id",
     kind: "crew",
     merge: "leave",
+    erase: "keep",
+    eraseWhy:
+      "the technician who worked the ticket, a staff pointer; the ticket's diver is erased through `person_id`",
     why: "which technician is working it \u2014 a staff assignment",
   },
   {
@@ -975,6 +1254,8 @@ const rows = [
     column: "recipient_person_id",
     kind: "subject",
     merge: "delete",
+    erase: "delete",
+    eraseIn: "scrubPersonRecord",
     why: "sealed retries retain the source subject and cannot transfer authority",
   },
 ] as const satisfies readonly PersonColumn[];
@@ -1011,6 +1292,23 @@ export function refusedPersonOnlyTables(): RefusedPersonOnlyTable[] {
   return rows
     .filter((row) => "withoutShop" in row)
     .map((row) => row.table) as RefusedPersonOnlyTable[];
+}
+
+/** What erasing the person a row's column names does to it. */
+export function eraseFate(row: PersonColumn): PersonColumnErase {
+  if (row.erase) return row.erase;
+  if (row.kind === "actor") return "keep";
+  throw new Error(`person-columns: ${personColumnKey(row)} states no erase fate`);
+}
+
+/**
+ * The rows the erasure deletes straight from this registry: a person's own
+ * rows, found by `shop_id` and the column, with nothing bespoke about them.
+ */
+export function erasedPersonRowDeletes(): { table: string; column: string }[] {
+  return PERSON_COLUMNS.filter((row) => eraseFate(row) === "delete" && !row.eraseIn).map(
+    ({ table, column }) => ({ table, column }),
+  );
 }
 
 /** `table.column` for every row, the key the guards and the docs use. */
