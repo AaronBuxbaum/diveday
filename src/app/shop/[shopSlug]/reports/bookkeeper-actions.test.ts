@@ -32,10 +32,8 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
-vi.mock("@/lib/security-step-up", () => ({
-  hasRequiredStepUp: vi.fn(async () => true),
-  stepUpChallengeUrl: vi.fn(() => "/step-up"),
-}));
+vi.mock("@/db/step-up", () => ({ hasRequiredStepUp: vi.fn(async () => true) }));
+vi.mock("@/lib/security-step-up", () => ({ stepUpChallengeUrl: vi.fn(() => "/step-up") }));
 const sent = vi.hoisted(() => ({ list: [] as Notification[] }));
 vi.mock("@/db/notifications", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/notifications")>();
@@ -64,7 +62,7 @@ vi.mock("@/lib/notifications", async (importOriginal) => {
 });
 
 const { requireShopSurface } = await import("@/lib/session");
-const { hasRequiredStepUp } = await import("@/lib/security-step-up");
+const { hasRequiredStepUp } = await import("@/db/step-up");
 const { saveBookkeeperAction } = await import("./bookkeeper-actions");
 
 const idle = { status: "idle" } as const;

@@ -15,14 +15,11 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
-vi.mock("@/lib/security-step-up", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/security-step-up")>();
-  return { ...actual, hasRequiredStepUp: vi.fn() };
-});
+vi.mock("@/db/step-up", () => ({ hasRequiredStepUp: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { hasRequiredStepUp } = await import("@/lib/security-step-up");
+const { hasRequiredStepUp } = await import("@/db/step-up");
 const { releaseHeldSendAction, undoHeldSendAction } = await import("./held-sends");
 
 /**

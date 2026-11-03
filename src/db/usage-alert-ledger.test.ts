@@ -2,7 +2,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type AppDb, createTestDb } from "@/db/client";
 import { closePglite } from "@/db/close-pglite";
-import { claimUsageAlert, releaseUsageAlert } from "./alert-ledger";
+import { claimUsageAlert, releaseUsageAlert } from "./usage-alert-ledger";
 
 /**
  * The dedup that makes this a once-per-period alert rather than a daily one.

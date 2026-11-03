@@ -1,5 +1,6 @@
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadShopExportBundleInput } from "@/db/export";
+import { hasRequiredStepUp } from "@/db/step-up";
 import { nowDate } from "@/lib/clock";
 import {
   buildExportBundle,
@@ -7,7 +8,7 @@ import {
   fetchExportPhotos,
   zipExportBundle,
 } from "@/lib/export";
-import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
+import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 
 /**

@@ -2,7 +2,7 @@ import type { RentalFitLine, RentalItemKind, StatedSizeKind } from "@/lib/dive-p
 import type { DrysuitCardCheck } from "@/lib/drysuit-card";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { type RentableItemKind, type ShopCatalogKind, SIZED_RENTAL_KINDS } from "@/lib/rentals";
-import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
+import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "./staff-messages";
 
 /**
  * `src/lib/dive-prep.ts` and `src/lib/rentals.ts` return item *codes*, never
@@ -37,6 +37,19 @@ const RENTAL_ITEM_LABEL_KEYS: Record<RentalItemKind, StaffMessageKey> = {
 /** A dive-prep packing-list item's word, e.g. for `PrepLine.kind` or a `RentalFitLine`'s items. */
 export function rentalItemLabel(t: StaffTranslator, kind: RentalItemKind): string {
   return t(RENTAL_ITEM_LABEL_KEYS[kind]);
+}
+
+/**
+ * The staff note an import writes for a size it could not store (issue #1801),
+ * in the shop's own language: "Prior shop recorded wetsuit 5mm".
+ */
+export function declinedSizeNote(
+  locale: string | null | undefined,
+  kind: RentalItemKind,
+  value: string,
+): string {
+  const t = staffTranslator(locale);
+  return t("settings.import.declinedSizeNote", { item: rentalItemLabel(t, kind), value });
 }
 
 /** A shop catalog gear item's word (rentals.ts's `RentableItemKind`) — never includes `boots`. */

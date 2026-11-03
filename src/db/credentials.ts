@@ -1,21 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { compare } from "bcryptjs";
 import { and, eq, isNull } from "drizzle-orm";
-import type { DbExecutor } from "@/db/client";
-import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { isStaff, type Role } from "@/lib/authz";
 import { demoBypassAccepted } from "@/lib/demo-bypass";
 import { hashPassword } from "@/lib/password-hashing";
-
-/**
- * The demo sign-in password, re-exported for the surfaces that *display* it
- * (the demo banners) and for `enterDemoAction`/`switchDemoRoleAction`, which
- * submit it on the visitor's behalf. The bypass *decision* deliberately no
- * longer lives in this module — see `src/lib/demo-bypass.ts` for the three
- * conditions it now requires and why. New importers should take it from there
- * directly.
- */
-export { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
+import type { DbExecutor } from "./client";
+import { people, personRoles, shops, userAccounts } from "./schema";
 
 export type VerifiedUser = {
   id: string;
@@ -95,7 +85,6 @@ export async function verifyCredentials(
         .from(people)
         // A person removed from the shop's lists signs in to nothing, rather
         // than being admitted and bounced by the next gate (src/lib/authz.ts).
-        // `livePerson()` spelled out: src/lib takes only types from src/db.
         .where(and(eq(people.id, account.personId), isNull(people.deletedAt)))
         .limit(1)
     : [];

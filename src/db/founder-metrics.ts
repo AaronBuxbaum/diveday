@@ -251,7 +251,7 @@ export async function markStallsAlerted(
 /**
  * Claim the right to send one week's digest. One statement, so two runs on
  * the same Monday cannot both send — the same claim the usage monitor takes on
- * the same table (`src/lib/usage/alert-ledger.ts` explains why a successful
+ * the same table (`src/db/usage-alert-ledger.ts` explains why a successful
  * send leaves nothing in `notification_send_queue` to deduplicate on). The
  * claim holds for a year: a digest week is never re-sent.
  */

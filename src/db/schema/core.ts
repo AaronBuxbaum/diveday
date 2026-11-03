@@ -1442,7 +1442,7 @@ export const userAccounts = pgTable(
       .references(() => people.id),
     email: text("email").notNull(),
     /**
-     * Ours, not better-auth's: `verifyCredentials` (src/lib/credentials.ts)
+     * Ours, not better-auth's: `verifyCredentials` (src/db/credentials.ts)
      * compares against this column directly and better-auth's own `user` model
      * has never heard of it. Nullable for exactly that reason — 1.7.3's adapter
      * refuses to serve any request whose schema holds a required column it

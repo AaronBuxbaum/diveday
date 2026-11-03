@@ -73,7 +73,6 @@ export function workOrderReadyEmail(input: WorkOrderReadyEmailInput): Notificati
 
 /** The same news as a text: one line, with what was done cut to fit. */
 export function workOrderReadyText(
-  t: DiverTranslator,
   locale: DiverLocale,
   input: {
     shopName: string;
@@ -82,6 +81,7 @@ export function workOrderReadyText(
     workPerformed?: string | null;
   },
 ): string {
+  const t = diverTranslator(locale);
   const number = String(input.ticketNumber);
   const ready =
     input.pieces.length > 0
@@ -138,10 +138,10 @@ export function gearServiceDueEmail(input: GearServiceDueEmailInput): Notificati
 
 /** The reminder as a text. */
 export function gearServiceDueText(
-  t: DiverTranslator,
   locale: DiverLocale,
   input: { shopName: string; piece: CustomerGearPiece; clock: GearServiceKind; dueOn: string },
 ): string {
+  const t = diverTranslator(locale);
   const due = customerGearDueText(t, {
     clock: input.clock,
     piece: customerGearPieceText(t, input.piece),

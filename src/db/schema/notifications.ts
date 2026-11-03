@@ -465,7 +465,7 @@ export const notificationSendQueue = pgTable(
 /**
  * A keyed claim with an expiry (`next_allowed_at`), not a per-second rate
  * limit. Two claims use it: the once-per-period usage alert
- * (`claimUsageAlert` in src/lib/usage/alert-ledger.ts) and the founder weekly
+ * (`claimUsageAlert` in src/db/usage-alert-ledger.ts) and the founder weekly
  * digest (`claimFounderDigest` in src/db/founder-metrics.ts). The name is
  * historical. The provider permit clock it was made for is not used, because
  * SES's SDK retry/backoff covers that need (20260803-ses-sole-email-provider).

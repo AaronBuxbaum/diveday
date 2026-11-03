@@ -33,9 +33,8 @@
 
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { rentalItemLabel } from "@/i18n/rental-labels";
+import { declinedSizeNote } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { canImportShopData } from "@/lib/authz";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -297,7 +296,7 @@ export async function commitContactImport(
     await resolveImportDocuments(preparedRows);
   summary.waiverDocumentsFailed = waiverDocumentsFailed;
   summary.receiptDocumentsFailed = receiptDocumentsFailed;
-  const t = staffTranslator(shop?.defaultLocale ?? DEFAULT_DIVER_LOCALE);
+  const locale = shop?.defaultLocale ?? DEFAULT_DIVER_LOCALE;
   const now = nowDate();
 
   return db.transaction(async (tx) => {
@@ -449,7 +448,7 @@ export async function commitContactImport(
           template,
           importedByPersonId,
           shopCurrency: shop?.currency ?? "usd",
-          t,
+          locale,
         });
         continue;
       }
@@ -553,7 +552,7 @@ export async function commitContactImport(
         template,
         importedByPersonId,
         shopCurrency: shop?.currency ?? "usd",
-        t,
+        locale,
       });
     }
 
@@ -590,12 +589,21 @@ async function writeEvidence(
     template: Awaited<ReturnType<typeof getCurrentWaiverTemplate>> | null;
     importedByPersonId: string;
     shopCurrency: string;
-    /** The shop's own language, for the one line this writer composes itself. */
-    t: StaffTranslator;
+    /** The shop's own language, for the one line this writer stores itself. */
+    locale: string;
   },
 ): Promise<void> {
-  const { row, personId, shopId, now, summary, template, importedByPersonId, shopCurrency, t } =
-    ctx;
+  const {
+    row,
+    personId,
+    shopId,
+    now,
+    summary,
+    template,
+    importedByPersonId,
+    shopCurrency,
+    locale,
+  } = ctx;
 
   if (row.visit) {
     // Inert history, not an operational record (ADR 20260725-import-prior-visits):
@@ -910,10 +918,7 @@ async function writeEvidence(
    * somebody will meet it at the counter.
    */
   for (const declined of row.declinedSizes) {
-    const body = t("settings.import.declinedSizeNote", {
-      item: rentalItemLabel(t, declined.kind),
-      value: declined.value,
-    });
+    const body = declinedSizeNote(locale, declined.kind, declined.value);
     if (await writeImportedNote(tx, { shopId, personId, importedByPersonId, now }, body)) {
       summary.sizesDeclined += 1;
     }

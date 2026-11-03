@@ -6,7 +6,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/lib/usage/collect", () => ({ collectUsageSamples: vi.fn() }));
-vi.mock("@/lib/usage/alert-ledger", () => ({
+vi.mock("@/db/usage-alert-ledger", () => ({
   claimUsageAlert: vi.fn(),
   releaseUsageAlert: vi.fn(),
 }));
@@ -21,7 +21,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 const { getDb } = await import("@/db/client");
 const { collectUsageSamples } = await import("@/lib/usage/collect");
-const { claimUsageAlert, releaseUsageAlert } = await import("@/lib/usage/alert-ledger");
+const { claimUsageAlert, releaseUsageAlert } = await import("@/db/usage-alert-ledger");
 const { notify } = await import("@/lib/notifications");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");

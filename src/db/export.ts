@@ -30,8 +30,7 @@
  */
 
 import { and, asc, count, eq, getTableColumns, inArray, isNull, or } from "drizzle-orm";
-import { fieldGuideCards } from "@/i18n/marine-life-labels";
-import { diverTranslator } from "@/i18n/messages";
+import { fieldGuideCardsIn } from "@/i18n/marine-life-labels";
 import { canExportShopData } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import {
@@ -307,10 +306,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const creatureRows = await readScoped(tx, "diveSiteCreatures", scope);
 
   const cardById = new Map(
-    fieldGuideCards(creatureRows, diverTranslator(shop.defaultLocale)).map((card) => [
-      card.id,
-      card,
-    ]),
+    fieldGuideCardsIn(creatureRows, shop.defaultLocale).map((card) => [card.id, card]),
   );
 
   const recapPhotoRows = await readScoped(tx, "recapPhotos", scope);

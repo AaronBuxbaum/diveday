@@ -1,5 +1,4 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { courseFormsLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -8,6 +7,7 @@ import {
   notificationProviderSignal,
   publicAppUrl,
   recipientLocale,
+  waiverLinkText,
 } from "@/lib/notifications";
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
@@ -87,26 +87,6 @@ async function waiverTextProviders(db: DbExecutor, shopId: string): Promise<Cour
 }
 
 /**
- * The text a diver reads on their phone, in their own language.
- *
- * Composed here rather than returned as a code because nothing downstream picks
- * words for a sent text — the same terminal-renderer exception `reminderSmsBody`
- * takes (docs ADR 20260731-notification-locale).
- */
-function waiverTextBody(
-  t: DiverTranslator,
-  input: { shopName: string; tripTitle?: string; completionUrl: string },
-): string {
-  return input.tripTitle
-    ? t("notifications.sms.waiverForTrip", {
-        shopName: input.shopName,
-        tripTitle: input.tripTitle,
-        url: input.completionUrl,
-      })
-    : t("notifications.sms.waiver", { shopName: input.shopName, url: input.completionUrl });
-}
-
-/**
  * Text one diver their waiver link over the shop's own WhatsApp when it has
  * connected one, and platform SMS otherwise — one message either way, never
  * both (`src/lib/notifications/courtesy.ts`).
@@ -129,24 +109,12 @@ async function textWaiverLink(
   const to = smsRecipient(input.phone);
   if (!to) return { delivery: "no_phone" };
   const providers = input.providers ?? (await waiverTextProviders(db, input.shopId));
-  const t = diverTranslator(input.locale);
   const { delivery } = await sendCourtesyMessage(
     {
       to,
       shopName: input.shopName,
-      body:
-        input.courseForms && input.tripTitle
-          ? t("notifications.sms.courseForms", {
-              shopName: input.shopName,
-              tripTitle: input.tripTitle,
-              url: input.completionUrl,
-            })
-          : waiverTextBody(t, {
-              shopName: input.shopName,
-              tripTitle: input.tripTitle,
-              completionUrl: input.completionUrl,
-            }),
-      smsStopLine: t("notifications.sms.stopLine"),
+      body: waiverLinkText(input),
+      locale: input.locale,
     },
     providers,
     { signal: input.signal ?? notificationProviderSignal() },

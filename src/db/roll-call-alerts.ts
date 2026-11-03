@@ -1,8 +1,12 @@
 import { and, eq, gte, isNotNull, isNull, lte, or } from "drizzle-orm";
-import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
-import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
+import {
+  type NotificationProvider,
+  publicAppUrl,
+  recipientLocale,
+  staleRollCallPush,
+} from "@/lib/notifications";
 import { notificationTripTitle } from "@/lib/notifications/kinds";
 import {
   isMissingReason,
@@ -307,10 +311,8 @@ export async function sendStaleRollCallAlerts(
         if (ownersClaimed) {
           const pushes = await pushTripAlert(db, shopId, tripId, {
             url: `${shopPath(shop.slug, "trips", tripId, "manifest")}?checkpoint=${checkpoint}`,
-            words: (t) => ({
-              title: t("manifest.staleRollCall.pushTitle"),
-              body: pushBody(t, { title: tripTitle, dive: gap.diveNumber, ...counts }),
-            }),
+            words: (locale) =>
+              staleRollCallPush(locale, { title: tripTitle, dive: gap.diveNumber, ...counts }),
           });
           ownersReached += pushes;
           summary.pushes += pushes;
@@ -333,22 +335,4 @@ export async function sendStaleRollCallAlerts(
   log("roll_call_alert.pass", "info", summary);
   if (failure !== undefined) throw failure;
   return summary;
-}
-
-/** The push's one line: the counts in their own words, as the email says them. */
-function pushBody(
-  t: StaffTranslator,
-  input: { title: string; dive: number; notBackAboard: number; awaiting: number },
-): string {
-  const values = {
-    title: input.title,
-    dive: input.dive,
-    missing: input.notBackAboard,
-    awaiting: input.awaiting,
-  };
-  if (input.notBackAboard > 0 && input.awaiting > 0) {
-    return t("manifest.staleRollCall.pushBodyBoth", values);
-  }
-  if (input.notBackAboard > 0) return t("manifest.staleRollCall.pushBodyMissing", values);
-  return t("manifest.staleRollCall.pushBody", values);
 }

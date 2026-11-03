@@ -14,13 +14,13 @@ import { canPersonExportDisputeSheet, canPersonManageOrders, canPersonRefund } f
 import { pendingCounterPayment } from "@/db/counter-payment-hold";
 import { getOrderBookingContext } from "@/db/order-booking";
 import { getOrder, isStaleCounterClaim, isVoidableCounterOrder } from "@/db/orders";
+import { hasRequiredStepUp } from "@/db/step-up";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { currencySymbol, minorToMajor } from "@/lib/money";
-import { hasRequiredStepUp } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";

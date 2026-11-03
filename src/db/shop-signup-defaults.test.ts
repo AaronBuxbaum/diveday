@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { unseededTestDb } from "@/test/db";
 import { recordSetupRequest } from "./funnel";
@@ -34,6 +35,7 @@ async function signUpIn(timezone: string) {
     ownerName: "Ana Ruiz",
     ownerEmail: "ana@reefline.example",
     ownerPassword: "a long enough passphrase 123",
+    firstChecklistLine: staffTranslator("en-US")("settings.safetyChecklist.defaultLine"),
   });
   if (!outcome.ok) throw new Error(`sign-up refused: ${outcome.reason}`);
   return outcome.shop;

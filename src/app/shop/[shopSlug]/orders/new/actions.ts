@@ -6,6 +6,7 @@ import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createOrder, type NewOrderLineItem } from "@/db/orders";
 import { orderLineItemKind } from "@/db/schema";
+import { hasRequiredStepUp } from "@/db/step-up";
 import { getShopCurrency, getShopTaxEnabled } from "@/db/stripe-accounts";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
@@ -13,7 +14,7 @@ import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { customerAddressFromForm } from "@/lib/payments/customer-address-form";
 import type { InvoiceCustomerAddress } from "@/lib/payments/invoicing";
-import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
+import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {

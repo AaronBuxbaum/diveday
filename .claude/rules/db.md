@@ -47,7 +47,9 @@ barrels, bookings, seating, retention, integrations). What they do not say:
   `trip-prep.ts`) are not in the `@/db/trips` barrel, which holds only the departure aggregate. It detects nothing of its own (a rule lives in `src/lib`, once) and returns
   codes and data, not a sentence: `src/db` may not value-import `@/i18n/messages` or
   `@/i18n/staff-messages`, and `src/lib` may not value-import `drizzle-orm` (`scripts/check-architecture.mjs`
-  seams; files that still do are banked in `scripts/ratchets.json`, and a new one fails). A
+  seams; files that still do are banked in `scripts/ratchets.json`, and a new one fails). An outbound
+  message's words live in its renderer under `src/lib/notifications/` (`waiver-text.ts`,
+  `staff-push.ts`, …); the db sender passes the recipient's locale and the facts. A
   page that needs a rule from Today's queue takes the small file below it (`src/lib/today-kinds.ts`,
   `today-urgency.ts`), not the queue.
 

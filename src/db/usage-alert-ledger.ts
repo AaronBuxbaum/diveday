@@ -1,7 +1,7 @@
 import { eq, lte } from "drizzle-orm";
-import type { AppDb } from "@/db/client";
-import { notificationRateLimitState } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
+import type { AppDb } from "./client";
+import { notificationRateLimitState } from "./schema";
 
 /**
  * "Has this exact alert already been sent this period?" — the one durable fact

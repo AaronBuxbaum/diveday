@@ -19,6 +19,7 @@ import {
   undoHeldSend,
 } from "@/db/held-sends";
 import { getShopById } from "@/db/shops";
+import { hasRequiredStepUp } from "@/db/step-up";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { trackEvent } from "@/lib/analytics";
@@ -27,7 +28,6 @@ import { nowMs } from "@/lib/clock";
 import { formValue, parseForm, readForm, single, trimmedText } from "@/lib/form-parse";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
 import { majorToMinor, toShopCurrency } from "@/lib/money";
-import { hasRequiredStepUp } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 

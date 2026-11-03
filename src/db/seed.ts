@@ -646,7 +646,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
  * Sal) so the demo banner and role switcher read identically, but their emails
  * are namespaced under the unique slug so they never collide on the global
  * `user_accounts.email` index. Sign-in for every role goes through the `isDemo`
- * bypass token (src/lib/credentials.ts), so no real password is minted or stored.
+ * bypass token (src/db/credentials.ts), so no real password is minted or stored.
  *
  * Demo names carry no random suffix any more (src/lib/demo-identity.ts): the
  * visitor sees a slug and a sign-in address a real shop could have. That trades

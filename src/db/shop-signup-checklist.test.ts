@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { unseededTestDb } from "@/test/db";
 import { recordSetupRequest } from "./funnel";
 import { preDepartureChecklistItems } from "./schema";
@@ -28,6 +29,7 @@ async function signUp(slug: string) {
     ownerName: "Marisol Vega",
     ownerEmail: `owner@${slug}.example`,
     ownerPassword: "a long enough password 1",
+    firstChecklistLine: staffTranslator("en-US")("settings.safetyChecklist.defaultLine"),
   });
   if (!outcome.ok) throw new Error(outcome.reason);
   return { db, shop: outcome.shop };
@@ -61,6 +63,7 @@ describe("createSignedUpShop", () => {
       ownerName: "Marisol Vega",
       ownerEmail: "owner@refused.example",
       ownerPassword: "a long enough password 1",
+      firstChecklistLine: staffTranslator("en-US")("settings.safetyChecklist.defaultLine"),
     });
     expect(outcome).toEqual({ ok: false, reason: "setup_link_closed" });
     expect(await db.select().from(preDepartureChecklistItems)).toEqual([]);
