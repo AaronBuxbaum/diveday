@@ -394,6 +394,24 @@ export const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
  * playground never touches these, so a signed-in demo session survives a reset
  * (docs ADR 20260718-demo-mode).
  */
+/**
+ * The named shapes a seeded shop comes in, written once: the unit-test template's
+ * `lean` and `history` variants (`src/test/db-template-build.ts`) are these two
+ * names, and `empty` is no seed at all. A shape is the set of scenario groups the
+ * orchestrator runs, so a caller names a shape instead of threading a flag.
+ */
+export const SEED_SHAPES = {
+  lean: { history: false },
+  history: { history: true },
+} as const;
+
+export type SeedShape = keyof typeof SEED_SHAPES;
+
+/** Seed the canonical demo in a named shape. */
+export async function seedShape(db: DbExecutor, shape: SeedShape): Promise<void> {
+  await seedDemo(db, SEED_SHAPES[shape]);
+}
+
 export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {}): Promise<void> {
   const [shop] = await db
     .insert(shops)
@@ -915,6 +933,8 @@ export async function seedDemoSchedule(
   shopId: string,
   opts: { history?: boolean } = {},
 ): Promise<void> {
+  // History is one decision, made by the caller's shape (`SEED_SHAPES`), read here by name.
+  const withHistory = opts.history !== false;
   // Look the instructors up by **name**, not by a hardcoded email and no longer
   // by role. The name is the one key both shops share: a minted demo carries
   // per-shop-unique emails, and since DOM-M7 the shop has two instructors, so
@@ -1075,11 +1095,11 @@ export async function seedDemoSchedule(
   // 20260907-two-way-inbox). After the divers, since every row but the
   // stranger's names one.
   await seedInbox(db, shopId, customers, instructor.id);
-  await seedFrontDesk(db, shopId, cast, tripRows, bookingRows, opts.history !== false);
+  await seedFrontDesk(db, shopId, cast, tripRows, bookingRows, withHistory);
   // The trailing quarter of already-sailed trips that gives owner reporting
   // something to report. Off for the lean unit-test template and for trial
   // shops (see callers); on for the demo shop and the e2e fleet.
-  if (opts.history !== false) {
+  if (withHistory) {
     await seedHistory(db, shopId, instructor.id);
     await seedRecentRecaps(db, shopId);
     if (shopRow?.isDemo) {
@@ -1180,7 +1200,7 @@ export async function seedDemoSchedule(
   // before a discount blast are actually rendered somewhere
   // (src/db/seed-self-declared.ts). Neither holds a seat, so no readiness count,
   // roster or head count moves. Rides the history flag like the list itself.
-  await seedSelfDeclaredJoiners(db, shopId, opts.history !== false);
+  await seedSelfDeclaredJoiners(db, shopId, withHistory);
   // Adds-only and late, like the two scenarios above: it stamps a column on
   // seats that already exist and gates nothing, so no readiness count, head
   // count or roster membership moves (ADR
@@ -1247,15 +1267,15 @@ export async function seedDemoSchedule(
   // seeded (src/db/seed-boat-at-sea.ts, market sheet 2026-10-22, item 1):
   // after every scenario that seats a diver, since she takes regulars with no
   // seat from today on, and before the stage taps, which she carries too.
-  if (opts.history !== false) await seedBoatAtSea(db, shopId);
+  if (withHistory) await seedBoatAtSea(db, shopId);
   // What a booth visitor is shown (src/db/seed-booth.ts, market sheet
   // 2026-10-22, item 4): a dive card, a weather call, two cards the shop
   // issued, a mask left behind. After the boat at sea, which takes regulars
   // with no seat from today on, and before the course forms are worded, which
   // sign for every student already booked.
-  if (opts.history !== false) await seedBoothStories(db, shopId);
+  if (withHistory) await seedBoothStories(db, shopId);
   if (captainId) await seedTripStage(db, shopId, captainId);
-  await seedTripLegs(db, shopId, opts.history !== false);
+  await seedTripLegs(db, shopId, withHistory);
 
   // A synthetic, status-only medical-review hold on a future departure gives
   // the demo and staff training a real fail-closed waiver path without storing
@@ -1272,7 +1292,7 @@ export async function seedDemoSchedule(
   // real ones, so they ask readiness the question the counter would (UX
   // review 2026-10-13, item 3). No waiver row is written, so it may sit
   // before the evidence pass below.
-  if (opts.history !== false && reef) {
+  if (withHistory && reef) {
     await seedDeskHandoff(db, shopId, {
       trip: reef,
       roster: bookingRows,
@@ -1285,7 +1305,7 @@ export async function seedDemoSchedule(
   // already booked, so no seeded seat changes readiness
   // (src/db/seed-course-form-wording.ts, fourth review, item 53). Rides the
   // history flag, so the lean template keeps its forms empty.
-  if (opts.history !== false) {
+  if (withHistory) {
     await seedCourseFormWording(db, shopId, { recordedByPersonId: instructor.id });
   }
 
@@ -1293,7 +1313,7 @@ export async function seedDemoSchedule(
   // Saturday asks its standing crew about every other boat already on the
   // board: the shop's weekly run (src/db/seed-weekly-run.ts, fourth review,
   // item 51). Rides the history flag, so the lean template keeps its board.
-  if (opts.history !== false) {
+  if (withHistory) {
     // The owner skippers it and two guides lead the water, enough for the
     // twelve seats at the shop's ratio. A standing crew asked of a date they
     // are busy on is left off it, and a free instructor or divemaster takes
@@ -1349,7 +1369,7 @@ export async function seedDemoSchedule(
   // every boat day and the shop's word on the ones seeded after the first pass
   // (src/db/seed-hulls.ts, src/db/seed-lenses.ts), so Reports' "By boat" and
   // "By kind of trip" add up to the month (market sheet 2026-10-22, item 2).
-  if (opts.history !== false) {
+  if (withHistory) {
     await seedHulls(db, shopId);
     await seedLenses(db, shopId);
   }
