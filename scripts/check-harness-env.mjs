@@ -20,7 +20,7 @@ const HARNESS = /\b(?:process\.)?env(?:\.|\[["'])(DIVEDAY_E2E|DIVEDAY_CLOCK)\b(?
 const SEAM = "src/lib/runtime-mode.ts";
 
 const REMAINING = new Set([
-  "src/app/api/test/clock/route.ts", // writes the clock, the one place that sets it
+  "src/lib/test-clock.ts", // writes the clock, the one place that sets it
   "src/app/api/test/seed-trouble-states/auth-state.ts",
   "src/app/sign-in/page.tsx",
   "src/proxy.ts", // the dev-only CSP relaxation

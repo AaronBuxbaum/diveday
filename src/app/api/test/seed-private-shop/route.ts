@@ -39,6 +39,9 @@ import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes"
  * deployment — this mints a tenant whose staff sign in with a published
  * password.
  */
+/** Slugs this server minted with `?demo=0`: the only non-demo shops `DELETE` will drop. */
+const MINTED_REAL_SHAPED = new Set<string>();
+
 export async function POST(request: Request) {
   if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const db = await getDb();
@@ -62,13 +65,21 @@ export async function POST(request: Request) {
   // (`createDemoShop`'s `brand`). A flag, never a URL: the caller picks
   // whether, not what.
   const brand = params.get("brand") === "1";
+  // **`?demo=0` mints a real-shaped shop** (`isDemo: false`, issue #2783): the
+  // first-run checklist, orientation, trial row and payments row all render on
+  // it. Its staff sign in through `fixtureSignIn`, which exists only under the
+  // harness with no database URL. The route remembers its slug, so the
+  // teardown below may drop it and nothing else that is not a demo.
+  const demo = params.get("demo") !== "0";
   const { slug, ownerEmail } = await db.transaction(async (tx) =>
     createDemoShop(tx, {
       history: false,
       slug: requested ?? undefined,
       brand,
+      demo,
     }),
   );
+  if (!demo) MINTED_REAL_SHAPED.add(slug);
   return NextResponse.json({ slug, ownerEmail, password: DEMO_BYPASS_PASSWORD });
 }
 
@@ -89,7 +100,9 @@ export async function DELETE(request: Request) {
   }
   const db = await getDb();
   const shop = await getShopBySlug(db, slug);
-  if (!shop?.isDemo) return NextResponse.json({ ok: true, dropped: false });
+  if (!shop || (!shop.isDemo && !MINTED_REAL_SHAPED.delete(slug))) {
+    return NextResponse.json({ ok: true, dropped: false });
+  }
   await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
   return NextResponse.json({ ok: true, dropped: true });
 }

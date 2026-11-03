@@ -116,3 +116,12 @@ namespace, so both are covered — but a new seeding path that invents its own d
 mode to watch for. Revisit this ADR if demos ever need to live outside `.invalid` (a demo that must
 receive real mail), which would remove condition (3)'s guarantee and require replacing it with the
 session-binding alternative above.
+
+## Amendment (2026-11-03, issue #2783): condition (2) is "isDemo or harness"
+
+`is_demo` keeps its product meaning, a visitor's playground, and stops doubling as "a test fixture".
+Condition (2) now reads: the shop is a demo, **or** `runtimeMode().fixtureSignIn` is true, which is
+the e2e harness opt-in (`DIVEDAY_E2E=1`) with no `DATABASE_URL`. That lets `privateShop` mint a
+real-shaped shop (`isDemo: false`) whose owner signs in with the demo password, so the first-run
+checklist and other non-demo branches render. Conditions (1), (3) and (4) are untouched, and a set
+`DATABASE_URL` shuts the new arm whatever else is set (`demo-bypass.test.ts`).

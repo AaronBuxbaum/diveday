@@ -69,6 +69,48 @@ describe("demoBypassAccepted", () => {
     expect(demoBypassAccepted(candidate({ shopIsDemo: false }), prod)).toBe(false);
   });
 
+  describe("a fixture shop that is not a demo (issue #2783)", () => {
+    const harness = { NODE_ENV: "production", DIVEDAY_E2E: "1" };
+    const real = "postgres://user:pass@db.invalid/diveday";
+
+    it("admits the reserved namespace under the e2e harness with no database", () => {
+      expect(demoBypassAccepted(candidate({ shopIsDemo: false }), harness)).toBe(true);
+    });
+
+    it("refuses whenever DATABASE_URL is set, whatever the harness says", () => {
+      for (const NODE_ENV of ["development", "test", "production"]) {
+        expect(
+          demoBypassAccepted(candidate({ shopIsDemo: false }), {
+            NODE_ENV,
+            DIVEDAY_E2E: "1",
+            DATABASE_URL: real,
+          }),
+        ).toBe(false);
+      }
+    });
+
+    it("refuses without the harness opt-in, and keeps the namespace and password conditions", () => {
+      expect(
+        demoBypassAccepted(candidate({ shopIsDemo: false }), { NODE_ENV: "development" }),
+      ).toBe(false);
+      expect(
+        demoBypassAccepted(
+          candidate({ shopIsDemo: false, accountEmail: "owner@example.com" }),
+          harness,
+        ),
+      ).toBe(false);
+      expect(demoBypassAccepted(candidate({ shopIsDemo: false, password: "nope" }), harness)).toBe(
+        false,
+      );
+      expect(
+        demoBypassAccepted(candidate({ shopIsDemo: false }), {
+          ...harness,
+          DIVEDAY_DEMO_BYPASS: "off",
+        }),
+      ).toBe(false);
+    });
+  });
+
   it("refuses a routable address even when is_demo has been flipped on", () => {
     // The finding this closes: is_demo alone used to be the whole gate, so
     // anything able to set that column turned the demo password into a master

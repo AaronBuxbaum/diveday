@@ -670,7 +670,7 @@ const DEMO_IDENTITY_ATTEMPTS = 5;
  * identity on a name collision — never patching the slug alone, since every
  * staff email is derived from it and would otherwise disagree with the shop.
  */
-async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false) {
+async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false, isDemo = true) {
   let lastError: unknown;
   for (let attempt = 0; attempt < DEMO_IDENTITY_ATTEMPTS; attempt += 1) {
     // A pinned identity has nothing to retry *to* — it is the caller's own
@@ -750,7 +750,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
             },
             nitroxCents: 1200,
           },
-          isDemo: true,
+          isDemo,
           hasShoreDiving: true,
           hasPoolDiving: true,
           ...(brand ? MINTED_DEMO_BRAND : {}),
@@ -777,8 +777,11 @@ export async function createDemoShop(
    * the storefront brand spec.
    * Left off, a minted shop is blank shop-wide config, as every behavioural
    * spec expects.
+   *
+   * `demo: false` mints a real-shaped shop (issue #2783) for the e2e harness, so the first-run
+   * checklist, trial row and payments row render. Only `fixtureSignIn` lets its staff in.
    */
-  opts: { history?: boolean; slug?: string; brand?: boolean } = {},
+  opts: { history?: boolean; slug?: string; brand?: boolean; demo?: boolean } = {},
 ): Promise<{ slug: string; ownerEmail: string }> {
   // Aggregate storage cap (security review, finding 1): the per-IP rate limit
   // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
@@ -787,7 +790,7 @@ export async function createDemoShop(
   // ceiling — the canonical demo and real shops are never eligible (see below).
   await enforceMintedDemoCap(db);
 
-  const { shop, identity } = await insertDemoShop(db, opts.slug, opts.brand);
+  const { shop, identity } = await insertDemoShop(db, opts.slug, opts.brand, opts.demo !== false);
 
   await db.insert(boats).values([
     {
