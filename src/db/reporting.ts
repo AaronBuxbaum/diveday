@@ -30,6 +30,7 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { shopDaysBounds, shopMonthBounds, wallTimeToUtc } from "@/lib/zoned";
 import { readActiveStaffRoles } from "./authz";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
+import { levelCardLevel } from "./card-columns";
 import { fareCheckout, tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -40,7 +41,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
-  certifications,
+  cards,
   diveSites,
   importedPaymentHistory,
   orders,
@@ -223,17 +224,28 @@ async function partnerReferredSeatsForWindow(
   return totals;
 }
 
-/** Post-trip tips settled on this month's trips (PAY-M2). */
-async function tipsTotalsForWindow(
-  db: DbExecutor,
-  shopId: string,
-  inWindow: SQL<unknown> | undefined,
-) {
-  const [tipTotals] = await db
-    .select({
-      total: sum(tipAmountCents),
-      tipCount: count(bookingCheckouts.id),
-    })
+/**
+ * Post-trip tips settled on this month's trips (PAY-M2). Anchored to the
+ * trip's departure like every other figure here, not to when the diver
+ * happened to tap the recap link, so a tip left the morning after a June
+ * charter belongs to June's boat.
+ *
+ * Only `completed`: a pending Stripe session is money nobody has, and an
+ * expired one is money nobody will get. Tips never reach the booking payment
+ * gate — their own checkout purpose, their own Stripe session, 100% to the
+ * shop (docs ADR 20260726-post-trip-tipping) — and every fare figure in `getMonthlyReport`
+ * names `fareCheckout()`, so this can never double-count against them; it
+ * is returned as its own figure rather than added into them.
+ *
+ * Summed without a currency filter, exactly as `booking_payments` is in
+ * `getMonthlyReport`. A checkout's `currency` is per-row and a shop can change currency
+ * (docs ADR 20260731-shop-currency), so this report is single-currency by
+ * assumption throughout — a pre-existing limitation of the whole page, not
+ * one tips introduce.
+ */
+async function monthTipTotals(db: DbExecutor, shopId: string, inWindow: SQL | undefined) {
+  const [row] = await db
+    .select({ total: sum(tipAmountCents), tipCount: count(bookingCheckouts.id) })
     .from(bookingCheckouts)
     .innerJoin(trips, eq(trips.id, bookingCheckouts.tripId))
     .where(
@@ -244,7 +256,7 @@ async function tipsTotalsForWindow(
         tipCheckout(),
       ),
     );
-  return tipTotals;
+  return row;
 }
 
 /**
@@ -622,24 +634,7 @@ export async function getMonthlyReport(
       ),
     );
 
-  // Post-trip tips settled on this month's trips (PAY-M2). Anchored to the
-  // trip's departure like every other figure here, not to when the diver
-  // happened to tap the recap link, so a tip left the morning after a June
-  // charter belongs to June's boat.
-  //
-  // Only `completed`: a pending Stripe session is money nobody has, and an
-  // expired one is money nobody will get. Tips never reach the booking payment
-  // gate — their own checkout purpose, their own Stripe session, 100% to the
-  // shop (docs ADR 20260726-post-trip-tipping) — and every fare figure above
-  // names `fareCheckout()`, so this can never double-count against them; it
-  // is returned as its own figure rather than added into them.
-  //
-  // Summed without a currency filter, exactly as `booking_payments` is two
-  // queries above. A checkout's `currency` is per-row and a shop can change currency
-  // (docs ADR 20260731-shop-currency), so this report is single-currency by
-  // assumption throughout — a pre-existing limitation of the whole page, not
-  // one tips introduce.
-  const tipTotals = await tipsTotalsForWindow(db, shopId, inWindow);
+  const tipTotals = await monthTipTotals(db, shopId, inWindow);
 
   // **How many seats arrived on a partner link this month** — a count, and
   // deliberately not a list of who.
@@ -1304,18 +1299,19 @@ export async function certifiedHere(
   window: { startUtc: Date; endUtc: Date },
 ): Promise<CertifiedHere> {
   const rows = await db
-    .select({ level: certifications.level, count: count() })
-    .from(certifications)
+    .select({ level: levelCardLevel, count: count() })
+    .from(cards)
     .where(
       and(
-        eq(certifications.shopId, shopId),
-        isNotNull(certifications.issuedByShopAt),
-        isNull(certifications.deletedAt),
-        gte(certifications.issuedByShopAt, window.startUtc),
-        lt(certifications.issuedByShopAt, window.endUtc),
+        eq(cards.shopId, shopId),
+        eq(cards.kind, "level"),
+        isNotNull(cards.issuedByShopAt),
+        isNull(cards.deletedAt),
+        gte(cards.issuedByShopAt, window.startUtc),
+        lt(cards.issuedByShopAt, window.endUtc),
       ),
     )
-    .groupBy(certifications.level);
+    .groupBy(cards.level);
   const byLevel = rows
     .map((row) => ({ level: row.level, count: Number(row.count) }))
     .sort((left, right) => right.count - left.count || left.level.localeCompare(right.level));
@@ -1343,18 +1339,19 @@ export async function crewYearFacts(
   const [issued, days] = await queryAll(db, [
     () =>
       db
-        .select({ personId: certifications.issuedByPersonId, certified: count() })
-        .from(certifications)
+        .select({ personId: cards.issuedByPersonId, certified: count() })
+        .from(cards)
         .where(
           and(
-            eq(certifications.shopId, shopId),
-            isNotNull(certifications.issuedByPersonId),
-            isNull(certifications.deletedAt),
-            gte(certifications.issuedByShopAt, from),
-            lt(certifications.issuedByShopAt, to),
+            eq(cards.shopId, shopId),
+            eq(cards.kind, "level"),
+            isNotNull(cards.issuedByPersonId),
+            isNull(cards.deletedAt),
+            gte(cards.issuedByShopAt, from),
+            lt(cards.issuedByShopAt, to),
           ),
         )
-        .groupBy(certifications.issuedByPersonId),
+        .groupBy(cards.issuedByPersonId),
     () =>
       db
         .select({

@@ -41,11 +41,15 @@ export {
   getEmergencyContactForBearer,
   getEmergencyContactForPerson,
   getWaiverForToken,
-  saveBookingEmergencyContact,
-  savePersonEmergencyContact,
-  saveWaiverDraft,
+  recordBookingEmergencyContact,
+  recordPersonEmergencyContact,
+  recordWaiverDraft,
   staleWaiverRecordForToken,
+  type ThreadWaiverKey,
   type TokenWaiverState,
+  threadWaiverAwaitsPhysician,
+  threadWaiverKey,
+  type WaiverKey,
 } from "./waivers-completion";
 export {
   type DiverWaiverRequestStatus,
@@ -86,16 +90,18 @@ export {
   hasLiveWaiverRequest,
   type IssueWaiverOutcome,
   issueWaiverRequest,
+  type OpenThreadWaiverOutcome,
+  openWaiverInThread,
 } from "./waivers-requests";
 export {
   getCurrentWaiverGeneration,
   getCurrentWaiverTemplate,
   getSignedRecordShopAnswers,
   getWaiverTemplateQuestions,
+  recordWaiverTemplate,
   type SaveWaiverTemplateInput,
   type SaveWaiverTemplateResult,
   type StandingWaiverExposure,
-  saveWaiverTemplate,
   standingWaiverExposure,
   type WaiverDeliveryChannel,
 } from "./waivers-templates";

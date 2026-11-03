@@ -32,10 +32,11 @@ import {
   setTripRecapShoutout,
   unpauseTripRecapAutoSend,
 } from "./recap";
+import { listRollCallGaps } from "./roll-call-gaps";
 import { crewSubject } from "./roll-call-subject";
 import {
   bookings,
-  certifications,
+  cards,
   executedDives,
   notificationDeliveries,
   people,
@@ -48,7 +49,6 @@ import {
 import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
-import { listRollCallGaps } from "./today";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const ORIGIN = "https://diveday.test";
@@ -461,8 +461,9 @@ describe("the course recap's certification", () => {
     // 2. Pending: sighted but not yet confirmed.
     // 3. Imported: carried in from a spreadsheet, provenance unknown.
     // 4. Verified, this shop's — but issued from another departure.
-    await db.insert(certifications).values([
+    await db.insert(cards).values([
       {
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "padi",
@@ -471,6 +472,7 @@ describe("the course recap's certification", () => {
         status: "pending",
       },
       {
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "padi",
@@ -481,6 +483,7 @@ describe("the course recap's certification", () => {
         issuedFromTripId: session.id,
       },
       {
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "padi",
@@ -490,6 +493,7 @@ describe("the course recap's certification", () => {
         importedAt: nowDate(),
       },
       {
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "padi",

@@ -154,7 +154,7 @@ function suitUpdates(
  * review). `?? []` on the column is right — a shop really can rent nothing —
  * but reading *no row* the same way turns a save into a silent lie: every flag
  * would go to `false` on a brand-new profile and the caller would be told it
- * saved. `saveRentalFit` already answers an unknown person with null, and a
+ * saved. `recordRentalFit` already answers an unknown person with null, and a
  * shop whose catalog cannot be read deserves the same answer.
  */
 async function fitWritingContext(db: AppDb, shopId: string) {
@@ -191,7 +191,7 @@ function sizeUpdates(input: RentalFitInput) {
  * as sizes change, so it upserts rather than versioning. The person lookup
  * keeps a copied URL from writing a fit into another shop's tenant.
  */
-export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
+export async function recordRentalFit(db: AppDb, input: RentalFitInput) {
   const [person] = await db
     .select({ id: people.id })
     .from(people)
@@ -229,7 +229,7 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
     // field did, left that shop unable to save any fit at all.
     ...sizeUpdates(input),
     // This writer *is* the fit being stated — by the diver's gear form or by
-    // staff editing it. `saveRentalFitNote` deliberately never sets it, which
+    // staff editing it. `recordRentalFitNote` deliberately never sets it, which
     // is what keeps a note-only row off the packing list (see the column's own
     // comment in schema.ts).
     fitStatedAt: nowDate(),
@@ -262,10 +262,10 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
  * the note rather than storing whitespace, which is the diver taking their
  * words back.
  *
- * Same tenant proof as `saveRentalFit` above: a copied URL cannot write a note
+ * Same tenant proof as `recordRentalFit` above: a copied URL cannot write a note
  * into another shop's record.
  */
-export async function saveRentalFitNote(
+export async function recordRentalFitNote(
   db: AppDb,
   input: { shopId: string; personId: string; note: string },
 ) {
@@ -351,7 +351,7 @@ export async function confirmRentalFitSize(
 ): Promise<ConfirmRentalFitOutcome> {
   const size = input.size.trim();
   if (!size) return "invalid";
-  // The same tenant proof `saveRentalFit` makes: a copied id must not write a
+  // The same tenant proof `recordRentalFit` makes: a copied id must not write a
   // fit into another shop's record.
   const [person] = await db
     .select({ id: people.id })
@@ -666,7 +666,7 @@ export async function applyPaidRentalKindsToFit(
   const rents = Object.fromEntries(
     RENTABLE_ITEMS.map((item) => [item.field, paid.has(item.kind)]),
   ) as Record<RentalFitField, boolean>;
-  const profile = await saveRentalFit(db, {
+  const profile = await recordRentalFit(db, {
     shopId: input.shopId,
     personId: booking.personId,
     ...rents,

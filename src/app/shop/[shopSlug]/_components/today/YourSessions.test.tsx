@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { CrewedSessionSummary } from "@/db/today";
+import type { CrewedSessionSummary } from "@/features/today";
 import { YourSessions } from "./YourSessions";
 
 afterEach(cleanup);

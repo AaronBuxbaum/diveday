@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createPerson } from "./people";
-import { getRentalFit, saveRentalFit } from "./rental-fit";
-import { certifications, people, waiverDeliveries, waiverRecords } from "./schema";
+import { getRentalFit, recordRentalFit } from "./rental-fit";
+import { cards, people, waiverDeliveries, waiverRecords } from "./schema";
 import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "./self-registration";
 import { completeWaiver, getWaiverForToken, issueWaiverRequest } from "./waivers";
 
@@ -125,8 +125,8 @@ describe("self-registration", () => {
     });
     const [card] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, personId));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, personId)));
     expect(card).toMatchObject({
       agency: "padi",
       level: "advanced_open_water",
@@ -325,7 +325,7 @@ describe("self-registration", () => {
       const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
       // What the shop and the diver settled on together: sizes, and the gear
       // the boat packs for them.
-      await saveRentalFit(db, {
+      await recordRentalFit(db, {
         shopId: shop.id,
         personId,
         rentsBcd: true,
@@ -352,7 +352,7 @@ describe("self-registration", () => {
         fit: { wetsuitSize: "XS", bootSize: "5", finSize: "S" },
       });
 
-      // Unchanged — flags included. `saveRentalFit` upserts all seven, so a
+      // Unchanged — flags included. `recordRentalFit` upserts all seven, so a
       // matched write here would drop this diver's BCD, regulator, wetsuit and
       // weights off the packing list and they would find out at the dock.
       const fit = await getRentalFit(db, shop.id, personId);
@@ -372,7 +372,8 @@ describe("self-registration", () => {
       const email = `ines-${randomUUID()}@example.com`;
       const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
       // The card a staffer sighted, off the physical plastic.
-      await db.insert(certifications).values({
+      await db.insert(cards).values({
+        kind: "level",
         shopId: shop.id,
         personId,
         agency: "padi",
@@ -387,15 +388,15 @@ describe("self-registration", () => {
         certification: { agency: "padi", level: "instructor", identifier: "PADI-99999" },
       });
 
-      const cards = await db
+      const cardRows = await db
         .select()
-        .from(certifications)
-        .where(eq(certifications.personId, personId));
+        .from(cards)
+        .where(and(eq(cards.kind, "level"), eq(cards.personId, personId)));
       // Nothing was written at all. `decideTripAdmission` reads these rows, so
       // a stranger's "Instructor" claim landing beside a card the shop believes
       // it checked would move the booking gate on somebody else's typing.
-      expect(cards).toHaveLength(1);
-      expect(cards[0]).toMatchObject({
+      expect(cardRows).toHaveLength(1);
+      expect(cardRows[0]).toMatchObject({
         level: "open_water",
         identifier: "PADI-11111",
         status: "verified",

@@ -5,7 +5,7 @@ import { getShopById } from "@/db/shops";
 import {
   consumeIntegrationOAuthState,
   exchangeShopifyCode,
-  saveShopIntegration,
+  recordShopIntegration,
   shopifyConfigFromEnvironment,
 } from "@/features/integrations";
 import { publicAppUrl } from "@/lib/notifications";
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(destination(request, session.user.shopSlug, "failed"));
   }
   try {
-    await saveShopIntegration(db, {
+    await recordShopIntegration(db, {
       shopId: session.user.shopId,
       provider: "shopify",
       credentials: result.credentials,

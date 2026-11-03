@@ -55,7 +55,7 @@ const courseRosterForm = z.object({
 
 /**
  * The one path from "this shop's own instructor taught and ran this course"
- * to a `certifications` row this shop's own booking gate will actually read
+ * to a level card (`cards`, kind = level) this shop's own booking gate will actually read
  * (issue #717) — a per-student tap on the course session's own roster,
  * never automatic. See `issueShopCertification`'s doc comment for why the
  * card lands `verified` immediately with no number yet.

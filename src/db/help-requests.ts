@@ -280,7 +280,7 @@ export type SaveHelpRequestResult =
   | { ok: false; reason: "unavailable" | "handled" };
 
 /** Create, replace, or withdraw the one small request attached to a seat. */
-export async function saveHelpRequest(
+export async function recordHelpRequest(
   db: AppDb,
   input: {
     shopId: string;

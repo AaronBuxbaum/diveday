@@ -140,7 +140,7 @@ export async function readStaffingWeekAway(
 }
 
 /** A crew member says they are away for a range of days. */
-export async function saveCrewAvailabilityBlock(
+export async function recordCrewAvailabilityBlock(
   db: AppDb,
   input: {
     shopId: string;
@@ -191,7 +191,7 @@ export async function saveCrewAvailabilityBlock(
         createdByPersonId: input.actorPersonId,
       })
       .returning({ id: crewAvailabilityBlocks.id });
-    if (!row) throw new Error("saveCrewAvailabilityBlock: insert returned no row");
+    if (!row) throw new Error("recordCrewAvailabilityBlock: insert returned no row");
     return { ok: true, id: row.id };
   });
 }

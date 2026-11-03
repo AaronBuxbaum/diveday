@@ -356,7 +356,7 @@ export async function getLatestTipForBooking(
       ),
     )
     .where(and(eq(bookingCheckouts.shopId, shopId), tipCheckout()))
-    // diveday:allow-time-id-order: internal query picking the single most recent tip for a booking
+    // diveday:allow-time-id-order: picks the one newest tip; nobody is shown a list.
     .orderBy(desc(bookingCheckouts.createdAt), desc(bookingCheckouts.id))
     .limit(1);
   return row?.tip ?? null;

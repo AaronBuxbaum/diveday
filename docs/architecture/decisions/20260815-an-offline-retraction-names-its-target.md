@@ -20,7 +20,7 @@ in any single step:
 1. 09:50 — device B records diver X **not back aboard** after dive 1. The missing-diver alarm.
 2. 10:00 — device A, offline since 09:00, retracts its own earlier mark on X.
 3. 10:05 — sync. 09:50 is not later than 10:00, so the retraction applies. X reads **awaiting**: B's
-   alarm is gone, and `src/db/today.ts` drops X from its `notBackAboard` count with it.
+   alarm is gone, and `src/features/today/today-reader.ts` drops X from its `notBackAboard` count with it.
 
 That is fine for a *statement* — a later opinion supersedes an earlier one — and wrong for a
 retraction, which is not an opinion about the diver at all. It says "the thing I said is not a thing

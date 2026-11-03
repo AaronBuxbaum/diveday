@@ -184,7 +184,7 @@ Where to read it:
   **DiveDay/Heaviest renders by route**, which group the same lines by `route`.
 
 Neither is alarmed. The guard against a render growing quietly is
-`src/db/staff-render-cost.test.ts`, which pins both the statements Today and the trip page send and
+`src/app/shop/[shopSlug]/staff-render-cost.test.ts`, which pins both the statements Today and the trip page send and
 the number of round trips each waits for one after another.
 
 ### The context around the numbers: CloudWatch RUM

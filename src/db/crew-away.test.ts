@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { crewAwayByTrip } from "./crew-away";
-import { saveCrewAvailabilityBlock } from "./crew-requests";
+import { recordCrewAvailabilityBlock } from "./crew-requests";
 import { createTrip, listStaff, setTripCrew } from "./trips";
 
 const ctx = fileScopedShopContext();
@@ -40,7 +40,7 @@ describe("crewAwayByTrip", () => {
 
   async function away(personId: string, startsOn: string, endsOn: string) {
     const { db, shop } = ctx;
-    const outcome = await saveCrewAvailabilityBlock(db, {
+    const outcome = await recordCrewAvailabilityBlock(db, {
       shopId: shop.id,
       personId,
       actorPersonId: personId,

@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { createDiver, updateDiver } from "./divers";
+import { createDiver, editDiver } from "./divers";
 import { activityEvents, courses, people, trips } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -17,8 +17,8 @@ import { upcomingTripsWithCounts } from "./trips";
 const ctx = fileScopedShopContext();
 
 /** The saved row, or a failure naming the refusal. */
-function saved(result: Awaited<ReturnType<typeof updateDiver>>) {
-  if (!result.ok) throw new Error(`updateDiver refused: ${result.reason}`);
+function saved(result: Awaited<ReturnType<typeof editDiver>>) {
+  if (!result.ok) throw new Error(`editDiver refused: ${result.reason}`);
   return result.person;
 }
 
@@ -45,7 +45,7 @@ async function staffer(db: AppDb, shopId: string): Promise<string> {
   return row.id;
 }
 
-describe("updateDiver and the date of birth", () => {
+describe("editDiver and the date of birth", () => {
   /**
    * H-20261007-held-seat-split-into, dive-domain review: once a date answers the age question, a
    * staffer's earlier "18 or older" goes, so clearing the date later cannot
@@ -66,7 +66,7 @@ describe("updateDiver and the date of birth", () => {
       .where(eq(people.id, diver.id));
 
     const untouched = saved(
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId: diver.id,
         fullName: "Attested Ari",
@@ -76,7 +76,7 @@ describe("updateDiver and the date of birth", () => {
     expect(untouched.adultAttestedAt).not.toBeNull();
 
     const dated = saved(
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId: diver.id,
         fullName: "Attested Ari",
@@ -100,7 +100,7 @@ describe("updateDiver and the date of birth", () => {
       const diver = await createDiver(db, { shopId: shop.id, fullName: "Cleared Cleo" });
       if (!diver) throw new Error("diver insert failed");
       saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId: diver.id,
           fullName: "Cleared Cleo",
@@ -113,7 +113,7 @@ describe("updateDiver and the date of birth", () => {
     it("is refused without an 18-or-older answer, and the date stays", async () => {
       const { db, shop, personId } = await minor();
 
-      const result = await updateDiver(db, {
+      const result = await editDiver(db, {
         shopId: shop.id,
         personId,
         fullName: "Cleared Cleo",
@@ -129,7 +129,7 @@ describe("updateDiver and the date of birth", () => {
     it("refuses a whitespace date the same way", async () => {
       const { db, shop, personId } = await minor();
 
-      const result = await updateDiver(db, {
+      const result = await editDiver(db, {
         shopId: shop.id,
         personId,
         fullName: "Cleared Cleo",
@@ -142,7 +142,7 @@ describe("updateDiver and the date of birth", () => {
     it("refuses the whole save, so no other field lands either", async () => {
       const { db, shop, personId } = await minor();
 
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId,
         fullName: "Renamed Cleo",
@@ -158,7 +158,7 @@ describe("updateDiver and the date of birth", () => {
       const staffId = await staffer(db, shop.id);
 
       const person = saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId,
           fullName: "Cleared Cleo",
@@ -184,7 +184,7 @@ describe("updateDiver and the date of birth", () => {
       const { db, shop, personId } = await minor();
       const staffId = await staffer(db, shop.id);
       saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId,
           fullName: "Cleared Cleo",
@@ -194,7 +194,7 @@ describe("updateDiver and the date of birth", () => {
       );
 
       const corrected = saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId,
           fullName: "Cleared Cleo",
@@ -212,7 +212,7 @@ describe("updateDiver and the date of birth", () => {
       if (!gone) throw new Error("staffer insert failed");
       await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, gone.id));
 
-      const result = await updateDiver(db, {
+      const result = await editDiver(db, {
         shopId: shop.id,
         personId,
         fullName: "Cleared Cleo",
@@ -231,7 +231,7 @@ describe("updateDiver and the date of birth", () => {
       const staffId = await staffer(db, shop.id);
 
       const kept = saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId,
           fullName: "Cleared Cleo",
@@ -244,7 +244,7 @@ describe("updateDiver and the date of birth", () => {
       expect(kept.adultAttestedAt).toBeNull();
 
       // Dropped, but not in silence: the save says the answer was not used.
-      const typed = await updateDiver(db, {
+      const typed = await editDiver(db, {
         shopId: shop.id,
         personId,
         fullName: "Cleared Cleo",
@@ -252,7 +252,7 @@ describe("updateDiver and the date of birth", () => {
         adultAttestedByPersonId: staffId,
       });
       expect(typed).toMatchObject({ ok: true, adultAnswerUnused: true });
-      const unticked = await updateDiver(db, {
+      const unticked = await editDiver(db, {
         shopId: shop.id,
         personId,
         fullName: "Cleared Cleo",
@@ -284,7 +284,7 @@ describe("updateDiver and the date of birth", () => {
       if (!course) throw new Error("course setup failed");
       await db.update(trips).set({ courseId: course.id }).where(eq(trips.id, trip.id));
 
-      const result = await updateDiver(db, {
+      const result = await editDiver(db, {
         shopId: shop.id,
         personId,
         fullName: "Cleared Cleo",
@@ -301,7 +301,7 @@ describe("updateDiver and the date of birth", () => {
       const { db, shop, personId } = await minor();
 
       const person = saved(
-        await updateDiver(db, { shopId: shop.id, personId, fullName: "Cleared Cleo" }),
+        await editDiver(db, { shopId: shop.id, personId, fullName: "Cleared Cleo" }),
       );
 
       expect(person.dateOfBirth).toBe("2013-05-02");

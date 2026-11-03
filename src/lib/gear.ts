@@ -482,7 +482,7 @@ function outranks(a: GearServiceState, b: GearServiceState): boolean {
  * The 30-day window is not applied here: {@link gearServiceState} has already
  * spent {@link GEAR_SERVICE_DUE_SOON_DAYS} deciding that `due_soon` means
  * "inside the next service run". Today's queue narrows further to six days on
- * its own (`src/db/today.ts`) because it is a *today* list; the register is
+ * its own (`src/features/today/today-reader.ts`) because it is a *today* list; the register is
  * where the month-ahead heads-up lives, and a tank's hydro or visual
  * inspection is a compliance clock a fill station enforces, so losing that
  * distance costs a boat its air.

@@ -24,7 +24,7 @@ import {
 } from "./schema";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import { saveWaiverTemplate } from "./waivers-templates";
+import { recordWaiverTemplate } from "./waivers-templates";
 import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -117,7 +117,7 @@ describe("the medical alert on the boat (issue #2960)", () => {
 
   it("follows the standing release: signing again with nothing clears the flag", async () => {
     const { db, shop, trip, booking, person, template } = await signedWith(alert);
-    await saveWaiverTemplate(db, {
+    await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: `${template.body}\n\nNew terms.`,
       material: true,
@@ -205,7 +205,7 @@ describe("medicalAlertPrefill", () => {
 
   it("reads only the latest signed release: an alert the diver cleared on purpose stays cleared", async () => {
     const { db, shop, booking, person, template } = await signedWith(alert);
-    await saveWaiverTemplate(db, {
+    await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: `${template.body}\n\nNew terms.`,
       material: true,

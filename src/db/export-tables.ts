@@ -12,10 +12,9 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPaymentEvents,
-  bookingPayments,
   buddyTeamMembers,
+  cards,
   certificationJuniorReviews,
-  certifications,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -40,7 +39,6 @@ import {
   incidentReports,
   interests,
   internalNotes,
-  nitroxCertifications,
   notificationDeliveries,
   orderLineItems,
   orders,
@@ -53,7 +51,6 @@ import {
   rollCallEvents,
   shopPromoCodes,
   shopTextTranslations,
-  specialtyCertifications,
   staffCredentialHistory,
   staffCredentials,
   tripChangeEvents,
@@ -272,19 +269,13 @@ export const EXPORT_TABLES = {
     order: [asc(tripHelpRequests.createdAt), asc(tripHelpRequests.id)],
     scope: { shopColumn: tripHelpRequests.shopId },
   },
-  bookingPayments: {
-    table: bookingPayments,
-    order: [],
-    scope: { shopColumn: bookingPayments.shopId, bookingColumn: bookingPayments.bookingId },
-  },
-  // The history behind those current rows. `booking_payments` folds into
-  // bookings.csv as one payment_* column set — the state as it stands —
-  // and refunds overwrite it in place, so without this file the bundle
-  // carries a balance and no story. Oldest first, so a reader replaying
-  // the file in order arrives at the folded row.
+  // A booking's money, as its entries (issue #2716). The newest entry per
+  // booking also folds into bookings.csv as its payment_* columns — the
+  // state as it stands. Oldest first in write order, so a reader replaying
+  // the file in order arrives at that folded state.
   bookingPaymentEvents: {
     table: bookingPaymentEvents,
-    order: [asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.id)],
+    order: [asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.seq)],
     scope: {
       shopColumn: bookingPaymentEvents.shopId,
       bookingColumn: bookingPaymentEvents.bookingId,
@@ -384,10 +375,12 @@ export const EXPORT_TABLES = {
     order: [],
     scope: { shopColumn: buddyTeamMembers.shopId },
   },
-  certifications: {
-    table: certifications,
-    order: [asc(certifications.createdAt), asc(certifications.id)],
-    scope: { shopColumn: certifications.shopId, personColumn: certifications.personId },
+  // Every kind of card, in one file (issue #2722): `kind` says which, and
+  // `level`/`specialty` carry the rung or the specialty.
+  cards: {
+    table: cards,
+    order: [asc(cards.createdAt), asc(cards.id)],
+    scope: { shopColumn: cards.shopId, personColumn: cards.personId },
   },
   certificationJuniorReviews: {
     table: certificationJuniorReviews,
@@ -396,19 +389,6 @@ export const EXPORT_TABLES = {
       shopColumn: certificationJuniorReviews.shopId,
       personColumn: certificationJuniorReviews.personId,
     },
-  },
-  specialtyCertifications: {
-    table: specialtyCertifications,
-    order: [asc(specialtyCertifications.createdAt), asc(specialtyCertifications.id)],
-    scope: {
-      shopColumn: specialtyCertifications.shopId,
-      personColumn: specialtyCertifications.personId,
-    },
-  },
-  nitroxCertifications: {
-    table: nitroxCertifications,
-    order: [asc(nitroxCertifications.createdAt), asc(nitroxCertifications.id)],
-    scope: { shopColumn: nitroxCertifications.shopId, personColumn: nitroxCertifications.personId },
   },
   waiverTemplates: {
     table: waiverTemplates,
@@ -726,7 +706,7 @@ export async function readTipRows(db: DbExecutor, scope: ExportScope) {
             : undefined,
         ),
       )
-      // diveday:allow-time-id-order: CSV export row stability; CSV exports are not user-facing sorted lists
+      // diveday:allow-time-id-order: a file's row order, the same rule as every EXPORT_TABLES entry.
       .orderBy(asc(bookingCheckouts.createdAt), asc(bookingCheckouts.id))
   );
 }

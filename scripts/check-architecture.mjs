@@ -36,9 +36,11 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *      value imports): `src/db` returns codes and data and the caller words them.
  *      Outbound-message composers (a reminder, a push, a recap) hold their sentences
  *      for now, so their files are banked below until those sentences have a home.
- *    - Anything outside `src/db` → `@/db/trips-*`. The trips modules are
- *      reached through the `@/db/trips` barrel (AGENTS.md route map), so a
- *      sibling can be split or merged without a repo-wide edit.
+ *    - Anything outside `src/db` → `@/db/trips-*` or `@/db/seed-*`. The trips
+ *      modules are reached through the `@/db/trips` barrel and the seed
+ *      scenarios through `@/db/seed` (AGENTS.md route map), so a sibling can be
+ *      split or merged without a repo-wide edit. A trip page's surface reader
+ *      (`trip-overview.ts`, …) is not a trips sibling and is imported by name.
  *    - `src/lib` and `src/db` → `src/i18n` *value* imports (issue #2772). Words are chosen
  *      in a renderer: the page, the message (`src/lib/notifications/**`) and the file.
  *      The rest returns codes and keys. A type is a shape and passes.
@@ -59,6 +61,21 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    to be split or merged without a repo-wide edit, and adding a function to
  *    a sibling does not publish it. (`src/features` modules say the same in
  *    rule 3, with a README.) Tests are exempt, like every seam.
+ *
+ * 6. **A staff page reads through one reader** (issue #2757). Every
+ *    `page.tsx` under `src/app/shop` value-imports at most one `@/db/*` module:
+ *    the surface reader that answers that page's question in one call
+ *    (`.claude/rules/db.md`, "Two kinds of module"). A permission the page
+ *    needs, a constant it renders and the rows it lists come back from that
+ *    reader, so a page's question has one place to be answered and one
+ *    query budget to hold. A type import is a shape and passes; a Server
+ *    Action file and a component are not pages.
+ *
+ * 7. **A table module writes by transition** (issue #2757). An exported
+ *    `src/db` function is never named `update…` or `save…`: a write is named
+ *    for what happened to the row (`record`, `mark`, `issue`, `claim`,
+ *    `release`, `consume`, `restore`, `cancel`, `edit`), so a grep for a
+ *    transition finds every place it is written.
  *
  * 4. **Server-only modules stay out of client bundles.** A module in
  *    `SERVER_ONLY_MODULES` (or a `libphonenumber-js` import) must not be
@@ -85,6 +102,10 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  */
 
 const ROOT = process.cwd();
+/** Rule 6: every `page.tsx` under here is a staff page. */
+const STAFF_PAGES_ROOT = "src/app/shop";
+/** Rule 7: an exported `src/db` function named for a vague write. */
+const VAGUE_WRITER = /export\s+(?:async\s+)?function\s+((?:update|save)[A-Z]\w*)/g;
 const FEATURES_DIR = "src/features";
 const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 
@@ -159,10 +180,14 @@ export const seams = [
   {
     roots: ["src/app", "src/components", "src/features", "src/lib", "src/worker", "src/i18n"],
     refuses: (target) =>
-      target !== null && path.dirname(target) === "src/db" && /^trips-/.test(path.basename(target)),
+      target !== null &&
+      path.dirname(target) === "src/db" &&
+      /^(?:trips|seed)-/.test(path.basename(target)),
     typeOnlyAllowed: false,
     message: (file, specifier) =>
-      `${file}: imports ${specifier} — reach the trips modules through the "@/db/trips" barrel`,
+      /\/seed-/.test(specifier)
+        ? `${file}: imports ${specifier} — reach the seed scenarios through the "@/db/seed" barrel`
+        : `${file}: imports ${specifier} — reach the trips modules through the "@/db/trips" barrel`,
   },
 ];
 
@@ -453,6 +478,38 @@ export async function collectViolations(root = ROOT) {
     }
   }
 
+  // 6. A staff page reads through one reader.
+  for (const file of await walk(root, STAFF_PAGES_ROOT)) {
+    if (isTestFile(file) || path.basename(file) !== "page.tsx") continue;
+    const readers = new Set();
+    for (const { specifier, typeOnly } of importsOf(
+      await readFile(path.join(root, file), "utf8"),
+    )) {
+      if (!typeOnly && /^@\/db\//.test(specifier)) readers.add(specifier);
+    }
+    if (readers.size > 1) {
+      const posix = file.replaceAll(path.sep, "/");
+      for (const specifier of [...readers].sort().slice(1)) {
+        record(
+          file,
+          `${posix}: reads ${[...readers].sort().join(", ")} — a staff page reads through requireShopSurface and one surface reader; fold ${specifier} into it`,
+        );
+      }
+    }
+  }
+
+  // 7. A table module writes by transition.
+  for (const file of await walk(root, "src/db")) {
+    if (isTestFile(file)) continue;
+    const contents = await readFile(path.join(root, file), "utf8");
+    for (const match of contents.matchAll(VAGUE_WRITER)) {
+      record(
+        file,
+        `${file.replaceAll(path.sep, "/")}: exports ${match[1]} — name a write by its transition (record, mark, issue, claim, release, consume, restore, cancel, edit…), never update or save`,
+      );
+    }
+  }
+
   // 4. Server-only modules never reach a client bundle.
   await clientReachViolations(root, record);
 
@@ -570,7 +627,7 @@ async function main() {
       `Architecture boundary violations:\n${failures.map((item) => `- ${item}`).join("\n")}`,
     );
     console.error(
-      "Domain code must not import from src/app or src/features, src/components and src/i18n must not import from src/app, a feature module, or a src/lib or src/db directory with an index.ts, is reachable only through its index.ts, src/lib takes only types from src/db, src/app never imports drizzle-orm, and the trips modules are reached through @/db/trips. See docs/architecture/decisions/20260730-feature-module-contracts.md and the header of scripts/check-architecture.mjs.",
+      "Domain code must not import from src/app or src/features, src/components and src/i18n must not import from src/app, a feature module, or a src/lib or src/db directory with an index.ts, is reachable only through its index.ts, src/lib takes only types from src/db, src/app never imports drizzle-orm, the trips modules are reached through @/db/trips, and the seed scenarios through @/db/seed. See docs/architecture/decisions/20260730-feature-module-contracts.md and the header of scripts/check-architecture.mjs.",
     );
     process.exit(1);
   }

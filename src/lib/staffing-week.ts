@@ -91,7 +91,7 @@ export type StaffGapCode =
 
 /**
  * How loudly a gap is drawn — Today's own tone for the same code
- * (`KIND_TONE`, src/lib/today.ts), not a second judgement about the same
+ * (`KIND_TONE`, src/features/today/today.ts), not a second judgement about the same
  * departure.
  *
  * `crew_below_target` is deliberately quiet: the shop's target "binds
@@ -117,7 +117,7 @@ export const GAP_TONE: Record<StaffGapCode, "warning" | "neutral"> = {
  * `over_ratio` — the entry-level rule and the far tighter intro one measure
  * different things — and every caller but this surface already words the two
  * apart (`trips.detail.overRatioWarningIntro`, and `overRatioIntroDetailText`
- * in src/db/today.ts). The staffing week collapsed them by placing
+ * in src/features/today/today-reader.ts). The staffing week collapsed them by placing
  * `courseGap.code` verbatim, which is how it came to offer a divemaster the one
  * ask that cannot help (issue #1339). Pure and exported so `src/db/staffing.ts`
  * and the tests read the same mapping.
@@ -146,7 +146,7 @@ export type CrewGap = {
 /**
  * **The one decision of a departure's crew gap** (issue #2482), read by the
  * staffing week (`src/db/staffing.ts`) and Today's crew rows
- * (`src/db/today-crew-gap-rows.ts`), so the two cannot disagree about whether
+ * (`src/features/today/today-crew-gap-rows.ts`), so the two cannot disagree about whether
  * a boat is short. Pure: the counts come in, a code comes out.
  *
  * The agency training ratio first (`courseCrewGap`): a course session missing

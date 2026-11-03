@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -8,7 +8,7 @@ import { anonymizeDiver } from "./anonymize";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { mergeDiverRecords } from "./diver-merge";
 import { recordRollCall } from "./manifests";
-import { certifications, people, personRoles, rollCallEvents } from "./schema";
+import { cards, people, personRoles, rollCallEvents } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -89,8 +89,9 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
       .returning();
     if (!reviewer) throw new Error("reviewer missing");
     const [card] = await pg.db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId: seat.person.id,
         agency: "padi",
@@ -127,9 +128,9 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
       await waitForLockWaiters(pg.db, 1);
       advanceClock(60_000);
       await pg.db
-        .update(certifications)
+        .update(cards)
         .set({ status: "pending", reviewedAt: null, reviewedByPersonId: null })
-        .where(eq(certifications.id, card.id));
+        .where(and(eq(cards.id, card.id), eq(cards.kind, "level")));
       await pg.db
         .update(people)
         .set({ fullName: "Updated name" })
@@ -163,8 +164,9 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
     const [staff] = await listStaff(pg.db, shop.id);
     if (!seat || !staff) throw new Error("seat or staff missing");
     const [card] = await pg.db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId: seat.person.id,
         agency: "padi",
@@ -197,9 +199,9 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
       await waitForLockWaiters(pg.db, 1);
       advanceClock(60_000);
       await pg.db
-        .update(certifications)
+        .update(cards)
         .set({ status: "verified", reviewedAt: nowDate(), reviewedByPersonId: staff.person.id })
-        .where(eq(certifications.id, card.id));
+        .where(and(eq(cards.id, card.id), eq(cards.kind, "level")));
     } finally {
       await gate.release();
     }
@@ -239,7 +241,8 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
       { personId: source.id, role: "diver" },
       { personId: survivor.id, role: "diver" },
     ]);
-    await pg.db.insert(certifications).values({
+    await pg.db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: seat.person.id,
       agency: "padi",
@@ -311,7 +314,8 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
     const [seat] = await getTripRoster(pg.db, shop.id, reef.id);
     const owner = (await listStaff(pg.db, shop.id)).find((row) => row.roles.includes("owner"));
     if (!seat || !owner) throw new Error("seat or owner missing");
-    await pg.db.insert(certifications).values({
+    await pg.db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: seat.person.id,
       agency: "padi",

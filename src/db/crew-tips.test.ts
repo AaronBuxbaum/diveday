@@ -3,12 +3,11 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
+import { insertTip } from "@/test/tips";
 import type { AppDb } from "./client";
 import { crewMonth, crewTipShare, tipsByDeparture } from "./crew-tips";
 import {
   boats,
-  bookingCheckoutBookings,
-  bookingCheckouts,
   bookings,
   executedDives,
   people,
@@ -72,27 +71,14 @@ async function tipOn(
     .values({ bookedAs: "diver", shopId, tripId, personId: diver.id })
     .returning();
   if (!booking) throw new Error("booking insert failed");
-  const checkoutStatus = status === "paid" ? "completed" : status;
-  const [checkout] = await db
-    .insert(bookingCheckouts)
-    .values({
-      shopId,
-      tripId,
-      purpose: "tip",
-      status: checkoutStatus as "completed" | "pending" | "expired",
-      stripeAccountId: "acct_test",
-      stripeSessionId: `cs_${randomUUID()}`,
-      currency: "usd",
-      amountPerDiverCents: amountCents,
-      totalCents: amountCents,
-      settledTotalCents: checkoutStatus === "completed" ? amountCents : null,
-    })
-    .returning();
-  if (!checkout) throw new Error("checkout insert failed");
-  await db.insert(bookingCheckoutBookings).values({
+  await insertTip(db, {
     shopId,
-    checkoutId: checkout.id,
     bookingId: booking.id,
+    status,
+    stripeAccountId: "acct_test",
+    stripeSessionId: `cs_${randomUUID()}`,
+    currency: "usd",
+    amountCents,
   });
 }
 

@@ -3,14 +3,14 @@ import { and, count, eq, ne, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { createBoat, updateBoatWithinCertificate } from "./boats";
+import { createBoat, editBoatWithinCertificate } from "./boats";
 import { createBooking } from "./bookings";
 import { boats, bookings, shops, trips } from "./schema";
 
 /**
  * **A certificate edit and a booking on the hull's departure, at once** (#2396).
  *
- * `updateBoatWithinCertificate` locks the hull and then its upcoming
+ * `editBoatWithinCertificate` locks the hull and then its upcoming
  * departures; `createBookingRecord` locks the departure and reads the hull's
  * certificate under that lock. Both take the trip `FOR NO KEY UPDATE`, so they
  * queue rather than deadlock, and whichever goes second sees the other's
@@ -55,7 +55,7 @@ describePostgres("a hull's certificate edit against a booking on its departure",
     expect(first.ok).toBe(true);
 
     const gate = await holdRowLock(pg, sql`select id from trips where id = ${trip.id} for update`);
-    const edit = updateBoatWithinCertificate(pg.connect(), {
+    const edit = editBoatWithinCertificate(pg.connect(), {
       shopId: shop.id,
       boatId: boat.id,
       name: "Certified Hull",

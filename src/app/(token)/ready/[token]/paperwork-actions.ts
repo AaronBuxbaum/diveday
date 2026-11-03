@@ -1,6 +1,5 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { confirmCarriedFacts } from "@/db/bookings";
@@ -11,41 +10,12 @@ import {
   signCourseFormForLink,
   verifyCourseFormsLink,
 } from "@/db/course-forms";
-import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
+import { recordBookingEmergencyContact } from "@/db/waivers";
 import { emergencyContactSchema, readEmergencyContact } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import {
-  PARTY_RETURN_MAX_AGE_SECONDS,
-  partyReturnCookiePath,
-  partyReturnCookieSecure,
-  WAIVER_RETURN_COOKIE,
-} from "@/lib/party-return";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";
-
-/**
- * Open the waiver for this readiness holder. Keep their existing readiness link
- * in a cookie scoped to this waiver; completion verifies it again before return.
- */
-export async function signWaiverFromReady(token: string) {
-  const ctx = await contextFor(token);
-  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-  refuseWhileHeld(token, ctx.data);
-  const issued = await issueWaiverRequest(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-  });
-  if (!issued.ok) redirect(`${base(token)}?error=waiver`);
-  (await cookies()).set(WAIVER_RETURN_COOKIE, token, {
-    path: partyReturnCookiePath(issued.token),
-    maxAge: PARTY_RETURN_MAX_AGE_SECONDS,
-    sameSite: "lax",
-    httpOnly: true,
-    secure: partyReturnCookieSecure(),
-  });
-  redirect(`/waivers/${issued.token}`);
-}
 
 /**
  * **Who to call**, on its own.
@@ -54,7 +24,7 @@ export async function signWaiverFromReady(token: string) {
  * written from the *waiver* token until now — and bounded the same way that one
  * is: the shared `emergencyContactSchema` (max 120/40, the bound CR-014 added
  * precisely because this page's equivalent action once had none), and
- * `saveBookingEmergencyContact`, which resolves the person from the booking the
+ * `recordBookingEmergencyContact`, which resolves the person from the booking the
  * verified capability names rather than from anything posted.
  *
  * It never blanks a field, which is that writer's own standing rule: a diver
@@ -78,7 +48,7 @@ export async function saveEmergencyContactFromReady(token: string, formData: For
     phone: parsed.data.emergencyContactPhone,
   });
   if (submitted.kind === "half") redirect(`${base(token)}?error=contact-pair`);
-  const saved = await saveBookingEmergencyContact(ctx.db, {
+  const saved = await recordBookingEmergencyContact(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
     name: parsed.data.emergencyContactName,

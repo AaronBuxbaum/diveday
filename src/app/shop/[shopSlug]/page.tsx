@@ -38,6 +38,13 @@ import { loadFirstRunFacts } from "@/db/first-run";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
 import { shopByIdCached } from "@/db/shops";
 import { canAcceptPayments } from "@/db/stripe-accounts";
+import {
+  assembleDaySpine,
+  factOfScaleFor,
+  readNeedsYou,
+  roleLensFor,
+  spineIsQuiet,
+} from "@/features/today";
 import { orientationRoleFor } from "@/i18n/orientation-labels";
 import { requestLocale } from "@/i18n/request";
 import { sendLimitWords } from "@/i18n/shared-sentences";
@@ -52,13 +59,6 @@ import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeCodeOf, type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
-import {
-  assembleDaySpine,
-  factOfScaleFor,
-  readNeedsYou,
-  roleLensFor,
-  spineIsQuiet,
-} from "@/lib/today";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
 
@@ -320,7 +320,7 @@ async function TodayBody({
   );
   const firstBoatEver = eveningClose.allHome && !sailedBefore;
   // **First run is "never had a departure", not "none coming up"**: `nextDeparture` is null on
-  // any day nothing sails (`src/db/today.ts`), so it is only the cheap prefilter and the count
+  // any day nothing sails (`src/features/today/today-reader.ts`), so it is only the cheap prefilter and the count
   // decides. A demo shop is excluded (issue #806): it arrives with every step done, and its count
   // is never read. The release step outlives first run (`ReleaseStillSample`, item 21).
   const showFirstRunChecklist = !nextDeparture && shopTripCount === 0;

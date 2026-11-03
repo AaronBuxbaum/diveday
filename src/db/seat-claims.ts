@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { trackEvent } from "@/lib/analytics";
+import { asLevelCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { seatListPriceCents } from "@/lib/deposits";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
@@ -31,7 +32,7 @@ import { getBookingReadiness } from "./readiness";
 import {
   bookingPayments,
   bookings,
-  certifications,
+  cards,
   courses,
   people,
   type Shop,
@@ -372,14 +373,16 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
       if (!shop) throw new Error(`claimSeatRecord: shop ${capability.shopId} not found`);
       const cardRows = await tx
         .select()
-        .from(certifications)
+        .from(cards)
         .where(
           and(
-            eq(certifications.shopId, capability.shopId),
-            eq(certifications.personId, existing.id),
-            isNull(certifications.deletedAt),
+            eq(cards.kind, "level"),
+            eq(cards.shopId, capability.shopId),
+            eq(cards.personId, existing.id),
+            isNull(cards.deletedAt),
           ),
-        );
+        )
+        .then((rows) => rows.map(asLevelCard));
       if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
         return { ok: false, reason: "course_prerequisite" };
       }

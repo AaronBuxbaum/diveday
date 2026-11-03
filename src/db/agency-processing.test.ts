@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -11,15 +11,7 @@ import {
   setCardProcessed,
   splitCardsToProcess,
 } from "./agency-processing";
-import {
-  certifications,
-  courses,
-  nitroxCertifications,
-  people,
-  shops,
-  specialtyCertifications,
-  trips,
-} from "./schema";
+import { cards, courses, people, shops, trips } from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -59,6 +51,7 @@ async function fixture() {
     )
     .returning();
   const card = (personId: string, issuedAt: Date | null) => ({
+    kind: "level" as const,
     shopId: shop.id,
     personId,
     agency: "padi" as const,
@@ -69,7 +62,7 @@ async function fixture() {
     identifier: issuedAt ? null : "OW-12345",
   });
   const [priyaCard, tomCard, oldCard] = await db
-    .insert(certifications)
+    .insert(cards)
     .values([
       card(priya.id, new Date(now.getTime() - 2 * DAY_MS)),
       card(tom.id, null),
@@ -108,8 +101,8 @@ describe("agency processing", () => {
     expect(await listed()).toEqual(["Old Card"]);
     const [stamped] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.id, priyaCard.id));
+      .from(cards)
+      .where(and(eq(cards.id, priyaCard.id), eq(cards.kind, "level")));
     expect(stamped.processedByPersonId).toBe(owner.id);
 
     await setCardProcessed(db, {
@@ -155,8 +148,9 @@ describe("agency processing", () => {
       issuedFromTripId: session.id,
     };
     const [nitrox] = await db
-      .insert(nitroxCertifications)
+      .insert(cards)
       .values({
+        kind: "nitrox",
         shopId: shop.id,
         personId: priya.id,
         agency: "padi",
@@ -166,8 +160,9 @@ describe("agency processing", () => {
       })
       .returning();
     const [deep] = await db
-      .insert(specialtyCertifications)
+      .insert(cards)
       .values({
+        kind: "specialty",
         shopId: shop.id,
         personId: priya.id,
         agency: "padi",
@@ -207,7 +202,7 @@ describe("agency processing", () => {
     }
     expect(await kinds()).toEqual([{ kind: "level", level: "open_water" }]);
 
-    // The id names the table: a nitrox id ticked as a level card changes nothing.
+    // The id is no proof of its kind: a nitrox id ticked as a level card changes nothing.
     expect(
       await setCardProcessed(db, {
         shopId: shop.id,
@@ -218,12 +213,18 @@ describe("agency processing", () => {
         now,
       }),
     ).toBe(false);
+    const [stillProcessed] = await db
+      .select({ at: cards.processedWithAgencyAt })
+      .from(cards)
+      .where(and(eq(cards.id, nitrox.id), eq(cards.kind, "nitrox")));
+    expect(stillProcessed?.at).toEqual(now);
   });
 
   it("refuses the processed stamp on a specialty card the shop did not issue", async () => {
     const { db, shop, priya, now, owner } = await fixture();
     await expect(
-      db.insert(specialtyCertifications).values({
+      db.insert(cards).values({
+        kind: "specialty",
         shopId: shop.id,
         personId: priya.id,
         agency: "padi",

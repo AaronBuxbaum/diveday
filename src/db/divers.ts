@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
+import { asLevelCard, asNitroxCard, asSpecialtyCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { minorDeclaredOnLiveUpcomingSeat } from "@/lib/guardian";
 import { shopWaiverStatus, waiverClockInstant } from "@/lib/waivers";
@@ -36,16 +37,14 @@ import { personSearchMatch } from "./person-search";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   bookings,
-  certifications,
+  cards,
   courses,
-  nitroxCertifications,
   type Person,
   people,
   personRoles,
   priorVisits,
   rentalFitProfiles,
   shops,
-  specialtyCertifications,
   tripReviews,
   trips,
 } from "./schema";
@@ -167,7 +166,7 @@ async function holdsAgeGatedSeat(db: DbExecutor, shopId: string, personId: strin
   return Boolean(seat);
 }
 
-export async function updateDiver(
+export async function editDiver(
   db: AppDb,
   input: {
     shopId: string;
@@ -186,7 +185,7 @@ export async function updateDiver(
     /**
      * Staff-entered directly on the diver record (task 144 — Today used to say
      * "ask at the counter" with no field to type it into). Undefined leaves it
-     * untouched; "" clears it — unlike `saveBookingEmergencyContact`'s
+     * untouched; "" clears it — unlike `recordBookingEmergencyContact`'s
      * blanks-never-overwrite rule for the diver-facing capture on /ready and
      * /waivers, a staffer correcting a wrong entry here must be able to blank it.
      */
@@ -365,9 +364,9 @@ export async function restoreDiver(db: AppDb, shopId: string, personId: string) 
 /**
  * Whether this diver is currently removed from the active roster.
  *
- * A one-column read, for telling two `updateDiver` refusals apart on the
+ * A one-column read, for telling two `editDiver` refusals apart on the
  * failure path: "a live diver already owns that email" and "this record is
- * removed, and `updateDiver` will not touch a removed row" both come back as
+ * removed, and `editDiver` will not touch a removed row" both come back as
  * null, and reporting the second as the first told a staffer to go and fix an
  * email conflict that does not exist.
  */
@@ -513,66 +512,26 @@ function diverFilterCondition(
     // count and the page agree. A diver appears once however many cards they
     // have waiting — the view answers "who", the badges answer "how many".
     //
-    // Each card table carries the same two shapes — a card awaiting review, and
-    // an imported card awaiting its one-tap confirm (ADR
-    // 20260724-import-verified-cards) — spelled out three times rather than
-    // through a shared helper: Drizzle types every column against its own table
-    // name, so the generic version costs more casting than it saves.
-    return or(
-      inArray(
-        people.id,
-        db
-          .select({ personId: certifications.personId })
-          .from(certifications)
-          .where(
-            and(
-              eq(certifications.shopId, shopId),
-              isNull(certifications.deletedAt),
-              or(
-                eq(certifications.status, "pending"),
-                and(isNotNull(certifications.importedAt), isNull(certifications.reviewedAt)),
-              ),
+    // Every kind of card carries the same two shapes — a card awaiting review,
+    // and an imported card awaiting its one-tap confirm (ADR
+    // 20260724-import-verified-cards) — so one read of `cards` names all three
+    // kinds and asks both.
+    return inArray(
+      people.id,
+      db
+        .select({ personId: cards.personId })
+        .from(cards)
+        .where(
+          and(
+            inArray(cards.kind, ["level", "specialty", "nitrox"]),
+            eq(cards.shopId, shopId),
+            isNull(cards.deletedAt),
+            or(
+              eq(cards.status, "pending"),
+              and(isNotNull(cards.importedAt), isNull(cards.reviewedAt)),
             ),
           ),
-      ),
-      inArray(
-        people.id,
-        db
-          .select({ personId: specialtyCertifications.personId })
-          .from(specialtyCertifications)
-          .where(
-            and(
-              eq(specialtyCertifications.shopId, shopId),
-              isNull(specialtyCertifications.deletedAt),
-              or(
-                eq(specialtyCertifications.status, "pending"),
-                and(
-                  isNotNull(specialtyCertifications.importedAt),
-                  isNull(specialtyCertifications.reviewedAt),
-                ),
-              ),
-            ),
-          ),
-      ),
-      inArray(
-        people.id,
-        db
-          .select({ personId: nitroxCertifications.personId })
-          .from(nitroxCertifications)
-          .where(
-            and(
-              eq(nitroxCertifications.shopId, shopId),
-              isNull(nitroxCertifications.deletedAt),
-              or(
-                eq(nitroxCertifications.status, "pending"),
-                and(
-                  isNotNull(nitroxCertifications.importedAt),
-                  isNull(nitroxCertifications.reviewedAt),
-                ),
-              ),
-            ),
-          ),
-      ),
+        ),
     );
   }
   if (filter === "diving_today") {
@@ -944,72 +903,67 @@ export async function getDiverProfile(
   ] = await Promise.all([
     db
       .select({
-        card: certifications,
+        card: cards,
         reviewedByName: levelReviewer.fullName,
         juniorStatusVerifiedByName: juniorReviewer.fullName,
       })
-      .from(certifications)
-      .leftJoin(levelReviewer, eq(levelReviewer.id, certifications.reviewedByPersonId))
+      .from(cards)
+      .leftJoin(levelReviewer, eq(levelReviewer.id, cards.reviewedByPersonId))
       .leftJoin(
         juniorReviewer,
         and(
-          eq(juniorReviewer.id, certifications.juniorStatusVerifiedByPersonId),
+          eq(juniorReviewer.id, cards.juniorStatusVerifiedByPersonId),
           eq(juniorReviewer.shopId, shopId),
           isNull(juniorReviewer.anonymizedAt),
         ),
       )
       .where(
         and(
-          eq(certifications.shopId, shopId),
-          eq(certifications.personId, personId),
-          isNull(certifications.deletedAt),
+          eq(cards.kind, "level"),
+          eq(cards.shopId, shopId),
+          eq(cards.personId, personId),
+          isNull(cards.deletedAt),
         ),
       )
       .orderBy(
-        desc(certifications.createdAt),
-        asc(certifications.agency),
-        asc(certifications.level),
-        asc(certifications.identifier),
-        asc(certifications.id),
+        desc(cards.createdAt),
+        asc(cards.agency),
+        asc(cards.level),
+        asc(cards.identifier),
+        asc(cards.id),
       ),
     db
-      .select({ card: specialtyCertifications, reviewedByName: specialtyReviewer.fullName })
-      .from(specialtyCertifications)
-      .leftJoin(
-        specialtyReviewer,
-        eq(specialtyReviewer.id, specialtyCertifications.reviewedByPersonId),
-      )
+      .select({ card: cards, reviewedByName: specialtyReviewer.fullName })
+      .from(cards)
+      .leftJoin(specialtyReviewer, eq(specialtyReviewer.id, cards.reviewedByPersonId))
       .where(
         and(
-          eq(specialtyCertifications.shopId, shopId),
-          eq(specialtyCertifications.personId, personId),
-          isNull(specialtyCertifications.deletedAt),
+          eq(cards.kind, "specialty"),
+          eq(cards.shopId, shopId),
+          eq(cards.personId, personId),
+          isNull(cards.deletedAt),
         ),
       )
       .orderBy(
-        desc(specialtyCertifications.createdAt),
-        asc(specialtyCertifications.agency),
-        asc(specialtyCertifications.specialty),
-        asc(specialtyCertifications.identifier),
-        asc(specialtyCertifications.id),
+        desc(cards.createdAt),
+        asc(cards.agency),
+        asc(cards.specialty),
+        asc(cards.identifier),
+        asc(cards.id),
       ),
     db
-      .select({ card: nitroxCertifications, reviewedByName: nitroxReviewer.fullName })
-      .from(nitroxCertifications)
-      .leftJoin(nitroxReviewer, eq(nitroxReviewer.id, nitroxCertifications.reviewedByPersonId))
+      .select({ card: cards, reviewedByName: nitroxReviewer.fullName })
+      .from(cards)
+      .leftJoin(nitroxReviewer, eq(nitroxReviewer.id, cards.reviewedByPersonId))
       .where(
         and(
-          eq(nitroxCertifications.shopId, shopId),
-          eq(nitroxCertifications.personId, personId),
-          isNull(nitroxCertifications.deletedAt),
+          eq(cards.kind, "nitrox"),
+          eq(cards.shopId, shopId),
+          eq(cards.personId, personId),
+          isNull(cards.deletedAt),
         ),
       )
-      .orderBy(
-        desc(nitroxCertifications.createdAt),
-        asc(nitroxCertifications.agency),
-        asc(nitroxCertifications.identifier),
-        asc(nitroxCertifications.id),
-      ),
+      .orderBy(desc(cards.createdAt), asc(cards.agency), asc(cards.identifier), asc(cards.id)),
     db
       .select()
       .from(rentalFitProfiles)
@@ -1138,16 +1092,16 @@ export async function getDiverProfile(
     /** Distinct people who booked on a link from one of this diver's recaps. */
     friendsBrought,
     certifications: levelCards.map(({ card, reviewedByName, juniorStatusVerifiedByName }) => ({
-      ...card,
+      ...asLevelCard(card),
       reviewedByName,
       juniorStatusVerifiedByName,
     })),
     specialtyCertifications: specialtyCards.map(({ card, reviewedByName }) => ({
-      ...card,
+      ...asSpecialtyCard(card),
       reviewedByName,
     })),
     nitroxCertifications: nitroxCards.map(({ card, reviewedByName }) => ({
-      ...card,
+      ...asNitroxCard(card),
       reviewedByName,
     })),
     rentalFit: profile[0] ?? null,

@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
-import { recordPaidRentalKinds, saveRentalFit } from "@/db/rental-fit";
+import { recordPaidRentalKinds, recordRentalFit } from "@/db/rental-fit";
 import { log } from "@/lib/log";
 import {
   quoteRentalFit,
@@ -11,7 +11,7 @@ import {
 
 /**
  * Persist each diver's chosen gear (and nitrox request) the moment their
- * booking exists — the same durable record `saveRentalFit`/`setBookingNitrox`
+ * booking exists — the same durable record `recordRentalFit`/`setBookingNitrox`
  * already write from the post-booking form, just written a step earlier. The
  * seats are already committed, so a write failure here is logged and dropped,
  * never turned into a booking error (docs ADR
@@ -54,7 +54,7 @@ export async function persistCheckoutGear(
             kinds: selection.rentedKinds,
           });
           if (!identityUnconfirmed) {
-            await saveRentalFit(dbi, {
+            await recordRentalFit(dbi, {
               shopId: input.shopId,
               personId,
               ...rentalFlagsFromKinds(selection.rentedKinds),

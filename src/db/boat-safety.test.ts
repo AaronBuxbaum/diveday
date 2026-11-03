@@ -6,14 +6,14 @@ import {
   departureKitRecord,
   todayBoatSafety,
 } from "./boat-safety";
-import { createBoat, deleteBoat, getBoatById, updateBoat } from "./boats";
+import { createBoat, deleteBoat, editBoat, getBoatById } from "./boats";
 import type { AppDb } from "./client";
 import {
   createGearItem,
   deleteGearItem,
+  editGearItem,
   recordGearService,
   setGearItemStatus,
-  updateGearItem,
 } from "./gear";
 import { shops, trips } from "./schema";
 
@@ -83,7 +83,7 @@ describe("boat papers", () => {
     });
     expect(boat).toMatchObject({ certifiedPassengers: 14, inspectionDueOn: "2027-03-01" });
 
-    await updateBoat(db, shop.id, boat.id, "Paper Hull", 12, null, {
+    await editBoat(db, shop.id, boat.id, "Paper Hull", 12, null, {
       ...PAPERS_CLEAR,
       insuranceExpiresOn: "2026-12-31",
     });
@@ -100,7 +100,7 @@ describe("boat papers", () => {
       ...PAPERS_CLEAR,
       certifiedPassengers: 10,
     });
-    await updateBoat(db, shop.id, boat.id, "Kept Papers II", 12);
+    await editBoat(db, shop.id, boat.id, "Kept Papers II", 12);
     expect((await getBoatById(db, shop.id, boat.id))?.certifiedPassengers).toBe(10);
   });
 
@@ -157,7 +157,7 @@ describe("aboard a boat", () => {
       label: "O2 relabelled",
       aboardBoatId: boat.id,
     });
-    const edited = await updateGearItem(db, {
+    const edited = await editGearItem(db, {
       shopId: shop.id,
       gearItemId: o2.id,
       kind: "other",
@@ -171,7 +171,7 @@ describe("aboard a boat", () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Steady Hull", 12);
     const aed = await kit(db, shop.id, { kind: "aed", label: "AED steady", aboardBoatId: boat.id });
-    const edited = await updateGearItem(db, {
+    const edited = await editGearItem(db, {
       shopId: shop.id,
       gearItemId: aed.id,
       kind: "aed",
@@ -179,7 +179,7 @@ describe("aboard a boat", () => {
     });
     expect(edited.ok && edited.item.aboardBoatId).toBe(boat.id);
 
-    const ashore = await updateGearItem(db, {
+    const ashore = await editGearItem(db, {
       shopId: shop.id,
       gearItemId: aed.id,
       kind: "aed",
@@ -304,7 +304,7 @@ describe("departureBoatSafety", () => {
     await setGearItemStatus(db, { shopId: shop.id, gearItemId: o2.id, status: "in_service" });
 
     // Moved to the other hull.
-    await updateGearItem(db, {
+    await editGearItem(db, {
       shopId: shop.id,
       gearItemId: o2.id,
       kind: "o2_kit",

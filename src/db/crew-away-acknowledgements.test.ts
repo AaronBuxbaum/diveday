@@ -8,10 +8,10 @@ import {
   listCrewAwayAcknowledgements,
   withdrawCrewAwayAcknowledgement,
 } from "./crew-away-acknowledgements";
-import { saveCrewAvailabilityBlock } from "./crew-requests";
+import { recordCrewAvailabilityBlock } from "./crew-requests";
 import { loadShopExportBundleInput } from "./export";
 import { crewAvailabilityBlocks, crewAwayAcknowledgements } from "./schema";
-import { changeTripCrew, createTrip, listStaff, moveTrip, setTripCrew, updateTrip } from "./trips";
+import { changeTripCrew, createTrip, editTrip, listStaff, moveTrip, setTripCrew } from "./trips";
 
 const ctx = fileScopedShopContext();
 const HOUR = 60 * 60 * 1000;
@@ -52,7 +52,7 @@ async function rostered(title: string, startsAt: string, hours = 4) {
 
 async function away(personId: string, startsOn: string, endsOn: string) {
   const { db, shop } = ctx;
-  const outcome = await saveCrewAvailabilityBlock(db, {
+  const outcome = await recordCrewAvailabilityBlock(db, {
     shopId: shop.id,
     personId,
     actorPersonId: personId,
@@ -200,7 +200,7 @@ describe("acknowledgeCrewAway", () => {
     await away(instructor.id, "2027-08-01", "2027-08-02");
     expect(await acknowledge(trip.id, instructor.id, owner.id)).toBe("saved");
 
-    const kept = await updateTrip(db, shop.id, trip.id, {
+    const kept = await editTrip(db, shop.id, trip.id, {
       title: "Ack moved, renamed",
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
@@ -211,7 +211,7 @@ describe("acknowledgeCrewAway", () => {
     expect(await liveAcks(trip.id)).toHaveLength(1);
 
     const later = new Date(trip.startsAt.getTime() + HOUR);
-    const edited = await updateTrip(db, shop.id, trip.id, {
+    const edited = await editTrip(db, shop.id, trip.id, {
       title: "Ack moved, renamed",
       startsAt: later,
       endsAt: new Date(trip.endsAt.getTime() + HOUR),

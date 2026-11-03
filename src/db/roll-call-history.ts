@@ -7,7 +7,7 @@ import { rollCallEvents } from "./schema";
  * **Every roll-call statement recorded on these departures, divers and crew,**
  * in the shape `maxRecordedDiveNumber` (src/lib/manifests.ts) reads: the floor
  * under a departure's planned dives (CR-006), which a single edit
- * (`updateTrip`) and a series apply both hold.
+ * (`editTrip`) and a series apply both hold.
  *
  * Both halves, because the floor read the diver table alone until batch 6: a
  * crew member counted after dive 2 — the divemaster who went back down — was

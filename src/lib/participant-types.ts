@@ -292,7 +292,7 @@ export function seatRentalItems(
 /**
  * A fit form's answer for one piece, read for the seat that posted it: "on" or
  * not for a piece this seat may rent, and nothing at all for one it may not,
- * since the form never showed it. Nothing is what `saveRentalFit` reads as
+ * since the form never showed it. Nothing is what `recordRentalFit` reads as
  * "leave the stored answer alone", so one snorkel trip never rewrites the
  * person's own dive kit.
  */

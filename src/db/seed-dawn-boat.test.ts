@@ -7,7 +7,7 @@ import {
   bookings,
   buddyTeamEvents,
   buddyTeamMembers,
-  certifications,
+  cards,
   executedDives,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
@@ -118,9 +118,9 @@ describe("the seeded dawn boat's record", () => {
       .where(eq(bookings.tripId, dawn.id));
     expect(aboard.length).toBeGreaterThan(0);
     const reviewed = await db
-      .select({ personId: certifications.personId, reviewedAt: certifications.reviewedAt })
-      .from(certifications)
-      .where(eq(certifications.status, "verified"));
+      .select({ personId: cards.personId, reviewedAt: cards.reviewedAt })
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.status, "verified")));
     for (const { personId } of aboard) {
       const card = reviewed.find((row) => row.personId === personId && row.reviewedAt);
       expect(card?.reviewedAt?.getTime(), personId).toBeLessThan(dawn.startsAt.getTime());

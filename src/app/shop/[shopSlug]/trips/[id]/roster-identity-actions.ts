@@ -7,7 +7,7 @@ import { getDb } from "@/db/client";
 import { repointHeldBooking } from "@/db/identity-repoint";
 import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import { type IdentityReleaseOutcome, sendReleasesOnceIdentityKnown } from "@/db/waiver-issue";
-import { saveBookingEmergencyContact } from "@/db/waivers";
+import { recordBookingEmergencyContact } from "@/db/waivers";
 import { emergencyContactSchema } from "@/lib/contact";
 import { checkbox, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -254,10 +254,10 @@ const SPLIT_REFUSAL_NOTICE = {
  * roster — the fallback for a diver who never filled it in themselves, and
  * the field Today's "ask at the counter" nudge used to have nowhere to land
  * (UX persona Lens 17, task 144). Writes through the same
- * `saveBookingEmergencyContact` the diver-facing /ready and /waivers capture
+ * `recordBookingEmergencyContact` the diver-facing /ready and /waivers capture
  * uses, so there is exactly one write path regardless of who fills it in.
  * Prints on the manifest — safety-adjacent, hence the shop-scoped booking
- * lookup inside `saveBookingEmergencyContact` rather than trusting the
+ * lookup inside `recordBookingEmergencyContact` rather than trusting the
  * `bookingId` field alone, and a blank submission is reported distinctly from
  * a genuine failure rather than silently landing on the same "invalid" notice.
  */
@@ -275,7 +275,7 @@ export async function saveRosterEmergencyContactAction(
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, noticeUrl(back, "invalid"));
   const name = (parsed.data.emergencyContactName ?? "").trim();
   const phone = (parsed.data.emergencyContactPhone ?? "").trim();
-  await saveBookingEmergencyContact(dbi, {
+  await recordBookingEmergencyContact(dbi, {
     shopId: s.user.shopId,
     bookingId,
     name,

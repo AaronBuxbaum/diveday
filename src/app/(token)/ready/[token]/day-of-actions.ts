@@ -9,8 +9,8 @@ import {
   setBookingLastDived,
   setBookingReEntryAsk,
 } from "@/db/bookings";
-import { saveHelpRequest } from "@/db/help-requests";
-import { saveRentalFitNote } from "@/db/rental-fit";
+import { recordHelpRequest } from "@/db/help-requests";
+import { recordRentalFitNote } from "@/db/rental-fit";
 import { clearBookingRunningLate, markBookingRunningLate } from "@/db/running-late";
 import { setWelcomeConsent } from "@/db/welcome-cues";
 import { nowDate } from "@/lib/clock";
@@ -114,7 +114,7 @@ export async function saveDayOfDetailsFromReady(token: string, formData: FormDat
   if (!data.identityHeld) {
     if (answers.note !== undefined && answers.note !== (data.rentalFit?.note ?? "")) {
       writes.push(
-        saveRentalFitNote(ctx.db, { shopId, personId: data.person.id, note: answers.note }).then(
+        recordRentalFitNote(ctx.db, { shopId, personId: data.person.id, note: answers.note }).then(
           Boolean,
         ),
       );
@@ -145,7 +145,7 @@ export async function saveDayOfDetailsFromReady(token: string, formData: FormDat
   let helpHandled = false;
   const currentHelp = data.helpRequest?.kind ?? "none";
   if (answers.kind && answers.kind !== currentHelp) {
-    const result = await saveHelpRequest(ctx.db, { shopId, bookingId, kind: answers.kind });
+    const result = await recordHelpRequest(ctx.db, { shopId, bookingId, kind: answers.kind });
     if (!result.ok && result.reason === "handled") helpHandled = true;
     else writes.push(Promise.resolve(result.ok));
   }

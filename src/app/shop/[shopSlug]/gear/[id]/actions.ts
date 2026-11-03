@@ -5,11 +5,11 @@ import { getDb } from "@/db/client";
 import {
   checkOutGearReservation,
   deleteGearItem,
+  editGearItem,
   recordGearService,
   releaseGearReservation,
   returnGearReservation,
   setGearItemStatus,
-  updateGearItem,
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -90,7 +90,7 @@ export async function updateGearItemAction(formData: FormData) {
   if (!parsed.success) revalidateAndRedirect(unit, noticeUrl(unit, "invalid"));
 
   const { aboardBoatId, nitroxDesignated, thicknessMm, ...fields } = parsed.data;
-  const outcome = await updateGearItem(await getDb(), {
+  const outcome = await editGearItem(await getDb(), {
     shopId: session.user.shopId,
     gearItemId,
     ...fields,

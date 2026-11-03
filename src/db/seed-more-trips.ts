@@ -1,12 +1,13 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
+import { paymentEntries } from "./payments";
 import { listTripReadiness } from "./readiness";
 import {
   boats,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
-  certifications,
+  cards,
   type DiveSpecialty,
   executedDives,
   interests,
@@ -755,7 +756,8 @@ export async function seedMoreTrips(
         amountCents: row.amountCents,
         currency: "usd",
       }));
-    if (duanePaymentSeed.length > 0) await db.insert(bookingPayments).values(duanePaymentSeed);
+    if (duanePaymentSeed.length > 0)
+      await db.insert(bookingPaymentEvents).values(paymentEntries(duanePaymentSeed));
   }
 
   // Front-desk texture: a wait-list interest on Pickles Reef, a promo midweek.
@@ -800,13 +802,14 @@ async function reviewedCardHolders(
   const holders = new Set(
     (
       await db
-        .select({ personId: certifications.personId })
-        .from(certifications)
+        .select({ personId: cards.personId })
+        .from(cards)
         .where(
           and(
-            eq(certifications.shopId, shopId),
-            eq(certifications.status, "verified"),
-            isNotNull(certifications.reviewedAt),
+            eq(cards.shopId, shopId),
+            eq(cards.kind, "level"),
+            eq(cards.status, "verified"),
+            isNotNull(cards.reviewedAt),
           ),
         )
     ).map((row) => row.personId),

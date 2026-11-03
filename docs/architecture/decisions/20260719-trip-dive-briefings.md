@@ -96,7 +96,7 @@ behavior need not be preserved (H-20260815-no-legacy: no legacy), so both are de
   last dive.
 - **"Trips at this site" asks every dive.** Site reviews and past-diver invitations use
   `tripVisitsSite` / the dive rows, not the first site, so a second-tank visit counts.
-- **Writers.** `createTrip`, `createTripSeries` and `updateTrip` take only `dives`; the
+- **Writers.** `createTrip`, `createTripSeries` and `editTrip` take only `dives`; the
   single-site shorthand (`diveSiteId` on a new trip or a patch) is removed, and the schedule
   builder's quick-row site becomes dive one. Series propagation copies the dive rows, and a
   sibling's `revision` rises when its ordered site list changes, as before.

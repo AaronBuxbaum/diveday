@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
-import { certificationJuniorReviews, certifications, people } from "./schema";
+import { cards, certificationJuniorReviews, people } from "./schema";
 
 /** A staff sighting of the actual card wording, never an inference from a lookup or age. */
 export async function recordJuniorCardStatus(
@@ -39,14 +39,16 @@ export async function recordJuniorCardStatus(
       .for("no key update");
     if (!person) return { ok: false, reason: "not_found" } as const;
     const [card] = await tx
-      .select({ id: certifications.id, status: certifications.status })
-      .from(certifications)
+      .select({ id: cards.id, status: cards.status })
+      .from(cards)
       .where(
         and(
-          eq(certifications.id, input.certificationId),
-          eq(certifications.shopId, input.shopId),
-          eq(certifications.personId, input.personId),
-          isNull(certifications.deletedAt),
+          eq(cards.id, input.certificationId),
+          eq(cards.shopId, input.shopId),
+          // Junior status is a level card's wording; an id from a form names no kind.
+          eq(cards.kind, "level"),
+          eq(cards.personId, input.personId),
+          isNull(cards.deletedAt),
         ),
       )
       .for("no key update");
@@ -54,13 +56,13 @@ export async function recordJuniorCardStatus(
     if (card.status !== "verified") return { ok: false, reason: "not_verified" } as const;
     const at = nowDate();
     await tx
-      .update(certifications)
+      .update(cards)
       .set({
         juniorStatus: input.juniorStatus,
         juniorStatusVerifiedAt: at,
         juniorStatusVerifiedByPersonId: input.byPersonId,
       })
-      .where(and(eq(certifications.id, card.id), eq(certifications.shopId, input.shopId)));
+      .where(and(eq(cards.id, card.id), eq(cards.shopId, input.shopId), eq(cards.kind, "level")));
     await tx.insert(certificationJuniorReviews).values({
       shopId: input.shopId,
       personId: input.personId,

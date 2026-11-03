@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { createDiveSite, updateDiveSite } from "./dive-sites";
+import { createDiveSite, editDiveSite } from "./dive-sites";
 
 const ctx = fileScopedShopContext();
 
@@ -16,14 +16,14 @@ describe("snorkel-suitable dive sites (#2214)", () => {
     });
     expect(site.snorkelSuitable).toBe(true);
 
-    const no = await updateDiveSite(db, shop.id, site.id, {
+    const no = await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
       snorkelSuitable: false,
     });
     expect(no).toMatchObject({ snorkelSuitable: false });
 
-    const unsaid = await updateDiveSite(db, shop.id, site.id, {
+    const unsaid = await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
       snorkelSuitable: null,

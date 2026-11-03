@@ -608,7 +608,7 @@ export async function setShopReplyNotes(db: AppDb, shopId: string, replyNotes: s
  * fill method when the form does not post it). The route validates and
  * normalizes every value before calling this.
  */
-export async function saveShopRentals(
+export async function recordShopRentals(
   db: DbExecutor,
   shopId: string,
   write: {

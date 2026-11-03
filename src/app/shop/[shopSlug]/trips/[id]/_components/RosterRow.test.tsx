@@ -64,7 +64,7 @@ function contextFor(status: "ready" | "blocked"): RosterRowContext {
     },
     paymentStatus: "paid",
     paymentProvider: null,
-    depthAdvisory: null,
+    advisories: [],
   };
   return {
     t,
@@ -313,7 +313,7 @@ describe("RosterRow party payment", () => {
       readiness: { status: "ready", blockers: [] },
       paymentStatus: "unpaid",
       paymentProvider: provider,
-      depthAdvisory: null,
+      advisories: [],
     });
     const marks = (owed: number | null) => ({
       shopCurrency: "usd",

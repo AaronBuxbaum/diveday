@@ -27,7 +27,7 @@ export function scopedHash(prefix: string | undefined, id: string): string {
 /**
  * **Where the morning packing list lives on a departure page.**
  *
- * Here rather than beside the component because `src/db/today.ts` links at it
+ * Here rather than beside the component because `src/features/today/today-reader.ts` links at it
  * too, and the dependency direction is one way (`pnpm check:architecture`).
  * Unscoped and shared with Today: the paper day never renders it.
  */

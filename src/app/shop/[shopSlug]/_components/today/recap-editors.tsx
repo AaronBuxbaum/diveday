@@ -8,7 +8,7 @@ import {
 } from "@/app/shop/[shopSlug]/actions";
 import { assistsAvailable } from "@/db/assists";
 import type { AppDb } from "@/db/client";
-import type { getDayCloseout } from "@/db/closeout";
+import type { getDayCloseout } from "@/features/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { recapAutoSendAt } from "@/lib/recap-schedule";

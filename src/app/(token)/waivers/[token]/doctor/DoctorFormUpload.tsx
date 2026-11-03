@@ -5,7 +5,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { Field } from "@/components/ui/form";
 import { MAX_IMAGE_BYTES } from "@/lib/storage/limits";
-import { type DoctorFormState, sendDoctorFormAction } from "./actions";
+import type { DoctorFormState } from "./doctor-core";
 
 const IDLE: DoctorFormState = { status: "idle" };
 
@@ -31,16 +31,17 @@ export type DoctorFormCopy = {
  * the other ways back (`fallback`) are not.
  */
 export function DoctorFormUpload({
-  token,
+  action,
   copy,
   fallback,
 }: {
-  token: string;
+  /** The send, bound by the page to its own door's credential. */
+  action: (previous: DoctorFormState, formData: FormData) => Promise<DoctorFormState>;
   copy: DoctorFormCopy;
   /** The shop's email or counter, under the picker until a form is sent. */
   fallback: ReactNode;
 }) {
-  const [state, formAction] = useActionState(sendDoctorFormAction.bind(null, token), IDLE);
+  const [state, formAction] = useActionState(action, IDLE);
   const [picked, setPicked] = useState<string | null>(null);
   const [tooBig, setTooBig] = useState(false);
 

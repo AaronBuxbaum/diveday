@@ -49,8 +49,8 @@ import {
   getDiverWaiverRequestStatus,
   getWaiverForToken,
   issueWaiverRequest,
-  saveWaiverDraft,
-  saveWaiverTemplate,
+  recordWaiverDraft,
+  recordWaiverTemplate,
 } from "./waivers";
 
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
@@ -436,7 +436,7 @@ describe("issueAndDeliverWaiver", () => {
       email: "delivered@dive.day",
     });
     if (!second.ok) throw new Error(`booking failed: ${second.reason}`);
-    const terms = await saveWaiverTemplate(db, {
+    const terms = await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: `${DEFAULT_WAIVER_BODY}\n\nRevised terms.`,
       material: true,
@@ -738,7 +738,7 @@ describe("emailFreshWaiverLink", () => {
       responses: { heart: false },
     };
     expect(
-      await saveWaiverDraft(db, live.token, {
+      await recordWaiverDraft(db, live.token, {
         signerName: "Nora Quinn",
         acknowledged: true,
         medicalAnswers: draft,

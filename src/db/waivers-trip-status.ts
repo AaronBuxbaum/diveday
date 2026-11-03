@@ -33,7 +33,7 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
  * booking id: `listTripsReadiness` builds `readinessByBooking` /
  * `depthByBooking` maps from it, the trip page's `WaiverByBooking` is a `Map`,
  * the Guests tab hangs waiver detail off the roster's own spine
- * (`trips-guests.ts`), and the requirements action reduces it to a count. So
+ * (`trip-guests.ts`), and the requirements action reduces it to a count. So
  * nobody — a staffer, a capture, or a diff — can see the tie broken either
  * way today.
  *

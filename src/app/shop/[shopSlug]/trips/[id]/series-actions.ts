@@ -10,9 +10,9 @@ import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
   cancelOffCadenceSeriesTrips,
+  editSeriesCadence,
   setSeriesRepeat,
   setSeriesStandingCrew,
-  updateSeriesCadence,
 } from "@/db/trips";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -212,7 +212,7 @@ export async function updateSeriesCadenceAction(
   if (!parsed.success || !isValidWeekdaySet(weekdays)) {
     redirect(noticeUrl(back, "series-error"));
   }
-  const result = await updateSeriesCadence(await getDb(), s.user.shopId, seriesId, {
+  const result = await editSeriesCadence(await getDb(), s.user.shopId, seriesId, {
     intervalWeeks: parsed.data.repeatIntervalWeeks,
     weekdays,
     endsOn: parsed.data.repeatEndsOn ?? null,

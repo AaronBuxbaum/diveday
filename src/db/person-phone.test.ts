@@ -6,7 +6,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
 import { createBooking } from "./bookings";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { createDiver, updateDiver } from "./divers";
+import { createDiver, editDiver } from "./divers";
 import { commitContactImport } from "./import";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
@@ -53,7 +53,7 @@ describe("people.phone is E.164 on write", () => {
     expect(await storedPhone(db, shop.id, bare)).toBe(bare);
   });
 
-  it("createDiver and updateDiver", async () => {
+  it("createDiver and editDiver", async () => {
     const { db, shop } = ctx;
     const created = await createDiver(db, {
       shopId: shop.id,
@@ -64,7 +64,7 @@ describe("people.phone is E.164 on write", () => {
     if (!created) throw new Error("createDiver returned null");
     expect(created.phone).toBe(e164);
 
-    await updateDiver(db, {
+    await editDiver(db, {
       shopId: shop.id,
       personId: created.id,
       fullName: "Nadia Okonkwo",

@@ -251,6 +251,12 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
     "`queueMediaDeletion` (./media-deletions) — every blob the erasure retires goes through the existing durable ledger rather than a second mechanism invented here (ADR 20260723-media-validation-and-deletion)",
   processor_erasure_obligations:
     "`recordProcessorErasureObligations` (./processor-erasure) — what Stripe still holds, written inside the transaction so a crash a millisecond later cannot lose it (ADR 20260803-processor-erasure-obligations)",
+  certifications:
+    "`forgetPremergeCards` (./premerge-cards-cleanup) — the retired level-card table, kept one release after the card ledger (issue #2722)",
+  specialty_certifications:
+    "`forgetPremergeCards` (./premerge-cards-cleanup) — the retired specialty-card table, kept one release after the card ledger (issue #2722)",
+  nitrox_certifications:
+    "`forgetPremergeCards` (./premerge-cards-cleanup) — the retired nitrox-card table, kept one release after the card ledger (issue #2722)",
 };
 
 /**
@@ -397,13 +403,9 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "copy",
     why: "the idempotency ledger's record of which object an attempt produced — a pointer to an object already censused under the table that owns it, never a second one",
   },
-  "booking_payments.provider_ref": {
-    held: "copy",
-    why: "whichever object moved this booking's money, spelled without the vendor's name: `booking_checkouts.stripe_session_id`, `orders.stripe_invoice_id`, the `re_…` a refund returned, or a package entitlement id that is at no processor at all. Each is owed against where it is stored, which is why this column raises nothing of its own",
-  },
   "booking_payment_events.provider_ref": {
     held: "copy",
-    why: "the same pointer on the append-only twin, copied from the mutation that caused the row (`setBookingPayment`, src/db/payments.ts)",
+    why: "whichever object moved this booking's money, spelled without the vendor's name: `booking_checkouts.stripe_session_id`, `orders.stripe_invoice_id`, the `re_…` a refund returned, or a package entitlement id that is at no processor at all. Each is owed against where it is stored, which is why this column raises nothing of its own",
   },
   "orders.stripe_payment_intent_id": {
     held: "copy",
@@ -511,11 +513,10 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "none",
     why: "a display label for the connection, which the schema already states is never a token or a URL secret",
   },
-  "booking_payments.provider": {
+  "booking_payment_events.provider": {
     held: "none",
     why: '"stripe", or null for a manual mark: which system moved the money, not a handle on anything it holds',
   },
-  "booking_payment_events.provider": { held: "none", why: "as booking_payments.provider" },
   "inbound_messages.assist_intent": {
     held: "none",
     why: "Claude's code for what a message asks (cancel, move, question…): a tag from a fixed list, not a handle on anything",

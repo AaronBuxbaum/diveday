@@ -8,7 +8,6 @@ import {
   shopIntegrations,
   shops,
 } from "@/db/schema";
-import { recordSeedTips } from "@/db/tips";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -19,6 +18,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { insertTip } from "@/test/tips";
 
 const fileCtx = fileScopedShopContext();
 
@@ -73,22 +73,16 @@ async function context() {
   if (!booking) throw new Error("seeded booking missing");
   // The demo data has checkouts and tips of its own; push them out of the window.
   await db.update(bookingCheckouts).set({ completedAt: new Date(0) });
-  await recordSeedTips(db, [
-    {
-      shopId: shop.id,
-      bookingId: booking.id,
-      tripId: booking.tripId,
-      status: "completed",
-      stripeAccountId: "acct_x",
-      stripeSessionId: "cs_tip_earlier",
-      checkoutUrl: null,
-      currency: "usd",
-      amountCents: 1_500,
-      expiresAt: null,
-      completedAt: new Date(nowDate().getTime() - 86_400_000),
-      createdAt: new Date(nowDate().getTime() - 86_400_000),
-    },
-  ]);
+  await insertTip(db, {
+    shopId: shop.id,
+    bookingId: booking.id,
+    status: "paid",
+    stripeAccountId: "acct_x",
+    stripeSessionId: "cs_tip_earlier",
+    currency: "usd",
+    amountCents: 1_500,
+    completedAt: new Date(nowDate().getTime() - 86_400_000),
+  });
   return { db, shop, owner, captain, signIn, integration };
 }
 

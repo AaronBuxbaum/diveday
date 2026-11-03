@@ -64,7 +64,7 @@ and run the command again.
 
 | ID | Status | Last dated | Decision |
 | --- | --- | --- | --- |
-| H-20260724-certification-levels-agency-rules | In progress | 2026-08-21 | Which certification levels, agency rules, and Discover Scuba Diver rules define a course booking? |
+| H-20260724-certification-levels-agency-rules | In progress | 2026-11-03 | Which certification levels, agency rules, and Discover Scuba Diver rules define a course booking? |
 | H-20260724-channel-sends-booking-waiver | In progress | 2026-10-14 | Which channel sends booking and waiver notifications, and what consent, copy, timing, and sender… |
 | H-20260724-contact-importer-trust-prior | Implemented | 2026-07-24 | Should the contact importer trust a prior shop's own waiver acceptance — including its… |
 | H-20260724-contact-importer-trust-shop | Implemented | 2026-07-24 | Should the contact importer trust what a shop already had in its own system… |

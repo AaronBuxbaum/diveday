@@ -8,7 +8,7 @@ import { getShopBySlug } from "@/db/shops";
 import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
- * Mints a real, valid `person_courtesy_email_unsubscribe_tokens` row for an
+ * Mints a real, valid `courtesy_email_unsubscribe` capability for an
  * existing person and hands back the raw token — the only way an e2e spec
  * can drive `/unsubscribe/[token]`'s courtesy-email branch through its real
  * page and server action, mirroring

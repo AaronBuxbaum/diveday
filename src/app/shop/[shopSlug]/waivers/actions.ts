@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { createCourseForm, deleteCourseForm, saveCourseFormVersion } from "@/db/course-forms";
-import { saveWaiverTemplate, standingWaiverExposure } from "@/db/waivers";
+import { createCourseForm, deleteCourseForm, recordCourseFormVersion } from "@/db/course-forms";
+import { recordWaiverTemplate, standingWaiverExposure } from "@/db/waivers";
 import {
   COURSE_FORM_BODY_MAX,
   COURSE_FORM_BODY_MIN,
@@ -101,7 +101,7 @@ export async function saveWaiverAction(
   // there applies with the whole shop's roster behind it.
   const atRisk = await standingWaiverExposure(editor, staff.user.shopId);
   // No title: this form has no field for one, so a save cannot mean "rename"
-  // and `saveWaiverTemplate` carries the shop's own forward.
+  // and `recordWaiverTemplate` carries the shop's own forward.
   //
   // H-20260822-may-shop-explicitly-declare's two explicit choices, enforced where a POST cannot skip them. The
   // surface asks with a radio pair the form is invalid without
@@ -126,7 +126,7 @@ export async function saveWaiverAction(
     return refused("materiality");
   }
   const isMaterial = materialValue !== "non-material";
-  const { versioned } = await saveWaiverTemplate(editor, {
+  const { versioned } = await recordWaiverTemplate(editor, {
     shopId: staff.user.shopId,
     body: parsed.data.body,
     questions: questions.questions,
@@ -213,7 +213,7 @@ export async function saveCourseFormAction(formData: FormData) {
     );
     return;
   }
-  const saved = await saveCourseFormVersion(db, {
+  const saved = await recordCourseFormVersion(db, {
     shopId: staff.user.shopId,
     formId,
     title: parsed.data.title,

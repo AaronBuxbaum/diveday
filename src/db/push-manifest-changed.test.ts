@@ -12,7 +12,7 @@ vi.mock("@/lib/notifications/web-push", async (importOriginal) => {
 });
 
 const { sendWebPush } = await import("@/lib/notifications/web-push");
-const { pushManifestChanged, savePushSubscription } = await import("./push-subscriptions");
+const { pushManifestChanged, recordPushSubscription } = await import("./push-subscriptions");
 
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/device-a";
 
@@ -26,7 +26,7 @@ async function subscribed() {
     .from(people)
     .where(eq(people.shopId, shop.id));
   if (!person) throw new Error("expected a seeded person");
-  await savePushSubscription(db, {
+  await recordPushSubscription(db, {
     shopId: shop.id,
     tripId: trip.id,
     personId: person.id,

@@ -3,14 +3,17 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverChecklistItem } from "@/lib/readiness-summary";
-import { signWaiverFromReady } from "../paperwork-actions";
+import { openWaiverFromReady } from "../waiver-actions";
+import { PhysicianDoor } from "./PhysicianDoor";
 
 /**
  * **The thread's sign step: the release's act, and the course forms' door.**
  *
- * An expired link needs the same action as a pending one —
- * `signWaiverFromReady` always issues a fresh link and opens it, superseding
- * whatever came before, so the only difference is what the button promises.
+ * **The release signs here, on this link** (issue #2743): `openWaiverFromReady`
+ * keeps the seat's release while it can still be signed, or starts a fresh one,
+ * and opens it at `/ready/<token>/waiver`. No second link is handed over. An
+ * expired release needs the same act as a pending one, so the only difference
+ * is what the button promises.
  * Naming it matters: "Sign your waiver" on a link the diver already knows is
  * dead reads as the page not having noticed. `guardian_signature_missing`
  * belongs here for the same reason `waiver_expired` does: its own detail line
@@ -59,7 +62,11 @@ export function SignStepActions({
       (blocker) =>
         blocker.code === "course_form_unsigned" || blocker.code === "course_form_guardian_missing",
     );
-  if (!waiverCode && !formsOwed) return null;
+  // Read off the same codes as the release's act: a referral waits on a physician.
+  const awaitsPhysician = [item?.code, ...(item?.actionable ?? []).map((b) => b.code)].includes(
+    "medical_review",
+  );
+  if (!waiverCode && !formsOwed && !awaitsPhysician) return null;
   return (
     <>
       {formsOwed ? (
@@ -67,18 +74,24 @@ export function SignStepActions({
       ) : null}
       <div className="flex flex-wrap items-center gap-3 print:hidden">
         {waiverCode ? (
-          <form action={signWaiverFromReady.bind(null, token)}>
+          <form action={openWaiverFromReady.bind(null, token)}>
             <SubmitButton pendingLabel={t("ready.opening")} className={actionButton}>
               {t(
                 waiverCode === "waiver_pending"
                   ? "ready.signWaiver"
                   : // Expired, lapsed and guardian-missing all end in the same act, and
-                    // "Get a fresh waiver link" is what each one's own copy has
+                    // "Sign a fresh waiver" is what each one’s own copy has
                     // already told the reader to do.
                     "ready.freshWaiverLink",
               )}
             </SubmitButton>
           </form>
+        ) : null}
+        {/* A referred release's receipt carries the physician instructions and
+          the doctor's page; the thread is where the diver signed it, so it is
+          where they find it again. */}
+        {awaitsPhysician && !waiverCode ? (
+          <PhysicianDoor token={token} className={actionButton} t={t} />
         ) : null}
         {/* The course's forms are signed on this link's own sub-page: they
           belong to this enrollment, which is exactly what the readiness link

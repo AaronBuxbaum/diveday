@@ -543,7 +543,7 @@ describe("the dive-site importer", () => {
 
   /**
    * A row matching a **deleted** site by name matched nothing, because
-   * `updateDiveSite` carries `deleted_at is null` — and the importer counted it
+   * `editDiveSite` carries `deleted_at is null` — and the importer counted it
    * as updated anyway, then counted it as deleted on top. "1 updated, 1
    * deleted" over a library that had not changed at all, on exactly the
    * scenario the name match exists for.

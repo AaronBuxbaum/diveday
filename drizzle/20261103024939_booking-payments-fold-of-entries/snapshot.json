@@ -1,0 +1,276 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9e8af3da-135e-49f8-b037-1b49bcbfc4b3",
+  "prevIds": [
+    "f7603f93-17fe-4a36-865d-a0b5220a219e"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_payments"
+      ],
+      "writes": [
+        "s|tbl|public.booking_payments",
+        "n|tbl|public.booking_payments",
+        "e|tbl|public.booking_payments",
+        "n|rel|public.booking_payments",
+        "n|type|public.booking_payments"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "booking_payment_events",
+        "booking_payment_events_shop_booking_occurred_idx"
+      ],
+      "writes": [
+        "s|idx|public.booking_payment_events_shop_booking_occurred_idx",
+        "n|idx|public.booking_payment_events_shop_booking_occurred_idx",
+        "e|idx|public.booking_payment_events_shop_booking_occurred_idx",
+        "n|rel|public.booking_payment_events_shop_booking_occurred_idx"
+      ],
+      "reads": [
+        "e|tbl|public.booking_payment_events",
+        "n|sch|public",
+        "e|col|public.booking_payment_events.shop_id",
+        "e|col|public.booking_payment_events.booking_id",
+        "e|col|public.booking_payment_events.occurred_at"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "booking_payment_events",
+        "seq"
+      ],
+      "writes": [
+        "s|col|public.booking_payment_events.seq",
+        "n|col|public.booking_payment_events.seq",
+        "e|col|public.booking_payment_events.seq"
+      ],
+      "reads": [
+        "n|tbl|public.booking_payment_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "booking_payment_events",
+        "booking_payment_events_shop_booking_newest_idx"
+      ],
+      "writes": [
+        "s|idx|public.booking_payment_events_shop_booking_newest_idx",
+        "n|idx|public.booking_payment_events_shop_booking_newest_idx",
+        "e|idx|public.booking_payment_events_shop_booking_newest_idx",
+        "n|rel|public.booking_payment_events_shop_booking_newest_idx"
+      ],
+      "reads": [
+        "n|tbl|public.booking_payment_events",
+        "n|sch|public",
+        "n|col|public.booking_payment_events.shop_id",
+        "n|col|public.booking_payment_events.booking_id",
+        "n|col|public.booking_payment_events.occurred_at",
+        "n|col|public.booking_payment_events.seq"
+      ]
+    },
+    {
+      "statementType": "create_view",
+      "statementTarget": [
+        "view",
+        "public",
+        "booking_payments"
+      ],
+      "writes": [
+        "s|view|public.booking_payments",
+        "n|view|public.booking_payments",
+        "e|view|public.booking_payments",
+        "n|rel|public.booking_payments",
+        "n|type|public.booking_payments"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_payment_events",
+        "name": "seq",
+        "type": "bigserial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_payment_events",
+        "name": "booking_payment_events_shop_booking_newest_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "booking_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "occurred_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "seq",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "booking_payments",
+        "definition": "select distinct on (shop_id, booking_id) id, shop_id, booking_id, status, amount_cents, currency, provider, provider_ref, note, method, recorded_by_person_id, occurred_at as updated_at, created_at from booking_payment_events order by shop_id, booking_id, occurred_at desc, seq desc",
+        "with": null,
+        "withNoData": null,
+        "using": null,
+        "tablespace": null,
+        "materialized": false,
+        "entityType": "views"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"booking_payments\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"booking_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"amount_cents\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"currency\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"provider\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"provider_ref\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"note\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"updated_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"method\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"booking_payments\",\"recorded_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"booking_payment_events_shop_booking_occurred_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"booking_payments_booking_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"booking_payments_shop_status_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"booking_payments\",\"booking_payments_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"booking_payments\",\"booking_payments_booking_id_bookings_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"booking_payments\",\"booking_payments_recorded_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"booking_payments\",\"booking_payments_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"booking_payments\",\"booking_payments_amount_nonnegative\"]"
+    }
+  ]
+}

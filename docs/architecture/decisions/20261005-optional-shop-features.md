@@ -173,7 +173,7 @@ discount that does not exist.
   - **Queued retries ask again**: a seat offer carries `governedBy` (`waitlist` or
     `pastDiverInvites`) when a switch governs it, and `drainNotificationRetries` refuses it
     (`switched_off`) while that switch is off; a staffer's own offer carries none and always goes.
-  - **Help requests** off: the ready page asks no help question and `saveHelpRequest` refuses a new
+  - **Help requests** off: the ready page asks no help question and `recordHelpRequest` refuses a new
     or changed ask; the shop's phone and email stand where the question was. **A request already
     open stays**: the diver still sees where it stands and has one Withdraw button (it posts
     `none`, the one answer the save still takes), and it stays on Today until the crew handles it,

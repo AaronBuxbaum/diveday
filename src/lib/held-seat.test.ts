@@ -25,7 +25,12 @@ const matchedPerson: ManifestDiver = {
   minor: true,
   birthday: { status: "today" },
   welcomeCue: { kind: "first_trip" },
-  depthAdvisory: { status: "exceeds" } as ManifestDiver["depthAdvisory"],
+  advisories: [
+    {
+      code: "depth_exceeds_ceiling",
+      params: { siteDepth: 30, limitDepth: 12, unit: "meters", basis: "junior_age", level: null },
+    },
+  ],
   medicalWaiver: {
     source: "digital",
     at: new Date("2026-09-01T12:00:00.000Z"),
@@ -85,7 +90,7 @@ describe("withholding a held seat's particulars (issue #1690)", () => {
       welcomeCue: null,
       medicalWaiver: null,
     });
-    expect(shown.depthAdvisory).toBeUndefined();
+    expect(shown.advisories).toBeUndefined();
   });
 
   it("withholds a previously marked course from a newly held seat", () => {

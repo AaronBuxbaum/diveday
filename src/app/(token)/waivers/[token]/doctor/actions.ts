@@ -1,36 +1,20 @@
 "use server";
 
-import { getDb } from "@/db/client";
-import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { getShopById } from "@/db/shops";
-import {
-  attachDiverMedicalForm,
-  diverMedicalFormOpen,
-  getWaiverForToken,
-  revealDoctorReferral,
-} from "@/db/waivers";
-import { diverTranslator } from "@/i18n/messages";
-import { requestLocale } from "@/i18n/request";
-import {
-  checkRateLimit,
-  checkRateLimitFailClosed,
-  RATE_LIMITS,
-  rateLimitKey,
-} from "@/lib/rate-limit";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-import { storeMedicalClearanceDocument } from "@/lib/storage";
-import { isDoctorFormUpload } from "./doctor-form-upload";
-import { referralRefLabel } from "./referral-labels";
+import {
+  type DoctorAnswersState,
+  type DoctorFormState,
+  revealDoctorAnswersFor,
+  sendDoctorFormFor,
+} from "./doctor-core";
 
-/** What the doctor's page's answers section shows after a date of birth is entered. */
-export type DoctorAnswersState =
-  | { status: "locked" }
-  | { status: "mismatch" }
-  | { status: "rate" }
-  | { status: "closed" }
-  /** Nothing to unlock, or the wrong-date ceiling is reached: the whole questionnaire. */
-  | { status: "whole" }
-  | { status: "open"; items: { label: string; prompt: string }[]; source: string | null };
+/** The shared per-IP bucket every waiver-link action spends from. */
+async function waiverLinkAllowed(): Promise<boolean> {
+  const ip = await clientIp();
+  return (await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction))
+    .allowed;
+}
 
 /**
  * **Unlock the doctor's page's answers with the diver's date of birth**
@@ -47,66 +31,10 @@ export async function revealDoctorAnswersAction(
   _previous: DoctorAnswersState,
   formData: FormData,
 ): Promise<DoctorAnswersState> {
-  const ip = await clientIp();
-  if (
-    !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction)).allowed
-  ) {
-    return { status: "rate" };
-  }
-  const db = await getDb();
-  const state = await getWaiverForToken(db, token);
-  if (state.state !== "completed") return { status: "closed" };
-  const record = state.record;
-  // Keyed by the diver, so a reissued link buys no fresh budget; fails closed,
-  // because this one bucket stands in front of medical answers.
-  if (
-    !(
-      await checkRateLimitFailClosed(
-        rateLimitKey("doctor-answers", record.personId),
-        RATE_LIMITS.doctorAnswersByPerson,
-      )
-    ).allowed
-  ) {
-    return { status: "rate" };
-  }
-  const entered = formData.get("birthdate");
-  const answers = await revealDoctorReferral(
-    db,
-    record,
-    typeof entered === "string" ? entered.trim() : "",
-  );
-  if (answers === null) return { status: "closed" };
-  if (answers === "mismatch") return { status: "mismatch" };
-  if (answers === "whole") return { status: "whole" };
-  const shop = await getShopById(db, record.shopId);
-  const t = diverTranslator(await requestLocale(shop?.defaultLocale));
-  return {
-    status: "open",
-    items: answers.items.map((item) => ({
-      label: referralRefLabel(t, item.ref),
-      prompt: item.prompt,
-    })),
-    source: answers.form
-      ? t("waiver.doctor.answersSource", {
-          title: answers.form.title,
-          product: answers.form.productNumber,
-          version: answers.form.versionDate,
-        })
-      : null,
-  };
+  if (typeof token !== "string") return { status: "closed" };
+  if (!(await waiverLinkAllowed())) return { status: "rate" };
+  return revealDoctorAnswersFor(token, formData);
 }
-
-/** What the doctor's page's return section shows after the diver sends the form. */
-export type DoctorFormState =
-  | { status: "idle" }
-  /** The shop has a form for this release: this one, or one sent before it. */
-  | { status: "sent" }
-  /** Not a photo or a PDF, empty, or over the size cap. */
-  | { status: "invalid" }
-  | { status: "rate" }
-  | { status: "closed" }
-  /** Storage is not configured here; the email or the counter still works. */
-  | { status: "unavailable" };
 
 /**
  * **Send the signed doctor's form from the doctor's page** (issue #2797, ADR
@@ -127,45 +55,7 @@ export async function sendDoctorFormAction(
   _previous: DoctorFormState,
   formData: FormData,
 ): Promise<DoctorFormState> {
-  const ip = await clientIp();
-  if (
-    !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction)).allowed
-  ) {
-    return { status: "rate" };
-  }
-  const db = await getDb();
-  const state = await getWaiverForToken(db, token);
-  if (state.state !== "completed") return { status: "closed" };
-  const record = state.record;
-  if (
-    !(
-      await checkRateLimitFailClosed(
-        rateLimitKey("doctor-form", record.personId),
-        RATE_LIMITS.doctorFormByPerson,
-      )
-    ).allowed
-  ) {
-    return { status: "rate" };
-  }
-  const file = formData.get("doctorForm");
-  if (!isDoctorFormUpload(file)) return { status: "invalid" };
-  const open = await diverMedicalFormOpen(db, record);
-  if (open !== "open") return { status: open };
-
-  const stored = await storeMedicalClearanceDocument({
-    filename: "doctors-form",
-    contentType: file.type,
-    bytes: await file.arrayBuffer(),
-  });
-  if (stored.status === "not_configured") return { status: "unavailable" };
-  if (stored.status !== "stored") return { status: "invalid" };
-
-  const attached = await attachDiverMedicalForm(db, record, stored.url);
-  if (attached === "sent") return { status: "sent" };
-  await queueAndAttemptMediaDeletion(db, {
-    shopId: record.shopId,
-    kind: "waiver_document",
-    url: stored.url,
-  });
-  return { status: attached === "already" ? "sent" : "closed" };
+  if (typeof token !== "string") return { status: "closed" };
+  if (!(await waiverLinkAllowed())) return { status: "rate" };
+  return sendDoctorFormFor(token, formData);
 }

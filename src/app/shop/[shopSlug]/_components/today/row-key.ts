@@ -1,4 +1,4 @@
-import type { TodayAction } from "@/lib/today";
+import type { TodayAction } from "@/features/today";
 
 /**
  * **The key a performing row keeps across its own fix landing.**

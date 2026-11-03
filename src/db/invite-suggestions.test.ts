@@ -13,14 +13,12 @@ import {
 } from "./invite-suggestions";
 import {
   bookings,
-  certifications,
+  cards,
   courses,
   diveSites,
   interests,
-  nitroxCertifications,
   people,
   personRoles,
-  specialtyCertifications,
   tripDives,
   tripRequirements,
   trips,
@@ -142,7 +140,8 @@ async function fixture() {
       status,
     });
   const card = (personId: string, level: "open_water" | "advanced_open_water") =>
-    db.insert(certifications).values({
+    db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId,
       agency: "padi",
@@ -392,7 +391,8 @@ describe("listInviteSuggestions", () => {
     for (const p of [underLevel, advanced, noDeep, deep]) await seat(march.id, p.id);
     await card(underLevel.id, "open_water");
     for (const p of [advanced, noDeep, deep]) await card(p.id, "advanced_open_water");
-    await db.insert(specialtyCertifications).values({
+    await db.insert(cards).values({
+      kind: "specialty",
       shopId: shop.id,
       personId: deep.id,
       agency: "padi",
@@ -453,7 +453,8 @@ describe("admittedToTrip", () => {
     const stranger = await diver("Gate No Cards");
     await card(underLevel.id, "open_water");
     await card(advanced.id, "advanced_open_water");
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: deletedCard.id,
       agency: "padi",
@@ -489,7 +490,8 @@ describe("admittedToTrip", () => {
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
     });
-    await db.insert(specialtyCertifications).values({
+    await db.insert(cards).values({
+      kind: "specialty",
       shopId: shop.id,
       personId: advanced.id,
       agency: "padi",
@@ -502,7 +504,8 @@ describe("admittedToTrip", () => {
     // the one place the batch is stricter than the one-diver gate.
     const referred = await diver("Gate Advanced Referred");
     await card(referred.id, "advanced_open_water");
-    await db.insert(specialtyCertifications).values({
+    await db.insert(cards).values({
+      kind: "specialty",
       shopId: shop.id,
       personId: referred.id,
       agency: "padi",
@@ -554,8 +557,9 @@ describe("admittedToTrip, the branches the booking gate takes", () => {
     const verified = await diver("Nitrox Verified");
     const pending = await diver("Nitrox Pending");
     const none = await diver("Nitrox None");
-    await db.insert(nitroxCertifications).values([
+    await db.insert(cards).values([
       {
+        kind: "nitrox",
         shopId: shop.id,
         personId: verified.id,
         agency: "padi",
@@ -563,6 +567,7 @@ describe("admittedToTrip, the branches the booking gate takes", () => {
         identifier: "EAN-V",
       },
       {
+        kind: "nitrox",
         shopId: shop.id,
         personId: pending.id,
         agency: "padi",
@@ -611,7 +616,8 @@ describe("admittedToTrip, the branches the booking gate takes", () => {
     const pendingAow = await diver("Site Pending AOW");
     await card(aow.id, "advanced_open_water");
     await card(ow.id, "open_water");
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: pendingAow.id,
       agency: "padi",
@@ -629,7 +635,8 @@ describe("admittedToTrip, the branches the booking gate takes", () => {
     const pending = await diver("Level Pending");
     const lateTrainee = await diver("Course After Departure");
     const pastTrainee = await diver("Course Ended No Card");
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: pending.id,
       agency: "padi",

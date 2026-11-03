@@ -8,7 +8,7 @@ import { getIncidentExport } from "./incident-export";
 import {
   addIncidentAddendum,
   fileIncidentReport,
-  saveIncidentDraft,
+  recordIncidentDraft,
   startIncidentReport,
 } from "./incident-reports";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
@@ -578,7 +578,7 @@ describe("the departure log's roster changes and incident reports", () => {
     const filed = await startIncidentReport(db, input);
     if (!filed.ok) throw new Error("expected a draft");
     const secret = "Diver surfaced coughing after a fast ascent from 18 m.";
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...input,
       reportId: filed.reportId,
       fields: {
