@@ -3,6 +3,7 @@ import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
+import { deletePremergeCards } from "./premerge-cards-cleanup";
 import {
   accountSecurity,
   accountSessions,
@@ -304,10 +305,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
 
   // People-scoped records and the shop's own catalog/config.
-  // Nitrox and specialty rows first: a card an agency check listed points at
-  // the level card whose page listed it (`listed_from_certification_id`).
   // Every kind of card at once: the reset clears the shop's whole ledger.
   await db.delete(cards).where(eq(cards.shopId, shopId));
+  await deletePremergeCards(db, shopId);
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));

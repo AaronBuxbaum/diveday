@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import {
-  cards,
-  interests,
-  people,
-  tripRequirements,
-} from "./schema";
+import { cards, interests, people, tripRequirements } from "./schema";
 import { getTripGuests } from "./trip-guests";
 import { upcomingTripsWithCounts } from "./trips";
 

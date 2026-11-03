@@ -56,9 +56,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // never a dormancy timer.
   "people",
   "person_roles",
-  "certifications",
-  "specialty_certifications",
-  "nitrox_certifications",
+  "cards",
   "rental_fit_profiles",
   "prior_visits",
   "prior_gear_assignments",

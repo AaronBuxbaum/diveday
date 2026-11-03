@@ -590,17 +590,13 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
    * lifetime roster would blow PostgreSQL's bind-parameter limit (the same
    * reason `personRoles` above is joined rather than filtered by id list).
    *
-   * A still-unsighted self-declaration of a level or nitrox card is not a
-   * card: a diver who declared a rung and later said they hold nothing has
-   * made two statements and neither is evidence. Any live specialty row
-   * settles it, as `listCertificationSummaries` has it.
+   * A still-unsighted self-declaration of any kind is not a card: a diver who
+   * declared a rung and later said they hold nothing has made two statements
+   * and neither is evidence.
    */
   const cardedPeople = new Set<string>();
   for (const card of cardExport.cardRows) {
-    if (card.deletedAt) continue;
-    if (card.kind === "specialty" || !isUnsightedSelfDeclaration(card)) {
-      cardedPeople.add(card.personId);
-    }
+    if (!card.deletedAt && !isUnsightedSelfDeclaration(card)) cardedPeople.add(card.personId);
   }
 
   const waiversByPerson = new Map<string, typeof waiverRows>();

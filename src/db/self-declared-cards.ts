@@ -286,6 +286,7 @@ async function holdsRealCardOutsideLevels(
         eq(cards.personId, input.personId),
         isNull(cards.deletedAt),
         isRealCard(),
+        isRealCard(),
       ),
     )
     .limit(1);
@@ -340,9 +341,9 @@ async function recordNoCertification(
     );
   if (liveNitrox.some((card) => !isUnsightedSelfDeclaration(card))) return "card_on_file";
 
-  // The third kind, and the only one where a row's mere existence settles it:
-  // these public forms never write a specialty card (`cards`, kind = specialty),
-  // so every such row is a card a staffer captured or a CSV brought in, and a diver holding a Deep card is not a diver with no card.
+  // The third kind: a Deep card the shop holds says the diver is not a diver
+  // with no card. A Deep claim typed on /ready and never sighted is a claim,
+  // not a card, so it settles nothing (`isRealCard`).
   const [liveSpecialty] = await tx
     .select({ id: cards.id })
     .from(cards)
@@ -785,8 +786,8 @@ export async function listCertificationSummaries(
   // **Only for the stamp**, and only when there is a stamp to refute. A
   // specialty card says nothing about a rung, so it never joins the phrase —
   // but it is a card the shop holds, and "this diver has no card at all" is
-  // false in front of one. The public forms never write a specialty card, so a
-  // live one is always evidence.
+  // false in front of one. A specialty the diver typed on /ready and nobody has
+  // sighted is a claim, not a card, so it refutes nothing (`isRealCard`).
   const unrefuted = [...declared].filter((id) => !carded.has(id));
   if (unrefuted.length > 0) {
     const specialtyRows = await db
@@ -798,6 +799,7 @@ export async function listCertificationSummaries(
           eq(cards.shopId, shopId),
           inArray(cards.personId, unrefuted),
           isNull(cards.deletedAt),
+          isRealCard(),
         ),
       );
     for (const row of specialtyRows) carded.add(row.personId);

@@ -57,7 +57,7 @@ test.describe("full-shop data export", () => {
       "shop.csv",
       "contacts.csv",
       "people.csv",
-      "certifications.csv",
+      "cards.csv",
       "trips.csv",
       "trip_requirements.csv",
       "trip_assignments.csv",

@@ -13,6 +13,7 @@ import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { deleteDemoSafetyTrail } from "./incident-reports";
+import { deletePremergeCards } from "./premerge-cards-cleanup";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   accountSecurity,
@@ -1664,6 +1665,7 @@ export async function clearDemoSchedule(
   await db.delete(courses).where(eq(courses.shopId, shopId));
   // Every kind of card at once: the reset clears the shop's whole ledger.
   await db.delete(cards).where(eq(cards.shopId, shopId));
+  await deletePremergeCards(db, shopId);
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
 
   // Everyone except the staff seeded once at shop creation (`staffDefs`, by

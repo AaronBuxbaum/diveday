@@ -530,10 +530,12 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       tripStartsAt: trips.startsAt,
       tripCourseId: trips.courseId,
       tripLunchAboard: trips.lunchAboard,
-      // Any live card, verified or not: whether a course student has dives to
-      // log (`packsLogbook`, issue #2795). In this row rather than a query of
-      // its own, so the page stays inside its round-trip budget.
-      holdsAnyCertification: sql<boolean>`exists (select 1 from ${cards} where ${cards.kind} = 'level' and ${cards.shopId} = ${bookings.shopId} and ${cards.personId} = ${bookings.personId} and ${cards.deletedAt} is null)`,
+      // Any live card of any kind, verified or not: whether a course student
+      // has dives to log (`packsLogbook`, issue #2795). A nitrox or Deep card
+      // is a certified diver too. A suggestion, never a gate, so it reads every
+      // kind. In this row rather than a query of its own, so the page stays
+      // inside its round-trip budget.
+      holdsAnyCertification: sql<boolean>`exists (select 1 from ${cards} where ${cards.shopId} = ${bookings.shopId} and ${cards.personId} = ${bookings.personId} and ${cards.deletedAt} is null)`,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))

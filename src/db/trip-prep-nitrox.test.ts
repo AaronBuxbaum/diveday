@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { proposalKey } from "@/lib/gear-proposals";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, gearItems, cards } from "./schema";
+import { bookings, cards, gearItems } from "./schema";
 import { getTripPrep, screenGearPicks } from "./trip-prep";
 import { upcomingTripsWithCounts } from "./trips";
 

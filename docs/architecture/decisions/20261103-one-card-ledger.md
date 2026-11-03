@@ -31,9 +31,8 @@ serving while the migration runs still reads them; the next release drops them.
 
 ## Alternatives considered
 
-- **A text `code` column for the rung, specialty and `eanx`**, as the issue sketched. Two typed
-  enum columns keep the ladder's rank map and the specialty gate typed, and the check ties each to
-  its kind.
+- **A text `code` column for the rung, specialty and `eanx`**, as the issue sketched. Two enum
+  columns keep the ladder and the specialty gate typed.
 - **Drop the three tables in the same migration.** The serving release would fail every card read
   for the length of the build.
 - **Keep the tables and add a view over them.** Every writer would still choose a table, which is
@@ -45,5 +44,10 @@ serving while the migration runs still reads them; the next release drops them.
   provenance stamp for every kind.
 - A query that forgets its `kind` filter reads other kinds' cards. Database checks keep a row's
   shape honest, but only review and tests keep a gate on its own kind.
-- Collapsing provenance into one `source` column and readiness's per-kind codes into three, which
-  the issue also proposed, is not part of this change.
+- Collapsing provenance into one `source` column, which the issue also proposed, is not part of
+  this change.
+- A card the old release writes between the copy migration and the cutover lands only in the old
+  tables. The drop release copies any such row across before it drops them.
+- Until that drop, erasure scrubs the old tables' copy of the diver's cards as well, and a demo
+  reset deletes their rows before the people they point at.
+- The listed-from and junior-review references do not pin the target's kind; the writers check it.
