@@ -29,6 +29,7 @@ import { getTripManifests } from "./manifests";
 import { survivingPersonNames } from "./people";
 import { latestPreDepartureChecksForTrip, listChecklistItemsForTrip } from "./pre-departure-check";
 import { listTripReadiness } from "./readiness";
+import { oldestMarkFirst } from "./roll-call-order";
 import { asCrewMark, asSeatMark, crewMarks, seatMarks } from "./roll-call-subject";
 import { activityEvents, bookings, people, rollCallEvents } from "./schema";
 import { getShopById } from "./shops";
@@ -127,22 +128,14 @@ export async function getIncidentExport(
       // document is hashed, so two orderings of the same events produce two
       // different SHA-256 integrity codes for one departure. A tie on
       // transaction time would make the hash a coin toss.
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
     db
       .select({ event: rollCallEvents, subject: people, recorder: recorders })
       .from(rollCallEvents)
       .innerJoin(people, eq(people.id, rollCallEvents.crewPersonId))
       .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
       .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
     listExecutedDives(db, shopId, tripId),
   ]);
   const diverEventRows = diverEventReads.map((row) => ({ ...row, event: asSeatMark(row.event) }));

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { findSubjectlessReads, rollCallNames } from "./check-roll-call-subject.mjs";
+import {
+  findHandOrderedMarks,
+  findSubjectlessReads,
+  rollCallNames,
+} from "./check-roll-call-subject.mjs";
 
 const lines = (source) => findSubjectlessReads(source).findings.map((finding) => finding.line);
 
@@ -91,5 +95,38 @@ describe("a query on the roll-call ledger", () => {
 
   it("ignores a mention in a comment", () => {
     expect(lines(" * `.from(rollCallEvents)` is how a reader starts.")).toEqual([]);
+  });
+});
+
+const ordered = (source) => findHandOrderedMarks(source).map((finding) => finding.line);
+
+describe("the order of roll-call marks", () => {
+  it("is refused when written by hand, the copy that once forgot seq", () => {
+    expect(
+      ordered(`
+        .orderBy(desc(rollCallEvents.occurredAt), desc(rollCallEvents.createdAt))
+        .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.seq));
+        sql\`order by \${rollCallEvents.seq} desc\`;
+      `),
+    ).toEqual([2, 3, 4]);
+  });
+
+  it("is refused on an alias in a newer-mark comparison", () => {
+    expect(
+      ordered(`
+        const newer = alias(rollCallEvents, "newer");
+        or(gt(newer.occurredAt, rollCallEvents.occurredAt), gt(newer.seq, rollCallEvents.seq));
+      `),
+    ).toEqual([3]);
+  });
+
+  it("passes the helpers and a projection of seq for an in-memory sort", () => {
+    expect(
+      ordered(`
+        .orderBy(...newestMarkFirst())
+        .select({ seq: rollCallEvents.seq })
+        // desc(rollCallEvents.seq) in a comment
+      `),
+    ).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
@@ -8,6 +8,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { deskCountsDiveDay, seatCanBeDiveDay } from "./dive-days";
 import { isMarineLifeSlug } from "./marine-life-catalog";
+import { newestMarkFirst } from "./roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
   bookings,
@@ -302,11 +303,7 @@ async function sailedByRollCall(
         inArray(rollCallEvents.bookingId, [...contested.keys()]),
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    );
+    .orderBy(...newestMarkFirst());
   for (const bookingId of standingSailedSubjects(diverRows, (row) => row.bookingId)) {
     if (contested.has(bookingId)) sailed.add(bookingId);
   }
@@ -331,11 +328,7 @@ async function sailedByRollCall(
         ]),
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    );
+    .orderBy(...newestMarkFirst());
   // A crew result answers only for the departure the contested seat is on,
   // never for another boat that person crewed in the window.
   const crewSailed = standingSailedSubjects(crewRows, (row) => `${row.tripId}|${row.personId}`);

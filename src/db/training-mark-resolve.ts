@@ -14,6 +14,7 @@ import {
 } from "@/lib/training-mark";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
+import { oldestMarkFirst } from "./roll-call-order";
 import { crewMarks, markCrewPersonId } from "./roll-call-subject";
 import { bookings, courses, personRoles, rollCallEvents, tripAssignments, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -191,11 +192,7 @@ export async function trustedCrewOfTrips(
           ),
         )
         // diveday:allow-time-id-order: the latest mark per person wins; nobody is shown this order.
-        .orderBy(
-          asc(rollCallEvents.occurredAt),
-          asc(rollCallEvents.createdAt),
-          asc(rollCallEvents.seq),
-        ),
+        .orderBy(...oldestMarkFirst()),
   ]);
   // The latest crew-count mark per (trip, person): "not boarded" keeps them off.
   const latest = new Map<string, string>();

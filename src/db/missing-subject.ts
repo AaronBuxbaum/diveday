@@ -1,5 +1,6 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { DbExecutor } from "./client";
+import { oldestMarkFirst } from "./roll-call-order";
 import { crewMarks, seatMarks } from "./roll-call-subject";
 import { bookings, incidentReportPeople, people, rollCallEvents, tripAssignments } from "./schema";
 
@@ -80,11 +81,7 @@ export async function afterDiveEvents(
           ne(rollCallEvents.checkpoint, "departure"),
         ),
       )
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      );
+      .orderBy(...oldestMarkFirst());
   }
   return tx
     .select({
@@ -102,11 +99,7 @@ export async function afterDiveEvents(
         ne(rollCallEvents.checkpoint, "departure"),
       ),
     )
-    .orderBy(
-      asc(rollCallEvents.occurredAt),
-      asc(rollCallEvents.createdAt),
-      asc(rollCallEvents.seq),
-    );
+    .orderBy(...oldestMarkFirst());
 }
 
 /** Whether the subject is on this departure: a seat booked on it, or its crew. */

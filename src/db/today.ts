@@ -84,6 +84,7 @@ import { openOrdersForBookings } from "./orders";
 import { listOpenPaymentDisputes } from "./payment-disputes";
 import { listTripsReadiness } from "./readiness";
 import { readReviewsAwaitingModeration } from "./reviews";
+import { newestMarkFirst, oldestMarkFirst } from "./roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
   boats,
@@ -632,11 +633,7 @@ export async function listRollCallGaps(
       // `created_at` is transaction time, so a batched write inside one
       // transaction leaves the order arbitrary — and Today's missing-diver row
       // and the manifest must never disagree about who is still in the water.
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
     db
       .select({
         tripId: rollCallEvents.tripId,
@@ -665,11 +662,7 @@ export async function listRollCallGaps(
           inArray(rollCallEvents.tripId, tripIds),
         ),
       )
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
   ]);
 
   // Seats the desk turned away: off the boat at any checkpoint nobody at the
@@ -1204,11 +1197,7 @@ async function boardedAfterLastDive(
         ),
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    );
+    .orderBy(...newestMarkFirst());
   const seen = new Set<string>();
   for (const row of rows) {
     if (row.checkpoint !== lastCheckpoint.get(row.tripId)) continue;

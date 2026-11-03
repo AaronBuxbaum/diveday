@@ -1,9 +1,10 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { departureUnderway } from "@/lib/day-blowout";
 import { hasSailed } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { onTheWaterByRollCall } from "./manifests";
+import { newestMarkFirst } from "./roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import { bookings, rollCallEvents, tripAssignments, tripStageEvents, trips } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
@@ -190,11 +191,7 @@ async function crewDockWords(
         eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    );
+    .orderBy(...newestMarkFirst());
   const seen = new Set<string>();
   for (const row of rows) {
     if (seen.has(row.personId) || !words.has(row.personId)) continue;
@@ -255,11 +252,7 @@ async function dockWordBySeat(
         bookingIds ? inArray(rollCallEvents.bookingId, [...bookingIds]) : undefined,
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    );
+    .orderBy(...newestMarkFirst());
   const dock = new Map<string, "boarded" | "not_boarded" | "cleared">();
   for (const row of rows) if (!dock.has(row.bookingId)) dock.set(row.bookingId, row.status);
   return dock;
@@ -295,11 +288,7 @@ async function crewMarkedAshore(
         eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    )
+    .orderBy(...newestMarkFirst())
     .limit(1);
   return newest?.status === "not_boarded";
 }

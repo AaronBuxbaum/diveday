@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import type { ReadinessResult } from "@/lib/readiness";
@@ -8,6 +8,7 @@ import { seatSailed } from "@/lib/seat-sailed";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { listTripsReadiness } from "./readiness";
+import { newestMarkFirst } from "./roll-call-order";
 import { markBookingId, seatMarks } from "./roll-call-subject";
 import { bookings, rollCallEvents, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -149,11 +150,7 @@ export async function departureCounts(
         .where(
           and(eq(rollCallEvents.shopId, shopId), seatMarks(), inArray(rollCallEvents.tripId, ids)),
         )
-        .orderBy(
-          desc(rollCallEvents.occurredAt),
-          desc(rollCallEvents.createdAt),
-          desc(rollCallEvents.seq),
-        ),
+        .orderBy(...newestMarkFirst()),
   ]);
   const readiness = await readinessFor(db, shopId, roster, options);
 

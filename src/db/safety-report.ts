@@ -11,6 +11,7 @@ import { hasReturned } from "@/lib/trips";
 import { shopMonthBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
+import { oldestMarkFirst } from "./roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
   activityEvents,
@@ -133,11 +134,7 @@ export async function getSafetyMonth(
             inArray(rollCallEvents.tripId, tripIds),
           ),
         )
-        .orderBy(
-          asc(rollCallEvents.occurredAt),
-          asc(rollCallEvents.createdAt),
-          asc(rollCallEvents.seq),
-        ),
+        .orderBy(...oldestMarkFirst()),
     () =>
       db
         .select({
@@ -157,11 +154,7 @@ export async function getSafetyMonth(
             inArray(rollCallEvents.tripId, tripIds),
           ),
         )
-        .orderBy(
-          asc(rollCallEvents.occurredAt),
-          asc(rollCallEvents.createdAt),
-          asc(rollCallEvents.seq),
-        ),
+        .orderBy(...oldestMarkFirst()),
   ]);
 
   const crewIds = [...new Set(crew.map((row) => row.personId))];

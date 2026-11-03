@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "drizzle-orm";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
@@ -19,6 +19,7 @@ import type { AppDb } from "./client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "./recap";
+import { newestMarkFirst, oldestMarkFirst } from "./roll-call-order";
 import { crewMarks, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
   bookings,
@@ -235,11 +236,7 @@ async function dayTrips(
           inArray(rollCallEvents.tripId, tripIds),
         ),
       )
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
     // **D24** — dives whose actual site was not the planned one. A dive with no
     // planned site is deliberately not a change: there was no plan to depart
     // from, and "the plan changed" would be the surface inventing one.
@@ -605,11 +602,7 @@ export async function listHeadCountCloses(
           ne(rollCallEvents.status, "cleared"),
         ),
       )
-      .orderBy(
-        desc(rollCallEvents.occurredAt),
-        desc(rollCallEvents.createdAt),
-        desc(rollCallEvents.seq),
-      ),
+      .orderBy(...newestMarkFirst()),
     crewClosedTripIds.length === 0
       ? []
       : db
@@ -630,11 +623,7 @@ export async function listHeadCountCloses(
               ne(rollCallEvents.status, "cleared"),
             ),
           )
-          .orderBy(
-            desc(rollCallEvents.occurredAt),
-            desc(rollCallEvents.createdAt),
-            desc(rollCallEvents.seq),
-          ),
+          .orderBy(...newestMarkFirst()),
   ]);
   const closingCheckpoint = new Map(
     tripRows.map((trip) => [trip.id, rollCallCheckpoints(trip.plannedDives).at(-1) ?? "departure"]),

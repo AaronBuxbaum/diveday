@@ -1,13 +1,17 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, notExists } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
+import { compareMarkOrder } from "@/lib/roll-call";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { CLIENT_EVENT_CONFLICT } from "./offline-replay";
+import { isNewerMark, newestMarkFirst, oldestMarkFirst } from "./roll-call-order";
 import {
   asCrewMark,
   asSeatMark,
+  crewMarks,
   crewSubject,
   markSubjectId,
   splitRollCallRows,
@@ -412,5 +416,73 @@ describe("reading a row by its subject", () => {
     expect(seats.map((seat) => seat.bookingId)).toEqual(["b1", "b2"]);
     expect(crew.map((member) => member.crewPersonId)).toEqual(["p1"]);
     expect(() => splitRollCallRows([row("seat", null, "p")])).toThrow();
+  });
+});
+
+describe("the order of roll-call marks (one helper, src/db/roll-call-order.ts)", () => {
+  // One instant, one transaction: only `seq` still says which tap came last.
+  async function twoTapsInOneInstant() {
+    const { db, shop } = ctx;
+    const { tripId, staffId } = await reefWithCrew(db, shop.id);
+    const at = new Date("2026-07-21T13:30:00.000Z");
+    const base = {
+      shopId: shop.id,
+      tripId,
+      ...crewSubject(staffId),
+      recordedByPersonId: staffId,
+      checkpoint: "after_dive_1",
+      occurredAt: at,
+      createdAt: at,
+    };
+    // The second insert is the later tap: "not back aboard" after "boarded".
+    await db.insert(rollCallEvents).values({ ...base, status: "boarded" });
+    await db.insert(rollCallEvents).values({ ...base, status: "not_boarded" });
+    const scope = and(
+      eq(rollCallEvents.shopId, shop.id),
+      crewMarks(),
+      eq(rollCallEvents.tripId, tripId),
+    );
+    return { db, scope };
+  }
+
+  it("puts the later of two same-instant taps first, so a missing crew member stays missing", async () => {
+    const { db, scope } = await twoTapsInOneInstant();
+    const newest = await db
+      .select()
+      .from(rollCallEvents)
+      .where(scope)
+      .orderBy(...newestMarkFirst());
+    const oldest = await db
+      .select()
+      .from(rollCallEvents)
+      .where(scope)
+      .orderBy(...oldestMarkFirst());
+    expect(newest.map((row) => row.status)).toEqual(["not_boarded", "boarded"]);
+    expect(oldest.map((row) => row.status)).toEqual(["boarded", "not_boarded"]);
+    expect([...newest].sort(compareMarkOrder).map((row) => row.status)).toEqual([
+      "boarded",
+      "not_boarded",
+    ]);
+  });
+
+  it("finds no newer mark only for the standing one", async () => {
+    const { db, scope } = await twoTapsInOneInstant();
+    const newer = alias(rollCallEvents, "newer");
+    const newerMark = db
+      .select({ id: newer.id })
+      .from(newer)
+      .where(
+        and(
+          crewMarks(newer),
+          eq(newer.tripId, rollCallEvents.tripId),
+          eq(newer.crewPersonId, rollCallEvents.crewPersonId),
+          isNewerMark(newer, rollCallEvents),
+        ),
+      );
+    const standing = await db
+      .select({ status: rollCallEvents.status })
+      .from(rollCallEvents)
+      .where(and(scope, notExists(newerMark)));
+    expect(standing).toEqual([{ status: "not_boarded" }]);
   });
 });

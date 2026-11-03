@@ -28,6 +28,17 @@ import { filesUnder } from "./files-under.mjs";
  * `diveday:roll-call-both-subjects: <why>` in a comment inside the query or on
  * the three lines above it: the erasure sweep, the export, a delete of a
  * whole trip's ledger.
+ *
+ * ## The order of marks
+ *
+ * The same scan refuses sorting a roll-call mark by hand (`asc(`/`desc(` on
+ * `occurredAt`, `createdAt` or `seq`, or a raw `${T.seq}`) and comparing its
+ * `seq` (`gt(`, `lt(`, …) anywhere but
+ * `src/db/roll-call-order.ts`. Newest wins on `occurred_at`, `created_at`,
+ * `seq`; the rule was written by hand 39 times, and forgetting `seq` once
+ * left every test green and a diver reading as back aboard (ADR
+ * 20260815-roll-call-order-is-a-property-of-the-data). Projecting `seq` to
+ * sort in memory is fine; `compareMarkOrder` (src/lib/roll-call.ts) sorts it.
  */
 
 const ROOT = process.cwd();
@@ -38,6 +49,7 @@ const QUERY_WINDOW = 40;
 const ALLOW = /diveday:roll-call-both-subjects:/;
 const IS_TEST = /\.test\.tsx?$/;
 const TABLE = "rollCallEvents";
+const ORDER_HOME = "src/db/roll-call-order.ts";
 // A filter, not a mention: projecting `subjectKind` does not scope a query.
 const NAMES_SUBJECT = /\b(?:seatMarks|crewMarks)\(|\beq\(\s*\w+\.subjectKind\b|subject_kind\s*=/;
 
@@ -92,8 +104,24 @@ export function findSubjectlessReads(source) {
   return { guarded: anchors.size, findings };
 }
 
+/** Hand-written orderings or comparisons on a roll-call `.seq` in `source`. */
+export function findHandOrderedMarks(source) {
+  const lines = source.split("\n");
+  const name = `(?:${rollCallNames(source).join("|")})`;
+  const pattern = new RegExp(
+    String.raw`\b(?:asc|desc)\(\s*${name}\.(?:occurredAt|createdAt|seq)\b|\b(?:gt|lt|gte|lte)\(\s*${name}\.seq\b|,\s*${name}\.seq\s*\)|\$\{${name}\.(?:occurredAt|seq)\}\s+(?:asc|desc)\b|\$\{${name}\.seq\}`,
+  );
+  const findings = [];
+  lines.forEach((line, index) => {
+    if (/^\s*(?:\/\/|\*|\/\*)/.test(line)) return;
+    if (pattern.test(line)) findings.push({ line: index + 1, text: line.trim() });
+  });
+  return findings;
+}
+
 async function main() {
   const violations = [];
+  const orderings = [];
   let guarded = 0;
   for (const root of GUARDED_ROOTS) {
     for (const file of await filesUnder(
@@ -103,12 +131,26 @@ async function main() {
     )) {
       if (IS_TEST.test(file)) continue;
       if (path.normalize(file).startsWith(path.normalize(SCHEMA_DIR))) continue;
-      const result = findSubjectlessReads(await readFile(path.join(ROOT, file), "utf8"));
+      const source = await readFile(path.join(ROOT, file), "utf8");
+      if (path.normalize(file) !== path.normalize(ORDER_HOME)) {
+        for (const finding of findHandOrderedMarks(source)) {
+          orderings.push(`${file}:${finding.line}: ${finding.text}`);
+        }
+      }
+      const result = findSubjectlessReads(source);
       guarded += result.guarded;
       for (const finding of result.findings) {
         violations.push(`${file}:${finding.line}: ${finding.text}`);
       }
     }
+  }
+  if (orderings.length > 0) {
+    console.error(
+      `Roll-call marks ordered by hand:\n${orderings.map((line) => `- ${line}`).join("\n")}`,
+    );
+    console.error(
+      "Use `newestMarkFirst()`, `oldestMarkFirst()` or `isNewerMark()` from src/db/roll-call-order.ts, or `compareMarkOrder` from src/lib/roll-call.ts in memory: the order is occurred_at, created_at, seq, and a hand-written copy is how one of them goes missing.",
+    );
   }
   if (violations.length > 0) {
     console.error(
@@ -122,9 +164,11 @@ async function main() {
     console.error(
       "A query that reads both halves by design says `diveday:roll-call-both-subjects: <why>` in a comment inside it or just above it.",
     );
-    process.exit(1);
   }
-  console.log(`roll-call-subject: ${guarded} queries on roll_call_events all name a subject kind`);
+  if (violations.length > 0 || orderings.length > 0) process.exit(1);
+  console.log(
+    `roll-call-subject: ${guarded} queries on roll_call_events all name a subject kind; marks are ordered in one place`,
+  );
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();

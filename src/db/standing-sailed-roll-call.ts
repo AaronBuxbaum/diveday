@@ -1,6 +1,7 @@
-import { and, eq, exists, gt, ne, notExists, or, sql } from "drizzle-orm";
+import { and, eq, exists, ne, notExists, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { DbExecutor } from "./client";
+import { isNewerMark } from "./roll-call-order";
 import { crewMarks, seatMarks } from "./roll-call-subject";
 import { rollCallEvents, trips } from "./schema";
 
@@ -30,18 +31,7 @@ export function tripHasStandingSailedRollCall(db: DbExecutor) {
         eq(newerDiver.tripId, diver.tripId),
         eq(newerDiver.bookingId, diver.bookingId),
         eq(newerDiver.checkpoint, diver.checkpoint),
-        or(
-          gt(newerDiver.occurredAt, diver.occurredAt),
-          and(
-            eq(newerDiver.occurredAt, diver.occurredAt),
-            gt(newerDiver.createdAt, diver.createdAt),
-          ),
-          and(
-            eq(newerDiver.occurredAt, diver.occurredAt),
-            eq(newerDiver.createdAt, diver.createdAt),
-            gt(newerDiver.seq, diver.seq),
-          ),
-        ),
+        isNewerMark(newerDiver, diver),
       ),
     );
   const diverEvidence = db
@@ -70,15 +60,7 @@ export function tripHasStandingSailedRollCall(db: DbExecutor) {
         eq(newerCrew.tripId, crew.tripId),
         eq(newerCrew.crewPersonId, crew.crewPersonId),
         eq(newerCrew.checkpoint, crew.checkpoint),
-        or(
-          gt(newerCrew.occurredAt, crew.occurredAt),
-          and(eq(newerCrew.occurredAt, crew.occurredAt), gt(newerCrew.createdAt, crew.createdAt)),
-          and(
-            eq(newerCrew.occurredAt, crew.occurredAt),
-            eq(newerCrew.createdAt, crew.createdAt),
-            gt(newerCrew.seq, crew.seq),
-          ),
-        ),
+        isNewerMark(newerCrew, crew),
       ),
     );
   const crewEvidence = db

@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-o
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
+import { oldestMarkFirst } from "@/db/roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "@/db/roll-call-subject";
 import {
   bookings,
@@ -299,11 +300,7 @@ async function closeHeadCounts(
       )
       // Oldest first, so the last row read per subject and checkpoint is the
       // one that stands — the same order every reader of this trail uses.
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
     db
       .select({
         tripId: rollCallEvents.tripId,
@@ -320,11 +317,7 @@ async function closeHeadCounts(
           inArray(rollCallEvents.tripId, tripIds),
         ),
       )
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
   ]);
 
   const latestByBooking = new Map<string, (typeof events)[number]>();

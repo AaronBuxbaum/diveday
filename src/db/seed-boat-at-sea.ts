@@ -5,6 +5,7 @@ import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { listTripReadiness } from "./readiness";
+import { oldestMarkFirst } from "./roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
   bookingPayments,
@@ -728,11 +729,7 @@ async function bringBoatHome(
     .where(and(eq(rollCallEvents.tripId, trip.id), seatMarks()))
     // Oldest first, the roll call's own order, so the last row per person is
     // the mark standing now.
-    .orderBy(
-      asc(rollCallEvents.occurredAt),
-      asc(rollCallEvents.createdAt),
-      asc(rollCallEvents.seq),
-    );
+    .orderBy(...oldestMarkFirst());
   const crew = await db
     .select({
       personId: markCrewPersonId(),
@@ -742,11 +739,7 @@ async function bringBoatHome(
     })
     .from(rollCallEvents)
     .where(and(eq(rollCallEvents.tripId, trip.id), crewMarks()))
-    .orderBy(
-      asc(rollCallEvents.occurredAt),
-      asc(rollCallEvents.createdAt),
-      asc(rollCallEvents.seq),
-    );
+    .orderBy(...oldestMarkFirst());
 
   const lastCount = [...divers, ...crew]
     .filter((row) => row.checkpoint === "after_dive_2")

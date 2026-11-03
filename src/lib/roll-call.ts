@@ -42,6 +42,22 @@ export const ROLL_CALL_SUBJECT_KINDS = ["seat", "crew"] as const;
 
 export type RollCallSubjectKind = (typeof ROLL_CALL_SUBJECT_KINDS)[number];
 
+/**
+ * Oldest first on `occurredAt`, then `createdAt`, then `seq`: the one order of roll-call marks
+ * (ADR 20260815-roll-call-order-is-a-property-of-the-data). The SQL twin is
+ * `src/db/roll-call-order.ts`; a missing `seq` (a row from before the column) sorts first.
+ */
+export function compareMarkOrder(
+  a: { occurredAt: Date; createdAt: Date; seq?: number | null },
+  b: { occurredAt: Date; createdAt: Date; seq?: number | null },
+): number {
+  return (
+    a.occurredAt.getTime() - b.occurredAt.getTime() ||
+    a.createdAt.getTime() - b.createdAt.getTime() ||
+    (a.seq ?? 0) - (b.seq ?? 0)
+  );
+}
+
 export type RollCallState = "awaiting" | "boarded" | "not_boarded";
 
 /**
