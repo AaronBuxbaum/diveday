@@ -126,7 +126,12 @@ describe("the run's next date is gated at the sale like a direct visit (issue #2
     expect(viaOffer).toMatchObject({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+      refusal: expect.arrayContaining([
+        {
+          code: "certification_insufficient",
+          params: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+        },
+      ]),
     });
     expect(viaOffer).toEqual(viaDirect);
 

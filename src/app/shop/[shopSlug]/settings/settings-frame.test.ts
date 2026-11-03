@@ -1,3 +1,5 @@
+// **Every settings destination keeps the settings rail**, and bookkeeper settings live on the
+// hub, not on Reports.
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 

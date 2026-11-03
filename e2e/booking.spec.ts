@@ -562,7 +562,7 @@ test.describe("as owner", () => {
     // would pass with the two doors indistinguishable again.
     await openTripActivity(page);
     await expect(
-      page.getByText(/confirmed on the trip roster that this booking is Nora Quinn/),
+      page.getByText(/confirmed on the trip’s Divers tab that this booking is Nora Quinn/),
     ).toBeVisible();
   });
 });

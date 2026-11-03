@@ -42,7 +42,6 @@
       "Bash(git merge:*)",
       "Bash(ls:*)",
       "Bash(wc:*)",
-      "Bash(pnpm task:context:*)",
       "Bash(pnpm check:*)",
       "Bash(pnpm test *)",
       "Bash(pnpm test:changed)",

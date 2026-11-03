@@ -180,7 +180,9 @@ test.describe("as owner", () => {
     // The codes stay readable and an HMAC follows them, bound to this
     // departure (src/lib/trip-admission-gate.ts) — unsigned, the param was an
     // instruction anyone could write.
-    await expect(page).toHaveURL(/gate=advanced_open_water[^&]*\.[\w-]{40,}/);
+    await expect(page).toHaveURL(
+      /gate=certification_insufficient-advanced_open_water[^&]*\.[\w-]{40,}/,
+    );
     const banner = page.getByText("This charter requires Advanced Open Water.");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText("highest certification on file is Open Water");
