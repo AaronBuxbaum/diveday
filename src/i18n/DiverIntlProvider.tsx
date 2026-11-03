@@ -1,7 +1,7 @@
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { nowDate } from "@/lib/clock";
-import { type ClientDiverMessageNamespace, messagesForNamespaces } from "./messages";
+import { type ClientDiverMessageNamespace, messagesFor, messagesForNamespaces } from "./messages";
 import { toDiverLocale } from "./settings";
 
 /**
@@ -22,6 +22,9 @@ import { toDiverLocale } from "./settings";
  * rendering — a 200 with nothing in it, which is exactly how this surfaced.
  *
  * - `locale`/`messages`: the shop's, negotiated per request.
+ * - `words`: always carried, never named. The product's invariant words ("Saving…",
+ *   "Never mind") are about 20 keys and every diver page uses some of them, so a provider
+ *   that had to remember to list `words` would be one more way to render a key as itself.
  * - `namespaces`: the top-level bundle sections the Client Components under
  *   this provider actually call `useTranslations()` for — required, and
  *   deliberately not defaulted to "everything," because the full diver bundle
@@ -52,7 +55,10 @@ export function DiverIntlProvider({
   return (
     <NextIntlClientProvider
       locale={resolved}
-      messages={messagesForNamespaces(resolved, namespaces)}
+      messages={{
+        ...messagesForNamespaces(resolved, namespaces),
+        words: messagesFor(resolved).words,
+      }}
       timeZone={timeZone}
       now={nowDate()}
       formats={{}}

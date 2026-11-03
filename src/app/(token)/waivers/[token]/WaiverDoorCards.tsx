@@ -74,7 +74,7 @@ export function ExpiredLink({
           send — offering the button again would only invite a pointless email. */}
       {sent === "signed" ? null : (
         <form action={emailFreshWaiverLinkAction.bind(null, token)}>
-          <SubmitButton pendingLabel={t("waiver.sendingFreshLink")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.sending")} className={buttonClass()}>
             {t("waiver.emailFreshLink")}
           </SubmitButton>
         </form>

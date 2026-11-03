@@ -121,7 +121,7 @@ describe("CertificationEntries", () => {
     expect(
       screen.getByRole("button", { name: t("ready.certNotYetConfirmButton") }),
     ).toHaveAttribute("type", "submit");
-    fireEvent.click(screen.getByRole("button", { name: t("ready.neverMind") }));
+    fireEvent.click(screen.getByRole("button", { name: t("words.dismiss.neverMind") }));
     expect(screen.queryByText(t("ready.certNotYetConfirm"))).toBeNull();
     expect(screen.getByRole("button", { name: t("ready.certNotYetButton") })).toBeInTheDocument();
   });

@@ -55,7 +55,7 @@ export function ReviewAsk({
         />
         <div>
           <SubmitButton
-            pendingLabel={t("reviews.submitting")}
+            pendingLabel={t("words.busy.sending")}
             className={buttonClass({
               variant: stepsBack ? "secondary" : "primary",
             })}

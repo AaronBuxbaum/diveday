@@ -12,8 +12,8 @@ import { pathToFileURL } from "node:url";
  * spellings of "Saving…" is how the bundle got there. This refuses a new one: use the `words.*`
  * key.
  *
- * Scope: the staff bundles. The diver bundle still holds its own spellings; the guard widens to
- * it when that migration lands.
+ * Scope: the staff bundles, `diver.json` (as `diver:<key>`) and the content bundles (as
+ * `content/<section>:<key>`).
  *
  * A key that genuinely needs its own value (a participle that agrees in Spanish with its noun)
  * is named in `EXEMPT` with the reason.
@@ -63,12 +63,19 @@ async function main() {
   for (const file of (await readdir(dir)).filter((f) => f.endsWith(".json"))) {
     bundles[file.replace(/\.json$/, "")] = JSON.parse(await readFile(path.join(dir, file), "utf8"));
   }
+  bundles.diver = JSON.parse(await readFile(path.join(ROOT, LOCALE_DIR, "diver.json"), "utf8"));
+  const contentDir = path.join(ROOT, LOCALE_DIR, "content");
+  for (const file of (await readdir(contentDir)).filter((f) => f.endsWith(".json"))) {
+    bundles[`content/${file.replace(/\.json$/, "")}`] = JSON.parse(
+      await readFile(path.join(contentDir, file), "utf8"),
+    );
+  }
   const repeats = findRepeats(words, bundles);
   if (repeats.length === 0) {
-    console.log(`words: no staff key repeats a words.* value (${wordValues(words).size} words)`);
+    console.log(`words: no key repeats a words.* value (${wordValues(words).size} words)`);
     return;
   }
-  console.error("words: these staff keys spell a word `words.json` already holds:");
+  console.error("words: these keys spell a word `words.json` already holds:");
   for (const { id, value, owner } of repeats) {
     console.error(`  ${id} = ${JSON.stringify(value)}  ->  use t("${owner}")`);
   }

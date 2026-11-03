@@ -77,7 +77,7 @@ export function ExpiredLink({
           retrying: a provider failure passes, and a live link expires. */}
       {sent === "unavailable" ? null : (
         <form action={emailFreshReadinessLinkAction.bind(null, token)}>
-          <SubmitButton pendingLabel={t("ready.sendingFreshLink")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.sending")} className={buttonClass()}>
             {t("ready.emailFreshLink")}
           </SubmitButton>
         </form>

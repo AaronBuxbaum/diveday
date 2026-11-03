@@ -249,7 +249,7 @@ export function PhotoDoor({
             {canShareWithBoat ? <ShareWithBoatTick label={t("recap.shareWithBoat")} /> : null}
             <div>
               <SubmitButton
-                pendingLabel={t("recap.addingPhoto")}
+                pendingLabel={t("words.busy.adding")}
                 className={buttonClass({ variant: "secondary", className: "self-start" })}
               >
                 {t("recap.addToMyRecap")}

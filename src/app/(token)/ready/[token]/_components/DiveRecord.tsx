@@ -311,7 +311,7 @@ export function DiveRecord({
             lineHint: t("recap.privateLineHint"),
             linePlaceholder: t("recap.privateLinePlaceholder"),
             save: t("recap.saveAsImage"),
-            saving: t("recap.savingImage"),
+            saving: t("words.busy.saving"),
             failed: t("recap.saveImageFailed"),
           }}
           // Whose record it is, which is all this card may claim of itself.

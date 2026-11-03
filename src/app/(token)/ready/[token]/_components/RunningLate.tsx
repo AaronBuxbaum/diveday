@@ -74,7 +74,7 @@ export function RunningLate({
             : t("ready.lateConfirm", { time: formatTime(dockCallAt, locale, tz) })
         }
         confirmLabel={t("ready.lateConfirmButton")}
-        cancelLabel={t("ready.neverMind")}
+        cancelLabel={t("words.dismiss.neverMind")}
         pendingLabel={t("ready.lateSending")}
         confirmClassName={buttonClass({ size: "sm" })}
       />

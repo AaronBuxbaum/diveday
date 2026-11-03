@@ -61,7 +61,7 @@ export default async function GetSetUpPage({
     phone: t("marketing.setUp.phone"),
     website: t("marketing.setUp.website"),
     submit: t("marketing.setUp.submit"),
-    sending: t("marketing.setUp.sending"),
+    sending: t("words.busy.sending"),
     errors: {
       required: t("marketing.setUp.errors.required"),
       invalid: t("marketing.setUp.errors.invalid"),

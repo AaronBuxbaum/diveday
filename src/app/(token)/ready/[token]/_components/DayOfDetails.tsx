@@ -310,7 +310,7 @@ export function DayOfDetails({
                   <SubmitButton
                     name="kind"
                     value="none"
-                    pendingLabel={t("common.saving")}
+                    pendingLabel={t("words.busy.saving")}
                     className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
                   >
                     {t("ready.helpWithdraw")}
@@ -364,7 +364,7 @@ export function DayOfDetails({
         ) : null}
       </div>
       <div className="pt-2">
-        <SubmitButton pendingLabel={t("common.saving")} className={buttonClass({ size: "sm" })}>
+        <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass({ size: "sm" })}>
           {t("ready.dayOfSave")}
         </SubmitButton>
       </div>

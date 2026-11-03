@@ -1371,7 +1371,6 @@
     "phone": "Teléfono",
     "website": "Sitio web",
     "submit": "Enviar",
-    "sending": "Enviando…",
     "errors": {
       "required": "Completa este campo.",
       "invalid": "Revisa este dato.",

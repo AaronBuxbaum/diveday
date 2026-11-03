@@ -50,6 +50,8 @@ export function providedNamespaces(source) {
   const offered = new Set();
   if (source.includes("<ErrorBoundaryIntlProvider")) offered.add("errorBoundary");
   if (!source.includes("<DiverIntlProvider")) return offered.size > 0 ? offered : null;
+  // `DiverIntlProvider` always carries the words bundle (src/i18n/DiverIntlProvider.tsx).
+  offered.add("words");
   for (const block of source.matchAll(/namespaces=\{\[([^\]]*)\]\}/g)) {
     for (const name of block[1].matchAll(/"([^"]+)"/g)) offered.add(name[1]);
   }
