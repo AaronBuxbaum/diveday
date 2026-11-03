@@ -3,9 +3,10 @@
  *
  * Reasons invite review of each decision. Three arguments apply throughout:
  *
- * - **A staff member is never erased** (`anonymizeDiver` refuses anyone holding
- *   a staff role), so a table whose only person column is the staffer who
- *   acted is not about the diver at all. Their name on the record is the shop's
+ * - **A current staff member is never erased** (`anonymizeDiver` refuses anyone
+ *   holding a staff role; a former one can be, and their own notes are cleared),
+ *   so a table whose only person column is the staffer who acted is not about
+ *   the diver at all. Their name on the record is the shop's
  *   accountability trail, which the ADR keeps on purpose.
  * - **A pointer is not a disclosure.** A row that names a diver only by
  *   `person_id` says nothing once that person's row is erased, and the name
@@ -69,8 +70,6 @@ export const ERASURE_KEEPS: Record<string, string> = {
     "kept deliberately by ADR 20260803-processor-erasure-obligations: it names the erased person and whoever discharged the obligation, which is how an unfinished erasure stays visible",
   account_step_ups:
     "cleared by ON DELETE CASCADE from `user_accounts` and `account_sessions`, both of which the erasure deletes",
-  push_subscriptions:
-    "`person_id` is the staff member who opted a device in, and the erasure refuses anyone holding a staff role. This becomes a gap the day a diver-facing push subscription ships",
   trip_series_crew:
     "who sails with a repeating departure on every new date — a staff roster row, like `trip_assignments`",
   customer_gear_notices:
@@ -80,11 +79,11 @@ export const ERASURE_KEEPS: Record<string, string> = {
   work_order_bills:
     "which order billed which ticket — two ids. The order keeps its own erasure answer, and the ticket's words are redacted",
   crew_away_acknowledgements:
-    "that a staffer said an away crew member is working a departure anyway, and who took it back — four ids and two dates. Only crew are its subject, and the erasure refuses anyone holding a staff role",
+    "that a staffer said an away crew member is working a departure anyway, and who took it back — four ids and two dates. Only crew are its subject, and it holds ids and dates, no words",
   crew_notices:
-    "that a crew member was put on, taken off, or answered about a departure — a change code, two ids and two dates. Only crew are its subject, and the erasure refuses anyone holding a staff role",
+    "that a crew member was put on, taken off, or answered about a departure — a change code, two ids and two dates. Only crew are its subject, and it holds ids and dates, no words",
   weekly_digest_sends:
-    "that a staff member's Monday email went out for a week — a date, a delivery status and a token hash. Only staff receive it, and the erasure refuses anyone holding a staff role",
+    "that a staff member's Monday email went out for a week — a date, a delivery status and a token hash. Only staff receive it, and it holds a date, a status and a hash, no words",
 
   // --- the shop's own objects, holding nobody ------------------------------
   trip_dives: "the dives inside a departure, by site and order",
@@ -106,8 +105,6 @@ export const ERASURE_KEEPS: Record<string, string> = {
     "an owner's ruling on whether a template change was material — a decision about the shop’s text, not about any signer",
   // --- the staffer who acted is the only person on the row -----------------
   crew_assignment_requests: "a crew member asking for a departure, and the answer",
-  crew_availability_blocks: "a crew member’s own unavailable dates and their note about them",
-  staff_shifts: "a staff member’s own hours and the note attached to them",
   executed_dives:
     "what the crew recorded about a dive that ran — depth, time, conditions, and why the plan changed",
   gear_service_events: "a technician's record of servicing a unit",

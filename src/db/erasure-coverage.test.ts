@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { and, eq, getTableName, isNull, sql } from "drizzle-orm";
+import { and, eq, getTableName, isNull } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
@@ -9,13 +9,14 @@ import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { ERASURE_KEEPS } from "./erasure-coverage-keeps.test-support";
 import { OUTSIDE_CLOSURE_REASONS } from "./erasure-outside-closure-classification.test-support";
-import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
 import {
-  erasedPersonRowDeletes,
-  eraseFate,
-  PERSON_COLUMNS,
-  personColumnKey,
-} from "./person-columns";
+  inRegistryDeleteFunction,
+  REGISTRY_WRITE,
+  registryDeletesRun,
+  stripCommentsAndStrings,
+} from "./erasure-source.test-support";
+import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
+import { erasedPersonRowDeletes } from "./person-columns";
 import * as schema from "./schema";
 import {
   bookings,
@@ -85,66 +86,6 @@ const ctx = fileScopedShopContext({ history: true });
 type ForeignKeyFacts = { target: string; columns: string[]; onDelete: string };
 type ColumnFacts = { name: string; columnType: string };
 type TableFacts = { references: string[]; columns: ColumnFacts[]; foreignKeys: ForeignKeyFacts[] };
-
-/**
- * Blank out line comments, block comments and string/template literals, keeping
- * the source's length so nothing else shifts. Crude on purpose: it only has to
- * stop a `.update(x)` inside prose or a quoted example from counting as a
- * write, and every real write site in this file is bare code.
- */
-function stripCommentsAndStrings(source: string): string {
-  let out = "";
-  let mode: "code" | "line" | "block" | '"' | "'" | "`" = "code";
-  for (let i = 0; i < source.length; i += 1) {
-    const char = source[i] as string;
-    const next = source[i + 1];
-    if (mode === "code") {
-      if (char === "/" && next === "/") {
-        mode = "line";
-        out += "  ";
-        i += 1;
-        continue;
-      }
-      if (char === "/" && next === "*") {
-        mode = "block";
-        out += "  ";
-        i += 1;
-        continue;
-      }
-      if (char === '"' || char === "'" || char === "`") {
-        mode = char;
-        out += " ";
-        continue;
-      }
-      out += char;
-      continue;
-    }
-    if (mode === "line") {
-      if (char === "\n") mode = "code";
-      out += char === "\n" ? char : " ";
-      continue;
-    }
-    if (mode === "block") {
-      if (char === "*" && next === "/") {
-        mode = "code";
-        out += "  ";
-        i += 1;
-        continue;
-      }
-      out += char === "\n" ? char : " ";
-      continue;
-    }
-    // Inside a string literal.
-    if (char === "\\") {
-      out += "  ";
-      i += 1;
-      continue;
-    }
-    if (char === mode) mode = "code";
-    out += char === "\n" ? char : " ";
-  }
-  return out;
-}
 
 function schemaTables(): Map<string, TableFacts> {
   const tables = new Map<string, TableFacts>();
@@ -217,7 +158,8 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
   const unresolved: string[] = [];
   for (const match of source.matchAll(/\.(?:update|delete)\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
     const identifier = match[1] as string;
-    if (identifier === REGISTRY_WRITE) continue;
+    if (identifier === REGISTRY_WRITE && inRegistryDeleteFunction(source, match.index ?? 0))
+      continue;
     const name = schemaTableNameOf(identifier);
     if (name) written.add(name);
     else unresolved.push(identifier);
@@ -229,30 +171,6 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
 }
 
 /**
- * The one write `anonymize.ts` makes through a variable: the registry's plain
- * deletes (`deleteRegisteredPersonRows`), which stand for every row of
- * `erasedPersonRowDeletes()`. They count as written only while a sweep calls
- * the function, so a dropped call is a dropped write here too.
- */
-const REGISTRY_WRITE = "registeredTable";
-const REGISTRY_DELETES_CALL = /\bdeleteRegisteredPersonRows\(\s*tx\b/;
-
-function registryDeletesRun(strippedSource: string): boolean {
-  const call = REGISTRY_DELETES_CALL.exec(strippedSource);
-  return call !== null && sweepContaining(strippedSource, call.index) !== null;
-}
-
-/** The `scrub*` sweep whose body holds `index`, or null. */
-function sweepContaining(strippedSource: string, index: number): string | null {
-  for (const match of strippedSource.matchAll(/^async function (scrub\w+)\(/gm)) {
-    const start = match.index ?? 0;
-    const end = strippedSource.indexOf("\n}\n", start);
-    if (index > start && index < end) return match[1] as string;
-  }
-  return null;
-}
-
-/**
  * The tables `anonymizeDiver` **hard-deletes** from, in the order its source
  * deletes them. Order matters here and nowhere else in this file: a foreign key
  * into a deleted table is harmless if the referencing rows go first.
@@ -260,7 +178,8 @@ function sweepContaining(strippedSource: string, index: number): string | null {
 function erasureHardDeleteOrder(): string[] {
   const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
   const order: string[] = [];
-  const sites = /\.delete\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)|\bdeleteRegisteredPersonRows\(\s*tx\b/g;
+  const sites =
+    /\.delete\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)|(?<!function )\bdeleteRegisteredPersonRows\(\s*tx\b/g;
   for (const match of source.matchAll(sites)) {
     // The registry's deletes run where a sweep calls them, not where they are written.
     const names = match[1]
@@ -980,195 +899,5 @@ describe("erasure coverage", () => {
         .map(({ column, raises }) => `${column} -> ${raises}`)
         .sort(),
     ).toEqual([]);
-  });
-});
-
-/**
- * The tables an `anonymize.ts` sweep writes, directly or through a helper it
- * imports from a sibling module, read from source the way `erasureWriteSites`
- * is. The helper is followed one step: `scrubTrainingPlans` writes `bookings`
- * and `trip_assignments` through `forgetTrainingPlanPeople`.
- */
-function tablesSweepWrites(sweep: string): Set<string> {
-  const raw = readFileSync("src/db/anonymize.ts", "utf8");
-  const source = stripCommentsAndStrings(raw);
-  const start = source.search(new RegExp(`^async function ${sweep}\\(`, "m"));
-  if (start < 0) return new Set();
-  const body = source.slice(start, source.indexOf("\n}\n", start));
-  const written = new Set<string>();
-  const writesIn = (text: string) => {
-    for (const match of text.matchAll(/\.(?:update|delete)\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
-      const name = schemaTableNameOf(match[1] as string);
-      if (name) written.add(name);
-    }
-  };
-  writesIn(body);
-  if (REGISTRY_DELETES_CALL.test(body)) {
-    for (const { table } of erasedPersonRowDeletes()) written.add(table);
-  }
-  for (const call of body.matchAll(/\b([a-z][A-Za-z0-9]*)\(/g)) {
-    const helper = call[1] as string;
-    const from = raw.match(
-      new RegExp(`import \\{[^}]*\\b${helper}\\b[^}]*\\} from "\\./([a-z0-9-]+)";`),
-    )?.[1];
-    if (from) writesIn(stripCommentsAndStrings(readFileSync(`src/db/${from}.ts`, "utf8")));
-  }
-  return written;
-}
-
-/**
- * The registry's `erase` column (`./person-columns`, issue #2724) against the
- * code it describes. A fate is a claim, and these make each kind of claim
- * fail on the day it stops being true: a named sweep that is gone or no longer
- * writes the table, a `keep` on a table the erasure does write with no word
- * on why, a plain delete on a table that cannot be scoped to one shop.
- */
-describe("the registry's erase fates", () => {
-  const tables = schemaTables();
-  const sweeps = new Set(
-    [...readFileSync("src/db/anonymize.ts", "utf8").matchAll(/^async function (scrub\w+)\(/gm)].map(
-      (match) => match[1] as string,
-    ),
-  );
-
-  it("gives every column a fate", () => {
-    expect(
-      PERSON_COLUMNS.filter((row) => {
-        try {
-          eraseFate(row);
-          return false;
-        } catch {
-          return true;
-        }
-      }).map(personColumnKey),
-    ).toEqual([]);
-  });
-
-  it("names, for every delete, scrub or null, a sweep that writes the table", () => {
-    const wrong: string[] = [];
-    for (const row of PERSON_COLUMNS) {
-      const fate = eraseFate(row);
-      if (fate === "keep") {
-        if (row.eraseIn) wrong.push(`${personColumnKey(row)}: keep names a sweep`);
-        continue;
-      }
-      if (!row.eraseIn) {
-        if (fate !== "delete") wrong.push(`${personColumnKey(row)}: ${fate} names no sweep`);
-        continue;
-      }
-      if (!sweeps.has(row.eraseIn)) {
-        wrong.push(`${personColumnKey(row)}: no sweep ${row.eraseIn}`);
-      } else if (!tablesSweepWrites(row.eraseIn).has(row.table)) {
-        wrong.push(`${personColumnKey(row)}: ${row.eraseIn} does not write ${row.table}`);
-      }
-    }
-    expect(wrong).toEqual([]);
-  });
-
-  it("says why it keeps a column of a table the erasure writes", () => {
-    const { written } = erasureWriteSites();
-    const unexplained = PERSON_COLUMNS.filter(
-      (row) =>
-        eraseFate(row) === "keep" &&
-        row.kind !== "actor" &&
-        !row.eraseWhy &&
-        !(row.table in ERASURE_KEEPS),
-    ).map(personColumnKey);
-    expect(unexplained).toEqual([]);
-    expect(
-      PERSON_COLUMNS.filter((row) => row.eraseWhy && eraseFate(row) !== "keep").map(
-        personColumnKey,
-      ),
-    ).toEqual([]);
-    // A keep-listed table the erasure writes is already refused above; this is
-    // the column-level half: a table the keep-list answers for is one no row
-    // claims the erasure deletes, scrubs or clears.
-    expect(
-      PERSON_COLUMNS.filter((row) => row.table in ERASURE_KEEPS && eraseFate(row) !== "keep").map(
-        personColumnKey,
-      ),
-    ).toEqual([]);
-    expect(written.size).toBeGreaterThan(30);
-  });
-
-  it("runs its plain deletes, and only on tables scoped to one shop", () => {
-    const plain = erasedPersonRowDeletes();
-    expect(plain.length).toBeGreaterThan(2);
-    const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
-    expect(registryDeletesRun(source)).toBe(true);
-    expect(
-      plain
-        .filter(({ table, column }) => {
-          const columns = tables.get(table)?.columns.map((facts) => facts.name) ?? [];
-          return !columns.includes("shop_id") || !columns.includes(column);
-        })
-        .map(personColumnKey),
-    ).toEqual([]);
-  });
-
-  /**
-   * The registry loop against a real database. Adversarial on the half that
-   * matters most for a loop with no table named in it: it reaches the erased
-   * diver's rows and nobody else's, and leaves none of theirs behind in any
-   * table it covers, including one added to the registry after this was written.
-   */
-  it("deletes the erased diver's plain rows and leaves another diver's", async () => {
-    const { db, shop } = ctx;
-    const [owner] = await db
-      .select({ id: people.id })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
-      .limit(1);
-    if (!owner) throw new Error("expected the seeded owner");
-    const seats = await db
-      .select({ id: bookings.id, personId: bookings.personId, tripId: bookings.tripId })
-      .from(bookings)
-      .innerJoin(people, eq(people.id, bookings.personId))
-      .where(
-        and(eq(bookings.shopId, shop.id), isNull(people.anonymizedAt), isNull(people.deletedAt)),
-      )
-      .orderBy(bookings.personId);
-    const erased = seats[0];
-    const other = seats.find((seat) => seat.personId !== erased?.personId);
-    if (!erased || !other) throw new Error("expected two seeded divers holding seats");
-    for (const seat of [erased, other]) {
-      await db.insert(schema.lostItems).values({
-        shopId: shop.id,
-        tripId: seat.tripId,
-        bookingId: seat.id,
-        personId: seat.personId,
-        description: "a blue mask in a red case",
-      });
-      await db.insert(schema.internalNotes).values({
-        shopId: shop.id,
-        personId: seat.personId,
-        body: "prefers the bow",
-        createdByPersonId: owner.id,
-      });
-    }
-
-    const result = await anonymizeDiver(db, {
-      shopId: shop.id,
-      personId: erased.personId,
-      actorPersonId: owner.id,
-    });
-    expect(result.ok).toBe(true);
-
-    const left = async (personId: string) => {
-      const counts: Record<string, number> = {};
-      for (const { table, column } of erasedPersonRowDeletes()) {
-        const found = await db.execute(
-          sql`select count(*)::int as n from ${sql.identifier(table)} where ${sql.identifier(column)} = ${personId}`,
-        );
-        counts[`${table}.${column}`] = (found.rows[0] as { n: number }).n;
-      }
-      return counts;
-    };
-    const erasedLeft = await left(erased.personId);
-    expect(Object.values(erasedLeft).every((n) => n === 0)).toBe(true);
-    const otherLeft = await left(other.personId);
-    expect(otherLeft["lost_items.person_id"]).toBeGreaterThan(0);
-    expect(otherLeft["internal_notes.person_id"]).toBeGreaterThan(0);
   });
 });
