@@ -192,7 +192,9 @@ export function DiverList({
     if (debounce.current) return;
     setTyped(query);
   }, [query]);
+  // An open add panel (`?add=1`) owns the focus instead (`AddPanelFocus`).
   useEffect(() => {
+    if (document.querySelector("[data-add-panel-heading]")) return;
     searchRef.current?.focus({ preventScroll: true });
   }, []);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
