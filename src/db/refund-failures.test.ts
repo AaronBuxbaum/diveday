@@ -27,7 +27,7 @@ import { recordStripeRefundFailure } from "./refund-failures";
 import { refundBookingOnCancellation } from "./refunds";
 import { bookingCheckouts, orders } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { editTrip, getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, upcomingTripsWithCounts, editTrip } from "./trips";
 import { listUnfinished } from "./unfinished";
 
 /**

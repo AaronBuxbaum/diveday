@@ -96,6 +96,7 @@ describe("staffRouteAt", () => {
       "/shop/blue-mantis/schedule/board",
     );
     expect(up("/shop/blue-mantis/trips/t-1/log")).toBe("/shop/blue-mantis/trips/t-1");
+    expect(up("/shop/blue-mantis/trips/t-1/party/l-1/waivers")).toBe("/shop/blue-mantis/trips/t-1");
     expect(up("/shop/blue-mantis/trips/t-1/prep/ticket/b-1")).toBe(
       "/shop/blue-mantis/trips/t-1/prep#packing-list",
     );
@@ -133,6 +134,8 @@ describe("wayUpHref", () => {
     expect(wayUpHref("/s/blue-mantis")).toBeNull();
     expect(wayUpHref("/s/blue-mantis/courses")).toBeNull();
     expect(wayUpHref("/ready/token")).toBeNull();
+    // The offline manifest is not under `/shop/`: its eyebrow never links.
+    expect(wayUpHref("/offline-manifest")).toBeNull();
     expect(wayUpHref("")).toBeNull();
   });
 });

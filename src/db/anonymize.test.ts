@@ -4,6 +4,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
+import { tipCheckout } from "./checkout-purpose";
 import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { recordShopIntegration } from "./integrations";
@@ -33,7 +34,6 @@ import {
   recapPulses,
   rollCallEvents,
   shops,
-  tips,
   tripLastMinutePromos,
   trips,
   userAccounts,
@@ -715,15 +715,27 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       description: "Two tanks for Kwame Mensah",
       unitAmountCents: 18000,
     });
-    await db.insert(tips).values({
-      shopId: shop.id,
-      bookingId: booking.id,
-      stripeAccountId: "acct_test",
-      stripeSessionId: "cs_test",
-      currency: "usd",
-      amountCents: 2000,
-      checkoutUrl: "https://checkout.stripe.com/c/pay/cs_test",
-    });
+    const [tipCheckoutRow] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        purpose: "tip",
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_test",
+        currency: "usd",
+        amountPerDiverCents: 2000,
+        totalCents: 2000,
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_test",
+      })
+      .returning();
+    if (tipCheckoutRow) {
+      await db.insert(bookingCheckoutBookings).values({
+        shopId: shop.id,
+        checkoutId: tipCheckoutRow.id,
+        bookingId: booking.id,
+      });
+    }
 
     // 7. The provider's own words for a bounce, on the release and per channel.
     const [template] = await db
@@ -838,9 +850,18 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     expect(line?.unitAmountCents).toBe(18000);
 
     // The hosted tip page renders the address it was minted with.
-    const [tip] = await db.select().from(tips).where(eq(tips.bookingId, booking.id));
+    const [tip] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(
+        and(
+          eq(bookingCheckouts.shopId, shop.id),
+          tipCheckout(),
+          eq(bookingCheckouts.id, tipCheckoutRow.id),
+        ),
+      );
     expect(tip?.checkoutUrl).toBeNull();
-    expect(tip?.amountCents).toBe(2000);
+    expect(tip?.totalCents).toBe(2000);
 
     // The receipt document itself, retired through the same durable ledger
     // every other blob deletion uses rather than a second mechanism.
@@ -1165,16 +1186,28 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
-    await db.insert(tips).values({
-      shopId: shop.id,
-      bookingId: booking.id,
-      stripeAccountId: "acct_test",
-      stripeSessionId: "cs_tip",
-      stripeCustomerId: "cus_tip",
-      currency: "usd",
-      amountCents: 2000,
-      checkoutUrl: "https://checkout.stripe.com/c/pay/cs_tip",
-    });
+    const [tipCheckoutRow] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: await seededTripId(db, shop.id),
+        purpose: "tip",
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_tip",
+        stripeCustomerId: "cus_tip",
+        currency: "usd",
+        amountPerDiverCents: 2000,
+        totalCents: 2000,
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_tip",
+      })
+      .returning();
+    if (tipCheckoutRow) {
+      await db.insert(bookingCheckoutBookings).values({
+        shopId: shop.id,
+        checkoutId: tipCheckoutRow.id,
+        bookingId: booking.id,
+      });
+    }
     const provider = providerReturning({ status: "deleted" });
 
     const result = await anonymizeDiver(
@@ -1219,21 +1252,33 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
-    await db.insert(tips).values({
-      shopId: shop.id,
-      bookingId: booking.id,
-      stripeAccountId: "acct_test",
-      stripeSessionId: "cs_abandoned",
-      // Null, because `customer_creation: "if_required"` created none. An
-      // obligation raised here would point an owner at an object that never
-      // existed.
-      stripeCustomerId: null,
-      currency: "usd",
-      amountCents: 1500,
-      // The link is already gone, which is the case the separate read exists
-      // for: the `checkoutUrl` UPDATE would not have returned this row.
-      checkoutUrl: null,
-    });
+    const [tipCheckoutRow] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: await seededTripId(db, shop.id),
+        purpose: "tip",
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_abandoned",
+        // Null, because `customer_creation: "if_required"` created none. An
+        // obligation raised here would point an owner at an object that never
+        // existed.
+        stripeCustomerId: null,
+        currency: "usd",
+        amountPerDiverCents: 1500,
+        totalCents: 1500,
+        // The link is already gone, which is the case the separate read exists
+        // for: the `checkoutUrl` UPDATE would not have returned this row.
+        checkoutUrl: null,
+      })
+      .returning();
+    if (tipCheckoutRow) {
+      await db.insert(bookingCheckoutBookings).values({
+        shopId: shop.id,
+        checkoutId: tipCheckoutRow.id,
+        bookingId: booking.id,
+      });
+    }
     const provider = providerReturning({ status: "deleted" });
 
     await anonymizeDiver(
@@ -1454,18 +1499,30 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       stripeCustomerId: "cus_rina",
       stripeInvoiceId: "in_rina",
     });
-    await db.insert(tips).values({
-      shopId: shop.id,
-      bookingId: booking.id,
-      stripeAccountId: "acct_test",
-      stripeSessionId: "cs_rina",
-      // The same returning diver, so Stripe reused the customer object her
-      // order already named.
-      stripeCustomerId: "cus_rina",
-      currency: "usd",
-      amountCents: 2500,
-      checkoutUrl: "https://checkout.stripe.com/c/pay/cs_rina",
-    });
+    const [tipCheckoutRow] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId,
+        purpose: "tip",
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_rina",
+        // The same returning diver, so Stripe reused the customer object her
+        // order already named.
+        stripeCustomerId: "cus_rina",
+        currency: "usd",
+        amountPerDiverCents: 2500,
+        totalCents: 2500,
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_rina",
+      })
+      .returning();
+    if (tipCheckoutRow) {
+      await db.insert(bookingCheckoutBookings).values({
+        shopId: shop.id,
+        checkoutId: tipCheckoutRow.id,
+        bookingId: booking.id,
+      });
+    }
     // A sole-occupant checkout on her own seat, on that same customer again.
     const [checkout] = await db
       .insert(bookingCheckouts)

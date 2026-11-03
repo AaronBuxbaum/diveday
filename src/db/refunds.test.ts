@@ -22,7 +22,7 @@ import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode } from "./trip-promos";
-import { editTrip, getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, setTripStatus, upcomingTripsWithCounts, editTrip } from "./trips";
 import { listUnfinished, type UnfinishedOptions } from "./unfinished";
 
 // One seeded database for the file and a rolled-back transaction per test

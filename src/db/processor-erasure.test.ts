@@ -105,6 +105,11 @@ describe("recording processor erasure obligations", () => {
     expect(raised.map((row) => row.externalId).sort()).toEqual(["cus_a", "cus_b", "in_a"]);
     const owed = await listUnfinished(db, shop.id, "processor_erasure");
     expect(owed.every((row) => row.status === "owed" && row.attempts === 0)).toBe(true);
+    // Owed at any age: a cutoff a caller passes cannot hide an erasure promise.
+    const anyAge = await listUnfinished(db, shop.id, "processor_erasure", {
+      olderThan: new Date(0),
+    });
+    expect(anyAge).toHaveLength(owed.length);
   });
 
   it("records nothing when the diver's orders name nothing at all", async () => {

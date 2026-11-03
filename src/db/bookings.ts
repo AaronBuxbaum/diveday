@@ -50,6 +50,7 @@ import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
+import { fareCheckout } from "./checkout-purpose";
 import type { AppDb, DbExecutor } from "./client";
 import {
   completeDateRequestOfferParty,
@@ -2312,6 +2313,7 @@ export async function moveBooking(
     const linked = tx
       .select({ id: bookingCheckoutBookings.checkoutId })
       .from(bookingCheckoutBookings)
+      // diveday:any-checkout-purpose: the update below names the fare.
       .where(
         and(
           eq(bookingCheckoutBookings.shopId, shopId),
@@ -2325,6 +2327,7 @@ export async function moveBooking(
         and(
           eq(bookingCheckouts.shopId, shopId),
           eq(bookingCheckouts.status, "pending"),
+          fareCheckout(),
           inArray(bookingCheckouts.id, linked),
         ),
       );
@@ -2782,6 +2785,7 @@ async function changeParticipantType(
     const linked = tx
       .select({ id: bookingCheckoutBookings.checkoutId })
       .from(bookingCheckoutBookings)
+      // diveday:any-checkout-purpose: the update below names the fare.
       .where(
         and(
           eq(bookingCheckoutBookings.shopId, shopId),
@@ -2795,6 +2799,7 @@ async function changeParticipantType(
         and(
           eq(bookingCheckouts.shopId, shopId),
           eq(bookingCheckouts.status, "pending"),
+          fareCheckout(),
           inArray(bookingCheckouts.id, linked),
         ),
       );
