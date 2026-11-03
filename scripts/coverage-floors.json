@@ -15,6 +15,12 @@
         "src/lib/readiness.ts": "99.47 -> 99.06",
         "src/lib/trip-admission.ts": "98.71 -> 98.64"
       }
+    },
+    {
+      "why": "#2703 (06afd958) moved the stuck-refund readers out of refunds.ts into unfinished.ts, taking covered branches with them; no branch was added. Measured by CI on #3735; the coverage artifact cannot be downloaded from an agent session, so the value is copied from the job log",
+      "files": {
+        "src/db/refunds.ts": "84.18 -> 83.76"
+      }
     }
   ],
   "src/db/aboard-at-sea.ts": 94.82,
@@ -42,7 +48,7 @@
   "src/db/promo-caps.ts": 75,
   "src/db/readiness-link-rescue.ts": 74.07,
   "src/db/readiness.ts": 84.59,
-  "src/db/refunds.ts": 84.18,
+  "src/db/refunds.ts": 83.76,
   "src/db/roll-call-alerts.ts": 82.6,
   "src/db/roll-call-history.ts": 50,
   "src/db/schema/certifications.ts": 100,
