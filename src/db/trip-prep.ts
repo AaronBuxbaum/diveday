@@ -456,7 +456,11 @@ export async function getTripPrepPage(db: AppDb, shop: TripPrepShop, tripId: str
   ]);
   if (!prep) return null;
   const { trip } = prep;
-  const stage = await readDepartureStage(db, shop.id, tripId, {
+  const {
+    shown: shownStage,
+    sailed,
+    finished,
+  } = await readDepartureStage(db, shop.id, tripId, {
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -465,8 +469,8 @@ export async function getTripPrepPage(db: AppDb, shop: TripPrepShop, tripId: str
     cancelled: trip.status === "cancelled",
     meetingWindows: (await meetingWindowsByTrip(db, [trip])).get(tripId),
   });
-  const backFromBoat = stage.finished ? await listTripUnitsToCheckIn(db, shop.id, tripId) : [];
-  return { prep, stage, backFromBoat };
+  const backFromBoat = finished ? await listTripUnitsToCheckIn(db, shop.id, tripId) : [];
+  return { prep, shownStage, sailed, finished, backFromBoat };
 }
 
 /**

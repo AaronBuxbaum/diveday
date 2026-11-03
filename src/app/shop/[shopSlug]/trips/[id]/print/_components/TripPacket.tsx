@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
 import { getTripOverview } from "@/db/trip-overview";
 import { readTripPaperIdentity } from "@/db/trip-paper-identity";
+import { getTripPrepPage } from "@/db/trip-prep";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
@@ -23,7 +24,6 @@ import { ManifestPaper } from "../../manifest/_components/ManifestPaper";
 import { readManifestView } from "../../manifest/_components/manifest-view";
 import { PrintedBoatPaper } from "../../manifest/_components/PrintedBoatProcedure";
 import { PrepBody } from "../../prep/_components/PrepBody";
-import { readPrepView } from "../../prep/_components/prep-reads";
 import { PacketDives } from "./PacketDives";
 
 /**
@@ -119,7 +119,7 @@ export type PacketSheets = (lead?: ReactNode) => ReactNode;
  *
  * **Sheets, read from the readers the tabs use.** The Boat and Gear tabs and
  * these sheets build their facts in one place each (`readManifestView`,
- * `readPrepView`), so the sheet cannot drift from the screen a captain just
+ * `getTripPrepPage`), so the sheet cannot drift from the screen a captain just
  * reviewed; the sheets render the paper half of each (`ManifestPaper`,
  * `PrepBody`'s paper), which holds no control at all. Nothing interactive
  * reaches paper because nothing interactive is rendered, not because a
@@ -163,7 +163,7 @@ async function composeTripPacket({
       locale,
       t,
     }),
-    readPrepView(db, shop, tripId, now),
+    getTripPrepPage(db, shop, tripId, now),
   ]);
   // A departure whose overview resolved but whose manifest or packing list
   // did not is gone in the window between the reads: the same `notFound()`
