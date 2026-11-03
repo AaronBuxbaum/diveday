@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { courseSeatCapacity } from "@/lib/course-ratios";
+import { decideCourseAdmission } from "@/lib/course-admission";
 import { seatName } from "@/lib/held-seat";
 import {
   type NoShowGate,
@@ -15,14 +15,14 @@ import { seatStatusAfterRelease } from "@/lib/presence";
 import { type SimilarDeparture, similarDepartures } from "@/lib/similar-departures";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
-import { tripCourseCrewCounts } from "./bookings";
+import { readCourseSession } from "./bookings";
 import { expirePendingCheckoutsForBooking } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { departureOpenToDiver } from "./interest-offers";
 import { listDepartureInterests } from "./interests";
 import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";
-import { activityEvents, bookings, courses, people, trips } from "./schema";
+import { activityEvents, bookings, people, trips } from "./schema";
 import { lockSeatDeparture } from "./seat-locks";
 import { shopHasFeatureOn } from "./shops";
 import { tripPrimarySiteId } from "./trip-primary-site";
@@ -374,23 +374,21 @@ export async function undoBookingNoShow(
     const full = seatRefusal(seat.participantType, { ...trip, capacity }, held);
     if (full) return await refuse(full);
 
-    // A course session's ratio counts its students, its divers (G5 of
-    // #2226): a priced rider beside the class is a passenger, and a
-    // passenger's seat coming back asks no ratio at all.
-    if (trip.courseId && isDiver(seat.participantType)) {
-      const [course] = await tx
-        .select()
-        .from(courses)
-        .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, input.shopId)))
-        .limit(1);
-      const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, trip.id);
-      // Null means the session carries no ratio at all, so capacity alone binds.
-      // A gated session that has since lost its last instructor caps at zero and
-      // refuses too: a seat cannot be handed back to a session that could not
-      // sell it in the first place.
-      const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (seatCap !== null && held.divers >= seatCap) return await refuse("course_ratio_full");
-    }
+    // A course session's gates at `restore` strictness, the ratio alone, which
+    // counts its students, its divers (G5 of #2226): a priced rider beside the
+    // class is a passenger, and a passenger's seat coming back asks no ratio
+    // at all. A ratio-gated session that has since lost its last instructor
+    // caps at zero and refuses too; one with no ratio takes the seat back,
+    // because staffing is a sale's gate, not an undo's (`COURSE_GATES`).
+    const session = await readCourseSession(tx, trip);
+    const courseRefusal = decideCourseAdmission({
+      strictness: "restore",
+      course: session.course,
+      student: isDiver(seat.participantType),
+      crew: session.crew,
+      studentsHeld: held.divers,
+    });
+    if (courseRefusal) return await refuse(courseRefusal);
 
     // The status the standing arrival supports, never an assumed one. Not a new
     // check-in and so no readiness re-read: this restores a statement the desk

@@ -141,7 +141,6 @@
     "label": "Bookkeeper’s email",
     "description": "On the 2nd of each month, last month’s report, orders and crew sheet go to this address. Leave it empty to turn this off.",
     "save": "Save",
-    "saving": "Saving…",
     "saved": "Saved. Files go out on the 2nd.",
     "cleared": "Turned off. No month-end files will be sent.",
     "invalid": "That isn’t an email address. Check it and save again.",

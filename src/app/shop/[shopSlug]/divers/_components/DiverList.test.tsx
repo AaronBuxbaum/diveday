@@ -184,7 +184,7 @@ describe("DiverList empty state", () => {
 
   it("offers a bulk import to whoever may run one", () => {
     renderList();
-    expect(screen.getByRole("link", { name: "Import your roster" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Import your divers" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/settings/import",
     );
@@ -192,7 +192,7 @@ describe("DiverList empty state", () => {
 
   it("hides the import door from whoever may not — no disabled control, no explanation", () => {
     renderList({ importHref: null });
-    expect(screen.queryByRole("link", { name: "Import your roster" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Import your divers" })).toBeNull();
     expect(screen.queryByText(/spreadsheet/i)).toBeNull();
   });
 
@@ -458,19 +458,19 @@ describe("DiverList ledger", () => {
 describe("DiverList roster views", () => {
   it("hides the view chips over a day-one empty roster — controls with nothing to govern", () => {
     renderList();
-    expect(screen.queryByRole("navigation", { name: "Roster views" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Diver views" })).toBeNull();
     // Narrowed-to-nothing is a different state: the chips are how you widen
     // back out, so the row stays.
     cleanup();
     renderList({ filter: "missing_contact" });
-    expect(screen.getByRole("navigation", { name: "Roster views" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Diver views" })).toBeInTheDocument();
   });
 
   it("offers the day's three questions over the roster, then the way back to a removal", () => {
     // A view chip is active so the row renders (the roster itself is empty in
     // this fixture; see the day-one test above for the hidden state).
     renderList({ filter: "diving_today" });
-    const views = screen.getByRole("navigation", { name: "Roster views" });
+    const views = screen.getByRole("navigation", { name: "Diver views" });
     expect(
       [...views.querySelectorAll("a")].map((link) => [link.textContent, link.getAttribute("href")]),
     ).toEqual([
@@ -490,7 +490,7 @@ describe("DiverList roster views", () => {
 
   it("hides the Deleted view from a staffer who may not restore — no chip, no explanation", () => {
     renderList({ filter: "diving_today", canRestore: false });
-    const views = screen.getByRole("navigation", { name: "Roster views" });
+    const views = screen.getByRole("navigation", { name: "Diver views" });
     expect([...views.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
       "All divers",
       "Diving today",
@@ -506,7 +506,7 @@ describe("DiverList roster views", () => {
       sort: "last_dived",
       rows: [rosterRow({ personId: "p-1", fullName: "Zed Last", letter: "Z" })],
     });
-    const views = screen.getByRole("navigation", { name: "Roster views" });
+    const views = screen.getByRole("navigation", { name: "Diver views" });
     expect(views.querySelector("a")?.getAttribute("href")).toBe(
       "/shop/blue-mantis/divers?sort=last_dived",
     );

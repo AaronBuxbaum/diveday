@@ -92,7 +92,7 @@ export function noShowSalvageCopy(input: {
       offerCopy: {
         personId: diver.id,
         label: t("checkIn.noShow.offerSend"),
-        pending: t("checkIn.noShow.offerSending"),
+        pending: t("words.busy.sending"),
         sendFailed: t("checkIn.sendFailedButton"),
       },
       money,
@@ -145,7 +145,7 @@ export function sailedRebookCopy(input: {
       personId: diver.id,
       label: t("checkIn.noShow.offerSend"),
       ariaLabel: t("checkIn.noShow.offerAriaLabel", { name: diver.name, title: next.title, when }),
-      pending: t("checkIn.noShow.offerSending"),
+      pending: t("words.busy.sending"),
       sendFailed: t("checkIn.sendFailedButton"),
     },
   };

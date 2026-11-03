@@ -31,6 +31,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Clearing a declared-uncertified stamp
 - CMAS
 - Confirm to clear
+- Course admission
 - Course ladder
 - Declared uncertified
 - Depth ceiling
@@ -202,6 +203,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Date-request party bookings
 - Days at sea
 - Days away
+- Deal
 - Decompression card reminder
 - Default course page
 - Delivery receipt
@@ -354,6 +356,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Waiver / release
 - Waiver activity
 - Waiver completion
+- Waiver standing
 - Walk-in
 - Walk-in party
 - Weather day

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lt, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
 import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
@@ -34,6 +34,7 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   customerGearItems,
+  deals,
   departureBoatSafetySnapshots,
   divePackageEntitlements,
   divePackages,
@@ -73,6 +74,8 @@ import {
   recapPulses,
   rentalFitProfiles,
   retiredRollCallCrewEvents,
+  retiredShopPromoCodes,
+  retiredTripLastMinutePromos,
   reviewModerationEvents,
   reviewReplies,
   rollCallEvents,
@@ -81,7 +84,6 @@ import {
   shopBackupDestinations,
   shopContactEmailConfirmationTokens,
   shopIntegrations,
-  shopPromoCodes,
   shopShoreAlertTokens,
   shopStripeAccounts,
   shopSubscriptions,
@@ -99,7 +101,6 @@ import {
   tripChangeEvents,
   tripDives,
   tripHelpRequests,
-  tripLastMinutePromos,
   tripLenses,
   tripRecapPhotos,
   tripRequirements,
@@ -198,7 +199,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // The codes are referenced *by* checkouts, so they go after them.
   await db.delete(divePackages).where(eq(divePackages.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
-  await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
+  await db.delete(deals).where(and(eq(deals.shopId, shopId), isNull(deals.tripId)));
+  await db.delete(retiredShopPromoCodes).where(eq(retiredShopPromoCodes.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
   // lever W) — two of them, and neither is deleted first — so it goes before them.
@@ -251,7 +253,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // the people (both purposes go in one delete, before either parent).
   await db.delete(capabilities).where(eq(capabilities.shopId, shopId));
   await db.delete(interests).where(eq(interests.shopId, shopId));
-  await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
+  await db.delete(deals).where(and(eq(deals.shopId, shopId), isNotNull(deals.tripId)));
+  await db
+    .delete(retiredTripLastMinutePromos)
+    .where(eq(retiredTripLastMinutePromos.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(executedDives).where(inArray(executedDives.tripId, tripIds));

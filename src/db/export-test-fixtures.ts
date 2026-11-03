@@ -125,7 +125,6 @@ export const EXPORTED_TABLES = [
   "notification_deliveries",
   "interests",
   "date_request_offer_bookings",
-  "trip_last_minute_promos",
   "booking_arrival_events",
   "roll_call_events",
   "buddy_team_members",
@@ -163,7 +162,7 @@ export const EXPORTED_TABLES = [
   "trip_reviews",
   "recap_pulses",
   "review_moderation_events",
-  "shop_promo_codes",
+  "deals",
   "courses",
 ];
 

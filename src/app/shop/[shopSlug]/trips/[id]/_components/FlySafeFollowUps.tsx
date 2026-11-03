@@ -67,7 +67,7 @@ export async function FlySafeFollowUps({
               )}
             >
               <SubmitButton
-                pendingLabel={t("trips.flySafeFollowUp.resolving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
                 ariaLabel={t("trips.flySafeFollowUp.resolveFor", { name: item.name })}
               >

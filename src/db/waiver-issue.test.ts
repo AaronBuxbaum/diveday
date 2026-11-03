@@ -407,7 +407,7 @@ describe("issueAndDeliverWaiver", () => {
       .where(eq(bookings.id, bookingId));
     if (!seat) throw new Error("seat missing");
     const profile = await getDiverProfile(db, shop.id, seat.personId);
-    expect(profile?.waiver).toEqual({ state: "expired", signedAt: longAgo });
+    expect(profile?.waiver).toEqual({ state: "lapsed", signedAt: longAgo });
   });
 
   /**

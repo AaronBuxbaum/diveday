@@ -22,8 +22,12 @@ import {
 /** Route-owned identity included in the signature to prevent cross-surface replay. */
 export type TripAdmissionGateScope = { kind: "trip"; id: string } | { kind: "diver"; id: string };
 
-/** Folded into the signed payload so a gate signature verifies as nothing else. */
-const GATE_PURPOSE = "diveday-trip-admission-gate:v1";
+/**
+ * Folded into the signed payload so a gate signature verifies as nothing else.
+ * v2: the codes are ladder blockers; a v1 link from before then shows the
+ * generic notice rather than decoding into the new shape.
+ */
+const GATE_PURPOSE = "diveday-trip-admission-gate:v2";
 
 /** Separates the readable codes from the signature. In no code, and unreserved in a URI. */
 const SIGNATURE_SEPARATOR = ".";

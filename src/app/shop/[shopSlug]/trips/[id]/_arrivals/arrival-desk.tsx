@@ -522,7 +522,7 @@ function turnAwayDoor({
         legend: t("checkIn.turnAway.legend"),
         consequence: t("checkIn.turnAway.consequence"),
         confirm: t("checkIn.turnAway.confirm"),
-        confirming: t("checkIn.turnAway.confirming"),
+        confirming: t("words.busy.recording"),
         confirmAriaLabel: t("checkIn.turnAway.confirmAriaLabel", { name: row.personName }),
         sendFailed: t("checkIn.sendFailedButton"),
       }}

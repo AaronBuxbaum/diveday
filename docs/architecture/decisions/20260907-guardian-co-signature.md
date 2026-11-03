@@ -206,7 +206,7 @@ guardian signs the same release beside them, and the release is not usable until
 
 **Easy.** Any surface that shows a signature can say who co-signed by calling one function. Any
 reader that asks "is this release standing" gets the guardian rule for free, because it lives in
-`shopWaiverStatus` and in `calculateReadiness` rather than at call sites.
+`shopWaiverStanding` and in `calculateReadiness` rather than at call sites.
 
 **Hard.** Every fixture that constructs a `WaiverRecord` grows seven fields. Two readers now need
 the shop's timezone (`carriedPreparationForDiver`, `getDiverProfile`) that did not before. And a

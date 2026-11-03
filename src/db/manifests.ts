@@ -89,9 +89,9 @@ import { resolveTrainingMarks } from "./training-mark-resolve";
 import { invalidateTrainingPlansForCrewChange } from "./training-plan-crew";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
+import { getTripRoster } from "./trips-manifest";
 import { heldSeatCounts, seatNotCancelled, sellableCapacity } from "./trips-queries";
 import { getTripWithBooked } from "./trips-record";
-import { getTripRoster } from "./trips-roster";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**

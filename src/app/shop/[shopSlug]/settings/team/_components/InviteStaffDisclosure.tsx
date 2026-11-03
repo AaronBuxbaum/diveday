@@ -112,10 +112,7 @@ export function InviteStaffDisclosure({
             <RoleCheckboxes name="role" defaultRoles={[]} t={t} />
           </div>
           <FieldActions>
-            <SubmitButton
-              pendingLabel={t("settings.team.invite.submitting")}
-              className={buttonClass()}
-            >
+            <SubmitButton pendingLabel={t("words.busy.sending")} className={buttonClass()}>
               {t("settings.team.invite.submit")}
             </SubmitButton>
             <FormStatus tone={status?.tone}>{status?.text}</FormStatus>

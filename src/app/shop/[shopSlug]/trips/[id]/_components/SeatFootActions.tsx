@@ -75,7 +75,7 @@ export function SeatFootActions({
               choose: t("trips.roster.moveSeatChoose"),
               pending: t("trips.roster.moveSeatPending"),
               submit: t("trips.roster.moveSeatSubmit"),
-              cancel: t("trips.roster.neverMind"),
+              cancel: t("words.dismiss.neverMind"),
             }}
             targets={moveSeat.targets.map((target) => ({
               ...target,
@@ -105,7 +105,7 @@ export function SeatFootActions({
               triggerLabel={t("trips.roster.removeBooking")}
               message={t("trips.roster.confirmRemoveBooking", { name: person.fullName })}
               confirmLabel={t("trips.roster.removeBookingConfirmButton")}
-              cancelLabel={t("trips.roster.neverMind")}
+              cancelLabel={t("words.dismiss.neverMind")}
               evidence={carriedChartersNote}
               pendingLabel={t("trips.roster.removing")}
               // `danger-ghost`, which is this variant's own stated case: a

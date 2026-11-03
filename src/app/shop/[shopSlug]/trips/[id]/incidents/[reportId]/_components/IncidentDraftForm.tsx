@@ -254,7 +254,7 @@ export function IncidentDraftForm({
           />
         </Field>
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <SubmitButton pendingLabel={t("incidents.form.saving")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
             {t("incidents.form.save")}
           </SubmitButton>
           <FormStatus tone={notice?.tone}>{notice?.text}</FormStatus>

@@ -49,7 +49,7 @@ describe("CrewAwayWorkingControl", () => {
             personId: person.personId,
             label: t("today.crewAway.working", { name: person.fullName }),
           }))}
-          pendingLabel={t("today.crewAway.saving")}
+          pendingLabel={t("words.busy.saving")}
         />,
       );
       const buttons = screen.getAllByRole("button");

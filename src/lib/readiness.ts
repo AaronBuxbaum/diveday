@@ -26,7 +26,7 @@ import {
   unionRequirements,
 } from "./requirement";
 import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-mark";
-import { type ReleaseLapse, type WaiverStateFields, waiverState } from "./waivers";
+import { type ReleaseLapse, type WaiverStateFields, waiverStanding } from "./waivers";
 
 /**
  * Payment states that clear the "ready to board" payment gate.
@@ -1029,7 +1029,7 @@ export type StandingEvidence = {
  * `sale` for the level: clears when any row, the typed rung, or a course
  * finishing first reaches it. Otherwise `insufficient` naming the highest rung
  * stood on (a course is not a card, so it never counts toward `heldLevel`), or
- * `missing` when nothing names a rung at all.
+ * `missing` naming the rung asked for when nothing names a rung at all.
  */
 function saleLevelBlocker(
   evidence: StandingEvidence,
@@ -1051,7 +1051,7 @@ function saleLevelBlocker(
   }
   return heldLevel
     ? { code: "certification_insufficient", params: { requiredLevel: minimumLevel, heldLevel } }
-    : { code: "certification_missing" };
+    : { code: "certification_missing", params: { requiredLevel: minimumLevel } };
 }
 
 /** The standing against one level, at a threshold. Null when it clears. */
@@ -1149,7 +1149,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     }
   }
 
-  const rawState = waiverState(input.waiver, now);
+  const rawState = waiverStanding(input.waiver, now);
   // A rider is never held on a medical (H-20261009-rider-snorkeler-medical, issue #2212): a release a
   // referral parked or a physician refused is still the release they signed,
   // and the caller hands in the one `effectiveReleaseForRiderSeat` chose, which
@@ -1157,7 +1157,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   const state =
     !isHeldToMedical(input.participantType) &&
     (rawState === "medical_review" || rawState === "medical_not_cleared")
-      ? "complete"
+      ? "signed"
       : rawState;
 
   // A medical answer is a fact about the diver, not about the departure
@@ -1165,7 +1165,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // holds the diver on every trip, including one whose requirements leave the
   // release off, and — like the two checks above — one whose requirements
   // nobody has configured yet. A clean release signed after a refusal is the
-  // record handed in here instead (H-20261007-after-physician-says-no), so it reads "complete" and raises
+  // record handed in here instead (H-20261007-after-physician-says-no), so it reads "signed" and raises
   // neither.
   if (state === "medical_review") {
     blockers.push({ code: "medical_review" });
@@ -1184,7 +1184,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
 
   // The release's own blockers follow the departure's setting.
   if (input.requirement.requiresWaiver) {
-    if (state === "not_sent") {
+    if (state === "none") {
       blockers.push({
         code:
           input.releaseLapse === "before_trip"
@@ -1197,7 +1197,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     if (state === "awaiting_signature") {
       blockers.push({ code: "waiver_pending" });
     }
-    if (state === "expired") blockers.push({ code: "waiver_expired" });
+    if (state === "link_expired") blockers.push({ code: "waiver_expired" });
     // A signed release a minor gave alone (ADR 20260907-guardian-co-signature).
     // Only ever raised over a record that *is* signed: an unsigned, expired or
     // held release already has its own line above, and a second one here
@@ -1205,7 +1205,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     // diver signed, in the shop's own zone — never on today's date.
     if (
       input.waiver &&
-      state === "complete" &&
+      state === "signed" &&
       guardianSignatureMissing(input.waiver, {
         dateOfBirth: input.dateOfBirth,
         minorDeclared: input.minorDeclared ?? false,

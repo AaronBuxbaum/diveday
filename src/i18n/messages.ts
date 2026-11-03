@@ -1,8 +1,10 @@
 import { createTranslator } from "next-intl";
 import enUSContent from "./locales/en-US/content";
 import enUSChrome from "./locales/en-US/diver.json";
+import enUSWords from "./locales/en-US/words.json";
 import esESContent from "./locales/es-ES/content";
 import esESChrome from "./locales/es-ES/diver.json";
+import esESWords from "./locales/es-ES/words.json";
 import { messageFallback } from "./message-fallback";
 import { translatorOnError } from "./on-error";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
@@ -25,8 +27,8 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  */
 
 export const DIVER_MESSAGES = {
-  "en-US": { ...enUSChrome, ...enUSContent },
-  "es-ES": { ...esESChrome, ...esESContent },
+  "en-US": { ...enUSChrome, ...enUSContent, words: enUSWords },
+  "es-ES": { ...esESChrome, ...esESContent, words: esESWords },
 } as const satisfies Record<DiverLocale, unknown>;
 
 export type DiverMessages = (typeof DIVER_MESSAGES)["en-US"];

@@ -24,13 +24,11 @@
     "turnOff": "Turn off",
     "turningOff": "Turning off…",
     "copy": "Copy",
-    "copied": "Copied",
     "copyFailed": "Couldn’t copy. Select it and copy it yourself.",
     "confirmRotate": "Replace this link? Any calendar still using the old one stops updating.",
     "confirmRotateButton": "Yes, replace the link",
     "confirmTurnOff": "Turn off this subscription? The link stops working immediately.",
-    "confirmTurnOffButton": "Yes, turn it off",
-    "cancel": "Never mind"
+    "confirmTurnOffButton": "Yes, turn it off"
   },
   "newLink": {
     "heading": "Your subscription link",

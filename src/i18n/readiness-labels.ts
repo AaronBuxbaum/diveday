@@ -9,8 +9,10 @@ import {
   REQUIRABLE_CERTIFICATION_LEVELS,
   type RequirableCertificationLevel,
 } from "@/lib/certification-levels";
+import type { Copy } from "@/lib/copy";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { cachedListFormat } from "@/lib/intl-cache";
+import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessStatus } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import type { DiverMessageKey, DiverTranslator } from "./messages";
@@ -490,7 +492,10 @@ export function readinessBlockerText(t: StaffTranslator, blocker: ReadinessBlock
 
 /**
  * **The words a refused sale gets, driven by which requirement actually
- * failed** (`TripAdmissionRefusal`, src/lib/trip-admission.ts).
+ * failed** (`TripAdmissionRefusal`, src/lib/trip-admission.ts: the ladder's
+ * blockers at the sale threshold). Its own sentences rather than
+ * `readinessBlockerText`, because the remedy differs: at the sale the fix for a
+ * level is another trip or the course, never "add a card".
  *
  * One sentence used to cover every case: *"…don't reach what that trip and its
  * dive sites require. Add the missing card above…"*. On a **level** refusal
@@ -517,24 +522,30 @@ export function tripAdmissionRefusalText(
   locale: string,
 ): string {
   const sentences: string[] = [];
-  if (refusal.requiredLevel) {
-    const level = t(CERTIFICATION_LEVEL_KEYS[refusal.requiredLevel]);
-    sentences.push(
-      refusal.heldLevel
-        ? t("shared.tripAdmission.level", {
-            level,
-            held: t(CERTIFICATION_LEVEL_KEYS[refusal.heldLevel]),
-          })
-        : t("shared.tripAdmission.levelNoCard", { level }),
-    );
-  }
   // Nitrox rides in the same list as the specialties: to a staffer reading a
-  // refusal they are the same kind of thing — a card that is or isn't on the
-  // record — even though the domain models them in separate tables.
-  const cards = [
-    ...refusal.missingSpecialties.map((specialty) => t(SPECIALTY_KEYS[specialty])),
-    ...(refusal.nitroxRequired ? [t("shared.tripAdmission.nitrox")] : []),
-  ];
+  // refusal they are the same kind of thing, a card that is or isn't on the
+  // record, even though the domain models them in separate tables.
+  const cards: string[] = [];
+  for (const { code, params } of refusal) {
+    if (code === "certification_insufficient" && params?.requiredLevel && params.heldLevel) {
+      sentences.push(
+        t("shared.tripAdmission.level", {
+          level: t(CERTIFICATION_LEVEL_KEYS[params.requiredLevel]),
+          held: t(CERTIFICATION_LEVEL_KEYS[params.heldLevel]),
+        }),
+      );
+    } else if (code === "certification_missing" && params?.requiredLevel) {
+      sentences.push(
+        t("shared.tripAdmission.levelNoCard", {
+          level: t(CERTIFICATION_LEVEL_KEYS[params.requiredLevel]),
+        }),
+      );
+    } else if (code === "specialty_missing" && params?.specialty) {
+      cards.push(t(SPECIALTY_KEYS[params.specialty]));
+    } else if (code === "nitrox_missing") {
+      cards.push(t("shared.tripAdmission.nitrox"));
+    }
+  }
   if (cards.length > 0) {
     sentences.push(
       t("shared.tripAdmission.cards", {
@@ -544,7 +555,7 @@ export function tripAdmissionRefusalText(
       }),
     );
   }
-  // Nothing set is not a refusal `decideTripAdmission` can produce; the generic
+  // An empty refusal is not one `decideTripAdmission` can produce; the generic
   // sentence is the honest fallback rather than an empty banner.
   return sentences.length > 0 ? sentences.join(" ") : t("shared.tripAdmission.generic");
 }
@@ -574,3 +585,20 @@ export const DIVER_CERTIFICATION_AGENCY_KEYS: Record<CertificationAgency, DiverM
   iantd: "common.certification.agencies.iantd",
   other: "common.certification.agencies.other",
 };
+
+/**
+ * A label for a row whose fix lives on another screen: it points, it does not
+ * command ("Open Priya's record", "Open roster"). Card work waits on the
+ * person record; everything else on the trip roster.
+ */
+export function pointingLabelCopy(target: "trip" | "diver", fullName: string): Copy {
+  return target === "diver"
+    ? // Falls back to the whole name rather than a word: this is a pointing
+      // label ("Open Priya's record"), so an unsplittable name is still the
+      // best thing to point at.
+      {
+        key: "today.pointingLabel.diver",
+        params: { name: firstNameOf(fullName, fullName) },
+      }
+    : { key: "today.pointingLabel.trip" };
+}

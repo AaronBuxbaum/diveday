@@ -27,7 +27,7 @@ const { sendNotification } = await import("./notifications");
 const { offerSeats } = await import("./interest-offers");
 const { createBoat } = await import("./boats");
 const { askAnytime, resolveInterestUnsubscribeToken } = await import("./interests");
-const { interests, people, tripLastMinutePromos } = await import("./schema");
+const { deals, interests, people } = await import("./schema");
 const { setShopStripeAccountStatus, upsertShopStripeAccount } = await import("./stripe-accounts");
 const { trips } = await import("./schema");
 const { listStaff, setTripCrew, upcomingTripsWithCounts } = await import("./trips");
@@ -68,10 +68,7 @@ describe("offerSeats with a discount", () => {
     const promotions = fakePromotions({
       async createTripPromotion(request) {
         // The idempotency key is the promo row's own id.
-        const [promo] = await db
-          .select()
-          .from(tripLastMinutePromos)
-          .where(eq(tripLastMinutePromos.id, request.idempotencyKey));
+        const [promo] = await db.select().from(deals).where(eq(deals.id, request.idempotencyKey));
         const rows = await db
           .select()
           .from(interests)
@@ -157,10 +154,7 @@ describe("offerSeats with a discount", () => {
 
     expect(outcome.deal).toMatchObject({ ok: true, recipientCount: 1 });
     if (!outcome.deal?.ok) throw new Error("expected the deal to go");
-    const [promo] = await db
-      .select()
-      .from(tripLastMinutePromos)
-      .where(eq(tripLastMinutePromos.id, outcome.deal.promoId));
+    const [promo] = await db.select().from(deals).where(eq(deals.id, outcome.deal.promoId));
     expect(promo?.maxRedemptions).toBe(Math.max(0, Math.min(trip.capacity, 8 - 2) - trip.booked));
   });
 
@@ -237,7 +231,7 @@ describe("offerSeats with a discount", () => {
   it("offers a list interest without a discount as an ordinary commercial offer, no promo written", async () => {
     const { db, shop, trip } = await context();
     const joined = await askAnytime(db, { shopId: shop.id, ...nora, declaration: openWater });
-    const promosBefore = (await db.select().from(tripLastMinutePromos)).length;
+    const promosBefore = (await db.select().from(deals)).length;
 
     const outcome = await offerSeats(db, {
       shopId: shop.id,
@@ -252,7 +246,7 @@ describe("offerSeats with a discount", () => {
     expect(mail?.kind).toBe("seat_offer_commercial");
     if (mail?.kind !== "seat_offer_commercial") return;
     expect(mail.code).toBeUndefined();
-    expect(await db.select().from(tripLastMinutePromos)).toHaveLength(promosBefore);
+    expect(await db.select().from(deals)).toHaveLength(promosBefore);
   });
 });
 
@@ -275,7 +269,7 @@ describe("offerSeats on a rehearsal", () => {
     const { db, shop, trip } = await context();
     const joined = await askAnytime(db, { shopId: shop.id, ...nora, declaration: openWater });
     await db.update(trips).set({ isRehearsal: true, isPrivate: true }).where(eq(trips.id, trip.id));
-    const promosBefore = (await db.select().from(tripLastMinutePromos)).length;
+    const promosBefore = (await db.select().from(deals)).length;
     const stripeCalls: string[] = [];
     const promotions = fakePromotions({
       async createTripPromotion(request) {
@@ -301,7 +295,7 @@ describe("offerSeats on a rehearsal", () => {
     expect(outcome.results.every((result) => result.delivery !== "sent")).toBe(true);
     expect(stripeCalls).toEqual([]);
     expect(offered()).toHaveLength(0);
-    expect(await db.select().from(tripLastMinutePromos)).toHaveLength(promosBefore);
+    expect(await db.select().from(deals)).toHaveLength(promosBefore);
     const rows = await db
       .select()
       .from(interests)

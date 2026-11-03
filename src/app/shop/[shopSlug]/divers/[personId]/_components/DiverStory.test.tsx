@@ -45,7 +45,7 @@ const BEHIND = booking("b-behind", "Last month’s wreck dive", BEHIND_AT);
 function diver(overrides: Partial<Record<string, unknown>> = {}): DiverProfile {
   return {
     person: { id: "person-1", fullName: "Grace Mensah", deletedAt: null },
-    waiver: { state: "current" },
+    waiver: { state: "signed" },
     bookings: [],
     orders: [],
     bookingPayments: [],

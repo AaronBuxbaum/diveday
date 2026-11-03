@@ -148,7 +148,7 @@ export function RecordPaymentForm({
                 />
               </Field>
               <SubmitButton
-                pendingLabel={t("orders.detail.recordPayment.recording")}
+                pendingLabel={t("words.busy.recording")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("orders.detail.recordPayment.roomConfirm")}

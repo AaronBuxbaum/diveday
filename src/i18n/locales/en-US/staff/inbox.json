@@ -45,13 +45,11 @@
   "delete": {
     "action": "Delete",
     "actionFor": "Delete the message from {address}",
-    "confirm": "Delete this message?",
-    "pending": "Deleting…"
+    "confirm": "Delete this message?"
   },
   "done": {
     "action": "Mark done",
-    "reopen": "Move back to waiting",
-    "pending": "Saving…"
+    "reopen": "Move back to waiting"
   },
   "menu": {
     "label": "More for the message from {name}"
@@ -74,7 +72,6 @@
     "whatsapp": "Reply on WhatsApp to {address}",
     "placeholder": "Type your answer",
     "send": "Send",
-    "sending": "Sending…",
     "windowClosed": "After 24 hours, WhatsApp requires an approved message; you can reply when {name} responds.",
     "reopenSent": "You asked {name} to write back {date}. When they do, you can type your reply here.",
     "diverRemoved": "This diver’s record was removed, so replies are switched off."
@@ -94,7 +91,7 @@
     "reopenWindowOpen": "They wrote again in the last 24 hours, so type your reply instead.",
     "reopenAlreadyAsked": "You already asked them to write back. Wait for their answer before asking again.",
     "notAuthorized": "Your account can’t answer divers for this shop any more. Ask an owner or manager to check your access.",
-    "lateMarked": "Marked running late. The roster and the manifest show it.",
+    "lateMarked": "Marked running late. The Divers tab and the manifest show it.",
     "lateClosed": "That seat is past running late: checked in, canceled, or the boat has sailed.",
     "deleted": "Message deleted",
     "gone": "That message is no longer in the inbox."

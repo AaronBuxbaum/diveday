@@ -1281,7 +1281,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "paid_after_close_cents",
       "created_at",
     ],
-    rows: ({ tripTitle, tripStartsAt, checkoutRows }) =>
+    rows: ({ tripTitle, tripStartsAt, checkoutRows, tripDealIds }) =>
       checkoutRows.map((row) => [
         row.id,
         row.tripId,
@@ -1291,8 +1291,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.purpose,
         row.stripeSessionId,
         row.customerEmail,
-        row.promoCodeId,
-        row.tripPromoId,
+        row.dealId && !tripDealIds.has(row.dealId) ? row.dealId : null,
+        row.dealId && tripDealIds.has(row.dealId) ? row.dealId : null,
         row.promoCode,
         row.appliedDiscountPercent,
         row.appliedDiscountCents,

@@ -1,0 +1,15 @@
+{
+  "busy": {
+    "saving": "Saving…",
+    "sending": "Sending…",
+    "adding": "Adding…",
+    "deleting": "Deleting…",
+    "recording": "Recording…"
+  },
+  "dismiss": {
+    "neverMind": "Never mind"
+  },
+  "did": {
+    "copied": "Copied"
+  }
+}

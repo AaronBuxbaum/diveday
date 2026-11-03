@@ -32,8 +32,8 @@ export function IncidentDiscard({
           triggerLabel={t("incidents.discard.trigger")}
           message={t("incidents.discard.message")}
           confirmLabel={t("incidents.discard.confirm")}
-          cancelLabel={t("incidents.discard.cancel")}
-          pendingLabel={t("incidents.discard.pending")}
+          cancelLabel={t("words.dismiss.neverMind")}
+          pendingLabel={t("words.busy.deleting")}
           triggerClassName={buttonClass({ variant: "danger-ghost" })}
           confirmClassName={buttonClass({ variant: "danger" })}
         />
@@ -62,7 +62,7 @@ export function IncidentLegalHold({
     >
       <form action={action} className="flex flex-wrap items-center gap-3">
         <SubmitButton
-          pendingLabel={t("incidents.hold.pending")}
+          pendingLabel={t("words.busy.saving")}
           className={buttonClass({ variant: "secondary" })}
         >
           {t(held ? "incidents.hold.release" : "incidents.hold.set")}

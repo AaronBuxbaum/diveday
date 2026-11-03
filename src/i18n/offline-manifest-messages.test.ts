@@ -194,7 +194,7 @@ describe("the offline manifest's message bundle", () => {
     const fallback = readFileSync(path.join(ROOT, "src/i18n/message-fallback.ts"), "utf8");
     expect(module).toContain('from "./message-fallback"');
     expect(fallback).not.toMatch(/^\s*import\s/m);
-    expect([...module.matchAll(/from "\.\/locales\/[^"]+"/g)]).toHaveLength(4);
+    expect([...module.matchAll(/from "\.\/locales\/[^"]+"/g)]).toHaveLength(6);
   });
 
   it("resolves a key from each of the two, in both locales", () => {

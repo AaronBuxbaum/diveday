@@ -25,7 +25,7 @@ import {
   o2CleanStanding,
 } from "@/lib/gear";
 import type { NitroxFillMethod } from "@/lib/nitrox-fill";
-import { type ShopWaiverStatus, shopWaiverStatus } from "@/lib/waivers";
+import { type ShopWaiverStanding, shopWaiverStanding } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
 import {
   type GearReservationActionOutcome,
@@ -1070,7 +1070,7 @@ function groupCounterRentals(rows: readonly CounterRentalRow[]): CounterRentalTi
 /**
  * **Where each counter-rental holder stands with the shop's release** (issue
  * #2261, H-20261008-counter-rental-waiver-informs): the ticket and the Rentals list say it, and nothing gates on
- * it. Read through the same `shopWaiverStatus` the diver record uses, because
+ * it. Read through the same `shopWaiverStanding` the diver record uses, because
  * the release belongs to the person — signed once, on any booking or on a link
  * sent from their record — so a counter has had a person's waiver to read all
  * along. Shop-scoped on every read; a person id from another shop answers
@@ -1083,8 +1083,8 @@ function groupCounterRentals(rows: readonly CounterRentalRow[]): CounterRentalTi
 export async function counterRentalWaiverStandings(
   db: AppDb,
   input: { shopId: string; timezone: string; personIds: readonly string[] },
-): Promise<Map<string, ShopWaiverStatus>> {
-  const standings = new Map<string, ShopWaiverStatus>();
+): Promise<Map<string, ShopWaiverStanding>> {
+  const standings = new Map<string, ShopWaiverStanding>();
   const personIds = [...new Set(input.personIds)];
   if (personIds.length === 0) return standings;
   const now = nowDate();
@@ -1110,7 +1110,7 @@ export async function counterRentalWaiverStandings(
     const minorDeclared = declaredPeople.has(holder.id);
     standings.set(
       holder.id,
-      shopWaiverStatus({
+      shopWaiverStanding({
         personSignedWaivers: signed.get(holder.id) ?? [],
         currentTemplateVersion: template?.materialGeneration ?? null,
         signer: { dateOfBirth: holder.dateOfBirth, minorDeclared, timezone: input.timezone },

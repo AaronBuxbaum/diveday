@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ShopNotice } from "@/components/ShopNotice";
 import { FormStatus } from "@/components/ui/form";
+import { ShopNotice } from "@/components/ui/outcome";
+import { noticeRole } from "@/components/ui/tone";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { DiverNotice } from "@/lib/diver-notices";
-import { noticeRole } from "@/lib/staff-notices";
 
 export type { DiverNotice } from "@/lib/diver-notices";
 

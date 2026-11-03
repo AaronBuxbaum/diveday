@@ -40,7 +40,7 @@ export function staffingWeekWords(t: StaffTranslator, week?: StaffWeek) {
     requested: t.raw("staffing.week.requested"),
     approve: t("staffing.week.approve"),
     decline: t("staffing.week.decline"),
-    deciding: t("staffing.week.deciding"),
+    deciding: t("words.busy.saving"),
     requestApproved: t("staffing.week.requestApproved"),
     requestDeclined: t("staffing.week.requestDeclined"),
     askWontClose: t("staffing.week.askWontClose"),

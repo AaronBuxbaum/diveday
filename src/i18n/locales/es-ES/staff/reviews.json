@@ -27,7 +27,6 @@
   "hide": "Ocultar",
   "rowMoreSrLabel": "Más opciones para la reseña de {name}",
   "publish": "Publicar",
-  "saving": "Guardando…",
   "pagination": {
     "total": "{count, plural, one {# reseña que has respondido} other {# reseñas que has respondido}}",
     "paperSubset": "{total, plural, one {{shown} de # reseña respondida en esta lista} other {{shown} de # reseñas respondidas en esta lista}}"

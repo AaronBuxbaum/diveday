@@ -131,7 +131,7 @@ is reachable from three client components with no server boundary in between:
 ```
 src/components/OfflineManifestView.tsx      "use client"
   -> src/i18n/readiness-labels.ts           REQUIRABLE_CERTIFICATION_LEVELS
-    -> src/lib/readiness.ts                 waiverState
+    -> src/lib/readiness.ts                 waiverStanding
       -> src/lib/waivers.ts                 node:crypto
         -> next/dist/compiled/crypto-browserify   (+ stream, elliptic, bn.js, pbkdf2, vm-browserify)
 ```

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { TripLastMinutePromo } from "@/db/schema";
+import type { TripLastMinutePromo } from "@/db/trip-promos";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 
 afterEach(cleanup);
@@ -10,7 +10,7 @@ function promo(over: Partial<TripLastMinutePromo> = {}): TripLastMinutePromo {
   return {
     id: "promo-1",
     code: "SAVE25-A1B2",
-    status: "sent",
+    status: "active",
     recipientCount: 12,
     discountPercent: 25,
     discountAmountCents: null,

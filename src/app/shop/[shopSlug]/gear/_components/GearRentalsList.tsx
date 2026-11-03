@@ -16,7 +16,7 @@ import { formatCalendarDateRange } from "@/lib/format";
 import type { GearRental, OpenRentalPhase } from "@/lib/gear-rentals";
 import { rentalPhaseLapsed } from "@/lib/gear-rentals";
 import { shopPath } from "@/lib/staff-notices";
-import type { ShopWaiverStatus } from "@/lib/waivers";
+import type { ShopWaiverStanding } from "@/lib/waivers";
 import {
   PAYMENT_STATUS_KEYS,
   PAYMENT_STATUS_TONES,
@@ -282,7 +282,7 @@ function MedicalWarnings({
  * record uses (`waiverRowStateText`), in the warning ink and drawn mark the
  * lapsed phases wear, or danger for a medical hold.
  */
-function WaiverWord({ state, t }: { state: ShopWaiverStatus["state"]; t: StaffTranslator }) {
+function WaiverWord({ state, t }: { state: ShopWaiverStanding["state"]; t: StaffTranslator }) {
   return (
     <span
       className={`inline-flex items-baseline gap-1.5 font-medium ${

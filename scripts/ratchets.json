@@ -312,12 +312,6 @@
         }
       },
       {
-        "why": "#2756: blockerDestination moved down from src/lib/today.ts (banked at 2) with its one Copy-key import, so the counter and palette no longer import Today",
-        "files": {
-          "src/lib/blockers.ts": "0 -> 1"
-        }
-      },
-      {
         "why": "Three new seams (lib to db values, app to drizzle-orm, the trips barrel): what was left after draining the 2026-10-10 review's list",
         "files": {
           "src/lib/auth.ts": "0 -> 3",
@@ -1072,7 +1066,6 @@
     "src/lib/auth.ts": 4,
     "src/lib/billing/events.ts": 1,
     "src/lib/billing/stripe-billing.ts": 1,
-    "src/lib/blockers.ts": 1,
     "src/lib/dive-declaration.ts": 1,
     "src/lib/dive-site-field-guide.ts": 1,
     "src/lib/dive-site-import.ts": 2,
@@ -1369,7 +1362,6 @@
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
-          "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
       },
@@ -1384,12 +1376,6 @@
         "files": {
           "src/db/reviews.test.ts": "1004 -> 1034",
           "src/db/work-order-follow-up.test.ts": "0 -> 1213"
-        }
-      },
-      {
-        "why": "merge of the ready-for-human batch's worker branches (#2611 tests from two sides)",
-        "files": {
-          "src/lib/trip-admission.test.ts": "984 -> 992"
         }
       },
       {
@@ -1440,7 +1426,6 @@
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
-          "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
       },
@@ -1485,7 +1470,6 @@
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
-          "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
       },
@@ -1530,7 +1514,6 @@
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
-          "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
       },
@@ -1608,10 +1591,10 @@
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
     "src/db/anonymize.test.ts": 1629,
-    "src/db/bookings.test.ts": 3539,
+    "src/db/bookings.test.ts": 3529,
     "src/db/buddy-teams.test.ts": 975,
     "src/db/check-in.test.ts": 1212,
-    "src/db/checkouts.test.ts": 2966,
+    "src/db/checkouts.test.ts": 2964,
     "src/db/course-forms.test.ts": 1234,
     "src/db/courses.test.ts": 1713,
     "src/db/dive-sites.test.ts": 1156,
@@ -1619,7 +1602,7 @@
     "src/db/divers.test.ts": 3064,
     "src/db/erasure-coverage.test.ts": 946,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1186,
+    "src/db/export.test.ts": 1185,
     "src/db/import.test.ts": 1076,
     "src/db/incident-reports.test.ts": 1013,
     "src/db/manifests.test.ts": 3587,
@@ -1658,7 +1641,6 @@
     "src/lib/offline-manifests.test.ts": 2179,
     "src/lib/readiness.test.ts": 1575,
     "src/lib/staffing-week.test.ts": 1125,
-    "src/lib/trip-admission.test.ts": 992,
     "src/lib/waivers.test.ts": 1402,
     "src/proxy.test.ts": 1171
   },
@@ -1684,7 +1666,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 307,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 313,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 347,
-    "src/db/checkouts.ts#startBookingCheckout": 303,
+    "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 634,
@@ -1738,20 +1720,30 @@
         "files": {
           "src/app/shop/[shopSlug]/page.tsx": "569 -> 577"
         }
+      },
+      {
+        "why": "NoticeTone and noticeRole import moves to ui/tone, one import line more",
+        "files": {
+          "src/app/(token)/ready/[token]/page.tsx": "616 -> 617",
+          "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577",
+          "src/app/shop/[shopSlug]/orders/page.tsx": "575 -> 576",
+          "src/app/shop/[shopSlug]/page.tsx": "577 -> 578",
+          "src/app/shop/[shopSlug]/staffing/page.tsx": "503 -> 504"
+        }
       }
     ],
-    "src/app/(token)/ready/[token]/page.tsx": 616,
+    "src/app/(token)/ready/[token]/page.tsx": 617,
     "src/app/page.tsx": 440,
     "src/app/s/[shopSlug]/page.tsx": 645,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 466,
-    "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 576,
-    "src/app/shop/[shopSlug]/orders/page.tsx": 575,
-    "src/app/shop/[shopSlug]/page.tsx": 577,
+    "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
+    "src/app/shop/[shopSlug]/orders/page.tsx": 576,
+    "src/app/shop/[shopSlug]/page.tsx": 578,
     "src/app/shop/[shopSlug]/promos/page.tsx": 559,
     "src/app/shop/[shopSlug]/reports/page.tsx": 474,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 410,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 578,
-    "src/app/shop/[shopSlug]/staffing/page.tsx": 506,
+    "src/app/shop/[shopSlug]/staffing/page.tsx": 504,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 473
   },
   "tokens": {

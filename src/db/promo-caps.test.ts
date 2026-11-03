@@ -5,13 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { resolvePaymentOperation, startPaymentOperation } from "./payment-operations";
 import { discountCapReached, reserveDiscountUse } from "./promo-caps";
-import {
-  bookingCheckouts,
-  paymentOperationIntents,
-  shops,
-  tripLastMinutePromos,
-  trips,
-} from "./schema";
+import { bookingCheckouts, deals, paymentOperationIntents, shops, trips } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 
@@ -41,10 +35,10 @@ describe("reserveDiscountUse", () => {
     const first = await startPaymentOperation(db, { shopId: shop.id, kind: "checkout_session" });
     expect(await reserveDiscountUse(db, { ...ref, intentId: first.id })).toBe("reserved");
     const [tagged] = await db
-      .select({ promoCodeId: paymentOperationIntents.promoCodeId })
+      .select({ dealId: paymentOperationIntents.dealId })
       .from(paymentOperationIntents)
       .where(eq(paymentOperationIntents.id, first.id));
-    expect(tagged?.promoCodeId).toBe(promo.id);
+    expect(tagged?.dealId).toBe(promo.id);
 
     const second = await startPaymentOperation(db, { shopId: shop.id, kind: "checkout_session" });
     expect(await reserveDiscountUse(db, { ...ref, intentId: second.id })).toBe("used_up");
@@ -72,7 +66,7 @@ describe("reserveDiscountUse", () => {
       tripId: trip.id,
       stripeAccountId: "acct_caps",
       stripeSessionId: "cs_caps_first",
-      promoCodeId: promo.id,
+      dealId: promo.id,
       currency: "usd",
       amountPerDiverCents: 10000,
       totalCents: 9000,
@@ -148,18 +142,18 @@ async function tripDeal(opts: {
   if (!trip) throw new Error("seeded shop has no trip");
   await db.update(trips).set({ capacity: opts.capacity }).where(eq(trips.id, trip.id));
   const [deal] = await db
-    .insert(tripLastMinutePromos)
+    .insert(deals)
     .values({
       shopId: shop.id,
       tripId: trip.id,
-      status: "sent",
+      status: "active",
       discountPercent: 20,
       code: `LAST${opts.capacity}${opts.maxRedemptions ?? "X"}`,
       maxRedemptions: opts.maxRedemptions,
       expiresAt: new Date(trip.startsAt),
       createdAt: opts.createdAt,
     })
-    .returning({ id: tripLastMinutePromos.id });
+    .returning({ id: deals.id });
   if (!deal) throw new Error("deal insert failed");
   return { db, shop, ref: { shopId: shop.id, source: "trip" as const, promoId: deal.id } };
 }
@@ -186,9 +180,9 @@ describe("a trip deal's cap", () => {
     const { db, ref } = await tripDeal({ maxRedemptions: 1, createdAt: nowDate(), capacity: 12 });
     expect(await reserveInTurn(db, ref, 2)).toEqual(["reserved", "used_up"]);
     const tagged = await db
-      .select({ tripPromoId: paymentOperationIntents.tripPromoId })
+      .select({ dealId: paymentOperationIntents.dealId })
       .from(paymentOperationIntents)
-      .where(eq(paymentOperationIntents.tripPromoId, ref.promoId));
+      .where(eq(paymentOperationIntents.dealId, ref.promoId));
     expect(tagged).toHaveLength(1);
   });
 

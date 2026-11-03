@@ -11,8 +11,8 @@ import {
 } from "react";
 import { Toast } from "@/components/Toast";
 import { StatusInView } from "@/components/ui/StatusInView";
+import { type NoticeTone, noticeRole } from "@/components/ui/tone";
 import { currencySymbol, minorToMajor } from "@/lib/money";
-import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
 import { DateInput } from "./DateInput";
 import { type ForgivingCopy, ForgivingInput } from "./ForgivingInput";
 import { StatusMark } from "./StatusMark";

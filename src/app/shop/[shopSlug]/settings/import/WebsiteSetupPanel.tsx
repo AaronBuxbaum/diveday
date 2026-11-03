@@ -4,12 +4,13 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
+import type { NoticeTone } from "@/components/ui/tone";
 import type { WebsiteSetup } from "@/db/website-setup";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { SetupLine, SetupLineKind } from "@/lib/assists/website-setup";
 import { deskTimeOn } from "@/lib/desk-hours";
 import { formatDateTimeTz, formatMoneyCents, formatTime } from "@/lib/format";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam } from "@/lib/staff-notices";
 import {
   acceptSetupLineAction,
   dismissSetupLineAction,
@@ -179,7 +180,7 @@ export function WebsiteSetupPanel({
                             value={line.text}
                             hint={t("assistsFront.setup.policyHint")}
                             copyLabel={t("assistsFront.setup.copy")}
-                            copiedLabel={t("assistsFront.setup.copied")}
+                            copiedLabel={t("words.did.copied")}
                             failedLabel={t("assistsFront.setup.copyFailed")}
                             layout="inline"
                           />

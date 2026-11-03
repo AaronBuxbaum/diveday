@@ -1,14 +1,7 @@
 import { and, count, eq, gt, isNull, lt, ne, notExists, or, sql } from "drizzle-orm";
 import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import type { AppDb, DbExecutor } from "./client";
-import {
-  bookingCheckouts,
-  bookings,
-  paymentOperationIntents,
-  shopPromoCodes,
-  tripLastMinutePromos,
-  trips,
-} from "./schema";
+import { bookingCheckouts, bookings, deals, paymentOperationIntents, trips } from "./schema";
 import { seatHeld } from "./trips-queries";
 
 /**
@@ -37,25 +30,23 @@ export type DiscountRef = { shopId: string; source: "shop" | "trip"; promoId: st
 async function discountCap(db: DbExecutor, ref: DiscountRef): Promise<number | null> {
   if (ref.source === "shop") {
     const [promo] = await db
-      .select({ maxRedemptions: shopPromoCodes.maxRedemptions })
-      .from(shopPromoCodes)
-      .where(and(eq(shopPromoCodes.id, ref.promoId), eq(shopPromoCodes.shopId, ref.shopId)))
+      .select({ maxRedemptions: deals.maxRedemptions })
+      .from(deals)
+      .where(and(eq(deals.id, ref.promoId), eq(deals.shopId, ref.shopId), isNull(deals.tripId)))
       .limit(1);
     if (!promo) return 0;
     return promo.maxRedemptions;
   }
   const [deal] = await db
     .select({
-      tripId: tripLastMinutePromos.tripId,
-      createdAt: tripLastMinutePromos.createdAt,
-      maxRedemptions: tripLastMinutePromos.maxRedemptions,
+      tripId: trips.id,
+      createdAt: deals.createdAt,
+      maxRedemptions: deals.maxRedemptions,
       capacity: trips.capacity,
     })
-    .from(tripLastMinutePromos)
-    .innerJoin(trips, and(eq(trips.id, tripLastMinutePromos.tripId), eq(trips.shopId, ref.shopId)))
-    .where(
-      and(eq(tripLastMinutePromos.id, ref.promoId), eq(tripLastMinutePromos.shopId, ref.shopId)),
-    )
+    .from(deals)
+    .innerJoin(trips, and(eq(trips.id, deals.tripId), eq(trips.shopId, ref.shopId)))
+    .where(and(eq(deals.id, ref.promoId), eq(deals.shopId, ref.shopId)))
     .limit(1);
   if (!deal) return 0;
   if (deal.maxRedemptions !== null) return deal.maxRedemptions;
@@ -86,8 +77,6 @@ async function discountUses(
   now: Date,
   exceptIntentId?: string,
 ): Promise<number> {
-  const promoColumn =
-    ref.source === "shop" ? bookingCheckouts.promoCodeId : bookingCheckouts.tripPromoId;
   const livePending = and(
     eq(bookingCheckouts.status, "pending"),
     or(isNull(bookingCheckouts.expiresAt), gt(bookingCheckouts.expiresAt, now)),
@@ -101,21 +90,17 @@ async function discountUses(
     .where(
       and(
         eq(bookingCheckouts.shopId, ref.shopId),
-        eq(promoColumn, ref.promoId),
+        eq(bookingCheckouts.dealId, ref.promoId),
         or(eq(bookingCheckouts.status, "completed"), livePending),
       ),
     );
-  const intentColumn =
-    ref.source === "shop"
-      ? paymentOperationIntents.promoCodeId
-      : paymentOperationIntents.tripPromoId;
   const [reserved] = await db
     .select({ total: count() })
     .from(paymentOperationIntents)
     .where(
       and(
         eq(paymentOperationIntents.shopId, ref.shopId),
-        eq(intentColumn, ref.promoId),
+        eq(paymentOperationIntents.dealId, ref.promoId),
         eq(paymentOperationIntents.status, "started"),
         // A crashed attempt stops holding a use once it is stale, on the same
         // horizon the booking claim uses.
@@ -187,9 +172,7 @@ export async function reserveDiscountUse(
     if ((await discountCap(tx, input)) === null) return "uncapped";
     const tagged = await tx
       .update(paymentOperationIntents)
-      .set(
-        input.source === "shop" ? { promoCodeId: input.promoId } : { tripPromoId: input.promoId },
-      )
+      .set({ dealId: input.promoId })
       .where(
         and(
           eq(paymentOperationIntents.id, input.intentId),

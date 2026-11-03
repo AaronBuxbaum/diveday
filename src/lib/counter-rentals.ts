@@ -10,7 +10,7 @@ import {
   type RentableItemKind,
   type RentalPricing,
 } from "./rentals";
-import { medicalWarningDays, type ShopWaiverStatus } from "./waivers";
+import { medicalWarningDays, type ShopWaiverStanding } from "./waivers";
 
 /**
  * **A counter rental** — units from the register lent to a person who is not
@@ -327,7 +327,7 @@ export function isOneCoreSet(
  * **What a counter rental says about the person's waiver** (issue #2261,
  * decided by Aaron 2026-10-09, H-20261008-counter-rental-waiver-informs): it informs and never blocks.
  *
- * The shop-wide release is the person's (`shopWaiverStatus`, src/lib/waivers.ts),
+ * The shop-wide release is the person's (`shopWaiverStanding`, src/lib/waivers.ts),
  * so a person who signed on any booking, or on a link sent from their record,
  * is covered here too. Anything short of a current signature is said on the
  * ticket and the Rentals list in the release's own word (`shopWaiverStatusText`),
@@ -343,13 +343,13 @@ export function isOneCoreSet(
  * card (`counterRentalCardRefusal`).
  */
 export function counterRentalWaiverFlag(
-  state: ShopWaiverStatus["state"],
+  state: ShopWaiverStanding["state"],
 ): { offerLink: boolean } | null {
   switch (state) {
-    case "current":
+    case "signed":
       return null;
     case "none":
-    case "expired":
+    case "lapsed":
     case "guardian_missing":
       return { offerLink: true };
     case "medical_review":
@@ -367,16 +367,16 @@ export function counterRentalWaiverFlag(
  * Informing only, never a gate (H-20261008-counter-rental-waiver-informs).
  */
 export type CounterRentalWaiverStanding = {
-  state: ShopWaiverStatus["state"];
+  state: ShopWaiverStanding["state"];
   refusedOn?: CalendarDate;
   referredOn?: CalendarDate;
 };
 
 export function counterRentalWaiverStanding(
-  status: ShopWaiverStatus,
+  status: ShopWaiverStanding,
   timeZone: string,
 ): CounterRentalWaiverStanding {
-  if (status.state !== "current") return { state: status.state };
+  if (status.state !== "signed") return { state: status.state };
   const { refusedOn, referredOn } = medicalWarningDays(status.medical, timeZone);
   return {
     state: status.state,

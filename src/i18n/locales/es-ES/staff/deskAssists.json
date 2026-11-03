@@ -30,7 +30,6 @@
     "descriptionLabel": "Descripción, en español",
     "draft": "Redactar en español",
     "save": "Guardar español",
-    "saving": "Guardando…",
     "saved": "Guardado.",
     "error": "No se guardó. Inténtalo de nuevo.",
     "stale": "El original cambió después de guardar esto, así que los buceadores que leen en español ven el original. Redáctalo de nuevo o corrígelo para que coincida, y guárdalo.",
@@ -47,7 +46,6 @@
     "match": "Buscar",
     "matching": "Buscando…",
     "add": "Agregarlos",
-    "adding": "Agregando…",
     "none": "Nada de lo que dijiste coincide con las especies de este arrecife.",
     "proposed": "{name} × {count}"
   },

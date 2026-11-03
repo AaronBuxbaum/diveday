@@ -39,15 +39,9 @@ const { associateDateRequestOfferBooking, askAnytime, unsubscribeAnytimeInterest
 const { optOutPersonFromCourtesyEmailByToken, resolveCourtesyEmailUnsubscribeToken } = await import(
   "./courtesy-email"
 );
-const {
-  bookings,
-  dateRequestOfferBookings,
-  interests,
-  people,
-  shops,
-  tripLastMinutePromos,
-  trips,
-} = await import("./schema");
+const { bookings, dateRequestOfferBookings, interests, people, shops, deals, trips } = await import(
+  "./schema"
+);
 const { setShopStripeAccountStatus, upsertShopStripeAccount } = await import("./stripe-accounts");
 const { createTrip, upcomingTripsWithCounts } = await import("./trips");
 
@@ -824,14 +818,14 @@ describe("invitableSeats and the deal", () => {
     });
     if (!trip) throw new Error("setup: trip failed");
     const [promo] = await db
-      .insert(tripLastMinutePromos)
+      .insert(deals)
       .values({
         shopId: shop.id,
         tripId: trip.id,
         code: "LASTMIN-R2",
         discountPercent: 20,
         expiresAt: trip.startsAt,
-        status: "sent",
+        status: "active",
       })
       .returning();
     if (!promo) throw new Error("setup: promo failed");

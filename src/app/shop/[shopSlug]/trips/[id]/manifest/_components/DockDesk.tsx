@@ -68,7 +68,7 @@ export function DockDesk({
               ridesAlong: t("desk.dockRider.ridesAlong"),
               snorkels: t("desk.dockRider.snorkels"),
               submit: t("desk.dockRider.submit"),
-              pending: t("desk.dockRider.pending"),
+              pending: t("words.busy.adding"),
               added: t.raw("desk.dockRider.added"),
               addedOwesRelease: t.raw("desk.dockRider.addedOwesRelease"),
               releaseHandOver: t("desk.dockRider.releaseHandOver"),

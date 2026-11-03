@@ -18,14 +18,33 @@ import { queryAll } from "./query-helpers";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
+  type Deal,
+  type DealStatus,
+  deals,
   interests,
   people,
   shops,
-  type TripLastMinutePromo,
-  tripLastMinutePromos,
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+
+/**
+ * **A last-minute deal**: a `deals` row sent for one departure
+ * (ADR 20261103-a-deal-is-one-row). `deals_trip_shape` holds that it has a trip
+ * and is never switched off; this type says so to the code that reads one.
+ */
+export type TripLastMinutePromo = Deal & {
+  tripId: string;
+  status: Exclude<DealStatus, "disabled">;
+  expiresAt: Date;
+};
+
+function lastMinuteDeal(row: Deal): TripLastMinutePromo {
+  if (row.tripId === null || row.status === "disabled" || row.expiresAt === null) {
+    throw new Error(`deal ${row.id} is not a last-minute deal`);
+  }
+  return { ...row, tripId: row.tripId, status: row.status, expiresAt: row.expiresAt };
+}
 
 /** Every blast sent for one trip, newest first — the staff page's send history. */
 export async function listTripLastMinutePromos(
@@ -33,11 +52,12 @@ export async function listTripLastMinutePromos(
   shopId: string,
   tripId: string,
 ): Promise<TripLastMinutePromo[]> {
-  return db
+  const rows = await db
     .select()
-    .from(tripLastMinutePromos)
-    .where(and(eq(tripLastMinutePromos.shopId, shopId), eq(tripLastMinutePromos.tripId, tripId)))
-    .orderBy(desc(tripLastMinutePromos.createdAt));
+    .from(deals)
+    .where(and(eq(deals.shopId, shopId), eq(deals.tripId, tripId)))
+    .orderBy(desc(deals.createdAt));
+  return rows.map(lastMinuteDeal);
 }
 
 export type TripLastMinutePromoRecipientItem = {
@@ -67,13 +87,13 @@ export async function listTripLastMinutePromoRecipients(
       offeredAt: interests.offeredAt,
     })
     .from(interests)
-    .innerJoin(tripLastMinutePromos, eq(tripLastMinutePromos.id, interests.promoId))
+    .innerJoin(deals, eq(deals.id, interests.promoId))
     .innerJoin(people, and(eq(people.id, interests.personId), eq(people.shopId, shopId)))
     .where(
       and(
         eq(interests.shopId, shopId),
         eq(interests.scope, "departure"),
-        eq(tripLastMinutePromos.tripId, tripId),
+        eq(deals.tripId, tripId),
         // Who the deal went to, not who was merely stamped with it: an offer
         // whose mail never left carries no `offered_at`.
         isNotNull(interests.offeredAt),
@@ -112,7 +132,7 @@ export type OutstandingLastMinutePromoPage = {
 };
 
 /**
- * Every `sent`, unexpired last-minute code across the whole shop, soonest to
+ * Every `active`, unexpired last-minute code across the whole shop, soonest to
  * expire first — the shop-wide counterpart to `listTripLastMinutePromos`'s
  * one-trip history. Backs the read-only "Trip deals" section on `/promos`
  * (task 148, UX-persona Lens 17): before this, a live trip-scoped code was
@@ -136,11 +156,7 @@ export async function listOutstandingLastMinutePromos(
   now: Date = nowDate(),
   options: { page?: number; limit?: number } = {},
 ): Promise<OutstandingLastMinutePromoPage> {
-  const scope = and(
-    eq(tripLastMinutePromos.shopId, shopId),
-    eq(tripLastMinutePromos.status, "sent"),
-    gt(tripLastMinutePromos.expiresAt, now),
-  );
+  const scope = and(eq(deals.shopId, shopId), eq(deals.status, "active"), gt(deals.expiresAt, now));
 
   const paged = await offsetPage({
     page: options.page,
@@ -148,34 +164,29 @@ export async function listOutstandingLastMinutePromos(
     countRows: async () => {
       const [counted] = await db
         .select({ total: count() })
-        .from(tripLastMinutePromos)
-        .innerJoin(trips, eq(trips.id, tripLastMinutePromos.tripId))
+        .from(deals)
+        .innerJoin(trips, eq(trips.id, deals.tripId))
         .where(and(scope, liveTrip()));
       return counted?.total ?? 0;
     },
     fetchRows: async (offset, limit) =>
       db
         .select({
-          promo: tripLastMinutePromos,
+          promo: deals,
           tripTitle: trips.title,
           tripStartsAt: trips.startsAt,
         })
-        .from(tripLastMinutePromos)
-        .innerJoin(trips, eq(trips.id, tripLastMinutePromos.tripId))
+        .from(deals)
+        .innerJoin(trips, eq(trips.id, deals.tripId))
         .where(and(scope, liveTrip()))
-        .orderBy(
-          asc(tripLastMinutePromos.expiresAt),
-          asc(trips.startsAt),
-          asc(trips.title),
-          asc(tripLastMinutePromos.id),
-        )
+        .orderBy(asc(deals.expiresAt), asc(trips.startsAt), asc(trips.title), asc(deals.id))
         .limit(limit)
         .offset(offset),
   });
 
   return {
     deals: paged.rows.map(({ promo, tripTitle, tripStartsAt }) => ({
-      ...promo,
+      ...lastMinuteDeal(promo),
       tripTitle,
       tripStartsAt,
     })),
@@ -203,26 +214,23 @@ export async function getActiveTripPromoByCode(
   // A deal already sent stops applying once the shop switches the last-minute
   // list off (the Features page); the row is kept for when it comes back on.
   const [row] = await db
-    .select({ promo: tripLastMinutePromos })
-    .from(tripLastMinutePromos)
-    .innerJoin(
-      shops,
-      and(eq(shops.id, tripLastMinutePromos.shopId), eq(shops.lastMinuteListEnabled, true)),
-    )
+    .select({ promo: deals })
+    .from(deals)
+    .innerJoin(shops, and(eq(shops.id, deals.shopId), eq(shops.lastMinuteListEnabled, true)))
     .where(
       and(
-        eq(tripLastMinutePromos.shopId, input.shopId),
-        eq(tripLastMinutePromos.tripId, input.tripId),
-        eq(tripLastMinutePromos.code, code),
-        eq(tripLastMinutePromos.status, "sent"),
-        gt(tripLastMinutePromos.expiresAt, input.now ?? nowDate()),
+        eq(deals.shopId, input.shopId),
+        eq(deals.tripId, input.tripId),
+        eq(deals.code, code),
+        eq(deals.status, "active"),
+        gt(deals.expiresAt, input.now ?? nowDate()),
       ),
     )
     .limit(1);
-  return row?.promo ?? null;
+  return row ? lastMinuteDeal(row.promo) : null;
 }
 
-/** Trip ids among `tripIds` that have never had a `sent` last-minute-deal blast. */
+/** Trip ids among `tripIds` that have never had an `active` last-minute deal. */
 export async function tripIdsNeverSentLastMinuteDeal(
   db: DbExecutor,
   shopId: string,
@@ -230,16 +238,12 @@ export async function tripIdsNeverSentLastMinuteDeal(
 ): Promise<Set<string>> {
   if (tripIds.length === 0) return new Set();
   const sent = await db
-    .select({ tripId: tripLastMinutePromos.tripId })
-    .from(tripLastMinutePromos)
+    .select({ tripId: deals.tripId })
+    .from(deals)
     .where(
-      and(
-        eq(tripLastMinutePromos.shopId, shopId),
-        inArray(tripLastMinutePromos.tripId, tripIds),
-        eq(tripLastMinutePromos.status, "sent"),
-      ),
+      and(eq(deals.shopId, shopId), inArray(deals.tripId, tripIds), eq(deals.status, "active")),
     );
-  const alreadySent = new Set(sent.map((row) => row.tripId));
+  const alreadySent = new Set(sent.flatMap((row) => (row.tripId ? [row.tripId] : [])));
   return new Set(tripIds.filter((id) => !alreadySent.has(id)));
 }
 
@@ -294,7 +298,7 @@ export async function lastMinuteDealOutcomes(
     () =>
       db
         .select({
-          dealId: bookingCheckouts.tripPromoId,
+          dealId: bookingCheckouts.dealId,
           seats: countDistinct(bookingCheckoutBookings.bookingId),
         })
         .from(bookingCheckouts)
@@ -310,14 +314,14 @@ export async function lastMinuteDealOutcomes(
           and(
             eq(bookingCheckouts.shopId, shopId),
             eq(bookingCheckouts.status, "completed"),
-            inArray(bookingCheckouts.tripPromoId, [...dealIds]),
+            inArray(bookingCheckouts.dealId, [...dealIds]),
           ),
         )
-        .groupBy(bookingCheckouts.tripPromoId),
+        .groupBy(bookingCheckouts.dealId),
     () =>
       db
         .select({
-          dealId: bookingCheckouts.tripPromoId,
+          dealId: bookingCheckouts.dealId,
           cents: sql<string>`coalesce(sum(greatest(coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents}) - coalesce(${bookingCheckouts.taxCents}, 0), 0)), 0)`,
         })
         .from(bookingCheckouts)
@@ -326,10 +330,10 @@ export async function lastMinuteDealOutcomes(
           and(
             eq(bookingCheckouts.shopId, shopId),
             eq(bookingCheckouts.status, "completed"),
-            inArray(bookingCheckouts.tripPromoId, [...dealIds]),
+            inArray(bookingCheckouts.dealId, [...dealIds]),
           ),
         )
-        .groupBy(bookingCheckouts.tripPromoId),
+        .groupBy(bookingCheckouts.dealId),
   ]);
   const outcomes = new Map<string, DealOutcome>();
   for (const row of seatRows) {

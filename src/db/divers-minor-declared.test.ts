@@ -73,9 +73,9 @@ describe("a declared minor with no date of birth (#2553)", () => {
   it("reads Signed before any seat is declared", async () => {
     const s = await soloSigner("minor-none@example.com");
     const profile = await record(s);
-    expect(profile.waiver.state).toBe("current");
+    expect(profile.waiver.state).toBe("signed");
     expect(profile.minorDeclared).toBe(false);
-    expect(await counter(s)).toBe("current");
+    expect(await counter(s)).toBe("signed");
   });
 
   it("reads the solo signature as missing a guardian on the record and at the counter", async () => {
@@ -115,8 +115,8 @@ describe("a declared minor with no date of birth (#2553)", () => {
       .update(people)
       .set({ dateOfBirth: "1990-05-01" })
       .where(eq(people.id, adult.personId));
-    expect((await record(adult)).waiver.state).toBe("current");
-    expect(await counter(adult)).toBe("current");
+    expect((await record(adult)).waiver.state).toBe("signed");
+    expect(await counter(adult)).toBe("signed");
 
     const child = await soloSigner("minor-child-dob@example.com");
     await child.db
@@ -133,8 +133,8 @@ describe("a declared minor with no date of birth (#2553)", () => {
     await s.db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, s.bookingId));
     const profile = await record(s);
     expect(profile.minorDeclared).toBe(false);
-    expect(profile.waiver.state).toBe("current");
-    expect(await counter(s)).toBe("current");
+    expect(profile.waiver.state).toBe("signed");
+    expect(await counter(s)).toBe("signed");
   });
 
   it("ignores a declared seat on a departure that was deleted, called off, or is over", async () => {
@@ -144,15 +144,15 @@ describe("a declared minor with no date of birth (#2553)", () => {
     if (!trip) throw new Error("trip missing");
     try {
       await s.db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, trip.id));
-      expect((await record(s)).waiver.state).toBe("current");
-      expect(await counter(s)).toBe("current");
+      expect((await record(s)).waiver.state).toBe("signed");
+      expect(await counter(s)).toBe("signed");
 
       await s.db
         .update(trips)
         .set({ deletedAt: null, status: "cancelled" })
         .where(eq(trips.id, trip.id));
-      expect((await record(s)).waiver.state).toBe("current");
-      expect(await counter(s)).toBe("current");
+      expect((await record(s)).waiver.state).toBe("signed");
+      expect(await counter(s)).toBe("signed");
 
       // Back, and past the late-arrival hour too.
       const over = new Date(nowDate().getTime() - 2 * 3_600_000);
@@ -165,7 +165,7 @@ describe("a declared minor with no date of birth (#2553)", () => {
         })
         .where(eq(trips.id, trip.id));
       expect((await record(s)).minorDeclared).toBe(false);
-      expect(await counter(s)).toBe("current");
+      expect(await counter(s)).toBe("signed");
     } finally {
       await s.db
         .update(trips)

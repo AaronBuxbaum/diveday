@@ -10,7 +10,7 @@ import { heldSeatBlockers } from "@/lib/identity-match";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
-import { waiverState } from "@/lib/waivers";
+import { waiverStanding } from "@/lib/waivers";
 import type { RosterRowContext } from "./RosterRow";
 import { seatMoveForRow } from "./roster-model";
 import type { RosterEntry } from "./types";
@@ -185,7 +185,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
             ? t("trips.roster.paymentSourceWaived")
             : null;
   const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
-  const waiverStatus = waiverState(currentWaiver);
+  const waiverStatus = waiverStanding(currentWaiver);
   // **A retired refusal still governs, and the seat's own new link is what
   // there is to do** (`retireMedicalRefusal`). The physician's "no" keeps the
   // seat blocked and keeps its reason line, while the waiver control speaks
@@ -193,7 +193,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   const refusalRetired =
     waiverStatus === "medical_not_cleared" && Boolean(currentWaiver?.supersededAt);
   const ownWaiver = seatRow?.bookingWaiver ?? null;
-  const waiverControl = WAIVER_CONTROLS[refusalRetired ? waiverState(ownWaiver) : waiverStatus];
+  const waiverControl = WAIVER_CONTROLS[refusalRetired ? waiverStanding(ownWaiver) : waiverStatus];
   const nitrox = nitroxByBooking.get(booking.id);
   // Either signal holds the seat, so a readiness read that failed closed
   // (and so raised no identity blocker) still withholds (security review

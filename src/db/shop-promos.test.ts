@@ -4,7 +4,7 @@ import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { fakeCheckout, fakePromotions } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
-import { bookingCheckouts, bookingPayments, shopPromoCodes, tripLastMinutePromos } from "./schema";
+import { bookingCheckouts, bookingPayments, deals } from "./schema";
 import {
   createShopPromoCode,
   deleteShopPromoCode,
@@ -67,14 +67,12 @@ async function promoNamed(
  */
 async function redemptionsOf(
   db: Awaited<ReturnType<typeof seededShopContext>>["db"],
-  promoCodeId: string,
+  dealId: string,
 ) {
   return db
     .select()
     .from(bookingCheckouts)
-    .where(
-      and(eq(bookingCheckouts.promoCodeId, promoCodeId), eq(bookingCheckouts.status, "completed")),
-    )
+    .where(and(eq(bookingCheckouts.dealId, dealId), eq(bookingCheckouts.status, "completed")))
     .orderBy(bookingCheckouts.completedAt, bookingCheckouts.id);
 }
 
@@ -711,7 +709,7 @@ describe("deleteShopPromoCode", () => {
   it("deletes a pending code — one whose Stripe call never finished", async () => {
     const { db, shop } = await promoContext();
     const stuck = await db
-      .insert(shopPromoCodes)
+      .insert(deals)
       .values({ shopId: shop.id, code: "STUCK10", discountPercent: 10, scope: "all" })
       .returning();
     const row = stuck[0];
@@ -756,7 +754,7 @@ describe("deleteShopPromoCode", () => {
 describe("listShopPromoCodes group ordering (in-memory PGlite)", () => {
   it("sorts live, then scheduled, then ended — newest first inside each shelf", async () => {
     const { db, shop } = await promoContext();
-    await db.insert(shopPromoCodes).values([
+    await db.insert(deals).values([
       {
         shopId: shop.id,
         code: "ENDED",
@@ -823,7 +821,7 @@ describe("listShopPromoCodes group ordering (in-memory PGlite)", () => {
       fakePromotions(),
     );
     if (!capped.ok) throw new Error("expected the capped promo");
-    await db.insert(shopPromoCodes).values({
+    await db.insert(deals).values({
       shopId: shop.id,
       code: "OPEN",
       discountPercent: 10,
@@ -865,10 +863,10 @@ describe("tripMayTakeACode", () => {
     await setShopPromoEnabled(db, shop.id, reef10.id, false);
     const [dealTrip, otherTrip] = await upcomingTripsWithCounts(db, shop.id);
     if (!dealTrip || !otherTrip) throw new Error("demo trips missing");
-    await db.insert(tripLastMinutePromos).values({
+    await db.insert(deals).values({
       shopId: shop.id,
       tripId: dealTrip.id,
-      status: "sent",
+      status: "active",
       discountPercent: 20,
       code: "LASTCALL20",
       expiresAt: new Date(dealTrip.startsAt),

@@ -21,6 +21,7 @@
 // pnpm check:locale proves the file sets match across locales and that every
 // file is imported here, so a stray or orphaned namespace cannot ship.
 
+import words from "../words.json";
 import activity from "./activity.json";
 import assistsFront from "./assistsFront.json";
 import backup from "./backup.json";
@@ -125,6 +126,7 @@ const staff = {
   desk,
   deskAssists,
   disputeSheet,
+  words,
 };
 
 export default staff;

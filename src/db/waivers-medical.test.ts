@@ -6,8 +6,8 @@ import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import {
   isCleanCompletion,
   isUnresolvedMedicalHold,
-  shopWaiverStatus,
-  waiverState,
+  shopWaiverStanding,
+  waiverStanding,
 } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
@@ -132,7 +132,7 @@ describe("physician medical clearance", () => {
 
     const signed = (await listSignedWaiversByPerson(db, shop.id, [person.id])).get(person.id) ?? [];
     const template = await getCurrentWaiverTemplate(db, shop.id);
-    const status = shopWaiverStatus({
+    const status = shopWaiverStanding({
       personSignedWaivers: signed,
       currentTemplateVersion: template?.materialGeneration ?? null,
       now: later,
@@ -140,7 +140,7 @@ describe("physician medical clearance", () => {
     // Cleared — the reproduction, kept by decision (Aaron, 2026-10-09, issue
     // #2195, amending H-20261007-after-physician-says-no). Refusing it would strand a diver who mis-tapped
     // question 3 until a doctor writes a letter.
-    expect(status.state).toBe("current");
+    expect(status.state).toBe("signed");
     // And the standing says what it stood over, so the diver's record and the
     // boat's manifest can both say so, and link to the referral itself.
     const [referral] = await db
@@ -519,7 +519,7 @@ describe("physician medical clearance", () => {
     });
     expect(isUnresolvedMedicalHold(record)).toBe(true);
     expect(isCleanCompletion(record)).toBe(false);
-    expect(waiverState(record, declinedAt)).toBe("medical_not_cleared");
+    expect(waiverStanding(record, declinedAt)).toBe("medical_not_cleared");
 
     // Fail-closed end to end: readiness still refuses to board them, and the
     // blocker it raises is the one that says why.

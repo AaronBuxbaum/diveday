@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NO_NITROX } from "@/test/admission-refusals";
 
 const SECRET = "known-answer-secret";
 const BOOKING = "0b9d6f3e-1c2a-4d4e-8a5b-6c7d8e9f0a1b";
@@ -8,7 +9,8 @@ const MINTED = {
   recap:
     "cmVjYXA6MGI5ZDZmM2UtMWMyYS00ZDRlLThhNWItNmM3ZDhlOWYwYTFiOjE3ODQ2NDA2MDA.GYaO7xgfnY3d64o12MpiigGlxJgZigjOSPqkVP56Hxo",
   buddy: "C51vPhwqTU6KW2x9jp8KGw.mrcKxb4Uzf_4yf8N",
-  gate: "~~~1.kXvijUe6Lgt06VAEkkSS6o5FpWG7F8xMx_UuZ_02eY8",
+  // v2 (#2706): the gate carries ladder blocker codes, under a new purpose.
+  gate: "nitrox_missing.DY3zoB8GVO6wtNNlG4ZOVZMMxSLO-Wu46_9fUsuwP20",
   epoch: "3.2.chedpM2MpU5HmuVTgGjG6kXVU4lcQgEtqH0Kljg6lhM",
   preview: "1800000600000.ESwgziOoL_4ex9mIyStw-Ca2tEV1fMIuCozTfXuImRg",
   catchUp:
@@ -19,12 +21,7 @@ const MINTED = {
   quiet: "tbEOdFPi5zoL2KF_HRX3TJjYQHefTb6_39rTjD7dGy8",
 };
 const QUIET_ENV = { DEMO_QUIET_KEY: "quiet-key-quiet-key-quiet-key-1" };
-const GATE_REFUSAL = {
-  requiredLevel: null,
-  heldLevel: null,
-  missingSpecialties: [],
-  nitroxRequired: true,
-} as never;
+const GATE_REFUSAL = [NO_NITROX] as never;
 const GATE_SCOPE = { kind: "trip", id: BOOKING } as never;
 const CATCH_UP_SCOPE = { shopId: "s", personId: "p", dayStart: "d", mode: "ack" as const };
 

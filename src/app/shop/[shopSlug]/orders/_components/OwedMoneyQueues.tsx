@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { ShopNotice } from "@/components/ui/outcome";
 import type { PaidAfterCloseCheckout } from "@/db/checkouts-paid-after-close";
 import type { UnattributedRefund } from "@/db/unattributed-refunds";
 import type { FailedRefund, OwedShopCancellationRefund } from "@/db/unfinished";

@@ -64,7 +64,7 @@ test.describe("as instructor", () => {
     // Its own labeled group, between the summary sentence and the first
     // station — not a stack of sunken cards.
     await expect(page.getByRole("heading", { name: "Your sessions" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Open roster" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open divers" }).first()).toBeVisible();
   });
 });
 

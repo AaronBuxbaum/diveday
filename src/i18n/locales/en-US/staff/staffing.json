@@ -9,8 +9,7 @@
     "note": "Note",
     "noteHint": "(optional)",
     "notePlaceholder": "Dock, classroom, boat 2",
-    "submit": "Add shift",
-    "saving": "Saving…"
+    "submit": "Add shift"
   },
   "away": {
     "from": "From",
@@ -21,7 +20,6 @@
     "remove": "Remove",
     "removing": "Removing…",
     "save": "Save",
-    "saving": "Saving…",
     "to": "To"
   },
   "credentials": {
@@ -44,8 +42,6 @@
     "markVerified": "Mark reviewed",
     "delete": "Delete",
     "deleteConfirm": "Delete {name}?",
-    "deleting": "Deleting…",
-    "saving": "Saving…",
     "add": "Add a credential",
     "noneOnFile": "No credentials on file",
     "missing": {
@@ -82,7 +78,7 @@
     "notAllowed": "That isn’t yours to change.",
     "notAuthorized": "Only owners and managers can change shifts.",
     "overlap": "That person already has an overlapping shift.",
-    "personNotFound": "That person isn’t on this shop’s roster.",
+    "personNotFound": "That person isn’t on this shop’s crew.",
     "requestApproved": "Approved, and they’re on the crew.",
     "requestApprovedNotAssigned": "Approved, but the assignment was refused. Crew that departure from its own page to see why.",
     "requestApprovedRatioOpen": "Approved, and they’re on the crew. The session is still over its ratio: only an instructor adds seats.",
@@ -106,9 +102,8 @@
     "awayConflict": "Away {dates}",
     "continuedFrom": "from {day}",
     "continuedUntil": "until {time} · from {day}",
-    "crewClash": "Also rostered on {departure}",
+    "crewClash": "Also scheduled on {departure}",
     "crewing": "Crewing",
-    "deciding": "Saving…",
     "decline": "Decline",
     "empty": "Nothing scheduled this week",
     "needsCrew": "Needs crew",
@@ -143,7 +138,6 @@
     "rowLabel": "On public pages",
     "shownAs": "Shown as {name}",
     "notShown": "Not shown",
-    "save": "Save",
-    "saving": "Saving…"
+    "save": "Save"
   }
 }

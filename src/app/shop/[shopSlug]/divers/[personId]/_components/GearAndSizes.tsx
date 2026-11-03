@@ -330,7 +330,7 @@ export function GearAndSizes({
                   />
                 ) : null}
                 <SubmitButton
-                  pendingLabel={t("divers.rentalFit.saving")}
+                  pendingLabel={t("words.busy.saving")}
                   className={buttonClass({ variant: "secondary" })}
                 >
                   {t("divers.rentalFit.recordRentalFit")}

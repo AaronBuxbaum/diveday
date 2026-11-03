@@ -1,4 +1,4 @@
-import { ShopNotice } from "@/components/ShopNotice";
+import { ShopNotice } from "@/components/ui/outcome";
 import type { ShopPayout } from "@/db/payouts";
 import type { RoomChargeTotal } from "@/db/room-charges";
 import { payoutSentence } from "@/i18n/payout-labels";

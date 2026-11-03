@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { levelShort } from "@/test/admission-refusals";
 import { resolveDiverNotice } from "./diver-notices";
 import type { TripAdmissionRefusal } from "./trip-admission";
 import { signTripAdmissionGate } from "./trip-admission-gate";
@@ -11,12 +12,7 @@ const PERSON = "00000000-0000-4000-8000-000000000001";
 const OTHER_PERSON = "00000000-0000-4000-8000-000000000002";
 const t = staffTranslator("en-US");
 
-const REFUSAL: TripAdmissionRefusal = {
-  requiredLevel: "advanced_open_water",
-  heldLevel: "open_water",
-  missingSpecialties: [],
-  nitroxRequired: false,
-};
+const REFUSAL: TripAdmissionRefusal = [levelShort("advanced_open_water", "open_water")];
 
 const resolve = (input: Partial<Parameters<typeof resolveDiverNotice>[0]>) =>
   resolveDiverNotice({ personId: PERSON, locale: "en-US", ...input });

@@ -1,3 +1,4 @@
+import type { NoticeTone } from "@/components/ui/tone";
 /**
  * The `?notice=` → banner plumbing every page repeats: a page redirects
  * back to itself with a notice code, and the next render looks that code up
@@ -18,10 +19,6 @@
  * query string is a hostile query string on either side of the auth line.
  * `NoticeTone`/`noticeRole` below stay tied to the staff `ShopNotice` banner.
  */
-
-/** The tone vocabulary `ShopNotice` accepts — kept here so a notice map never
- * has to redeclare the union and risk drifting from what the banner renders. */
-export type NoticeTone = "success" | "danger" | "warning" | "neutral";
 
 /** One resolved `?notice=`: the tone it carries and the words for it. */
 export type NoticeMessage = { tone: NoticeTone; text: string };
@@ -255,16 +252,6 @@ export function noticeUrl(
   // else with a `?` in it is mid-query and needs `&`.
   const separator = /[?&]$/.test(base) ? "" : base.includes("?") ? "&" : "?";
   return `${base}${separator}${query}${hash}`;
-}
-
-/**
- * `danger` notices are refusals a staff member needs to notice over anything
- * else on the page, so they get `role="alert"`; everything else is ambient
- * confirmation (`role="status"`). The one rule every full-shape migration
- * (`StaffNoticeBanner`) applies, extracted so it can't drift between them.
- */
-export function noticeRole(tone: NoticeTone): "status" | "alert" {
-  return tone === "danger" ? "alert" : "status";
 }
 
 /**

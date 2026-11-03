@@ -713,7 +713,7 @@ describe("claimPartySeat", () => {
     expect(outcome).toMatchObject({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+      refusal: [{ params: { requiredLevel: "advanced_open_water", heldLevel: "open_water" } }],
     });
     // Refused claim leaves the seat exactly as it was.
     const [row] = await db

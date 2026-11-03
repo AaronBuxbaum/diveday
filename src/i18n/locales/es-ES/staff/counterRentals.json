@@ -1,5 +1,8 @@
 {
-  "fill": { "air": "Aire", "eanx": "EANx {percent}" },
+  "fill": {
+    "air": "Aire",
+    "eanx": "EANx {percent}"
+  },
   "rentOut": "Alquilar",
   "new": {
     "title": "Alquilar",
@@ -94,8 +97,7 @@
       "unverified": "{count, plural, one {# tarjeta registrada} other {# tarjetas registradas}}, sin verificar",
       "minor": "Menor de edad",
       "seen": "Tarjeta vista",
-      "record": "Registrar tarjeta",
-      "recording": "Registrando…"
+      "record": "Registrar tarjeta"
     },
     "review": "Revisar alquiler"
   },

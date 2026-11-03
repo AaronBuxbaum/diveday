@@ -62,8 +62,8 @@ export function medicalClearanceCopy(
     documentHint: t("shared.medicalClearance.documentHint"),
     documentChoose: t("shared.medicalClearance.documentChoose"),
     documentChooseAnother: t("shared.medicalClearance.documentChooseAnother"),
-    recording: t("shared.medicalClearance.recording"),
+    recording: t("words.busy.recording"),
     confirm: t("shared.medicalClearance.confirm"),
-    neverMind: t("shared.waiverSend.neverMind"),
+    neverMind: t("words.dismiss.neverMind"),
   };
 }

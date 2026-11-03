@@ -164,7 +164,7 @@ export function OfflineCounter({
                         longer repeats "when saved" (B01). */}
                     {!arrived
                       ? t("shared.offlineManifest.single.counter.notCheckedInLabel")
-                      : `${t("shared.offlineManifest.single.counter.checkedInLabel")}${
+                      : `${t("shared.presence.arrived")}${
                           arrival.local && arrival.pending
                             ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
                             : ""

@@ -142,7 +142,7 @@ test("a diver says it in their own words, and the desk marks it from the inbox r
   await message.getByRole("button", { name: `More for the message from ${name}` }).click();
   await page.getByRole("button", { name: `Mark ${name} running late for ${OPEN_BOAT}` }).click();
   await expect(
-    page.getByText("Marked running late. The roster and the manifest show it."),
+    page.getByText("Marked running late. The Divers tab and the manifest show it."),
   ).toBeVisible();
   await expect(
     page

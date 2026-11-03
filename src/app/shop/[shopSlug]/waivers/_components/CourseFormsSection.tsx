@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { StatusInView } from "@/components/ui/StatusInView";
+import type { NoticeTone } from "@/components/ui/tone";
 import type { CourseFormImpact, CourseFormSummary } from "@/db/course-forms";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
@@ -23,7 +24,6 @@ import {
   courseFormAwaitingText,
 } from "@/lib/course-forms";
 import { formatShortDate } from "@/lib/format";
-import type { NoticeTone } from "@/lib/staff-notices";
 import { deleteCourseFormAction, saveCourseFormAction } from "../actions";
 
 /** A course-form outcome, and which form on the page it belongs beside. */
@@ -129,16 +129,13 @@ export function CourseFormsSection({
                   />
                   <ResignImpact impact={resign.get(form.id)} t={t} />
                   <div className="flex flex-wrap items-center gap-3">
-                    <SubmitButton
-                      pendingLabel={t("waiversStaff.courseForms.saving")}
-                      className={buttonClass()}
-                    >
+                    <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                       {t("waiversStaff.courseForms.save")}
                     </SubmitButton>
                     <InlineConfirm
                       triggerLabel={t("waiversStaff.courseForms.delete")}
                       confirmLabel={t("waiversStaff.courseForms.deleteConfirm")}
-                      pendingLabel={t("waiversStaff.courseForms.deleting")}
+                      pendingLabel={t("words.busy.deleting")}
                       triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
                       formAction={deleteCourseFormAction}
                       autoResetMs={6000}
@@ -168,10 +165,7 @@ export function CourseFormsSection({
           <form action={saveCourseFormAction} className="flex flex-col gap-5">
             <CourseFormFields idPrefix="new" title="" body="" t={t} />
             <div>
-              <SubmitButton
-                pendingLabel={t("waiversStaff.courseForms.saving")}
-                className={buttonClass()}
-              >
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("waiversStaff.courseForms.create")}
               </SubmitButton>
             </div>

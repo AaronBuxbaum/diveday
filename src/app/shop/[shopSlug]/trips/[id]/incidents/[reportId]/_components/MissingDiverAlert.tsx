@@ -71,7 +71,7 @@ export function MissingDiverAlert({
         <form action={action} className="mt-4 print:hidden">
           <p className="text-sm text-muted">{t("incidents.found.help")}</p>
           <SubmitButton
-            pendingLabel={t("incidents.found.pending")}
+            pendingLabel={t("words.busy.saving")}
             className={buttonClass({ variant: "secondary", className: "mt-3" })}
           >
             {t("incidents.found.submit")}

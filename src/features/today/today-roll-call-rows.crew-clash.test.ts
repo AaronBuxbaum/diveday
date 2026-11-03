@@ -114,7 +114,7 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
     expect(rows[0]).toMatchObject({
       aboutDeparture: true,
       urgency: "soon",
-      detail: "Kai Clashwell is also rostered on Clash host reef at these hours.",
+      detail: "Kai Clashwell is also scheduled on Clash host reef at these hours.",
       href: `/shop/${ctx.shop.slug}/trips/${mover.id}?view=details#crew`,
     });
   });
@@ -173,7 +173,7 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
   });
 
   /**
-   * #1814's narrow version: the boat is out with somebody also rostered on
+   * #1814's narrow version: the boat is out with somebody also scheduled on
    * another hull. One row, named, pointing at the roll call — and the
    * pre-sailing kind is gone, because there is no "before it sails" left.
    */
@@ -192,7 +192,7 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
       urgency: "imminent",
       aboutDeparture: true,
       detail:
-        "Kai Clashwell is out aboard while also rostered on Clash mover charter at these hours. Confirm who is aboard.",
+        "Kai Clashwell is out aboard while also scheduled on Clash mover charter at these hours. Confirm who is aboard.",
       href: `/shop/${ctx.shop.slug}/trips/${host.id}/manifest`,
     });
 

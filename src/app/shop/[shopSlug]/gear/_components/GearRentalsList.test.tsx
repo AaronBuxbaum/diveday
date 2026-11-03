@@ -194,7 +194,7 @@ describe("GearRentalsList's counter waiver word", () => {
   });
 
   it("says nothing once the waiver is signed", () => {
-    renderList([counter()], new Map([["person-ana", { state: "current" as const }]]));
+    renderList([counter()], new Map([["person-ana", { state: "signed" as const }]]));
     expect(screen.queryByText(/Waiver:/)).toBeNull();
   });
 
@@ -205,7 +205,7 @@ describe("GearRentalsList's counter waiver word", () => {
       new Map([
         [
           "person-ana",
-          { state: "current" as const, refusedOn: "2026-07-18", referredOn: "2026-07-20" },
+          { state: "signed" as const, refusedOn: "2026-07-18", referredOn: "2026-07-20" },
         ],
       ]),
     );

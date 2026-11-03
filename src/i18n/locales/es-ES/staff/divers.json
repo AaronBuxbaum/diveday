@@ -53,7 +53,6 @@
     "juniorCardOptionJunior": "Titulación junior",
     "juniorCardOptionFull": "Titulación completa",
     "juniorCardSave": "Registrar tipo de titulación",
-    "juniorCardSaving": "Registrando…",
     "juniorCardVerifiedBy": "Verificada por {name} el {date}.",
     "juniorCardStaff": "un miembro del equipo",
     "drysuitSeenTitle": "Visto bucear con traje seco",
@@ -63,7 +62,6 @@
     "drysuitSeenNoteLabel": "Qué viste",
     "drysuitSeenNotePlaceholder": "p. ej., traje seco propio, tres inmersiones desde costa con nosotros en octubre",
     "recordDrysuitSeen": "Lo he visto bucear con traje seco",
-    "recordingDrysuitSeen": "Anotando…",
     "clearDrysuitSeen": "Quitar",
     "clearingDrysuitSeen": "Quitando…",
     "heading": "Registros de certificación",
@@ -114,7 +112,6 @@
         "lead": "{agency} también muestra estas certificaciones. ¿Las agregas? Cada una espera a Marcar certificado.",
         "leadFor": "{agency} también muestra estas certificaciones de {name}. ¿Las agregas? Cada una espera a Marcar certificado.",
         "add": "Agregar",
-        "adding": "Agregando…",
         "added": "Agregadas",
         "failed": "No se pudieron agregar. Recarga para ver las certificaciones de este buceador."
       }
@@ -126,7 +123,6 @@
     "sightCardLevelHint": "Viene rellenado con lo que dijo el buceador. Cámbialo para que coincida con el registro de certificación que verificaste.",
     "cardNumberShapeHint": "El número que figura en el registro de certificación: al menos tres caracteres, con algún dígito.",
     "markCertified": "Marcar certificado",
-    "deleting": "Eliminando…",
     "delete": "Eliminar",
     "clearNoCertificationHint": "Alguien indicó en un formulario público que este buceador no tiene ninguna certificación. Cualquiera que sepa su nombre y su correo puede dejar esa respuesta, así que corrígela si no la dio él. Corregirla no dice nada sobre certificaciones, nunca que esté certificado, y las listas de ofertas y de espera dejan de señalarlo.",
     "clearNoCertification": "No nos dijo eso",
@@ -168,7 +164,6 @@
     "fullNameLabel": "Nombre completo",
     "emailLabel": "Correo electrónico",
     "phoneLabel": "Teléfono",
-    "adding": "Agregando…",
     "cancel": "Cancelar",
     "addDiver": "Agregar buceador",
     "confirmMatchesTitle": "¿Es {name} alguna de estas personas? Al elegir una se reutiliza su ficha, y sus certificaciones y su exención no cuentan hasta que alguien confirme que es la misma persona",
@@ -252,7 +247,6 @@
     "diveInsurancePlaceholder": "DAN n.º 12345",
     "emergencyContactNameLabel": "Nombre del contacto de emergencia",
     "emergencyContactPhoneLabel": "Teléfono del contacto de emergencia",
-    "saving": "Guardando…",
     "saveDetails": "Guardar datos",
     "diveDays": "{count, plural, one {# día de buceo} other {# días de buceo}}",
     "diveDaysSince": "{count, plural, one {# día de buceo} other {# días de buceo}} desde {since}",
@@ -277,7 +271,6 @@
   },
   "remove": {
     "removePersonSummary": "Eliminar a {name}",
-    "removing": "Eliminando…",
     "removeDiver": "Eliminar buceador",
     "consequence": "Quita a {name} de la lista, los selectores de reserva, los manifiestos y la preparación. Sus exenciones, salidas y pagos se conservan, y puedes restaurarlo.",
     "staffWarning": "También trabaja aquí. Al eliminarlo sale del equipo y ya no podrá iniciar sesión."
@@ -412,7 +405,6 @@
     "weightPreferenceLabel": "Preferencia de peso",
     "weightPreferencePlaceholder": "Normalmente 12 lb con neopreno de 3 mm",
     "weightPreferencePlaceholderDry": "Normalmente 22 lb con traje seco",
-    "saving": "Guardando…",
     "recordRentalFit": "Guardar ajuste de alquiler",
     "flaggedHeading": "Marcado para ajuste manual",
     "cantFillHeading": "¿No puedes cubrir una talla?",
@@ -438,9 +430,7 @@
     "appliesEverywhere": "Se aplica a todas las salidas de este buceador",
     "addLabel": "Agregar una nota",
     "placeholder": "¿Qué debe saber la próxima persona del equipo?",
-    "adding": "Agregando…",
     "add": "Agregar nota",
-    "deleting": "Eliminando…",
     "delete": "Eliminar",
     "writtenBy": "{name} · {date}"
   },
@@ -471,7 +461,6 @@
     "sendWaiverViaSms": "Enviar exención por texto",
     "copyWaiverLink": "Copiar enlace",
     "waiverChannelSent": "Enviada",
-    "waiverChannelCopied": "Copiado",
     "waiverChannelFailed": "No salió",
     "waiverChannelUnavailable": "Sin configurar"
   },
@@ -658,7 +647,6 @@
     "openClearanceDocument": "Abrir la evaluación médica",
     "openDiverForm": "Abrir el formulario firmado que el buceador envió el {date}",
     "rejectDiverForm": "No se puede usar este formulario",
-    "rejectingDiverForm": "Eliminando…",
     "evaluationFromDiver": "Enviado por el buceador",
     "openSignedRecord": "Abrir la exención firmada"
   },
@@ -679,7 +667,6 @@
     "theySaid": "Para su salida del {date}: {said}",
     "fieldLabel": "Última inmersión, en cualquier sitio",
     "save": "Guardar",
-    "saving": "Guardando…",
     "clear": "Quitar",
     "clearing": "Quitando…"
   }

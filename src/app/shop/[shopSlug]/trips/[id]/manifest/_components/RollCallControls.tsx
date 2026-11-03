@@ -333,7 +333,7 @@ export function RollCallMarkButton({
             : t("manifest.markBoarded")
       }
       pendingLabel={
-        isCrew ? t("manifest.saving") : boarded ? t("manifest.undoing") : t("manifest.boarding")
+        isCrew ? t("words.busy.saving") : boarded ? t("manifest.undoing") : t("manifest.boarding")
       }
       mark={<RollCallMark state={markState} />}
       className={MARK_BUTTON_CLASS}
@@ -485,7 +485,7 @@ export function RollCallExceptionControl({
             ? isDeparture
               ? isCrew
                 ? t("manifest.crewNotAboardCheck")
-                : t("manifest.notBoardedCheck")
+                : t("shared.presence.notBoarded")
               : isCrew
                 ? t("manifest.crewNotBackAboardActive")
                 : t("manifest.notBackAboardActive")
@@ -514,7 +514,7 @@ export function RollCallExceptionControl({
               : t("manifest.notBoardedCheckAriaLabel")
             : undefined
         }
-        pendingLabel={t("manifest.saving")}
+        pendingLabel={t("words.busy.saving")}
         // **The exception is never the filled action** (layer 4 review,
         // dde-a F1): it is the deliberate second step, and a mis-tap on it
         // takes a soul who is aboard out of every later count. Boat mode's

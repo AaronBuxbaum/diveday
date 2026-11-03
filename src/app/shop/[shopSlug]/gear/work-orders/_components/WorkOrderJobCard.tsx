@@ -178,7 +178,7 @@ export function WorkOrderJobCard({
       </Field>
       <FieldActions>
         <SubmitButton
-          pendingLabel={t("workOrders.form.saving")}
+          pendingLabel={t("words.busy.saving")}
           className={buttonClass({ variant: "secondary" })}
         >
           {t("workOrders.form.save")}

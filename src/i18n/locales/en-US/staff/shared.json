@@ -31,7 +31,6 @@
     "markSignedOnPaper": "Mark signed on paper",
     "medicalAttestationLabel": "I have this diver’s signed release on file, I have reviewed their medical questionnaire, and no answer needs physician sign-off.",
     "medicalAttestationMinorLabel": "I have this diver’s signed release on file, I have reviewed their medical questionnaire, no answer needs physician sign-off, and the parent or guardian answered the health questions.",
-    "recording": "Recording…",
     "recordPaperSignature": "Record paper signature",
     "guardianNameLabel": "Parent or guardian who signed",
     "guardianRelationshipLabel": "Relationship",
@@ -61,14 +60,11 @@
     "documentHint": "An image or PDF of the signed form.",
     "documentChoose": "Choose a file",
     "documentChooseAnother": "Choose a different file",
-    "recording": "Recording…",
     "confirm": "Record the answer",
     "useDiverForm": "Use the form the diver sent as the evaluation. Open it first and type the physician’s name from it.",
     "earlierLetterConfirm": "Tick if this letter is dated before the latest referral: the physician evaluated their current condition, not only the referral signed {date}."
   },
   "waiverSend": {
-    "sending": "Sending…",
-    "copied": "Copied",
     "copyLink": "Copy link",
     "copyFailed": "Try again",
     "reasonNoEmailOne": "No email on file",
@@ -87,9 +83,8 @@
     "sent": "Waiver sent to {names}",
     "alreadyDoneOne": "{names} already has a signed waiver, so nothing was reissued.",
     "alreadyDoneOther": "{names} already have a signed waiver, so nothing was reissued.",
-    "errors": "Couldn’t send to {names}. Open the roster to check the booking.",
+    "errors": "Couldn’t send to {names}. Open the divers to check the booking.",
     "confirmResend": "Yes, resend",
-    "neverMind": "Never mind",
     "emptySelection": "Tick at least one diver, then send the waiver to the whole selection.",
     "unnamedDiver": "A diver"
   },
@@ -190,7 +185,7 @@
       "diverOn": "{name} on the {time} {day} · {trip}",
       "noDeparture": "No upcoming departure",
       "openRecord": "Open {name}’s record",
-      "openRoster": "Open the roster",
+      "openRoster": "Open the divers",
       "openManifest": "Open the manifest",
       "dayNothing": "Nothing on the board yet",
       "dayCounts": "{departures, plural, one {# departure} other {# departures}} · {divers, plural, one {# diver} other {# divers}}",
@@ -228,7 +223,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Trip requirements have not been configured yet.",
-      "identityUnconfirmed": "Matched to this record on a guess: confirm who this is on the roster before boarding.",
+      "identityUnconfirmed": "Matched to this record on a guess: confirm who this is on the Divers tab before boarding.",
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
@@ -257,11 +252,13 @@
       "courseFormUnsigned": "Course form not signed: {form}.",
       "courseFormAgeUnknown": "{form} is for students {maxAge} and under, and there’s no date of birth on file. Add it, or have it signed with a parent or guardian.",
       "courseFormGuardianMissing": "{form} needs a parent or guardian’s signature.",
-      "trainingMarkInvalid": "Training mark no longer fits its course seat. Clear it on the roster."
+      "trainingMarkInvalid": "Training mark no longer fits its course seat. Clear it on the Divers tab."
     }
   },
   "presence": {
-    "arrived": "Checked in"
+    "arrived": "Checked in",
+    "boarded": "Boarded",
+    "notBoarded": "Not boarded"
   },
   "shopNav": {
     "language": "Language",
@@ -355,21 +352,21 @@
     "juniorCheckRequired": "Check this diver’s dive plan and supervision with the crew.",
     "juniorChecksUnavailable": "This saved copy predates junior card checks. Confirm the applicable card and supervision limits with the crew.",
     "freshnessCopy": {
-      "current": "The saved roster is current",
-      "aging": "This saved roster is a little old",
-      "stale": "This saved roster is old"
+      "current": "The saved manifest is current",
+      "aging": "This saved manifest is a little old",
+      "stale": "This saved manifest is old"
     },
     "freshnessPill": {
       "current": "Fresh copy",
       "currentOnline": "Fresh copy · online",
-      "currentOnlineWithNoteLoss": "Fresh roster · older notes removed",
+      "currentOnlineWithNoteLoss": "Fresh manifest · older notes removed",
       "aging": "Aging copy",
       "stale": "Stale copy"
     },
     "loadingMessage": "Opening the manifest saved on this device…",
     "openingHeading": "Opening this device’s saved copy",
     "reconcile": {
-      "tenantChanged": "The signed-in shop changed. This saved roster and its controls are hidden while this device checks the current shop. Pending changes remain saved here; reconnect or reload to try again.",
+      "tenantChanged": "The signed-in shop changed. This saved manifest and its controls are hidden while this device checks the current shop. Pending changes remain saved here; reconnect or reload to try again.",
       "reachError": "Couldn’t reach DiveDay just now. Your changes are still saved on this phone and will try to send again on the next change or reconnect.",
       "pendingRejectedSingle": "{count, plural, one {# change needs a look. Open the live manifest to sort it out.} other {# changes need a look. Open the live manifest to sort it out.}}",
       "pendingWaiting": "{count, plural, one {# change is still sending.} other {# changes are still sending.}}",
@@ -455,9 +452,7 @@
       "notOnFile": "Not on file",
       "rentalFit": "Rental fit",
       "nitroxRequestedSuffix": "· Nitrox requested",
-      "saving": "Saving…",
       "markBoarded": "Mark boarded",
-      "notBoardedDone": "Not boarded",
       "markNotBoarded": "Mark not boarded",
       "notBackAboardActive": "Not back aboard",
       "markNotBackAboard": "Mark not back aboard",
@@ -483,7 +478,6 @@
       },
       "counter": {
         "heading": "At the counter",
-        "checkedInLabel": "Checked in",
         "notCheckedInLabel": "Check in",
         "refusedNotReady": "Not checked in: readiness stopped clearing them after you tapped. Open the live counter before they board.",
         "refusedNotBookable": "Not checked in: this seat is no longer on the boat’s list. It was either canceled or marked not here at the desk. Open the live counter.",
@@ -548,8 +542,6 @@
   },
   "rollCallState": {
     "awaiting": "Awaiting roll call",
-    "boarded": "Boarded",
-    "notBoarded": "Not boarded",
     "notBoardedCarried": "Not boarded · carried",
     "notBackAboard": "Not back aboard"
   },
@@ -626,7 +618,6 @@
     "typedAs": "typed as “{raw}”"
   },
   "sendHold": {
-    "sendingNow": "Sending…",
     "undo": "Undo"
   },
   "rescheduleHold": {

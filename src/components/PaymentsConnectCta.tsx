@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ShopNotice } from "@/components/ShopNotice";
 import { buttonClass } from "@/components/ui/button";
+import { ShopNotice } from "@/components/ui/outcome";
 
 /**
  * The one door every "connect payments first" fallback opens —

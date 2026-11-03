@@ -329,7 +329,7 @@ export function EmergencyReferenceForm({
             a bare div, 44px beside every other row's 48px (K-308). */}
         <FieldActions>
           <SubmitButton
-            pendingLabel={t("settings.main.emergency.saving")}
+            pendingLabel={t("words.busy.saving")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("settings.main.emergency.submit")}
@@ -339,7 +339,7 @@ export function EmergencyReferenceForm({
       {waiting ? (
         <form action={resendShoreAlertConfirmationAction} className="mt-3">
           <SubmitButton
-            pendingLabel={t("settings.main.emergency.shoreAlertResending")}
+            pendingLabel={t("words.busy.sending")}
             className={buttonClass({ variant: "ghost" })}
           >
             {t("settings.main.emergency.shoreAlertResend")}

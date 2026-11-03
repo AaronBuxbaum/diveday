@@ -7,12 +7,13 @@ import {
   listCalendarFeeds,
 } from "@/features/calendar-sync";
 import { requestLocale } from "@/i18n/request";
+import { StaffIntlProvider } from "@/i18n/StaffIntlProvider";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { staffPageClass } from "../../_components/staff-page";
 import { CalendarFeedPanel } from "./CalendarFeedPanel";
-import type { CalendarFeedCopy, FeedScopeView } from "./feed-panel-types";
+import type { FeedScopeView } from "./feed-panel-types";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -54,33 +55,6 @@ export default async function CalendarSubscriptionsPage({
   const canSeeShopWide = session.user.roles.some((role) => role === "owner" || role === "manager");
   const scopes: FeedScope[] = canSeeShopWide ? ["assignments", "shop_trips"] : ["assignments"];
 
-  const copy: CalendarFeedCopy = {
-    create: t("calendar.actions.create"),
-    creating: t("calendar.actions.creating"),
-    rotate: t("calendar.actions.rotate"),
-    rotating: t("calendar.actions.rotating"),
-    turnOff: t("calendar.actions.turnOff"),
-    turningOff: t("calendar.actions.turningOff"),
-    copy: t("calendar.actions.copy"),
-    copied: t("calendar.actions.copied"),
-    copyFailed: t("calendar.actions.copyFailed"),
-    confirmRotate: t("calendar.actions.confirmRotate"),
-    confirmRotateButton: t("calendar.actions.confirmRotateButton"),
-    confirmTurnOff: t("calendar.actions.confirmTurnOff"),
-    confirmTurnOffButton: t("calendar.actions.confirmTurnOffButton"),
-    cancel: t("calendar.actions.cancel"),
-    newLinkHeading: t("calendar.newLink.heading"),
-    shownOnce: t("calendar.newLink.shownOnce"),
-    webcalLabel: t("calendar.newLink.webcalLabel"),
-    httpsLabel: t("calendar.newLink.httpsLabel"),
-    webcalHint: t("calendar.newLink.webcalHint"),
-    httpsHint: t("calendar.newLink.httpsHint"),
-    rotateWarning: t("calendar.warning.rotate"),
-    sharedWarning: t("calendar.warning.shared"),
-    denied: t("calendar.notice.denied"),
-    neverRead: t("calendar.status.neverRead"),
-  };
-
   const views: FeedScopeView[] = scopes.map((scope) => {
     const live = feeds.find((feed) => feed.scope === scope);
     // Dates are formatted here, against the negotiated locale and the shop's
@@ -116,17 +90,22 @@ export default async function CalendarSubscriptionsPage({
 
       <p className="mb-6 text-sm text-muted">{t("calendar.refreshNote")}</p>
 
-      <div className="border-t border-border">
-        {views.map((view) => (
-          <CalendarFeedPanel
-            key={view.scope}
-            view={view}
-            copy={copy}
-            subscribed={feeds.some((feed) => feed.scope === view.scope)}
-            createVariant="secondary"
-          />
-        ))}
-      </div>
+      <StaffIntlProvider
+        locale={locale}
+        timeZone={shop.timezone}
+        namespaces={["calendar", "words"]}
+      >
+        <div className="border-t border-border">
+          {views.map((view) => (
+            <CalendarFeedPanel
+              key={view.scope}
+              view={view}
+              subscribed={feeds.some((feed) => feed.scope === view.scope)}
+              createVariant="secondary"
+            />
+          ))}
+        </div>
+      </StaffIntlProvider>
 
       <p className="mt-6 text-xs text-muted">
         {t("calendar.coverage", { past: FEED_PAST_DAYS, future: FEED_FUTURE_DAYS })}

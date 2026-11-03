@@ -13,6 +13,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { buttonClass } from "@/components/ui/button";
 import { SearchField } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
+import type { NoticeTone } from "@/components/ui/tone";
 import {
   countGlobalDiveSiteTemplates,
   currentGlobalDiveSiteVersions,
@@ -28,7 +29,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { CatalogView } from "./_components/CatalogView";
 import { NewSitePanel } from "./_components/NewSitePanel";
 import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";

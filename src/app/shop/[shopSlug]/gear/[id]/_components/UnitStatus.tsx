@@ -73,7 +73,7 @@ export function StatusControls({ item, t }: { item: GearItemDetail["item"]; t: S
             noteLabel: t("gear.unit.status.pullNote"),
             noteHint: t("gear.form.optionalHint"),
             notePlaceholder: t("gear.unit.status.pullNotePlaceholder"),
-            cancel: t("gear.unit.status.pullCancel"),
+            cancel: t("words.dismiss.neverMind"),
             pending: t("gear.unit.status.pulling"),
           }}
         />
@@ -114,7 +114,7 @@ export function DeleteUnitFoot({
       <form action={deleteGearItemAction}>
         <input type="hidden" name="gearItemId" value={item.id} />
         <SubmitButton
-          pendingLabel={t("gear.unit.status.deleting")}
+          pendingLabel={t("words.busy.deleting")}
           className={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
         >
           {t("gear.unit.status.delete")}

@@ -17,6 +17,7 @@ vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
   };
 });
 
+import { levelShort } from "@/test/admission-refusals";
 import {
   activityEvents,
   bookings,
@@ -833,12 +834,7 @@ describe("seatDiver trip admission (the boat's own cert gate reaches every staff
     expect(result).toEqual({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: {
-        requiredLevel: "divemaster",
-        heldLevel: "open_water",
-        missingSpecialties: [],
-        nitroxRequired: false,
-      },
+      refusal: [levelShort("divemaster", "open_water")],
     });
     // Refused seatings owe no consequences at all — no seat, no waiver, no trail.
     const seats = await db

@@ -251,7 +251,7 @@ export function AddDiverSection({
                   requestId: request?.id,
                   personHref: (personId) => `/shop/${shopSlug}/divers/${personId}`,
                   addLabel: t("trips.addDiver.addToWaitlist"),
-                  pendingLabel: t("seatDiver.adding"),
+                  pendingLabel: t("words.busy.adding"),
                   addPersonAriaLabel: (name) => t("trips.addDiver.addPersonToWaitlist", { name }),
                   noEmailOnFile: t("trips.addDiver.noEmailOnFile"),
                 }}
@@ -344,7 +344,7 @@ export function AddDiverSection({
                         ? "trips.addDiver.addForRequest"
                         : "trips.addDiver.addToTrip",
                     ),
-                    pendingLabel: t("seatDiver.adding"),
+                    pendingLabel: t("words.busy.adding"),
                     addPersonAriaLabel: (name) =>
                       t(
                         request && !walkInOpen

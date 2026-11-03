@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import type { ParticipantType } from "@/lib/participant-types";
 import { fileScopedShopContext } from "@/test/db";
-import { createBooking, setBookingParticipantType } from "./bookings";
+import { createBooking, moveBooking, setBookingParticipantType } from "./bookings";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";
 import { tripRatioGapNeedsInstructor } from "./crew-requests";
@@ -375,5 +375,77 @@ describe("the ratio beside priced passengers", () => {
         now: after,
       }),
     ).toMatchObject({ ok: true });
+  });
+});
+
+/**
+ * **One course decision, every door** (issue #2709): the sale and a staff move
+ * ask `decideCourseAdmission` at the same strictness, after the boat's own
+ * limits.
+ */
+describe("the course gates at each door", () => {
+  it("refuses a priced rider onto an unstaffed session by a move, as the sale does", async () => {
+    const { db, shop } = ctx;
+    const from = await session(db, shop.id, "Advanced Open Water Diver");
+    seq += 1;
+    const startsAt = from.trip.startsAt.getTime() + 7 * 24 * 60 * 60 * 1000;
+    // The target has no instructor rostered: nobody is teaching it.
+    const unstaffed = await createTrip(db, {
+      shopId: shop.id,
+      courseId: from.course.id,
+      title: `Advanced — unstaffed ${seq}`,
+      startsAt: new Date(startsAt),
+      endsAt: new Date(startsAt + 4 * 60 * 60 * 1000),
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!unstaffed) throw new Error("session not created");
+    const to = { trip: unstaffed };
+    await priceRiders(db, shop.id, from.trip.id);
+    await priceRiders(db, shop.id, to.trip.id);
+    const rider = await seat(db, shop.id, from.trip.id, "rider");
+    if (!rider.ok) throw new Error("rider not seated");
+    expect(await seat(db, shop.id, to.trip.id, "rider")).toMatchObject({
+      ok: false,
+      reason: "course_unstaffed",
+    });
+    expect(
+      await moveBooking(db, {
+        shopId: shop.id,
+        fromTripId: from.trip.id,
+        toTripId: to.trip.id,
+        bookingId: rider.bookingId,
+      }),
+    ).toMatchObject({ ok: false, reason: "course_unstaffed" });
+  });
+
+  it("refuses a full boat as full before asking the student for a card", async () => {
+    const { db, shop } = ctx;
+    const { trip, course, staff } = await session(db, shop.id, "Advanced Open Water Diver");
+    seq += 1;
+    const startsAt = trip.startsAt.getTime() + 7 * 24 * 60 * 60 * 1000;
+    const small = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: `Advanced — one seat ${seq}`,
+      startsAt: new Date(startsAt),
+      endsAt: new Date(startsAt + 4 * 60 * 60 * 1000),
+      capacity: 1,
+      plannedDives: 2,
+    });
+    if (!small) throw new Error("session not created");
+    expect(await setTripCrew(db, shop.id, small.id, [staff.id])).toBeTruthy();
+    // No card on file: the course's own gate would refuse this walk-in.
+    expect(await seat(db, shop.id, small.id, "diver")).toMatchObject({
+      ok: false,
+      reason: "course_prerequisite",
+    });
+    await priceRiders(db, shop.id, small.id);
+    expect(await seat(db, shop.id, small.id, "rider")).toMatchObject({ ok: true });
+    // The boat is full now, so the cheaper answer comes first.
+    expect(await seat(db, shop.id, small.id, "diver")).toMatchObject({
+      ok: false,
+      reason: "trip_full",
+    });
   });
 });

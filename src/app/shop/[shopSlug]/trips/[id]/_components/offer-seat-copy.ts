@@ -16,7 +16,7 @@ export function offerSeatCopy(t: StaffTranslator): OfferSeatCopy {
     couldntSend: t("trips.whoWantsIn.couldntSend"),
     writeTo: t.raw("trips.whoWantsIn.writeTo"),
     copyFor: t.raw("trips.whoWantsIn.copyFor"),
-    copied: t("trips.whoWantsIn.copied"),
+    copied: t("words.did.copied"),
     copyFailed: t("trips.whoWantsIn.copyFailed"),
     emailSubject: t.raw("trips.whoWantsIn.emailSubject"),
     emailBody: t.raw("trips.whoWantsIn.emailBody"),

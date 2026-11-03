@@ -143,8 +143,8 @@ export type WaiverSendCopy = {
 export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
   return {
     hold: sendHoldCopy(t),
-    sending: t("shared.waiverSend.sending"),
-    copied: t("shared.waiverSend.copied"),
+    sending: t("words.busy.sending"),
+    copied: t("words.did.copied"),
     copyLink: t("shared.waiverSend.copyLink"),
     copyFailed: t("shared.waiverSend.copyFailed"),
     reasonNoEmailOne: t("shared.waiverSend.reasonNoEmailOne"),
@@ -165,7 +165,7 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     alreadyDoneOther: t.raw("shared.waiverSend.alreadyDoneOther"),
     errors: t.raw("shared.waiverSend.errors"),
     confirmResend: t("shared.waiverSend.confirmResend"),
-    neverMind: t("shared.waiverSend.neverMind"),
+    neverMind: t("words.dismiss.neverMind"),
     emptySelection: t("shared.waiverSend.emptySelection"),
     unnamedDiver: t("shared.waiverSend.unnamedDiver"),
   };

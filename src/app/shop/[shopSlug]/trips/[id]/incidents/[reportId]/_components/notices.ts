@@ -1,5 +1,5 @@
+import type { NoticeTone } from "@/components/ui/tone";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
-import type { NoticeTone } from "@/lib/staff-notices";
 
 /** Which form on the report page a notice belongs to (`noticeForForm`). */
 export type IncidentForm = "page" | "draft" | "people" | "file" | "addenda" | "discard" | "hold";
