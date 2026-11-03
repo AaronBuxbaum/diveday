@@ -1,4 +1,4 @@
-import type { DiverProfile } from "../_components/shared";
+import type { DiverProfile } from "@/lib/diver-profile";
 
 /**
  * Shared gate for the story's invoice link and the ledger's Collect action:

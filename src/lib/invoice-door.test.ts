@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { DiverProfile } from "../_components/shared";
+import type { DiverProfile } from "@/lib/diver-profile";
 import { canRaiseInvoiceFor } from "./invoice-door";
 
 /**
@@ -86,9 +86,9 @@ describe("the two surfaces that must not disagree", () => {
   });
 
   it("is what the record hands the status ledger", async () => {
-    const page = await read("src/app/shop/[shopSlug]/divers/[personId]/page.tsx");
-    expect(page).toMatch(/const collectHasSomewhereToGo = canRaiseInvoiceFor\(diver, \{/);
-    expect(page).toMatch(
+    const reader = await read("src/db/diver-record.ts");
+    expect(reader).toMatch(/const collectHasSomewhereToGo = canRaiseInvoiceFor\(diver, \{/);
+    expect(reader).toMatch(
       /diverStatusRows\(db, shop\.id, diver, now, \{ collectHasSomewhereToGo \}\)/,
     );
   });

@@ -5,13 +5,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
-import { listDiveSites } from "@/db/dive-sites";
-import {
-  getIncidentReport,
-  listIncidentCrewChoices,
-  listIncidentSeatChoices,
-  listIncidentShopStaffChoices,
-} from "@/db/incident-reports";
+import { getIncidentReportPage } from "@/db/incident-reports";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate, formatTimeZoneName } from "@/lib/format";
@@ -65,8 +59,13 @@ export default async function IncidentReportPage({
   const { shopSlug, id: tripId, reportId } = await params;
   if (!uuidParam(tripId) || !uuidParam(reportId)) notFound();
   const { session, db, shop } = await requireShopSurface(shopSlug);
-  const report = await getIncidentReport(db, shop.id, reportId, session.user.personId);
-  if (!report || report.tripId !== tripId) notFound();
+  const page = await getIncidentReportPage(db, shop.id, tripId, reportId, session.user.personId);
+  if (!page) notFound();
+  const {
+    report,
+    editing,
+    choices: { diveSites, seats, crew, shopStaff },
+  } = page;
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -80,15 +79,6 @@ export default async function IncidentReportPage({
     : undefined;
 
   const pageNotice = noticeForForm(notice, "page");
-  const editing = report.status === "draft" && report.mayWrite;
-  const [diveSites, seats, crew, shopStaff] = editing
-    ? await Promise.all([
-        listDiveSites(db, shop.id),
-        listIncidentSeatChoices(db, shop.id, tripId),
-        listIncidentCrewChoices(db, shop.id, tripId),
-        listIncidentShopStaffChoices(db, shop.id, tripId),
-      ])
-    : [[], [], [], []];
 
   // Readable is writable (`mayWriteIncidentReport`): whoever reaches a draft
   // here may edit it.

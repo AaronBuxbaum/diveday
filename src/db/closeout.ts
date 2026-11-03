@@ -15,6 +15,7 @@ import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
 import { seatSailed } from "@/lib/seat-sailed";
 import { settleWithLimit } from "@/lib/settle-with-limit";
 import { shopDayBounds, shopDaysBounds } from "@/lib/zoned";
+import { canPersonExportIncidentRecord } from "./authz";
 import type { AppDb } from "./client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
@@ -755,4 +756,38 @@ export async function readDayLoadOut(
         : [],
     ),
   );
+}
+
+/**
+ * **A past day, read later** (issue #2757): the day's closeout as the evening
+ * left it, its stations, who closed each head count, whether this staffer may
+ * open a departure's log, and who was never marked back after a dive. Both
+ * per-trip readers answer an empty map for no trips, so an empty day reads
+ * nothing past the closeout.
+ */
+export async function getPastDay(
+  db: AppDb,
+  shop: { id: string; timezone: string },
+  date: CalendarDate,
+  personId: string,
+  now: Date,
+) {
+  const closeout = await getDayCloseout(db, shop.id, shop.timezone, now, undefined, date);
+  const { stations } = assembleEveningClose(closeout.departures, now);
+  const [headCountCloses, canOpenLog, notBack] = await Promise.all([
+    listHeadCountCloses(
+      db,
+      shop.id,
+      stations
+        .filter((station) => station.status === "all_home")
+        .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
+    ),
+    stations.length > 0 && canPersonExportIncidentRecord(db, shop.id, personId),
+    listNotBackAfterDive(
+      db,
+      shop.id,
+      stations.map((station) => station.tripId),
+    ),
+  ]);
+  return { closeout, stations, headCountCloses, canOpenLog, notBack };
 }

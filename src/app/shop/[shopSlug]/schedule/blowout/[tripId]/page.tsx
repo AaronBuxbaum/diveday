@@ -7,8 +7,7 @@ import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { canPersonCallDayBlowout, canPersonRefund } from "@/db/authz";
-import { getTripRoster, getTripWithBooked } from "@/db/trips";
+import { getBlowoutPage, readTripBlowout } from "@/db/blowouts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -21,7 +20,7 @@ import { uuidParam } from "@/lib/uuid";
 import { BlowoutConfirmation } from "./_components/BlowoutConfirmation";
 import { HeldRefundsCard } from "./_components/HeldRefundsCard";
 import { RecoveryGroups } from "./_components/RecoveryGroups";
-import { blowoutTitleKey, readBlowout } from "./_lib/title";
+import { blowoutTitleKey } from "./_lib/title";
 import { callBlowoutAction, releaseBlowoutRefundsAction, resumeBlowoutAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -50,7 +49,7 @@ export async function generateMetadata({
   const { db, shop } = await requireShopSurface(shopSlug);
   const [locale, blowout] = await Promise.all([
     requestLocale(shop.defaultLocale),
-    readBlowout(db, shop.id, tripId),
+    readTripBlowout(db, shop.id, tripId),
   ]);
   return { title: `${staffTranslator(locale)(blowoutTitleKey(blowout))} — DiveDay` };
 }
@@ -85,14 +84,17 @@ export default async function BlowoutPage({
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
   const { db, shop, session } = await requireShopSurface(shopSlug);
-  const [locale, trip, blowout, canCallDay, mayRefund] = await Promise.all([
+  const [locale, page] = await Promise.all([
     requestLocale(shop.defaultLocale),
-    getTripWithBooked(db, shop.id, tripId),
-    readBlowout(db, shop.id, tripId),
-    canPersonCallDayBlowout(db, shop.id, session.user.personId),
-    canPersonRefund(db, shop.id, session.user.personId),
+    getBlowoutPage(db, shop.id, tripId, session.user.personId),
   ]);
-  if (!trip) notFound();
+  if (!page) notFound();
+  const {
+    trip,
+    blowout,
+    roster,
+    can: { callDay: canCallDay, refund: mayRefund },
+  } = page;
   const t = staffTranslator(locale);
   const banner = noticeFromParam(notice, NOTICES);
 
@@ -128,7 +130,6 @@ export default async function BlowoutPage({
 
   if (!blowout) {
     const departed = trip.startsAt <= nowDate();
-    const roster = await getTripRoster(db, shop.id, tripId);
     return (
       <BlowoutConfirmation
         header={header}

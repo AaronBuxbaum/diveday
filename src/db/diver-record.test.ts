@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { people } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
-import { loadDiverGear } from "./gear-load";
+import { loadDiverGear } from "./diver-record";
 
 const ctx = fileScopedShopContext();
 
