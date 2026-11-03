@@ -4,15 +4,7 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { DownloadAcknowledgmentLink } from "@/components/DownloadAcknowledgmentLink";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
-import { diverPackageBalance } from "@/db/dive-packages";
-import { listDiverMergeCandidates } from "@/db/diver-merge";
-import { getDiverProfile } from "@/db/divers";
-import { listGuardianEmails } from "@/db/guardian-erasure";
-import { personThread } from "@/db/inbound-messages";
-import { lastKnownDive } from "@/db/last-dive";
-import { openLostItemsByPerson } from "@/db/lost-items";
-import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { getDiverRecord } from "@/db/diver-record";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -33,12 +25,7 @@ import { DiverStory } from "./_components/DiverStory";
 import { FoundItemLine } from "./_components/FoundItemLine";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
-import { loadBookingDepartures } from "./_lib/book-activity";
-import { loadDiverGear } from "./_lib/gear-load";
-import { canRaiseInvoiceFor } from "./_lib/invoice-door";
-import { loadDiverRecordGates } from "./_lib/record-gates";
-import { DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
-import { diverStatusRows } from "./_lib/status-load";
+import { bookingPageNumber, DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -123,78 +110,46 @@ export default async function DiverDetailPage({
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  // `includeRemoved`: a removed diver's record has to stay reachable, because
-  // this page is where the way back lives once the roster's undo toast is gone
-  // (`RestoreDiver`). It is a visibility affordance for staff and nothing more —
-  // removal still holds everywhere it matters, and this page drops the controls
-  // that would put a removed person back into shop work by the back door.
-  const diver = shop
-    ? await getDiverProfile(db, shop.id, personId, { includeRemoved: true })
-    : null;
-  if (!shop || !diver) notFound();
-  // A merged-away record is intentionally still a pointer, not a second
-  // profile. Follow it before loading any of the old record's sections so a
-  // stale bookmark cannot make a staffer act on the source row again.
-  if (diver.person.mergedIntoPersonId) {
-    redirect(shopPath(shopSlug, "divers", diver.person.mergedIntoPersonId));
-  }
-  const removed = Boolean(diver.person.deletedAt);
   const now = nowDate();
-  const [
-    { canDelete, canMerge, canOverrideFit, canErase, canExport, canOpenClearance, canManageOrders },
-    stripeAccount,
+  // Shop-scoped from the session, never the slug (`getDiverRecord`). A removed
+  // diver's record stays reachable: it is where the way back lives
+  // (`RestoreDiver`), and this page drops the controls that would put a removed
+  // person back into shop work by the back door.
+  const record = await getDiverRecord(db, shop, personId, {
+    viewerPersonId: session.user.personId,
+    activityPage: Number.parseInt(activity ?? "", 10),
+    bookingPage: bookingPageNumber(bookingPage),
+    now,
+  });
+  if (!record) notFound();
+  // A merged-away record is a pointer, not a second profile: follow it.
+  if (record.kind === "merged") redirect(shopPath(shopSlug, "divers", record.mergedInto));
+  const {
+    diver,
+    removed,
+    can: {
+      canDelete,
+      canMerge,
+      canOverrideFit,
+      canErase,
+      canExport,
+      canOpenClearance,
+      canManageOrders,
+    },
+    paymentsConnected,
+    collectHasSomewhereToGo,
     notes,
     activityPage,
     thread,
     gear,
     packages,
-  ] = await Promise.all([
-    loadDiverRecordGates(db, shop.id, session.user.personId),
-    getShopStripeAccount(db, shop.id),
-    listDiverRecordNotes(db, shop.id, personId),
-    // Shop-scoped from the session, never the slug, like every read on this
-    // page. A non-numeric `?activity=` reads as page 1 and the query clamps
-    // anything past the end, so a stale bookmark lands on the last real page.
-    pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
-    // What this diver wrote and what the shop wrote back, interleaved by time.
-    personThread(db, shop.id, personId),
-    loadDiverGear(db, shop, personId, { removed }),
-    diverPackageBalance(db, shop.id, personId, now),
-  ]);
-  // `orders/new` refuses outright without a payable account, so the story's
-  // foot simply omits "New invoice" rather than offering a link that bounces.
-  // Connecting payments is a Settings errand and left this page with the ADR.
-  const paymentsConnected = canAcceptPayments(stripeAccount);
-  // **The one place the ledger's "Collect" act has nowhere to go.** With no
-  // order raised, that act is `#the-story`, whose only act is the very link the
-  // line above may have removed — so the row keeps its sentence and loses its
-  // fix (issue #1926). Asked through `canRaiseInvoiceFor` so this page and the
-  // story below cannot answer it differently.
-  const collectHasSomewhereToGo = canRaiseInvoiceFor(diver, {
-    canManageOrders,
-    paymentsConnected,
-  });
-  // Reads that need the gates above, so they could not ride the `Promise.all`
-  // that produced them; concurrent with each other instead of serial.
-  const [mergeCandidates, status, departures, guardianEmails, found, lastDive] = await Promise.all([
-    canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
-    // The readiness of the departure this diver is next on, read through the
-    // entry the Today queue and the manifest already use — never a second
-    // detector (`_lib/status-load.ts`).
-    diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
-    loadBookingDepartures(db, shop.id, personId, bookingPage, now),
-    // The co-signing guardians' addresses, for the owner's control that erases
-    // one on the guardian's request (H-20261007-guardian-email-erasure). Nobody else is shown them here.
-    canErase ? listGuardianEmails(db, shop.id, personId) : [],
-    openLostItemsByPerson(db, shop.id, [personId]), // found items, under the header
-    lastKnownDive(db, {
-      shopId: shop.id,
-      personId,
-      timezone: shop.timezone,
-      now,
-      recorded: diver.person.lastDiveOn,
-    }),
-  ]);
+    mergeCandidates,
+    status,
+    departures,
+    guardianEmails,
+    found,
+    lastDive,
+  } = record;
   /**
    * The page's `?notice=` resolved once, to words *and* to the group those
    * words belong beside. Each group is handed its own below with

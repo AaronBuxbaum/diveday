@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { canPersonExportDisputeSheet } from "@/db/authz";
-import { getDisputeSheet, recordDisputeSheetOpened } from "@/db/dispute-sheet";
+import {
+  canPersonExportDisputeSheet,
+  getDisputeSheet,
+  recordDisputeSheetOpened,
+} from "@/db/dispute-sheet";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { PACKET_PAPER } from "@/lib/print-sheets";

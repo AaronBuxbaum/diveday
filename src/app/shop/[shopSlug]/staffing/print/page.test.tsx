@@ -6,10 +6,14 @@ import type { StaffingView } from "@/db/staffing";
 const staffingView = vi.hoisted(() => vi.fn());
 const awayRead = vi.hoisted(() => vi.fn());
 
-vi.mock("@/db/staffing", () => ({ getStaffingView: staffingView }));
-vi.mock("@/db/crew-requests", () => ({
-  listCrewAssignmentRequests: vi.fn(async () => []),
-  readStaffingWeekAway: awayRead,
+// The week's one reader (issue #2757), assembled from the same two reads it
+// makes, so the roster still comes from the staffing view alone.
+vi.mock("@/db/staffing", () => ({
+  getStaffingPage: vi.fn(async () => ({
+    view: await staffingView(),
+    ...(await awayRead()),
+    crewRequests: [],
+  })),
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));

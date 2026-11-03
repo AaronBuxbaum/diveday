@@ -12,9 +12,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureRowList } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { FormStatus, StickyFormActions } from "@/components/ui/form";
-import { assistsAvailable } from "@/db/assists";
-import { canPersonConfigureTrips } from "@/db/authz";
-import { courseIdsEverOnBoard, getCourseBySlug, getCourseTemplateUpdate } from "@/db/courses";
+import { getCourseEditPage } from "@/db/course-edit-page";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -77,8 +75,9 @@ export default async function EditCoursePage({
   const { shopSlug, slug } = await params;
   const { notice, error, field } = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
-  const course = await getCourseBySlug(db, shop.id, slug);
-  if (!course) notFound();
+  const page = await getCourseEditPage(db, shop.id, slug, session.user.personId);
+  if (!page) notFound();
+  const { course, templateUpdate, everOnBoard } = page;
   const locale = await requestLocale(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
   const t = staffTranslator(locale);
@@ -89,9 +88,8 @@ export default async function EditCoursePage({
   const visibilityAction = setCourseVisibilityAction.bind(null, slug, course.id);
   // The same question the action asks, asked once for the reader: a control
   // whose only outcome is a refusal is a control that should not be drawn.
-  const canSetVisibility = await canPersonConfigureTrips(db, shop.id, session.user.personId);
-  const templateUpdate = await getCourseTemplateUpdate(db, session.user.shopId, course.id);
-  const canAssist = await assistsAvailable(db, shop.id);
+  const canSetVisibility = page.can.setVisibility;
+  const canAssist = page.can.assist;
   const summaryTranslation = await loadTranslationBox(
     db,
     shop,
@@ -173,10 +171,7 @@ export default async function EditCoursePage({
   // itself. It moved here from the roster's every row (visual review
   // 2026-10-24, A39); a template's other courses are scheduled from the
   // board's own Add, which lists every course.
-  const offersSchedule =
-    canSetVisibility &&
-    (course.sourceTemplateSlug === null ||
-      (await courseIdsEverOnBoard(db, shop.id, [course.id])).has(course.id));
+  const offersSchedule = canSetVisibility && (course.sourceTemplateSlug === null || everOnBoard);
 
   const templateFieldLabels = courseTemplateFieldLabels(t);
 

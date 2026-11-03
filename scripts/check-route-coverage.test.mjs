@@ -59,13 +59,13 @@ async function fixture({
 
 /** A tree whose ledger is honest, so each test only has to break one thing. */
 const HEALTHY = {
-  routes: ["/", "/shop/[shopSlug]/staffing", "/shop/[shopSlug]/orders/new"],
+  routes: ["/", "/shop/[shopSlug]/staffing", "/shop/[shopSlug]/promos"],
   specs: ["booking.spec.ts", "visual.spec.ts"],
   captures: ["landing"],
   ledger: {
     "//": "note",
     "/": { e2e: ["booking.spec.ts"], visual: ["landing"] },
-    "/shop/[shopSlug]/orders/new": {
+    "/shop/[shopSlug]/promos": {
       e2e: [],
       visual: [],
       exempt: "no coverage yet — needs a spec",
@@ -483,7 +483,7 @@ describe("planLedgerWrite (the ratchet)", () => {
     const result = await plan({ routes: ["/"] });
     expect(Object.keys(result.next)).toEqual(["/"]);
     expect(result.removedRoutes.sort()).toEqual([
-      "/shop/[shopSlug]/orders/new",
+      "/shop/[shopSlug]/promos",
       "/shop/[shopSlug]/staffing",
     ]);
   });

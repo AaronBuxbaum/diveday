@@ -190,8 +190,6 @@ seeded identifiers, not capability tokens.
 - `src/app/s/[shopSlug]/trips/[id]/embed/page.tsx`
 - `src/app/s/[shopSlug]/trips/[id]/page.tsx`
 - `src/app/shop/[shopSlug]/boats/page.tsx`
-- `src/app/shop/[shopSlug]/bookings/new/[tripId]/page.tsx`
-- `src/app/shop/[shopSlug]/bookings/new/page.tsx`
 - `src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx`
 - `src/app/shop/[shopSlug]/courses/page.tsx`
 - `src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx`

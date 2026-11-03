@@ -22,10 +22,7 @@ import {
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
-import { canPersonManagePaymentSettings } from "@/db/authz";
-import { listShopPromoCodes } from "@/db/shop-promos";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { listOutstandingLastMinutePromos } from "@/db/trip-promos";
+import { canAcceptPayments, canPersonManagePaymentSettings, getPromosPage } from "@/db/promos-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
@@ -45,7 +42,7 @@ import { DivePackagesSection, TripDealsSection } from "./_components/DealsAndPac
 import { PromoConnectNotice } from "./_components/PromoConnectNotice";
 import { PromoDiscountFields, promoDiscountText } from "./_components/PromoDiscountFields";
 import { PromoCodeLedger, type PromoCodeRow } from "./_components/PromoLedger";
-import { codeOutcomeFact, readPromoOutcomes, tripDealRows } from "./_components/promo-outcomes";
+import { codeOutcomeFact, tripDealRows } from "./_components/promo-outcomes";
 import {
   createPromoAction,
   deletePromoAction,
@@ -195,21 +192,19 @@ export default async function PromosPage({
   if (!codesOn && !dealsOn && !packagesOn) redirect(shopPath(shopSlug, "orders"));
 
   const now = nowDate();
-  const [promoPage, stripeAccount, dealPage] = await Promise.all([
-    // A non-numeric or missing `?page=`/`?dealsPage=` reads as page 1; each
-    // query clamps it into range, so a bookmarked page past the end of either
-    // list lands on that list's last real page.
-    listShopPromoCodes(db, session.user.shopId, {
-      page: Number.parseInt(page ?? "", 10),
+  // A non-numeric or missing `?page=`/`?dealsPage=` reads as page 1; each
+  // query clamps it into range, so a bookmarked page past the end of either
+  // list lands on that list's last real page.
+  const { promoPage, stripeAccount, dealPage, outcomes } = await getPromosPage(
+    db,
+    session.user.shopId,
+    {
       now,
-    }),
-    getShopStripeAccount(db, session.user.shopId),
-    listOutstandingLastMinutePromos(db, session.user.shopId, now, {
-      page: Number.parseInt(dealsPage ?? "", 10),
-    }),
-  ]);
+      page: Number.parseInt(page ?? "", 10),
+      dealsPage: Number.parseInt(dealsPage ?? "", 10),
+    },
+  );
   const { promos } = promoPage;
-  const outcomes = await readPromoOutcomes(db, session.user.shopId, promos, dealPage.deals);
   const base = shopPath(shopSlug, "promos");
   // The two lists page independently, so moving one must carry the other's
   // page along rather than resetting it back to its own first page.

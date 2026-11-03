@@ -34,8 +34,10 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *      named function in `src/db`, the twin the name pairs already model.
  *    - `src/db` → the translators (`@/i18n/messages`, `@/i18n/staff-messages`,
  *      value imports): `src/db` returns codes and data and the caller words them.
- *      Outbound-message composers (a reminder, a push, a recap) hold their sentences
- *      for now, so their files are banked below until those sentences have a home.
+ *      An outbound message is worded by its renderer in `src/lib/notifications/`
+ *      (`reminder-text.ts`, `staff-push.ts`, `reply-keyword-text.ts`, …), which
+ *      the db sender calls with a locale and the facts. Today's queue still
+ *      words its rows and is banked until the Today move (issue #2756).
  *    - Anything outside `src/db` → `@/db/trips-*` or `@/db/seed-*`. The trips
  *      modules are reached through the `@/db/trips` barrel and the seed
  *      scenarios through `@/db/seed` (AGENTS.md route map), so a sibling can be

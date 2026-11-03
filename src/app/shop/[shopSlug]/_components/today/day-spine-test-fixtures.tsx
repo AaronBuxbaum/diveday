@@ -5,13 +5,13 @@ import {
   assembleDaySpine,
   assembleEveningClose,
   type CloseoutDeparture,
+  type CrewReading,
   type FactOfScale,
   type SpineDeparture,
   type TodayAction,
 } from "@/features/today";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import type { DayLoadOut } from "@/lib/closeout-kinds";
-import type { CrewReading } from "./CrewLines";
 import { DaySpine, type EveningReading, type SpineDraft } from "./DaySpine";
 
 /**

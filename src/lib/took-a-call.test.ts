@@ -4,6 +4,7 @@ import {
   type CallCapture,
   type CallOutcome,
   callOutcomeNeeds,
+  callPanelHref,
   callRefusal,
   isCallOutcome,
 } from "./took-a-call";
@@ -97,5 +98,21 @@ describe("callOutcomeNeeds", () => {
         );
       }
     }
+  });
+});
+
+describe("callPanelHref", () => {
+  it("opens the shop home's call panel", () => {
+    expect(callPanelHref("blue-mantis")).toBe("/shop/blue-mantis?call=1");
+  });
+
+  it("carries a request, a day and the call form's anchor, and drops what is absent", () => {
+    expect(
+      callPanelHref("blue-mantis", { request: "r 1", from: undefined, page: "2" }, "call"),
+    ).toBe("/shop/blue-mantis?call=1&request=r+1&page=2#call");
+  });
+
+  it("escapes the slug it is given", () => {
+    expect(callPanelHref("a/b?c")).toBe("/shop/a%2Fb%3Fc?call=1");
   });
 });

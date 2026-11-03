@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
+import { getTripPrepPage } from "@/db/trip-prep";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -17,7 +18,6 @@ import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader
 import { TripStageBadge, TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { PrepBody } from "./_components/PrepBody";
-import { readPrepView } from "./_components/prep-reads";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -76,8 +76,10 @@ export default async function TripPrepPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  // The readers this tab shares with the packet's packing-list sheet.
-  const view = await readPrepView(db, shop, tripId, nowDate());
+  // The reader this tab shares with the packet's packing-list sheet: the
+  // packing list, the crew's word for the header chip, whether the boat has
+  // left the dock, and (once home) every unit still out on this boat.
+  const view = await getTripPrepPage(db, shop, tripId, nowDate());
   if (!view) notFound();
   const { prep, shownStage, sailed, finished, backFromBoat } = view;
   const { trip } = prep;

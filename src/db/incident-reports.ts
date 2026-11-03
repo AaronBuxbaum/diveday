@@ -38,6 +38,7 @@ import type { NotificationProvider } from "@/lib/notifications";
 import { OFFLINE_EVENT_SKEW_MS } from "@/lib/offline-events";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { listDiveSites } from "./dive-sites";
 import {
   type MissingDiverAllClearOutcome,
   sendMissingDiverAlerts,
@@ -1589,4 +1590,31 @@ export async function listIncidentShopStaffChoices(
     )
     .orderBy(asc(people.fullName), asc(people.id));
   return rows.filter((row) => !onCrew.has(row.personId));
+}
+
+/**
+ * **One incident report's page**: the report as this reader may see it, and —
+ * only while it is a draft they may write — the pickers its form offers (the
+ * shop's sites, the seats, crew and staff of its departure). `null` when the
+ * report is not this shop's, not readable by this person, or not on `tripId`.
+ */
+export async function getIncidentReportPage(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  reportId: string,
+  personId: string,
+) {
+  const report = await getIncidentReport(db, shopId, reportId, personId);
+  if (!report || report.tripId !== tripId) return null;
+  const editing = report.status === "draft" && report.mayWrite;
+  const [diveSites, seats, crew, shopStaff] = editing
+    ? await Promise.all([
+        listDiveSites(db, shopId),
+        listIncidentSeatChoices(db, shopId, tripId),
+        listIncidentCrewChoices(db, shopId, tripId),
+        listIncidentShopStaffChoices(db, shopId, tripId),
+      ])
+    : [[], [], [], []];
+  return { report, editing, choices: { diveSites, seats, crew, shopStaff } };
 }

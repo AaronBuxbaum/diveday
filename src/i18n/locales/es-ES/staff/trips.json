@@ -120,6 +120,7 @@
     "bookingRestoreRatio": "No se pudo deshacer: la plaza liberada está ocupada y la sesión está en su ratio de instructor. Asigna otro instructor o usa la lista de espera.",
     "bookingRestoreCancelled": "No se pudo deshacer. Esta salida está cancelada. Reactiva la salida y vuelve a agregarlo.",
     "diverAdded": "Buceador agregado a la salida",
+    "partySeatAdded": "Una plaza solicitada ya está reservada. Agrega al resto del grupo a esta salida.",
     "diverAddedConfirmed": "Buceador agregado. Su confirmación va en camino.",
     "diverAddedWaiverUndelivered": "Buceador agregado a la salida, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
     "diverAddedIdentityUnconfirmed": "Buceador agregado a la salida, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila de abajo.",
@@ -453,7 +454,16 @@
     "addNewDiverAction": "Agregar buceador",
     "offerSeat": "Ofrecer una plaza",
     "offerSeating": "Ofreciendo…",
-    "offerSeatAria": "Ofrecer a {name} una plaza en la salida"
+    "offerSeatAria": "Ofrecer a {name} una plaza en la salida",
+    "modeLabel": "Reserva o mostrador",
+    "modeBooking": "Reserva",
+    "modeWalkIn": "En el mostrador",
+    "addForRequest": "Agregar para esta petición",
+    "addPersonForRequestAria": "Agregar a {name} para esta petición",
+    "requestLeft": "{count, plural, one {Queda # buceador por agregar} other {Quedan # buceadores por agregar}}",
+    "requestDone": "Terminar con esta petición",
+    "requestGone": "Esa petición está cerrada o se eliminó.",
+    "requestNotOffered": "Esa petición no recibió esta salida, así que las plazas de aquí no la responden."
   },
   "inviteSuggestions": {
     "heading": "Ya bucearon en {site} contigo",

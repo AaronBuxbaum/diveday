@@ -26,7 +26,7 @@ describe("ShopPageHeader's eyebrow (issue #2748)", () => {
   });
 
   it("goes where returnTo says when a query opened the page from elsewhere", () => {
-    pathname = "/shop/blue-mantis/divers/new";
+    pathname = "/shop/blue-mantis/divers";
     render(
       <ShopPageHeader
         eyebrow="Trip"

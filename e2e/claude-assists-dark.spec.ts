@@ -20,7 +20,7 @@ test.describe("the front-of-house assists, dark", () => {
     await expect(page.getByRole("button", { name: /Draft a booking request/ })).toHaveCount(0);
     await expect(page.getByText("Urgent", { exact: true })).toHaveCount(0);
 
-    await page.goto("/shop/blue-mantis/bookings/new#call");
+    await page.goto("/shop/blue-mantis?call=1#call");
     await expect(page.getByLabel("Notes from the call")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Fill the form" })).toHaveCount(0);
 

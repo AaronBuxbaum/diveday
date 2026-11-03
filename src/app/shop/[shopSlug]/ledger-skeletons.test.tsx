@@ -2,7 +2,6 @@
 import { cleanup, render } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import NewBookingLoading from "./bookings/new/loading";
 import StaffCoursesLoading from "./courses/loading";
 import DiveSitesLoading from "./dive-sites/loading";
 import DiversLoading from "./divers/loading";
@@ -32,7 +31,6 @@ const SKELETONS: Record<string, ComponentType> = {
   divers: DiversLoading,
   gear: GearLoading,
   courses: StaffCoursesLoading,
-  "bookings/new": NewBookingLoading,
   "dive-sites": DiveSitesLoading,
   reports: ReportsLoading,
   promos: PromosLoading,

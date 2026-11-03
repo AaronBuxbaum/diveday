@@ -1,0 +1,252 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn(() => {
+    throw new Error("REDIRECT");
+  }),
+}));
+vi.mock("@/components/FormDraft", () => ({ FormDraft: () => null }));
+vi.mock("@/app/actions/form-drafts", () => ({
+  discardFormDraftAction: vi.fn(),
+  saveFormDraftAction: vi.fn(),
+}));
+vi.mock("@/app/actions/seat-diver", () => ({
+  seatExistingDiverAction: vi.fn(),
+  seatNewDiverAction: vi.fn(),
+}));
+vi.mock("@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions", () => ({
+  addToWaitlistAction: vi.fn(),
+}));
+vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
+vi.mock("@/db/divers", () => ({ createDiver: vi.fn(), findSimilarDivers: vi.fn() }));
+vi.mock("@/db/form-drafts", () => ({
+  discardFormDraft: vi.fn(),
+  readFormDraft: vi.fn(async () => null),
+}));
+vi.mock("@/lib/session", () => ({
+  requireStaffSession: vi.fn(),
+}));
+
+const { findSimilarDivers } = await import("@/db/divers");
+const { AddDiverPanel, addDiverCloseHref } = await import("./AddDiverPanel");
+
+const t = Object.assign((key: string) => key, {
+  raw: (key: string) => key,
+  rich: (key: string) => key,
+}) as never;
+
+const SHOP_ID = "22222222-2222-4222-8222-222222222222";
+const TRIP_ID = "33333333-3333-4333-8333-333333333333";
+
+const MATCH = {
+  id: "11111111-1111-4111-8111-111111111111",
+  fullName: "Nadia Ruiz",
+  email: "nadia@example.com",
+  phone: "+529985550100",
+  dateOfBirth: null,
+  lastDiveDayAt: null,
+};
+
+afterEach(cleanup);
+
+function surfaceFor(personId: string) {
+  return {
+    session: { user: { shopId: SHOP_ID, shopSlug: "blue-mantis", personId } },
+    db: {},
+    shop: {
+      id: SHOP_ID,
+      slug: "blue-mantis",
+      defaultLocale: "en-US",
+      timezone: "America/Cancun",
+    },
+  } as never;
+}
+
+function panel(search: Record<string, string>, personId = "staff") {
+  return AddDiverPanel({
+    surface: surfaceFor(personId),
+    shopSlug: "blue-mantis",
+    search,
+    t,
+    locale: "en-US",
+  });
+}
+
+async function renderPage(search: Record<string, string>, matches: unknown[] = [MATCH]) {
+  vi.mocked(findSimilarDivers).mockResolvedValue(matches as never);
+  return render(await panel(search));
+}
+
+const seatingArm = { surface: "departure", tripId: TRIP_ID, confirmName: "Nadia Ruis" };
+const waitlistArm = { ...seatingArm, waitlist: "true" };
+
+/**
+ * The third door onto the counter prompt (issue #1556), and the only one where
+ * the flag is behind a ternary: `isWaitlist` picks the arm, so one flipped
+ * character either stops marking a guessed seat or starts marking every
+ * wait-list entry. The sibling prompts are pinned in `SeatDiverPanel.test.tsx`
+ * and `AddDiverSection.test.tsx`.
+ */
+describe("AddDiverPanel name-match prompt", () => {
+  it("marks a seating tap as the guess it is, and marks nothing else on the page", async () => {
+    const { container } = await renderPage(seatingArm);
+
+    const candidateForm = screen.getByRole("button", { name: MATCH.fullName }).closest("form");
+    expect(candidateForm?.querySelector('input[name="fromNameMatch"]')).toHaveValue("true");
+    // ...along with the name it was guessing from, which is what the booking
+    // compares. `fullName` beside it is the *matched* diver's, so only this
+    // field can tell a guess from a regular the desk spelled right.
+    expect(candidateForm?.querySelector('input[name="nameMatchQuery"]')).toHaveValue("Nadia Ruis");
+    // Not on "create a new diver anyway", which invents nobody's history, and
+    // not on the hand-entry form below it: a flag on either would block every
+    // seat and teach the counter to tap past it.
+    expect(container.querySelectorAll('input[name="fromNameMatch"]')).toHaveLength(1);
+  });
+
+  it("leaves the wait-list arm unmarked, because nobody boards from an entry", async () => {
+    const { container } = await renderPage(waitlistArm);
+
+    expect(screen.getByRole("button", { name: MATCH.fullName })).toBeInTheDocument();
+    expect(container.querySelectorAll('input[name="fromNameMatch"]')).toHaveLength(0);
+    expect(container.querySelectorAll('input[name="nameMatchQuery"]')).toHaveLength(0);
+  });
+
+  it("wait-lists the matched diver's own record, not the name that was typed", async () => {
+    // The tap *means* "this is the same diver", and `addToWaitlistAction`
+    // ignores `personId`: `askForDeparture` resolves the person from the name
+    // and email it is handed. Sending the counter-typed spelling instead would
+    // spawn the second person row this prompt exists to prevent, and put a
+    // stranger's name on the list. The seating arm does the same thing by id.
+    await renderPage(waitlistArm);
+
+    const form = screen.getByRole("button", { name: MATCH.fullName }).closest("form");
+    expect(form?.querySelector('input[name="fullName"]')).toHaveValue(MATCH.fullName);
+    expect(form?.querySelector('input[name="email"]')).toHaveValue(MATCH.email);
+    expect(form?.querySelector('input[name="phone"]')).toHaveValue(MATCH.phone);
+    expect(form?.querySelector('input[name="personId"]')).toHaveValue(MATCH.id);
+  });
+
+  /**
+   * The stored column is E.164 (#1547). The line the staffer reads is grouped,
+   * and the form beside it still posts the stored value the action matches on —
+   * a display concern that must not reach the write (#1712).
+   *
+   * The candidate is a Mexican number, so since #1764 the national part reads
+   * unbroken: DiveDay groups only where it knows the rule, which is North
+   * America. The calling code still stands in front of it, which is the part a
+   * staffer needs to see separated.
+   */
+  it("groups the candidate's stored number without changing what the form posts", async () => {
+    await renderPage(seatingArm);
+
+    expect(screen.getByText(`(${MATCH.email}, +52 9985550100)`)).toBeInTheDocument();
+    const form = screen.getByRole("button", { name: MATCH.fullName }).closest("form");
+    expect(form?.querySelector('input[name="phone"]')).toHaveValue("+529985550100");
+  });
+
+  it("names the candidate with no dive day once a sibling has one", async () => {
+    // The third door renders its own dive-day line, so it gets its own pin
+    // (`dive-domain-expert`, 2026-09-11): a blank beside a dated sibling reads
+    // as "the one with the date is the real diver" and biases the tap toward
+    // the record that already has cards. With no date anywhere on the list the
+    // line says nothing and is not rendered — `noDiveDayNeedsSaying`.
+    await renderPage(seatingArm, [
+      { ...MATCH, lastDiveDayAt: new Date("2026-08-27T00:30:00Z") },
+      { ...MATCH, id: "44444444-4444-4444-8444-444444444444", fullName: "Nadia Ruiseco" },
+    ]);
+
+    // The translator is mocked to echo keys here, so these are the two message
+    // keys; the sentences themselves are pinned in `i18n/name-match-prompt`.
+    expect(screen.getByText("divers.page.confirmMatchesLastDive")).toBeInTheDocument();
+    expect(screen.getByText("divers.page.confirmMatchesNoDiveDay")).toBeInTheDocument();
+  });
+
+  it("prints a candidate's date of birth, and nothing where none is on file", async () => {
+    // H-20260916-unconfirmed-identity-withhold-cost (issue #1698). The translator echoes keys here, so the line shows
+    // as its key; the undated sibling must add nothing beside its contact line.
+    await renderPage(seatingArm, [
+      { ...MATCH, dateOfBirth: "1984-03-09" },
+      { ...MATCH, id: "44444444-4444-4444-8444-444444444444", fullName: "Nadia Ruiseco" },
+    ]);
+
+    expect(screen.getAllByText("divers.page.confirmMatchesBorn")).toHaveLength(1);
+    expect(screen.getByText("divers.page.confirmMatchesBorn").closest("li")).toHaveTextContent(
+      MATCH.email,
+    );
+  });
+
+  it("says nothing about dive days when this shop has one for nobody on the list", async () => {
+    await renderPage(seatingArm);
+
+    expect(screen.queryByText("divers.page.confirmMatchesLastDive")).toBeNull();
+    expect(screen.queryByText("divers.page.confirmMatchesNoDiveDay")).toBeNull();
+  });
+
+  it("links the match instead of seating them when there is no trip to seat onto", async () => {
+    const { container } = await renderPage({ confirmName: "Nadia Ruis" });
+
+    expect(screen.getByRole("link", { name: MATCH.fullName })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/divers/${MATCH.id}`,
+    );
+    expect(container.querySelectorAll('input[name="fromNameMatch"]')).toHaveLength(0);
+  });
+});
+
+/**
+ * **The action row stands one field gap under the last field** (pixel-craft
+ * class 4, K-182). The row sits inside the trio's `FieldGrid`, whose `gap-y-4`
+ * is already that gap; an `mt-6` of its own stacked on it, so "Add a diver"
+ * put its buttons 40px under the phone field where every other form in the
+ * app puts them 16px under.
+ */
+describe("AddDiverPanel action row", () => {
+  it("rides the trio's grid and adds no margin of its own", async () => {
+    await renderPage({}, []);
+
+    const row = screen.getByRole("link", { name: "divers.page.cancel" }).parentElement;
+    expect(row).toHaveClass("col-span-full");
+    expect(row?.parentElement).toHaveClass("grid", "gap-y-4");
+    expect(row?.className).not.toMatch(/(^|\s)m[ty]-/);
+  });
+});
+
+describe("new-diver form ownership", () => {
+  it("clears the old account's uncontrolled inputs when a refresh changes the account", async () => {
+    const { rerender } = await renderPage({});
+    fireEvent.input(screen.getByLabelText(/divers.page.fullNameLabel/), {
+      target: { value: "Old account's private input" },
+    });
+    rerender(await panel({}, "replacement-staff"));
+    expect(screen.getByLabelText(/divers.page.fullNameLabel/)).toHaveValue("");
+  });
+});
+
+describe("closing the add-diver panel", () => {
+  it("goes back to the departure that sent the staffer here", () => {
+    expect(addDiverCloseHref("blue-mantis", { surface: "departure", tripId: TRIP_ID })).toBe(
+      `/shop/blue-mantis/trips/${TRIP_ID}#add-diver`,
+    );
+  });
+
+  it("leaves the roster as it was read, without the panel's own keys", () => {
+    expect(
+      addDiverCloseHref("blue-mantis", {
+        q: "nadia",
+        confirmName: "Nadia Ruis",
+        notice: "duplicate",
+        "onFile-1": "Ana",
+      } as never),
+    ).toBe("/shop/blue-mantis/divers?q=nadia");
+  });
+
+  it("cancels onto the same place the close link goes", async () => {
+    await renderPage({ surface: "departure", tripId: TRIP_ID }, []);
+    expect(screen.getByRole("link", { name: "divers.page.cancel" })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/trips/${TRIP_ID}#add-diver`,
+    );
+  });
+});

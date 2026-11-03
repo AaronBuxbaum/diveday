@@ -398,7 +398,7 @@ test.describe("undoing a removal after the trip is canceled", () => {
 
     await page.goto(`${tripPath}`);
     await page.getByRole("link", { name: "Add diver" }).click();
-    await page.waitForURL(/\/divers\/new/);
+    await page.waitForURL(/\/divers\?add=1/);
     await page.getByLabel("Full name").fill(diver);
     await page.getByLabel("Email").fill(`ursula-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: "Add to trip" }).click();

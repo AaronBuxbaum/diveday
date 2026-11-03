@@ -5,8 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
-import { canPersonManageMessagingSettings } from "@/db/authz";
-import { getShopWhatsAppAccount, type WhatsAppConnectRefusal } from "@/db/whatsapp-accounts";
+import type { WhatsAppConnectRefusal } from "@/db/whatsapp-accounts";
+import {
+  canPersonManageMessagingSettings,
+  getWhatsAppSettingsPage,
+} from "@/db/whatsapp-settings-page";
 import { requestLocale } from "@/i18n/request";
 import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -103,7 +106,7 @@ export default async function WhatsAppSettingsPage({
   const { notice } = await searchParams;
   const banner = noticeFrom(notice);
 
-  const account = await getShopWhatsAppAccount(db, session.user.shopId);
+  const { account } = await getWhatsAppSettingsPage(db, session.user.shopId);
   const signupConfig = whatsAppSignupConfigFromEnvironment();
   // Both must hold before a shop can connect: Meta's approval of DiveDay's app,
   // and somewhere safe to seal the token that comes back.

@@ -7,6 +7,12 @@ import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { fill } from "@/i18n/fill";
 import { type DraftFields, draftableFields, type FormDraftKind } from "@/lib/form-drafts";
 import { applyFormFields } from "./apply-form-fields";
+import {
+  forgetFormDraft,
+  formDraftMemoryKey,
+  recallFormDraft,
+  rememberFormDraft,
+} from "./form-draft-memory";
 
 export type FormDraftCopy = {
   /** "Picked up from the desk, {time}." */
@@ -84,10 +90,17 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
    * later is what is already in the form.
    */
   const [openingDraft] = useState(draft);
+  const key = useRef("");
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, on mount — the whole point of this effect (see above).
   useEffect(() => {
+    key.current = formDraftMemoryKey(form);
     const element = anchor.current?.closest("form");
-    if (element && openingDraft && applyFormFields(element, openingDraft.fields)) setApplied(true);
+    if (!element) return;
+    const remembered = recallFormDraft(key.current);
+    if (remembered) {
+      applyFormFields(element, Object.fromEntries(remembered));
+      if (openingDraft) setApplied(true);
+    } else if (openingDraft && applyFormFields(element, openingDraft.fields)) setApplied(true);
   }, []);
 
   // A server refresh can replace the action references without rebinding the
@@ -116,6 +129,7 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
     if (JSON.stringify(fields) !== JSON.stringify(latest.current)) {
       latest.current = fields;
       revision.current += 1;
+      rememberFormDraft(key.current, fields);
     }
   });
 
@@ -209,6 +223,8 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
       cancelTimer();
       // Retain the last input snapshot: React may already have removed the
       // form's fields by passive-effect cleanup. No browser storage is used.
+      // A submission that navigated away succeeded: nothing is left to recover.
+      if (dispatchedSubmit.current) forgetFormDraft(key.current);
       if (!dispatchedSubmit.current) submitted.current = false;
       void save();
     };
@@ -226,6 +242,7 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
       await actions.discard(form);
       // Do not wipe edits made while the discard was in flight.
       if (version === revision.current) {
+        forgetFormDraft(key.current);
         element?.reset();
         if (element) latest.current = snapshot(element);
         savedRevision.current = revision.current;

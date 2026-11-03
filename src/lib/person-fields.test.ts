@@ -94,7 +94,7 @@ describe("diverSearchPrefill", () => {
 
 describe("newDiverHref", () => {
   it("builds clean path when no params provided", () => {
-    expect(newDiverHref("blue-mantis")).toBe("/shop/blue-mantis/divers/new");
+    expect(newDiverHref("blue-mantis")).toBe("/shop/blue-mantis/divers?add=1");
   });
 
   it("extracts name from query and preserves context params", () => {
@@ -106,7 +106,7 @@ describe("newDiverHref", () => {
         waitlist: true,
       }),
     ).toBe(
-      "/shop/blue-mantis/divers/new?name=Alex+Smith&surface=trip-guests&tripId=trip-123&waitlist=true",
+      "/shop/blue-mantis/divers?add=1&name=Alex+Smith&surface=trip-guests&tripId=trip-123&waitlist=true",
     );
   });
 
@@ -117,6 +117,8 @@ describe("newDiverHref", () => {
         surface: "walk-in",
         tripId: "trip-456",
       }),
-    ).toBe("/shop/blue-mantis/divers/new?email=alex%40example.com&surface=walk-in&tripId=trip-456");
+    ).toBe(
+      "/shop/blue-mantis/divers?add=1&email=alex%40example.com&surface=walk-in&tripId=trip-456",
+    );
   });
 });

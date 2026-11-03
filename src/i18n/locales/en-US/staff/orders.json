@@ -1,7 +1,6 @@
 {
   "new": {
     "title": "New order",
-    "cancel": "Cancel",
     "notice": {
       "invalid": "Pick a customer and at least one line item with an amount.",
       "notConnected": "Connect a Stripe account in Shop settings before creating an order.",

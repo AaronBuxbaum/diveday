@@ -92,7 +92,6 @@ describe("a switched-off staff page", () => {
 
   it.each([
     ["the bench", () => import("./gear/work-orders/page"), {}],
-    ["a new ticket", () => import("./gear/work-orders/new/page"), {}],
     ["a ticket", () => import("./gear/work-orders/[workOrderId]/page"), { workOrderId: SOME_ID }],
     [
       "a claim tag",

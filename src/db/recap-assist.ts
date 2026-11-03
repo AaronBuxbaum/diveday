@@ -1,6 +1,6 @@
 import { and, eq, isNull, notExists } from "drizzle-orm";
-import { marineLifeCatalogCards } from "@/i18n/marine-life-labels";
-import { diverTranslator } from "@/i18n/messages";
+import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
+import { DIVER_LOCALES } from "@/i18n/settings";
 import {
   RECAP_LINE_FEATURE,
   type RecapLog,
@@ -26,13 +26,10 @@ import { liveTrip } from "./trips-live";
 
 /** Every catalog species with its names in each language the app writes, for the refusal check. */
 function catalogNames(): { slug: string; names: string[] }[] {
-  const en = marineLifeCatalogCards(diverTranslator("en-US"));
-  const es = new Map(
-    marineLifeCatalogCards(diverTranslator("es-ES")).map((card) => [card.slug, card.name]),
-  );
-  return en.map((card) => ({
-    slug: card.slug,
-    names: [card.name, es.get(card.slug) ?? card.name],
+  const byLocale = DIVER_LOCALES.map((locale) => marineLifeNamesIn(locale));
+  return [...(byLocale[0] ?? [])].map(([slug]) => ({
+    slug,
+    names: [...new Set(byLocale.flatMap((names) => names.get(slug) ?? []))],
   }));
 }
 
@@ -67,9 +64,7 @@ export async function recapLogFor(
     );
   if (sightings.length === 0) return null;
   const locale = row.shop.defaultLocale;
-  const names = new Map<string, string>(
-    marineLifeCatalogCards(diverTranslator(locale)).map((card) => [card.slug, card.name]),
-  );
+  const names = marineLifeNamesIn(locale);
   // Grouped by the site they were logged at, so the line cannot move a
   // creature to another reef; a count is summed only within its own site.
   const bySite = new Map<string, Map<string, number>>();

@@ -101,21 +101,21 @@ describe("POST /api/test/reset — auth gate (specialist-optimization-audit-2026
     );
   });
 
-  it("vacuums only the tables a replay wrote", async () => {
+  it("vacuums and analyzes only the tables a replay wrote", async () => {
     await POST(resetRequest(`Bearer ${secret}`));
-    expect(vacuumed()).toBe('vacuum public."bookings", public."trips"');
+    expect(vacuumed()).toBe('vacuum (analyze) public."bookings", public."trips"');
   });
 
-  it("vacuums everything after a real reset or a purge of minted shops", async () => {
+  it("vacuums and analyzes everything after a real reset or a purge of minted shops", async () => {
     vi.mocked(resetDemoFromSnapshot).mockResolvedValue({ mode: "captured", wrote: null });
     await POST(resetRequest(`Bearer ${secret}`));
-    expect(vacuumed()).toBe("vacuum");
+    expect(vacuumed()).toBe("vacuum (analyze)");
 
     FAKE_DB.execute.mockClear();
     vi.mocked(resetDemoFromSnapshot).mockResolvedValue({ mode: "snapshot", wrote: ["trips"] });
     vi.mocked(purgeMintedDemoShops).mockResolvedValue(2);
     await POST(resetRequest(`Bearer ${secret}`));
-    expect(vacuumed()).toBe("vacuum");
+    expect(vacuumed()).toBe("vacuum (analyze)");
   });
 
   it("leaves a shop that is not a demo alone", async () => {

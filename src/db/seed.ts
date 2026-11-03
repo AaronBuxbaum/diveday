@@ -454,7 +454,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // Its seeded invoices carry the matching `tax_cents` (seed-history.ts).
       //
       // Turning it on is what makes the staff invoice form ask for a customer
-      // billing address, so `orders/new` prefills the demo's own address for
+      // billing address, so `orders?add=1` prefills the demo's own address for
       // it — see that page. `e2e/tax.spec.ts` drives freshly minted shops
       // precisely so it never depends on this one's setting, and the "a shop
       // starts with tax off" case still has a fixture: a minted demo.
@@ -647,7 +647,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
  * Sal) so the demo banner and role switcher read identically, but their emails
  * are namespaced under the unique slug so they never collide on the global
  * `user_accounts.email` index. Sign-in for every role goes through the `isDemo`
- * bypass token (src/lib/credentials.ts), so no real password is minted or stored.
+ * bypass token (src/db/credentials.ts), so no real password is minted or stored.
  *
  * Demo names carry no random suffix any more (src/lib/demo-identity.ts): the
  * visitor sees a slug and a sign-in address a real shop could have. That trades

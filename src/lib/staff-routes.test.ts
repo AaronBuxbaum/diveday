@@ -67,12 +67,11 @@ describe("staffRouteAt", () => {
       "/shop/blue-mantis/gear/work-orders/w-1",
     );
     // `rentals` has no page of its own, so the nearest page above is Gear.
-    expect(up("/shop/blue-mantis/gear/rentals/new")).toBe("/shop/blue-mantis/gear");
+    expect(up("/shop/blue-mantis/gear/rentals/r-1")).toBe("/shop/blue-mantis/gear");
     expect(up("/shop/blue-mantis/orders/o-1/print/dispute")).toBe("/shop/blue-mantis/orders/o-1");
   });
 
   it("prefers a static segment over a param, as the router does", () => {
-    expect(staffRouteAt("/shop/blue-mantis/divers/new")?.key).toBe("divers/new");
     expect(staffRouteAt("/shop/blue-mantis/divers/d-1")?.key).toBe("divers/[personId]");
     expect(staffRouteAt("/shop/blue-mantis/gear/work-orders")?.key).toBe("gear/work-orders");
     expect(staffRouteAt("/shop/blue-mantis/gear/g-1")?.key).toBe("gear/[id]");
@@ -82,7 +81,6 @@ describe("staffRouteAt", () => {
     expect(up("/shop/blue-mantis/boats")).toBe("/shop/blue-mantis/settings");
     expect(up("/shop/blue-mantis/me/email")).toBe("/shop/blue-mantis/me/security");
     expect(up("/shop/blue-mantis/settings/export/backups")).toBe("/shop/blue-mantis/settings");
-    expect(up("/shop/blue-mantis/bookings/new/t-1")).toBe("/shop/blue-mantis/schedule/board");
     expect(up("/shop/blue-mantis/schedule/day/2026-11-03")).toBe(
       "/shop/blue-mantis/schedule/board",
     );

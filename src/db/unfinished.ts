@@ -391,7 +391,14 @@ const shopCancellationRefunds: KindReader<"shop_cancellation_refund"> = async (
           : undefined,
       ),
     )
-    .orderBy(desc(sql`coalesce(${trips.cancelledAt}, ${bookingPayments.updatedAt})`))
+    // Refunds owed on one cancelled trip share its cancellation time; the
+    // diver's name, then the id, break that tie so the limit always keeps the
+    // same rows in the same order.
+    .orderBy(
+      desc(sql`coalesce(${trips.cancelledAt}, ${bookingPayments.updatedAt})`),
+      asc(people.fullName),
+      asc(bookingPayments.id),
+    )
     .limit(options.limit ?? OWED_REFUND_LIMIT);
 
   return rows.map(({ paymentStatus, ...row }) => ({

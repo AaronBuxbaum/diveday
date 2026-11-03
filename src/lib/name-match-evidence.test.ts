@@ -3,7 +3,7 @@ import { candidateBirthDate, noDiveDayNeedsSaying } from "./name-match-evidence"
 
 /**
  * One rule, three doors (the walk-in panel, the trip's Add-diver section, and
- * `/divers/new`). What it is for is in `noDiveDayNeedsSaying`'s docblock: a
+ * `/divers?add=1`). What it is for is in `noDiveDayNeedsSaying`'s docblock: a
  * blank beside a dated sibling argues for the dated record, and the counter is
  * being asked to tell two people with one name apart.
  */

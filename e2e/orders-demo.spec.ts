@@ -345,7 +345,7 @@ test.describe("demo billing history", () => {
 
 /**
  * The demo never connects a Stripe account, which makes it the day-one shop:
- * `orders/new` refuses to open at all. It used to refuse by redirecting to a
+ * the Orders add panel (`?add=1`) refuses to open at all. It used to refuse by redirecting to a
  * notice code nothing rendered (with a diver in hand) or to `/divers` with no
  * message (without one) — so "New order" was a button that visibly did
  * nothing, on the very first shop anyone sees. The server-side gate is
@@ -368,20 +368,18 @@ test.describe("no connected payment account", () => {
     await expect(page.getByText("Take payments with DiveDay")).toHaveCount(0);
   });
 
-  test("reaching orders/new anyway lands back on Orders with a reason", { tag: READ_ONLY }, async ({
+  test("asking for the add panel anyway keeps it shut and says why", { tag: READ_ONLY }, async ({
     page,
   }) => {
-    // Hiding the link is a courtesy; the page itself is the gate. A bookmark,
+    // Hiding the link is a courtesy; the index itself is the gate. A bookmark,
     // a deep link, or a shop that disconnected mid-session still gets here.
-    await page.goto("/shop/blue-mantis/orders/new");
+    await page.goto("/shop/blue-mantis/orders?add=1");
     await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
-    // Not a URL assertion: FlashParams strips `?notice=payment-not-connected`
-    // on mount, so the rendered banner is what proves the code was handled —
-    // an unhandled code renders nothing and fails here.
     await expect(page.getByText(/Payments aren’t connected yet/i).first()).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "New order" })).toHaveCount(0);
   });
 
-  test("reaching it with a diver in hand lands back on that diver with a reason", {
+  test("asking for it with a diver in hand keeps that diver's orders and says why", {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/divers");
@@ -397,11 +395,11 @@ test.describe("no connected payment account", () => {
     // matched nothing whatever the page showed, so it could not fail (#1920).
     await expect(page.getByRole("link", { name: "New invoice" })).toHaveCount(0);
 
-    await page.goto(`/shop/blue-mantis/orders/new?personId=${personId}`);
-    await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
+    await page.goto(`/shop/blue-mantis/orders?add=1&personId=${personId}`);
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
     // This is the code that rendered *nothing* before — the whole bug.
     await expect(page.getByText(/Payments aren’t connected yet/i).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Connect payments" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "New order" })).toHaveCount(0);
   });
 });
 

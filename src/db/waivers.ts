@@ -20,6 +20,8 @@
  * siblings import each other by file, so this barrel is never in a cycle.
  */
 
+/** Who may manage the release: the waiver pages' gate (`requireShopSurface`'s `allow`). */
+export { canPersonManageWaiverTemplates } from "./authz";
 export {
   getSignedWaiverForDiver,
   getSignedWaiverRecordForShop,

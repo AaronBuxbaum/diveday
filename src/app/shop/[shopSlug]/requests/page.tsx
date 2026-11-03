@@ -5,18 +5,11 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import { canPersonConfigureTrips } from "@/db/authz";
-import { listBoats } from "@/db/boats";
-import {
-  countWaitingDateInterests,
-  listClosedDateInterests,
-  listDeparturesOnDates,
-  listOpenDateInterests,
-} from "@/db/interest-dates";
+import { getRequestsPage } from "@/db/requests-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
-import { addDepartureHref, groupDateRequests } from "@/lib/date-requests";
+import { addDepartureHref } from "@/lib/date-requests";
 import { formatShortDate } from "@/lib/format";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
@@ -96,49 +89,39 @@ export default async function RequestsPage({
   // Date requests switched off (the Features page): the tab is gone, and so
   // is the page once no course inquiry is left waiting on it — those still
   // arrive, because a course page's inquiry is not part of that switch.
-  if (!shop.dateRequestsEnabled && (await countWaitingDateInterests(db, shop.id)) === 0) {
-    redirect(shopPath(shopSlug, "inbox"));
-  }
+  //
+  // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
+  // range, so a bookmarked page past the end lands on the last real one. The
+  // closed interests (third UX review, item 13) sit off the days, under "Done".
+  //
+  // **Reading a day is every role's; putting a boat on it is not** (issue
+  // #1831). The day's act lands on the schedule builder, whose add panel is
+  // `canConfigureTrips` — owner, manager, instructor (H-20260724-staff-role-reach). Asked with
+  // the same live check the board asks, so the link and the panel cannot
+  // disagree; a captain sees the day and its interests, and no act they would
+  // be refused (ADR 20260724-role-gated-surfaces-hide-not-explain).
+  //
+  // **Departures already on the board for these days** (ADR
+  // 20261017-one-interest-with-a-scope): a day whose interests were listed as if nothing
+  // existed for them now says what does.
+  const requests = await getRequestsPage(
+    db,
+    shop,
+    session.user.personId,
+    Number.parseInt(page ?? "", 10),
+  );
+  if (requests.gone) redirect(shopPath(shopSlug, "inbox"));
+  const { requestPage, handled, boats: shopBoats, groups, undated, boardByDate } = requests;
+  const canAddDeparture = requests.can.addDeparture;
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone;
   const t = staffTranslator(locale);
-
-  // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
-  // range, so a bookmarked page past the end lands on the last real one.
-  const [requestPage, handled, shopBoats, canAddDeparture] = await Promise.all([
-    listOpenDateInterests(db, shop.id, {
-      page: Number.parseInt(page ?? "", 10),
-    }),
-    // The closed interests (third UX review, item 13): off the days, under "Done".
-    listClosedDateInterests(db, shop.id),
-    listBoats(db, shop.id),
-    // **Reading a day is every role's; putting a boat on it is not** (issue
-    // #1831). The day's act lands on the schedule builder, whose add panel is
-    // `canConfigureTrips` — owner, manager, instructor (H-20260724-staff-role-reach). Asked here with
-    // the same live check the board asks, so the link and the panel cannot
-    // disagree; a captain sees the day and its interests, and no act they would
-    // be refused (ADR 20260724-role-gated-surfaces-hide-not-explain).
-    canPersonConfigureTrips(db, shop.id, session.user.personId),
-  ]);
   // A boat shop plans a day against its hulls and is the only kind of shop
   // shown one; every shop, hull or not, crews it against its own target ratio.
   const departureShape = departureShapeFor(
     shop,
     shopBoats.map((b) => ({ id: b.id, name: b.name, capacity: b.capacity })),
   );
-  const { groups, undated } = groupDateRequests(requestPage.rows, (row) => row);
-  // **Departures already on the board for these days** (ADR
-  // 20261017-one-interest-with-a-scope): a day whose interests were listed as if nothing
-  // existed for them now says what does.
-  const boardByDate = new Map<string, Awaited<ReturnType<typeof listDeparturesOnDates>>>();
-  for (const departure of await listDeparturesOnDates(
-    db,
-    shop.id,
-    groups.map((group) => group.date),
-    timezone,
-  )) {
-    boardByDate.set(departure.date, [...(boardByDate.get(departure.date) ?? []), departure]);
-  }
   const base = shopPath(shopSlug, "requests");
   // The one notice this page answers, and it is genuinely about the page rather
   // than about a form on it: the staffer wrote a caller down on "Took a call"

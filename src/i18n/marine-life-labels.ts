@@ -5,7 +5,7 @@ import {
   type MarineLifeSlug,
   marineLifeImage,
 } from "@/db/marine-life-catalog";
-import type { DiverTranslator } from "./messages";
+import { type DiverTranslator, diverTranslator } from "./messages";
 
 /**
  * The words for a catalog species, in the reader's own language.
@@ -99,4 +99,19 @@ export function fieldGuideCards(
     if (!slug || !MARINE_LIFE_BY_SLUG.has(slug as MarineLifeSlug)) return [];
     return [{ id: row.id, ...marineLifeCard(slug as MarineLifeSlug, t) }];
   });
+}
+
+/** {@link fieldGuideCards} in `locale`, for a caller that holds a language, not a translator (an export file). */
+export function fieldGuideCardsIn(
+  rows: readonly { id: string; catalogSlug: string | null }[],
+  locale: string | null | undefined,
+): (MarineLifeCard & { id: string })[] {
+  return fieldGuideCards(rows, diverTranslator(locale));
+}
+
+/** Every catalog species' name in `locale`, by slug. */
+export function marineLifeNamesIn(locale: string | null | undefined): Map<string, string> {
+  return new Map(
+    marineLifeCatalogCards(diverTranslator(locale)).map((card) => [card.slug, card.name]),
+  );
 }

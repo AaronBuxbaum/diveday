@@ -1054,7 +1054,7 @@ describe("listBookableDivers (returning-diver picker)", () => {
   /**
    * The picker's own copy of the roster's defect (issue #1765): the panels that
    * drive it print `displayStoredPhone(match.phone)` beside each candidate
-   * (`SeatDiverPanel`, `AddDiverSection`), so the number a staffer sees there is
+   * (`AddDiverSection`), so the number a staffer sees there is
    * the grouped one too.
    */
   it("finds a returning diver by the grouped phone number beside their name", async () => {

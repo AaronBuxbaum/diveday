@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { diverTranslator } from "@/i18n/messages";
 import {
   gearServiceDueEmail,
   gearServiceDueText,
@@ -42,7 +41,7 @@ describe("the ready message", () => {
   });
 
   it("keeps a text short: the work performed is cut, never the shop or the gear", () => {
-    const text = workOrderReadyText(diverTranslator("en-US"), "en-US", {
+    const text = workOrderReadyText("en-US", {
       shopName: "Blue Mantis",
       ticketNumber: 12,
       pieces: [REGULATOR],
@@ -73,7 +72,7 @@ describe("the service reminder", () => {
   });
 
   it("as a text, leads with the shop", () => {
-    const text = gearServiceDueText(diverTranslator("en-US"), "en-US", {
+    const text = gearServiceDueText("en-US", {
       shopName: "Blue Mantis",
       piece: REGULATOR,
       clock: "service",

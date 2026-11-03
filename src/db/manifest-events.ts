@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Client } from "pg";
 import { DAY_MS, nowDate } from "@/lib/clock";
@@ -359,6 +359,13 @@ async function chartersMarkedOn(db: AppDb, shopId: string, tripId: string): Prom
       .innerJoin(enrollment, eq(enrollment.id, bookings.trainingEnrollmentBookingId))
       .where(
         and(
+          // Stated, not implied by the join: it lets the planner start from the
+          // marked seats' partial index (`bookings_training_enrollment_idx`), a
+          // handful of rows, instead of from the shop. A shop whose seats were
+          // written since its statistics (a demo minted in one transaction)
+          // otherwise estimates one row per shop and nests the whole shop's
+          // bookings against itself: 84 calls of this took 11s of a 16s mint.
+          isNotNull(bookings.trainingEnrollmentBookingId),
           eq(bookings.shopId, shopId),
           eq(enrollment.shopId, shopId),
           eq(enrollment.tripId, tripId),

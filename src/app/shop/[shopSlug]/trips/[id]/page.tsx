@@ -8,13 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
-import { canPersonRefund, canPersonRetireMedicalRefusal } from "@/db/authz";
-import { listBoats } from "@/db/boats";
-import { getTripGuests } from "@/db/trip-guests";
-import { listTripLenses } from "@/db/trip-lenses";
-import { getTripOverview } from "@/db/trip-overview";
-import { loadTripSharedReads } from "@/db/trip-shared-reads";
-import { latestTripStage } from "@/db/trip-stages";
+import { getTripManifest } from "@/db/trip-page";
 import { getDepartureNeeds } from "@/features/today";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -34,6 +28,7 @@ import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
+import { addBandFor } from "./_components/seat-request-band";
 import { TripAboutLinks } from "./_components/TripAboutLinks";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { TripAddBookingLink } from "./_components/TripAddBookingLink";
@@ -46,7 +41,7 @@ import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
 import { tripCrewNotes } from "./_components/trip-crew-notes";
 import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-price";
-import { DETAILS_FORMS } from "./_components/trip-notice-tabs";
+import { showsDetailsTab } from "./_components/trip-notice-tabs";
 import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
 import { tripPulseFactsOf } from "./_components/trip-pulse-facts";
 import { type TripPageSearchParams, tripFlashParams } from "./_components/trip-search-params";
@@ -110,7 +105,7 @@ export default async function ManageTripPage({
       view,
       held,
       tell,
-      ...paymentParams
+      ...rest
     },
   ] = await Promise.all([params, searchParams]);
   // An unparseable UUID must not reach Postgres.
@@ -119,38 +114,26 @@ export default async function ManageTripPage({
   reportRenderQueries("/shop/[shopSlug]/trips/[id]", after);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const sharedReads = loadTripSharedReads(db, shop.id, tripId);
   const now = nowDate();
-  const needs =
+  // Today's queue for this boat, awaited only if the pulse needs it.
+  const departureNeeds =
     view === "details" ? null : getDepartureNeeds(db, shop, tripId, { now, t, locale, session });
-  const [
-    overview,
-    guests,
-    shopBoats,
-    shopLenses,
-    mayWriteOffPayment,
-    stageReading,
-    mayRetireRefusal,
-    staffGates,
-  ] = await Promise.all([
-    // Both read the trip, its requirements, readiness and prep list; started
-    // once here and handed to each (`src/db/trip-shared-reads.ts`).
-    getTripOverview(db, shop, tripId, session.user.personId, undefined, sharedReads),
-    getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName }, sharedReads),
-    // The fleet, for the Details form's hull select. Live hulls only: this is
-    // a picker for what the departure will sail on, not a record of what it
-    // did (`listBoatsForHistory` is the other one).
-    shop.hasBoatDiving ? listBoats(db, shop.id) : [],
-    // The shop's trip tags, for the select beside the
-    // hull (ADR 20260904-reef-all-the-way-down, decision 2).
-    listTripLenses(db, shop.id),
-    canPersonRefund(db, shop.id, session.user.personId),
-    latestTripStage(db, shop.id, tripId),
-    // Who may give a refused seat a fresh release; the action re-checks.
-    canPersonRetireMedicalRefusal(db, shop.id, session.user.personId),
+  const [manifest, staffGates] = await Promise.all([
+    getTripManifest(db, shop, tripId, {
+      session,
+      filters: { diverQuery: diverq, confirmName },
+    }),
     readStaffGates(db, shop.id, session.user.personId),
   ]);
-  if (!overview || !guests) notFound();
+  if (!manifest) notFound();
+  const {
+    overview,
+    guests,
+    boats: shopBoats,
+    lenses: shopLenses,
+    stage: stageReading,
+    can: { refund: mayWriteOffPayment, retireMedicalRefusal: mayRetireRefusal },
+  } = manifest;
   const {
     trip,
     cancelled,
@@ -189,12 +172,10 @@ export default async function ManageTripPage({
     tripId,
     now,
     t,
-    needs: overview.pulseNeeded ? await needs : null,
+    needs: overview.pulseNeeded ? await departureNeeds : null,
   });
 
-  // **Details is its own tab**, and a save on it lands back on it.
-  const showDetails =
-    view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
+  const showDetails = showsDetailsTab(view, rest.add, tripNotice);
   const readRows = detailsReadRows({ db, shop, overview, t, locale, shown: showDetails });
   const { automatedForecast, tideLines } = departureConditionReads({
     showDetails,
@@ -207,9 +188,8 @@ export default async function ManageTripPage({
   });
 
   const acceptsDivers = acceptsNewDivers(trip, now);
-  // The desk while arrivals are open, or a finished departure's record; the
-  // stage is read with it, since a diver counted out and not back keeps the
-  // departure open (`readDepartureStage`).
+  // The desk while arrivals are open, or a finished departure's record; the stage is read with
+  // it, since a diver counted out and not back keeps the departure open (`readDepartureStage`).
   const { shown, sailed, checkInOpen, desk, record } = await diversTabState({
     db,
     shopId: shop.id,
@@ -243,7 +223,7 @@ export default async function ManageTripPage({
     tripId,
     notice,
     bookingId: bid,
-    params: paymentParams,
+    params: rest,
   });
 
   return (
@@ -280,10 +260,9 @@ export default async function ManageTripPage({
               />
             </>
           }
-          // **Say it before the tap, not after.** The desk is live-only — the
-          // boat has an encrypted device copy and this does not — so a dropped
-          // signal means the list is stale and the next tap will not send
-          // (issue #819).
+          // **Say it before the tap, not after.** The desk is live-only — the boat has an
+          // encrypted device copy and this does not — so a dropped signal means the list is
+          // stale and the next tap will not send (issue #819).
           extraMeta={
             desk ? (
               <ConnectivityStatus
@@ -447,6 +426,7 @@ export default async function ManageTripPage({
                 record,
                 inWaterCrew: overview.crew.inWaterCrew,
                 walkInOpen: desk?.walkInOpen,
+                addBand: await addBandFor(db, { shop, shopSlug, tripId, t }, { ...rest, diverq }),
                 acceptsDivers,
                 guests,
                 shopSlug,
@@ -472,9 +452,8 @@ export default async function ManageTripPage({
                 keepOpenBookingId: notice?.startsWith("booking-removed") ? undefined : bid,
                 paymentMarkRetry,
                 partyPreview,
-                // The one paper-release refusal with a way through (issue #1573),
-                // scoped to the seat the action named so a roster of minors does not
-                // all sprout the staffer's confirmation.
+                // The one paper-release refusal with a way through (issue #1573), scoped to
+                // the seat it named, so a roster of minors does not all sprout the confirmation.
                 namesakeRefusedBookingId: notice === "waiver-guardian-name" ? bid : undefined,
                 participantTypeCertBookingId:
                   notice === "participant-type-cert" && staffGates.mayOverrideCertBlock

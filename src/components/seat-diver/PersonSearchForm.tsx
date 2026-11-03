@@ -5,8 +5,8 @@ import { QueryForm } from "@/components/ui/QueryForm";
 
 /**
  * The one "find a returning diver" box, shared by every staff door that seats
- * one (the trip's Guests tab, the counter walk-in, the global Add-booking
- * step two).
+ * one (the departure's add band, which every "Add a booking" door opens, and
+ * the work-order intake).
  *
  * Server-fed search on purpose: a GET reload carries `diverq` and the list
  * re-renders from the server. No client state, so the picker stays

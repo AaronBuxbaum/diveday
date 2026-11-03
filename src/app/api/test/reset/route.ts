@@ -68,7 +68,16 @@ export async function POST(request: Request) {
 }
 
 /**
- * Hand the rows this reset just deleted back to the page allocator.
+ * Hand the rows this reset just deleted back to the page allocator, and give
+ * the planner fresh statistics for the rows it wrote back.
+ *
+ * **Analyze, not only vacuum.** PGlite has no autovacuum daemon, so nothing
+ * else ever refreshes the statistics of a table a reset just deleted and
+ * re-inserted. Planned on stale ones, the Orders ledger's union (`pagedOrdersByDay`)
+ * went from ~40ms to ~1.4s per render, every render of the Orders index, which
+ * is also where every add-panel refusal lands (#2737): four landings of that
+ * were most of a 15s test budget. Real Postgres autoanalyzes; this keeps the
+ * e2e database planning the way production does, for ~100ms a reset.
  *
  * A reset deletes and re-inserts ~4,400 rows (a replay from the snapshot
  * still does: it is the re-seed's statements it saves, not its rows), and PGlite ships no autovacuum
@@ -164,9 +173,9 @@ async function reclaimDeadTuples(
     await db.execute(
       tables && tables.length > 0
         ? sql.raw(
-            `vacuum ${tables.map((table) => `public."${table.replaceAll('"', '""')}"`).join(", ")}`,
+            `vacuum (analyze) ${tables.map((table) => `public."${table.replaceAll('"', '""')}"`).join(", ")}`,
           )
-        : sql`vacuum`,
+        : sql`vacuum (analyze)`,
     );
   } catch {
     // Nothing to do: a runtime without VACUUM still gets a correct reset.

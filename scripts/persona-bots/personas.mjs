@@ -149,7 +149,7 @@ export const PERSONAS = Object.freeze([
     lens: "the front desk in the morning rush",
     surfaces: [
       { path: `/shop/${DEMO_SHOP_SLUG}/divers`, as: "owner" },
-      { path: `/shop/${DEMO_SHOP_SLUG}/bookings/new`, as: "owner" },
+      { path: `/shop/${DEMO_SHOP_SLUG}?call=1`, as: "owner" },
     ],
   },
   {

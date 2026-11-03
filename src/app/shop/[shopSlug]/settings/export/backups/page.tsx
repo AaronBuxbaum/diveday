@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { canPersonExportShopData } from "@/db/export";
-import { PAGE_SIZE } from "@/db/paging";
+import { canPersonExportShopData, PAGE_SIZE } from "@/db/export";
 import {
   getShopBackupDestination,
   listBackupDeliveries,

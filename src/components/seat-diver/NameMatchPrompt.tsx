@@ -6,17 +6,16 @@ import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { NameMatchCandidateFacts } from "./NameMatchCandidateFacts";
 
 /**
- * The "is this the same person?" prompt both add-a-diver shells show when a
- * typed name sounds like somebody on file: the trip's Add-diver band and the
- * New booking page's seat panel. One component, so the wording, the facts
- * beside each candidate and the two ways out cannot drift between them.
+ * The "is this the same person?" prompt the add-a-diver shells show when a
+ * typed name sounds like somebody on file (the departure's add band). One
+ * component, so the wording, the facts beside each candidate and the two ways
+ * out cannot drift between the shells that use it.
  *
- * It holds no action of its own. Each shell passes the actions it already
- * binds (the seat panel passes the departure door's `seatExistingDiverAction`
- * and `seatNewDiverAction`, the Add-diver band `addExistingDiverAction` and
- * `addBookingAction`, or the wait-list pair on a full boat), and the hidden
- * fields that must ride along on every form (the request a seat closes as
- * booked) come in as `hiddenFields`.
+ * It holds no action of its own. A shell passes the actions it already binds
+ * (the band's `addExistingDiverAction` and `addBookingAction`, or the
+ * wait-list pair on a full boat), and the hidden fields that must ride along
+ * on every form (the request a seat closes as booked) come in as
+ * `hiddenFields`.
  */
 export function NameMatchPrompt({
   matches,

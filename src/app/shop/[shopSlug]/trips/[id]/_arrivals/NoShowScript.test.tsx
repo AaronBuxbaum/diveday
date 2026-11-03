@@ -123,11 +123,11 @@ describe("NoShowSalvage", () => {
           line: "Nobody is waiting. Offer Nadia Petrov another day.",
           links: [
             {
-              href: "/shop/blue-mantis/bookings/new/trip-2?diverq=Nadia%20Petrov",
+              href: "/shop/blue-mantis/trips/trip-2?add=1&diverq=Nadia%20Petrov",
               label: "Add them to Two-Tank Reef, Thu 8:00 AM",
             },
             {
-              href: "/shop/blue-mantis/bookings/new/trip-3?diverq=Nadia%20Petrov",
+              href: "/shop/blue-mantis/trips/trip-3?add=1&diverq=Nadia%20Petrov",
               label: "Add them to Two-Tank Reef, Sat 8:00 AM",
             },
           ],
@@ -139,7 +139,7 @@ describe("NoShowSalvage", () => {
       screen
         .getByRole("link", { name: "Add them to Two-Tank Reef, Thu 8:00 AM" })
         .getAttribute("href"),
-    ).toBe("/shop/blue-mantis/bookings/new/trip-2?diverq=Nadia%20Petrov");
+    ).toBe("/shop/blue-mantis/trips/trip-2?add=1&diverq=Nadia%20Petrov");
     expect(
       screen.getByRole("link", { name: "Add them to Two-Tank Reef, Sat 8:00 AM" }),
     ).toBeTruthy();
@@ -189,7 +189,7 @@ describe("NoShowSalvage", () => {
           line: "Nobody is waiting. Offer Nadia Petrov another day.",
           links: [
             {
-              href: "/shop/blue-mantis/bookings/new/trip-2?diverq=Nadia%20Petrov",
+              href: "/shop/blue-mantis/trips/trip-2?add=1&diverq=Nadia%20Petrov",
               label: "Add them to Two-Tank Reef, Sat 8:00 AM",
               offer: {
                 tripId: "trip-2",

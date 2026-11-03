@@ -65,8 +65,14 @@ describe("the staff destination registry", () => {
    * landing where the first one already goes.
    */
   it("declares no destination as a query on another destination's path", () => {
+    // The one query a destination may carry opens a panel on its page, an act
+    // rather than a view ("Add one" is one grammar, #2737): `?add=` on an
+    // index, `?call=1` on the shop home. Any other query is a view of a page,
+    // which is not a destination.
     for (const destination of STAFF_DESTINATIONS) {
-      expect(destination.suffix, destination.id).not.toContain("?");
+      const query = destination.suffix.split("?")[1];
+      if (query === undefined) continue;
+      expect(query, destination.id).toMatch(/^(?:add=[\w-]+|call=1)$/);
     }
   });
 
@@ -368,11 +374,12 @@ describe("what each consumer derives", () => {
     // and the board keeps its own button for it.
     const addBooking = STAFF_DESTINATIONS.find((d) => d.id === "addBooking");
     if (!addBooking) throw new Error("registry lost the add-booking door");
-    expect(addBooking.suffix).toBe("/bookings/new");
+    // No departure known yet: the shop home's panel and its picker (#2737).
+    expect(addBooking.suffix).toBe("?call=1");
     expect(addBooking.section).toBe("schedule");
     expect(addBooking.gate).toBeUndefined();
     expect(staffDestinationHref(staffShopRoot("blue-mantis"), addBooking)).toBe(
-      "/shop/blue-mantis/bookings/new",
+      "/shop/blue-mantis?call=1",
     );
     // Seating a diver is front-desk work, not owner work, so the crew keeps it.
     expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("addBooking");
