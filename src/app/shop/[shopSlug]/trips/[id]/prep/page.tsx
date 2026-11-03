@@ -4,25 +4,20 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
-import { listTripUnitsToCheckIn } from "@/db/gear";
-import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
-import { latestTripStage } from "@/db/trip-stages";
-import { getTripPrep } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { isPrepGrouping, type PrepGrouping } from "@/lib/dive-prep";
-import { PREP_SECTION_ID, scopedId } from "@/lib/element-id";
+import { PREP_SECTION_ID } from "@/lib/element-id";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { readDepartureStage } from "../_arrivals/departure-record";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { TripStageBadge, TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
-import { PAPER_PACKET } from "../manifest/_components/manifest-search-params";
 import { PrepBody } from "./_components/PrepBody";
+import { readPrepView } from "./_components/prep-reads";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -67,27 +62,10 @@ export default async function TripPrepPage({
     count?: string;
     /** Which grouping; anything unrecognised reads as the by-item default. */
     group?: string;
-    /**
-     * **Not part of this route's URL contract** — see the same field on the
-     * manifest page. The paper day composes this page once per departure, and
-     * without a prefix every `aria-labelledby` below the first one points at
-     * the first departure's heading. Narrowed by `uuidParam`, so a hand-typed
-     * value on this route changes nothing.
-     */
-    idPrefix?: string;
-    /** Composed as the trip packet's paper; see `PAPER_PACKET`. */
-    [PAPER_PACKET]?: true;
   }>;
 }) {
   const { shopSlug, id: tripId } = await params;
-  const {
-    notice,
-    count,
-    group,
-    idPrefix: requestedIdPrefix,
-    [PAPER_PACKET]: paper,
-  } = await searchParams;
-  const idPrefix = uuidParam(requestedIdPrefix ?? "") ?? undefined;
+  const { notice, count, group } = await searchParams;
   const grouping: PrepGrouping = isPrepGrouping(group) ? group : "item";
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
@@ -98,34 +76,12 @@ export default async function TripPrepPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [prep, stageReading] = await Promise.all([
-    getTripPrep(db, shop, tripId),
-    latestTripStage(db, shop.id, tripId),
-  ]);
-  if (!prep) notFound();
+  // The readers this tab shares with the packet's packing-list sheet.
+  const view = await readPrepView(db, shop, tripId, nowDate());
+  if (!view) notFound();
+  const { prep, shownStage, sailed, finished, backFromBoat } = view;
   const { trip } = prep;
-  const now = nowDate();
-  // The crew's word for the header chip, and whether the boat has left the dock.
-  const {
-    shown: shownStage,
-    sailed,
-    finished,
-  } = await readDepartureStage(db, shop.id, tripId, {
-    startsAt: trip.startsAt,
-    endsAt: trip.endsAt,
-    now,
-    timeZone: shop.timezone,
-    stage: stageReading,
-    cancelled: trip.status === "cancelled",
-    meetingWindows: (await meetingWindowsByTrip(db, [trip])).get(tripId),
-  });
 
-  // Once home, every unit still out on this boat (fifth-loop ideas, item 5).
-  const backFromBoat = finished ? await listTripUnitsToCheckIn(db, shop.id, tripId) : [];
-
-  // **The packet's paper** (B03, B55): the packing list alone. The packet's
-  // dive plan already names the departure once, so this section carries no
-  // header of its own, no tabs, and no control.
   const body = (
     <PrepBody
       prep={prep}
@@ -134,7 +90,7 @@ export default async function TripPrepPage({
       shopSlug={shopSlug}
       tripId={tripId}
       rentalItems={shop.rentalItems}
-      notice={paper ? undefined : notice}
+      notice={notice}
       noticeCount={count}
       grouping={grouping}
       cancelled={trip.status === "cancelled"}
@@ -147,29 +103,18 @@ export default async function TripPrepPage({
           title={t("tripPrep.emptyHeading")}
           body={t("tripPrep.noDivers")}
           action={
-            paper ? null : (
-              <Link
-                href={shopPath(shopSlug, "trips", tripId)}
-                className={buttonClass({ className: "print:hidden" })}
-              >
-                {t("tripPrep.emptyAction")}
-              </Link>
-            )
+            <Link
+              href={shopPath(shopSlug, "trips", tripId)}
+              className={buttonClass({ className: "print:hidden" })}
+            >
+              {t("tripPrep.emptyAction")}
+            </Link>
           }
         />
       }
-      idPrefix={idPrefix}
-      paper={paper === true}
       className="space-y-10"
     />
   );
-  if (paper) {
-    return (
-      <div id={scopedId(idPrefix, PREP_SECTION_ID)} className="scroll-mt-6">
-        {body}
-      </div>
-    );
-  }
 
   return (
     <>
@@ -192,9 +137,8 @@ export default async function TripPrepPage({
         }
       />
       <TripTabs shopSlug={shopSlug} tripId={tripId} current="gear" copy={tripTabsCopy(t)} />
-      {/* The anchor every "fix the packing list" link lands on, prefixed like
-          every other id here when the paper day composes this page per departure. */}
-      <div id={scopedId(idPrefix, PREP_SECTION_ID)} className="mt-10 scroll-mt-6">
+      {/* The anchor every "fix the packing list" link lands on. */}
+      <div id={PREP_SECTION_ID} className="mt-10 scroll-mt-6">
         {body}
       </div>
     </>

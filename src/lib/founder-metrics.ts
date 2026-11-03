@@ -6,6 +6,7 @@ import {
   shiftCalendarDate,
 } from "./calendar-date";
 import { DAY_MS } from "./clock";
+import { compareMarkOrder } from "./roll-call";
 
 /**
  * **The numbers DiveDay's founder reads on Monday morning**, and nothing a
@@ -210,9 +211,5 @@ export function countDiveDays(events: readonly DepartureRollCallEvent[]): {
 }
 
 function compareRollCallOrder(a: DepartureRollCallEvent, b: DepartureRollCallEvent): number {
-  return (
-    a.occurredAt.getTime() - b.occurredAt.getTime() ||
-    a.createdAt.getTime() - b.createdAt.getTime() ||
-    a.seq - b.seq
-  );
+  return compareMarkOrder(a, b);
 }

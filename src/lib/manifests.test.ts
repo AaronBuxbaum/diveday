@@ -322,6 +322,7 @@ describe("buildTripManifest", () => {
       status: "boarded",
       occurredAt,
       createdAt: occurredAt,
+      seq: 0,
     });
 
     expect(maxRecordedDiveNumber([])).toBe(0);
@@ -341,6 +342,15 @@ describe("buildTripManifest", () => {
     ).toBe(4);
   });
 
+  const mark = (bookingId: string, checkpoint: string, status: string, at: Date) => ({
+    bookingId,
+    checkpoint,
+    status,
+    occurredAt: at,
+    createdAt: at,
+    seq: 0,
+  });
+
   it("ignores a checkpoint whose latest event for that diver is a clear — the mis-tap-then-undo case (dive-domain-expert review finding, CR-006)", () => {
     const t0 = new Date("2026-06-01T10:00:00Z");
     const t1 = new Date("2026-06-01T10:05:00Z");
@@ -350,27 +360,9 @@ describe("buildTripManifest", () => {
     // edit down to 2.
     expect(
       maxRecordedDiveNumber([
-        {
-          bookingId: "b1",
-          checkpoint: "after_dive_3",
-          status: "boarded",
-          occurredAt: t0,
-          createdAt: t0,
-        },
-        {
-          bookingId: "b1",
-          checkpoint: "after_dive_3",
-          status: "cleared",
-          occurredAt: t1,
-          createdAt: t1,
-        },
-        {
-          bookingId: "b1",
-          checkpoint: "after_dive_2",
-          status: "boarded",
-          occurredAt: t0,
-          createdAt: t0,
-        },
+        mark("b1", "after_dive_3", "boarded", t0),
+        mark("b1", "after_dive_3", "cleared", t1),
+        mark("b1", "after_dive_2", "boarded", t0),
       ]),
     ).toBe(2);
 
@@ -378,27 +370,9 @@ describe("buildTripManifest", () => {
     // means dive 3 really did happen — the checkpoint counts.
     expect(
       maxRecordedDiveNumber([
-        {
-          bookingId: "b1",
-          checkpoint: "after_dive_3",
-          status: "boarded",
-          occurredAt: t0,
-          createdAt: t0,
-        },
-        {
-          bookingId: "b1",
-          checkpoint: "after_dive_3",
-          status: "cleared",
-          occurredAt: t1,
-          createdAt: t1,
-        },
-        {
-          bookingId: "b2",
-          checkpoint: "after_dive_3",
-          status: "boarded",
-          occurredAt: t0,
-          createdAt: t0,
-        },
+        mark("b1", "after_dive_3", "boarded", t0),
+        mark("b1", "after_dive_3", "cleared", t1),
+        mark("b2", "after_dive_3", "boarded", t0),
       ]),
     ).toBe(3);
   });

@@ -125,7 +125,7 @@ export function PrepBody({
   emptyState?: ReactNode;
   /** See `src/lib/element-id.ts`: set on the paper day, absent on a route. */
   idPrefix?: string;
-  /** The trip packet's paper (`PAPER_PACKET`, B03): no notice, no controls. */
+  /** The trip packet's paper (`TripPacket`, B03): no notice, no controls. */
   paper?: boolean;
   /**
    * **The gap between the list's sections, which is the page's to set** —

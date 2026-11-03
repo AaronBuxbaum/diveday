@@ -7,9 +7,10 @@ import { sortStationRows } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
+import { crewSubject } from "./roll-call-subject";
 import {
-  rollCallCrewEvents as rollCallCrewEventsTable,
   rollCallEvents as rollCallEventsTable,
+  rollCallEvents as rollCallMarksTable,
   tripAssignments,
 } from "./schema";
 import { getTodayWork } from "./today";
@@ -424,11 +425,11 @@ describe("unclosed roll call (DOM-H3)", () => {
       await db
         .insert(tripAssignments)
         .values(personIds.map((personId) => ({ tripId: input.tripId, personId })));
-      await db.insert(rollCallCrewEventsTable).values(
+      await db.insert(rollCallMarksTable).values(
         personIds.map((personId) => ({
           shopId: input.shopId,
           tripId: input.tripId,
-          personId,
+          ...crewSubject(personId),
           recordedByPersonId: personIds[0] ?? personId,
           status: "boarded" as const,
           checkpoint: "departure",

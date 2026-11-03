@@ -6,6 +6,8 @@ import type { DbExecutor } from "./client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { paymentEntries } from "./payments";
 import { listTripReadiness } from "./readiness";
+import { oldestMarkFirst } from "./roll-call-order";
+import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
   bookingPaymentEvents,
   bookings,
@@ -19,7 +21,6 @@ import {
   personRoles,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   type TripAssignmentRole,
@@ -561,7 +562,7 @@ async function writeTheRecord(
       ? new Date(plan.finishedAt.getTime() - 30_000)
       : new Date(now.getTime() - (SURFACED_BEFORE_NOW_MIN[FIRST_GUIDE_TEAMS - 1] ?? 6) * minute);
   const lastGuideId = crew.filter((member) => member.tripRole === "divemaster").at(-1)?.personId;
-  await db.insert(rollCallCrewEvents).values(
+  await db.insert(rollCallEvents).values(
     crew.flatMap((member, index) =>
       [
         { checkpoint: "departure", occurredAt: plan.startsAt },
@@ -580,7 +581,8 @@ async function writeTheRecord(
       ].map(({ checkpoint, occurredAt }) => ({
         shopId,
         tripId: trip.id,
-        personId: member.personId,
+        subjectKind: "crew" as const,
+        crewPersonId: member.personId,
         recordedByPersonId: captainId,
         status: "boarded" as const,
         checkpoint,
@@ -720,34 +722,26 @@ async function bringBoatHome(
 
   const divers = await db
     .select({
-      bookingId: rollCallEvents.bookingId,
+      bookingId: markBookingId(),
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
       occurredAt: rollCallEvents.occurredAt,
     })
     .from(rollCallEvents)
-    .where(eq(rollCallEvents.tripId, trip.id))
+    .where(and(eq(rollCallEvents.tripId, trip.id), seatMarks()))
     // Oldest first, the roll call's own order, so the last row per person is
     // the mark standing now.
-    .orderBy(
-      asc(rollCallEvents.occurredAt),
-      asc(rollCallEvents.createdAt),
-      asc(rollCallEvents.seq),
-    );
+    .orderBy(...oldestMarkFirst());
   const crew = await db
     .select({
-      personId: rollCallCrewEvents.personId,
-      checkpoint: rollCallCrewEvents.checkpoint,
-      status: rollCallCrewEvents.status,
-      occurredAt: rollCallCrewEvents.occurredAt,
+      personId: markCrewPersonId(),
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+      occurredAt: rollCallEvents.occurredAt,
     })
-    .from(rollCallCrewEvents)
-    .where(eq(rollCallCrewEvents.tripId, trip.id))
-    .orderBy(
-      asc(rollCallCrewEvents.occurredAt),
-      asc(rollCallCrewEvents.createdAt),
-      asc(rollCallCrewEvents.seq),
-    );
+    .from(rollCallEvents)
+    .where(and(eq(rollCallEvents.tripId, trip.id), crewMarks()))
+    .orderBy(...oldestMarkFirst());
 
   const lastCount = [...divers, ...crew]
     .filter((row) => row.checkpoint === "after_dive_2")
@@ -787,11 +781,12 @@ async function bringBoatHome(
     );
   }
   if (crewDown.length > 0) {
-    await db.insert(rollCallCrewEvents).values(
+    await db.insert(rollCallEvents).values(
       crewDown.map((personId) => ({
         shopId: trip.shopId,
         tripId: trip.id,
-        personId,
+        subjectKind: "crew" as const,
+        crewPersonId: personId,
         recordedByPersonId: captain.personId,
         status: "boarded" as const,
         checkpoint: "after_dive_2",
