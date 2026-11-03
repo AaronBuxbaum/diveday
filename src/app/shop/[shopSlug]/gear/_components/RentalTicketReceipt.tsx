@@ -3,7 +3,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
  * **The foot of every rental ticket**, shared by the trip slip
- * (`trips/[id]/prep/ticket/[bookingId]`) and the counter ticket
+ * (`trips/[id]/prep?diver=`) and the counter ticket
  * (`gear/rentals/[ticketId]`): the shop's own rental terms when it has written
  * any, then "Received by", printed-name and date lines (Aaron, 2026-10-08; ADR
  * 20260815-minimal-gear-register, amended 2026-10-08).

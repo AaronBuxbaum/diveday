@@ -2032,7 +2032,7 @@ never retail POS or repair work orders (vision non-goals), and `rental_fit_profi
 universal always-on layer beneath it.
 
 Two later pieces the same day (its 2026-08-20 amendment, second half): a **printable per-booking
-rental slip** at `/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]` — what a diver has and when
+rental slip** at `/shop/[shopSlug]/trips/[id]/prep?diver=<bookingId>` — what a diver has and when
 it is due back, with deliberately no signature line and no money on it — and **dual-clocked service
 intervals**, where a service event may carry `next_due_dives` beside `next_due_on` and a unit falls
 due at whichever comes first. The dive count is derived from the departures a unit came back from,

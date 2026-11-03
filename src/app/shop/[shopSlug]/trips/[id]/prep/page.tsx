@@ -18,6 +18,7 @@ import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader
 import { TripStageBadge, TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { PrepBody } from "./_components/PrepBody";
+import { RentalTicketSheet } from "./_components/RentalTicketSheet";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -62,15 +63,22 @@ export default async function TripPrepPage({
     count?: string;
     /** Which grouping; anything unrecognised reads as the by-item default. */
     group?: string;
+    /** One booking: the page is that diver's rental slip, to print and hand over. */
+    diver?: string;
   }>;
 }) {
   const { shopSlug, id: tripId } = await params;
-  const { notice, count, group } = await searchParams;
+  const { notice, count, group, diver } = await searchParams;
   const grouping: PrepGrouping = isPrepGrouping(group) ? group : "item";
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
+  if (diver !== undefined) {
+    const bookingId = uuidParam(diver);
+    if (!bookingId) notFound();
+    return <RentalTicketSheet shopSlug={shopSlug} tripId={tripId} bookingId={bookingId} />;
+  }
   const { db, shop } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).

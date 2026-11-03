@@ -125,7 +125,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                 <div className="flex items-center gap-x-1">
                   {assigned.length > 0 ? (
                     <Link
-                      href={shopPath(shopSlug, "trips", tripId, "prep", "ticket", diver.bookingId)}
+                      href={`${shopPath(shopSlug, "trips", tripId, "prep")}?diver=${diver.bookingId}`}
                       className={buttonClass({
                         variant: "ghost",
                         size: "sm",

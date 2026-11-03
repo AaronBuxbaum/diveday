@@ -36,7 +36,6 @@
     ]
   },
   "/ready/[token]/forms": {
-    "e2e": ["course-forms.spec.ts"],
     "visual": ["course-form-sign"]
   },
   "/ready/[token]/waiver": {
@@ -61,25 +60,7 @@
     "e2e": ["returning-diver.spec.ts", "schedule-embed.spec.ts"],
     "visual": ["booking-confirmed-embed"]
   },
-  "/shop/[shopSlug]/divers/[personId]": {
-    "visual": [
-      "diver-medical-clearance-form",
-      "diver-medical-not-cleared",
-      "diver-profile",
-      "diver-profile-agency-listed",
-      "diver-profile-deleted",
-      "diver-profile-erase-refused",
-      "diver-profile-imported",
-      "diver-profile-not-certified",
-      "diver-profile-paper-waiver",
-      "diver-profile-payments",
-      "diver-record-bench",
-      "diver-record-clear",
-      "staff-diver-conversation"
-    ]
-  },
   "/shop/[shopSlug]/divers/[personId]/merge/[survivorId]": {
-    "e2e": ["diver-merge.spec.ts"],
     "visual": ["diver-merge-preview"]
   },
   "/shop/[shopSlug]/divers/[personId]/waivers/[recordId]": {
@@ -87,8 +68,7 @@
     "visual": ["diver-signed-waiver", "signed-waiver"]
   },
   "/shop/[shopSlug]/gear/[id]": {
-    "e2e": ["boat-safety.spec.ts", "gear.spec.ts"],
-    "visual": ["gear-unit", "gear-unit-deleted"]
+    "e2e": ["boat-safety.spec.ts", "gear.spec.ts"]
   },
   "/shop/[shopSlug]/gear/rentals/[ticketId]": {
     "e2e": ["counter-rentals.spec.ts", "rental-terms.spec.ts"],
@@ -102,43 +82,27 @@
     "e2e": ["work-orders.spec.ts"],
     "visual": ["work-order-claim-tag"]
   },
-  "/shop/[shopSlug]/orders/[id]": {
-    "visual": ["order-detail", "order-detail-partly-refunded"]
+  "/shop/[shopSlug]/me/security": {
+    "exempt": "Browser coverage is real (e2e/security-settings.spec.ts enrols in two-factor against the frozen clock, reads the recovery codes and revokes a session). No capture, because the Active sessions card cannot hold a baseline still: account_sessions.updated_at is stamped by better-auth's own clock, which DIVEDAY_CLOCK does not reach, so \"last seen\" is the wall clock; the row beside it prints the Chromium user-agent string, version and all; and the row count depends on how often the run signed in. Masking those is the one fix AGENTS.md refuses. Closing this means stamping those timestamps through src/lib/clock.ts at the better-auth boundary, which is an auth change wanting its own review (issue #1020)."
   },
   "/shop/[shopSlug]/orders/[id]/print/dispute": {
     "e2e": ["dispute-sheet.spec.ts"],
     "visual": ["order-dispute-sheet"]
   },
-  "/shop/[shopSlug]/print/pass/[bookingId]": {
-    "e2e": ["shop-on-paper.spec.ts"]
+  "/shop/[shopSlug]/schedule/blowout/day/[date]": {
+    "visual": ["blowout-day"]
   },
   "/shop/[shopSlug]/staffing/print": {
     "e2e": ["visual-print.spec.ts"],
     "visual": ["crew-week"]
   },
-  "/shop/[shopSlug]/safety": {
-    "e2e": ["incident-reports.spec.ts"]
-  },
-  "/shop/[shopSlug]/schedule/blowout/day/[date]": {
-    "visual": ["blowout-day"]
-  },
-  "/shop/[shopSlug]/me/security": {
-    "exempt": "Browser coverage is real (e2e/security-settings.spec.ts enrols in two-factor against the frozen clock, reads the recovery codes and revokes a session). No capture, because the Active sessions card cannot hold a baseline still: account_sessions.updated_at is stamped by better-auth's own clock, which DIVEDAY_CLOCK does not reach, so \"last seen\" is the wall clock; the row beside it prints the Chromium user-agent string, version and all; and the row count depends on how often the run signed in. Masking those is the one fix AGENTS.md refuses. Closing this means stamping those timestamps through src/lib/clock.ts at the better-auth boundary, which is an auth change wanting its own review (issue #1020)."
-  },
   "/shop/[shopSlug]/trips/[id]/incidents/[reportId]": {
     "e2e": ["incident-reports.spec.ts"],
     "visual": ["incident-report-draft"]
   },
-  "/shop/[shopSlug]/trips/[id]/log": {
-    "visual": ["departure-log", "departure-log-every-checkpoint"]
-  },
   "/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers": {
-    "e2e": ["party-waiver-qr.spec.ts", "check-in.spec.ts"],
-    "visual": ["party-waiver-queue", "party-waiver-held-medical"]
-  },
-  "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
-    "e2e": ["gear.spec.ts", "rental-terms.spec.ts"],
-    "visual": ["rental-ticket"]
+    "e2e": ["check-in.spec.ts", "party-waiver-qr.spec.ts"],
+    "visual": ["party-waiver-held-medical", "party-waiver-queue"]
   },
   "/shop/[shopSlug]/trips/[id]/print": {
     "visual": ["trip-packet"]

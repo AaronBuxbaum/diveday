@@ -24,7 +24,7 @@ export const metadata: Metadata = { title: "Claim tag — DiveDay" };
  * counter prints when a regulator is handed over the counter, and the diver
  * walks away with.
  *
- * It follows the rental slip (`trips/[id]/prep/ticket/[bookingId]`) in what it
+ * It follows the rental slip (`trips/[id]/prep?diver=`) in what it
  * is *not*. Not a waiver: no signature line and nothing to agree to. Not a
  * quote or a receipt: the parts and labor on the ticket are the shop's working
  * figures until the job is done, and a printed total on the way in is a price
