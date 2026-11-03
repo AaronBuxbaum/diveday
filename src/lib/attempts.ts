@@ -48,7 +48,9 @@ export type AttemptRule = {
   stuckAfterMs: number;
   /**
    * How long the row waits before Today raises it. Today is for what is loud,
-   * so it can wait longer than the kind's own queue, never less.
+   * so it can wait longer than the kind's own queue, never less. Today reads
+   * only payment operations, media deletes and owed shop-cancellation refunds;
+   * for the other kinds this is the rule it would read with.
    */
   todayAfterMs: number;
   /** The grammar states a reader lists for this kind. */
@@ -75,9 +77,12 @@ export const ATTEMPT_RULES = {
     unfinished: ["in_flight"],
   },
   /**
-   * A stored-image delete. The row is queued and attempted in one call, so a
-   * `pending` row past the window means that call died; a `failed` one is
-   * owner-visible and retryable at once (CR-012).
+   * A stored-image delete. Most rows are queued and attempted in one call, so
+   * a `pending` row past the window means that call died; a `failed` one is
+   * owner-visible and retryable at once (CR-012). An erasure or a rejected
+   * doctor's form queues its deletes inside its transaction and leaves them
+   * to the daily retry, so those sit `pending` until it runs: never skip a
+   * `pending` row as "already in flight", or those deletes starve.
    */
   media_deletion: {
     stuckAfterMs: PAYMENT_WINDOW_MS,
@@ -108,7 +113,8 @@ export const ATTEMPT_RULES = {
 
 /**
  * Each ledger's own status word, placed in the grammar. A media deletion's
- * `pending` is `in_flight`: the row is written and attempted in the same call.
+ * `pending` is `in_flight`: a delete is attempted as it is queued, or by the
+ * daily retry when an erasure queued it inside a transaction.
  */
 export const LEDGER_STATES = {
   payment_operation: {
@@ -127,7 +133,11 @@ export const LEDGER_STATES = {
   } satisfies Record<ProcessorErasureObligation["status"], AttemptState>,
 } as const;
 
-/** The derived kinds, which have no status column and read as one fixed state. */
+/**
+ * The derived kinds, which have no status column and read as one fixed state.
+ * Their readers keep their own predicates; this says where they sit in the
+ * grammar, and their `unfinished` lists say the same thing.
+ */
 export const DERIVED_STATES = {
   shop_cancellation_refund: "pending",
   failed_refund: "failed",

@@ -2,11 +2,14 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { issueAccountToken } from "./account-tokens";
+import { tipCheckout } from "./checkout-purpose";
 import {
   accountTokens,
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookings,
   buddyTeamEvents,
   capabilities,
@@ -19,7 +22,6 @@ import {
   orders,
   people,
   shops,
-  tips,
   tripBlowoutDivers,
   tripBlowouts,
   trips,
@@ -166,20 +168,40 @@ describe("deleteDemoShopCascade", () => {
     const shop = await requireShop(db, slug);
     const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
     if (!booking) throw new Error("test setup: demo shop has no bookings");
-    await db.insert(tips).values({
+    const [tipCheckoutRow] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: booking.tripId,
+        purpose: "tip",
+        status: "completed",
+        currency: "usd",
+        stripeAccountId: "acct_demo",
+        stripeSessionId: `cs_demo_${booking.id}`,
+        amountPerDiverCents: 1000,
+        totalCents: 1000,
+        settledTotalCents: 1000,
+      })
+      .returning();
+    if (!tipCheckoutRow) throw new Error("tip checkout insert failed");
+    await db.insert(bookingCheckoutBookings).values({
       shopId: shop.id,
-      currency: "usd",
+      checkoutId: tipCheckoutRow.id,
       bookingId: booking.id,
-      stripeAccountId: "acct_demo",
-      stripeSessionId: `cs_demo_${booking.id}`,
-      amountCents: 1000,
     });
 
     // No FK violation here is the real assertion — tips must go before bookings.
     await deleteDemoShopCascade(db, shop.id);
 
     expect(await findShop(db, slug)).toBeUndefined();
-    expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBe(0);
+    expect(
+      (
+        await db
+          .select()
+          .from(bookingCheckouts)
+          .where(and(eq(bookingCheckouts.shopId, shop.id), tipCheckout()))
+      ).length,
+    ).toBe(0);
   });
 
   /**

@@ -1,8 +1,18 @@
 import { and, asc, eq, gte, inArray, lt, ne } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
-import { bookings, people, shops, tips, tripReviews, trips } from "./schema";
+import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookings,
+  people,
+  shops,
+  tripReviews,
+  trips,
+} from "./schema";
+import { recordSeedTips, type SeedTip } from "./tips";
 
 /**
  * The recaps the month you are *reading about* should carry.
@@ -134,9 +144,16 @@ export async function seedRecentRecaps(
   // Serial, never `Promise.all`: this can be handed a transaction, and a drizzle
   // transaction is one checked-out client (scripts/check-db-concurrency.mjs).
   const existingTips = await db
-    .select({ bookingId: tips.bookingId })
-    .from(tips)
-    .where(and(eq(tips.shopId, shopId), inArray(tips.bookingId, bookingIds)));
+    .select({ bookingId: bookingCheckoutBookings.bookingId })
+    .from(bookingCheckouts)
+    .innerJoin(bookingCheckoutBookings, eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id))
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        tipCheckout(),
+        inArray(bookingCheckoutBookings.bookingId, bookingIds),
+      ),
+    );
   const existingReviews = await db
     .select({ bookingId: tripReviews.bookingId })
     .from(tripReviews)
@@ -150,7 +167,7 @@ export async function seedRecentRecaps(
   const reviewRows =
     existingReviews.length > 0 ? [] : candidates.map(reviewRowFor(shopId)).filter(isRow);
 
-  if (tipRows.length > 0) await db.insert(tips).values(tipRows);
+  await recordSeedTips(db, tipRows);
   if (reviewRows.length > 0) await db.insert(tripReviews).values(reviewRows);
 
   return { tips: tipRows.length, reviews: reviewRows.length };
@@ -168,14 +185,15 @@ function isRow<T>(row: T | null): row is T {
  * gate (ADR 20260726-post-trip-tipping).
  */
 function tipRowFor(shopId: string, currency: string) {
-  return (row: Candidate, i: number): typeof tips.$inferInsert | null => {
+  return (row: Candidate, i: number): SeedTip | null => {
     if (i % 7 === 3) return null;
     // The recap link is tapped once the boat is back in, not at the dock.
     const createdAt = new Date(row.startsAt.getTime() + 3 * HOUR_MS);
     return {
       shopId,
       bookingId: row.bookingId,
-      status: "paid" as const,
+      tripId: row.tripId,
+      status: "completed" as const,
       stripeAccountId: "acct_demo",
       // Keyed to the booking, so the unique index itself refuses a duplicate
       // even if this ever ran twice against the same board.

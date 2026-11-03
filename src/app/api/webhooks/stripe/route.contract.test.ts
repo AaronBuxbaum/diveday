@@ -36,11 +36,6 @@ vi.mock("@/db/checkouts", () => ({
   recordCheckoutStripeCustomer: vi.fn(),
   recordCheckoutPaymentIntent: vi.fn(),
 }));
-vi.mock("@/db/tips", () => ({
-  markTipPaidBySessionId: vi.fn(),
-  markTipExpiredBySessionId: vi.fn(),
-  recordTipStripeCustomer: vi.fn(),
-}));
 vi.mock("@/db/orders", () => ({
   applyInvoicePaid: vi.fn(),
   markOrderVoidedByInvoiceId: vi.fn(),
@@ -78,7 +73,6 @@ const {
   markCheckoutPaymentFailedBySessionId,
   recordCheckoutPaymentIntent,
 } = await import("@/db/checkouts");
-const { markTipPaidBySessionId, markTipExpiredBySessionId } = await import("@/db/tips");
 const { applyInvoicePaid, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } = await import(
   "@/db/orders"
 );
@@ -158,8 +152,6 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ account: null, newlyRestricted: false });
   vi.mocked(disconnectShopStripeAccount).mockReset();
-  vi.mocked(markTipPaidBySessionId).mockReset();
-  vi.mocked(markTipExpiredBySessionId).mockReset();
   vi.mocked(claimStripeWebhookEvent).mockReset().mockResolvedValue(true);
   vi.mocked(hasNewerAccountUpdate).mockReset().mockResolvedValue(false);
   // The route logs a structured line per delivery and per outcome. That is
@@ -209,7 +201,6 @@ describe("checkout session events", () => {
       0,
       { firstCompletion: false, reportedOverCeiling: false },
     );
-    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
 
   it("checkout.session.completed falls back to no settled figure when Stripe sends none", async () => {
@@ -496,7 +487,6 @@ describe("the livemode cross-check, against real test-mode events", () => {
     const response = await deliver("checkout.session.completed", LIVE_SECRET);
     expect(response.status).toBe(200);
     expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
-    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
     // Refused before the ledger, so a redelivery under the right secret still works.
     expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
   });

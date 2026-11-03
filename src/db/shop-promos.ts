@@ -324,6 +324,7 @@ export async function listShopPromoCodes(
         })
         .from(shopPromoCodes)
         .leftJoin(bookingCheckouts, redeemedBy(shopPromoCodes))
+        // diveday:any-checkout-purpose: keyed by a promotion, which a tip never carries (booking_checkouts_tip_shape)
         .where(scope)
         .groupBy(shopPromoCodes.id)
         .orderBy(
@@ -539,6 +540,7 @@ export async function shopPromoOutcomes(
       off: sql<string>`coalesce(sum(coalesce(${bookingCheckouts.appliedDiscountCents}, round(${bookingCheckouts.totalCents} * ${bookingCheckouts.appliedDiscountPercent} / 100.0), 0)), 0)`,
     })
     .from(bookingCheckouts)
+    // diveday:any-checkout-purpose: keyed by a promotion, which a tip never carries (booking_checkouts_tip_shape)
     .where(
       and(
         eq(bookingCheckouts.shopId, shopId),
