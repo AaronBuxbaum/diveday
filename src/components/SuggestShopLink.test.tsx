@@ -49,6 +49,25 @@ describe("the storefront address under the shop-link field", () => {
     expect(hint()).toHaveTextContent("Your schedule will live at dive.day/s/torchlight");
   });
 
+  it("suggests from a name typed before the page hydrated", () => {
+    render(
+      <form>
+        <input id="shop-name" name="shopName" defaultValue="Torchlight Divers" />
+        <input id="shop-slug" name="shopSlug" defaultValue="" />
+        <p data-testid="hint">
+          <SuggestShopLink
+            nameId="shop-name"
+            slugId="shop-slug"
+            urlLead="Your schedule will live at"
+            urlHost="dive.day"
+          />
+        </p>
+      </form>,
+    );
+    expect(slugBox().value).toBe("torchlight-divers");
+    expect(hint()).toHaveTextContent("dive.day/s/torchlight-divers");
+  });
+
   it("writes itself as the shop's name is typed, alongside the box it fills", () => {
     mount();
     fireEvent.input(nameBox(), { target: { value: "Torchlight Divers" } });
