@@ -85,7 +85,6 @@ import {
   reviewReplies,
   shopBackupDeliveryClaims,
   shopPromoCodes,
-  shopPromoRedemptions,
   shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
@@ -1583,10 +1582,7 @@ export async function clearDemoSchedule(
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
   await deleteStripeReversals(db, shopId);
-  // A redemption points at the checkout that spent the code, so it goes first
-  // (docs ADR 20260729-shop-promo-codes). The codes themselves are shop config
-  // and survive a schedule reset.
-  await db.delete(shopPromoRedemptions).where(eq(shopPromoRedemptions.shopId, shopId));
+  // The codes themselves are shop config and survive a schedule reset.
   // An entitlement points at the booking that consumed it and the order it was
   // bought on, so it goes before both. The package *definitions* are the shop's
   // price list and survive a schedule reset, exactly like the promo codes above

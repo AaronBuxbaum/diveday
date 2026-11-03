@@ -4,12 +4,8 @@ import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { DeadLink } from "@/components/DeadLink";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { resolveBookkeeperStopToken } from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
-import { resolveCourtesyEmailUnsubscribeToken } from "@/db/courtesy-email";
-import { resolveInterestUnsubscribeToken } from "@/db/interests";
-import { resolveShoreAlertStopToken } from "@/db/shore-alert-tokens";
-import { resolveWeeklyDigestUnsubscribeToken } from "@/db/weekly-digest";
+import { resolveUnsubscribeToken, type UnsubscribeKind } from "@/db/unsubscribe";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { confirmUnsubscribe } from "./actions";
@@ -26,12 +22,10 @@ export const metadata: Metadata = {
  * submit is what mutates. State is always read fresh from the DB, never from
  * a query flag, so there is nothing here for a forged param to fake.
  *
- * One route serves two independent token kinds — a last-minute-list entry's
- * opt-out and a person's courtesy-email opt-out (Leo — self-serve email
- * unsubscribe) — since both are the same "tap once to stop these emails"
- * shape and a diver clicking an email footer link shouldn't need to know
- * which internal mechanism sent it. Each token hash lives in its own table,
- * so trying both resolvers in turn is a cheap, unambiguous lookup.
+ * One route serves five token kinds, since each is the same "tap once to stop
+ * these emails" shape and nobody clicking a footer link should need to know
+ * which internal mechanism sent it. `resolveUnsubscribeToken` is the one place
+ * that decides which kind a token is (issue #3659); this page only words it.
  */
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -40,7 +34,7 @@ export const metadata: Metadata = {
 // See ADR 20260804-instant-navigation.
 export const instant = true;
 
-/** The one ask, both token kinds: a title, the shop it's about, one button. */
+/** The one ask, every token kind: a title, the shop it's about, one button. */
 function ConfirmUnsubscribe({
   title,
   description,
@@ -66,124 +60,85 @@ function ConfirmUnsubscribe({
   );
 }
 
+type Translate = ReturnType<typeof diverTranslator>;
+
+/**
+ * The words for each kind. Every key is spelled out, never built from a prefix,
+ * so the bundle-reach guard can see that each one is read.
+ */
+function wordsFor(t: Translate, kind: UnsubscribeKind, shopName: string) {
+  switch (kind) {
+    case "interest":
+      return {
+        confirmedTitle: t("lastMinute.unsubscribe.confirmedTitle"),
+        confirmedText: t("lastMinute.unsubscribe.confirmedText", { shopName }),
+        title: t("lastMinute.unsubscribe.title", { shopName }),
+        description: t("lastMinute.unsubscribe.description", { shopName }),
+        submit: t("lastMinute.unsubscribe.submit"),
+        submitting: t("lastMinute.unsubscribe.submitting"),
+      };
+    case "courtesy":
+      return {
+        confirmedTitle: t("courtesyEmailUnsubscribe.confirmedTitle"),
+        confirmedText: t("courtesyEmailUnsubscribe.confirmedText", { shopName }),
+        title: t("courtesyEmailUnsubscribe.title", { shopName }),
+        description: t("courtesyEmailUnsubscribe.description", { shopName }),
+        submit: t("courtesyEmailUnsubscribe.submit"),
+        submitting: t("courtesyEmailUnsubscribe.submitting"),
+      };
+    case "weeklyDigest":
+      return {
+        confirmedTitle: t("weeklyDigestUnsubscribe.confirmedTitle"),
+        confirmedText: t("weeklyDigestUnsubscribe.confirmedText", { shopName }),
+        title: t("weeklyDigestUnsubscribe.title", { shopName }),
+        description: t("weeklyDigestUnsubscribe.description", { shopName }),
+        submit: t("weeklyDigestUnsubscribe.submit"),
+        submitting: t("weeklyDigestUnsubscribe.submitting"),
+      };
+    case "shoreAlert":
+      return {
+        confirmedTitle: t("shoreAlertStop.confirmedTitle"),
+        confirmedText: t("shoreAlertStop.confirmedText", { shopName }),
+        title: t("shoreAlertStop.title", { shopName }),
+        description: t("shoreAlertStop.description", { shopName }),
+        submit: t("shoreAlertStop.submit"),
+        submitting: t("shoreAlertStop.submitting"),
+      };
+    case "bookkeeper":
+      return {
+        confirmedTitle: t("bookkeeperStop.confirmedTitle"),
+        confirmedText: t("bookkeeperStop.confirmedText", { shopName }),
+        title: t("bookkeeperStop.title", { shopName }),
+        description: t("bookkeeperStop.description", { shopName }),
+        submit: t("bookkeeperStop.submit"),
+        submitting: t("bookkeeperStop.submitting"),
+      };
+  }
+}
+
 export default async function UnsubscribePage({ params }: { params: Promise<{ token: string }> }) {
   await connection();
   const { token } = await params;
   const db = await getDb();
   const t = diverTranslator(await requestLocale());
 
-  const lastMinute = await resolveInterestUnsubscribeToken(db, token);
-  if (lastMinute) {
-    if (lastMinute.alreadyUnsubscribed) {
-      return (
-        <EntryDone
-          glyph="quiet"
-          title={t("lastMinute.unsubscribe.confirmedTitle")}
-          text={t("lastMinute.unsubscribe.confirmedText", { shopName: lastMinute.shopName })}
-        />
-      );
-    }
+  const resolved = await resolveUnsubscribeToken(db, token);
+  if (!resolved) {
     return (
-      <ConfirmUnsubscribe
-        title={t("lastMinute.unsubscribe.title")}
-        description={t("lastMinute.unsubscribe.description", { shopName: lastMinute.shopName })}
-        submitLabel={t("lastMinute.unsubscribe.submit")}
-        pendingLabel={t("lastMinute.unsubscribe.submitting")}
-        token={token}
-      />
+      <DeadLink t={t} next={t("lastMinute.unsubscribe.unavailableText")} diveDayDoor={false} />
     );
   }
-
-  const courtesy = await resolveCourtesyEmailUnsubscribeToken(db, token);
-  if (courtesy) {
-    if (courtesy.alreadyOptedOut) {
-      return (
-        <EntryDone
-          glyph="quiet"
-          title={t("courtesyEmailUnsubscribe.confirmedTitle")}
-          text={t("courtesyEmailUnsubscribe.confirmedText", { shopName: courtesy.shopName })}
-        />
-      );
-    }
-    return (
-      <ConfirmUnsubscribe
-        title={t("courtesyEmailUnsubscribe.title")}
-        description={t("courtesyEmailUnsubscribe.description", { shopName: courtesy.shopName })}
-        submitLabel={t("courtesyEmailUnsubscribe.submit")}
-        pendingLabel={t("courtesyEmailUnsubscribe.submitting")}
-        token={token}
-      />
-    );
+  const words = wordsFor(t, resolved.kind, resolved.shopName);
+  if (resolved.done) {
+    return <EntryDone glyph="quiet" title={words.confirmedTitle} text={words.confirmedText} />;
   }
-
-  // The third kind: a staffer's own Monday email (`src/db/weekly-digest.ts`).
-  const digest = await resolveWeeklyDigestUnsubscribeToken(db, token);
-  if (digest) {
-    if (digest.alreadyOff) {
-      return (
-        <EntryDone
-          glyph="quiet"
-          title={t("weeklyDigestUnsubscribe.confirmedTitle")}
-          text={t("weeklyDigestUnsubscribe.confirmedText", { shopName: digest.shopName })}
-        />
-      );
-    }
-    return (
-      <ConfirmUnsubscribe
-        title={t("weeklyDigestUnsubscribe.title")}
-        description={t("weeklyDigestUnsubscribe.description", { shopName: digest.shopName })}
-        submitLabel={t("weeklyDigestUnsubscribe.submit")}
-        pendingLabel={t("weeklyDigestUnsubscribe.submitting")}
-        token={token}
-      />
-    );
-  }
-
-  // The fourth kind: a shop's shore contact, from a roll-call alert (H-20261014-stale-roll-call-recipients).
-  const shore = await resolveShoreAlertStopToken(db, token);
-  if (shore) {
-    if (shore.alreadyStopped) {
-      return (
-        <EntryDone
-          glyph="quiet"
-          title={t("shoreAlertStop.confirmedTitle")}
-          text={t("shoreAlertStop.confirmedText", { shopName: shore.shopName })}
-        />
-      );
-    }
-    return (
-      <ConfirmUnsubscribe
-        title={t("shoreAlertStop.title", { shopName: shore.shopName })}
-        description={t("shoreAlertStop.description", { shopName: shore.shopName })}
-        submitLabel={t("shoreAlertStop.submit")}
-        pendingLabel={t("shoreAlertStop.submitting")}
-        token={token}
-      />
-    );
-  }
-
-  // The fifth kind: a shop's bookkeeper, from a month-end email (item 35, N1).
-  const bookkeeper = await resolveBookkeeperStopToken(db, token);
-  if (bookkeeper) {
-    if (bookkeeper.alreadyStopped) {
-      return (
-        <EntryDone
-          glyph="quiet"
-          title={t("bookkeeperStop.confirmedTitle")}
-          text={t("bookkeeperStop.confirmedText", { shopName: bookkeeper.shopName })}
-        />
-      );
-    }
-    return (
-      <ConfirmUnsubscribe
-        title={t("bookkeeperStop.title", { shopName: bookkeeper.shopName })}
-        description={t("bookkeeperStop.description", { shopName: bookkeeper.shopName })}
-        submitLabel={t("bookkeeperStop.submit")}
-        pendingLabel={t("bookkeeperStop.submitting")}
-        token={token}
-      />
-    );
-  }
-
-  return <DeadLink t={t} next={t("lastMinute.unsubscribe.unavailableText")} diveDayDoor={false} />;
+  return (
+    <ConfirmUnsubscribe
+      title={words.title}
+      description={words.description}
+      submitLabel={words.submit}
+      pendingLabel={words.submitting}
+      token={token}
+    />
+  );
 }

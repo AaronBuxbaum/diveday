@@ -88,7 +88,6 @@ export const EXPORT_PURPOSE_KEYS = {
   "dive_packages.csv": "settings.export.filePurposes.dive_packages",
   "dive_package_entitlements.csv": "settings.export.filePurposes.dive_package_entitlements",
   "shop_promo_codes.csv": "settings.export.filePurposes.shop_promo_codes",
-  "shop_promo_redemptions.csv": "settings.export.filePurposes.shop_promo_redemptions",
   "courses.csv": "settings.export.filePurposes.courses",
   "shop_text_translations.csv": "settings.export.filePurposes.shop_text_translations",
 } as const satisfies Record<keyof typeof EXPORT_FILE_NOTES, StaffMessageKey>;

@@ -18,7 +18,6 @@ import {
   bookingCheckouts,
   type ShopPromoCode,
   shopPromoCodes,
-  shopPromoRedemptions,
   shops,
   tripLastMinutePromos,
 } from "./schema";
@@ -235,6 +234,21 @@ export type ShopPromoPage = {
 };
 
 /**
+ * **A redemption is a completed checkout that carried the code.** There is no
+ * redemption table: `booking_checkouts.status = 'completed'` is written once, in
+ * the transaction that marks the checkout paid, and a replayed webhook cannot
+ * complete it twice, so counting these rows is the count of times a code was
+ * spent (ADR 20261102-a-redemption-is-a-completed-checkout, issue #2720).
+ */
+function redeemedBy(codes: typeof shopPromoCodes) {
+  return and(
+    eq(bookingCheckouts.promoCodeId, codes.id),
+    eq(bookingCheckouts.shopId, codes.shopId),
+    eq(bookingCheckouts.status, "completed"),
+  );
+}
+
+/**
  * The shelf each code sits on, said in SQL — the rank `promoLedgerGroup`
  * returns as a word (`src/lib/promo-codes.ts`), in that function's own
  * precedence: a window that has not opened first, then one that has closed,
@@ -247,7 +261,7 @@ export type ShopPromoPage = {
  * middle of, never open a second Live shelf below an Ended one.
  *
  * The exhaustion arm reads the same `count()` the row query selects: a cap is
- * spent against the redemptions actually recorded, so re-deriving it any other
+ * spent against the checkouts that completed with the code, so re-deriving it any other
  * way here would be a second answer to a question this query already asks.
  */
 function promoLedgerGroupRank(now: Date) {
@@ -255,7 +269,7 @@ function promoLedgerGroupRank(now: Date) {
     when ${shopPromoCodes.startsAt} is not null and ${shopPromoCodes.startsAt} > ${now}::timestamptz then 1
     when (${shopPromoCodes.expiresAt} is not null and ${shopPromoCodes.expiresAt} <= ${now}::timestamptz)
       or (${shopPromoCodes.maxRedemptions} is not null
-          and count(${shopPromoRedemptions.id}) >= ${shopPromoCodes.maxRedemptions}) then 2
+          and count(${bookingCheckouts.id}) >= ${shopPromoCodes.maxRedemptions}) then 2
     else 0
   end`;
 }
@@ -304,12 +318,12 @@ export async function listShopPromoCodes(
       db
         .select({
           promo: shopPromoCodes,
-          // count(redemption id), not count(*) — the left join produces one row
+          // count(checkout id), not count(*) — the left join produces one row
           // for a code nobody has redeemed, and count(*) would report that as 1.
-          timesRedeemed: sql<number>`count(${shopPromoRedemptions.id})::int`,
+          timesRedeemed: sql<number>`count(${bookingCheckouts.id})::int`,
         })
         .from(shopPromoCodes)
-        .leftJoin(shopPromoRedemptions, eq(shopPromoRedemptions.promoCodeId, shopPromoCodes.id))
+        .leftJoin(bookingCheckouts, redeemedBy(shopPromoCodes))
         .where(scope)
         .groupBy(shopPromoCodes.id)
         .orderBy(
@@ -424,10 +438,10 @@ export async function retryShopPromoCode(
  * Delete a code that never went live — `pending` (the Stripe call never
  * finished) or `failed` (it finished and lost). Neither status ever carries a
  * Stripe promotion-code id (`getRedeemableShopPromo` requires one to redeem
- * anything), so neither can have a redemption row referencing it — a plain
+ * anything), so neither can have a completed checkout referencing it — a plain
  * delete is safe and leaves nothing orphaned. `active`/`disabled` codes are
  * switched off instead (`setShopPromoEnabled`), never deleted, so their
- * redemption history always keeps a code row to point at.
+ * redemption history (completed checkouts) always keeps a code row to point at.
  */
 export async function deleteShopPromoCode(
   db: AppDb,
@@ -445,33 +459,6 @@ export async function deleteShopPromoCode(
     )
     .returning({ id: shopPromoCodes.id });
   return Boolean(deleted);
-}
-
-/**
- * Record that a completed checkout spent a code. Called from inside
- * `markCheckoutPaidBySessionId`'s transaction; the unique index on
- * `checkout_id` means a replayed or duplicated Stripe webhook lands on the same
- * row instead of inflating the count, so this is safe to call on every
- * completion, including a repair run over an already-completed checkout.
- */
-export async function recordShopPromoRedemption(
-  db: DbExecutor,
-  input: {
-    shopId: string;
-    promoCodeId: string;
-    checkoutId: string;
-    amountChargedCents: number;
-  },
-): Promise<void> {
-  await db
-    .insert(shopPromoRedemptions)
-    .values({
-      shopId: input.shopId,
-      promoCodeId: input.promoCodeId,
-      checkoutId: input.checkoutId,
-      amountChargedCents: input.amountChargedCents,
-    })
-    .onConflictDoNothing({ target: shopPromoRedemptions.checkoutId });
 }
 
 /**
@@ -547,26 +534,20 @@ export async function shopPromoOutcomes(
   if (codeIds.length === 0) return new Map();
   const rows = await db
     .select({
-      codeId: shopPromoRedemptions.promoCodeId,
+      codeId: bookingCheckouts.promoCodeId,
       of: sql<string>`coalesce(sum(${bookingCheckouts.totalCents}), 0)`,
       off: sql<string>`coalesce(sum(coalesce(${bookingCheckouts.appliedDiscountCents}, round(${bookingCheckouts.totalCents} * ${bookingCheckouts.appliedDiscountPercent} / 100.0), 0)), 0)`,
     })
-    .from(shopPromoRedemptions)
-    .innerJoin(
-      bookingCheckouts,
-      and(
-        eq(bookingCheckouts.id, shopPromoRedemptions.checkoutId),
-        eq(bookingCheckouts.shopId, shopId),
-      ),
-    )
+    .from(bookingCheckouts)
     .where(
       and(
-        eq(shopPromoRedemptions.shopId, shopId),
-        inArray(shopPromoRedemptions.promoCodeId, [...codeIds]),
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "completed"),
+        inArray(bookingCheckouts.promoCodeId, [...codeIds]),
       ),
     )
-    .groupBy(shopPromoRedemptions.promoCodeId);
+    .groupBy(bookingCheckouts.promoCodeId);
   return new Map(
-    rows.map((row) => [row.codeId, { offCents: Number(row.off), ofCents: Number(row.of) }]),
+    rows.map((row) => [row.codeId ?? "", { offCents: Number(row.off), ofCents: Number(row.of) }]),
   );
 }

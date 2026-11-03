@@ -82,7 +82,6 @@ export const EXPECTED_FILES = [
   "dive_packages.csv",
   "dive_package_entitlements.csv",
   "shop_promo_codes.csv",
-  "shop_promo_redemptions.csv",
   "courses.csv",
   "shop_text_translations.csv",
 ];
@@ -128,7 +127,6 @@ export const EXPORTED_TABLES = [
   "incident_report_addenda",
   "activity_events",
   "notification_deliveries",
-  "shop_promo_redemptions",
   "interests",
   "date_request_offer_bookings",
   "trip_last_minute_promos",

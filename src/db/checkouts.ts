@@ -33,7 +33,7 @@ import {
   courses,
   trips,
 } from "./schema";
-import { getShopPromoCodeById, recordShopPromoRedemption } from "./shop-promos";
+import { getShopPromoCodeById } from "./shop-promos";
 import { getShopById } from "./shops";
 import {
   canAcceptPayments,
@@ -1439,25 +1439,6 @@ export async function markCheckoutPaidBySessionId(
     // acquired, would leave the same race the lock exists to close (Codex
     // finding). (The checkout itself is still marked completed above, so a
     // retried webhook delivery doesn't reprocess it.)
-    // A shop-wide code this session actually spent. Written here, inside the
-    // same transaction, and deduped on `checkout_id`, so a retried webhook
-    // delivery or a repair run over an already-completed checkout lands on the
-    // existing row rather than counting the redemption twice
-    // (docs ADR 20260729-shop-promo-codes).
-    if (updated.promoCodeId) {
-      await recordShopPromoRedemption(tx, {
-        shopId: updated.shopId,
-        promoCodeId: updated.promoCodeId,
-        checkoutId: updated.id,
-        // What the shop actually received with this code applied, straight
-        // from Stripe; with no settled figure, the total net of this code's
-        // own discount — never the pre-discount amount the diver was quoted,
-        // which would overstate every un-settled redemption in the history
-        // this page reports on (PAY-M3).
-        amountChargedCents: attributableCents,
-      });
-    }
-
     for (const { bookingId, gearCents } of linked) {
       await tx
         .update(bookingCheckoutBookings)

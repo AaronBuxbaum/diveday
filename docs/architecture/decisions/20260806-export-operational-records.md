@@ -40,7 +40,7 @@ about its own machinery.** Applying that, seven files join the bundle:
 | `notification_deliveries.csv` | "Did this diver ever get their waiver request" is a question a shop must be able to answer about its own past, sometimes years later, and no other file could. |
 | `booking_checkouts.csv` | What the shop *asked for*, including the asks nobody finished. `bookings.csv` and `orders.csv` structurally cannot show an abandoned attempt. |
 | `booking_checkout_bookings.csv` | Which seats each attempt covered, and the per-seat gear charge, which lives nowhere else. |
-| `shop_promo_redemptions.csv` | How a code actually performed. Resolvable at last, because the checkout each row points at now travels with it. |
+| ~~`shop_promo_redemptions.csv`~~ | Retired 2026-11-02 ([20261102-a-redemption-is-a-completed-checkout](20261102-a-redemption-is-a-completed-checkout.md)): a redemption is a completed row of `booking_checkouts.csv`. |
 | `course_inquiries.csv` | Leads someone gave *the shop*. An unconverted lead is exactly the thing a shop would lose by leaving. |
 
 **Two families stay out, and the reasons are now stated where a human reads them** — the bundle

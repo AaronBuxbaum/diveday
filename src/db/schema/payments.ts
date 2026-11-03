@@ -116,46 +116,6 @@ export const shopPromoCodes = pgTable(
 );
 
 /**
- * One paid redemption of a shop-wide code — the "redemption history" half of a
- * real promotion model. Written inside `markCheckoutPaidBySessionId`'s
- * transaction and keyed unique on the checkout, so a replayed or duplicated
- * Stripe webhook can never inflate a code's usage count. Stripe remains the
- * authority on whether a redemption was *allowed*; this is DiveDay's own audit
- * trail for reporting and for a later cancellation/refund conversation.
- */
-export const shopPromoRedemptions = pgTable(
-  "shop_promo_redemptions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    promoCodeId: uuid("promo_code_id")
-      .notNull()
-      .references(() => shopPromoCodes.id),
-    checkoutId: uuid("checkout_id")
-      .notNull()
-      .references(() => bookingCheckouts.id),
-    /**
-     * What the checkout this code was spent on actually settled for, as Stripe
-     * reported it (`booking_checkouts.settled_total_cents`) — the money the
-     * shop received with this code applied. Recording it is not DiveDay
-     * re-deriving a discount it does not own: the number is copied verbatim
-     * from Stripe's own `amount_total`, which is why this column may hold it.
-     * Falls back to the checkout's quoted (pre-discount) total when no settled
-     * figure exists — a historical row, or a completion Stripe reported no
-     * total for.
-     */
-    amountChargedCents: integer("amount_charged_cents").notNull(),
-    redeemedAt: appNowTimestamp("redeemed_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("shop_promo_redemptions_checkout_unique").on(table.checkoutId),
-    index("shop_promo_redemptions_promo_idx").on(table.promoCodeId, table.redeemedAt),
-  ],
-);
-
-/**
  * **What a shop sells when it sells "ten dives".** The definition, not a
  * purchase — one row per product on the shop's price list
  * (ADR 20260822-a-package-is-entitlements-not-money).

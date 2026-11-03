@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
-import { stopBookkeeperByToken } from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
-import { optOutPersonFromCourtesyEmailByToken } from "@/db/courtesy-email";
-import { unsubscribeAnytimeInterestByToken } from "@/db/interests";
-import { stopShoreAlertsByToken } from "@/db/shore-alert-tokens";
-import { turnOffWeeklyDigestByToken } from "@/db/weekly-digest";
+import { unsubscribeByToken } from "@/db/unsubscribe";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
@@ -29,9 +25,8 @@ import { clientIp } from "@/lib/request-ip";
  * would have sent the raw, non-expiring unsubscribe token to Sentry on any
  * server error (security review finding on this task).
  *
- * One route serves every token kind, in the page's order: a last-minute-list
- * interest, a person's courtesy email, a staffer's Monday email, a shore
- * contact's roll-call alerts and a bookkeeper's month-end files.
+ * One route serves every token kind through `unsubscribeByToken`, the same
+ * resolver the page and the confirm action use (issue #3659).
  */
 export async function POST(
   request: Request,
@@ -52,17 +47,7 @@ export async function POST(
   );
   if (!limit.allowed) return new NextResponse(null, { status: 429 });
 
-  const db = await getDb();
-  const lastMinute = await unsubscribeAnytimeInterestByToken(db, { token });
-  if (!lastMinute) {
-    const courtesy = await optOutPersonFromCourtesyEmailByToken(db, { token });
-    // The third kind: a staffer's own Monday email. The fourth: a shop's
-    // shore contact stopping its roll-call alerts (H-20261014-stale-roll-call-recipients). The fifth, tried
-    // last: a shop's bookkeeper stopping the month-end files (item 35, N1).
-    const digest = courtesy ? null : await turnOffWeeklyDigestByToken(db, { token });
-    const shore = courtesy || digest ? null : await stopShoreAlertsByToken(db, { token });
-    if (!courtesy && !digest && !shore) await stopBookkeeperByToken(db, { token });
-  }
+  await unsubscribeByToken(await getDb(), { token });
   // A mail client acts on the status code alone and never renders a body.
   return new NextResponse(null, { status: 200 });
 }

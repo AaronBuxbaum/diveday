@@ -387,7 +387,6 @@ describe("full-shop export dataset", () => {
       "internal_notes.csv",
       "activity_events.csv",
       "notification_deliveries.csv",
-      "shop_promo_redemptions.csv",
       "imported_payment_history.csv",
     ]) {
       expect(table(input, file).rows.length, `${file} has no rows`).toBeGreaterThan(0);
