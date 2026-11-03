@@ -102,27 +102,38 @@ function waiverBlockers(
     .filter((code) => WAIVER_BLOCKERS.has(code));
 }
 
+/**
+ * The expected word, spelled from the stored columns alone. Deliberately not
+ * the predicates the code uses (`isCleanCompletion`, `isUnclearedReferral`):
+ * a change to one of those moves the word and the gate together, and only a
+ * literal oracle notices (attacker-framed domain review, A3).
+ */
+function expectedWord(record: WaiverRecord): string {
+  if (record.status === "completed") return "signed";
+  if (record.status === "medical_review") {
+    if (record.medicalClearedAt) return "signed";
+    return record.medicalClearanceDeclinedAt ? "medical_not_cleared" : "medical_review";
+  }
+  return record.expiresAt.getTime() <= NOW.getTime() ? "link_expired" : "awaiting_signature";
+}
+
 describe("one record's standing", () => {
   it("reads every record shape as exactly the word its columns imply", () => {
     for (const record of RECORDS) {
-      const standing = waiverStanding(record, NOW);
-      if (isCleanCompletion(record)) {
-        expect(standing, record.id).toBe("signed");
-      } else if (record.status === "medical_review") {
-        expect(standing, record.id).toBe(
-          record.medicalClearanceDeclinedAt ? "medical_not_cleared" : "medical_review",
-        );
-      } else {
-        expect(standing, record.id).toBe(
-          record.expiresAt <= NOW ? "link_expired" : "awaiting_signature",
-        );
-      }
+      expect(waiverStanding(record, NOW), record.id).toBe(expectedWord(record));
+      // The shared primitive agrees with the literal oracle too.
+      expect(isCleanCompletion(record), record.id).toBe(expectedWord(record) === "signed");
     }
     expect(waiverStanding(null, NOW)).toBe("none");
   });
 
   it("never calls a live medical hold anything but a hold", () => {
-    for (const record of RECORDS.filter(isUnresolvedMedicalHold)) {
+    const held = RECORDS.filter(
+      (r) => r.status === "medical_review" && !r.medicalClearedAt && !r.supersededAt,
+    );
+    expect(held.length).toBeGreaterThan(0);
+    for (const record of held) {
+      expect(isUnresolvedMedicalHold(record), record.id).toBe(true);
       expect(["medical_review", "medical_not_cleared"], record.id).toContain(
         waiverStanding(record, NOW),
       );
@@ -140,7 +151,7 @@ describe("one record's standing", () => {
       const standing = waiverStanding(record, NOW);
       const blockers = waiverBlockers(record, "diver");
       expect(blockers.length === 0, `${record.id} ${standing} ${blockers}`).toBe(
-        standing === "signed",
+        expectedWord(record) === "signed",
       );
     }
     expect(waiverBlockers(null, "diver")).toEqual(["waiver_not_sent"]);
@@ -183,5 +194,36 @@ describe("the diver's standing at the shop agrees with every seat's", () => {
       }
     }
     expect(checked).toBeGreaterThan(10_000);
+  });
+});
+
+describe("a seat's own live referral", () => {
+  it("holds the seat over any carried signature, newer or not", () => {
+    const referral = RECORDS.find(
+      (r) =>
+        r.status === "medical_review" &&
+        !r.medicalClearedAt &&
+        !r.medicalClearanceDeclinedAt &&
+        !r.supersededAt,
+    );
+    if (!referral) throw new Error("fixture has no live referral");
+    const newer = {
+      ...SIGNED.find(
+        (r) => r.status === "completed" && !r.supersededAt && r.templateGeneration === 1,
+      ),
+      id: "carried",
+      bookingId: "other-booking",
+      signedAt: new Date(NOW.getTime() - HOUR / 4),
+      completedAt: new Date(NOW.getTime() - HOUR / 4),
+    } as WaiverRecord;
+    const seat = effectiveWaiverForBooking({
+      bookingWaiver: referral,
+      personSignedWaivers: [newer],
+      currentTemplateVersion: 1,
+      now: NOW,
+    });
+    expect(seat?.id).toBe(referral.id);
+    expect(waiverStanding(seat, NOW)).toBe("medical_review");
+    expect(waiverBlockers(seat as WaiverRecord | null, "diver")).toContain("medical_review");
   });
 });
