@@ -14,7 +14,6 @@
 export type DayState = {
   /** The transcript's vocabulary and the simulator's screenshot names. */
   readonly id: string;
-  readonly label: string;
   /** The visual capture that photographs this reading of the day. */
   readonly capture?: string;
   /** Why no capture photographs it. Exactly one of `capture` and `exempt` is set. */
@@ -32,23 +31,22 @@ const ON_THE_WATER =
  * fails at it by name.
  */
 export const DAY_STATES: readonly DayState[] = Object.freeze([
-  { id: "shop-open", label: "The shop opens on a fresh day", capture: "today-empty" },
-  { id: "seat-booked", label: "A diver books a seat on the public page", exempt: AN_ACT },
-  { id: "waiver-signed", label: "The diver signs the waiver from the link", exempt: AN_ACT },
+  { id: "shop-open", capture: "today-empty" },
+  { id: "seat-booked", exempt: AN_ACT },
+  { id: "waiver-signed", exempt: AN_ACT },
   {
     id: "card-added",
-    label: "The diver adds their certification card from the link",
     exempt: AN_ACT,
   },
-  { id: "card-verified", label: "The counter sights the card and verifies it", exempt: AN_ACT },
-  { id: "checked-in", label: "The counter checks the diver in", exempt: AN_ACT },
-  { id: "boarding", label: "The crew says the boat is boarding", exempt: ON_THE_WATER },
-  { id: "roll-call-departure", label: "Roll call before departure", exempt: ON_THE_WATER },
-  { id: "underway", label: "Underway", exempt: ON_THE_WATER },
-  { id: "roll-call-after-dives", label: "Roll call after every dive", exempt: ON_THE_WATER },
-  { id: "heading-in", label: "Heading in", exempt: ON_THE_WATER },
-  { id: "home", label: "Home", capture: "today-evening" },
-  { id: "evening", label: "Every boat is home", capture: "today-all-home" },
-  { id: "recap-sent", label: "The recap pass sends the diver's recap", exempt: AN_ACT },
-  { id: "recap-read", label: "The diver reads the recap", exempt: AN_ACT },
+  { id: "card-verified", exempt: AN_ACT },
+  { id: "checked-in", exempt: AN_ACT },
+  { id: "boarding", exempt: ON_THE_WATER },
+  { id: "roll-call-departure", exempt: ON_THE_WATER },
+  { id: "underway", exempt: ON_THE_WATER },
+  { id: "roll-call-after-dives", exempt: ON_THE_WATER },
+  { id: "heading-in", exempt: ON_THE_WATER },
+  { id: "home", capture: "today-evening" },
+  { id: "evening", capture: "today-all-home" },
+  { id: "recap-sent", exempt: AN_ACT },
+  { id: "recap-read", exempt: AN_ACT },
 ]);

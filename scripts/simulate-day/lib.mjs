@@ -34,8 +34,26 @@ export const EVENING_AFTER_MS = 2 * HOUR_MS;
  * `day.spec.ts` walks it and refuses to skip a state, so a day that cannot reach
  * one fails at it by name.
  */
+const DAY_LABELS = Object.freeze({
+  "shop-open": "The shop opens on a fresh day",
+  "seat-booked": "A diver books a seat on the public page",
+  "waiver-signed": "The diver signs the waiver from the link",
+  "card-added": "The diver adds their certification card from the link",
+  "card-verified": "The counter sights the card and verifies it",
+  "checked-in": "The counter checks the diver in",
+  boarding: "The crew says the boat is boarding",
+  "roll-call-departure": "Roll call before departure",
+  underway: "Underway",
+  "roll-call-after-dives": "Roll call after every dive",
+  "heading-in": "Heading in",
+  home: "Home",
+  evening: "Every boat is home",
+  "recap-sent": "The recap pass sends the diver's recap",
+  "recap-read": "The diver reads the recap",
+});
+
 export const DAY_STATES = Object.freeze(
-  WORLD_DAY_STATES.map(({ id, label }) => Object.freeze({ id, label })),
+  WORLD_DAY_STATES.map(({ id }) => Object.freeze({ id, label: DAY_LABELS[id] })),
 );
 
 /**
