@@ -38,7 +38,7 @@ test("rental terms written in Settings print on the trip slip and the counter ti
   const tripTicket = await trip
     .getByRole("link", { name: /^Rental ticket for / })
     .getAttribute("href");
-  expect(tripTicket).toMatch(/\/prep\/ticket\//);
+  expect(tripTicket).toMatch(/\/prep\?diver=/);
 
   await counter.getByRole("link", { name: /^Rental ticket for / }).click();
   await expect(page).toHaveURL(/\/gear\/rentals\//);
