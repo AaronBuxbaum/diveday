@@ -165,7 +165,7 @@ export default async function IncidentExportPage({
             "table-and-definition-list document" the a11y scan expects, so a
             screen reader keeps the label-to-figure pairing on the record a
             shop hands an insurer. */}
-              <dl className="mt-3 grid grid-cols-5 gap-3">
+              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
                 {summary.map(([label, value, detail]) => (
                   <ShopStat key={label} definition label={label} value={value} detail={detail} />
                 ))}
