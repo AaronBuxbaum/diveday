@@ -7,7 +7,6 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice } from "@/components/ShopNotice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { UndoToast } from "@/components/UndoToast";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { listDiverMergeDuplicateIds } from "@/db/diver-merge";
 import { isDiverFilter, isDiverSort, listDiverSummaries } from "@/db/divers";
