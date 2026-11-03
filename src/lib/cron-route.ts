@@ -1,6 +1,6 @@
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
-import { flushLogs, sentry } from "@/lib/observability";
+import { flushLogs, reportScrubbedError, sentry } from "@/lib/observability";
 
 /**
  * **A scheduled route is a name, a schedule and a body** (issue #2780).
@@ -23,6 +23,11 @@ import { flushLogs, sentry } from "@/lib/observability";
  *   `cronRoute({ id: "..." })` call as it finds a literal `log("...")`.
  * - **The slug override is read here and nowhere else.** `slugEnv` names a
  *   route whose variable predates the `SENTRY_<ID>_CRON_MONITOR_SLUG` shape.
+ * - **A thrown pass reaches Sentry without its message.** A database or
+ *   provider error can quote the row it refused (a diver's name or email), and
+ *   Sentry's `beforeSend` does not scrub exception text, so the failure goes
+ *   through `reportScrubbedError`: its stack frames and error class, never what
+ *   it said (issue #2334).
  *
  * `maxDuration` is deliberately not an option. Next reads route segment config
  * from the route file's own `export const`, statically; a value passed through
@@ -83,7 +88,11 @@ export function cronRoute<Summary>(
       await sentry.captureCheckIn({ checkInId, monitorSlug, status: ok ? "ok" : "error" });
       return Response.json(summary);
     } catch (error) {
-      await sentry.captureException(error, { tags: { cron_scan: id } });
+      await reportScrubbedError(error, {
+        name: "CronPassFailed",
+        message: `cron pass ${id} failed`, // i18n-exempt: Sentry event title, never shown to a person
+        tags: { cron_scan: id },
+      });
       log(`${logName}.scan_failed`, "error", { scan: id });
       await sentry.captureCheckIn({ checkInId, monitorSlug, status: "error" });
       return Response.json({ error: "scan_unavailable" }, { status: 503 });

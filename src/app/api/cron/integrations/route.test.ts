@@ -94,15 +94,19 @@ describe("GET /api/cron/integrations", () => {
   });
 
   it("reports an unavailable drain without leaving the monitor open", async () => {
-    const failure = new Error("provider unavailable");
+    const failure = new Error("provider refused ada@example.com");
     vi.mocked(dispatchDueIntegrationDeliveries).mockRejectedValue(failure);
 
     const response = await GET(cronRequest(`Bearer ${secret}`));
 
     expect(response.status).toBe(503);
-    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
-      tags: { cron_scan: "integrations" },
-    });
+    // Sentry gets the pass's name and the error's class, never its text.
+    const [reported, context] = vi.mocked(Sentry.captureException).mock.calls[0] ?? [];
+    expect(reported).toBeInstanceOf(Error);
+    expect((reported as Error).name).toBe("CronPassFailed");
+    expect((reported as Error).message).toBe("cron pass integrations failed");
+    expect(JSON.stringify(context)).not.toContain("ada@example.com");
+    expect(context).toEqual({ tags: { cron_scan: "integrations", error_class: "Error" } });
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(2, {
       checkInId: "check-in-id",
       monitorSlug: "diveday-integrations",

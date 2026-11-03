@@ -1307,6 +1307,12 @@ export const ENV_GROUPS = [
         absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
       },
       {
+        key: "SENTRY_BOOKKEEPER_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
         key: "SENTRY_DAILY_SWEEPS_CRON_MONITOR_SLUG",
         from: "override",
         targets: NOWHERE,
@@ -1319,7 +1325,19 @@ export const ENV_GROUPS = [
         absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
       },
       {
+        key: "SENTRY_INTEGRATIONS_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
         key: "SENTRY_PLATFORM_BACKUP_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_PRICING_VOLUME_CRON_MONITOR_SLUG",
         from: "override",
         targets: NOWHERE,
         absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
@@ -1332,6 +1350,12 @@ export const ENV_GROUPS = [
       },
       {
         key: "SENTRY_RETENTION_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_SHOP_TICK_CRON_MONITOR_SLUG",
         from: "override",
         targets: NOWHERE,
         absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",

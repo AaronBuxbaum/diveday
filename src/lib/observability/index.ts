@@ -16,4 +16,4 @@ export {
   setLogShipperSink,
 } from "./cloudwatch";
 export { type CloudWatchLogsConfig, readCloudWatchLogsConfig } from "./cloudwatch-config";
-export { sentry } from "./sentry";
+export { reportScrubbedError, sentry } from "./sentry";
