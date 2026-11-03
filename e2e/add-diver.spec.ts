@@ -474,7 +474,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   ).toBeVisible();
 });
 
-test("a refusal from the add band lands on the boat's Divers tab", async ({ page }) => {
+test("a full boat's add band offers the wait list, never a seat", async ({ page }) => {
   test.setTimeout(30_000);
   const title = `Global Door Full ${e2eNow().getTime()}`;
   const tripId = await scheduleTrip(page, title, 9, 1);
@@ -487,18 +487,14 @@ test("a refusal from the add band lands on the boat's Divers tab", async ({ page
   await page.getByRole("button", { name: "Add to trip" }).click();
   await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
-  // The boat is full now. The refusal lands on that departure's Divers tab,
-  // the one place that says why and offers the wait list.
+  // The boat is full now. The band has one rule for a full boat (#2737): it
+  // offers the wait list, so someone new is taken down as waiting, never
+  // seated past the capacity.
   await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
-  await page.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
-  await page.getByLabel("Full name").fill("Too Late Theo");
-  await page.getByLabel("Email").fill("theo@example.com");
-  await page.getByRole("button", { name: "Add to trip" }).click();
-
-  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
-  // Next's own route announcer is also `role="alert"`, so target the banner.
-  await expect(page.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Add diver", exact: true })).toHaveAttribute(
+    "href",
+    /waitlist=true/,
+  );
   await expect(page.getByText(title).first()).toBeVisible();
 });
 
