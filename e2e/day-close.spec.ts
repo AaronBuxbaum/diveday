@@ -178,8 +178,9 @@ test.describe("the clock fixture", () => {
   test.describe.configure({ mode: "serial" });
 
   test("reads the day as over once the clock reaches the evening", async ({ page, clock }) => {
-    await signInAsOwner(page);
+    // Sign in after the move: a session made at the frozen morning is idle-expired by the evening.
     await clock.toEvening();
+    await signInAsOwner(page);
     await page.goto("/shop/blue-mantis");
     await expect(page.getByRole("region", { name: "What today made" })).toBeVisible();
   });
