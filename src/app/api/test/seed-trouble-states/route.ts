@@ -5,16 +5,14 @@ import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { queueMediaDeletion } from "@/db/media-deletions";
 import { recordProcessorErasureObligations } from "@/db/processor-erasure";
 import {
-  certifications,
+  cards,
   gearItems,
   gearReservations,
   gearServiceEvents,
   mediaDeletionAttempts,
-  nitroxCertifications,
   paymentOperationIntents,
   people,
   processorErasureObligations,
-  specialtyCertifications,
   trips,
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
@@ -109,9 +107,9 @@ export async function POST(request: Request) {
     .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Nadia Petrov")))
     .limit(1);
   if (nadia) {
-    await db.delete(nitroxCertifications).where(eq(nitroxCertifications.personId, nadia.id));
-    await db.delete(specialtyCertifications).where(eq(specialtyCertifications.personId, nadia.id));
-    await db.delete(certifications).where(eq(certifications.personId, nadia.id));
+    await db.delete(cards).where(and(eq(cards.kind, "nitrox"), eq(cards.personId, nadia.id)));
+    await db.delete(cards).where(and(eq(cards.kind, "specialty"), eq(cards.personId, nadia.id)));
+    await db.delete(cards).where(and(eq(cards.kind, "level"), eq(cards.personId, nadia.id)));
   }
   await db
     .update(people)

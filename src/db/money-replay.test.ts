@@ -12,7 +12,7 @@ import { refundBookingOnCancellation } from "./refunds";
 import { bookingCheckouts, bookings } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
-import { upcomingTripsWithCounts, updateTrip } from "./trips";
+import { editTrip, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -63,7 +63,7 @@ async function pricedReef(db: Db, shopId: string, cancellationWindowHours: numbe
   const trips = await upcomingTripsWithCounts(db, shopId, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  await updateTrip(db, shopId, reef.id, {
+  await editTrip(db, shopId, reef.id, {
     title: reef.title,
     startsAt: reef.startsAt,
     endsAt: reef.endsAt,

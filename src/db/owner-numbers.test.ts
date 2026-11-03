@@ -5,6 +5,7 @@ import { summarizeShopYear } from "@/lib/shop-year";
 import { unseededTestDb } from "@/test/db";
 import { weatherCallsInWindow } from "./blowouts";
 import type { AppDb } from "./client";
+import { paymentEntries } from "./payments";
 import {
   bookingLeadTimes,
   certifiedHere,
@@ -16,9 +17,9 @@ import {
   boats,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
-  certifications,
+  cards,
   courses,
   diveSites,
   people,
@@ -90,8 +91,8 @@ async function booking(
 
 async function paid(db: AppDb, shopId: string, bookingId: string, amountCents: number) {
   await db
-    .insert(bookingPayments)
-    .values({ shopId, bookingId, status: "paid", amountCents, currency: "usd" });
+    .insert(bookingPaymentEvents)
+    .values(paymentEntries({ shopId, bookingId, status: "paid", amountCents, currency: "usd" }));
 }
 
 describe("each departure's net (item 26)", () => {
@@ -141,15 +142,17 @@ describe("each departure's net (item 26)", () => {
       tripCents: 10_000,
       taxCents: 1_000,
     });
-    await db.insert(bookingPayments).values({
-      shopId,
-      bookingId: taxed,
-      status: "paid",
-      amountCents: 11_000,
-      currency: "usd",
-      provider: "stripe",
-      providerRef: "cs_net",
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId,
+        bookingId: taxed,
+        status: "paid",
+        amountCents: 11_000,
+        currency: "usd",
+        provider: "stripe",
+        providerRef: "cs_net",
+      }),
+    );
 
     const report = await getMonthlyReport(
       db,
@@ -297,7 +300,8 @@ describe("certifiedHere and crewYearFacts (item 32)", () => {
       at: string,
       deleted = false,
     ) =>
-      db.insert(certifications).values({
+      db.insert(cards).values({
+        kind: "level",
         shopId,
         personId: await person(db, shopId, `Student ${level} ${at}`),
         agency: "padi",
@@ -314,7 +318,8 @@ describe("certifiedHere and crewYearFacts (item 32)", () => {
     await issue("open_water", "2026-05-02T15:00:00Z", true);
     await issue("open_water", "2025-12-01T15:00:00Z");
     // A card someone else issued, captured rather than issued here.
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId,
       personId: await person(db, shopId, "Walk-in"),
       agency: "padi",
@@ -408,13 +413,15 @@ describe("weatherCallsInWindow (item 27)", () => {
     });
     const [first, second] = snapshot;
     if (!first || !second) throw new Error("snapshot missing");
-    await db.insert(bookingPayments).values({
-      shopId,
-      bookingId: first.id,
-      status: "refunded",
-      amountCents: 9_500,
-      currency: "usd",
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId,
+        bookingId: first.id,
+        status: "refunded",
+        amountCents: 9_500,
+        currency: "usd",
+      }),
+    );
     // The second diver books the make-up boat after the call.
     await db.insert(bookings).values({
       shopId,

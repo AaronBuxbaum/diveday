@@ -4,15 +4,12 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { LedgerGroup } from "@/components/ui/ledger";
-import { canPersonExportIncidentRecord } from "@/db/authz";
-import { getDayCloseout, listHeadCountCloses, listNotBackAfterDive } from "@/db/closeout";
+import { getPastDay, pastDayStationNotes } from "@/features/today";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate, isShopDayParam } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose } from "@/lib/closeout";
 import { formatWeekday } from "@/lib/format";
-import { pastDayStationNotes } from "@/lib/past-day-notes";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { shopDaysBounds } from "@/lib/zoned";
@@ -52,24 +49,14 @@ export default async function PastDayPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
-  const closeout = await getDayCloseout(db, shop.id, shop.timezone, now, undefined, date);
-  const { stations } = assembleEveningClose(closeout.departures, now);
-  // Both readers answer an empty map for no trips, so an empty day reads nothing.
-  const [headCountCloses, canOpenLog, notBack] = await Promise.all([
-    listHeadCountCloses(
-      db,
-      shop.id,
-      stations
-        .filter((station) => station.status === "all_home")
-        .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
-    ),
-    stations.length > 0 && canPersonExportIncidentRecord(db, shop.id, session.user.personId),
-    listNotBackAfterDive(
-      db,
-      shop.id,
-      stations.map((station) => station.tripId),
-    ),
-  ]);
+  // Both per-trip readers answer an empty map for no trips, so an empty day reads nothing.
+  const { stations, headCountCloses, canOpenLog, notBack } = await getPastDay(
+    db,
+    shop,
+    date,
+    session.user.personId,
+    now,
+  );
   // What a day read later must say that the evening could leave unsaid. The
   // departure log stays the record; these lines only point at it.
   const stationNotes = (station: (typeof stations)[number]) => {

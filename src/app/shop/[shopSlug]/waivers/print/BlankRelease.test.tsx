@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { PACKET_PAPER } from "@/lib/print-sheets";
 import type { ShopQuestion } from "@/lib/waiver-questions";
+import { ShopSheet } from "../../print/_components/ShopSheet";
 import { BlankRelease, type BlankReleaseCopy } from "./BlankRelease";
 
 afterEach(cleanup);
@@ -89,5 +92,35 @@ describe("the blank release", () => {
       expect(screen.getByText(line)).toBeTruthy();
     }
     expect(screen.getAllByText("Date")).toHaveLength(2);
+  });
+});
+
+/** Issue #2745: the page prints the release as one sheet of the shop's paper. */
+describe("the blank release on the shop's paper", () => {
+  it("is one sheet with no control on it", () => {
+    const { container } = render(
+      <ShopSheet
+        paper={PACKET_PAPER}
+        shop={{ name: "Blue Mantis Divers", brandColor: null }}
+        shopSlug="blue-mantis"
+        printed={staffTranslator("en-US")("print.sheet.printed", { date: "Nov 3, 2026" })}
+      >
+        <BlankRelease
+          version={7}
+          body="I accept the risks."
+          questionnaire={RSTC_QUESTIONNAIRE}
+          shopQuestions={QUESTIONS}
+          copy={COPY}
+        />
+      </ShopSheet>,
+    );
+    const sheets = container.querySelectorAll(".paper-sheet");
+    expect(sheets).toHaveLength(1);
+    expect(sheets[0]?.querySelector("[data-blank-release]")).not.toBeNull();
+    expect(
+      sheets[0]?.querySelectorAll(
+        "a, button, input, select, textarea, form, [role='button'], [tabindex]",
+      ),
+    ).toHaveLength(0);
   });
 });

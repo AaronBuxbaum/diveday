@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
 import {
@@ -465,5 +466,101 @@ describe("booking_payment_events (append-only money trail)", () => {
 
     expect(await getBookingPayment(db, shop.id, entry.booking.id)).toBeNull();
     expect(await listBookingPaymentEvents(db, shop.id, entry.booking.id)).toEqual([]);
+  });
+
+  // `booking_payments` is a view over these entries (issue #2716): the
+  // booking's state is whatever its newest entry says, by write order.
+  it("folds the newest entry by write order, even when two share a clock instant", async () => {
+    const { db, shop, entry } = await paymentContext();
+    const base = {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      currency: "usd",
+      provider: "stripe",
+    } as const;
+    await db.transaction(async (tx) => {
+      // One transaction under the test clock: both entries share `occurred_at`.
+      await setBookingPayment(tx, { ...base, status: "deposit_paid", amountCents: 5_000 });
+      await setBookingPayment(tx, { ...base, status: "paid", amountCents: 18_000 });
+      await setBookingPayment(tx, { ...base, status: "partly_refunded", amountCents: 9_000 });
+    });
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
+      status: "partly_refunded",
+      amountCents: 9_000,
+    });
+    const events = await listBookingPaymentEvents(db, shop.id, entry.booking.id);
+    expect(events.map((event) => event.status)).toEqual([
+      "partly_refunded",
+      "paid",
+      "deposit_paid",
+    ]);
+  });
+
+  it("keeps the time of the real transition through a replay", async () => {
+    const { db, shop, entry } = await paymentContext();
+    const write = () =>
+      setBookingPayment(db, {
+        shopId: shop.id,
+        bookingId: entry.booking.id,
+        status: "paid",
+        currency: "usd",
+        amountCents: 18_000,
+        provider: "stripe",
+        providerRef: "cs_time",
+        operation: "checkout_settled",
+      });
+    const first = await write();
+    advanceClock(60_000);
+    const replay = await write();
+    expect(replay?.updatedAt).toEqual(first?.updatedAt);
+    expect((await getBookingPayment(db, shop.id, entry.booking.id))?.updatedAt).toEqual(
+      first?.updatedAt,
+    );
+  });
+
+  it("appends when the same mark is made by a different staffer", async () => {
+    const { db, shop, entry } = await paymentContext();
+    const mark = (recordedByPersonId: string | null) =>
+      setBookingPayment(db, {
+        shopId: shop.id,
+        bookingId: entry.booking.id,
+        status: "paid",
+        currency: "usd",
+        amountCents: 12_000,
+        method: "cash",
+        recordedByPersonId,
+      });
+    await mark(entry.person.id);
+    await mark(null);
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
+      recordedByPersonId: null,
+    });
+    expect(await listBookingPaymentEvents(db, shop.id, entry.booking.id)).toHaveLength(2);
+  });
+
+  it("returns the state it wrote, matching what the fold reads back", async () => {
+    const { db, shop, entry } = await paymentContext();
+    const written = await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      status: "waived",
+      currency: "usd",
+      note: "comped by the owner",
+    });
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toEqual(written);
+  });
+
+  it("writes nothing for another shop's booking", async () => {
+    const { db, entry } = await paymentContext();
+    const other = crypto.randomUUID();
+    expect(
+      await setBookingPayment(db, {
+        shopId: other,
+        bookingId: entry.booking.id,
+        status: "paid",
+        currency: "usd",
+      }),
+    ).toBeNull();
+    expect(await listBookingPaymentEvents(db, other, entry.booking.id)).toEqual([]);
   });
 });

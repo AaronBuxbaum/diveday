@@ -52,14 +52,11 @@ export const GATES = [
 
 /**
  * The pages that compare by hand rather than through the helper, each for a
- * stated reason in its own comment. A third appearing silently would mean the
+ * stated reason in its own comment. A second appearing silently would mean the
  * helper is being worked around rather than used: adding to this list is a
  * decision, not a fix.
  */
 export const BY_HAND = [
-  // Reads the shop by slug — the course lookup is slug-scoped — and then
-  // compares ids. It says why at the call site.
-  "courses/page.tsx",
   // The home resolves its own shop from the session (`getShopById`) inside the
   // page's own boundary, so the slug is the half it has to check.
   "page.tsx",

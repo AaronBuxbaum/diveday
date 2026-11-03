@@ -22,7 +22,7 @@ import { issueWaiverRequest } from "./waivers-requests";
 import {
   getCurrentWaiverGeneration,
   getCurrentWaiverTemplate,
-  saveWaiverTemplate,
+  recordWaiverTemplate,
   standingWaiverExposure,
 } from "./waivers-templates";
 import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
@@ -47,7 +47,7 @@ describe("waiver records (in-memory PGlite)", () => {
     const seeded = template.version;
     expect(seeded).toBeGreaterThan(0);
 
-    const next = await saveWaiverTemplate(db, {
+    const next = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "An updated release, edited by staff and long enough to be valid.",
@@ -69,17 +69,17 @@ describe("waiver records (in-memory PGlite)", () => {
     const seeded = template.version;
 
     const [a, b, c] = await Promise.all([
-      saveWaiverTemplate(db, {
+      recordWaiverTemplate(db, {
         shopId: shop.id,
         title: template.title,
         body: "Concurrent A body.",
       }),
-      saveWaiverTemplate(db, {
+      recordWaiverTemplate(db, {
         shopId: shop.id,
         title: "A different title",
         body: "Concurrent B body.",
       }),
-      saveWaiverTemplate(db, {
+      recordWaiverTemplate(db, {
         shopId: shop.id,
         title: template.title,
         body: "Concurrent C body.",
@@ -98,12 +98,12 @@ describe("waiver records (in-memory PGlite)", () => {
 
   it("snapshots the highest version on a new link and a paper signature, whatever the clock says", async () => {
     const { db, shop, booking, template } = await waiverContext();
-    const older = await saveWaiverTemplate(db, {
+    const older = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "An interim release whose save started second but committed first, long enough to publish.",
     });
-    const newer = await saveWaiverTemplate(db, {
+    const newer = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "The release that took the lock last and must be what every new signature reads.",
@@ -149,7 +149,7 @@ describe("waiver records (in-memory PGlite)", () => {
     });
 
     // Editing the waiver after it was signed must not rewrite the evidence.
-    await saveWaiverTemplate(db, {
+    await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "A materially rewritten release that no signed record should adopt.",
@@ -202,7 +202,7 @@ describe("saving the waiver template", () => {
     const before = await waiverTemplateHistory(db, shop.id);
     const standing = (await standingWaiverExposure(db, shop.id, now)).divers;
 
-    const result = await saveWaiverTemplate(db, {
+    const result = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       // Untrimmed on purpose: the editor hands back whatever the textarea
@@ -234,7 +234,7 @@ describe("saving the waiver template", () => {
       { id: "insurance01", kind: "yes_no" as const, prompt: "Insured?", required: false },
     ];
 
-    const added = await saveWaiverTemplate(db, {
+    const added = await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: template.body,
       questions,
@@ -245,7 +245,7 @@ describe("saving the waiver template", () => {
     expect(added.template.materialGeneration).toBe(generation);
     expect(await waiverTemplateHistory(db, shop.id)).toHaveLength(before.length + 1);
     // Never inferred from "only questions changed": the publisher said material.
-    const material = await saveWaiverTemplate(db, {
+    const material = await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: template.body,
       questions: [{ ...questions[0], required: true }],
@@ -266,14 +266,14 @@ describe("saving the waiver template", () => {
         options: ["Un amigo", "Internet"],
       },
     ];
-    const first = await saveWaiverTemplate(db, {
+    const first = await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: template.body,
       questions,
       material: false,
     });
     expect(first.versioned).toBe(true);
-    const again = await saveWaiverTemplate(db, {
+    const again = await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: template.body,
       // What a round trip through the editor can hand back: decomposed
@@ -290,7 +290,7 @@ describe("saving the waiver template", () => {
     expect(again.template.id).toBe(first.template.id);
     // Omitted, the list carries forward like the title, so a caller with no
     // list in hand never removes the shop's questions by accident.
-    const bodyEdit = await saveWaiverTemplate(db, {
+    const bodyEdit = await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: `${template.body}\n\nOne more line.`,
       material: false,
@@ -347,7 +347,7 @@ describe("saving the waiver template", () => {
     // against it yet.
     expect((await standingWaiverExposure(db, shop.id, now)).divers).toBeGreaterThan(0);
 
-    const result = await saveWaiverTemplate(db, {
+    const result = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "A materially different release, long enough to be valid as a version.",
@@ -362,7 +362,7 @@ describe("saving the waiver template", () => {
     const { db, shop, template, staff } = await signedContext();
     const standing = (await standingWaiverExposure(db, shop.id, now)).divers;
     expect(standing).toBeGreaterThan(0);
-    const result = await saveWaiverTemplate(db, {
+    const result = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "A typo-fixed release that keeps the same promises and is long enough to publish.",
@@ -385,7 +385,7 @@ describe("saving the waiver template", () => {
 
   it("advances the material generation for an explicit material revision", async () => {
     const { db, shop, template, staff } = await signedContext();
-    const result = await saveWaiverTemplate(db, {
+    const result = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "A materially revised release with a changed promise that is long enough to publish.",
@@ -401,12 +401,12 @@ describe("saving the waiver template", () => {
     // lock, so the lower version can carry the later stamp. Every reader of
     // "which release is current" must still pick the higher version.
     const { db, shop, template, staff } = await signedContext();
-    const older = await saveWaiverTemplate(db, {
+    const older = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "An interim release whose save started second but committed first, long enough to publish.",
     });
-    const newer = await saveWaiverTemplate(db, {
+    const newer = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "A materially revised release that took the lock last and must be current, long enough to publish.",
@@ -458,11 +458,11 @@ describe("saving the waiver template", () => {
     const spanish =
       "Exención de responsabilidad: reconozco los riesgos del buceo, la inmersión " +
       "y la navegación, y participo de forma voluntaria bajo mi propia decisión médica.";
-    await saveWaiverTemplate(db, { shopId: shop.id, body: spanish });
+    await recordWaiverTemplate(db, { shopId: shop.id, body: spanish });
     const before = await waiverTemplateHistory(db, shop.id);
     expect(spanish.normalize("NFD")).not.toBe(spanish);
 
-    const result = await saveWaiverTemplate(db, {
+    const result = await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: spanish.normalize("NFD"),
     });
@@ -479,7 +479,7 @@ describe("saving the waiver template", () => {
     // on its first edit.
     expect(template.title).not.toBe(DEFAULT_WAIVER_TITLE);
 
-    const result = await saveWaiverTemplate(db, {
+    const result = await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: "An edit that changes the words and must not change the name of the document.",
     });

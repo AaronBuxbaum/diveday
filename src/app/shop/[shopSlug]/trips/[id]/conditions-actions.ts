@@ -9,7 +9,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { getShopById } from "@/db/shops";
-import { listTripDiverContacts, updateTripConditions } from "@/db/trips";
+import { editTripConditions, listTripDiverContacts } from "@/db/trips";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
@@ -76,7 +76,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
   if (visibility !== undefined && visibility > maxEnteredVisibility(shop.depthUnit)) {
     redirect(noticeUrl(back, "invalid", { form: "conditions" }));
   }
-  const { trip: saved, holdStarted } = await updateTripConditions(db, s.user.shopId, tripId, {
+  const { trip: saved, holdStarted } = await editTripConditions(db, s.user.shopId, tripId, {
     conditionsSummary: parsed.data.conditionsSummary,
     surfaceConditions: parsed.data.surfaceConditions,
     waterTemperatureC:
@@ -130,7 +130,7 @@ export async function clearConditionsAction(shopSlug: string, tripId: string) {
   // Crew-entered conditions (see saveConditionsAction) — operating work, open to
   // all staff.
   const s = (await requireShopSurface(shopSlug)).session;
-  const { trip: saved } = await updateTripConditions(await getDb(), s.user.shopId, tripId, {
+  const { trip: saved } = await editTripConditions(await getDb(), s.user.shopId, tripId, {
     changeActorPersonId: s.user.personId,
   });
   revalidateAndRedirect(

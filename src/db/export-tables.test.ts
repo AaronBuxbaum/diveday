@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import {
@@ -9,7 +9,7 @@ import {
   type ExportTableRead,
   readScoped,
 } from "./export-tables";
-import { bookings, certifications, people, shopTextTranslations } from "./schema";
+import { bookings, cards, people, shopTextTranslations } from "./schema";
 
 /**
  * The read list both export bundles go through. What matters about it is the
@@ -38,21 +38,21 @@ describe("the export read list", () => {
   it("reads one person's rows only inside their own shop", async () => {
     const { db, shop } = await seededShopContext();
     const [card] = await db
-      .select({ personId: certifications.personId })
-      .from(certifications)
-      .where(eq(certifications.shopId, shop.id))
+      .select({ personId: cards.personId })
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.shopId, shop.id)))
       .limit(1);
     if (!card) throw new Error("seed has no certification");
 
     const diver = (shopId: string) =>
       ({ kind: "diver", shopId, personId: card.personId, bookingIds: [] }) as const;
-    const rows = await readScoped(db, "certifications", diver(shop.id));
+    const rows = await readScoped(db, "cards", diver(shop.id));
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((row) => row.personId === card.personId && row.shopId === shop.id)).toBe(
       true,
     );
     // The right person under the wrong shop is nobody.
-    expect(await readScoped(db, "certifications", diver(randomUUID()))).toEqual([]);
+    expect(await readScoped(db, "cards", diver(randomUUID()))).toEqual([]);
   });
 
   it("reads by the diver's bookings, and skips the query when there are none", async () => {
@@ -65,17 +65,19 @@ describe("the export read list", () => {
     const bookingIds = seats.map((seat) => seat.id);
     const diver = (shopId: string, ids: string[]) =>
       ({ kind: "diver", shopId, personId: randomUUID(), bookingIds: ids }) as const;
-    const rows = await readScoped(db, "bookingPayments", diver(shop.id, bookingIds));
+    const rows = await readScoped(db, "bookingPaymentEvents", diver(shop.id, bookingIds));
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((row) => bookingIds.includes(row.bookingId))).toBe(true);
-    expect(await readScoped(db, "bookingPayments", diver(randomUUID(), bookingIds))).toEqual([]);
+    expect(await readScoped(db, "bookingPaymentEvents", diver(randomUUID(), bookingIds))).toEqual(
+      [],
+    );
 
     const noQuery = {
       select: () => {
         throw new Error("an empty booking list must not reach the database");
       },
     } as unknown as typeof db;
-    expect(await readScoped(noQuery, "bookingPayments", diver(shop.id, []))).toEqual([]);
+    expect(await readScoped(noQuery, "bookingPaymentEvents", diver(shop.id, []))).toEqual([]);
   });
 
   it("refuses to read a shop-only table for a diver, rather than widening to the shop", async () => {
@@ -90,13 +92,13 @@ describe("the export read list", () => {
     await expect(readScoped(db, "people", scope)).rejects.toThrow(/no diver scope/);
   });
 
-  it("declares a total order for every table except the three the loader reorders", () => {
+  it("declares a total order for every table except the two the loader reorders", () => {
     const unordered = Object.entries(EXPORT_TABLES as Record<string, ExportTableRead>)
       .filter(([, entry]) => entry.order.length === 0)
       .map(([key]) => key)
       .sort();
     // `buddyTeamMembers` is put in team order after the read (issue #1795).
-    expect(unordered).toEqual(["bookingPayments", "buddyTeamMembers", "tripRequirements"]);
+    expect(unordered).toEqual(["buddyTeamMembers", "tripRequirements"]);
   });
 
   it("reads one field's translations in locale order, whatever order they were written in", async () => {

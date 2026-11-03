@@ -20,7 +20,7 @@ import {
   recordShopActivity,
   recordShopActivityWithin,
 } from "./shop-activity";
-import { getTripRoster, listStaff, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { editTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`): every test here writes rows and
@@ -224,7 +224,7 @@ describe("recordShopActivity", () => {
         );
     const before = (await moved()).length;
     const save = (startsAt: Date, endsAt: Date, title = trip.title) =>
-      updateTrip(db, shop.id, trip.id, {
+      editTrip(db, shop.id, trip.id, {
         title,
         startsAt,
         endsAt,

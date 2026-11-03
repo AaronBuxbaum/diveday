@@ -14,7 +14,6 @@ import {
   waiverContextFor,
 } from "@/db/waivers-test-fixtures";
 import { diverTranslator } from "@/i18n/messages";
-import { hashCapabilityToken } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { sealCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { fileScopedShopContext } from "@/test/db";
@@ -86,7 +85,7 @@ describe("the actual completed waiver branch", () => {
     expect(html).toContain('data-medical-next="referral"');
     expect(html).not.toContain("moderate exercise");
   });
-  it("shows physician instructions and the independently held return link together", async () => {
+  it("offers no return door to a readiness link carried in a cookie (issue #2743)", async () => {
     const { db, shop, booking, render } = await signed();
     const readiness = await issueBookingCapability(db, {
       shopId: shop.id,
@@ -97,36 +96,9 @@ describe("the actual completed waiver branch", () => {
     cookieJar.set("diveday_waiver_return", readiness.token);
     const html = await render();
     expect(html).toContain(t("waiver.medicalReferralNext"));
-    expect(html).toContain(t("waiver.doctor.open"));
-    expect(html).toContain(t("waiver.seeWhatsLeft"));
-    expect(html.includes(`/ready/${readiness.token}`)).toBe(true);
+    expect(html).not.toContain(t("waiver.seeWhatsLeft"));
+    expect(html).not.toContain("/ready/");
   });
-  it.each(["wrong purpose", "expired", "revoked", "cancelled"] as const)(
-    "does not offer a return link when the separately held capability is %s",
-    async (condition) => {
-      const { db, shop, booking, render } = await signed();
-      const readiness = await issueBookingCapability(db, {
-        shopId: shop.id,
-        bookingId: booking.id,
-        purpose: condition === "wrong purpose" ? "confirm" : "readiness",
-      });
-      if (!readiness) throw new Error("link unavailable");
-      if (condition === "expired" || condition === "revoked") {
-        await db
-          .update(bookingCapabilities)
-          .set(condition === "expired" ? { expiresAt: nowDate() } : { revokedAt: nowDate() })
-          .where(eq(bookingCapabilities.tokenHash, hashCapabilityToken(readiness.token)));
-      }
-      if (condition === "cancelled") {
-        await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
-      }
-      cookieJar.set("diveday_waiver_return", readiness.token);
-      const html = await render();
-      expect(html).toContain(t("waiver.medicalReferralNext"));
-      expect(html).not.toContain(t("waiver.seeWhatsLeft"));
-      expect(html).not.toContain("/ready/");
-    },
-  );
   it("keeps physician refusal distinct on the waiver receipt", async () => {
     const { db, shop, booking, render } = await signed();
     const [staff] = await listStaff(db, shop.id);

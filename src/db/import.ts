@@ -33,9 +33,8 @@
 
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { rentalItemLabel } from "@/i18n/rental-labels";
+import { declinedSizeNote } from "@/i18n/import-notes";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { canImportShopData } from "@/lib/authz";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -47,19 +46,18 @@ import { ingestImageUrl } from "@/lib/storage/ingest-url";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { readActiveStaffRoles } from "./authz";
+import { specialtyCardSpecialty } from "./card-columns";
 import type { AppDb } from "./client";
 import { createPerson } from "./people";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
-  certifications,
+  cards,
   importedPaymentHistory,
   internalNotes,
-  nitroxCertifications,
   people,
   priorVisits,
   rentalFitProfiles,
   shops,
-  specialtyCertifications,
   waiverRecords,
 } from "./schema";
 import { getCurrentWaiverTemplate } from "./waivers";
@@ -297,7 +295,7 @@ export async function commitContactImport(
     await resolveImportDocuments(preparedRows);
   summary.waiverDocumentsFailed = waiverDocumentsFailed;
   summary.receiptDocumentsFailed = receiptDocumentsFailed;
-  const t = staffTranslator(shop?.defaultLocale ?? DEFAULT_DIVER_LOCALE);
+  const locale = shop?.defaultLocale ?? DEFAULT_DIVER_LOCALE;
   const now = nowDate();
 
   return db.transaction(async (tx) => {
@@ -361,12 +359,12 @@ export async function commitContactImport(
     // they are not (`security-reviewer` finding).
     const liveCerts = await tx
       .select({
-        agency: certifications.agency,
-        identifier: certifications.identifier,
-        personId: certifications.personId,
+        agency: cards.agency,
+        identifier: cards.identifier,
+        personId: cards.personId,
       })
-      .from(certifications)
-      .where(and(eq(certifications.shopId, shopId), isNull(certifications.deletedAt)));
+      .from(cards)
+      .where(and(eq(cards.shopId, shopId), eq(cards.kind, "level"), isNull(cards.deletedAt)));
     // A self-declared row has no card number at all, so it can neither collide
     // with an incoming one nor prove a diver is already carded — it drops out
     // of the dedupe map rather than keying it on an empty string, which would
@@ -378,20 +376,18 @@ export async function commitContactImport(
     );
 
     // Keyed on the specialty too, matching
-    // specialty_certifications_shop_agency_specialty_identifier_unique: an agency
+    // cards_specialty_shop_agency_specialty_identifier_unique: an agency
     // number identifies the diver, so one number legitimately carries a diver's
     // Deep *and* Wreck cards (ADR 20260725-import-specialty-cards).
     const liveSpecialty = await tx
       .select({
-        agency: specialtyCertifications.agency,
-        specialty: specialtyCertifications.specialty,
-        identifier: specialtyCertifications.identifier,
-        personId: specialtyCertifications.personId,
+        agency: cards.agency,
+        specialty: specialtyCardSpecialty,
+        identifier: cards.identifier,
+        personId: cards.personId,
       })
-      .from(specialtyCertifications)
-      .where(
-        and(eq(specialtyCertifications.shopId, shopId), isNull(specialtyCertifications.deletedAt)),
-      );
+      .from(cards)
+      .where(and(eq(cards.shopId, shopId), eq(cards.kind, "specialty"), isNull(cards.deletedAt)));
     // Numberless rows drop out, the same way the nitrox map below drops its
     // own: a row with no identifier is a card nobody has read a number off —
     // a shop-issued one awaiting its agency number (issue #975) — and it
@@ -404,12 +400,12 @@ export async function commitContactImport(
 
     const liveNitrox = await tx
       .select({
-        agency: nitroxCertifications.agency,
-        identifier: nitroxCertifications.identifier,
-        personId: nitroxCertifications.personId,
+        agency: cards.agency,
+        identifier: cards.identifier,
+        personId: cards.personId,
       })
-      .from(nitroxCertifications)
-      .where(and(eq(nitroxCertifications.shopId, shopId), isNull(nitroxCertifications.deletedAt)));
+      .from(cards)
+      .where(and(eq(cards.shopId, shopId), eq(cards.kind, "nitrox"), isNull(cards.deletedAt)));
     // Numberless self-declared rows drop out here for the same reason.
     const seenNitrox = new Map(
       liveNitrox
@@ -449,7 +445,7 @@ export async function commitContactImport(
           template,
           importedByPersonId,
           shopCurrency: shop?.currency ?? "usd",
-          t,
+          locale,
         });
         continue;
       }
@@ -553,7 +549,7 @@ export async function commitContactImport(
         template,
         importedByPersonId,
         shopCurrency: shop?.currency ?? "usd",
-        t,
+        locale,
       });
     }
 
@@ -590,12 +586,21 @@ async function writeEvidence(
     template: Awaited<ReturnType<typeof getCurrentWaiverTemplate>> | null;
     importedByPersonId: string;
     shopCurrency: string;
-    /** The shop's own language, for the one line this writer composes itself. */
-    t: StaffTranslator;
+    /** The shop's own language, for the one line this writer stores itself. */
+    locale: string;
   },
 ): Promise<void> {
-  const { row, personId, shopId, now, summary, template, importedByPersonId, shopCurrency, t } =
-    ctx;
+  const {
+    row,
+    personId,
+    shopId,
+    now,
+    summary,
+    template,
+    importedByPersonId,
+    shopCurrency,
+    locale,
+  } = ctx;
 
   if (row.visit) {
     // Inert history, not an operational record (ADR 20260725-import-prior-visits):
@@ -742,10 +747,11 @@ async function writeEvidence(
       // the shop's own system already checked — unless the row itself says
       // otherwise, in which case `prepare` already downgraded it to `pending`.
       const inserted = await tx
-        .insert(certifications)
+        .insert(cards)
         .values({
           shopId,
           personId,
+          kind: "level",
           agency: row.cert.agency,
           level: row.cert.level,
           identifier: row.cert.identifier,
@@ -756,7 +762,7 @@ async function writeEvidence(
           importedFromLabel: row.cert.sourceLabel,
         })
         .onConflictDoNothing()
-        .returning({ id: certifications.id });
+        .returning({ id: cards.id });
       if (inserted.length > 0) summary.cardsAdded += 1;
       else summary.cardsSkippedExisting += 1;
     }
@@ -778,10 +784,11 @@ async function writeEvidence(
     // express it, and weakening it would lose the fact that the prior system did
     // check this card.
     const inserted = await tx
-      .insert(specialtyCertifications)
+      .insert(cards)
       .values({
         shopId,
         personId,
+        kind: "specialty",
         agency: card.agency,
         specialty: card.specialty,
         identifier: card.identifier,
@@ -790,7 +797,7 @@ async function writeEvidence(
         importedFromLabel: card.sourceLabel,
       })
       .onConflictDoNothing()
-      .returning({ id: specialtyCertifications.id });
+      .returning({ id: cards.id });
     if (inserted.length > 0) summary.specialtyAdded += 1;
     else summary.specialtySkippedExisting += 1;
   }
@@ -806,10 +813,11 @@ async function writeEvidence(
       // verified nitrox card authorizes enriched-air requests; the imported
       // marker keeps it distinguishable and fills are re-checked at fill time.
       const inserted = await tx
-        .insert(nitroxCertifications)
+        .insert(cards)
         .values({
           shopId,
           personId,
+          kind: "nitrox",
           agency: row.nitrox.agency,
           identifier: row.nitrox.identifier,
           status: row.nitrox.status,
@@ -817,7 +825,7 @@ async function writeEvidence(
           importedFromLabel: row.nitrox.sourceLabel,
         })
         .onConflictDoNothing()
-        .returning({ id: nitroxCertifications.id });
+        .returning({ id: cards.id });
       if (inserted.length > 0) summary.nitroxAdded += 1;
       else summary.nitroxSkippedExisting += 1;
     }
@@ -902,7 +910,7 @@ async function writeEvidence(
    * **A declined size becomes a staff note, not a rental-fit note.**
    *
    * `rental_fit_profiles.note` is the diver's own words to the crew: it is
-   * diver-visible and diver-editable on their gear form (`saveRentalFitNote`,
+   * diver-visible and diver-editable on their gear form (`recordRentalFitNote`,
    * issue 627). A prior shop's staff shorthand there is words put in the
    * diver's mouth that the diver can then delete. `internal_notes` is the
    * staff-side record, shared across the diver record and the live boat
@@ -910,10 +918,7 @@ async function writeEvidence(
    * somebody will meet it at the counter.
    */
   for (const declined of row.declinedSizes) {
-    const body = t("settings.import.declinedSizeNote", {
-      item: rentalItemLabel(t, declined.kind),
-      value: declined.value,
-    });
+    const body = declinedSizeNote(locale, declined.kind, declined.value);
     if (await writeImportedNote(tx, { shopId, personId, importedByPersonId, now }, body)) {
       summary.sizesDeclined += 1;
     }

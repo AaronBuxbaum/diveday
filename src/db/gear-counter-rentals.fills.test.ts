@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "./client";
 import {
@@ -18,7 +18,7 @@ import {
   staffer,
   unit,
 } from "./gear-counter-rentals-test-fixtures";
-import { nitroxCertifications } from "./schema";
+import { cards } from "./schema";
 
 /**
  * **The gas in a counter-rented tank** (issue #2257, Aaron 2026-10-13).
@@ -31,9 +31,10 @@ async function nitroxCard(
   db: AppDb,
   shopId: string,
   personId: string,
-  overrides: Partial<typeof nitroxCertifications.$inferInsert> = {},
+  overrides: Partial<typeof cards.$inferInsert> = {},
 ) {
-  await db.insert(nitroxCertifications).values({
+  await db.insert(cards).values({
+    kind: "nitrox",
     shopId,
     personId,
     agency: "padi",
@@ -50,9 +51,9 @@ describe("counter tank fills", () => {
     await nitroxCard(db, shop.id, diver.id);
     expect(await counterRentalHasNitroxFillCard(db, shop.id, diver.id)).toBe(true);
     await db
-      .update(nitroxCertifications)
+      .update(cards)
       .set({ deletedAt: new Date("2026-10-02T00:00:00Z") })
-      .where(eq(nitroxCertifications.personId, diver.id));
+      .where(and(eq(cards.personId, diver.id), eq(cards.kind, "nitrox")));
     const tank = await unit(db, shop.id, "Tank #1", "tank");
     expect(await lend(db, shop.id, diver.id, [tank.id], { tankFills: { [tank.id]: 32 } })).toEqual({
       ok: false,

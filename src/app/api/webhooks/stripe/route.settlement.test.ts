@@ -39,7 +39,7 @@ const { POST } = await import("./route");
 
 const secret = "whsec_test";
 const FAKE_DB = { fake: "db" };
-const FAKE_CHECKOUT = { id: "checkout_1", purpose: "fare" as const };
+const FAKE_CHECKOUT = { id: "checkout_1", purpose: "fare" };
 
 function post(event: Record<string, unknown>) {
   const payload = JSON.stringify({ livemode: true, ...event });
@@ -88,7 +88,7 @@ beforeEach(() => {
 });
 
 describe("a paid booking checkout", () => {
-  it("hands Stripe's settled total to the completion, and the tip fallback never runs", async () => {
+  it("hands Stripe's settled total to the completion", async () => {
     expect((await post(paid)).status).toBe(200);
     expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
       FAKE_DB,
@@ -152,8 +152,19 @@ describe("the party receipt (issue 2566)", () => {
     expect(sendPartyPaymentReceipt).not.toHaveBeenCalled();
   });
 
-  it("is not sent when no checkout matched the session (a tip)", async () => {
+  it("is not sent when no checkout matched the session", async () => {
     vi.mocked(markCheckoutPaidBySessionId).mockResolvedValue(null);
+    expect((await post(paid)).status).toBe(200);
+    expect(sendPartyPaymentReceipt).not.toHaveBeenCalled();
+  });
+
+  it("is never sent for a tip, even one reported as a first completion (issue #2718)", async () => {
+    vi.mocked(markCheckoutPaidBySessionId).mockImplementation(
+      async (_db, _id, _account, _total, _tax, outcome) => {
+        if (outcome) outcome.firstCompletion = true;
+        return { ...FAKE_CHECKOUT, purpose: "tip" } as never;
+      },
+    );
     expect((await post(paid)).status).toBe(200);
     expect(sendPartyPaymentReceipt).not.toHaveBeenCalled();
   });

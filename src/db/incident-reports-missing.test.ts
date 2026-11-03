@@ -5,7 +5,7 @@ import type { AppDb } from "./client";
 import {
   addIncidentPerson,
   fileIncidentReport,
-  saveIncidentDraft,
+  recordIncidentDraft,
   startIncidentReport,
   startMissingDiverReport,
 } from "./incident-reports";
@@ -102,7 +102,7 @@ describe("a missing diver report from the manifest", () => {
       actorPersonId: f.crew.id,
     });
     if (!injury.ok) throw new Error("expected a draft");
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       shopId: shop.id,
       tripId: f.trip.id,
       reportId: injury.reportId,
@@ -173,7 +173,7 @@ describe("a missing diver report from the manifest", () => {
     };
     const first = await startMissingDiverReport(db, input);
     if (!first.ok) throw new Error(`refused: ${first.reason}`);
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       shopId: shop.id,
       tripId: f.trip.id,
       reportId: first.reportId,
@@ -198,7 +198,7 @@ describe("a missing diver report from the manifest", () => {
     const first = await startMissingDiverReport(db, { ...base, actorPersonId: f.crew.id });
     if (!first.ok) throw new Error(`refused: ${first.reason}`);
     const target = { shopId: shop.id, tripId: f.trip.id, reportId: first.reportId };
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...target,
       actorPersonId: f.crew.id,
       fields: { ...complete, kind: "missing_diver", occurredAt: MARKED_AT },
@@ -276,7 +276,7 @@ describe("a missing diver report from the manifest", () => {
     const first = await startMissingDiverReport(db, input);
     if (!first.ok) throw new Error(`refused: ${first.reason}`);
     const target = { shopId: shop.id, tripId: f.trip.id, reportId: first.reportId };
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...target,
       actorPersonId: f.crew.id,
       fields: { ...complete, kind: "missing_diver", occurredAt: at("14:00") },
@@ -333,7 +333,7 @@ describe("a missing diver report from the manifest", () => {
     });
     if (!other.ok) throw new Error("expected a draft");
     const target = { shopId: shop.id, tripId: f.trip.id, reportId: other.reportId };
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...target,
       actorPersonId: f.owner.id,
       fields: { ...complete, kind: "missing_diver" },

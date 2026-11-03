@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
+import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 

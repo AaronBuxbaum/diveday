@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { canPersonExportShopData } from "@/db/export";
 import { getShopById } from "@/db/shops";
+import { hasRequiredStepUp } from "@/db/step-up";
 import {
   disconnectShopBackupDestination,
   runShopBackup,
@@ -16,7 +17,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { parseForm, single } from "@/lib/form-parse";
 import { type NoticeRedirect, revalidateWithNotice } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications/app-url";
-import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
+import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 

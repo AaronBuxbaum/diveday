@@ -1,7 +1,6 @@
 import { and, eq, gt, inArray, isNotNull, isNull, lte } from "drizzle-orm";
 import { isStaff, type Role } from "@/lib/authz";
 import { nowDate, nowMs } from "@/lib/clock";
-import { type VerifiedUser, verifyCredentials } from "@/lib/credentials";
 import { demoBypassAccepted } from "@/lib/demo-bypass";
 import {
   createPendingHandle,
@@ -11,6 +10,7 @@ import {
 } from "@/lib/pending-sign-in";
 import { verifyAccountSecondFactor } from "./account-security";
 import type { AppTransaction, DbExecutor } from "./client";
+import { type VerifiedUser, verifyCredentials } from "./credentials";
 import { boundLockWaits } from "./lock-bounds";
 import {
   accountSecurity,

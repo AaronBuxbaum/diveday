@@ -19,6 +19,7 @@ import {
 import { createOrder, type NewOrderLineItem, recordCounterOrder } from "@/db/orders";
 import { certificationAgency, certificationLevel } from "@/db/schema";
 import { getShopById } from "@/db/shops";
+import { hasRequiredStepUp } from "@/db/step-up";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { requestLocale } from "@/i18n/request";
@@ -42,7 +43,7 @@ import {
   blankableDiverNameSchema,
   diverPhoneSchema,
 } from "@/lib/person-fields";
-import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
+import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {

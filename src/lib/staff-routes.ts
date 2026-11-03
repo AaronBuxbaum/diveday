@@ -112,6 +112,7 @@ export const STAFF_ROUTES = {
   "settings/team": {},
   "settings/whatsapp": {},
   staffing: {},
+  "staffing/print": {},
   "trip-tags": { parent: SETTINGS },
   // `/trips` has no page: a departure is the board's detail view.
   "trips/[id]": { parent: BOARD },

@@ -7,12 +7,12 @@ import {
   createBoat,
   deleteBoat,
   departureVessels,
+  editBoat,
+  editBoatWithinCertificate,
   getBoatById,
   getBoatForHistory,
   listBoats,
   replaceBoatPhoto,
-  updateBoat,
-  updateBoatWithinCertificate,
 } from "./boats";
 import { trips } from "./schema";
 import { setShopDivingOptions } from "./shops";
@@ -51,7 +51,7 @@ describe("boats database operations", () => {
     expect(retrieved?.id).toBe(boat.id);
     expect(retrieved?.name).toBe("Sea Explorer");
 
-    const updated = await updateBoat(db, shop.id, boat.id, "Sea Explorer II", 24);
+    const updated = await editBoat(db, shop.id, boat.id, "Sea Explorer II", 24);
     expect(updated?.name).toBe("Sea Explorer II");
     expect(updated?.capacity).toBe(24);
 
@@ -209,7 +209,7 @@ describe("deleting a boat", () => {
     const boat = await createBoat(db, shop.id, "Old Faithful", 6);
     await deleteBoat(db, shop.id, boat.id);
 
-    expect(await updateBoat(db, shop.id, boat.id, "New Name", 10)).toBeNull();
+    expect(await editBoat(db, shop.id, boat.id, "New Name", 10)).toBeNull();
     expect((await getBoatForHistory(db, shop.id, boat.id))?.name).toBe("Old Faithful");
   });
 });
@@ -219,7 +219,7 @@ describe("deleting a boat", () => {
  * the fleet row's save decides against the departures it has locked, and
  * writes nothing when it refuses.
  */
-describe("updateBoatWithinCertificate", () => {
+describe("editBoatWithinCertificate", () => {
   const NOW = new Date("2030-05-01T12:00:00.000Z");
   const papers = (
     certifiedPassengers: number | null,
@@ -239,7 +239,7 @@ describe("updateBoatWithinCertificate", () => {
     capacity: number,
     certifiedPassengers: number | null,
   ) =>
-    updateBoatWithinCertificate(db, {
+    editBoatWithinCertificate(db, {
       shopId,
       boatId,
       name: "Certified Hull",
@@ -268,7 +268,7 @@ describe("updateBoatWithinCertificate", () => {
   it("saves a total-persons limit and the certificate's own expiry", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Persons Hull", 6);
-    const saved = await updateBoatWithinCertificate(db, {
+    const saved = await editBoatWithinCertificate(db, {
       shopId: shop.id,
       boatId: boat.id,
       name: "Persons Hull",
@@ -287,7 +287,7 @@ describe("updateBoatWithinCertificate", () => {
   it("refuses more passengers than persons and writes nothing", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Typo Hull", 6);
-    const refused = await updateBoatWithinCertificate(db, {
+    const refused = await editBoatWithinCertificate(db, {
       shopId: shop.id,
       boatId: boat.id,
       name: "Typo Hull",
@@ -314,7 +314,7 @@ describe("updateBoatWithinCertificate", () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Spanish Hull", 6);
     expect(
-      await updateBoatWithinCertificate(db, {
+      await editBoatWithinCertificate(db, {
         shopId: shop.id,
         boatId: boat.id,
         name: "Spanish Hull",

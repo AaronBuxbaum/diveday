@@ -63,8 +63,8 @@ const NOT_YET_OFFER_CODES = new Set<ReadinessBlockerCode>([
  * the shop, and asking again would tell a diver to re-send what they already
  * sent.
  *
- * Offering this at all took a schema change. `specialty_certifications` had no
- * `self_declared_at` column until 2026-08-20, so a row a diver typed was
+ * Offering this at all took a schema change. Specialty cards had no
+ * `self_declared_at` column until 2026-08-20, so a card a diver typed was
  * byte-for-byte a staff transcription and the staff list's ordinary one-tap
  * confirm would have promoted an invented number to `verified` — the state that
  * clears a depth gate past 18 m (`security-reviewer`). The column, the sighting
@@ -376,9 +376,7 @@ function IntroCourseDoor({
 /**
  * A specialty card, typed in. Same contract as the level card above — the row
  * lands `pending` and only a staff sighting makes it count — with one
- * difference the schema enforces rather than the form: the number is required,
- * because `specialty_certifications.identifier` is `NOT NULL` and that table
- * carries no self-declaration column. A specialty is what authorizes a
+ * difference: the number is required. A specialty is what authorizes a
  * materially riskier dive, so there is no version of it that is only a claim.
  *
  * The specialty itself is fixed by the blocker, not chosen: the trip asked for
@@ -441,7 +439,7 @@ function SpecialtyEntry({
 
 /**
  * A nitrox card, typed in. No level and no expiry — a nitrox card is a yes/no
- * qualification and `nitrox_certifications` has no expiry state at all
+ * qualification and a nitrox card has no expiry state at all
  * (`src/lib/readiness.ts` raises no `nitrox_expired`).
  *
  * `optional` is when the trip does not require nitrox but the shop fills it.

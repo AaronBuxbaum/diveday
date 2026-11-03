@@ -135,7 +135,7 @@ export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver
     minor: null,
     birthday: null,
     welcomeCue: null,
-    depthAdvisory: undefined,
+    advisories: undefined,
     trainingDive: null,
     medicalWaiver: null,
     riderMedicalHold: null,

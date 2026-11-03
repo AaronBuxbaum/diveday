@@ -62,7 +62,7 @@
 - **Close-out** — the shop home's evening state (ADR 20260827-clearwater-surface-language,
   decision 4): once every departure of the shop day has settled, each station reads its end state
   in strict precedence off the same roll-call evidence Today chases, then the clock, and only then
-  the crew's own **trip stage** (`departureStatus`, `src/lib/closeout.ts`), and the day's takings
+  the crew's own **trip stage** (`departureStatus`, `src/features/today/closeout.ts`), and the day's takings
   read beneath them. **A stage settles a station the clock would leave open, and never reopens one
   the clock has closed** (issue #1480): inside the late-arrival hour a live `home` reads `all_home`,
   because a crew member tapping Home at the rail is the statement that buffer was standing in for
@@ -90,7 +90,7 @@
   time is it at this shop" for a request: the instant, the shop's zone, its calendar date
   (`today`), the exact UTC pair around that date (`day`), its wall-clock time and whether a guest
   message may go out now. `requireShopSurface` mints one beside the shop row, and a domain function takes a clock
-  rather than a loose `now` and time zone (Today's reads in `src/db/today.ts` first).
+  rather than a loose `now` and time zone (Today's reads in `src/features/today/today-reader.ts` first).
   "Today's departures" is `startsAt` inside `clock.day`, exactly, with no looser scan beside it.
 - **Shop tick** — the one hourly pass (`/api/cron/shop-tick`, `0 * * * *`) that serves every shop
   cadence: the minimum-head-count decision, pre-trip reminders, held sends, gear service reminders,
@@ -1792,12 +1792,12 @@
   [20260816-imported-payment-history-is-evidence](../../architecture/decisions/20260816-imported-payment-history-is-evidence.md).
 - **Payment event** — one recorded *transition* of a booking's payment state: what it moved to,
   what it moved from, the amount and currency at that moment, and which operation caused it. The
-  append-only trail (`booking_payment_events`) beside the single mutable `booking_payments` row,
-  which carries only where the money stands now and which a refund overwrites in place. Written
-  inside the same transaction as the mutation it records, so the two commit or roll back together.
+  booking's money is these entries (`booking_payment_events`); where the money stands now is the
+  newest one, which the `booking_payments` view folds out, and a refund appends rather than
+  overwriting the capture it reverses (issue #2716).
   "Transition, not write" is the load-bearing distinction: a webhook redelivered twice appends
   nothing the second time, and a refused write appends nothing at all, so a row here always means
-  the state genuinely changed — otherwise the money ledger would slowly become a delivery log.
+  something material changed (the same mark by another staffer counts) — otherwise the money ledger would slowly become a delivery log.
 - **Retention window** — how long one append-only table's rows are kept before the weekly prune
   deletes them. Set per table in `RETENTION_DAYS` (`src/lib/retention.ts`), which is the only place
   a human edits. Most windows are a preference; `stripe_webhook_events` is not — its rows are the
@@ -1897,7 +1897,7 @@
   while somebody is missing**: while any diver or rostered crew member on the departure has an
   after-dive "not back aboard" standing — exactly while Today raises its missing-diver or
   missing-crew row, read through the same function (`tripsWithSomebodyMissing`,
-  `src/db/today.ts`) — every recap on that departure waits: the email, a staff send (which says
+  `src/features/today/today-reader.ts`) — every recap on that departure waits: the email, a staff send (which says
   "Recaps are held until the roll call is corrected"), `/recap`, and the after-dive `/ready`. The
   page answers with the **waiting** state, which says only that the recap is not ready yet; the
   four writers on it (photo, tip, review, pulse) refuse while it is closed (`recapClosedReason`).

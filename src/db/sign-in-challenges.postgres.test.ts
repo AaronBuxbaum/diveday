@@ -1,8 +1,8 @@
 import { count, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
+import type { VerifiedUser } from "@/db/credentials";
 import { createAuth } from "@/lib/auth";
 import { nowDate, nowMs } from "@/lib/clock";
-import type { VerifiedUser } from "@/lib/credentials";
 import { hashPassword } from "@/lib/password-hashing";
 import { createPendingHandle, hashPendingHandle } from "@/lib/pending-sign-in";
 import { totpCode } from "@/lib/totp";

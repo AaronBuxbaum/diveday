@@ -6,12 +6,12 @@ import { createBoat } from "./boats";
 import { boats, rollCallEvents } from "./schema";
 import {
   createTrip,
+  editTripSection,
   getTripRoster,
   getTripWithBooked,
   listStaff,
   listTripScheduleDays,
   upcomingTripsWithCounts,
-  updateTripSection,
 } from "./trips";
 
 const ctx = fileScopedShopContext();
@@ -29,7 +29,7 @@ describe("independent departure sections (#3141)", () => {
     });
     if (!trip) throw new Error("trip not created");
     const days = await listTripScheduleDays(db, shop.id, trip.id);
-    await updateTripSection(db, shop.id, trip.id, {
+    await editTripSection(db, shop.id, trip.id, {
       meetingPointLabel: "North dock",
       description: "A quiet reef",
       depositCents: 6000,
@@ -38,8 +38,8 @@ describe("independent departure sections (#3141)", () => {
       isPrivate: true,
       lunchAboard: true,
     });
-    await updateTripSection(db, shop.id, trip.id, { priceCents: 21000, capacity: 11 });
-    const saved = await updateTripSection(db, shop.id, trip.id, { plannedDives: 3 });
+    await editTripSection(db, shop.id, trip.id, { priceCents: 21000, capacity: 11 });
+    const saved = await editTripSection(db, shop.id, trip.id, { plannedDives: 3 });
     expect(saved.ok).toBe(true);
     expect(await getTripWithBooked(db, shop.id, trip.id)).toMatchObject({
       title: "Three-day trip",
@@ -59,7 +59,7 @@ describe("independent departure sections (#3141)", () => {
     expect(await listTripScheduleDays(db, shop.id, trip.id)).toEqual(days);
     expect(
       (
-        await updateTripSection(db, "00000000-0000-4000-8000-000000000001", trip.id, {
+        await editTripSection(db, "00000000-0000-4000-8000-000000000001", trip.id, {
           title: "Other shop",
         })
       ).ok,
@@ -82,7 +82,7 @@ describe("scoped saves use the current boat and seat count together", () => {
       boatId: boat.id,
     });
     if (!trip) throw new Error("trip not created");
-    expect(await updateTripSection(db, shop.id, trip.id, { capacity: 7 })).toMatchObject({
+    expect(await editTripSection(db, shop.id, trip.id, { capacity: 7 })).toMatchObject({
       ok: false,
       reason: "capacity_above_certificate",
       detail: { limit: 6 },
@@ -97,9 +97,10 @@ it("retains booked-seat and recorded-roll-call floors for partial section edits"
     (trip) => trip.title === "Two-Tank Reef — Molasses & French",
   );
   if (!reef) throw new Error("seeded reef missing");
-  expect(
-    await updateTripSection(db, shop.id, reef.id, { capacity: reef.booked - 1 }),
-  ).toMatchObject({ ok: false, reason: "capacity_below_booked" });
+  expect(await editTripSection(db, shop.id, reef.id, { capacity: reef.booked - 1 })).toMatchObject({
+    ok: false,
+    reason: "capacity_below_booked",
+  });
   const [entry] = await getTripRoster(db, shop.id, reef.id);
   const [staff] = await listStaff(db, shop.id);
   if (!entry || !staff) throw new Error("seeded diver or crew missing");
@@ -112,7 +113,7 @@ it("retains booked-seat and recorded-roll-call floors for partial section edits"
     checkpoint: "after_dive_2",
     occurredAt: nowDate(),
   });
-  expect(await updateTripSection(db, shop.id, reef.id, { plannedDives: 1 })).toMatchObject({
+  expect(await editTripSection(db, shop.id, reef.id, { plannedDives: 1 })).toMatchObject({
     ok: false,
     reason: "planned_dives_below_history",
   });

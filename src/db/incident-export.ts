@@ -429,3 +429,19 @@ export async function getIncidentExport(
     generatedByName,
   });
 }
+
+/**
+ * **The departure log page**: whether this staffer may generate it at all,
+ * checked against the database rather than the JWT so a demoted owner loses it
+ * at once, and only then the document. `doc` is `null` for another shop's
+ * trip; tenancy is the session's shop, never the URL.
+ */
+export async function getTripLogPage(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  personId: string,
+): Promise<{ allowed: false } | { allowed: true; doc: IncidentExportDocument | null }> {
+  if (!(await canPersonExportIncidentRecord(db, shopId, personId))) return { allowed: false };
+  return { allowed: true, doc: await getIncidentExport(db, shopId, tripId, personId) };
+}

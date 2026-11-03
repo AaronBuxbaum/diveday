@@ -115,10 +115,12 @@ test.describe("staff", () => {
     const packBox = await page.getByRole("heading", { name: "Pack with confidence" }).boundingBox();
     expect(confirmationBox?.y ?? 0).toBeLessThan(packBox?.y ?? Number.POSITIVE_INFINITY);
 
-    // The waiver is the real next step, and the checklist offers it directly.
+    // The waiver is the real next step, and the checklist signs it in place:
+    // on the diver's own link, never a second one (issue #2743).
     await page.getByRole("button", { name: "Sign your waiver" }).click();
-    await expect(page).toHaveURL(/\/waivers\//);
-    await page.goBack();
+    await expect(page).toHaveURL(/\/ready\/[^/]+\/waiver$/);
+    await expect(page.getByRole("button", { name: diver("waiver.signButton") })).toBeVisible();
+    await page.getByRole("link", { name: diver("waiver.backToPrep") }).click();
     await expect(threadStatus(page)).toBeVisible();
 
     // Both named spots are held atomically.

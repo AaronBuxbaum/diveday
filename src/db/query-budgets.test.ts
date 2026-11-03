@@ -1,12 +1,25 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { getDiverRecord } from "@/db/diver-record";
 import { pagedOrdersByDay } from "@/db/orders";
 import { listTripsReadiness } from "@/db/readiness";
-import { trips } from "@/db/schema";
-import { getTodayWork } from "@/db/today";
+import { bookings, people, personRoles, trips } from "@/db/schema";
+import { getTripManifest } from "@/db/trip-page";
+import { liveTrip } from "@/db/trips-live";
 import { nowDate } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { countingShopContext } from "@/test/query-count";
+
+/** The seeded shop's owner: the reader whose gates open every door on these pages. */
+async function seededOwner(ctx: Awaited<ReturnType<typeof countingShopContext>>) {
+  const [owner] = await ctx.uncounted
+    .select({ personId: people.id })
+    .from(personRoles)
+    .innerJoin(people, eq(people.id, personRoles.personId))
+    .where(and(eq(people.shopId, ctx.shop.id), eq(personRoles.role, "owner")))
+    .limit(1);
+  if (!owner) throw new Error("the seeded shop has no owner");
+  return owner.personId;
+}
 
 /**
  * What the assembly readers **cost**, as opposed to what they answer.
@@ -91,51 +104,71 @@ describe("what the assembly readers cost", () => {
   });
 
   /**
-   * The shop home, which is the one surface every staff session opens first
-   * and the one whose reader composes the most: today's departures, their
-   * rosters, the desk work, the stuck-payment and unfinished-deletion mirrors.
-   *
-   * A ceiling rather than an invariance check, because its fan-out is bounded
-   * by a *window* — today and the next few days — rather than by anything a
-   * caller passes, so there is no size to vary. The number is deliberately
-   * loose: this is not a ratchet to be re-banked, it is a tripwire for someone
-   * adding a twenty-first query to the page that has to paint instantly. If it
-   * fails, the question to ask is not "what should the number be" but "what did
-   * this change add to the first screen a shop sees every morning".
+   * The departure page's Divers tab (`getTripManifest`): the shared trip
+   * reads, the overview and guests over them, the Details selects, the stage
+   * and the reader's gates; the departure's needs are Today's, and the page
+   * reads them beside it. A ceiling, like the shop home's, because its fan-out is
+   * one departure's roster; a per-guest read is what it is here to catch.
    */
-  it("assembles the whole shop home under a ceiling", async () => {
+  it("reads the departure page under a ceiling", async () => {
     const ctx = await countingShopContext();
+    const personId = await seededOwner(ctx);
+    const [trip] = await ctx.uncounted
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, ctx.shop.id), liveTrip(), gt(trips.startsAt, nowDate())))
+      .orderBy(asc(trips.startsAt))
+      .limit(1);
+    if (!trip) throw new Error("the seeded shop has no upcoming departure");
     ctx.reset();
-    const work = await getTodayWork(
-      ctx.db,
-      ctx.shop.id,
-      ctx.shop.slug,
-      shopClock(ctx.shop, nowDate()),
-    );
-    expect(work).toBeTruthy();
+    const manifest = await getTripManifest(ctx.db, ctx.shop, trip.id, {
+      session: { user: { personId, roles: ["owner"] } },
+      filters: {},
+    });
+    expect(manifest).not.toBeNull();
 
     const used = ctx.count();
-    expect(
-      used,
-      `the shop home sent ${used} queries; see this test's comment before raising the ceiling`,
-    ).toBeLessThanOrEqual(TODAY_QUERY_CEILING);
+    expect(used, `the departure page sent ${used} queries`).toBeLessThanOrEqual(
+      TRIP_PAGE_QUERY_CEILING,
+    );
+  });
+
+  /**
+   * The diver record (`getDiverRecord`): the profile, the gates and the file's
+   * groups, then the reads that need the gates. Bounded by one diver, so a
+   * ceiling; a per-booking or per-piece read is what it catches.
+   */
+  it("reads a diver record under a ceiling", async () => {
+    const ctx = await countingShopContext();
+    const viewerPersonId = await seededOwner(ctx);
+    const [diver] = await ctx.uncounted
+      .select({ id: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, ctx.shop.id), isNotNull(bookings.personId)))
+      .limit(1);
+    if (!diver) throw new Error("the seeded shop has no booked diver");
+    ctx.reset();
+    const record = await getDiverRecord(ctx.db, ctx.shop, diver.id, {
+      viewerPersonId,
+      activityPage: 1,
+      bookingPage: 1,
+      now: nowDate(),
+    });
+    expect(record?.kind).toBe("record");
+
+    const used = ctx.count();
+    expect(used, `the diver record sent ${used} queries`).toBeLessThanOrEqual(
+      DIVER_RECORD_QUERY_CEILING,
+    );
   });
 });
 
 /**
- * The tripwire for the shop home, set well above what the reader sends today so
- * ordinary work never trips it and a loop always does. Raising it is a decision
- * about the first screen of the working day, not a maintenance chore — the test
- * above says what to ask first.
- *
- * 60 → 61 (fifth loop, merged): what it added is the crew's open snags against
- * a boat's checklist (`openSnagsForShop`), one statement in Today's one wave,
- * on top of the desk layer's count of found items waiting to go home.
- * 61 → 62 (merging main, 2026-10-17): main's boat-on-two-departures read
- * (`boatClashesByTrip`, H-20260916-may-one-hull-carry) beside the crew clash, in the same wave.
- * 62 → 64 (merging batch 3): countOpenDateRequests (#2658) and
- * crewAwayAcknowledgedAt (#2678) in Today's wave.
- * 64 → 65 (#3436): every planned dive's site for the departure cards
- * (`plannedSitesByTrip`), one statement in the same wave.
+ * The departure page's tripwire (issue #2757, measured when its reads moved
+ * behind `getTripManifest`). Raising it is a decision about the page the desk
+ * works a departure from.
  */
-const TODAY_QUERY_CEILING = 65;
+const TRIP_PAGE_QUERY_CEILING = 143;
+
+/** The diver record's tripwire (issue #2757, measured when its reads moved behind `getDiverRecord`). */
+const DIVER_RECORD_QUERY_CEILING = 75;

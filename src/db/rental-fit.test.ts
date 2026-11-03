@@ -15,9 +15,9 @@ import {
   getRentalFit,
   listTripPrepDivers,
   recordPaidRentalKinds,
+  recordRentalFit,
+  recordRentalFitNote,
   rentalFitByBooking,
-  saveRentalFit,
-  saveRentalFitNote,
   setNeedsStaffFit,
   toDiverRentalFit,
 } from "./rental-fit";
@@ -73,12 +73,15 @@ function baseFitInput(shopId: string, personId: string) {
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
 
-describe("saveRentalFit / getRentalFit", () => {
+describe("recordRentalFit / getRentalFit", () => {
   it("creates a fit and reads it back", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    const saved = await saveRentalFit(db, { ...baseFitInput(shopId, personId), note: "Runs cold" });
+    const saved = await recordRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      note: "Runs cold",
+    });
     expect(saved).toMatchObject({ personId, shopId, bcdSize: "M", note: "Runs cold" });
 
     const fetched = await getRentalFit(db, shopId, personId);
@@ -89,8 +92,8 @@ describe("saveRentalFit / getRentalFit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    const first = await saveRentalFit(db, baseFitInput(shopId, personId));
-    const second = await saveRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "L" });
+    const first = await recordRentalFit(db, baseFitInput(shopId, personId));
+    const second = await recordRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "L" });
     expect(second?.id).toBe(first?.id);
 
     const fetched = await getRentalFit(db, shopId, personId);
@@ -101,12 +104,12 @@ describe("saveRentalFit / getRentalFit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       note: "Titanium hip, runs heavy",
     });
     // Staff correcting a boot size through a form that never carried the note field.
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), bootSize: "10" });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), bootSize: "10" });
 
     const fetched = await getRentalFit(db, shopId, personId);
     expect(fetched?.note).toBe("Titanium hip, runs heavy");
@@ -117,14 +120,14 @@ describe("saveRentalFit / getRentalFit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await recordRentalFit(db, baseFitInput(shopId, personId));
 
     // A shop that has turned weights off in its rental catalog renders no
     // weight box, so its form posts no `weightPreference` key at all. The
     // save must go through, and must not blank what the diver already gave
     // -- re-adding the item would otherwise show an empty box (issue #1062).
     const { weightPreference: _dropped, ...withoutWeights } = baseFitInput(shopId, personId);
-    const saved = await saveRentalFit(db, { ...withoutWeights, bcdSize: "L" });
+    const saved = await recordRentalFit(db, { ...withoutWeights, bcdSize: "L" });
     expect(saved).not.toBeNull();
 
     const fetched = await getRentalFit(db, shopId, personId);
@@ -133,7 +136,7 @@ describe("saveRentalFit / getRentalFit", () => {
 
     // Absent and empty stay different answers: a box the shop *does* render,
     // emptied on purpose, is the diver taking the size back.
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), weightPreference: "  " });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), weightPreference: "  " });
     expect((await getRentalFit(db, shopId, personId))?.weightPreference).toBeNull();
   });
 
@@ -141,8 +144,8 @@ describe("saveRentalFit / getRentalFit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), note: "Temporary note" });
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), note: "  " });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), note: "Temporary note" });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), note: "  " });
 
     const fetched = await getRentalFit(db, shopId, personId);
     expect(fetched?.note).toBeNull();
@@ -152,7 +155,7 @@ describe("saveRentalFit / getRentalFit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    const saved = await saveRentalFit(db, {
+    const saved = await recordRentalFit(db, {
       ...baseFitInput("99999999-8888-4777-8666-555555555555", personId),
     });
     expect(saved).toBeNull();
@@ -169,7 +172,7 @@ describe("saveRentalFit / getRentalFit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       rentsDrysuit: true,
       drysuitSize: "  ML  ",
@@ -184,14 +187,14 @@ describe("saveRentalFit / getRentalFit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       rentsDrysuit: true,
       drysuitSize: "MT",
     });
     // A shop that has since dropped drysuits from its catalog posts no
     // `drysuitSize` key at all — the same rule every other size column keeps.
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "L" });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "L" });
 
     expect((await getRentalFit(db, shopId, personId))?.drysuitSize).toBe("MT");
   });
@@ -201,7 +204,7 @@ describe("saveRentalFit / getRentalFit", () => {
     await setShopRentalItems(db, shopId, [...shop.rentalItems, "hood", "gloves"]);
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       rentsHood: false,
       rentsGloves: true,
@@ -215,13 +218,17 @@ describe("saveRentalFit / getRentalFit", () => {
     expect(toDiverRentalFit(fetched)).toMatchObject({ rentsGloves: true, gloveSize: "L" });
 
     // A shop that stops renting hoods leaves the diver's hood answer standing.
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsHood: true, hoodSize: "M" });
+    await recordRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsHood: true,
+      hoodSize: "M",
+    });
     await setShopRentalItems(
       db,
       shopId,
       shop.rentalItems.filter((kind) => kind !== "hood"),
     );
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsHood: false });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), rentsHood: false });
     expect((await getRentalFit(db, shopId, personId))?.rentsHood).toBe(true);
   });
 
@@ -250,7 +257,7 @@ describe("saveRentalFit / getRentalFit", () => {
       const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
       await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
 
-      await saveRentalFit(db, {
+      await recordRentalFit(db, {
         ...baseFitInput(shopId, personId),
         rentsWetsuit: false,
         rentsDrysuit: true,
@@ -262,7 +269,7 @@ describe("saveRentalFit / getRentalFit", () => {
       // from a question the form never put to the diver. (A full fit form posts
       // the diver's stored suit choice instead, which `offeredSuitChoices`
       // keeps on the list for exactly this case.)
-      await saveRentalFit(db, {
+      await recordRentalFit(db, {
         ...baseFitInput(shopId, personId),
         rentsWetsuit: false,
         rentsDrysuit: false,
@@ -280,14 +287,14 @@ describe("saveRentalFit / getRentalFit", () => {
       const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
       await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
 
-      await saveRentalFit(db, {
+      await recordRentalFit(db, {
         ...baseFitInput(shopId, personId),
         rentsWetsuit: false,
         rentsDrysuit: true,
         drysuitSize: "MT",
       });
       await setShopRentalItems(db, shopId, withoutDrysuit(shop.rentalItems));
-      await saveRentalFit(db, {
+      await recordRentalFit(db, {
         ...baseFitInput(shopId, personId),
         rentsWetsuit: false,
         rentsDrysuit: false,
@@ -307,10 +314,10 @@ describe("saveRentalFit / getRentalFit", () => {
       const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
       await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
 
-      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: true });
+      await recordRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: true });
       // The ordinary path, and the one a careless fix breaks: a flag that can
       // never be turned off is a worse bug than the one above.
-      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: false });
+      await recordRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: false });
 
       const fetched = await getRentalFit(db, shopId, personId);
       expect(fetched?.rentsDrysuit).toBe(false);
@@ -329,7 +336,7 @@ describe("saveRentalFit / getRentalFit", () => {
       // which is the point: this test is what proved the base could go.
       await setShopRentalItems(db, shopId, ["wetsuit"]);
 
-      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsBcd: true });
+      await recordRentalFit(db, { ...baseFitInput(shopId, personId), rentsBcd: true });
 
       const fetched = await getRentalFit(db, shopId, personId);
       expect(fetched?.rentsWetsuit).toBe(true);
@@ -343,12 +350,12 @@ describe("saveRentalFit / getRentalFit", () => {
       const { db, shopId, tripId } = await context();
       const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
       await setShopRentalItems(db, shopId, ["wetsuit"]);
-      // `saveRentalFitNote` creates the row with `fit_stated_at` null: no answer
+      // `recordRentalFitNote` creates the row with `fit_stated_at` null: no answer
       // has been given, and nothing — neither the writer nor the schema — may
       // invent one on the diver's behalf.
-      await saveRentalFitNote(db, { shopId, personId, note: "Titanium hip, runs heavy" });
+      await recordRentalFitNote(db, { shopId, personId, note: "Titanium hip, runs heavy" });
 
-      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsWetsuit: true });
+      await recordRentalFit(db, { ...baseFitInput(shopId, personId), rentsWetsuit: true });
 
       const fetched = await getRentalFit(db, shopId, personId);
       expect(fetched?.note).toBe("Titanium hip, runs heavy");
@@ -394,7 +401,7 @@ describe("saveRentalFit / getRentalFit", () => {
       await db.update(people).set({ shopId: shopWithNoRow }).where(eq(people.id, personId));
 
       expect(
-        await saveRentalFit(db, {
+        await recordRentalFit(db, {
           ...baseFitInput(shopWithNoRow, personId),
           rentsBcd: true,
         }),
@@ -414,7 +421,7 @@ describe("saveRentalFit / getRentalFit", () => {
  * the one the next caller forgets; the table's check constraints refuse what
  * the writer does not resolve.
  */
-describe("saveRentalFit: one suit", () => {
+describe("recordRentalFit: one suit", () => {
   const withDrysuit = (items: readonly string[]) => [
     ...items.filter((k) => k !== "drysuit"),
     "drysuit",
@@ -428,7 +435,7 @@ describe("saveRentalFit: one suit", () => {
     // No form sends this any more, but a hand post or a half-hydrated form can.
     // Two suits came off the wall for one departure, and the drysuit's
     // consequences won silently on the packing list.
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       rentsWetsuit: true,
       rentsDrysuit: true,
@@ -442,14 +449,14 @@ describe("saveRentalFit: one suit", () => {
     const { db, shop, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
     await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       rentsWetsuit: false,
       rentsDrysuit: true,
     });
 
     // The booking-time picker: a priced list with no suit question of its own.
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       rentsWetsuit: true,
       rentsDrysuit: false,
@@ -463,7 +470,7 @@ describe("saveRentalFit: one suit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       rentsWetsuit: false,
       rentsDrysuit: false,
@@ -483,7 +490,7 @@ describe("saveRentalFit: one suit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), divesDry: true });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), divesDry: true });
 
     const fetched = await getRentalFit(db, shopId, personId);
     expect(fetched).toMatchObject({ rentsWetsuit: false, divesDry: true });
@@ -493,7 +500,7 @@ describe("saveRentalFit: one suit", () => {
     const { db, shop, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
     await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       rentsWetsuit: false,
       rentsDrysuit: true,
@@ -506,7 +513,7 @@ describe("saveRentalFit: one suit", () => {
 
     // The diver answered the suit question, which is not the silence the
     // catalog rule protects: a stale drysuit flag must not outlive it.
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       rentsWetsuit: false,
       rentsDrysuit: false,
@@ -520,14 +527,14 @@ describe("saveRentalFit: one suit", () => {
   it("leaves the dry answer alone when a save says nothing about the suit", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       ...baseFitInput(shopId, personId),
       rentsWetsuit: false,
       divesDry: true,
     });
 
     // A booking-time pick of weights alone: no suit rented, nothing said.
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId,
       personId,
       rentsWetsuit: false,
@@ -542,7 +549,7 @@ describe("saveRentalFit: one suit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    // A writer that bypasses `saveRentalFit` meets the check constraints.
+    // A writer that bypasses `recordRentalFit` meets the check constraints.
     await expect(
       db
         .insert(rentalFitProfiles)
@@ -563,12 +570,12 @@ describe("saveRentalFit: one suit", () => {
  * a diver adding "titanium hip, I run heavy" must not blank the sizes they set
  * last week.
  */
-describe("saveRentalFitNote", () => {
+describe("recordRentalFitNote", () => {
   it("writes a note for a diver with no fit on file yet", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    const saved = await saveRentalFitNote(db, { shopId, personId, note: "Titanium hip." });
+    const saved = await recordRentalFitNote(db, { shopId, personId, note: "Titanium hip." });
     expect(saved).not.toBeNull();
     expect((await getRentalFit(db, shopId, personId))?.note).toBe("Titanium hip.");
   });
@@ -581,7 +588,7 @@ describe("saveRentalFitNote", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    await saveRentalFitNote(db, { shopId, personId, note: "Bringing my own mask." });
+    await recordRentalFitNote(db, { shopId, personId, note: "Bringing my own mask." });
 
     const fit = await getRentalFit(db, shopId, personId);
     expect(fit?.fitStatedAt).toBeNull();
@@ -592,9 +599,9 @@ describe("saveRentalFitNote", () => {
   it("leaves a stated fit stated when the note is rewritten", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
-    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await recordRentalFit(db, baseFitInput(shopId, personId));
 
-    await saveRentalFitNote(db, { shopId, personId, note: "Titanium hip." });
+    await recordRentalFitNote(db, { shopId, personId, note: "Titanium hip." });
 
     const fit = await getRentalFit(db, shopId, personId);
     expect(fit?.fitStatedAt).not.toBeNull();
@@ -604,9 +611,9 @@ describe("saveRentalFitNote", () => {
   it("leaves every size and rental choice untouched", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), note: "First words" });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), note: "First words" });
 
-    await saveRentalFitNote(db, { shopId, personId, note: "Second words" });
+    await recordRentalFitNote(db, { shopId, personId, note: "Second words" });
 
     const fetched = await getRentalFit(db, shopId, personId);
     expect(fetched?.note).toBe("Second words");
@@ -619,9 +626,9 @@ describe("saveRentalFitNote", () => {
   it("clears the note when the diver empties the box", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), note: "Temporary note" });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), note: "Temporary note" });
 
-    await saveRentalFitNote(db, { shopId, personId, note: "  " });
+    await recordRentalFitNote(db, { shopId, personId, note: "  " });
 
     const fetched = await getRentalFit(db, shopId, personId);
     expect(fetched?.note).toBeNull();
@@ -633,7 +640,7 @@ describe("saveRentalFitNote", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
 
-    const saved = await saveRentalFitNote(db, {
+    const saved = await recordRentalFitNote(db, {
       shopId: "99999999-8888-4777-8666-555555555555",
       personId,
       note: "Not mine to write",
@@ -647,7 +654,7 @@ describe("setNeedsStaffFit (H-20260724-initial-gear-policy-sizing fallback)", ()
   it("flags a diver with a note, then clears both on resolve", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Fit Fallback");
-    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await recordRentalFit(db, baseFitInput(shopId, personId));
 
     const flagged = await setNeedsStaffFit(db, {
       shopId,
@@ -667,12 +674,12 @@ describe("setNeedsStaffFit (H-20260724-initial-gear-policy-sizing fallback)", ()
   it("leaves the flag alone when the diver's sizes are edited", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Sticky Flag");
-    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await recordRentalFit(db, baseFitInput(shopId, personId));
     await setNeedsStaffFit(db, { shopId, personId, needed: true, note: "No L BCD" });
 
     // A stale flag costs one extra look; a silently-cleared one puts a diver in
     // gear nobody checked. Only the explicit clear above may take it down.
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "S" });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "S" });
     const after = await getRentalFit(db, shopId, personId);
     expect(after?.bcdSize).toBe("S");
     expect(after?.needsStaffFitAt).toBeInstanceOf(Date);
@@ -700,7 +707,7 @@ describe("fitConfirmationForDiver", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Kept Fit");
     const { personId: staffId } = await bookVisitor(db, shopId, tripId, "Keiko Tanaka");
-    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await recordRentalFit(db, baseFitInput(shopId, personId));
 
     expect(
       await confirmRentalFitSize(db, {
@@ -728,7 +735,7 @@ describe("fitConfirmationForDiver", () => {
   it("says nothing at all with no confirmation on file", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nothing To Keep");
-    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await recordRentalFit(db, baseFitInput(shopId, personId));
     expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
   });
 
@@ -738,7 +745,7 @@ describe("fitConfirmationForDiver", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Anonymized Keeper");
     const { personId: staffId } = await bookVisitor(db, shopId, tripId, "Gone Keeper");
-    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await recordRentalFit(db, baseFitInput(shopId, personId));
     await confirmRentalFitSize(db, {
       shopId,
       personId,
@@ -758,7 +765,7 @@ describe("fitConfirmationForDiver", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Half A Record");
     const { personId: staffId } = await bookVisitor(db, shopId, tripId, "Half Keeper");
-    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await recordRentalFit(db, baseFitInput(shopId, personId));
     await db
       .update(rentalFitProfiles)
       .set({ fitConfirmedAt: new Date("2026-09-01T12:00:00Z"), fitConfirmedBy: staffId })
@@ -778,7 +785,7 @@ describe("listTripPrepDivers", () => {
       "Nora Quinn",
     );
     const { bookingId: bareBooking } = await bookVisitor(db, shopId, tripId, "Priya Patel");
-    await saveRentalFit(db, baseFitInput(shopId, fittedPerson));
+    await recordRentalFit(db, baseFitInput(shopId, fittedPerson));
 
     const cert = await createNitroxCertification(db, {
       shopId,
@@ -929,7 +936,7 @@ async function heldSeatOnFittedNitroxDiver(
   bookedAs: string | null,
 ) {
   const visitor = await bookVisitor(db, shopId, tripId, fullName);
-  await saveRentalFit(db, baseFitInput(shopId, visitor.personId));
+  await recordRentalFit(db, baseFitInput(shopId, visitor.personId));
   const cert = await createNitroxCertification(db, {
     shopId,
     personId: visitor.personId,
@@ -955,7 +962,7 @@ describe("rentalFitByBooking", () => {
   it("keys fits by booking id for the trip's active roster", async () => {
     const { db, shopId, tripId } = await context();
     const { bookingId, personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
-    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await recordRentalFit(db, baseFitInput(shopId, personId));
 
     const map = await rentalFitByBooking(db, shopId, tripId);
     expect(map.get(bookingId)).toMatchObject({ bcdSize: "M" });
@@ -981,7 +988,7 @@ describe("rentalFitByBooking", () => {
 });
 
 /**
- * The stored row and the completeness rule, together — `saveRentalFit` writes
+ * The stored row and the completeness rule, together — `recordRentalFit` writes
  * a fit, `rentalFitCompleteness` reads it, and the answer has to survive the
  * trip through the database. The reported bug lived exactly here: a row
  * existed, so every surface said "Saved", while the sizes the diver would be
@@ -993,7 +1000,7 @@ describe("rental fit completeness over a stored profile", () => {
     const { personId } = await bookVisitor(db, shopId, tripId, "Partial Pat");
 
     // Rents a BCD, and the only size anybody typed is a fin size.
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId,
       personId,
       rentsBcd: true,
@@ -1021,13 +1028,13 @@ describe("rental fit completeness over a stored profile", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Filled Fern");
 
-    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await recordRentalFit(db, baseFitInput(shopId, personId));
     expect(rentalFitCompleteness(await getRentalFit(db, shopId, personId))).toEqual({
       state: "complete",
     });
 
     // Staff blank the BCD size — the row is still there, the fit is not done.
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "" });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "" });
     expect(rentalFitCompleteness(await getRentalFit(db, shopId, personId))).toEqual({
       state: "incomplete",
       missing: ["bcd"],
@@ -1050,7 +1057,7 @@ describe("rental fit completeness over a stored profile", () => {
         .limit(1);
       if (!staffPerson) throw new Error("shop has no people");
 
-      await saveRentalFit(db, baseFitInput(shopId, personId));
+      await recordRentalFit(db, baseFitInput(shopId, personId));
       await setNeedsStaffFit(db, { shopId, personId, needed: true, note: "no L in stock" });
 
       expect(
@@ -1088,7 +1095,7 @@ describe("rental fit completeness over a stored profile", () => {
         .limit(1);
       if (!staffPerson) throw new Error("shop has no people");
 
-      // No `saveRentalFit` first: the evening's tap is a door onto this table
+      // No `recordRentalFit` first: the evening's tap is a door onto this table
       // of its own, and it stamps `fit_stated_at`. Without the all-false
       // baseline the row it creates claimed the five `default(true)` pieces
       // beside the one size a human actually confirmed (issue #1755).
@@ -1158,10 +1165,13 @@ describe("countFitsAskingForDroppedItems", () => {
   const everything = RENTABLE_ITEMS.map((item) => item.kind);
   const withoutDrysuitOrTorch = everything.filter((kind) => kind !== "drysuit" && kind !== "torch");
 
-  async function fitFor(fullName: string, overrides: Partial<Parameters<typeof saveRentalFit>[1]>) {
+  async function fitFor(
+    fullName: string,
+    overrides: Partial<Parameters<typeof recordRentalFit>[1]>,
+  ) {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, fullName);
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), ...overrides });
+    await recordRentalFit(db, { ...baseFitInput(shopId, personId), ...overrides });
     return personId;
   }
 

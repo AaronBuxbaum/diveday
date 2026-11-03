@@ -4,7 +4,6 @@ import type { IncidentExportDocument } from "@/lib/incident-export";
 import type { RollCallCheckpoint } from "@/lib/roll-call";
 import { RollCallCell } from "./CrewAtDeparture";
 import { NumberedName } from "./NumberedName";
-import { rollCallTableMinWidth } from "./roll-call-columns";
 
 type Props = {
   doc: IncidentExportDocument;
@@ -12,24 +11,25 @@ type Props = {
   dateTime: (value: string) => string;
   checkpointText: (value: string) => string;
   memberList: Intl.ListFormat;
-  checkpointPrintClass: string;
+  checkpointClass: string;
 };
 
-/** A wide screen roster becomes readable two-checkpoint sections on paper. */
+/**
+ * The roster, at the sheet's width. Six checkpoints are nine columns, too many
+ * for the page, so a roster that long is three readable two-checkpoint
+ * sections, on screen as on paper.
+ */
 export function DepartureRoster(props: Props) {
   const checkpoints = props.doc.meta.checkpoints;
-  if (checkpoints.length <= 5)
-    return <RosterTable {...props} checkpoints={checkpoints} shellClassName="mt-3" />;
+  if (checkpoints.length <= 5) return <RosterTable {...props} checkpoints={checkpoints} />;
   return (
     <>
-      <RosterTable {...props} checkpoints={checkpoints} shellClassName="mt-3 print:hidden" />
       {[0, 2, 4].map((start) => (
         <RosterTable
           key={start}
           {...props}
           checkpoints={checkpoints.slice(start, start + 2)}
-          shellClassName="mt-3 hidden print:block"
-          printSegment
+          checkpointClass="w-auto"
         />
       ))}
     </>
@@ -42,30 +42,19 @@ function RosterTable({
   dateTime,
   checkpointText,
   memberList,
-  checkpointPrintClass,
+  checkpointClass,
   checkpoints,
-  shellClassName,
-  printSegment,
 }: Props & {
   checkpoints: RollCallCheckpoint[];
-  shellClassName: string;
-  printSegment?: boolean;
 }) {
   return (
-    <Table
-      minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)}
-      shellClassName={shellClassName}
-    >
+    <Table shellClassName="mt-3">
       <THead>
         <Th>{t("incidentExport.colDiver")}</Th>
         <Th>{t("incidentExport.colEmergencyContact")}</Th>
         <Th>{t("incidentExport.colBuddy")}</Th>
         {checkpoints.map((checkpoint) => (
-          <Th
-            key={checkpoint}
-            width="8rem"
-            className={printSegment ? "print:w-auto" : checkpointPrintClass}
-          >
+          <Th key={checkpoint} className={checkpointClass}>
             {checkpointText(checkpoint)}
           </Th>
         ))}

@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { prepareContactImport } from "@/test/import-fixture";
@@ -13,15 +13,7 @@ import {
 } from "./buddy-teams";
 import { commitContactImport } from "./import";
 import { createCertification, restoreCertification } from "./readiness";
-import {
-  bookings,
-  certifications,
-  people,
-  personRoles,
-  shops,
-  trips,
-  userAccounts,
-} from "./schema";
+import { bookings, cards, people, personRoles, shops, trips, userAccounts } from "./schema";
 
 describePostgres("one-tap party decisions against junior evidence changes", () => {
   async function fixture() {
@@ -60,8 +52,9 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
       .returning();
     if (!first || !second) throw new Error("divers missing");
     const [card] = await pg.db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId: first.id,
         agency: "naui",
@@ -74,7 +67,8 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
       })
       .returning();
     if (!card) throw new Error("card missing");
-    await pg.db.insert(certifications).values({
+    await pg.db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: second.id,
       agency: "padi",
@@ -222,8 +216,9 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
       const [deleted] =
         change === "restored card"
           ? await pg.db
-              .insert(certifications)
+              .insert(cards)
               .values({
+                kind: "level",
                 shopId: shop.id,
                 personId: first.id,
                 agency: "sdi",
@@ -252,16 +247,17 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
             .where(eq(people.id, first.id))
             .for("no key update");
           await tx
-            .update(certifications)
+            .update(cards)
             .set({ juniorStatus: "junior" })
-            .where(eq(certifications.id, card.id));
+            .where(and(eq(cards.id, card.id), eq(cards.kind, "level")));
         } else if (change === "new card") {
           await tx
             .select({ id: people.id })
             .from(people)
             .where(eq(people.id, first.id))
             .for("no key update");
-          await tx.insert(certifications).values({
+          await tx.insert(cards).values({
+            kind: "level",
             shopId: shop.id,
             personId: first.id,
             agency: "sdi",
@@ -272,9 +268,9 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
         } else {
           if (!deleted) throw new Error("deleted card missing");
           await tx
-            .update(certifications)
+            .update(cards)
             .set({ deletedAt: null })
-            .where(eq(certifications.id, deleted.id));
+            .where(and(eq(cards.id, deleted.id), eq(cards.kind, "level")));
         }
         ready();
         await held;
@@ -306,8 +302,9 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
   it("makes actual card insertion and restoration writers participate in the person lock", async () => {
     const { pg, shop, first } = await fixture();
     const [deleted] = await pg.db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId: first.id,
         agency: "sdi",
@@ -364,7 +361,7 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
     const { pg, shop, first, staff, card } = await fixture();
     const gate = await holdRowLock(
       pg,
-      sql`select id from certifications where id = ${card.id} for update`,
+      sql`select id from cards where id = ${card.id} and kind = 'level' for update`,
     );
     const erasing = anonymizeDiver(pg.connect(), {
       shopId: shop.id,
@@ -432,8 +429,9 @@ describePostgres("one-tap planning against erasure", () => {
       participantType: "diver",
     });
     const [card] = await pg.db
-      .insert(certifications)
+      .insert(cards)
       .values({
+        kind: "level",
         shopId: shop.id,
         personId: diver.id,
         agency: "padi",
@@ -445,7 +443,7 @@ describePostgres("one-tap planning against erasure", () => {
     if (!card) throw new Error("card missing");
     const gate = await holdRowLock(
       pg,
-      sql`select id from certifications where id = ${card.id} for update`,
+      sql`select id from cards where id = ${card.id} and kind = 'level' for update`,
     );
     const erasure = anonymizeDiver(pg.connect(), {
       shopId: shop.id,

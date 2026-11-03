@@ -2,12 +2,14 @@ import { and, asc, desc, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
+import { levelCardLevel } from "./card-columns";
 import type { DbExecutor } from "./client";
+import { paymentEntries } from "./payments";
 import {
   boats,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
-  certifications,
+  cards,
   courses,
   type DiveSpecialty,
   divePackageEntitlements,
@@ -113,14 +115,15 @@ async function castIds(
 /** The history cohort with their verified level, in the cohort's own order. */
 async function historyCohort(db: DbExecutor, shopId: string): Promise<Cohort> {
   const rows = await db
-    .select({ id: people.id, fullName: people.fullName, level: certifications.level })
+    .select({ id: people.id, fullName: people.fullName, level: levelCardLevel })
     .from(people)
     .innerJoin(
-      certifications,
+      cards,
       and(
-        eq(certifications.personId, people.id),
-        eq(certifications.status, "verified"),
-        isNull(certifications.deletedAt),
+        eq(cards.personId, people.id),
+        eq(cards.kind, "level"),
+        eq(cards.status, "verified"),
+        isNull(cards.deletedAt),
       ),
     )
     .where(
@@ -330,17 +333,19 @@ async function seedDiveCard(
     .update(divePackageEntitlements)
     .set({ bookingId: seat.id, consumedAt: bookedAt })
     .where(inArray(divePackageEntitlements.id, spent));
-  await db.insert(bookingPayments).values({
-    shopId,
-    bookingId: seat.id,
-    status: "paid",
-    amountCents: 0,
-    currency: "usd",
-    provider: "dive_package",
-    providerRef: spent[0] ?? null,
-    createdAt: bookedAt,
-    updatedAt: bookedAt,
-  });
+  await db.insert(bookingPaymentEvents).values(
+    paymentEntries({
+      shopId,
+      bookingId: seat.id,
+      status: "paid",
+      amountCents: 0,
+      currency: "usd",
+      provider: "dive_package",
+      providerRef: spent[0] ?? null,
+      createdAt: bookedAt,
+      updatedAt: bookedAt,
+    }),
+  );
 }
 
 /**
@@ -406,15 +411,17 @@ async function seedLostMask(
       })
       .returning({ id: bookings.id });
     if (!seat) throw new Error("seed: the mask owner's seat was not written");
-    await db.insert(bookingPayments).values({
-      shopId,
-      bookingId: seat.id,
-      status: "paid",
-      amountCents: boat.priceCents ?? 0,
-      currency: "usd",
-      createdAt: bookedAt,
-      updatedAt: bookedAt,
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId,
+        bookingId: seat.id,
+        status: "paid",
+        amountCents: boat.priceCents ?? 0,
+        currency: "usd",
+        createdAt: bookedAt,
+        updatedAt: bookedAt,
+      }),
+    );
     return;
   }
 }
@@ -544,15 +551,17 @@ async function seedWeatherCall(
       })
       .returning({ id: bookings.id });
     if (!booking) continue;
-    await db.insert(bookingPayments).values({
-      shopId,
-      bookingId: booking.id,
-      status: "refunded",
-      amountCents: WEATHER_PRICE_CENTS,
-      currency: "usd",
-      createdAt: bookedAt,
-      updatedAt: refundedAt,
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId,
+        bookingId: booking.id,
+        status: "refunded",
+        amountCents: WEATHER_PRICE_CENTS,
+        currency: "usd",
+        createdAt: bookedAt,
+        updatedAt: refundedAt,
+      }),
+    );
     await db.insert(tripBlowoutDivers).values({
       shopId,
       blowoutId: blowout.id,
@@ -775,16 +784,19 @@ async function seedShopCertified(
     // Paid at the desk on the first morning, so the course's money falls in
     // the month it ran, where Reports' "By kind" counts it too.
     const paidAt = new Date(window.startsAt.getTime() - (lead + 20) * 60_000);
-    await db.insert(bookingPayments).values({
-      shopId,
-      bookingId: booking.id,
-      status: "paid",
-      amountCents: course.priceCents,
-      currency: "usd",
-      createdAt: paidAt,
-      updatedAt: paidAt,
-    });
-    await db.insert(certifications).values({
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId,
+        bookingId: booking.id,
+        status: "paid",
+        amountCents: course.priceCents,
+        currency: "usd",
+        createdAt: paidAt,
+        updatedAt: paidAt,
+      }),
+    );
+    await db.insert(cards).values({
+      kind: "level",
       shopId,
       personId: student.id,
       agency: course.agency === "ssi" ? "ssi" : "padi",
@@ -913,15 +925,17 @@ export async function fillWeeklyRun(db: DbExecutor, shopId: string): Promise<voi
       .returning({ id: bookings.id });
     if (!booking) return;
     used.add(personId);
-    await db.insert(bookingPayments).values({
-      shopId,
-      bookingId: booking.id,
-      status: "paid",
-      amountCents: run.priceCents ?? 0,
-      currency: "usd",
-      createdAt: bookedAt,
-      updatedAt: bookedAt,
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId,
+        bookingId: booking.id,
+        status: "paid",
+        amountCents: run.priceCents ?? 0,
+        currency: "usd",
+        createdAt: bookedAt,
+        updatedAt: bookedAt,
+      }),
+    );
   };
 
   for (const [index, row] of moved.slice(0, WEATHER_MOVED).entries()) {

@@ -62,7 +62,7 @@ export function stageStripProps(
   if (!trip) throw new Error("stageStripProps: a departure has at least its dock manifest");
   const homewardGap = "manifests" in input ? homewardCheckpointGap(input.manifests) : null;
   // The dive count lives on the departure's Details tab (`TripDiveFields`): a
-  // dive called off is a plan edit, and the floor (`updateTrip`) allows it
+  // dive called off is a plan edit, and the floor (`editTrip`) allows it
   // because nobody was counted there.
   const planHref =
     "manifests" in input && input.manifests[0]

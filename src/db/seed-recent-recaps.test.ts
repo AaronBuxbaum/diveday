@@ -4,20 +4,11 @@ import { nowDate } from "@/lib/clock";
 import { summarizeMonth } from "@/lib/reporting";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
-import { tipCheckout } from "./checkout-purpose";
 import type { AppDb } from "./client";
 import { refreshCanonicalDemoSchedule } from "./demo-refresh";
 import { recapClosedReason } from "./recap";
 import { getMonthlyReport } from "./reporting";
-import {
-  bookingCheckoutBookings,
-  bookingCheckouts,
-  bookings,
-  people,
-  recapPhotos,
-  tripReviews,
-  trips,
-} from "./schema";
+import { bookingCheckouts, bookings, people, recapPhotos, tripReviews, trips } from "./schema";
 import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 
@@ -86,19 +77,8 @@ async function tipsWithDeparture(db: AppDb, shopId: string) {
   return db
     .select({ status: bookingCheckouts.status, startsAt: trips.startsAt })
     .from(bookingCheckouts)
-    .innerJoin(
-      bookingCheckoutBookings,
-      and(
-        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
-        eq(bookingCheckoutBookings.shopId, shopId),
-      ),
-    )
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
-    )
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(eq(bookingCheckouts.shopId, shopId), tipCheckout()));
+    .innerJoin(trips, eq(trips.id, bookingCheckouts.tripId))
+    .where(and(eq(bookingCheckouts.shopId, shopId), eq(bookingCheckouts.purpose, "tip")));
 }
 
 describe("seedRecentRecaps", () => {
@@ -204,7 +184,7 @@ describe("seedRecentRecaps", () => {
 
     await seedRecentRecaps(db, shop.id);
 
-    // `getMonthlyReport` sums `completed` and nothing else, so a pending or expired
+    // `getMonthlyReport` sums `paid` and nothing else, so a pending or expired
     // row would simply vanish from the figure this pass exists to fill.
     const thisMonth = (await tipsWithDeparture(db, shop.id)).filter(
       (row) => row.startsAt >= start && row.startsAt < end,

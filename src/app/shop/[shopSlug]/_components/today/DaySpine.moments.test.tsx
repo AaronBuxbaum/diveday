@@ -3,7 +3,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import { prerender } from "react-dom/static";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assembleDaySpine, type TodayAction } from "@/lib/today";
+import { assembleDaySpine, type TodayAction } from "@/features/today";
 
 // The spine composes WaiverSendControl/ResendConfirmationControl/
 // PaymentActionControl, each of which statically imports its own `"use server"`

@@ -4,7 +4,7 @@ import { BrandStyle } from "@/components/BrandStyle";
 import { PrintButton } from "@/components/PrintButton";
 import { buttonClass } from "@/components/ui/button";
 import type { BrandDisplayFontCode } from "@/lib/brand";
-import { type PrintSheetPaper, printSheetPageRule } from "@/lib/print-sheets";
+import { PRINT_SHEET_BOX_MM, type PrintSheetPaper, printSheetPageRule } from "@/lib/print-sheets";
 import { AutoPrint } from "../../trips/[id]/_components/AutoPrint";
 
 /**
@@ -24,13 +24,20 @@ import { AutoPrint } from "../../trips/[id]/_components/AutoPrint";
  *   dialog. A packet may add one more door beside them (`doors`).
  *
  * `AutoPrint` opens the dialog on arrival: the door that reached this page
- * said Print, so the page does not ask again. A packet composed from many
- * readers names the marker it renders last (`readySelector`), so the dialog
- * never opens on half a document.
+ * said Print, so the page does not ask again. A document reached by its own
+ * name rather than by Print (the departure log) turns it off (`autoPrint`).
+ * A packet composed from many readers names the marker it renders last
+ * (`readySelector`), so the dialog never opens on half a document.
+ *
+ * A counter rental's ticket is also where the rental is worked: the acts that
+ * move it sit above the sheet (`screen`), screen-only like the doors, so the
+ * sheet under them is still the page that comes out of the printer.
  *
  * **Every document the app prints is this page around `PaperSheet`s**
  * (issue #2745): the passes, the counter card, and the trip, day and
- * medical-alerts packets. One paper face, on `--sheet-*`.
+ * medical-alerts packets, the departure log and the crew rota, the rental
+ * tickets, the claim tag, the dispute sheet and the blank release. One paper
+ * face, on `--sheet-*`.
  */
 export function SheetDocument({
   backHref,
@@ -40,7 +47,9 @@ export function SheetDocument({
   printLabel,
   readySelector,
   doors,
+  screen,
   printOnly,
+  autoPrint = true,
   children,
 }: {
   /** The counter this sheet was printed from. */
@@ -52,8 +61,12 @@ export function SheetDocument({
   printLabel: string;
   /** What `AutoPrint` waits for; see `PACKET_READY_SELECTOR`. */
   readySelector?: string;
+  /** Opens the print dialog on arrival; `false` when the door did not say Print. */
+  autoPrint?: boolean;
   /** One more screen-only door beside Back and Print. */
   doors?: ReactNode;
+  /** The screen's own work above the sheet: a ticket's notices and acts. Never printed. */
+  screen?: ReactNode;
   /**
    * **The sheets reach paper and never the screen**, which shows this
    * instead. The medical-alerts packet only (layer 4 security review, note 1):
@@ -69,7 +82,7 @@ export function SheetDocument({
           `printSheetPageRule` — never a request value. */}
       <style data-print-sheet="">{printSheetPageRule(paper)}</style>
       <BrandStyle brandColor={null} brandDisplayFont={brandDisplayFont} />
-      <AutoPrint readySelector={readySelector} />
+      {autoPrint ? <AutoPrint readySelector={readySelector} /> : null}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 print:hidden">
         <Link href={backHref} className={buttonClass({ variant: "ghost", size: "sm" })}>
           {backLabel}
@@ -79,6 +92,14 @@ export function SheetDocument({
           <PrintButton label={printLabel} />
         </div>
       </div>
+      {screen ? (
+        <div
+          className="mx-auto flex flex-col gap-6 px-4 py-3 print:hidden"
+          style={{ maxWidth: `calc(${PRINT_SHEET_BOX_MM[paper].width}mm + 2rem)` }}
+        >
+          {screen}
+        </div>
+      ) : null}
       {printOnly ? <div className="px-4 py-3 print:hidden">{printOnly}</div> : null}
       {/* `data-paper-print-only`, not Tailwind's `hidden`: the frame's own
           rule sits outside every cascade layer and would beat a utility, so

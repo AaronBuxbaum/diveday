@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { buttonClass } from "@/components/ui/button";
 import type { TripUnitToCheckIn } from "@/db/gear";
-import type { TripPrep } from "@/db/trips";
+import type { TripPrep } from "@/db/trip-prep";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { PrepGrouping } from "@/lib/dive-prep";
 import { scopedId } from "@/lib/element-id";

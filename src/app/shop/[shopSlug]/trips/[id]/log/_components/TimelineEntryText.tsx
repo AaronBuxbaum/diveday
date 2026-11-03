@@ -116,13 +116,13 @@ export function TimelineGroups({
         group.kind === "single" ? (
           <li
             key={group.order}
-            className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
+            className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 py-2.5 text-sm"
           >
             <span className="font-mono text-xs text-muted tabular-nums">{group.stamp}</span>
             <TimelineEntryText entry={group.entry} t={t} memberList={memberList} />
           </li>
         ) : (
-          <li key={group.order} className="px-4 py-3 text-sm sm:px-5">
+          <li key={group.order} className="px-5 py-3 text-sm">
             <p className="break-after-avoid font-semibold">
               {t("incidentExport.timelineGroupHeading", {
                 checkpoint: rollCallCheckpointText(t, group.checkpoint as RollCallCheckpoint),

@@ -2,6 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { ageOnDate, birthdayCallout } from "@/lib/age";
 import { STAFF_ROLES } from "@/lib/authz";
+import { isWaiverCode } from "@/lib/blockers";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
@@ -12,7 +13,6 @@ import {
   rollCallCompleteness,
 } from "@/lib/manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
-import { isWaiverCode } from "@/lib/today";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { checkInBooking, undoCheckInBooking } from "./check-in";
 import { listAvailableGearUnits, reserveGearUnit } from "./gear";
@@ -30,6 +30,7 @@ import {
 } from "./manifests";
 import { clearAnswers, ctx, manifestContext } from "./manifests-test-fixtures";
 import { markBookingNoShow } from "./no-show";
+import { listRollCallGaps } from "./roll-call-gaps";
 import { crewSubject } from "./roll-call-subject";
 import {
   activityEvents,
@@ -43,7 +44,6 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
-import { listRollCallGaps } from "./today";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -482,7 +482,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   it("answers 'who is aboard' the same way for the counter and for the departure board", async () => {
-    // One reader, two shapes. `boardedCountsByTrip` (src/db/today.ts) used to
+    // One reader, two shapes. `boardedCountsByTrip` (src/features/today/today-reader.ts) used to
     // be a second hand-written copy of this query, and the copies had already
     // drifted: only one of them carried the cancelled-booking guard. Both
     // derive from `listDepartureBoardedByTrip` now, so a head count and a
@@ -613,7 +613,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     // The counter's `already_boarded` refusal reads this rather than the dock
     // alone: a diver who joined at the second site has no departure event at
     // all, and the desk must not be able to call them absent
-    // (`inAfterDivePopulation`, src/db/today.ts).
+    // (`inAfterDivePopulation`, src/features/today/today-reader.ts).
     const { db, shop, reef, booking, staff } = await manifestContext();
     expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBeNull();
 
@@ -650,7 +650,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    * At `departure` it is "never left the dock" — the benign half, and the
    * ordinary absence the counter exists to record. At `after_dive_n` it is "did
    * not come back from the dive", which is the missing-diver row
-   * (`isAccountedForAfterDive`, src/db/today.ts; **sailed** in the glossary).
+   * (`isAccountedForAfterDive`, src/features/today/today-reader.ts; **sailed** in the glossary).
    * A reader that ignored the checkpoint would be wrong in the direction that
    * stops a shop doing its work: every walk-away carries a dock `not_boarded`,
    * so the desk could never release a seat again.

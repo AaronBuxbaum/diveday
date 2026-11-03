@@ -1,7 +1,7 @@
 import { AddPanel } from "@/components/AddPanel";
 import { keptTypedScope } from "@/components/kept-typed-scope";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { getBookingContext, listOrderableCustomers } from "@/db/orders";
+import { getOrderNewPage } from "@/db/order-new-page";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
 import { bookingInvoiceLines } from "@/lib/courses";
@@ -131,10 +131,11 @@ export async function NewOrderPanel({
    * a real shop is deliberately left to type it.
    */
   const demoAddress = shop.isDemo ? shop : null;
-  const [customers, bookingContext] = await Promise.all([
-    listOrderableCustomers(db, shop.id),
-    prefillBookingId ? getBookingContext(db, shop.id, prefillBookingId) : null,
-  ]);
+  // The index opens this panel only for a shop that can take payment; the
+  // reader asks again and reads nothing more when it cannot.
+  const page = await getOrderNewPage(db, shop.id, prefillBookingId);
+  if (!page.acceptsPayments) return null;
+  const { customers, bookingContext } = page;
 
   // Auto-fill from the linked booking so staff only review and send. A course
   // session fills two lines — instruction and e-learning — because a student

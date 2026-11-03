@@ -23,21 +23,21 @@ import { TodayOrientation } from "@/app/shop/[shopSlug]/_components/today/TodayO
 import { TodayPrintDoor } from "@/app/shop/[shopSlug]/_components/today/TodayPrintDoor";
 import { TodaySkeleton } from "@/app/shop/[shopSlug]/_components/today/TodaySkeleton";
 import { TodayUpdated } from "@/app/shop/[shopSlug]/_components/today/TodayUpdated";
-import {
-  assembleTodayEveningClose,
-  hasTodayWorkToShow,
-  readTodayFirstWave,
-  readTodaySecondWave,
-} from "@/app/shop/[shopSlug]/_components/today/today-reads";
+import { hasTodayWorkToShow } from "@/app/shop/[shopSlug]/_components/today/today-work-to-show";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
 import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { FlashParams } from "@/components/FlashParams";
-import { daySummaryBlocked } from "@/db/blockers";
-import { getDb } from "@/db/client";
-import { loadFirstRunFacts } from "@/db/first-run";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
-import { shopByIdCached } from "@/db/shops";
-import { canAcceptPayments } from "@/db/stripe-accounts";
+import {
+  assembleDaySpine,
+  canAcceptPayments,
+  daySummaryBlocked,
+  factOfScaleFor,
+  getHomeShop,
+  getShopHome,
+  readNeedsYou,
+  spineIsQuiet,
+} from "@/features/today";
 import { orientationRoleFor } from "@/i18n/orientation-labels";
 import { requestLocale } from "@/i18n/request";
 import { sendLimitWords } from "@/i18n/shared-sentences";
@@ -52,14 +52,7 @@ import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeCodeOf, type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
-import {
-  assembleDaySpine,
-  factOfScaleFor,
-  readNeedsYou,
-  roleLensFor,
-  spineIsQuiet,
-} from "@/lib/today";
-import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
+import { utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
 import { CallPanelSlot } from "./_components/call/CallPanelSlot";
 
@@ -203,8 +196,7 @@ async function TodayBody({
   /** What the desk typed into the arrival lookup; `""` for none. */
   arrivalQuery: string;
 }) {
-  const db = await getDb();
-  const shop = await shopByIdCached(db, session.user.shopId);
+  const { db, shop } = await getHomeShop(session.user.shopId);
   // Staff and public pages negotiate locale alike (ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
   // A session pointing at a shop row that is gone is a page that does not
@@ -237,13 +229,12 @@ async function TodayBody({
   // a dismissal there would be meaningless (every demo visit signs in as a fresh, credential-shared
   // session).
   const orientationRole = shop.isDemo ? null : orientationRoleFor(session.user.roles);
-  const season = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
-  // **Two waves, not thirteen phases** (code review 2026-10-10, item 2): this wave needs only the
-  // shop, the reader and the clock; the next needs its answers. A read a later branch may discard
-  // is still started here — each is bounded, and that branch is mostly a first run with no rows.
+  // **Three waves, one call** (`getShopHome`): the first needs only the shop, the reader and the
+  // clock; the second (the queue, tomorrow's cards, the closing reads and the day's money) needs its
+  // answers; the third is the reads only a first-run shop makes. A read a later branch may discard
+  // is still started in the first — each is bounded, and that branch is mostly a first run.
   const {
     freshDrafts,
-    canReadShopMoney,
     evidence,
     arrivalRows,
     counterOpen,
@@ -255,14 +246,25 @@ async function TodayBody({
     firstBookingRead,
     scale,
     orientationDismissed,
-  } = await readTodayFirstWave({
-    db,
-    shop,
+    season,
+    lens,
+    eveningClose,
+    work,
+    tomorrowDepartures,
+    headCountCloses,
+    canOpenLog,
+    sailedBefore,
+    dayMoney,
+    firstRun,
+  } = await getShopHome(db, shop, {
+    shopSlug,
     personId: session.user.personId,
+    roles: session.user.roles,
     now,
     arrivalQuery,
     orientationRole,
-    season,
+    t,
+    locale,
   });
   const spineDrafts: SpineDraft[] = freshDrafts.map((draft) => ({
     form: draft.form,
@@ -271,46 +273,6 @@ async function TodayBody({
     // somebody else's answers in it.
     href: `/shop/${shopSlug}${FORM_DRAFT_RESUME_SUFFIX[draft.form]}`,
   }));
-  // The lens (20260721-role-aware-landing): a captain or divemaster's Today filters to boat work
-  // and badges the boat they crew; an instructor's leads with their sessions. It never re-orders
-  // the spine — clock order wins.
-  const lens = roleLensFor(session.user.roles);
-  const eveningClose = assembleTodayEveningClose(closeout, now);
-  // **The shop's own calendar day**, as the two UTC instants that bracket it. Four readers below
-  // want it — the first-boat-ever question, the day strip's window and ticks, and the day's takings
-  // — and it is the host's day for none of them, so it is computed once here rather than per
-  // caller.
-  const dayBounds = shopDayBounds(now, shop.timezone);
-  // The second wave: the queue (needs the readiness pass and money gate) beside the closing reads.
-  //
-  // Tomorrow is read beside today rather than after it, and only as its departure cards
-  // (`getShopDayDepartures`): the jobs behind the disclosure are today's own ranked queue,
-  // re-filed, so a job is counted exactly once wherever its boat happens to sail - and a second
-  // whole queue, read only to keep its departures, was about forty statements thrown away.
-  //
-  // Two bounded reads, and only when there is a day to close over: who made the last roll-call mark
-  // on each settled boat, and whether this staffer may generate a departure's log at all. The log
-  // gate is checked against the database rather than the session's roles so a demotion takes effect
-  // at once, and resolved once here rather than per station.
-  //
-  // **The day's money** (`readDayMoney`): what today made, gated on `canReadShopMoney` (the live
-  // role read of the first wave) and the day closing; and the tips on the reader's own boats.
-  const { work, tomorrowDepartures, headCountCloses, canOpenLog, sailedBefore, dayMoney } =
-    await readTodaySecondWave({
-      db,
-      shop,
-      shopSlug,
-      personId: session.user.personId,
-      roles: session.user.roles,
-      now,
-      lens,
-      t,
-      locale,
-      canReadShopMoney,
-      evidence,
-      eveningClose,
-      dayBounds,
-    });
   const { actions, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
   // The day's whole board, clock order — the strip's marks and the count under the date both read
@@ -320,12 +282,10 @@ async function TodayBody({
   );
   const firstBoatEver = eveningClose.allHome && !sailedBefore;
   // **First run is "never had a departure", not "none coming up"**: `nextDeparture` is null on
-  // any day nothing sails (`src/db/today.ts`), so it is only the cheap prefilter and the count
+  // any day nothing sails (`src/features/today/today-reader.ts`), so it is only the cheap prefilter and the count
   // decides. A demo shop is excluded (issue #806): it arrives with every step done, and its count
   // is never read. The release step outlives first run (`ReleaseStillSample`, item 21).
-  const showFirstRunChecklist = !nextDeparture && shopTripCount === 0;
-  // The reads only a first-run shop makes, so the one third wave.
-  const firstRun = showFirstRunChecklist ? await loadFirstRunFacts(db, shop, stripeAccount) : null;
+  const showFirstRunChecklist = firstRun !== null;
   // The desk group's one presence-derived row (ADR 20260827-first-light,
   // decision 6): the shop has departures, cannot take money online, and has
   // never taken an order at all. Two bounded reads, and only for a shop past

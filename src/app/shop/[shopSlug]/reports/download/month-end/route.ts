@@ -2,10 +2,11 @@ import { strToU8, zipSync } from "fflate";
 import { getDb } from "@/db/client";
 import { canPersonExportShopData } from "@/db/export";
 import { getShopById } from "@/db/shops";
+import { hasRequiredStepUp } from "@/db/step-up";
 import { requestLocale } from "@/i18n/request";
 import { monthKey, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
+import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { monthEndFiles } from "../month-end-files";
 

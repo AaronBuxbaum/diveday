@@ -3,7 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { listBoats } from "@/db/boats";
 import type { listTripLenses } from "@/db/trip-lenses";
-import type { getTripOverview } from "@/db/trips";
+import type { getTripOverview } from "@/db/trip-overview";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.

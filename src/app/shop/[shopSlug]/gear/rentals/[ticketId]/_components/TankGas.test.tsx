@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CounterRentalUnit } from "@/db/gear-counter-rentals";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { TankGas } from "./TankGas";
+import { TankGas, TankGasCorrections } from "./TankGas";
 
 vi.mock("../../actions", () => ({ correctCounterTankFillAction: vi.fn() }));
 
@@ -30,23 +30,21 @@ const unit = (overrides: Partial<CounterRentalUnit>): CounterRentalUnit => ({
 
 /** Domain reviews A3/F6: the ticket says the gas was recorded, not analyzed. */
 describe("TankGas", () => {
-  it("prints each tank's gas, who recorded it, and that nobody analyzed it", () => {
-    render(<TankGas t={t} ticketId="r1" units={[unit({})]} />);
+  it("prints each tank's gas, who recorded it, and that nobody analyzed it, with no control", () => {
+    const { container } = render(<TankGas t={t} units={[unit({})]} />);
     expect(screen.getByText("EANx 32", { selector: "span" })).toBeTruthy();
     expect(
       screen.getByText(t("counterRentals.ticket.fillRecordedBy", { name: "Dana Desk" })),
     ).toBeTruthy();
     expect(screen.getByText(t("counterRentals.ticket.fillNotAnalyzed"))).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: t("counterRentals.ticket.fillCorrect") }),
-    ).toBeTruthy();
+    // It sits on the slip's sheet (issue #2745): the correction is the screen's.
+    expect(container.querySelector("form, button, select")).toBeNull();
   });
 
   it("says beside the gas when EANx went in without a current O2-clean record (issue #3005)", () => {
     render(
       <TankGas
         t={t}
-        ticketId="r1"
         units={[
           unit({ fillO2CleanGap: "lapsed" }),
           unit({ reservationId: "r2", label: "Tank #2", fillO2CleanGap: "never" }),
@@ -60,17 +58,50 @@ describe("TankGas", () => {
   });
 
   it("says nothing about O2 cleaning on a current or air fill", () => {
-    render(<TankGas t={t} ticketId="r1" units={[unit({}), unit({ fillO2Percent: 21 })]} />);
+    render(<TankGas t={t} units={[unit({}), unit({ fillO2Percent: 21 })]} />);
     expect(document.querySelector("[data-o2-clean-gap]")).toBeNull();
   });
 
-  it("offers no correction once the tank is home, and says nothing with no tank", () => {
-    render(<TankGas t={t} ticketId="r1" units={[unit({ returnedAt: new Date() })]} />);
-    expect(screen.queryByRole("button")).toBeNull();
-    cleanup();
+  it("says nothing with no tank", () => {
     const { container } = render(
-      <TankGas t={t} ticketId="r1" units={[unit({ kind: "fins", fillO2Percent: null })]} />,
+      <TankGas t={t} units={[unit({ kind: "fins", fillO2Percent: null })]} />,
     );
     expect(container.textContent).toBe("");
+  });
+});
+
+describe("TankGasCorrections", () => {
+  it("offers a correction per tank still held or out", () => {
+    render(
+      <TankGasCorrections
+        t={t}
+        ticketId="r1"
+        units={[unit({}), unit({ reservationId: "r2", label: "Tank #2", returnedAt: new Date() })]}
+      />,
+    );
+    expect(
+      screen.getAllByRole("button", { name: t("counterRentals.ticket.fillCorrect") }),
+    ).toHaveLength(1);
+    expect(
+      screen.getByRole("combobox", {
+        name: t("counterRentals.ticket.fillCorrectAria", { label: "Tank #1" }),
+      }),
+    ).toBeTruthy();
+  });
+
+  it("offers none once every tank is home, and says nothing with no tank", () => {
+    const { container } = render(
+      <TankGasCorrections t={t} ticketId="r1" units={[unit({ returnedAt: new Date() })]} />,
+    );
+    expect(container.textContent).toBe("");
+    cleanup();
+    const none = render(
+      <TankGasCorrections
+        t={t}
+        ticketId="r1"
+        units={[unit({ kind: "fins", fillO2Percent: null })]}
+      />,
+    );
+    expect(none.container.textContent).toBe("");
   });
 });

@@ -294,7 +294,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("radio", { name: /^No charge/ }).check();
         await page.getByRole("button", { name: "Rent out", exact: true }).click();
         await page.waitForURL(/\/gear\/rentals\/[0-9a-f-]{36}(?:[?#]|$)/);
-        await page.locator('[data-tank-gas] select[name="fill"]').waitFor();
+        await page.locator('[data-tank-gas-corrections] select[name="fill"]').waitFor();
         await capture(page, "counter-rental-tank-gas-correction", scheme);
       });
 

@@ -7,12 +7,12 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { bookings, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
-import { updateTrip, updateTripSection } from "./trips-record";
+import { editTrip, editTripSection } from "./trips-record";
 
 /**
  * Staff shrinking a departure while a diver books it (A§4 item 7).
  *
- * `updateTrip` locks the trip row before it counts the seats held, the same
+ * `editTrip` locks the trip row before it counts the seats held, the same
  * lock `createBookingRecord` takes before it counts them to sell one. Under
  * READ COMMITTED without that pairing, the edit could count two divers, the
  * booking could add a third, and the edit could then write a capacity of two
@@ -70,13 +70,13 @@ async function seatsAndCapacity(db: AppDb, tripId: string) {
 
 const tripRowLock = (tripId: string) => sql`select id from trips where id = ${tripId} for update`;
 
-describePostgres("updateTrip against createBooking under real concurrency", () => {
+describePostgres("editTrip against createBooking under real concurrency", () => {
   it("never leaves more divers aboard than the capacity a simultaneous shrink writes", async () => {
     const pg = await postgresTestDb();
     const { shopId, trip } = await tripWithTwoOfThreeTaken(pg.db);
 
     const gate = await holdRowLock(pg, tripRowLock(trip.id));
-    const shrink = updateTrip(pg.connect(), shopId, trip.id, {
+    const shrink = editTrip(pg.connect(), shopId, trip.id, {
       title: trip.title,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
@@ -107,8 +107,8 @@ describePostgres("independent departure section saves (#3141)", () => {
     const pg = await postgresTestDb();
     const { shopId, trip } = await tripWithTwoOfThreeTaken(pg.db);
     const gate = await holdRowLock(pg, tripRowLock(trip.id));
-    const rename = updateTripSection(pg.connect(), shopId, trip.id, { title: "Renamed departure" });
-    const price = updateTripSection(pg.connect(), shopId, trip.id, { priceCents: 16500 });
+    const rename = editTripSection(pg.connect(), shopId, trip.id, { title: "Renamed departure" });
+    const price = editTripSection(pg.connect(), shopId, trip.id, { priceCents: 16500 });
     await waitForLockWaiters(pg.db, 2);
     await gate.release();
     expect((await Promise.all([rename, price])).every((result) => result.ok)).toBe(true);

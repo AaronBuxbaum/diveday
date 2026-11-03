@@ -3,7 +3,7 @@ import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { createDemoShop, deleteDemoShopCascade } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
+import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
 import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**

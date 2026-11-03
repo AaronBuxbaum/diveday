@@ -11,7 +11,7 @@ import {
 import {
   bookings,
   buddyTeamEvents,
-  certifications,
+  cards,
   people,
   personRoles,
   shops,
@@ -68,8 +68,9 @@ async function fixture(operation: Operation) {
     .returning();
   const members = seats.map((seat) => ({ kind: "diver" as const, bookingId: seat.id }));
   const [card] = await pg.db
-    .insert(certifications)
+    .insert(cards)
     .values({
+      kind: "level",
       shopId: shop.id,
       personId: first.id,
       agency: "padi",
@@ -146,7 +147,7 @@ describePostgres("manual buddy team trail against erasure", () => {
       const { pg, card, mutate, erase, noName } = await fixture(operation);
       const gate = await holdRowLock(
         pg,
-        sql`select id from certifications where id = ${card.id} for update`,
+        sql`select id from cards where id = ${card.id} for update`,
       );
       const erasing = erase();
       try {

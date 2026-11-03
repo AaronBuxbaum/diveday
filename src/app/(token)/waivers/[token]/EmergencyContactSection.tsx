@@ -27,7 +27,7 @@ export function EmergencyContactSection({
           read-only the moment a contact existed, on the reasoning that a
           correction was staff work — but this is the one screen a diver
           fills in the week before a trip, and the person they'd name has
-          often changed since they booked. `saveBookingEmergencyContact`
+          often changed since they booked. `recordBookingEmergencyContact`
           never lets a blank overwrite a stored value, so re-showing the
           fields can only ever improve what the crew has. */}
         {emergencyContact?.name && emergencyContact?.phone ? (

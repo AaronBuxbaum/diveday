@@ -48,6 +48,8 @@ const STAFF_PATHS = [
   "/reports",
   "/promos",
   "/staffing",
+  // The same week as a sheet for the noticeboard.
+  "/staffing/print",
   "/dive-sites",
   // The paper day: one document holding every diver's emergency contact for
   // today, so a cross-tenant read of it is the whole roster at once.

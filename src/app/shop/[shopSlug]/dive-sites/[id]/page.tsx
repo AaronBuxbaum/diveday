@@ -9,13 +9,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { DangerDisclosure, DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
-import {
-  getDiveSite,
-  getDiveSiteTemplateUpdate,
-  listDiveSiteCreatures,
-  listUpcomingTripsForSite,
-} from "@/db/dive-sites";
-import { listTripDives } from "@/db/trips";
+import { getDiveSitePage } from "@/db/dive-site-page";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -84,8 +78,12 @@ export default async function EditDiveSitePage({
   if (!uuidParam(id)) notFound();
   const { notice, error, undo } = await searchParams;
   const { db, shop } = await requireShopSurface(shopSlug);
-  const site = await getDiveSite(db, shop.id, id);
-  if (!site) notFound();
+  const rhythm = parseDockDayRhythm(shop);
+  const page = await getDiveSitePage(db, shop.id, id, {
+    tideDepartures: rhythm ? TIDE_LINE_DEPARTURES : 0,
+  });
+  if (!page) notFound();
+  const { site, upcomingTrips, creatures, templateUpdate, tideDives } = page;
   const assists = await loadSiteAssists(db, shop, site);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -100,11 +98,6 @@ export default async function EditDiveSitePage({
   // that never happened. An unrecognized code now renders nothing.
   const noticeKey = noticeFromParam(notice, NOTICE_KEYS);
   const errorKey = noticeFromParam(error, ERROR_KEYS);
-  const [upcomingTrips, creatures] = await Promise.all([
-    listUpcomingTripsForSite(db, shop.id, id),
-    listDiveSiteCreatures(db, shop.id, id),
-  ]);
-  const templateUpdate = await getDiveSiteTemplateUpdate(db, shop.id, id);
   // What NOAA calls the station this site carries, and whether it sits
   // anywhere near the site's own coordinates (issue #1468, ADR
   // 20260907-noaa-tide-predictions' 2026-09-10 amendment). Read here in the
@@ -125,12 +118,10 @@ export default async function EditDiveSitePage({
   // list in order would put a four-second bound on the page once per row. The
   // rows a captain plans tides against are the next ones; the rest read as they
   // did before this feature.
-  const rhythm = parseDockDayRhythm(shop);
   const tideLineByTrip = new Map<string, string>();
   if (site.tideStationId && rhythm) {
     const lines = await Promise.all(
-      upcomingTrips.slice(0, TIDE_LINE_DEPARTURES).map(async (trip) => {
-        const dives = await listTripDives(db, shop.id, trip.tripId);
+      tideDives.map(async ({ trip, dives }) => {
         const windows = await tideWindowsForDeparture({
           startsAt: trip.startsAt,
           plannedDives: trip.plannedDives,

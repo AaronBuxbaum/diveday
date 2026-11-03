@@ -212,7 +212,7 @@ export function BookingGearFields({
                             next.add(kind);
                             // One diver, one suit (H-20260916-rental-fit-describe-shop): ticking one suit
                             // unticks the other, so the quote never charges
-                            // for two. `saveRentalFit` holds the same rule
+                            // for two. `recordRentalFit` holds the same rule
                             // for a post that arrives with both.
                             if (kind === "wetsuit") next.delete("drysuit");
                             if (kind === "drysuit") next.delete("wetsuit");

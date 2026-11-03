@@ -1,5 +1,4 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
-import { diverTranslator } from "@/i18n/messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { canonicalAgency } from "@/lib/courses";
@@ -161,12 +160,11 @@ export async function tellCourseCertified(
     if (!phone) return "no_contact";
     const senders = providers.whatsAppProviders ?? (await whatsAppProvidersForShops(db, [shop.id]));
     const sms = stopListedSmsProvider(db, providers.smsProvider ?? smsProviderFromEnvironment());
-    const t = diverTranslator(locale);
     const sent = await sendCourtesyMessage(
       {
         to: phone,
         body: courseCertifiedText({ locale, shopName: shop.name, level: input.level, ...card }),
-        smsStopLine: t("notifications.sms.stopLine"),
+        locale,
         shopName: shop.name,
       },
       { sms, whatsapp: senders.get(shop.id) ?? null },

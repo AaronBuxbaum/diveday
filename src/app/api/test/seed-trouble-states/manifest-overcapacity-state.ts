@@ -2,7 +2,7 @@ import { and, eq, gte, inArray, isNotNull } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { markBookingNoShow } from "@/db/no-show";
-import { boats, bookings, certifications, people, personRoles, trips } from "@/db/schema";
+import { boats, bookings, cards, people, personRoles, trips } from "@/db/schema";
 import { liveTrip } from "@/db/trips-live";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
@@ -104,7 +104,8 @@ export async function seedManifestOverCapacityState(
       if (!result.ok && result.reason === "not_ready") {
         // Nadia is intentionally uncarded in the demo. Verify her through the
         // normal certification row before retrying the boarding writer.
-        await db.insert(certifications).values({
+        await db.insert(cards).values({
+          kind: "level",
           shopId,
           personId: seat.personId,
           agency: "padi" as const,

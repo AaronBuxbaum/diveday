@@ -134,7 +134,7 @@ export type UpdateGearItemOutcome =
       reason: "not_found" | "empty_label" | "duplicate_label" | "invalid_date" | "invalid_boat";
     };
 
-export async function updateGearItem(
+export async function editGearItem(
   db: AppDb,
   input: GearItemInput & { gearItemId: string },
 ): Promise<UpdateGearItemOutcome> {

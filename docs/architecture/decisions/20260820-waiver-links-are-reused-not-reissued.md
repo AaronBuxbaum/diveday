@@ -17,7 +17,7 @@ killed the URL the first one produced. The failure is silent and lands on the di
 link they were given and get the dead-link page.
 
 The worse case predates that row. A diver part-way through signing online has their draft saved
-against the pending record (`saveWaiverDraft`). *Any* staff send — from the roster, the check-in
+against the pending record (`recordWaiverDraft`). *Any* staff send — from the roster, the check-in
 queue, Today, or the diver record — superseded that record and took the half-filled questionnaire
 with it. Nothing in the product told anyone this had happened.
 

@@ -13,8 +13,7 @@ import { NameMatchCandidateFacts } from "@/components/seat-diver/NameMatchCandid
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { buttonClass } from "@/components/ui/button";
 import { FieldActions } from "@/components/ui/form";
-import { findSimilarDivers } from "@/db/divers";
-import { readFormDraft } from "@/db/form-drafts";
+import { getNewDiverPage } from "@/db/new-diver-page";
 import { staffParticipantTypeLabel } from "@/i18n/participant-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { addPanelCloseHref } from "@/lib/add-panel";
@@ -27,7 +26,7 @@ import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { WALK_IN_FIRST_ROW, WALK_IN_PARTY_FORM, WALK_IN_PARTY_MAX } from "@/lib/walk-in-party";
 import { createDiverFormAction } from "../add-diver-actions";
 import { NOTICES } from "./add-diver-notices";
-import { PartyOnFileChoices, type PartyOnFileRow } from "./PartyOnFileChoices";
+import { PartyOnFileChoices } from "./PartyOnFileChoices";
 import { WalkInPartyRows } from "./WalkInPartyRows";
 import { type WalkInExtrasCopy, WalkInPersonExtras } from "./WalkInPersonExtras";
 
@@ -119,12 +118,38 @@ export async function AddDiverPanel({
   const draftBinding = bindFormDraft(session.user);
   const keptScope = keptTypedScope(shopSlug, session.user.personId);
 
+  const surface =
+    surfaceParam && Object.hasOwn(SEAT_SURFACES, surfaceParam)
+      ? (surfaceParam as SeatSurfaceId)
+      : null;
+  const isWaitlist = waitlistParam === "true";
+  const tripId = tripIdParam?.trim() || null;
+  const walkIn = walkInParam === "true" && surface === "departure" && tripId !== null;
   // What this person had typed here when they were last interrupted (ADR
-  // 20260906-before-you-ask, decision 3), applied by `FormDraft` below.
-  const draft = await readFormDraft(db, shop.id, session.user.personId, "new_diver");
+  // 20260906-before-you-ask, decision 3), applied by `FormDraft` below; who a
+  // name being confirmed reads like; and each party row the on-file check
+  // stopped on, with who it reads like.
+  const { draft, potentialMatches, onFileRows } = await getNewDiverPage(
+    db,
+    shop.id,
+    session.user.personId,
+    {
+      confirmName,
+      onFile:
+        walkIn && notice === "party-on-file"
+          ? Object.entries(rest)
+              .flatMap(([key, value]) => {
+                const row = /^onFile-(\d{1,4})$/.exec(key)?.[1];
+                return row !== undefined && typeof value === "string" && value.trim()
+                  ? [{ row: Number(row), typedName: value.trim() }]
+                  : [];
+              })
+              .sort((a, b) => a.row - b.row)
+              .slice(0, WALK_IN_PARTY_MAX)
+          : [],
+    },
+  );
   const newDiverDraft = draftForForm(draft, locale, shop.timezone);
-
-  const potentialMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   // A candidate with no dive day says so only when a sibling has one; the rule
   // and the bias it corrects are in `noDiveDayNeedsSaying`.
   const sayNoDiveDay = noDiveDayNeedsSaying(potentialMatches);
@@ -135,13 +160,6 @@ export async function AddDiverPanel({
   const defaultEmail = email ?? prefill.email ?? "";
   const defaultPhone = phone ?? "";
 
-  const surface =
-    surfaceParam && Object.hasOwn(SEAT_SURFACES, surfaceParam)
-      ? (surfaceParam as SeatSurfaceId)
-      : null;
-  const isWaitlist = waitlistParam === "true";
-  const tripId = tripIdParam?.trim() || null;
-  const walkIn = walkInParam === "true" && surface === "departure" && tripId !== null;
   const closeHref = addDiverCloseHref(shopSlug, search);
 
   const submitLabel =
@@ -156,28 +174,6 @@ export async function AddDiverPanel({
   const banner = noticeFromParam(notice, NOTICES);
   const noticeText = banner ? t(banner.key) : null;
   const noticeIsError = banner?.tone === "danger";
-  const walkInParty = walkIn;
-  // Each party row the on-file check stopped on, with who it reads like.
-  const onFileRows: PartyOnFileRow[] =
-    walkInParty && notice === "party-on-file"
-      ? (
-          await Promise.all(
-            Object.entries(rest)
-              .flatMap(([key, value]) => {
-                const row = /^onFile-(\d{1,4})$/.exec(key)?.[1];
-                return row !== undefined && typeof value === "string" && value.trim()
-                  ? [{ row: Number(row), typedName: value.trim() }]
-                  : [];
-              })
-              .sort((a, b) => a.row - b.row)
-              .slice(0, WALK_IN_PARTY_MAX)
-              .map(async (entry) => ({
-                ...entry,
-                matches: await findSimilarDivers(db, shop.id, entry.typedName),
-              })),
-          )
-        ).filter((entry) => entry.matches.length > 0)
-      : [];
   const extrasCopy: WalkInExtrasCopy = {
     comingAs: t("participants.roster.typeLabel"),
     types: Object.fromEntries(
@@ -336,7 +332,7 @@ export async function AddDiverPanel({
         <input type="hidden" name="request" value={requestParam ?? ""} />
         {/* **The rest of a walk-in family** (fifth loop, item 9): only at
               the counter, where the party is standing at the desk. */}
-        {walkInParty ? (
+        {walkIn ? (
           <>
             <KeepTypedOnRefusal
               form={WALK_IN_PARTY_FORM}

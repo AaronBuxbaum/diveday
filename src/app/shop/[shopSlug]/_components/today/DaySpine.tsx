@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Suspense } from "react";
+import { type ComponentProps, Suspense } from "react";
 import { type WaiverSendCopy, waiverSendCopy } from "@/app/actions/waiver-send-types";
 import {
   AgencyCheckHost,
@@ -7,7 +7,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { agencyCheckCopies } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
-import { CrewLines, type CrewReading } from "@/app/shop/[shopSlug]/_components/today/CrewLines";
+import { CrewLines } from "@/app/shop/[shopSlug]/_components/today/CrewLines";
 import {
   addAgencyListedCardsAction,
   agencyCheckAction,
@@ -25,13 +25,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { FirstBooking } from "@/db/first-booking";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
-import { nowDate } from "@/lib/clock";
-import type { DayTakings as DayTakingsReading, EveningClose } from "@/lib/closeout";
-import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
-import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
-import { isCapturedPaymentStatus } from "@/lib/payment-source";
+import type { DayTakings as DayTakingsReading, EveningClose } from "@/features/today";
 import {
   type DaySpine as DaySpineData,
   type DayStation as DayStationData,
@@ -43,7 +37,13 @@ import {
   spineJobCount,
   type TodayAction,
   weekCrewAway,
-} from "@/lib/today";
+} from "@/features/today";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
+import { nowDate } from "@/lib/clock";
+import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
+import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
+import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { AllClearLine } from "./AllClearLine";
 import { ClosingStation, LastRollCall } from "./ClosingStation";
 import { crewAwayRowControl } from "./CrewAwayWorkingControl";
@@ -76,7 +76,7 @@ import { WeekHorizon } from "./WeekHorizon";
  * Three things this file is deliberately *not*:
  *
  * - **A second detector.** Every row here came out of `getTodayWork` and was
- *   ranked by `src/lib/today.ts`; `assembleDaySpine` only decides which
+ *   ranked by `src/features/today/today.ts`; `assembleDaySpine` only decides which
  *   station it files under. There is no query, no blocker rule and no urgency
  *   arithmetic on this page.
  * - **A mode.** There is no view control and no phase switch — the ADR rejected
@@ -583,7 +583,7 @@ function paymentActionCopy(t: StaffTranslator): PaymentActionCopy {
  * this component rendered before 6d.
  */
 export type EveningReading = {
-  /** The day's departures with their closing state (`src/lib/closeout.ts`). */
+  /** The day's departures with their closing state (`src/features/today/closeout.ts`). */
   close: EveningClose;
   /** Per trip, who made the last roll-call mark and when. Absent for a trip with none. */
   headCountCloses: ReadonlyMap<string, { closedAt: Date; closedBy: string }>;
@@ -681,7 +681,7 @@ export type DaySpineContext = {
    */
   factOfScale?: FactOfScale | null;
   /** The reader's own crew lines: this week's tips, this month's boats (`CrewLines`). */
-  crew?: CrewReading;
+  crew?: ComponentProps<typeof CrewLines>["crew"];
   /** The instructor lens's own labeled group, above the first station. */
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */

@@ -488,7 +488,7 @@
     "visual-print.spec.ts › print › the crew week prints as a noticeboard rota": 2367,
     "visual-print.spec.ts › print › the day packet prints every departure of today": 3250,
     "visual-print.spec.ts › print › the departure log prints monochrome and padded": 3931,
-    "visual-print.spec.ts › print › the dispute sheet prints monochrome and padded": 3978,
+    "visual-print.spec.ts › print › the dispute sheet prints as a sheet of the shop's paper": 3978,
     "visual-print.spec.ts › print › the dock manifest prints monochrome and padded": 4039,
     "visual-print.spec.ts › print › the dock prep list prints monochrome and padded": 6411,
     "visual-print.spec.ts › print › the inbox prints its excerpts without clipping": 4360,

@@ -19,9 +19,7 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import { LedgerRow } from "@/components/ui/ledger";
-import { getDiverProfile } from "@/db/divers";
-import { listStaff } from "@/db/trips";
-import { listBenchUnits, listCustomerGearItems, searchWorkOrderCustomers } from "@/db/work-orders";
+import { getWorkOrderNewPage } from "@/db/work-order-new-page";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { ADD_ONE, ADD_PARAM, addPanelHref } from "@/lib/add-panel";
@@ -77,21 +75,9 @@ export async function NewWorkOrderPanel({
 }) {
   const askedPerson = search.personId ? uuidParam(search.personId) : undefined;
   const askedUnit = search.unitId ? uuidParam(search.unitId) : undefined;
-  const both = Boolean(askedPerson && askedUnit);
   const query = search.diverq?.trim() ?? "";
-  const [profile, staff, allUnits] = await Promise.all([
-    askedPerson && !both ? getDiverProfile(db, shop.id, askedPerson) : null,
-    listStaff(db, shop.id),
-    listBenchUnits(db, shop.id),
-  ]);
-  const customer = profile ?? null;
-  const personId = customer ? askedPerson : undefined;
-  const chosenUnit = askedUnit && !both ? allUnits.find((row) => row.id === askedUnit) : undefined;
-  const [pieces, candidates] = await Promise.all([
-    personId ? listCustomerGearItems(db, shop.id, personId) : [],
-    personId || chosenUnit ? [] : searchWorkOrderCustomers(db, shop.id, query),
-  ]);
-  const units = personId ? [] : allUnits;
+  const { customer, personId, pieces, candidates, units, staff, chosenUnit } =
+    await getWorkOrderNewPage(db, shop.id, { personId: askedPerson, unitId: askedUnit, query });
 
   const notice = noticeFromParam(search.notice, NEW_ORDER_NOTICES);
   const noticeKey = notice?.messageKey;

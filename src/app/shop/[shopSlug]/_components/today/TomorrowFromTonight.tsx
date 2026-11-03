@@ -3,7 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
 import { dayLoadOutLine } from "@/i18n/load-out-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { DayLoadOut } from "@/lib/closeout";
+import type { DayLoadOut } from "@/lib/closeout-kinds";
 import { shopPath } from "@/lib/staff-notices";
 import type { EveningReading } from "./DaySpine";
 import { DayTakings } from "./DayTakings";

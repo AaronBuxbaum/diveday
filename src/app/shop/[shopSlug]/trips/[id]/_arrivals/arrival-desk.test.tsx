@@ -1,19 +1,12 @@
 // @vitest-environment jsdom
 
 import { cleanup, render } from "@testing-library/react";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { isValidElement, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { listCheckInQueue } from "@/db/check-in";
 import { createCertification } from "@/db/readiness";
-import {
-  bookings,
-  certifications,
-  lostItems,
-  nitroxCertifications,
-  people,
-  trips,
-} from "@/db/schema";
+import { bookings, cards, lostItems, people, trips } from "@/db/schema";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -140,9 +133,9 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
       .set({ welcomeSharedAt: seat.now })
       .where(eq(bookings.id, seat.bookingId));
     await seat.db
-      .update(certifications)
+      .update(cards)
       .set({ deletedAt: seat.now })
-      .where(eq(certifications.personId, seat.personId));
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, seat.personId)));
     await createCertification(seat.db, {
       shopId: seat.shop.id,
       personId: seat.personId,
@@ -150,7 +143,8 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
       level: "open_water",
       identifier: "OW-DOCK-1",
     });
-    await seat.db.insert(nitroxCertifications).values({
+    await seat.db.insert(cards).values({
+      kind: "nitrox",
       shopId: seat.shop.id,
       personId: seat.personId,
       agency: "padi",

@@ -24,7 +24,7 @@ import {
   activityEvents,
   bookings,
   buddyTeamMembers,
-  certifications,
+  cards,
   gearItems,
   gearReservations,
   interests,
@@ -128,7 +128,8 @@ describe("diver record merge", () => {
 
   it("moves diver history atomically and leaves activity subjects on the original id", async () => {
     const { db, shop, owner, trip, source, survivor } = await mergeFixtures();
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: source.id,
       agency: "padi",
@@ -194,9 +195,12 @@ describe("diver record merge", () => {
     expect(result).toEqual({ ok: true, survivorId: survivor.id, mergedPersonId: source.id });
 
     expect(
-      (await db.select().from(certifications).where(eq(certifications.personId, survivor.id))).map(
-        (row) => row.identifier,
-      ),
+      (
+        await db
+          .select()
+          .from(cards)
+          .where(and(eq(cards.kind, "level"), eq(cards.personId, survivor.id)))
+      ).map((row) => row.identifier),
     ).toEqual(["MAYA-OW-1"]);
     expect(
       (

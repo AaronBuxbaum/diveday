@@ -21,18 +21,16 @@ import {
 } from "./review-assists";
 import {
   assistResults,
-  certifications,
+  cards,
   diveSites,
   incidentReports,
-  nitroxCertifications,
   people,
   shops,
-  specialtyCertifications,
   tripReviews,
   tripSightings,
   trips,
 } from "./schema";
-import { readTranslations, saveTranslation, translatedOr } from "./shop-text-translations";
+import { readTranslations, recordTranslation, translatedOr } from "./shop-text-translations";
 import { liveTrip } from "./trips-live";
 
 const ctx = fileScopedShopContext({ history: true });
@@ -297,7 +295,7 @@ describe("shop text translations", () => {
     const subject = await tripSubject();
     const original = "Two tanks on the wall, 18 m max.";
     expect(
-      await saveTranslation(ctx.db, ctx.shop.id, subject, {
+      await recordTranslation(ctx.db, ctx.shop.id, subject, {
         text: "Dos tanques en la pared, 18 m máx.",
         original,
         translatedFrom: "",
@@ -311,7 +309,7 @@ describe("shop text translations", () => {
       "Two tanks, 30 m max.",
     );
     expect(
-      await saveTranslation(
+      await recordTranslation(
         ctx.db,
         ctx.shop.id,
         { ...subject, field: "title" },
@@ -324,7 +322,7 @@ describe("shop text translations", () => {
     const subject = await tripSubject();
     const before = "Easy reef along the sand edge.";
     const spanish = "Arrecife fácil junto al borde de arena.";
-    await saveTranslation(ctx.db, ctx.shop.id, subject, {
+    await recordTranslation(ctx.db, ctx.shop.id, subject, {
       text: spanish,
       original: before,
       translatedFrom: sourceDigest(before),
@@ -333,7 +331,7 @@ describe("shop text translations", () => {
       "Easy reef along the sand edge. Strong down-current past the point on the outgoing tide: turn back at the mooring.";
     // Save Spanish pressed with the box as it was: what it holds translated `before`.
     expect(
-      await saveTranslation(ctx.db, ctx.shop.id, subject, {
+      await recordTranslation(ctx.db, ctx.shop.id, subject, {
         text: spanish,
         original: after,
         translatedFrom: sourceDigest(before),
@@ -343,7 +341,7 @@ describe("shop text translations", () => {
     expect(translatedOr(map, subject.id, "description", after)).toBe(after);
     // A draft of the English that was never saved: the same refusal.
     expect(
-      await saveTranslation(ctx.db, ctx.shop.id, subject, {
+      await recordTranslation(ctx.db, ctx.shop.id, subject, {
         text: "Un arrecife.",
         original: after,
         translatedFrom: sourceDigest("A reef."),
@@ -351,14 +349,14 @@ describe("shop text translations", () => {
     ).toBe("stale");
     // Spanish drafted from the current original, or rewritten by hand, saves.
     expect(
-      await saveTranslation(ctx.db, ctx.shop.id, subject, {
+      await recordTranslation(ctx.db, ctx.shop.id, subject, {
         text: "Arrecife junto a la arena. Fuerte corriente descendente: regresa en la boya.",
         original: after,
         translatedFrom: "",
       }),
     ).toBe("saved");
     expect(
-      await saveTranslation(ctx.db, ctx.shop.id, subject, {
+      await recordTranslation(ctx.db, ctx.shop.id, subject, {
         text: "",
         original: after,
         translatedFrom: sourceDigest(before),
@@ -375,7 +373,7 @@ describe("a translation's subject going", () => {
       .returning({ id: diveSites.id });
     if (!site) throw new Error("site was not inserted");
     const subject = { kind: "dive_site", id: site.id, field: "description" } as const;
-    await saveTranslation(ctx.db, ctx.shop.id, subject, {
+    await recordTranslation(ctx.db, ctx.shop.id, subject, {
       text: "Un arrecife.",
       original: "A reef.",
       translatedFrom: "",
@@ -592,9 +590,10 @@ describe("the same-person read", () => {
       ])
       .returning({ id: people.id });
     if (!a || !b) throw new Error("people were not inserted");
-    await ctx.db.insert(certifications).values([
+    await ctx.db.insert(cards).values([
       // A card removed as wrong, and a claim nobody checked: neither is a level held.
       {
+        kind: "level",
         shopId: ctx.shop.id,
         personId: a.id,
         agency: "padi",
@@ -603,8 +602,16 @@ describe("the same-person read", () => {
         status: "verified",
         deletedAt: now,
       },
-      { shopId: ctx.shop.id, personId: a.id, agency: "padi", level: "rescue", identifier: "R-1" },
       {
+        kind: "level",
+        shopId: ctx.shop.id,
+        personId: a.id,
+        agency: "padi",
+        level: "rescue",
+        identifier: "R-1",
+      },
+      {
+        kind: "level",
         shopId: ctx.shop.id,
         personId: b.id,
         agency: "padi",
@@ -627,12 +634,8 @@ describe("the card photo read", () => {
   };
 
   async function cardRows() {
-    const [levels, specialties, nitrox] = await Promise.all([
-      ctx.db.select({ id: certifications.id }).from(certifications),
-      ctx.db.select({ id: specialtyCertifications.id }).from(specialtyCertifications),
-      ctx.db.select({ id: nitroxCertifications.id }).from(nitroxCertifications),
-    ]);
-    return levels.length + specialties.length + nitrox.length;
+    // Every kind of card at once: a read writes none of them.
+    return (await ctx.db.select({ id: cards.id }).from(cards)).length;
   }
 
   it("answers form values only, writes no card, and reads a doubtful photo as nothing", async () => {

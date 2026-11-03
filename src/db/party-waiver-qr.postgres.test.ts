@@ -6,9 +6,9 @@ import { raceShop } from "@/test/postgres-shop";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { issuePartyWaiver } from "./party-waiver-queue";
 import { bookings, people, tripRequirements, trips, waiverRecords } from "./schema";
-import { completeWaiver, getWaiverForToken, saveWaiverDraft } from "./waivers-completion";
+import { completeWaiver, getWaiverForToken, recordWaiverDraft } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import { saveWaiverTemplate } from "./waivers-templates";
+import { recordWaiverTemplate } from "./waivers-templates";
 import { clearAnswers } from "./waivers-test-fixtures";
 
 afterEach(() => {
@@ -20,7 +20,7 @@ async function fixture() {
   vi.stubEnv("DIVEDAY_CLOCK", "");
   const pg = await postgresTestDb();
   const shop = await raceShop(pg.db);
-  await saveWaiverTemplate(pg.db, {
+  await recordWaiverTemplate(pg.db, {
     shopId: shop.id,
     title: "Release",
     body: "I understand the risks of diving.",
@@ -121,7 +121,7 @@ describePostgres("counter waiver locking", () => {
               medicalAnswers: clearAnswers,
               emergencyContact: { name: "Jordan", phone: "1234567890" },
             })
-          : saveWaiverDraft(f.pg.connect(), f.issued.token, {
+          : recordWaiverDraft(f.pg.connect(), f.issued.token, {
               acknowledged: true,
               medicalAnswers: clearAnswers,
               emergencyContact: { name: "Jordan", phone: "1234567890" },
@@ -161,7 +161,7 @@ describePostgres("counter waiver locking", () => {
               medicalAnswers: clearAnswers,
               emergencyContact: { name: "Jordan", phone: "1234567890" },
             })
-          : saveWaiverDraft(f.pg.connect(), f.issued.token, {
+          : recordWaiverDraft(f.pg.connect(), f.issued.token, {
               acknowledged: true,
               medicalAnswers: clearAnswers,
               emergencyContact: { name: "Jordan", phone: "1234567890" },
@@ -232,7 +232,7 @@ describePostgres("counter waiver locking", () => {
     "ordinary issuance serializes before a concurrent %s without deadlocking",
     async (operation) => {
       const f = await fixture();
-      await saveWaiverTemplate(f.pg.db, {
+      await recordWaiverTemplate(f.pg.db, {
         shopId: f.shop.id,
         title: "Revised",
         body: "Revised terms for the release.",
@@ -253,7 +253,7 @@ describePostgres("counter waiver locking", () => {
               agreed: true,
               medicalAnswers: clearAnswers,
             })
-          : saveWaiverDraft(f.pg.connect(), f.issued.token, {
+          : recordWaiverDraft(f.pg.connect(), f.issued.token, {
               acknowledged: true,
               medicalAnswers: clearAnswers,
             });

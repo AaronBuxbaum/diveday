@@ -4,14 +4,7 @@ import { issueBookingCapability } from "@/db/booking-capabilities";
 import { firstActiveIntroCourse } from "@/db/courses";
 import { createCertification } from "@/db/readiness";
 import { getReadyPageData } from "@/db/ready";
-import {
-  bookings,
-  certifications,
-  nitroxCertifications,
-  people,
-  specialtyCertifications,
-  trips,
-} from "@/db/schema";
+import { bookings, cards, people, trips } from "@/db/schema";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 
@@ -73,11 +66,13 @@ async function seat() {
     .set({ participantType: "diver", identityUnconfirmedAt: null })
     .where(eq(bookings.id, row.bookingId));
   const at = nowDate();
-  for (const table of [certifications, nitroxCertifications, specialtyCertifications]) {
+  for (const kind of ["level", "nitrox", "specialty"] as const) {
     await db
-      .update(table)
+      .update(cards)
       .set({ deletedAt: at })
-      .where(and(eq(table.shopId, shop.id), eq(table.personId, row.personId)));
+      .where(
+        and(eq(cards.kind, kind), eq(cards.shopId, shop.id), eq(cards.personId, row.personId)),
+      );
   }
   await db
     .update(people)
@@ -116,13 +111,14 @@ describe("declareNoCertificationFromReady", () => {
     expect(await stamp(personId)).not.toBeNull();
     // A stamp, never a card: no certification row was written for them.
     const live = await db
-      .select({ id: certifications.id })
-      .from(certifications)
+      .select({ id: cards.id })
+      .from(cards)
       .where(
         and(
-          eq(certifications.personId, personId),
-          eq(certifications.shopId, shop.id),
-          isNull(certifications.deletedAt),
+          eq(cards.kind, "level"),
+          eq(cards.personId, personId),
+          eq(cards.shopId, shop.id),
+          isNull(cards.deletedAt),
         ),
       );
     expect(live).toEqual([]);

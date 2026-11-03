@@ -1,10 +1,6 @@
-import { eq } from "drizzle-orm";
-import { getAccountSecurity, hasStepUp } from "@/db/account-security";
-import type { AppDb } from "@/db/client";
-import { userAccounts } from "@/db/schema";
-import type { DiveDaySession } from "@/lib/auth";
 import { noticeUrl, safeShopReturnPath, shopPath } from "@/lib/staff-notices";
 
+/** A step-up's purpose, its return path and its challenge link; whether a session holds one is `hasRequiredStepUp` in `src/db/step-up.ts`. */
 export type StepUpPurpose = "money" | "export" | "backup";
 
 export function isStepUpPurpose(value: string | null | undefined): value is StepUpPurpose {
@@ -29,36 +25,5 @@ export function stepUpChallengeUrl(
   return noticeUrl(shopPath(shopSlug, "me", "security"), "step-up-required", {
     purpose,
     returnTo,
-  });
-}
-
-/**
- * TOTP is optional. When it is enabled, every sensitive operation must have a
- * live grant tied to this exact Better Auth session; a grant from another
- * browser or from a revoked session never satisfies the check.
- */
-export async function hasRequiredStepUp(
-  db: AppDb,
-  session: DiveDaySession,
-  purpose: StepUpPurpose,
-): Promise<boolean> {
-  const accountId =
-    session.user.userAccountId ??
-    (
-      await db
-        .select({ id: userAccounts.id })
-        .from(userAccounts)
-        .where(eq(userAccounts.personId, session.user.personId))
-        .limit(1)
-    )[0]?.id;
-  if (!accountId) return false;
-  const security = await getAccountSecurity(db, accountId);
-  if (!security?.totpEnabledAt) return true;
-  const sessionId = session.user.sessionId;
-  if (!sessionId) return false;
-  return hasStepUp(db, {
-    userAccountId: accountId,
-    accountSessionId: sessionId,
-    purpose,
   });
 }

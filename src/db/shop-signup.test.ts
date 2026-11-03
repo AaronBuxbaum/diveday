@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   DEFAULT_PRICING_CONFIG,
   type PricingConfig,
@@ -43,6 +44,7 @@ async function signUp(
       ownerName: "Ana Ruiz",
       ownerEmail: `${slug}@example.test`,
       ownerPassword: "a-long-enough-password-1",
+      firstChecklistLine: staffTranslator("en-US")("settings.safetyChecklist.defaultLine"),
     },
     pricing.config ?? DEFAULT_PRICING_CONFIG,
   );

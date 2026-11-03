@@ -7,7 +7,7 @@ const courtesy = {
   body: "Reef Runner departs Sat at 8:00 AM.",
   shopName: "Blue Horizon Divers",
 };
-const message = { ...courtesy, smsStopLine: "Reply STOP to opt out." };
+const message = { ...courtesy, locale: "en-US" };
 
 function provider(...results: CourtesyDelivery[]) {
   const send = vi.fn();

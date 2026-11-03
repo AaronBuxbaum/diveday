@@ -14,14 +14,14 @@ The other was a per-departure **coverage table**: every scheduled trip in the wi
 fact Today already owns, and the code said so out loud in both directions:
 
 - `courseCrewGap` (`src/lib/course-ratios.ts`) was called in **two** readers —
-  `src/db/staffing.ts` and `src/db/today.ts` — and the comment at each call site referred the
+  `src/db/staffing.ts` and `src/features/today/today-reader.ts` — and the comment at each call site referred the
   reader to the other one, on the theory that naming the twin keeps it honest.
 - The twins had **different vocabularies** for the one verdict. Today files it as
   `instructor_missing`; staffing split the same `courseCrewGap` result into `over_ratio` and
   `course_needs_instructor`, plus two codes of its own (`no_crew`, `no_shift_coverage`). Four
   staffing strings and one Today string for one computation.
 - Keeping them in step needed a **test asserting the two surfaces agree** (DOM-M3, in
-  `src/db/today.test.ts`) — the standing cost of a duplicate that documentation alone could not
+  `src/features/today/today-reader.test.ts`) — the standing cost of a duplicate that documentation alone could not
   hold.
 
 The decisive asymmetry is what each surface could *do* about a gap. Today's `DepartureBoard`

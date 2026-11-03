@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { listUnfinished } from "@/db/unfinished";
@@ -49,7 +49,6 @@ const { createOrder, recordPaymentOnOpenOrder, refundOrder } = await import("@/d
 const { getBookingPayment, listBookingPaymentEvents, setBookingPayment } = await import(
   "@/db/payments"
 );
-const { tipCheckout } = await import("@/db/checkout-purpose");
 const { bookingCheckouts, integrationEvents, orders, paymentDisputes } = await import(
   "@/db/schema"
 );
@@ -62,7 +61,7 @@ const { getShopStripeAccount, setShopStripeAccountStatus, upsertShopStripeAccoun
   "@/db/stripe-accounts"
 );
 const { startTipCheckout } = await import("@/db/tips");
-const { upcomingTripsWithCounts, updateTrip } = await import("@/db/trips");
+const { upcomingTripsWithCounts, editTrip } = await import("@/db/trips");
 const { POST } = await import("./route");
 
 type Db = AppDb;
@@ -173,7 +172,7 @@ async function pricedReef(db: Db, shopId: string) {
   const trips = await upcomingTripsWithCounts(db, shopId, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  await updateTrip(db, shopId, reef.id, {
+  await editTrip(db, shopId, reef.id, {
     title: reef.title,
     startsAt: reef.startsAt,
     endsAt: reef.endsAt,
@@ -418,17 +417,13 @@ describe("tip session hostile sequences (real handlers, real db)", () => {
   }
 
   async function tipState(db: Db) {
-    const [tip] = await db
-      .select()
-      .from(bookingCheckouts)
-      .where(and(eq(bookingCheckouts.stripeSessionId, "cs_1"), tipCheckout()))
-      .limit(1);
+    const tipSession = eq(bookingCheckouts.stripeSessionId, "cs_1");
+    const [tip] = await db.select().from(bookingCheckouts).where(tipSession);
     return { status: tip?.status ?? null, completedAt: tip?.completedAt ?? null };
   }
 
-  it("a tip completion replayed under both id flavors, then an expiry, leaves the tip paid once", async () => {
+  it("a tip completion replayed under both id flavors, then an expiry, leaves the tip completed once", async () => {
     const { db, shop, bookingId } = await tipScenario();
-
     expect((await deliver(completedPaid("evt_t1", "cs_1"))).status).toBe(200);
     const paid = await tipState(db);
     expect(paid.status).toBe("completed");

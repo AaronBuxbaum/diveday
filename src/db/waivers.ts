@@ -20,6 +20,8 @@
  * siblings import each other by file, so this barrel is never in a cycle.
  */
 
+/** Who may manage the release: the waiver pages' gate (`requireShopSurface`'s `allow`). */
+export { canPersonManageWaiverTemplates } from "./authz";
 export {
   getSignedWaiverForDiver,
   getSignedWaiverRecordForShop,
@@ -41,11 +43,15 @@ export {
   getEmergencyContactForBearer,
   getEmergencyContactForPerson,
   getWaiverForToken,
-  saveBookingEmergencyContact,
-  savePersonEmergencyContact,
-  saveWaiverDraft,
+  recordBookingEmergencyContact,
+  recordPersonEmergencyContact,
+  recordWaiverDraft,
   staleWaiverRecordForToken,
+  type ThreadWaiverKey,
   type TokenWaiverState,
+  threadWaiverAwaitsPhysician,
+  threadWaiverKey,
+  type WaiverKey,
 } from "./waivers-completion";
 export {
   type DiverWaiverRequestStatus,
@@ -86,16 +92,18 @@ export {
   hasLiveWaiverRequest,
   type IssueWaiverOutcome,
   issueWaiverRequest,
+  type OpenThreadWaiverOutcome,
+  openWaiverInThread,
 } from "./waivers-requests";
 export {
   getCurrentWaiverGeneration,
   getCurrentWaiverTemplate,
   getSignedRecordShopAnswers,
   getWaiverTemplateQuestions,
+  recordWaiverTemplate,
   type SaveWaiverTemplateInput,
   type SaveWaiverTemplateResult,
   type StandingWaiverExposure,
-  saveWaiverTemplate,
   standingWaiverExposure,
   type WaiverDeliveryChannel,
 } from "./waivers-templates";

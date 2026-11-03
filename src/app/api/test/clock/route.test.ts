@@ -1,9 +1,9 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
+import { listRollCallGaps } from "@/db/roll-call-gaps";
 import { trips } from "@/db/schema";
 import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "@/db/seed-boat-at-sea";
-import { listRollCallGaps } from "@/db/today";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
 

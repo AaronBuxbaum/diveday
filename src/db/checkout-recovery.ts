@@ -212,7 +212,13 @@ export async function sendDueCheckoutRecoveries(
     .select({ checkoutId: bookingCheckoutBookings.checkoutId })
     .from(bookingCheckoutBookings)
     // diveday:any-checkout-purpose: the links of the fare candidates read above
-    .innerJoin(bookingPayments, eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId))
+    .innerJoin(
+      bookingPayments,
+      and(
+        eq(bookingPayments.shopId, bookingCheckoutBookings.shopId),
+        eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId),
+      ),
+    )
     .where(
       and(
         inArray(bookingCheckoutBookings.checkoutId, candidateIds),
@@ -351,7 +357,13 @@ export async function sendDueCheckoutRecoveries(
       .select({ checkoutId: bookingCheckoutBookings.checkoutId })
       .from(bookingCheckoutBookings)
       // diveday:any-checkout-purpose: the links of the fare candidates read above
-      .innerJoin(bookingPayments, eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId))
+      .innerJoin(
+        bookingPayments,
+        and(
+          eq(bookingPayments.shopId, bookingCheckoutBookings.shopId),
+          eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId),
+        ),
+      )
       .where(
         and(
           eq(bookingCheckoutBookings.checkoutId, checkout.id),

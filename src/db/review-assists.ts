@@ -16,7 +16,7 @@ import {
 } from "@/lib/assists/review-themes";
 import { sourceDigest } from "@/lib/assists/shop-translate";
 import { DAY_MS, nowDate } from "@/lib/clock";
-import { readAssistResult, readAssistResults, saveAssistResult } from "./assist-results";
+import { readAssistResult, readAssistResults, recordAssistResult } from "./assist-results";
 import { type AssistOptions, runAssistOutcome } from "./assists";
 import type { AppDb } from "./client";
 import { tripReviews } from "./schema";
@@ -111,7 +111,7 @@ export async function flagWaitingReviews(
     // A refused or unusable answer is stored as no flags: asking again would
     // cost the same for the same answer, and it must not hold the reviews
     // behind it out of the slots.
-    await saveAssistResult(db, {
+    await recordAssistResult(db, {
       shopId,
       feature: REVIEW_FLAGS_FEATURE,
       subjectKey: review.id,
@@ -209,7 +209,7 @@ export async function refreshReviewThemes(
   if (status === "skipped") return false;
   // A refused or unusable answer is stored as no themes, so the month is
   // asked once.
-  await saveAssistResult(db, {
+  await recordAssistResult(db, {
     shopId,
     feature: REVIEW_THEMES_FEATURE,
     subjectKey: month,

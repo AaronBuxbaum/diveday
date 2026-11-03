@@ -90,7 +90,7 @@ describe("the SMS stop list", () => {
       }),
     };
     const result = await sendCourtesyMessage(
-      { to: PHONE, body: "hi", smsStopLine: "Reply STOP to opt out.", shopName: "DiveDay" },
+      { to: PHONE, body: "hi", locale: "en-US", shopName: "DiveDay" },
       { sms, whatsapp },
     );
 
