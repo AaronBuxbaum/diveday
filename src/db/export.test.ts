@@ -137,11 +137,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "party_lead_booking_id",
     "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
   ],
-  trip_last_minute_promos: [
-    "shop_id",
-    "stripe_coupon_id", // provider linkage, useless outside this Stripe account
-    "stripe_promotion_code_id",
-  ],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
   buddy_team_members: ["shop_id", "id"],
@@ -188,6 +183,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   booking_payment_events: ["shop_id", "created_at"],
   booking_checkouts: [
     "shop_id",
+    "deal_id", // written as promo_code_id or trip_promo_id by its deal's kind (#2720)
+    "promo_code_id", // retired by #2720 for deal_id, dropped next release
+    "trip_promo_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account
     "stripe_customer_id", // provider linkage, same as stripe_account_id above
     // An ephemeral Stripe Checkout link that stopped resolving when the session
@@ -266,7 +264,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // generation no rendered page has ever carried.
     "row_version",
   ],
-  shop_promo_codes: [
+  // Split into shop_promo_codes.csv and trip_last_minute_promos.csv by trip_id.
+  deals: [
     "shop_id",
     "stripe_coupon_id", // provider linkage, useless outside this Stripe account
     "stripe_promotion_code_id",

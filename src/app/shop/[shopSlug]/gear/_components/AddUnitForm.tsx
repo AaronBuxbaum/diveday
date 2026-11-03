@@ -10,11 +10,11 @@ import {
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
+import type { NoticeTone } from "@/components/ui/tone";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { GEAR_KIND_ORDER } from "@/lib/gear";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
-import type { NoticeTone } from "@/lib/staff-notices";
 import { createGearItemAction } from "../actions";
 
 /**
@@ -96,7 +96,7 @@ export function AddUnitForm({
           <DateField name="purchasedOn" />
         </Field>
         <FieldActions>
-          <SubmitButton pendingLabel={t("gear.addUnit.pending")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.adding")} className={buttonClass()}>
             {t("gear.addUnit.submit")}
           </SubmitButton>
           <FormStatus tone={status?.tone}>{status?.text ?? null}</FormStatus>

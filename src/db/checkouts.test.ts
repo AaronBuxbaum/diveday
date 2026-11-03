@@ -1439,10 +1439,9 @@ describe("checkout completion", () => {
     expect(start.checkout.totalCents).toBe(42_000);
     // The snapshot itself: which deal, its code, and the percent Stripe was
     // told to take off — none of which the shop-wide columns can carry.
-    expect(start.checkout.tripPromoId).toBe(tripPromo.id);
+    expect(start.checkout.dealId).toBe(tripPromo.id);
     expect(start.checkout.promoCode).toBe(tripPromo.code);
     expect(start.checkout.appliedDiscountPercent).toBe(25);
-    expect(start.checkout.promoCodeId).toBeNull();
 
     const completed = await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
     // Stripe reported nothing, so nothing is claimed as its evidence.
@@ -1483,7 +1482,7 @@ describe("checkout completion", () => {
     );
     if (!start.ok) throw new Error("checkout start failed");
     expect(start.checkout.appliedDiscountPercent).toBeNull();
-    expect(start.checkout.tripPromoId).toBeNull();
+    expect(start.checkout.dealId).toBeNull();
 
     await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
     for (const bookingId of bookingIds) {
@@ -1497,7 +1496,7 @@ describe("checkout completion", () => {
   // spent, and the reconstruction would have two percents and no way to tell
   // which was Stripe's. The trip deal wins (the caller's own resolution order)
   // and the shop-wide code is recorded nowhere.
-  it("records one promo source when a caller supplies both", async () => {
+  it("records one deal when a caller supplies both", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const tripPromo = await sentTripDeal(db, shop.id, reef.id, 25);
     const shopPromo = await createShopPromoCode(
@@ -1526,8 +1525,7 @@ describe("checkout completion", () => {
       fakeCheckout(),
     );
     if (!start.ok) throw new Error("checkout start failed");
-    expect(start.checkout.tripPromoId).toBe(tripPromo.id);
-    expect(start.checkout.promoCodeId).toBeNull();
+    expect(start.checkout.dealId).toBe(tripPromo.id);
     expect(start.checkout.appliedDiscountPercent).toBe(25);
   });
 
@@ -1560,7 +1558,7 @@ describe("checkout completion", () => {
     // empty, everything else exactly as it was.
     await db
       .update(bookingCheckouts)
-      .set({ appliedDiscountPercent: null, tripPromoId: null, promoCode: null })
+      .set({ appliedDiscountPercent: null, dealId: null, promoCode: null })
       .where(eq(bookingCheckouts.id, start.checkout.id));
 
     const completed = await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
@@ -2498,9 +2496,9 @@ describe("a fixed-amount promotion", () => {
     // Its own database: the first refusal aborts the transaction it runs in, and
     // inside the shared one the second insert would fail for that reason instead.
     const { db, shop } = await seededShopContext();
-    const { shopPromoCodes } = await import("./schema");
+    const { deals } = await import("./schema");
     await expect(
-      db.insert(shopPromoCodes).values({
+      db.insert(deals).values({
         shopId: shop.id,
         code: "BOTH",
         discountPercent: 10,
@@ -2509,7 +2507,7 @@ describe("a fixed-amount promotion", () => {
       }),
     ).rejects.toThrow();
     await expect(
-      db.insert(shopPromoCodes).values({ shopId: shop.id, code: "NEITHER", scope: "all" }),
+      db.insert(deals).values({ shopId: shop.id, code: "NEITHER", scope: "all" }),
     ).rejects.toThrow();
   });
 });

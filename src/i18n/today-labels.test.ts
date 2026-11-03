@@ -143,13 +143,13 @@ describe("a crew clash, said once per other departure", () => {
 
   it("names everyone a departure shares in one sentence", () => {
     expect(crewClashDetailText(t, "en-US", clashes)).toBe(
-      "Keiko Tanaka and Sal Moretti are also rostered on Dawn Two-Tank at these hours. Keiko Tanaka is also rostered on Night Dive at these hours.",
+      "Keiko Tanaka and Sal Moretti are also scheduled on Dawn Two-Tank at these hours. Keiko Tanaka is also scheduled on Night Dive at these hours.",
     );
   });
 
   it("says the same once the boat has left, then the one thing to do", () => {
     expect(crewClashSailedDetailText(t, "en-US", clashes.slice(0, 2))).toBe(
-      "Keiko Tanaka and Sal Moretti are out aboard while also rostered on Dawn Two-Tank at these hours. Confirm who is aboard.",
+      "Keiko Tanaka and Sal Moretti are out aboard while also scheduled on Dawn Two-Tank at these hours. Confirm who is aboard.",
     );
   });
 
@@ -157,7 +157,7 @@ describe("a crew clash, said once per other departure", () => {
     const [first] = clashes;
     if (!first) throw new Error("the fixture lists a clash");
     expect(crewClashDetailText(t, "en-US", [first, first])).toBe(
-      "Keiko Tanaka is also rostered on Dawn Two-Tank at these hours.",
+      "Keiko Tanaka is also scheduled on Dawn Two-Tank at these hours.",
     );
   });
 });

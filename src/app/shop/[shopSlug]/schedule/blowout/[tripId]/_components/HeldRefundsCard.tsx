@@ -28,7 +28,7 @@ export function HeldRefundsCard({
         <form action={releaseAction} className="mt-3">
           <p className="mb-3 text-sm text-muted">{t("blowout.record.heldRelease")}</p>
           <SubmitButton
-            pendingLabel={t("blowout.record.releasing")}
+            pendingLabel={t("words.busy.sending")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("blowout.record.release")}

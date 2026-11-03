@@ -949,7 +949,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/staffing?week=${crewClash.date}`);
         // The destination's own words, not a timing guess.
         await page
-          .getByText(/^Also rostered on /)
+          .getByText(/^Also scheduled on /)
           .first()
           .waitFor();
         await capture(page, "staffing-week-crew-clash", scheme);

@@ -175,7 +175,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
               hint={waiverControl.hint}
               pendingLabel={
                 waiverControl.action === "send"
-                  ? t("trips.roster.sending")
+                  ? t("words.busy.sending")
                   : t("trips.roster.resending")
               }
               confirmMessage={

@@ -250,7 +250,7 @@ export function WorkOrderWorkCard({
 
         <FieldActions>
           <SubmitButton
-            pendingLabel={t("workOrders.work.recording")}
+            pendingLabel={t("words.busy.recording")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("workOrders.work.record")}

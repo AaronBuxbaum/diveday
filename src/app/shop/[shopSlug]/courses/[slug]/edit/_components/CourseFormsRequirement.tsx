@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChoiceRow, controlClass, FormStatus } from "@/components/ui/form";
 import { StatusInView } from "@/components/ui/StatusInView";
+import type { NoticeTone } from "@/components/ui/tone";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import {
@@ -16,7 +17,6 @@ import {
 import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { courseFormAwaitingText } from "@/lib/course-forms";
-import type { NoticeTone } from "@/lib/staff-notices";
 import { CourseSection } from "./CourseSection";
 
 /**

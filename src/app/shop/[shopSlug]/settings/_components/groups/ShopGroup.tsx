@@ -1,10 +1,10 @@
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
+import { ShopNotice } from "@/components/ui/outcome";
 import type { stripeCurrencyMismatch } from "@/db/stripe-accounts";
 import { currencyOptions } from "@/i18n/currency-labels";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
@@ -168,7 +168,7 @@ export function ShopGroup({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.timezone.submitting")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.timezone.submit")}
@@ -278,7 +278,7 @@ export function ShopGroup({
             ) : null}
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.units.submitting")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.units.submit")}
@@ -312,7 +312,7 @@ export function ShopGroup({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.juniorBuddy.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.juniorBuddy.save")}
@@ -349,7 +349,7 @@ export function ShopGroup({
               searchLabel: t("settings.main.address.searchLabel"),
               searchPlaceholder: t("settings.main.address.searchPlaceholder"),
               searching: t("settings.main.address.searching"),
-              saving: t("settings.main.address.saving"),
+              saving: t("words.busy.saving"),
               noMatches: t("settings.main.address.noMatches"),
               lookupFailed: t("settings.main.address.lookupFailed"),
               lookupResting: t("settings.main.address.lookupResting"),

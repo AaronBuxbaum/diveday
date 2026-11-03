@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { ShopNotice } from "@/components/ShopNotice";
+import { ShopNotice } from "@/components/ui/outcome";
 import { type FormControlSnapshot, snapshotFormControls } from "./form-control-snapshot";
 
 export type SaveResult = { ok: false; reason: "conflict" } | null;

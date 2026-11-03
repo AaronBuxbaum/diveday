@@ -207,6 +207,16 @@
   (`CARD_PROCESSING_SINCE`, the migration that added it) is listed apart, in one collapsed "N cards
   certified before {date}" line, and never called late: nothing is backfilled, so a card truly
   never sent is still there to tick. Gates nothing.
+- **Course admission** — whether a **course session** takes a seat, asked by every door that puts
+  one on it: a new booking and a staff move at **sale** strictness (staffing, then the course's
+  `minimum_certification_level` card, then its minimum age, then the crew's in-water ratio), an
+  undone removal and an undone no-show at **restore** strictness (the ratio alone). Staffing is
+  asked of everyone aboard; the card, age and ratio are the student's, and a priced snorkeler or
+  rider beside the class is asked none of them. The card gate fails *closed*, the age gate fails
+  open and is staff's alone. The boat's own limits are asked first, so a full boat is refused as
+  full. One pure function, `decideCourseAdmission` (`src/lib/course-admission.ts`), with the
+  strictness table beside it. Distinct from **Trip admission**, which stands down on a course
+  session.
 - **Course ladder** — the Courses page's "N did Discover Scuba in the last 12 months · M went on to Open Water",
   with the names of those who did not and an Invite to the next course's soonest session with a
   seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-20261014-one-to-one-invite's one-at-a-time invite under the
@@ -445,6 +455,9 @@
   refuses**: a diver this shop has never carded books as before, the same trade-off H-20260724-certification-levels-agency-rules settled
   for the course minimum-age gate. It exists to stop a diver **paying in full** for a dive they
   were never going to be allowed to do (DOM-M6) — it stops the money, never the manifest.
+  Admission and readiness read **one evidence ladder** (`standing` in `src/lib/readiness.ts`) at
+  two thresholds: `verified` for boarding, `sale` for admission. A refusal is the ladder's own
+  blockers at the sale threshold, so it can never name an item readiness would clear (#2706).
   **A historical narrow exception ran from 2026-08-20 through 2026-08-27**: the public booking form
   supplied a just-typed level and the seat was sold with a warning under that answer rather than
   refused — the case H-20260803-booking-form-succeed-fail itself describes as "a response to what this submitter just typed rather

@@ -71,7 +71,7 @@ export function CourseFormsRowControl({
           tripId={tripId}
           bookingIds={[bookingId]}
           label={t("trips.roster.courseForms.send")}
-          pendingLabel={t("trips.roster.sending")}
+          pendingLabel={t("words.busy.sending")}
           className={buttonClass({ variant: "secondary", size: "sm" })}
           wrapperClassName=""
           copy={waiverSendCopy(t)}
@@ -159,7 +159,7 @@ export function CourseFormsRowControl({
             </ChoiceRow>
             <div>
               <SubmitButton
-                pendingLabel={t("trips.roster.courseForms.recording")}
+                pendingLabel={t("words.busy.recording")}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("trips.roster.courseForms.record")}

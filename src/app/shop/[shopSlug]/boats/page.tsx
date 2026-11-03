@@ -208,7 +208,7 @@ export default async function BoatsSettingsPage({
                     Wrapping gives an armed confirmation message its own line. */}
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 w-full sm:w-auto justify-end">
                   <SubmitButton
-                    pendingLabel={t("boats.submitting")}
+                    pendingLabel={t("words.busy.saving")}
                     className={buttonClass({ variant: "secondary", size: "sm" })}
                     formAction={updateBoatAction}
                   >
@@ -230,9 +230,9 @@ export default async function BoatsSettingsPage({
                       message={t("boats.deleteBoatDepartures", {
                         count: boatDepartures.get(boat.id) ?? 0,
                       })}
-                      cancelLabel={t("boats.deleteBoatCancel")}
+                      cancelLabel={t("words.dismiss.neverMind")}
                       confirmLabel={t("boats.deleteBoatConfirm")}
-                      pendingLabel={t("boats.deleteBoatPending")}
+                      pendingLabel={t("words.busy.deleting")}
                       triggerClassName={buttonClass({
                         variant: "danger-ghost",
                         size: "sm",
@@ -246,7 +246,7 @@ export default async function BoatsSettingsPage({
                       formAction={deleteBoatAction}
                       triggerLabel={t("boats.deleteBoat")}
                       confirmLabel={t("boats.deleteBoatConfirm")}
-                      pendingLabel={t("boats.deleteBoatPending")}
+                      pendingLabel={t("words.busy.deleting")}
                       triggerClassName={buttonClass({
                         variant: "danger-ghost",
                         size: "sm",
@@ -316,7 +316,7 @@ export default async function BoatsSettingsPage({
               </p>
             ) : null}
             <FieldActions>
-              <SubmitButton pendingLabel={t("boats.submitting")} className={buttonClass()}>
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("boats.addBoat")}
               </SubmitButton>
             </FieldActions>

@@ -1,8 +1,8 @@
 import type { Key, ReactNode } from "react";
 import { Toast } from "@/components/Toast";
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
+import type { NoticeTone } from "@/components/ui/tone";
 import { type ToneName, toneMark } from "@/components/ui/tone";
-import type { NoticeTone } from "@/lib/staff-notices";
 
 /**
  * The tones the banner draws: `NoticeTone` (the vocabulary a notice map

@@ -7,12 +7,12 @@ import { FormDraft } from "@/components/FormDraft";
 import { formDraftCopy } from "@/components/form-draft-copy";
 import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
 import { keptTypedScope } from "@/components/kept-typed-scope";
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { NameMatchCandidateFacts } from "@/components/seat-diver/NameMatchCandidateFacts";
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { buttonClass } from "@/components/ui/button";
 import { FieldActions } from "@/components/ui/form";
+import { ShopNotice } from "@/components/ui/outcome";
 import { getNewDiverPage } from "@/db/new-diver-page";
 import { staffParticipantTypeLabel } from "@/i18n/participant-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -289,7 +289,7 @@ export async function AddDiverPanel({
               <input type="hidden" name="request" value={requestParam ?? ""} />
               <input type="hidden" name="force" value="true" />
               <SubmitButton
-                pendingLabel={t("divers.page.adding")}
+                pendingLabel={t("words.busy.adding")}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("divers.page.confirmMatchesSubmit")}
@@ -373,7 +373,7 @@ export async function AddDiverPanel({
         {/* No margin: the trio's grid gap is the one field gap every form
               stands its action row under (K-182). */}
         <FieldActions>
-          <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.adding")} className={buttonClass()}>
             {submitLabel}
           </SubmitButton>
           <Link

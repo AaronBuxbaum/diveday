@@ -1,5 +1,5 @@
-import { ShopNotice } from "@/components/ShopNotice";
-import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
+import { ShopNotice } from "@/components/ui/outcome";
+import { type NoticeTone, noticeRole } from "@/components/ui/tone";
 
 /**
  * The shared render half of the `?notice=` banner pattern (see

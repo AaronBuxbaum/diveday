@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
-import { shops, tripLastMinutePromos } from "./schema";
+import { deals, shops } from "./schema";
 import { createShopPromoCode, getRedeemableShopPromo, tripMayTakeACode } from "./shop-promos";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts } from "./trips";
@@ -37,10 +37,10 @@ describe("the promo codes and last-minute list switches", () => {
     await createShopPromoCode(db, promoInput(shop.id), fakePromotions());
     const [dealTrip, otherTrip] = await upcomingTripsWithCounts(db, shop.id);
     if (!dealTrip || !otherTrip) throw new Error("demo trips missing");
-    await db.insert(tripLastMinutePromos).values({
+    await db.insert(deals).values({
       shopId: shop.id,
       tripId: dealTrip.id,
-      status: "sent",
+      status: "active",
       discountPercent: 20,
       code: "LASTCALL20",
       expiresAt: new Date(dealTrip.startsAt),

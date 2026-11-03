@@ -2,7 +2,7 @@
 
 import { type ReactNode, useActionState, useState } from "react";
 import { Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
-import type { NoticeTone } from "@/lib/staff-notices";
+import type { NoticeTone } from "@/components/ui/tone";
 import { normalizeShopText, type ShopQuestion, shopQuestionsEqual } from "@/lib/waiver-questions";
 import { RELEASE_FORM_IDLE, type ReleaseFormState } from "../release-form-state";
 import { PublishRelease, type PublishReleaseCopy } from "./PublishRelease";

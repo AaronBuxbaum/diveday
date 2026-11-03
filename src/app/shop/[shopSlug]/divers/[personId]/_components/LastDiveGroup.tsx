@@ -147,7 +147,7 @@ export function LastDiveGroup({
             </Field>
             <div className="flex flex-wrap gap-2">
               <SubmitButton
-                pendingLabel={t("divers.lastDive.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("divers.lastDive.save")}

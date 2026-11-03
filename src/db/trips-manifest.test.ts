@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { getDepartureInterestForTrip, listDepartureInterests } from "./interests";
 import { bookings, interests, people, trips } from "./schema";
-import { getTripRoster, listTripDiverContacts } from "./trips-roster";
+import { getTripRoster, listTripDiverContacts } from "./trips-manifest";
 
 const OTHER_SHOP = "00000000-0000-0000-0000-000000000000";
 

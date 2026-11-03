@@ -180,7 +180,7 @@ export function RentalsForm({
         </Field>
         <FieldActions>
           <SubmitButton
-            pendingLabel={t("settings.main.rentals.submitting")}
+            pendingLabel={t("words.busy.saving")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("settings.main.rentals.submit")}

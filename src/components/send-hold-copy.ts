@@ -7,7 +7,7 @@ import type { SendHoldCopy } from "./SendHold";
  */
 export function sendHoldCopy(t: StaffTranslator): SendHoldCopy {
   return {
-    sendingNow: t("shared.sendHold.sendingNow"),
+    sendingNow: t("words.busy.sending"),
     undo: t("shared.sendHold.undo"),
   };
 }

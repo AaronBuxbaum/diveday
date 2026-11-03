@@ -5,11 +5,11 @@ import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldActions, FormStatus, SearchField } from "@/components/ui/form";
+import type { NoticeTone } from "@/components/ui/tone";
 import type { listDiverSummaries } from "@/db/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { ADD_PARAM } from "@/lib/add-panel";
 import { diverSearchPrefill } from "@/lib/person-fields";
-import type { NoticeTone } from "@/lib/staff-notices";
 import { addCounterRentalPersonAction } from "../actions";
 import { counterRentalFormPath, RENT_OUT_PANEL } from "../rental-form";
 
@@ -132,7 +132,7 @@ export function RentalPersonStep({
               >
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("seatDiver.adding")}
+                    pendingLabel={t("words.busy.adding")}
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("counterRentals.new.addPerson")}

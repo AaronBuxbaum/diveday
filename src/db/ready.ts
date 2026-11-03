@@ -18,7 +18,7 @@ import type { RentalPricing } from "@/lib/rentals";
 import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
 import { type DiveDayMilestone, diveDayMilestone } from "@/lib/visit-milestones";
-import { shopWaiverStatus } from "@/lib/waivers";
+import { shopWaiverStanding } from "@/lib/waivers";
 import {
   type OfferableWelcomeCue,
   offerableWelcomeCue,
@@ -917,7 +917,7 @@ export async function carriedPreparationForDiver(
   const signer = signerRows[0];
 
   return carriedPreparation({
-    waiver: shopWaiverStatus({
+    waiver: shopWaiverStanding({
       personSignedWaivers: signedWaivers.get(input.personId) ?? [],
       currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
       signer: signer

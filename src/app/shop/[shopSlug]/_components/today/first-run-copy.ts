@@ -70,7 +70,7 @@ export function firstRunChecklistCopy(
     scheduleTitle: t("shopHome.firstRun.scheduleTitle"),
     scheduleBody: t("shopHome.firstRun.scheduleBody"),
     scheduleCopy: t("shopHome.firstRun.scheduleCopy"),
-    scheduleCopied: t("shopHome.firstRun.scheduleCopied"),
+    scheduleCopied: t("words.did.copied"),
     scheduleCopyFailed: t("shopHome.firstRun.scheduleCopyFailed"),
     stripeTitle: t("shopHome.firstRun.stripeTitle"),
     stripeBody: t("shopHome.firstRun.stripeBody"),

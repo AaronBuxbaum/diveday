@@ -90,7 +90,7 @@ export function DiverNotesSection({
               >
                 <input type="hidden" name="noteId" value={note.id} />
                 <SubmitButton
-                  pendingLabel={t("divers.notes.deleting")}
+                  pendingLabel={t("words.busy.deleting")}
                   className={buttonClass({ variant: "danger-ghost", size: "sm", busy: true })}
                 >
                   {t("divers.notes.delete")}
@@ -110,7 +110,7 @@ export function DiverNotesSection({
               label: t("divers.notes.addLabel"),
               placeholder: t("divers.notes.placeholder"),
               add: t("divers.notes.add"),
-              adding: t("divers.notes.adding"),
+              adding: t("words.busy.adding"),
             }}
           />
           {status ? (

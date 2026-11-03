@@ -246,6 +246,7 @@ script again.
 | 20260811-deploy-gate-runs-fresh-diff | Run `cdk synth`+`diff` inside the… |
 | 20260811-person-scoped-paper-waivers | A paper release is filed… |
 | 20260811-retire-the-digital-card | The card's evidence has no… |
+| 20260811-staff-copy-provider | A staff provider replaces hand-typed… |
 | 20260811-vercel-sync-checkpoint-in-ssm | Diff Vercel env pushes against… |
 | 20260812-configurable-dock-day-rhythm | A shop's dive day is… |
 | 20260812-demo-schedule-keeper | Keep the canonical demo's schedule… |
@@ -439,6 +440,7 @@ script again.
 | 20261102-public-suffix-list | Refuse wildcard parents, unknown TLDs… |
 | 20261102-stripe-sdk-adapters | Call Stripe through the official… |
 | 20261102-website-assist-public-suffix-list | Read the Public Suffix List… |
+| 20261103-a-deal-is-one-row | A shop-wide code and a… |
 | 20261103-advisory-is-a-finding | Record an advisory as a… |
 | 20261103-one-card-ledger | Keep every diver card in… |
 | 20261103-one-roll-call-ledger | Seat and crew marks are… |

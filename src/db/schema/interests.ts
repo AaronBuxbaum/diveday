@@ -14,10 +14,11 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { bookings, tripLastMinutePromos } from "./bookings";
+import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { courses } from "./courses";
+import { deals } from "./payments";
 import { trips } from "./trips";
 
 /**
@@ -129,8 +130,8 @@ export const interests = pgTable(
      * so only mail that went holds the 24-hour window (#2133).
      */
     emailedAt: timestamp("emailed_at", { withTimezone: true }),
-    /** The deal this offer carried. */
-    promoId: uuid("promo_id").references(() => tripLastMinutePromos.id),
+    /** The last-minute deal this offer carried. */
+    promoId: uuid("promo_id").references(() => deals.id),
 
     // the end
     closedAt: timestamp("closed_at", { withTimezone: true }),

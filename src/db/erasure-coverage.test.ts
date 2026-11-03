@@ -370,18 +370,18 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "shop",
     why: "the shop's own Connect account. Disconnecting it is a shop decision, not an erasure",
   },
-  "shop_promo_codes.stripe_coupon_id": {
+  "deals.stripe_coupon_id": {
     held: "shop",
-    why: "a discount the shop published; no diver is behind the object",
+    why: "a discount the shop published; no diver is behind the object, and the redemption that ties a person to it lives locally and is erased locally",
   },
-  "shop_promo_codes.stripe_promotion_code_id": { held: "shop", why: "as stripe_coupon_id above" },
-  "trip_last_minute_promos.stripe_coupon_id": {
-    held: "shop",
-    why: "a trip-scoped deal the shop published; the redemption that ties a person to it lives locally and is erased locally",
-  },
+  "deals.stripe_promotion_code_id": { held: "shop", why: "as stripe_coupon_id above" },
+  // Retired by #2720, copied to deals above; dropped next release.
+  "shop_promo_codes.stripe_coupon_id": { held: "shop", why: "as deals.stripe_coupon_id" },
+  "shop_promo_codes.stripe_promotion_code_id": { held: "shop", why: "as deals.stripe_coupon_id" },
+  "trip_last_minute_promos.stripe_coupon_id": { held: "shop", why: "as deals.stripe_coupon_id" },
   "trip_last_minute_promos.stripe_promotion_code_id": {
     held: "shop",
-    why: "as stripe_coupon_id above",
+    why: "as deals.stripe_coupon_id",
   },
   "shop_integrations.external_account_id": {
     held: "shop",

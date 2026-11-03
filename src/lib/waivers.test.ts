@@ -20,9 +20,9 @@ import {
   overriddenRefusal,
   releaseLapsedForBooking,
   riderMedicalHold,
-  shopWaiverStatus,
+  shopWaiverStanding,
   WAIVER_SIGNATURE_VALIDITY_MS,
-  waiverState,
+  waiverStanding,
 } from "./waivers";
 
 const clear = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
@@ -80,8 +80,8 @@ describe("waiver domain rules", () => {
     const record = {
       status: "pending",
       expiresAt: new Date("2026-07-18T00:00:00.000Z"),
-    } as Parameters<typeof waiverState>[0];
-    expect(waiverState(record, new Date("2026-07-18T00:00:01.000Z"))).toBe("expired");
+    } as Parameters<typeof waiverStanding>[0];
+    expect(waiverStanding(record, new Date("2026-07-18T00:00:01.000Z"))).toBe("link_expired");
   });
 });
 
@@ -261,7 +261,7 @@ describe("effective waiver (sign once per diver)", () => {
     const carried = completedWaiver({ bookingId: "other-booking" });
     const effective = effectiveWaiverForBooking(args({ personSignedWaivers: [carried] }));
     expect(effective).toBe(carried);
-    expect(waiverState(effective, SIGN_NOW)).toBe("complete");
+    expect(waiverStanding(effective, SIGN_NOW)).toBe("signed");
   });
 
   it("does not carry a stale or wrong-version release — the booking still needs one", () => {
@@ -271,13 +271,13 @@ describe("effective waiver (sign once per diver)", () => {
       bookingId: "other",
     });
     expect(effectiveWaiverForBooking(args({ personSignedWaivers: [staleVersion] }))).toBeNull();
-    // Falls through to not_sent, so staff are prompted to send a fresh link.
+    // Falls through to none, so staff are prompted to send a fresh link.
     expect(
-      waiverState(
+      waiverStanding(
         effectiveWaiverForBooking(args({ personSignedWaivers: [staleVersion] })),
         SIGN_NOW,
       ),
-    ).toBe("not_sent");
+    ).toBe("none");
   });
 
   it("keeps the booking's own medical-review record over a carried clean waiver", () => {
@@ -287,7 +287,7 @@ describe("effective waiver (sign once per diver)", () => {
       args({ bookingWaiver: ownReview, personSignedWaivers: [carried] }),
     );
     expect(effective).toBe(ownReview);
-    expect(waiverState(effective, SIGN_NOW)).toBe("medical_review");
+    expect(waiverStanding(effective, SIGN_NOW)).toBe("medical_review");
   });
 
   it("satisfies a booking whose own link is still pending once a valid release exists", () => {
@@ -329,7 +329,7 @@ describe("effective waiver (sign once per diver)", () => {
     // carry, but the unresolved June hold is newer, so it must block instead.
     const effective = effectiveWaiverForBooking(args({ personSignedWaivers: [cleanJan, holdJun] }));
     expect(effective?.id).toBe("hold-jun");
-    expect(waiverState(effective, SIGN_NOW)).toBe("medical_review");
+    expect(waiverStanding(effective, SIGN_NOW)).toBe("medical_review");
   });
 
   it("lets a clean signature made after a hold supersede it", () => {
@@ -459,7 +459,7 @@ describe("releaseLapsedForBooking", () => {
  */
 describe("shop-level waiver standing", () => {
   const status = (records: WaiverRecord[], version: number | null = 1) =>
-    shopWaiverStatus({
+    shopWaiverStanding({
       personSignedWaivers: records,
       currentTemplateVersion: version,
       now: SIGN_NOW,
@@ -472,8 +472,8 @@ describe("shop-level waiver standing", () => {
   it("reads a clean, current signature as good, with the date it runs out", () => {
     const record = completedWaiver();
     const result = status([record]);
-    expect(result.state).toBe("current");
-    if (result.state !== "current") throw new Error("unreachable");
+    expect(result.state).toBe("signed");
+    if (result.state !== "signed") throw new Error("unreachable");
     expect(result.signedAt).toEqual(record.signedAt);
     expect(result.expiresAt.getTime()).toBe(
       (record.signedAt as Date).getTime() + WAIVER_SIGNATURE_VALIDITY_MS,
@@ -486,11 +486,11 @@ describe("shop-level waiver standing", () => {
     const aged = completedWaiver({
       signedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1),
     });
-    expect(status([aged])).toEqual({ state: "expired", signedAt: aged.signedAt });
+    expect(status([aged])).toEqual({ state: "lapsed", signedAt: aged.signedAt });
 
     // A shop edit bumps the template: those are terms this diver never agreed to.
     const oldTerms = completedWaiver();
-    expect(status([oldTerms], 2)).toEqual({ state: "expired", signedAt: oldTerms.signedAt });
+    expect(status([oldTerms], 2)).toEqual({ state: "lapsed", signedAt: oldTerms.signedAt });
   });
 
   it("carries the newest signature when several are on file", () => {
@@ -501,8 +501,8 @@ describe("shop-level waiver standing", () => {
     });
     const newer = completedWaiver({ id: "newer" });
     const result = status([older, newer]);
-    expect(result.state).toBe("current");
-    if (result.state !== "current") throw new Error("unreachable");
+    expect(result.state).toBe("signed");
+    if (result.state !== "signed") throw new Error("unreachable");
     expect(result.signedAt).toEqual(newer.signedAt);
   });
 
@@ -528,7 +528,7 @@ describe("shop-level waiver standing", () => {
       completedAt: new Date(SIGN_NOW.getTime() - 500_000),
     });
     const signed = completedWaiver({ id: "signed" });
-    expect(status([hold, signed]).state).toBe("current");
+    expect(status([hold, signed]).state).toBe("signed");
   });
 
   it("keeps a superseded referral no physician cleared as a hold (glossary: Medical hold)", () => {
@@ -572,7 +572,7 @@ describe("shop-level waiver standing", () => {
     expect(isUnresolvedMedicalHold(refused)).toBe(true);
     expect(isCleanCompletion(refused)).toBe(false);
     expect(isCompletedWaiverCurrent(refused, 1, SIGN_NOW)).toBe(false);
-    expect(waiverState(refused, SIGN_NOW)).toBe("medical_not_cleared");
+    expect(waiverStanding(refused, SIGN_NOW)).toBe("medical_not_cleared");
   });
 
   it("keeps a refusal out of the mark a manifest reads", () => {
@@ -593,7 +593,7 @@ describe("shop-level waiver standing", () => {
 
 /**
  * **A minor's release is signed twice** (ADR 20260907-guardian-co-signature) —
- * the standing half of it. `shopWaiverStatus` is what the diver's own record
+ * the standing half of it. `shopWaiverStanding` is what the diver's own record
  * and the carried-preparation reader both call, so a solo minor signature has
  * to read as its own state there rather than as "Signed"; and the mark that
  * travels to the manifest has to carry who co-signed.
@@ -611,7 +611,7 @@ describe("a minor's co-signature", () => {
       medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
     });
   const standing = (records: WaiverRecord[], signer?: GuardianSigner) =>
-    shopWaiverStatus({
+    shopWaiverStanding({
       personSignedWaivers: records,
       currentTemplateVersion: 1,
       signer,
@@ -627,12 +627,12 @@ describe("a minor's co-signature", () => {
   });
 
   it("reads it as Signed once the guardian has co-signed", () => {
-    expect(standing([coSignedRecord()], minor).state).toBe("current");
+    expect(standing([coSignedRecord()], minor).state).toBe("signed");
   });
 
   it("answers as before for an adult and for a caller that names no signer", () => {
-    expect(standing([soloRecord()], { ...minor, dateOfBirth: "1990-01-01" }).state).toBe("current");
-    expect(standing([soloRecord()]).state).toBe("current");
+    expect(standing([soloRecord()], { ...minor, dateOfBirth: "1990-01-01" }).state).toBe("signed");
+    expect(standing([soloRecord()]).state).toBe("signed");
   });
 
   it("puts the co-signer on the mark the manifest reads, and nothing when nobody co-signed", () => {
@@ -689,8 +689,8 @@ describe("physician clearance", () => {
   });
 
   it("reads the record as complete rather than held", () => {
-    expect(waiverState(cleared(), SIGN_NOW)).toBe("complete");
-    expect(waiverState(completedWaiver({ status: "medical_review" }), SIGN_NOW)).toBe(
+    expect(waiverStanding(cleared(), SIGN_NOW)).toBe("signed");
+    expect(waiverStanding(completedWaiver({ status: "medical_review" }), SIGN_NOW)).toBe(
       "medical_review",
     );
   });
@@ -703,7 +703,7 @@ describe("physician clearance", () => {
       currentTemplateVersion: 1,
       now: SIGN_NOW,
     });
-    expect(waiverState(effective, SIGN_NOW)).toBe("complete");
+    expect(waiverStanding(effective, SIGN_NOW)).toBe("signed");
   });
 
   it("stops a carried hold from failing a clean signature closed", () => {
@@ -722,16 +722,16 @@ describe("physician clearance", () => {
       currentTemplateVersion: 1,
       now: SIGN_NOW,
     });
-    expect(waiverState(effective, SIGN_NOW)).toBe("complete");
+    expect(waiverStanding(effective, SIGN_NOW)).toBe("signed");
   });
 
   it("leaves the shop standing current rather than in review", () => {
-    const status = shopWaiverStatus({
+    const status = shopWaiverStanding({
       personSignedWaivers: [cleared()],
       currentTemplateVersion: 1,
       now: SIGN_NOW,
     });
-    expect(status.state).toBe("current");
+    expect(status.state).toBe("signed");
   });
 
   it("marks the medical as physician-cleared, dated by the clearance", () => {
@@ -813,12 +813,12 @@ describe("overriddenRefusal", () => {
 
   it("boards the diver on the new release, and warns once rather than twice", () => {
     const records = [refusal({ supersededAt: null }), reSigned()];
-    const status = shopWaiverStatus({
+    const status = shopWaiverStanding({
       personSignedWaivers: records,
       currentTemplateVersion: 1,
       now: SIGN_NOW,
     });
-    expect(status.state).toBe("current");
+    expect(status.state).toBe("signed");
     // The refusal is its own warning, never also an "unanswered referral".
     expect(status).toMatchObject({
       medical: { overriddenReferralAt: null, overriddenRefusal: { recordId: "refusal" } },
@@ -998,12 +998,12 @@ describe("a referral a later clean signature stood over", () => {
     // doctor writes a letter. The owner ruled it stands (issue #2195); what
     // changes is that nobody has to notice it by accident.
     expect(
-      shopWaiverStatus({
+      shopWaiverStanding({
         personSignedWaivers: [referral(), reSigned()],
         currentTemplateVersion: 1,
         now: SIGN_NOW,
       }).state,
-    ).toBe("current");
+    ).toBe("signed");
     expect(
       effectiveWaiverForBooking({
         bookingWaiver: null,
@@ -1017,13 +1017,13 @@ describe("a referral a later clean signature stood over", () => {
   it("names the referral the standing signature replaced", () => {
     const at = overriddenReferralAt(reSigned(), [referral(), reSigned()]);
     expect(at).toEqual(referral().signedAt);
-    const status = shopWaiverStatus({
+    const status = shopWaiverStanding({
       personSignedWaivers: [referral(), reSigned()],
       currentTemplateVersion: 1,
       now: SIGN_NOW,
     });
     expect(status).toMatchObject({
-      state: "current",
+      state: "signed",
       medical: { source: "digital", overriddenReferralAt: referral().signedAt },
     });
   });
@@ -1051,7 +1051,7 @@ describe("a referral a later clean signature stood over", () => {
   it("says nothing for a diver who was never referred", () => {
     expect(overriddenReferralAt(reSigned(), [reSigned()])).toBeNull();
     expect(
-      shopWaiverStatus({
+      shopWaiverStanding({
         personSignedWaivers: [reSigned()],
         currentTemplateVersion: 1,
         now: SIGN_NOW,
@@ -1070,7 +1070,7 @@ describe("a referral a later clean signature stood over", () => {
     });
     expect(overriddenReferralAt(reSigned(), [reSigned(), laterReferral])).toBeNull();
     expect(
-      shopWaiverStatus({
+      shopWaiverStanding({
         personSignedWaivers: [reSigned(), laterReferral],
         currentTemplateVersion: 1,
         now: SIGN_NOW,
@@ -1297,7 +1297,7 @@ describe("effectiveReleaseForRiderSeat", () => {
     const rider = effectiveReleaseForRiderSeat(args({ bookingWaiver: lapsed }));
     expect(rider).toBe(lapsed);
     expect(rider).toBe(effectiveWaiverForBooking(args({ bookingWaiver: lapsed })));
-    expect(waiverState(rider, SIGN_NOW)).toBe("expired");
+    expect(waiverStanding(rider, SIGN_NOW)).toBe("link_expired");
   });
 });
 

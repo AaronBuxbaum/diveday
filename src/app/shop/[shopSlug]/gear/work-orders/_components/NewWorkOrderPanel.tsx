@@ -359,7 +359,7 @@ function AddPieceForm({
         </Field>
         <FieldActions>
           <SubmitButton
-            pendingLabel={t("workOrders.new.addingPiece")}
+            pendingLabel={t("words.busy.adding")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("workOrders.new.addPiece")}

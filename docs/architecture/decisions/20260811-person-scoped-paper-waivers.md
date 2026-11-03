@@ -8,7 +8,7 @@
 DiveDay has read a signed release as a fact about a **person and a shop** since
 [20260721-waiver-sign-once](20260721-waiver-sign-once.md) put the diver's id on the record: `effectiveWaiverForBooking`
 (`src/lib/waivers.ts`) clears any booking a diver holds here from the one current signature, and
-`shopWaiverStatus` answers "has this person signed?" with no booking in the question at all. The
+`shopWaiverStanding` answers "has this person signed?" with no booking in the question at all. The
 diver record's Waiver stat card renders exactly that answer.
 
 The *writer* had not caught up. `recordInPersonWaiver` — the "this diver signed on paper" path
@@ -78,7 +78,7 @@ field. There is no booking id in that form to substitute.
 
 - **Two records can now exist where one did before.** A person-scoped release followed by a
   booking-scoped one on a seat with no record of its own writes both. Harmless by construction —
-  `effectiveWaiverForBooking` and `shopWaiverStatus` both take the *latest* qualifying record — and
+  `effectiveWaiverForBooking` and `shopWaiverStanding` both take the *latest* qualifying record — and
   the signature audit lists both, which is honest: two attestations were made.
 - **`requireTokenBookingId` keeps its invariant, narrowed in wording.** No completion link is ever
   issued for a person-scoped record (its `tokenHash` is a random unusable value, as for every paper

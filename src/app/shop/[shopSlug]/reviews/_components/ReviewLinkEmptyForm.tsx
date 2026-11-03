@@ -36,7 +36,7 @@ export function ReviewLinkEmptyForm({
           className={`${controlClass} min-w-0 flex-1`}
         />
         <SubmitButton
-          pendingLabel={t("reviews.saving")}
+          pendingLabel={t("words.busy.saving")}
           className={buttonClass({ variant: "secondary" })}
         >
           {t("reviews.emptyReviewLinkSave")}

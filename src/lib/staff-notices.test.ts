@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { noticeRole } from "@/components/ui/tone";
 import {
   NOTICE_CODE_PATTERN,
   type NoticeCodeOf,
   noticeCode,
   noticeCountParam,
   noticeFromParam,
-  noticeRole,
   noticeUrl,
   safeShopReturnPath,
   shopPath,

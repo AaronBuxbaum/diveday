@@ -139,7 +139,7 @@ export function NoteDoor({
         />
         <FieldActions>
           <SubmitButton
-            pendingLabel={t("gear.unit.notes.adding")}
+            pendingLabel={t("words.busy.adding")}
             className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             {t("gear.unit.notes.add")}

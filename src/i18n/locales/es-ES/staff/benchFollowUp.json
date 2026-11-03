@@ -13,8 +13,7 @@
     "notConfigured": "No enviado: los mensajes no están configurados",
     "failed": "No enviado el {date}",
     "send": "Enviar aviso de recogida",
-    "resend": "Reenviar",
-    "sending": "Enviando…"
+    "resend": "Reenviar"
   },
   "bill": {
     "heading": "Factura",
@@ -23,12 +22,10 @@
     "needsEmail": "Agrega un correo a la ficha del cliente para enviarle la factura.",
     "send": "Enviar la factura",
     "sendAgain": "Enviar una factura nueva",
-    "sending": "Enviando…",
     "sent": "Enviada el {date}",
     "openOrder": "Ver pedido",
     "description": "Orden de trabajo #{number}",
-    "paidAtPickup": "Pagado al recoger:",
-    "recording": "Registrando…"
+    "paidAtPickup": "Pagado al recoger:"
   },
   "notice": {
     "readySent": "Aviso de recogida enviado",
@@ -53,8 +50,7 @@
     "turnOff": "Detener recordatorios",
     "turnOn": "Enviar recordatorios",
     "turnOffFor": "Detener los recordatorios de mantenimiento de {label}",
-    "turnOnFor": "Enviar recordatorios de mantenimiento de {label}",
-    "saving": "Guardando…"
+    "turnOnFor": "Enviar recordatorios de mantenimiento de {label}"
   },
   "today": {
     "pastPromise": "Prometida para el {date}, todavía no está lista.",

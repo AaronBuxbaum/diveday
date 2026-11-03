@@ -36,7 +36,7 @@ import { hasSailed } from "@/lib/trips";
  * nobody has looked at, a release never signed, money outstanding, no
  * emergency contact — come straight off the profile, and each is the same
  * condition an existing surface already counts (`cardsNeedingLookCount`,
- * `shopWaiverStatus`, `unpaidBookingCount`, the roster's `missing_contact`
+ * `shopWaiverStanding`, `unpaidBookingCount`, the roster's `missing_contact`
  * filter).
  *
  * **Rows carry codes, never sentences.** A `DiverStatusRow` names a message
@@ -209,7 +209,7 @@ function missingEmergencyContact(diver: DiverProfile): boolean {
  * - Booked on the course that gets them there: no fix. The card is the
  *   instructor's to issue when the course ends.
  * - A course that should have got them there and has ended without a card
- *   (`endedCourseTripId`, issue #2058): **Open the course roster**, where the
+ *   (`endedCourseTripId`, issue #2058): **Open the course’s divers**, where the
  *   instructor issues the card, or the conversation with a student who did
  *   not finish starts. Applied over the table below in `certificationFix`.
  */
@@ -370,13 +370,13 @@ export function buildDiverStatus(
       tone: "danger",
       sentence: { key: "divers.status.waiverNotCleared" },
     });
-  } else if (diver.waiver.state !== "current") {
+  } else if (diver.waiver.state !== "signed") {
     rows.push({
       kind: "waiver",
       tone: "warning",
       sentence: {
         key:
-          diver.waiver.state === "expired"
+          diver.waiver.state === "lapsed"
             ? "divers.status.waiverExpired"
             : "divers.status.waiverMissing",
       },

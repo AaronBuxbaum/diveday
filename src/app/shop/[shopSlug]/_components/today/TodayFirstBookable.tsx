@@ -31,7 +31,7 @@ export function TodayFirstBookable({
             : t("shopHome.firstBookable.body", { title: created }),
         linkLabel: t("shopHome.firstBookable.linkLabel"),
         copy: t("shopHome.firstRun.scheduleCopy"),
-        copied: t("shopHome.firstRun.scheduleCopied"),
+        copied: t("words.did.copied"),
         copyFailed: t("shopHome.firstRun.scheduleCopyFailed"),
         viewAsDiver: t("shopHome.firstBookable.viewAsDiver"),
       }}

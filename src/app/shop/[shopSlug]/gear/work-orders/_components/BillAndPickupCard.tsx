@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FormStatus } from "@/components/ui/form";
+import type { NoticeTone } from "@/components/ui/tone";
 import type { DbExecutor } from "@/db/client";
 import type { CustomerGearNotice, WorkOrder } from "@/db/schema";
 import { billAndPickupFacts } from "@/db/work-order-follow-up";
@@ -17,7 +18,7 @@ import {
 import { ownerOrManagerWords, type StaffWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { workOrderBillAllowsAnother } from "@/lib/work-order-follow-up";
 import {
   recordBenchPaymentAction,
@@ -194,7 +195,7 @@ export async function BillAndPickupCard({
                   <form action={resendReadyNoticeAction} className="mt-3">
                     <input type="hidden" name="workOrderId" value={workOrder.id} />
                     <SubmitButton
-                      pendingLabel={t("benchFollowUp.ready.sending")}
+                      pendingLabel={t("words.busy.sending")}
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
                       {readyNotice
@@ -276,7 +277,7 @@ export async function BillAndPickupCard({
                   <form action={sendWorkOrderBillAction} className="mt-3">
                     <input type="hidden" name="workOrderId" value={workOrder.id} />
                     <SubmitButton
-                      pendingLabel={t("benchFollowUp.bill.sending")}
+                      pendingLabel={t("words.busy.sending")}
                       className={buttonClass({ size: "sm" })}
                     >
                       {bill ? t("benchFollowUp.bill.sendAgain") : t("benchFollowUp.bill.send")}
@@ -302,7 +303,7 @@ function CounterPaymentControls({ workOrderId, t }: { workOrderId: string; t: St
           <input type="hidden" name="workOrderId" value={workOrderId} />
           <input type="hidden" name="collection" value={collection} />
           <SubmitButton
-            pendingLabel={t("benchFollowUp.bill.recording")}
+            pendingLabel={t("words.busy.recording")}
             className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             {t(ORDER_COLLECTION_KEYS[collection])}

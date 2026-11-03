@@ -149,7 +149,7 @@ export function seenGroupView({
               match: t("deskAssists.sightings.match"),
               matching: t("deskAssists.sightings.matching"),
               add: t("deskAssists.sightings.add"),
-              adding: t("deskAssists.sightings.adding"),
+              adding: t("words.busy.adding"),
               none: t("deskAssists.sightings.none"),
               proposed: t.raw("deskAssists.sightings.proposed"),
             },

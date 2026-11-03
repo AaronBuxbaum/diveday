@@ -67,7 +67,7 @@ export function SeatCourseControls({
             <span className="text-sm text-muted">{materialsDoneLine}</span>
           ) : null}
           <SubmitButton
-            pendingLabel={t("trips.roster.materialsSaving")}
+            pendingLabel={t("words.busy.saving")}
             className={
               materialsDoneLine
                 ? buttonClass({ variant: "link", size: "sm", flush: true })
@@ -166,7 +166,7 @@ export function SeatCourseControls({
             <span className="text-sm text-muted">{processedCard.doneLine}</span>
           ) : null}
           <SubmitButton
-            pendingLabel={t("trips.roster.processedSaving")}
+            pendingLabel={t("words.busy.saving")}
             className={
               processedCard.doneLine
                 ? buttonClass({ variant: "link", size: "sm", flush: true })
@@ -215,7 +215,7 @@ export function SeatCourseControls({
               />
             </Field>
             <SubmitButton
-              pendingLabel={t("trips.roster.nextStepSaving")}
+              pendingLabel={t("words.busy.saving")}
               className={buttonClass({ variant: "secondary", size: "sm" })}
             >
               {t("trips.roster.nextStepSave")}

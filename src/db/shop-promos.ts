@@ -14,15 +14,12 @@ import {
 } from "@/lib/promo-codes";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
-import {
-  bookingCheckouts,
-  type ShopPromoCode,
-  shopPromoCodes,
-  shops,
-  tripLastMinutePromos,
-} from "./schema";
+import { bookingCheckouts, type Deal, deals, shops } from "./schema";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 import { promotionProviderFromEnvironment } from "./stripe-providers";
+
+/** A shop-wide code is a deal with no trip (ADR 20261103-a-deal-is-one-row). */
+const shopWide = isNull(deals.tripId);
 
 /**
  * Shop-wide promo codes (docs ADR 20260729-shop-promo-codes). Same
@@ -48,7 +45,7 @@ export type CreateShopPromoInput = {
 };
 
 export type CreateShopPromoOutcome =
-  | { ok: true; promo: ShopPromoCode }
+  | { ok: true; promo: Deal }
   | {
       ok: false;
       reason:
@@ -92,11 +89,16 @@ export async function createShopPromoCode(
   if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };
   const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
 
-  const existing = await getShopPromoByCode(db, input.shopId, code);
+  // One code per shop across both kinds of deal: Stripe holds them on one account.
+  const [existing] = await db
+    .select({ id: deals.id })
+    .from(deals)
+    .where(and(eq(deals.shopId, input.shopId), eq(deals.code, code)))
+    .limit(1);
   if (existing) return { ok: false, reason: "duplicate" };
 
   const [pending] = await db
-    .insert(shopPromoCodes)
+    .insert(deals)
     .values({
       shopId: input.shopId,
       code,
@@ -122,21 +124,18 @@ export async function createShopPromoCode(
     idempotencyKey: pending.id,
   });
   if (stripeResult.status !== "created") {
-    await db
-      .update(shopPromoCodes)
-      .set({ status: "failed" })
-      .where(eq(shopPromoCodes.id, pending.id));
+    await db.update(deals).set({ status: "failed" }).where(eq(deals.id, pending.id));
     return { ok: false, reason: "stripe_failed" };
   }
 
   const [active] = await db
-    .update(shopPromoCodes)
+    .update(deals)
     .set({
       status: "active",
       stripeCouponId: stripeResult.stripeCouponId,
       stripePromotionCodeId: stripeResult.stripePromotionCodeId,
     })
-    .where(eq(shopPromoCodes.id, pending.id))
+    .where(eq(deals.id, pending.id))
     .returning();
   return active ? { ok: true, promo: active } : { ok: false, reason: "stripe_failed" };
 }
@@ -168,11 +167,11 @@ export async function getShopPromoCodeById(
   db: DbExecutor,
   shopId: string,
   promoId: string,
-): Promise<ShopPromoCode | null> {
+): Promise<Deal | null> {
   const [row] = await db
     .select()
-    .from(shopPromoCodes)
-    .where(and(eq(shopPromoCodes.id, promoId), eq(shopPromoCodes.shopId, shopId)))
+    .from(deals)
+    .where(and(eq(deals.id, promoId), eq(deals.shopId, shopId), shopWide))
     .limit(1);
   return row ?? null;
 }
@@ -182,13 +181,13 @@ export async function getShopPromoByCode(
   db: DbExecutor,
   shopId: string,
   code: string,
-): Promise<ShopPromoCode | null> {
+): Promise<Deal | null> {
   const normalized = normalizePromoCode(code);
   if (!normalized) return null;
   const [row] = await db
     .select()
-    .from(shopPromoCodes)
-    .where(and(eq(shopPromoCodes.shopId, shopId), eq(shopPromoCodes.code, normalized)))
+    .from(deals)
+    .where(and(eq(deals.shopId, shopId), eq(deals.code, normalized), shopWide))
     .limit(1);
   return row ?? null;
 }
@@ -204,7 +203,7 @@ export async function getShopPromoByCode(
 export async function getRedeemableShopPromo(
   db: DbExecutor,
   input: { shopId: string; code: string; kind: PromoBookingKind; now?: Date },
-): Promise<ShopPromoCode | null> {
+): Promise<Deal | null> {
   // A shop that switched promo codes off (the Features page) takes none; the
   // codes are kept for when it is switched back on.
   const [shop] = await db
@@ -220,7 +219,7 @@ export async function getRedeemableShopPromo(
   return isPromoRedeemable(promo, input.kind, input.now ?? nowDate()) ? promo : null;
 }
 
-export type ShopPromoWithUsage = ShopPromoCode & { timesRedeemed: number };
+export type ShopPromoWithUsage = Deal & { timesRedeemed: number };
 
 /** How many codes the Promos page's "Your codes" list shows per page. */
 export const SHOP_PROMO_PAGE_SIZE = PAGE_SIZE.list;
@@ -240,9 +239,9 @@ export type ShopPromoPage = {
  * complete it twice, so counting these rows is the count of times a code was
  * spent (ADR 20261102-a-redemption-is-a-completed-checkout, issue #2720).
  */
-function redeemedBy(codes: typeof shopPromoCodes) {
+function redeemedBy(codes: typeof deals) {
   return and(
-    eq(bookingCheckouts.promoCodeId, codes.id),
+    eq(bookingCheckouts.dealId, codes.id),
     eq(bookingCheckouts.shopId, codes.shopId),
     eq(bookingCheckouts.status, "completed"),
   );
@@ -266,10 +265,10 @@ function redeemedBy(codes: typeof shopPromoCodes) {
  */
 function promoLedgerGroupRank(now: Date) {
   return sql`case
-    when ${shopPromoCodes.startsAt} is not null and ${shopPromoCodes.startsAt} > ${now}::timestamptz then 1
-    when (${shopPromoCodes.expiresAt} is not null and ${shopPromoCodes.expiresAt} <= ${now}::timestamptz)
-      or (${shopPromoCodes.maxRedemptions} is not null
-          and count(${bookingCheckouts.id}) >= ${shopPromoCodes.maxRedemptions}) then 2
+    when ${deals.startsAt} is not null and ${deals.startsAt} > ${now}::timestamptz then 1
+    when (${deals.expiresAt} is not null and ${deals.expiresAt} <= ${now}::timestamptz)
+      or (${deals.maxRedemptions} is not null
+          and count(${bookingCheckouts.id}) >= ${deals.maxRedemptions}) then 2
     else 0
   end`;
 }
@@ -291,7 +290,7 @@ function promoLedgerGroupRank(now: Date) {
  * had "Show more" and "Back to top" and nothing in between
  * (ADR 20260803-one-pagination-model).
  *
- * The count is taken off `shopPromoCodes` alone — deliberately *not* off the
+ * The count is taken off `deals` alone — deliberately *not* off the
  * redemption join below, whose row multiplication is exactly what the
  * `groupBy` collapses. Counting the joined shape would report a code redeemed
  * forty times as forty codes and invent pages that do not exist. It is also
@@ -304,35 +303,30 @@ export async function listShopPromoCodes(
   shopId: string,
   options: { page?: number; limit?: number; now?: Date } = {},
 ): Promise<ShopPromoPage> {
-  const scope = eq(shopPromoCodes.shopId, shopId);
+  const scope = and(eq(deals.shopId, shopId), shopWide);
   const now = options.now ?? nowDate();
 
   const paged = await offsetPage({
     page: options.page,
     pageSize: options.limit ?? SHOP_PROMO_PAGE_SIZE,
     countRows: async () => {
-      const [counted] = await db.select({ total: count() }).from(shopPromoCodes).where(scope);
+      const [counted] = await db.select({ total: count() }).from(deals).where(scope);
       return counted?.total ?? 0;
     },
     fetchRows: async (offset, limit) =>
       db
         .select({
-          promo: shopPromoCodes,
+          promo: deals,
           // count(checkout id), not count(*) — the left join produces one row
           // for a code nobody has redeemed, and count(*) would report that as 1.
           timesRedeemed: sql<number>`count(${bookingCheckouts.id})::int`,
         })
-        .from(shopPromoCodes)
-        .leftJoin(bookingCheckouts, redeemedBy(shopPromoCodes))
+        .from(deals)
+        .leftJoin(bookingCheckouts, redeemedBy(deals))
         // diveday:any-checkout-purpose: keyed by a promotion, which a tip never carries (booking_checkouts_tip_shape)
         .where(scope)
-        .groupBy(shopPromoCodes.id)
-        .orderBy(
-          promoLedgerGroupRank(now),
-          desc(shopPromoCodes.createdAt),
-          asc(shopPromoCodes.code),
-          desc(shopPromoCodes.id),
-        )
+        .groupBy(deals.id)
+        .orderBy(promoLedgerGroupRank(now), desc(deals.createdAt), asc(deals.code), desc(deals.id))
         .limit(limit)
         .offset(offset),
   });
@@ -359,21 +353,22 @@ export async function setShopPromoEnabled(
   enabled: boolean,
 ): Promise<boolean> {
   const [updated] = await db
-    .update(shopPromoCodes)
+    .update(deals)
     .set({ status: enabled ? "active" : "disabled" })
     .where(
       and(
-        eq(shopPromoCodes.id, promoId),
-        eq(shopPromoCodes.shopId, shopId),
-        sql`${shopPromoCodes.status} in ('active', 'disabled')`,
+        eq(deals.id, promoId),
+        eq(deals.shopId, shopId),
+        shopWide,
+        sql`${deals.status} in ('active', 'disabled')`,
       ),
     )
-    .returning({ id: shopPromoCodes.id });
+    .returning({ id: deals.id });
   return Boolean(updated);
 }
 
 export type RetryShopPromoOutcome =
-  | { ok: true; promo: ShopPromoCode }
+  | { ok: true; promo: Deal }
   | { ok: false; reason: "not_found" | "not_connected" | "stripe_failed" };
 
 /**
@@ -391,13 +386,9 @@ export async function retryShopPromoCode(
 ): Promise<RetryShopPromoOutcome> {
   const [existing] = await db
     .select()
-    .from(shopPromoCodes)
+    .from(deals)
     .where(
-      and(
-        eq(shopPromoCodes.id, promoId),
-        eq(shopPromoCodes.shopId, shopId),
-        eq(shopPromoCodes.status, "failed"),
-      ),
+      and(eq(deals.id, promoId), eq(deals.shopId, shopId), shopWide, eq(deals.status, "failed")),
     )
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
@@ -424,13 +415,13 @@ export async function retryShopPromoCode(
   if (stripeResult.status !== "created") return { ok: false, reason: "stripe_failed" };
 
   const [active] = await db
-    .update(shopPromoCodes)
+    .update(deals)
     .set({
       status: "active",
       stripeCouponId: stripeResult.stripeCouponId,
       stripePromotionCodeId: stripeResult.stripePromotionCodeId,
     })
-    .where(eq(shopPromoCodes.id, existing.id))
+    .where(eq(deals.id, existing.id))
     .returning();
   return active ? { ok: true, promo: active } : { ok: false, reason: "stripe_failed" };
 }
@@ -450,15 +441,16 @@ export async function deleteShopPromoCode(
   promoId: string,
 ): Promise<boolean> {
   const [deleted] = await db
-    .delete(shopPromoCodes)
+    .delete(deals)
     .where(
       and(
-        eq(shopPromoCodes.id, promoId),
-        eq(shopPromoCodes.shopId, shopId),
-        sql`${shopPromoCodes.status} in ('pending', 'failed')`,
+        eq(deals.id, promoId),
+        eq(deals.shopId, shopId),
+        shopWide,
+        sql`${deals.status} in ('pending', 'failed')`,
       ),
     )
-    .returning({ id: shopPromoCodes.id });
+    .returning({ id: deals.id });
   return Boolean(deleted);
 }
 
@@ -484,32 +476,30 @@ export async function tripMayTakeACode(
 ): Promise<boolean> {
   const now = input.now ?? nowDate();
   const [shopCode] = await db
-    .select({ id: shopPromoCodes.id })
-    .from(shopPromoCodes)
-    .innerJoin(shops, and(eq(shops.id, shopPromoCodes.shopId), eq(shops.promoCodesEnabled, true)))
+    .select({ id: deals.id })
+    .from(deals)
+    .innerJoin(shops, and(eq(shops.id, deals.shopId), eq(shops.promoCodesEnabled, true)))
     .where(
       and(
-        eq(shopPromoCodes.shopId, input.shopId),
-        eq(shopPromoCodes.status, "active"),
-        isNotNull(shopPromoCodes.stripePromotionCodeId),
-        or(isNull(shopPromoCodes.expiresAt), gt(shopPromoCodes.expiresAt, now)),
+        eq(deals.shopId, input.shopId),
+        shopWide,
+        eq(deals.status, "active"),
+        isNotNull(deals.stripePromotionCodeId),
+        or(isNull(deals.expiresAt), gt(deals.expiresAt, now)),
       ),
     )
     .limit(1);
   if (shopCode) return true;
   const [tripCode] = await db
-    .select({ id: tripLastMinutePromos.id })
-    .from(tripLastMinutePromos)
-    .innerJoin(
-      shops,
-      and(eq(shops.id, tripLastMinutePromos.shopId), eq(shops.lastMinuteListEnabled, true)),
-    )
+    .select({ id: deals.id })
+    .from(deals)
+    .innerJoin(shops, and(eq(shops.id, deals.shopId), eq(shops.lastMinuteListEnabled, true)))
     .where(
       and(
-        eq(tripLastMinutePromos.shopId, input.shopId),
-        eq(tripLastMinutePromos.tripId, input.tripId),
-        eq(tripLastMinutePromos.status, "sent"),
-        gt(tripLastMinutePromos.expiresAt, now),
+        eq(deals.shopId, input.shopId),
+        eq(deals.tripId, input.tripId),
+        eq(deals.status, "active"),
+        gt(deals.expiresAt, now),
       ),
     )
     .limit(1);
@@ -535,7 +525,7 @@ export async function shopPromoOutcomes(
   if (codeIds.length === 0) return new Map();
   const rows = await db
     .select({
-      codeId: bookingCheckouts.promoCodeId,
+      codeId: bookingCheckouts.dealId,
       of: sql<string>`coalesce(sum(${bookingCheckouts.totalCents}), 0)`,
       off: sql<string>`coalesce(sum(coalesce(${bookingCheckouts.appliedDiscountCents}, round(${bookingCheckouts.totalCents} * ${bookingCheckouts.appliedDiscountPercent} / 100.0), 0)), 0)`,
     })
@@ -545,10 +535,10 @@ export async function shopPromoOutcomes(
       and(
         eq(bookingCheckouts.shopId, shopId),
         eq(bookingCheckouts.status, "completed"),
-        inArray(bookingCheckouts.promoCodeId, [...codeIds]),
+        inArray(bookingCheckouts.dealId, [...codeIds]),
       ),
     )
-    .groupBy(bookingCheckouts.promoCodeId);
+    .groupBy(bookingCheckouts.dealId);
   return new Map(
     rows.map((row) => [row.codeId ?? "", { offCents: Number(row.off), ofCents: Number(row.of) }]),
   );

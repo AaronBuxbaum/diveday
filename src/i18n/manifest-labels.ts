@@ -48,8 +48,8 @@ export function rollCallCheckpointShortText(
 
 const ROLL_CALL_STATE_KEYS: Record<RollCallLabel, StaffMessageKey> = {
   awaiting: "shared.rollCallState.awaiting",
-  boarded: "shared.rollCallState.boarded",
-  not_boarded: "shared.rollCallState.notBoarded",
+  boarded: "shared.presence.boarded",
+  not_boarded: "shared.presence.notBoarded",
   not_boarded_carried: "shared.rollCallState.notBoardedCarried",
   not_back_aboard: "shared.rollCallState.notBackAboard",
 };

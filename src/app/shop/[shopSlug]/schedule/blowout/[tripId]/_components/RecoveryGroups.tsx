@@ -26,7 +26,7 @@ const MESSAGE_BADGE: Record<
   sent: { tone: "success", key: "blowout.record.messageSent" },
   queued: { tone: "warning", key: "blowout.record.messageQueued" },
   pending: { tone: "warning", key: "blowout.record.messagePending" },
-  sending: { tone: "warning", key: "blowout.record.messageSending" },
+  sending: { tone: "warning", key: "words.busy.sending" },
   failed: { tone: "danger", key: "blowout.record.messageFailed" },
   no_email: { tone: "neutral", key: "blowout.record.messageNoEmail" },
 };

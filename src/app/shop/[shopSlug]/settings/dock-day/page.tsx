@@ -126,10 +126,7 @@ export default async function DockDaySettingsPage({
           </ChoiceFieldset>
         </section>
         <StickyFormActions>
-          <SubmitButton
-            pendingLabel={t("settings.main.dockCall.submitting")}
-            className={buttonClass()}
-          >
+          <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
             {t("settings.dockDay.save")}
           </SubmitButton>
           <FormStatus tone={banner?.tone} occurrenceKey={notice}>

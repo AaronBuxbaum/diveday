@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ShopNotice } from "@/components/ShopNotice";
 import { buttonClass } from "@/components/ui/button";
+import { ShopNotice } from "@/components/ui/outcome";
 import { fill, pluralForm } from "@/i18n/fill";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ImportActionState } from "./actions";

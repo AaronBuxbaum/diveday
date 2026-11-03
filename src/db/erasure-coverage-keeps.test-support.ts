@@ -95,6 +95,8 @@ export const ERASURE_KEEPS: Record<string, string> = {
   dive_packages: "the shop’s price list of multi-dive packages",
   pre_departure_checklist_items: "the shop’s own checklist lines",
   gear_items: "the shop’s own units: a serial number, a size, a service note about the unit",
+  deals:
+    "a discount the shop published: a shop-wide code's window and ceiling, or a last-minute deal on a departure and how many people it reached. The addresses it reached are on the interest rows, which the erasure redacts",
   shop_promo_codes: "a discount the shop published, its window and its ceiling",
   trip_last_minute_promos:
     "that a shop offered a deal on a departure and to how many people. The addresses it reached are on the recipient rows, which the erasure redacts",

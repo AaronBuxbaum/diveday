@@ -205,7 +205,7 @@ export function agencyCheckCopy(
       agency: name,
     }),
     listedAdd: t("divers.certifications.agencyCheck.listed.add"),
-    listedAdding: t("divers.certifications.agencyCheck.listed.adding"),
+    listedAdding: t("words.busy.adding"),
     listedAdded: t("divers.certifications.agencyCheck.listed.added"),
     listedFailed: t("divers.certifications.agencyCheck.listed.failed"),
   };

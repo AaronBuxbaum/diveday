@@ -162,7 +162,7 @@ export function RequirementsSection({
                     other Overview forms share (DetailsSection's comment states
                     the rule). Only one disclosure is open at a time, so the
                     primaries never compete. */}
-              <SubmitButton pendingLabel={t("trips.requirements.saving")} className={buttonClass()}>
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("trips.requirements.save")}
               </SubmitButton>
               <FormStatus tone={status?.tone}>{status?.text}</FormStatus>

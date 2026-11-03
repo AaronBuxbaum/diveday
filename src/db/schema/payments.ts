@@ -14,7 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { bookings, tripLastMinutePromos } from "./bookings";
+import { bookings, retiredTripLastMinutePromos } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
@@ -37,7 +37,12 @@ export const divePackageScope = pgEnum("dive_package_scope", ["all", "fun_dives"
 
 export type DivePackageScope = (typeof divePackageScope.enumValues)[number];
 
-export const shopPromoStatus = pgEnum("shop_promo_status", [
+/**
+ * **Retired: nothing reads or writes this enum's table.** Only
+ * `shop_promo_codes.status` used it; a deal's status is `deal_status`
+ * (issue #2720). Dropped with the table next release.
+ */
+export const retiredShopPromoStatus = pgEnum("shop_promo_status", [
   "pending",
   "active",
   "disabled",
@@ -45,31 +50,52 @@ export const shopPromoStatus = pgEnum("shop_promo_status", [
 ]);
 
 /**
- * A shop-wide, staff-authored discount code — the general promotion model
- * `tripLastMinutePromos` deliberately was not (docs ADR
- * 20260727-last-minute-fill-promos left it "one narrow producer of Stripe
- * promotion codes, not the thing it replaces"). Same Stripe-native mechanism:
- * DiveDay mints a Coupon + PromotionCode on the shop's own connected account
- * and hands the resolved `promo_...` id to Checkout explicitly, so Stripe
- * independently enforces expiry and redemption caps while the local row keeps
- * the scope/window the shop actually configured. Inserted `pending` before
- * either Stripe call, exactly like a last-minute blast, so a crash mid-create
- * leaves evidence rather than nothing (docs ADR 20260729-shop-promo-codes).
+ * Where a deal is in its life. `pending` is inserted before either Stripe call,
+ * so a crash mid-mint leaves evidence rather than nothing; `active` once Stripe
+ * holds the coupon and promotion code; `failed` when the mint lost; `disabled`
+ * when staff switched a shop-wide code off. A trip deal is never `disabled`.
  */
-export const shopPromoCodes = pgTable(
-  "shop_promo_codes",
+export const dealStatus = pgEnum("deal_status", ["pending", "active", "disabled", "failed"]);
+
+/**
+ * **A deal: one discount a shop mints on its own Stripe account.** Two kinds
+ * share the row, told apart by `trip_id` (ADR 20261103-a-deal-is-one-row,
+ * issue #2720):
+ *
+ * - **A shop-wide code** (`trip_id` null): staff-authored, with a scope, an
+ *   optional window and an optional cap (docs ADR 20260729-shop-promo-codes).
+ * - **A last-minute deal** (`trip_id` set): one blast to the last-minute list
+ *   for one departure, its code generated, expiring at departure, capped at the
+ *   seats open when it went out (docs ADR 20260727-last-minute-fill-promos).
+ *   A trip may have several; staff re-send at a steeper discount.
+ *
+ * Same Stripe-native mechanism for both: DiveDay mints a Coupon +
+ * PromotionCode and hands the resolved `promo_...` id to Checkout, so Stripe
+ * enforces expiry and caps while the row keeps what the shop configured. A
+ * redemption is a completed checkout carrying `deal_id`
+ * (ADR 20261102-a-redemption-is-a-completed-checkout).
+ */
+export const deals = pgTable(
+  "deals",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
-    /** Normalized upper-case (`normalizePromoCode`, src/lib/promo-codes.ts) — what a diver types. */
+    /** The departure a last-minute deal was sent for; null for a shop-wide code. */
+    tripId: uuid("trip_id").references(() => trips.id),
+    /**
+     * Normalized upper-case: what a diver types. Staff choose a shop-wide code
+     * (`normalizePromoCode`, src/lib/promo-codes.ts); a last-minute deal's is
+     * generated, e.g. "SAVE50-A1B2C3". Unique per shop across both kinds, as
+     * Stripe holds it on one account.
+     */
     code: text("code").notNull(),
-    /** Staff's own note about what this code is for; never shown to a diver. */
+    /** Staff's own note about what a shop-wide code is for; never shown to a diver. */
     description: text("description"),
     /**
-     * Percent off, or null for a fixed-amount code. Exactly one of this and
-     * `discountAmountCents` is set (`shop_promo_codes_one_discount`).
+     * Percent off, or null for a fixed-amount deal. Exactly one of this and
+     * `discountAmountCents` is set (`deals_one_discount`).
      */
     discountPercent: integer("discount_percent"),
     /**
@@ -79,12 +105,89 @@ export const shopPromoCodes = pgTable(
      * stops at the session total (`discountOffCents`, src/lib/promo-codes.ts).
      */
     discountAmountCents: integer("discount_amount_cents"),
+    /** What a shop-wide code may be spent on. A last-minute deal covers its own trip and reads `all`. */
     scope: shopPromoScope("scope").notNull().default("all"),
-    status: shopPromoStatus("status").notNull().default("pending"),
-    /** Null means "live now"; null `expiresAt` means the shop set no end date. */
+    status: dealStatus("status").notNull().default("pending"),
+    /** Null means "live now". A last-minute deal is live from the moment it is sent. */
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    /**
+     * Null means the shop set no end date. A last-minute deal always has one:
+     * pinned to the departure at creation, so a later reschedule does not move it.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /**
+     * Null is unlimited. Stripe enforces the cap at checkout; this is the
+     * shop's stated intent. A last-minute deal stores the cap Stripe was given:
+     * the departure's open seats when it went out, so the checkout can hold the
+     * same cap where Stripe cannot see it (a pass-through fee's one-off coupon).
+     */
+    maxRedemptions: integer("max_redemptions"),
+    stripeCouponId: text("stripe_coupon_id"),
+    stripePromotionCodeId: text("stripe_promotion_code_id"),
+    /** How many last-minute-list entries a last-minute deal's email went to; 0 for a shop-wide code. */
+    recipientCount: integer("recipient_count").notNull().default(0),
+    createdByPersonId: uuid("created_by_person_id").references(() => people.id),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    index("deals_shop_created_idx").on(table.shopId, table.createdAt),
+    index("deals_trip_created_idx")
+      .on(table.tripId, table.createdAt)
+      .where(sql`${table.tripId} is not null`),
+    uniqueIndex("deals_shop_code_unique").on(table.shopId, table.code),
+    // A shop-wide code takes 1..100 percent; a last-minute deal 5..90
+    // (`LAST_MINUTE_DISCOUNT_*`, src/lib/last-minute-list.ts).
+    check(
+      "deals_discount_range",
+      sql`${table.discountPercent} is null or (${table.tripId} is null and ${table.discountPercent} between 1 and 100) or (${table.tripId} is not null and ${table.discountPercent} between 5 and 90)`,
+    ),
+    check(
+      "deals_discount_amount_positive",
+      sql`${table.discountAmountCents} is null or ${table.discountAmountCents} > 0`,
+    ),
+    check(
+      "deals_one_discount",
+      sql`(${table.discountPercent} is null) <> (${table.discountAmountCents} is null)`,
+    ),
+    check(
+      "deals_max_redemptions_positive",
+      sql`${table.maxRedemptions} is null or ${table.maxRedemptions} > 0`,
+    ),
+    check(
+      "deals_window",
+      sql`${table.startsAt} is null or ${table.expiresAt} is null or ${table.startsAt} < ${table.expiresAt}`,
+    ),
+    // A last-minute deal ends at its departure and is never switched off: the
+    // shop stops it by switching the last-minute list off (the Features page).
+    check(
+      "deals_trip_shape",
+      sql`${table.tripId} is null or (${table.expiresAt} is not null and ${table.startsAt} is null and ${table.status} <> 'disabled' and ${table.scope} = 'all' and ${table.description} is null)`,
+    ),
+  ],
+);
+
+/**
+ * **Retired: nothing reads or writes this table.** A shop-wide code is a
+ * `deals` row with `trip_id` null (issue #2720). The declaration stays one
+ * release so the release still serving while that migration runs keeps its
+ * table; the next release drops it (expand/contract,
+ * `.agents/skills/schema-change/removing.md`). Do not add a reader.
+ */
+export const retiredShopPromoCodes = pgTable(
+  "shop_promo_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    code: text("code").notNull(),
+    description: text("description"),
+    discountPercent: integer("discount_percent"),
+    discountAmountCents: integer("discount_amount_cents"),
+    scope: shopPromoScope("scope").notNull().default("all"),
+    status: retiredShopPromoStatus("status").notNull().default("pending"),
     startsAt: timestamp("starts_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
-    /** Null is unlimited. Stripe enforces the cap at checkout; this is the shop's stated intent. */
     maxRedemptions: integer("max_redemptions"),
     stripeCouponId: text("stripe_coupon_id"),
     stripePromotionCodeId: text("stripe_promotion_code_id"),
@@ -851,26 +954,22 @@ export const bookingCheckouts = pgTable(
     /** Set once a recovery email has gone out, so a re-run of the recovery scan never double-sends. */
     abandonedRecoverySentAt: timestamp("abandoned_recovery_sent_at", { withTimezone: true }),
     /**
-     * The shop-wide promo code handed to Stripe on this attempt, if any. This
-     * is what a completed checkout records a redemption against (docs ADR
-     * 20260729-shop-promo-codes). Null for an undiscounted checkout and for a
-     * trip-scoped last-minute deal, which has its own row and lands on
-     * `trip_promo_id` below instead.
+     * The deal handed to Stripe on this attempt, if any: a trip's last-minute
+     * deal or a shop-wide code, resolved in that order. A completed checkout
+     * carrying it is one redemption
+     * (ADR 20261102-a-redemption-is-a-completed-checkout). Null for an
+     * undiscounted checkout.
      */
-    promoCodeId: uuid("promo_code_id").references(() => shopPromoCodes.id),
+    dealId: uuid("deal_id").references(() => deals.id),
     /**
-     * The trip-scoped last-minute deal handed to Stripe on this attempt, if any
-     * (docs ADR 20260727-last-minute-fill-promos). The counterpart to
-     * `promo_code_id`: at most one of the two is ever set, because the caller
-     * resolves a trip deal *or* a shop-wide code, never both — a check
-     * constraint below holds that. Null on every row written before this column
-     * existed, including ones that did apply a trip deal; see
-     * `applied_discount_percent`.
+     * **Retired: nothing reads or writes these two.** `deal_id` replaced them
+     * (issue #2720); they stay declared one release, so the release serving
+     * during the deploy keeps them, and are dropped in the next.
      */
-    tripPromoId: uuid("trip_promo_id").references(() => tripLastMinutePromos.id),
+    retiredPromoCodeId: uuid("promo_code_id").references(() => retiredShopPromoCodes.id),
+    retiredTripPromoId: uuid("trip_promo_id").references(() => retiredTripLastMinutePromos.id),
     /**
-     * The code text the diver actually typed, from whichever of the two sources
-     * above it resolved against. A snapshot, so a later edit or delete of the
+     * The code text the diver actually typed, as the deal above resolved it. A snapshot, so a later edit or delete of the
      * code can't rewrite what this diver was quoted.
      */
     promoCode: text("promo_code"),
@@ -878,8 +977,8 @@ export const bookingCheckouts = pgTable(
      * Percent off, as applied to *this* session at the moment it was created —
      * the one figure that makes the discount reconstructible later without
      * asking Stripe anything (PAY-M3). Both promotion flavors are percent-only
-     * by house rule (`trip_last_minute_promos_discount_range` 5..90,
-     * `shop_promo_codes_discount_range` 1..100) and neither restricts the
+     * by house rule (`deals_discount_range`: 5..90 for a last-minute
+     * deal, 1..100 for a shop-wide code) and neither restricts the
      * coupon to particular line items, so a single percent describes the whole
      * discount on the whole session, gear lines included.
      *
@@ -892,7 +991,7 @@ export const bookingCheckouts = pgTable(
      * Null means "no discount snapshot exists": an undiscounted checkout, or a
      * row written before this column existed. Those older rows keep the
      * conservative pre-column behaviour — a shop-wide code is still
-     * reconstructible from `promo_code_id`, and anything else falls back to the
+     * reconstructible from its `deal_id`, and anything else falls back to the
      * asked total (`attributableTotalCents`, src/db/checkouts.ts). A completion
      * is never refused and never recorded as zero for want of this figure.
      */
@@ -1024,14 +1123,10 @@ export const bookingCheckouts = pgTable(
       "booking_checkouts_single_discount_snapshot",
       sql`${table.appliedDiscountPercent} is null or ${table.appliedDiscountCents} is null`,
     ),
-    // A checkout applies a trip-scoped deal *or* a shop-wide code, never both:
-    // the caller resolves them in that order and stops at the first hit, and
-    // Stripe Checkout accepts one promotion code per session anyway. Held here
-    // so no future caller can quietly record two and leave the reconstruction
-    // guessing which percent was the one Stripe applied.
+    // Retired with its two columns (issue #2720): one `deal_id` cannot name two.
     check(
       "booking_checkouts_single_promo_source",
-      sql`${table.promoCodeId} is null or ${table.tripPromoId} is null`,
+      sql`${table.retiredPromoCodeId} is null or ${table.retiredTripPromoId} is null`,
     ),
     // A tip is a whole amount the diver chose: no deposit, no promotion, no
     // discount snapshot and no tax (ADR 20260726-post-trip-tipping), so a fare
@@ -1039,7 +1134,7 @@ export const bookingCheckouts = pgTable(
     // or deposit seat.
     check(
       "booking_checkouts_tip_shape",
-      sql`${table.purpose} <> 'tip' or (not ${table.isDeposit} and ${table.promoCodeId} is null and ${table.tripPromoId} is null and ${table.appliedDiscountPercent} is null and ${table.appliedDiscountCents} is null and not ${table.taxEnabled} and ${table.passThroughCents} = 0)`,
+      sql`${table.purpose} <> 'tip' or (not ${table.isDeposit} and ${table.dealId} is null and ${table.appliedDiscountPercent} is null and ${table.appliedDiscountCents} is null and not ${table.taxEnabled} and ${table.passThroughCents} = 0)`,
     ),
     // The abandoned-checkout-recovery scan's exact predicate (pending, not yet
     // recovered), so the daily cron doesn't force a sequential scan of the
@@ -1360,10 +1455,12 @@ export const paymentOperationIntents = pgTable(
      * the promo's advisory lock before Stripe is called. A `started` intent
      * carrying one is a reservation against the cap (`discountCapReached`,
      * src/db/promo-caps.ts), so two attempts at a code's last use cannot both
-     * reach Stripe. At most one of the two is set.
+     * reach Stripe.
      */
-    promoCodeId: uuid("promo_code_id").references(() => shopPromoCodes.id),
-    tripPromoId: uuid("trip_promo_id").references(() => tripLastMinutePromos.id),
+    dealId: uuid("deal_id").references(() => deals.id),
+    /** **Retired** with `booking_checkouts`' pair (issue #2720); dropped next release. */
+    retiredPromoCodeId: uuid("promo_code_id").references(() => retiredShopPromoCodes.id),
+    retiredTripPromoId: uuid("trip_promo_id").references(() => retiredTripLastMinutePromos.id),
     /** The Stripe object id once known, even if the local finalize write then failed. */
     stripeObjectId: text("stripe_object_id"),
     /**
@@ -1405,7 +1502,7 @@ export const paymentOperationIntents = pgTable(
       .where(sql`${table.status} = 'started'`),
     check(
       "payment_operation_intents_single_promo",
-      sql`${table.promoCodeId} is null or ${table.tripPromoId} is null`,
+      sql`${table.retiredPromoCodeId} is null or ${table.retiredTripPromoId} is null`,
     ),
     check(
       "payment_operation_intents_amount_nonnegative",
@@ -1539,7 +1636,8 @@ export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 export type PaymentDispute = typeof paymentDisputes.$inferSelect;
 export type StripePayout = typeof stripePayouts.$inferSelect;
 
-export type ShopPromoCode = typeof shopPromoCodes.$inferSelect;
+export type Deal = typeof deals.$inferSelect;
+export type DealStatus = (typeof dealStatus.enumValues)[number];
 
 export type PaymentOperationIntent = typeof paymentOperationIntents.$inferSelect;
 

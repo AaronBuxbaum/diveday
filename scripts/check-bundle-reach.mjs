@@ -101,7 +101,7 @@ const DYNAMIC_KEY = /`([^`$]*)\$\{/g;
  * `check-bundle-reach.test.mjs` opens by saying is the one that hurts, and it
  * was in the tree the whole time.
  */
-const SCOPE = /\buseTranslations\(\s*["'`]([A-Za-z][\w-]*(?:\.[\w-]+)*)["'`]\s*\)/g;
+const SCOPE = /\buse(?:Staff)?Translations\(\s*["'`]([A-Za-z][\w-]*(?:\.[\w-]+)*)["'`]\s*\)/g;
 
 /**
  * The literal argument of a translator call, of any depth. Only consulted in a

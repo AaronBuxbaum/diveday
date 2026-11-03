@@ -59,9 +59,9 @@ export function WorkOrderLinesCard({
   const copy: WorkOrderLineMenuCopy = {
     edit: t("workOrders.detail.editLine"),
     delete: t("workOrders.detail.deleteLine"),
-    deleting: t("workOrders.detail.deletingLine"),
+    deleting: t("words.busy.deleting"),
     save: t("workOrders.form.save"),
-    saving: t("workOrders.form.saving"),
+    saving: t("words.busy.saving"),
     kind: t("workOrders.form.kind"),
     part: workOrderLineKindLabel(t, "part"),
     labor: workOrderLineKindLabel(t, "labor"),
@@ -229,7 +229,7 @@ export function WorkOrderLinesCard({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("workOrders.detail.adding")}
+                pendingLabel={t("words.busy.adding")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("workOrders.detail.addLine")}

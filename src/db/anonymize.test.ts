@@ -18,6 +18,7 @@ import {
   bookingPaymentEvents,
   bookings,
   capabilities,
+  deals,
   formDrafts,
   gearItems,
   gearReservations,
@@ -34,7 +35,6 @@ import {
   recapPulses,
   rollCallEvents,
   shops,
-  tripLastMinutePromos,
   trips,
   userAccounts,
   waiverDeliveries,
@@ -661,7 +661,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
 
     // 5. The address a last-minute deal was sent to.
     const [promo] = await db
-      .insert(tripLastMinutePromos)
+      .insert(deals)
       .values({
         shopId: shop.id,
         tripId: trip.id,
@@ -669,7 +669,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
         code: "LASTCALL20",
         expiresAt: new Date("2099-01-01T00:00:00.000Z"),
       })
-      .returning({ id: tripLastMinutePromos.id });
+      .returning({ id: deals.id });
     if (!promo) throw new Error("fixture insert failed");
     // The deal went out as a departure row copied from the diver's anytime interest,
     // with a way out of the list.

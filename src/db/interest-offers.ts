@@ -50,11 +50,11 @@ import {
   cards,
   courses,
   dateRequestOfferBookings,
+  deals,
   type Interest,
   interests,
   people,
   shops,
-  tripLastMinutePromos,
   trips,
 } from "./schema";
 import { getShopById } from "./shops";
@@ -395,7 +395,7 @@ export async function offerSeats(
   );
   // Durable evidence before either Stripe call.
   const [pendingRow] = await db
-    .insert(tripLastMinutePromos)
+    .insert(deals)
     .values({
       shopId: input.shopId,
       tripId: input.tripId,
@@ -420,10 +420,7 @@ export async function offerSeats(
     idempotencyKey: pendingRow.id,
   });
   if (stripeResult.status !== "created") {
-    await db
-      .update(tripLastMinutePromos)
-      .set({ status: "failed" })
-      .where(eq(tripLastMinutePromos.id, pendingRow.id));
+    await db.update(deals).set({ status: "failed" }).where(eq(deals.id, pendingRow.id));
     return refused("stripe_failed");
   }
 
@@ -439,14 +436,14 @@ export async function offerSeats(
   );
   const sentCount = results.filter(({ delivery }) => delivery === "sent").length;
   await db
-    .update(tripLastMinutePromos)
+    .update(deals)
     .set({
-      status: "sent",
+      status: "active",
       stripeCouponId: stripeResult.stripeCouponId,
       stripePromotionCodeId: stripeResult.stripePromotionCodeId,
       recipientCount: sentCount,
     })
-    .where(eq(tripLastMinutePromos.id, pendingRow.id));
+    .where(eq(deals.id, pendingRow.id));
   return {
     results,
     deal: { ok: true, promoId: pendingRow.id, code, recipientCount: sentCount },

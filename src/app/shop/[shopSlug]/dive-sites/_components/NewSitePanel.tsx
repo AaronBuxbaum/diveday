@@ -49,7 +49,7 @@ export async function NewSitePanel({
       errorMessages={siteFormErrorMessages(t, "diveSites.new.errorInvalid")}
       actions={
         <>
-          <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
             {t("diveSites.form.save")}
           </SubmitButton>
           <UnsavedSections

@@ -707,22 +707,21 @@ export const tripHelpRequests = pgTable(
   ],
 );
 
-export const tripLastMinutePromoStatus = pgEnum("trip_last_minute_promo_status", [
+/** **Retired** with `trip_last_minute_promos` (issue #2720); dropped with it next release. */
+export const retiredTripLastMinutePromoStatus = pgEnum("trip_last_minute_promo_status", [
   "pending",
   "sent",
   "failed",
 ]);
 
 /**
- * One staff-triggered last-minute-deal blast on one trip: the Stripe coupon +
- * promotion code it minted, and how many last-minute-list divers it went to.
- * The row is inserted `pending` before either Stripe call so a crash mid-send
- * leaves durable evidence to reconcile, mirroring `startBookingCheckout`'s
- * insert-before-external-call shape (docs ADR 20260727-last-minute-fill-promos).
- * Multiple rows per trip are expected — staff may re-send at a steeper
- * discount as departure nears.
+ * **Retired: nothing reads or writes this table.** A last-minute deal is a
+ * `deals` row with `trip_id` set (issue #2720). The declaration stays one
+ * release so the release still serving while that migration runs keeps its
+ * table; the next release drops it (expand/contract,
+ * `.agents/skills/schema-change/removing.md`). Do not add a reader.
  */
-export const tripLastMinutePromos = pgTable(
+export const retiredTripLastMinutePromos = pgTable(
   "trip_last_minute_promos",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -732,28 +731,14 @@ export const tripLastMinutePromos = pgTable(
     tripId: uuid("trip_id")
       .notNull()
       .references(() => trips.id),
-    status: tripLastMinutePromoStatus("status").notNull().default("pending"),
-    /** Percent off, or null for a fixed-amount deal; exactly one of the two is set. */
+    status: retiredTripLastMinutePromoStatus("status").notNull().default("pending"),
     discountPercent: integer("discount_percent"),
-    /**
-     * A fixed amount off the whole booking, in minor units — "$20 off". Same
-     * rule as a shop-wide code: once per checkout, never below zero.
-     */
     discountAmountCents: integer("discount_amount_cents"),
-    /** The human-typed code, e.g. "SAVE50-A1B2C3" — unique per shop's Stripe account. */
     code: text("code").notNull(),
     stripeCouponId: text("stripe_coupon_id"),
     stripePromotionCodeId: text("stripe_promotion_code_id"),
-    /**
-     * The redemption cap Stripe was given: the departure's open seats when the
-     * deal went out. Kept so the checkout can hold the same cap where Stripe
-     * cannot see it (a pass-through fee's one-off coupon). Null on a deal sent
-     * before this column existed.
-     */
     maxRedemptions: integer("max_redemptions"),
-    /** Pinned to the trip's departure at creation; a later reschedule does not move it. */
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    /** How many last-minute-list entries the blast email actually went to. */
     recipientCount: integer("recipient_count").notNull().default(0),
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
     createdAt: appNowTimestamp("created_at").notNull(),
@@ -882,8 +867,6 @@ export const bookingCapabilities = pgTable(
 );
 
 export type Booking = typeof bookings.$inferSelect;
-
-export type TripLastMinutePromo = typeof tripLastMinutePromos.$inferSelect;
 
 /**
  * **Which diver's link brought this seat** (ADR 20260908-one-hand, decision 6,

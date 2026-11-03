@@ -1,5 +1,5 @@
 import { StatusMark } from "./StatusMark";
-import { toneMark as toneToMark } from "./tone";
+import { type ToneName, toneMark as toneToMark } from "./tone";
 
 /**
  * Canonical status pill. Every hand-rolled "rounded-full bg-X/10 text-X" span
@@ -34,9 +34,9 @@ const toneClass = {
   // `border` made "Not here" 30px beside a 28px "Blocked" on the same line,
   // and the only pill still outlined on paper (`badge.test.tsx`).
   neutral: "ring-1 ring-inset ring-border bg-surface-sunken text-muted",
-} as const;
+} as const satisfies Record<ToneName, string>;
 
-export type BadgeTone = keyof typeof toneClass;
+export type BadgeTone = ToneName;
 
 /**
  * The same drawn mark, for a status that is **not** wearing a pill.

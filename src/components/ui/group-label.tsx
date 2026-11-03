@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { ToneName } from "./tone";
 
 /**
  * **The ledger's group label, in a module of its own.** `ledger.tsx` composes
@@ -23,10 +24,12 @@ const GROUP_LABEL_INK = {
   warning: "text-warning-strong",
   /** The one label set in danger ink: the home's "First thing" panel, naming the row that blocks a boat. */
   danger: "text-danger",
-} as const;
+} as const satisfies Record<GroupLabelTone, string>;
 
 /** Which ink a group label is set in. `muted` unless the group has a state to carry. */
-export type GroupLabelTone = keyof typeof GROUP_LABEL_INK;
+export type GroupLabelTone =
+  | "muted"
+  | Extract<ToneName, "primary" | "success" | "warning" | "danger">;
 
 /**
  * The small-caps line that owns a group's shared facts. Settings' spelling,

@@ -575,12 +575,10 @@ export async function startBookingCheckout(
           passThroughCents,
           isDeposit: charge.isDeposit,
           expiresAt: session.expiresAt,
-          // At most one source is ever recorded (the table's
-          // `single_promo_source` check holds it): if a trip deal is what
-          // Stripe applied, the shop-wide code was not spent and has no
-          // redemption to record against it.
-          promoCodeId: appliedPromo?.source === "trip" ? null : (input.shopPromo?.id ?? null),
-          tripPromoId: appliedPromo?.source === "trip" ? appliedPromo.id : null,
+          // One deal is ever recorded: if a trip deal is what Stripe applied,
+          // the shop-wide code was not spent and has no redemption to record
+          // against it.
+          dealId: appliedPromo?.source === "trip" ? appliedPromo.id : (input.shopPromo?.id ?? null),
           promoCode: appliedPromo?.code ?? input.shopPromo?.code ?? null,
           appliedDiscountPercent,
           appliedDiscountCents,
@@ -998,8 +996,8 @@ export async function getLatestCheckoutForBooking(
  *
  * Rows written before that column existed have no snapshot. They keep the
  * conservative behaviour they were completed under: a shop-wide code is still
- * reconstructible from its own row (`shop_promo_codes.discount_percent` is NOT
- * NULL and constrained to 1..100), and anything else — an undiscounted session,
+ * reconstructible from its own deal row (one of `discount_percent` and
+ * `discount_amount_cents` is always set, `deals_one_discount`), and anything else — an undiscounted session,
  * or an old trip-scoped last-minute deal, which left no local trace at all —
  * falls back to the asked total. Both answers are a figure, never a refusal and
  * never zero.
@@ -1025,8 +1023,10 @@ async function attributableTotalCents(db: DbExecutor, checkout: BookingCheckout)
   if (checkout.appliedDiscountCents !== null) {
     return net({ kind: "amount", amountCents: checkout.appliedDiscountCents });
   }
-  if (!checkout.promoCodeId) return checkout.totalCents;
-  const promo = await getShopPromoCodeById(db, checkout.shopId, checkout.promoCodeId);
+  if (!checkout.dealId) return checkout.totalCents;
+  // A shop-wide code only: `getShopPromoCodeById` finds no trip deal, which
+  // falls back to the asked total as it always did.
+  const promo = await getShopPromoCodeById(db, checkout.shopId, checkout.dealId);
   // A code deleted since (or belonging to another shop) leaves nothing to
   // reconstruct from; the asked total is the only defensible figure left.
   const discount = promo ? promoDiscountOf(promo) : null;

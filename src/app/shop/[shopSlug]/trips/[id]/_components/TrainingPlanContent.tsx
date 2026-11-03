@@ -56,7 +56,7 @@ export function TrainingPlanContent({
         {canEdit ? (
           <SubmitButton
             className={buttonClass({ variant: "secondary" })}
-            pendingLabel={t("trips.trainingPlan.saving")}
+            pendingLabel={t("words.busy.saving")}
           >
             {t("trips.trainingPlan.save")}
           </SubmitButton>

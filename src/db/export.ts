@@ -29,7 +29,7 @@
  * "a person reads it" side gets its key here and a sentence at its clause.
  */
 
-import { and, asc, count, eq, getTableColumns, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, count, eq, getTableColumns, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { fieldGuideCardsIn } from "@/i18n/marine-life-labels";
 import { canExportShopData } from "@/lib/authz";
 import { splitCardsByKind } from "@/lib/card-ledger";
@@ -64,6 +64,7 @@ import {
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
+  deals,
   divePackages,
   gearItems,
   gearReservations,
@@ -362,7 +363,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .where(eq(recapPulses.shopId, shopId))
     .orderBy(asc(recapPulses.createdAt), asc(recapPulses.id));
 
-  const promoCodeRows = await readScoped(tx, "shopPromoCodes", scope);
+  const { promoCodeRows, lastMinutePromoRows } = await readDealRows(tx, scope);
   const promoCodeText = new Map(promoCodeRows.map((row) => [row.id, row.code]));
 
   const divePackageRows = await readScoped(tx, "divePackages", scope);
@@ -374,8 +375,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const seriesRecordRows = await readSeriesRecordRows(tx, scope);
 
   const interestExportRows = await readInterestExportRows(tx, scope);
-
-  const lastMinutePromoRows = await readScoped(tx, "tripLastMinutePromos", scope);
 
   const orderRows = await readScoped(tx, "orders", scope);
 
@@ -639,6 +638,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     recapPulseRows,
     promoCodeRows,
     promoCodeText,
+    tripDealIds: new Set(lastMinutePromoRows.map((row) => row.id)),
     divePackageRows,
     entitlementRows,
     courseRows,
@@ -716,6 +716,20 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     cardedPeople,
     waiversByPerson,
     photoUrls,
+  };
+}
+
+/**
+ * One table, two files: shop-wide codes and last-minute deals, split by
+ * whether the deal names a trip (ADR 20261103-a-deal-is-one-row).
+ */
+async function readDealRows(tx: AppTransaction, scope: ShopExportScope) {
+  const dealRows = await readScoped(tx, "deals", scope);
+  return {
+    promoCodeRows: dealRows.filter((row) => row.tripId === null),
+    lastMinutePromoRows: dealRows.flatMap((row) =>
+      row.tripId === null ? [] : [{ ...row, tripId: row.tripId }],
+    ),
   };
 }
 
@@ -1278,7 +1292,7 @@ export async function loadShopExportCounts(
       "dateRequestOfferBookings",
       shopId,
     ),
-    "trip_last_minute_promos.csv": await countShopScoped(db, "tripLastMinutePromos", shopId),
+    "trip_last_minute_promos.csv": await countDeals(db, shopId, "trip"),
     "booking_arrival_events.csv": await countShopScoped(db, "bookingArrivalEvents", shopId),
     "roll_call_events.csv": await countRollCallMarks(db, shopId, "seat"),
     "roll_call_crew_events.csv": await countRollCallMarks(db, shopId, "crew"),
@@ -1347,7 +1361,7 @@ export async function loadShopExportCounts(
     ),
     "dive_packages.csv": await countShopScoped(db, "divePackages", shopId),
     "dive_package_entitlements.csv": await countShopScoped(db, "divePackageEntitlements", shopId),
-    "shop_promo_codes.csv": await countShopScoped(db, "shopPromoCodes", shopId),
+    "shop_promo_codes.csv": await countDeals(db, shopId, "shop"),
     "courses.csv": await countShopScoped(db, "courses", shopId),
     "shop_text_translations.csv": await countShopScoped(db, "shopTextTranslations", shopId),
   };
@@ -1357,6 +1371,20 @@ export async function loadShopExportCounts(
     note: EXPORT_FILE_NOTES[file],
     count: counts[file],
   }));
+}
+
+/** How many of the shop's deals land in one of the two files `deals` splits into. */
+async function countDeals(db: AppDb, shopId: string, kind: "shop" | "trip"): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(deals)
+    .where(
+      and(
+        eq(deals.shopId, shopId),
+        kind === "shop" ? isNull(deals.tripId) : isNotNull(deals.tripId),
+      ),
+    );
+  return row?.n ?? 0;
 }
 
 /**

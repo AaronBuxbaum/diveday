@@ -32,6 +32,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "dive_sites",
   "dive_site_creatures",
   "waiver_templates",
+  "deals",
   "shop_promo_codes",
   "dive_packages",
   "pre_departure_checklist_items",

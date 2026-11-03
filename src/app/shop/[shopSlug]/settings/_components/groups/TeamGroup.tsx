@@ -72,7 +72,7 @@ export function TeamGroup({ view, canManageTeam }: { view: SettingsView; canMana
                 </Field>
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("settings.main.crewSchedule.saving")}
+                    pendingLabel={t("words.busy.saving")}
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.crewSchedule.save")}

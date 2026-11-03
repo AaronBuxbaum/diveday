@@ -8,7 +8,7 @@ export function helpRequestCopy(t: StaffTranslator): HelpRequestCopy {
     cancel: t("today.helpRequest.cancel"),
     selector: t("today.helpRequest.crewSelector"),
     speakFirst: t("today.helpRequest.speakFirst"),
-    saving: t("today.helpRequest.saving"),
+    saving: t("words.busy.saving"),
     assigned: t("today.helpRequest.assigned"),
     completed: t("today.helpRequest.completed"),
     undone: t("today.helpRequest.undone"),

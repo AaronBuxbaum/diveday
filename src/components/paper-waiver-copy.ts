@@ -1,8 +1,8 @@
+import type { NoticeTone } from "@/components/ui/tone";
 import { staffGuardianRelationshipOptions } from "@/i18n/guardian-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { GuardianRelationship } from "@/lib/guardian";
 import type { PaperWaiverRefusal } from "@/lib/paper-waiver-form";
-import type { NoticeTone } from "@/lib/staff-notices";
 
 /**
  * Words for `PaperWaiverControl`, resolved server-side and passed down as plain
@@ -122,9 +122,9 @@ export function paperWaiverCopy(t: StaffTranslator, surface: PaperWaiverSurface)
     markSignedOnPaper: t("shared.paperWaiver.markSignedOnPaper"),
     medicalAttestationLabel: t("shared.paperWaiver.medicalAttestationLabel"),
     medicalAttestationMinorLabel: t("shared.paperWaiver.medicalAttestationMinorLabel"),
-    recording: t("shared.paperWaiver.recording"),
+    recording: t("words.busy.recording"),
     recordPaperSignature: t("shared.paperWaiver.recordPaperSignature"),
-    neverMind: t("shared.waiverSend.neverMind"),
+    neverMind: t("words.dismiss.neverMind"),
     guardian: {
       nameLabel: t("shared.paperWaiver.guardianNameLabel"),
       relationshipLabel: t("shared.paperWaiver.guardianRelationshipLabel"),

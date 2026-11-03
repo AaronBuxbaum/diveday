@@ -161,7 +161,7 @@ describe("OfflineManifestView note-loss status", () => {
       await screen.findByText(/Older offline note text was removed after a data erasure/),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Synthetic own-shop trip" })).toBeInTheDocument();
-    expect(screen.getByText("Fresh roster · older notes removed")).toBeInTheDocument();
+    expect(screen.getByText("Fresh manifest · older notes removed")).toBeInTheDocument();
     expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@ import type { HandledHelpRequest } from "@/db/help-requests";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   blockerItemText,
+  blockerLabelCopy,
   blockerRowText,
   diverAlsoText,
   diverItemsText,
@@ -507,7 +508,7 @@ export function diverBlockerAction(
     context: input.tripTitle,
     departure: { tripId: input.tripId, label: input.tripTitle },
     detail: blockerRowText(t, blocker),
-    actionLabel: resolveCopy(t, destination.label),
+    actionLabel: resolveCopy(t, blockerLabelCopy(destination.label)),
     href: destination.href,
     ...(sendsWaiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
     ...(kind === "payment" ? { payment: { bookingId: input.bookingId } } : {}),

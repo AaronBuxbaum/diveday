@@ -23,7 +23,6 @@
     "notReached": "Aún sin aviso. Llama ya a los propietarios.",
     "notAlerted": "Aquí no hay ningún aviso abierto para esta persona.",
     "found": "Encontrado",
-    "foundPending": "Guardando…",
     "foundDone": "Marcado como encontrado. Los propietarios ya tienen el fin de la alerta.",
     "foundPartial": "Marcado como encontrado. El fin de la alerta no llegó a todos los propietarios. Llámalos.",
     "foundNoAllClear": "Marcado como encontrado. No se envió el fin de la alerta.",
@@ -72,8 +71,7 @@
     "followUp": "Seguimiento",
     "followUpHint": "A quién se avisó (DAN, la agencia de formación, el contacto de emergencia), equipo guardado para su revisión, qué pasa ahora.",
     "optional": "(opcional)",
-    "save": "Guardar borrador",
-    "saving": "Guardando…"
+    "save": "Guardar borrador"
   },
   "handoverKind": {
     "none": "Se quedó con la tripulación",
@@ -110,7 +108,6 @@
     "outsiderNameHint": "Solo para alguien que no está en las listas.",
     "part": "Su papel",
     "add": "Agregar al informe",
-    "adding": "Agregando…",
     "remove": "Quitar",
     "removeLabel": "Quitar a {name} del informe",
     "removing": "Quitando…",
@@ -157,7 +154,6 @@
     "byAt": "{name}, {when}",
     "help": "Envía por correo un único fin de la alerta a los propietarios avisados. Solo cuando ya figure de vuelta a bordo.",
     "submit": "Encontrado",
-    "pending": "Guardando…",
     "allClearSent": "Fin de la alerta enviado {when}",
     "allClearPartial": "El fin de la alerta no llegó a todos los propietarios. Llámalos.",
     "allClearNone": "No se envió el fin de la alerta."
@@ -168,8 +164,7 @@
     "empty": "No hay notas posteriores.",
     "by": "{name}, {date}",
     "label": "Agregar una nota",
-    "submit": "Agregar nota",
-    "pending": "Agregando…"
+    "submit": "Agregar nota"
   },
   "notices": {
     "saved": "Borrador guardado",
@@ -256,8 +251,6 @@
     "description": "Solo puede hacerlo un propietario, y solo antes de presentarlo. Desaparece de esta salida y de la página de informes.",
     "trigger": "Eliminar borrador",
     "confirm": "Sí, eliminar el borrador",
-    "cancel": "Cancelar",
-    "pending": "Eliminando…",
     "message": "¿Eliminar este borrador? Deja de verse, y sus palabras se conservan siete años. Un informe presentado nunca se puede eliminar."
   },
   "hold": {
@@ -265,7 +258,6 @@
     "descriptionOff": "Para una reclamación abierta. Conserva este informe más allá de los siete años. Solo un propietario puede ponerla o levantarla.",
     "descriptionOn": "Con retención legal. Este informe se conserva hasta que un propietario la levante.",
     "set": "Poner retención legal",
-    "release": "Levantar la retención",
-    "pending": "Guardando…"
+    "release": "Levantar la retención"
   }
 }

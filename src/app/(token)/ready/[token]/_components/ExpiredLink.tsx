@@ -2,9 +2,10 @@ import { DeadLink } from "@/components/DeadLink";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { noticeRole } from "@/components/ui/tone";
 import type { Shop } from "@/db/schema";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { emailFreshReadinessLinkAction } from "../booking-actions";
 
 /**

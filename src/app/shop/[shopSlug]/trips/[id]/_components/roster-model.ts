@@ -26,7 +26,7 @@ import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { seatSailed } from "@/lib/seat-sailed";
-import { waiverState } from "@/lib/waivers";
+import { waiverStanding } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { SHARED_FACT_MIN } from "./shared-facts";
@@ -467,8 +467,8 @@ type WaiverControlKeys = {
 
 export type WaiverControl = WaiverControlKeys & { label: string; hint?: string };
 
-const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlKeys> = {
-  not_sent: {
+const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverStanding>, WaiverControlKeys> = {
+  none: {
     labelKey: "trips.roster.waiverSend",
     variant: "secondary",
     action: "send",
@@ -481,13 +481,13 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
     action: "resend",
     confirm: true,
   },
-  expired: {
+  link_expired: {
     labelKey: "trips.roster.waiverLinkExpired",
     variant: "danger",
     action: "resend",
     confirm: false,
   },
-  complete: {
+  signed: {
     labelKey: "trips.roster.waiverSigned",
     action: null,
     confirm: false,
@@ -498,7 +498,7 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
     confirm: false,
   },
   // Danger where the review above it is warning: a hold might still clear, and
-  // this one will not. `action: null` for the same reason as `complete` —
+  // this one will not. `action: null` for the same reason as `signed` —
   // there is no next tap here, and a refusal is the one waiver state where
   // sending another link would be the wrong thing to offer (issue #1283).
   medical_not_cleared: {
@@ -508,7 +508,7 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
   },
 };
 
-export type WaiverControls = Record<ReturnType<typeof waiverState>, WaiverControl>;
+export type WaiverControls = Record<ReturnType<typeof waiverStanding>, WaiverControl>;
 
 /**
  * Every waiver state's control, worded. On a rehearsal an open link was never
@@ -640,7 +640,7 @@ export function groupRoster({
     const readiness = readinessByBooking.get(booking.id)?.readiness;
     const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
     const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
-    const status = waiverState(currentWaiver);
+    const status = waiverStanding(currentWaiver);
     const control = WAIVER_CONTROLS[status];
     const identityUnconfirmed =
       Boolean(booking.identityUnconfirmedAt) ||

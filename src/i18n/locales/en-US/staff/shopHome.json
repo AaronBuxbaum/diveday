@@ -94,7 +94,6 @@
     "scheduleTitle": "Share your public schedule",
     "scheduleBody": "Paste it on your website or socials.",
     "scheduleCopy": "Copy link",
-    "scheduleCopied": "Copied",
     "scheduleCopyFailed": "Couldn’t copy. Open the link and copy its address.",
     "stripeTitle": "Connect payments",
     "stripeBody": "Divers pay when they book; payouts land in your account.",

@@ -230,7 +230,7 @@ describe("the diver record", () => {
     const s = await seat();
     await lapseAt(s, beforeTheTrip(s));
     const profile = await getDiverProfile(s.db, s.shop.id, s.entry.person.id);
-    expect(profile?.waiver).toMatchObject({ state: "current", runsOutBeforeTrip: true });
+    expect(profile?.waiver).toMatchObject({ state: "signed", runsOutBeforeTrip: true });
 
     // The record reads the furthest upcoming seat, so the other seats go.
     const others = await s.db
@@ -242,6 +242,6 @@ describe("the diver record", () => {
     }
     await lapseAt(s, new Date(s.reef.endsAt.getTime() + DAY_MS));
     const after = await getDiverProfile(s.db, s.shop.id, s.entry.person.id);
-    expect(after?.waiver).toMatchObject({ state: "current", runsOutBeforeTrip: false });
+    expect(after?.waiver).toMatchObject({ state: "signed", runsOutBeforeTrip: false });
   });
 });

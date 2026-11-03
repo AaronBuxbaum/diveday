@@ -1,14 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Certification } from "@/db/schema";
-import {
-  bookingIdentityColumns,
-  courseEnrollmentRefusal,
-  courseRatioRefusal,
-  participantTypeRefusal,
-} from "./booking-gates";
-
-const card = (level: Certification["level"], status: Certification["status"]) =>
-  ({ level, status }) as Certification;
+import { bookingIdentityColumns, participantTypeRefusal } from "./booking-gates";
 
 const charter = {
   courseId: null,
@@ -48,78 +39,6 @@ describe("participantTypeRefusal", () => {
     expect(
       participantTypeRefusal({ actor: "staff", participantType: "rider", trip: charter }),
     ).toBeNull();
-  });
-});
-
-describe("courseEnrollmentRefusal", () => {
-  const needsOpenWater = { minimumCertificationLevel: "open_water" as const, minimumAge: null };
-  const tenAndUp = { minimumCertificationLevel: null, minimumAge: 10 };
-
-  it("admits anyone to a course that asks for nothing", () => {
-    const open = { minimumCertificationLevel: null, minimumAge: null };
-    expect(
-      courseEnrollmentRefusal({ actor: "public", course: open, diver: null, courseDate: null }),
-    ).toBeNull();
-  });
-
-  it("fails the card gate closed: no record, no verified card, or a card below the level", () => {
-    const refuse = (diver: Parameters<typeof courseEnrollmentRefusal>[0]["diver"]) =>
-      courseEnrollmentRefusal({ actor: "staff", course: needsOpenWater, diver, courseDate: null });
-    expect(refuse(null)).toBe("course_prerequisite");
-    expect(refuse({ cards: [], dateOfBirth: null })).toBe("course_prerequisite");
-    // A diver's own claim is pending, never verified, and reserves no seat.
-    expect(refuse({ cards: [card("advanced_open_water", "pending")], dateOfBirth: null })).toBe(
-      "course_prerequisite",
-    );
-    expect(
-      refuse({ cards: [card("advanced_open_water", "verified")], dateOfBirth: null }),
-    ).toBeNull();
-  });
-
-  it("refuses an under-age student at the staff door, on the day the course runs", () => {
-    const at = (courseDate: string, actor: "staff" | "public" = "staff") =>
-      courseEnrollmentRefusal({
-        actor,
-        course: tenAndUp,
-        diver: { cards: [], dateOfBirth: "2021-06-15" },
-        courseDate,
-      });
-    expect(at("2031-06-14")).toBe("course_min_age");
-    expect(at("2031-06-15")).toBeNull();
-    // The anonymous form never refuses on someone else's date of birth (H-20260724-certification-levels-agency-rules).
-    expect(at("2031-06-14", "public")).toBeNull();
-  });
-
-  it("fails the age gate open when there is no date of birth or no record", () => {
-    for (const diver of [null, { cards: [], dateOfBirth: null }]) {
-      expect(
-        courseEnrollmentRefusal({
-          actor: "staff",
-          course: tenAndUp,
-          diver,
-          courseDate: "2031-06-14",
-        }),
-      ).toBeNull();
-    }
-  });
-
-  it("applies the card gate before the age gate", () => {
-    expect(
-      courseEnrollmentRefusal({
-        actor: "staff",
-        course: { minimumCertificationLevel: "open_water", minimumAge: 10 },
-        diver: { cards: [], dateOfBirth: "2025-01-01" },
-        courseDate: "2031-06-14",
-      }),
-    ).toBe("course_prerequisite");
-  });
-});
-
-describe("courseRatioRefusal", () => {
-  it("refuses at the ratio cap, and never without one", () => {
-    expect(courseRatioRefusal(3, 4)).toBeNull();
-    expect(courseRatioRefusal(4, 4)).toBe("course_ratio_full");
-    expect(courseRatioRefusal(40, null)).toBeNull();
   });
 });
 

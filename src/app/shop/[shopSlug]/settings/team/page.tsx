@@ -216,7 +216,7 @@ function StaffRow({
             <LanguageCheckboxes defaultLanguages={member.spokenLanguages} locale={locale} t={t} />
             <div className="flex flex-wrap items-center gap-3">
               <SubmitButton
-                pendingLabel={t("settings.team.languagesSaving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("settings.team.languagesSave")}
@@ -290,7 +290,7 @@ function StaffRow({
             <FieldActions>
               <FormStatus tone={contactStatus?.tone}>{contactStatus?.text}</FormStatus>
               <SubmitButton
-                pendingLabel={t("settings.team.emergencyContact.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("settings.team.emergencyContact.save")}
@@ -311,7 +311,7 @@ function StaffRow({
           <form action={resendInviteAction}>
             <input type="hidden" name="userAccountId" value={member.userAccountId} />
             <SubmitButton
-              pendingLabel={t("settings.team.staffRow.sending")}
+              pendingLabel={t("words.busy.sending")}
               className={buttonClass({
                 variant: "secondary",
                 size: "sm",
@@ -388,7 +388,7 @@ function StaffRow({
                     and this page's one irreversible act is erasure, which says
                     so itself. */}
                 <SubmitButton
-                  pendingLabel={t("settings.team.staffRow.deleting")}
+                  pendingLabel={t("words.busy.deleting")}
                   ariaLabel={t("settings.team.staffRow.deleteAriaLabel", {
                     name: member.fullName,
                   })}

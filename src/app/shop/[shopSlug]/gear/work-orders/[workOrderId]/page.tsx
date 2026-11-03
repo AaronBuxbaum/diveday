@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { LedgerRow } from "@/components/ui/ledger";
+import type { NoticeTone } from "@/components/ui/tone";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getWorkOrderPage } from "@/db/work-order-page";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
@@ -22,7 +23,7 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { isCustomerRegulatorServiceMonths, type WorkOrderOutcome } from "@/lib/work-orders";
 import { draftBenchNoteAction } from "../../../content-assist-actions";
@@ -266,7 +267,7 @@ export default async function WorkOrderPage({
           <form action={deleteWorkOrderAction} className="print:hidden">
             <input type="hidden" name="workOrderId" value={workOrder.id} />
             <SubmitButton
-              pendingLabel={t("workOrders.detail.deleting")}
+              pendingLabel={t("words.busy.deleting")}
               className={buttonClass({ variant: "ghost" })}
             >
               {t("workOrders.detail.delete")}

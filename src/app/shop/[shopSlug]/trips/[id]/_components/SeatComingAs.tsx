@@ -49,7 +49,7 @@ export function SeatComingAs({
             </select>
           </Field>
           <SubmitButton
-            pendingLabel={t("trips.roster.saving")}
+            pendingLabel={t("words.busy.saving")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("participants.roster.save")}
@@ -66,7 +66,7 @@ export function SeatComingAs({
             <input type="hidden" name="participantType" value="diver" />
             <input type="hidden" name="confirmCertBlock" value="1" />
             <SubmitButton
-              pendingLabel={t("trips.roster.saving")}
+              pendingLabel={t("words.busy.saving")}
               className={buttonClass({ variant: "secondary", size: "sm" })}
             >
               {t("participants.roster.changeAnyway")}

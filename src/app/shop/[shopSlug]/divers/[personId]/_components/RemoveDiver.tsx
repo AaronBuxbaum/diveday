@@ -49,7 +49,7 @@ export function RemoveDiver({
           className="mt-3 flex flex-wrap items-center gap-3"
         >
           <SubmitButton
-            pendingLabel={t("divers.remove.removing")}
+            pendingLabel={t("words.busy.deleting")}
             className={buttonClass({ variant: "danger-solid" })}
           >
             {t("divers.remove.removeDiver")}

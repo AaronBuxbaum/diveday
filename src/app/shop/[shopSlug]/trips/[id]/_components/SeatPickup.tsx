@@ -67,7 +67,7 @@ export function SeatPickup({
             </FieldGrid>
             <div>
               <SubmitButton
-                pendingLabel={t("trips.roster.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("trips.roster.savePickup")}

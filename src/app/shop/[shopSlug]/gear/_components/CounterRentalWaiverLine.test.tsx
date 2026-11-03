@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { MedicalWaiverMark, ShopWaiverStatus } from "@/lib/waivers";
+import type { MedicalWaiverMark, ShopWaiverStanding } from "@/lib/waivers";
 
 const holdSendAction = vi.fn(async (_formData: FormData) => ({
   id: "held-1",
@@ -23,7 +23,7 @@ const t = staffTranslator("en-US");
 const signedAt = new Date("2026-07-20T14:00:00Z");
 const expiresAt = new Date("2027-07-20T14:00:00Z");
 
-function Line(props: { status: ShopWaiverStatus | undefined; ticketId?: string }) {
+function Line(props: { status: ShopWaiverStanding | undefined; ticketId?: string }) {
   return (
     <CounterRentalWaiverLine
       t={t}
@@ -36,9 +36,9 @@ function Line(props: { status: ShopWaiverStatus | undefined; ticketId?: string }
   );
 }
 
-function current(medical: Partial<MedicalWaiverMark> | null): ShopWaiverStatus {
+function current(medical: Partial<MedicalWaiverMark> | null): ShopWaiverStanding {
   return {
-    state: "current",
+    state: "signed",
     signedAt,
     expiresAt,
     medical: medical
@@ -49,7 +49,7 @@ function current(medical: Partial<MedicalWaiverMark> | null): ShopWaiverStatus {
           ...medical,
         } as MedicalWaiverMark)
       : null,
-  } as ShopWaiverStatus;
+  } as ShopWaiverStanding;
 }
 
 afterEach(() => {
@@ -82,20 +82,20 @@ describe("CounterRentalWaiverLine", () => {
   });
 
   it("names the ticket when there is one", async () => {
-    render(<Line status={{ state: "expired", signedAt }} ticketId="t-1" />);
+    render(<Line status={{ state: "lapsed", signedAt }} ticketId="t-1" />);
     await userEvent.setup().click(screen.getByRole("button", { name: "Send waiver" }));
     expect(holdSendAction.mock.calls.at(-1)?.[0].get("ticketId")).toBe("t-1");
   });
 
   it("says a physician's answer in full, without a waiver prefix or a link", () => {
-    render(<Line status={{ state: "medical_not_cleared" } as ShopWaiverStatus} />);
+    render(<Line status={{ state: "medical_not_cleared" } as ShopWaiverStanding} />);
     expect(screen.getByText("A physician did not clear this diver to dive.")).toBeVisible();
     expect(screen.queryByText(/^Waiver:/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Send waiver" })).toBeNull();
   });
 
   it("says a medical hold in full, without a link", () => {
-    render(<Line status={{ state: "medical_review" } as ShopWaiverStatus} />);
+    render(<Line status={{ state: "medical_review" } as ShopWaiverStanding} />);
     expect(
       screen.getByText("A medical answer needs a doctor’s sign-off before this diver dives."),
     ).toBeVisible();

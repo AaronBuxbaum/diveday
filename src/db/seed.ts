@@ -1,5 +1,5 @@
 import { hash } from "bcryptjs";
-import { and, eq, inArray, ne, or } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -44,6 +44,7 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   customerGearItems,
+  deals,
   departureBoatSafetySnapshots,
   divePackageEntitlements,
   diveSiteCreatures,
@@ -78,10 +79,11 @@ import {
   recapPhotos,
   recapPulses,
   rentalFitProfiles,
+  retiredShopPromoCodes,
+  retiredTripLastMinutePromos,
   reviewModerationEvents,
   reviewReplies,
   shopBackupDeliveryClaims,
-  shopPromoCodes,
   shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
@@ -98,7 +100,6 @@ import {
   tripChangeEvents,
   tripDives,
   tripHelpRequests,
-  tripLastMinutePromos,
   tripRecapPhotos,
   tripRequirements,
   tripReviews,
@@ -1631,7 +1632,10 @@ export async function clearDemoSchedule(
   // `promo_id`, so it goes after them and before the trips/people deletes below
   // or this FK-violates and aborts the whole reset mid-run (docs ADR
   // 20260727-last-minute-fill-promos).
-  await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
+  await db.delete(deals).where(and(eq(deals.shopId, shopId), isNotNull(deals.tripId)));
+  await db
+    .delete(retiredTripLastMinutePromos)
+    .where(eq(retiredTripLastMinutePromos.shopId, shopId));
   // The blow-out cascade's two tables, innermost first: the per-diver rows
   // reference both `bookings` and `trip_blowouts`, and the cascade row
   // references `trips`. Missing from this ordering when the cascade shipped,
@@ -1874,7 +1878,8 @@ export async function clearDemoSchedule(
   // replaced outright the way the waiver templates just were. `seedDemoSchedule`
   // re-inserts REEF10 and OPENWATER25 in their seeded state below; a code some
   // test minted is not seeded state and correctly does not come back.
-  await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
+  await db.delete(deals).where(and(eq(deals.shopId, shopId), isNull(deals.tripId)));
+  await db.delete(retiredShopPromoCodes).where(eq(retiredShopPromoCodes.shopId, shopId));
 
   return { waiverTitle: existingWaiver?.title ?? DEFAULT_WAIVER_TITLE };
 }

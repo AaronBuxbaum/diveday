@@ -138,7 +138,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripAbout(page);
         await page
           .locator("#crew")
-          .getByText(/^Also rostered on /)
+          .getByText(/^Also scheduled on /)
           .first()
           .waitFor();
         await capture(page, "trip-crew-clash", scheme);
@@ -521,7 +521,7 @@ for (const scheme of ["light", "dark"] as const) {
       /**
        * **A crew member another boat also claims, said once** (issue #2217,
        * PR #2202). At the dock the Boat tab says the instruction once above
-       * the crew list and each clashing row reads only "Also rostered on …
+       * the crew list and each clashing row reads only "Also scheduled on …
        * at these hours." Through `?crewClash=1`, the one door into the state
        * the roster refuses to write.
        */
@@ -538,7 +538,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}/manifest`);
         // The destination's own words, not a timing guess.
         await page
-          .getByText(/^Also rostered on /)
+          .getByText(/^Also scheduled on /)
           .first()
           .waitFor();
         await offlineCopySaved(page);

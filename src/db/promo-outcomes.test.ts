@@ -6,10 +6,9 @@ import {
   bookingCheckouts,
   bookings,
   courses,
+  deals,
   people,
-  shopPromoCodes,
   shops,
-  tripLastMinutePromos,
   trips,
 } from "./schema";
 import { shopPromoOutcomes } from "./shop-promos";
@@ -92,11 +91,11 @@ describe("lastMinuteDealOutcomes", () => {
     const db = await unseededTestDb();
     const { shopId, tripId } = await fixture(db, "deal-outcomes");
     const [deal] = await db
-      .insert(tripLastMinutePromos)
+      .insert(deals)
       .values({
         shopId,
         tripId,
-        status: "sent",
+        status: "active",
         discountPercent: 20,
         code: "SAVE20-A1",
         expiresAt: new Date("2026-06-10T13:00:00Z"),
@@ -104,11 +103,11 @@ describe("lastMinuteDealOutcomes", () => {
       })
       .returning();
     const [quiet] = await db
-      .insert(tripLastMinutePromos)
+      .insert(deals)
       .values({
         shopId,
         tripId,
-        status: "sent",
+        status: "active",
         discountPercent: 10,
         code: "SAVE10-B2",
         expiresAt: new Date("2026-06-10T13:00:00Z"),
@@ -118,14 +117,14 @@ describe("lastMinuteDealOutcomes", () => {
     // Two seats settled at $176 with $16 of tax: $160 in seats.
     await checkout(db, shopId, tripId, {
       seats: 2,
-      tripPromoId: deal.id,
+      dealId: deal.id,
       settledTotalCents: 17_600,
       taxCents: 1_600,
     });
     // One seat with no settled figure: the asked total.
-    await checkout(db, shopId, tripId, { seats: 1, tripPromoId: deal.id });
+    await checkout(db, shopId, tripId, { seats: 1, dealId: deal.id });
     // An abandoned checkout sold nothing.
-    await checkout(db, shopId, tripId, { seats: 3, tripPromoId: deal.id, status: "expired" });
+    await checkout(db, shopId, tripId, { seats: 3, dealId: deal.id, status: "expired" });
 
     const outcomes = await lastMinuteDealOutcomes(db, shopId, [deal.id, quiet.id]);
     expect(outcomes.get(deal.id)).toEqual({ seats: 3, seatsCents: 26_000 });
@@ -137,18 +136,18 @@ describe("lastMinuteDealOutcomes", () => {
     const { shopId, tripId } = await fixture(db, "deal-owner");
     const other = await fixture(db, "deal-other");
     const [deal] = await db
-      .insert(tripLastMinutePromos)
+      .insert(deals)
       .values({
         shopId,
         tripId,
-        status: "sent",
+        status: "active",
         discountPercent: 20,
         code: "SAVE20-C3",
         expiresAt: new Date("2026-06-10T13:00:00Z"),
       })
       .returning();
     if (!deal) throw new Error("deal insert failed");
-    await checkout(db, shopId, tripId, { seats: 1, tripPromoId: deal.id });
+    await checkout(db, shopId, tripId, { seats: 1, dealId: deal.id });
     expect((await lastMinuteDealOutcomes(db, other.shopId, [deal.id])).size).toBe(0);
     expect((await lastMinuteDealOutcomes(db, shopId, [])).size).toBe(0);
   });
@@ -159,29 +158,29 @@ describe("shopPromoOutcomes", () => {
     const db = await unseededTestDb();
     const { shopId, tripId } = await fixture(db, "code-outcomes");
     const [code] = await db
-      .insert(shopPromoCodes)
+      .insert(deals)
       .values({ shopId, code: "SPRING", discountPercent: 10, status: "active" })
       .returning();
     const [unused] = await db
-      .insert(shopPromoCodes)
+      .insert(deals)
       .values({ shopId, code: "WINTER", discountAmountCents: 2_000, status: "active" })
       .returning();
     if (!code || !unused) throw new Error("code insert failed");
     await checkout(db, shopId, tripId, {
       seats: 2,
-      promoCodeId: code.id,
+      dealId: code.id,
       appliedDiscountCents: 2_000,
     });
     // No cents snapshot: the percent of the asked total.
     await checkout(db, shopId, tripId, {
       seats: 1,
-      promoCodeId: code.id,
+      dealId: code.id,
       appliedDiscountPercent: 10,
     });
     // An unpaid checkout that carried the code is not a redemption.
     await checkout(db, shopId, tripId, {
       seats: 1,
-      promoCodeId: code.id,
+      dealId: code.id,
       appliedDiscountCents: 500,
       status: "pending",
     });

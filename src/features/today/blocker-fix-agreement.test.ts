@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { blockerLabelCopy } from "@/i18n/today-labels";
 import { BLOCKER_ACTIONS, blockerFixFor } from "@/lib/blockers";
 import { nowDate } from "@/lib/clock";
 import { resolveCopy } from "@/lib/copy";
@@ -11,7 +12,8 @@ import type {
 import { diverBlockerAction } from "./index";
 
 const t = staffTranslator("en-US");
-const words = (fix: ReturnType<typeof blockerFixFor>) => (fix ? resolveCopy(t, fix.label) : null);
+const words = (fix: ReturnType<typeof blockerFixFor>) =>
+  fix ? resolveCopy(t, blockerLabelCopy(fix.label)) : null;
 
 const ctx = {
   shopSlug: "reef-co",

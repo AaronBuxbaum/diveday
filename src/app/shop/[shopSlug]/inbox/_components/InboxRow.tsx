@@ -317,7 +317,7 @@ export function InboxRow({
                         <input type="hidden" name="messageId" value={message.id} />
                         <input type="hidden" name="bookingId" value={seat.bookingId} />
                         <SubmitButton
-                          pendingLabel={t("inbox.done.pending")}
+                          pendingLabel={t("words.busy.saving")}
                           className={ACT_CLASS}
                           ariaLabel={
                             severalLate
@@ -368,7 +368,7 @@ export function InboxRow({
                 <input type="hidden" name="messageId" value={message.id} />
                 <input type="hidden" name="receivedAt" value={message.receivedAt.toISOString()} />
                 <input type="hidden" name="done" value={done ? "false" : "true"} />
-                <SubmitButton pendingLabel={t("inbox.done.pending")} className={ACT_CLASS}>
+                <SubmitButton pendingLabel={t("words.busy.saving")} className={ACT_CLASS}>
                   {done ? t("inbox.done.reopen") : t("inbox.done.action")}
                 </SubmitButton>
               </form>
@@ -376,7 +376,7 @@ export function InboxRow({
                 <form action={deleteAction}>
                   <input type="hidden" name="messageId" value={message.id} />
                   <SubmitButton
-                    pendingLabel={t("inbox.delete.pending")}
+                    pendingLabel={t("words.busy.deleting")}
                     className={DANGER_ACT_CLASS}
                     confirmMessage={t("inbox.delete.confirm")}
                     // One "Delete" per row would name them all the same, so the
