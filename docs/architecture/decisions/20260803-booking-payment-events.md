@@ -127,7 +127,7 @@ mutable row was a second copy that could only drift from it, and a refund still 
 
 - **`booking_payments` is a view**, `select distinct on (shop_id, booking_id) … from
   booking_payment_events order by shop_id, booking_id, seq desc`, with the old table's name and its
-  columns except `created_at`. Its `updated_at` is the newest entry's `occurred_at`. Every reader
+  columns. Its `updated_at` is the newest entry's `occurred_at`, its `created_at` that entry's own. Every reader
   (the roster, readiness's `PAYMENT_CLEARED` gate, Reports, refunds) keeps reading it unchanged, and
   a release still serving during the deploy keeps reading it too. Nothing can write it.
 - **`setBookingPayment` only appends.** Under the same per-booking lock it reads the fold, compares,
@@ -135,10 +135,13 @@ mutable row was a second copy that could only drift from it, and a refund still 
   one. The comparison now also covers `method` and `recorded_by_person_id`: with no mutable row, a
   change the trail skipped would be a change lost, so the same mark made by another staffer is an
   entry of its own.
-- **`seq` (bigserial) orders the entries**, not `occurred_at`. The app clock can give two writes in
-  one transaction, or under a pinned `DIVEDAY_CLOCK`, the same instant; the fold must never tie.
-  The index is now `(shop_id, booking_id, seq)`, and leading with `shop_id` in the `distinct on`
-  lets a reader's shop predicate reach it.
+- **Newest is the latest `occurred_at`, then the highest `seq`** (a new bigserial). The app clock
+  can give two writes in one transaction, or under a pinned `DIVEDAY_CLOCK`, the same instant, and
+  the fold must never tie; `seq` alone is not trusted because entries written before it existed
+  were numbered in storage order. The index is now `(shop_id, booking_id, occurred_at, seq)`, and
+  leading with `shop_id` in the `distinct on` lets a reader's shop predicate reach it.
+- **The 7-year prune never takes a booking's newest entry,** since that entry is the booking's
+  payment state; an old paid seat must not turn into one that sailed owing.
 - **A replay no longer moves `updated_at`.** It used to bump the mutable row on every redelivery;
   now the time is when the state was last really reached, which is what the owed-refunds list and
   the month's report lines meant by it.

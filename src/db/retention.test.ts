@@ -9,7 +9,7 @@ import {
 } from "@/test/retention-account-tokens";
 import { setupRequestForRetention } from "@/test/retention-setup-request";
 import { schemaTableNames } from "@/test/schema-tables";
-import { setBookingPayment } from "./payments";
+import { getBookingPayment, setBookingPayment } from "./payments";
 import { PRUNE_ARMS, pruneExpiredRecords, retentionIdentityMatches } from "./retention";
 import { writeBackupDeliveryClaimFixture } from "./retention-backup-delivery-claims.test-support";
 import { OUTSIDE_RETENTION } from "./retention-table-classification.test-support";
@@ -318,6 +318,38 @@ describe("pruneExpiredRecords", () => {
     const summary = await pruneExpiredRecords(db, { now: NOW });
     expect(outcomeFor(summary, "booking_payment_events").deleted).toBe(0);
     expect(await db.select().from(bookingPaymentEvents)).toHaveLength(before.length);
+  });
+
+  // The newest entry is the booking's payment state (issue #2716): pruning it
+  // would turn a seat paid years ago into one that sailed owing.
+  it("prunes old money entries but never a booking's newest one", async () => {
+    const { db, shop, entry } = await retentionContext();
+    const long = new Date(NOW.getTime() - 3_000 * 24 * 60 * 60_000);
+    const longer = new Date(long.getTime() - 24 * 60 * 60_000);
+    const write = (status: "deposit_paid" | "paid", occurredAt: Date) =>
+      db
+        .insert(bookingPaymentEvents)
+        .values({
+          shopId: shop.id,
+          bookingId: entry.booking.id,
+          status,
+          currency: "usd",
+          operation: "manual_mark",
+          occurredAt,
+        })
+        .returning({ id: bookingPaymentEvents.id });
+    const [deposit] = await write("deposit_paid", longer);
+    const [paid] = await write("paid", long);
+    await pruneExpiredRecords(db, { now: NOW });
+    const left = (
+      await db
+        .select({ id: bookingPaymentEvents.id })
+        .from(bookingPaymentEvents)
+        .where(eq(bookingPaymentEvents.bookingId, entry.booking.id))
+    ).map((row) => row.id);
+    expect(left).toEqual([paid?.id]);
+    expect(left).not.toContain(deposit?.id);
+    expect((await getBookingPayment(db, shop.id, entry.booking.id))?.status).toBe("paid");
   });
 
   it("is idempotent: a second pass with nothing eligible deletes nothing", async () => {

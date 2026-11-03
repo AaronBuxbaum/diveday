@@ -1796,7 +1796,7 @@
   overwriting the capture it reverses (issue #2716).
   "Transition, not write" is the load-bearing distinction: a webhook redelivered twice appends
   nothing the second time, and a refused write appends nothing at all, so a row here always means
-  the state genuinely changed — otherwise the money ledger would slowly become a delivery log.
+  something material changed (the same mark by another staffer counts) — otherwise the money ledger would slowly become a delivery log.
 - **Retention window** — how long one append-only table's rows are kept before the weekly prune
   deletes them. Set per table in `RETENTION_DAYS` (`src/lib/retention.ts`), which is the only place
   a human edits. Most windows are a preference; `stripe_webhook_events` is not — its rows are the

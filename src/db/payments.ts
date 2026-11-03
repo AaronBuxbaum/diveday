@@ -186,9 +186,13 @@ export async function setBookingPayment(
         operation: input.operation ?? "manual_mark",
         occurredAt: now,
       })
-      .returning({ id: bookingPaymentEvents.id, occurredAt: bookingPaymentEvents.occurredAt });
+      .returning({
+        id: bookingPaymentEvents.id,
+        occurredAt: bookingPaymentEvents.occurredAt,
+        createdAt: bookingPaymentEvents.createdAt,
+      });
     if (!entry) return null;
-    return { ...next, id: entry.id, updatedAt: entry.occurredAt };
+    return { ...next, id: entry.id, updatedAt: entry.occurredAt, createdAt: entry.createdAt };
   });
 }
 
@@ -279,7 +283,7 @@ export async function listBookingPaymentEvents(
     .where(
       and(eq(bookingPaymentEvents.shopId, shopId), eq(bookingPaymentEvents.bookingId, bookingId)),
     )
-    .orderBy(desc(bookingPaymentEvents.seq))
+    .orderBy(desc(bookingPaymentEvents.occurredAt), desc(bookingPaymentEvents.seq))
     .limit(limit);
 }
 

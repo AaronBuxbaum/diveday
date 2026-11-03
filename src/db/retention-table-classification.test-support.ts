@@ -146,7 +146,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // trail among these and it has a window (7 years); the rows here are the
   // seats, orders and tips that trail is about.
   "bookings",
-  "booking_payments",
   "booking_referrals",
   "booking_checkouts",
   "booking_checkout_bookings",

@@ -6,8 +6,8 @@ import { capturedPaymentStatuses, isCapturedPaymentStatus } from "@/lib/payment-
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
-import { lockSeatsInOrder } from "./checkouts";
 import { fareCheckout } from "./checkout-purpose";
+import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { checkoutRefundKey, enqueueCheckoutIntegrationEvent } from "./integration-events";
 import { boundLockWaits } from "./lock-bounds";
@@ -495,9 +495,8 @@ export async function refundBookingOnCancellation(
         provider: "stripe",
         providerRef: result.refundId ?? plan.providerRef,
         note: "Auto-refunded on cancellation within the free window",
-        // The capture this reverses is overwritten in `booking_payments`; the
-        // append-only trail is where it survives (ADR
-        // 20260803-booking-payment-events).
+        // An entry of its own: the capture this reverses stays in the
+        // booking's entries (ADR 20260803-booking-payment-events).
         operation: "cancellation_refund",
       });
       // After the seat, never before it: the seat-then-checkout order (#2335).

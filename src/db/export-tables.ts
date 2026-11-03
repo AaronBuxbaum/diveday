@@ -277,7 +277,7 @@ export const EXPORT_TABLES = {
   // the file in order arrives at that folded state.
   bookingPaymentEvents: {
     table: bookingPaymentEvents,
-    order: [asc(bookingPaymentEvents.seq)],
+    order: [asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.seq)],
     scope: {
       shopColumn: bookingPaymentEvents.shopId,
       bookingColumn: bookingPaymentEvents.bookingId,

@@ -2,7 +2,7 @@
   "type": "diff",
   "version": "9",
   "dialect": "postgres",
-  "id": "62153878-656c-4aa2-9094-b39f4e65251d",
+  "id": "9e8af3da-135e-49f8-b037-1b49bcbfc4b3",
   "prevIds": [
     "f7603f93-17fe-4a36-865d-a0b5220a219e"
   ],
@@ -72,19 +72,20 @@
         "index",
         "public",
         "booking_payment_events",
-        "booking_payment_events_shop_booking_seq_idx"
+        "booking_payment_events_shop_booking_newest_idx"
       ],
       "writes": [
-        "s|idx|public.booking_payment_events_shop_booking_seq_idx",
-        "n|idx|public.booking_payment_events_shop_booking_seq_idx",
-        "e|idx|public.booking_payment_events_shop_booking_seq_idx",
-        "n|rel|public.booking_payment_events_shop_booking_seq_idx"
+        "s|idx|public.booking_payment_events_shop_booking_newest_idx",
+        "n|idx|public.booking_payment_events_shop_booking_newest_idx",
+        "e|idx|public.booking_payment_events_shop_booking_newest_idx",
+        "n|rel|public.booking_payment_events_shop_booking_newest_idx"
       ],
       "reads": [
         "n|tbl|public.booking_payment_events",
         "n|sch|public",
         "n|col|public.booking_payment_events.shop_id",
         "n|col|public.booking_payment_events.booking_id",
+        "n|col|public.booking_payment_events.occurred_at",
         "n|col|public.booking_payment_events.seq"
       ]
     },
@@ -129,7 +130,7 @@
       "row": {
         "schema": "public",
         "table": "booking_payment_events",
-        "name": "booking_payment_events_shop_booking_seq_idx",
+        "name": "booking_payment_events_shop_booking_newest_idx",
         "nameExplicit": true,
         "columns": [
           {
@@ -141,6 +142,13 @@
           },
           {
             "value": "booking_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "occurred_at",
             "isExpression": false,
             "asc": true,
             "nullsFirst": false,
@@ -167,7 +175,7 @@
       "row": {
         "schema": "public",
         "name": "booking_payments",
-        "definition": "select distinct on (shop_id, booking_id) id, shop_id, booking_id, status, amount_cents, currency, provider, provider_ref, note, method, recorded_by_person_id, occurred_at as updated_at from booking_payment_events order by shop_id, booking_id, seq desc",
+        "definition": "select distinct on (shop_id, booking_id) id, shop_id, booking_id, status, amount_cents, currency, provider, provider_ref, note, method, recorded_by_person_id, occurred_at as updated_at, created_at from booking_payment_events order by shop_id, booking_id, occurred_at desc, seq desc",
         "with": null,
         "withNoData": null,
         "using": null,

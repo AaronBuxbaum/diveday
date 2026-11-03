@@ -349,9 +349,9 @@ export const bookingPaymentEvents = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     /**
-     * Write order, and the only order the fold trusts. `occurred_at` comes
-     * from the app clock, so two writes in one transaction (or under a pinned
-     * `DIVEDAY_CLOCK`) can share it; `seq` cannot tie.
+     * Write order, the fold's tie-break after `occurred_at`. The app clock
+     * can give two writes in one transaction (or under a pinned
+     * `DIVEDAY_CLOCK`) the same instant; `seq` cannot tie.
      */
     seq: bigserial("seq", { mode: "number" }).notNull(),
     /**
@@ -413,9 +413,10 @@ export const bookingPaymentEvents = pgTable(
      * booking's entries for one shop, newest first. Shop-scoped leading column
      * so the tenant predicate is index-served.
      */
-    index("booking_payment_events_shop_booking_seq_idx").on(
+    index("booking_payment_events_shop_booking_newest_idx").on(
       table.shopId,
       table.bookingId,
+      table.occurredAt,
       table.seq,
     ),
     check(
@@ -435,7 +436,10 @@ export const bookingPaymentEvents = pgTable(
  *
  * `distinct on (shop_id, booking_id)` rather than `(booking_id)` so a reader's
  * `shop_id` predicate pushes down into the fold and is served by
- * `booking_payment_events_shop_booking_seq_idx`.
+ * `booking_payment_events_shop_booking_newest_idx`. Newest is the latest
+ * `occurred_at`, then the highest `seq`: entries written before `seq` existed
+ * got theirs in storage order, so `seq` alone could not be trusted to rank
+ * them.
  */
 export const bookingPayments = pgView("booking_payments", {
   id: uuid("id").notNull(),
@@ -450,8 +454,10 @@ export const bookingPayments = pgView("booking_payments", {
   method: manualPaymentMethod("method"),
   recordedByPersonId: uuid("recorded_by_person_id"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  /** When the newest entry was written; kept so the old table's shape reads unchanged. */
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 }).as(
-  sql`select distinct on (shop_id, booking_id) id, shop_id, booking_id, status, amount_cents, currency, provider, provider_ref, note, method, recorded_by_person_id, occurred_at as updated_at from booking_payment_events order by shop_id, booking_id, seq desc`,
+  sql`select distinct on (shop_id, booking_id) id, shop_id, booking_id, status, amount_cents, currency, provider, provider_ref, note, method, recorded_by_person_id, occurred_at as updated_at, created_at from booking_payment_events order by shop_id, booking_id, occurred_at desc, seq desc`,
 );
 
 /**
