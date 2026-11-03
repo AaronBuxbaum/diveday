@@ -2,8 +2,11 @@ import path from "node:path";
 import type { Page, Request } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { DEMO_SHOP_TIMEZONE } from "../src/db/seed-clock";
 import { BASEMAP_TILE_HOSTS } from "../src/lib/basemap";
 import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "../src/lib/maps";
+import { shopDayBounds } from "../src/lib/zoned";
+import { BROWSER_CLOCK_COOKIE, pinBrowserClock } from "./browser-clock";
 import { currentStaffStorageStateGeneration, signInAs } from "./helpers";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
 
@@ -244,8 +247,22 @@ async function rendererWedged(page: Page): Promise<boolean> {
   return wedged;
 }
 
+/**
+ * The clock as a fact of the test (issue #2761): `to` moves the worker server's
+ * clock and the page's together, and `/api/test/reset` puts the server's back
+ * before the next test, so nothing needs a `finally`. An instant is named by
+ * the test, never by the harness; the default stays {@link E2E_FROZEN_CLOCK}.
+ */
+export type Clock = {
+  /** Move to `instant`. Forward of the frozen clock only; the server refuses a step back. */
+  to(instant: Date | string): Promise<void>;
+  /** The last half-hour of the demo shop's day, which is where the evening reading lives. */
+  toEvening(): Promise<void>;
+};
+
 export const test = base.extend<
   {
+    clock: Clock;
     demoReset: undefined;
     browserActivity: undefined;
     privateShop: PrivateShop;
@@ -547,6 +564,28 @@ export const test = base.extend<
    */
   privateShopBrand: [false, { option: true }],
 
+  clock: async ({ request, context, workerBaseURL }, use) => {
+    const to = async (instant: Date | string) => {
+      const at = new Date(instant);
+      const response = await request.post("/api/test/clock", { data: { now: at.toISOString() } });
+      if (!response.ok()) {
+        throw new Error(
+          `could not move the clock to ${at.toISOString()}: ${response.status()} ${await response.text()}`,
+        );
+      }
+      await context.addCookies([
+        { name: BROWSER_CLOCK_COOKIE, value: at.toISOString(), url: workerBaseURL },
+      ]);
+    };
+    await use({
+      to,
+      toEvening: async () => {
+        const { to: endOfDay } = shopDayBounds(new Date(E2E_FROZEN_CLOCK), DEMO_SHOP_TIMEZONE);
+        await to(new Date(endOfDay.getTime() - 30 * 60 * 1000));
+      },
+    });
+  },
+
   privateShop: async ({ demoReset, request, page, privateShopSlug, privateShopBrand }, use) => {
     // Named only for ordering: the reset purges the *previous* test's minted
     // shop, and it has to have run before this one mints its replacement.
@@ -604,15 +643,7 @@ export const test = base.extend<
   // unchanged, and real timers are left alone — so event- and timer-driven UI
   // (the offline reconcile, debounced search) behaves exactly as in production.
   context: async ({ context, workerBaseURL }, use) => {
-    await context.addInitScript((iso) => {
-      const fixed = new Date(iso).getTime();
-      const RealDate = Date;
-      globalThis.Date = new Proxy(RealDate, {
-        construct: (target, args) => Reflect.construct(target, args.length === 0 ? [fixed] : args),
-        get: (target, prop, receiver) =>
-          prop === "now" ? () => fixed : Reflect.get(target, prop, receiver),
-      });
-    }, E2E_FROZEN_CLOCK);
+    await pinBrowserClock(context, E2E_FROZEN_CLOCK);
 
     await context.addInitScript(() => {
       const isOfflineCookie = document.cookie
