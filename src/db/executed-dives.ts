@@ -8,12 +8,12 @@ import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { deskCountsDiveDay, seatCanBeDiveDay } from "./dive-days";
 import { isMarineLifeSlug } from "./marine-life-catalog";
+import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
   bookings,
   diveSites,
   executedDives,
   people,
-  rollCallCrewEvents,
   rollCallEvents,
   tripDives,
   trips,
@@ -289,7 +289,7 @@ async function sailedByRollCall(
 
   const diverRows = await db
     .select({
-      bookingId: rollCallEvents.bookingId,
+      bookingId: markBookingId(),
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
     })
@@ -297,6 +297,7 @@ async function sailedByRollCall(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         inArray(rollCallEvents.tripId, [...new Set(seats.map((seat) => seat.tripId))]),
         inArray(rollCallEvents.bookingId, [...contested.keys()]),
       ),
@@ -314,25 +315,26 @@ async function sailedByRollCall(
   if (unanswered.length === 0) return sailed;
   const crewRows = await db
     .select({
-      tripId: rollCallCrewEvents.tripId,
-      personId: rollCallCrewEvents.personId,
-      checkpoint: rollCallCrewEvents.checkpoint,
-      status: rollCallCrewEvents.status,
+      tripId: rollCallEvents.tripId,
+      personId: markCrewPersonId(),
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
     })
-    .from(rollCallCrewEvents)
+    .from(rollCallEvents)
     .where(
       and(
-        eq(rollCallCrewEvents.shopId, shopId),
-        inArray(rollCallCrewEvents.tripId, [...new Set(unanswered.map(([, seat]) => seat.tripId))]),
-        inArray(rollCallCrewEvents.personId, [
+        eq(rollCallEvents.shopId, shopId),
+        crewMarks(),
+        inArray(rollCallEvents.tripId, [...new Set(unanswered.map(([, seat]) => seat.tripId))]),
+        inArray(rollCallEvents.crewPersonId, [
           ...new Set(unanswered.map(([, seat]) => seat.personId)),
         ]),
       ),
     )
     .orderBy(
-      desc(rollCallCrewEvents.occurredAt),
-      desc(rollCallCrewEvents.createdAt),
-      desc(rollCallCrewEvents.seq),
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
     );
   // A crew result answers only for the departure the contested seat is on,
   // never for another boat that person crewed in the window.

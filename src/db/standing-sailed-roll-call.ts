@@ -1,7 +1,8 @@
 import { and, eq, exists, gt, ne, notExists, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { DbExecutor } from "./client";
-import { rollCallCrewEvents, rollCallEvents, trips } from "./schema";
+import { crewMarks, seatMarks } from "./roll-call-subject";
+import { rollCallEvents, trips } from "./schema";
 
 /**
  * Whether the trip in the outer query has any **standing** roll-call result
@@ -16,14 +17,15 @@ import { rollCallCrewEvents, rollCallEvents, trips } from "./schema";
 export function tripHasStandingSailedRollCall(db: DbExecutor) {
   const diver = alias(rollCallEvents, "sailed_diver_event");
   const newerDiver = alias(rollCallEvents, "newer_sailed_diver_event");
-  const crew = alias(rollCallCrewEvents, "sailed_crew_event");
-  const newerCrew = alias(rollCallCrewEvents, "newer_sailed_crew_event");
+  const crew = alias(rollCallEvents, "sailed_crew_event");
+  const newerCrew = alias(rollCallEvents, "newer_sailed_crew_event");
 
   const diverHasNewerAtCheckpoint = db
     .select({ one: sql`1` })
     .from(newerDiver)
     .where(
       and(
+        seatMarks(newerDiver),
         eq(newerDiver.shopId, diver.shopId),
         eq(newerDiver.tripId, diver.tripId),
         eq(newerDiver.bookingId, diver.bookingId),
@@ -47,6 +49,7 @@ export function tripHasStandingSailedRollCall(db: DbExecutor) {
     .from(diver)
     .where(
       and(
+        seatMarks(diver),
         eq(diver.shopId, trips.shopId),
         eq(diver.tripId, trips.id),
         or(
@@ -62,9 +65,10 @@ export function tripHasStandingSailedRollCall(db: DbExecutor) {
     .from(newerCrew)
     .where(
       and(
+        crewMarks(newerCrew),
         eq(newerCrew.shopId, crew.shopId),
         eq(newerCrew.tripId, crew.tripId),
-        eq(newerCrew.personId, crew.personId),
+        eq(newerCrew.crewPersonId, crew.crewPersonId),
         eq(newerCrew.checkpoint, crew.checkpoint),
         or(
           gt(newerCrew.occurredAt, crew.occurredAt),
@@ -82,6 +86,7 @@ export function tripHasStandingSailedRollCall(db: DbExecutor) {
     .from(crew)
     .where(
       and(
+        crewMarks(crew),
         eq(crew.shopId, trips.shopId),
         eq(crew.tripId, trips.id),
         or(

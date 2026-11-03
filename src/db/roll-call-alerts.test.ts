@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { sendStaleRollCallAlerts } from "./roll-call-alerts";
+import { crewSubject } from "./roll-call-subject";
 
 // The push half of the send path, made to throw on demand: the email half
 // reports a provider failure as a status, so a throw there is the database's.
@@ -25,7 +26,6 @@ import {
   bookings,
   people,
   personRoles,
-  rollCallCrewEvents,
   rollCallEvents,
   shopShoreAlertTokens,
   shops,
@@ -187,10 +187,10 @@ describe("sendStaleRollCallAlerts", () => {
       occurredAt: boardedAt,
     });
     await db.insert(tripAssignments).values({ tripId: trip.id, personId: crewMember.person.id });
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: trip.id,
-      personId: crewMember.person.id,
+      ...crewSubject(crewMember.person.id),
       recordedByPersonId: staff.person.id,
       status: "boarded",
       checkpoint: "departure",

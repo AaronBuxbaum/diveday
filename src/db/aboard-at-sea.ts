@@ -4,14 +4,8 @@ import { departureUnderway } from "@/lib/day-blowout";
 import { hasSailed } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { onTheWaterByRollCall } from "./manifests";
-import {
-  bookings,
-  rollCallCrewEvents,
-  rollCallEvents,
-  tripAssignments,
-  tripStageEvents,
-  trips,
-} from "./schema";
+import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
+import { bookings, rollCallEvents, tripAssignments, tripStageEvents, trips } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -130,7 +124,8 @@ export async function crewTookTheBoatOut(
   const [row] = await db
     .select({
       afterDive:
-        sql<boolean>`(exists (select 1 from ${rollCallEvents} where ${rollCallEvents.shopId} = ${shopId} and ${rollCallEvents.tripId} = ${tripId} and ${rollCallEvents.checkpoint} <> 'departure') or exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.shopId} = ${shopId} and ${rollCallCrewEvents.tripId} = ${tripId} and ${rollCallCrewEvents.checkpoint} <> 'departure'))`.mapWith(
+        // diveday:roll-call-both-subjects: an after-dive mark on either half means the boat went out.
+        sql<boolean>`exists (select 1 from ${rollCallEvents} where ${rollCallEvents.shopId} = ${shopId} and ${rollCallEvents.tripId} = ${tripId} and ${rollCallEvents.checkpoint} <> 'departure')`.mapWith(
           Boolean,
         ),
       stage: sql<
@@ -185,19 +180,20 @@ async function crewDockWords(
   );
   if (words.size === 0) return words;
   const rows = await db
-    .select({ personId: rollCallCrewEvents.personId, status: rollCallCrewEvents.status })
-    .from(rollCallCrewEvents)
+    .select({ personId: markCrewPersonId(), status: rollCallEvents.status })
+    .from(rollCallEvents)
     .where(
       and(
-        eq(rollCallCrewEvents.shopId, shopId),
-        eq(rollCallCrewEvents.tripId, tripId),
-        eq(rollCallCrewEvents.checkpoint, "departure"),
+        eq(rollCallEvents.shopId, shopId),
+        crewMarks(),
+        eq(rollCallEvents.tripId, tripId),
+        eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
     .orderBy(
-      desc(rollCallCrewEvents.occurredAt),
-      desc(rollCallCrewEvents.createdAt),
-      desc(rollCallCrewEvents.seq),
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
     );
   const seen = new Set<string>();
   for (const row of rows) {
@@ -248,11 +244,12 @@ async function dockWordBySeat(
   bookingIds: readonly string[] | undefined,
 ): Promise<Map<string, "boarded" | "not_boarded" | "cleared">> {
   const rows = await db
-    .select({ bookingId: rollCallEvents.bookingId, status: rollCallEvents.status })
+    .select({ bookingId: markBookingId(), status: rollCallEvents.status })
     .from(rollCallEvents)
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.checkpoint, "departure"),
         bookingIds ? inArray(rollCallEvents.bookingId, [...bookingIds]) : undefined,
@@ -280,27 +277,28 @@ async function crewMarkedAshore(
   personId: string,
 ): Promise<boolean> {
   const [newest] = await db
-    .select({ status: rollCallCrewEvents.status })
-    .from(rollCallCrewEvents)
+    .select({ status: rollCallEvents.status })
+    .from(rollCallEvents)
     .innerJoin(
       tripAssignments,
       and(
-        eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
-        eq(tripAssignments.personId, rollCallCrewEvents.personId),
+        eq(tripAssignments.tripId, rollCallEvents.tripId),
+        eq(tripAssignments.personId, rollCallEvents.crewPersonId),
       ),
     )
     .where(
       and(
-        eq(rollCallCrewEvents.shopId, shopId),
-        eq(rollCallCrewEvents.tripId, tripId),
-        eq(rollCallCrewEvents.personId, personId),
-        eq(rollCallCrewEvents.checkpoint, "departure"),
+        eq(rollCallEvents.shopId, shopId),
+        crewMarks(),
+        eq(rollCallEvents.tripId, tripId),
+        eq(rollCallEvents.crewPersonId, personId),
+        eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
     .orderBy(
-      desc(rollCallCrewEvents.occurredAt),
-      desc(rollCallCrewEvents.createdAt),
-      desc(rollCallCrewEvents.seq),
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
     )
     .limit(1);
   return newest?.status === "not_boarded";

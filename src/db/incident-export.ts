@@ -29,12 +29,13 @@ import { getTripManifests } from "./manifests";
 import { survivingPersonNames } from "./people";
 import { latestPreDepartureChecksForTrip, listChecklistItemsForTrip } from "./pre-departure-check";
 import { listTripReadiness } from "./readiness";
-import { activityEvents, bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
+import { asCrewMark, asSeatMark, crewMarks, seatMarks } from "./roll-call-subject";
+import { activityEvents, bookings, people, rollCallEvents } from "./schema";
 import { getShopById } from "./shops";
 
 /** The newest departure mark owns its capture; a correction never reuses an earlier one. */
 function standingCertificationCaptures(
-  rows: readonly { event: typeof rollCallEvents.$inferSelect }[],
+  rows: readonly { event: typeof rollCallEvents.$inferSelect & { bookingId: string } }[],
 ) {
   const boardingCards = new Map<
     string,
@@ -99,7 +100,7 @@ export async function getIncidentExport(
   if (!manifests || !departure) return null;
 
   const recorders = alias(people, "recorders");
-  const [shop, generator, diverEventRows, crewEventRows, executedDiveRows] = await Promise.all([
+  const [shop, generator, diverEventReads, crewEventReads, executedDiveRows] = await Promise.all([
     getShopById(db, shopId),
     db
       .select({ fullName: people.fullName })
@@ -121,7 +122,7 @@ export async function getIncidentExport(
       .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
       .innerJoin(people, eq(people.id, bookings.personId))
       .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
-      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
+      .where(and(eq(rollCallEvents.shopId, shopId), seatMarks(), eq(rollCallEvents.tripId, tripId)))
       // `seq` last, for a reason sharper here than anywhere else: this
       // document is hashed, so two orderings of the same events produce two
       // different SHA-256 integrity codes for one departure. A tie on
@@ -132,18 +133,20 @@ export async function getIncidentExport(
         asc(rollCallEvents.seq),
       ),
     db
-      .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
-      .from(rollCallCrewEvents)
-      .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
-      .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
-      .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
+      .select({ event: rollCallEvents, subject: people, recorder: recorders })
+      .from(rollCallEvents)
+      .innerJoin(people, eq(people.id, rollCallEvents.crewPersonId))
+      .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
+      .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
       .orderBy(
-        asc(rollCallCrewEvents.occurredAt),
-        asc(rollCallCrewEvents.createdAt),
-        asc(rollCallCrewEvents.seq),
+        asc(rollCallEvents.occurredAt),
+        asc(rollCallEvents.createdAt),
+        asc(rollCallEvents.seq),
       ),
     listExecutedDives(db, shopId, tripId),
   ]);
+  const diverEventRows = diverEventReads.map((row) => ({ ...row, event: asSeatMark(row.event) }));
+  const crewEventRows = crewEventReads.map((row) => ({ ...row, event: asCrewMark(row.event) }));
   if (!shop) return null;
   const generatedByName = generator[0]?.fullName;
   if (!generatedByName) return null;

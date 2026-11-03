@@ -31,6 +31,17 @@ export const ROLL_CALL_EVENT_STATUSES = ["boarded", "not_boarded", "cleared"] as
 
 export type RollCallEventStatus = (typeof ROLL_CALL_EVENT_STATUSES)[number];
 
+/**
+ * Who a roll-call mark is about. A `seat` is a paid booking; a `crew` subject
+ * is an assigned crew member, a roster line that never becomes a booking (ADR
+ * 20260804-crew-roll-call-is-per-person). Both halves of a head count are one
+ * ledger, `roll_call_events` (issue #2700): the same checkpoint, the same
+ * newest-wins read, the same `cleared` undo and the same `seq` tiebreak.
+ */
+export const ROLL_CALL_SUBJECT_KINDS = ["seat", "crew"] as const;
+
+export type RollCallSubjectKind = (typeof ROLL_CALL_SUBJECT_KINDS)[number];
+
 export type RollCallState = "awaiting" | "boarded" | "not_boarded";
 
 /**
@@ -97,8 +108,8 @@ export type RollCallRecord = {
    */
   note?: string | null;
   /**
-   * The stored event this result came from (`roll_call_events` or
-   * `roll_call_crew_events` id). Lets a list tell whether two results are the
+   * The stored event this result came from (a `roll_call_events` id, seat
+   * or crew). Lets a list tell whether two results are the
    * same event without comparing formatted text. Absent on results never
    * stored; a carried-forward (`implied`) result keeps its source event's id.
    */

@@ -19,13 +19,13 @@ import type { AppDb } from "./client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "./recap";
+import { crewMarks, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
   bookings,
   diveSites,
   executedDives,
   notificationDeliveries,
   people,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   tripDives,
@@ -215,26 +215,30 @@ async function dayTrips(
     // walks it in.
     db
       .select({
-        tripId: rollCallCrewEvents.tripId,
-        personId: rollCallCrewEvents.personId,
-        checkpoint: rollCallCrewEvents.checkpoint,
-        status: rollCallCrewEvents.status,
+        tripId: rollCallEvents.tripId,
+        personId: markCrewPersonId(),
+        checkpoint: rollCallEvents.checkpoint,
+        status: rollCallEvents.status,
       })
-      .from(rollCallCrewEvents)
+      .from(rollCallEvents)
       .innerJoin(
         tripAssignments,
         and(
-          eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
-          eq(tripAssignments.personId, rollCallCrewEvents.personId),
+          eq(tripAssignments.tripId, rollCallEvents.tripId),
+          eq(tripAssignments.personId, rollCallEvents.crewPersonId),
         ),
       )
       .where(
-        and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          crewMarks(),
+          inArray(rollCallEvents.tripId, tripIds),
+        ),
       )
       .orderBy(
-        asc(rollCallCrewEvents.occurredAt),
-        asc(rollCallCrewEvents.createdAt),
-        asc(rollCallCrewEvents.seq),
+        asc(rollCallEvents.occurredAt),
+        asc(rollCallEvents.createdAt),
+        asc(rollCallEvents.seq),
       ),
     // **D24** — dives whose actual site was not the planned one. A dive with no
     // planned site is deliberately not a change: there was no plan to depart
@@ -596,6 +600,7 @@ export async function listHeadCountCloses(
       .where(
         and(
           eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
           inArray(rollCallEvents.tripId, [...tripIds]),
           ne(rollCallEvents.status, "cleared"),
         ),
@@ -609,25 +614,26 @@ export async function listHeadCountCloses(
       ? []
       : db
           .select({
-            tripId: rollCallCrewEvents.tripId,
-            checkpoint: rollCallCrewEvents.checkpoint,
-            occurredAt: rollCallCrewEvents.occurredAt,
-            createdAt: rollCallCrewEvents.createdAt,
+            tripId: rollCallEvents.tripId,
+            checkpoint: rollCallEvents.checkpoint,
+            occurredAt: rollCallEvents.occurredAt,
+            createdAt: rollCallEvents.createdAt,
             closedBy: people.fullName,
           })
-          .from(rollCallCrewEvents)
-          .innerJoin(people, eq(people.id, rollCallCrewEvents.recordedByPersonId))
+          .from(rollCallEvents)
+          .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
           .where(
             and(
-              eq(rollCallCrewEvents.shopId, shopId),
-              inArray(rollCallCrewEvents.tripId, crewClosedTripIds),
-              ne(rollCallCrewEvents.status, "cleared"),
+              eq(rollCallEvents.shopId, shopId),
+              crewMarks(),
+              inArray(rollCallEvents.tripId, crewClosedTripIds),
+              ne(rollCallEvents.status, "cleared"),
             ),
           )
           .orderBy(
-            desc(rollCallCrewEvents.occurredAt),
-            desc(rollCallCrewEvents.createdAt),
-            desc(rollCallCrewEvents.seq),
+            desc(rollCallEvents.occurredAt),
+            desc(rollCallEvents.createdAt),
+            desc(rollCallEvents.seq),
           ),
   ]);
   const closingCheckpoint = new Map(
@@ -676,6 +682,7 @@ export async function listNotBackAfterDive(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         inArray(rollCallEvents.tripId, [...tripIds]),
         eq(rollCallEvents.status, "not_boarded"),
         ne(rollCallEvents.checkpoint, "departure"),

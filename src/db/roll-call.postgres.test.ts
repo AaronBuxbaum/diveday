@@ -323,9 +323,7 @@ function offlineEvent(minutesAfterSave: number) {
 
 async function rowsCarrying(db: AppDb, clientEventId: string): Promise<number> {
   const result = await db.execute(
-    sql`select (select count(*) from roll_call_events where client_event_id = ${clientEventId})
-             + (select count(*) from roll_call_crew_events where client_event_id = ${clientEventId})
-             as n`,
+    sql`select count(*) as n from roll_call_events where client_event_id = ${clientEventId}`,
   );
   const rows = Array.isArray(result)
     ? result

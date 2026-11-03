@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 66 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 67 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, seat-status, person-door, event-scope, slug-action, env-reads, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, assist-prompt, infra-ASCII, CI-change-detection, runner-image, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, seat-status, person-door, event-scope, roll-call-subject, slug-action, env-reads, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, assist-prompt, infra-ASCII, CI-change-detection, runner-image, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
 
 ## The guards worth reading about
 
@@ -322,6 +322,10 @@ The live-people-read one (`scripts/check-live-people.mjs`) fails a `.from(people
 ### event-scope
 
 The event-scope one (`scripts/check-event-scope.mjs`) fails a `.from(<table>)` on an append-only event table that does not name `<table>.shopId` inside the query, before the next `.from(`, and does not say `diveday:allow-unscoped-event: <why>`. The tables are every `export const <name>Events = pgTable` in `src/db/schema/` that declares `shopId`, plus `executedDives`, `recapPhotos` and `tripRecapPhotos`; each index leads with `shop_id`. A read by trip or parent id alone is right today, because the id belongs to one shop, but the tenant boundary then rests on the id rather than on the column that states it, and the read misses the index. The 2026-10-11 review fixed two roll-call reads of that shape; the next day `src/db/rehearsals.ts`, which a nightly cron runs across every shop, wrote it again, and the 2026-10-13 review found three siblings from 2026-10-05 (`trips-crew.ts`, `recap.ts`, `pre-departure-check.ts`). Writing the guard found six more (the review-moderation trail, the work-order trail, the diver recap-photo counts). `src/db/retention.ts` is skipped whole: the prune is across shops by design.
+
+### roll-call-subject
+
+The roll-call-subject one (`scripts/check-roll-call-subject.mjs`) fails a query on `roll_call_events` (a `.from`, `.update`, `.delete`, a join, a raw `${rollCallEvents}` or an alias of the table) that does not name its half before the next query starts: `seatMarks()`, `crewMarks()`, `eq(<t>.subjectKind, …)` or `subject_kind =`. A query that means both halves says `diveday:roll-call-both-subjects: <why>`. Since the 2026-11-03 fold (ADR 20261103-one-roll-call-ledger) a crew member's tap sits beside the divers' taps in one table; a diver count without the filter counts the deckhand as a diver aboard, and a join to bookings that drops crew rows only by luck is refused too, because the next edit to it would not keep that luck.
 
 ### slug-action
 

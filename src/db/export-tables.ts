@@ -48,7 +48,6 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
-  rollCallCrewEvents,
   rollCallEvents,
   shopPromoCodes,
   shopTextTranslations,
@@ -372,14 +371,10 @@ export const EXPORT_TABLES = {
     // `occurred_at` came out in a different order every export — of the one
     // file a shop is meant to be able to diff against last week's.
     order: [asc(rollCallEvents.occurredAt), asc(rollCallEvents.seq)],
+    // Both halves, seat and crew: the shop bundle splits them into
+    // roll_call_events.csv and roll_call_crew_events.csv by `subject_kind`
+    // (`splitRollCallRows`), and a diver's scope by booking reads seats only.
     scope: { shopColumn: rollCallEvents.shopId, bookingColumn: rollCallEvents.bookingId },
-  },
-  // The crew half: who, not just how many. Same oldest-first ordering, same
-  // append-only replay rule as the diver events.
-  rollCallCrewEvents: {
-    table: rollCallCrewEvents,
-    order: [asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.seq)],
-    scope: { shopColumn: rollCallCrewEvents.shopId },
   },
   // Buddy teams standing at export time — not a history: dissolving a team
   // deletes the rows, and the trail that outlives them (`buddy_team_events`)

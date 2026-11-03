@@ -31,7 +31,7 @@ import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
 import { seatStatusAfterRelease } from "@/lib/presence";
-import type { RollCallEventStatus } from "@/lib/roll-call";
+import type { RollCallEventStatus, RollCallSubjectKind } from "@/lib/roll-call";
 import {
   type CountedAboardBlocked,
   type ReadinessSnapshot,
@@ -65,11 +65,18 @@ import {
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
 import {
+  asSeatMark,
+  crewMarks,
+  markBookingId,
+  markCrewPersonId,
+  markSubjectId,
+  seatMarks,
+} from "./roll-call-subject";
+import {
   activityEvents,
   bookings,
   people,
   personRoles,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripAssignments,
@@ -102,7 +109,7 @@ import { welcomeCueInputsByBooking } from "./welcome-cues";
  * them touches `trip_assignments` — so a staff-role-only rule dropped a
  * divemaster from *every* trip they had ever crewed the moment they left the
  * shop. A checkpoint held open **because they did not come back** then read
- * complete, with their `roll_call_crew_events` rows still sitting there unread
+ * complete, with their crew marks still sitting there unread
  * (dive-domain review 20260804). Employment ends; who was on the boat that day
  * does not change, and the manifest is a record of the second thing.
  *
@@ -120,12 +127,13 @@ function isOnTripCrew(db: DbExecutor, shopId: string, tripId: string) {
     exists(
       db
         .select({ present: sql`1` })
-        .from(rollCallCrewEvents)
+        .from(rollCallEvents)
         .where(
           and(
-            eq(rollCallCrewEvents.shopId, shopId),
-            eq(rollCallCrewEvents.tripId, tripId),
-            eq(rollCallCrewEvents.personId, tripAssignments.personId),
+            eq(rollCallEvents.shopId, shopId),
+            crewMarks(),
+            eq(rollCallEvents.tripId, tripId),
+            eq(rollCallEvents.crewPersonId, tripAssignments.personId),
           ),
         ),
     ),
@@ -207,19 +215,19 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
  */
 async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
-    .select({ event: rollCallCrewEvents, recorder: people })
-    .from(rollCallCrewEvents)
-    .innerJoin(people, eq(people.id, rollCallCrewEvents.recordedByPersonId))
-    .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
+    .select({ event: rollCallEvents, recorder: people })
+    .from(rollCallEvents)
+    .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
+    .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
     .orderBy(
-      desc(rollCallCrewEvents.occurredAt),
-      desc(rollCallCrewEvents.createdAt),
-      desc(rollCallCrewEvents.seq),
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
     );
   const latest = new Map<string, RollCallRecord>();
   const seen = new Set<string>();
   for (const { event, recorder } of rows) {
-    const key = `${event.checkpoint}\u0000${event.personId}`;
+    const key = `${event.checkpoint}\u0000${event.crewPersonId}`;
     if (seen.has(key)) continue;
     seen.add(key);
     if (event.status === "cleared") continue;
@@ -247,6 +255,7 @@ async function listLatestRollCallByBooking(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.checkpoint, checkpoint),
       ),
@@ -270,7 +279,8 @@ async function listLatestRollCallByBooking(
   // event is staff undoing a mistake: record the booking as seen so no older
   // event resurfaces, but leave it out of the map so the diver reads as awaiting.
   const seen = new Set<string>();
-  for (const { event, recorder } of rows) {
+  for (const { event: row, recorder } of rows) {
+    const event = asSeatMark(row);
     if (seen.has(event.bookingId)) continue;
     seen.add(event.bookingId);
     if (event.status === "cleared") continue;
@@ -354,7 +364,7 @@ export async function listDepartureRollCallByTrip(
   const rows = await db
     .select({
       tripId: rollCallEvents.tripId,
-      bookingId: rollCallEvents.bookingId,
+      bookingId: markBookingId(),
       status: rollCallEvents.status,
     })
     .from(rollCallEvents)
@@ -362,6 +372,7 @@ export async function listDepartureRollCallByTrip(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         inArray(rollCallEvents.tripId, tripIds),
         eq(rollCallEvents.checkpoint, "departure"),
       ),
@@ -416,13 +427,19 @@ export async function listBoardedAtAnyCheckpointByTrip(
   const rows = await db
     .select({
       tripId: rollCallEvents.tripId,
-      bookingId: rollCallEvents.bookingId,
+      bookingId: markBookingId(),
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
     })
     .from(rollCallEvents)
     .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
-    .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+      ),
+    )
     .orderBy(
       desc(rollCallEvents.occurredAt),
       desc(rollCallEvents.createdAt),
@@ -496,7 +513,7 @@ async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds:
   const rows = await db
     .select({
       tripId: rollCallEvents.tripId,
-      bookingId: rollCallEvents.bookingId,
+      bookingId: markBookingId(),
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
     })
@@ -505,6 +522,7 @@ async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds:
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         inArray(rollCallEvents.tripId, tripIds),
         ne(rollCallEvents.checkpoint, "departure"),
       ),
@@ -564,7 +582,7 @@ export async function listUnaccountedForByTrip(
   const rows = await db
     .select({
       tripId: rollCallEvents.tripId,
-      bookingId: rollCallEvents.bookingId,
+      bookingId: markBookingId(),
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
     })
@@ -573,6 +591,7 @@ export async function listUnaccountedForByTrip(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         inArray(rollCallEvents.tripId, [...tripIds]),
         ne(rollCallEvents.checkpoint, "departure"),
       ),
@@ -641,7 +660,7 @@ export async function listCountedAboardBlockedByTrip(
   const rows = await db
     .select({
       tripId: rollCallEvents.tripId,
-      bookingId: rollCallEvents.bookingId,
+      bookingId: markBookingId(),
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
       readinessStatus: rollCallEvents.readinessStatus,
@@ -649,7 +668,13 @@ export async function listCountedAboardBlockedByTrip(
     })
     .from(rollCallEvents)
     .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
-    .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+      ),
+    )
     .orderBy(
       desc(rollCallEvents.occurredAt),
       desc(rollCallEvents.createdAt),
@@ -771,6 +796,7 @@ export async function onTheWaterByRollCall(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.bookingId, bookingId),
       ),
@@ -800,28 +826,28 @@ export async function onTheWaterByRollCall(
   // guard above — somebody taken off the roster keeps their event rows and must
   // not answer for a crew list they are no longer on.
   const crewRows = await db
-    .select({ checkpoint: rollCallCrewEvents.checkpoint, status: rollCallCrewEvents.status })
-    .from(rollCallCrewEvents)
+    .select({ checkpoint: rollCallEvents.checkpoint, status: rollCallEvents.status })
+    .from(rollCallEvents)
     .innerJoin(
       bookings,
       and(
         eq(bookings.id, bookingId),
-        eq(bookings.personId, rollCallCrewEvents.personId),
+        eq(bookings.personId, rollCallEvents.crewPersonId),
         seatNotCancelled,
       ),
     )
     .innerJoin(
       tripAssignments,
       and(
-        eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
-        eq(tripAssignments.personId, rollCallCrewEvents.personId),
+        eq(tripAssignments.tripId, rollCallEvents.tripId),
+        eq(tripAssignments.personId, rollCallEvents.crewPersonId),
       ),
     )
-    .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
+    .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
     .orderBy(
-      desc(rollCallCrewEvents.occurredAt),
-      desc(rollCallCrewEvents.createdAt),
-      desc(rollCallCrewEvents.seq),
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
     );
   return standingRowMeansSailed(crewRows);
 }
@@ -894,29 +920,30 @@ export async function listDepartureCrewRollCallByTrip(
   if (tripIds.length === 0) return byTrip;
   const rows = await db
     .select({
-      tripId: rollCallCrewEvents.tripId,
-      personId: rollCallCrewEvents.personId,
-      status: rollCallCrewEvents.status,
+      tripId: rollCallEvents.tripId,
+      personId: markCrewPersonId(),
+      status: rollCallEvents.status,
     })
-    .from(rollCallCrewEvents)
+    .from(rollCallEvents)
     .innerJoin(
       tripAssignments,
       and(
-        eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
-        eq(tripAssignments.personId, rollCallCrewEvents.personId),
+        eq(tripAssignments.tripId, rollCallEvents.tripId),
+        eq(tripAssignments.personId, rollCallEvents.crewPersonId),
       ),
     )
     .where(
       and(
-        eq(rollCallCrewEvents.shopId, shopId),
-        inArray(rollCallCrewEvents.tripId, tripIds),
-        eq(rollCallCrewEvents.checkpoint, "departure"),
+        eq(rollCallEvents.shopId, shopId),
+        crewMarks(),
+        inArray(rollCallEvents.tripId, tripIds),
+        eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
     .orderBy(
-      desc(rollCallCrewEvents.occurredAt),
-      desc(rollCallCrewEvents.createdAt),
-      desc(rollCallCrewEvents.seq),
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
     );
   // Newest first, so the first row seen per person is their latest event.
   const seen = new Set<string>();
@@ -959,6 +986,7 @@ export async function departureRollCallTakenTripIds(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         inArray(rollCallEvents.tripId, [...tripIds]),
         eq(rollCallEvents.checkpoint, "departure"),
         inArray(rollCallEvents.status, ["boarded", "not_boarded"]),
@@ -1526,6 +1554,7 @@ async function standingDiverRollCall(
     .where(
       and(
         eq(rollCallEvents.shopId, keys.shopId),
+        seatMarks(),
         eq(rollCallEvents.tripId, keys.tripId),
         eq(rollCallEvents.bookingId, keys.bookingId),
         eq(rollCallEvents.checkpoint, keys.checkpoint),
@@ -1546,20 +1575,21 @@ async function standingCrewRollCall(
   keys: { shopId: string; tripId: string; personId: string; checkpoint: string },
 ): Promise<Pick<RollCallRecord, "state"> | undefined> {
   const [newest] = await tx
-    .select({ status: rollCallCrewEvents.status })
-    .from(rollCallCrewEvents)
+    .select({ status: rollCallEvents.status })
+    .from(rollCallEvents)
     .where(
       and(
-        eq(rollCallCrewEvents.shopId, keys.shopId),
-        eq(rollCallCrewEvents.tripId, keys.tripId),
-        eq(rollCallCrewEvents.personId, keys.personId),
-        eq(rollCallCrewEvents.checkpoint, keys.checkpoint),
+        eq(rollCallEvents.shopId, keys.shopId),
+        crewMarks(),
+        eq(rollCallEvents.tripId, keys.tripId),
+        eq(rollCallEvents.crewPersonId, keys.personId),
+        eq(rollCallEvents.checkpoint, keys.checkpoint),
       ),
     )
     .orderBy(
-      desc(rollCallCrewEvents.occurredAt),
-      desc(rollCallCrewEvents.createdAt),
-      desc(rollCallCrewEvents.seq),
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
     )
     .limit(1);
   return newest && newest.status !== "cleared" ? { state: newest.status } : undefined;
@@ -1826,8 +1856,8 @@ function scheduledOrCountingHeads(tripId: string, offlineOccurredAt: Date | null
     offlineOccurredAt
       ? sql`${trips.cancelledAt} > ${offlineOccurredAt.toISOString()}::timestamptz`
       : undefined,
+    // diveday:roll-call-both-subjects: a count under way on either half keeps the ledger open.
     sql`exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId})`,
-    sql`exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId})`,
   );
 }
 
@@ -1859,9 +1889,14 @@ export async function rollCallOpenOnTrip(
 
 /**
  * The roll-call event this shop already holds under a device's
- * `clientEventId`, with the seat it is about, or undefined. The offline replay
- * check (`replayVerdict`): asked before any work and again under the seat
- * lock (`recordRollCall`).
+ * `clientEventId`, with the subject it is about, or undefined. The offline
+ * replay check (`replayVerdict`): asked before any work and again under the
+ * writer's lock (`recordRollCall`, `recordCrewRollCall`).
+ *
+ * Seat and crew marks share one id namespace, so the subject names its kind:
+ * a crew replay under an id a seat mark already holds is a conflict, never a
+ * duplicate that would let the device mark a crew tap applied when nothing
+ * about that crew member was written.
  */
 async function storedRollCallEvent(
   tx: DbExecutor,
@@ -1872,35 +1907,24 @@ async function storedRollCallEvent(
     .select({
       id: rollCallEvents.id,
       tripId: rollCallEvents.tripId,
+      subjectKind: rollCallEvents.subjectKind,
       bookingId: rollCallEvents.bookingId,
+      crewPersonId: rollCallEvents.crewPersonId,
     })
+    // diveday:roll-call-both-subjects: one id namespace; the kind read here decides duplicate or conflict.
     .from(rollCallEvents)
     .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.clientEventId, clientEventId)))
     .limit(1);
-  return existing && { id: existing.id, subject: `${existing.tripId}/${existing.bookingId}` };
+  if (!existing) return undefined;
+  return {
+    id: existing.id,
+    subject: rollCallReplaySubject(existing.subjectKind, existing.tripId, markSubjectId(existing)),
+  };
 }
 
-/** The same question of the crew trail (`recordCrewRollCall`), with the person. */
-async function storedCrewRollCallEvent(
-  tx: DbExecutor,
-  shopId: string,
-  clientEventId: string,
-): Promise<StoredOfflineEvent | undefined> {
-  const [existing] = await tx
-    .select({
-      id: rollCallCrewEvents.id,
-      tripId: rollCallCrewEvents.tripId,
-      personId: rollCallCrewEvents.personId,
-    })
-    .from(rollCallCrewEvents)
-    .where(
-      and(
-        eq(rollCallCrewEvents.shopId, shopId),
-        eq(rollCallCrewEvents.clientEventId, clientEventId),
-      ),
-    )
-    .limit(1);
-  return existing && { id: existing.id, subject: `${existing.tripId}/${existing.personId}` };
+/** The replay subject both a stored row and an incoming event are compared by. */
+function rollCallReplaySubject(kind: RollCallSubjectKind, tripId: string, subjectId: string) {
+  return `${kind}:${tripId}/${subjectId}`;
 }
 
 export async function recordRollCall(
@@ -1937,7 +1961,7 @@ export async function recordRollCall(
       indexName: "roll_call_events_shop_client_event_unique",
       clientEventId: input.clientEventId,
       source: input.source,
-      subject: `${input.tripId}/${input.bookingId}`,
+      subject: rollCallReplaySubject("seat", input.tripId, input.bookingId),
       stored: (clientEventId) => storedRollCallEvent(db, input.shopId, clientEventId),
     },
   );
@@ -1996,7 +2020,7 @@ async function writeRollCall(
   if (source === "offline" && input.clientEventId) {
     const replayed = replayVerdict(
       await storedRollCallEvent(tx, input.shopId, input.clientEventId),
-      `${input.tripId}/${input.bookingId}`,
+      rollCallReplaySubject("seat", input.tripId, input.bookingId),
       "roll_call_events",
     );
     if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
@@ -2023,7 +2047,7 @@ async function writeRollCall(
   if (source === "offline" && input.clientEventId) {
     const replayed = replayVerdict(
       await storedRollCallEvent(tx, input.shopId, input.clientEventId),
-      `${input.tripId}/${input.bookingId}`,
+      rollCallReplaySubject("seat", input.tripId, input.bookingId),
       "roll_call_events",
     );
     if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
@@ -2081,6 +2105,7 @@ async function writeRollCall(
       .where(
         and(
           eq(rollCallEvents.shopId, input.shopId),
+          seatMarks(),
           eq(rollCallEvents.tripId, input.tripId),
           eq(rollCallEvents.bookingId, booking.id),
           eq(rollCallEvents.checkpoint, checkpoint),
@@ -2165,6 +2190,7 @@ async function writeRollCall(
     .values({
       shopId: input.shopId,
       tripId: input.tripId,
+      subjectKind: "seat",
       bookingId: booking.id,
       recordedByPersonId: staffId,
       status: input.status,
@@ -2199,7 +2225,9 @@ async function writeRollCall(
     await tx
       .update(rollCallEvents)
       .set({ certificationSnapshotCapturedAt: finishedAt < capturedAt ? capturedAt : finishedAt })
-      .where(and(eq(rollCallEvents.id, event.id), eq(rollCallEvents.shopId, input.shopId)));
+      .where(
+        and(eq(rollCallEvents.id, event.id), eq(rollCallEvents.shopId, input.shopId), seatMarks()),
+      );
   }
   await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
   // The rail has contradicted the desk. Nothing above refused it and nothing
@@ -2393,9 +2421,9 @@ export async function recordCrewRollCall(
         // that has changed since.
         if (source === "offline" && input.clientEventId) {
           const replayed = replayVerdict(
-            await storedCrewRollCallEvent(tx, input.shopId, input.clientEventId),
-            `${input.tripId}/${input.personId}`,
-            "roll_call_crew_events",
+            await storedRollCallEvent(tx, input.shopId, input.clientEventId),
+            rollCallReplaySubject("crew", input.tripId, input.personId),
+            "roll_call_events",
           );
           if (replayed) {
             return noteDisposition ? { ...replayed, noteDisposition } : replayed;
@@ -2431,9 +2459,9 @@ export async function recordCrewRollCall(
         // request's commit show.
         if (source === "offline" && input.clientEventId) {
           const replayed = replayVerdict(
-            await storedCrewRollCallEvent(tx, input.shopId, input.clientEventId),
-            `${input.tripId}/${input.personId}`,
-            "roll_call_crew_events",
+            await storedRollCallEvent(tx, input.shopId, input.clientEventId),
+            rollCallReplaySubject("crew", input.tripId, input.personId),
+            "roll_call_events",
           );
           if (replayed) {
             return noteDisposition ? { ...replayed, noteDisposition } : replayed;
@@ -2489,22 +2517,23 @@ export async function recordCrewRollCall(
           }
           const [newest] = await tx
             .select({
-              occurredAt: rollCallCrewEvents.occurredAt,
-              clientEventId: rollCallCrewEvents.clientEventId,
+              occurredAt: rollCallEvents.occurredAt,
+              clientEventId: rollCallEvents.clientEventId,
             })
-            .from(rollCallCrewEvents)
+            .from(rollCallEvents)
             .where(
               and(
-                eq(rollCallCrewEvents.shopId, input.shopId),
-                eq(rollCallCrewEvents.tripId, input.tripId),
-                eq(rollCallCrewEvents.personId, assigned.personId),
-                eq(rollCallCrewEvents.checkpoint, checkpoint),
+                eq(rollCallEvents.shopId, input.shopId),
+                crewMarks(),
+                eq(rollCallEvents.tripId, input.tripId),
+                eq(rollCallEvents.crewPersonId, assigned.personId),
+                eq(rollCallEvents.checkpoint, checkpoint),
               ),
             )
             .orderBy(
-              desc(rollCallCrewEvents.occurredAt),
-              desc(rollCallCrewEvents.createdAt),
-              desc(rollCallCrewEvents.seq),
+              desc(rollCallEvents.occurredAt),
+              desc(rollCallEvents.createdAt),
+              desc(rollCallEvents.seq),
             )
             .limit(1);
           if (newest && newest.occurredAt > occurredAt) {
@@ -2608,20 +2637,22 @@ export async function recordCrewRollCall(
         const captureAssignedCredentials = captureCredentials && assigned.anonymizedAt === null;
         const credentialSnapshotStartedAt = captureAssignedCredentials ? nowDate() : null;
         const [event] = await tx
-          .insert(rollCallCrewEvents)
+          .insert(rollCallEvents)
           .values({
             shopId: input.shopId,
             tripId: input.tripId,
-            personId: assigned.personId,
+            subjectKind: "crew",
+            crewPersonId: assigned.personId,
             recordedByPersonId: staffId,
             status: input.status,
             checkpoint,
             source,
             clientEventId: source === "offline" ? input.clientEventId : null,
-            // No `offlineSnapshotSavedAt` counterpart: the diver row keeps it as
-            // evidence of which snapshot supplied the *readiness* it boarded on,
-            // and a crew member has no readiness to evidence. It is still an input
-            // above, where the staleness bound is computed from it.
+            // No `offlineSnapshotSavedAt`: a seat row keeps it as evidence of
+            // which snapshot supplied the *readiness* it boarded on, and a crew
+            // member has no readiness to evidence
+            // (`roll_call_events_offline_snapshot_seat_only`). It is still an
+            // input above, where the staleness bound is computed from it.
             note,
             credentialSnapshot: captureAssignedCredentials
               ? crewCredentialSnapshot(input.shopId, assigned.personId)
@@ -2630,7 +2661,7 @@ export async function recordCrewRollCall(
             credentialSnapshotCapturedAt: credentialSnapshotStartedAt,
             occurredAt,
           })
-          .returning({ id: rollCallCrewEvents.id });
+          .returning({ id: rollCallEvents.id });
         if (!event) throw new Error("recordCrewRollCall: insert returned no row");
         if (checkpoint === "departure" && input.status === "not_boarded")
           await invalidateTrainingPlansForCrewChange(tx, input.shopId, input.tripId, [
@@ -2639,7 +2670,7 @@ export async function recordCrewRollCall(
         if (credentialSnapshotStartedAt) {
           const finishedAt = nowDate();
           await tx
-            .update(rollCallCrewEvents)
+            .update(rollCallEvents)
             .set(
               finishedAt < credentialSnapshotStartedAt
                 ? {
@@ -2650,7 +2681,11 @@ export async function recordCrewRollCall(
                 : { credentialSnapshotCapturedAt: finishedAt },
             )
             .where(
-              and(eq(rollCallCrewEvents.id, event.id), eq(rollCallCrewEvents.shopId, input.shopId)),
+              and(
+                eq(rollCallEvents.id, event.id),
+                eq(rollCallEvents.shopId, input.shopId),
+                crewMarks(),
+              ),
             );
         }
         await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
@@ -2671,11 +2706,11 @@ export async function recordCrewRollCall(
         return { ok: true, eventId: event.id, ...(noteDisposition ? { noteDisposition } : {}) };
       }),
     {
-      indexName: "roll_call_crew_events_shop_client_event_unique",
+      indexName: "roll_call_events_shop_client_event_unique",
       clientEventId: input.clientEventId,
       source: input.source,
-      subject: `${input.tripId}/${input.personId}`,
-      stored: (clientEventId) => storedCrewRollCallEvent(db, input.shopId, clientEventId),
+      subject: rollCallReplaySubject("crew", input.tripId, input.personId),
+      stored: (clientEventId) => storedRollCallEvent(db, input.shopId, clientEventId),
     },
   );
   // Same push signal the other head-count writes raise: this changes whether

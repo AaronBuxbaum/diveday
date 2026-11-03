@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { anonymizeDiver } from "./anonymize";
 import { recordCrewRollCall } from "./manifests";
-import { people, personRoles, rollCallCrewEvents, tripAssignments } from "./schema";
+import { people, personRoles, rollCallEvents, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
 import { changeStaffCredential, createStaffCredential } from "./staff-credentials";
@@ -70,9 +70,9 @@ describePostgres("crew boarding credential observation", () => {
     expect(await mark()).toMatchObject({ ok: true });
     const events = await pg.db
       .select()
-      .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.personId, staff.person.id))
-      .orderBy(asc(rollCallCrewEvents.seq));
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.crewPersonId, staff.person.id))
+      .orderBy(asc(rollCallEvents.seq));
     const observed = events.filter((event) => event.tripId === trip.id && event.credentialSnapshot);
     expect(observed).toHaveLength(2);
     expect(observed[0]?.credentialSnapshot).toEqual(
@@ -159,8 +159,8 @@ describePostgres("crew boarding credential observation", () => {
     ).toMatchObject({ ok: true });
     const events = await pg.db
       .select()
-      .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.personId, person.id));
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.crewPersonId, person.id));
     expect(events).toHaveLength(3);
     expect(
       events.every(

@@ -4,14 +4,8 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelDeparture } from "./aboard-at-sea";
 import type { AppDb } from "./client";
-import {
-  rollCallCrewEvents,
-  rollCallEvents,
-  shops,
-  tripAssignments,
-  tripStageEvents,
-  trips,
-} from "./schema";
+import { crewSubject } from "./roll-call-subject";
+import { rollCallEvents, shops, tripAssignments, tripStageEvents, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -94,10 +88,10 @@ describe("cancelDeparture refuses a boat that may be on the water", () => {
     status: "boarded" | "not_boarded",
     checkpoint = "departure",
   ) {
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId,
       tripId,
-      personId,
+      ...crewSubject(personId),
       recordedByPersonId: personId,
       status,
       checkpoint,

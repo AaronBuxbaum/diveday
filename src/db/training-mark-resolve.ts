@@ -14,14 +14,8 @@ import {
 } from "@/lib/training-mark";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
-import {
-  bookings,
-  courses,
-  personRoles,
-  rollCallCrewEvents,
-  tripAssignments,
-  trips,
-} from "./schema";
+import { crewMarks, markCrewPersonId } from "./roll-call-subject";
+import { bookings, courses, personRoles, rollCallEvents, tripAssignments, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 
@@ -183,23 +177,24 @@ export async function trustedCrewOfTrips(
     () =>
       db
         .select({
-          tripId: rollCallCrewEvents.tripId,
-          personId: rollCallCrewEvents.personId,
-          status: rollCallCrewEvents.status,
+          tripId: rollCallEvents.tripId,
+          personId: markCrewPersonId(),
+          status: rollCallEvents.status,
         })
-        .from(rollCallCrewEvents)
+        .from(rollCallEvents)
         .where(
           and(
-            eq(rollCallCrewEvents.shopId, shopId),
-            inArray(rollCallCrewEvents.tripId, ids),
-            eq(rollCallCrewEvents.checkpoint, "departure"),
+            eq(rollCallEvents.shopId, shopId),
+            crewMarks(),
+            inArray(rollCallEvents.tripId, ids),
+            eq(rollCallEvents.checkpoint, "departure"),
           ),
         )
         // diveday:allow-time-id-order: the latest mark per person wins; nobody is shown this order.
         .orderBy(
-          asc(rollCallCrewEvents.occurredAt),
-          asc(rollCallCrewEvents.createdAt),
-          asc(rollCallCrewEvents.seq),
+          asc(rollCallEvents.occurredAt),
+          asc(rollCallEvents.createdAt),
+          asc(rollCallEvents.seq),
         ),
   ]);
   // The latest crew-count mark per (trip, person): "not boarded" keeps them off.

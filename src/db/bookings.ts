@@ -69,6 +69,7 @@ import { type CreatePersonInput, createPerson, findOrCreatePerson } from "./peop
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "./readiness";
+import { seatMarks } from "./roll-call-subject";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -2206,7 +2207,13 @@ export async function moveBooking(
     const [rolled] = await tx
       .select({ id: rollCallEvents.id })
       .from(rollCallEvents)
-      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.bookingId, booking.id)))
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
+          eq(rollCallEvents.bookingId, booking.id),
+        ),
+      )
       .limit(1);
     if (rolled) return { ok: false, reason: "roll_call_started" };
 
@@ -2606,6 +2613,7 @@ async function boardedAtDeparture(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.bookingId, bookingId),
         eq(rollCallEvents.checkpoint, "departure"),

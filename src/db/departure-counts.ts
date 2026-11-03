@@ -8,6 +8,7 @@ import { seatSailed } from "@/lib/seat-sailed";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { listTripsReadiness } from "./readiness";
+import { markBookingId, seatMarks } from "./roll-call-subject";
 import { bookings, rollCallEvents, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -139,13 +140,15 @@ export async function departureCounts(
       db
         .select({
           tripId: rollCallEvents.tripId,
-          bookingId: rollCallEvents.bookingId,
+          bookingId: markBookingId(),
           checkpoint: rollCallEvents.checkpoint,
           status: rollCallEvents.status,
         })
         .from(rollCallEvents)
         .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
-        .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, ids)))
+        .where(
+          and(eq(rollCallEvents.shopId, shopId), seatMarks(), inArray(rollCallEvents.tripId, ids)),
+        )
         .orderBy(
           desc(rollCallEvents.occurredAt),
           desc(rollCallEvents.createdAt),
