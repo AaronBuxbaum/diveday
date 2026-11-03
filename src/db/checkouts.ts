@@ -10,9 +10,9 @@ import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/che
 import type { PromotionProvider } from "@/lib/payments/promotions";
 import { allocateSettledTotal } from "@/lib/payments/settlement";
 import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
+import { fareCheckout, tipCheckout } from "./checkout-purpose";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
-import { fareCheckout, tipCheckout } from "./checkout-purpose";
 import {
   checkoutPaidKey,
   enqueueCheckoutIntegrationEvent,

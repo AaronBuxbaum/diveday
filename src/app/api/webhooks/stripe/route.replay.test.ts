@@ -48,7 +48,7 @@ const { createOrder, recordPaymentOnOpenOrder, refundOrder } = await import("@/d
 const { getBookingPayment, listBookingPaymentEvents, setBookingPayment } = await import(
   "@/db/payments"
 );
-const { bookingCheckouts, integrationEvents, orders, paymentDisputes, tips } = await import(
+const { bookingCheckouts, integrationEvents, orders, paymentDisputes } = await import(
   "@/db/schema"
 );
 const {
@@ -420,16 +420,16 @@ describe("tip session hostile sequences (real handlers, real db)", () => {
   }
 
   async function tipState(db: Db) {
-    const [tip] = await db.select().from(tips).where(eq(tips.stripeSessionId, "cs_1")).limit(1);
+    const tipSession = eq(bookingCheckouts.stripeSessionId, "cs_1");
+    const [tip] = await db.select().from(bookingCheckouts).where(tipSession);
     return { status: tip?.status ?? null, completedAt: tip?.completedAt ?? null };
   }
 
-  it("a tip completion replayed under both id flavors, then an expiry, leaves the tip paid once", async () => {
+  it("a tip completion replayed under both id flavors, then an expiry, leaves the tip completed once", async () => {
     const { db, shop, bookingId } = await tipScenario();
-
     expect((await deliver(completedPaid("evt_t1", "cs_1"))).status).toBe(200);
     const paid = await tipState(db);
-    expect(paid.status).toBe("paid");
+    expect(paid.status).toBe("completed");
 
     await deliver(completedPaid("evt_t1", "cs_1")); // same-id redelivery
     await deliver(completedPaid("evt_t2", "cs_1")); // fresh-id redelivery

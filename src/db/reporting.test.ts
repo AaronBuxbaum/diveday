@@ -4,6 +4,7 @@ import type { Role } from "@/lib/authz";
 import { type MonthlyReport, summarizeMonth } from "@/lib/reporting";
 import { shiftInstantByCalendarDays, shopDayBounds, shopMonthBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
+import { insertTip } from "@/test/tips";
 import type { AppDb } from "./client";
 import { paymentEntries } from "./payments";
 import {
@@ -25,7 +26,6 @@ import {
   people,
   personRoles,
   shops,
-  tips,
   trips,
   userAccounts,
   waiverRecords,
@@ -199,7 +199,7 @@ async function makeTip(
   status: "pending" | "paid" | "expired" = "paid",
 ): Promise<void> {
   seq += 1;
-  await db.insert(tips).values({
+  await insertTip(db, {
     shopId,
     bookingId,
     status,

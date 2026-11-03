@@ -21,11 +21,6 @@ vi.mock("@/db/checkouts", () => ({
   recordCheckoutPaymentIntent: vi.fn(),
 }));
 vi.mock("@/db/party-payment-receipt", () => ({ sendPartyPaymentReceipt: vi.fn() }));
-vi.mock("@/db/tips", () => ({
-  markTipPaidBySessionId: vi.fn(),
-  markTipExpiredBySessionId: vi.fn(),
-  recordTipStripeCustomer: vi.fn(),
-}));
 vi.mock("@/db/webhook-events", () => ({
   claimStripeWebhookEvent: vi.fn(),
   hasNewerAccountUpdate: vi.fn(),
@@ -38,14 +33,13 @@ const { getDb } = await import("@/db/client");
 const { markCheckoutPaidBySessionId, recordCheckoutPaymentIntent, recordCheckoutStripeCustomer } =
   await import("@/db/checkouts");
 const { sendPartyPaymentReceipt } = await import("@/db/party-payment-receipt");
-const { markTipPaidBySessionId } = await import("@/db/tips");
 const { claimStripeWebhookEvent, hasNewerAccountUpdate, releaseStripeWebhookEventClaim } =
   await import("@/db/webhook-events");
 const { POST } = await import("./route");
 
 const secret = "whsec_test";
 const FAKE_DB = { fake: "db" };
-const FAKE_CHECKOUT = { id: "checkout_1" };
+const FAKE_CHECKOUT = { id: "checkout_1", purpose: "fare" };
 
 function post(event: Record<string, unknown>) {
   const payload = JSON.stringify({ livemode: true, ...event });
@@ -85,7 +79,6 @@ beforeEach(() => {
   vi.mocked(markCheckoutPaidBySessionId)
     .mockReset()
     .mockResolvedValue(FAKE_CHECKOUT as never);
-  vi.mocked(markTipPaidBySessionId).mockReset();
   vi.mocked(sendPartyPaymentReceipt).mockReset().mockResolvedValue("sent");
   vi.mocked(recordCheckoutStripeCustomer).mockReset().mockResolvedValue(true);
   vi.mocked(recordCheckoutPaymentIntent).mockReset().mockResolvedValue(true);
@@ -95,7 +88,7 @@ beforeEach(() => {
 });
 
 describe("a paid booking checkout", () => {
-  it("hands Stripe's settled total to the completion, and the tip fallback never runs", async () => {
+  it("hands Stripe's settled total to the completion", async () => {
     expect((await post(paid)).status).toBe(200);
     expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
       FAKE_DB,
@@ -105,7 +98,6 @@ describe("a paid booking checkout", () => {
       undefined,
       { firstCompletion: false, reportedOverCeiling: false },
     );
-    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
 
   it("invents no total when the delayed-payment event carries none", async () => {
@@ -123,7 +115,6 @@ describe("a paid booking checkout", () => {
       undefined,
       { firstCompletion: false, reportedOverCeiling: false },
     );
-    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
 });
 
@@ -161,8 +152,19 @@ describe("the party receipt (issue 2566)", () => {
     expect(sendPartyPaymentReceipt).not.toHaveBeenCalled();
   });
 
-  it("is not sent when no checkout matched the session (a tip)", async () => {
+  it("is not sent when no checkout matched the session", async () => {
     vi.mocked(markCheckoutPaidBySessionId).mockResolvedValue(null);
+    expect((await post(paid)).status).toBe(200);
+    expect(sendPartyPaymentReceipt).not.toHaveBeenCalled();
+  });
+
+  it("is never sent for a tip, even one reported as a first completion (issue #2718)", async () => {
+    vi.mocked(markCheckoutPaidBySessionId).mockImplementation(
+      async (_db, _id, _account, _total, _tax, outcome) => {
+        if (outcome) outcome.firstCompletion = true;
+        return { ...FAKE_CHECKOUT, purpose: "tip" } as never;
+      },
+    );
     expect((await post(paid)).status).toBe(200);
     expect(sendPartyPaymentReceipt).not.toHaveBeenCalled();
   });

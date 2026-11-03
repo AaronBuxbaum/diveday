@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { log } from "@/lib/log";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { recordCheckoutPaymentIntent } from "./checkouts";
-import type { AppDb, DbExecutor } from "./client";
+import type { AppDb } from "./client";
 import { recordOrderPaymentIntent, stripeInvoiceOf } from "./orders";
 import type { BookingCheckout, Order } from "./schema";
 import { bookingCheckouts, orders } from "./schema";

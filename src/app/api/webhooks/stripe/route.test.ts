@@ -14,11 +14,6 @@ vi.mock("@/db/checkouts", () => ({
   recordCheckoutStripeCustomer: vi.fn(),
   recordCheckoutPaymentIntent: vi.fn(),
 }));
-vi.mock("@/db/tips", () => ({
-  markTipPaidBySessionId: vi.fn(),
-  markTipExpiredBySessionId: vi.fn(),
-  recordTipStripeCustomer: vi.fn(),
-}));
 vi.mock("@/db/orders", () => ({
   applyInvoicePaid: vi.fn(),
   markOrderVoidedByInvoiceId: vi.fn(),
@@ -58,9 +53,6 @@ const {
   recordCheckoutPaymentIntent,
   recordCheckoutStripeCustomer,
 } = await import("@/db/checkouts");
-const { markTipPaidBySessionId, markTipExpiredBySessionId, recordTipStripeCustomer } = await import(
-  "@/db/tips"
-);
 const { applyInvoicePaid, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } = await import(
   "@/db/orders"
 );
@@ -126,8 +118,6 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ account: null, newlyRestricted: false });
   vi.mocked(disconnectShopStripeAccount).mockReset();
-  vi.mocked(markTipPaidBySessionId).mockReset();
-  vi.mocked(markTipExpiredBySessionId).mockReset();
   vi.mocked(recordCheckoutStripeCustomer).mockReset().mockResolvedValue(true);
   vi.mocked(recordCheckoutPaymentIntent).mockReset().mockResolvedValue(true);
   vi.mocked(recordOrderPaymentIntent).mockReset().mockResolvedValue(true);
@@ -136,7 +126,6 @@ beforeEach(() => {
   vi.mocked(recordStripePayout).mockReset();
   vi.mocked(summarizeStripePayout).mockReset();
   vi.mocked(after).mockReset();
-  vi.mocked(recordTipStripeCustomer).mockReset().mockResolvedValue(false);
   vi.mocked(claimStripeWebhookEvent).mockReset().mockResolvedValue(true);
   vi.mocked(hasNewerAccountUpdate).mockReset().mockResolvedValue(false);
   vi.mocked(releaseStripeWebhookEventClaim).mockReset().mockResolvedValue(true);
@@ -247,7 +236,6 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
     expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
-    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
     expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
   });
 
@@ -264,7 +252,6 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
     expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
-    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
     expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
   });
 
@@ -376,17 +363,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
   });
 
-  it("checkout.session.completed falls back to marking a tip paid when no booking checkout matches the session", async () => {
-    vi.mocked(markCheckoutPaidBySessionId).mockResolvedValue(null);
-    const response = await post({
-      id: "evt_1",
-      type: "checkout.session.completed",
-      data: { object: { id: "cs_tip_1", payment_status: "paid" } },
-    });
-    expect(response.status).toBe(200);
-    expect(markTipPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1", undefined);
-  });
-
   it("checkout.session.completed does NOT mark paid when payment_status is unpaid (async payment pending)", async () => {
     const response = await post({
       id: "evt_1",
@@ -414,18 +390,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     );
     // Never a payment-side write, and never the paid path.
     expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
-    expect(markTipExpiredBySessionId).not.toHaveBeenCalled();
-  });
-
-  it("checkout.session.async_payment_failed falls back to the tip table on the shared session-id space", async () => {
-    vi.mocked(markCheckoutPaymentFailedBySessionId).mockResolvedValue(null);
-    const response = await post({
-      id: "evt_1",
-      type: "checkout.session.async_payment_failed",
-      data: { object: { id: "cs_tip_1" } },
-    });
-    expect(response.status).toBe(200);
-    expect(markTipExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1", undefined);
   });
 
   // Idempotency at the route level: the db helper returns null for a row that
@@ -434,7 +398,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
   // would make Stripe retry a genuinely-handled event forever.
   it("checkout.session.async_payment_failed is a quiet 200 when nothing is left to release", async () => {
     vi.mocked(markCheckoutPaymentFailedBySessionId).mockResolvedValue(null);
-    vi.mocked(markTipExpiredBySessionId).mockResolvedValue(null as never);
     const response = await post({
       id: "evt_replay",
       type: "checkout.session.async_payment_failed",
@@ -453,7 +416,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
     expect(response.status).toBe(200);
     expect(markCheckoutPaymentFailedBySessionId).not.toHaveBeenCalled();
-    expect(markTipExpiredBySessionId).not.toHaveBeenCalled();
   });
 
   it("checkout.session.expired marks the checkout expired", async () => {
@@ -464,18 +426,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
     expect(response.status).toBe(200);
     expect(markCheckoutExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123", undefined);
-    expect(markTipExpiredBySessionId).not.toHaveBeenCalled();
-  });
-
-  it("checkout.session.expired falls back to marking a tip expired when no booking checkout matches the session", async () => {
-    vi.mocked(markCheckoutExpiredBySessionId).mockResolvedValue(null);
-    const response = await post({
-      id: "evt_1",
-      type: "checkout.session.expired",
-      data: { object: { id: "cs_tip_1" } },
-    });
-    expect(response.status).toBe(200);
-    expect(markTipExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1", undefined);
   });
 
   // Issue #1621. Stripe creates a Customer `if_required`, so the id appears on
@@ -520,23 +470,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       // an obligation against an id nobody has is noise an owner cannot
       // discharge.
       expect(recordCheckoutStripeCustomer).not.toHaveBeenCalled();
-      expect(recordTipStripeCustomer).not.toHaveBeenCalled();
-    });
-
-    it("falls back to the tip table on the shared session-id space", async () => {
-      vi.mocked(recordCheckoutStripeCustomer).mockResolvedValue(false);
-      const response = await post({
-        id: "evt_1",
-        type: "checkout.session.completed",
-        data: { object: { id: "cs_tip_1", payment_status: "paid", customer: "cus_tipper" } },
-        account: "acct_123",
-      });
-      expect(response.status).toBe(200);
-      expect(recordTipStripeCustomer).toHaveBeenCalledWith(FAKE_DB, {
-        stripeSessionId: "cs_tip_1",
-        stripeCustomerId: "cus_tipper",
-        expectedAccountId: "acct_123",
-      });
     });
 
     it("reads an expanded Customer object as its id", async () => {
@@ -1436,18 +1369,6 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
       arrange: () => vi.mocked(markCheckoutPaidBySessionId).mockRejectedValue(boom),
     },
     {
-      name: "checkout.session.completed (tip fallback)",
-      event: {
-        id: "evt_fail_tip",
-        type: "checkout.session.completed",
-        data: { object: { id: "cs_tip", payment_status: "paid" } },
-      },
-      arrange: () => {
-        vi.mocked(markCheckoutPaidBySessionId).mockResolvedValue(null);
-        vi.mocked(markTipPaidBySessionId).mockRejectedValue(boom);
-      },
-    },
-    {
       name: "checkout.session.async_payment_succeeded",
       event: {
         id: "evt_fail_async",
@@ -1473,18 +1394,6 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
         data: { object: { id: "cs_1" } },
       },
       arrange: () => vi.mocked(markCheckoutExpiredBySessionId).mockRejectedValue(boom),
-    },
-    {
-      name: "checkout.session.expired (tip fallback)",
-      event: {
-        id: "evt_fail_tip_expired",
-        type: "checkout.session.expired",
-        data: { object: { id: "cs_tip" } },
-      },
-      arrange: () => {
-        vi.mocked(markCheckoutExpiredBySessionId).mockResolvedValue(null);
-        vi.mocked(markTipExpiredBySessionId).mockRejectedValue(boom);
-      },
     },
     {
       name: "account.updated (staleness check)",

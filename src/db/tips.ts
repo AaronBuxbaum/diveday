@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { majorToMinor, type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/checkout";
+import { tipCheckout } from "./checkout-purpose";
 import type { AppDb, DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import {
@@ -10,8 +11,14 @@ import {
   resolvePaymentOperation,
   startPaymentOperation,
 } from "./payment-operations";
-import { tipCheckout } from "./checkout-purpose";
-import { bookingCheckoutBookings, bookingCheckouts, bookings, type BookingCheckout, people, shops } from "./schema";
+import {
+  type BookingCheckout,
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookings,
+  people,
+  shops,
+} from "./schema";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 import { checkoutProviderFromEnvironment } from "./stripe-providers";
 
@@ -349,6 +356,7 @@ export async function getLatestTipForBooking(
       ),
     )
     .where(and(eq(bookingCheckouts.shopId, shopId), tipCheckout()))
+    // diveday:allow-time-id-order: picks the one newest tip; nobody is shown a list.
     .orderBy(desc(bookingCheckouts.createdAt), desc(bookingCheckouts.id))
     .limit(1);
   return row?.tip ?? null;

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { fileScopedShopContext } from "@/test/db";
+import { insertTip, tipsOf } from "@/test/tips";
 import { anonymizeDiver } from "./anonymize";
 import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
@@ -34,7 +35,6 @@ import {
   recapPulses,
   rollCallEvents,
   shops,
-  tips,
   tripLastMinutePromos,
   trips,
   userAccounts,
@@ -717,7 +717,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       description: "Two tanks for Kwame Mensah",
       unitAmountCents: 18000,
     });
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       stripeAccountId: "acct_test",
@@ -840,9 +840,9 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     expect(line?.unitAmountCents).toBe(18000);
 
     // The hosted tip page renders the address it was minted with.
-    const [tip] = await db.select().from(tips).where(eq(tips.bookingId, booking.id));
+    const [tip] = await tipsOf(db, shop.id);
     expect(tip?.checkoutUrl).toBeNull();
-    expect(tip?.amountCents).toBe(2000);
+    expect(tip?.totalCents).toBe(2000);
 
     // The receipt document itself, retired through the same durable ledger
     // every other blob deletion uses rather than a second mechanism.
@@ -1167,7 +1167,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       stripeAccountId: "acct_test",
@@ -1221,7 +1221,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       stripeAccountId: "acct_test",
@@ -1456,7 +1456,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       stripeCustomerId: "cus_rina",
       stripeInvoiceId: "in_rina",
     });
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       bookingId: booking.id,
       stripeAccountId: "acct_test",

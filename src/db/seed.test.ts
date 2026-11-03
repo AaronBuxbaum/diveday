@@ -5,6 +5,7 @@ import { reservedTestRecipientDelivery } from "@/lib/notifications/provider";
 import { DEMO_MAIL_DOMAIN, deliveryAddressFor, SES_SIMULATOR_DOMAIN } from "@/lib/simulator-email";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { insertTip, tipsOf } from "@/test/tips";
 import { waiverTemplateHistory } from "@/test/waiver-history";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
@@ -27,7 +28,6 @@ import {
   shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
-  tips,
   todayReadMarkEvents,
   todayReadMarks,
   tripDeskEvents,
@@ -124,9 +124,7 @@ describe("resetDemoSchedule", () => {
     expect(
       (await db.select().from(orders).where(eq(orders.shopId, shop.id))).length,
     ).toBeGreaterThan(0);
-    expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBeGreaterThan(
-      0,
-    );
+    expect((await tipsOf(db, shop.id)).length).toBeGreaterThan(0);
   });
 
   it("restores the seeded schedule after the playground is churned", async () => {
@@ -460,7 +458,7 @@ describe("resetDemoSchedule", () => {
       email: "tessa@example.com",
     });
     if (!outcome.ok) throw new Error("setup booking failed");
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       currency: "usd",
       bookingId: outcome.bookingId,
@@ -471,7 +469,7 @@ describe("resetDemoSchedule", () => {
 
     // No FK violation here is the real assertion — tips must go before bookings.
     await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
-    expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBe(0);
+    expect((await tipsOf(db, shop.id)).length).toBe(0);
   });
 
   it("clears issued booking capabilities so a churned playground resets cleanly", async () => {

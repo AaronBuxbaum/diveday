@@ -850,12 +850,6 @@
         }
       },
       {
-        "why": "merge of the safety layer (#2687/#2688) into the ready-for-human batch",
-        "files": {
-          "src/app/api/webhooks/stripe/route.ts": "902 -> 923"
-        }
-      },
-      {
         "why": "merge of batches 1-5 (#2058 #2129 #2145 #2225 #2226 #2265) into the safety stack top: the batch 2 seat, ratio and youth-form work grew these on that side; the three test files that grew most moved their new tests to siblings",
         "files": {
           "src/db/waiver-issue.test.ts": "1178 -> 1179",
@@ -1065,12 +1059,20 @@
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
+      },
+      {
+        "why": "Merge of #3723 (#2716) onto main's #2718 fix-up: it dropped main's absorbs for the tip fold (anonymize, reporting tests) and brings the payment-entry tests (retention, divers) and seed line",
+        "files": {
+          "src/db/anonymize.test.ts": "1627 -> 1629",
+          "src/db/divers.test.ts": "3052 -> 3056",
+          "src/db/reporting.test.ts": "1379 -> 1384",
+          "src/db/retention.test.ts": "1051 -> 1084"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1308,
-    "src/app/api/webhooks/stripe/route.test.ts": 1873,
-    "src/app/api/webhooks/stripe/route.ts": 923,
+    "src/app/api/webhooks/stripe/route.test.ts": 1782,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1075,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
@@ -1082,7 +1084,7 @@
     "src/components/ui/button.test.ts": 971,
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
-    "src/db/anonymize.test.ts": 1627,
+    "src/db/anonymize.test.ts": 1629,
     "src/db/bookings.test.ts": 3540,
     "src/db/buddy-teams.test.ts": 975,
     "src/db/check-in.test.ts": 1212,
@@ -1092,10 +1094,10 @@
     "src/db/courses.test.ts": 1719,
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1160,
-    "src/db/divers.test.ts": 3052,
-    "src/db/erasure-coverage.test.ts": 961,
+    "src/db/divers.test.ts": 3056,
+    "src/db/erasure-coverage.test.ts": 940,
     "src/db/executed-dives.test.ts": 1084,
-    "src/db/export.test.ts": 1182,
+    "src/db/export.test.ts": 1181,
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3592,
@@ -1108,8 +1110,8 @@
     "src/db/refunds.test.ts": 1151,
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1227,
-    "src/db/reporting.test.ts": 1379,
-    "src/db/retention.test.ts": 1051,
+    "src/db/reporting.test.ts": 1384,
+    "src/db/retention.test.ts": 1084,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,
     "src/db/self-declared-cards.test.ts": 1849,
@@ -1151,6 +1153,12 @@
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "308 -> 315"
         }
+      },
+      {
+        "why": "Merge of #3723 (#2716) onto main's #2718 fix-up: it dropped main's absorbs for the tip fold (anonymize, reporting tests) and brings the payment-entry tests (retention, divers) and seed line",
+        "files": {
+          "src/db/seed-more-trips.ts#seedMoreTrips": "624 -> 625"
+        }
       }
     ],
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 314,
@@ -1160,11 +1168,11 @@
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 353,
     "src/db/checkouts.ts#startBookingCheckout": 303,
-    "src/db/export.ts#loadShopExportContext": 310,
-    "src/db/reporting.ts#getMonthlyReport": 321,
+    "src/db/export.ts#loadShopExportContext": 309,
+    "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
-    "src/db/seed-history.ts#seedHistory": 665,
-    "src/db/seed-more-trips.ts#seedMoreTrips": 624,
+    "src/db/seed-history.ts#seedHistory": 644,
+    "src/db/seed-more-trips.ts#seedMoreTrips": 625,
     "src/db/seed-trips.ts#seedTrips": 363,
     "src/db/trips-record.ts#updateTripRecord": 309,
     "src/lib/import.ts#prepareContactImport": 455

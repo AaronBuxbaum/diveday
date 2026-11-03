@@ -28,7 +28,6 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPaymentEvents,
   bookingReferrals,
   bookings,
   buddyTeamEvents,

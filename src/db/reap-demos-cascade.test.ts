@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { insertTip, tipsOf } from "@/test/tips";
 import { issueAccountToken } from "./account-tokens";
 import {
   accountTokens,
@@ -20,7 +21,6 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   shops,
-  tips,
   tripBlowoutDivers,
   tripBlowouts,
   trips,
@@ -167,7 +167,7 @@ describe("deleteDemoShopCascade", () => {
     const shop = await requireShop(db, slug);
     const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
     if (!booking) throw new Error("test setup: demo shop has no bookings");
-    await db.insert(tips).values({
+    await insertTip(db, {
       shopId: shop.id,
       currency: "usd",
       bookingId: booking.id,
@@ -180,7 +180,7 @@ describe("deleteDemoShopCascade", () => {
     await deleteDemoShopCascade(db, shop.id);
 
     expect(await findShop(db, slug)).toBeUndefined();
-    expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBe(0);
+    expect((await tipsOf(db, shop.id)).length).toBe(0);
   });
 
   /**
