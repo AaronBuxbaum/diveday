@@ -83,7 +83,7 @@ function RosterTable({
                 <>
                   {diver.emergencyContactName}
                   {"\u00a0"}·{" "}
-                  <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
+                  <span>{diver.emergencyContactPhone}</span>
                 </>
               ) : (
                 t("incidentExport.notOnFile")

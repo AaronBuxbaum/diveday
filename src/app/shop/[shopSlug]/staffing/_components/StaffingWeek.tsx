@@ -170,7 +170,7 @@ function AwayChip({ block, words }: { block: AvailabilityBlock; words: StaffingW
   return (
     <span className={chipClass("away")}>
       <span className="font-semibold">{words.away}</span>
-      {block.note ? <span className="font-medium">{block.note}</span> : null}
+      {block.note ? <span className="font-medium print:hidden">{block.note}</span> : null}
     </span>
   );
 }
