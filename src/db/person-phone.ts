@@ -12,7 +12,7 @@ import { shops } from "./schema";
  * record it belongs to (`phoneMatches`) and what a shop's export hands to any
  * other system. **Every** writer of `people.phone` goes through this or through
  * its pure half (`phoneForStorage`, for the importer, which already holds the
- * shop row): `createDiver` and `updateDiver` (src/db/divers.ts),
+ * shop row): `createDiver` and `editDiver` (src/db/divers.ts),
  * `findOrCreatePerson` (src/db/people.ts) and therefore the public booking,
  * wait-list, last-minute-list and self-registration doors,
  * `createPhoneOnlyPerson` (src/db/self-registration.ts), the no-email booking

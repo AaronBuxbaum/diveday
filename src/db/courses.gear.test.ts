@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { getCourseBySlug, updateCourse } from "./courses";
+import { editCourse, getCourseBySlug } from "./courses";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -13,14 +13,14 @@ describe("a course's gear-included switch", () => {
     const course = await getCourseBySlug(db, shop.id, "open-water-diver");
     if (!course) throw new Error("seeded course missing");
     expect(course.gearIncluded).toBe(false);
-    const included = await updateCourse(db, shop.id, course.id, {
+    const included = await editCourse(db, shop.id, course.id, {
       priceCents: 49500,
       eLearningPriceCents: null,
       gearIncluded: true,
     });
     expect(included?.gearIncluded).toBe(true);
     // A patch that does not carry it leaves it alone.
-    const repriced = await updateCourse(db, shop.id, course.id, {
+    const repriced = await editCourse(db, shop.id, course.id, {
       priceCents: 52500,
       eLearningPriceCents: null,
     });

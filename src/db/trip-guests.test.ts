@@ -7,8 +7,8 @@ import {
   specialtyCertifications,
   tripRequirements,
 } from "./schema";
+import { getTripGuests } from "./trip-guests";
 import { upcomingTripsWithCounts } from "./trips";
-import { getTripGuests } from "./trips-guests";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

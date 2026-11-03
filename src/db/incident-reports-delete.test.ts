@@ -7,7 +7,7 @@ import {
   listDepartureLogIncidentReports,
   listTripIncidentReports,
   listUnfiledIncidentDrafts,
-  saveIncidentDraft,
+  recordIncidentDraft,
   startIncidentReport,
 } from "./incident-reports";
 import { complete, fixture } from "./incident-reports-test-fixtures";
@@ -85,7 +85,7 @@ describe("discarding an unfiled draft", () => {
   it("refuses every write to a discarded draft as if it did not exist", async () => {
     const { db, input, reportId, owner } = await draft();
     await discardIncidentDraft(db, { ...input, reportId, actorPersonId: owner.id });
-    expect(await saveIncidentDraft(db, { ...input, reportId, fields: complete })).toEqual({
+    expect(await recordIncidentDraft(db, { ...input, reportId, fields: complete })).toEqual({
       ok: false,
       reason: "not_found",
     });

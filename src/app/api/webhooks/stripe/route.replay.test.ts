@@ -61,7 +61,7 @@ const { getShopStripeAccount, setShopStripeAccountStatus, upsertShopStripeAccoun
   "@/db/stripe-accounts"
 );
 const { startTipCheckout } = await import("@/db/tips");
-const { upcomingTripsWithCounts, updateTrip } = await import("@/db/trips");
+const { upcomingTripsWithCounts, editTrip } = await import("@/db/trips");
 const { POST } = await import("./route");
 
 type Db = AppDb;
@@ -172,7 +172,7 @@ async function pricedReef(db: Db, shopId: string) {
   const trips = await upcomingTripsWithCounts(db, shopId, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  await updateTrip(db, shopId, reef.id, {
+  await editTrip(db, shopId, reef.id, {
     title: reef.title,
     startsAt: reef.startsAt,
     endsAt: reef.endsAt,

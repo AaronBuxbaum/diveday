@@ -123,7 +123,7 @@ export async function seedDeskHandoff(
     }
     if (plan.kind === "help_request") {
       // The diver's own ask on their link: no staff actor, so it is news to
-      // every staffer including the desk (`saveHelpRequest`).
+      // every staffer including the desk (`recordHelpRequest`).
       await db.insert(tripHelpRequests).values({
         shopId,
         tripId: ctx.trip.id,
@@ -264,7 +264,7 @@ async function checkIn(
 
 /**
  * The meeting point moved, written the way a Details save writes it
- * (`updateTrip`): the departure's own columns, the diver-facing change ledger
+ * (`editTrip`): the departure's own columns, the diver-facing change ledger
  * and the crew's catch-up line, so `/ready`, every message and the manifest
  * agree about where the boat is.
  */

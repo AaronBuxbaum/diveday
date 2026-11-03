@@ -596,7 +596,7 @@ async function planningNoteWrite(
   return { planningNote: words, planningNoteAt: now, planningNoteByPersonId: note.byPersonId };
 }
 
-export async function updateDiveSite(
+export async function editDiveSite(
   db: DbExecutor,
   shopId: string,
   siteId: string,
@@ -747,8 +747,8 @@ async function fieldGuideOn(db: DbExecutor, shopId: string): Promise<boolean> {
  */
 export const SITE_EDIT_CONFLICT = "conflict";
 
-/** `updateDiveSite` for the form a staffer types into. See `createDiveSiteForForm`. */
-export async function updateDiveSiteForForm(
+/** `editDiveSite` for the form a staffer types into. See `createDiveSiteForForm`. */
+export async function editDiveSiteForForm(
   db: DbExecutor,
   shopId: string,
   siteId: string,
@@ -757,7 +757,7 @@ export async function updateDiveSiteForForm(
 ) {
   const allowed = await formFieldGuide(db, shopId, input);
   const written = await refusingNameClash(db, (savepoint) =>
-    updateDiveSite(savepoint, shopId, siteId, allowed, options),
+    editDiveSite(savepoint, shopId, siteId, allowed, options),
   );
   if (written !== null) return written;
   // The write matched nothing. Either the site is gone (or another shop's), or

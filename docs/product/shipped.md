@@ -2639,7 +2639,7 @@ path ever populated it, so an Open Water weekend went on the board as unrelated 
 title: separate rosters, separate waivers, separate crew. "Schedule a trip" and the trip's own
 details editor now take a day count (1–14, `src/lib/trip-days.ts`); the day-one window repeats on
 consecutive days, each converted through the shop's own zone on its own date so a departure that
-straddles a DST change keeps the wall-clock time the shop promised. `updateTrip` rebuilds the day
+straddles a DST change keeps the wall-clock time the shop promised. `editTrip` rebuilds the day
 rows when the schedule moves, and a weekly series gives every occurrence its own days.
 
 **A shop's timezone is no longer a one-shot question.** Sign-up's picker opened on US Eastern for
@@ -3717,7 +3717,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   trip-fee line. Each diver's gear subtotal is snapshotted onto `booking_checkout_bookings.gear_cents`
   so a later refund or report can attribute money back to trip vs. gear.
 - **The chosen fit and nitrox request are saved the moment the booking exists** — the same
-  `saveRentalFit`/`setBookingNitrox` writes the post-booking form already made, just a step earlier;
+  `recordRentalFit`/`setBookingNitrox` writes the post-booking form already made, just a step earlier;
   that form still exists for a diver who skipped the step or wants to add sizes afterward.
   Was the highest-leverage of [roadmap.md](features/roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
   candidates. See

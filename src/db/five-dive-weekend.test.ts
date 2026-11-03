@@ -8,7 +8,7 @@ import { getTripManifest, recordRollCall } from "./manifests";
 import { bookings, courses, people, tripDives, trips } from "./schema";
 import { listStaff } from "./trips";
 import { createTrip, normalizedDiveCount } from "./trips-create";
-import { updateTrip } from "./trips-record";
+import { editTrip } from "./trips-record";
 import { applyDetailsToFutureSeries, createTripSeries } from "./trips-series";
 
 const ctx = fileScopedShopContext();
@@ -147,13 +147,13 @@ describe("five-dive course sessions", () => {
         recordedByPersonId: staff.person.id,
       }),
     ).toMatchObject({ ok: true });
-    expect(
-      await updateTrip(db, shop.id, trip.id, { ...tripDetails, plannedDives: 4 }),
-    ).toMatchObject({
-      ok: false,
-      reason: "planned_dives_below_history",
-      detail: { recordedDiveCount: 5 },
-    });
+    expect(await editTrip(db, shop.id, trip.id, { ...tripDetails, plannedDives: 4 })).toMatchObject(
+      {
+        ok: false,
+        reason: "planned_dives_below_history",
+        detail: { recordedDiveCount: 5 },
+      },
+    );
   });
 
   it("never applies a shorter plan over a future sibling with a logged fifth dive", async () => {
@@ -187,7 +187,7 @@ describe("five-dive course sessions", () => {
       }),
     ).toMatchObject({ ok: true });
     expect(
-      await updateTrip(db, shop.id, source.id, {
+      await editTrip(db, shop.id, source.id, {
         title: source.title,
         startsAt: source.startsAt,
         endsAt: source.endsAt,

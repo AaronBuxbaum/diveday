@@ -26,7 +26,7 @@ import type { AppDb } from "./client";
 import { createDiver } from "./divers";
 import { listTripActivity, pagedDiverActivity } from "./operations";
 import * as readinessModule from "./readiness";
-import { saveRentalFit } from "./rental-fit";
+import { recordRentalFit } from "./rental-fit";
 import {
   bookingCapabilities,
   bookings,
@@ -556,7 +556,7 @@ describe("createBooking stamps its own clock (D15's comparison)", () => {
       .where(eq(bookings.id, outcome.bookingId));
     if (!booking) throw new Error("booking row vanished");
 
-    const saved = await saveRentalFit(db, {
+    const saved = await recordRentalFit(db, {
       shopId: shop.id,
       personId: booking.personId,
       rentsBcd: true,

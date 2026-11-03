@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { enqueueOrderIntegrationEvent } from "@/db/integration-events";
-import { saveShopIntegration } from "@/db/integrations";
+import { recordShopIntegration } from "@/db/integrations";
 import { integrationDeliveries, orders, shopIntegrations } from "@/db/schema";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
@@ -24,7 +24,7 @@ function jsonResponse(status: number) {
 }
 
 async function connectZapier(db: AppDb, shopId: string) {
-  return saveShopIntegration(db, {
+  return recordShopIntegration(db, {
     shopId,
     provider: "zapier",
     credentials: { webhookUrl: HOOK },

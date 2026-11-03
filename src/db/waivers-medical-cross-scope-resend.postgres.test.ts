@@ -5,7 +5,7 @@ import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } fro
 import { bookings, people, personRoles, shops, trips, userAccounts, waiverRecords } from "./schema";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import { saveWaiverTemplate } from "./waivers-templates";
+import { recordWaiverTemplate } from "./waivers-templates";
 import {
   clearAnswers,
   medicalReferralAnswers,
@@ -56,7 +56,7 @@ describePostgres("person-scoped waiver issuance against a physician update", () 
       .values({ shopId: shop.id, tripId: trip.id, personId: person.id, bookedAs: "diver" })
       .returning();
     if (!booking) throw new Error("booking insert returned no row");
-    await saveWaiverTemplate(pg.db, {
+    await recordWaiverTemplate(pg.db, {
       shopId: shop.id,
       title: "Release",
       body: "I understand diving carries risk and release the shop as the law allows.",

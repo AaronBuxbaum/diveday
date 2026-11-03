@@ -56,7 +56,7 @@ async function catchUpFixture() {
 }
 
 /**
- * A diver's ask for a hand, as `saveHelpRequest` writes it: the request row,
+ * A diver's ask for a hand, as `recordHelpRequest` writes it: the request row,
  * and the crew's line with no staff actor. Written here rather than through
  * it because the fixture's departure may already have sailed, which that
  * writer refuses, and what is under test is the reader.

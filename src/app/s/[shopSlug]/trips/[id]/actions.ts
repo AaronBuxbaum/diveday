@@ -316,7 +316,7 @@ export async function bookSpot(
   if (offersGearAtCheckout && (offeredGearItems.length > 0 || nitroxOfferedAtCheckout)) {
     for (let index = 0; index < partySize; index++) {
       gearSelections.push({
-        // One suit, held here as well as in `saveRentalFit`, so a post that
+        // One suit, held here as well as in `recordRentalFit`, so a post that
         // ticks both is charged for the suit that gets packed (H-20260916-rental-fit-describe-shop).
         rentedKinds: withOneSuit(
           offeredGearItems

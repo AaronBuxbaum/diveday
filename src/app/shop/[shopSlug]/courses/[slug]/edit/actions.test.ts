@@ -14,8 +14,8 @@ vi.mock("@/db/courses", () => ({
   getCourseBySlug: vi.fn(),
   pullCourseTemplateUpdates: vi.fn(),
   setCourseVisibility: vi.fn(),
-  updateCourse: vi.fn(),
-  updateCourseContent: vi.fn(),
+  editCourse: vi.fn(),
+  editCourseContent: vi.fn(),
 }));
 vi.mock("@/lib/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, target: string) => {
@@ -41,7 +41,7 @@ vi.mock("@/db/media-deletions", () => ({ queueAndAttemptMediaDeletion: vi.fn() }
 vi.mock("@/lib/storage", () => ({ storeCourseImage: vi.fn() }));
 vi.mock("@/db/shop-text-translations", () => ({
   readTranslations: vi.fn(async () => new Map()),
-  saveTranslation: vi.fn(async () => "saved"),
+  recordTranslation: vi.fn(async () => "saved"),
 }));
 vi.mock("@/db/course-forms", () => ({
   courseFormListRefusal: vi.fn(async () => null),
@@ -51,9 +51,9 @@ vi.mock("@/db/course-forms", () => ({
 }));
 
 const { revalidatePath } = await import("next/cache");
-const { getCourseBySlug, pullCourseTemplateUpdates, setCourseVisibility, updateCourseContent } =
+const { getCourseBySlug, pullCourseTemplateUpdates, setCourseVisibility, editCourseContent } =
   await import("@/db/courses");
-const { readTranslations, saveTranslation } = await import("@/db/shop-text-translations");
+const { readTranslations, recordTranslation } = await import("@/db/shop-text-translations");
 const { requireStaffSession } = await import("@/lib/session");
 const { canPersonConfigureTrips, canPersonManageWaiverTemplates } = await import("@/db/authz");
 const {
@@ -90,7 +90,7 @@ beforeEach(() => {
     galleryPhotos: [],
     learningMaterials: [],
   } as never);
-  vi.mocked(updateCourseContent).mockResolvedValue({ ok: true } as never);
+  vi.mocked(editCourseContent).mockResolvedValue({ ok: true } as never);
 });
 
 /** A course page as the editor posts it: every content field, valid and blank. */
@@ -245,9 +245,9 @@ describe("saveCourseContentAction, with the forms a course asks for", () => {
    * write would land after them.
    */
   it("refuses a list naming a bound on a medical form before writing the page or its prices", async () => {
-    const { updateCourse } = await import("@/db/courses");
-    vi.mocked(updateCourse).mockClear();
-    vi.mocked(updateCourseContent).mockClear();
+    const { editCourse } = await import("@/db/courses");
+    vi.mocked(editCourse).mockClear();
+    vi.mocked(editCourseContent).mockClear();
     vi.mocked(setCourseFormRequirements).mockClear();
     vi.mocked(courseFormListRefusal).mockResolvedValueOnce("medical_bound");
     expect(
@@ -256,8 +256,8 @@ describe("saveCourseContentAction, with the forms a course asks for", () => {
         [`maxAge-${FORM_A}`, "12"],
       ]),
     ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-medical-age#forms");
-    expect(updateCourseContent).not.toHaveBeenCalled();
-    expect(updateCourse).not.toHaveBeenCalled();
+    expect(editCourseContent).not.toHaveBeenCalled();
+    expect(editCourse).not.toHaveBeenCalled();
     expect(setCourseFormRequirements).not.toHaveBeenCalled();
   });
 
@@ -286,14 +286,14 @@ describe("saveCourseContentAction, with the forms a course asks for", () => {
     );
     expect(setCourseFormRequirements).not.toHaveBeenCalled();
     // The whole save is refused, the course page with it.
-    expect(updateCourseContent).not.toHaveBeenCalled();
+    expect(editCourseContent).not.toHaveBeenCalled();
   });
 
   it("leaves the forms alone when the page drew no forms list", async () => {
     expect(await savedTo(coursePage())).toBe(
       "/shop/blue-mantis/courses/open-water-diver/edit?notice=saved",
     );
-    expect(updateCourseContent).toHaveBeenCalled();
+    expect(editCourseContent).toHaveBeenCalled();
     expect(setCourseFormRequirements).not.toHaveBeenCalled();
   });
 
@@ -391,8 +391,8 @@ describe("saveCourseContentAction, with the summary's Spanish", () => {
     expect(
       await savedTo(coursePage([["spanish.summary", "Tu primera respiración bajo el agua."]])),
     ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=saved");
-    expect(updateCourseContent).toHaveBeenCalled();
-    expect(saveTranslation).toHaveBeenCalledWith(
+    expect(editCourseContent).toHaveBeenCalled();
+    expect(recordTranslation).toHaveBeenCalledWith(
       {},
       SHOP_ID,
       { kind: "course", id: COURSE_ID, field: "summary" },
@@ -409,8 +409,8 @@ describe("saveCourseContentAction, with the summary's Spanish", () => {
         ]),
       ),
     ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?error=spanish-stale");
-    expect(updateCourseContent).not.toHaveBeenCalled();
-    expect(saveTranslation).not.toHaveBeenCalled();
+    expect(editCourseContent).not.toHaveBeenCalled();
+    expect(recordTranslation).not.toHaveBeenCalled();
   });
 
   it("leaves Spanish nobody touched alone, whatever the English did", async () => {
@@ -425,7 +425,7 @@ describe("saveCourseContentAction, with the summary's Spanish", () => {
         ]),
       ),
     ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=saved");
-    expect(saveTranslation).not.toHaveBeenCalled();
+    expect(recordTranslation).not.toHaveBeenCalled();
   });
 });
 

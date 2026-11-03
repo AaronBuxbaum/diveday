@@ -22,7 +22,7 @@ import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode } from "./trip-promos";
-import { getTripRoster, setTripStatus, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { getTripRoster, setTripStatus, upcomingTripsWithCounts, editTrip } from "./trips";
 import { listUnfinished, type UnfinishedOptions } from "./unfinished";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -131,7 +131,7 @@ async function paidBookingContext(
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  await updateTrip(db, shop.id, reef.id, {
+  await editTrip(db, shop.id, reef.id, {
     title: reef.title,
     startsAt: reef.startsAt,
     endsAt: reef.endsAt,

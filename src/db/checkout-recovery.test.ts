@@ -11,7 +11,7 @@ import { setBookingPayment } from "./payments";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, people, trips } from "./schema";
 import { setShopFeature, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { upcomingTripsWithCounts, updateTrip } from "./trips";
+import { editTrip, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -102,7 +102,7 @@ async function pendingCheckoutContext(hoursAgo: number, partySize: 1 | 2 = 1, ta
   // Pinned safely after NOW regardless of the seed's own (real-clock-relative)
   // dates — the departed-trip check below needs a trip that's still upcoming
   // by default, with individual tests free to backdate it themselves.
-  await updateTrip(db, shop.id, reef.id, {
+  await editTrip(db, shop.id, reef.id, {
     title: reef.title,
     startsAt: new Date(NOW.getTime() + 48 * HOUR_MS),
     endsAt: new Date(NOW.getTime() + 48 * HOUR_MS + 3 * HOUR_MS),

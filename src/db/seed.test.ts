@@ -43,7 +43,7 @@ import {
 import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
-import { getCurrentWaiverTemplate, saveWaiverTemplate } from "./waivers";
+import { getCurrentWaiverTemplate, recordWaiverTemplate } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -349,7 +349,7 @@ describe("resetDemoSchedule", () => {
     expect(before?.version).toBe(seededHistory.length);
     expect(seededHistory.length).toBeGreaterThan(1);
 
-    const edited = await saveWaiverTemplate(db, {
+    const edited = await recordWaiverTemplate(db, {
       shopId: shop.id,
       title: before?.title ?? "",
       body: "Leaked release text from a previous spec.",

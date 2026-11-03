@@ -269,7 +269,7 @@ export function offeredRentalFitFields(rentalItems: readonly string[]): Set<Rent
  * and the evening's "keep it". Five of the eleven columns defaulted to `true`
  * when this was written, so a column no form asked about arrived as a claim —
  * six unasked-for pieces on a packing list. They default to `false` now (issue
- * #1793), which is why `saveRentalFit` no longer lays this under its own
+ * #1793), which is why `recordRentalFit` no longer lays this under its own
  * insert. It stays under the rest because a row created **claiming nothing** is
  * what makes it safe for the next writer to stamp `fit_stated_at` on a row it
  * did not create, and because the self-registration and the importer are
@@ -330,7 +330,7 @@ export const SCUBA_UNIT_KINDS: ReadonlySet<RentableItemKind> = new Set([
 
 /**
  * A rental pick holding at most one suit: the drysuit when both arrive, which
- * is the answer `saveRentalFit` gives the same post, so what a diver is
+ * is the answer `recordRentalFit` gives the same post, so what a diver is
  * charged for at checkout is what goes on their packing list.
  */
 export function withOneSuit<K extends string>(kinds: readonly K[]): K[] {
@@ -352,7 +352,7 @@ export function suitFlags(choice: SuitChoice): SuitFlags {
 /**
  * The choice a stored fit reads as, or `own_wetsuit` for a diver with no fit.
  * A rented suit is read first and the drysuit before the wetsuit, the same
- * order `saveRentalFit` resolves a post asking for both: a drysuit is the more
+ * order `recordRentalFit` resolves a post asking for both: a drysuit is the more
  * demanding suit, and its consequences are the safer default.
  */
 export function suitChoiceOf(fit: Partial<SuitFlags> | null | undefined): SuitChoice {
@@ -384,7 +384,7 @@ export function parseSuitChoice(value: unknown): SuitChoice | undefined {
 /**
  * The suit columns a fit form's posted `suit` states, or **nothing** for a
  * post that carries no valid choice — never three `false`s, which would be a
- * claim ("own wetsuit") the diver did not make. `saveRentalFit` leaves an
+ * claim ("own wetsuit") the diver did not make. `recordRentalFit` leaves an
  * absent column as it is.
  */
 export function suitFlagsFromPost(value: unknown): Partial<SuitFlags> {

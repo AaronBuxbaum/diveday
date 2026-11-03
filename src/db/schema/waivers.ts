@@ -60,7 +60,7 @@ export const waiverTemplates = pgTable(
   },
   (table) => [
     // A shop has exactly one waiver — versions increment per shop, not per
-    // (shop, title): saveWaiverTemplate already computes the next version
+    // (shop, title): recordWaiverTemplate already computes the next version
     // shop-wide with no title filter, so the DB constraint now matches that
     // real invariant instead of a looser one that could let two different
     // titles both claim "version 2" at the same shop (CR-015).

@@ -9,7 +9,7 @@ import {
 } from "@/lib/assists/recap-line";
 import { sourceDigest } from "@/lib/assists/shop-translate";
 import { temperatureInUnit, temperatureUnitFor } from "@/lib/temperature-units";
-import { readAssistResult, saveAssistResult } from "./assist-results";
+import { readAssistResult, recordAssistResult } from "./assist-results";
 import { type AssistOptions, runAssist, runAssistOutcome } from "./assists";
 import type { AppDb } from "./client";
 import { incidentReports, shops, tripSightings, trips } from "./schema";
@@ -165,7 +165,7 @@ export async function autoFillRecapLine(
     if (status === "skipped") return false;
     const line = recapLine(value, log, catalogNames());
     if (!line) {
-      await saveAssistResult(db, {
+      await recordAssistResult(db, {
         shopId: trip.shopId,
         feature: RECAP_LINE_FEATURE,
         subjectKey: trip.id,

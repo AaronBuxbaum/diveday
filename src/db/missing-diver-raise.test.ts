@@ -9,8 +9,8 @@ import {
   fileIncidentReport,
   markMissingDiverFound,
   raiseMissingDiverAlert,
+  recordIncidentDraft,
   removeIncidentPerson,
-  saveIncidentDraft,
   startMissingDiverReport,
 } from "./incident-reports";
 import { complete, OTHER_SHOP, OTHER_TRIP } from "./incident-reports-test-fixtures";
@@ -169,7 +169,7 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
     const started = await startMissingDiverReport(db, { ...input, actorPersonId: f.crew.id });
     if (!started.ok) throw new Error("start refused");
     const target = { ...input, reportId: started.reportId, actorPersonId: f.crew.id };
-    await saveIncidentDraft(db, { ...target, fields: { ...complete, kind: "missing_diver" } });
+    await recordIncidentDraft(db, { ...target, fields: { ...complete, kind: "missing_diver" } });
     const { provider, kinds } = recorder();
     expect(await fileIncidentReport(db, { ...target, provider })).toEqual({ ok: true });
     const once = kinds("incident_missing_diver");
@@ -293,7 +293,7 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
       ok: false,
       reason: "alerted",
     });
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...target,
       actorPersonId: f.crew.id,
       fields: { ...complete, kind: "injury" },

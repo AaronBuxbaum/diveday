@@ -1,6 +1,6 @@
 import { MixedTrainingDepthWarning } from "@/components/MixedTrainingDepthWarning";
 import type { TrainingMarkRosterSeat } from "@/db/training-marks";
-import type { TripGuests } from "@/db/trips";
+import type { TripGuests } from "@/db/trip-guests";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { mixedTrainingDepthAdvisory } from "@/lib/training-mark";
 

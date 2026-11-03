@@ -21,7 +21,7 @@ import {
   trips,
 } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { upcomingTripsWithCounts, updateTrip } from "./trips";
+import { editTrip, upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();
 const DAY = 86_400_000;
@@ -40,7 +40,7 @@ async function priced() {
     t.title.startsWith("Two-Tank Reef — Molasses"),
   );
   if (!trip) throw new Error("demo reef trip missing");
-  await updateTrip(db, shop.id, trip.id, {
+  await editTrip(db, shop.id, trip.id, {
     title: trip.title,
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,

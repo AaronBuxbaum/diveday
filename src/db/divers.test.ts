@@ -22,9 +22,9 @@ import {
   listBookableDivers,
   listDiverSummaries,
   restoreDiver,
-  updateDiver,
+  editDiver,
 } from "./divers";
-import { saveRentalFit } from "./rental-fit";
+import { recordRentalFit } from "./rental-fit";
 import {
   activityEvents,
   bookingArrivalEvents,
@@ -76,8 +76,8 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
 const DATE_INTEREST = { scope: "date", askedBy: "diver" } as const;
 const ctx = fileScopedShopContext();
 /** The saved row, or a failure naming the refusal. */
-function saved(result: Awaited<ReturnType<typeof updateDiver>>) {
-  if (!result.ok) throw new Error(`updateDiver refused: ${result.reason}`);
+function saved(result: Awaited<ReturnType<typeof editDiver>>) {
+  if (!result.ok) throw new Error(`editDiver refused: ${result.reason}`);
   return result.person;
 }
 describe("person-first diver records", () => {
@@ -193,7 +193,7 @@ describe("person-first diver records", () => {
     });
     if (!diver) throw new Error("diver insert failed");
     const edited = saved(
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId: diver.id,
         fullName: "Edited Eli",
@@ -203,7 +203,7 @@ describe("person-first diver records", () => {
     expect(edited.phone).toBe("+13055550302");
 
     const cleared = saved(
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId: diver.id,
         fullName: "Edited Eli",
@@ -262,7 +262,7 @@ describe("person-first diver records", () => {
       emergencyContactPhone: null,
     });
 
-    const profile = await saveRentalFit(db, {
+    const profile = await recordRentalFit(db, {
       shopId: shop.id,
       personId: priya.id,
       rentsBcd: true,
@@ -390,7 +390,7 @@ describe("person-first diver records", () => {
     ).toBeNull();
 
     const updated = saved(
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId: diver.id,
         fullName: "Returning Riley Updated",
@@ -403,7 +403,7 @@ describe("person-first diver records", () => {
     // The dive-insurance field is trimmed and persisted; blanking it clears it.
     expect(updated.diveInsurance).toBe("DAN #12345");
     const cleared = saved(
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId: diver.id,
         fullName: "Returning Riley Updated",
@@ -422,14 +422,14 @@ describe("person-first diver records", () => {
   // Task 144 (safety-adjacent — this prints on the manifest): staff can now
   // type an emergency contact straight onto the diver record, not just "ask
   // at the counter" with nowhere to record it.
-  describe("updateDiver emergency contact fields", () => {
+  describe("editDiver emergency contact fields", () => {
     it("writes both fields, leaves them untouched when omitted, and clears them on blank", async () => {
       const { db, shop } = ctx;
       const diver = await createDiver(db, { shopId: shop.id, fullName: "Contact Casey" });
       if (!diver) throw new Error("diver insert failed");
 
       const withContact = saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId: diver.id,
           fullName: "Contact Casey",
@@ -446,7 +446,7 @@ describe("person-first diver records", () => {
       // existing value alone — a staffer editing only the phone number must
       // never silently wipe the name.
       const untouched = saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId: diver.id,
           fullName: "Contact Casey",
@@ -458,10 +458,10 @@ describe("person-first diver records", () => {
       });
 
       // "" is an explicit clear — unlike the diver-facing capture on
-      // /ready and /waivers (saveBookingEmergencyContact), a staffer
+      // /ready and /waivers (recordBookingEmergencyContact), a staffer
       // correcting a wrong entry here must be able to blank it out.
       const cleared = saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId: diver.id,
           fullName: "Contact Casey",
@@ -485,7 +485,7 @@ describe("person-first diver records", () => {
       const diver = await createDiver(db, { shopId: shop.id, fullName: "Cross Shop Devon" });
       if (!diver) throw new Error("diver insert failed");
 
-      const result = await updateDiver(db, {
+      const result = await editDiver(db, {
         shopId: otherShop.id,
         personId: diver.id,
         fullName: "Cross Shop Devon",
@@ -980,7 +980,7 @@ describe("listBookableDivers (returning-diver picker)", () => {
       email: "marina@example.com",
     });
     if (!diver) throw new Error("diver setup failed");
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId: shop.id,
       personId: diver.id,
       rentsBcd: true,
@@ -1105,7 +1105,7 @@ describe("diver erasure", () => {
       phone: "+1 305 555 0142",
     });
     if (!diver) throw new Error("diver insert failed");
-    await updateDiver(db, {
+    await editDiver(db, {
       shopId: shop.id,
       personId: diver.id,
       fullName: "Erasure Elena",
@@ -1214,7 +1214,7 @@ describe("diver erasure", () => {
       status: "verified",
     });
 
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId: shop.id,
       personId: diver.id,
       rentsBcd: true,

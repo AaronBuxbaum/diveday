@@ -4,7 +4,8 @@ import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getDayCloseout, readDayLoadOut } from "./closeout";
 import { trips } from "./schema";
-import { getTripPrep, listShopDayDepartures } from "./trips";
+import { getTripPrep } from "./trip-prep";
+import { listShopDayDepartures } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

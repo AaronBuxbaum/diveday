@@ -27,6 +27,9 @@ import {
   todayNextDepartureTripId,
 } from "@/db/today";
 import { listTripChangeEvents } from "@/db/trip-change-events";
+import { getTripGuests } from "@/db/trip-guests";
+import { getTripOverview } from "@/db/trip-overview";
+import { loadTripSharedReads } from "@/db/trip-shared-reads";
 import { siteSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import {
@@ -37,10 +40,7 @@ import {
   pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
 } from "@/db/trips";
-import { getTripGuests } from "@/db/trips-guests";
 import { liveTrip } from "@/db/trips-live";
-import { getTripOverview } from "@/db/trips-overview";
-import { loadTripSharedReads } from "@/db/trips-shared-reads";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
@@ -647,7 +647,7 @@ const TRIP_CEILING = 69;
  * The trip page measured 10: its shared reads, then `getTripOverview`'s four
  * steps after its fan-out. 10 → 7: the overview's dependent reads (ratings and
  * shifts on the crew, the off-cadence list, both clash reads) now chain inside
- * its one wave (`src/db/trips-overview.ts`, issue #2353).
+ * its one wave (`src/db/trip-overview.ts`, issue #2353).
  */
 // 7 → 8: not a new wait, an old one made visible. The marine provider now
 // answers after the database goes quiet, as a real one does, and Today's queue

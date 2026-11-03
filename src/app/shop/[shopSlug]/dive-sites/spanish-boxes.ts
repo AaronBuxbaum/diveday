@@ -1,5 +1,5 @@
 import type { AppDb } from "@/db/client";
-import { readTranslations, saveTranslation } from "@/db/shop-text-translations";
+import { readTranslations, recordTranslation } from "@/db/shop-text-translations";
 import {
   sourceDigest,
   TRANSLATION_MAX_LENGTH,
@@ -17,7 +17,7 @@ import { spanishFromName, spanishTextName } from "./spanish-box-names";
  * Two halves, because a refusal has to come before any write: `planSpanishBoxes`
  * reads what was posted and says whether it may be saved, and the action calls
  * `writeSpanishBoxes` once the English it translates is saved. The rules are
- * `saveTranslation`'s own, asked early: Spanish written from English other than
+ * `recordTranslation`'s own, asked early: Spanish written from English other than
  * the English being saved is stale, and a box longer than its limit is refused.
  * A box nobody touched is left alone, so changing the English never refuses a
  * save for Spanish the staffer did not edit (the box says it is out of date on
@@ -68,7 +68,7 @@ export async function writeSpanishBoxes(
   boxes: readonly SpanishBox[],
 ): Promise<void> {
   for (const box of boxes) {
-    await saveTranslation(
+    await recordTranslation(
       db,
       shopId,
       { kind: subject.kind, id: subject.id, field: box.field },

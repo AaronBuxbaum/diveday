@@ -5,7 +5,7 @@ import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } fro
 import { raceShop, withinOrParked } from "@/test/postgres-shop";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { assignHelpRequestHelper, saveHelpRequest } from "./help-requests";
+import { assignHelpRequestHelper, recordHelpRequest } from "./help-requests";
 import {
   people,
   personRoles,
@@ -53,7 +53,7 @@ async function requestedHelp(db: AppDb) {
     email: "asking@example.invalid",
   });
   if (!booking.ok) throw new Error(`booking refused: ${booking.reason}`);
-  const saved = await saveHelpRequest(db, {
+  const saved = await recordHelpRequest(db, {
     shopId: shop.id,
     bookingId: booking.bookingId,
     kind: "carry_gear",
@@ -131,7 +131,7 @@ describePostgres("diver request edits against named helper assignment", () => {
       for each statement execute function gate_help_edit()
     `);
     const gate = await holdRowLock(pg, sql`select pg_advisory_xact_lock(2852)`);
-    const editing = saveHelpRequest(pg.connect(), {
+    const editing = recordHelpRequest(pg.connect(), {
       shopId: shop.id,
       bookingId: booking.bookingId,
       kind: "first_timer",

@@ -459,7 +459,7 @@ register units, not a second inventory:
   suggests a date: the date is on the packet. An O2 kit now also runs a tank's `hydro_test` and
   `visual_inspection` for its cylinder.
 - **A unit of safety kit may live aboard one boat** (`gear_items.aboard_boat_id`, nullable). Only
-  the four kinds carry one, and `updateGearItem` clears it for any other kind; a boat id that is
+  the four kinds carry one, and `editGearItem` clears it for any other kind; a boat id that is
   not one of this shop's live hulls is refused.
 - **The pre-departure check reads it**: every clock inside 30 days or past it on the kit aboard a
   departure's boat is one line above the checklist, and an expired clock on any safety kit, aboard

@@ -138,7 +138,7 @@
   Every fit form asks the **suit** as one choice of four — own wetsuit (or none), rented
   wetsuit, own drysuit, rented drysuit — so a diver can never record two suits, and the database
   holds the same rule: a rented drysuit implies dives dry, and a diver who dives dry rents no
-  wetsuit (two checks on `rental_fit_profiles`). `saveRentalFit` settles a post that names both
+  wetsuit (two checks on `rental_fit_profiles`). `recordRentalFit` settles a post that names both
   suits for the drysuit, the conservative answer for weighting; a post that says nothing about the
   suit changes nothing. It defaults false with no separate "unknown": every fit form opens on the
   stored answer, and a diver nobody has asked is shown no weight check either way.

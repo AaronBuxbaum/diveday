@@ -109,7 +109,7 @@ export async function readIntegrationCredentials(
   }
 }
 
-export async function saveShopIntegration(
+export async function recordShopIntegration(
   db: AppDb | AppTransaction,
   input: {
     shopId: string;
@@ -155,7 +155,7 @@ export async function saveShopIntegration(
       },
     })
     .returning();
-  if (!row) throw new Error("saveShopIntegration: insert returned no row");
+  if (!row) throw new Error("recordShopIntegration: insert returned no row");
   await adoptUndeliveredDeliveries(db, row);
   return row;
 }
@@ -222,7 +222,7 @@ async function adoptUndeliveredDeliveries(
     );
 }
 
-export async function updateShopIntegrationSettings(
+export async function editShopIntegrationSettings(
   db: DbExecutor,
   input: {
     shopId: string;

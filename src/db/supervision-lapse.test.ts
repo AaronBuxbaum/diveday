@@ -19,8 +19,8 @@ import {
 } from "./schema";
 import { getStaffingView } from "./staffing";
 import { getTodayWork } from "./today";
+import { getTripOverview } from "./trip-overview";
 import { createTrip } from "./trips";
-import { getTripOverview } from "./trips-overview";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

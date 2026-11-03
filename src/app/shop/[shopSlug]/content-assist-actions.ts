@@ -4,7 +4,7 @@ import { runAssist } from "@/db/assists";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { courseWords, tripWords } from "@/db/content-assists";
 import type { DiveSpecialty } from "@/db/schema";
-import { saveTranslation, translatableOriginal } from "@/db/shop-text-translations";
+import { recordTranslation, translatableOriginal } from "@/db/shop-text-translations";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { BENCH_NOTE_FEATURE, benchNote, benchNoteCall } from "@/lib/assists/bench-note";
@@ -255,7 +255,7 @@ export async function draftTranslationAction(
     original,
   );
   // The box records which English it holds a translation of, so a save after
-  // the English changed is refused rather than re-pinned (saveTranslation).
+  // the English changed is refused rather than re-pinned (recordTranslation).
   return text ? { text, translatedFrom: sourceDigest(original) } : null;
 }
 
@@ -276,7 +276,7 @@ export async function saveTranslationAction(
   if (original === null) return { status: "error" };
   const text = formData.get("text");
   const translatedFrom = formData.get("translatedFrom");
-  const result = await saveTranslation(
+  const result = await recordTranslation(
     db,
     shop.id,
     { kind, id, field },

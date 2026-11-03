@@ -471,12 +471,7 @@ export async function coursesAwaitingFormText(
   return roster.filter((course) => awaiting.has(course.id));
 }
 
-export async function updateCourse(
-  db: AppDb,
-  shopId: string,
-  courseId: string,
-  input: CoursePatch,
-) {
+export async function editCourse(db: AppDb, shopId: string, courseId: string, input: CoursePatch) {
   const [course] = await db
     .update(courses)
     .set({
@@ -672,7 +667,7 @@ export type CourseContentSave =
  * version is that Postgres keeps microseconds a JS `Date` cannot hold, and
  * PGlite does not, so every test in this repository was blind to it.
  */
-export async function updateCourseContent(
+export async function editCourseContent(
   db: AppDb,
   shopId: string,
   courseId: string,

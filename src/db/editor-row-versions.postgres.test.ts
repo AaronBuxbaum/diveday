@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import type { AppDb } from "./client";
-import { createDiveSite, SITE_EDIT_CONFLICT, updateDiveSiteForForm } from "./dive-sites";
+import { createDiveSite, editDiveSiteForForm, SITE_EDIT_CONFLICT } from "./dive-sites";
 import { diveSites, shops } from "./schema";
 
 /**
@@ -65,7 +65,7 @@ describePostgres("the editor's edit generation on a real server", () => {
     // posts back — through the string form, because that round trip is where
     // the timestamp version lost its microseconds.
     const asRendered = String(site.rowVersion);
-    const saved = await updateDiveSiteForForm(
+    const saved = await editDiveSiteForForm(
       pg.db,
       shop.id,
       site.id,
@@ -89,7 +89,7 @@ describePostgres("the editor's edit generation on a real server", () => {
     const site = await createDiveSite(pg.db, { shopId: shop.id, name: "Two Tabs Reef" });
     const opened = site.rowVersion;
 
-    await updateDiveSiteForForm(
+    await editDiveSiteForForm(
       pg.db,
       shop.id,
       site.id,
@@ -97,7 +97,7 @@ describePostgres("the editor's edit generation on a real server", () => {
       { expectedVersion: opened },
     );
     expect(
-      await updateDiveSiteForForm(
+      await editDiveSiteForForm(
         pg.db,
         shop.id,
         site.id,

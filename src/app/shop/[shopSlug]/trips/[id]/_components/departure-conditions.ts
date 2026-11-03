@@ -1,4 +1,4 @@
-import type { getTripOverview } from "@/db/trips";
+import type { getTripOverview } from "@/db/trip-overview";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { staffTideStationText, staffTideWindowText } from "@/i18n/tide-labels";
 import { oneWindowPerSite, tideWindowsForDeparture } from "@/lib/departure-tides";

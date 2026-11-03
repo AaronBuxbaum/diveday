@@ -5,9 +5,9 @@ import { restoreDraftShopAnswers, type ShopQuestion } from "@/lib/waiver-questio
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { people, personRoles, waiverRecords } from "./schema";
-import { completeWaiver, getWaiverForToken, saveWaiverDraft } from "./waivers-completion";
+import { completeWaiver, getWaiverForToken, recordWaiverDraft } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import { saveWaiverTemplate } from "./waivers-templates";
+import { recordWaiverTemplate } from "./waivers-templates";
 import {
   clearAnswers,
   medicalReferralAnswers,
@@ -62,7 +62,7 @@ describe("shop questions on the waiver", () => {
   async function linkAsking(questions: ShopQuestion[]) {
     const context = await waiverContext();
     const { db, shop, booking, template } = context;
-    await saveWaiverTemplate(db, {
+    await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: template.body,
       questions,
@@ -141,7 +141,7 @@ describe("shop questions on the waiver", () => {
   it("builds the snapshot from the version the link was issued under, not the shop's current list", async () => {
     const { db, person, shop, template, token } = await linkAsking([dives]);
     // The shop rewords and adds a question after the link went out.
-    await saveWaiverTemplate(db, {
+    await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: template.body,
       questions: [{ ...dives, prompt: "Dives in the last year?" }, heard],
@@ -253,7 +253,7 @@ describe("shop questions on the waiver", () => {
   it("keeps only valid draft answers, re-validated against the pinned questions on load", async () => {
     const { db, token } = await linkAsking([dives, heard, fitToDive]);
     expect(
-      await saveWaiverDraft(db, token, {
+      await recordWaiverDraft(db, token, {
         acknowledged: false,
         medicalAnswers: clearAnswers,
         shopAnswers: { [dives.id]: "lots", [heard.id]: "Not an option", [fitToDive.id]: "no" },
@@ -273,7 +273,7 @@ describe("shop questions on the waiver", () => {
       }),
     ).toEqual({ [fitToDive.id]: false });
     // A save without the section leaves the draft as it was.
-    await saveWaiverDraft(db, token, { acknowledged: false, medicalAnswers: clearAnswers, now });
+    await recordWaiverDraft(db, token, { acknowledged: false, medicalAnswers: clearAnswers, now });
     expect((await recordFor(db, token)).draftShopAnswers).toEqual(record.draftShopAnswers);
   });
 
@@ -305,7 +305,7 @@ describe("shop questions on the waiver", () => {
 
   it("clears the draft on signing", async () => {
     const { db, person, token } = await linkAsking([heard]);
-    await saveWaiverDraft(db, token, {
+    await recordWaiverDraft(db, token, {
       acknowledged: false,
       medicalAnswers: clearAnswers,
       shopAnswers: { [heard.id]: "A friend" },
@@ -325,7 +325,7 @@ describe("shop questions on the waiver", () => {
 
   it("is stripped from an unsigned draft by erasure", async () => {
     const { db, person, shop, token } = await linkAsking([heard]);
-    await saveWaiverDraft(db, token, {
+    await recordWaiverDraft(db, token, {
       acknowledged: false,
       medicalAnswers: clearAnswers,
       shopAnswers: { [heard.id]: "A friend" },

@@ -6,7 +6,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
-import { saveShopIntegration } from "./integrations";
+import { recordShopIntegration } from "./integrations";
 import { recordRollCall } from "./manifests";
 import {
   authProviderAccounts,
@@ -413,7 +413,7 @@ describe("anonymizeDiver — the integration outbox (issue #1016)", () => {
    */
   it("leaves no name or email in an order event's payload", async () => {
     const { db, shop, owner } = await erasureFixtures();
-    await saveShopIntegration(db, {
+    await recordShopIntegration(db, {
       shopId: shop.id,
       provider: "zapier",
       credentials: { webhookUrl: "https://hooks.zapier.com/hooks/catch/123456/abcdef" },

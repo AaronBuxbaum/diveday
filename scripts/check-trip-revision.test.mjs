@@ -25,7 +25,7 @@ describe("a write that moves a departure", () => {
   });
 
   /**
-   * `updateTrip`'s shape: one statement renames a departure and may also move
+   * `editTrip`'s shape: one statement renames a departure and may also move
    * it, so the bump is a spread that collapses to nothing when only the words
    * changed. A diver's phone re-alerts for the move and not for the typo.
    */

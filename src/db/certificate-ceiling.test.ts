@@ -17,6 +17,7 @@ import {
   createTrip,
   createTripSeries,
   duplicateTrip,
+  editTrip,
   getTripWithBooked,
   listStaff,
   listUpcomingSessionsForCourse,
@@ -24,7 +25,6 @@ import {
   pagedUpcomingTripsWithCounts,
   rollSeriesForward,
   setTripStatus,
-  updateTrip,
 } from "./trips";
 
 /**
@@ -252,7 +252,7 @@ describe("each path that writes a departure from another ends unable to sell abo
     const { seriesId, source, onSmall, onRoomy } = await seriesWithMiddleOnSmall(db, shop.id);
     // Divers-only seats above what the small hull may carry.
     await db.update(trips).set({ diverCapacity: 3 }).where(eq(trips.id, onSmall.id));
-    await updateTrip(db, shop.id, source.id, {
+    await editTrip(db, shop.id, source.id, {
       title: "Saturday, renamed",
       startsAt: source.startsAt,
       endsAt: source.endsAt,
@@ -301,7 +301,7 @@ describe("each path that writes a departure from another ends unable to sell abo
       .update(trips)
       .set({ boatId: small?.id ?? null })
       .where(eq(trips.id, onSmall.id));
-    await updateTrip(db, shop.id, source.id, {
+    await editTrip(db, shop.id, source.id, {
       title: "Saturday, renamed",
       startsAt: source.startsAt,
       endsAt: source.endsAt,
@@ -342,7 +342,7 @@ describe("each path that writes a departure from another ends unable to sell abo
       }),
     ).toMatchObject({ ok: true });
     // One seat held, one released: one seat is enough.
-    await updateTrip(db, shop.id, source.id, {
+    await editTrip(db, shop.id, source.id, {
       title: "Saturday, smaller",
       startsAt: source.startsAt,
       endsAt: source.endsAt,

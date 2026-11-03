@@ -1,6 +1,6 @@
 import { quietIcon } from "@/app/shop/[shopSlug]/_components/today/row-glyph";
 import { rowLine } from "@/app/shop/[shopSlug]/_components/today/spine-reading";
-import type { getTripOverview } from "@/db/trips";
+import type { getTripOverview } from "@/db/trip-overview";
 import { boatWorkText } from "@/i18n/boat-work-labels";
 import { overRatioPulseKey } from "@/i18n/crew-gap-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";

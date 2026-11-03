@@ -14,7 +14,7 @@ vi.mock("@/lib/notifications/web-push", async (importOriginal) => {
 });
 
 const { sendWebPush } = await import("@/lib/notifications/web-push");
-const { pushTripAlert, savePushSubscription } = await import("./push-subscriptions");
+const { pushTripAlert, recordPushSubscription } = await import("./push-subscriptions");
 
 const ctx = fileScopedShopContext();
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/staffer-device";
@@ -28,7 +28,7 @@ async function following() {
     (member) => member.accountStatus === "active" && !member.roles.includes("owner"),
   );
   if (!trip || !staffer) throw new Error("expected a seeded trip and staffer");
-  await savePushSubscription(db, {
+  await recordPushSubscription(db, {
     shopId: shop.id,
     tripId: trip.id,
     personId: staffer.personId,

@@ -5,10 +5,10 @@ import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { countQueries } from "@/test/query-count";
 import { people, personRoles, trips } from "./schema";
-import { getTripGuests } from "./trips-guests";
+import { getTripGuests } from "./trip-guests";
+import { getTripOverview } from "./trip-overview";
+import { loadTripSharedReads } from "./trip-shared-reads";
 import { liveTrip } from "./trips-live";
-import { getTripOverview } from "./trips-overview";
-import { loadTripSharedReads } from "./trips-shared-reads";
 
 async function upcomingTripContext() {
   const { db, shop } = await seededShopContext();

@@ -77,7 +77,7 @@ export async function getCurrentWaiverTemplate(db: DbExecutor, shopId: string) {
     .from(waiverTemplates)
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
     // `version`, never `createdAt`: versions are numbered under the shop's
-    // lock in `saveWaiverTemplate`, while `createdAt` is transaction time,
+    // lock in `recordWaiverTemplate`, while `createdAt` is transaction time,
     // taken before the lock, so two overlapping saves can stamp the lower
     // version later. `createdAt` is for display only.
     .orderBy(desc(waiverTemplates.version))
@@ -126,7 +126,7 @@ export async function getCurrentWaiverGeneration(
     .from(waiverTemplates)
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
     // `version`, never `createdAt`: versions are numbered under the shop's
-    // lock in `saveWaiverTemplate`, while `createdAt` is transaction time,
+    // lock in `recordWaiverTemplate`, while `createdAt` is transaction time,
     // taken before the lock, so two overlapping saves can stamp the lower
     // version later. `createdAt` is for display only.
     .orderBy(desc(waiverTemplates.version))
@@ -163,7 +163,7 @@ export type SaveWaiverTemplateResult = {
  * (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit), and DiveDay must never infer materiality from a diff — this only
  * recognises the case where there is no diff at all.
  */
-export async function saveWaiverTemplate(
+export async function recordWaiverTemplate(
   db: AppDb,
   input: SaveWaiverTemplateInput,
 ): Promise<SaveWaiverTemplateResult> {
@@ -230,7 +230,7 @@ export async function saveWaiverTemplate(
         materialGeneration,
       })
       .returning();
-    if (!template) throw new Error("saveWaiverTemplate: insert returned no row");
+    if (!template) throw new Error("recordWaiverTemplate: insert returned no row");
     if (input.actorPersonId) {
       const [actor] = await tx
         .select({ id: people.id })
@@ -328,7 +328,7 @@ export async function standingWaiverExposure(
       materialGeneration: waiverTemplates.materialGeneration,
     })
     .from(waiverTemplates)
-    // Same reader shape as `saveWaiverTemplate` above, and for the same reason:
+    // Same reader shape as `recordWaiverTemplate` above, and for the same reason:
     // a count against a version readiness does not consider current is a
     // number nobody can act on.
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))

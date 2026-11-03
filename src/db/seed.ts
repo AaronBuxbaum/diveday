@@ -2023,6 +2023,7 @@ async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promis
   if (owedRoles.length > 0) await db.insert(personRoles).values(owedRoles);
 }
 
+export { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
 export { demoTodayDepartureStart } from "./seed-clock";
 /**
  * The demo-shop lifecycle, re-exported so `@/db/seed` stays the one import for

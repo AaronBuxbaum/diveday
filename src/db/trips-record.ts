@@ -595,7 +595,7 @@ function unlessRehearsal(value: number | null) {
   return sql<number | null>`case when ${trips.isRehearsal} then null else ${value}::integer end`;
 }
 
-export async function updateTrip(
+export async function editTrip(
   db: AppDb,
   shopId: string,
   tripId: string,
@@ -613,7 +613,7 @@ export async function updateTrip(
 }
 
 /** A section save preserves omitted facts from the current locked row, never a client snapshot. */
-export async function updateTripSection(
+export async function editTripSection(
   db: AppDb,
   shopId: string,
   tripId: string,
@@ -1113,7 +1113,7 @@ export type SetParticipantTermsOutcome =
  * 20261007-participant-types; parsed by `parseParticipantTerms`).
  *
  * Under the trip-row lock every seat-granting write takes, for the reason
- * `updateTrip` refuses a capacity below the booked count: a divers-only limit
+ * `editTrip` refuses a capacity below the booked count: a divers-only limit
  * lowered beneath the divers already aboard would leave a manifest no rule
  * agrees with. Refused, typed, never silently clamped. The limit is also held
  * to the boat's own capacity here, against the row as it is now rather than as
@@ -1165,7 +1165,7 @@ export async function setTripParticipantTerms(
  * out. `setTripStatus` is the same — a cancelled departure leaves the feed by
  * losing its UID, not by being re-issued at a higher revision.
  */
-export async function updateTripConditions(
+export async function editTripConditions(
   db: AppDb,
   shopId: string,
   tripId: string,
