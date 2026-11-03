@@ -37,7 +37,7 @@ describe("a signed gate round-trips for the scope it was minted for", () => {
     specialtyRefusal,
     [NO_NITROX],
     [
-      levelShort("rescue", "instructor"),
+      levelShort("rescue", "advanced_open_water"),
       noSpecialty("wreck"),
       noSpecialty("night"),
       noSpecialty("drysuit"),
@@ -168,5 +168,8 @@ describe("hostile and malformed query values are refused, never thrown on", () =
     // A boarding blocker the sale never raises, signed: still not a refusal.
     const boardingOnly = signTripAdmissionGate([{ code: "waiver_pending" }], tripA);
     expect(verifyTripAdmissionGate(boardingOnly, tripA)).toBeNull();
+    // Signed, but out of ladder order: the decoder still refuses it.
+    const outOfOrder = signTripAdmissionGate([...specialtyRefusal, ...levelRefusal], tripA);
+    expect(verifyTripAdmissionGate(outOfOrder, tripA)).toBeNull();
   });
 });

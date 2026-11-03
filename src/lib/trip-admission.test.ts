@@ -574,6 +574,15 @@ describe("decideTripAdmission — a course session is admitted on the course's o
   });
 });
 
+/**
+ * **Admission never refuses anyone readiness would clear.**
+ *
+ * The whole design rests on admission asking a strictly narrower question than
+ * readiness — every gate it applies, readiness applies at least as strictly.
+ * The invariant held on the day it shipped and nothing asserted it, so a later
+ * tightening could violate it silently and produce the worst artifact in the
+ * product: a diver refused a seat they would have been cleared to board on.
+ */
 /** Two blockers about the same demanded thing: the level, one specialty, or nitrox. */
 function sameDemand(a: ReadinessBlocker, b: ReadinessBlocker): boolean {
   const item = (blocker: ReadinessBlocker) =>

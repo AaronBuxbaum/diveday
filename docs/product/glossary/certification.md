@@ -445,6 +445,9 @@
   refuses**: a diver this shop has never carded books as before, the same trade-off H-20260724-certification-levels-agency-rules settled
   for the course minimum-age gate. It exists to stop a diver **paying in full** for a dive they
   were never going to be allowed to do (DOM-M6) — it stops the money, never the manifest.
+  Admission and readiness read **one evidence ladder** (`standing` in `src/lib/readiness.ts`) at
+  two thresholds: `verified` for boarding, `sale` for admission. A refusal is the ladder's own
+  blockers at the sale threshold, so it can never name an item readiness would clear (#2706).
   **A historical narrow exception ran from 2026-08-20 through 2026-08-27**: the public booking form
   supplied a just-typed level and the seat was sold with a warning under that answer rather than
   refused — the case H-20260803-booking-form-succeed-fail itself describes as "a response to what this submitter just typed rather

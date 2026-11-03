@@ -5,6 +5,7 @@ import type {
   NitroxCertification,
   SpecialtyCertification,
 } from "@/db/schema";
+import { certificationRank } from "./certification-levels";
 import { isDiver, type ParticipantType } from "./participant-types";
 import {
   type CertificationLevel,
@@ -127,10 +128,23 @@ export type TripAdmissionEvidence = {
  *   that specialty in any state.
  * - `nitrox_missing`: no enriched-air card in any state, and no tick.
  *
- * Each is a blocker readiness raises too, on the same demand item, because a
- * `verified` clear is also a `sale` clear (`readiness-standing.test.ts`).
+ * The ladder raises each at `sale` only where it would at `verified` too
+ * (`readiness-standing.test.ts`), so on the same evidence and demand readiness
+ * holds the diver on the same item. The training-dive exception above lowers
+ * only the level, and only as far as a staff mark could.
  */
 export type TripAdmissionRefusal = ReadinessBlocker[];
+
+/**
+ * Is the shortfall the level alone? The one refusal a booker's own answer can
+ * be advised on (`advisable` in src/db/bookings.ts); a missing specialty or
+ * nitrox card is never talked past.
+ */
+export function refusalIsLevelOnly(refusal: TripAdmissionRefusal): boolean {
+  return (
+    refusal.length > 0 && refusal.every((blocker) => blocker.code.startsWith("certification_"))
+  );
+}
 
 export type TripAdmission = { admitted: true } | { admitted: false; refusal: TripAdmissionRefusal };
 
@@ -426,6 +440,14 @@ function decodeBlocker(item: string): ReadinessBlocker | null {
       if (!Object.hasOwn(LEVEL_CODES, value)) return null;
       params[name] = value as CertificationLevel;
     }
+  }
+  // The sale only says "holds {held}, needs {required}" when held is below it.
+  if (
+    params.requiredLevel &&
+    params.heldLevel &&
+    certificationRank(params.heldLevel) >= certificationRank(params.requiredLevel)
+  ) {
+    return null;
   }
   return shape.params.length > 0
     ? { code: code as RefusalCode, params }

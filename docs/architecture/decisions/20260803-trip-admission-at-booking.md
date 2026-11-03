@@ -60,8 +60,9 @@ the evidence ladder's own blockers at the sale threshold (`standing(…, "sale")
 `src/lib/readiness.ts`; issue #2706): `certification_insufficient` with the required and held
 level, `certification_missing` with the required level, one `specialty_missing` per absent card,
 and `nitrox_missing`. A staffer sees *which* requirement failed and *what the diver holds*, and
-every code is one readiness raises on the same item, because a `verified` clear is also a `sale`
-clear. Words come from the message bundles as usual.
+on the same evidence readiness holds the diver on the same demand item, because a `verified`
+clear is also a `sale` clear (not always with the same code: a pending Open Water card on an
+Advanced trip is `certification_insufficient` at the sale and `certification_missing` at the boat). Words come from the message bundles as usual.
 
 Three deliberate choices inside that rule:
 

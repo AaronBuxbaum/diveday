@@ -41,6 +41,7 @@ import { requirementDemandsNothing, unionRequirements } from "@/lib/requirement"
 import type { TrainingDiveCourse } from "@/lib/training-mark";
 import {
   decideTripAdmission,
+  refusalIsLevelOnly,
   type SelfDeclaration,
   type TripAdmission,
   type TripAdmissionEvidence,
@@ -376,10 +377,7 @@ export type BookingAdmissionAdvisory = TripAdmissionRefusal;
  */
 function advisable(req: BookingRequest, refusal: TripAdmissionRefusal): boolean {
   return (
-    req.admissionGate === "advise" &&
-    Boolean(req.declared?.level) &&
-    refusal.length > 0 &&
-    refusal.every((blocker) => blocker.code.startsWith("certification_"))
+    req.admissionGate === "advise" && Boolean(req.declared?.level) && refusalIsLevelOnly(refusal)
   );
 }
 

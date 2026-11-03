@@ -6,6 +6,7 @@ import {
   decideTripAdmission,
   decodeTripAdmissionRefusal,
   encodeTripAdmissionRefusal,
+  refusalIsLevelOnly,
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "./trip-admission";
@@ -46,7 +47,7 @@ describe("the refusal survives a redirect", () => {
     [noSpecialty("deep")],
     [NO_NITROX],
     [
-      levelShort("rescue", "instructor"),
+      levelShort("rescue", "advanced_open_water"),
       noSpecialty("wreck"),
       noSpecialty("night"),
       noSpecialty("drysuit"),
@@ -115,6 +116,15 @@ describe("the refusal survives a redirect", () => {
     ["constructor", "a prototype-walking code"],
     ["certification_missing-constructor", "a prototype-walking level"],
     ["specialty_missing-__proto__", "a prototype-walking specialty"],
+    ["certification_insufficient-rescue-instructor", "a held level that already reaches the bar"],
+    ["certification_insufficient-rescue-rescue", "a held level equal to the bar"],
+    ["certification_missing-deep", "a specialty in a level slot"],
+    ["specialty_missing-rescue", "a level in a specialty slot"],
+    ["certification_insufficient--open_water", "an empty param"],
+    ["NITROX_MISSING", "a code in another case"],
+    ["specialty_missing-Deep", "a param in another case"],
+    ["specialty_missing%2Ddeep", "a percent-encoded separator"],
+    ["nitrox_missing.extra", "a stray signature separator"],
   ];
 
   it.each(hostile)("refuses %s (%s) rather than half-decoding it", (value) => {
@@ -128,6 +138,14 @@ describe("the refusal survives a redirect", () => {
    * The same class `src/proxy.ts` documents at length for `embed`; every
    * sibling param on these routes was already hardened and `gate` was not.
    */
+  it("accepts only canonical values: whatever decodes re-encodes to the same string", () => {
+    for (const refusal of cases) {
+      const encoded = encodeTripAdmissionRefusal(refusal);
+      const decoded = decodeTripAdmissionRefusal(encoded);
+      expect(decoded && encodeTripAdmissionRefusal(decoded)).toBe(encoded);
+    }
+  });
+
   const repeated: Array<[string[], string]> = [
     [["certification_missing-rescue", "specialty_missing-deep"], "two well-formed values"],
     [["certification_missing-rescue"], "one well-formed value in an array"],
@@ -141,12 +159,18 @@ describe("the refusal survives a redirect", () => {
   });
 });
 
-/**
- * **Admission never refuses anyone readiness would clear.**
- *
- * The whole design rests on admission asking a strictly narrower question than
- * readiness — every gate it applies, readiness applies at least as strictly.
- * The invariant held on the day it shipped and nothing asserted it, so a later
- * tightening could violate it silently and produce the worst artifact in the
- * product: a diver refused a seat they would have been cleared to board on.
- */
+describe("refusalIsLevelOnly: what the booking form may advise on", () => {
+  it("is true only for a level shortfall with no card missing beside it", () => {
+    expect(refusalIsLevelOnly([levelShort("advanced_open_water", "open_water")])).toBe(true);
+    expect(refusalIsLevelOnly([noLevel("rescue")])).toBe(true);
+    // `.some` here would sell these seats on a typed rung; they must refuse.
+    expect(
+      refusalIsLevelOnly([levelShort("advanced_open_water", "open_water"), noSpecialty("deep")]),
+    ).toBe(false);
+    expect(refusalIsLevelOnly([levelShort("advanced_open_water", "open_water"), NO_NITROX])).toBe(
+      false,
+    );
+    expect(refusalIsLevelOnly([noSpecialty("deep")])).toBe(false);
+    expect(refusalIsLevelOnly([])).toBe(false);
+  });
+});
