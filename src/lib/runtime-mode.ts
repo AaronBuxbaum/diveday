@@ -33,6 +33,17 @@ export type RuntimeMode = Readonly<{
   testRoutesOpen: boolean;
   /** The e2e capture run: photo URLs are swapped for the committed tile files. */
   capturePhotos: boolean;
+  /**
+   * `DIVEDAY_DISABLE_EXTERNAL_HTTP` is honored: tide stations and predictions answer from
+   * committed fixtures instead of fetching. Needs the harness opt-in or a non-production runtime.
+   */
+  syntheticFixtures: boolean;
+  /** Cookies a flow sets itself (locale, demo, party return) carry `Secure`: production, not the e2e fleet. */
+  secureCookies: boolean;
+  /** Session cookies (proxy, Better Auth) carry `Secure`: everything except the e2e fleet's HTTP loopback. */
+  secureSessionCookies: boolean;
+  /** A memory-backed rate limiter in this process is worth a warning: production, not the e2e fleet. */
+  warnMemoryRateLimit: boolean;
 }>;
 
 export function runtimeMode(env: Environment = process.env): RuntimeMode {
@@ -43,6 +54,10 @@ export function runtimeMode(env: Environment = process.env): RuntimeMode {
       frozenClockMs: null,
       testRoutesOpen: false,
       capturePhotos: false,
+      syntheticFixtures: false,
+      secureCookies: true,
+      secureSessionCookies: true,
+      warnMemoryRateLimit: env.NODE_ENV === "production",
     });
   }
   const harness = env.DIVEDAY_E2E === "1";
@@ -54,5 +69,10 @@ export function runtimeMode(env: Environment = process.env): RuntimeMode {
     // what opens it there; outside a production runtime it is open by default.
     testRoutesOpen: env.NODE_ENV !== "production" || harness,
     capturePhotos: harness,
+    syntheticFixtures:
+      (harness || env.NODE_ENV !== "production") && env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1",
+    secureCookies: env.NODE_ENV === "production" && !harness,
+    secureSessionCookies: !harness,
+    warnMemoryRateLimit: env.NODE_ENV === "production" && !harness,
   });
 }

@@ -1,5 +1,6 @@
 import { HOUR_MS, nowMs } from "./clock";
 import type { DepthUnit } from "./depth-units";
+import { runtimeMode } from "./runtime-mode";
 import { AsyncTtlCache } from "./ttl-lru";
 
 /**
@@ -168,8 +169,7 @@ export async function fetchTideStation(
   // and `DIVEDAY_E2E` rather than `NODE_ENV` is what separates the fleet from
   // a real deployment, because `pnpm e2e:build` runs `next build` and so *is*
   // production by that measure.
-  const fixtureAllowed = process.env.DIVEDAY_E2E === "1" || process.env.NODE_ENV !== "production";
-  if (fixtureAllowed && process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch) {
+  if (runtimeMode().syntheticFixtures && fetcher === fetch) {
     return fixtureTideStation(stationId);
   }
   return cacheFor(fetcher).getOrLoad(

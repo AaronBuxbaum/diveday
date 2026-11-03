@@ -93,6 +93,7 @@
     "env:manual": "node scripts/env-manual.mjs",
     "check:env": "node scripts/check-env.mjs",
     "check:env-reads": "node scripts/check-env-reads.mjs",
+    "check:harness-env": "node scripts/check-harness-env.mjs",
     "check:repo": "node scripts/check-repo.mjs",
     "cost:report": "node scripts/cost-report.mjs",
     "check": "node scripts/check-all.mjs",

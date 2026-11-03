@@ -19,6 +19,7 @@ import { parseForm, readForm, single, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { runtimeMode } from "@/lib/runtime-mode";
 import { sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { isStepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
@@ -67,7 +68,7 @@ export async function beginTotpEnrollmentAction(shopSlug: string) {
           maxAge: 10 * 60,
           path: "/",
           sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
+          secure: runtimeMode().secureCookies,
         },
       );
     }
@@ -164,7 +165,7 @@ export async function refreshRecoveryCodesAction(shopSlug: string, formData: For
       maxAge: 10 * 60,
       path: "/",
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: runtimeMode().secureCookies,
     },
   );
   revalidateAndRedirect(shopPath(shopSlug, "me", "security"));

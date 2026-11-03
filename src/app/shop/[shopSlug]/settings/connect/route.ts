@@ -8,6 +8,7 @@ import {
   STRIPE_CONNECT_STATE_COOKIE,
   stripeConnectCallbackUrl,
 } from "@/lib/payments/connect";
+import { runtimeMode } from "@/lib/runtime-mode";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
   const cookieStore = await cookies();
   cookieStore.set(STRIPE_CONNECT_STATE_COOKIE, state, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: runtimeMode().secureCookies,
     sameSite: "lax",
     maxAge: 600,
   });

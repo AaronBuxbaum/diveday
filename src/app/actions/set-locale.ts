@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE } from "@/i18n/locale-cookie";
 import { isDiverLocale } from "@/i18n/settings";
+import { runtimeMode } from "@/lib/runtime-mode";
 
 /**
  * Remember the language this reader picked.
@@ -36,7 +37,7 @@ export async function setLocaleAction(locale: string): Promise<void> {
     // Nothing in the browser reads this — the words are chosen during the
     // server render — so it has no business being script-readable.
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: runtimeMode().secureCookies,
   });
   // Every rendered page holds words in the old language, and the words are
   // chosen on the server, so nothing short of the whole tree is stale.

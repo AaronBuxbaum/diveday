@@ -24,6 +24,7 @@ import { onboardSchema } from "@/lib/onboarding";
 import { alertRecipient } from "@/lib/platform-mail";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { runtimeMode } from "@/lib/runtime-mode";
 import {
   isSetupLinkTokenShape,
   SETUP_LINK_COOKIE,
@@ -91,7 +92,7 @@ export async function onboardAction(formData: FormData) {
     // it; the page reads it from there (`setupLinkDoor`).
     (await cookies()).set(SETUP_LINK_COOKIE, setupToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: runtimeMode().secureCookies,
       sameSite: "strict",
       path: "/onboard",
       maxAge: SETUP_LINK_COOKIE_MAX_AGE_S,
