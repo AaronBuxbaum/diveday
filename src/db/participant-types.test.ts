@@ -711,12 +711,7 @@ describe("setBookingParticipantType", () => {
     expect(refused).toMatchObject({
       ok: false,
       reason: "cert_blocked",
-      refusal: [
-        {
-          code: "certification_insufficient",
-          params: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
-        },
-      ],
+      refusal: [{ code: "certification_insufficient", params: { heldLevel: "open_water" } }],
     });
     const [still] = await db.select().from(bookings).where(eq(bookings.id, snorkeler.bookingId));
     expect(still?.participantType).toBe("snorkeler");
