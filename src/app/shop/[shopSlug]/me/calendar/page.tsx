@@ -10,7 +10,6 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
 import { staffPageClass } from "../../_components/staff-page";
 import { CalendarFeedPanel } from "./CalendarFeedPanel";
 import type { CalendarFeedCopy, FeedScopeView } from "./feed-panel-types";
@@ -113,11 +112,7 @@ export default async function CalendarSubscriptionsPage({
 
   return (
     <main className={staffPageClass("reading")}>
-      <ShopPageHeader
-        eyebrow={t("settings.security.title")}
-        eyebrowHref={shopPath(session.user.shopSlug, "me", "security")}
-        title={t("calendar.title")}
-      />
+      <ShopPageHeader eyebrow={t("settings.security.title")} title={t("calendar.title")} />
 
       <p className="mb-6 text-sm text-muted">{t("calendar.refreshNote")}</p>
 

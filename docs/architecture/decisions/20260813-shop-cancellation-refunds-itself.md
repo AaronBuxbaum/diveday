@@ -108,3 +108,11 @@ cancelled, which is a consumer-protection question in most jurisdictions rather 
   sat for a day. The predicate deliberately excludes a **cancelled booking**, matching
   `refundBookingsForShopCancelledTrip` seat for seat: a diver who cancelled inside no window
   forfeited their fare, and the departure being called off later does not hand it back.
+
+## Amendment 2026-11-03: one reader for unfinished work (issue #2703)
+
+The derived residue is now the `shop_cancellation_refund` kind of `listUnfinished`
+(`src/db/unfinished.ts`), with the same predicate, forfeit carve-out and null-as-stale bound.
+Today's one-day delay is `ATTEMPT_RULES.shop_cancellation_refund.todayAfterMs`
+(`src/lib/attempts.ts`); Orders still lists the money at once. `listOwedShopCancellationRefunds` and
+`OWED_REFUND_STALE_AFTER_MS` are gone. There is still no stored `refund_owed` state.

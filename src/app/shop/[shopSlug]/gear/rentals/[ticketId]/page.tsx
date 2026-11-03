@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { FlashParams } from "@/components/FlashParams";
 import { PrintButton } from "@/components/PrintButton";
-import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -140,9 +141,9 @@ export default async function CounterRentalTicketPage({
       <div id="rental-ticket">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
           <div>
-            <EyebrowBackLink href={shopPath(shopSlug, "gear")} className="print:hidden">
+            <EyebrowWayUp className="print:hidden">
               {t(STAFF_DESTINATION_LABEL_KEYS.gear)}
-            </EyebrowBackLink>
+            </EyebrowWayUp>
             <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("gear.ticket.eyebrow")}</p>
             <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{ticket.personName}</h1>
             <p className="mt-1 text-muted">{window}</p>

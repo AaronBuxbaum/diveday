@@ -141,29 +141,6 @@ export async function recordProcessorErasureObligations(
     .returning();
 }
 
-/**
- * This shop's still-owed obligations, oldest first — the panel in Settings'
- * "Data" group.
- * Shop-scoped in the query, never filtered in the caller: an obligation names a
- * record in one shop's Stripe account and has no business being readable from
- * another's.
- */
-export async function listOwedProcessorErasures(
-  db: AppDb,
-  shopId: string,
-): Promise<ProcessorErasureObligation[]> {
-  return db
-    .select()
-    .from(processorErasureObligations)
-    .where(
-      and(
-        eq(processorErasureObligations.shopId, shopId),
-        eq(processorErasureObligations.status, "owed"),
-      ),
-    )
-    .orderBy(asc(processorErasureObligations.createdAt));
-}
-
 export type AttemptProcessorErasureOutcome =
   /** The customer is gone from Stripe (this call did it, or it already was). */
   | { status: "discharged" }

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
 import { keptTypedScope } from "@/components/kept-typed-scope";
-import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
@@ -104,7 +104,7 @@ export default async function NewWorkOrderPage({
   return (
     <StaffPage width="reading">
       <header>
-        <EyebrowBackLink href={board}>{t("workOrders.title")}</EyebrowBackLink>
+        <EyebrowWayUp>{t("workOrders.title")}</EyebrowWayUp>
         <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{t("workOrders.new.title")}</h1>
       </header>
 

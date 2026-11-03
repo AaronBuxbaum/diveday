@@ -134,11 +134,7 @@ export default async function ShopActivityPage({
 
   return (
     <main className={settingsPaneClass()}>
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={shopPath(shopSlug, "settings")}
-        title={t("activity.log.title")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("activity.log.title")} />
       <div className="space-y-10">
         <section className="space-y-6">
           <ActivityToolbar

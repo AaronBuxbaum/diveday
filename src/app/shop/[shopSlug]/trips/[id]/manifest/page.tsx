@@ -159,7 +159,6 @@ export default async function TripManifestPage({
           level="page"
         />
         <TripPageHeader
-          boardHref={shopPath(shopSlug, "schedule", "board")}
           backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
           trip={manifest.trip}
           locale={locale}

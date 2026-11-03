@@ -24,7 +24,6 @@ import {
   people,
   personRoles,
   shops,
-  tips,
   trips,
   userAccounts,
   waiverRecords,
@@ -196,15 +195,33 @@ async function makeTip(
   status: "pending" | "paid" | "expired" = "paid",
 ): Promise<void> {
   seq += 1;
-  await db.insert(tips).values({
+  const [b] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId));
+  if (!b) throw new Error("booking not found for tip");
+  const checkoutStatus = status === "paid" ? "completed" : status;
+  const [checkout] = await db
+    .insert(bookingCheckouts)
+    .values({
+      shopId,
+      tripId: b.tripId,
+      purpose: "tip",
+      currency: "usd",
+      status: checkoutStatus,
+      stripeAccountId: "acct_test",
+      stripeSessionId: `cs_tip_${seq}`,
+      amountPerDiverCents: amountCents,
+      totalCents: amountCents,
+      settledTotalCents: checkoutStatus === "completed" ? amountCents : null,
+      completedAt: checkoutStatus === "completed" ? new Date("2026-06-11T00:00:00Z") : null,
+    })
+    .returning();
+  if (!checkout) throw new Error("failed to insert tip checkout");
+  await db.insert(bookingCheckoutBookings).values({
     shopId,
+    checkoutId: checkout.id,
     bookingId,
-    status,
-    stripeAccountId: "acct_test",
-    stripeSessionId: `cs_tip_${seq}`,
-    currency: "usd",
-    amountCents,
-    completedAt: status === "paid" ? new Date("2026-06-11T00:00:00Z") : null,
   });
 }
 

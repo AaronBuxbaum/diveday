@@ -72,7 +72,6 @@ export default async function DockDaySettingsPage({
 
   return (
     <SettingsEditorPage
-      shopSlug={shopSlug}
       t={t}
       title={t("settings.main.dockCall.heading")}
       description={t("settings.main.dockCall.description")}

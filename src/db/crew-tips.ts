@@ -1,12 +1,12 @@
 import { and, asc, count, eq, gte, inArray, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
 import { splitTipsEqually } from "@/lib/crew-sheet";
+import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import {
   boats,
-  bookings,
+  bookingCheckouts,
   executedDives,
-  tips,
   tripAssignments,
   tripDives,
   tripScheduleDays,
@@ -43,10 +43,9 @@ export async function crewTipShare(
   window: { from: Date; to: Date },
 ): Promise<number> {
   const mine = await db
-    .select({ tripId: trips.id, total: sum(tips.amountCents) })
-    .from(tips)
-    .innerJoin(bookings, and(eq(bookings.id, tips.bookingId), eq(bookings.shopId, shopId)))
-    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+    .select({ tripId: trips.id, total: sum(tipAmountCents) })
+    .from(bookingCheckouts)
+    .innerJoin(trips, and(eq(trips.id, bookingCheckouts.tripId), eq(trips.shopId, shopId)))
     .innerJoin(
       tripAssignments,
       and(eq(tripAssignments.tripId, trips.id), eq(tripAssignments.personId, personId)),
@@ -54,8 +53,9 @@ export async function crewTipShare(
     .where(
       and(
         liveTrip(),
-        eq(tips.shopId, shopId),
-        eq(tips.status, "paid"),
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "completed"),
+        tipCheckout(),
         gte(trips.startsAt, window.from),
         lt(trips.startsAt, window.to),
       ),
@@ -110,17 +110,17 @@ export async function tipsByDeparture(
       startsAt: trips.startsAt,
       title: trips.title,
       boatName: boats.name,
-      total: sum(tips.amountCents),
+      total: sum(tipAmountCents),
     })
-    .from(tips)
-    .innerJoin(bookings, and(eq(bookings.id, tips.bookingId), eq(bookings.shopId, shopId)))
-    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+    .from(bookingCheckouts)
+    .innerJoin(trips, and(eq(trips.id, bookingCheckouts.tripId), eq(trips.shopId, shopId)))
     .leftJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
     .where(
       and(
         liveTrip(),
-        eq(tips.shopId, shopId),
-        eq(tips.status, "paid"),
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "completed"),
+        tipCheckout(),
         gte(trips.startsAt, window.from),
         lt(trips.startsAt, window.to),
       ),

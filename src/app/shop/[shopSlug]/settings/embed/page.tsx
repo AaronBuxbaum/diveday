@@ -36,7 +36,7 @@ export default async function EmbedSettingsPage({
   params: Promise<{ shopSlug: string }>;
 }) {
   const { shopSlug } = await params;
-  const { session, shop, db } = await requireShopSurface(shopSlug, {
+  const { shop, db } = await requireShopSurface(shopSlug, {
     allow: canPersonManageShopSettings,
     refusal: { notice: "settings-not-authorized" },
   });
@@ -46,7 +46,6 @@ export default async function EmbedSettingsPage({
   const header = (
     <ShopPageHeader
       eyebrow={t("settings.main.eyebrow")}
-      eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
       title={t("settings.embed.title")}
       description={origin ? t("settings.embed.description") : undefined}
       descriptionIsCaption

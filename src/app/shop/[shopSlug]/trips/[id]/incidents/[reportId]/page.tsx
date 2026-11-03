@@ -17,7 +17,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate, formatTimeZoneName } from "@/lib/format";
 import { incidentFilingGaps } from "@/lib/incident-reports";
 import { requireShopSurface } from "@/lib/session";
-import { noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import {
   addIncidentAddendumAction,
@@ -104,7 +104,6 @@ export default async function IncidentReportPage({
     <div className="space-y-10">
       <ShopPageHeader
         eyebrow={t("trips.surfaces.trip")}
-        eyebrowHref={`${shopPath(shopSlug, "trips", tripId)}?view=details#incidents`}
         title={t("incidents.page.title")}
         meta={
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

@@ -2231,3 +2231,15 @@
   assist works the same without it. Code: `runAssist` in `src/db/assists.ts`; on screen, the
   controls in `src/components/assists/` (`AssistDraftButton` and its siblings). Not "AI": the copy
   names Claude.
+- **Unfinished work** — work DiveDay or the shop still has to finish for someone, in one grammar
+  (issue #2703): `pending` until it is done or attested, `in_flight` while a call is out, then
+  `done` or `failed` with a reason. Each ledger keeps its own status word and `src/lib/attempts.ts`
+  places it (`LEDGER_STATES`); the rule for when each kind is stuck, and when Today raises it, is
+  `ATTEMPT_RULES`. Five kinds today: payment operations still in flight past five minutes, media
+  deletes that failed or died mid-call, processor erasures still owed to a diver, a
+  shop-cancellation refund (a seat still holding its money on a departure the shop called off,
+  except a diver who cancelled and forfeited), and a **failed refund**. One reader,
+  `listUnfinished` / `readUnfinished` in `src/db/unfinished.ts`, answers for all of them; each
+  surface shows its own kinds in its own words (Orders the money, Settings' Data group the erasure
+  halves, Today the stuck payments, failed deletes and day-old cancellation refunds). The
+  notification send queue is not one of them: its parked rows go to operator logging (#1826).

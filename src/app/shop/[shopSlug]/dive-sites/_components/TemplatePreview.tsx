@@ -73,7 +73,7 @@ export function TemplatePreview({
       <div>
         <ShopPageHeader
           eyebrow={t("diveSites.catalog.backToCatalog")}
-          eyebrowHref={backHref}
+          returnTo={backHref}
           title={briefing.name}
           description={briefing.description ?? ""}
           actions={

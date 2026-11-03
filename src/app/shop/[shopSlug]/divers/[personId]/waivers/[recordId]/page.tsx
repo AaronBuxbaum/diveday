@@ -204,11 +204,7 @@ export default async function SignedWaiverPage({
           the way back to the diver's record, which `EyebrowBackLink` keeps off
           paper; a printed release has to say whose release it is. */}
       <p className={`hidden ${EYEBROW_CLASS} print:block`}>{shop.name}</p>
-      <ShopPageHeader
-        eyebrow={waiver.personName}
-        eyebrowHref={`${shopPath(shopSlug, "divers", waiver.personId)}#waiver`}
-        title={t("waiversStaff.record.title")}
-      />
+      <ShopPageHeader eyebrow={waiver.personName} title={t("waiversStaff.record.title")} />
       {waiver.supersededAt ? (
         <p className="mt-4 text-sm text-muted">
           {retiredRefusal

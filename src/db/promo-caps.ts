@@ -1,6 +1,6 @@
 import { and, count, eq, gt, isNull, lt, ne, notExists, or, sql } from "drizzle-orm";
+import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import type { AppDb, DbExecutor } from "./client";
-import { STALE_AFTER_MS } from "./payment-operations";
 import {
   bookingCheckouts,
   bookings,
@@ -97,6 +97,7 @@ async function discountUses(
   const [held] = await db
     .select({ total: count() })
     .from(bookingCheckouts)
+    // diveday:any-checkout-purpose: keyed by a promotion, which a tip never carries (booking_checkouts_tip_shape)
     .where(
       and(
         eq(bookingCheckouts.shopId, ref.shopId),
@@ -118,7 +119,10 @@ async function discountUses(
         eq(paymentOperationIntents.status, "started"),
         // A crashed attempt stops holding a use once it is stale, on the same
         // horizon the booking claim uses.
-        gt(paymentOperationIntents.startedAt, new Date(now.getTime() - STALE_AFTER_MS)),
+        gt(
+          paymentOperationIntents.startedAt,
+          new Date(now.getTime() - PAYMENT_CLAIM_STALE_AFTER_MS),
+        ),
         ...(exceptIntentId ? [ne(paymentOperationIntents.id, exceptIntentId)] : []),
         // An attempt whose checkout row already landed is counted there, as a
         // live pending page; until its intent resolves it must not count twice.
@@ -126,6 +130,7 @@ async function discountUses(
           db
             .select({ one: sql`1` })
             .from(bookingCheckouts)
+            // diveday:any-checkout-purpose: keyed by a promotion, which a tip never carries (booking_checkouts_tip_shape)
             .where(
               and(
                 eq(bookingCheckouts.shopId, ref.shopId),

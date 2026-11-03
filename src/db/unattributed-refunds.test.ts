@@ -10,13 +10,13 @@ import {
   recordCheckoutPaymentIntent,
   startBookingCheckout,
 } from "./checkouts";
-import { listStuckPaymentOperations } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { recordStripeChargeRefund } from "./refunds";
 import { activityEvents, paymentOperationIntents } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 import { attributeUnattributedRefund, listUnattributedRefunds } from "./unattributed-refunds";
+import { listUnfinished } from "./unfinished";
 
 /**
  * A refund made in the Stripe dashboard on a party checkout names an amount,
@@ -141,8 +141,9 @@ describe("a dashboard refund on a party checkout", () => {
     await dashboardRefund(db, 6_000);
     // `started_at` is the database's clock, which the frozen test clock does not move.
     const later = new Date("2100-01-01T00:00:00Z");
-    const all = await listStuckPaymentOperations(db, shop.id, later);
-    const shown = await listStuckPaymentOperations(db, shop.id, later, {
+    const all = await listUnfinished(db, shop.id, "payment_operation", { olderThan: later });
+    const shown = await listUnfinished(db, shop.id, "payment_operation", {
+      olderThan: later,
       withoutUnattributedRefunds: true,
     });
     expect(all.some((op) => op.intent.amountCents === 6_000)).toBe(true);
