@@ -205,7 +205,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   // typing a name and choosing Add diver creates the record and opens it.
   await page.goto(`/shop/${unique}/divers`);
   await expect(page.getByText("No divers on file yet")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Import your roster" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Import your divers" })).toHaveAttribute(
     "href",
     `/shop/${unique}/settings/import`,
   );

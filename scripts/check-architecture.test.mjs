@@ -163,7 +163,7 @@ describe("the seams", () => {
   it("sends everything outside src/db through the trips and seed barrels", async () => {
     const root = await fixture({
       "src/app/trip/page.tsx": 'import { getTripRecord } from "@/db/trips-record";\n',
-      "src/components/Roster.tsx": 'import type { TripRoster } from "@/db/trips-roster";\n',
+      "src/components/Roster.tsx": 'import type { TripRoster } from "@/db/trips-manifest";\n',
       "src/app/trip/ok.tsx": 'import { getTripRecord } from "@/db/trips";\n',
       "src/app/trip/reader.tsx": 'import { getTripOverview } from "@/db/trip-overview";\n',
       "src/db/today.ts": 'import { listStaff } from "./trips-crew";\n',
@@ -174,7 +174,7 @@ describe("the seams", () => {
     });
     expect(flat(await collectViolations(root)).sort()).toEqual([
       expect.stringContaining("src/app/trip/page.tsx: imports @/db/trips-record"),
-      expect.stringContaining("src/components/Roster.tsx: imports @/db/trips-roster"),
+      expect.stringContaining("src/components/Roster.tsx: imports @/db/trips-manifest"),
       expect.stringContaining("src/features/tick.ts: imports @/db/seed-boat-at-sea"),
     ]);
   });

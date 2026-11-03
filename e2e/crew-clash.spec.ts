@@ -85,7 +85,7 @@ test.describe("a standing crew clash", () => {
       await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
       // Nothing is wrong yet: the two boats do not overlap, so neither panel
       // says a word about the other.
-      await expect(page.locator("#crew").getByText(/^Also rostered on /)).toHaveCount(0);
+      await expect(page.locator("#crew").getByText(/^Also scheduled on /)).toHaveCount(0);
     }
 
     // The move that manufactures the clash: 06:30 slides to 09:00, straight on
@@ -98,14 +98,14 @@ test.describe("a standing crew clash", () => {
     // The Move panel does say so — which is the whole of what the shop used to
     // be told, and it is about to close.
     await expect(
-      page.getByText(`Marcus Webb is already rostered on ${drift} at that time.`),
+      page.getByText(`Marcus Webb is already scheduled on ${drift} at that time.`),
     ).toBeVisible();
     // And the hull, above the crew: one boat cannot be on both.
     await expect(page.getByText(`${HULL} is already out on ${drift} at that time.`)).toBeVisible();
     await page.getByRole("button", { name: "Move it" }).click();
     await expect(page.getByRole("status")).toContainText("Moved");
     // Gone with the panel, exactly as before this issue.
-    await expect(page.getByText(/is already rostered on/)).toHaveCount(0);
+    await expect(page.getByText(/is already scheduled on/)).toHaveCount(0);
 
     // **The departure's own page**, which is where a staffer looks next. The
     // Divers tab's pulse names the hull's other departure (H-20260916-may-one-hull-carry).
@@ -133,7 +133,7 @@ test.describe("a standing crew clash", () => {
     // list below `lg`, but it is hidden here and `page.getByText` matches
     // visible nodes only (`e2e/fixtures.ts`), so a second match would be the
     // same fact said twice, under both boats.
-    const said = page.getByText(new RegExp(`^Also rostered on (${drift}|${twoTank})$`));
+    const said = page.getByText(new RegExp(`^Also scheduled on (${drift}|${twoTank})$`));
     await expect(said.first()).toBeVisible();
     await expect(said).toHaveCount(1);
   });

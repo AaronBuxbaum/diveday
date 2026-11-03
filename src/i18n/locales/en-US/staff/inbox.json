@@ -91,7 +91,7 @@
     "reopenWindowOpen": "They wrote again in the last 24 hours, so type your reply instead.",
     "reopenAlreadyAsked": "You already asked them to write back. Wait for their answer before asking again.",
     "notAuthorized": "Your account can’t answer divers for this shop any more. Ask an owner or manager to check your access.",
-    "lateMarked": "Marked running late. The roster and the manifest show it.",
+    "lateMarked": "Marked running late. The Divers tab and the manifest show it.",
     "lateClosed": "That seat is past running late: checked in, canceled, or the boat has sailed.",
     "deleted": "Message deleted",
     "gone": "That message is no longer in the inbox."

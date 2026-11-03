@@ -17,8 +17,8 @@ import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookingPayments, bookings, courses, people, shops, trips } from "./schema";
 import { seatBalanceOwedCentsFromJoinedRow } from "./seat-balance";
 import { recordShopActivityWithin } from "./shop-activity";
+import { tripRosterOrder, tripRosterWhere } from "./trips-manifest";
 import { seatNotCancelled } from "./trips-queries";
-import { tripRosterOrder, tripRosterWhere } from "./trips-roster";
 
 export type PaymentMarkFacts = {
   /** The shop's currency: what an amount typed into the mark is read in. */

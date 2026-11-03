@@ -1127,7 +1127,7 @@
         "sizesDeclinedLineOne": "{count} size was too long for its box and is kept as a staff note on the diver.",
         "sizesDeclinedLineOther": "{count} sizes were too long for their boxes and are kept as staff notes on the divers.",
         "receiptDocumentsFailedNote": " {count} receipt document link(s) didn’t fetch and were left off the source record.",
-        "seeRoster": "See the roster"
+        "seeRoster": "See the divers"
       }
     },
     "issues": {

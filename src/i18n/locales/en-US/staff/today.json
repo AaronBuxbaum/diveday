@@ -12,7 +12,7 @@
     "confirmationsResent": "Confirmations resent.",
     "errors": {
       "invalid": "That booking could not be found. Open the trip to check it.",
-      "noEmail": "No email on file. Add one from the roster, then resend.",
+      "noEmail": "No email on file. Add one from the diver’s page, then resend.",
       "notConfigured": "Email isn’t configured for this shop yet.",
       "failed": "Still couldn’t deliver it. Open the trip to check the booking."
     }
@@ -74,7 +74,7 @@
     "studentsCount": "{count, plural, one {# student} other {# students}}",
     "readyCount": "{count} ready",
     "blockedCount": "{count} blocked",
-    "openRoster": "Open roster",
+    "openRoster": "Open divers",
     "away": "You said you’re away {dates}."
   },
   "yourWeek": {
@@ -171,7 +171,7 @@
     "reissueWaivers": "Reissue waivers"
   },
   "pointingLabel": {
-    "trip": "Open roster",
+    "trip": "Open divers",
     "diver": "Open {name}’s record"
   },
   "nameList": {
@@ -227,8 +227,8 @@
     "overRatioIntro": "{booked} booked, crew covers {capacity} at {perInstructor} per instructor.",
     "uncrewedDeparture": "{divers, plural, one {# diver} other {# divers}} booked, no divemaster or instructor.",
     "boatClash": "{boat} is also on {departure} at these hours.",
-    "crewClash": "{names} {count, plural, one {is} other {are}} also rostered on {departure} at these hours.",
-    "crewClashSailed": "{names} {count, plural, one {is} other {are}} out aboard while also rostered on {departure} at these hours.",
+    "crewClash": "{names} {count, plural, one {is} other {are}} also scheduled on {departure} at these hours.",
+    "crewClashSailed": "{names} {count, plural, one {is} other {are}} out aboard while also scheduled on {departure} at these hours.",
     "crewClashSailedConfirm": "Confirm who is aboard.",
     "crewBelowTarget": "{divers, plural, one {# diver} other {# divers}}, {divemasterCount, plural, one {# supervisor} other {# supervisors}}. Your target is {ratio}:1.",
     "ratingUnverified": "{names} {count, plural, one {has a rating issued after this departure starts} other {have ratings issued after this departure starts}}. Check the cards.",

@@ -16,7 +16,7 @@
  * | `./trips-minimum.ts` | the minimum-head-count sweep: cancel what did not fill by its own deadline |
  * | `./trips-crew.ts` | who is working it, and the guards on changing that |
  * | `./trips-clashes.ts` | two departures in each other's way: the overlap rule, and one hull on two at once |
- * | `./trips-roster.ts` | who is on it: bookings, wait list, contacts |
+ * | `./trips-manifest.ts` | who is on it: bookings, wait list, contacts |
  * | `./trip-primary-site.ts` | `tripPrimarySiteId`, the one projection of `trip_dives` to "the trip's site" |
  * | `./trips-queries.ts` | reading the board: schedule lists, aggregates, calendar feeds |
  *
@@ -69,6 +69,7 @@ export {
   tripCrewByTrip,
 } from "./trips-crew";
 export { liveTrip, notRehearsal } from "./trips-live";
+export { getTripRoster, listTripDiverContacts } from "./trips-manifest";
 export {
   cancelDeparturesBelowMinimum,
   listDeparturesAwaitingMinimumDecision,
@@ -128,7 +129,6 @@ export {
   tripPublicCrew,
   type UpdateTripOutcome,
 } from "./trips-record";
-export { getTripRoster, listTripDiverContacts } from "./trips-roster";
 export {
   type CopyWeekOutcome,
   copyWeekFromYearBefore,

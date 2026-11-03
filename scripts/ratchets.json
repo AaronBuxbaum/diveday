@@ -1751,7 +1751,7 @@
     "src/app/shop/[shopSlug]/reports/page.tsx": 474,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 410,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 578,
-    "src/app/shop/[shopSlug]/staffing/page.tsx": 506,
+    "src/app/shop/[shopSlug]/staffing/page.tsx": 503,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 473
   },
   "tokens": {

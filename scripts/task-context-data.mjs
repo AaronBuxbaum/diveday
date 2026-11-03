@@ -288,7 +288,7 @@ export const areas = {
       "src/db/trips-record.ts",
       "src/db/trips-schedule.ts",
       "src/db/trips-crew.ts",
-      "src/db/trips-roster.ts",
+      "src/db/trips-manifest.ts",
       "src/db/shops.ts",
       "src/db/bookings.ts",
       "src/db/seed.ts",

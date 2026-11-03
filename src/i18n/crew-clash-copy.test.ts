@@ -3,7 +3,7 @@ import { DIVER_LOCALES } from "./settings";
 import { STAFF_MESSAGES } from "./staff-messages";
 
 /**
- * **Every sentence about a crew clash states the fact — rostered on both —
+ * **Every sentence about a crew clash states the fact — scheduled on both —
  * and never an impossibility** (H-20260916-may-one-hull-carry, issue #1780).
  *
  * This guard used to require the opposite. Issue #1345 found the Move panel's
@@ -16,7 +16,7 @@ import { STAFF_MESSAGES } from "./staff-messages";
  * arrangement a shop can deliberately build — one captain across a course
  * group and a fun-dive group — and under "one hull, one departure at a time"
  * a shop models that as one departure with two groups. So every surface says
- * the roster fact: this person is **rostered on** the other departure at these
+ * the roster fact: this person is **scheduled on** the other departure at these
  * hours. That is true of every state a shop can reach, and it is still the
  * roster contradicting itself rather than a coincidence, because the word is
  * about the roster, not the clock.
@@ -25,7 +25,7 @@ import { STAFF_MESSAGES } from "./staff-messages";
  * drifting from the others'. A new reader of the clash belongs in this list.
  */
 const ROSTERED = {
-  "en-US": /rostered on/i,
+  "en-US": /scheduled on/i,
   "es-ES": /figura en|en la tripulación de/i,
 } as const satisfies Record<(typeof DIVER_LOCALES)[number], RegExp>;
 

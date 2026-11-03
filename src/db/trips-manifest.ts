@@ -70,7 +70,7 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * or a resold released seat re-numbers everything below it, so a sequence that
  * closed only the rename case would make the number look like an identity it
  * is not. What the order is stable against is a re-read and a fresh seed of the
- * same data; `trips-roster.test.ts` pins the rename case as the behavior, so a
+ * same data; `trips-manifest.test.ts` pins the rename case as the behavior, so a
  * change to it is a change to the ruling. See the glossary's *Roll-call order*.
  *
  * ADR 20260815-roll-call-order-is-a-property-of-the-data already says of the

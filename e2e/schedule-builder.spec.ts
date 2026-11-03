@@ -175,7 +175,7 @@ test.describe("schedule builder", () => {
 
     await chooseRowAction(page, "Move", mover as string);
     // Nothing is claimed about the crew until the fields move.
-    await expect(page.getByText(/is already rostered on .+ at that time\./)).toHaveCount(0);
+    await expect(page.getByText(/is already scheduled on .+ at that time\./)).toHaveCount(0);
 
     await page.getByLabel("New date").fill(landingDate);
     await page.getByLabel("New departure time (America/New_York)").fill(landingTime);
@@ -184,7 +184,7 @@ test.describe("schedule builder", () => {
     // landing one boat on top of another is a clash by construction. Matched
     // by shape rather than by name: which staff member it is belongs to the
     // seed, and pinning one would fail on a roster change that broke nothing.
-    await expect(page.getByText(/is already rostered on .+ at that time\./).first()).toBeVisible();
+    await expect(page.getByText(/is already scheduled on .+ at that time\./).first()).toBeVisible();
 
     // Still a preview and still not a gate: the move is offered, and nothing
     // has happened to the board by asking.

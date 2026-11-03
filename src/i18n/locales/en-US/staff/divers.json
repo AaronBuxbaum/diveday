@@ -56,9 +56,9 @@
     "juniorCardVerifiedBy": "Checked by {name} on {date}.",
     "juniorCardStaff": "a staff member",
     "drysuitSeenTitle": "Seen diving dry",
-    "drysuitSeenNote": "Recorded by {name} on {date}. Staff-observed, not a drysuit card: it quiets the roster’s drysuit reminder and changes nothing a trip requires.",
+    "drysuitSeenNote": "Recorded by {name} on {date}. Staff-observed, not a drysuit card: it quiets the drysuit reminder and changes nothing a trip requires.",
     "drysuitSeenByUnknown": "a staff member",
-    "drysuitSeenHint": "Dives dry with no drysuit card. If you have watched them dive dry, record it here and the roster stops reminding you. It is not a card.",
+    "drysuitSeenHint": "Dives dry with no drysuit card. If you have watched them dive dry, record it here and DiveDay stops reminding you. It is not a card.",
     "drysuitSeenNoteLabel": "What you saw",
     "drysuitSeenNotePlaceholder": "e.g. Own drysuit, three shore dives with us in October",
     "recordDrysuitSeen": "I’ve seen them dive dry",
@@ -192,7 +192,7 @@
     "viewNeedsAttention": "Needs you",
     "viewMissingContact": "Missing contact",
     "viewRemoved": "Deleted",
-    "viewsAriaLabel": "Roster views",
+    "viewsAriaLabel": "Diver views",
     "removedNote": "These divers are off every list and out of trip prep.",
     "searchDiversLabel": "Search divers",
     "searchPlaceholder": "Search people",
@@ -201,7 +201,7 @@
     "addOneHere": "Add one here or accept a booking to create their person record.",
     "emptyShowAll": "Show all divers",
     "emptyImportBody": "Coming from a spreadsheet or another system?",
-    "emptyImportAction": "Import your roster",
+    "emptyImportAction": "Import your divers",
     "possibleDuplicateLabel": "Possible duplicate",
     "openBalanceLabel": "Open balance",
     "blocked": {
@@ -226,7 +226,7 @@
     "sortLabel": "Sort:",
     "sortName": "Name",
     "sortLastDived": "Last dived",
-    "sortAriaLabel": "Roster order",
+    "sortAriaLabel": "Diver order",
     "downloadList": "Download this list (CSV)"
   },
   "header": {
@@ -272,13 +272,13 @@
   "remove": {
     "removePersonSummary": "Delete {name}",
     "removeDiver": "Delete diver",
-    "consequence": "Takes {name} off the roster, the booking pickers, manifests, and trip prep. Their waivers, trips, and payments stay on file, and you can restore them.",
+    "consequence": "Takes {name} off the diver list, the booking pickers, manifests, and trip prep. Their waivers, trips, and payments stay on file, and you can restore them.",
     "staffWarning": "They also work here. Deleting them takes them off the team, and they can no longer sign in."
   },
   "removed": {
     "badge": "Deleted",
     "heading": "This diver is deleted",
-    "body": "Out of the roster, booking pickers, manifests, and trip prep. Their records stay on file.",
+    "body": "Out of the diver list, booking pickers, manifests, and trip prep. Their records stay on file.",
     "restore": "Restore diver",
     "restoring": "Restoring…",
     "restoreRestricted": "Only owners and managers can restore a diver."
@@ -465,8 +465,8 @@
     "waiverChannelUnavailable": "Not set up"
   },
   "notices": {
-    "drysuitExperienceRecorded": "Recorded. The roster stops reminding you about a drysuit card for this diver. No card was added.",
-    "drysuitExperienceCleared": "Cleared. The roster reminds you about a drysuit card for this diver again.",
+    "drysuitExperienceRecorded": "Recorded. DiveDay stops reminding you about a drysuit card for this diver. No card was added.",
+    "drysuitExperienceCleared": "Cleared. DiveDay reminds you about a drysuit card for this diver again.",
     "drysuitExperienceUnchanged": "Nothing changed. The record already said that.",
     "drysuitExperienceNotAuthorized": "Only an instructor, assistant instructor, divemaster, manager or owner can record seeing someone dive dry. Clearing it is for whoever recorded it, a manager or the owner.",
     "drysuitExperienceNoteRequired": "Not recorded. Say briefly what you saw, in 200 characters or fewer.",
@@ -558,7 +558,7 @@
     "waiverError": "That paper waiver couldn’t be recorded. Open the diver’s next departure to see why.",
     "waiverIdentityUnconfirmed": "That seat is held until somebody confirms who the diver is, so a paper release can’t go on their record yet. Confirm it on the departure’s Divers tab, then record the release.",
     "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver, or send the digital link so the diver answers it.",
-    "waiverGuardianName": "The co-signer’s name is the diver’s own, so this release would show one person signing twice. Type the guardian’s name as their own ID reads it, and if the diver’s record is shorter than the diver’s ID, correct the record to match. If the two really do read exactly alike, record the release at the check-in counter or from the trip roster, where you can confirm you watched both of them sign.",
+    "waiverGuardianName": "The co-signer’s name is the diver’s own, so this release would show one person signing twice. Type the guardian’s name as their own ID reads it, and if the diver’s record is shorter than the diver’s ID, correct the record to match. If the two really do read exactly alike, record the release at the check-in counter or from the trip’s Divers tab, where you can confirm you watched both of them sign.",
     "waiverPaperRecorded": "Paper waiver recorded, signed and on file",
     "guardianEmailErased": "Guardian’s email erased from every release at this shop that carried it. Each one is marked as redacted.",
     "guardianEmailMismatch": "The email you typed doesn’t match, so nothing was erased. Type it exactly as it appears above.",
@@ -597,7 +597,7 @@
       "verify": "Verify it",
       "addCard": "Add certification",
       "openBooking": "Open the booking",
-      "openCourseRoster": "Open the course roster",
+      "openCourseRoster": "Open the course’s divers",
       "sendWaiver": "Send the waiver",
       "collect": "Collect",
       "editContact": "Add one"
