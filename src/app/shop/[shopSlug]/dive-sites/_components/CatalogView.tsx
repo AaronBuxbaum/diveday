@@ -59,7 +59,7 @@ export async function CatalogView({
       <StaffPage width="full">
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
-          eyebrowHref={back}
+          returnTo={back}
           title={t("diveSites.catalog.title")}
         />
         <EmptyState
@@ -123,7 +123,7 @@ export async function CatalogView({
       <div>
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
-          eyebrowHref={back}
+          returnTo={back}
           title={t("diveSites.catalog.title")}
           description={t("diveSites.catalog.description")}
           descriptionIsCaption

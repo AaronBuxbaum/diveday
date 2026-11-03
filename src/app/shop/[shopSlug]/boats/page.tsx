@@ -107,11 +107,7 @@ export default async function BoatsSettingsPage({
       <FlashParams
         params={["notice", "boat", "capacity", "passengers", "limit", "count", "dates"]}
       />
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
-        title={t("boats.heading")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("boats.heading")} />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
 
       <DisclosureRowList>

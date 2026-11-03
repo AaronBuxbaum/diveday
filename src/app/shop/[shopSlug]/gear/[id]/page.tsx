@@ -173,7 +173,6 @@ export default async function GearUnitPage({
       <div>
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.gear)}
-          eyebrowHref={`/shop/${shopSlug}/gear`}
           title={item.label}
           description={identity}
           meta={

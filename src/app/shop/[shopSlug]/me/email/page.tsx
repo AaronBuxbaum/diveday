@@ -55,11 +55,7 @@ export default async function EmailSettingsPage({
 
   return (
     <main className={staffPageClass("reading")}>
-      <ShopPageHeader
-        eyebrow={t("settings.security.title")}
-        eyebrowHref={shopPath(shop.slug, "me", "security")}
-        title={t("emailSettings.title")}
-      />
+      <ShopPageHeader eyebrow={t("settings.security.title")} title={t("emailSettings.title")} />
       <div className="space-y-10">
         <SectionCard aria-label={t("emailSettings.digest.heading")}>
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">

@@ -43,7 +43,6 @@ export default async function RentalItemsSettingsPage({
 
   return (
     <SettingsEditorPage
-      shopSlug={shopSlug}
       t={t}
       title={t("settings.main.rentals.heading")}
       description={t("settings.main.rentals.detail")}

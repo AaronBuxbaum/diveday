@@ -92,11 +92,7 @@ export default async function MergeDiverPage({
 
   return (
     <StaffPage width="reading">
-      <ShopPageHeader
-        eyebrow={preview.source.fullName}
-        eyebrowHref={shopPath(shop.slug, "divers", personId)}
-        title={t("divers.mergePreview.title")}
-      />
+      <ShopPageHeader eyebrow={preview.source.fullName} title={t("divers.mergePreview.title")} />
       {canAssist ? (
         <div className="mt-6">
           <AssistReadButton

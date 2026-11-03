@@ -14,6 +14,7 @@ import { envelope, FROZEN_MS, identityResponse, setOnline } from "./offline-mani
 
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/offline-manifest",
   useSearchParams: () => searchParams,
 }));
 vi.mock("@/lib/offline-manifest-store", async () => ({

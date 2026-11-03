@@ -42,7 +42,6 @@ function renderHeader({
   return render(
     <DiverHeader
       diver={diver()}
-      shopSlug="blue-mantis"
       t={t}
       standing={NO_STANDING}
       locale="en-US"
@@ -138,7 +137,6 @@ describe("the package line", () => {
     const { getByText } = render(
       <DiverHeader
         diver={diver()}
-        shopSlug="blue-mantis"
         t={t}
         standing={NO_STANDING}
         locale="en-US"
@@ -163,7 +161,6 @@ describe("the standing line", () => {
     const { container } = render(
       <DiverHeader
         diver={diver()}
-        shopSlug="blue-mantis"
         t={t}
         locale="en-US"
         standing={{

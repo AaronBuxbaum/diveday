@@ -95,7 +95,6 @@ export default async function BlowoutPage({
   if (!trip) notFound();
   const t = staffTranslator(locale);
   const banner = noticeFromParam(notice, NOTICES);
-  const tripPath = shopPath(shopSlug, "trips", tripId);
 
   const header = (
     <ShopPageHeader
@@ -106,7 +105,6 @@ export default async function BlowoutPage({
       // as a secondary button, where it competed with the one act on the page
       // (principle 10, issue #823).
       eyebrow={t("trips.surfaces.trip")}
-      eyebrowHref={tripPath}
       title={t(blowoutTitleKey(blowout))}
       meta={
         <div className="flex flex-col gap-1 text-sm text-muted">

@@ -43,7 +43,6 @@ export default async function ProfileSettingsPage({
 
   return (
     <SettingsEditorPage
-      shopSlug={shopSlug}
       t={t}
       title={t("settings.main.profile.heading")}
       description={t("settings.main.profile.description")}
