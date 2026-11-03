@@ -8,7 +8,9 @@ import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
 import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
-import { countsAsJob, rowTone, type TodayAction, type TodayActionKind } from "@/lib/today";
+import { rowTone, type TodayAction } from "@/lib/today";
+import { countsAsJob } from "@/lib/today-job";
+import type { TodayActionKind } from "@/lib/today-kinds";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.

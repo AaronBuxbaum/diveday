@@ -29,6 +29,13 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    - `src/app` → `drizzle-orm`. A route that builds its own query is a query
  *      no `src/db` test covers and no tenant-scope reader sees; it becomes a
  *      named function in `src/db` instead (routes stay thin, AGENTS.md).
+ *    - `src/lib` → `drizzle-orm` (value imports): the same reason one level down.
+ *      A lib file that builds a query is a loader in disguise; the query half is a
+ *      named function in `src/db`, the twin the name pairs already model.
+ *    - `src/db` → the translators (`@/i18n/messages`, `@/i18n/staff-messages`,
+ *      value imports): `src/db` returns codes and data and the caller words them.
+ *      Outbound-message composers (a reminder, a push, a recap) hold their sentences
+ *      for now, so their files are banked below until those sentences have a home.
  *    - Anything outside `src/db` → `@/db/trips-*`. The trips modules are
  *      reached through the `@/db/trips` barrel (AGENTS.md route map), so a
  *      sibling can be split or merged without a repo-wide edit.
@@ -120,6 +127,13 @@ export const seams = [
       `${file}: value-imports ${specifier} — src/lib is the framework-free domain layer; a type import is fine, a loader belongs in src/db or a feature module`,
   },
   {
+    roots: ["src/lib"],
+    refuses: (_target, specifier) => /^drizzle-orm(?:\/|$)/.test(specifier),
+    typeOnlyAllowed: true,
+    message: (file, specifier) =>
+      `${file}: value-imports ${specifier} — src/lib is the framework-free domain layer and builds no query; the query half is a named function in src/db (the twin the name pairs already model)`,
+  },
+  {
     // Words are chosen in a renderer and nowhere else (issue #2772, ADR
     // 20260731-domain-layer-copy-leaks): the page, the message (the notification
     // senders) and the file. Everything else in `src/lib` and `src/db` hands back
@@ -156,7 +170,7 @@ export const seams = [
 export const SERVER_ONLY_MODULES = [
   "src/lib/phone-line-type.ts",
   "src/lib/payments/stripe-keys.ts",
-  "src/lib/payments/stripe-fetch.ts",
+  "src/lib/payments/stripe-client.ts",
   "src/lib/payments/webhook.ts",
 ];
 const SERVER_ONLY_PACKAGE = /^libphonenumber-js(?:\/|$)/;

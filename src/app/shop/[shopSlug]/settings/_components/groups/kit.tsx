@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { requireShopSurface } from "@/lib/session";

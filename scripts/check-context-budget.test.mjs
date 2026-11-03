@@ -76,6 +76,8 @@ describe("what counts as always-loaded context", () => {
       path.join("..", "..", ".agents/skills/imported"),
       path.join(root, ".claude/skills/imported"),
     );
+    // pnpm writes `pnpm-<package>-<skill>` here on install; it is ignored by git and not ours.
+    await mkdir(path.join(root, ".claude/skills/pnpm-drizzle-kit-drizzle"), { recursive: true });
     // A dangling link is not a skill and must not throw.
     await symlink(path.join(root, "nowhere"), path.join(root, ".claude/skills/broken"));
 

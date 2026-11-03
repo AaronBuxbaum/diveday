@@ -905,7 +905,7 @@
   presence, like the rest of the register, and it **informs, never gates**: roll call and boarding
   go on.
 - **Sailed** — how many of a departure's booked divers the boat actually **carried**, as distinct
-  from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/closeout.ts`),
+  from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/seat-sailed.ts`),
   reading the shop's statements about that seat strongest first: the crew's own result at the
   `departure` **roll-call** checkpoint, where `boarded` counts and `not_boarded` ("never left the
   dock") does not; then any result standing at an *after-dive* checkpoint, either word of which
@@ -939,7 +939,7 @@
 - **Didn't sail** — a finished departure's record band for the seats somebody *said* did not go:
   the crew's `not_boarded` at the `departure` roll-call checkpoint, or a released seat (`no_show`)
   nobody counted aboard at any checkpoint. Only a statement files a seat here (`seatSailed`,
-  `src/lib/closeout.ts`; `recordGroups` in the trip's `roster-model.ts`). It used to take every seat
+  `src/lib/seat-sailed.ts`; `recordGroups` in the trip's `roster-model.ts`). It used to take every seat
   without a dock `boarded` once one seat boarded, which filed a diver picked up at a later site, and
   a seat nobody counted, as not having sailed (dive-domain review of UX batch 1). Spanish: "No
   zarparon".

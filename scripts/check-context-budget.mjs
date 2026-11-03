@@ -74,12 +74,14 @@ export function isPathScoped(contents) {
 /**
  * The directories under `relative`, following symlinks. Many of `.claude/skills/` are links into
  * `.agents/skills/`, and a `Dirent` reports a link as a link, not a directory — filtering on
- * `isDirectory()` alone left every imported skill's description out of the count.
+ * `isDirectory()` alone left every imported skill's description out of the count. A `pnpm-*`
+ * directory is one pnpm wrote on install for a dependency's skills; it is gitignored and not ours.
  */
 export async function listDirs(root, relative) {
   const entries = await readdir(path.join(root, relative), { withFileTypes: true });
   const dirs = [];
   for (const entry of entries) {
+    if (entry.name.startsWith("pnpm-")) continue;
     if (entry.isDirectory()) dirs.push(entry.name);
     else if (entry.isSymbolicLink()) {
       const target = await stat(path.join(root, relative, entry.name)).catch(() => null);

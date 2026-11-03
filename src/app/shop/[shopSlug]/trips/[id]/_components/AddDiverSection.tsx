@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { SubmitButton } from "@/components/SubmitButton";
 import { HandEntryPrompt } from "@/components/seat-diver/HandEntryPrompt";
-import { NameMatchCandidateFacts } from "@/components/seat-diver/NameMatchCandidateFacts";
+import { NameMatchPrompt } from "@/components/seat-diver/NameMatchPrompt";
 import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
@@ -11,7 +10,6 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
-import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
 import type { FormNotice } from "@/lib/staff-notices";
 
@@ -115,9 +113,6 @@ export function AddDiverSection({
   } = context;
   const t = staffTranslator(locale);
   const searched = query.length > 0;
-  // A candidate with no dive day says so only when a sibling has one; the rule
-  // and the bias it corrects are in `noDiveDayNeedsSaying`.
-  const sayNoDiveDay = noDiveDayNeedsSaying(confirmMatches ?? []);
   const bookNewDiver = newDiverHref(shopSlug, { query, surface: "departure", tripId });
   const walkInNewDiver = newDiverHref(shopSlug, {
     query,
@@ -137,64 +132,21 @@ export function AddDiverSection({
     <div className={`flex flex-col gap-4 ${className}`.trim()}>
       <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
 
-      {confirmMatches && confirmMatches.length > 0 && (waitlistOn || !full) ? (
-        <div className="border border-warning/25 bg-warning/10 rounded-inset p-4 text-left">
-          <div className="flex flex-col gap-2">
-            <h3 className="font-semibold text-sm">
-              {t("divers.page.confirmMatchesTitle", { name: confirmName ?? "" })}
-            </h3>
-            <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
-              {confirmMatches.map((match) => (
-                <li key={match.id}>
-                  {/* On a full boat the match joins who's waiting: a seat
-                      would only be refused. */}
-                  <form
-                    action={full ? addKnownToWaitlistAction : addExistingDiverAction}
-                    className="inline"
-                  >
-                    <input type="hidden" name="tripId" value={tripId} />
-                    <input type="hidden" name="personId" value={match.id} />
-                    {/* A tap here came off a name match, so the booking is
-                        told the name it matched on: the prompt fires on an
-                        exact spelling too, and only the comparison says whether
-                        the seat is identity-unconfirmed (issue #1556). The
-                        "create a new diver anyway" form below carries no such
-                        field: it invents nobody's history. */}
-                    <input type="hidden" name="fromNameMatch" value="true" />
-                    <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
-                    <SubmitButton
-                      pendingLabel={match.fullName}
-                      className="underline font-medium text-left"
-                    >
-                      {match.fullName}
-                    </SubmitButton>
-                  </form>
-                  <NameMatchCandidateFacts
-                    match={match}
-                    sayNoDiveDay={sayNoDiveDay}
-                    t={t}
-                    locale={locale}
-                    timeZone={timeZone}
-                    size="xs"
-                  />
-                </li>
-              ))}
-            </ul>
-            <form action={full ? addToWaitlistAction : addBookingAction} className="mt-2">
-              <input type="hidden" name="tripId" value={tripId} />
-              <input type="hidden" name="fullName" value={confirmName} />
-              <input type="hidden" name="email" value={confirmEmail} />
-              <input type="hidden" name="phone" value={confirmPhone} />
-              <input type="hidden" name="force" value="true" />
-              <SubmitButton
-                pendingLabel={t("seatDiver.adding")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("divers.page.confirmMatchesSubmit")}
-              </SubmitButton>
-            </form>
-          </div>
-        </div>
+      {waitlistOn || !full ? (
+        <NameMatchPrompt
+          matches={confirmMatches ?? []}
+          tripId={tripId}
+          confirmName={confirmName}
+          confirmEmail={confirmEmail}
+          confirmPhone={confirmPhone}
+          // On a full boat the match joins who's waiting: a seat would only be
+          // refused.
+          seatKnownAction={full ? addKnownToWaitlistAction : addExistingDiverAction}
+          seatNewAction={full ? addToWaitlistAction : addBookingAction}
+          t={t}
+          locale={locale}
+          timeZone={timeZone}
+        />
       ) : null}
 
       {full && !waitlistOn ? (

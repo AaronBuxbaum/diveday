@@ -124,6 +124,25 @@ describe("attribution by address", () => {
     expect(await matchPersonByAddress(db, florida, "whatsapp", "34612345678")).toBeNull();
   });
 
+  it("files a body with NUL bytes in it, without them", async () => {
+    const { db, shop } = ctx;
+    const result = await recordInboundMessage(db, {
+      senderAuthenticated: false,
+      shopId: shop.id,
+      channel: "email",
+      fromAddress: "nul.sender@example.net",
+      body: "hi\u0000there\u0000",
+      receivedAt: NOW,
+      providerMessageId: "email-nul",
+    });
+    expect(result).toMatchObject({ status: "recorded" });
+    const [row] = await db
+      .select({ body: inboundMessages.body })
+      .from(inboundMessages)
+      .where(eq(inboundMessages.providerMessageId, "email-nul"));
+    expect(row?.body).toBe("hithere");
+  });
+
   it("leaves a stranger unmatched rather than guessing", async () => {
     const { db, shop } = ctx;
     const result = await recordInboundMessage(db, {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { DiverNotice } from "@/lib/diver-notices";

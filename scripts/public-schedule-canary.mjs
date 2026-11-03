@@ -7,7 +7,7 @@
 // or says "No trips on the books yet". Hourly, from `.github/workflows/public-schedule-canary.yml`,
 // whose last step files one `ci-red` issue and closes it on the first green hour.
 //
-//   node scripts/public-schedule-canary.mjs [--base-url https://dive.day] [--slug blue-mantis]
+//   node scripts/public-schedule-canary.mjs [--base-url https://dive.day] [--slug <slug>]
 //
 // The base URL and slug also come from CANARY_BASE_URL and CANARY_SHOP_SLUG, which the workflow
 // reads from repository variables: set CANARY_SHOP_SLUG to the pilot shop's slug when there is one.

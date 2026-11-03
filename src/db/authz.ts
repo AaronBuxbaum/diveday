@@ -40,7 +40,7 @@ import {
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { type EmergencyReadWindow, emergencyReadWindow } from "@/lib/medical-alert";
-import { rolesMayActOnKind, type TodayActionKind } from "@/lib/today";
+import { rolesMayActOnKind, type TodayActionKind } from "@/lib/today-kinds";
 import type { DbExecutor } from "./client";
 import { people, personRoles, shops, tripAssignments, trips, userAccounts } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";

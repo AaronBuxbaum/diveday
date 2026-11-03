@@ -1079,7 +1079,7 @@ export async function getDiverProfile(
   // the trip alone, so a seat the crew marked `not_boarded` at the dock read
   // as a dive, and could be the diver's first. Read through the manifest's own
   // readers, which already apply the supersession every reader of the trail
-  // applies; the rule over them is `seatSailed` (src/lib/closeout.ts).
+  // applies; the rule over them is `seatSailed` (src/lib/seat-sailed.ts).
   const diverTripIds = [...new Set(bookingRows.map((row) => row.trip.id))];
   const [dockResults, afterDiveResults] = await Promise.all([
     listDepartureRollCallByTrip(db, shopId, diverTripIds),

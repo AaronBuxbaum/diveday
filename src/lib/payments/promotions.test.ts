@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { promotionProviderFromEnvironment } from "@/db/stripe-providers";
+import { stripeResponse } from "@/lib/payments/__fixtures__/stripe-response";
 
 /** The `stripe_api.request_threw` lines a case wrote, parsed. */
 function threwLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
@@ -23,7 +24,7 @@ const request = {
 };
 
 function ok(json: unknown) {
-  return { ok: true, json: async () => json };
+  return stripeResponse(json);
 }
 
 describe("stripe promotion provider", () => {
@@ -81,7 +82,7 @@ describe("stripe promotion provider", () => {
   });
 
   it("fails without creating a promotion code when the coupon call fails", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) });
+    const fetchImpl = vi.fn().mockResolvedValue(stripeResponse({}, 400));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.createTripPromotion(request)).toEqual({ status: "failed" });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -91,7 +92,7 @@ describe("stripe promotion provider", () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(ok({ id: "coupon_1" }))
-      .mockResolvedValueOnce({ ok: false, json: async () => ({}) });
+      .mockResolvedValueOnce(stripeResponse({}, 400));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.createTripPromotion(request)).toEqual({ status: "failed" });
   });

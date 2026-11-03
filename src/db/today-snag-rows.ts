@@ -1,6 +1,7 @@
 import { boatSnagDetailText, openBoatCheckActionText } from "@/i18n/today-labels";
 import { shopPath } from "@/lib/staff-notices";
-import { type TodayAction, urgencyFor } from "@/lib/today";
+import type { TodayAction } from "@/lib/today";
+import { urgencyFor } from "@/lib/today-urgency";
 import type { TodayRowsContext } from "./today-rows-context";
 
 /**

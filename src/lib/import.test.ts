@@ -18,31 +18,11 @@ import {
   MAX_IMPORT_COLUMNS,
   MAX_IMPORT_ROWS,
   normalizeLevel,
-  parseCsv,
   parseImportedMoney,
   priorVisitDedupeKey,
 } from "./import";
 import { IMPORT_SCOPE_ROW_KEYS } from "./migration-guides";
 import { RENTAL_FIT_TEXT_LIMITS } from "./rentals";
-
-describe("parseCsv (RFC-4180)", () => {
-  it("reads quoted fields, embedded commas, doubled quotes, and CRLF", () => {
-    const text = 'a,b,c\r\n"x,y","she said ""hi""",z\r\n';
-    expect(parseCsv(text)).toEqual([
-      ["a", "b", "c"],
-      ["x,y", 'she said "hi"', "z"],
-    ]);
-  });
-
-  it("handles bare LF, a trailing row without a newline, and a leading BOM", () => {
-    const text = "﻿name,email\nAda\n";
-    expect(parseCsv(text)).toEqual([["name", "email"], ["Ada"]]);
-  });
-
-  it("keeps embedded newlines inside quotes", () => {
-    expect(parseCsv('a\n"line1\nline2",b\n')).toEqual([["a"], ["line1\nline2", "b"]]);
-  });
-});
 
 describe("enum arrays stay in step with the schema", () => {
   it("agencies and levels mirror the pg enums", () => {

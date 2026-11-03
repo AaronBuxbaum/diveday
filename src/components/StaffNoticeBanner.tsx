@@ -1,4 +1,4 @@
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
 
 /**

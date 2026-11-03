@@ -98,6 +98,13 @@ const SKIPPED_FILES = new Set(
 );
 
 /**
+ * The trouble route's per-fact state files: the route's own functions, moved out
+ * one to a file (issue #3670), so the same exemption as `route.ts` above holds.
+ * Each one stages a departure for a capture and is handed a demo shop's id.
+ */
+const SKIPPED_DIRECTORY = path.normalize("src/app/api/test/seed-trouble-states/states/");
+
+/**
  * Every guarded read of `trips` in one file, and which of them prove nothing.
  *
  * Split out so the rule is testable in isolation
@@ -135,6 +142,7 @@ async function main() {
     )) {
       const normalized = path.normalize(file);
       if (SKIPPED_FILES.has(normalized) || IS_TEST.test(file)) continue;
+      if (normalized.startsWith(SKIPPED_DIRECTORY)) continue;
       if (path.basename(file).startsWith("seed-")) continue;
       const source = await readFile(path.join(ROOT, file), "utf8");
       const result = findUnfilteredTripReads(source);

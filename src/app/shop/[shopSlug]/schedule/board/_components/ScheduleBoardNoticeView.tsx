@@ -5,7 +5,7 @@ import {
   RescheduleHold,
   type RescheduleNoticeSnapshot,
 } from "@/app/shop/[shopSlug]/_components/RescheduleHold";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { noticeRole } from "@/lib/staff-notices";
 import { clearBoardResultParams } from "./board-search-params";
 

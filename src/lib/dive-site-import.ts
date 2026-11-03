@@ -11,6 +11,7 @@ import {
   MAX_IMPORT_COLUMNS,
   MAX_IMPORT_ROWS,
   parseCsv,
+  widestRow,
 } from "./import";
 import { normalizeImportKey } from "./import-key";
 import { isManagedStorageUrl } from "./storage/blob-host";
@@ -348,7 +349,7 @@ export function prepareDiveSiteImport(
   const grid = parseCsv(csv).filter((row) => row.some((cell) => cell.trim() !== ""));
   const header = grid[0];
   if (!header) return { rows: [], unknownColumns: [], fatal: "file_empty" };
-  if (header.length > MAX_IMPORT_COLUMNS)
+  if (widestRow(grid) > MAX_IMPORT_COLUMNS)
     return { rows: [], unknownColumns: [], fatal: "too_many_columns" };
   if (grid.length - 1 > MAX_IMPORT_ROWS)
     return { rows: [], unknownColumns: [], fatal: "too_many_rows" };
@@ -591,7 +592,7 @@ export function prepareDiveSiteCreaturesImport(csv: string): PreparedDiveSiteCre
   const grid = parseCsv(csv).filter((row) => row.some((cell) => cell.trim() !== ""));
   const header = grid[0];
   if (!header) return { rows: [], unknownColumns: [], fatal: "file_empty" };
-  if (header.length > MAX_IMPORT_COLUMNS)
+  if (widestRow(grid) > MAX_IMPORT_COLUMNS)
     return { rows: [], unknownColumns: [], fatal: "too_many_columns" };
   if (grid.length - 1 > MAX_IMPORT_ROWS)
     return { rows: [], unknownColumns: [], fatal: "too_many_rows" };

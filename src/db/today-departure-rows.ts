@@ -23,9 +23,9 @@ import {
   blockedDiverActions,
   collapseEmailDeliveries,
   type TodayAction,
-  urgencyFor,
   waiverBatchActions,
 } from "@/lib/today";
+import { urgencyFor } from "@/lib/today-urgency";
 import { type BoatWork, type BoatWorkDiver, boatWorkFor } from "./boat-work";
 import { pushCrewGapRows } from "./today-crew-gap-rows";
 import type { TodayRowsContext } from "./today-rows-context";

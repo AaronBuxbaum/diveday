@@ -1,13 +1,11 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import Stripe from "stripe";
 import { z } from "zod";
 import { nowMs } from "../clock";
 
 /**
- * Stripe Connect webhook signature verification, done by hand against the
- * documented `Stripe-Signature` scheme (`t=<timestamp>,v1=<hmac>[,v1=<hmac>]`)
- * so the webhook route needs no SDK dependency (docs ADR
- * 20260719-stripe-connect-orders). Fails closed: an invalid or stale
- * signature, or a missing secret, never reaches event handling.
+ * Stripe Connect webhook verification (ADR 20261102-stripe-sdk-adapters).
+ * Fails closed: an invalid, stale or early signature, or a missing secret,
+ * never reaches event handling.
  */
 
 const stripeEventSchema = z.object({
@@ -46,55 +44,62 @@ export type WebhookVerification =
   | { status: "invalid_signature" }
   | { status: "malformed" };
 
-function parseSignatureHeader(header: string): { timestamp: string; signatures: string[] } {
-  const parts = header.split(",").map((part) => part.split("="));
-  const timestamp = parts.find(([key]) => key === "t")?.[1] ?? "";
-  const signatures = parts.filter(([key]) => key === "v1").map(([, value]) => value ?? "");
-  return { timestamp, signatures };
-}
+/** The absolute window, either side of now. Stripe's libraries check only the past side. */
+export const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
 
-function isSignatureMatch(expectedHex: string, candidateHex: string): boolean {
-  const expected = Buffer.from(expectedHex, "hex");
-  const candidate = Buffer.from(candidateHex, "hex");
-  return expected.length === candidate.length && timingSafeEqual(expected, candidate);
+/**
+ * The one `t=` the header carries, read the way the SDK reads it, or null.
+ * More than one is refused: the SDK signs over the last, and a window checked
+ * against a different one would be a window over nothing.
+ */
+function signedTimestamp(header: string): number | null {
+  const stamps = header
+    .split(",")
+    .map((item) => item.split("="))
+    .filter(([key]) => key === "t")
+    .map(([, value]) => value ?? "");
+  if (stamps.length !== 1 || !/^\d{1,12}$/.test(stamps[0] ?? "")) return null;
+  return Number.parseInt(stamps[0] ?? "", 10);
 }
 
 /**
- * `toleranceSeconds` guards against a replayed old event; Stripe's own
- * libraries default to 300s, matched here.
+ * The signature is the SDK's (`Stripe.webhooks.constructEvent`, HMAC over the
+ * raw body, constant-time compare). The window is ours: the SDK refuses an
+ * event older than its tolerance but accepts one stamped any distance in the
+ * future, so a signed event cannot be held and replayed from ahead of time
+ * only because this checks both sides itself.
  */
 export function verifyStripeWebhook(
   payload: string,
   signatureHeader: string | null,
   secret: string | undefined,
-  toleranceSeconds = 300,
+  toleranceSeconds = STRIPE_WEBHOOK_TOLERANCE_SECONDS,
 ): WebhookVerification {
   if (!secret) return { status: "not_configured" };
   if (!signatureHeader) return { status: "invalid_signature" };
-
-  const { timestamp, signatures } = parseSignatureHeader(signatureHeader);
-  if (!timestamp || signatures.length === 0) return { status: "invalid_signature" };
-
-  const expected = createHmac("sha256", secret).update(`${timestamp}.${payload}`).digest("hex");
-  const matches = signatures.some((candidate) => {
-    try {
-      return isSignatureMatch(expected, candidate);
-    } catch {
-      return false;
-    }
-  });
-  if (!matches) return { status: "invalid_signature" };
-
-  const ageSeconds = Math.abs(nowMs() / 1000 - Number(timestamp));
-  if (!Number.isFinite(ageSeconds) || ageSeconds > toleranceSeconds) {
+  const timestamp = signedTimestamp(signatureHeader);
+  const now = nowMs();
+  if (timestamp === null || Math.abs(now / 1000 - timestamp) > toleranceSeconds) {
     return { status: "invalid_signature" };
   }
 
   let parsedJson: unknown;
   try {
-    parsedJson = JSON.parse(payload);
-  } catch {
-    return { status: "malformed" };
+    parsedJson = Stripe.webhooks.constructEvent(
+      payload,
+      signatureHeader,
+      secret,
+      toleranceSeconds,
+      undefined,
+      now,
+    );
+  } catch (error) {
+    // A signed body that is not JSON is malformed. Every other throw (the
+    // SDK's verification error, or anything it raises on a header it cannot
+    // read, such as an empty or bare `v1`) is a signature this did not
+    // accept, so the route's test-secret fallback and its logged reason see
+    // `invalid_signature`.
+    return error instanceof SyntaxError ? { status: "malformed" } : { status: "invalid_signature" };
   }
   const event = stripeEventSchema.safeParse(parsedJson);
   if (!event.success) return { status: "malformed" };

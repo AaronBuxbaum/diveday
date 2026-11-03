@@ -8,11 +8,11 @@ import {
   type DayLoadOut,
   dayLoadOut,
   loadOutDue,
-  seatSailed,
   tomorrowNoon,
 } from "@/lib/closeout";
 import type { CrewRollCallSubject } from "@/lib/manifests";
 import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
+import { seatSailed } from "@/lib/seat-sailed";
 import { settleWithLimit } from "@/lib/settle-with-limit";
 import { shopDayBounds, shopDaysBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
@@ -141,7 +141,7 @@ async function dayTrips(
     // The rows themselves rather than `count()` and a `filter (where …)`,
     // because deciding whether a seat sailed takes two statements about that
     // seat and only one of them is on this row: the rule is
-    // `seatSailed` (src/lib/closeout.ts) and the other half is the query
+    // `seatSailed` (src/lib/seat-sailed.ts) and the other half is the query
     // below. One shop day of non-cancelled bookings is bounded by the day's
     // capacity, which is the same population `listRollCallGaps` already walks
     // per booking over a thirty-day residue window.

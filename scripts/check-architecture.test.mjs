@@ -134,6 +134,32 @@ describe("the seams", () => {
     ]);
   });
 
+  it("refuses a drizzle-orm value under src/lib and lets the type through", async () => {
+    const root = await fixture({
+      "src/lib/ledger.ts": 'import { eq } from "drizzle-orm";\n',
+      "src/lib/shapes.ts": 'import type { SQL } from "drizzle-orm";\n',
+      "src/lib/ledger.test.ts": 'import { eq } from "drizzle-orm";\n',
+      "src/db/ledger.ts": 'import { eq } from "drizzle-orm";\n',
+    });
+    expect(flat(await collectViolations(root))).toEqual([
+      expect.stringContaining("src/lib/ledger.ts: value-imports drizzle-orm"),
+    ]);
+  });
+
+  it("refuses a translator value under src/db and lets the key type through", async () => {
+    const root = await fixture({
+      "src/db/words.ts": 'import { staffTranslator } from "@/i18n/staff-messages";\n',
+      "src/db/diver-words.ts": 'import { diverTranslator } from "@/i18n/messages";\n',
+      "src/db/keys.ts": 'import type { StaffMessageKey } from "@/i18n/staff-messages";\n',
+      "src/db/words.test.ts": 'import { staffTranslator } from "@/i18n/staff-messages";\n',
+      "src/app/words.ts": 'import { staffTranslator } from "@/i18n/staff-messages";\n',
+    });
+    expect(flat(await collectViolations(root)).sort()).toEqual([
+      expect.stringContaining("src/db/diver-words.ts: value-imports @/i18n/messages"),
+      expect.stringContaining("src/db/words.ts: value-imports @/i18n/staff-messages"),
+    ]);
+  });
+
   it("sends everything outside src/db through the trips barrel", async () => {
     const root = await fixture({
       "src/app/trip/page.tsx": 'import { getTripOverview } from "@/db/trips-overview";\n',
@@ -276,8 +302,8 @@ describe("server-only modules stay out of client bundles", () => {
 
   it("stops at a use-server module, which the browser gets as a call stub", async () => {
     const root = await fixture({
-      "src/lib/payments/stripe-fetch.ts": "export const stripe = 1;\n",
-      "src/lib/payments/checkout.ts": 'import { stripe } from "./stripe-fetch";\n',
+      "src/lib/payments/stripe-client.ts": "export const stripe = 1;\n",
+      "src/lib/payments/checkout.ts": 'import { stripe } from "./stripe-client";\n',
       "src/app/actions.ts": '"use server";\nimport { x } from "@/lib/payments/checkout";\n',
       "src/app/Form.tsx": '"use client";\nimport { act } from "@/app/actions";\n',
       "src/app/Leaky.tsx": '"use client";\nimport { x } from "@/lib/payments/checkout";\n',

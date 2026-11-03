@@ -13,7 +13,6 @@ import {
 } from "@/app/s/[shopSlug]/_components/PublicShopShell";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ShopSearchField } from "@/components/ShopSearchField";
-import { StaffActivity } from "@/components/StaffActivity";
 import { buttonClass } from "@/components/ui/button";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -32,6 +31,7 @@ import {
 import { shopSwitchesOn } from "@/lib/shop-features";
 import { staffHomeSlug } from "@/lib/staff-home";
 import { shopPath } from "@/lib/staff-notices";
+import { LazyStaffActivity } from "./LazyStaffActivity";
 
 /**
  * The app-wide backstop for `notFound()` — a stale email link, a typo'd URL,
@@ -194,7 +194,7 @@ async function StaffNotFound({ shopSlug, locale }: { shopSlug: string; locale: L
       session.user.sessionId &&
       session.idleRemainingMs !== undefined ? (
         <div className="mt-8 w-full">
-          <StaffActivity
+          <LazyStaffActivity
             sessionId={session.user.sessionId}
             copy={{
               title: t("shared.sessionIdle.title"),
