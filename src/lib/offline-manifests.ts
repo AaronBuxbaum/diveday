@@ -6,6 +6,7 @@ import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import type { DepartureEmergencyReference } from "./emergency-reference";
 // Dependency-free too (type-only imports), for the same reason.
+import { depthAdvisoryIn } from "./findings";
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { TrainingMarkCleared, TripManifest } from "./manifests";
 // Same reasoning as the roll-call import above: dependency-free, so a value
@@ -1190,9 +1191,7 @@ export function serializeManifests(
         nitroxRequested: diver.nitroxRequested,
         ...(resolveJuniorAdvisory &&
         !diver.identityWithheld &&
-        (diver.depthAdvisory?.status === "verification_required" ||
-          (diver.depthAdvisory?.status === "exceeds" &&
-            diver.depthAdvisory.verificationReasons?.length))
+        depthAdvisoryIn(diver.advisories)?.params.verificationReasons?.length
           ? { safetyAdvisoryText: resolveJuniorAdvisory() }
           : {}),
         participantType: diver.participantType,

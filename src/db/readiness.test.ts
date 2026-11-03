@@ -767,22 +767,17 @@ describe("depth advisory (H-20260724-certification-levels-agency-rules — a war
 
   it("warns when the trip goes deeper than the card trains for", async () => {
     const { diver } = await withAllSiteDepths(30);
-    expect(diver.depthAdvisory).toMatchObject({
-      status: "exceeds",
-      limitDepth: 18,
-      siteDepth: 30,
-      unit: "meters",
-      basis: "certification",
-    });
+    const [advisory] = diver.advisories;
+    expect(advisory).toMatchObject({ code: "depth_exceeds_ceiling", params: { siteDepth: 30 } });
+    expect(advisory?.params).toMatchObject({ limitDepth: 18, basis: "certification" });
   });
 
   it("never turns that warning into a blocker — the diver still boards", async () => {
-    // The whole decision in one assertion: a 30 m trip under an 18 m card
-    // produces an advisory and *no* readiness blocker. An instructor may be
-    // keeping this diver shallower on purpose.
+    // A 30 m trip under an 18 m card produces an advisory and the very readiness
+    // a shallow trip does. An instructor may keep this diver shallower on purpose.
     const { diver } = await withAllSiteDepths(30);
-    expect(diver.depthAdvisory.status).toBe("exceeds");
-    expect(diver.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
+    expect(diver.advisories.map((advisory) => advisory.code)).toEqual(["depth_exceeds_ceiling"]);
+    expect((await withAllSiteDepths(10)).diver.readiness).toEqual(diver.readiness);
   });
 
   it("takes the deepest site the trip visits, not just the first", async () => {
@@ -802,7 +797,9 @@ describe("depth advisory (H-20260724-certification-levels-agency-rules — a war
 
     const rows = await listTripReadiness(db, shop.id, reef.id);
     const diver = rows.find((row) => row.booking.id === rosterEntry.booking.id);
-    expect(diver?.depthAdvisory).toMatchObject({ status: "exceeds", siteDepth: 35 });
+    expect(diver?.advisories).toMatchObject([
+      { code: "depth_exceeds_ceiling", params: { siteDepth: 35 } },
+    ]);
   });
 });
 

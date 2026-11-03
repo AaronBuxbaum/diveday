@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { presenceText } from "@/i18n/presence-labels";
+import { depthAdvisoryIn } from "@/lib/findings";
 import type { TripManifest } from "@/lib/manifests";
 import { shopPath } from "@/lib/staff-notices";
 import { DiverFacts, diverBlockerText } from "./DiverFacts";
@@ -57,6 +58,7 @@ export function DiverRowPanel({
     t,
   } = context;
   const { rc, rowState, blockedAtDock, capsuleKind, medicalHoldInPanel } = state;
+  const depthAdvisory = depthAdvisoryIn(diver.advisories);
   // No box round the whole panel any more (visual review 2026-10-24, B08):
   // the emergency contact alone sits in the card, and the one roll-call step
   // stands at the sheet's foot, outside it.
@@ -126,12 +128,10 @@ export function DiverRowPanel({
         state by name keeps the full sentence — here, where the
         plan for dive two is read during the surface interval.
         Warning tone, never a gate (H-20260724-certification-levels-agency-rules). */}
-      {(diver.depthAdvisory?.status === "exceeds" ||
-        diver.depthAdvisory?.status === "verification_required") &&
-      !sharedAdvisoryTexts.has(depthWarningText(t, diver.depthAdvisory)) ? (
+      {depthAdvisory && !sharedAdvisoryTexts.has(depthWarningText(t, depthAdvisory)) ? (
         <p className="mb-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
           <StatusMark variant="warning" size="md" />
-          <span>{depthWarningText(t, diver.depthAdvisory)}</span>
+          <span>{depthWarningText(t, depthAdvisory)}</span>
         </p>
       ) : null}
       {/* **The diver's medical alert for the crew** (issue #2960, H-20261023-medical-alert-for-the),

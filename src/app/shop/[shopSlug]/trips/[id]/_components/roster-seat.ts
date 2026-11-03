@@ -3,6 +3,7 @@ import { identityReasonText } from "@/i18n/identity-check-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
+import { depthAdvisoryIn } from "@/lib/findings";
 import { formatDateTimeTz, formatMoneyCents } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
@@ -113,12 +114,10 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
       ? { at: booking.courseMaterialsDoneAt, byName: null as string | null }
       : null);
   const materialsPending = courseHasMaterials && courseMaterialsOpen && !materialsDone;
-  const readiness = readinessByBooking.get(booking.id)?.readiness;
-  const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
-  const paymentSourceCode = paymentSourceLine(
-    paymentStatus,
-    readinessByBooking.get(booking.id)?.paymentProvider,
-  );
+  const seatRow = readinessByBooking.get(booking.id);
+  const readiness = seatRow?.readiness;
+  const paymentStatus = seatRow?.paymentStatus;
+  const paymentSourceCode = paymentSourceLine(paymentStatus, seatRow?.paymentProvider);
   // The Paid mark's own record (batch 6 item 1): a counter payment says how
   // much, how, and who took it, where it used to say only "at the counter".
   const markFacts = paymentMarksByBooking?.get(booking.id) ?? null;
@@ -193,7 +192,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   // for the fresh release the seat now carries: sent, expired, or not yet.
   const refusalRetired =
     waiverStatus === "medical_not_cleared" && Boolean(currentWaiver?.supersededAt);
-  const ownWaiver = readinessByBooking.get(booking.id)?.bookingWaiver ?? null;
+  const ownWaiver = seatRow?.bookingWaiver ?? null;
   const waiverControl = WAIVER_CONTROLS[refusalRetired ? waiverState(ownWaiver) : waiverStatus];
   const nitrox = nitroxByBooking.get(booking.id);
   // Either signal holds the seat, so a readiness read that failed closed
@@ -244,11 +243,9 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   const requiresGuardian = guardianSignatureRequired(dateOfBirth, signedToday, minorDeclared);
   const birthday = showsPersonDetail ? birthdayCallout(dateOfBirth, tripDate) : null;
   const hasEmergencyContact = Boolean(person.emergencyContactName && person.emergencyContactPhone);
-  // A warning, never a gate: the site goes deeper than this diver's
-  // training, which an instructor may well have already planned around
-  // (H-20260724-certification-levels-agency-rules). It sits apart from the blocker list for that reason. Withheld
-  // on a held seat, as everything measured against the matched person is.
-  const depth = showsPersonDetail ? readinessByBooking.get(booking.id)?.depthAdvisory : undefined;
+  // An advisory, never a gate (`src/lib/findings.ts`): an instructor may plan around a deep site.
+  // Withheld on a held seat, as everything measured against the matched person is.
+  const depth = showsPersonDetail ? depthAdvisoryIn(seatRow?.advisories) : undefined;
   const notes = notesByBooking.get(booking.id) ?? [];
   // This row's blockers, each in its own sentence. The held-identity one
   // names both people the guess was between (`identityReasonText`), so the
