@@ -1,10 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Badge } from "@/components/ui/badge";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { TripCapacityBadge, TripPageHeader, TripPageHeaderSkeleton } from "./TripPageHeader";
+
+// The way up is read off the URL (issue #2748): a face of a departure links to
+// the board above the departure, never to the departure itself.
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/shop/blue-mantis/trips/trip-1/manifest",
+}));
 
 afterEach(cleanup);
 
@@ -16,7 +22,6 @@ function renderHeader(actions?: ReactNode) {
         startsAt: new Date("2026-07-21T18:30:00Z"),
         endsAt: new Date("2026-07-21T22:00:00Z"),
       }}
-      boardHref="/shop/blue-mantis/trips/trip-1"
       backLabel="Trip"
       locale="en-US"
       timeZone="America/New_York"
@@ -60,14 +65,16 @@ describe("TripPageHeader", () => {
           startsAt: new Date("2026-07-21T18:30:00Z"),
           endsAt: new Date("2026-07-21T22:00:00Z"),
         }}
-        boardHref="/shop/blue-mantis/schedule/board"
         backLabel="Schedule"
         locale="en-US"
         timeZone="America/New_York"
       />,
     );
     expect(screen.getAllByRole("link")).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "Schedule" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Schedule" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/schedule/board",
+    );
     expect(screen.queryByRole("link", { name: "Today" })).toBeNull();
   });
 
@@ -96,7 +103,6 @@ describe("TripPageHeader", () => {
           startsAt: new Date("2026-07-21T18:30:00Z"),
           endsAt: new Date("2026-07-21T22:00:00Z"),
         }}
-        boardHref="/shop/blue-mantis/schedule/board"
         backLabel="Schedule"
         locale="en-US"
         timeZone="America/New_York"
@@ -120,7 +126,6 @@ function loadedHeader() {
         startsAt: new Date("2026-07-21T18:30:00Z"),
         endsAt: new Date("2026-07-21T22:00:00Z"),
       }}
-      boardHref="/shop/blue-mantis/trips/t1"
       backLabel="Trip"
       locale="en-US"
       timeZone="America/New_York"

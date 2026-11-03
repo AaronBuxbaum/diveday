@@ -480,7 +480,7 @@ to *look for* anything. Content leads; chrome defers. Concretely:
   finds the page by what it says on screen: a staffer who typed the headline used to get nothing
   back (issue #824).
 - **A surface below depth 1 names its parent and links to it.** Through the page's eyebrow where it
-  has one — `ShopPageHeader`'s `eyebrowHref`, or `EyebrowBackLink` for a header that is not that
+  has one — `ShopPageHeader`'s eyebrow, or `EyebrowWayUp` for a header that is not that
   component — and through an explicit "← Parent" link only where the page has no eyebrow to spend
   (the printed sheets under `print/**`, whose `SheetDocument` shell wears a band rather than a
   header and carries a `print:hidden` link to the print register). Two forms, chosen by whether
@@ -489,8 +489,10 @@ to *look for* anything. Content leads; chrome defers. Concretely:
   A "Back to …" **button** in the header's actions slot is a third form, and so is a "← Back to …"
   link stranded under the header. Both put navigation at the weight of the act the page is for —
   the order detail spent two secondary buttons on it, the blow-out one, beside the danger button
-  that cancels a boat. `src/app/shop/eyebrow-way-up.test.ts` walks the staff tree and fails on a
-  page below depth 1 carrying neither form.
+  that cancels a boat. The link's href is never written by the page: the route tree
+  (`src/lib/staff-routes.ts`) holds every staff page, a page's parent is its URL's nearest ancestor
+  page unless its node says the URL lies, and the eyebrow reads it off the pathname (issue #2748).
+  `src/lib/staff-routes.test.ts` walks the staff tree and fails on a page with no node.
   The four trip surfaces were the case that named it. They are the deepest pages in the staff app,
   and their first header link was the Overview/Guests/Manifest/Prep strip — which moves you
   *sideways* between one departure's own pages and never back to the board. A crew member finishing

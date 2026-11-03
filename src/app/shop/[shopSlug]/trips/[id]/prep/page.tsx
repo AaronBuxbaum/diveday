@@ -175,7 +175,6 @@ export default async function TripPrepPage({
     <>
       <FlashParams params={["notice", "count"]} />
       <TripPageHeader
-        boardHref={shopPath(shopSlug, "schedule", "board")}
         backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
         trip={trip}
         locale={locale}

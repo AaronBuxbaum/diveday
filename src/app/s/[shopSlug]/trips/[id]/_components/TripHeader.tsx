@@ -7,7 +7,7 @@ import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatMoneyScanned, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { offeredParticipantTypes, participantPriceCents } from "@/lib/participant-types";
-import { publicCoursePath, publicSchedulePath } from "@/lib/public-routes";
+import { publicCoursePath } from "@/lib/public-routes";
 import type { Shop, Trip, TripMeetingDay } from "./types";
 
 /**
@@ -87,7 +87,7 @@ export function TripHeader({
   return (
     <ShopPageHeader
       eyebrow={embed ? shop.name : t("trip.backToAllTrips")}
-      {...(embed ? {} : { eyebrowHref: publicSchedulePath(shop.slug) })}
+      returnTo={embed ? null : undefined}
       title={trip.title}
       {...(embed
         ? {
