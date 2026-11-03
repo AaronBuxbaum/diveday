@@ -120,16 +120,18 @@ describe("what this slice was forbidden to touch", () => {
  */
 describe("a held seat's release", () => {
   it("returns its held card before the signer on file is read", () => {
-    // The signer is read only inside the form, and both doors return the held
-    // card before they draw it.
+    // The signer is read only inside the form. The waiver link returns the held
+    // card before it draws it; the thread has no key on a held seat at all and
+    // redirects every state but "available" and "completed" before the form.
     expect(FORM).toContain("getWaiverSignerOnFile(");
     expect(FORM).toContain("guardianSignatureRequired(");
-    for (const page of [SOURCE, THREAD]) {
-      const held = page.indexOf('state.state === "held"');
-      expect(held).toBeGreaterThan(-1);
-      expect(held).toBeLessThan(page.indexOf("waiverSigningForm({"));
-      expect(page).not.toContain("getWaiverSignerOnFile(");
-    }
+    const held = SOURCE.indexOf('state.state === "held"');
+    expect(held).toBeGreaterThan(-1);
+    expect(held).toBeLessThan(SOURCE.indexOf("waiverSigningForm({"));
+    const gate = THREAD.indexOf('state.state !== "available" && state.state !== "completed"');
+    expect(gate).toBeGreaterThan(-1);
+    expect(gate).toBeLessThan(THREAD.indexOf("waiverSigningForm({"));
+    for (const page of [SOURCE, THREAD]) expect(page).not.toContain("getWaiverSignerOnFile(");
   });
 });
 

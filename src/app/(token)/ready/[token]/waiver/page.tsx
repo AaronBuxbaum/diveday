@@ -12,7 +12,6 @@ import { requestLocale } from "@/i18n/request";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completedMedicalState } from "../../../waivers/[token]/completed-medical-state";
 import { completedWaiverRail, WaiverCompleted } from "../../../waivers/[token]/WaiverCompleted";
-import { HeldWaiverCard } from "../../../waivers/[token]/WaiverDoorCards";
 import { waiverSigningForm } from "../../../waivers/[token]/WaiverSigningForm";
 import { completeWaiverFromReady, saveWaiverDraftFromReady } from "../waiver-actions";
 
@@ -39,7 +38,7 @@ export const instant = true;
  * already signed and clear goes back to `/ready`, which says each of those
  * honestly. A signed release waiting on a physician shows its receipt, with the
  * physician instructions and the doctor's page. A seat held for staff to
- * confirm who it is draws no form.
+ * confirm who it is opens nothing here, not even a medical status.
  */
 export default async function ThreadWaiverPage({
   params,
@@ -67,13 +66,12 @@ export default async function ThreadWaiverPage({
   });
   if (!key) redirect(prep);
   const state = await getWaiverForToken(db, key);
-  if (state.state === "unavailable" || state.state === "expired") redirect(prep);
+  // A held seat has no key at all (`threadWaiverKey`), so "held" never reaches here.
+  if (state.state !== "available" && state.state !== "completed") redirect(prep);
   const shop = await getShopById(db, state.record.shopId);
   if (!shop) redirect(prep);
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
-
-  if (state.state === "held") return <HeldWaiverCard shop={shop} t={t} />;
 
   if (state.state === "completed") {
     if (!isUnresolvedMedicalHold(state.record)) redirect(prep);

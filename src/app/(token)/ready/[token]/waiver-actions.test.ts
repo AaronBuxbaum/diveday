@@ -56,6 +56,7 @@ const { completeWaiverFromReady, openWaiverFromReady, saveWaiverDraftFromReady }
   "./waiver-actions"
 );
 const { default: ThreadWaiverPage } = await import("./waiver/page");
+const { default: ThreadDoctorPage } = await import("./waiver/doctor/page");
 
 const t = diverTranslator("en-US");
 
@@ -469,6 +470,26 @@ describe("the thread keeps every signing rule the waiver link has", () => {
         signedForm(shop, { signerName: "Cy Clean", acknowledged: "on" }),
       ),
     );
+    expect(await threadWaiverAwaitsPhysician(db, { shopId: shop.id, bookingId })).toBe(false);
+  });
+});
+
+describe("a held seat in the thread", () => {
+  it("shows neither the medical status nor the doctor's page (attacker review A1)", async () => {
+    const { db, shop, bookingId, token } = await bookedSeat("Hal Held");
+    await redirectedTo(async () => openWaiverFromReady(token));
+    const form = signedForm(shop, { signerName: "Hal Held", acknowledged: "on" });
+    form.set(medicalQuestionField("q3"), "yes");
+    await redirectedTo(async () => completeWaiverFromReady(token, await drawnId(bookingId), form));
+    // A claim under another name holds the seat; the signed referral stays on it.
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: new Date() })
+      .where(eq(bookings.id, bookingId));
+    expect(await redirectedTo(async () => renderPage(token))).toBe(`/ready/${token}`);
+    expect(
+      await redirectedTo(async () => ThreadDoctorPage({ params: Promise.resolve({ token }) })),
+    ).toBe(`/ready/${token}/waiver`);
     expect(await threadWaiverAwaitsPhysician(db, { shopId: shop.id, bookingId })).toBe(false);
   });
 });

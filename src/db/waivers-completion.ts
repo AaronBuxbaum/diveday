@@ -114,6 +114,9 @@ export async function threadWaiverKey(
         eq(waiverRecords.bookingId, input.bookingId),
         isNull(waiverRecords.supersededAt),
         seatNotCancelled,
+        // A held seat's link may be in someone else's hands: the thread opens
+        // nothing on it, not even a signed release's medical status.
+        isNull(bookings.identityUnconfirmedAt),
       ),
     )
     // diveday:allow-time-id-order: picks the seat's one current release; nobody is shown this order.
@@ -194,6 +197,7 @@ async function currentRecordForToken(db: DbExecutor, key: WaiverKey, now = nowDa
           eq(waiverRecords.bookingId, key.bookingId),
           isNull(waiverRecords.supersededAt),
           seatNotCancelled,
+          isNull(bookings.identityUnconfirmedAt),
         ),
       )
       .limit(1);
