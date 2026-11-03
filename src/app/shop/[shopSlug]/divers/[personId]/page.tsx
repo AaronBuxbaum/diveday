@@ -5,10 +5,10 @@ import { DownloadAcknowledgmentLink } from "@/components/DownloadAcknowledgmentL
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { getDiverRecord } from "@/db/diver-record";
+import { resolveDiverNotice } from "@/i18n/diver-notice-text";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { resolveDiverNotice } from "@/lib/diver-notices";
 import { diverStanding } from "@/lib/diver-standing";
 import { splitDiverStatus } from "@/lib/diver-status";
 import { requireShopSurface } from "@/lib/session";
