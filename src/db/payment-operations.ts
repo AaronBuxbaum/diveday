@@ -1,16 +1,9 @@
-import { and, eq, inArray, isNotNull, isNull, like, lt, not, or, type SQL } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, like, lt, or, type SQL } from "drizzle-orm";
+import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import type { PaymentOperationIntent, PaymentOperationKind } from "./schema";
-import {
-  bookingCheckouts,
-  bookings,
-  orders,
-  paymentOperationIntents,
-  people,
-  trips,
-} from "./schema";
-import { liveTrip } from "./trips-live";
+import { bookings, paymentOperationIntents } from "./schema";
 
 export type StartPaymentOperationInput = {
   shopId: string;
@@ -52,7 +45,7 @@ export async function startPaymentOperation(
  * its own committed write, deliberately *before* the local order/checkout/
  * payment write that follows. That local write can still fail (a crash, a
  * dropped connection); if it does, the intent is left `started` but with
- * `stripeObjectId` already on it, so `listStuckPaymentOperations` gives an
+ * `stripeObjectId` already on it, so the stuck-payment read (`src/db/unfinished.ts`) gives an
  * operator the one thing they need to find the object in the Stripe
  * dashboard and reconcile it by hand — the reconciliation clue a crash right
  * after this point would otherwise have taken with it (CR-005).
@@ -72,7 +65,7 @@ export async function recordPaymentOperationStripeObject(
  * The mark an intent carries when its Stripe call went out and no answer came
  * back: a timeout, a reset connection, a body that never arrived. Stripe may
  * have done the thing, so the intent is **not** resolved `failed`: it stays
- * `started` with this as its `errorMessage`, which `listStuckPaymentOperations`
+ * `started` with this as its `errorMessage`, which the stuck-payment read (`src/db/unfinished.ts`)
  * shows a human once it ages, and which every refund claim refuses on
  * ({@link awaitingStripeReconciliation}). Resolving it `failed` was what let a
  * second Refund press mint a fresh idempotency key and reverse the money a
@@ -164,14 +157,6 @@ export function idempotencyKeyFor(intentId: string, step?: string): string {
 }
 
 /**
- * Exported so `src/db/today.ts` can build the same "stuck" cutoff from its own
- * `now` parameter (task 157) — Today's queue must not read the live clock
- * directly (see `src/lib/clock.ts`), so it can't call `listStuckPaymentOperations`
- * with its default argument the way Reports does.
- */
-export const STALE_AFTER_MS = 5 * 60 * 1000;
-
-/**
  * Atomically claim a set of bookings for one in-flight checkout attempt, so a
  * second concurrent `startBookingCheckout` call for an overlapping party can
  * never also proceed to Stripe — closing the "concurrent starts create
@@ -194,7 +179,8 @@ export async function claimBookingsForCheckout(
   db: AppDb,
   input: { bookingIds: string[]; intentId: string; staleBefore?: Date },
 ): Promise<boolean> {
-  const staleBefore = input.staleBefore ?? new Date(nowDate().getTime() - STALE_AFTER_MS);
+  const staleBefore =
+    input.staleBefore ?? new Date(nowDate().getTime() - PAYMENT_CLAIM_STALE_AFTER_MS);
   return db.transaction(async (tx) => {
     const staleIntents = await tx
       .select({ id: paymentOperationIntents.id })
@@ -261,143 +247,4 @@ export async function releaseBookingCheckoutClaim(
     .update(bookings)
     .set({ pendingCheckoutIntentId: null })
     .where(and(inArray(bookings.id, bookingIds), eq(bookings.pendingCheckoutIntentId, intentId)));
-}
-
-export type StuckPaymentOperation = {
-  intent: PaymentOperationIntent;
-  tripId: string | null;
-  tripTitle: string | null;
-  personName: string | null;
-};
-
-/**
- * Intents still `started` well past the time a Stripe round trip should take
- * — the process died mid-call, or died between the call succeeding and the
- * local order/checkout/payment write that should have followed. These are
- * exactly the "orphaned or indeterminate" operations CR-005 requires be
- * owner-visible rather than silently stuck forever; staff check the intent's
- * `stripeObjectId` (if any) against the Stripe dashboard and reconcile by
- * hand. `olderThan` is injectable for tests; defaults to the real clock.
- */
-export async function listStuckPaymentOperations(
-  db: AppDb,
-  shopId: string,
-  olderThan: Date = new Date(nowDate().getTime() - STALE_AFTER_MS),
-  options: {
-    /**
-     * Leave out the dashboard refunds held for staff to match to a seat: the
-     * Orders index lists those in a queue of their own, with the seats to pick
-     * from (`listUnattributedRefunds`, issue #2293). Today keeps counting them.
-     */
-    withoutUnattributedRefunds?: boolean;
-  } = {},
-): Promise<StuckPaymentOperation[]> {
-  const intents = await db
-    .select()
-    .from(paymentOperationIntents)
-    .where(
-      and(
-        eq(paymentOperationIntents.shopId, shopId),
-        eq(paymentOperationIntents.status, "started"),
-        lt(paymentOperationIntents.startedAt, olderThan),
-        options.withoutUnattributedRefunds ? not(heldUnattributedRefund()) : undefined,
-      ),
-    );
-  if (intents.length === 0) return [];
-
-  // Batched lookups, not a join: a checkout_session intent's trip, a
-  // bookingId intent's booking->trip/person, and an invoice/refund intent's
-  // order->person live on different tables, and only one of these
-  // references is ever set per intent (schema.ts comment). Every lookup is
-  // scoped to shopId too — belt-and-suspenders alongside every caller
-  // already validating a referenced row's shop before it's ever recorded on
-  // an intent (payment-operations.test.ts's cross-shop test covers that).
-  //
-  // Two phases: checkout/order/booking ids resolve first (phase one), since
-  // a booking or checkout can itself point at a trip that isn't on any
-  // intent directly — the trips query (phase two) has to wait for those
-  // results to know the full set of trip ids it needs.
-  const checkoutIds = [
-    ...new Set(intents.flatMap((intent) => (intent.checkoutId ? [intent.checkoutId] : []))),
-  ];
-  const orderIds = [
-    ...new Set(intents.flatMap((intent) => (intent.orderId ? [intent.orderId] : []))),
-  ];
-  const bookingIds = [
-    ...new Set(intents.flatMap((intent) => (intent.bookingId ? [intent.bookingId] : []))),
-  ];
-
-  const [checkoutRows, orderRows, bookingRows] = await Promise.all([
-    checkoutIds.length
-      ? db
-          .select({ id: bookingCheckouts.id, tripId: bookingCheckouts.tripId })
-          .from(bookingCheckouts)
-          .where(
-            and(inArray(bookingCheckouts.id, checkoutIds), eq(bookingCheckouts.shopId, shopId)),
-          )
-      : [],
-    orderIds.length
-      ? db
-          .select({ id: orders.id, personId: orders.personId })
-          .from(orders)
-          .where(and(inArray(orders.id, orderIds), eq(orders.shopId, shopId)))
-      : [],
-    bookingIds.length
-      ? db
-          .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
-          .from(bookings)
-          .where(and(inArray(bookings.id, bookingIds), eq(bookings.shopId, shopId)))
-      : [],
-  ]);
-  const tripIdByCheckoutId = new Map(checkoutRows.map((row) => [row.id, row.tripId]));
-  const personIdByOrderId = new Map(orderRows.map((row) => [row.id, row.personId]));
-  const tripIdByBookingId = new Map(bookingRows.map((row) => [row.id, row.tripId]));
-  const personIdByBookingId = new Map(bookingRows.map((row) => [row.id, row.personId]));
-
-  const tripIds = [
-    ...new Set([
-      ...intents.flatMap((intent) => (intent.tripId ? [intent.tripId] : [])),
-      ...checkoutRows.map((row) => row.tripId),
-      ...bookingRows.map((row) => row.tripId),
-    ]),
-  ];
-  const personIds = [
-    ...new Set([
-      ...orderRows.flatMap((row) => (row.personId ? [row.personId] : [])),
-      ...bookingRows.map((row) => row.personId),
-    ]),
-  ];
-  const [tripRows, personRows] = await Promise.all([
-    tripIds.length
-      ? db
-          .select({ id: trips.id, title: trips.title })
-          .from(trips)
-          .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), liveTrip()))
-      : [],
-    personIds.length
-      ? db
-          .select({ id: people.id, fullName: people.fullName })
-          .from(people)
-          // diveday:allow-deleted-people: names for the stuck-operation queue, removed people included.
-          .where(and(inArray(people.id, personIds), eq(people.shopId, shopId)))
-      : [],
-  ]);
-  const tripTitleById = new Map(tripRows.map((row) => [row.id, row.title]));
-  const personNameById = new Map(personRows.map((row) => [row.id, row.fullName]));
-
-  return intents.map((intent) => {
-    const tripId =
-      intent.tripId ??
-      (intent.checkoutId ? tripIdByCheckoutId.get(intent.checkoutId) : undefined) ??
-      (intent.bookingId ? tripIdByBookingId.get(intent.bookingId) : undefined);
-    const personId =
-      (intent.orderId ? personIdByOrderId.get(intent.orderId) : undefined) ??
-      (intent.bookingId ? personIdByBookingId.get(intent.bookingId) : undefined);
-    return {
-      intent,
-      tripId: tripId ?? null,
-      tripTitle: tripId ? (tripTitleById.get(tripId) ?? null) : null,
-      personName: personId ? (personNameById.get(personId) ?? null) : null,
-    };
-  });
 }

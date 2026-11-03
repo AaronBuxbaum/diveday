@@ -9,7 +9,6 @@ import {
   attemptProcessorErasure,
   attemptProcessorErasures,
   dischargeProcessorErasure,
-  listOwedProcessorErasures,
   MAX_AUTOMATIC_DELETE_ATTEMPTS,
   recordProcessorErasureObligations,
   retryPendingProcessorErasures,
@@ -17,6 +16,7 @@ import {
 } from "./processor-erasure";
 import { people, processorErasureObligations, shopStripeAccounts, shops } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
+import { listUnfinished } from "./unfinished";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -103,7 +103,7 @@ describe("recording processor erasure obligations", () => {
       ],
     });
     expect(raised.map((row) => row.externalId).sort()).toEqual(["cus_a", "cus_b", "in_a"]);
-    const owed = await listOwedProcessorErasures(db, shop.id);
+    const owed = await listUnfinished(db, shop.id, "processor_erasure");
     expect(owed.every((row) => row.status === "owed" && row.attempts === 0)).toBe(true);
   });
 
@@ -116,7 +116,7 @@ describe("recording processor erasure obligations", () => {
         targets: [],
       }),
     ).toEqual([]);
-    expect(await listOwedProcessorErasures(db, shop.id)).toEqual([]);
+    expect(await listUnfinished(db, shop.id, "processor_erasure")).toEqual([]);
   });
 
   it("folds a repeat obligation onto the existing row instead of duplicating the work", async () => {
@@ -133,7 +133,7 @@ describe("recording processor erasure obligations", () => {
         targets: [CUSTOMER("cus_shared")],
       }),
     ).toEqual([]);
-    expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(1);
+    expect(await listUnfinished(db, shop.id, "processor_erasure")).toHaveLength(1);
   });
 
   // Security review of #1721, F2: an entry dropped for naming no account is an
@@ -175,8 +175,8 @@ describe("recording processor erasure obligations", () => {
       targets: [CUSTOMER("cus_same")],
     });
 
-    const mine = await listOwedProcessorErasures(db, shop.id);
-    const theirs = await listOwedProcessorErasures(db, otherShop.id);
+    const mine = await listUnfinished(db, shop.id, "processor_erasure");
+    const theirs = await listUnfinished(db, otherShop.id, "processor_erasure");
     expect(mine).toHaveLength(1);
     expect(theirs).toHaveLength(1);
     expect(mine[0]?.id).not.toBe(theirs[0]?.id);
@@ -213,7 +213,7 @@ describe("attempting the Stripe customer delete", () => {
       // Nobody attested this — DiveDay did it.
       dischargedByPersonId: null,
     });
-    expect(await listOwedProcessorErasures(db, shop.id)).toEqual([]);
+    expect(await listUnfinished(db, shop.id, "processor_erasure")).toEqual([]);
   });
 
   it("treats an already-deleted customer as discharged", async () => {
@@ -256,7 +256,7 @@ describe("attempting the Stripe customer delete", () => {
       attempts: 1,
       lastError: "HTTP 401: account_invalid",
     });
-    expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(1);
+    expect(await listUnfinished(db, shop.id, "processor_erasure")).toHaveLength(1);
   });
 
   it("logs a throw by its class, never its message, and moves on (issue #2239)", async () => {
@@ -380,7 +380,7 @@ describe("attempting the Stripe customer delete", () => {
       attempts: 1,
       lastError: "stripe account not owned by this shop",
     });
-    expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(1);
+    expect(await listUnfinished(db, shop.id, "processor_erasure")).toHaveLength(1);
   });
 
   it("refuses to fire at an account that maps to no shop at all", async () => {
@@ -497,7 +497,7 @@ describe("retrying an owed delete", () => {
       reason: "not_found",
     });
     expect(provider.deleteCustomer).not.toHaveBeenCalled();
-    expect(await listOwedProcessorErasures(db, otherShop.id)).toHaveLength(1);
+    expect(await listUnfinished(db, otherShop.id, "processor_erasure")).toHaveLength(1);
   });
 
   it("drains owed deletes across shops on the nightly tick, skipping manual rows", async () => {
@@ -520,7 +520,7 @@ describe("retrying an owed delete", () => {
     });
     // The invoice snapshot is untouched: it has no API behind it, so a nightly
     // retry would be a call that can never succeed.
-    const stillOwed = await listOwedProcessorErasures(db, shop.id);
+    const stillOwed = await listUnfinished(db, shop.id, "processor_erasure");
     expect(stillOwed.map((row) => row.target)).toEqual(["stripe_invoice_snapshot"]);
   });
 
@@ -538,7 +538,7 @@ describe("retrying an owed delete", () => {
       discharged: 1,
     });
     expect(provider.deleteCustomer.mock.calls.map((call) => call[1])).toEqual(["cus_nightly"]);
-    const stillOwed = await listOwedProcessorErasures(db, shop.id);
+    const stillOwed = await listUnfinished(db, shop.id, "processor_erasure");
     expect(stillOwed.map((row) => row.target)).toEqual(["stripe_checkout_session_snapshot"]);
     expect(stillOwed[0]).toMatchObject({ attempts: 0, lastError: null });
   });
@@ -563,7 +563,7 @@ describe("retrying an owed delete", () => {
     });
     expect(provider.deleteCustomer).not.toHaveBeenCalled();
     // Still owed, still visible — the cap stops the nightly call, not the debt.
-    expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(1);
+    expect(await listUnfinished(db, shop.id, "processor_erasure")).toHaveLength(1);
     // And an owner can still drive it by hand.
     expect(
       await retryProcessorErasure(
@@ -628,7 +628,7 @@ describe("retrying an owed delete", () => {
     );
     expect(await rowById(db, eligible.id)).toMatchObject({ status: "discharged" });
     // The capped rows are still owed and still nobody's nightly Stripe call.
-    expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(5);
+    expect(await listUnfinished(db, shop.id, "processor_erasure")).toHaveLength(5);
   });
 });
 
@@ -649,7 +649,7 @@ describe("discharging by attestation", () => {
         actorPersonId: ownerId,
       }),
     ).toEqual({ ok: true });
-    expect(await listOwedProcessorErasures(db, shop.id)).toEqual([]);
+    expect(await listUnfinished(db, shop.id, "processor_erasure")).toEqual([]);
     const row = await rowById(db, obligation.id);
     expect(row).toMatchObject({ status: "discharged", dischargedByPersonId: ownerId });
     expect(row?.dischargedAt).toBeInstanceOf(Date);
@@ -698,6 +698,6 @@ describe("discharging by attestation", () => {
         actorPersonId: ownerId,
       }),
     ).toEqual({ ok: false, reason: "not_found" });
-    expect(await listOwedProcessorErasures(db, otherShop.id)).toHaveLength(1);
+    expect(await listUnfinished(db, otherShop.id, "processor_erasure")).toHaveLength(1);
   });
 });

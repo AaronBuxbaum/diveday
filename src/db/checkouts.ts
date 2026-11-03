@@ -380,7 +380,7 @@ export async function startBookingCheckout(
 
   // Durable evidence this attempt exists, written and committed before
   // Stripe is ever called (CR-005) — a crash mid-attempt still leaves this
-  // row for reconciliation (listStuckPaymentOperations) instead of no trace
+  // row for reconciliation (the `payment_operation` kind of `src/db/unfinished.ts`) instead of no trace
   // at all.
   const intent = await startPaymentOperation(db, {
     shopId: input.shopId,
