@@ -672,9 +672,9 @@ again) with no gift left.
 Runs the whole shop alone. Opens Today with coffee in hand, 90 minutes before the boat leaves.
 
 **What she hits today.** The Today ranking is genuinely good (chronological-beats-severity,
-per-departure collapse, role lenses — `src/lib/today.ts`), but the "now" band is 24 hours wide,
+per-departure collapse, role lenses — `src/features/today/today.ts`), but the "now" band is 24 hours wide,
 so tomorrow's 7am boat interleaves with today's. Six of fourteen action kinds have hardcoded
-English labels and details straight from `src/db/today.ts` ("Open prep list", "Open trip"…), and
+English labels and details straight from `src/features/today/today-reader.ts` ("Open prep list", "Open trip"…), and
 its time formatter hardcodes `"en-US"`. Most non-waiver rows point at a surface rather than act
 in place ("Open Priya's record"), so N blockers = N page loads. Crew assignment on the departure
 board is HTML5 drag-and-drop — **impossible on the phone she's holding** — with a visually
@@ -684,12 +684,12 @@ covers the fully empty queue).
 
 ### Tasks
 
-61. **[S] Localize `src/db/today.ts`.** Move the six hardcoded action kinds' labels/details to
+61. **[S] Localize `src/features/today/today-reader.ts`.** Move the six hardcoded action kinds' labels/details to
     codes resolved through `today-labels.ts` (the blocker rows already show the pattern), and
     replace the `"en-US"` literal in its `at()` time helper with the negotiated locale. Bank
     the `check:domain-strings` reduction.
     **Done — PR #274.**
-62. **[M] Add an "imminent" urgency band.** In `src/lib/today.ts`, split `now` (≤24h) into
+62. **[M] Add an "imminent" urgency band.** In `src/features/today/today.ts`, split `now` (≤24h) into
     "next 3 hours" and "today," so the 7am boat's problems visibly outrank tonight's. Ranking
     is pure logic with tests — extend `sortActions`/`urgencyFor` test cases first.
     **Done — PR #274.**

@@ -1,5 +1,5 @@
-import type { EveningClose } from "@/lib/closeout";
-import { type DaySpine, type DayStation, rowTone, type TodayAction } from "@/lib/today";
+import type { EveningClose } from "@/features/today";
+import { type DaySpine, type DayStation, rowTone, type TodayAction } from "@/features/today";
 import type { TodayActionKind } from "@/lib/today-kinds";
 
 export type SpineEntry =
@@ -80,7 +80,7 @@ export function spineClearUnlessWindy(
 
 /**
  * **A boat's Needs you rows, by what keeps a diver off the boat** (visual
- * review 2026-10-24, A43). `src/lib/today.ts` ranks by how long a fix takes
+ * review 2026-10-24, A43). `src/features/today/today.ts` ranks by how long a fix takes
  * to land, which put "1 order awaiting payment" above three divers with no
  * emergency contact. Within one boat the desk reads them by boarding impact:
  *
@@ -95,7 +95,7 @@ export function spineClearUnlessWindy(
  * 4. money;
  * 5. the rest (a help request, the wait list, an email that bounced).
  *
- * The sort is stable, so `src/lib/today.ts`'s order holds inside a tier, and
+ * The sort is stable, so `src/features/today/today.ts`'s order holds inside a tier, and
  * it never drops or adds a row. H-20261022-needs-you-groups-by's one-row-per-diver grouping happened
  * upstream; this only orders what it produced.
  */
@@ -142,7 +142,7 @@ export function rankBoatRows(rows: readonly TodayAction[]): TodayAction[] {
 /**
  * **A Needs you row's line ends without a period** (visual review
  * 2026-10-24, A22): "{person} · {one-line why}" reads as a label, and a
- * label takes no full stop. The readers in `src/lib/today.ts` and `src/db`
+ * label takes no full stop. The readers in `src/features/today/today.ts` and `src/db`
  * compose the same words as sentences for the other places they are said
  * (the week's rows, the trip page), so the row drops the one final period at
  * render time. A line of two sentences keeps its punctuation: dropping the

@@ -7,6 +7,12 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A booking's money is its entries (built 2026-11-03)
+
+- `booking_payments` is now a view over `booking_payment_events`: a booking's payment state is its
+  newest entry, and `setBookingPayment` only appends. Nothing on screen changes (issue #2716,
+  amendment to [20260803-booking-payment-events](../architecture/decisions/20260803-booking-payment-events.md)).
+
 ## Erasure removes a person's own data only (built 2026-11-01)
 
 Erasing a diver no longer searches other people's free text for their name: departure titles and
@@ -535,7 +541,7 @@ re-rendered Today's own evidence in a different order; it is now a **state the h
 into**, and `/close-out` is a 308. Nothing about `day_closeouts`, the recorded act or the departure
 log changed underneath — only where they render, which was the whole finding.
 
-**A station settles, one at a time.** `assembleEveningClose` (`src/lib/closeout.ts`) joins the
+**A station settles, one at a time.** `assembleEveningClose` (`src/features/today/closeout.ts`) joins the
 day's departures to the clock: a station settles when its head count closed or its scheduled return
 is an hour behind it, and a settled one renders as `ClosingStation` — the time, the title, a drawn
 `SettledCheck` beside the state in words, "10 of 10 back by 10:26 AM · head count closed by Keiko
@@ -584,7 +590,7 @@ the headline and the parting-glance card they existed for.
 
 Pinned rather than remembered: `DaySpine.test.tsx` holds the closing block back while a boat is
 still out, refuses an acknowledgement control at every leftover count, hides the log door from a
-non-owner, and proves at most one coral element renders; `src/lib/closeout.test.ts` pins the
+non-owner, and proves at most one coral element renders; `src/features/today/closeout.test.ts` pins the
 late-arrival buffer on both sides of the hour and the once-ever wording's condition;
 `staff-destinations.test.ts` pins four primary tabs and no `/close-out` suffix anywhere in the
 registry; `e2e/day-close.spec.ts` runs J4 end to end and checks the 308, the dock and the palette
@@ -1916,7 +1922,7 @@ pools under **At the desk**; tomorrow is a collapsed disclosure whose body reuse
 renderer, and the rest of the week is one link to the board. A day with no boats and nothing waiting
 collapses to a heading, one sentence and the one act.
 
-Nothing about *what counts as work* moved: `assembleDaySpine` (`src/lib/today.ts`) is a pure
+Nothing about *what counts as work* moved: `assembleDaySpine` (`src/features/today/today.ts`) is a pure
 re-filing of the queue `getTodayWork` already ranked — a `tripId` picks the station, its absence
 picks the desk — and tomorrow comes from a second bounded read of the next shop-day sharing the same
 readiness pass, never a widened window. `DepartureSummary` gained the station's three meta facts

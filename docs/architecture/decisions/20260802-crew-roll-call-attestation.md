@@ -72,7 +72,7 @@ checkpoint from reading complete. Not a per-person crew roll call.
    crew member queued offline and has not synced.
 
 Scope: this changes the manifest surfaces only. Today's `roll_call_unfinished` escalation
-(`src/lib/today.ts`, DOM-H3) still reasons about diver events and is untouched here.
+(`src/features/today/today.ts`, DOM-H3) still reasons about diver events and is untouched here.
 
 ## Alternatives considered
 

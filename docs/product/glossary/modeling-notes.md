@@ -26,8 +26,8 @@
 - **Level vs. specialty** — a **level** (OW→Instructor) is a rank; a **specialty** (Deep, Wreck,
   Night, Drysuit, Cavern) is a distinct yes/no gate. Cavern is the one a guided tour must not tick:
   the card is only one of the things a cavern dive needs, so "Ready" means the card was seen and
-  nothing more, and a Full Cave diver blocks on a Cavern gate until staff record a Cavern card. Levels live in `certifications`; specialties live in
-  `specialty_certifications`, both captured pending and usable only once verified — except a card
+  nothing more, and a Full Cave diver blocks on a Cavern gate until staff record a Cavern card. Levels and specialties are
+  `level` and `specialty` cards on the **Card ledger**, both captured pending and usable only once verified — except a card
   brought in by the importer, which lands `verified` but (for a specialty only) still holds its gate
   until a staff confirm (see **Imported certification**). At most agencies (PADI, SSI, NAUI, GUE) the
   number identifies the *diver*, not the card, so their Deep and Wreck cards carry the same number;

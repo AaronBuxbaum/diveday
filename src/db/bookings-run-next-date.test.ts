@@ -5,7 +5,7 @@ import { similarDepartures } from "@/lib/similar-departures";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { createDiver } from "./divers";
-import { certifications, diveSites, tripDives } from "./schema";
+import { cards, diveSites, tripDives } from "./schema";
 import { createTrip } from "./trips";
 import { createTripSeries } from "./trips-series";
 
@@ -34,7 +34,8 @@ describe("the run's next date is gated at the sale like a direct visit (issue #2
     const { db, shop } = ctx;
     const person = await createDiver(db, { shopId: shop.id, fullName: "Tamsin Reef", email });
     if (!person) throw new Error("diver setup failed");
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: person.id,
       agency: "padi",

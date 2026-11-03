@@ -1169,12 +1169,6 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 }
 
-/* A rota is read across seven days on a noticeboard. Landscape gives those
-   columns room without reducing names and shift times to fine print. */
-@page crew-rota {
-  size: landscape;
-}
-
 @media print {
   @layer base {
     /* A session lock protects the page on paper as well as on screen. */
@@ -1185,56 +1179,6 @@ select:not([multiple]):not([size]):dir(rtl) {
     body:has([data-staff-session-lock]) > [inert] {
       display: none !important;
     }
-  }
-
-  .staffing-print-rota {
-    page: crew-rota;
-  }
-
-  /* A weekly crew rota belongs on the noticeboard. Keep all seven days in
-     columns even when printing from a phone, and let names wrap on paper. */
-  .staffing-print-grid tr {
-    display: table-row;
-    break-inside: avoid;
-  }
-
-  /* Table layout repeats the weekday key when a busy rota needs more than
-     one sheet. The same cells keep their screen grid outside print. */
-  .staffing-print-grid {
-    display: table;
-    table-layout: fixed;
-    width: 100%;
-  }
-
-  .staffing-print-grid thead {
-    display: table-header-group;
-    break-inside: avoid;
-  }
-
-  .staffing-print-grid :is(td, th) {
-    display: table-cell;
-    vertical-align: top;
-    padding: 0.35rem;
-  }
-
-  .staffing-print-grid :is(td, th):first-child {
-    width: 7rem;
-  }
-
-  .staffing-print-grid :is(td, th) > * + * {
-    margin-top: 0.25rem;
-  }
-
-  .staffing-print-grid .text-base {
-    font-size: 11.5px;
-    line-height: 1.35;
-    padding: 0.25rem;
-  }
-
-  .staffing-print-grid .truncate {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
   }
 
   /* The saved departure details are a paper ledger, not a set of tap targets. */

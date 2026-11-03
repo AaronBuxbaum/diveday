@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { asLevelCard, asNitroxCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { calculateReadiness, isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { decideTripAdmission } from "@/lib/trip-admission";
@@ -13,7 +14,7 @@ import {
   deleteCertification,
   reviewCertification,
 } from "./readiness";
-import { certifications, nitroxCertifications, people, shops } from "./schema";
+import { cards, people, shops } from "./schema";
 import {
   clearNoCertificationDeclaration,
   listCertificationSummaries,
@@ -40,8 +41,9 @@ async function joiner(name = "Nora Quinn", email = "nora@example.com") {
 async function liveCards(db: Awaited<ReturnType<typeof joiner>>["db"], shopId: string) {
   return db
     .select()
-    .from(certifications)
-    .where(and(eq(certifications.shopId, shopId), isNull(certifications.deletedAt)));
+    .from(cards)
+    .where(and(eq(cards.kind, "level"), eq(cards.shopId, shopId), isNull(cards.deletedAt)))
+    .then((rows) => rows.map(asLevelCard));
 }
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -78,8 +80,8 @@ describe("recordSelfDeclaredCards", () => {
 
     const [nitrox] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.personId, person.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
     expect(nitrox?.status).toBe("pending");
     expect(nitrox?.identifier).toBeNull();
     expect(nitrox?.selfDeclaredAt).not.toBeNull();
@@ -300,8 +302,8 @@ describe("recordSelfDeclaredCards", () => {
     expect(outcome.nitrox).toBe("not_said");
     const rows = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.personId, person.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
     expect(rows).toHaveLength(1);
     expect(rows[0]?.identifier).toBe("NX-7781");
   });
@@ -352,7 +354,7 @@ describe("recordSelfDeclaredCards", () => {
      * The assertion this whole design exists for. A Discover Scuba experience
      * is not a certification, and "DSD certification" is the phrase that costs
      * a dive business its credibility with an instructor — but the structural
-     * reason is stronger than the words: every row in `certifications` asserts
+     * reason is stronger than the words: every row in `cards` asserts
      * that a card exists, and a row asserting the opposite would have to be
      * special-cased by readiness, admission, the CSV export, the incident
      * document and the importer. The one reader that missed it would turn "no
@@ -377,13 +379,13 @@ describe("recordSelfDeclaredCards", () => {
       // to this table on this path, ever.
       const anyRow = await db
         .select()
-        .from(certifications)
-        .where(eq(certifications.personId, person.id));
+        .from(cards)
+        .where(and(eq(cards.kind, "level"), eq(cards.personId, person.id)));
       expect(anyRow).toEqual([]);
       const anyNitrox = await db
         .select()
-        .from(nitroxCertifications)
-        .where(eq(nitroxCertifications.personId, person.id));
+        .from(cards)
+        .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
       expect(anyNitrox).toEqual([]);
     });
 
@@ -405,18 +407,21 @@ describe("recordSelfDeclaredCards", () => {
       expect(outcome.level).toBe("not_said");
       expect(outcome.nitrox).toBe("not_said");
       expect(
-        await db.select().from(certifications).where(eq(certifications.personId, person.id)),
+        await db
+          .select()
+          .from(cards)
+          .where(and(eq(cards.kind, "level"), eq(cards.personId, person.id))),
       ).toEqual([]);
       expect(
         await db
           .select()
-          .from(nitroxCertifications)
-          .where(eq(nitroxCertifications.personId, person.id)),
+          .from(cards)
+          .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id))),
       ).toEqual([]);
     });
 
     /**
-     * The anti-displacement rule, widened to both tables because the claim
+     * The anti-displacement rule, widened to every kind of card because the claim
      * here is "there is no card" and *any* card the shop holds refutes it. The
      * forms are unauthenticated: anybody who knows a diver's name and email
      * address reaches that diver's real record.
@@ -455,8 +460,8 @@ describe("recordSelfDeclaredCards", () => {
         identifier: "DEEP-4004",
       });
 
-      // `specialty_certifications` has no `self_declared_at` — these forms
-      // cannot write there, so a row's existence is the whole answer, and a
+      // These forms never write a specialty card (`cards`, kind = specialty),
+      // so a row's existence is the whole answer, and a
       // diver holding a Deep card is not a diver with no card.
       const outcome = await recordSelfDeclaredCards(db, {
         shopId: shop.id,
@@ -490,8 +495,8 @@ describe("recordSelfDeclaredCards", () => {
       expect(await stamp(db, shop.id, person.id)).toBeNull();
       const rows = await db
         .select()
-        .from(nitroxCertifications)
-        .where(eq(nitroxCertifications.personId, person.id));
+        .from(cards)
+        .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
       expect(rows[0]?.deletedAt).toBeNull();
     });
 
@@ -558,15 +563,15 @@ describe("recordSelfDeclaredCards", () => {
       // reconstructing what was said and when (ADR 20260719-crud-archive-semantics).
       const archived = await db
         .select()
-        .from(certifications)
-        .where(eq(certifications.personId, person.id));
+        .from(cards)
+        .where(and(eq(cards.kind, "level"), eq(cards.personId, person.id)));
       expect(archived).toHaveLength(1);
       expect(archived[0]?.deletedAt).not.toBeNull();
       expect(archived[0]?.selfDeclaredAt).not.toBeNull();
       const nitrox = await db
         .select()
-        .from(nitroxCertifications)
-        .where(eq(nitroxCertifications.personId, person.id));
+        .from(cards)
+        .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
       expect(nitrox[0]?.deletedAt).not.toBeNull();
     });
 
@@ -639,7 +644,7 @@ describe("recordSelfDeclaredCards", () => {
     /**
      * **The reader ignores the stamp on the same test the writer refuses to
      * write against.** A `dive-domain-expert` review found the two disagreeing:
-     * the writer was refuted by all three card tables, the reader only by a
+     * the writer was refuted by every kind of card, the reader only by a
      * level — so a diver whose shop holds a verified *nitrox* card and no level
      * card read as "Not certified yet — unverified, Nitrox", warning-toned,
      * and was lifted to the top of the send list. Nobody holds enriched air
@@ -901,8 +906,8 @@ describe("recordSelfDeclaredCards", () => {
       expect(outcome.nitrox).toBe("card_on_file");
       const rows = await db
         .select()
-        .from(nitroxCertifications)
-        .where(eq(nitroxCertifications.personId, person.id));
+        .from(cards)
+        .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.selfDeclaredAt).toBeNull();
     });
@@ -918,8 +923,8 @@ describe("recordSelfDeclaredCards", () => {
       await recordSelfDeclaredCards(db, { shopId: shop.id, personId: person.id, nitrox: true });
       const [claim] = await db
         .select()
-        .from(nitroxCertifications)
-        .where(eq(nitroxCertifications.personId, person.id));
+        .from(cards)
+        .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
       if (!claim) throw new Error("setup: declaration not recorded");
       await reviewNitroxCertification(db, {
         shopId: shop.id,
@@ -929,8 +934,8 @@ describe("recordSelfDeclaredCards", () => {
       });
       const [before] = await db
         .select()
-        .from(nitroxCertifications)
-        .where(eq(nitroxCertifications.personId, person.id));
+        .from(cards)
+        .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
 
       const outcome = await recordSelfDeclaredCards(db, {
         shopId: shop.id,
@@ -941,8 +946,8 @@ describe("recordSelfDeclaredCards", () => {
       expect(outcome.nitrox).toBe("card_on_file");
       const rows = await db
         .select()
-        .from(nitroxCertifications)
-        .where(eq(nitroxCertifications.personId, person.id));
+        .from(cards)
+        .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
       expect(rows).toHaveLength(1);
       expect(rows[0]).toEqual(before);
     });
@@ -973,7 +978,8 @@ describe('the SQL and TypeScript spellings of "a real card" agree', () => {
   for (const shape of shapes) {
     it(`treats a nitrox card that is ${shape.name} as ${shape.real ? "real" : "a claim"}`, async () => {
       const { db, shop, person } = await joiner();
-      await db.insert(nitroxCertifications).values({
+      await db.insert(cards).values({
+        kind: "nitrox",
         shopId: shop.id,
         personId: person.id,
         agency: "padi",
@@ -985,8 +991,8 @@ describe('the SQL and TypeScript spellings of "a real card" agree', () => {
       // The TypeScript side, over the row itself.
       const [row] = await db
         .select()
-        .from(nitroxCertifications)
-        .where(eq(nitroxCertifications.personId, person.id));
+        .from(cards)
+        .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
       if (!row) throw new Error("setup: nitrox row not written");
       expect(!isUnsightedSelfDeclaration(row)).toBe(shape.real);
 
@@ -1018,7 +1024,7 @@ describe("the anti-displacement rule reaches every table", () => {
       status: "verified",
     });
 
-    // The level table is empty, which used to be the whole test — so an
+    // No level card is on file, which used to be the whole test — so an
     // anonymous poster could write a rung onto a diver this shop demonstrably
     // knows. Inert while the gate ignored claims; a refusal on somebody else's
     // typing from the moment it believed them (security review, 2026-08-20).
@@ -1032,8 +1038,8 @@ describe("the anti-displacement rule reaches every table", () => {
 
     const rows = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, person.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, person.id)));
     expect(rows).toHaveLength(0);
   });
 
@@ -1100,7 +1106,8 @@ describe("self-declared cards and the booking gate", () => {
     });
     // Forced past the anti-displacement rule, because the gate has to hold even
     // if a row like this reaches it some other way.
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: person.id,
       agency: "other",
@@ -1161,8 +1168,9 @@ describe("self-declared cards and the booking gate", () => {
         specialtyCertifications: [],
         nitroxCertifications: await db
           .select()
-          .from(nitroxCertifications)
-          .where(eq(nitroxCertifications.personId, person.id)),
+          .from(cards)
+          .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)))
+          .then((rows) => rows.map(asNitroxCard)),
       },
     });
 
@@ -1335,7 +1343,10 @@ describe("reviewCertification on a self-declared card", () => {
     });
 
     expect(outcome).toEqual({ ok: false, reason: "not_found" });
-    const [row] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [row] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(row?.deletedAt).not.toBeNull();
     expect(row?.status).toBe("pending");
   });
@@ -1384,9 +1395,9 @@ describe("listCertificationSummaries", () => {
     expect(typed).toMatchObject({ nitrox: true, nitroxSelfDeclared: false, nitroxVerified: false });
 
     await db
-      .update(nitroxCertifications)
+      .update(cards)
       .set({ status: "verified" })
-      .where(eq(nitroxCertifications.personId, person.id));
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.personId, person.id)));
     const checked = (await listCertificationSummaries(db, shop.id, [person.id])).get(person.id);
     expect(checked).toMatchObject({ nitrox: true, nitroxVerified: true });
   });
@@ -1450,7 +1461,8 @@ describe("listCertificationSummaries", () => {
       (await listCertificationSummaries(db, shop.id, [person.id])).get(person.id),
     ).toMatchObject({ level: "open_water", levelSelfDeclared: false, verifiedLevel: null });
 
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: person.id,
       agency: "ssi",
@@ -1543,7 +1555,7 @@ describe("clearNoCertificationDeclaration", () => {
     expect(cleared).toBe(true);
     const [row] = await db.select().from(people).where(eq(people.id, person.id));
     // Superseded, never deleted: where a record began is history, exactly as
-    // `certifications.self_declared_at` is kept after a sighting. A shop has to
+    // `cards.self_declared_at` is kept after a sighting. A shop has to
     // be able to answer "did this diver ever tell us that?".
     expect(row?.noCertificationDeclaredAt).not.toBeNull();
     expect(row?.noCertificationClearedAt).not.toBeNull();
@@ -1553,7 +1565,7 @@ describe("clearNoCertificationDeclaration", () => {
     expect(profiles.get(person.id)).toBeUndefined();
   });
 
-  it("cannot turn a claim into evidence — it leaves every card table untouched", async () => {
+  it("cannot turn a claim into evidence — it leaves every card untouched", async () => {
     const { db, shop, person } = await joiner();
     await recordSelfDeclaredCards(db, {
       shopId: shop.id,
@@ -1580,8 +1592,8 @@ describe("clearNoCertificationDeclaration", () => {
     expect(live.filter((row) => row.personId === person.id)).toHaveLength(0);
     const all = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, person.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, person.id)));
     expect(all.every((row) => row.status === "pending")).toBe(true);
     expect(all.every((row) => row.identifier === null)).toBe(true);
   });
@@ -1730,7 +1742,7 @@ describe("clearNoCertificationDeclaration", () => {
 });
 
 /**
- * `certifications_identifier_present_unless_self_declared` was credited, in
+ * The identifier constraint (now `cards_identifier_present_unless_unsighted`) was credited, in
  * three comments and the ADR, with keeping a numberless row out of `verified`.
  * It read `identifier is not null`, and `''` satisfies that — so the claim was
  * true of NULL and held up by the application alone for the empty string.
@@ -1751,7 +1763,8 @@ describe("the card-number constraint", () => {
     const { db, shop, person } = await joiner();
 
     await expect(
-      db.insert(certifications).values({
+      db.insert(cards).values({
+        kind: "level",
         shopId: shop.id,
         personId: person.id,
         agency: "padi",
@@ -1766,7 +1779,8 @@ describe("the card-number constraint", () => {
     const { db, shop, person } = await joiner();
 
     await expect(
-      db.insert(nitroxCertifications).values({
+      db.insert(cards).values({
+        kind: "nitrox",
         shopId: shop.id,
         personId: person.id,
         agency: "padi",
@@ -1793,7 +1807,10 @@ describe("the card-number constraint", () => {
     // refuses this too — the point is that the database does as well, so the
     // refusal does not depend on one action remembering to ask.
     await expect(
-      db.update(certifications).set({ status: "verified" }).where(eq(certifications.id, claim.id)),
+      db
+        .update(cards)
+        .set({ status: "verified" })
+        .where(and(eq(cards.kind, "level"), eq(cards.id, claim.id))),
     ).rejects.toThrow();
   });
 
@@ -1801,7 +1818,8 @@ describe("the card-number constraint", () => {
     const { db, shop, person } = await joiner();
 
     await expect(
-      db.insert(certifications).values({
+      db.insert(cards).values({
+        kind: "level",
         shopId: shop.id,
         personId: person.id,
         agency: "padi",
@@ -1820,7 +1838,8 @@ describe("the card-number constraint", () => {
     const { db, shop, person } = await joiner();
 
     await expect(
-      db.insert(certifications).values({
+      db.insert(cards).values({
+        kind: "level",
         shopId: shop.id,
         personId: person.id,
         agency: "padi",
@@ -1835,7 +1854,8 @@ describe("the card-number constraint", () => {
     const { db, shop, person } = await joiner();
 
     await expect(
-      db.insert(certifications).values({
+      db.insert(cards).values({
+        kind: "level",
         shopId: shop.id,
         personId: person.id,
         agency: "other",

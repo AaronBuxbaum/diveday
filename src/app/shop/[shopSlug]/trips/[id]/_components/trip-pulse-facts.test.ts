@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { TodayAction } from "@/features/today";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { TodayAction } from "@/lib/today";
 import { tripPulseFacts } from "./trip-pulse-facts";
 
 const t = staffTranslator("en-US");

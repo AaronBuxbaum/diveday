@@ -71,7 +71,7 @@ export function BoatAtDeparture({
               {t("incidentExport.boatChanged", { boatName: boatSafety.boatName })}
             </p>
           ) : null}
-          <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+          <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
             {PAPER_ROWS.map((row) => {
               const value = boatSafety.papers[row.key];
               return (
@@ -102,7 +102,7 @@ export function BoatAtDeparture({
           {/* The register's notices and the crew's checklist answer, side by
               side and from the one snapshot, so the two describe one moment
               (issue 2725). */}
-          <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+          <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <div>
               <p className="text-muted">{t("incidentExport.boatNoticesLabel")}</p>
               {boatSafety.notices.length === 0 ? (

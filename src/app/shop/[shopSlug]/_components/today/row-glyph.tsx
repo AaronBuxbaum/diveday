@@ -1,8 +1,8 @@
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import type { LedgerRowKindTone } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
+import type { ACTION_KIND_META, TodayAction } from "@/features/today";
 import type { StaffDestinationId } from "@/lib/staff-destinations";
-import type { ACTION_KIND_META, TodayAction } from "@/lib/today";
 
 /*
  * A Needs you row's leading mark, shared by Today's rows and a departure's

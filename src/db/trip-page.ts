@@ -1,9 +1,7 @@
-import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
 import { canPersonRefund, canPersonRetireMedicalRefusal } from "./authz";
 import { listBoats } from "./boats";
 import type { AppDb } from "./client";
-import { getDepartureNeeds } from "./today-departure-needs";
 import { getTripGuests, type TripGuestsFilters, type TripGuestsShop } from "./trip-guests";
 import { listTripLenses } from "./trip-lenses";
 import { getTripOverview, type TripOverviewShop } from "./trip-overview";
@@ -23,9 +21,11 @@ export type TripManifestShop = TripOverviewShop &
  * the trip tags for the Details selects, the latest stage, and what the reader
  * may do. `null` when there is no such departure in this shop.
  *
- * The departure's needs (Today's queue, filtered to this boat) start with
- * everything else and are only waited on when the overview says the pulse
- * needs them; the Details tab never asks.
+ * The departure's needs (Today's queue, filtered to this boat) are not read
+ * here: they belong to the Today feature (`getDepartureNeeds` in
+ * `@/features/today`), which sits above `src/db`, so the page starts them
+ * beside this call and waits on them only when the overview's `pulseNeeded`
+ * says so.
  */
 export async function getTripManifest(
   db: AppDb,
@@ -33,21 +33,11 @@ export async function getTripManifest(
   tripId: string,
   input: {
     session: { user: { personId: string; roles: readonly Role[] } };
-    now: Date;
-    t: StaffTranslator;
-    locale: string;
-    /** `"details"` skips the departure's needs. */
-    view?: string;
     filters: TripGuestsFilters;
   },
 ) {
-  const { session, now, t, locale } = input;
-  const personId = session.user.personId;
+  const personId = input.session.user.personId;
   const sharedReads = loadTripSharedReads(db, shop.id, tripId);
-  const needs =
-    input.view === "details"
-      ? null
-      : getDepartureNeeds(db, shop, tripId, { now, t, locale, session });
   const [overview, guests, boats, lenses, refund, stage, retireMedicalRefusal] = await Promise.all([
     getTripOverview(db, shop, tripId, personId, undefined, sharedReads),
     getTripGuests(db, shop, tripId, input.filters, sharedReads),
@@ -70,7 +60,6 @@ export async function getTripManifest(
     boats,
     lenses,
     stage,
-    needs: overview.pulseNeeded ? await needs : null,
     can: { refund, retireMedicalRefusal },
   };
 }

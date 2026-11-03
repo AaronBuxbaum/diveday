@@ -13,7 +13,7 @@ import {
   unit,
 } from "./gear-counter-rentals-test-fixtures";
 import { recordGearService } from "./gear-service";
-import { gearReservations, nitroxCertifications, shops } from "./schema";
+import { cards, gearReservations, shops } from "./schema";
 
 /**
  * **An EANx tank that left without a current O2-clean record** (issue #3005).
@@ -26,7 +26,8 @@ import { gearReservations, nitroxCertifications, shops } from "./schema";
 
 async function nitroxDiver(db: AppDb, shopId: string, name = "Nitrox Nia") {
   const diver = await person(db, shopId, name);
-  await db.insert(nitroxCertifications).values({
+  await db.insert(cards).values({
+    kind: "nitrox",
     shopId,
     personId: diver.id,
     agency: "padi",

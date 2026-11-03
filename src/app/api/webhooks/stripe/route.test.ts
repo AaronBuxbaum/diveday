@@ -97,7 +97,7 @@ function eventPayload(event: Record<string, unknown>) {
   return JSON.stringify({ livemode: true, ...event });
 }
 
-const FAKE_CHECKOUT = { id: "checkout_1", purpose: "fare" as const };
+const FAKE_CHECKOUT = { id: "checkout_1" };
 
 beforeEach(() => {
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", secret);
@@ -363,27 +363,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
   });
 
-  it("checkout.session.completed settles a tip checkout and logs tip_paid", async () => {
-    vi.mocked(markCheckoutPaidBySessionId).mockResolvedValue({
-      id: "tip_1",
-      purpose: "tip",
-    } as never);
-    const response = await post({
-      id: "evt_1",
-      type: "checkout.session.completed",
-      data: { object: { id: "cs_tip_1", payment_status: "paid" } },
-    });
-    expect(response.status).toBe(200);
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
-      FAKE_DB,
-      "cs_tip_1",
-      undefined,
-      undefined,
-      undefined,
-      { firstCompletion: false, reportedOverCeiling: false },
-    );
-  });
-
   it("checkout.session.completed does NOT mark paid when payment_status is unpaid (async payment pending)", async () => {
     const response = await post({
       id: "evt_1",
@@ -411,24 +390,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     );
     // Never a payment-side write, and never the paid path.
     expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
-  });
-
-  it("checkout.session.async_payment_failed expires a tip checkout and logs tip_expired", async () => {
-    vi.mocked(markCheckoutPaymentFailedBySessionId).mockResolvedValue({
-      id: "tip_1",
-      purpose: "tip",
-    } as never);
-    const response = await post({
-      id: "evt_1",
-      type: "checkout.session.async_payment_failed",
-      data: { object: { id: "cs_tip_1" } },
-    });
-    expect(response.status).toBe(200);
-    expect(markCheckoutPaymentFailedBySessionId).toHaveBeenCalledWith(
-      FAKE_DB,
-      "cs_tip_1",
-      undefined,
-    );
   });
 
   // Idempotency at the route level: the db helper returns null for a row that
@@ -465,20 +426,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
     expect(response.status).toBe(200);
     expect(markCheckoutExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123", undefined);
-  });
-
-  it("checkout.session.expired marks a tip checkout expired and logs tip_expired", async () => {
-    vi.mocked(markCheckoutExpiredBySessionId).mockResolvedValue({
-      id: "tip_1",
-      purpose: "tip",
-    } as never);
-    const response = await post({
-      id: "evt_1",
-      type: "checkout.session.expired",
-      data: { object: { id: "cs_tip_1" } },
-    });
-    expect(response.status).toBe(200);
-    expect(markCheckoutExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1", undefined);
   });
 
   // Issue #1621. Stripe creates a Customer `if_required`, so the id appears on
@@ -523,21 +470,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       // an obligation against an id nobody has is noise an owner cannot
       // discharge.
       expect(recordCheckoutStripeCustomer).not.toHaveBeenCalled();
-    });
-
-    it("records customer on the checkout for tips and fares alike", async () => {
-      const response = await post({
-        id: "evt_1",
-        type: "checkout.session.completed",
-        data: { object: { id: "cs_tip_1", payment_status: "paid", customer: "cus_tipper" } },
-        account: "acct_123",
-      });
-      expect(response.status).toBe(200);
-      expect(recordCheckoutStripeCustomer).toHaveBeenCalledWith(FAKE_DB, {
-        stripeSessionId: "cs_tip_1",
-        stripeCustomerId: "cus_tipper",
-        expectedAccountId: "acct_123",
-      });
     });
 
     it("reads an expanded Customer object as its id", async () => {

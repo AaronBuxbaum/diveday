@@ -32,7 +32,7 @@ function Box({ label }: { label: string }) {
 
 function Line({ label }: { label: string }) {
   return (
-    <div className="mt-8 border-b border-foreground pb-1 print:mt-6">
+    <div className="mt-6 border-b border-foreground pb-1">
       <span className="text-xs text-muted">{label}</span>
     </div>
   );

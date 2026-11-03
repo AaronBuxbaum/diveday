@@ -18,10 +18,12 @@ Today, notifications, offline manifests, auth). What they do not say:
 - **Admission is weaker than readiness**: `src/lib/trip-admission.ts` (booking-time) never refuses
   someone `src/lib/readiness.ts` (boarding-time) would clear.
 - **Codes and deals** both resolve in `bookSpot`, and Stripe owns the arithmetic.
-- **Closing the day** is a recorded act, never a gate, and Today has one detector
-  (ADR 20260804-day-closeout). What a `src/db` module needs from Today and the close-out is a small
-  file below them: `today-kinds.ts`, `today-urgency.ts`, `today-job.ts`, `seat-sailed.ts`,
-  `shop-day.ts`; import those, not the queue.
+- **Today and the close-out are a feature**, `src/features/today` (issue #2756): they read every
+  other module, so nothing in `src/lib`, `src/db` or `src/i18n` imports them. Closing the day is a
+  recorded act, never a gate, and the open head counts have one detector, `src/db/roll-call-gaps.ts`
+  (ADR 20260804-day-closeout). What a substrate module needs from Today is a small file below it:
+  `today-kinds.ts`, `today-urgency.ts`, `today-job.ts`, `roll-call-gaps.ts`, `closeout-kinds.ts`,
+  `blockers.ts`, `seat-sailed.ts`, `shop-day.ts`; import those, not the queue.
 - **Offline manifests**: two `no-store` routes read through the response types in
   `src/lib/offline-manifests.ts` (ADR 20260726-shopwide-offline-manifest-priming).
 - **Dive-site difficulty** is one of three codes in `src/lib/dive-site-difficulty.ts`, never free

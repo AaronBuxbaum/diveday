@@ -4,7 +4,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { commitContactImport } from "./import";
-import { certifications, people, userAccounts, waiverRecords } from "./schema";
+import { cards, people, userAccounts, waiverRecords } from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -101,7 +101,10 @@ describe("commitContactImport — what an assisted column may change", () => {
     expect(ana).toMatchObject({ fullName: "Ana Booker", dateOfBirth: "2017-03-01" });
     if (!ana) throw new Error("expected Ana");
     expect(
-      await db.select().from(certifications).where(eq(certifications.personId, ana.id)),
+      await db
+        .select()
+        .from(cards)
+        .where(and(eq(cards.kind, "level"), eq(cards.personId, ana.id))),
     ).toHaveLength(0);
     expect(
       await db.select().from(waiverRecords).where(eq(waiverRecords.personId, ana.id)),

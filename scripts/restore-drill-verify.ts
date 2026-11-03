@@ -38,9 +38,9 @@ import { getTripManifest } from "@/db/manifests";
 import { people, personRoles, shops, trips, userAccounts } from "@/db/schema";
 import { liveTrip } from "@/db/trips-live";
 import { listShopDayDepartures } from "@/db/trips-queries";
+import { tomorrowNoon } from "@/features/today";
 import { isStaff, type Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { tomorrowNoon } from "@/lib/closeout";
 import { DEMO_BYPASS_PASSWORD, demoBypassEnabled } from "@/lib/demo-bypass";
 
 type Departure = { id: string; startsAt: Date };

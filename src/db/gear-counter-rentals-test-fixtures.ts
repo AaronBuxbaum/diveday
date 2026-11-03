@@ -4,7 +4,7 @@ import type { AppDb } from "./client";
 import { createGearItem } from "./gear";
 import { createCounterRental } from "./gear-counter-rentals";
 import {
-  certifications,
+  cards,
   type GearItemKindValue,
   gearReservations,
   people,
@@ -60,7 +60,8 @@ export async function person(
   if (!row) throw new Error("person insert failed");
   await db.insert(personRoles).values({ personId: row.id, role: "diver" });
   if (options.card ?? true) {
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId,
       personId: row.id,
       agency: "padi",

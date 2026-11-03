@@ -27,7 +27,7 @@ Today answers two questions, in that order, and nothing else:
    departure three weeks out is a Schedule question.
 2. **Who needs me before they do?** A ranked work queue over the next seven days.
 
-Rules that define the queue, encoded in [`src/lib/today.ts`](../../../src/lib/today.ts):
+Rules that define the queue, encoded in [`src/features/today/today.ts`](../../../src/features/today/today.ts):
 
 - **Every row is an action.** A row carries a subject, why it is timely, what is wrong in staff
   language, and a verb-labelled link to the one surface that fixes it. Card evidence resolves to

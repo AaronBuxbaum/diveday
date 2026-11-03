@@ -7,10 +7,11 @@ import { summarizeShopYear } from "@/lib/shop-year";
 import { shiftInstantByCalendarDays } from "@/lib/zoned";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
+import { paymentEntries } from "./payments";
 import { getShopYear, getYearMonthInputs, getYearToDate } from "./reporting";
 import {
   boats,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   diveSites,
   people,
@@ -72,13 +73,15 @@ async function makeBooking(
 }
 
 async function pay(db: AppDb, shopId: string, bookingId: string, amountCents: number) {
-  await db.insert(bookingPayments).values({
-    shopId,
-    bookingId,
-    status: "paid",
-    amountCents,
-    currency: "usd",
-  });
+  await db.insert(bookingPaymentEvents).values(
+    paymentEntries({
+      shopId,
+      bookingId,
+      status: "paid",
+      amountCents,
+      currency: "usd",
+    }),
+  );
 }
 
 /**

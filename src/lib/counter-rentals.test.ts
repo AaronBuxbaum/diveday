@@ -111,7 +111,9 @@ describe("counterRentalLineCents", () => {
 
 function card(overrides: Partial<Certification> = {}): Certification {
   return {
+    kind: "level",
     level: "open_water",
+    specialty: null,
     status: "verified",
     selfDeclaredAt: null,
     ...overrides,
@@ -120,6 +122,8 @@ function card(overrides: Partial<Certification> = {}): Certification {
 
 function specialty(overrides: Partial<SpecialtyCertification> = {}): SpecialtyCertification {
   return {
+    kind: "specialty",
+    level: null,
     specialty: "drysuit",
     status: "verified",
     importedAt: null,

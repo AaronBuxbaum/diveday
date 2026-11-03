@@ -118,7 +118,9 @@ describe("the dock copy of a training dive", () => {
 describe("junior safety advisories on a saved manifest", () => {
   it("stores the worded advisory without storing card details or a birthday", () => {
     const manifest = manifestWith({
-      depthAdvisory: { status: "verification_required", verificationReasons: ["card_status"] },
+      advisories: [
+        { code: "depth_verification_required", params: { verificationReasons: ["card_status"] } },
+      ],
     });
     const payload = serializeManifests(
       [manifest],
@@ -139,7 +141,9 @@ describe("junior safety advisories on a saved manifest", () => {
   it("withholds the advisory for a held identity", () => {
     const manifest = manifestWith({
       identityWithheld: true,
-      depthAdvisory: { status: "verification_required", verificationReasons: ["card_status"] },
+      advisories: [
+        { code: "depth_verification_required", params: { verificationReasons: ["card_status"] } },
+      ],
     });
     const payload = serializeManifests(
       [manifest],

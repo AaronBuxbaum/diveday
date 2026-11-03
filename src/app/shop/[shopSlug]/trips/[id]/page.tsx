@@ -9,6 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { getTripManifest } from "@/db/trip-page";
+import { getDepartureNeeds } from "@/features/today";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -113,13 +114,12 @@ export default async function ManageTripPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const now = nowDate();
+  // Today's queue for this boat, awaited only if the pulse needs it.
+  const departureNeeds =
+    view === "details" ? null : getDepartureNeeds(db, shop, tripId, { now, t, locale, session });
   const [manifest, staffGates] = await Promise.all([
     getTripManifest(db, shop, tripId, {
       session,
-      now,
-      t,
-      locale,
-      view,
       filters: { diverQuery: diverq, confirmName },
     }),
     readStaffGates(db, shop.id, session.user.personId),
@@ -131,7 +131,6 @@ export default async function ManageTripPage({
     boats: shopBoats,
     lenses: shopLenses,
     stage: stageReading,
-    needs,
     can: { refund: mayWriteOffPayment, retireMedicalRefusal: mayRetireRefusal },
   } = manifest;
   const {
@@ -172,7 +171,7 @@ export default async function ManageTripPage({
     tripId,
     now,
     t,
-    needs,
+    needs: overview.pulseNeeded ? await departureNeeds : null,
   });
 
   // **Details is its own tab**, and a save on it lands back on it.

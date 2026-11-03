@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { createDiver, getDiverProfile } from "./divers";
-import { certifications, nitroxCertifications, specialtyCertifications } from "./schema";
+import { cards } from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -13,8 +13,9 @@ describe("diver profile card ordering", () => {
     const tiedAt = new Date("2026-10-28T12:00:00.000Z");
     const newestAt = new Date("2026-10-28T12:01:00.000Z");
 
-    await db.insert(certifications).values([
+    await db.insert(cards).values([
       {
+        kind: "level",
         id: "00000000-0000-4000-8000-000000000102",
         shopId: shop.id,
         personId: diver.id,
@@ -24,6 +25,7 @@ describe("diver profile card ordering", () => {
         createdAt: tiedAt,
       },
       {
+        kind: "level",
         id: "00000000-0000-4000-8000-000000000101",
         shopId: shop.id,
         personId: diver.id,
@@ -33,6 +35,7 @@ describe("diver profile card ordering", () => {
         createdAt: tiedAt,
       },
       {
+        kind: "level",
         id: "00000000-0000-4000-8000-000000000103",
         shopId: shop.id,
         personId: diver.id,
@@ -42,8 +45,9 @@ describe("diver profile card ordering", () => {
         createdAt: newestAt,
       },
     ]);
-    await db.insert(specialtyCertifications).values([
+    await db.insert(cards).values([
       {
+        kind: "specialty",
         id: "00000000-0000-4000-8000-000000000202",
         shopId: shop.id,
         personId: diver.id,
@@ -53,6 +57,7 @@ describe("diver profile card ordering", () => {
         createdAt: tiedAt,
       },
       {
+        kind: "specialty",
         id: "00000000-0000-4000-8000-000000000201",
         shopId: shop.id,
         personId: diver.id,
@@ -62,6 +67,7 @@ describe("diver profile card ordering", () => {
         createdAt: tiedAt,
       },
       {
+        kind: "specialty",
         id: "00000000-0000-4000-8000-000000000203",
         shopId: shop.id,
         personId: diver.id,
@@ -71,8 +77,9 @@ describe("diver profile card ordering", () => {
         createdAt: newestAt,
       },
     ]);
-    await db.insert(nitroxCertifications).values([
+    await db.insert(cards).values([
       {
+        kind: "nitrox",
         id: "00000000-0000-4000-8000-000000000302",
         shopId: shop.id,
         personId: diver.id,
@@ -81,6 +88,7 @@ describe("diver profile card ordering", () => {
         createdAt: tiedAt,
       },
       {
+        kind: "nitrox",
         id: "00000000-0000-4000-8000-000000000301",
         shopId: shop.id,
         personId: diver.id,
@@ -89,6 +97,7 @@ describe("diver profile card ordering", () => {
         createdAt: tiedAt,
       },
       {
+        kind: "nitrox",
         id: "00000000-0000-4000-8000-000000000303",
         shopId: shop.id,
         personId: diver.id,

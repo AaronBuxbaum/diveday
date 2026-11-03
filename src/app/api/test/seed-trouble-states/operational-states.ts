@@ -9,7 +9,7 @@ import { seatMarks } from "@/db/roll-call-subject";
 import {
   boats,
   bookings,
-  certifications,
+  cards,
   courses,
   people,
   personRoles,
@@ -173,7 +173,8 @@ export async function seedOperationalTrust(
       .returning();
     if (!booking) throw new Error("operational fixture seat missing");
     if (participantType === "diver") {
-      await db.insert(certifications).values({
+      await db.insert(cards).values({
+        kind: "level",
         shopId: shop.id,
         personId: person.id,
         agency: "padi",

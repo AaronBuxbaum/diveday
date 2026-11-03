@@ -20,7 +20,7 @@ export type CrewSheetInput = {
  * **Which departures count.** Those that *started* inside the month, are still
  * on the board (`liveTrip()`), and were not called off: a cancelled charter is
  * not a shift anyone worked. That is the same rule `todaysTrips` applies in
- * `src/db/closeout.ts`.
+ * `src/features/today/closeout-reader.ts`.
  *
  * **How long one ran.** The trip's own scheduled days when it has them, summed
  * — so a three-day course is three working days rather than the seventy-two

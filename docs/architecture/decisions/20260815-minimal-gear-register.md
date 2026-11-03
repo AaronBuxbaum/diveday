@@ -88,7 +88,7 @@ gear_reservations
   (The sketch here originally said "new feature module, per
   [20260730-feature-module-contracts](20260730-feature-module-contracts.md)" — superseded by the
   build amendment below: the shipped boundary is `src/lib/gear.ts` + `src/db/gear.ts`, no
-  `src/features/gear`, because Today's gear rows live in `src/db/today.ts` and `src/db` may not
+  `src/features/gear`, because Today's gear rows live in `src/features/today/today-reader.ts` and `src/db` may not
   import `src/features`.)
 - **Payments** — no new payment machinery. A reservation attaches to the same
   `order_line_items` row (`kind: "rental"`) the booking already creates; the reservation is a
@@ -99,7 +99,7 @@ gear_reservations
   equipment-specific liability addendum, that's a separate decision (a second template type,
   against the CR-015 invariant) and is out of scope here, not silently solved by inventing one.
 - **What's out and when it's due back** — a Today-queue row for "due back today," reusing
-  `src/lib/today.ts`'s existing assembly pattern, plus the `/gear` list's own filter.
+  `src/features/today/today.ts`'s existing assembly pattern, plus the `/gear` list's own filter.
 - **Avoid double booking** — the `EXCLUDE USING gist` constraint above, enforced at the database
   layer. Ships with its own real-Postgres CI coverage racing two concurrent reservation attempts
   for the same unit, mirroring the existing `FOR UPDATE` seat-oversell test.
@@ -170,7 +170,7 @@ schema sketch above, each for a reason worth keeping:
   carries it (tenancy + the delete-path coverage tests force the decision anyway).
 - **No feature module.** The sketch said `src/features/gear`; the shipped shape is
   `src/lib/gear.ts` + `src/db/gear.ts`, because the Today queue's gear rows live in
-  `src/db/today.ts`, and `src/db` may not import `src/features` (the one-way layering
+  `src/features/today/today-reader.ts`, and `src/db` may not import `src/features` (the one-way layering
   `pnpm check:architecture` enforces). The surface is ordinary app routes at
   `/shop/[shopSlug]/gear`, like every other pillar's.
 - **Reservations cascade from bookings and items** (`ON DELETE CASCADE`) rather than blocking

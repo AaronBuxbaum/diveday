@@ -1,15 +1,9 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { addAgencyListedCards } from "@/db/agency-check";
 import type { AppDb } from "@/db/client";
 import { reviewNitroxCertification, unreviewNitroxCertification } from "@/db/nitrox";
-import {
-  certifications,
-  nitroxCertifications,
-  people,
-  shops,
-  specialtyCertifications,
-} from "@/db/schema";
+import { cards, people, shops } from "@/db/schema";
 import { recordSelfDeclaredCards } from "@/db/self-declared-cards";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -81,11 +75,12 @@ async function pendingCard(
   db: AppDb,
   shopId: string,
   personId: string,
-  values: Partial<typeof certifications.$inferInsert> = {},
+  values: Partial<typeof cards.$inferInsert> = {},
 ) {
   const [card] = await db
-    .insert(certifications)
+    .insert(cards)
     .values({
+      kind: "level",
       shopId,
       personId,
       agency: "naui",
@@ -108,7 +103,10 @@ function check(certificationId: string, pageText: string | null, intent?: "undo"
 }
 
 async function cardRow(db: AppDb, id: string) {
-  const [row] = await db.select().from(certifications).where(eq(certifications.id, id));
+  const [row] = await db
+    .select()
+    .from(cards)
+    .where(and(eq(cards.id, id), eq(cards.kind, "level")));
   return row;
 }
 
@@ -353,8 +351,8 @@ describe("agencyCheckAction", () => {
     await recordSelfDeclaredCards(db, { shopId: shop.id, personId, level: "advanced_open_water" });
     const [claim] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, personId));
+      .from(cards)
+      .where(and(eq(cards.personId, personId), eq(cards.kind, "level")));
     if (!claim) throw new Error("self-declaration wrote no card");
 
     const result = await agencyCheckAction(shop.slug, personId, null, check(claim.id, NAUI_PAGE));
@@ -418,12 +416,12 @@ describe("addAgencyListedCardsAction", () => {
   async function filed(db: AppDb, personId: string) {
     const nitrox = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.personId, personId));
+      .from(cards)
+      .where(and(eq(cards.personId, personId), eq(cards.kind, "nitrox")));
     const specialties = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.personId, personId));
+      .from(cards)
+      .where(and(eq(cards.personId, personId), eq(cards.kind, "specialty")));
     return { nitrox, specialties };
   }
 
@@ -528,7 +526,8 @@ describe("addAgencyListedCardsAction", () => {
 
   it("never offers or files a card the diver already holds", async () => {
     const { db, shop, personId } = await context();
-    await db.insert(nitroxCertifications).values({
+    await db.insert(cards).values({
+      kind: "nitrox",
       shopId: shop.id,
       personId,
       agency: "padi",
@@ -638,8 +637,9 @@ describe("addAgencyListedCardsAction", () => {
   it("offers nitrox over an unsighted self-declaration, and retires the claim when it is added", async () => {
     const { db, shop, owner, personId } = await context();
     const [claim] = await db
-      .insert(nitroxCertifications)
+      .insert(cards)
       .values({
+        kind: "nitrox",
         shopId: shop.id,
         personId,
         agency: "other",

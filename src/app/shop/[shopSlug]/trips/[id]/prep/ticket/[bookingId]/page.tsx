@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { EyebrowWayUp } from "@/components/EyebrowWayUp";
-import { PrintButton } from "@/components/PrintButton";
-import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
-import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getRentalTicket } from "@/db/trip-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
+import { PREP_SECTION_ID } from "@/lib/element-id";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { PACKET_PAPER } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { RentalTicketReceipt } from "../../../../../gear/_components/RentalTicketReceipt";
+import { RentalSlip } from "../../../../../gear/_components/RentalSlip";
+import { SheetDocument } from "../../../../../print/_components/SheetDocument";
+import { sheetPrinted } from "../../../../../print/_components/ShopSheet";
 
 export const instant = true;
 
@@ -23,7 +24,8 @@ export const metadata: Metadata = {
 
 /**
  * One diver's rental slip: what they have and when it is due back, for the
- * counter to print and hand over (ADR 20260815-minimal-gear-register).
+ * counter to print and hand over (ADR 20260815-minimal-gear-register), as one
+ * sheet of the shop's paper (`RentalSlip`, issue #2745).
  *
  * The trip slip is read-only and carries no bill: a list of unit tags and one
  * date, then the shared foot (`RentalTicketReceipt`, which owns the terms,
@@ -62,60 +64,32 @@ export default async function RentalTicketPage({
     assignments[0]?.reservedUntil ?? "",
   );
   return (
-    <div id="rental-ticket">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
-        <div>
-          {/* On screen the eyebrow is the way back to the packing list (principle
-              10, issue #823); on paper it names the slip, which has no
-              navigation. */}
-          <EyebrowWayUp className="print:hidden">{t("trips.surfaces.trip")}</EyebrowWayUp>
-          <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("gear.ticket.eyebrow")}</p>
-          <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{diver.fullName}</h1>
-          <p className="mt-1 text-muted">
-            {trip.title} · {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-            {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
-          <PrintButton label={t("shared.printButton.label")} />
-        </div>
-      </header>
-
-      <section aria-labelledby="ticket-units-heading" className="mt-8">
-        <h2 id="ticket-units-heading" className={SECTION_TITLE_CLASS}>
-          {t("gear.ticket.unitsHeading")}
-        </h2>
-        {/* One column for the tags, so every kind starts at one x (K-505): two
-            columns sized by the widest tag, each row a subgrid. */}
-        <ul
-          className={sectionCardClass({
-            padding: "none",
-            className:
-              "mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 divide-y divide-border overflow-hidden",
-          })}
-        >
-          {assignments.map((assignment) => (
-            <li
-              key={assignment.reservationId}
-              className="col-span-2 grid grid-cols-subgrid items-baseline px-4 py-3 sm:px-5"
-            >
-              <span className="font-mono text-lg font-medium">{assignment.label}</span>
-              <span className="text-muted">
-                {gearItemKindLabel(t, assignment.kind)}
-                {assignment.size ? ` · ${assignment.size}` : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <p className="mt-6 text-lg">
-        {t("gear.ticket.dueBack", {
-          date: formatCalendarDate(dueBack, locale),
-        })}
-      </p>
-      <RentalTicketReceipt terms={shop.rentalTerms} t={t} />
-      <p className="mt-8 border-t border-border pt-4 text-sm text-muted">{shop.name}</p>
-    </div>
+    <SheetDocument
+      backHref={`${shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}`}
+      paper={PACKET_PAPER}
+      brandDisplayFont={shop.brandDisplayFont}
+      backLabel={t("trips.tabs.gear")}
+      printLabel={t("print.sheet.door")}
+      // The packing list's door says "Rental ticket", not Print.
+      autoPrint={false}
+    >
+      <RentalSlip
+        shop={shop}
+        shopSlug={shopSlug}
+        printed={sheetPrinted(t, nowDate(), locale, shop.timezone)}
+        holder={diver.fullName}
+        line={`${trip.title} · ${formatShortDate(trip.startsAt, locale, shop.timezone)} · ${formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}`}
+        units={assignments.map((assignment) => ({
+          id: assignment.reservationId,
+          label: assignment.label,
+          detail: [gearItemKindLabel(t, assignment.kind), assignment.size]
+            .filter(Boolean)
+            .join(" · "),
+        }))}
+        dueBack={t("gear.ticket.dueBack", { date: formatCalendarDate(dueBack, locale) })}
+        terms={shop.rentalTerms}
+        t={t}
+      />
+    </SheetDocument>
   );
 }

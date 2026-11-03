@@ -13,7 +13,7 @@ it is exactly that peer.
 It is not a near-duplicate; it is a literal one at the data layer. Both surfaces call
 `pagedUpcomingTripsWithCounts` and `listTripsReadiness` over the same shared operational horizon
 (`src/lib/operational-window.ts`), and both resolve a blocked diver's one fix through the same
-`BLOCKER_ACTIONS` map in `src/lib/today.ts`. Nothing distinguishes them but the sort: Today ranks
+`BLOCKER_ACTIONS` map in `src/features/today/today.ts`. Nothing distinguishes them but the sort: Today ranks
 chronologically then by severity, Not ready groups by departure.
 
 The cost of having shipped it as a route was paid in four places at once:

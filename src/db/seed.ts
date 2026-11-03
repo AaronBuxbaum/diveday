@@ -13,6 +13,7 @@ import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { deleteDemoSafetyTrail } from "./incident-reports";
+import { deletePremergeCards } from "./premerge-cards-cleanup";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   accountSecurity,
@@ -28,14 +29,13 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
   bookingReferrals,
   bookings,
   buddyTeamEvents,
   buddyTeamMembers,
   calendarFeeds,
   capabilities,
-  certifications,
+  cards,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -62,7 +62,6 @@ import {
   internalNotes,
   marineLifeRequests,
   mediaDeletionAttempts,
-  nitroxCertifications,
   notificationDeliveries,
   notificationSendQueue,
   orderLineItems,
@@ -87,7 +86,6 @@ import {
   shopStripeAccounts,
   shops,
   shopTextTranslations,
-  specialtyCertifications,
   staffCredentials,
   staffReplies,
   staffShifts,
@@ -359,11 +357,16 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
 }
 
 /**
+ * The demo's dusk boat, by title and clock, for the close-out's carry-over read
+ * (`src/features/today/closeout-reader.ts`), which lives outside `src/db`.
+ */
+export { DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "./seed-clock";
+/**
  * The colour a branded minted shop wears: mantis green, chosen because it is
  * not the product's teal and dark enough for white text as typed. Exported for
  * `e2e/storefront-brand.spec.ts`, which proves the storefront wears it.
  */
-export { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
+export { AT_SEA_DUSK_TITLE, MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 export { DEMO_SHOP_BRAND } from "./seed-shop-brand";
 
 /**
@@ -1534,7 +1537,6 @@ export async function clearDemoSchedule(
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
-  await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
@@ -1659,9 +1661,9 @@ export async function clearDemoSchedule(
   await db.delete(marineLifeRequests).where(eq(marineLifeRequests.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
-  await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
-  await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
-  await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  // Every kind of card at once: the reset clears the shop's whole ledger.
+  await db.delete(cards).where(eq(cards.shopId, shopId));
+  await deletePremergeCards(db, shopId);
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
 
   // Everyone except the staff seeded once at shop creation (`staffDefs`, by

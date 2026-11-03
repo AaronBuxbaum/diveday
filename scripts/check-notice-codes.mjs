@@ -369,7 +369,7 @@ const isNoticeDefinition = (value) =>
  * a `tone` and a `key`. The type is part of the shape because `{ tone, key }`
  * alone is also a badge: the blow-out page's `MESSAGE_BADGE` is keyed by a
  * delivery status (`no_email`) in a `BadgeTone`, and is not a notice map. Never
- * by key spelling, which is the whole trap: `src/lib/today.ts`,
+ * by key spelling, which is the whole trap: `src/features/today/today.ts`,
  * `src/i18n/card-labels.ts` and several more hold domain-enum maps keyed in
  * snake_case on purpose. A map declared in another file, or built at runtime,
  * is out of reach of a per-file scan and goes unjudged.

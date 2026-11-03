@@ -3,6 +3,7 @@ import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
+import { deletePremergeCards } from "./premerge-cards-cleanup";
 import {
   accountSecurity,
   accountSessions,
@@ -18,14 +19,13 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
   bookingReferrals,
   bookings,
   buddyTeamEvents,
   buddyTeamMembers,
   calendarFeeds,
   capabilities,
-  certifications,
+  cards,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -55,7 +55,6 @@ import {
   internalNotes,
   marineLifeRequests,
   mediaDeletionAttempts,
-  nitroxCertifications,
   notificationDeliveries,
   notificationSendQueue,
   orderLineItems,
@@ -89,7 +88,6 @@ import {
   shops,
   shopTextTranslations,
   shopWhatsappAccounts,
-  specialtyCertifications,
   staffCredentials,
   staffReplies,
   staffShifts,
@@ -201,7 +199,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(divePackages).where(eq(divePackages.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
-  await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
   // lever W) — two of them, and neither is deleted first — so it goes before them.
@@ -306,11 +303,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
 
   // People-scoped records and the shop's own catalog/config.
-  // Nitrox and specialty rows first: a card an agency check listed points at
-  // the level card whose page listed it (`listed_from_certification_id`).
-  await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
-  await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
-  await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  // Every kind of card at once: the reset clears the shop's whole ledger.
+  await db.delete(cards).where(eq(cards.shopId, shopId));
+  await deletePremergeCards(db, shopId);
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));

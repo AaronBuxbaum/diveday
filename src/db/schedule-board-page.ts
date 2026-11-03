@@ -10,7 +10,7 @@ import { crewAwayByTrip } from "./crew-away";
 import { listDiveSites } from "./dive-sites";
 import { readFormDraft } from "./form-drafts";
 import { listDateInterestsByIds, listOpenDateInterestsForDates } from "./interest-dates";
-import { openAfterDiveRollCalls } from "./today";
+import { openAfterDiveRollCalls } from "./roll-call-gaps";
 import { tripCrewByTrip } from "./trips-crew";
 import { upcomingScheduleRange, weekBoard } from "./trips-queries";
 import { departuresWeekBefore } from "./trips-schedule";

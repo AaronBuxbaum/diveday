@@ -294,13 +294,12 @@ describe("buildTripManifest", () => {
     expect(isRollCallCheckpoint("after_dive_3", 2)).toBe(false);
     // Bounded at both ends, and the bound is load-bearing off this file: the
     // departure log's roster and crew tables are three columns plus one per
-    // checkpoint, and they pick their scroll floor from a two-branch map over
-    // that count (`rollCallTableMinWidth`, trips/[id]/log/_components/
-    // roll-call-columns.ts, issue #1052), and their printed checkpoint width
-    // from another (`rollCallCheckpointPrintClass`, beside it). Two to six
-    // checkpoints is five to nine columns, so neither map has a missing case. Widening this clamp without widening that map would put
-    // a ninth column back at a floor sized for eight — which renders, and looks
-    // exactly like the crush issue #1035 fixed.
+    // checkpoint, and they pick their checkpoint width from a two-branch map
+    // over that count (`rollCallCheckpointClass`, trips/[id]/log/_components/
+    // roll-call-columns.ts, issue #1052), and print more than five as
+    // segments of two (`DepartureRoster`). Two to six checkpoints is five to
+    // nine columns, so neither has a missing case. Widening this clamp without
+    // widening them would put a seventh checkpoint on a sheet sized for six.
     expect(rollCallCheckpoints(1)).toHaveLength(2);
     expect(rollCallCheckpoints(4)).toHaveLength(5);
     expect(rollCallCheckpoints(5)).toHaveLength(6);

@@ -1,6 +1,6 @@
 import type { listOpenDateInterestsForDates } from "@/db/interest-dates";
+import type { openAfterDiveRollCalls } from "@/db/roll-call-gaps";
 import type { LastYearWeek, WeekCrew } from "@/db/schedule-board-page";
-import type { openAfterDiveRollCalls } from "@/db/today";
 import type { weekBoard } from "@/db/trips";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.

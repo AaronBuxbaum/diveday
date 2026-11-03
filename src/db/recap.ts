@@ -45,6 +45,7 @@ import { shopClock } from "@/lib/shop-clock";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
+import { levelCardLevel } from "./card-columns";
 import { refreshCheckoutFromStripe } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
@@ -59,9 +60,10 @@ import {
 } from "./notifications";
 import { queryAll } from "./query-helpers";
 import { autoFillRecapLine } from "./recap-assist";
+import { tripsWithSomebodyMissing } from "./roll-call-gaps";
 import {
   bookings,
-  certifications,
+  cards,
   notificationDeliveries,
   people,
   priorVisits,
@@ -74,7 +76,6 @@ import {
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking } from "./tips";
-import { tripsWithSomebodyMissing } from "./today";
 import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives, seatNotCancelled } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
@@ -634,7 +635,7 @@ export async function bookingsLeftAtTheDock(
  * real incident, the email lands in an inbox a family may be reading. So while
  * any diver or rostered crew member on a departure has an after-dive
  * `not_boarded` standing — the condition Today raises its missing-diver and
- * missing-crew rows on (`tripsWithSomebodyMissing`, src/db/today.ts)
+ * missing-crew rows on (`tripsWithSomebodyMissing`, src/db/roll-call-gaps.ts)
  * — **every** recap on that departure waits: the email, a staff send, and the
  * page. That covers the diver themselves, whose last word is the not-back one,
  * and the boatmates, whose "welcome back" would be the same email to a group
@@ -797,19 +798,20 @@ async function loadRecapPageData(
     // recap then says out loud.
     row.tripCourseId
       ? db
-          .select({ level: certifications.level, issuedAt: certifications.issuedByShopAt })
-          .from(certifications)
+          .select({ level: levelCardLevel, issuedAt: cards.issuedByShopAt })
+          .from(cards)
           .where(
             and(
-              eq(certifications.shopId, row.shopId),
-              eq(certifications.personId, row.personId),
-              eq(certifications.issuedFromTripId, row.tripId),
-              isNotNull(certifications.issuedByShopAt),
-              eq(certifications.status, "verified"),
-              isNull(certifications.deletedAt),
+              eq(cards.shopId, row.shopId),
+              eq(cards.kind, "level"),
+              eq(cards.personId, row.personId),
+              eq(cards.issuedFromTripId, row.tripId),
+              isNotNull(cards.issuedByShopAt),
+              eq(cards.status, "verified"),
+              isNull(cards.deletedAt),
             ),
           )
-          .orderBy(desc(certifications.issuedByShopAt))
+          .orderBy(desc(cards.issuedByShopAt))
           .limit(1)
       : Promise.resolve([]),
     // Who wrote the next step, for the name under the words. Read only when

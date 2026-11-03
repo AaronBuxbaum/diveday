@@ -14,7 +14,7 @@ it at the start.
 
 Three constraints shaped the design:
 
-- **No second detector.** `listRollCallGaps` and `getTodayWork` (src/db/today.ts) already decide
+- **No second detector.** `listRollCallGaps` (src/db/roll-call-gaps.ts) and `getTodayWork` (src/features/today/today-reader.ts) already decide
   what an open head count and an open job are. A close-out that re-derived either could disagree
   with the queue that chases them — about whether a person is accounted for.
 - **Never a gate.** Manifests and roll call are safety surfaces; the close-out is a ritual on top
@@ -35,7 +35,7 @@ A view switch labelled "urgency / departures / closing time" would hide a form b
 control. It replaces nothing and duplicates nothing: no data it shows is re-ranked Today evidence
 except the leftovers list, which is *deliberately* the queue's own rows (see below).
 
-- **Assembly, not detection** — `src/lib/closeout.ts` composes purely from `listRollCallGaps`
+- **Assembly, not detection** — `src/features/today/closeout.ts` composes purely from `listRollCallGaps`
   output and the `TodayAction` list: per-departure end states (`all_home` / `unreconciled` /
   `count_open` / `still_out` / `not_departed`), today's leftovers (queue rows dated today or
   undated, *minus* the roll-call kinds — a head count is chased, never carried or dismissed), and
@@ -81,7 +81,7 @@ route for the reasons above. `TOMORROW_GLANCE_LIMIT` is gone with the rows it bo
 cannot scroll, so there is nothing left to cap.
 
 Today gained the other half of the handoff at the same time: once every one of today's departures
-is back at the dock (`lastBoatIsIn`, src/lib/today.ts, read off the departures `getTodayWork`
+is back at the dock (`lastBoatIsIn`, src/features/today/today.ts, read off the departures `getTodayWork`
 already returns — no new detector, no wall-clock band), the shop home shows one calm card pointing
 at the close-out. The registry called this route "Today's evening mirror" while linking to it from
 nowhere but the nav's More drawer. It stays a suggestion: nothing nags, nothing gates, and a day

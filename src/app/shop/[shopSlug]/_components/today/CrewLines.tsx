@@ -1,4 +1,4 @@
-import type { CrewReading } from "@/db/day-money";
+import type { CrewReading } from "@/features/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyScanned, monthNames } from "@/lib/format";
 

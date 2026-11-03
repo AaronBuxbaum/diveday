@@ -1,5 +1,9 @@
-import type { assembleEveningClose } from "@/lib/closeout";
-import { type DaySpine, type roleLensFor, spineJobCount } from "@/lib/today";
+import {
+  type assembleEveningClose,
+  type DaySpine,
+  type roleLensFor,
+  spineJobCount,
+} from "@/features/today";
 
 /** Whether Today has a boat, task, previous demo close, or instructor session to show. */
 export function hasTodayWorkToShow(

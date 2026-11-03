@@ -22,12 +22,14 @@ import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { courseStudentSeatCap } from "./bookings";
 import { issueCapability, verifyCapability } from "./capabilities";
+import { specialtyCardSpecialty } from "./card-columns";
 import type { AppDb, DbExecutor } from "./client";
 import { lockDateRequestOffer, recordDateRequestOfferBooking } from "./date-request-offer-bookings";
 import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookings,
+  cards,
   type DiveSpecialty,
   type Interest,
   interests,
@@ -35,7 +37,6 @@ import {
   people,
   personRoles,
   shops,
-  specialtyCertifications,
   trips,
 } from "./schema";
 import { listCertificationSummaries, recordSelfDeclaredCards } from "./self-declared-cards";
@@ -990,15 +991,16 @@ export async function specialtiesForFit(
   }
   const rows = await db
     .select({
-      personId: specialtyCertifications.personId,
-      specialty: specialtyCertifications.specialty,
+      personId: cards.personId,
+      specialty: specialtyCardSpecialty,
     })
-    .from(specialtyCertifications)
+    .from(cards)
     .where(
       and(
-        eq(specialtyCertifications.shopId, shopId),
-        inArray(specialtyCertifications.personId, [...personIds]),
-        isNull(specialtyCertifications.deletedAt),
+        eq(cards.kind, "specialty"),
+        eq(cards.shopId, shopId),
+        inArray(cards.personId, [...personIds]),
+        isNull(cards.deletedAt),
       ),
     );
   for (const row of rows) {

@@ -1,33 +1,20 @@
 import { groupLabelClass } from "@/components/ui/group-label";
 
-/** Every printed sheet identifies its shop and full week, as well as its days. */
+/** The week's column heads: an unnamed person column, then the seven days. */
 export function StaffingWeekHeader({
   days,
-  shopName,
-  rangeLabel,
-  timeZoneLabel,
   words,
   grid,
 }: {
   days: { date: string; label: string; weekday: string; day: string; isToday: boolean }[];
-  shopName: string;
-  rangeLabel: string;
-  timeZoneLabel: string;
   words: { person: string; today: string };
   grid: { row: string; personHead: string; dayHead: string };
 }) {
   return (
-    <thead className="block print:table-header-group">
+    <thead className="block">
       <tr className={grid.row}>
         <th scope="col" className={`${grid.personHead} text-start font-normal`}>
           <span className="sr-only">{words.person}</span>
-          <div data-crew-print-context className="hidden text-sm leading-snug print:block">
-            <p className="font-semibold">{shopName}</p>
-            <p className="mt-1">{rangeLabel}</p>
-            <span data-crew-print-zone className="mt-1 block">
-              {timeZoneLabel}
-            </span>
-          </div>
         </th>
         {days.map((day) => (
           <th key={day.date} scope="col" className={`${grid.dayHead} text-start font-normal`}>

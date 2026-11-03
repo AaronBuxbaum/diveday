@@ -4,14 +4,7 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { getBookingReadiness } from "./readiness";
-import {
-  activityEvents,
-  bookings,
-  certifications,
-  people,
-  personRoles,
-  tripRequirements,
-} from "./schema";
+import { activityEvents, bookings, cards, people, personRoles, tripRequirements } from "./schema";
 import { seatParty } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers-completion";
@@ -299,7 +292,8 @@ describe("seatParty", () => {
       .values({ shopId: shop.id, fullName: `Gate Regular ${stamp}` })
       .returning({ id: people.id });
     if (!regular) throw new Error("fixture insert failed");
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: regular.id,
       agency: "padi",

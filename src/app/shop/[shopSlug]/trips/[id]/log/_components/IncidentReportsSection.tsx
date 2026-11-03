@@ -48,7 +48,7 @@ export function IncidentReportsSection({
           {reports.map((report) => (
             <li
               key={report.reportId}
-              className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
+              className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 py-2.5 text-sm"
             >
               {/* A deleted draft has no page to open (ADR
                   20261016-incident-drafts): it is listed, by whom and when. */}

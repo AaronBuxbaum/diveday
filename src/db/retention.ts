@@ -354,13 +354,17 @@ export const PRUNE_ARMS = {
     id: bookingCapabilities.id,
     clock: bookingCapabilities.expiresAt,
   },
-  // The local money ledger (DATA-M3). Longest window here by a wide margin;
-  // pruned at all only so that "how long is a shop's money history kept?" has
-  // a stated answer rather than an implicit "forever".
+  // A booking's money as entries (DATA-M3). Longest window here by a wide
+  // margin; pruned at all only so that "how long is a shop's money history
+  // kept?" has a stated answer rather than an implicit "forever". The newest
+  // entry per booking *is* its payment state (the `booking_payments` view,
+  // issue #2716), so it is never pruned: an old paid seat must not turn
+  // into one that sailed owing.
   booking_payment_events: {
     from: bookingPaymentEvents,
     id: bookingPaymentEvents.id,
     clock: bookingPaymentEvents.occurredAt,
+    extraWhere: sql`exists (select 1 from booking_payment_events newer where newer.shop_id = ${bookingPaymentEvents.shopId} and newer.booking_id = ${bookingPaymentEvents.bookingId} and (newer.occurred_at, newer.seq) > (${bookingPaymentEvents.occurredAt}, ${bookingPaymentEvents.seq}))`,
   },
   // Device push credentials (ADR 20260804-manifest-web-push). Pruned by
   // `created_at` rather than by the trip's departure: the row's whole value is

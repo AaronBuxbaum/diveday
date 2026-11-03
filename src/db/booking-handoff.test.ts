@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HANDOFF_TTL_MS } from "@/lib/booking-handoff";
 import { nowDate } from "@/lib/clock";
@@ -14,7 +14,7 @@ import {
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createNitroxCertification } from "./nitrox";
-import { bookings, nitroxCertifications, shops } from "./schema";
+import { bookings, cards, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -211,9 +211,9 @@ describe("lastGearFor", () => {
     });
     if (!card) throw new Error("card not created");
     await db
-      .update(nitroxCertifications)
+      .update(cards)
       .set({ status: "verified" })
-      .where(eq(nitroxCertifications.id, card.id));
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.id, card.id)));
     expect(await read()).toEqual({ nitrox: true, rentedKinds: ["bcd", "regulator"] });
   });
 

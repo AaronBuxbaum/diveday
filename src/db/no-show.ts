@@ -193,7 +193,7 @@ export async function markBookingNoShow(
       // site has no departure event at all, and one recorded as not back after
       // a dive is a missing-diver row on the manifest rather than an absence.
       // Reading the dock's `boarded` alone left this refusal silent about
-      // exactly the divers `inAfterDivePopulation` (src/db/today.ts) says are
+      // exactly the divers `inAfterDivePopulation` (src/features/today/today-reader.ts) says are
       // at risk in the water. The dock's own `not_boarded` is the other
       // direction and stays eligible: there it means "never left".
       onTheWater: await onTheWaterByRollCall(tx, input.shopId, seat.tripId, seat.id),

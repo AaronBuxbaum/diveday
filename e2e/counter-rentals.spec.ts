@@ -101,7 +101,8 @@ test.describe("staff", () => {
     // The ticket: who, what, and the one date that matters.
     await expect(page.getByRole("status").filter({ hasText: "Rented out" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: CUSTOMER })).toBeVisible();
-    const units = page.getByRole("list").filter({ hasText: "Mask #2" });
+    // The slip's own list: the screen above it says where each unit stands.
+    const units = page.locator("#rental-ticket").getByRole("list").filter({ hasText: "Mask #2" });
     await expect(units).toContainText("Fins #2");
     await expect(page.getByText(/^Back by /)).toBeVisible();
     await expect(page.getByRole("button", { name: "Print" })).toBeVisible();

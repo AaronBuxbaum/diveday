@@ -87,6 +87,7 @@ export {
   notificationSubjectEmail,
   notificationSubjectPhone,
   recipientLocale,
+  type WeeklyDigestEmailSection,
 } from "./kinds";
 export {
   NOTIFICATION_PROVIDER_TIMEOUT_MS,

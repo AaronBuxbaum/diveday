@@ -7,7 +7,6 @@ import {
   gt,
   gte,
   inArray,
-  isNull,
   lt,
   lte,
   ne,
@@ -34,6 +33,7 @@ import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { departureMayBeAtSea } from "./aboard-at-sea";
 import { canPersonCallDayBlowout, canPersonRefund } from "./authz";
 import { releasePackageCoverageForBooking } from "./bookings";
+import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices } from "./crew-notices";
@@ -51,11 +51,8 @@ import type { BlowoutCause, BlowoutMessageStatus, PaymentStatus } from "./schema
 import {
   bookingPayments,
   bookings,
-  certifications,
-  nitroxCertifications,
   people,
   shops,
-  specialtyCertifications,
   tripAssignments,
   tripBlowoutDivers,
   tripBlowouts,
@@ -486,50 +483,6 @@ export async function listDayBlowoutDepartures(
   }));
 }
 
-/** One diver's cert evidence at this shop — the same rows the booking gate reads. */
-async function certificationEvidence(db: DbExecutor, shopId: string, personId: string) {
-  const [certificationRows, specialtyRows, nitroxRows] = await queryAll(db, [
-    () =>
-      db
-        .select()
-        .from(certifications)
-        .where(
-          and(
-            eq(certifications.shopId, shopId),
-            eq(certifications.personId, personId),
-            isNull(certifications.deletedAt),
-          ),
-        ),
-    () =>
-      db
-        .select()
-        .from(specialtyCertifications)
-        .where(
-          and(
-            eq(specialtyCertifications.shopId, shopId),
-            eq(specialtyCertifications.personId, personId),
-            isNull(specialtyCertifications.deletedAt),
-          ),
-        ),
-    () =>
-      db
-        .select()
-        .from(nitroxCertifications)
-        .where(
-          and(
-            eq(nitroxCertifications.shopId, shopId),
-            eq(nitroxCertifications.personId, personId),
-            isNull(nitroxCertifications.deletedAt),
-          ),
-        ),
-  ]);
-  return {
-    certifications: certificationRows,
-    specialtyCertifications: specialtyRows,
-    nitroxCertifications: nitroxRows,
-  };
-}
-
 /**
  * Every departure the cascade could offer, with the requirement data the pure
  * filter needs. Gathered once per cascade, not per diver — the trips are the
@@ -696,7 +649,8 @@ async function sendPendingBlowoutMessages(
           ),
         );
       const [evidence, courseSeats] = await queryAll(db, [
-        () => certificationEvidence(db, input.shopId, row.diver.personId),
+        // The same rows the booking gate reads.
+        () => readCertificationEvidence(db, input.shopId, row.diver.personId),
         () => listCourseSeatsInTraining(db, input.shopId, [row.diver.personId]),
       ]);
       const offeredTripIds = qualifyingAlternatives({

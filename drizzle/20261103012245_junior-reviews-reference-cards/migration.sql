@@ -1,0 +1,3 @@
+-- diveday:allow-destructive drop-constraint certification_junior_reviews.certification_junior_reviews_fhxDHj1bkYkh_fkey: repointed from certifications to cards, whose ids are the same rows copied by the previous migration; the previous release writing a review against a card it created after the copy is the one window, pre-pilot, no users (H-20260815-no-legacy)
+ALTER TABLE "certification_junior_reviews" DROP CONSTRAINT "certification_junior_reviews_fhxDHj1bkYkh_fkey";--> statement-breakpoint
+ALTER TABLE "certification_junior_reviews" ADD CONSTRAINT "certification_junior_reviews_certification_id_cards_id_fkey" FOREIGN KEY ("certification_id") REFERENCES "cards"("id") ON DELETE CASCADE;

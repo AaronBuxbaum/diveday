@@ -1,4 +1,7 @@
 import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES, PDF_CONTENT_TYPE } from "./limits";
+
+export { MAX_IMAGE_MB } from "./limits";
+
 import { processImage } from "./process-image";
 import { deleteS3Image, s3ImageStorageProvider, s3StorageConfigSchema } from "./s3";
 

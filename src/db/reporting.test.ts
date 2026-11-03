@@ -4,7 +4,9 @@ import type { Role } from "@/lib/authz";
 import { type MonthlyReport, summarizeMonth } from "@/lib/reporting";
 import { shiftInstantByCalendarDays, shopDayBounds, shopMonthBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
+import { insertTip } from "@/test/tips";
 import type { AppDb } from "./client";
+import { paymentEntries } from "./payments";
 import {
   canPersonViewShopReports,
   crewCountsByTrip,
@@ -16,7 +18,7 @@ import {
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   importedPaymentHistory,
   orders,
@@ -121,15 +123,17 @@ async function pay(
   amountCents: number,
   source: { provider?: string; providerRef?: string } = {},
 ): Promise<void> {
-  await db.insert(bookingPayments).values({
-    shopId,
-    bookingId,
-    status,
-    amountCents,
-    currency: "usd",
-    provider: source.provider,
-    providerRef: source.providerRef,
-  });
+  await db.insert(bookingPaymentEvents).values(
+    paymentEntries({
+      shopId,
+      bookingId,
+      status,
+      amountCents,
+      currency: "usd",
+      provider: source.provider,
+      providerRef: source.providerRef,
+    }),
+  );
 }
 
 /**
@@ -195,33 +199,15 @@ async function makeTip(
   status: "pending" | "paid" | "expired" = "paid",
 ): Promise<void> {
   seq += 1;
-  const [b] = await db
-    .select({ tripId: bookings.tripId })
-    .from(bookings)
-    .where(eq(bookings.id, bookingId));
-  if (!b) throw new Error("booking not found for tip");
-  const checkoutStatus = status === "paid" ? "completed" : status;
-  const [checkout] = await db
-    .insert(bookingCheckouts)
-    .values({
-      shopId,
-      tripId: b.tripId,
-      purpose: "tip",
-      currency: "usd",
-      status: checkoutStatus,
-      stripeAccountId: "acct_test",
-      stripeSessionId: `cs_tip_${seq}`,
-      amountPerDiverCents: amountCents,
-      totalCents: amountCents,
-      settledTotalCents: checkoutStatus === "completed" ? amountCents : null,
-      completedAt: checkoutStatus === "completed" ? new Date("2026-06-11T00:00:00Z") : null,
-    })
-    .returning();
-  if (!checkout) throw new Error("failed to insert tip checkout");
-  await db.insert(bookingCheckoutBookings).values({
+  await insertTip(db, {
     shopId,
-    checkoutId: checkout.id,
     bookingId,
+    status,
+    stripeAccountId: "acct_test",
+    stripeSessionId: `cs_tip_${seq}`,
+    currency: "usd",
+    amountCents,
+    completedAt: status === "paid" ? new Date("2026-06-11T00:00:00Z") : null,
   });
 }
 
@@ -675,13 +661,15 @@ describe("getMonthlyReport", () => {
     // inconsistency CR-007 exists to never trust. A query that (incorrectly)
     // relied on the bookingId join alone would still pick these up for
     // shop.id's report.
-    await db.insert(bookingPayments).values({
-      shopId: otherShop.id,
-      bookingId: booking,
-      status: "paid",
-      amountCents: 99_999,
-      currency: "usd",
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId: otherShop.id,
+        bookingId: booking,
+        status: "paid",
+        amountCents: 99_999,
+        currency: "usd",
+      }),
+    );
     const template = await getCurrentWaiverTemplate(db, shop.id);
     if (!template) throw new Error("seeded shop is missing a waiver template");
     await db.insert(waiverRecords).values({

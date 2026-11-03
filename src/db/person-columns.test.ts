@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { PERSON_COLUMNS, personColumnKey } from "./person-columns";
 import * as schema from "./schema";
+import { PREMERGE_CARD_TABLES } from "./schema-retired/premerge-cards";
 
 const ctx = fileScopedShopContext();
 
@@ -23,10 +24,16 @@ async function referencesToPeople(): Promise<string[]> {
     select table_name, column_name
     from information_schema.columns
     where table_schema = 'public' and column_name like '%person_id'
+      and table_name in (
+        select table_name from information_schema.tables
+        where table_schema = 'public' and table_type = 'BASE TABLE'
+      )
   `);
   const pairs = new Set<string>();
   for (const row of [...byConstraint.rows, ...byName.rows]) {
     const { table_name, column_name } = row as { table_name: string; column_name: string };
+    // Kept for the release before `cards` and read by nothing since (issue #2722).
+    if (PREMERGE_CARD_TABLES.includes(table_name)) continue;
     pairs.add(`${table_name}.${column_name}`);
   }
   return [...pairs].sort();

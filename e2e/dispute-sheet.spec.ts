@@ -68,9 +68,13 @@ test.describe("as the owner", () => {
     // No medical answer in any section. The header says there are none, so the
     // sections are what is read; paired with the positive queries above, which
     // prove the sheet rendered: a missing page would also contain none.
+    const sheet = page.locator(".paper-sheet");
+    await expect(sheet).toHaveCount(1);
     await expect(
-      page.locator("main section").filter({ hasText: /medical|questionnaire|physician/i }),
+      sheet.locator("section").filter({ hasText: /medical|questionnaire|physician/i }),
     ).toHaveCount(0);
+    // One sheet of the shop's paper (issue #2745): nothing on it is a control.
+    await expect(sheet.locator("a, button, input, select, textarea, form")).toHaveCount(0);
     // The toolbar is the screen's, not the paper's.
     await page.emulateMedia({ media: "print" });
     await expect(page.getByRole("button", { name: staff("print.sheet.door") })).not.toBeVisible();
