@@ -47,7 +47,13 @@ describe("the print with medical alerts", () => {
       path.join(SRC, "app/shop/[shopSlug]/print/_components/SheetDocument.tsx"),
       "utf8",
     );
-    expect(document).toContain('printOnly ? "paper-sheet-frame hidden print:block"');
+    expect(document).toContain('data-paper-print-only={printOnly ? "" : undefined}');
+    // Unlayered and !important: Tailwind's `hidden` sits in a cascade layer
+    // and lost to the frame's own unlayered `display: flex` (security review
+    // of #3724, H1).
+    expect(css).toMatch(
+      /@media screen\s*\{\s*\.paper-sheet-frame\[data-paper-print-only\]\s*\{\s*display:\s*none !important;/,
+    );
     // The two default packets show their sheets.
     for (const packet of [
       "app/shop/[shopSlug]/trips/[id]/print/page.tsx",

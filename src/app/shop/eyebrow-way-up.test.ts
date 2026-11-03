@@ -58,8 +58,10 @@ const WAY_UP_EXEMPT: Record<string, string> = {
     "The account hub: the identity menu's one account row lands here, and `meta` links on to the calendar feed and email, whose eyebrows link back. It has no parent page to name, so its eyebrow is its own title.",
   "print/pass/[bookingId]":
     "A printed sheet, not a screen. `SheetDocument` carries the way back to the counter as its own `print:hidden` link, because paper has no eyebrow.",
+  "trips/[id]/print":
+    "A printed packet of sheets, not a screen (issue #2745). `SheetDocument` carries the way back to the departure as its own `print:hidden` link, because paper has no eyebrow.",
   "trips/[id]/print/medical-alerts":
-    "The trip packet with the medical alerts' words: it composes the packet's own `TripPacket` (`../_components`), whose `TripPageHeader` carries the way up to the board, exactly as `trips/[id]/print` does.",
+    "The trip packet with the medical alerts' words, printed sheets like `trips/[id]/print`: `SheetDocument` carries the way back to the departure as its own `print:hidden` link.",
   "waivers/print":
     "A printed form, not a screen. Its toolbar carries the way back to Waivers as a `print:hidden` link, because paper has no eyebrow.",
   "print/counter-card":

@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { SECTION_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
@@ -164,7 +165,11 @@ async function composeTripPacket({
     }),
     readPrepView(db, shop, tripId, now),
   ]);
-  if (manifest.status !== "ready" || !prep) return null;
+  // A departure whose overview resolved but whose manifest or packing list
+  // did not is gone in the window between the reads: the same `notFound()`
+  // the tab pages answer with, which the trip packet turns into its 404 and
+  // the day's paper settles into a dropped boat (`keptSheets`).
+  if (manifest.status !== "ready" || !prep) notFound();
   const vessel = vessels.get(tripId);
   const identity = [
     shop.name,
@@ -194,7 +199,9 @@ async function composeTripPacket({
     <>
       <DeparturePaperIdentity
         pageName={`departure-${tripId}-dives`}
-        identity={[...identity, t("trips.surfaces.manifest")]}
+        // The manifest's own running header: the boat, "Manifest" and the
+        // roll-call checkpoint, on every page this sheet runs to.
+        identity={manifest.paperIdentity.identity}
         printed={printed}
       >
         <PacketSheet
@@ -238,7 +245,7 @@ async function composeTripPacket({
               cancelled={manifest.cancelled}
               manifest={manifest.manifest}
               vesselName={manifest.vessel?.name ?? null}
-              boatSafety={manifest.boatSafety ? { idPrefix, ...manifest.boatSafety } : null}
+              boatSafety={manifest.boatSafety ? { ...manifest.boatSafety, idPrefix } : null}
               checklist={manifest.checklistProps}
               rollCall={manifest.rollCall}
               boatPaper={<PrintedBoatPaper {...manifest.boatPaper} />}

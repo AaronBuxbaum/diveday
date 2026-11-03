@@ -1091,6 +1091,15 @@ select:not([multiple]):not([size]):dir(rtl) {
   -webkit-print-color-adjust: exact;
 }
 
+/* **A print-only document never reaches the screen** (the medical-alerts
+   packet; layer 4 security review, note 1). Unlayered, like the frame rule
+   above, so no utility and no rule below can show it again. */
+@media screen {
+  .paper-sheet-frame[data-paper-print-only] {
+    display: none !important;
+  }
+}
+
 /* Paper's own rows, which the live manifest keeps for its print-only
    fallback (`data-print-only`): inside a sheet they are the content. */
 .paper-sheet [data-print-only] {

@@ -80,7 +80,10 @@ export function SheetDocument({
         </div>
       </div>
       {printOnly ? <div className="px-4 py-3 print:hidden">{printOnly}</div> : null}
-      <div className={printOnly ? "paper-sheet-frame hidden print:block" : "paper-sheet-frame"}>
+      {/* `data-paper-print-only`, not Tailwind's `hidden`: the frame's own
+          rule sits outside every cascade layer and would beat a utility, so
+          the screen-side hide is an unlayered rule too (`globals.css`). */}
+      <div className="paper-sheet-frame" data-paper-print-only={printOnly ? "" : undefined}>
         <div>{children}</div>
       </div>
     </>

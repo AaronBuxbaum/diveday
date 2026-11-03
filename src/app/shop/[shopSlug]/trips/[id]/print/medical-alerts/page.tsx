@@ -74,6 +74,20 @@ export default async function TripPrintWithMedicalAlertsPage({
   });
   if (!packet) notFound();
 
+  // **Its own title, on the paper too** (domain review 1, S3): the sheet in
+  // the crew's hands says it carries the alerts and when they were printed,
+  // so it is never mistaken for the plain packet.
+  const title = (
+    <header className="mb-6 border-b border-border pb-4">
+      <h1 className={SHELL_TITLE_CLASS}>{t("manifest.medicalAlertsPrintedTitle")}</h1>
+      <p className="mt-2 text-muted">
+        {t("print.sheet.printed", {
+          date: formatDateTimeTz(printed.printed.printedAt, locale, shop.timezone),
+        })}
+      </p>
+    </header>
+  );
+
   return (
     <SheetDocument
       backHref={shopPath(resolvedParams.shopSlug, "trips", tripId)}
@@ -83,19 +97,10 @@ export default async function TripPrintWithMedicalAlertsPage({
       printLabel={t("print.sheet.door")}
       readySelector={PACKET_READY_SELECTOR}
       // The words reach the crew's sheet, never this screen (layer 4 security
-      // review, note 1): the screen says what is printing and when.
-      printOnly={
-        <>
-          <h1 className={SHELL_TITLE_CLASS}>{t("manifest.medicalAlertsPrintedTitle")}</h1>
-          <p className="mt-2 text-muted">
-            {t("print.sheet.printed", {
-              date: formatDateTimeTz(printed.printed.printedAt, locale, shop.timezone),
-            })}
-          </p>
-        </>
-      }
+      // review, note 1): the screen says only what is printing and when.
+      printOnly={title}
     >
-      {packet()}
+      {packet(title)}
       <PacketReady />
     </SheetDocument>
   );
