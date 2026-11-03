@@ -3,10 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { TripAdmissionRefusal } from "@/lib/trip-admission";
+import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { levelShort } from "@/test/admission-refusals";
-import { resolveDiverNotice } from "./diver-notices";
-import type { TripAdmissionRefusal } from "./trip-admission";
-import { signTripAdmissionGate } from "./trip-admission-gate";
+import { resolveDiverNotice } from "./diver-notice-text";
 
 const PERSON = "00000000-0000-4000-8000-000000000001";
 const OTHER_PERSON = "00000000-0000-4000-8000-000000000002";
