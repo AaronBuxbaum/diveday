@@ -33,7 +33,7 @@
 
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { declinedSizeNote } from "@/i18n/rental-labels";
+import { declinedSizeNote } from "@/i18n/import-notes";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { canImportShopData } from "@/lib/authz";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
