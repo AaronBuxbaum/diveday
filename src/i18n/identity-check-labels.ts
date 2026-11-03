@@ -1,7 +1,7 @@
 import { type IdentityMatchKind, identityReasonMessage } from "@/lib/identity-match";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { readinessBlockerText } from "./readiness-labels";
-import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
+import type { StaffTranslator } from "./staff-messages";
 
 /**
  * The words of a held seat's two answers (`src/components/IdentityCheck.tsx`),
