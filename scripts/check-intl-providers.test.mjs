@@ -8,12 +8,13 @@ import {
 describe("providedNamespaces", () => {
   it("reads an inline list, a module-scope list, and the error boundary's one", () => {
     expect([...providedNamespaces('<DiverIntlProvider namespaces={["party", "trip"]}>')]).toEqual([
+      "words",
       "party",
       "trip",
     ]);
     expect([
       ...providedNamespaces('const PAGE = ["ready"];\n<DiverIntlProvider namespaces={PAGE}>'),
-    ]).toEqual(["ready"]);
+    ]).toEqual(["words", "ready"]);
     expect([...providedNamespaces("<ErrorBoundaryIntlProvider>")]).toEqual(["errorBoundary"]);
     expect(providedNamespaces("<div />")).toBeNull();
   });
