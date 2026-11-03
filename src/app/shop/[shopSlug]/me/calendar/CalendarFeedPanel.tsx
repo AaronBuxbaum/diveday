@@ -6,13 +6,9 @@ import { Copyable } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { ShopNotice } from "@/components/ui/outcome";
+import { useStaffTranslations } from "@/i18n/use-staff-translations";
 import { calendarFeedAction } from "./actions";
-import {
-  type CalendarFeedCopy,
-  type FeedIssueState,
-  type FeedScopeView,
-  IDLE_FEED_ISSUE_STATE,
-} from "./feed-panel-types";
+import { type FeedIssueState, type FeedScopeView, IDLE_FEED_ISSUE_STATE } from "./feed-panel-types";
 
 function ActionButton({
   label,
@@ -42,19 +38,16 @@ function ActionButton({
  * One subscribable scope: its current state, the buttons that change it, and —
  * only in the response that minted it — the link itself.
  *
- * Every word arrives as a prop. Staff copy is translated on the server and
- * never shipped to the client as a message bundle (see
- * `src/i18n/staff-messages.ts`), so a literal here would be both untranslatable
- * and a `pnpm check:copy` failure.
+ * Words come from `useStaffTranslations("calendar")`; the page mounts a
+ * `StaffIntlProvider` carrying it and the shared `words` bundle. A literal here would be both
+ * untranslatable and a `pnpm check:copy` failure.
  */
 export function CalendarFeedPanel({
   view,
-  copy,
   subscribed,
   createVariant = "primary",
 }: {
   view: FeedScopeView;
-  copy: CalendarFeedCopy;
   subscribed: boolean;
   /**
    * Two panels share this screen (visual review 2026-10-24, A37). Until the
@@ -65,6 +58,8 @@ export function CalendarFeedPanel({
    */
   createVariant?: "primary" | "secondary" | "link";
 }) {
+  const t = useStaffTranslations("calendar");
+  const w = useStaffTranslations("words");
   // One state for both buttons. Two `useActionState` hooks could not say which
   // of them ran last, so a revoke followed by a create rendered the revoked
   // state over a live subscription.
@@ -95,17 +90,17 @@ export function CalendarFeedPanel({
             <input type="hidden" name="rotating" value={live ? "true" : "false"} />
             {live ? (
               <InlineConfirm
-                triggerLabel={copy.rotate}
+                triggerLabel={t("actions.rotate")}
                 triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
-                message={copy.confirmRotate}
-                confirmLabel={copy.confirmRotateButton}
-                cancelLabel={copy.cancel}
-                pendingLabel={copy.rotating}
+                message={t("actions.confirmRotate")}
+                confirmLabel={t("actions.confirmRotateButton")}
+                cancelLabel={w("dismiss.neverMind")}
+                pendingLabel={t("actions.rotating")}
               />
             ) : (
               <ActionButton
-                label={copy.create}
-                pendingLabel={copy.creating}
+                label={t("actions.create")}
+                pendingLabel={t("actions.creating")}
                 variant={createVariant}
               />
             )}
@@ -115,12 +110,12 @@ export function CalendarFeedPanel({
               <input type="hidden" name="intent" value="revoke" />
               <input type="hidden" name="scope" value={view.scope} />
               <InlineConfirm
-                triggerLabel={copy.turnOff}
+                triggerLabel={t("actions.turnOff")}
                 triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
-                message={copy.confirmTurnOff}
-                confirmLabel={copy.confirmTurnOffButton}
-                cancelLabel={copy.cancel}
-                pendingLabel={copy.turningOff}
+                message={t("actions.confirmTurnOff")}
+                confirmLabel={t("actions.confirmTurnOffButton")}
+                cancelLabel={w("dismiss.neverMind")}
+                pendingLabel={t("actions.turningOff")}
               />
             </form>
           ) : null}
@@ -132,40 +127,40 @@ export function CalendarFeedPanel({
       {live && !issued ? (
         <div className="mt-3 text-sm text-muted">
           <p>{view.subscribedLabel}</p>
-          <p className="mt-1">{view.lastReadLabel ?? copy.neverRead}</p>
+          <p className="mt-1">{view.lastReadLabel ?? t("status.neverRead")}</p>
         </div>
       ) : null}
 
       {denied ? (
         <ShopNotice tone="danger" role="alert" className="mt-4">
-          {copy.denied}
+          {t("notice.denied")}
         </ShopNotice>
       ) : null}
 
       {issued ? (
         <div className="mt-4 rounded-inset border border-primary/25 bg-primary/5 p-4">
-          <h3 className="text-sm font-semibold text-foreground">{copy.newLinkHeading}</h3>
-          <p className="mt-1 text-sm text-foreground">{copy.shownOnce}</p>
+          <h3 className="text-sm font-semibold text-foreground">{t("newLink.heading")}</h3>
+          <p className="mt-1 text-sm text-foreground">{t("newLink.shownOnce")}</p>
           <div className="mt-3 grid gap-2">
             <Copyable
-              label={copy.webcalLabel}
-              hint={copy.webcalHint}
+              label={t("newLink.webcalLabel")}
+              hint={t("newLink.webcalHint")}
               value={issued.webcalUrl}
-              copyLabel={copy.copy}
-              copiedLabel={copy.copied}
-              failedLabel={copy.copyFailed}
+              copyLabel={t("actions.copy")}
+              copiedLabel={w("did.copied")}
+              failedLabel={t("actions.copyFailed")}
             />
             <Copyable
-              label={copy.httpsLabel}
-              hint={copy.httpsHint}
+              label={t("newLink.httpsLabel")}
+              hint={t("newLink.httpsHint")}
               value={issued.httpsUrl}
-              copyLabel={copy.copy}
-              copiedLabel={copy.copied}
-              failedLabel={copy.copyFailed}
+              copyLabel={t("actions.copy")}
+              copiedLabel={w("did.copied")}
+              failedLabel={t("actions.copyFailed")}
             />
           </div>
-          <p className="mt-3 text-xs text-muted">{copy.sharedWarning}</p>
-          {issued.rotated ? <p className="mt-1 text-xs text-muted">{copy.rotateWarning}</p> : null}
+          <p className="mt-3 text-xs text-muted">{t("warning.shared")}</p>
+          {issued.rotated ? <p className="mt-1 text-xs text-muted">{t("warning.rotate")}</p> : null}
         </div>
       ) : null}
     </section>

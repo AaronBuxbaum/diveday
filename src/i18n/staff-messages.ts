@@ -9,21 +9,13 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * The staff-facing message bundle — the `/shop/**` counterpart to
  * `./messages.ts` (docs ADR 20260730-staff-copy-localization).
  *
- * **Server-side only, on purpose.** There is no `StaffIntlProvider`, and *this*
- * bundle — every staff namespace, in both locales — never crosses to the client. Two
- * reasons:
- *
- * 1. `useTranslations()` types against the single global `AppConfig.Messages`
- *    augmentation, which is the diver bundle. A second client-side bundle
- *    would have to either widen that type — making every diver `t()` call
- *    accept keys its provider cannot resolve — or ship both bundles to every
- *    visitor.
- * 2. Staff copy has no business in an anonymous diver's JavaScript payload.
- *
- * A staff Client Component therefore receives its words as props from the
- * Server Component that rendered it. That is a real constraint on how staff
- * UI is written, and it is the point: the copy stays on the server, and the
- * client bundle stays small.
+ * **Server by default, a provider by exception** (ADR 20260811-staff-copy-provider). A Server
+ * Component words things with `staffTranslator`. A staff Client Component reads
+ * `useStaffTranslations(namespace)` under a `StaffIntlProvider` that carries only the namespaces
+ * it names, mounted somewhere under `src/app/shop`; `pnpm check:architecture` refuses the
+ * provider and the hook anywhere else, so staff copy still never reaches an anonymous diver's
+ * JavaScript. `useTranslations()` itself types against the diver `AppConfig.Messages`, so the
+ * hook is the one place that cast lives.
  *
  * ## The one surface that does ship staff copy, and why it is not a hole
  *

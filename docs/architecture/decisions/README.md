@@ -246,6 +246,7 @@ script again.
 | 20260811-deploy-gate-runs-fresh-diff | Run `cdk synth`+`diff` inside the… |
 | 20260811-person-scoped-paper-waivers | A paper release is filed… |
 | 20260811-retire-the-digital-card | The card's evidence has no… |
+| 20260811-staff-copy-provider | A staff provider replaces hand-typed… |
 | 20260811-vercel-sync-checkpoint-in-ssm | Diff Vercel env pushes against… |
 | 20260812-configurable-dock-day-rhythm | A shop's dive day is… |
 | 20260812-demo-schedule-keeper | Keep the canonical demo's schedule… |

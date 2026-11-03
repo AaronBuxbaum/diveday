@@ -173,6 +173,23 @@ export const seams = [
       `${file}: value-imports ${specifier} — src/lib and src/db return codes and keys; the page, the message or the file words them (a type import is fine)`,
   },
   {
+    // Staff copy never reaches an anonymous page (ADR 20260811-staff-copy-provider): the staff
+    // provider and its hook are named only from the staff surface, so a diver or token layout
+    // cannot mount a `staff` namespace. A type import is a shape and passes.
+    roots: ["src/app", "src/components", "src/features", "src/lib", "src/worker"],
+    exempt: (file) => {
+      const normal = file.replaceAll(path.sep, "/");
+      return normal.startsWith("src/app/shop/") || normal.startsWith("src/app/offline-manifest/");
+    },
+    refuses: (target) =>
+      target !== null &&
+      (path.normalize(target) === path.normalize("src/i18n/StaffIntlProvider") ||
+        path.normalize(target) === path.normalize("src/i18n/use-staff-translations")),
+    typeOnlyAllowed: true,
+    message: (file, specifier) =>
+      `${file}: imports ${specifier} — a staff namespace may only be provided from src/app/shop or src/app/offline-manifest, so staff copy never reaches an anonymous page`,
+  },
+  {
     roots: ["src/app"],
     refuses: (_target, specifier) => /^drizzle-orm(?:\/|$)/.test(specifier),
     typeOnlyAllowed: false,
