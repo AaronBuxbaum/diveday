@@ -2084,7 +2084,7 @@
   "src/lib/net/public-address.test.ts": 29,
   "src/lib/net/public-fetch.test.ts": 322,
   "src/lib/next-dive.test.ts": 23,
-  "src/lib/night-before-brief.test.ts": 61,
+  "src/lib/notifications/night-before-brief.test.ts": 61,
   "src/lib/night-palette.test.ts": 13,
   "src/lib/nitrox-fill.test.ts": 9,
   "src/lib/no-show.test.ts": 17,

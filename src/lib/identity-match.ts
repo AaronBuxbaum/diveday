@@ -1,3 +1,4 @@
+import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { BLOCKER_CATEGORY, type ReadinessBlocker } from "@/lib/readiness";
 
 /**
@@ -32,4 +33,32 @@ export function heldSeatBlockers<T extends ReadinessBlocker>(blockers: readonly 
       blocker.code === "requirements_not_configured" ||
       BLOCKER_CATEGORY[blocker.code] === "payment",
   );
+}
+
+/**
+ * **The held seat's reason, naming both people** (Aaron, 2026-10-05: the old
+ * sentence did not say what the issue was). "Booked as Hana Park with June
+ * Park's email" is the whole question in one line, so the two answers under it
+ * need no explanation of their own.
+ *
+ * A key and its values rather than words, so the diver record's status rows,
+ * which carry codes, can hold it too. Null for a seat whose booked-as name was
+ * never kept, where the generic blocker sentence stands.
+ */
+export function identityReasonMessage(
+  claim: { bookedAs: string | null; matchedBy: IdentityMatchKind | null },
+  recordName: string,
+): { key: StaffMessageKey; values: Record<string, string> } | null {
+  const { bookedAs, matchedBy } = claim;
+  if (!bookedAs || !matchedBy) return null;
+  if (bookedAs.trim().toLowerCase() === recordName.trim().toLowerCase()) {
+    return { key: "shared.identityCheck.reasonSameName", values: { name: recordName } };
+  }
+  return {
+    key:
+      matchedBy === "shared_email"
+        ? "shared.identityCheck.reasonSharedEmail"
+        : "shared.identityCheck.reasonPickedName",
+    values: { bookedAs, name: recordName },
+  };
 }

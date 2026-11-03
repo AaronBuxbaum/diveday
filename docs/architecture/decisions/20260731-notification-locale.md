@@ -39,7 +39,7 @@ fetch) the shop row, so this is one more field alongside `shopName`/`timezone`, 
 deliberate, narrow exception to "`src/lib`/`src/db` return codes, `src/app`/`src/components` choose
 words": these two are the *terminal* renderer for their content — there is no downstream React
 component that picks words for an email body or an SMS payload, so the translation has to happen
-here or nowhere. `src/lib/night-before-brief.ts` (the brief text shared by both channels) follows
+here or nowhere. `src/lib/notifications/night-before-brief.ts` (the brief text shared by both channels) follows
 the same rule for the same reason. `email.ts` and `night-before-brief.ts` carry an
 `// i18n-exempt-file` marker pointing at this ADR — `email.ts`'s `text`/`html` return fields are
 exactly the property-name shape `check-domain-strings.mjs` watches for, and would otherwise read as

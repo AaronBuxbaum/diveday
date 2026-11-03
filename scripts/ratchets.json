@@ -305,8 +305,6 @@
         "why": "New seam (issue #2772): lib and db value-import a translator; words are chosen in a renderer. Seeded at today's count, notifications exempt",
         "files": {
           "src/lib/diver-notices.ts": "0 -> 3",
-          "src/lib/diver-status.ts": "0 -> 1",
-          "src/lib/night-before-brief.ts": "0 -> 1",
           "src/lib/palette-answer.ts": "0 -> 1",
           "src/lib/trip-change-entries.ts": "0 -> 1"
         }
@@ -617,8 +615,6 @@
         "why": "New seam (issue #2772): lib and db value-import a translator; words are chosen in a renderer. Seeded at today's count, notifications exempt",
         "files": {
           "src/lib/diver-notices.ts": "0 -> 3",
-          "src/lib/diver-status.ts": "0 -> 1",
-          "src/lib/night-before-brief.ts": "0 -> 1",
           "src/lib/palette-answer.ts": "0 -> 1",
           "src/lib/trip-change-entries.ts": "0 -> 1"
         }
@@ -925,8 +921,6 @@
         "why": "New seam (issue #2772): lib and db value-import a translator; words are chosen in a renderer. Seeded at today's count, notifications exempt",
         "files": {
           "src/lib/diver-notices.ts": "0 -> 3",
-          "src/lib/diver-status.ts": "0 -> 1",
-          "src/lib/night-before-brief.ts": "0 -> 1",
           "src/lib/palette-answer.ts": "0 -> 1",
           "src/lib/trip-change-entries.ts": "0 -> 1"
         }
@@ -1072,8 +1066,6 @@
     "src/lib/dive-site-landmarks.ts": 1,
     "src/lib/dive-site-template-sync.ts": 1,
     "src/lib/diver-notices.ts": 3,
-    "src/lib/diver-status.ts": 1,
-    "src/lib/night-before-brief.ts": 1,
     "src/lib/notifications/sender.ts": 1,
     "src/lib/palette-answer.ts": 1,
     "src/lib/same-origin.ts": 1,
