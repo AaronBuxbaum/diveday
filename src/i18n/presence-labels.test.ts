@@ -8,4 +8,9 @@ describe("presenceText", () => {
     expect(presenceText(staffTranslator("en-US"), "arrived")).toBe("Checked in");
     expect(presenceText(staffTranslator("es-ES"), "arrived")).toBe("Registrado");
   });
+
+  it("says the rail's two answers once, in each locale", () => {
+    expect(presenceText(staffTranslator("en-US"), "boarded")).toBe("Boarded");
+    expect(presenceText(staffTranslator("es-ES"), "not_boarded")).toBe("No embarcado");
+  });
 });

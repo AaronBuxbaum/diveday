@@ -13,6 +13,8 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  */
 export const PRESENCE_LABEL_KEYS = {
   arrived: "shared.presence.arrived",
+  boarded: "shared.presence.boarded",
+  not_boarded: "shared.presence.notBoarded",
 } as const satisfies Partial<Record<PresenceState, StaffMessageKey>>;
 
 /** The word a presence state goes by in the staff bundle's language. */

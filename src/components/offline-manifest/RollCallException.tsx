@@ -133,7 +133,7 @@ export function OfflineRollCallException({
               <OfflineStatusLabel variant="checked">
                 {isCrew
                   ? t("manifest.crewNotAboardCheck")
-                  : t("shared.offlineManifest.single.notBoardedDone")}
+                  : t("shared.presence.notBoarded")}
               </OfflineStatusLabel>
             ) : (
               <OfflineStatusLabel variant="danger">

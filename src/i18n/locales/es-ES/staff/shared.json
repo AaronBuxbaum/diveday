@@ -257,7 +257,9 @@
     }
   },
   "presence": {
-    "arrived": "Registrado"
+    "arrived": "Registrado",
+    "boarded": "Embarcado",
+    "notBoarded": "No embarcado"
   },
   "shopNav": {
     "language": "Idioma",
@@ -452,7 +454,6 @@
       "rentalFit": "Equipo de alquiler",
       "nitroxRequestedSuffix": "· Nitrox solicitado",
       "markBoarded": "Marcar embarcado",
-      "notBoardedDone": "No embarcado",
       "markNotBoarded": "Marcar no embarcado",
       "notBackAboardActive": "Sin regresar a bordo",
       "markNotBackAboard": "Marcar sin regresar a bordo",
@@ -478,7 +479,6 @@
       },
       "counter": {
         "heading": "En el mostrador",
-        "checkedInLabel": "Registrado",
         "notCheckedInLabel": "Registrar",
         "refusedNotReady": "Sin registrar: dejó de estar listo después de que presionaste. Abre el mostrador en vivo antes de que suba a bordo.",
         "refusedNotBookable": "Sin registrar: esta plaza ya no está en la lista del barco. Se canceló o en el mostrador marcaron que no vino. Abre el mostrador en vivo.",
@@ -543,8 +543,6 @@
   },
   "rollCallState": {
     "awaiting": "Pendiente de pase de lista",
-    "boarded": "Embarcado",
-    "notBoarded": "No embarcado",
     "notBoardedCarried": "No embarcado · arrastrado",
     "notBackAboard": "Sin regresar a bordo"
   },

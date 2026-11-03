@@ -485,7 +485,7 @@ export function RollCallExceptionControl({
             ? isDeparture
               ? isCrew
                 ? t("manifest.crewNotAboardCheck")
-                : t("manifest.notBoardedCheck")
+                : t("shared.presence.notBoarded")
               : isCrew
                 ? t("manifest.crewNotBackAboardActive")
                 : t("manifest.notBackAboardActive")

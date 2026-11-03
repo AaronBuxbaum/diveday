@@ -257,7 +257,9 @@
     }
   },
   "presence": {
-    "arrived": "Checked in"
+    "arrived": "Checked in",
+    "boarded": "Boarded",
+    "notBoarded": "Not boarded"
   },
   "shopNav": {
     "language": "Language",
@@ -452,7 +454,6 @@
       "rentalFit": "Rental fit",
       "nitroxRequestedSuffix": "· Nitrox requested",
       "markBoarded": "Mark boarded",
-      "notBoardedDone": "Not boarded",
       "markNotBoarded": "Mark not boarded",
       "notBackAboardActive": "Not back aboard",
       "markNotBackAboard": "Mark not back aboard",
@@ -478,7 +479,6 @@
       },
       "counter": {
         "heading": "At the counter",
-        "checkedInLabel": "Checked in",
         "notCheckedInLabel": "Check in",
         "refusedNotReady": "Not checked in: readiness stopped clearing them after you tapped. Open the live counter before they board.",
         "refusedNotBookable": "Not checked in: this seat is no longer on the boat’s list. It was either canceled or marked not here at the desk. Open the live counter.",
@@ -543,8 +543,6 @@
   },
   "rollCallState": {
     "awaiting": "Awaiting roll call",
-    "boarded": "Boarded",
-    "notBoarded": "Not boarded",
     "notBoardedCarried": "Not boarded · carried",
     "notBackAboard": "Not back aboard"
   },
