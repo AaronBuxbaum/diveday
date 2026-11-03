@@ -9,6 +9,7 @@ import {
   publicAppUrl,
 } from "@/lib/notifications";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
+import { fareCheckout } from "./checkout-purpose";
 import {
   markCheckoutExpiredBySessionId,
   markCheckoutPaidBySessionId,
@@ -154,6 +155,9 @@ export async function sendDueCheckoutRecoveries(
     .where(
       and(
         eq(bookingCheckouts.status, "pending"),
+        // A seat's abandoned checkout, never a tip the diver chose not to
+        // finish: nobody is chased for a tip (issue #2718).
+        fareCheckout(),
         isNull(bookingCheckouts.abandonedRecoverySentAt),
         lte(bookingCheckouts.createdAt, staleBefore),
         or(isNull(bookingCheckouts.expiresAt), gt(bookingCheckouts.expiresAt, now)),
@@ -185,6 +189,7 @@ export async function sendDueCheckoutRecoveries(
   const cancelledBookingLinks = await db
     .select({ checkoutId: bookingCheckoutBookings.checkoutId })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the links of the fare candidates read above
     .innerJoin(bookings, eq(bookings.id, bookingCheckoutBookings.bookingId))
     .where(
       and(
@@ -206,6 +211,7 @@ export async function sendDueCheckoutRecoveries(
   const settledBookingLinks = await db
     .select({ checkoutId: bookingCheckoutBookings.checkoutId })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the links of the fare candidates read above
     .innerJoin(bookingPayments, eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId))
     .where(
       and(
@@ -327,6 +333,7 @@ export async function sendDueCheckoutRecoveries(
     const [freshlyCancelled] = await db
       .select({ checkoutId: bookingCheckoutBookings.checkoutId })
       .from(bookingCheckoutBookings)
+      // diveday:any-checkout-purpose: the links of the fare candidates read above
       .innerJoin(bookings, eq(bookings.id, bookingCheckoutBookings.bookingId))
       .where(
         and(
@@ -343,6 +350,7 @@ export async function sendDueCheckoutRecoveries(
     const [freshlySettled] = await db
       .select({ checkoutId: bookingCheckoutBookings.checkoutId })
       .from(bookingCheckoutBookings)
+      // diveday:any-checkout-purpose: the links of the fare candidates read above
       .innerJoin(bookingPayments, eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId))
       .where(
         and(
@@ -420,6 +428,7 @@ export async function sendDueCheckoutRecoveries(
     if (delivery.status === "sent") {
       await db
         .update(bookingCheckouts)
+        // diveday:any-checkout-purpose: a fare candidate read above, by its id
         .set({ abandonedRecoverySentAt: now })
         .where(eq(bookingCheckouts.id, checkout.id));
       summary.sent += 1;

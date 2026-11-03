@@ -70,3 +70,22 @@ describe("the attempt grammar", () => {
     );
   });
 });
+
+describe("every ledger kind lists at least one status", () => {
+  it("so the reader's filter is never empty", () => {
+    for (const kind of Object.keys(LEDGER_STATES) as (keyof typeof LEDGER_STATES)[]) {
+      const { windowed, always } = unfinishedStatuses(kind);
+      expect(windowed.length + always.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("a kind with a call in flight", () => {
+  it("always has a window, so a call made seconds ago never reads as stuck", () => {
+    for (const kind of Object.keys(LEDGER_STATES) as (keyof typeof LEDGER_STATES)[]) {
+      if (unfinishedStatuses(kind).windowed.length === 0) continue;
+      expect(ATTEMPT_RULES[kind].stuckAfterMs).toBeGreaterThan(0);
+      expect(ATTEMPT_RULES[kind].todayAfterMs).toBeGreaterThan(0);
+    }
+  });
+});

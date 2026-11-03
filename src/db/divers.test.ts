@@ -15,7 +15,6 @@ import type { AppDb } from "./client";
 import {
   createDiver,
   deleteDiver,
-  editDiver,
   findLiveDiverIdByEmail,
   findSimilarDivers,
   getDiverProfile,
@@ -23,6 +22,7 @@ import {
   listBookableDivers,
   listDiverSummaries,
   restoreDiver,
+  editDiver,
 } from "./divers";
 import { recordRentalFit } from "./rental-fit";
 import {
