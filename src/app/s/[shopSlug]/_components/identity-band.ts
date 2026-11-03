@@ -29,7 +29,7 @@ export function identityBand(
 
 /**
  * The month rail's two sides: the schedule a month either way, filters kept.
- * Never in the frame, so neither link carries `embed=1`.
+ * Never in the frame, so neither link leads to one.
  */
 export function monthRailSides(
   previousKey: string | null,

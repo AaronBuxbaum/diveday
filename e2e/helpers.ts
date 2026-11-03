@@ -955,9 +955,13 @@ export async function openTripInEmbed(page: Page, title: string | RegExp): Promi
   // The destination's own URL shape, not a duration: the click is a client
   // navigation, and reading `url()` before it settles hands back the schedule.
   await fullSchedule.waitForURL(/\/trips\//);
-  const tripPath = new URL(fullSchedule.url()).pathname;
+  // The full page's trip path, read as the framed trip page's twin (issue #2744).
+  const tripPath = new URL(fullSchedule.url()).pathname.replace(
+    /^(\/s\/[^/]+)\/trips\//,
+    "$1/embed/trip/",
+  );
   await fullSchedule.close();
-  await page.goto(`${tripPath}?embed=1`, { waitUntil: "domcontentloaded" });
+  await page.goto(tripPath, { waitUntil: "domcontentloaded" });
 }
 
 /**

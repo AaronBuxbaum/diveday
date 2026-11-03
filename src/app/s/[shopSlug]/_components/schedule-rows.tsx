@@ -10,6 +10,7 @@ import {
   resolveCourseContentDepths,
   resolveImageAlt,
 } from "@/lib/courses";
+import { embedTripPath } from "@/lib/embed-routes";
 import {
   formatDayParts,
   formatMoneyScanned,
@@ -75,7 +76,7 @@ export function weekLedgerRows({
   /** The shop-local calendar day a departure falls on (`scheduleDayWords`). */
   dayKeyOf: (date: Date) => string;
   shopSlug: string;
-  /** The framed schedule's rows open the framed trip page (`?embed=1`). */
+  /** The framed schedule's rows open the framed trip page (`embed/trip/<id>`). */
   isEmbed?: boolean;
   timezone: string;
   currency: ShopCurrency;
@@ -102,7 +103,7 @@ export function weekLedgerRows({
       id: trip.id,
       dayKey: dayKeyOf(trip.startsAt),
       dayParts: formatDayParts(trip.startsAt, locale, timezone),
-      href: `${publicTripPath(shopSlug, trip.id)}${isEmbed ? "?embed=1" : ""}`,
+      href: isEmbed ? embedTripPath(shopSlug, trip.id) : publicTripPath(shopSlug, trip.id),
       linkLabel: t("schedule.tripCardLabel", {
         when: `${formatShortDate(trip.startsAt, locale, timezone)} · ${formatTimeRange(trip.startsAt, trip.endsAt, locale, timezone)}`,
         trip: trip.title,

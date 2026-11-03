@@ -184,7 +184,7 @@ for (const scheme of ["light", "dark"] as const) {
       // `fullPage` measured the viewport (844px tall) instead of the real page
       // (11802px). A baseline that is a blank viewport asserts nothing.
       test(`the embedded schedule renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/s/blue-mantis?embed=1");
+        await page.goto("/s/blue-mantis/embed/calendar");
         await publicReefCard(page).getByRole("link").waitFor();
         await capture(page, "schedule-embed", scheme);
       });
@@ -248,7 +248,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        await page.goto("/s/blue-mantis?embed=1");
+        await page.goto("/s/blue-mantis/embed/calendar");
         await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
         await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
           "data-hydrated",
@@ -262,7 +262,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: /You’ve got a seat/ }).waitFor();
         // Still framed, and still on the trip page — the assertion that this
         // capture is of the embed branch and not a `/ready` that leaked in.
-        await expect(page).toHaveURL(/embed=1/);
+        await expect(page).toHaveURL(/\/embed\/trip\//);
         await capture(page, "booking-confirmed-embed", scheme);
       });
 
@@ -278,7 +278,7 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByTestId("trip-site-reviews")).toHaveCount(1);
         await expect(page.getByTestId("trip-site-reviews").locator("li")).toHaveCount(2);
         const embeddedTrip = new URL(page.url());
-        embeddedTrip.searchParams.set("embed", "1");
+        embeddedTrip.pathname = embeddedTrip.pathname.replace("/trips/", "/embed/trip/");
         await page.goto(embeddedTrip.href);
         await expect(page).toHaveURL(embeddedTrip.href);
         await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
@@ -315,9 +315,9 @@ for (const scheme of ["light", "dark"] as const) {
       // what the door holds. The page measured 5,782px at 390 before the form
       // when nothing bounded it.
       //
-      // Reached from the *standalone* schedule, never the embed: a schedule
-      // loaded with `embed=1` carries the flag forward on its trip links, and
-      // this baseline is the full-chrome page. Its own test now, so that can no
+      // Reached from the *standalone* schedule, never the embed: the framed
+      // calendar's trip links open the framed trip page, and this baseline is
+      // the full-chrome page. Its own test now, so that can no
       // longer depend on which capture ran before it.
       test(`the public trip briefing renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis");

@@ -49,7 +49,7 @@ export function offSeasonLine(
  * the composer under it is the thing to do next, and a card saying so as well
  * would be a second manual path to what that button already offers.
  *
- * Never inside `?embed=1`, and never on the same page as the collapsed
+ * Never inside the frame (`embed/calendar`), and never on the same page as the collapsed
  * date-request row further down — the ask is promoted here, not duplicated.
  */
 export function OffSeasonPanel({

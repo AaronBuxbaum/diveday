@@ -4,9 +4,9 @@ import { buttonClass } from "@/components/ui/button";
 import { StatusInView } from "@/components/ui/StatusInView";
 import type { BookingMailState } from "@/db/notifications";
 import { diverTranslator } from "@/i18n/messages";
+import { embedCalendarPath } from "@/lib/embed-routes";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { firstNameOf } from "@/lib/person-name";
-import { publicSchedulePath } from "@/lib/public-routes";
 import type { Confirmed, Shop, Trip } from "./types";
 
 /**
@@ -15,8 +15,8 @@ import type { Confirmed, Shop, Trip } from "./types";
  * `/ready` page, which is the one page after booking (ADR
  * 20260820-one-page-after-booking).
  *
- * The embed is the one place that honestly needs a second surface. `?embed=1`
- * is an iframe on a shop's own website (ADR 20260726-schedule-embed), and
+ * The embed is the one place that honestly needs a second surface. The frame
+ * (`embed/trip/<id>`) is an iframe on a shop's own website (ADR 20260726-schedule-embed), and
  * `/ready/**` is deliberately outside the framing allowlist — so a redirect
  * there would hand the shop's visitor a frame the CSP blocks instead of a
  * confirmation. A server action cannot navigate the top-level window, so the
@@ -146,8 +146,8 @@ export function EmbedBookedNotice({
           `_top`, always, on the first: `/ready/[token]` isn't in the embed
           framing allowlist (ADR 20260726-schedule-embed), so a same-frame click
           would swap the working widget for a frame Content-Security-Policy
-          silently blocks. The second stays inside the frame, and carries
-          `embed=1` so the schedule doesn't reload into full page chrome.
+          silently blocks. The second stays inside the frame, on the framed
+          calendar's path, so the schedule doesn't reload into full page chrome.
 
           A bare `<a>` rather than `next/link` for the first: it leaves the app
           either way, and `next/link` would *prefetch* the route — which mints a
@@ -166,7 +166,7 @@ export function EmbedBookedNotice({
           {t("booking.trackReadiness")}
         </a>
         <Link
-          href={`${publicSchedulePath(shopSlug)}?embed=1`}
+          href={embedCalendarPath(shopSlug)}
           className="inline-flex min-h-11 items-center text-sm text-muted hover:underline"
         >
           {t("common.backToSchedule")}

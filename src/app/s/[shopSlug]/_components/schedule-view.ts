@@ -73,11 +73,10 @@ export function scheduleViewLinks(view: ScheduleView) {
     if (activeLens) params.set("lens", activeLens.slug);
     return params;
   };
-  /** Month rail links replace the current month and always leave the embed frame. */
+  /** Month rail links replace the current month. */
   const monthHref = (monthKey: string) => {
     const params = withViewParams(new URLSearchParams());
     params.set("month", monthKey);
-    params.delete("embed");
     return `${publicSchedulePath(shopSlug)}?${params.toString()}`;
   };
   /**
@@ -269,7 +268,7 @@ export function schedulePagerHrefs({
  * derived from a departure the shop scheduled, and never from a column
  * somebody has to remember to update.
  *
- * Never inside the frame. `?embed=1` is a window onto the next few
+ * Never inside the frame. `embed/calendar` is a window onto the next few
  * departures on somebody else's website; a card about the shop's year, and
  * a composer under it, are both things the host page did not ask for, and
  * the widget already keeps its own terminal state below.

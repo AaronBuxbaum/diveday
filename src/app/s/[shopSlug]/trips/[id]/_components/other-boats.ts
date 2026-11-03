@@ -1,4 +1,5 @@
 import type { DiverLocale } from "@/i18n/settings";
+import { embedTripPath } from "@/lib/embed-routes";
 import { formatDayParts, formatShortDate, formatTime } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
 import { similarDepartures } from "@/lib/similar-departures";
@@ -72,7 +73,9 @@ export function fullTripAlternatives(trip: PublicTrip, board: Board, where: Othe
     // hands a client component, and in the header's own words ("Sat, Oct 24"),
     // so the run line and this one read as one calendar.
     when: formatShortDate(row.startsAt, where.locale, where.timeZone),
-    href: `${publicTripPath(where.shopSlug, row.tripId)}${where.isEmbed ? "?embed=1" : ""}`,
+    href: where.isEmbed
+      ? embedTripPath(where.shopSlug, row.tripId)
+      : publicTripPath(where.shopSlug, row.tripId),
   }));
 }
 
@@ -118,6 +121,8 @@ export function worthALookList(
     reason: row.reason,
     partOfDay: row.partOfDay,
     when: `${formatDayParts(row.startsAt, where.locale, where.timeZone).weekday} ${formatTime(row.startsAt, where.locale, where.timeZone)}`,
-    href: `${publicTripPath(where.shopSlug, row.tripId)}${where.isEmbed ? "?embed=1" : ""}`,
+    href: where.isEmbed
+      ? embedTripPath(where.shopSlug, row.tripId)
+      : publicTripPath(where.shopSlug, row.tripId),
   }));
 }

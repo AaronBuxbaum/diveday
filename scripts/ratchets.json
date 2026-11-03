@@ -1605,7 +1605,7 @@
     "src/lib/readiness.test.ts": 1575,
     "src/lib/staffing-week.test.ts": 1125,
     "src/lib/waivers.test.ts": 1402,
-    "src/proxy.test.ts": 1171
+    "src/proxy.test.ts": 1068
   },
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
@@ -1697,7 +1697,7 @@
     "src/app/(token)/ready/[token]/page.tsx": 617,
     "src/app/page.tsx": 440,
     "src/app/s/[shopSlug]/page.tsx": 645,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 466,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 464,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 576,
     "src/app/shop/[shopSlug]/page.tsx": 578,

@@ -20,7 +20,7 @@ import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
  * anywhere — nothing told a diver comparing two shops in another tab which one
  * they were looking at. Staff get `ShopNav` on their own namespace instead
  * (src/app/shop/[shopSlug]/layout.tsx); this is the diver-side counterpart, and
- * never renders in `?embed=1` mode, which already carries its own framing on
+ * never renders in a frame (`/s/<slug>/embed/**`), which already carries its own framing on
  * the page that embeds it.
  *
  * The header shows the shop's name, where a diver can go, and which language
