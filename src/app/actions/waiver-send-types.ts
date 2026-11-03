@@ -26,7 +26,7 @@ export type WaiverSendSurface = "today" | "roster" | "diver" | "counter";
  * assigned across in `sendWaiversAction`, so a drift is a type error there
  * rather than a channel that silently means nothing.
  */
-export const WAIVER_SEND_CHANNELS = ["email", "text", "link"] as const;
+export const WAIVER_SEND_CHANNELS = ["email", "sms", "link"] as const;
 export type WaiverSendChannel = (typeof WAIVER_SEND_CHANNELS)[number];
 
 export function isWaiverSendChannel(value: unknown): value is WaiverSendChannel {

@@ -93,7 +93,7 @@ describe("self-registration", () => {
 
       expect(sms.send).toHaveBeenCalledOnce();
       expect(sms.send.mock.calls[0]?.[0]?.body ?? "").toContain("https://diveday.example/waivers/");
-      expect(await sentTo(db, personId)).toEqual([{ channel: "text", status: "sent" }]);
+      expect(await sentTo(db, personId)).toEqual([{ channel: "sms", status: "sent" }]);
     });
 
     it("keeps email for a diver who gave both, and texts nothing", async () => {

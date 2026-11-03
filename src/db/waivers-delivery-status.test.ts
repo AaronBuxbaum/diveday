@@ -36,7 +36,7 @@ describe("a request's delivery, per channel and overall", () => {
     const nobody = "00000000-0000-4000-8000-000000000000";
     expect(await getDiverWaiverChannelStates(db, shop.id, nobody)).toEqual({
       email: "unknown",
-      text: "unknown",
+      sms: "unknown",
       link: "unknown",
     });
     expect(await getDiverWaiverRequestStatus(db, shop.id, nobody)).toBe("not_sent");
@@ -66,7 +66,7 @@ describe("a request's delivery, per channel and overall", () => {
       });
     }
     const states = await getDiverWaiverChannelStates(db, shop.id, personId);
-    expect(states).toMatchObject({ email: "sent", link: "copied", text: "unknown" });
+    expect(states).toMatchObject({ email: "sent", link: "copied", sms: "unknown" });
     expect(await getDiverWaiverRequestStatus(db, shop.id, personId)).toBe("not_signed");
   });
 
@@ -75,19 +75,19 @@ describe("a request's delivery, per channel and overall", () => {
     await recordWaiverDelivery(db, {
       shopId: shop.id,
       waiverRecordId: recordId,
-      channel: "text",
+      channel: "sms",
       delivery: { status: "failed", detail: "unreachable" },
     });
-    expect((await getDiverWaiverChannelStates(db, shop.id, personId)).text).toBe("failed");
+    expect((await getDiverWaiverChannelStates(db, shop.id, personId)).sms).toBe("failed");
     expect(await getDiverWaiverRequestStatus(db, shop.id, personId)).toBe("failed");
 
     await recordWaiverDelivery(db, {
       shopId: shop.id,
       waiverRecordId: recordId,
-      channel: "text",
+      channel: "sms",
       delivery: { status: "sent", providerMessageId: "sms-2" },
     });
-    expect((await getDiverWaiverChannelStates(db, shop.id, personId)).text).toBe("sent");
+    expect((await getDiverWaiverChannelStates(db, shop.id, personId)).sms).toBe("sent");
     expect(await getDiverWaiverRequestStatus(db, shop.id, personId)).toBe("not_signed");
   });
 });

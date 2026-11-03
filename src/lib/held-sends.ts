@@ -43,7 +43,7 @@ const waiverSendPayload = z
     bookingIds: z.array(z.uuid()).max(200),
     personId: z.uuid().optional(),
     /** The channel the staffer tapped. `link` never holds — it is a copy, not a send. */
-    channel: z.enum(["email", "text", "link"]),
+    channel: z.enum(["email", "sms", "link"]),
     surface: z.enum(WAIVER_SEND_SURFACES),
     tripId: z.uuid().optional(),
     /** The counter rental's ticket a `counter` send was made from, when there is one yet. */

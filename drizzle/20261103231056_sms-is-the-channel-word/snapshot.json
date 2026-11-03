@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "38645df0-7072-45c7-b254-bcfe30669155",
+  "prevIds": [
+    "cf90c22c-dd77-4a45-b5ac-36470b620cda"
+  ],
+  "footprints": [
+    {
+      "statementType": "recreate_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "waiver_delivery_channel"
+      ],
+      "writes": [
+        "s|enum|public.waiver_delivery_channel",
+        "n|enum|public.waiver_delivery_channel",
+        "e|enum|public.waiver_delivery_channel",
+        "n|type|public.waiver_delivery_channel",
+        "s|colprop|public.waiver_deliveries.channel.type",
+        "s|colprop|public.waiver_deliveries.channel.default"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|tbl|public.waiver_deliveries",
+        "n|sch|public",
+        "n|col|public.waiver_deliveries.channel"
+      ],
+      "sqlHash": "95f020197da6baed"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"waiver_delivery_channel\"]",
+      "set": {
+        "values": [
+          "email",
+          "sms",
+          "link"
+        ]
+      }
+    }
+  ]
+}

@@ -281,12 +281,12 @@ export function WaiverDeliveryActions({
           ) : null}
           {hasPhone ? (
             <ChannelButton
-              channel="text"
+              channel="sms"
               icon="text"
               label={copy.text}
               pendingLabel={sendCopy.sending}
-              state={channelStates.text}
-              stateLabel={stateWord(channelStates.text, copy)}
+              state={channelStates.sms}
+              stateLabel={stateWord(channelStates.sms, copy)}
               tapped={tapped}
               onTap={tap}
             />

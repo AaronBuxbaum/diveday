@@ -51,6 +51,7 @@ import { incidentMissingDiverEmail, incidentMissingDiverFoundEmail } from "./inc
 import { interestReceivedAckEmail } from "./interest-received-ack";
 import type { Notification } from "./kinds";
 import { partyPaymentReceiptEmail } from "./party-payment-receipt";
+import { reminderSmsBody } from "./reminder-text";
 import {
   rollCallStaleEmail,
   rollCallStaleShoreEmail,
@@ -275,4 +276,22 @@ function rawMessageFor(notification: Notification): NotificationEmail {
     return interestReceivedAckEmail(notification);
   }
   return passwordChangedEmail(notification);
+}
+
+/**
+ * The trip reminder's two text bodies from one set of facts: plain SMS, and the
+ * same reminder plus the reply line for the one text channel that can hear an
+ * answer. Which of the two goes out is `sendCourtesyMessage`'s call, and it may
+ * still fall back to SMS after a failed WhatsApp send, which is why both travel
+ * together (ADR 20260909-reply-keywords). `src/db/reminders.ts` hands over the
+ * facts and never composes the words.
+ */
+export function reminderTexts(
+  locale: Parameters<typeof reminderSmsBody>[0],
+  facts: Omit<Parameters<typeof reminderSmsBody>[1], "replyKeywords">,
+): { sms: string; whatsApp: string } {
+  return {
+    sms: reminderSmsBody(locale, { ...facts, replyKeywords: false }),
+    whatsApp: reminderSmsBody(locale, { ...facts, replyKeywords: true }),
+  };
 }

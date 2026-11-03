@@ -96,7 +96,8 @@ export {
   notificationProviderSignal,
 } from "./provider";
 export { recapText } from "./recap-text";
-export { reminderForecast, reminderSmsBody } from "./reminder-text";
+export { reminderForecast } from "./reminder-text";
+export { reminderTexts } from "./render";
 export {
   type ReplyKeywordAnswer,
   type ReplyKeywordDeparture,
