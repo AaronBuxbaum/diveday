@@ -90,7 +90,7 @@ export function MessagesGroup({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.contact.submitting")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.contact.submit")}
@@ -100,7 +100,7 @@ export function MessagesGroup({
           {contactUnconfirmed ? (
             <form action={resendContactConfirmationAction} className="mt-3">
               <SubmitButton
-                pendingLabel={t("settings.main.contact.resending")}
+                pendingLabel={t("words.busy.sending")}
                 className={buttonClass({ variant: "ghost" })}
               >
                 {t("settings.main.contact.resend")}
@@ -141,7 +141,7 @@ export function MessagesGroup({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.deskHours.submitting")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.deskHours.submit")}
@@ -179,7 +179,7 @@ export function MessagesGroup({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.reviewLink.submitting")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.reviewLink.submit")}

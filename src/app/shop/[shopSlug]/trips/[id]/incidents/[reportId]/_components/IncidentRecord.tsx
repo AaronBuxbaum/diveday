@@ -188,7 +188,7 @@ export function IncidentAddenda({
           </Field>
           <div className="flex flex-wrap items-center gap-3">
             <SubmitButton
-              pendingLabel={t("incidents.addenda.pending")}
+              pendingLabel={t("words.busy.adding")}
               className={buttonClass({ variant: "secondary" })}
             >
               {t("incidents.addenda.submit")}

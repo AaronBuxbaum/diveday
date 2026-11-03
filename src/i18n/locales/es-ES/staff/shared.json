@@ -31,7 +31,6 @@
     "markSignedOnPaper": "Marcar como firmado en papel",
     "medicalAttestationLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
     "medicalAttestationMinorLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico, ninguna respuesta necesita el visto bueno de un médico y la madre, el padre o el tutor respondió las preguntas de salud.",
-    "recording": "Registrando…",
     "recordPaperSignature": "Registrar firma en papel",
     "guardianNameLabel": "Madre, padre o tutor que firmó",
     "guardianRelationshipLabel": "Relación",
@@ -61,14 +60,11 @@
     "documentHint": "Una imagen o un PDF del formulario firmado.",
     "documentChoose": "Elige un archivo",
     "documentChooseAnother": "Elige otro archivo",
-    "recording": "Registrando…",
     "confirm": "Registrar la respuesta",
     "useDiverForm": "Usar como evaluación el formulario que envió el buceador. Ábrelo primero y escribe el nombre del médico que aparece en él.",
     "earlierLetterConfirm": "Marca si esta carta tiene fecha anterior a la última derivación: el médico evaluó su estado actual, no solo la derivación firmada el {date}."
   },
   "waiverSend": {
-    "sending": "Enviando…",
-    "copied": "Copiado",
     "copyLink": "Copiar enlace",
     "copyFailed": "Reintentar",
     "reasonNoEmailOne": "Sin correo registrado",
@@ -89,7 +85,6 @@
     "alreadyDoneOther": "{names} ya tienen una exención firmada, así que no se reenvió nada.",
     "errors": "No se pudo enviar a {names}. Revisa la reserva en el listado.",
     "confirmResend": "Sí, reenviar",
-    "neverMind": "Cancelar",
     "emptySelection": "Marca al menos un buceador y envía la exención a toda la selección.",
     "unnamedDiver": "Un buceador"
   },
@@ -261,7 +256,9 @@
     }
   },
   "presence": {
-    "arrived": "Registrado"
+    "arrived": "Registrado",
+    "boarded": "Embarcado",
+    "notBoarded": "No embarcado"
   },
   "shopNav": {
     "language": "Idioma",
@@ -455,9 +452,7 @@
       "notOnFile": "Sin datos registrados",
       "rentalFit": "Equipo de alquiler",
       "nitroxRequestedSuffix": "· Nitrox solicitado",
-      "saving": "Guardando…",
       "markBoarded": "Marcar embarcado",
-      "notBoardedDone": "No embarcado",
       "markNotBoarded": "Marcar no embarcado",
       "notBackAboardActive": "Sin regresar a bordo",
       "markNotBackAboard": "Marcar sin regresar a bordo",
@@ -483,7 +478,6 @@
       },
       "counter": {
         "heading": "En el mostrador",
-        "checkedInLabel": "Registrado",
         "notCheckedInLabel": "Registrar",
         "refusedNotReady": "Sin registrar: dejó de estar listo después de que presionaste. Abre el mostrador en vivo antes de que suba a bordo.",
         "refusedNotBookable": "Sin registrar: esta plaza ya no está en la lista del barco. Se canceló o en el mostrador marcaron que no vino. Abre el mostrador en vivo.",
@@ -548,8 +542,6 @@
   },
   "rollCallState": {
     "awaiting": "Pendiente de pase de lista",
-    "boarded": "Embarcado",
-    "notBoarded": "No embarcado",
     "notBoardedCarried": "No embarcado · arrastrado",
     "notBackAboard": "Sin regresar a bordo"
   },
@@ -626,7 +618,6 @@
     "typedAs": "escrito como “{raw}”"
   },
   "sendHold": {
-    "sendingNow": "Enviando…",
     "undo": "Deshacer"
   },
   "rescheduleHold": {

@@ -57,7 +57,6 @@
     "piecesEmpty": "Nothing on file for this diver yet. Add the piece they brought in.",
     "addPieceHeading": "Add a piece",
     "addPiece": "Add to the record",
-    "addingPiece": "Adding…",
     "jobHeading": "The job",
     "submit": "Open the work order",
     "pending": "Opening…"
@@ -79,8 +78,7 @@
     "descriptionPlaceholder": "Second-stage service kit",
     "quantity": "Quantity",
     "unitAmount": "Price each",
-    "save": "Save",
-    "saving": "Saving…"
+    "save": "Save"
   },
   "detail": {
     "eyebrow": "Work order",
@@ -95,16 +93,13 @@
     "serviceDue": "Service due {date}",
     "linesHeading": "Parts and labor",
     "addLine": "Add",
-    "adding": "Adding…",
     "deleteLine": "Delete",
-    "deletingLine": "Deleting…",
     "linesEmpty": "No parts or labor yet",
     "total": "Total",
     "historyHeading": "History",
     "receivedOn": "Received {date}",
     "deletedBadge": "Deleted",
     "delete": "Delete work order",
-    "deleting": "Deleting…",
     "restore": "Restore",
     "restoring": "Restoring…",
     "claimTag": "Print claim tag",
@@ -135,8 +130,7 @@
     "nextDueOn": "Next due",
     "nextDueDives": "Or after this many dives",
     "nextDue": "next due {date}",
-    "record": "Record the work",
-    "recording": "Recording…"
+    "record": "Record the work"
   },
   "history": {
     "created": "Opened",
@@ -159,7 +153,6 @@
     "onTheBench": "{count, number} on the bench",
     "deletePiece": "Delete {label}",
     "deletePieceShort": "Delete",
-    "deletingPiece": "Deleting…",
     "newOrder": "New work order",
     "orderLink": "#{number}: {problem}",
     "serial": "Serial {serial}"

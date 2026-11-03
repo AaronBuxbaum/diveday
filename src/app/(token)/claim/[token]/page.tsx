@@ -3,13 +3,14 @@ import { connection } from "next/server";
 import { EntryDone } from "@/components/account/EntryShell";
 import { DeadLink } from "@/components/DeadLink";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopNotice";
 import { SmsConsentNote } from "@/components/SmsConsentNote";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
+import { ShopNotice } from "@/components/ui/outcome";
+import { noticeRole } from "@/components/ui/tone";
 import { getDb } from "@/db/client";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { type DeadClaimShop, getClaimPageState } from "@/db/seat-claims";
@@ -18,7 +19,7 @@ import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { unionRequirements } from "@/lib/requirement";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { claimSeatAction } from "./actions";
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -54,9 +54,9 @@ describe("OfflineTripHeader", () => {
 
     const { container } = render(<OfflineTripHeader view={noteLossView} controls={controls()} />);
 
-    expect(container.textContent).toContain("Fresh roster · older notes removed");
+    expect(container.textContent).toContain("Fresh manifest · older notes removed");
     expect(container.textContent).toContain(
-      "The saved roster is current. Readiness reflects that moment, and we’ll re-check everything once you’re back in signal. Older offline note text was removed after a data erasure; see the notice below.",
+      "The saved manifest is current. Readiness reflects that moment, and we’ll re-check everything once you’re back in signal. Older offline note text was removed after a data erasure; see the notice below.",
     );
     expect(container.textContent).toContain(
       "Older offline note text was removed after a data erasure",

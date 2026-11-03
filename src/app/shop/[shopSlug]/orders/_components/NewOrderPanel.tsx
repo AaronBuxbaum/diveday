@@ -251,7 +251,7 @@ export async function NewOrderPanel({
             removeAria: t("orders.new.removeItemAria", { number: "#" }),
             subtotal: t("orders.new.subtotal"),
             submit: t("orders.new.submit"),
-            sending: t("orders.new.sending"),
+            sending: t("words.busy.sending"),
           }}
         />
       </InvoiceForm>

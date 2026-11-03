@@ -7,6 +7,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import type { NoticeTone } from "@/components/ui/tone";
 import {
   canPersonManageWaiverTemplates,
   getWaiversPage,
@@ -17,7 +18,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { requireShopSurface } from "@/lib/session";
-import type { NoticeTone } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
 import { BlankReleaseLink } from "./_components/BlankReleaseLink";

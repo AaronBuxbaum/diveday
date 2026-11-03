@@ -1,7 +1,7 @@
-import { ShopNotice } from "@/components/ShopNotice";
+import { ShopNotice } from "@/components/ui/outcome";
+import { type NoticeTone, noticeRole } from "@/components/ui/tone";
 import { type StaffWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
 
 /** The page's one notice surface: a visit rarely carries more than one, and they stack. */
 export function TodayNoticeStack({

@@ -192,7 +192,7 @@
   sailed boat: while the boat is still there it is about the seat, and once the boat has gone it is
   about the day, and the disclosure's words change to match (`noShowClaim`). **It removes nobody
   from the manifest.** The roster keeps every non-cancelled booking (`getTripRoster`,
-  `src/db/trips-roster.ts`), because a diver the desk wrote off is still a name the crew must
+  `src/db/trips-manifest.ts`), because a diver the desk wrote off is still a name the crew must
   account for at roll call; the row wears a mark of its own so it cannot read as somebody merely
   late, and it stays in the expected head count until somebody at the boat speaks for them. **The
   evening's souls count is the one place it does subtract, because that line asks a different
@@ -795,7 +795,7 @@
   people — a head count is the practice that leaves people behind, which is why no DiveDay surface
   asks for one. The number printed beside each name is a line number and never an identity; see
   **roll-call order**.
-- **Roll-call order** — the order the manifest lists divers in: **oldest seat first, then the diver's name, then the booking id** (`getTripRoster`, `src/db/trips-roster.ts`). The screen, the departure log and the saved dock copy all read that one query, so the three can never disagree about who sits where in the list. The **number beside each name is a line number, not the diver's number**: it is that row's position in today's list, so it shifts when a seat is cancelled, when a released seat is resold to somebody else, and when a name is corrected inside a group of seats sold in the same instant. It exists so a person can keep their place down a wet list, and for nothing else — **the roll is still called by name** (see **Manifest**), and no note, message, export or radio call ever refers to a diver as a number. A shop wanting a number a diver keeps for the day (a tank station, a group) does not have one: that is a stored fact about a person on a departure, not a position in a list. The order is stable against a re-read and against a fresh seed of the same data; it is not stable against the roster's own contents changing (issue #1720). The rename case is the owner's accepted cost, not an open question: the name stays the tie-break and no monotonic seat number is added (H-20260916-tiebreaker-user-visible-list, issue #1759).
+- **Roll-call order** — the order the manifest lists divers in: **oldest seat first, then the diver's name, then the booking id** (`getTripRoster`, `src/db/trips-manifest.ts`). The screen, the departure log and the saved dock copy all read that one query, so the three can never disagree about who sits where in the list. The **number beside each name is a line number, not the diver's number**: it is that row's position in today's list, so it shifts when a seat is cancelled, when a released seat is resold to somebody else, and when a name is corrected inside a group of seats sold in the same instant. It exists so a person can keep their place down a wet list, and for nothing else — **the roll is still called by name** (see **Manifest**), and no note, message, export or radio call ever refers to a diver as a number. A shop wanting a number a diver keeps for the day (a tank station, a group) does not have one: that is a stored fact about a person on a departure, not a position in a list. The order is stable against a re-read and against a fresh seed of the same data; it is not stable against the roster's own contents changing (issue #1720). The rename case is the owner's accepted cost, not an open question: the name stays the tie-break and no monotonic seat number is added (H-20260916-tiebreaker-user-visible-list, issue #1759).
 - **Meeting point** — where a diver goes for one departure: the trip's own label and address
   (`trips.meeting_point_label`, `trips.meeting_point_address`, free text and never geocoded, since
   "the gravel lot past the ranger station" is exactly what it exists to name), or the shop's own
@@ -2148,7 +2148,7 @@
   manifest roster, and since the counter could release a seat the two have drifted further apart
   than a filter. The manifest still lists every non-cancelled booking, no-shows included, because a
   name the desk wrote off is a name the crew must account for at roll call (`getTripRoster`,
-  `src/db/trips-roster.ts`) — but the seat behind that name may since have been sold to somebody
+  `src/db/trips-manifest.ts`) — but the seat behind that name may since have been sold to somebody
   else, so one departure can carry two names for one seat and count it once. Fill rate is a
   commercial measure of seats that earned; the manifest is a head count of who may come aboard,
   which is why carrying more bodies than seats is something it *says* (`summary.overCapacity`)

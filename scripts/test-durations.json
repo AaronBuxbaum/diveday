@@ -1718,7 +1718,7 @@
   "src/db/trips-record.postgres.test.ts": 2033,
   "src/db/trips-record.sections.test.ts": 4157,
   "src/db/trips-record.test.ts": 6871,
-  "src/db/trips-roster.test.ts": 4031,
+  "src/db/trips-manifest.test.ts": 4031,
   "src/db/trips-schedule-transaction.postgres.test.ts": 1603,
   "src/db/trips-schedule.test.ts": 4178,
   "src/db/trips-series-at-sea.test.ts": 5127,

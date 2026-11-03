@@ -137,8 +137,8 @@ export function rowNotices(seat: RowNoticesInput) {
               triggerLabel={t("trips.roster.sendNewWaiver")}
               message={t("trips.roster.sendNewWaiverMessage", { name: person.fullName })}
               confirmLabel={t("trips.roster.sendNewWaiverConfirm")}
-              cancelLabel={t("trips.roster.neverMind")}
-              pendingLabel={t("trips.roster.sending")}
+              cancelLabel={t("words.dismiss.neverMind")}
+              pendingLabel={t("words.busy.sending")}
               triggerClassName={linkAction}
               confirmClassName={buttonClass({ variant: "primary", size: "sm" })}
             />

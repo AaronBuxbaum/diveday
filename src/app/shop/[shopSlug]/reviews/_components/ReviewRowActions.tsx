@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { ListItemActions } from "@/components/ui/list-item-actions";
 import { menuRowClass } from "@/components/ui/menu";
-import type { NoticeTone } from "@/lib/staff-notices";
+import type { NoticeTone } from "@/components/ui/tone";
 import { type ReviewActionResult, reviewRowAction } from "../actions";
 import { ReviewHideForm } from "./ReviewHideForm";
 

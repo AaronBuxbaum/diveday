@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import type { NoticeTone } from "@/components/ui/tone";
 import { canPersonExportShopData, PAGE_SIZE } from "@/db/export";
 import {
   getShopBackupDestination,
@@ -9,7 +10,7 @@ import {
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
-import type { NoticeCodeOf, NoticeTone } from "@/lib/staff-notices";
+import type { NoticeCodeOf } from "@/lib/staff-notices";
 import { DataTabs } from "../../_components/DataTabs";
 import { settingsPaneClass } from "../../_components/settings-pane";
 import { BackupsSection, deliveryErrorText } from "../_components/BackupsSection";

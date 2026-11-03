@@ -491,7 +491,7 @@ export function DetailsSection({
         </>
       ) : null}
       <div className="flex flex-wrap items-center gap-3">
-        <SubmitButton pendingLabel={t("trips.details.saving")} className={buttonClass()}>
+        <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
           {t("trips.details.saveChanges")}
         </SubmitButton>
         <FormStatus tone={status?.tone}>{status?.text}</FormStatus>

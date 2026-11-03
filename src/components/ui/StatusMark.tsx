@@ -1,3 +1,4 @@
+import type { ToneName } from "./tone";
 /**
  * Drawn status marks shared by the staff surfaces.
  *
@@ -7,9 +8,7 @@
  * 20260827-the-departure-is-two-working-surfaces, decision 5).
  */
 export type StatusMarkVariant =
-  | "success"
-  | "warning"
-  | "danger"
+  | Extract<ToneName, "success" | "warning" | "danger">
   | "checked"
   | "unchecked"
   /** A hollow ring: a job not done yet, on a row whose kind is quiet. */

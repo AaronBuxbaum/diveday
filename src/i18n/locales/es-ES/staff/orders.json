@@ -29,7 +29,6 @@
     "lineItemDescriptionPlaceholder": "Descripción",
     "quantityLabel": "Cantidad",
     "unitPriceLabel": "Precio unitario ({currency})",
-    "sending": "Enviando…",
     "submit": "Crear y enviar factura",
     "kind": {
       "trip_fee": "Tarifa de la salida",
@@ -134,7 +133,6 @@
     },
     "recordPayment": {
       "label": "Registrar pago",
-      "recording": "Registrando…",
       "heldCash": "Registrando: {amount} en efectivo",
       "heldCardMachine": "Registrando: {amount} con terminal de pago",
       "roomCharge": "Cargar a la habitación",

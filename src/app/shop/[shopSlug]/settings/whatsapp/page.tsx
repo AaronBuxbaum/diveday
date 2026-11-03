@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import type { NoticeTone } from "@/components/ui/tone";
 import type { WhatsAppConnectRefusal } from "@/db/whatsapp-accounts";
 import {
   canPersonManageMessagingSettings,
@@ -17,7 +18,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { whatsAppSignupConfigFromEnvironment } from "@/lib/notifications/whatsapp-signup";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { requireShopSurface } from "@/lib/session";
-import type { NoticeCodeOf, NoticeTone } from "@/lib/staff-notices";
+import type { NoticeCodeOf } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import {
   completeWhatsAppSignupAction,
@@ -233,7 +234,7 @@ export default async function WhatsAppSettingsPage({
                 </Field>
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("whatsapp.test.submitting")}
+                    pendingLabel={t("words.busy.sending")}
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("whatsapp.test.submit")}

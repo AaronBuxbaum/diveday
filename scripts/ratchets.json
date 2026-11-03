@@ -1727,20 +1727,30 @@
         "files": {
           "src/app/shop/[shopSlug]/page.tsx": "569 -> 577"
         }
+      },
+      {
+        "why": "NoticeTone and noticeRole import moves to ui/tone, one import line more",
+        "files": {
+          "src/app/(token)/ready/[token]/page.tsx": "616 -> 617",
+          "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577",
+          "src/app/shop/[shopSlug]/orders/page.tsx": "575 -> 576",
+          "src/app/shop/[shopSlug]/page.tsx": "577 -> 578",
+          "src/app/shop/[shopSlug]/staffing/page.tsx": "503 -> 504"
+        }
       }
     ],
-    "src/app/(token)/ready/[token]/page.tsx": 616,
+    "src/app/(token)/ready/[token]/page.tsx": 617,
     "src/app/page.tsx": 440,
     "src/app/s/[shopSlug]/page.tsx": 645,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 466,
-    "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 576,
-    "src/app/shop/[shopSlug]/orders/page.tsx": 575,
-    "src/app/shop/[shopSlug]/page.tsx": 577,
+    "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
+    "src/app/shop/[shopSlug]/orders/page.tsx": 576,
+    "src/app/shop/[shopSlug]/page.tsx": 578,
     "src/app/shop/[shopSlug]/promos/page.tsx": 559,
     "src/app/shop/[shopSlug]/reports/page.tsx": 474,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 410,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 578,
-    "src/app/shop/[shopSlug]/staffing/page.tsx": 506,
+    "src/app/shop/[shopSlug]/staffing/page.tsx": 504,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 473
   },
   "tokens": {

@@ -43,7 +43,7 @@ export function ServiceReminderToggle({
       <input type="hidden" name="on" value={state.off ? "true" : "false"} />
       {fact ? <span className="text-muted text-xs">{fact}</span> : null}
       <SubmitButton
-        pendingLabel={t("benchFollowUp.reminders.saving")}
+        pendingLabel={t("words.busy.saving")}
         className={buttonClass({ variant: "ghost", size: "sm" })}
         aria-label={
           state.off

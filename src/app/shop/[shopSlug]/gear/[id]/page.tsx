@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import type { NoticeTone } from "@/components/ui/tone";
 import { type GearItemDetail, getGearItemDetail } from "@/db/gear";
 import {
   gearItemKindLabel,
@@ -25,7 +26,7 @@ import { nowDate } from "@/lib/clock";
 import { gearServiceState, reservationPhase } from "@/lib/gear";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { GearItemNotes, NoteDoor } from "./_components/GearItemNotes";
 import { aboardText, gearUnitHull } from "./_components/KindFacts";

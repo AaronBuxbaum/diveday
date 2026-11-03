@@ -269,7 +269,7 @@ export function ConversationSection({
                 </div>
               ) : null}
               <SubmitButton
-                pendingLabel={t("inbox.reply.sending")}
+                pendingLabel={t("words.busy.sending")}
                 className={buttonClass({
                   variant: "secondary",
                   size: "sm",
@@ -306,7 +306,7 @@ export function ConversationSection({
                       key={message}
                       name="message"
                       value={message}
-                      pendingLabel={t("inbox.reply.sending")}
+                      pendingLabel={t("words.busy.sending")}
                       className={buttonClass({
                         variant: "secondary",
                         size: "sm",

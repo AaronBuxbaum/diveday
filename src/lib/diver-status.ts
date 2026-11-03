@@ -209,7 +209,7 @@ function missingEmergencyContact(diver: DiverProfile): boolean {
  * - Booked on the course that gets them there: no fix. The card is the
  *   instructor's to issue when the course ends.
  * - A course that should have got them there and has ended without a card
- *   (`endedCourseTripId`, issue #2058): **Open the course roster**, where the
+ *   (`endedCourseTripId`, issue #2058): **Open the course’s divers**, where the
  *   instructor issues the card, or the conversation with a student who did
  *   not finish starts. Applied over the table below in `certificationFix`.
  */

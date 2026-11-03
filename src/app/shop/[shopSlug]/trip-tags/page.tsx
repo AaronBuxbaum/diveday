@@ -95,7 +95,7 @@ export default async function TripTagsSettingsPage({
                     lensId through its own formAction and names the history it affects. */}
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 w-full sm:w-auto justify-end">
                   <SubmitButton
-                    pendingLabel={t("lenses.submitting")}
+                    pendingLabel={t("words.busy.saving")}
                     className={buttonClass({ variant: "secondary" })}
                     formAction={updateTripLensAction}
                   >
@@ -112,9 +112,9 @@ export default async function TripTagsSettingsPage({
                       message={t("lenses.deleteDepartures", {
                         count: lensDepartures.get(lens.id) ?? 0,
                       })}
-                      cancelLabel={t("lenses.deleteCancel")}
+                      cancelLabel={t("words.dismiss.neverMind")}
                       confirmLabel={t("lenses.deleteConfirm")}
-                      pendingLabel={t("lenses.deletePending")}
+                      pendingLabel={t("words.busy.deleting")}
                       triggerClassName={buttonClass({
                         variant: "danger-ghost",
                         flush: true,
@@ -128,7 +128,7 @@ export default async function TripTagsSettingsPage({
                       formAction={deleteTripLensAction}
                       triggerLabel={t("lenses.delete")}
                       confirmLabel={t("lenses.deleteConfirm")}
-                      pendingLabel={t("lenses.deletePending")}
+                      pendingLabel={t("words.busy.deleting")}
                       triggerClassName={buttonClass({
                         variant: "danger-ghost",
                         flush: true,
@@ -160,7 +160,7 @@ export default async function TripTagsSettingsPage({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("lenses.adding")}
+                pendingLabel={t("words.busy.adding")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("lenses.add")}

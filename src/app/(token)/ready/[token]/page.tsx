@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
-import { ShopNotice } from "@/components/ShopNotice";
 import { buttonClass } from "@/components/ui/button";
+import { ShopNotice } from "@/components/ui/outcome";
+import { noticeRole } from "@/components/ui/tone";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
@@ -25,7 +26,7 @@ import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
 import { nitroxAvailableOn } from "@/lib/rentals";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { noticeFromParam } from "@/lib/staff-notices";
 import {
   buildThreadSteps,
   isDiveDay,

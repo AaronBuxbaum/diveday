@@ -1,0 +1,15 @@
+{
+  "busy": {
+    "saving": "Guardando…",
+    "sending": "Enviando…",
+    "adding": "Agregando…",
+    "deleting": "Eliminando…",
+    "recording": "Registrando…"
+  },
+  "dismiss": {
+    "neverMind": "Mejor no"
+  },
+  "did": {
+    "copied": "Copiado"
+  }
+}

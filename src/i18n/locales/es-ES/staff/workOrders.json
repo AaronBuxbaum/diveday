@@ -57,7 +57,6 @@
     "piecesEmpty": "Este buzo no tiene equipo registrado. Agrega la pieza que trajo.",
     "addPieceHeading": "Agregar una pieza",
     "addPiece": "Agregar al registro",
-    "addingPiece": "Agregando…",
     "jobHeading": "El trabajo",
     "submit": "Abrir la orden de trabajo",
     "pending": "Abriendo…"
@@ -79,8 +78,7 @@
     "descriptionPlaceholder": "Kit de servicio de segunda etapa",
     "quantity": "Cantidad",
     "unitAmount": "Precio por unidad",
-    "save": "Guardar",
-    "saving": "Guardando…"
+    "save": "Guardar"
   },
   "detail": {
     "eyebrow": "Orden de trabajo",
@@ -95,16 +93,13 @@
     "serviceDue": "Servicio el {date}",
     "linesHeading": "Repuestos y mano de obra",
     "addLine": "Agregar",
-    "adding": "Agregando…",
     "deleteLine": "Eliminar",
-    "deletingLine": "Eliminando…",
     "linesEmpty": "Todavía no hay repuestos ni mano de obra.",
     "total": "Total",
     "historyHeading": "Historial",
     "receivedOn": "Recibido el {date}",
     "deletedBadge": "Eliminada",
     "delete": "Eliminar la orden de trabajo",
-    "deleting": "Eliminando…",
     "restore": "Restaurar",
     "restoring": "Restaurando…",
     "claimTag": "Imprimir etiqueta de retiro",
@@ -135,8 +130,7 @@
     "nextDueOn": "Próxima fecha",
     "nextDueDives": "O después de estas inmersiones",
     "nextDue": "próxima el {date}",
-    "record": "Registrar el trabajo",
-    "recording": "Registrando…"
+    "record": "Registrar el trabajo"
   },
   "history": {
     "created": "Abierta",
@@ -159,7 +153,6 @@
     "onTheBench": "{count, number} en el taller",
     "deletePiece": "Eliminar {label}",
     "deletePieceShort": "Eliminar",
-    "deletingPiece": "Eliminando…",
     "newOrder": "Nueva orden de trabajo",
     "orderLink": "N.º {number}: {problem}",
     "serial": "N.º de serie {serial}"

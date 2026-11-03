@@ -3,8 +3,8 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SectionCard } from "@/components/ui/card";
+import type { NoticeTone } from "@/components/ui/tone";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { NoticeTone } from "@/lib/staff-notices";
 import { settingsPaneClass } from "./settings-pane";
 
 /**

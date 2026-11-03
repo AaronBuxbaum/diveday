@@ -60,9 +60,9 @@ import {
 } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
+import { getTripRoster } from "./trips-manifest";
 import { seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
 import { getTripWithBooked, rollCallStartedOn, setTripStatus } from "./trips-record";
-import { getTripRoster } from "./trips-roster";
 
 /**
  * The blow-out cascade (docs ADR 20260804-blowout-cascade, glossary

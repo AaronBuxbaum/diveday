@@ -227,7 +227,7 @@ function CredentialRow({
               <SubmitButton
                 name="renewalOf"
                 value={credential.id}
-                pendingLabel={t("staffing.credentials.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass()}
               >
                 {t("staffing.credentials.saveRenewal")}
@@ -235,7 +235,7 @@ function CredentialRow({
               <SubmitButton
                 name="correctionOf"
                 value={credential.id}
-                pendingLabel={t("staffing.credentials.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("staffing.credentials.saveCorrection")}
@@ -251,7 +251,7 @@ function CredentialRow({
             <input type="hidden" name="revision" value={credential.revision ?? 0} />
             <input type="hidden" name="status" value="verified" />
             <SubmitButton
-              pendingLabel={t("staffing.credentials.saving")}
+              pendingLabel={t("words.busy.saving")}
               className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
             >
               {t("staffing.credentials.markVerified")}
@@ -264,7 +264,7 @@ function CredentialRow({
           <InlineConfirm
             triggerLabel={t("staffing.credentials.delete")}
             confirmLabel={t("staffing.credentials.deleteConfirm", { name: credential.name })}
-            pendingLabel={t("staffing.credentials.deleting")}
+            pendingLabel={t("words.busy.deleting")}
             triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
             autoResetMs={6000}
           />

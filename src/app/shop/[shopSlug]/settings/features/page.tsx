@@ -203,7 +203,7 @@ export default async function FeaturesPage({
           );
         })}
         <StickyFormActions>
-          <SubmitButton pendingLabel={t("settings.main.features.saving")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
             {t("settings.main.features.save")}
           </SubmitButton>
           <FormStatus tone={banner?.tone} occurrenceKey={notice}>

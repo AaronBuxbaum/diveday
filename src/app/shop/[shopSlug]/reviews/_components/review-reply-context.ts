@@ -28,7 +28,7 @@ export async function reviewReplyContext(
       fieldLabel: t("reviews.reply.fieldLabel"),
       hint: t("reviews.reply.hint", { max }),
       save: t("reviews.reply.save"),
-      saving: t("reviews.saving"),
+      saving: t("words.busy.saving"),
       edit: t("reviews.reply.edit"),
       cancel: t("reviews.reply.cancel"),
       delete: t("reviews.reply.delete"),

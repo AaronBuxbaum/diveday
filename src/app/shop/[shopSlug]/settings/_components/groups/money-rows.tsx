@@ -68,7 +68,7 @@ export function passThroughRow(view: SettingsView) {
         </FieldGrid>
         <p className="mt-3 text-sm text-muted">{t("settings.main.passThrough.clearHint")}</p>
         <SubmitButton
-          pendingLabel={t("settings.main.passThrough.submitting")}
+          pendingLabel={t("words.busy.saving")}
           className={buttonClass({ variant: "secondary", className: "mt-3" })}
         >
           {t("settings.main.passThrough.submit")}

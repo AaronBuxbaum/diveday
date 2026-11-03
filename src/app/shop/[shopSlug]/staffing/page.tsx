@@ -5,7 +5,6 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
@@ -19,12 +18,14 @@ import {
   FormStatus,
 } from "@/components/ui/form";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { ShopNotice } from "@/components/ui/outcome";
+import { noticeRole } from "@/components/ui/tone";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { CREW_PUBLIC_NAME_MAX, defaultCrewPublicName } from "@/lib/crew-public-name";
 import { formatCalendarDateRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
-import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
 import { ScheduleViews } from "../schedule/_components/ScheduleViews";
 import { CrewPageHeader } from "./_components/CrewPageHeader";
@@ -288,10 +289,7 @@ export default async function StaffingPage({
                   />
                 </Field>
                 <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("staffing.addShift.saving")}
-                    className={buttonClass()}
-                  >
+                  <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                     {t("staffing.addShift.submit")}
                   </SubmitButton>
                   <FormStatus tone={shiftStatus?.tone}>
@@ -345,7 +343,7 @@ export default async function StaffingPage({
                 />
               </Field>
               <FieldActions>
-                <SubmitButton pendingLabel={t("staffing.away.saving")} className={buttonClass()}>
+                <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                   {t("staffing.away.save")}
                 </SubmitButton>
               </FieldActions>
@@ -440,7 +438,7 @@ export default async function StaffingPage({
               </Field>
               <FieldActions>
                 <SubmitButton
-                  pendingLabel={t("staffing.crewConsent.saving")}
+                  pendingLabel={t("words.busy.saving")}
                   className={buttonClass({ variant: "secondary", size: "sm" })}
                 >
                   {t("staffing.crewConsent.save")}

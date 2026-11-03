@@ -1,7 +1,7 @@
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
+import { ShopNotice } from "@/components/ui/outcome";
 import type { LadderStep } from "@/db/course-ladder";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";

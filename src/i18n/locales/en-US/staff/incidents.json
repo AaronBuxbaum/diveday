@@ -23,7 +23,6 @@
     "notReached": "Not reached yet. Call the owners now.",
     "notAlerted": "No alert stands for them here.",
     "found": "Found",
-    "foundPending": "Saving…",
     "foundDone": "Marked found. The owners have the all-clear.",
     "foundPartial": "Marked found. The all-clear did not reach every owner. Call them.",
     "foundNoAllClear": "Marked found. No all-clear was sent.",
@@ -72,8 +71,7 @@
     "followUp": "Follow-up",
     "followUpHint": "Who was notified (DAN, the training agency, the emergency contact), gear secured for inspection, what happens next.",
     "optional": "(optional)",
-    "save": "Save draft",
-    "saving": "Saving…"
+    "save": "Save draft"
   },
   "handoverKind": {
     "none": "Stayed with the crew",
@@ -110,7 +108,6 @@
     "outsiderNameHint": "Only for someone not on the lists.",
     "part": "Their part",
     "add": "Add to the report",
-    "adding": "Adding…",
     "remove": "Remove",
     "removeLabel": "Remove {name} from the report",
     "removing": "Removing…",
@@ -157,7 +154,6 @@
     "byAt": "{name}, {when}",
     "help": "Sends the owners who were alerted one all-clear by email. Only once they are marked back aboard.",
     "submit": "Found",
-    "pending": "Saving…",
     "allClearSent": "All-clear sent {when}",
     "allClearPartial": "The all-clear did not reach every owner. Call them.",
     "allClearNone": "No all-clear was sent."
@@ -168,8 +164,7 @@
     "empty": "No later notes",
     "by": "{name}, {date}",
     "label": "Add a note",
-    "submit": "Add note",
-    "pending": "Adding…"
+    "submit": "Add note"
   },
   "notices": {
     "saved": "Draft saved",
@@ -256,8 +251,6 @@
     "description": "Only an owner can, and only before it is filed. It comes off this departure and the Reports page.",
     "trigger": "Delete draft",
     "confirm": "Yes, delete the draft",
-    "cancel": "Never mind",
-    "pending": "Deleting…",
     "message": "Delete this draft? It leaves the screen, and its words are kept for seven years. A filed report can never be deleted."
   },
   "hold": {
@@ -265,7 +258,6 @@
     "descriptionOff": "For an open claim. Keeps this report past its seven years. Only an owner can set or release it.",
     "descriptionOn": "On hold. This report is kept until an owner releases the hold.",
     "set": "Put a legal hold",
-    "release": "Release the hold",
-    "pending": "Saving…"
+    "release": "Release the hold"
   }
 }

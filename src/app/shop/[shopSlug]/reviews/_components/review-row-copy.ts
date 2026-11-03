@@ -10,7 +10,7 @@ export function reviewRowCopy(t: StaffTranslator): ReviewRowCopy {
   return {
     publish: t("reviews.publish"),
     republish: t("reviews.republish"),
-    saving: t("reviews.saving"),
+    saving: t("words.busy.saving"),
     hide: t("reviews.hide"),
     hideConfirm: t("reviews.hideConfirm"),
     hideReasonLabel: t("reviews.hideReasonLabel"),

@@ -40,7 +40,7 @@ test("the diver roster offers role-view chips that drive the filter", { tag: REA
   await page.goto("/shop/blue-mantis/divers");
   await expect(page.getByRole("heading", { level: 1, name: "Divers" })).toBeVisible();
 
-  const views = page.getByRole("navigation", { name: "Roster views" });
+  const views = page.getByRole("navigation", { name: "Diver views" });
   const search = page.getByRole("searchbox", { name: "Search divers" });
   // The roster is one ledger now: a row is an `<li>` whose stretched link is
   // named for the diver (ADR 20260827-people-not-lists). There is one of them
@@ -88,7 +88,7 @@ test("the roster narrows to today's divers and to whoever needs a staffer", {
   tag: READ_ONLY,
 }, async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers");
-  const views = page.getByRole("navigation", { name: "Roster views" });
+  const views = page.getByRole("navigation", { name: "Diver views" });
   const search = page.getByRole("searchbox", { name: "Search divers" });
   // The roster is one ledger now: a row is an `<li>` whose stretched link is
   // named for the diver (ADR 20260827-people-not-lists). There is one of them

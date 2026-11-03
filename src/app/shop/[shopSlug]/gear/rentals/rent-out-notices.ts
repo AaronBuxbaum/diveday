@@ -1,6 +1,6 @@
+import type { NoticeTone } from "@/components/ui/tone";
 import { ownerOrManagerWords } from "@/i18n/shared-sentences";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
-import type { NoticeTone } from "@/lib/staff-notices";
 
 /** Where a refusal belongs: beside the person step, or beside the submit. */
 type NoticeDefinition = {

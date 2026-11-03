@@ -5,8 +5,8 @@ import {
   RescheduleHold,
   type RescheduleNoticeSnapshot,
 } from "@/app/shop/[shopSlug]/_components/RescheduleHold";
-import { ShopNotice } from "@/components/ShopNotice";
-import { noticeRole } from "@/lib/staff-notices";
+import { ShopNotice } from "@/components/ui/outcome";
+import { noticeRole } from "@/components/ui/tone";
 import { clearBoardResultParams } from "./board-search-params";
 
 type BoardNotice = { tone: "success" | "danger" | "warning"; message: string };

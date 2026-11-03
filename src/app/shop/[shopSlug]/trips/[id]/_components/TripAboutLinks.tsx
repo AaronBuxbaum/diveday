@@ -68,7 +68,7 @@ export function TripAboutLinks({
       <CopyLinkButton
         path={publicTripPath(shopSlug, tripId)}
         label={t("trips.detail.copyBookingLink")}
-        copiedLabel={t("trips.detail.linkCopied")}
+        copiedLabel={t("words.did.copied")}
         failedLabel={t("trips.detail.linkCopyFailed")}
         flush
       />

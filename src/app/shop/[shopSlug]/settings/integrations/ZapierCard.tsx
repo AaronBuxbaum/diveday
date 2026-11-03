@@ -51,7 +51,7 @@ export function ZapierCard({
             <EventCheckboxes t={t} selected={zapier.settings.eventTypes ?? []} />
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("integrations.common.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("integrations.common.save")}

@@ -258,7 +258,7 @@ export function BackupsSection({
                 />
               </Field>
               <FieldActions>
-                <SubmitButton pendingLabel={t("backup.form.submitting")} className={buttonClass()}>
+                <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                   {t("backup.form.submit")}
                 </SubmitButton>
               </FieldActions>

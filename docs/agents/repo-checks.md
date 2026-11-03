@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 69 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 70 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -109,6 +109,10 @@ The seat-word one (`scripts/check-seat-word.mjs`) refuses `spot` in every Englis
 **The general rule was declined** (#1794). "Never refuse a save on an over-long value the submitter did not change" cannot be built: an HTML post cannot tell a retyped value from an unchanged one, so it would need every form to carry an `original-<field>` hidden input — a second copy of every stored value on the wire, on bearer-token surfaces where the extra field is one more thing a hand-crafted post can lie about. What the three incidents actually shared is narrower, and it is what this guard checks: the cap was on the reader and not on the writer.
 
 **What it leaves alone, on purpose.** `src/db/rental-fit.ts`, which writes every one of these columns and is deliberately the layer with no opinion about length — a second cap there puts the number in two places, which is the thing #1728 fixed. The JSX `maxLength` attributes, which already read the constant and are a courtesy to the typist rather than a bound (HTML `maxlength` does not constrain a value the visitor never typed, which is how #1728 reached production). And every reader. It anchors on `z.` rather than on the field name, so an object literal that merely carries a size — every writer's `values()`, every reader's projection — is not mistaken for a door that accepts one. The escape hatch is `diveday:allow-unbounded-size: <why>` on the field or the line above it; there are none today.
+
+### words, written once
+
+The words one (`scripts/check-words.mjs`, issue #2770) refuses a staff key whose en-US value is already in `locales/<locale>/words.json`. That bundle holds the invariant words: progress verbs (`words.busy.saving`), dismissals (`words.dismiss.neverMind`) and speech acts (`words.did.copied`), composed into the diver, staff and offline-manifest translators as the `words` namespace. A word that must keep its own spelling (a participle that agrees with its noun in Spanish) is named in the script's `EXEMPT` map with the reason. The diver bundle still holds its own spellings and joins the scan when its call sites move.
 
 ### locale-coverage, and the count that is now zero on purpose
 

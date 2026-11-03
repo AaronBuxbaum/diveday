@@ -32,8 +32,7 @@
     }
   },
   "crewAway": {
-    "working": "{name} trabaja igualmente",
-    "saving": "Guardando…"
+    "working": "{name} trabaja igualmente"
   },
   "helpRequest": {
     "kind": {
@@ -51,7 +50,6 @@
     "crewSelector": "Tripulante",
     "speakFirst": "Habla con esa persona y luego confirma.",
     "meetingLine": "Encuentro de la salida: {where}",
-    "saving": "Guardando…",
     "assigned": "Ayuda asignada.",
     "completed": "Ayuda marcada como completada.",
     "undone": "Asignación restaurada.",

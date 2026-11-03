@@ -81,7 +81,7 @@ export function SeatNotes({
             copy={{
               label: t("trips.roster.addNoteLabel"),
               add: t("trips.roster.addPrivateNote"),
-              adding: t("trips.roster.adding"),
+              adding: t("words.busy.adding"),
             }}
           />
         </div>

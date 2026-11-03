@@ -16,41 +16,6 @@ export type FeedIssueState =
 
 export const IDLE_FEED_ISSUE_STATE: FeedIssueState = { status: "idle" };
 
-/**
- * Every word the panel renders, resolved on the server.
- *
- * Staff copy is server-translated and crosses to the client as props rather
- * than as a message bundle — see the note in `src/i18n/staff-messages.ts`. A
- * hardcoded English string in the client component would be a
- * `pnpm check:copy` failure.
- */
-export type CalendarFeedCopy = {
-  create: string;
-  creating: string;
-  rotate: string;
-  rotating: string;
-  turnOff: string;
-  turningOff: string;
-  copy: string;
-  copied: string;
-  copyFailed: string;
-  confirmRotate: string;
-  confirmRotateButton: string;
-  confirmTurnOff: string;
-  confirmTurnOffButton: string;
-  cancel: string;
-  newLinkHeading: string;
-  shownOnce: string;
-  webcalLabel: string;
-  httpsLabel: string;
-  webcalHint: string;
-  httpsHint: string;
-  rotateWarning: string;
-  sharedWarning: string;
-  denied: string;
-  neverRead: string;
-};
-
 /** One subscribable scope as the panel shows it, with dates already localized. */
 export type FeedScopeView = {
   scope: FeedScope;

@@ -1,5 +1,5 @@
+import type { NoticeTone } from "@/components/ui/tone";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
-import type { NoticeTone } from "@/lib/staff-notices";
 
 export const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   duplicate: { tone: "danger", key: "divers.page.noticeDuplicate" },

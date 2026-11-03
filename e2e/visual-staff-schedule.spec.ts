@@ -491,7 +491,7 @@ for (const scheme of ["light", "dark"] as const) {
         // the muted list is still under them, which is the stack worth a
         // baseline.
         await expect(
-          page.getByText(new RegExp(`is already rostered on ${host} at that time`)),
+          page.getByText(new RegExp(`is already scheduled on ${host} at that time`)),
         ).toHaveCount(2);
         await expect(page.getByText("If you move it")).toBeVisible();
         await capture(page, "schedule-builder-move-clash", scheme);

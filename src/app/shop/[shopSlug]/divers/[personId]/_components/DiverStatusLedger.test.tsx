@@ -117,7 +117,7 @@ describe("an open item", () => {
         courseTripId: "aow",
       },
     ]);
-    expect(screen.getByRole("link", { name: "Open the course roster" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open the course’s divers" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/trips/aow",
     );

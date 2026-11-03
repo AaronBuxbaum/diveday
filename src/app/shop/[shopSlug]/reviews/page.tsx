@@ -314,7 +314,7 @@ export default async function ReviewsPage({
                   <form action={markPulseAddressedAction} className="max-sm:ms-auto">
                     <input type="hidden" name="pulseId" value={pulse.id} />
                     <SubmitButton
-                      pendingLabel={t("reviews.saving")}
+                      pendingLabel={t("words.busy.saving")}
                       ariaLabel={`${t("reviews.pulseMarkAddressed")} — ${pulse.diverName}`}
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
@@ -366,7 +366,7 @@ export default async function ReviewsPage({
                         <PublishAllButton
                           reviewIds={waitingIds}
                           label={t("reviews.publishAll", { count: waitingIds.length })}
-                          pendingLabel={t("reviews.saving")}
+                          pendingLabel={t("words.busy.saving")}
                           className={buttonClass({ variant: "link", size: "sm", flush: true })}
                         />
                       ) : null}

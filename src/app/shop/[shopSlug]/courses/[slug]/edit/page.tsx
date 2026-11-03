@@ -5,13 +5,13 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AssistFillButton } from "@/components/assists/AssistFillButton";
 import type { EditorSectionRef } from "@/components/editor/EditorSection";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopNotice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRowList } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { FormStatus, StickyFormActions } from "@/components/ui/form";
+import { ShopNotice } from "@/components/ui/outcome";
 import { getCourseEditPage } from "@/db/course-edit-page";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -345,7 +345,7 @@ export default async function EditCoursePage({
                 the section holding the unsaved work. Sticky, because Save used
                 to live only at the far end of a four-thousand-pixel form. */}
             <StickyFormActions className="mt-8">
-              <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("courses.edit.save")}
               </SubmitButton>
               <UnsavedChangesNote

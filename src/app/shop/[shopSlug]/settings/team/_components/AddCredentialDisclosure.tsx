@@ -78,10 +78,7 @@ export function AddCredentialDisclosure({
               <DateField name="renewsAt" />
             </Field>
             <FieldActions>
-              <SubmitButton
-                pendingLabel={t("staffing.credentials.saving")}
-                className={buttonClass()}
-              >
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("staffing.credentials.add")}
               </SubmitButton>
             </FieldActions>

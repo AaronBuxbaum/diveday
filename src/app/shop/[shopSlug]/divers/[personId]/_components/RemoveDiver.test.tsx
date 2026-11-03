@@ -82,7 +82,7 @@ describe("the sentence under Delete", () => {
     );
     const sentence = container.querySelector("#remove > p");
     expect(sentence).toHaveTextContent(
-      "Takes Morgan Vale off the roster, the booking pickers, manifests, and trip prep.",
+      "Takes Morgan Vale off the diver list, the booking pickers, manifests, and trip prep.",
     );
     expect(sentence).toHaveTextContent(/stay on file, and you can restore them/);
     // Visible while the disclosure is shut: the warning comes before the tap.

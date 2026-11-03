@@ -200,7 +200,7 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
         <div className="mt-3 flex flex-wrap items-center gap-3">
           {!recapLocked ? (
             <SubmitButton
-              pendingLabel={t("trips.recapNote.saving")}
+              pendingLabel={t("words.busy.saving")}
               className={buttonClass({ variant: "secondary", size: "sm" })}
             >
               {t("trips.recapNote.save")}
@@ -352,7 +352,7 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
                             : t("trips.recapPhotos.confirmRemove")
                         }
                         confirmLabel={t("trips.recapPhotos.removeConfirmButton")}
-                        cancelLabel={t("trips.recapPhotos.removeCancel")}
+                        cancelLabel={t("words.dismiss.neverMind")}
                         pendingLabel={t("trips.recapPhotos.removing")}
                       />
                     </form>

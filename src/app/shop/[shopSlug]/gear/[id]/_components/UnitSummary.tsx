@@ -140,7 +140,7 @@ export function UnitSummary({
             </Field>
             <KindFacts hull={hull} item={item} t={t} />
             <FieldActions>
-              <SubmitButton pendingLabel={t("gear.unit.details.saving")} className={buttonClass()}>
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("gear.unit.details.save")}
               </SubmitButton>
               <Link href={unitPath} className={buttonClass({ variant: "ghost" })}>

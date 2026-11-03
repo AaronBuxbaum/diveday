@@ -5,11 +5,11 @@ import { useTranslations } from "next-intl";
 import { useActionState, useCallback, useState } from "react";
 import { getReturningDiverServerTime } from "@/app/actions/returning-diver-memory";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ChoiceRow, choiceClass, controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ShopNotice } from "@/components/ui/outcome";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   DIVER_PARTICIPANT_CHOICE_KEYS,

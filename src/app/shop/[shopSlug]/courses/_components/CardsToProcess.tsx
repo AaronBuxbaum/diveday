@@ -80,7 +80,7 @@ export function CardsToProcess({
           <input type="hidden" name="cardKind" value={card.kind} />
           <input type="hidden" name="certificationId" value={card.certificationId} />
           <SubmitButton
-            pendingLabel={t("trips.roster.processedSaving")}
+            pendingLabel={t("words.busy.saving")}
             className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             {t("courses.processing.mark", { agency: agencyName(card.agency) })}

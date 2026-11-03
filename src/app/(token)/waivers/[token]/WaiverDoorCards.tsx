@@ -1,12 +1,13 @@
 import { DeadLink } from "@/components/DeadLink";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { ShopNotice } from "@/components/ui/outcome";
+import { noticeRole } from "@/components/ui/tone";
 import type { Shop } from "@/db/schema";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { emailFreshWaiverLinkAction } from "./actions";
 
 /**

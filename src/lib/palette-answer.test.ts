@@ -97,7 +97,7 @@ describe("paletteAnswerView", () => {
     // The home's row would send the waiver in place; the palette never
     // mutates, so the act is the roster row that does.
     expect(view.act).toEqual({
-      label: "Open the roster",
+      label: "Open the divers",
       href: "/shop/blue-mantis/trips/t-1#booking-b-1",
     });
     expect(view.more).toEqual({

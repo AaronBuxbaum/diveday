@@ -1,9 +1,10 @@
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
+import { ShopNotice } from "@/components/ui/outcome";
+import { noticeRole } from "@/components/ui/tone";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { type FormNotice, noticeRole } from "@/lib/staff-notices";
+import type { FormNotice } from "@/lib/staff-notices";
 
 export { resolveTripNotice, type TripNoticeInput } from "./trip-notice-resolution";
 

@@ -1,8 +1,8 @@
-import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
 import { InsetGroup } from "@/components/ui/ledger";
+import { ShopNotice } from "@/components/ui/outcome";
 import { canPersonErasePersonalData } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { readShopConnections } from "@/db/connections";
@@ -279,7 +279,7 @@ export async function DataGroup({
                       <form action={dischargeProcessorErasureAction}>
                         <input type="hidden" name="obligationId" value={obligation.id} />
                         <SubmitButton
-                          pendingLabel={t("settings.main.dataJobs.processorErasures.discharging")}
+                          pendingLabel={t("words.busy.saving")}
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
                           {t("settings.main.dataJobs.processorErasures.discharge")}

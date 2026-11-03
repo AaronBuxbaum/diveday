@@ -9,8 +9,7 @@
     "note": "Nota",
     "noteHint": "(opcional)",
     "notePlaceholder": "Muelle, aula, barco 2",
-    "submit": "Agregar turno",
-    "saving": "Guardando…"
+    "submit": "Agregar turno"
   },
   "away": {
     "from": "Desde",
@@ -21,7 +20,6 @@
     "remove": "Quitar",
     "removing": "Quitando…",
     "save": "Guardar",
-    "saving": "Guardando…",
     "to": "Hasta"
   },
   "credentials": {
@@ -44,8 +42,6 @@
     "markVerified": "Marcar revisada",
     "delete": "Eliminar",
     "deleteConfirm": "¿Eliminar {name}?",
-    "deleting": "Eliminando…",
-    "saving": "Guardando…",
     "add": "Agregar una credencial",
     "noneOnFile": "Sin acreditaciones registradas",
     "missing": {
@@ -108,7 +104,6 @@
     "continuedUntil": "hasta {time} · desde el {day}",
     "crewClash": "También en la tripulación de {departure}",
     "crewing": "Tripulación",
-    "deciding": "Guardando…",
     "decline": "Rechazar",
     "empty": "No hay nada programado esta semana.",
     "needsCrew": "Falta tripulación",
@@ -143,7 +138,6 @@
     "rowLabel": "En las páginas públicas",
     "shownAs": "Se muestra como {name}",
     "notShown": "No se muestra",
-    "save": "Guardar",
-    "saving": "Guardando…"
+    "save": "Guardar"
   }
 }
