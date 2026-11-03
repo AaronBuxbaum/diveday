@@ -60,7 +60,7 @@ export function manifestRollCallProps({
       rollCallButtonCopy: copies.rollCallButtonCopy,
       buddyTeamLabel,
       // The medical-alert reads, and the words a "Print with medical alerts"
-      // packet carries (`PRINTED_MEDICAL_ALERTS`).
+      // packet carries (`TripPacket`).
       ...actions.medicalAlert,
       t,
     },

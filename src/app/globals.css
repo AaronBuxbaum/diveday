@@ -1005,28 +1005,26 @@ select:not([multiple]):not([size]):dir(rtl) {
  *    at reading distance — shrinking the base rescales both at once.
  */
 /*
- * **The shop on paper** — ADR 20260908-one-hand, decision 6, lever X.
+ * **Paper is one face** — ADR 20260908-one-hand, decision 6, lever X; issue
+ * #2745.
  *
- * The paper pass under `/shop/<slug>/print/pass/**` is the one page in the
- * app whose *output* is a sheet of the shop's own paper rather than a screen,
- * and it is the one place the rules below are deliberately inverted:
+ * Every document the app prints is a `PaperSheet` behind `SheetDocument`: the
+ * passes, the counter card, and the trip, day and medical-alerts packets. A
+ * sheet is the shop's paper rather than a screen, and three things make it so:
  *
- * 1. **They print in colour, on purpose.** The `@media print` block repaints
- *    the whole app black-on-white and strips every fill, which is right for a
- *    manifest a shop prints on a mono laser and wrong for a diver's pass:
- *    the whole point of these sheets is that they carry the shop's own colour
- *    and face. So each sheet restores its own ground and band under print, at
- *    class specificity, and asks the UA for the ink with `print-color-adjust`.
- * 2. **The band's colour is set inline by the sheet, never read from
- *    `--primary`.** Print redefines that token, so a band drawn from it would
- *    print grey; the sheet resolves the shop's derived brand at render and
- *    hands it down as `--sheet-band`.
+ * 1. **It wears its own face, on screen and on paper alike.** Inside
+ *    `.paper-sheet` every semantic token is the sheet's (`--sheet-*`), so the
+ *    page a staffer reviews before printing is the page that comes out, in
+ *    the light scheme whatever the device's, and nothing under it is repainted
+ *    for print. The `@media print` block below leaves a sheet alone.
+ * 2. **The band's colour is set inline by the sheet**: the shop's derived
+ *    brand, resolved at render and handed down as `--sheet-band`.
  * 3. **A sheet is a box in millimetres**, sized to its paper less the `@page`
- *    margin the route declares - a floor rather than a ceiling, and never a
- *    clip. A sheet that outgrows its paper takes a second page, and no sheet
- *    ever loses a word.
+ *    margin - a floor rather than a ceiling, and never a clip. A sheet that
+ *    outgrows its paper takes a second page, and no sheet ever loses a word.
+ *    A packet's sheet has no floor at all: it is as long as its roster.
  *
- * On screen the sheet sits in a frame that scrolls sideways rather than
+ * On screen the sheets sit in a frame that scrolls sideways rather than
  * squashing the layout - this is a document, and a document that reflows to a
  * phone is not the thing that comes out of the printer.
  */
@@ -1038,13 +1036,51 @@ select:not([multiple]):not([size]):dir(rtl) {
   padding: 1.5rem 1rem;
 }
 
+.paper-sheet-frame > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .paper-sheet {
   --sheet-ground: #ffffff;
   --sheet-ink: #0c2a35;
   --sheet-muted: #54676d;
   --sheet-rule: #d9d2c2;
+  --sheet-well: #f3f1ec;
   --sheet-band: #0c2a35;
   --sheet-band-ink: #ffffff;
+  /* The paper face: every semantic token, from the sheet's own. Status keeps
+     its colour (the words still carry it, for a mono printer); fills are
+     the sheet's well, never the screen's sea-green ground. */
+  color-scheme: light;
+  --background: var(--sheet-ground);
+  --surface: var(--sheet-ground);
+  --surface-sunken: var(--sheet-well);
+  --border: var(--sheet-rule);
+  --border-strong: var(--sheet-muted);
+  --foreground: var(--sheet-ink);
+  --muted: var(--sheet-muted);
+  --primary: var(--sheet-ink);
+  --primary-hover: var(--sheet-ink);
+  --primary-foreground: var(--sheet-ground);
+  --primary-sunken: var(--sheet-ink);
+  --primary-tint: var(--sheet-well);
+  --focus-ring: var(--sheet-ink);
+  --accent: var(--sheet-ink);
+  --accent-foreground: var(--sheet-ground);
+  --accent-deep: var(--sheet-ink);
+  --accent-tint: var(--sheet-well);
+  --shallows: var(--sheet-well);
+  --success: #1c7445;
+  --warning: #8f5409;
+  --danger: #b3262f;
+  --info: #3b4fb8;
+  --success-strong: var(--success);
+  --warning-strong: var(--warning);
+  --success-tint: #e2f2e8;
+  --warning-tint: #fbefdc;
+  --danger-tint: #fbe6e7;
   position: relative;
   display: flex;
   flex: 0 0 auto;
@@ -1055,8 +1091,10 @@ select:not([multiple]):not([size]):dir(rtl) {
   -webkit-print-color-adjust: exact;
 }
 
-.paper-sheet + .paper-sheet {
-  margin-top: 1.5rem;
+/* Paper's own rows, which the live manifest keeps for its print-only
+   fallback (`data-print-only`): inside a sheet they are the content. */
+.paper-sheet [data-print-only] {
+  display: block;
 }
 
 .paper-sheet-band {
@@ -1119,38 +1157,6 @@ select:not([multiple]):not([size]):dir(rtl) {
     font-family: var(--font-mono), ui-monospace, monospace;
     font-size: 8pt;
     color: #4b5563;
-  }
-}
-
-/*
- * **On screen, a packet's sheets stand apart.** Each sheet opens on its
- * header's eyebrow, whose 44px target rises 28px above its line — straight
- * into the last control of the sheet before it (the manifest's emergency
- * button), which axe reads as a partly covered target (WCAG 2.5.8). On paper
- * every sheet starts a page of its own, and the print block puts this back.
- */
-.trip-print-bundle .print-bundle-page + .print-bundle-page {
-  margin-top: 3rem;
-}
-
-/*
- * **On screen, a packet is its paper** (visual review 2026-10-24, B03, B55).
- * The manifest and prep sections compose their pages as paper
- * (`PAPER_PACKET`), which renders no control at all, so the printed rows are
- * the whole of them. Those rows are print-only on the live manifest
- * (`hidden print:block`, marked `data-print-only`); inside a packet they are
- * the content, so the screen shows them too, and what a captain reviews
- * before printing is the sheet that comes out.
- *
- * **Only the two default packets** (`data-paper-screen`: the trip packet and
- * the day packet). The medical-alerts packet keeps its print-only blocks off
- * the screen (layer 4 security review, note 1): the alert's own words are
- * for the sheet that goes in the crew's hands, never for a tablet left open
- * on the tab after the print dialog closes.
- */
-@media screen {
-  .trip-print-bundle[data-paper-screen] [data-print-only] {
-    display: block;
   }
 }
 
@@ -1283,35 +1289,6 @@ select:not([multiple]):not([size]):dir(rtl) {
   [data-public-trip-reading] details summary svg {
     display: none;
   }
-  /**
-   * **Nothing interactive reaches the trip packet's paper, by construction.**
-   *
-   * `/shop/<slug>/trips/<id>/print` composes whole pages, so a section that
-   * grows a button next month would inherit it onto the sheet a captain carries
-   * — which is how 42 buttons, 9 selects, 48 inputs and 13 textareas came to be
-   * printed beside a roster, "Cancel trip" among them (issue #814). The 47
-   * hand-placed `print:hidden` classes elsewhere in the app each solve one
-   * page's own printing; this solves the one route that renders four at once,
-   * and cannot rot the way another class would.
-   *
-   * A backstop, not the fix. It is only safe because the packet no longer
-   * composes the two tabs that *are* forms: with those gone nothing
-   * value-bearing lives inside a form control here, so hiding one loses no
-   * fact. The same rule applied to the old packet would have silently dropped
-   * the trip's title, date and dive plan off the sheet.
-   *
-   * **One kind of button is the fact.** The roll call's person is a button
-   * (the tap that opens their sheet), and its content is the index and the
-   * name — so under the blanket rule both packets printed every roster row with
-   * no name in it. A button whose content must reach paper says so with
-   * `data-print-content` and keeps only its control-only parts off the sheet
-   * (`PersonSheet`'s caret is `print:hidden`). `print-bundle.test.ts` asks the
-   * DOM what this selector matches.
-   */
-  .trip-print-bundle :is(button:not([data-print-content]), select, textarea, input) {
-    display: none;
-  }
-
   /*
    * **A submit button is an act, never a fact.** Its words only ever say what
    * a tap would do — Remove, Send waiver, Request, Save — and on paper each one
@@ -1388,9 +1365,10 @@ select:not([multiple]):not([size]):dir(rtl) {
    * with !important the way the reduced-motion kill-switch below does. Shadows
    * go too: they never read as depth on paper, only as wasted grey.
    */
-  *,
-  *::before,
-  *::after {
+  /* A sheet keeps its face: it is the shop's paper, not a screen to repaint. */
+  :not(.paper-sheet, .paper-sheet *),
+  :not(.paper-sheet, .paper-sheet *)::before,
+  :not(.paper-sheet, .paper-sheet *)::after {
     /* print must strip every ink-heavy fill to keep the page white */
     background: transparent !important;
     /* a shadow prints as grey haze, never as depth */
@@ -1438,103 +1416,29 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 
   /*
-   * **Nothing in the packet clips at a page boundary.** A clipped overflow box
+   * **Nothing on a sheet clips at a page boundary.** A clipped overflow box
    * is not a scroll region on paper — it is a box whose second half does not
    * exist, and a page break inside one is where a manifest row or half a
    * packing table silently disappears. Screen chrome (rounded card corners, a
    * sideways-scrolling table) is what those boxes buy, and paper wants neither.
-   * `Table` already opens its own two; a card, a divided list and a summary
-   * panel each carry one too, and there is no naming them all.
    */
-  .trip-print-bundle,
-  .trip-print-bundle * {
+  .paper-sheet,
+  .paper-sheet * {
     /* a clipped box on paper is content that does not exist */
     overflow: visible !important;
   }
 
-  /* The packet is four screen tabs in one document. Give each tab a clean
-     start without forcing a page break inside a long roster or manifest, and
-     the same gutter under the sheet's own first heading — `@page` owns the
-     paper margin, and a section that starts a page brought whatever margin
-     its on-screen position happened to give it. */
-  .trip-print-bundle .print-bundle-page {
-    break-before: page;
-    padding-top: 0;
-    margin-top: 0;
-  }
-
-  .trip-print-bundle .print-bundle-page:first-of-type {
-    break-before: auto;
-  }
-
-  /*
-   * **The dive plan and the roll call share a sheet.** The plan is a title, a
-   * meeting point and a line per dive, so on a page of its own it left most of
-   * the packet's first sheet blank and put the boat's name on the captain's
-   * clipboard twice before a single diver. The manifest runs on beneath it
-   * instead, with a rule between; the packing list still starts its own page,
-   * because it goes to the gear room and not to the boat.
-   */
-  .trip-print-bundle .print-bundle-page.print-bundle-continues {
-    break-before: auto;
-    margin-top: 1.5rem;
-    border-top: 1px solid var(--border);
-    padding-top: 1.5rem;
-  }
-
-  /*
-   * **The title and date once per sheet** (fourth review, item 17). The
-   * manifest runs on under the dive plan, and its own header printed the
-   * departure's title and date a second time a few lines below the plan's.
-   * The section that continues a sheet drops its header; one that starts a
-   * page keeps it, so the packing list still says which boat it is for.
-   */
-  .trip-print-bundle .print-bundle-continues [data-trip-page-header] {
-    display: none;
-  }
-
-  /*
-   * One rhythm down every sheet. On screen these sections are spaced by
-   * whatever each composed page chose for itself (`mt-6`, `mt-8`, `space-y-10`
-   * — the packet renders three pages' worth of independently-tuned spacing),
-   * which on paper reads as a document that changes its mind twice. A single
-   * gap above each block, stated once.
-   */
-  .trip-print-bundle section + section,
-  .trip-print-bundle section > * + section {
-    margin-top: 1.25rem;
-  }
-
-  /*
-   * **The sheets keep their ink.** Everything above repaints the app for a
-   * shop's mono laser; a pass in the shop's colour is the one document
-   * that is *for* the colour, so each sheet restores its own ground and band at
-   * class specificity - which beats the `*` rule above without another
-   * `!important` arms race - and the frame around it stops being a frame.
-   */
-  .paper-sheet {
-    /* the sheet's ground is the document, not a screen fill to strip */
-    background: var(--sheet-ground) !important;
-  }
-
-  .paper-sheet-band {
-    /* the band is the shop's colour on paper, which is the point of the sheet */
-    background: var(--sheet-band) !important;
-  }
-
-  .paper-sheet-mark {
-    /* the mark is the band's ink, reversed out of it */
-    background: var(--sheet-band-ink) !important;
-  }
-
+  /* On paper the frame stops being a frame, and every sheet starts a page. */
   .paper-sheet-frame {
     display: block;
     padding: 0;
   }
 
-  /* One sheet, one page. */
-  .paper-sheet + .paper-sheet {
-    margin-top: 0;
+  .paper-sheet-frame > div {
+    display: block;
+  }
+
+  .paper-sheet:not(:first-child) {
     break-before: page;
   }
 }

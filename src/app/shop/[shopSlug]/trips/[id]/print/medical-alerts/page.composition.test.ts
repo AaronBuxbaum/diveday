@@ -31,26 +31,29 @@ describe("the print with medical alerts", () => {
     expect(guard).toBeLessThan(SOURCE.indexOf("await medicalAlertsForPrint(db, {"));
   });
 
-  it("keeps the alert's words off the screen: only the default packets show their paper there (security review, note 1)", () => {
-    const css = readFileSync(path.join(SRC, "app/globals.css"), "utf8");
+  it("keeps the alert's words off the screen: this packet's sheets reach paper only (security review, note 1)", () => {
+    const css = readFileSync(path.join(SRC, "app/globals.css"), "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
     const reveals = [
       ...css.matchAll(/([^{}]*\[data-print-only\][^{}]*)\{\s*display:\s*block/g),
     ].map((match) => match[1]?.trim());
-    // Every on-screen reveal of print-only blocks needs the packet's opt-in.
-    expect(reveals.length).toBeGreaterThan(0);
-    for (const selector of reveals) {
-      expect(selector).toContain(".trip-print-bundle[data-paper-screen]");
-    }
-    // This packet never opts in; the two default packets do.
-    expect(SOURCE).toContain('<div className="trip-print-bundle">');
-    expect(SOURCE).not.toContain("data-paper-screen");
+    // A sheet shows its paper rows on screen, so this packet keeps its sheets
+    // off the screen altogether.
+    expect(reveals).toEqual([".paper-sheet [data-print-only]"]);
+    expect(SOURCE).toContain("printOnly={");
+    const document = readFileSync(
+      path.join(SRC, "app/shop/[shopSlug]/print/_components/SheetDocument.tsx"),
+      "utf8",
+    );
+    expect(document).toContain('printOnly ? "paper-sheet-frame hidden print:block"');
+    // The two default packets show their sheets.
     for (const packet of [
       "app/shop/[shopSlug]/trips/[id]/print/page.tsx",
       "app/shop/[shopSlug]/print/page.tsx",
     ]) {
-      expect(readFileSync(path.join(SRC, packet), "utf8")).toContain(
-        '<div className="trip-print-bundle" data-paper-screen>',
-      );
+      expect(readFileSync(path.join(SRC, packet), "utf8")).not.toContain("printOnly");
     }
   });
 
@@ -73,13 +76,12 @@ describe("the print with medical alerts", () => {
     expect(SOURCE).toContain("printedMedicalAlerts: printed.printed");
   });
 
-  it("is the only caller that hands the packet the words, and the symbol key goes nowhere else", () => {
+  it("is the only caller that hands the packet the words", () => {
     const handing = sourceFiles(SRC).filter((file) => {
       const text = readFileSync(file, "utf8");
-      return /printedMedicalAlerts:\s*printed/.test(text) || /PRINTED_MEDICAL_ALERTS\]:/.test(text);
+      return /printedMedicalAlerts:\s*printed/.test(text);
     });
     expect(handing.map((file) => path.relative(SRC, file)).sort()).toEqual([
-      "app/shop/[shopSlug]/trips/[id]/print/_components/TripPacket.tsx",
       "app/shop/[shopSlug]/trips/[id]/print/medical-alerts/page.tsx",
     ]);
     // The default packet and the day's paper never pass any.
@@ -96,17 +98,17 @@ describe("the print with medical alerts", () => {
       path.join(SRC, "app/shop/[shopSlug]/trips/[id]/print/_components/TripPacket.tsx"),
       "utf8",
     );
-    // The words and the paper flag ride the same searchParams to both pages.
-    expect(packet).toMatch(/\[PAPER_PACKET\]: true/);
-    expect(packet).toContain("[PRINTED_MEDICAL_ALERTS]: printedMedicalAlerts");
+    // The words reach the shared view as an argument, never a URL value.
+    expect(packet).toContain("printedMedicalAlerts,\n      locale,");
     const read = (file: string) =>
       readFileSync(path.join(SRC, "app/shop/[shopSlug]/trips/[id]/manifest", file), "utf8");
-    // The paper renders the same roll-call props the screen does, and the
+    // The sheet renders the same roll-call props the screen does, and the
     // words are bound into them.
     expect(read("_components/roll-call-props.ts")).toContain("...actions.medicalAlert,");
-    const page = read("page.tsx");
-    expect(page).toContain("rollCall={rollCall}");
-    expect(page.indexOf("if (paper) {")).toBeLessThan(page.indexOf("<SkipLink"));
+    expect(read("_components/manifest-view.ts")).toContain(
+      "bindManifestActions(actionContext, read.reader, printedMedicalAlerts)",
+    );
+    expect(packet).toContain("rollCall={manifest.rollCall}");
     const paper = read("_components/ManifestPaper.tsx");
     expect(paper).toContain("<DiverRollCall context={{ ...rollCall.divers, paper: true }} />");
     expect(paper).toContain("<PrintedSoulsOnBoard");

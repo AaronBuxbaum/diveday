@@ -335,7 +335,7 @@ test.describe("trip print packet", () => {
     // role locator cannot see what `display: none` removed.
     await popup.emulateMedia({ media: "print" });
     await expect(
-      popup.locator(".trip-print-bundle [data-print-content]", { hasText: "Priya Sharma" }),
+      popup.locator(".paper-sheet-frame [data-print-content]", { hasText: "Priya Sharma" }),
     ).toBeVisible();
     await popup.emulateMedia({ media: "screen" });
     await popup.close();
@@ -667,7 +667,7 @@ test.describe("the printed trip packet", () => {
     // rendered at all, the roll call's person included.
     await page.emulateMedia({ media: "screen" });
     const rendered = await page.evaluate(() =>
-      [...document.querySelectorAll(".trip-print-bundle :is(button, select, textarea, input)")].map(
+      [...document.querySelectorAll(".paper-sheet-frame :is(button, select, textarea, input)")].map(
         (element) =>
           `${element.tagName.toLowerCase()}: ${(element.textContent ?? "").trim().slice(0, 30)}`,
       ),
@@ -710,7 +710,7 @@ test.describe("the printed trip packet", () => {
     await page.emulateMedia({ media: "print" });
 
     const clipped = await page.evaluate(() =>
-      [...document.querySelectorAll(".trip-print-bundle *")]
+      [...document.querySelectorAll(".paper-sheet-frame *")]
         .filter((element) => {
           const style = getComputedStyle(element);
           return style.overflowX === "hidden" || style.overflowY === "hidden";
@@ -724,7 +724,7 @@ test.describe("the printed trip packet", () => {
     // fragment reprints it — and the two nested overflow boxes above were what
     // stopped the fragmentation.
     const headerGroups = await page.evaluate(() =>
-      [...document.querySelectorAll(".trip-print-bundle thead")].map(
+      [...document.querySelectorAll(".paper-sheet-frame thead")].map(
         (head) => getComputedStyle(head).display,
       ),
     );
