@@ -31,8 +31,11 @@ export const EMBED_CALENDAR_SEGMENT = "calendar";
 /** The static segment under `embed/` whose `[id]` child is the framed trip page. */
 export const EMBED_TRIP_SEGMENT = "trip";
 
+/** A departure id's shape: a path that could never name a departure grants no framing. */
+const UUID = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+
 const EMBED_ROUTE = new RegExp(
-  `^/s/[a-z0-9-]+/embed/(?:${[...EMBED_WIDGETS, EMBED_CALENDAR_SEGMENT].join("|")}|${EMBED_TRIP_SEGMENT}/[^/]+)/?$`,
+  `^/s/[a-z0-9-]+/embed/(?:${[...EMBED_WIDGETS, EMBED_CALENDAR_SEGMENT].join("|")}|${EMBED_TRIP_SEGMENT}/${UUID})/?$`,
 );
 
 /**

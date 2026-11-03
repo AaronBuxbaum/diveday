@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+
+const TRIP = "11111111-2222-4333-8444-555555555555";
+
 import {
   EMBED_WIDGETS,
   embedCalendarPath,
@@ -20,8 +23,8 @@ describe("isEmbedRoute", () => {
       "/s/blue-mantis/embed/calendar",
       "/s/blue-mantis/embed/calendar/",
       ...EMBED_WIDGETS.map((widget) => `/s/blue-mantis/embed/${widget}`),
-      "/s/blue-mantis/embed/trip/abc-123",
-      "/s/blue-mantis/embed/trip/abc-123/",
+      `/s/blue-mantis/embed/trip/${TRIP}`,
+      `/s/blue-mantis/embed/trip/${TRIP}/`,
     ]) {
       expect(isEmbedRoute(path), path).toBe(true);
     }
@@ -39,7 +42,9 @@ describe("isEmbedRoute", () => {
       "/s/blue-mantis/embed",
       "/s/blue-mantis/embed/nope",
       "/s/blue-mantis/embed/trip",
-      "/s/blue-mantis/embed/trip/abc-123/ready",
+      `/s/blue-mantis/embed/trip/${TRIP}/ready`,
+      // An id that could never name a departure is refused framing too.
+      "/s/blue-mantis/embed/trip/abc-123",
       "/s/blue-mantis/embed/grid/extra",
       "/s/Blue-Mantis/embed/calendar",
       "/s/blue-mantis/courses",
@@ -62,7 +67,7 @@ describe("isEmbedRoute", () => {
       expect(isEmbedRoute(embedWidgetPath("blue-mantis", widget)), widget).toBe(true);
     }
     expect(isEmbedRoute(embedCalendarPath("blue-mantis"))).toBe(true);
-    expect(isEmbedRoute(embedTripPath("blue-mantis", "abc-123"))).toBe(true);
+    expect(isEmbedRoute(embedTripPath("blue-mantis", TRIP))).toBe(true);
   });
 });
 
@@ -87,7 +92,7 @@ describe("isUnknownEmbedWidgetRoute", () => {
       expect(isUnknownEmbedWidgetRoute(path), path).toBe(false);
     }
     expect(isUnknownEmbedWidgetRoute("/s/blue-mantis/embed")).toBe(false);
-    expect(isUnknownEmbedWidgetRoute("/s/blue-mantis/embed/trip/abc-123")).toBe(false);
+    expect(isUnknownEmbedWidgetRoute(`/s/blue-mantis/embed/trip/${TRIP}`)).toBe(false);
     expect(isUnknownEmbedWidgetRoute("/s/blue-mantis/embed/grid/extra")).toBe(false);
     expect(isUnknownEmbedWidgetRoute("/s/blue-mantis")).toBe(false);
     expect(isUnknownEmbedWidgetRoute("/shop/blue-mantis/embed/nope")).toBe(false);

@@ -104,7 +104,9 @@
   // the schedule's is the calendar, a departure's is embed/trip/<id>.
   function framedHref(href) {
     const match = /^\/s\/([^/]+)(?:\/trips\/([^/]+))?\/?$/.exec(href.pathname);
-    if (match) {
+    // Only DiveDay's own pages have a twin under embed/; anything else is
+    // left as the link wrote it.
+    if (match && href.origin === origin) {
       href.pathname = match[2]
         ? `/s/${match[1]}/embed/trip/${match[2]}`
         : `/s/${match[1]}/embed/calendar`;
