@@ -420,7 +420,6 @@
           "src/app/shop/[shopSlug]/trips/[id]/incidents/[reportId]/page.tsx": "0 -> 1",
           "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": "0 -> 1",
           "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "1 -> 8",
-          "src/app/shop/[shopSlug]/trips/[id]/prep/page.tsx": "0 -> 3",
           "src/app/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]/page.tsx": "0 -> 2",
           "src/app/shop/[shopSlug]/waivers/page.tsx": "0 -> 2",
           "src/app/shop/[shopSlug]/waivers/print/page.tsx": "0 -> 1"
@@ -547,7 +546,6 @@
     "src/app/shop/[shopSlug]/trips/[id]/manifest/actions.ts": 1,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 8,
     "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts": 1,
-    "src/app/shop/[shopSlug]/trips/[id]/prep/page.tsx": 3,
     "src/app/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]/page.tsx": 2,
     "src/app/shop/[shopSlug]/waivers/page.tsx": 2,
     "src/app/shop/[shopSlug]/waivers/print/page.tsx": 1,
@@ -1190,7 +1188,7 @@
     "src/db/export.test.ts": 1182,
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1013,
-    "src/db/manifests.test.ts": 3592,
+    "src/db/manifests.test.ts": 3587,
     "src/db/no-show.test.ts": 1156,
     "src/db/notifications.test.ts": 1864,
     "src/db/orders.test.ts": 3174,
@@ -1327,7 +1325,6 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 580,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 590,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 472,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 494
   },
   "tokens": {
