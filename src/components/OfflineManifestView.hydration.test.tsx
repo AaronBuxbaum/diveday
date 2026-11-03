@@ -8,6 +8,7 @@ import { loadOfflineManifest } from "@/lib/offline-manifest-store";
 import { OfflineManifestView } from "./OfflineManifestView";
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/offline-manifest",
   useSearchParams: () => new URLSearchParams({ trip: "trip-1" }),
 }));
 vi.mock("@/lib/offline-manifest-store", async () => ({

@@ -20,7 +20,10 @@ import {
 } from "./offline-manifest/view-fixtures";
 
 let searchParams = new URLSearchParams("trip=trip-1");
-vi.mock("next/navigation", () => ({ useSearchParams: () => searchParams }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/offline-manifest",
+  useSearchParams: () => searchParams,
+}));
 vi.mock("@/lib/offline-manifest-store", async () => ({
   OfflineManifestError: (
     await vi.importActual<typeof import("@/lib/offline-manifest-store")>(

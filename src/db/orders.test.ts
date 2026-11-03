@@ -890,7 +890,7 @@ describe("orders", () => {
   /**
    * The other half of the same guard: a claim is a short-lived guard for one
    * Stripe round trip, never a permanent lock a crashed process can leave on
-   * an order forever. Same self-healing rule (and the same `STALE_AFTER_MS`
+   * an order forever. Same self-healing rule (and the same `PAYMENT_CLAIM_STALE_AFTER_MS`
    * horizon) `claimBookingsForCheckout` already applies to a booking's
    * checkout claim. Past that horizon Stripe's over-refund rejection is the
    * gate again, which is exactly where this started — the local lock is a

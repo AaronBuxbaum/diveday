@@ -164,7 +164,6 @@ export default async function DiveSitePage({
         // and the schedule is genuinely this page's parent: a site is a place
         // the board sends boats to.
         eyebrow={t("schedule.title")}
-        eyebrowHref={publicSchedulePath(shop.slug)}
         title={site.name}
         description={site.description ?? undefined}
         meta={

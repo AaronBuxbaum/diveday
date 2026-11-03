@@ -33,7 +33,6 @@ import type { DiverProfile } from "./shared";
  */
 export function DiverHeader({
   diver,
-  shopSlug,
   t,
   status,
   book,
@@ -44,7 +43,6 @@ export function DiverHeader({
   download,
 }: {
   diver: DiverProfile;
-  shopSlug: string;
   t: StaffTranslator;
   /** A saved-details confirmation, shown under the masthead. A refusal stays on the form. */
   status?: DiverNotice;
@@ -75,7 +73,6 @@ export function DiverHeader({
     <>
       <ShopPageHeader
         eyebrow={t("divers.page.title")}
-        eyebrowHref={`/shop/${shopSlug}/divers`}
         title={diver.person.fullName}
         align="start"
         meta={

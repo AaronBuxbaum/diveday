@@ -45,7 +45,6 @@ export default async function EmergencyReferenceSettingsPage({
 
   return (
     <SettingsEditorPage
-      shopSlug={shopSlug}
       t={t}
       title={t("settings.main.emergency.heading")}
       banner={noticeFromParam(notice, emergencyReferenceNoticeMessages(t))}

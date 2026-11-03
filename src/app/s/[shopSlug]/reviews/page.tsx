@@ -17,7 +17,7 @@ import {
 import { shopBySlugCached } from "@/db/shops-cached";
 import { requestTranslator } from "@/i18n/request";
 import { cachedFormatter } from "@/lib/intl-cache";
-import { publicReviewsPath, publicSchedulePath } from "@/lib/public-routes";
+import { publicReviewsPath } from "@/lib/public-routes";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 
 export const instant = true;
@@ -81,11 +81,7 @@ export default async function PublicReviewsPage({
       {/* Keep the description in metadata; repeating it below the title adds
           no information. */}
       {/* The eyebrow is the single way back to the schedule (principle 10). */}
-      <ShopPageHeader
-        eyebrow={t("reviews.sectionTitle")}
-        eyebrowHref={publicSchedulePath(shop.slug)}
-        title={t("reviews.allTitle")}
-      />
+      <ShopPageHeader eyebrow={t("reviews.sectionTitle")} title={t("reviews.allTitle")} />
 
       <section aria-label={t("reviews.sectionTitle")}>
         {/* Show the aggregate once, with the stars, average and count together

@@ -8,7 +8,6 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { stablePacket } from "@/lib/stable-packet";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { shopPath } from "@/lib/staff-notices";
 import {
   DeparturePaperIdentity,
   formatPaperDateTime,
@@ -126,7 +125,6 @@ async function composeTripPacket({
   const header = (
     <TripPageHeader
       trip={details.trip}
-      boardHref={shopPath(shopSlug, "schedule", "board")}
       backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
       locale={locale}
       timeZone={shop.timezone}

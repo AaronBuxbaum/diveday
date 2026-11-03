@@ -4,11 +4,20 @@ import { nowDate } from "@/lib/clock";
 import { summarizeMonth } from "@/lib/reporting";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
+import { tipCheckout } from "./checkout-purpose";
 import type { AppDb } from "./client";
 import { refreshCanonicalDemoSchedule } from "./demo-refresh";
 import { recapClosedReason } from "./recap";
 import { getMonthlyReport } from "./reporting";
-import { bookings, people, recapPhotos, tips, tripReviews, trips } from "./schema";
+import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookings,
+  people,
+  recapPhotos,
+  tripReviews,
+  trips,
+} from "./schema";
 import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 
@@ -75,11 +84,21 @@ async function publishedReviewsInWindow(
 /** Every tip this shop holds, with the departure it was left on. */
 async function tipsWithDeparture(db: AppDb, shopId: string) {
   return db
-    .select({ status: tips.status, startsAt: trips.startsAt })
-    .from(tips)
-    .innerJoin(bookings, and(eq(bookings.id, tips.bookingId), eq(bookings.shopId, shopId)))
+    .select({ status: bookingCheckouts.status, startsAt: trips.startsAt })
+    .from(bookingCheckouts)
+    .innerJoin(
+      bookingCheckoutBookings,
+      and(
+        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+        eq(bookingCheckoutBookings.shopId, shopId),
+      ),
+    )
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
+    )
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(eq(tips.shopId, shopId));
+    .where(and(eq(bookingCheckouts.shopId, shopId), tipCheckout()));
 }
 
 describe("seedRecentRecaps", () => {
@@ -185,13 +204,13 @@ describe("seedRecentRecaps", () => {
 
     await seedRecentRecaps(db, shop.id);
 
-    // `getMonthlyReport` sums `paid` and nothing else, so a pending or expired
+    // `getMonthlyReport` sums `completed` and nothing else, so a pending or expired
     // row would simply vanish from the figure this pass exists to fill.
     const thisMonth = (await tipsWithDeparture(db, shop.id)).filter(
       (row) => row.startsAt >= start && row.startsAt < end,
     );
     expect(thisMonth.length).toBeGreaterThan(0);
-    expect(thisMonth.every((row) => row.status === "paid")).toBe(true);
+    expect(thisMonth.every((row) => row.status === "completed")).toBe(true);
   });
 
   it("is idempotent — a second pass over the same board writes nothing", async () => {

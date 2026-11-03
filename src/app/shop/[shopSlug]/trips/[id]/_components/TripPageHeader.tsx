@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { EyebrowBackLink, SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
+import { EyebrowWayUp } from "@/components/EyebrowWayUp";
+import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -88,7 +89,6 @@ const TRIP_META_TYPE = "text-[13px] sm:text-[15px]";
  */
 export function TripPageHeader({
   trip,
-  boardHref,
   backLabel,
   locale,
   timeZone,
@@ -104,8 +104,6 @@ export function TripPageHeader({
   paperIdentity,
 }: {
   trip: { title: string; startsAt: Date; endsAt: Date };
-  /** This shop's schedule board — the parent every trip surface belongs to. */
-  boardHref: string;
   /** The nav's own word for it, so the two cannot drift (issue #824). */
   backLabel: string;
   locale: string;
@@ -169,9 +167,7 @@ export function TripPageHeader({
           are readings of rather than the board two levels above it.
           `print:hidden` because `print/page.tsx` wears this header too and a
           paper sheet has no navigation. */}
-      <EyebrowBackLink href={boardHref} className="print:hidden">
-        {backLabel}
-      </EyebrowBackLink>
+      <EyebrowWayUp className="print:hidden">{backLabel}</EyebrowWayUp>
       {/* **The title and its actions are one row, centred on each other.**
           The 48px ••• used to sit in a grid cell beside the 16px eyebrow on a
           phone — 16px under the eyebrow's centre, and holding the title 49px

@@ -67,6 +67,7 @@ const checks = [
   ["rental-fit-caps", "check-rental-fit-caps.mjs"],
   ["icu-plurals", "check-icu-plurals.mjs"],
   ["live-trips", "check-live-trips.mjs"],
+  ["checkout-purpose", "check-checkout-purpose.mjs"],
   ["live-people", "check-live-people.mjs"],
   ["seat-status", "check-seat-status.mjs"],
   ["person-door", "check-person-door.mjs"],
