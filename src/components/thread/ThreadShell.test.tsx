@@ -50,13 +50,21 @@ const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "load
  * — `AfterState` takes the measure from this file's own exported
  * `THREAD_MEASURE_CLASS`, so the width cannot drift.
  */
+/**
+ * Pages whose shell lives in an extracted module: the readiness masthead, and
+ * the waiver form and doctor's page that both the waiver link and the diver's
+ * own thread draw (issue #2743).
+ */
+const SHELL_OWNER: Record<string, string> = {
+  "app/(token)/ready/[token]/page.tsx": "app/(token)/ready/[token]/_components/ReadyMasthead.tsx",
+  "app/(token)/waivers/[token]/page.tsx": "app/(token)/waivers/[token]/WaiverSigningForm.tsx",
+  "app/(token)/waivers/[token]/doctor/page.tsx":
+    "app/(token)/waivers/[token]/doctor/DoctorReferralBody.tsx",
+};
+
 const THREAD_SHELL_COMPONENTS = THREAD_PAGES.filter(
   (page) => page !== "app/(token)/recap/[token]/page.tsx",
-).map((page) =>
-  page === "app/(token)/ready/[token]/page.tsx"
-    ? "app/(token)/ready/[token]/_components/ReadyMasthead.tsx"
-    : page,
-);
+).map((page) => SHELL_OWNER[page] ?? page);
 
 describe("ThreadShell", () => {
   it("renders the shop's name as the eyebrow and exactly one h1", () => {
@@ -211,7 +219,7 @@ describe("the thread's adopters", () => {
     expect(read("app/(token)/ready/[token]/page.tsx")).toContain(
       'params={["saved", "error", "pay", "booked"]}',
     );
-    expect(read("app/(token)/waivers/[token]/page.tsx")).toContain(
+    expect(read("app/(token)/waivers/[token]/WaiverSigningForm.tsx")).toContain(
       'params={["saved", "error", "field", "at"]}',
     );
     expect(read("app/(token)/claim/[token]/page.tsx")).toContain('params={["error"]}');
