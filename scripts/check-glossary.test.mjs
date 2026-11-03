@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { findDecapitatedEntries, glossaryIndex, readDomain } from "./check-glossary.mjs";
+import {
+  findDecapitatedEntries,
+  glossaryIndex,
+  missingVocabularyTerms,
+  readDomain,
+  vocabularyTable,
+} from "./check-glossary.mjs";
 
 /**
  * The check's judgement, not its plumbing. It exists because the Blocked / Ready entry lost
@@ -126,5 +132,33 @@ describe("the glossary's generated index", () => {
 
   it("keeps a heading per domain, which is what old links like glossary.md#operations land on", () => {
     expect(glossaryIndex([ops])).toMatch(/^## Operations$/m);
+  });
+});
+
+describe("the settled words", () => {
+  const row = {
+    id: "seat",
+    term: "Seat",
+    en: "seat",
+    es: "la plaza",
+    refuse: [{ locale: "en-US", word: "spot" }],
+  };
+
+  it("opens the index with one table row per concept", () => {
+    const table = vocabularyTable([
+      row,
+      { id: "delete", en: "Delete", es: "Eliminar", refuse: [], heldBy: "a | lint rule" },
+    ]);
+    expect(table).toContain("| Seat | seat | la plaza | spot (en-US) | check-vocabulary |");
+    expect(table).toContain("| delete | Delete | Eliminar | see held by | a \\| lint rule |");
+    expect(glossaryIndex([], [row])).toMatch(/^## Settled words$/m);
+  });
+
+  it("refuses a row naming a term no domain file defines", () => {
+    const ops = readDomain("operations.md", "# Operations\n\n- **Seat** — a place.\n");
+    expect(missingVocabularyTerms([ops], [row])).toEqual([]);
+    expect(missingVocabularyTerms([ops], [{ ...row, term: "Spot" }])).toEqual([
+      'config/vocabulary.mjs: row "seat" names the glossary term "Spot", which no domain file defines',
+    ]);
   });
 });

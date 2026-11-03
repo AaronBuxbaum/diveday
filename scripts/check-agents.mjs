@@ -1,5 +1,5 @@
 // Keeps the agent layer in sync: skills on disk vs the skill index and AGENTS.md,
-// skill/agent frontmatter, and task:context doc references. Many short-lived parallel
+// and skill/agent frontmatter. Many short-lived parallel
 // sessions rely on these being accurate; drift here silently misroutes every one of them.
 import { existsSync } from "node:fs";
 import { access, lstat, readdir, readFile, realpath } from "node:fs/promises";
@@ -7,18 +7,15 @@ import path from "node:path";
 import process from "node:process";
 
 import {
-  GUARD_COUNT_SITES,
   gitignoredPaths,
-  guardCountProblems,
   linkedSkillProblems,
   missingDocPaths,
   providerSkillProblems,
-  spawnedGuardCount,
   vendoredSkillProblems,
 } from "./agent-layer.mjs";
 import { listDirs } from "./check-context-budget.mjs";
 import { findLaunchProblems } from "./mcp-launch-guard.mjs";
-import { areas } from "./task-context-data.mjs";
+import { registryProblems, rulesRegistry } from "./rules-registry.mjs";
 
 const ROOT = process.cwd();
 const problems = [];
@@ -121,27 +118,6 @@ for (const file of agentFiles) {
     );
   if (!skillIndex.includes(agentName))
     problems.push(`.claude/skills/README.md: reviewer agent "${agentName}" is not mentioned`);
-}
-
-// 4. task:context areas point at files that exist — docs, code, and tests alike.
-// `code`/`tests` used to be allowed to be "planned", which made a renamed-away
-// module indistinguishable from an intended one: the nitrox area pointed
-// sessions at a src/lib/nitrox.ts that never existed. An area entry is a claim
-// about where the work lives; add the path when the file does exist.
-for (const [areaName, area] of Object.entries(areas)) {
-  for (const [kind, items] of [
-    ["doc", area.docs],
-    ["code", area.code],
-    ["test", area.tests],
-  ]) {
-    for (const item of items ?? []) {
-      try {
-        await access(path.join(ROOT, item));
-      } catch {
-        problems.push(`task-context area "${areaName}": ${kind} path ${item} does not exist`);
-      }
-    }
-  }
 }
 
 // 5. AGENTS.md's route map is the primary navigation surface every session reads first — a
@@ -356,7 +332,7 @@ for (const script of [
 // 7. Every guard on disk actually runs. A scripts/check-*.mjs that check-repo.mjs
 // doesn't spawn is a ratchet nobody turns — it would pass review as "checked"
 // while never executing in `pnpm check`.
-const checkRepoSource = await readFile(path.join(ROOT, "scripts/check-repo.mjs"), "utf8");
+const checkRepoSource = await readFile(path.join(ROOT, "scripts/rules-registry.mjs"), "utf8");
 // A guard that reads the network instead of the tree runs on a schedule, never per branch:
 // `check-follow-ups.mjs` reads the live tracker, and inside check:repo one malformed issue
 // turned every open pull request red (#2036). It still has to run somewhere, so its
@@ -383,7 +359,7 @@ const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(
     !file.endsWith(".test.mjs") &&
     file !== "check-repo.mjs" &&
     // Opt-in / env-shaped checks that check-repo runs are listed in its own
-    // `checks` table. Two standing exceptions: the e2e build probe, which needs
+    // `GUARDS` table (scripts/rules-registry.mjs). Two standing exceptions: the e2e build probe, which needs
     // a completed `pnpm e2e:build` to have anything to inspect, and check-all,
     // which is the orchestrator one level *above* check-repo — it spawns this
     // file, so requiring this file to spawn it would be a cycle.
@@ -391,17 +367,15 @@ const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(
     file !== "check-all.mjs" &&
     !(file in SCHEDULED_GUARDS),
 );
-// Every place that states the `pnpm check:repo` count states the one check-repo.mjs spawns.
-const guardCountTexts = {};
-for (const { file } of GUARD_COUNT_SITES) {
-  guardCountTexts[file] = await readFile(path.join(ROOT, file), "utf8").catch(() => "");
-}
-problems.push(...guardCountProblems(guardCountTexts, spawnedGuardCount(checkRepoSource)));
+// The rules registry (scripts/rules-registry.mjs) is the one index of the written rules: every
+// guard and every rule test has a holder that exists, opens with the sentence it holds, and cites
+// only decisions that exist. No document states a count; the index is the count.
+problems.push(...registryProblems(await rulesRegistry(ROOT), ROOT));
 
 for (const file of checkScripts) {
   if (!checkRepoSource.includes(`"${file}"`))
     problems.push(
-      `scripts/check-repo.mjs: ${file} exists but is never spawned — wire it into the checks table or it will never run`,
+      `scripts/check-repo.mjs: ${file} exists but is never spawned — add it to GUARDS in scripts/rules-registry.mjs or it will never run`,
     );
 }
 
@@ -436,5 +410,5 @@ if (problems.length > 0) {
 }
 
 console.log(
-  `agents: ${skillDirs.length} skills (${linkedSkills.size} linked in from .agents/skills), ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${Object.keys(areas).length} task-context areas, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync, ${handoffDocs.length} handoff docs' paths resolve`,
+  `agents: ${skillDirs.length} skills (${linkedSkills.size} linked in from .agents/skills), ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync, ${handoffDocs.length} handoff docs' paths resolve`,
 );

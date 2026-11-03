@@ -17,10 +17,11 @@ describe("env reads", () => {
     expect(reads.get("BUDDY_LINK_SECRET")).toBe(3);
   });
 
-  it("accounts for a registered key, a named platform key and a cron monitor slug", () => {
+  it("accounts for a registered key, a platform key and a cron monitor slug, all registry rows", () => {
     expect(isAccounted("RECAP_LINK_SECRET", ["RECAP_LINK_SECRET"])).toBe(true);
-    expect(isAccounted("NODE_ENV", [])).toBe(true);
-    expect(isAccounted("SENTRY_RETENTION_CRON_MONITOR_SLUG", [])).toBe(true);
+    expect(isAccounted("NODE_ENV")).toBe(true);
+    expect(isAccounted("SENTRY_RETENTION_CRON_MONITOR_SLUG")).toBe(true);
+    expect(isAccounted("NODE_ENV", [])).toBe(false);
   });
 
   it("refuses a key nobody registered", () => {

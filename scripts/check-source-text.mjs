@@ -1,3 +1,5 @@
+// Every source file under `src/`, `scripts/` and `e2e/` is valid UTF-8 with no NUL byte.
+
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";

@@ -13,11 +13,12 @@ Loaded when the CDK stack, the env registry or a deploy script is read. The long
 rule, with its incidents: [docs/agents/repo-checks.md](../../docs/agents/repo-checks.md#the-infra-rules).
 
 - **Environment variables — adding one, or asking who supplies one**: one registry,
-  `config/env-registry.mjs`: per key, who produces it (`stack` / `derived` / `manual`), where it
-  goes, and what its absence costs. Add a variable there and nowhere else (ADR
+  `config/env-registry.mjs`: per key, who produces it (`stack` / `derived` / `manual`, or nobody:
+  `harness` / `override` / `platform`), where it goes, and what its absence costs; each group
+  names its `seam` (the vendor behind it, or null). Every key `src/` reads has a row. Add a variable there and nowhere else (ADR
   20260812-env-provenance-registry). **A value this repository already knows is not
-  configuration**: it is compiled in behind `src/lib/configured.ts`, its variable only an override
-  (deploying it once corrupted it, issue #517). `.env.example` is generated
+  configuration**: it is compiled in behind `src/lib/configured.ts`, its variable only an `override` row that goes
+  to no target (deploying it once corrupted it, issue #517). `.env.example` is generated
   (`node scripts/render-env-example.mjs --write`); `.env.manual` is the only file a human edits
   (`pnpm env:manual`), and a stack-produced key in it is refused. `pnpm check:env` reports unset
   manual values, and fails under `VERCEL_ENV=production` on an unset `requiredInProduction` row.

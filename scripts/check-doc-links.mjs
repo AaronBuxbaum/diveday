@@ -1,3 +1,5 @@
+// Every relative Markdown link in the docs resolves to a file, and every `#anchor` to a heading in it.
+
 import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
