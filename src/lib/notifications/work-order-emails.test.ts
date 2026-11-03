@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { diverTranslator } from "@/i18n/messages";
 import {
   gearServiceDueEmail,
   gearServiceDueText,

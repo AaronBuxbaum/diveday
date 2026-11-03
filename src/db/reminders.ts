@@ -1,6 +1,5 @@
 import { and, eq, gt, inArray, isNull, lte } from "drizzle-orm";
 import type { TripRequirement } from "@/db/schema";
-import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { readLearningMaterials } from "@/lib/courses";
@@ -26,11 +25,7 @@ import {
 } from "@/lib/notifications/sms";
 import { isDiver, type ParticipantType } from "@/lib/participant-types";
 import type { ReadinessResult } from "@/lib/readiness";
-import {
-  buildDiverChecklist,
-  type ReminderActionCode,
-  reminderReadiness,
-} from "@/lib/readiness-summary";
+import { buildDiverChecklist, reminderReadiness } from "@/lib/readiness-summary";
 import {
   dueReminder,
   MAX_REMINDER_LEAD_HOURS,
