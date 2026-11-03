@@ -51,6 +51,8 @@ import {
   countShopScoped,
   type DiverExportScope,
   readScoped,
+  readTipRows,
+  countShopTips,
   type ShopExportScope,
 } from "./export-tables";
 import { shopRehearsalIds } from "./rehearsals";
@@ -473,7 +475,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const tripHelpRequestRows = await readScoped(tx, "tripHelpRequests", scope);
 
-  const tipRows = await readScoped(tx, "tips", scope);
+  const tipRows = await readTipRows(tx, scope);
 
   const paymentRows = await readScoped(tx, "bookingPayments", scope);
   const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
@@ -1002,7 +1004,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         .orderBy(asc(orderLineItems.orderId), asc(orderLineItems.createdAt), asc(orderLineItems.id))
     : [];
 
-  const tipRows = await readScoped(tx, "tips", scope);
+  const tipRows = await readTipRows(tx, scope);
 
   const recapPhotoRows = await readScoped(tx, "recapPhotos", scope);
 
@@ -1345,7 +1347,7 @@ export async function loadShopExportCounts(
       "customerGearReminderSettings",
       shopId,
     ),
-    "tips.csv": await countShopScoped(db, "tips", shopId),
+    "tips.csv": await countShopTips(db, shopId),
     "dive_sites.csv": await countShopScoped(db, "diveSites", shopId),
     "dive_site_creatures.csv": await countShopScoped(db, "diveSiteCreatures", shopId),
     "recap_photos.csv": await countShopScoped(db, "recapPhotos", shopId),

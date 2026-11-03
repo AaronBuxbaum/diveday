@@ -1,6 +1,7 @@
 import { and, asc, count, eq, inArray, type SQL } from "drizzle-orm";
 import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { CsvValue, ExportTable } from "@/lib/export";
+import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import {
   activityEvents,
@@ -55,7 +56,6 @@ import {
   specialtyCertifications,
   staffCredentialHistory,
   staffCredentials,
-  tips,
   tripChangeEvents,
   tripHelpRequests,
   tripLastMinutePromos,
@@ -271,11 +271,6 @@ export const EXPORT_TABLES = {
     table: tripHelpRequests,
     order: [asc(tripHelpRequests.createdAt), asc(tripHelpRequests.id)],
     scope: { shopColumn: tripHelpRequests.shopId },
-  },
-  tips: {
-    table: tips,
-    order: [asc(tips.createdAt), asc(tips.id)],
-    scope: { shopColumn: tips.shopId, bookingColumn: tips.bookingId },
   },
   bookingPayments: {
     table: bookingPayments,
@@ -694,6 +689,56 @@ export async function readScoped<K extends ExportTableKey>(
     );
   }
   throw new Error(`export: ${key} has no diver scope`);
+}
+
+/**
+ * **The tips file's rows**: every post-trip tip in the scope, one row per tip
+ * with the booking it was left on. A tip is a `booking_checkouts` row whose
+ * purpose is `tip` (issue #2718), so this reads that table through its one
+ * booking link rather than through `readScoped`; a diver scope reads only
+ * tips left on the diver's own bookings.
+ */
+export async function readTipRows(db: DbExecutor, scope: ExportScope) {
+  if (scope.kind === "diver" && scope.bookingIds.length === 0) return [];
+  return db
+    .select({
+      id: bookingCheckouts.id,
+      bookingId: bookingCheckoutBookings.bookingId,
+      status: bookingCheckouts.status,
+      currency: bookingCheckouts.currency,
+      amountCents: tipAmountCents,
+      stripeSessionId: bookingCheckouts.stripeSessionId,
+      expiresAt: bookingCheckouts.expiresAt,
+      completedAt: bookingCheckouts.completedAt,
+      createdAt: bookingCheckouts.createdAt,
+    })
+    .from(bookingCheckouts)
+    .innerJoin(
+      bookingCheckoutBookings,
+      and(
+        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+        eq(bookingCheckoutBookings.shopId, scope.shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, scope.shopId),
+        tipCheckout(),
+        scope.kind === "diver"
+          ? inArray(bookingCheckoutBookings.bookingId, [...scope.bookingIds])
+          : undefined,
+      ),
+    )
+    .orderBy(asc(bookingCheckouts.createdAt), asc(bookingCheckouts.id));
+}
+
+/** How many tips a shop's bundle holds — the settings page's cheap view. */
+export async function countShopTips(db: DbExecutor, shopId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(bookingCheckouts)
+    .where(and(eq(bookingCheckouts.shopId, shopId), tipCheckout()));
+  return row?.n ?? 0;
 }
 
 /** How many rows {@link readScoped} would return for a shop — the settings page's cheap view. */

@@ -332,6 +332,7 @@ export async function listStuckPaymentOperations(
       ? db
           .select({ id: bookingCheckouts.id, tripId: bookingCheckouts.tripId })
           .from(bookingCheckouts)
+          // diveday:any-checkout-purpose: names the trip of whichever checkout a stuck intent is about
           .where(
             and(inArray(bookingCheckouts.id, checkoutIds), eq(bookingCheckouts.shopId, shopId)),
           )

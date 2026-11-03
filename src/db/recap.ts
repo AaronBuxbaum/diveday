@@ -72,7 +72,8 @@ import {
 } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
+import { getLatestTipForBooking } from "./tips";
+import { refreshCheckoutFromStripe } from "./checkouts";
 import { tripsWithSomebodyMissing } from "./today";
 import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives, seatNotCancelled } from "./trips";
@@ -401,14 +402,18 @@ export async function getRecapPageState(
   // itself hasn't said so.
   const tip =
     latestTip?.status === "pending"
-      ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
+      ? await refreshCheckoutFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
       : latestTip;
   return {
     kind: "recap",
     data: {
       ...loaded.data,
       tip: tip
-        ? { status: tip.status, amountCents: tip.amountCents, checkoutUrl: tip.checkoutUrl }
+        ? {
+            status: tip.status === "completed" ? "paid" : tip.status,
+            amountCents: tip.settledTotalCents ?? tip.totalCents,
+            checkoutUrl: tip.checkoutUrl,
+          }
         : null,
     },
   };

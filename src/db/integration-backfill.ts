@@ -11,12 +11,10 @@ import {
 } from "./integration-events";
 import {
   bookingCheckouts,
-  bookings,
   integrationDeliveries,
   integrationEvents,
   type ShopIntegration,
   shopIntegrations,
-  tips,
   trips,
 } from "./schema";
 import { notRehearsal } from "./trips-live";
@@ -109,9 +107,11 @@ async function candidatesSince(
   const checkouts = await db
     .select({
       id: bookingCheckouts.id,
+      purpose: bookingCheckouts.purpose,
       completedAt: bookingCheckouts.completedAt,
       refundedCents: bookingCheckouts.refundedCents,
     })
+    // diveday:any-checkout-purpose: fares and tips both reach the books; each takes its own kind below.
     .from(bookingCheckouts)
     // diveday:allow-rehearsal: filtered by `notRehearsal()` below; a rehearsal's checkout never reaches an integration.
     .innerJoin(trips, and(eq(trips.id, bookingCheckouts.tripId), eq(trips.shopId, shopId)))
@@ -123,24 +123,14 @@ async function candidatesSince(
         notRehearsal(),
       ),
     );
-  const paidTips = await db
-    .select({ id: tips.id, completedAt: tips.completedAt })
-    .from(tips)
-    .innerJoin(bookings, and(eq(bookings.id, tips.bookingId), eq(bookings.shopId, shopId)))
-    // diveday:allow-rehearsal: filtered by `notRehearsal()` below; a rehearsal's tip never reaches an integration.
-    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
-    .where(
-      and(
-        eq(tips.shopId, shopId),
-        eq(tips.status, "paid"),
-        gte(tips.completedAt, since),
-        notRehearsal(),
-      ),
-    );
 
   const found: Candidate[] = [];
   for (const row of checkouts) {
     if (!row.completedAt) continue;
+    if (row.purpose === "tip") {
+      found.push({ kind: "tip", id: row.id, at: row.completedAt });
+      continue;
+    }
     found.push({ kind: "checkout", id: row.id, at: row.completedAt });
     if (row.refundedCents > 0) {
       found.push({
@@ -150,9 +140,6 @@ async function candidatesSince(
         refundedCents: row.refundedCents,
       });
     }
-  }
-  for (const row of paidTips) {
-    if (row.completedAt) found.push({ kind: "tip", id: row.id, at: row.completedAt });
   }
   return found.sort(
     (a, b) =>

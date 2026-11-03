@@ -24,6 +24,7 @@ import {
   revenueLineForOrderItem,
 } from "@/lib/report-lines";
 import { type BuddyReferrer, buddyReferrersForWindow } from "./buddy-referrals";
+import { fareCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { packageOrderStillBacks } from "./dive-packages";
 import { listShopPayoutsArriving, type ShopPayout } from "./payouts";
@@ -208,6 +209,8 @@ async function moneyOut(
       and(
         eq(bookingCheckouts.shopId, shopId),
         eq(bookingCheckouts.status, "completed"),
+        // Fares only; tips are their own line in the month's figures.
+        fareCheckout(),
         gte(bookingCheckouts.completedAt, startUtc),
         lt(bookingCheckouts.completedAt, endUtc),
       ),
@@ -333,6 +336,8 @@ async function moneyParts(
       and(
         eq(bookingCheckoutBookings.shopId, shopId),
         eq(bookingCheckouts.status, "completed"),
+        // Fares only; tips are their own line in the month's figures.
+        fareCheckout(),
         gte(bookingCheckouts.completedAt, startUtc),
         lt(bookingCheckouts.completedAt, endUtc),
       ),

@@ -21,6 +21,7 @@
  * Shop-scoped on every table it reads, each join on its own `shop_id`.
  */
 import { and, eq, gte, ilike, inArray, isNull, lt, ne, or, type SQL, sql } from "drizzle-orm";
+import { fareCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import type { ShopOrderFilter } from "./orders";
 import {
@@ -116,6 +117,8 @@ export function seatLedgerEntries(db: DbExecutor, shopId: string, filter: ShopOr
         and(
           eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
           eq(bookingCheckouts.shopId, shopId),
+          // A seat's payment, never a tip on the same booking.
+          fareCheckout(),
         ),
       )
       .innerJoin(
@@ -180,6 +183,8 @@ function seatPaymentQuery(db: DbExecutor, shopId: string) {
         and(
           eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
           eq(bookingCheckouts.shopId, shopId),
+          // A seat's payment, never a tip on the same booking.
+          fareCheckout(),
         ),
       )
       .innerJoin(

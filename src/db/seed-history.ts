@@ -16,7 +16,6 @@ import {
   people,
   personRoles,
   rollCallEvents,
-  tips,
   tripAssignments,
   tripDives,
   tripLenses,
@@ -31,6 +30,7 @@ import { LAST_YEAR_SAILINGS } from "./seed-last-year";
 import { paperRelease, signingNames } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
 import { getCurrentWaiverTemplate } from "./waivers";
+import { recordSeedTips, type SeedTip } from "./tips";
 
 /**
  * **What the demo shop's tax line is made of.**
@@ -908,24 +908,26 @@ export async function seedHistory(
     .map((plan, i) => {
       const booking = bookingRows[i];
       if (!booking || plan.status !== "checked_in") return null;
-      const state = i % 11 === 0 ? "expired" : i % 7 === 0 ? "pending" : "paid";
+      const state: SeedTip["status"] =
+        i % 11 === 0 ? "expired" : i % 7 === 0 ? "pending" : "completed";
       const createdAt = new Date(plan.createdAt.getTime() + 2 * 60 * 60 * 1000);
       return {
         shopId,
         bookingId: booking.id,
-        status: state as "pending" | "paid" | "expired",
+        tripId: booking.tripId,
+        status: state,
         stripeAccountId: "acct_demo",
         stripeSessionId: `cs_tip_demo_${shopId}_${i + 1}`,
         checkoutUrl: state === "pending" ? "https://checkout.stripe.com/c/pay/demo-tip" : null,
         currency: "usd",
         amountCents: i % 3 === 0 ? 2_500 : 1_500,
         expiresAt: state === "pending" ? new Date(createdAt.getTime() + DAY_MS) : null,
-        completedAt: state === "paid" ? new Date(createdAt.getTime() + 15 * 60 * 1000) : null,
+        completedAt: state === "completed" ? new Date(createdAt.getTime() + 15 * 60 * 1000) : null,
         createdAt,
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
-  if (tipRows.length > 0) await db.insert(tips).values(tipRows);
+  await recordSeedTips(db, tipRows);
 
   // Reviews from divers who actually sailed: `DEMO_REVIEWS` below.
   // The written reviews go on different departures, so the public list reads

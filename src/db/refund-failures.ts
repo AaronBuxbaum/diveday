@@ -247,11 +247,15 @@ async function reverseOnCheckout(
   checkout: BookingCheckout,
   input: RefundFailureInput,
 ): Promise<RefundFailureOutcome> {
+  // Only a fare is refunded through DiveDay; a tip's reversal is recorded
+  // nowhere yet (ADR 20260726-post-trip-tipping, issue #2718).
+  if (checkout.purpose !== "fare") return { status: "not_found" };
   const paidAfterClose = checkout.status === "expired" && checkout.paidAfterCloseCents !== null;
   if (checkout.status !== "completed" && !paidAfterClose) return { status: "not_found" };
   const covered = await db
     .select({ bookingId: bookingCheckoutBookings.bookingId })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the fare this reversal was checked against above
     .where(
       and(
         eq(bookingCheckoutBookings.shopId, checkout.shopId),
@@ -265,6 +269,7 @@ async function reverseOnCheckout(
     const [current] = await tx
       .select()
       .from(bookingCheckouts)
+      // diveday:any-checkout-purpose: the fare this reversal was checked against above
       .where(eq(bookingCheckouts.id, checkout.id))
       .for("update");
     if (!current) return { status: "not_found" };
@@ -274,6 +279,7 @@ async function reverseOnCheckout(
 
     await tx
       .update(bookingCheckouts)
+      // diveday:any-checkout-purpose: the fare this reversal was checked against above
       .set({ refundedCents: current.refundedCents - reversed })
       .where(eq(bookingCheckouts.id, current.id));
     const bookingId = paidAfterClose
@@ -337,6 +343,7 @@ export async function listFailedRefunds(db: AppDb, shopId: string): Promise<Fail
     .leftJoin(orders, and(eq(orders.id, stripeRefundFailures.orderId), eq(orders.shopId, shopId)))
     .leftJoin(
       bookingCheckouts,
+    // diveday:any-checkout-purpose: a refund failure is only ever recorded against a fare
       and(
         eq(bookingCheckouts.id, stripeRefundFailures.checkoutId),
         eq(bookingCheckouts.shopId, shopId),
@@ -368,6 +375,7 @@ export async function listFailedRefunds(db: AppDb, shopId: string): Promise<Fail
             fullName: people.fullName,
           })
           .from(bookingCheckoutBookings)
+          // diveday:any-checkout-purpose: a refund failure is only ever recorded against a fare
           .innerJoin(
             bookings,
             and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),

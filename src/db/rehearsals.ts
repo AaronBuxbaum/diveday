@@ -144,6 +144,7 @@ export async function notificationHeldForRehearsal(
     const [row] = await db
       .select({ tripId: bookingCheckouts.tripId })
       .from(bookingCheckouts)
+      // diveday:any-checkout-purpose: a checkout of either purpose names its departure the same way
       .where(and(eq(bookingCheckouts.id, handles.checkoutId), eq(bookingCheckouts.shopId, shopId)))
       .limit(1);
     if (row) tripIds.add(row.tripId);

@@ -97,6 +97,7 @@ async function discountUses(
   const [held] = await db
     .select({ total: count() })
     .from(bookingCheckouts)
+    // diveday:any-checkout-purpose: keyed by a promotion, which a tip never carries (booking_checkouts_tip_shape)
     .where(
       and(
         eq(bookingCheckouts.shopId, ref.shopId),
@@ -126,6 +127,7 @@ async function discountUses(
           db
             .select({ one: sql`1` })
             .from(bookingCheckouts)
+            // diveday:any-checkout-purpose: keyed by a promotion, which a tip never carries (booking_checkouts_tip_shape)
             .where(
               and(
                 eq(bookingCheckouts.shopId, ref.shopId),
