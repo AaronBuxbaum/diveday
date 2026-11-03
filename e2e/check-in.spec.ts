@@ -322,11 +322,15 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
   const counter = counterPath("blue-mantis", tripId);
   await page.goto(walkInFormPath("blue-mantis", tripId));
+  // A submit sent while the page hydrates can land without the name prompt
+  // (seen once in CI on #3740), so the form is filled only once React owns it.
+  await expect(page.locator("[data-identity-menu]")).toHaveAttribute("data-hydrated", "true");
 
   // One letter off a diver already on file. `personNamesMatch` compares token
   // sets exactly, so this is the disagreement that raises the flag — the prompt
   // fires on an exact spelling too, and that one is not a guess.
   await page.getByLabel("Full name").fill("Zoe Bennet");
+  await expect(page.getByLabel("Full name")).toHaveValue("Zoe Bennet");
   await page.getByRole("button", { name: "Add to boat" }).click();
 
   // "Is this the same Zoe Bennet?" — the prompt, with the record it found.
