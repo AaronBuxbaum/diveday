@@ -70,30 +70,13 @@ async function tsxFilesUnder(dir: string): Promise<string[]> {
 
 /**
  * **One file draws the scrim** (issue #2766). A full-screen `fixed inset-0`
- * overlay belongs in `ui/layer.tsx`; a listed file predates it and is a
- * ratchet: fix it and delete the entry, never add one.
+ * overlay belongs in `ui/layer.tsx`; nothing else spells it.
  */
 const LAYER_FILE = path.join("src", "components", "ui", "layer.tsx");
-const HAND_DRAWN_OVERLAYS = new Set<string>([
-  path.join("src", "components", "search", "CommandPalette.tsx"),
-  path.join("src", "components", "StaffActivity.tsx"),
-  path.join(
-    "src",
-    "app",
-    "shop",
-    "[shopSlug]",
-    "trips",
-    "[id]",
-    "manifest",
-    "_components",
-    "PersonSheet.tsx",
-  ),
-]);
 
 describe("stacking layers", () => {
-  it("draws a full-screen overlay only in ui/layer.tsx, bar the banked burn-down", async () => {
+  it("draws a full-screen overlay only in ui/layer.tsx", async () => {
     const offenders: string[] = [];
-    const stale: string[] = [];
     for (const root of ROOTS) {
       for (const file of await tsxFilesUnder(root)) {
         const relative = path.relative(process.cwd(), file);
@@ -101,12 +84,10 @@ describe("stacking layers", () => {
         const drawsOverlay = /\bfixed inset-0\b/.test(
           withoutComments(await readFile(file, "utf8")),
         );
-        if (drawsOverlay && !HAND_DRAWN_OVERLAYS.has(relative)) offenders.push(relative);
-        if (!drawsOverlay && HAND_DRAWN_OVERLAYS.has(relative)) stale.push(relative);
+        if (drawsOverlay) offenders.push(relative);
       }
     }
     expect(offenders).toEqual([]);
-    expect(stale).toEqual([]);
   });
 
   it("keeps the staff header above every in-page popover", async () => {
