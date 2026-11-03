@@ -1,0 +1,84 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "b9f2e9dd-f26c-4863-94d6-7eecda28b03c",
+  "prevIds": [
+    "9d9bd852-ed83-4f36-a8dd-bd1fba2770b3",
+    "7dd46915-6eb0-4aa1-813d-34dd978d3ee6"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "shop_promo_redemptions"
+      ],
+      "writes": [
+        "s|tbl|public.shop_promo_redemptions",
+        "n|tbl|public.shop_promo_redemptions",
+        "e|tbl|public.shop_promo_redemptions",
+        "n|rel|public.shop_promo_redemptions",
+        "n|type|public.shop_promo_redemptions"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"shop_promo_redemptions\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_redemptions\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_redemptions\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_redemptions\",\"promo_code_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_redemptions\",\"checkout_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_redemptions\",\"amount_charged_cents\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_redemptions\",\"redeemed_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"shop_promo_redemptions_checkout_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"shop_promo_redemptions_promo_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"shop_promo_redemptions\",\"shop_promo_redemptions_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"shop_promo_redemptions\",\"shop_promo_redemptions_promo_code_id_shop_promo_codes_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"shop_promo_redemptions\",\"shop_promo_redemptions_checkout_id_booking_checkouts_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"shop_promo_redemptions\",\"shop_promo_redemptions_pkey\"]"
+    }
+  ]
+}

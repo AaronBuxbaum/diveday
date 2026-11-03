@@ -553,7 +553,7 @@ const tripReminder24hSchema = z.object({
  * calendars re-alerted, and told no booked diver — "or a diver stands at the
  * dock at the old time", in the code's own words. One message per booked seat,
  * sent by the diver's usual channel after the same eight-second hold every
- * other staff send takes (`held_sends`, kind `trip_rescheduled`).
+ * other staff send takes (a held send, kind `trip_rescheduled`).
  *
  * The new time, the meeting point **only when it moved**, and the diver's own
  * trip-prep link. Delivery history is not tracked per seat, so the previous

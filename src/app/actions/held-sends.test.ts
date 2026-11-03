@@ -1,12 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { bookings, heldSends, people, personRoles, trips } from "@/db/schema";
+import { bookings, people, personRoles, trips } from "@/db/schema";
 import { ALL_ROLES } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
 import { SEND_HOLD_MS } from "@/lib/held-sends";
-import { KIND_AUDIENCE } from "@/lib/today";
+import { KIND_AUDIENCE } from "@/lib/today-kinds";
 import { fileScopedShopContext } from "@/test/db";
+import { heldRows } from "@/test/held-sends";
 
 const fileCtx = fileScopedShopContext();
 
@@ -60,10 +61,6 @@ function dealForm(tripId: string, recipient: string): FormData {
   return form;
 }
 
-async function heldRows(db: AppDb, shopId: string) {
-  return db.select().from(heldSends).where(eq(heldSends.shopId, shopId));
-}
-
 /**
  * ADR 20260906-before-you-ask, decision 2. Discounting is money work wherever
  * the button sits (issue #714): the gate the immediate deal action carried
@@ -76,7 +73,7 @@ describe("holdSendAction", () => {
     await expect(holdSendAction(dealForm(seat.tripId, captain.personId))).rejects.toThrow(
       "not_authorized",
     );
-    expect(await heldRows(db, shop.id)).toEqual([]);
+    expect(await heldRows(db, { shopId: shop.id })).toEqual([]);
   });
 
   it("holds an owner's deal eight seconds, with ids only in the row", async () => {
@@ -85,7 +82,7 @@ describe("holdSendAction", () => {
     const ticket = await holdSendAction(dealForm(seat.tripId, owner.personId));
     // Against the clock, which the suite freezes (`src/lib/clock.ts`).
     expect(ticket.runAt - nowMs()).toBe(SEND_HOLD_MS);
-    const [row] = await heldRows(db, shop.id);
+    const [row] = await heldRows(db, { shopId: shop.id });
     expect(row?.payload).toEqual({
       kind: "seat_offer",
       tripId: seat.tripId,
@@ -103,7 +100,7 @@ describe("holdSendAction", () => {
     form.set("discount", "20");
     form.set("discountKind", "amount");
     await holdSendAction(form);
-    const [row] = await heldRows(db, shop.id);
+    const [row] = await heldRows(db, { shopId: shop.id });
     expect(row?.payload).toEqual({
       kind: "seat_offer",
       tripId: seat.tripId,
@@ -120,7 +117,7 @@ describe("holdSendAction", () => {
     form.set("discount", " ");
     form.set("discountKind", "percent");
     await expect(holdSendAction(form)).rejects.toThrow("invalid_discount");
-    expect(await heldRows(db, shop.id)).toEqual([]);
+    expect(await heldRows(db, { shopId: shop.id })).toEqual([]);
   });
 
   it("holds a waiver send from the surface's own hidden inputs, and Undo takes it back", async () => {
@@ -132,7 +129,7 @@ describe("holdSendAction", () => {
     form.set("tripId", seat.tripId);
     form.append("bookingId", seat.bookingId);
     const ticket = await holdSendAction(form);
-    const [row] = await heldRows(db, shop.id);
+    const [row] = await heldRows(db, { shopId: shop.id });
     expect(row?.payload).toEqual({
       kind: "waiver_send",
       bookingIds: [seat.bookingId],
@@ -141,7 +138,7 @@ describe("holdSendAction", () => {
       tripId: seat.tripId,
     });
     expect(await undoHeldSendAction(ticket.id)).toBe(true);
-    expect(await heldRows(db, shop.id)).toEqual([]);
+    expect(await heldRows(db, { shopId: shop.id })).toEqual([]);
   });
 
   // Issue #2346: a rental ticket's send is its own surface, carries the
@@ -161,7 +158,7 @@ describe("holdSendAction", () => {
     form.set("ticketId", ticketId);
     form.set("personId", walkIn.id);
     const ticket = await holdSendAction(form);
-    const [row] = await heldRows(db, shop.id);
+    const [row] = await heldRows(db, { shopId: shop.id });
     expect(row?.payload).toEqual({
       kind: "waiver_send",
       bookingIds: [],
@@ -207,7 +204,7 @@ describe("holdSendAction wait-list invite", () => {
       user: { shopId: shop.id, personId: captain.personId, roles: ["manager"] },
     } as never);
     await expect(holdSendAction(waitlistForm(seat.tripId))).rejects.toThrow("not_authorized");
-    expect(await heldRows(db, shop.id)).toEqual([]);
+    expect(await heldRows(db, { shopId: shop.id })).toEqual([]);
   });
 
   for (const role of ALL_ROLES) {
@@ -227,7 +224,7 @@ describe("holdSendAction wait-list invite", () => {
         });
       } else {
         await expect(attempt).rejects.toThrow("not_authorized");
-        expect(await heldRows(db, shop.id)).toEqual([]);
+        expect(await heldRows(db, { shopId: shop.id })).toEqual([]);
       }
     });
   }
@@ -283,7 +280,7 @@ describe("Tell them", () => {
     await expect(
       holdSendAction(tellThemForm(seat.tripId, "2020-01-01T06:00:00.000Z")),
     ).rejects.toThrow("nothing_to_send");
-    expect(await heldRows(db, shop.id)).toEqual([]);
+    expect(await heldRows(db, { shopId: shop.id })).toEqual([]);
   });
 
   it("ignores a posted previous time and says the one the divers were told", async () => {
@@ -301,7 +298,7 @@ describe("Tell them", () => {
     expect(await undoHeldSendAction(moveHeld.id)).toBe(true);
 
     await holdSendAction(tellThemForm(tripId, "2020-01-01T06:00:00.000Z"));
-    const [row] = await heldRows(db, shop.id);
+    const [row] = await heldRows(db, { shopId: shop.id });
     expect(row?.payload).toMatchObject({ previousStartsAt: toldStartsAt.toISOString() });
   });
 });
@@ -326,14 +323,14 @@ describe("Tell them and the meeting point", () => {
   it("ignores a posted meetingPointMoved when the meeting point never moved", async () => {
     const { db, shop, tripId } = await undoneMove(false);
     await holdSendAction(tellThemForm(tripId, undefined, "true"));
-    const [row] = await heldRows(db, shop.id);
+    const [row] = await heldRows(db, { shopId: shop.id });
     expect(row?.payload).toMatchObject({ meetingPointMoved: false });
   });
 
   it("says the meeting point moved from the record, whatever is posted", async () => {
     const { db, shop, tripId } = await undoneMove(true);
     await holdSendAction(tellThemForm(tripId, undefined, "false"));
-    const [row] = await heldRows(db, shop.id);
+    const [row] = await heldRows(db, { shopId: shop.id });
     expect(row?.payload).toMatchObject({ meetingPointMoved: true });
   });
 });
@@ -358,21 +355,21 @@ describe("undo and early release", () => {
     signIn(shop, owner);
     expect(await undoHeldSendAction("not-a-uuid")).toBe(false);
     expect(await releaseHeldSendAction("not-a-uuid")).toEqual({ status: "gone" });
-    expect((await heldRows(db, shop.id)).map((row) => row.id)).toEqual([held.id]);
+    expect((await heldRows(db, { shopId: shop.id })).map((row) => row.id)).toEqual([held.id]);
   });
 
   it("refuses a captain's Undo of a manager's reschedule notice", async () => {
     const { db, shop, captain, held } = await heldNotice();
     signIn(shop, captain);
     await expect(undoHeldSendAction(held.id)).rejects.toThrow("not_authorized");
-    expect((await heldRows(db, shop.id)).map((row) => row.id)).toEqual([held.id]);
+    expect((await heldRows(db, { shopId: shop.id })).map((row) => row.id)).toEqual([held.id]);
   });
 
   it("refuses a captain's early release of it", async () => {
     const { db, shop, captain, held } = await heldNotice();
     signIn(shop, captain);
     await expect(releaseHeldSendAction(held.id)).rejects.toThrow("not_authorized");
-    expect((await heldRows(db, shop.id)).map((row) => row.id)).toEqual([held.id]);
+    expect((await heldRows(db, { shopId: shop.id })).map((row) => row.id)).toEqual([held.id]);
   });
 
   it("refuses a captain's Undo of an owner's deal blast", async () => {
@@ -381,6 +378,6 @@ describe("undo and early release", () => {
     const ticket = await holdSendAction(dealForm(seat.tripId, owner.personId));
     signIn(shop, captain);
     await expect(undoHeldSendAction(ticket.id)).rejects.toThrow("not_authorized");
-    expect(await heldRows(db, shop.id)).toHaveLength(1);
+    expect(await heldRows(db, { shopId: shop.id })).toHaveLength(1);
   });
 });

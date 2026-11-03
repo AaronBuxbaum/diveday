@@ -20,7 +20,6 @@ import {
   activityEvents,
   bookingPaymentEvents,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   stripeWebhookEvents,
   tripDeskEvents,
   tripReadMarks,
@@ -107,29 +106,8 @@ describe("pruneExpiredRecords", () => {
     expect(row).toBeDefined();
   });
 
-  it("prunes notification attempts and activity events on their own windows", async () => {
+  it("prunes notification deliveries and activity events on their own windows", async () => {
     const { db, shop, reef, entry } = await retentionContext();
-    const attemptsWindow = RETENTION_DAYS.notification_delivery_attempts;
-    const seededAttempts = await db
-      .select({ id: notificationDeliveryAttempts.id })
-      .from(notificationDeliveryAttempts);
-    await db.insert(notificationDeliveryAttempts).values([
-      {
-        shopId: shop.id,
-        bookingId: entry.booking.id,
-        kind: "booking_confirmation",
-        status: "sent",
-        attemptedAt: daysAgo(attemptsWindow + 1),
-      },
-      {
-        shopId: shop.id,
-        bookingId: entry.booking.id,
-        kind: "booking_confirmation",
-        status: "sent",
-        attemptedAt: daysAgo(attemptsWindow - 1),
-      },
-    ]);
-
     const deliveryWindow = RETENTION_DAYS.notification_deliveries;
     const insertedDeliveries = await db
       .insert(notificationDeliveries)
@@ -181,16 +159,9 @@ describe("pruneExpiredRecords", () => {
     ]);
 
     const summary = await pruneExpiredRecords(db, { now: NOW });
-    expect(outcomeFor(summary, "notification_delivery_attempts").deleted).toBe(1);
     expect(outcomeFor(summary, "notification_deliveries").deleted).toBe(1);
     expect(outcomeFor(summary, "activity_events").deleted).toBe(1);
 
-    // The seeded attempts (all recent) plus the one recent insert; only the
-    // ancient row is gone.
-    const attempts = await db
-      .select({ id: notificationDeliveryAttempts.id })
-      .from(notificationDeliveryAttempts);
-    expect(attempts).toHaveLength(seededAttempts.length + 1);
     const deliveries = await db
       .select({ id: notificationDeliveries.id })
       .from(notificationDeliveries);
@@ -613,19 +584,6 @@ const STALE_AND_FRESH = {
           attemptedAt: at,
         })
         .returning({ id: schema.notificationDeliveries.id }),
-    ),
-  notification_delivery_attempts: async ({ db, shop, entry }, at) =>
-    idOf(
-      await db
-        .insert(schema.notificationDeliveryAttempts)
-        .values({
-          shopId: shop.id,
-          bookingId: entry.booking.id,
-          kind: "booking_confirmation",
-          status: "sent",
-          attemptedAt: at,
-        })
-        .returning({ id: schema.notificationDeliveryAttempts.id }),
     ),
   activity_events: async ({ db, shop, people }, at) =>
     idOf(

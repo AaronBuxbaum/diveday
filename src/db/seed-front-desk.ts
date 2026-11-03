@@ -7,14 +7,13 @@ import {
   bookingCheckouts,
   interests,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   paymentOperationIntents,
   people,
   personRoles,
   rollCallEvents,
   tripLastMinutePromos,
 } from "./schema";
-import { CAPTAIN_NAME } from "./seed-cast";
+import { CAPTAIN_NAME, type Cast } from "./seed-cast";
 import { at, dateAt, nextCreatedAt } from "./seed-clock";
 
 /**
@@ -31,7 +30,7 @@ import { at, dateAt, nextCreatedAt } from "./seed-clock";
 export async function seedFrontDesk(
   db: DbExecutor,
   shopId: string,
-  customers: { id: string }[],
+  cast: Cast<{ id: string; fullName: string }>,
   tripRows: { id: string; title: string }[],
   bookingRows: { id: string; tripId: string; personId: string }[],
   includeHistoryData: boolean,
@@ -43,7 +42,7 @@ export async function seedFrontDesk(
   // records that otherwise tend to remain empty because they are created by
   // later staff actions in a real shop.
   const listPeople = [9, 10, 11, 12, 43, 45, 47, 49, 51]
-    .map((index) => customers[index])
+    .map((index) => cast.slot(index))
     .filter((person) => person !== undefined);
   if (includeHistoryData && listPeople.length > 0) {
     await db
@@ -67,7 +66,7 @@ export async function seedFrontDesk(
 
   // The sold-out charter is where a wait-list earns its keep.
   if (includeHistoryData && wreckId) {
-    const waiting = [10, 11, 12].map((index) => customers[index]).filter((c) => c !== undefined);
+    const waiting = [cast.amara, cast.felix, cast.hana];
     if (waiting.length > 0) {
       await db.insert(interests).values(
         waiting.map((person) => ({
@@ -186,8 +185,5 @@ export async function seedFrontDesk(
   }));
   if (deliveries.length > 0) {
     await db.insert(notificationDeliveries).values(deliveries);
-    await db
-      .insert(notificationDeliveryAttempts)
-      .values(deliveries.map((delivery) => ({ ...delivery, isRetry: false })));
   }
 }

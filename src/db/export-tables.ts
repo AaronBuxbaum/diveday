@@ -51,7 +51,6 @@ import {
   rollCallCrewEvents,
   rollCallEvents,
   shopPromoCodes,
-  shopPromoRedemptions,
   shopTextTranslations,
   specialtyCertifications,
   staffCredentialHistory,
@@ -332,11 +331,6 @@ export const EXPORT_TABLES = {
       shopColumn: bookingCheckoutBookings.shopId,
       bookingColumn: bookingCheckoutBookings.bookingId,
     },
-  },
-  shopPromoRedemptions: {
-    table: shopPromoRedemptions,
-    order: [asc(shopPromoRedemptions.redeemedAt), asc(shopPromoRedemptions.id)],
-    scope: { shopColumn: shopPromoRedemptions.shopId },
   },
   internalNotes: {
     table: internalNotes,

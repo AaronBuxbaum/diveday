@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ShopNotice } from "./ShopPageHeader";
+import { ShopNotice } from "./ShopNotice";
 import { Toast } from "./Toast";
 import { FormStatus } from "./ui/form";
 

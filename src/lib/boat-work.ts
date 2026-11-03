@@ -1,5 +1,5 @@
 import { isDiver, type ParticipantType } from "./participant-types";
-import { urgencyFor } from "./today";
+import { urgencyFor } from "./today-urgency";
 
 /**
  * **A boat's work, in one vocabulary** (third review, item 4). The jobs a

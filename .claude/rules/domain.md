@@ -19,7 +19,9 @@ Today, notifications, offline manifests, auth). What they do not say:
   someone `src/lib/readiness.ts` (boarding-time) would clear.
 - **Codes and deals** both resolve in `bookSpot`, and Stripe owns the arithmetic.
 - **Closing the day** is a recorded act, never a gate, and Today has one detector
-  (ADR 20260804-day-closeout).
+  (ADR 20260804-day-closeout). What a `src/db` module needs from Today and the close-out is a small
+  file below them: `today-kinds.ts`, `today-urgency.ts`, `today-job.ts`, `seat-sailed.ts`,
+  `shop-day.ts`; import those, not the queue.
 - **Offline manifests**: two `no-store` routes read through the response types in
   `src/lib/offline-manifests.ts` (ADR 20260726-shopwide-offline-manifest-priming).
 - **Dive-site difficulty** is one of three codes in `src/lib/dive-site-difficulty.ts`, never free

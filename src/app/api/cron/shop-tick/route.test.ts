@@ -10,7 +10,7 @@ vi.mock("@/db/trips", () => ({
   listMinimumNotMetRecipients: vi.fn(),
 }));
 vi.mock("@/db/reminders", () => ({ sendDueReminders: vi.fn() }));
-vi.mock("@/db/held-sends", () => ({ drainHeldSends: vi.fn() }));
+vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
 vi.mock("@/db/work-order-follow-up", () => ({ sendDueServiceReminders: vi.fn() }));
 vi.mock("@/db/recap", () => ({ sendDueRecaps: vi.fn() }));
 vi.mock("@/db/crew-notices", () => ({ sendDueCrewNotices: vi.fn() }));
@@ -28,7 +28,7 @@ const { getDb } = await import("@/db/client");
 const { bringDemoBoatsAtSeaHome } = await import("@/db/seed-boat-at-sea");
 const { cancelDeparturesBelowMinimum } = await import("@/db/trips");
 const { sendDueReminders } = await import("@/db/reminders");
-const { drainHeldSends } = await import("@/db/held-sends");
+const { drainNotificationRetries } = await import("@/db/notifications");
 const { sendDueServiceReminders } = await import("@/db/work-order-follow-up");
 const { sendDueRecaps } = await import("@/db/recap");
 const { sendDueCrewNotices } = await import("@/db/crew-notices");
@@ -53,7 +53,7 @@ const ALL_SCANS = [
   bringDemoBoatsAtSeaHome,
   cancelDeparturesBelowMinimum,
   sendDueReminders,
-  drainHeldSends,
+  drainNotificationRetries,
   sendDueServiceReminders,
   sendDueRecaps,
   sendDueCrewNotices,
@@ -80,7 +80,15 @@ beforeEach(() => {
   vi.mocked(sendDueReminders)
     .mockReset()
     .mockResolvedValue({ scanned: 1, sent: 1 } as never);
-  vi.mocked(drainHeldSends).mockReset().mockResolvedValue({ sent: 0, failed: 0 });
+  vi.mocked(drainNotificationRetries)
+    .mockReset()
+    .mockResolvedValue({
+      scanned: 0,
+      sent: 0,
+      queued: 0,
+      failed: 0,
+      held: { sent: 0, failed: 0 },
+    });
   vi.mocked(sendDueServiceReminders)
     .mockReset()
     .mockResolvedValue({ sent: 0 } as never);
@@ -173,19 +181,46 @@ describe("GET /api/cron/shop-tick", () => {
     expect(lastCheckInStatus()).toBe("error");
   });
 
-  it("runs only the named scans when asked", async () => {
+  it("decides the minimum head count before any reminder reads the day", async () => {
+    const order: string[] = [];
+    vi.mocked(cancelDeparturesBelowMinimum).mockImplementation(async () => {
+      await Promise.resolve();
+      order.push("minimum-seats");
+      return { considered: 1, cancelled: [], deferred: 0 } as never;
+    });
+    vi.mocked(sendDueReminders).mockImplementation(async () => {
+      order.push("reminders");
+      return { scanned: 0, sent: 0 } as never;
+    });
+    await GET(cronRequest());
+    expect(order).toEqual(["minimum-seats", "reminders"]);
+  });
+
+  it("runs only the named scans when asked, and never checks in to the hourly monitor", async () => {
     const body = await (await GET(cronRequest("?scan=minimum-seats&scan=recaps"))).json();
     expect(cancelDeparturesBelowMinimum).toHaveBeenCalledTimes(1);
     expect(sendDueRecaps).toHaveBeenCalledTimes(1);
     expect(sendDueReminders).not.toHaveBeenCalled();
     expect(bringDemoBoatsAtSeaHome).not.toHaveBeenCalled();
     expect(Object.keys(body).sort()).toEqual(["minimum-seats", "recaps"]);
+    expect(Sentry.captureCheckIn).not.toHaveBeenCalled();
   });
 
-  it("refuses an unknown scan name rather than running the whole tick", async () => {
-    const response = await GET(cronRequest("?scan=recap"));
-    expect(response.status).toBe(503);
+  it("runs a repeated scan name once", async () => {
+    await GET(cronRequest("?scan=recaps&scan=recaps"));
+    expect(sendDueRecaps).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a named rerun without the cron secret", async () => {
+    expect((await GET(cronRequest("?scan=recaps", null))).status).toBe(401);
+    expect(sendDueRecaps).not.toHaveBeenCalled();
+  });
+
+  it("answers an unknown scan name with 400 before anything runs, and pages no one", async () => {
+    const response = await GET(cronRequest("?scan=recaps&scan=recap"));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "unknown_scan", unknown: ["recap"] });
     for (const scan of ALL_SCANS) expect(scan).not.toHaveBeenCalled();
-    expect(lastCheckInStatus()).toBe("error");
+    expect(Sentry.captureCheckIn).not.toHaveBeenCalled();
   });
 });

@@ -632,7 +632,11 @@ const TODAY_CEILING = 76;
 // 67 → 68 (#2678 dock review S2): who is said to be working it anyway, for the
 // crew panel's "No longer working it" (`listCrewAwayAcknowledgements`), one
 // statement in the overview's wave, only while the boat is ahead.
-const TRIP_CEILING = 68;
+// 68 → 69 (issue #2785): the pulse's boarded and blocked come from the
+// departure's one head count (`departureCounts`), which reads the roster beside
+// the roll call: one statement more than the dock-only boarded read it
+// replaced, in the same wave.
+const TRIP_CEILING = 69;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never

@@ -81,7 +81,6 @@ export type RetainedTable =
   | "integration_events"
   | "integration_oauth_states"
   | "notification_deliveries"
-  | "notification_delivery_attempts"
   | "activity_events"
   | "account_tokens"
   | "account_sessions"
@@ -172,20 +171,14 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    */
   integration_oauth_states: 2,
   /**
-   * 400 days. This is the current delivery outcome a shop uses to answer
-   * whether a message reached a diver. It is mutable latest state rather than
-   * append-only history, but its provider detail and send error are still
-   * operational trail data and must not remain unbounded.
+   * 400 days. One row per send (issue #2728): the durable proof that a shop
+   * did (or did not) reach a diver — the record a "you never told me the trip
+   * was cancelled" conversation turns on. A season plus a full year, so last
+   * year's incident is still answerable during this year's same week. Carries
+   * provider message ids, error codes and the provider's own detail, not
+   * message bodies.
    */
   notification_deliveries: 400,
-  /**
-   * 400 days. The durable proof that a shop did (or did not) reach a diver —
-   * the record a "you never told me the trip was cancelled" conversation turns
-   * on. A season plus a full year, so last year's incident is still answerable
-   * during this year's same week. Carries provider message ids and error
-   * codes, not message bodies.
-   */
-  notification_delivery_attempts: 400,
   /**
    * 1095 days (3 years). Staff-facing operational history in human language:
    * who moved a booking, who cancelled a departure. Longest-lived because it
@@ -394,7 +387,7 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * 400 days, measured on `attempted_at`. A row is the latest delivery outcome
    * of one waiver link on one channel: the provider's message id and, on a
    * bounce, the provider's own words. It is the same kind of row as
-   * `notification_delivery_attempts` and answers the same question ("did the
+   * `notification_deliveries` and answers the same question ("did the
    * shop ever reach me about the waiver?"), so it keeps the same season plus a
    * year. The signed waiver itself is `waiver_records`, which no clock touches.
    */

@@ -14,12 +14,13 @@ import { bookings, notificationDeliveries } from "./schema";
  * told about the move, so an Undo on the reschedule notice cannot leave a
  * diver without the reminder for the date they now sail.
  *
- * The rows go rather than being marked: `notification_deliveries` is the
- * current state of each send, rewritten whole by the next one, and a row a
- * staffer never pointed at (ADR 20260820-every-delete-is-soft, "machinery
- * nobody pointed at"). What was sent for the old date stays in the
- * append-only `notification_delivery_attempts`. The failure this allows is one
- * extra reminder after a small move, never a missing one.
+ * The rows go rather than being marked: a reminder is a once-only kind
+ * (`ONCE_ONLY_DELIVERY_KINDS`), held to one row per booking by a partial unique
+ * index, and its row is machinery a staffer never pointed at (ADR
+ * 20260820-every-delete-is-soft, "machinery nobody pointed at"). Since issue
+ * #2728 dropped the separate attempt trail, the old date's reminder leaves no
+ * row behind. The failure this allows is one extra reminder after a small
+ * move, never a missing one.
  */
 export async function rearmTripReminders(
   tx: DbExecutor,

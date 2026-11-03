@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -11,6 +12,8 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { HeldSendPayload } from "@/lib/held-sends";
+import { ONCE_ONLY_DELIVERY_KINDS_PREDICATE } from "@/lib/once-only-delivery-kinds";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -124,7 +127,7 @@ export const shopShoreAlertTokens = pgTable(
   ],
 );
 
-/** Latest outbound-email state per booking and notification purpose. */
+/** Which message a `notification_deliveries` row records. */
 export const notificationKind = pgEnum("notification_kind", [
   "booking_confirmation",
   "waiver_request",
@@ -197,8 +200,11 @@ export const notificationProviderStatus = pgEnum("notification_provider_status",
 ]);
 
 /**
- * A current operational status, not an append-only provider log. One row per
- * booking/purpose means a newly emailed waiver link replaces its prior state.
+ * One row per send the shop made about a booking (issue #2728): the attempt
+ * trail is the rows, and "the latest status" of a booking's message is its
+ * newest row for that kind (`latestDeliveryOnly`, `src/db/latest-delivery.ts`).
+ * The once-only kinds (`ONCE_ONLY_DELIVERY_KINDS`) are the exception: a partial
+ * unique index keeps each to one row per booking, and a retry updates it.
  */
 export const notificationDeliveries = pgTable(
   "notification_deliveries",
@@ -213,7 +219,7 @@ export const notificationDeliveries = pgTable(
     kind: notificationKind("kind").notNull(),
     status: notificationDeliveryStatus("status").notNull(),
     providerMessageId: text("provider_message_id"),
-    /** Provider-reported outcome; reset to null whenever a fresh send replaces the row. */
+    /** Provider-reported outcome; null on a fresh send until the provider reports. */
     providerStatus: notificationProviderStatus("provider_status"),
     providerStatusAt: timestamp("provider_status_at", { withTimezone: true }),
     /** The provider's own explanation for a bounce or failure, shown to staff verbatim. */
@@ -226,7 +232,15 @@ export const notificationDeliveries = pgTable(
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
-    uniqueIndex("notification_deliveries_booking_kind_unique").on(table.bookingId, table.kind),
+    uniqueIndex("notification_deliveries_once_only_unique")
+      .on(table.bookingId, table.kind)
+      .where(sql.raw(ONCE_ONLY_DELIVERY_KINDS_PREDICATE)),
+    // Every "latest row for this booking and kind" read walks this.
+    index("notification_deliveries_booking_kind_attempted_idx").on(
+      table.bookingId,
+      table.kind,
+      table.attemptedAt,
+    ),
     index("notification_deliveries_shop_status_attempted_idx").on(
       table.shopId,
       table.status,
@@ -234,38 +248,6 @@ export const notificationDeliveries = pgTable(
     ),
     // The webhook's only entry point: an event names the provider's message id.
     index("notification_deliveries_provider_message_idx").on(table.providerMessageId),
-  ],
-);
-
-/**
- * Append-only history of every send attempt — the durable record behind the
- * denormalized latest state in notification_deliveries. A retry adds a row
- * here; nothing is ever updated, so the full delivery trail survives.
- */
-export const notificationDeliveryAttempts = pgTable(
-  "notification_delivery_attempts",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    bookingId: uuid("booking_id")
-      .notNull()
-      .references(() => bookings.id),
-    kind: notificationKind("kind").notNull(),
-    status: notificationDeliveryStatus("status").notNull(),
-    providerMessageId: text("provider_message_id"),
-    sendHttpStatus: integer("send_http_status"),
-    sendErrorCode: text("send_error_code"),
-    sendError: text("send_error"),
-    /** True when a staff member re-triggered the send from the dashboard. */
-    isRetry: boolean("is_retry").notNull().default(false),
-    attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [
-    index("notification_delivery_attempts_booking_kind_idx").on(table.bookingId, table.kind),
-    index("notification_delivery_attempts_shop_attempted_idx").on(table.shopId, table.attemptedAt),
   ],
 );
 
@@ -421,6 +403,25 @@ export const notificationSendQueue = pgTable(
     bookingId: uuid("booking_id"),
     recipientPersonId: uuid("recipient_person_id"),
     recipientTripId: uuid("recipient_trip_id"),
+    /**
+     * **A held send** (issue #2730, ADR 20260906-before-you-ask decision 2):
+     * a send that has been tapped and not yet left, the row the eight-second
+     * Undo takes back. Ids only, never a name or an address
+     * (`src/lib/held-sends.ts`): the executor joins those when the hold
+     * drains, so nothing sealed is stored for it and an erasure needs no sweep
+     * of it. `next_attempt_at` is when the hold drains.
+     *
+     * A row carries this **or** `payload_sealed`, never both
+     * (`notification_send_queue_one_payload`). Undo deletes a held row while
+     * it is still `queued`; the claim moves it to `processing`; the send moves
+     * it to `sent` or `failed` and nulls this and the actor. A held row is
+     * never retried: a send that died mid-way may have reached some of its
+     * divers, so a lapsed `processing` claim settles `failed`
+     * (`held_send_interrupted`) rather than going back to `queued`.
+     */
+    intent: jsonb("intent").$type<HeldSendPayload>(),
+    /** Who tapped Send on a held row; the trail's actor. Null once the row settles, or they are gone. */
+    actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
     status: notificationQueueStatus("status").notNull().default("queued"),
     /** Every drain pass that has claimed this row, incremented at the claim. */
     attempts: integer("attempts").notNull().default(0),
@@ -454,6 +455,10 @@ export const notificationSendQueue = pgTable(
       table.lockedUntil,
     ),
     index("notification_send_queue_shop_status_idx").on(table.shopId, table.status),
+    check(
+      "notification_send_queue_one_payload",
+      sql`${table.intent} is null or ${table.payloadSealed} is null`,
+    ),
   ],
 );
 

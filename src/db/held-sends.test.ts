@@ -2,8 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { SEND_HOLD_MS } from "@/lib/held-sends";
 import { fileScopedShopContext } from "@/test/db";
+import { heldRows, insertHeldRow } from "@/test/held-sends";
 import { claimDueHeldSends, claimHeldSend, holdSend, undoHeldSend } from "./held-sends";
-import { bookings, heldSends, people, personRoles, trips } from "./schema";
+import { bookings, people, personRoles, trips } from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -52,7 +53,7 @@ describe("held sends", () => {
     expect(await claimHeldSend(db, shop.id, held.id, now)).toEqual({ status: "pending" });
     // Undo before it is due deletes the row: nothing was sent, nothing is logged.
     expect(await undoHeldSend(db, shop.id, held.id, new Date(now.getTime() + 3_000))).toBe(true);
-    expect(await db.select().from(heldSends).where(eq(heldSends.id, held.id))).toHaveLength(0);
+    expect(await heldRows(db, { id: held.id })).toHaveLength(0);
     expect(await claimHeldSend(db, shop.id, held.id, held.runAt)).toEqual({ status: "gone" });
   });
 
@@ -143,7 +144,7 @@ describe("held sends", () => {
     });
     const swept = await claimDueHeldSends(db, early.runAt);
     expect(swept.map((row) => row.id)).toEqual([early.id]);
-    expect(await db.select().from(heldSends).where(eq(heldSends.id, late.id))).toHaveLength(1);
+    expect(await heldRows(db, { id: late.id })).toHaveLength(1);
   });
 
   // Security review of #2656, minor 2: a row held by the release before this
@@ -163,37 +164,29 @@ describe("held sends", () => {
         tripId: seat.tripId,
       },
     });
-    const [old] = await db
-      .insert(heldSends)
-      .values({
-        shopId: shop.id,
-        actorPersonId: owner.personId,
-        kind: "waitlist_invite",
-        runAt: good.runAt,
-        payload: { kind: "waitlist_invite", tripId: seat.tripId, entryIds: [] },
-      } as unknown as typeof heldSends.$inferInsert)
-      .returning();
+    const old = await insertHeldRow(db, {
+      shopId: shop.id,
+      actorPersonId: owner.personId,
+      runAt: good.runAt,
+      payload: { kind: "waitlist_invite", tripId: seat.tripId, entryIds: [] },
+    });
     if (!old) throw new Error("setup: old row missing");
 
     const swept = await claimDueHeldSends(db, good.runAt);
     expect(swept.map((row) => row.id)).toEqual([good.id]);
     // The unreadable one is gone too: nothing could ever run it.
-    expect(await db.select().from(heldSends).where(eq(heldSends.id, old.id))).toHaveLength(0);
+    expect(await heldRows(db, { id: old.id })).toHaveLength(0);
     expect(await claimHeldSend(db, shop.id, old.id, good.runAt)).toEqual({ status: "gone" });
   });
 
   it("answers gone for a single claim of a send it cannot read", async () => {
     const { db, shop, seat, owner } = await fixture();
-    const [old] = await db
-      .insert(heldSends)
-      .values({
-        shopId: shop.id,
-        actorPersonId: owner.personId,
-        kind: "last_minute_deal",
-        runAt: now,
-        payload: { kind: "last_minute_deal", tripId: seat.tripId },
-      } as unknown as typeof heldSends.$inferInsert)
-      .returning();
+    const old = await insertHeldRow(db, {
+      shopId: shop.id,
+      actorPersonId: owner.personId,
+      runAt: now,
+      payload: { kind: "last_minute_deal", tripId: seat.tripId },
+    });
     if (!old) throw new Error("setup: old row missing");
     expect(await claimHeldSend(db, shop.id, old.id, now)).toEqual({ status: "gone" });
   });

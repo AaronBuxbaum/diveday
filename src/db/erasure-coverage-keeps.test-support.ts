@@ -36,8 +36,6 @@ export const ERASURE_KEEPS: Record<string, string> = {
     "the arrival ledger for a seat: a status, a source and the staffer who recorded it, with no diver column and no free text",
   dive_package_entitlements:
     "ids, a consumption timestamp and an expiry — how many dives of a package are left, which is the shop’s own balance",
-  shop_promo_redemptions:
-    "that a code was redeemed on a checkout, and for how much; the diver is reached only through the checkout, which is redacted",
   trip_blowout_divers:
     "who was offered a re-book when a departure blew out, by id, plus whether the message left. The address it went to lives on the notification rows, which are redacted",
   trip_invitations:
@@ -120,6 +118,4 @@ export const ERASURE_KEEPS: Record<string, string> = {
     "a single-use OAuth handshake bound to the staff member who started it and expiring in minutes",
   departure_notes:
     "an operational note a staffer sent to everyone on a departure — the parking, the meeting point — and who sent it. It is addressed to a departure, not to a diver: no recipient is stored, and its one person column is the staff sender",
-  held_sends:
-    "an eight-second undo window. Its `payload` carries ids only (and, for a departure note, the staffer's one line, which is addressed to a departure, not to a diver) — never a name or an address, which the table's own docblock states and `src/lib/held-sends.ts` holds to — and nothing lingers, so nothing prunes it",
 };

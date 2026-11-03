@@ -48,10 +48,10 @@ turn the public booking form into an oracle for enumerating a shop's live codes.
 "check this code" endpoint for the same reason: resolution happens inside the booking submit, which
 has already committed a seat and is rate-limited, so it is not a free guessing loop.
 
-**Redemptions are recorded, not counted from.** `shop_promo_redemptions` is written inside
-`markCheckoutPaidBySessionId`'s transaction and is unique on `checkout_id`, so a retried Stripe
-webhook cannot inflate a code's usage. It is an audit trail for reporting and for a later refund
-conversation — Stripe remains the authority on whether a redemption was *allowed*.
+**Redemptions are counted from completed checkouts.** (Amended 2026-11-02, issue #2720, by
+[20261102-a-redemption-is-a-completed-checkout](20261102-a-redemption-is-a-completed-checkout.md):
+this was a `shop_promo_redemptions` row per checkout, unique on `checkout_id`; the table is gone.)
+Stripe remains the authority on whether a redemption was *allowed*.
 
 **Owner/manager only.** Codes discount real money on the shop's own account, so the staff page sits
 behind `canPersonManagePaymentSettings` (H-20260724-staff-role-reach, [20260724-role-authorization](20260724-role-authorization.md)),

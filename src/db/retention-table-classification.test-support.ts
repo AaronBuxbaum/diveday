@@ -162,7 +162,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "stripe_refund_failures",
   "pricing_volume_statements", // a percent-plan shop's closed month, the books behind a fee (ADR 20261022-pricing-ab-test)
   "dive_package_entitlements",
-  "shop_promo_redemptions",
   // Credentials that live and die with the thing they open: revoked, spent, or
   // deleted with their parent. The token tables that are *not* here
   // (`account_tokens`, `account_sessions`, `shop_contact_email_confirmation_tokens`,
@@ -191,9 +190,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "shop_whatsapp_accounts",
   "shop_backup_destinations",
   "shop_backup_deliveries",
-  // A queue that empties itself: a held send is deleted by whichever claimant
-  // reaches it first (its own docblock).
-  "held_sends",
   // An obligation, deleted when it is discharged. A window here would delete
   // exactly the rows that still owe something — the local blob whose provider
   // delete never landed, the Stripe side effect whose response was lost, the

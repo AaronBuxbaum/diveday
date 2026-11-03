@@ -1,4 +1,4 @@
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { buttonClass } from "@/components/ui/button";

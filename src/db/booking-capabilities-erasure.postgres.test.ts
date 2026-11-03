@@ -17,7 +17,6 @@ import {
   bookingCapabilities,
   bookings,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   notificationSendQueue,
   people,
   shops,
@@ -673,12 +672,6 @@ describePostgres("capability issuance and erasure serialization", () => {
         .select()
         .from(notificationDeliveries)
         .where(eq(notificationDeliveries.bookingId, booking.id)),
-    ).toHaveLength(1);
-    expect(
-      await pg.db
-        .select()
-        .from(notificationDeliveryAttempts)
-        .where(eq(notificationDeliveryAttempts.bookingId, booking.id)),
     ).toHaveLength(1);
   });
 

@@ -12,7 +12,8 @@ import {
 import type { InWaterCrewCount } from "@/lib/crew-roles";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import { crewGapFor } from "@/lib/staffing-week";
-import { type TodayAction, urgencyFor } from "@/lib/today";
+import type { TodayAction } from "@/lib/today";
+import { urgencyFor } from "@/lib/today-urgency";
 import { NO_SUPERVISION } from "./course-crew-counts";
 import type { TodayRowsContext } from "./today-rows-context";
 

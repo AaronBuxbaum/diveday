@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import { bookings, importedPaymentHistory, nitroxCertifications, priorVisits } from "./schema";
+import type { Cast } from "./seed-cast";
 import { dateAt } from "./seed-clock";
 import { reviewedBy } from "./seed-review";
 
@@ -13,7 +14,7 @@ import { reviewedBy } from "./seed-review";
 export async function seedNitrox(
   db: DbExecutor,
   shopId: string,
-  customers: { id: string }[],
+  cast: Cast<{ id: string; fullName: string }>,
   wreck: { id: string },
   bookingRows: { id: string; tripId: string; personId: string }[],
   /** The staffer every verified card here was checked by — see `reviewedBy`. */
@@ -23,7 +24,7 @@ export async function seedNitrox(
   await db.insert(nitroxCertifications).values([
     {
       shopId,
-      personId: customers[0].id,
+      personId: cast.priya.id,
       agency: "padi" as const,
       identifier: "EANX-0001",
       status: "verified" as const,
@@ -32,7 +33,7 @@ export async function seedNitrox(
     },
     {
       shopId,
-      personId: customers[1].id,
+      personId: cast.tom.id,
       agency: "ssi" as const,
       identifier: "EANX-0002",
       status: "verified" as const,
@@ -41,7 +42,7 @@ export async function seedNitrox(
     },
     {
       shopId,
-      personId: customers[2].id,
+      personId: cast.lena.id,
       agency: "padi" as const,
       identifier: "EANX-0003",
       status: "pending" as const,
@@ -59,7 +60,7 @@ export async function seedNitrox(
   ];
   const duaneNitroxRows = duaneNitroxPlan
     .map(([index, status]) => {
-      const person = customers[index];
+      const person = cast.slot(index);
       if (!person) return null;
       return {
         shopId,
@@ -75,126 +76,106 @@ export async function seedNitrox(
     })
     .filter((row) => row !== null);
   if (duaneNitroxRows.length > 0) await db.insert(nitroxCertifications).values(duaneNitroxRows);
-
-  // The imported nitrox state, on the same diver as the imported specialty card
-  // above: verified so it is never a boarding blocker, unconfirmed so the *fill*
-  // still gives plain air (authorizesNitroxFill) and the confirm asks the staffer
-  // to attest they have seen the card (H-20260725-two-findings-dive-domain).
-  if (customers[12]) {
-    await db.insert(nitroxCertifications).values([
-      {
-        shopId,
-        personId: customers[12].id,
-        agency: "padi" as const,
-        identifier: "EANX-0013",
-        status: "verified" as const,
-        // No reviewer and no date, deliberately: an import is not a review, and
-        // `importedAt IS NOT NULL AND reviewedAt IS NULL` is the exact pair that
-        // raises the "certified · confirm to clear" nudge (H-20260725-two-findings-dive-domain).
-        importedAt: nowDate(),
-        importedFromLabel: "Coral Coast Divers",
-      },
-    ]);
-  }
-
-  // History carried in from the shop's previous system, on the same diver as
-  // the imported cards above (ADR 20260725-import-prior-visits). Hana is booked
-  // on nothing, so her history can never touch a seeded trip's readiness,
-  // manifest, or Today queue — which is also the point being demonstrated:
-  // imported visits are inert.
-  //
-  // The three rows are the three shapes the profile has to render honestly: a
-  // completed booking, one the old system recorded as cancelled (struck through,
-  // never counted as a dive), and one with no price on it. Clock-anchored like
-  // every other seeded date so the visual baseline stays pixel-stable.
-  if (customers[12]) {
-    await db.insert(priorVisits).values([
-      {
-        shopId,
-        personId: customers[12].id,
-        visitedOn: dateAt(-384),
-        title: "Two-tank morning — Molasses Reef",
-        statusLabel: "Completed",
-        amountLabel: "$165.00",
-        sourceLabel: "Coral Coast Divers",
-        sourceReference: "CCD-20418",
-        dedupeKey: "ref:ccd-20418",
-        importedAt: nowDate(),
-      },
-      {
-        shopId,
-        personId: customers[12].id,
-        visitedOn: dateAt(-201),
-        title: "Night dive — Benwood Wreck",
-        statusLabel: "Cancelled",
-        amountLabel: "$95.00",
-        sourceLabel: "Coral Coast Divers",
-        sourceReference: "CCD-22677",
-        dedupeKey: "ref:ccd-22677",
-        importedAt: nowDate(),
-      },
-      {
-        shopId,
-        personId: customers[12].id,
-        visitedOn: dateAt(-97),
-        title: "Drysuit specialty — pool session",
-        statusLabel: "Completed",
-        amountLabel: null,
-        sourceLabel: "Coral Coast Divers",
-        sourceReference: "CCD-24003",
-        dedupeKey: "ref:ccd-24003",
-        importedAt: nowDate(),
-      },
-    ]);
-    // Source payment/receipt evidence deliberately sits beside the imported
-    // visits rather than becoming an order. The Orders visual surface needs a
-    // real unverified row to keep its warning treatment reviewable; the refund
-    // gives the aggregate its two-direction shape without touching Stripe or a
-    // booking-payment gate.
-    await db.insert(importedPaymentHistory).values([
-      {
-        shopId,
-        personId: customers[12].id,
-        occurredOn: dateAt(-384),
-        direction: "payment" as const,
-        title: "Two-tank morning — Molasses Reef",
-        statusLabel: "Completed",
-        amountLabel: "$165.00",
-        amountCents: 16_500,
-        currency: "usd",
-        paymentReference: "PAY-CCD-20418",
-        receiptReference: "RCPT-20418",
-        sourceLabel: "Coral Coast Divers",
-        sourceReference: "CCD-20418",
-        stripeReference: null,
-        dedupeKey: "payment:pay-ccd-20418",
-        importedAt: nowDate(),
-      },
-      {
-        shopId,
-        personId: customers[12].id,
-        occurredOn: dateAt(-201),
-        direction: "refund" as const,
-        title: "Night dive — Benwood Wreck",
-        statusLabel: "Refunded",
-        amountLabel: "$95.00",
-        amountCents: 9_500,
-        currency: "usd",
-        paymentReference: "PAY-CCD-22677",
-        receiptReference: null,
-        sourceLabel: "Coral Coast Divers",
-        sourceReference: "CCD-22677",
-        stripeReference: null,
-        dedupeKey: "payment:pay-ccd-22677",
-        importedAt: nowDate(),
-      },
-    ]);
-  }
+  await db.insert(nitroxCertifications).values([
+    {
+      shopId,
+      personId: cast.hana.id,
+      agency: "padi" as const,
+      identifier: "EANX-0013",
+      status: "verified" as const,
+      // No reviewer and no date, deliberately: an import is not a review, and
+      // `importedAt IS NOT NULL AND reviewedAt IS NULL` is the exact pair that
+      // raises the "certified · confirm to clear" nudge (H-20260725-two-findings-dive-domain).
+      importedAt: nowDate(),
+      importedFromLabel: "Coral Coast Divers",
+    },
+  ]);
+  await db.insert(priorVisits).values([
+    {
+      shopId,
+      personId: cast.hana.id,
+      visitedOn: dateAt(-384),
+      title: "Two-tank morning — Molasses Reef",
+      statusLabel: "Completed",
+      amountLabel: "$165.00",
+      sourceLabel: "Coral Coast Divers",
+      sourceReference: "CCD-20418",
+      dedupeKey: "ref:ccd-20418",
+      importedAt: nowDate(),
+    },
+    {
+      shopId,
+      personId: cast.hana.id,
+      visitedOn: dateAt(-201),
+      title: "Night dive — Benwood Wreck",
+      statusLabel: "Cancelled",
+      amountLabel: "$95.00",
+      sourceLabel: "Coral Coast Divers",
+      sourceReference: "CCD-22677",
+      dedupeKey: "ref:ccd-22677",
+      importedAt: nowDate(),
+    },
+    {
+      shopId,
+      personId: cast.hana.id,
+      visitedOn: dateAt(-97),
+      title: "Drysuit specialty — pool session",
+      statusLabel: "Completed",
+      amountLabel: null,
+      sourceLabel: "Coral Coast Divers",
+      sourceReference: "CCD-24003",
+      dedupeKey: "ref:ccd-24003",
+      importedAt: nowDate(),
+    },
+  ]);
+  // Source payment/receipt evidence deliberately sits beside the imported
+  // visits rather than becoming an order. The Orders visual surface needs a
+  // real unverified row to keep its warning treatment reviewable; the refund
+  // gives the aggregate its two-direction shape without touching Stripe or a
+  // booking-payment gate.
+  await db.insert(importedPaymentHistory).values([
+    {
+      shopId,
+      personId: cast.hana.id,
+      occurredOn: dateAt(-384),
+      direction: "payment" as const,
+      title: "Two-tank morning — Molasses Reef",
+      statusLabel: "Completed",
+      amountLabel: "$165.00",
+      amountCents: 16_500,
+      currency: "usd",
+      paymentReference: "PAY-CCD-20418",
+      receiptReference: "RCPT-20418",
+      sourceLabel: "Coral Coast Divers",
+      sourceReference: "CCD-20418",
+      stripeReference: null,
+      dedupeKey: "payment:pay-ccd-20418",
+      importedAt: nowDate(),
+    },
+    {
+      shopId,
+      personId: cast.hana.id,
+      occurredOn: dateAt(-201),
+      direction: "refund" as const,
+      title: "Night dive — Benwood Wreck",
+      statusLabel: "Refunded",
+      amountLabel: "$95.00",
+      amountCents: 9_500,
+      currency: "usd",
+      paymentReference: "PAY-CCD-22677",
+      receiptReference: null,
+      sourceLabel: "Coral Coast Divers",
+      sourceReference: "CCD-22677",
+      stripeReference: null,
+      dedupeKey: "payment:pay-ccd-22677",
+      importedAt: nowDate(),
+    },
+  ]);
 
   // A Nitrox request from a diver whose card is verified, on the
   // nitrox-required wreck charter.
   const wreckBookingForCert = bookingRows.find(
-    (b) => b.tripId === wreck.id && b.personId === customers[0].id,
+    (b) => b.tripId === wreck.id && b.personId === cast.priya.id,
   );
   if (wreckBookingForCert) {
     await db

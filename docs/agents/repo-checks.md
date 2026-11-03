@@ -1005,11 +1005,14 @@ For `src/lib/` and `src/features/`; the rules themselves are in `.claude/rules/d
 #### Dependency direction
 
 `app → features → lib/db`, one way, enforced by `pnpm check:architecture`: `src/lib`/`src/db` may
-import neither `src/app` nor `src/features`. Routes stay thin; the rules live here. Three seams
+import neither `src/app` nor `src/features`. Routes stay thin; the rules live here. Five seams
 inside that direction are enforced too (ratcheted in `scripts/ratchets.json`): `src/lib` takes only
 *types* from `src/db` (a loader that reads belongs in `src/db` or a feature module), nothing under
-`src/app` imports `drizzle-orm` (a query is a named `src/db` function), and everything outside
-`src/db` reaches the trips modules through the `@/db/trips` barrel. A fourth, general one: a directory
+`src/app` imports `drizzle-orm` (a query is a named `src/db` function), `src/lib` takes only
+*types* from `drizzle-orm` (its query half is the `src/db` twin), `src/db` takes no translator value
+from `@/i18n/messages` or `@/i18n/staff-messages` (it returns codes and data; the files that still
+compose a sentence, mostly outbound messages, are banked until the sentence has a home), and
+everything outside `src/db` reaches the trips modules through the `@/db/trips` barrel. A general one: a directory
 directly under `src/lib` or `src/db` that holds an `index.ts` is a module, and outside it only the
 index is importable (issue #2754). Test files and the e2e fixture
 routes under `src/app/api/test/` are exempt. Inside `src/db`, a module imports the `trips-*` sibling

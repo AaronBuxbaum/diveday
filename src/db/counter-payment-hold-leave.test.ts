@@ -2,13 +2,14 @@ import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
+import { heldRows } from "@/test/held-sends";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import type { AppDb } from "./client";
 import { commitCounterPaymentHold, holdCounterPayment } from "./counter-payment-hold";
-import { drainHeldSends } from "./held-sends";
+import { drainHeldQueueRows } from "./held-sends";
 import { STALE_AFTER_MS } from "./payment-operations";
 import { getMonthlyReport } from "./reporting";
-import { activityEvents, heldSends, orders, people, shops } from "./schema";
+import { activityEvents, orders, people, shops } from "./schema";
 
 /**
  * **The counter payment hold, review of #3061** (dde-a F2, security 2):
@@ -116,8 +117,8 @@ describe("a counter payment hold the screen left", () => {
     expect(marked).toHaveBeenCalledOnce();
     expect(await linesOf(db, order.id)).toEqual([{ code: "order_paid_cash", actor: staff }]);
     // Committed once: the sweep finds nothing left.
-    expect(await db.select().from(heldSends).where(eq(heldSends.id, held.id))).toHaveLength(0);
-    expect(await drainHeldSends(db, SWEEP)).toEqual({ sent: 0, failed: 0 });
+    expect(await heldRows(db, { id: held.id })).toHaveLength(0);
+    expect(await drainHeldQueueRows(db, SWEEP)).toEqual({ sent: 0, failed: 0 });
   });
 
   it("lands a 23:55 tap the sweep records after midnight on that day's report", async () => {
@@ -135,7 +136,7 @@ describe("a counter payment hold the screen left", () => {
     });
     if (!held) throw new Error("expected a hold");
     // No screen said anything (a dead battery): the sweep is the fallback.
-    expect(await drainHeldSends(db, SWEEP)).toEqual({ sent: 1, failed: 0 });
+    expect(await drainHeldQueueRows(db, SWEEP)).toEqual({ sent: 1, failed: 0 });
     expect(await reread(db, order.id)).toMatchObject({ status: "paid", paidAt: TAP });
     expect(await counterCents(db, shopId, OCT)).toBe(before.oct + 34_000);
     expect(await counterCents(db, shopId, NOV)).toBe(before.nov);
@@ -182,7 +183,7 @@ describe("a counter payment hold that records nothing", () => {
       .update(orders)
       .set({ status: "paid", amountPaidCents: 34_000, paidAt: TAP })
       .where(eq(orders.id, order.id));
-    expect(await drainHeldSends(db, SWEEP)).toEqual({ sent: 1, failed: 0 });
+    expect(await drainHeldQueueRows(db, SWEEP)).toEqual({ sent: 1, failed: 0 });
     expect(await reread(db, order.id)).toMatchObject({ collection: "stripe_invoice" });
     expect(await linesOf(db, order.id)).toEqual([
       { code: "counter_payment_not_recorded_paid_online", actor: staff },

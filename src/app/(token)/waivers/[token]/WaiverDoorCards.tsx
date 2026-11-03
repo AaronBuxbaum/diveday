@@ -1,7 +1,7 @@
 import { DeadLink } from "@/components/DeadLink";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import type { Shop } from "@/db/schema";

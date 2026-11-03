@@ -4,12 +4,12 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
+import { deleteHeldRows, heldRows } from "@/test/held-sends";
 import { confirmBookingIdentity, createBookingParty, splitBookingIdentity } from "./bookings";
 import { claimDueHeldSends } from "./held-sends";
 import {
   bookingCapabilities,
   bookings,
-  heldSends,
   notificationDeliveries,
   people,
   tripScheduleDays,
@@ -397,7 +397,7 @@ describe("holdRescheduleNotice", () => {
       actorPersonId: null,
       now,
     });
-    const held = await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id));
+    const held = await heldRows(db, { shopId: shop.id });
     expect(held.map((row) => row.id)).toEqual([second?.id]);
     // The divers were told the original time, so that is what the one notice says.
     expect(held[0].payload).toMatchObject({ previousStartsAt: previousStartsAt.toISOString() });
@@ -434,7 +434,7 @@ describe("holdRescheduleNotice", () => {
       now,
     });
     expect(held).toBeNull();
-    expect(await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toHaveLength(0);
+    expect(await heldRows(db, { shopId: shop.id })).toHaveLength(0);
   });
 
   it("holds one notice for a save that moved only the meeting point (#2443)", async () => {
@@ -448,7 +448,7 @@ describe("holdRescheduleNotice", () => {
       now,
     });
     expect(held?.told).toBe(3);
-    const rows = await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id));
+    const rows = await heldRows(db, { shopId: shop.id });
     expect(rows.map((row) => row.payload)).toEqual([
       {
         kind: "trip_rescheduled",
@@ -471,7 +471,7 @@ describe("holdRescheduleNotice", () => {
     });
     expect(held?.told).toBe(2);
 
-    await db.delete(heldSends).where(eq(heldSends.shopId, shop.id));
+    await deleteHeldRows(db, { shopId: shop.id });
     const sailed = await holdRescheduleNotice(db, {
       shopId: shop.id,
       tripId: course.id,
@@ -481,7 +481,7 @@ describe("holdRescheduleNotice", () => {
       now: new Date(dayOne.getTime() + 53 * HOUR),
     });
     expect(sailed).toBeNull();
-    expect(await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toEqual([]);
+    expect(await heldRows(db, { shopId: shop.id })).toEqual([]);
   });
 
   it("holds nothing for a rehearsal departure", async () => {
@@ -528,7 +528,7 @@ describe("holdRescheduleNotice", () => {
     expect(trip.diversToldStartsAt).toEqual(previousStartsAt);
 
     // Undo, then "Tell them": no time comes with it, the record supplies one.
-    await db.delete(heldSends).where(eq(heldSends.id, first?.id ?? ""));
+    await deleteHeldRows(db, { id: first?.id ?? "" });
     const tell = await holdRescheduleNotice(db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -536,14 +536,11 @@ describe("holdRescheduleNotice", () => {
       actorPersonId: null,
       now,
     });
-    const [held] = await db
-      .select()
-      .from(heldSends)
-      .where(eq(heldSends.id, tell?.id ?? ""));
+    const [held] = await heldRows(db, { id: tell?.id ?? "" });
     expect(held.payload).toMatchObject({ previousStartsAt: previousStartsAt.toISOString() });
 
     // Once sent, the divers know the time: nothing more to tell.
-    await db.delete(heldSends).where(eq(heldSends.id, tell?.id ?? ""));
+    await deleteHeldRows(db, { id: tell?.id ?? "" });
     const { options } = providers();
     await sendRescheduleNotices(
       db,
@@ -582,17 +579,14 @@ describe("holdRescheduleNotice", () => {
     expect(await read()).toBe(true);
 
     // Undo, then Tell them with nothing posted: the record says the place moved.
-    await db.delete(heldSends).where(eq(heldSends.id, first?.id ?? ""));
+    await deleteHeldRows(db, { id: first?.id ?? "" });
     const tell = await holdRescheduleNotice(db, {
       shopId: shop.id,
       tripId: reef.id,
       actorPersonId: null,
       now,
     });
-    const [held] = await db
-      .select()
-      .from(heldSends)
-      .where(eq(heldSends.id, tell?.id ?? ""));
+    const [held] = await heldRows(db, { id: tell?.id ?? "" });
     expect(held.payload).toMatchObject({ meetingPointMoved: true });
 
     // A later move that did not touch the place keeps the earlier one's word.
@@ -628,7 +622,7 @@ describe("holdRescheduleNotice", () => {
         now,
       }),
     ).toBeNull();
-    expect(await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toHaveLength(0);
+    expect(await heldRows(db, { shopId: shop.id })).toHaveLength(0);
   });
 });
 

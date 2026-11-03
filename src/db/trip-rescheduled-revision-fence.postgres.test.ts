@@ -4,11 +4,12 @@ import { expect, it } from "vitest";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { NotificationProvider } from "@/lib/notifications";
 import { fakeEmail } from "@/test/fakes";
+import { heldRows, insertHeldRow } from "@/test/held-sends";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { cancelDeparture } from "./aboard-at-sea";
 import { confirmBookingIdentity, createBooking } from "./bookings";
 import { claimDueHeldSends } from "./held-sends";
-import { bookings, heldSends, people, shops, tripScheduleDays, trips } from "./schema";
+import { bookings, people, shops, tripScheduleDays, trips } from "./schema";
 import { holdRescheduleNotice, sendRescheduleNotices } from "./trip-rescheduled";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { createTrip, moveTrip } from "./trips";
@@ -56,9 +57,8 @@ async function fixture() {
 }
 
 async function claimRescheduleFixture(input: Awaited<ReturnType<typeof fixture>>) {
-  await input.pg.db.insert(heldSends).values({
+  await insertHeldRow(input.pg.db, {
     shopId: input.shop.id,
-    kind: "trip_rescheduled",
     payload: {
       kind: "trip_rescheduled",
       tripId: input.trip.id,
@@ -100,12 +100,7 @@ describePostgres("initial held reschedule revision fence", () => {
       .from(trips)
       .where(eq(trips.id, trip.id));
     expect(currentTrip?.toldStartsAt).toBeNull();
-    expect(
-      await pg.db
-        .select({ id: heldSends.id })
-        .from(heldSends)
-        .where(eq(heldSends.kind, "trip_rescheduled")),
-    ).toEqual([]);
+    expect(await heldRows(pg.db, { kind: "trip_rescheduled" })).toEqual([]);
 
     const { provider, sent } = fakeEmail();
     const [resolvedPerson] = await pg.db
@@ -219,12 +214,7 @@ describePostgres("initial held reschedule revision fence", () => {
       .from(bookings)
       .where(eq(bookings.id, booking.bookingId));
     expect(current?.from).toBeNull();
-    expect(
-      await pg.db
-        .select({ id: heldSends.id })
-        .from(heldSends)
-        .where(eq(heldSends.kind, "trip_rescheduled")),
-    ).toHaveLength(1);
+    expect(await heldRows(pg.db, { kind: "trip_rescheduled" })).toHaveLength(1);
   });
 
   it("does not mark an identity-held seat after cancellation wins the hold fence", async () => {
@@ -504,7 +494,7 @@ describePostgres("initial held reschedule revision fence", () => {
     expect(current?.revision).toBe(trip.revision + 1);
     // The stale claimed row is replaced with a fresh hold carrying the same
     // last-told start, so a later dispatch can tell divers the current time.
-    const [reheld] = await pg.db.select().from(heldSends).where(eq(heldSends.shopId, shop.id));
+    const [reheld] = await heldRows(pg.db, { shopId: shop.id });
     expect(reheld?.payload).toMatchObject({
       kind: "trip_rescheduled",
       tripId: trip.id,
@@ -556,7 +546,7 @@ describePostgres("initial held reschedule revision fence", () => {
 
     await expect(send).resolves.toMatchObject({ told: 0, failed: 0 });
     expect(providerCalls).toBe(0);
-    const [reheld] = await pg.db.select().from(heldSends).where(eq(heldSends.shopId, shop.id));
+    const [reheld] = await heldRows(pg.db, { shopId: shop.id });
     expect(reheld?.payload).toMatchObject({
       kind: "trip_rescheduled",
       tripId: trip.id,
@@ -600,7 +590,7 @@ describePostgres("initial held reschedule revision fence", () => {
       expect.objectContaining({ told: 1 }),
       expect.objectContaining({ told: 1 }),
     ]);
-    const pending = await pg.db.select().from(heldSends).where(eq(heldSends.shopId, shop.id));
+    const pending = await heldRows(pg.db, { shopId: shop.id });
     expect(pending).toHaveLength(1);
     expect(pending[0]?.payload).toMatchObject({
       kind: "trip_rescheduled",
@@ -654,7 +644,7 @@ describePostgres("initial held reschedule revision fence", () => {
 
     const [current] = await pg.db.select().from(trips).where(eq(trips.id, trip.id));
     expect(current?.diversToldStartsAt).toEqual(original);
-    const pending = await pg.db.select().from(heldSends).where(eq(heldSends.shopId, shop.id));
+    const pending = await heldRows(pg.db, { shopId: shop.id });
     expect(pending).toHaveLength(1);
     expect(pending[0]?.payload).toMatchObject({
       kind: "trip_rescheduled",
@@ -725,9 +715,7 @@ describePostgres("initial held reschedule revision fence", () => {
       .where(eq(bookings.id, booking.bookingId));
     expect(currentTrip?.toldStartsAt).toBeNull();
     expect(currentBooking?.missedFrom).toEqual(original);
-    expect(await pg.db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toHaveLength(
-      0,
-    );
+    expect(await heldRows(pg.db, { shopId: shop.id })).toHaveLength(0);
   });
 
   it.each(["empty", "rehearsal", "past"] as const)(
@@ -810,7 +798,7 @@ describePostgres("initial held reschedule revision fence", () => {
 
     await expect(send).resolves.toMatchObject({ told: 0, failed: 0 });
     expect(providerCalls).toBe(0);
-    const [reheld] = await pg.db.select().from(heldSends).where(eq(heldSends.shopId, shop.id));
+    const [reheld] = await heldRows(pg.db, { shopId: shop.id });
     expect(reheld?.payload).toMatchObject({
       kind: "trip_rescheduled",
       tripId: trip.id,

@@ -64,7 +64,6 @@ import {
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   notificationSendQueue,
   orderLineItems,
   orders,
@@ -85,7 +84,6 @@ import {
   reviewReplies,
   shopBackupDeliveryClaims,
   shopPromoCodes,
-  shopPromoRedemptions,
   shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
@@ -985,7 +983,8 @@ export async function seedDemoSchedule(
   // the shop teaches, where it dives, what is on the board, and who is booked
   // on it. Each step reads rows the ones before it inserted — see the module
   // map at the top of this file before moving anything between them.
-  const customers = await seedDivers(db, shopId, instructor.id);
+  const cast = await seedDivers(db, shopId, instructor.id);
+  const customers = [...cast.all];
   const { courseRows, discoverCourse, openWaterCourse, courseIdByTitle } = await seedCatalog(
     db,
     shopId,
@@ -1017,7 +1016,7 @@ export async function seedDemoSchedule(
     db,
     shopId,
     {
-      customers,
+      cast,
       tripRows,
       pinRecapBooking: isCanonicalDemo,
       recordedById: instructor.id,
@@ -1041,7 +1040,7 @@ export async function seedDemoSchedule(
 
   await seedPromos(db, shopId, promoRedemptionBooking);
 
-  await seedNitrox(db, shopId, customers, wreck, bookingRows, instructor.id);
+  await seedNitrox(db, shopId, cast, wreck, bookingRows, instructor.id);
   await seedRentalFit(db, shopId, customers);
   // The rental fleet on the wall, after the bookings so a few units can be
   // reserved against the upcoming wreck trip (ADR 20260815-minimal-gear-register).
@@ -1072,7 +1071,7 @@ export async function seedDemoSchedule(
   // 20260907-two-way-inbox). After the divers, since every row but the
   // stranger's names one.
   await seedInbox(db, shopId, customers, instructor.id);
-  await seedFrontDesk(db, shopId, customers, tripRows, bookingRows, opts.history !== false);
+  await seedFrontDesk(db, shopId, cast, tripRows, bookingRows, opts.history !== false);
   // The trailing quarter of already-sailed trips that gives owner reporting
   // something to report. Off for the lean unit-test template and for trial
   // shops (see callers); on for the demo shop and the e2e fleet.
@@ -1547,9 +1546,6 @@ export async function clearDemoSchedule(
   // cascade's sibling (deleteDemoShopCascade) already fixed (Codex finding:
   // this reset path had its own, separate child-first list and was missed).
   await db.delete(tips).where(eq(tips.shopId, shopId));
-  await db
-    .delete(notificationDeliveryAttempts)
-    .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
@@ -1582,10 +1578,7 @@ export async function clearDemoSchedule(
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
   await deleteStripeReversals(db, shopId);
-  // A redemption points at the checkout that spent the code, so it goes first
-  // (docs ADR 20260729-shop-promo-codes). The codes themselves are shop config
-  // and survive a schedule reset.
-  await db.delete(shopPromoRedemptions).where(eq(shopPromoRedemptions.shopId, shopId));
+  // The codes themselves are shop config and survive a schedule reset.
   // An entitlement points at the booking that consumed it and the order it was
   // bought on, so it goes before both. The package *definitions* are the shop's
   // price list and survive a schedule reset, exactly like the promo codes above

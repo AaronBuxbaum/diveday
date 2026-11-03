@@ -2,7 +2,8 @@
 
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACTION_KIND_META, type TodayActionKind } from "@/lib/today";
+import { ACTION_KIND_META } from "@/lib/today";
+import type { TodayActionKind } from "@/lib/today-kinds";
 
 // The spine composes WaiverSendControl/ResendConfirmationControl/
 // PaymentActionControl, each of which statically imports its own `"use server"`

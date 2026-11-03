@@ -33,7 +33,6 @@ import {
   integrationOauthStates,
   lostItems,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   notificationSendQueue,
   pushSubscriptions,
   retentionPruneState,
@@ -297,18 +296,8 @@ export const PRUNE_ARMS = {
     id: integrationOauthStates.id,
     clock: integrationOauthStates.expiresAt,
   },
-  // Measured from the attempt, not from the row's insert — a retry queued long
-  // after the original send is its own row with its own `attempted_at`.
-  notification_delivery_attempts: {
-    from: notificationDeliveryAttempts,
-    id: notificationDeliveryAttempts.id,
-    clock: notificationDeliveryAttempts.attemptedAt,
-  },
-  // The latest delivery outcome is mutable state, but it is still an
-  // operational trail: its provider detail and send error are the evidence a
-  // shop reads when asking whether a message reached a diver. Measure it from
-  // the latest send attempt, which is refreshed whenever a new send replaces
-  // the row.
+  // One row per send: measured from the attempt, not from the row's insert,
+  // because a retry of a once-only kind refreshes `attempted_at` in place.
   notification_deliveries: {
     from: notificationDeliveries,
     id: notificationDeliveries.id,

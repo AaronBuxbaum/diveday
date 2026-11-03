@@ -7,7 +7,6 @@ import {
   bookings,
   people,
   shopPromoCodes,
-  shopPromoRedemptions,
 } from "./schema";
 import { at } from "./seed-clock";
 
@@ -116,16 +115,6 @@ async function seedPromosInTransaction(
     .insert(bookingCheckoutBookings)
     .values({ shopId, checkoutId: checkout.id, bookingId: booking.id })
     .onConflictDoNothing();
-  await db
-    .insert(shopPromoRedemptions)
-    .values({
-      shopId,
-      promoCodeId: reef10.id,
-      checkoutId: checkout.id,
-      amountChargedCents: checkout.settledTotalCents ?? checkout.totalCents,
-      redeemedAt: checkout.completedAt ?? at(-2, 11),
-    })
-    .onConflictDoNothing({ target: shopPromoRedemptions.checkoutId });
 }
 
 /** Seed promo configuration and its representative redemption atomically. */

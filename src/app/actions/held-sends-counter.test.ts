@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { heldSends, people, personRoles } from "@/db/schema";
+import { people, personRoles } from "@/db/schema";
 import { nowMs } from "@/lib/clock";
 import { SEND_HOLD_MS } from "@/lib/held-sends";
 import { fileScopedShopContext } from "@/test/db";
+import { heldRows, insertHeldRow } from "@/test/held-sends";
 
 const fileCtx = fileScopedShopContext();
 
@@ -40,21 +41,17 @@ async function heldPayment() {
     .where(eq(people.shopId, shop.id))
     .limit(1);
   if (!owner) throw new Error("fixture needs staff");
-  const [row] = await db
-    .insert(heldSends)
-    .values({
-      shopId: shop.id,
+  const row = await insertHeldRow(db, {
+    shopId: shop.id,
+    payload: {
       kind: "counter_payment",
-      payload: {
-        kind: "counter_payment",
-        orderId: crypto.randomUUID(),
-        collection: "cash",
-        heldAt: new Date(nowMs()).toISOString(),
-      },
-      actorPersonId: owner.personId,
-      runAt: new Date(nowMs() + SEND_HOLD_MS),
-    })
-    .returning();
+      orderId: crypto.randomUUID(),
+      collection: "cash",
+      heldAt: new Date(nowMs()).toISOString(),
+    },
+    actorPersonId: owner.personId,
+    runAt: new Date(nowMs() + SEND_HOLD_MS),
+  });
   vi.mocked(requireStaffSession).mockResolvedValue({
     user: { shopId: shop.id, personId: owner.personId, roles: ["owner"] },
   } as never);
@@ -62,7 +59,7 @@ async function heldPayment() {
 }
 
 async function stillHeld(id: string) {
-  return fileCtx.db.select().from(heldSends).where(eq(heldSends.id, id));
+  return heldRows(fileCtx.db, { id: id });
 }
 
 describe("a counter payment's Undo and early release", () => {
