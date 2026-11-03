@@ -9,7 +9,7 @@ import {
 } from "./courtesy-email";
 import { askAnytime } from "./interests";
 import { findOrCreatePerson } from "./people";
-import { interests, people, personCourtesyEmailUnsubscribeTokens, shops } from "./schema";
+import { capabilities, interests, people, shops } from "./schema";
 
 async function seededPerson() {
   const { db, shop } = ctx;
@@ -106,9 +106,9 @@ describe("self-serve courtesy-email unsubscribe token", () => {
       personId: person.id,
     });
     await db
-      .update(personCourtesyEmailUnsubscribeTokens)
+      .update(capabilities)
       .set({ shopId: otherShop.id })
-      .where(eq(personCourtesyEmailUnsubscribeTokens.personId, person.id));
+      .where(eq(capabilities.personId, person.id));
 
     expect(await resolveCourtesyEmailUnsubscribeToken(db, token)).toBeNull();
   });

@@ -22,4 +22,10 @@
   [20261019-single-address-token-table](../../architecture/decisions/20261019-single-address-token-table.md)).
   Stored as a SHA-256 hash at rest, expiring and single-use upon consumption. A token issued for one
   purpose cannot be resolved or redeemed under another.
-
+- **Capability** — a bearer link whose URL is the credential, stored as a row of `capabilities`
+  under one purpose (issue #2710). The purpose decides what the row opens (an interest or a
+  person), how long it lives and whether a use spends it, one record per purpose in
+  `src/lib/capabilities.ts`. A token minted for one purpose never verifies under another. Two
+  purposes so far, the email-unsubscribe links: `interest_unsubscribe` and
+  `courtesy_email_unsubscribe`. Booking capabilities, account tokens and the other link tables
+  move onto it later.

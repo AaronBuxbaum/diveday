@@ -10,7 +10,7 @@ import {
   resolveInterestUnsubscribeToken,
   unsubscribeAnytimeInterestByToken,
 } from "./interests";
-import { interests, interestUnsubscribeTokens, shops } from "./schema";
+import { capabilities, interests, shops } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
 import { setShopFeature } from "./shops";
 
@@ -257,9 +257,9 @@ describe("self-serve unsubscribe token", () => {
       interestId: joined.interestId,
     });
     await db
-      .update(interestUnsubscribeTokens)
+      .update(capabilities)
       .set({ shopId: otherShop.id })
-      .where(eq(interestUnsubscribeTokens.interestId, joined.interestId));
+      .where(eq(capabilities.interestId, joined.interestId));
 
     expect(await resolveInterestUnsubscribeToken(db, token)).toBeNull();
   });

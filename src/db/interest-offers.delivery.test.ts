@@ -30,8 +30,7 @@ vi.mock("@/lib/notifications", async (importOriginal) => {
 const { sendNotification } = await import("./notifications");
 const { getCourseBySlug } = await import("./courses");
 const { listBookableDivers } = await import("./divers");
-const { notificationSendQueue, interests, people, personCourtesyEmailUnsubscribeTokens } =
-  await import("./schema");
+const { capabilities, notificationSendQueue, interests, people } = await import("./schema");
 const { deliverSeatOffer } = await import("./interest-offers");
 const { ensureDepartureInterest } = await import("./interests");
 const { upcomingTripsWithCounts } = await import("./trips");
@@ -141,9 +140,9 @@ describe("deliverSeatOffer", () => {
     // The token is minted for the invited person, so the link opts out the
     // diver who received it and nobody else.
     const tokens = await ctx.db
-      .select({ personId: personCourtesyEmailUnsubscribeTokens.personId })
-      .from(personCourtesyEmailUnsubscribeTokens)
-      .where(eq(personCourtesyEmailUnsubscribeTokens.personId, personId));
+      .select({ personId: capabilities.personId })
+      .from(capabilities)
+      .where(eq(capabilities.personId, personId));
     expect(tokens).toHaveLength(1);
   });
 
@@ -186,9 +185,9 @@ describe("deliverSeatOffer", () => {
     expect(sendNotification).not.toHaveBeenCalled();
     // No link minted for a mail that never went.
     const tokens = await ctx.db
-      .select({ personId: personCourtesyEmailUnsubscribeTokens.personId })
-      .from(personCourtesyEmailUnsubscribeTokens)
-      .where(eq(personCourtesyEmailUnsubscribeTokens.personId, personId));
+      .select({ personId: capabilities.personId })
+      .from(capabilities)
+      .where(eq(capabilities.personId, personId));
     expect(tokens).toHaveLength(0);
     // The outreach is still recorded: "Contacted" is staff reaching out, by
     // email or by hand.
@@ -255,7 +254,10 @@ describe("deliverSeatOffer", () => {
 
       expect(sendNotification).toHaveBeenCalledTimes(1);
       // The refusal neither mints another link nor moves the window forward.
-      const tokens = await ctx.db.select().from(personCourtesyEmailUnsubscribeTokens);
+      const tokens = await ctx.db
+        .select()
+        .from(capabilities)
+        .where(eq(capabilities.purpose, "courtesy_email_unsubscribe"));
       expect(tokens).toHaveLength(1);
       expect(await stampOf(ctx, input.interestId)).toEqual(stamped);
     });
