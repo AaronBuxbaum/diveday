@@ -185,7 +185,9 @@ async function composeTripPacket({
       <h3 className={SECTION_TITLE_CLASS}>{details.trip.title}</h3>
       <p className="mt-1 text-sm text-muted">
         {[
-          `${formatPaperDateTime(details.trip.startsAt, locale, shop.timezone)} · ${shop.timezone}`,
+          // Out and due back: the return time is what an overdue-boat call
+          // is measured against (dock-operator review of #3724).
+          `${formatPaperDateTime(details.trip.startsAt, locale, shop.timezone)} – ${formatPaperDateTime(details.trip.endsAt, locale, shop.timezone)} · ${shop.timezone}`,
           vessel?.name,
         ]
           .filter(Boolean)
