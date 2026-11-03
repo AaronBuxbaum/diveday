@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { ScheduleViewsSkeleton } from "../schedule/_components/ScheduleViews";
 import { WEEK_GRID, weekTailRowClass } from "./_components/StaffingWeek";
@@ -31,7 +31,7 @@ export default function StaffingLoading() {
         {/* `description={false}`: the header is an eyebrow and a name now —
             the line under it explained where crew is assigned, and the gap
             cell's own Assign door says it better. */}
-        <ShopPageHeaderSkeleton eyebrow={false} description={false} titleWidth="w-48" actions />
+        <ShopPageHeader pending eyebrow={false} description={false} titleWidth="w-48" actions />
         <ScheduleViewsSkeleton />
 
         {/* Two step buttons, 48px squares (`WeekPager`'s `icon` size), and

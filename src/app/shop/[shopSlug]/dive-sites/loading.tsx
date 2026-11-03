@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
@@ -13,7 +13,7 @@ export default function DiveSitesLoading() {
   return (
     <StaffPage width="full">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} actions />
+        <ShopPageHeader pending titleWidth="w-56" description={false} actions />
         {/* The search box, in the `mb-6` toolbar the page draws it in. */}
         <div className="mb-6 h-12 w-full rounded-lg bg-surface-sunken sm:w-80" />
         <div className="mt-6 flex flex-col gap-8">

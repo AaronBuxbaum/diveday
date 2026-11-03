@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
@@ -40,7 +40,8 @@ export default function WaiversLoading() {
   return (
     <StaffPage width="reading">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton
+        <ShopPageHeader
+          pending
           description={false}
           meta={<div className="h-5 w-56 max-w-full rounded bg-surface-sunken" />}
         />

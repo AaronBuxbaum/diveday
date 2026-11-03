@@ -127,7 +127,7 @@ async function main() {
   if (missing.length > 0) {
     failures.push(
       `Routes with no sibling loading.tsx:\n${missing.map((page) => `- ${page}`).join("\n")}
-Each of these paints the nearest ancestor loading.tsx instead, which is a picture of a different page. Add a loading.tsx beside the page, shaped like its body and at its width — copy the idiom from a neighbour such as src/app/shop/[shopSlug]/orders/loading.tsx (an animate-pulse wrapper, bg-surface-sunken bars, sectionCardClass() shells, never a spinner). A route that genuinely needs none goes in SKELETON_EXEMPT in this script with its reason.`,
+Each of these paints the nearest ancestor loading.tsx instead, which is a picture of a different page. Add a loading.tsx beside the page, shaped like its body and at its width — copy the idiom from a neighbour such as src/app/shop/[shopSlug]/orders/loading.tsx (an animate-pulse wrapper, <ShopPageHeader pending>, <SectionCard pending> shells, never a spinner). A route that genuinely needs none goes in SKELETON_EXEMPT in this script with its reason.`,
     );
   }
 

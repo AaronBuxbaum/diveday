@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { LedgerRow } from "@/components/ui/ledger";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
@@ -38,7 +38,7 @@ export default function GearLoading() {
   return (
     <StaffPage width="full">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton eyebrow={false} description={false} actions />
+        <ShopPageHeader pending eyebrow={false} description={false} actions />
         <StaffSectionTabsSkeleton section="gear" />
         {/* The chip band, laid out as `FilterChips` lays it: one line that
             scrolls on a phone, wrapping only from `sm`, at the chips' 44px.

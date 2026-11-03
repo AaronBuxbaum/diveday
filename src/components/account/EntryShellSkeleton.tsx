@@ -14,7 +14,7 @@ import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeade
  *
  * A door's words wrap, and a bar cannot: how many lines the title, the
  * description, a panel's sentence and each footer sentence wrap to is the
- * page's to say, in `ShopPageHeaderSkeleton`'s spelling (`SkeletonLines`: one
+ * page's to say, in `<ShopPageHeader pending>`'s spelling (`SkeletonLines`: one
  * count, or one below `sm` and one from it).
  */
 export function EntryShellSkeleton({

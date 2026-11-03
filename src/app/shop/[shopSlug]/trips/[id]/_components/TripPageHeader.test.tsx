@@ -146,7 +146,7 @@ const spacing = (element: Element | null | undefined) =>
 
 /**
  * **`TripPageHeader` drawn as bars** (K-188). `/prep` stood in for it with
- * `ShopPageHeaderSkeleton`, which is the other header: no eyebrow where this one
+ * `<ShopPageHeader pending>`, which is the other header: no eyebrow where this one
  * always has its way back, a 44px title line where this one's is 26px on a
  * phone and 38px from `sm`, and a description bar this one never draws. The
  * packing list moved 12px when it landed at 1280.

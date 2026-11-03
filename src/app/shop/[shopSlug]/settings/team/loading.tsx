@@ -1,5 +1,5 @@
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 import { settingsPaneClass } from "../_components/settings-pane";
 
 /**
@@ -10,14 +10,14 @@ export default function TeamSettingsLoading() {
   return (
     <main className={settingsPaneClass()}>
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-40" description={false} />
+        <ShopPageHeader pending titleWidth="w-40" description={false} />
         {/* The invite card, then the roster of person-cards — the order the
             page renders them in, at the page's own `space-y-10`. */}
         <div className="space-y-10">
-          <div className={sectionCardClass({ padding: "none", className: "h-56" })} />
+          <SectionCard as="div" pending padding="none" className="h-56" />
           <div className="flex flex-col gap-3">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className={sectionCardClass({ padding: "none", className: "h-28" })} />
+              <SectionCard key={i} as="div" pending padding="none" className="h-28" />
             ))}
           </div>
         </div>

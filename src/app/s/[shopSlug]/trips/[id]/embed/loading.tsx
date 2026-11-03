@@ -1,5 +1,5 @@
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 import { EmbedChromeCollapse } from "../../../_components/EmbedChromeCollapse";
 
 /**
@@ -24,7 +24,8 @@ export default function EmbeddedTripLoading() {
       <main className="w-full flex-1 px-3 py-4">
         <div className="animate-pulse lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           {/* No wrapper: `TripHeader` returns its header bare (K-170). */}
-          <ShopPageHeaderSkeleton
+          <ShopPageHeader
+            pending
             brand={{ base: 2, sm: 1 }}
             titleWidth="w-72 max-w-full"
             titleLines={{ base: 2, sm: 1 }}
@@ -63,11 +64,11 @@ export default function EmbeddedTripLoading() {
             {/* The alternates. */}
             <div className="h-26 rounded bg-surface-sunken" />
             {/* The booking card, last, from the same place `SectionCard` takes it. */}
-            <div
-              className={sectionCardClass({
-                padding: "none",
-                className: "h-96 lg:col-start-2 lg:row-span-6 lg:row-start-1",
-              })}
+            <SectionCard
+              as="div"
+              pending
+              padding="none"
+              className="h-96 lg:col-start-2 lg:row-span-6 lg:row-start-1"
             />
           </div>
         </div>

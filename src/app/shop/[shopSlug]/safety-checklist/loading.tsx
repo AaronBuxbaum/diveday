@@ -1,5 +1,5 @@
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { registerPaneClass } from "../_components/register-pane";
 
@@ -9,7 +9,8 @@ export default function SafetyChecklistLoading() {
       <div className="animate-pulse">
         {/* "Pre-departure checklist" wraps to two lines at 390px and its
             description to three; one and two at 1280 (K-97). */}
-        <ShopPageHeaderSkeleton
+        <ShopPageHeader
+          pending
           titleWidth="w-56"
           titleLines={{ base: 2, sm: 1 }}
           description
@@ -25,7 +26,7 @@ export default function SafetyChecklistLoading() {
               </div>
             ))}
           </div>
-          <div className={sectionCardClass({ padding: "none", className: "h-14" })} />
+          <SectionCard as="div" pending padding="none" className="h-14" />
         </div>
       </div>
     </main>

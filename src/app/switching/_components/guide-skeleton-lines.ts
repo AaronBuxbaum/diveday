@@ -5,7 +5,7 @@ import type { GuideSkeletonLines } from "./guide";
  * the lines its title, lede and "you are here" paragraphs take on a phone (390)
  * and a desk (1280), `{ base, sm }`. A width cannot stand in for text that
  * wraps, and how far a page's words wrap is the page's business (the same
- * split `ShopPageHeaderSkeleton` makes), so the counts sit here beside the
+ * split `<ShopPageHeader pending>` makes), so the counts sit here beside the
  * guides rather than in the skeleton.
  *
  * Counted in en-US, the locale the static shell paints for, on the pixel

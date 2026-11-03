@@ -1,6 +1,6 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 
 /**
  * Receipt-shaped skeleton for one order (design principle 1) — line items,
@@ -19,19 +19,20 @@ export default function OrderLoading() {
   return (
     <StaffPage width="reading">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton
+        <ShopPageHeader
+          pending
           titleWidth="w-64 max-w-full"
           description
           descriptionWidth="w-48"
           meta={<div className="h-5 w-80 max-w-full rounded bg-surface-sunken" />}
         />
-        <div className={sectionCardClass({ padding: "lg" })}>
+        <SectionCard as="div" pending padding="lg">
           <div className="flex flex-col gap-3">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-12 rounded-inset bg-surface-sunken" />
             ))}
           </div>
-        </div>
+        </SectionCard>
       </div>
     </StaffPage>
   );

@@ -1,4 +1,4 @@
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
@@ -16,7 +16,8 @@ export default function DiveSitePageLoading() {
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton
+        <ShopPageHeader
+          pending
           titleWidth="w-72 max-w-full"
           description
           descriptionWidth="w-96 max-w-full"

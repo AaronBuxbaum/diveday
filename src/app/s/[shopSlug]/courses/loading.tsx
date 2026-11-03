@@ -1,5 +1,5 @@
 import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
-import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
+import { ShopPageHeader, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { segmentedTrackClass } from "@/components/ui/segmented";
 
 /**
@@ -36,7 +36,8 @@ export default function PublicCoursesLoading() {
         {/* No eyebrow bar: the page's header has none ("COURSES" over
             "Courses" was cut), and the default drew one anyway. The
             description is a desktop caption, absent on a phone. */}
-        <ShopPageHeaderSkeleton
+        <ShopPageHeader
+          pending
           eyebrow={false}
           titleWidth="w-48"
           description

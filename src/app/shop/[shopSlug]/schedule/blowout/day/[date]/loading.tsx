@@ -1,6 +1,6 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for the day's weather call (ADR
@@ -14,12 +14,13 @@ import { sectionCardClass } from "@/components/ui/card";
 export default function DayBlowoutLoading() {
   return (
     <StaffPage width="reading" className="animate-pulse">
-      <ShopPageHeaderSkeleton
+      <ShopPageHeader
+        pending
         titleWidth="w-72 max-w-full"
         description={false}
         meta={<div className="h-5 w-40 max-w-full rounded bg-surface-sunken" />}
       />
-      <div className={sectionCardClass({ padding: "lg" })}>
+      <SectionCard as="div" pending padding="lg">
         <div className="flex flex-col gap-1">
           <div className="h-4 w-full rounded bg-surface-sunken" />
           <div className="h-4 w-full rounded bg-surface-sunken" />
@@ -48,7 +49,7 @@ export default function DayBlowoutLoading() {
           ))}
         </div>
         <div className="mt-6 h-11 w-44 rounded-lg bg-surface-sunken" />
-      </div>
+      </SectionCard>
     </StaffPage>
   );
 }

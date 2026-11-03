@@ -1,5 +1,5 @@
 import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
-import { sectionCardClass } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for a course form (design principle 1): the header and
@@ -23,7 +23,7 @@ export default function CourseFormsLoading() {
             <div key={key} className={`h-5 ${width} rounded bg-surface-sunken`} />
           ))}
         </div>
-        <div className={sectionCardClass({ padding: "none", className: "mt-8 h-56" })} />
+        <SectionCard as="div" pending padding="none" className="mt-8 h-56" />
       </div>
     </main>
   );

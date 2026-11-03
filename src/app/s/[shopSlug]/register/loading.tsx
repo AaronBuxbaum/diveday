@@ -1,4 +1,4 @@
-import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
+import { ShopPageHeader, SkeletonLineBars } from "@/components/ShopPageHeader";
 
 /**
  * One `Field` as bars, in the field's own boxes: the caption's 20px `text-sm`
@@ -56,7 +56,7 @@ function GroupBars({
  * predated `RegisterForm`'s two legend groups — six fields in one grid under a
  * 36px title bar, and a pill for the submit — so every field below the first
  * row arrived lower than its grey box. It now stands the header's own lines
- * (`ShopPageHeaderSkeleton`: no eyebrow; the title two lines on a phone, the
+ * (`<ShopPageHeader pending>`: no eyebrow; the title two lines on a phone, the
  * intro three, one and two from `sm`), then the form's `gap-8` column: the
  * contact fields (the email's hint under its box), the certification group,
  * the sizes group, and the `md` submit's 48px.
@@ -64,7 +64,8 @@ function GroupBars({
 export default function Loading() {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 animate-pulse px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeaderSkeleton
+      <ShopPageHeader
+        pending
         eyebrow={false}
         titleWidth="w-full sm:w-4/5"
         titleLines={{ base: 2, sm: 1 }}

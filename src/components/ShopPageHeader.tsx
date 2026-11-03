@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { FoldedPageTitle } from "@/components/chrome/FoldedPageTitle";
 import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { tapTargetOverhangClass } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { bindTitleDash } from "@/lib/format";
 /**
  * The eyebrow — "where you are", one line above the title. Reef's rung: 11px,
  * bold, `+0.16em`, lagoon (ADR 20260901-diveday-reimagined's system sheet).
- * `leading-4` pins the line box to 16px so `ShopPageHeaderSkeleton`'s `h-4`
+ * `leading-4` pins the line box to 16px so `<ShopPageHeader pending>`'s `h-4`
  * bar stands in for it exactly.
  */
 const EYEBROW_SHAPE = "text-[11px] leading-4 font-bold tracking-[0.16em] uppercase";
@@ -25,13 +25,13 @@ export const EYEBROW_CLASS = `${EYEBROW_SHAPE} text-primary`;
  * box, so moving the hit area onto a pseudo-element would satisfy a person and
  * fail the scan. The box has to be 44px. The *flow* has to be 16, or the header
  * is a different height depending on whether its eyebrow links anywhere, and
- * one skeleton cannot stand in for both.
+ * one pending header cannot stand in for both.
  *
  * **The negative margin that used to do this never did.** `-my-2` sat on the
  * link itself, and the link is `inline-flex` — an *inline-level* box, whose
  * vertical margins do not move the line box it sits on. Measured on a running
  * dev server (issue #1857): the eyebrow occupied 28px against `EYEBROW_CLASS`'s
- * 16, so `ShopPageHeaderSkeleton`'s `h-4` bar was 12px short of the header it
+ * 16, so the pending header's `h-4` bar was 12px short of the header it
  * stands in for and **every sub-page with a back-link jumped its title 12px**
  * the instant the page landed — the exact jump `loading.tsx` exists to prevent,
  * on every navigation staff make all day. Widening the margin to 14px a side
@@ -138,7 +138,7 @@ export function EyebrowBackLink({
   );
 }
 
-export function ShopPageHeader({
+function ResolvedShopPageHeader({
   eyebrow,
   returnTo,
   title,
@@ -332,7 +332,7 @@ export function ShopPageHeader({
  * counts (`titleLines`, `descriptionLines`): a width cannot stand in for text
  * that wraps, and how far a page's words wrap at 390px is the page's too.
  */
-export function ShopPageHeaderSkeleton({
+function PendingShopPageHeader({
   brand,
   eyebrow = true,
   titleWidth = "w-64",
@@ -415,8 +415,32 @@ export function ShopPageHeaderSkeleton({
 }
 
 /**
+ * The staff page header — or, with `pending`, the same header drawn as bars for
+ * a route's `loading.tsx`. The bars live beside the header and measure
+ * themselves off the header's own line boxes (see `PendingShopPageHeader`), so
+ * a loading file writes `<ShopPageHeader pending description />` and never a
+ * second component that has to be kept in step (#1857, #2769).
+ *
+ * Pending takes the shape of the header, not its words: `eyebrow` and
+ * `description` are booleans, `titleWidth`, `titleLines` and `descriptionLines`
+ * size the bars.
+ */
+export function ShopPageHeader(
+  props: ({ pending?: false } & ComponentProps<typeof ResolvedShopPageHeader>) | PendingProps,
+) {
+  if (props.pending) {
+    const { pending: _pending, ...bars } = props;
+    return <PendingShopPageHeader {...bars} />;
+  }
+  const { pending: _resolved, ...header } = props;
+  return <ResolvedShopPageHeader {...header} />;
+}
+
+type PendingProps = { pending: true } & ComponentProps<typeof PendingShopPageHeader>;
+
+/**
  * **How many lines a heading or a description wraps to**, for
- * `ShopPageHeaderSkeleton`: one count, or one below `sm` and one from it —
+ * `<ShopPageHeader pending>`: one count, or one below `sm` and one from it —
  * `{ base: 3, sm: 2 }` for a description that is three lines on a phone and two
  * on a desk. The skeleton could once draw only one line of each, so every
  * header that wrapped dropped the page 24px a line when it landed (K-97:

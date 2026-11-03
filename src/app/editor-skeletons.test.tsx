@@ -55,7 +55,7 @@ describe("an editor's loading skeleton", () => {
   );
 });
 
-/** The skeleton's header block: `ShopPageHeaderSkeleton`'s `mb-8` box. */
+/** The skeleton's header block: `<ShopPageHeader pending>`'s `mb-8` box. */
 function headerSkeleton(container: HTMLElement): Element | null {
   return container.querySelector(".animate-pulse > .mb-8");
 }

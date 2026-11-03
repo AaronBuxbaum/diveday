@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 
 /**
  * Body-shaped skeleton for Lost and found: the title, then three hairline
@@ -9,7 +9,7 @@ export default function LostFoundLoading() {
   return (
     <StaffPage width="reading">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-48" description={false} />
+        <ShopPageHeader pending eyebrow={false} titleWidth="w-48" description={false} />
         <div className="divide-y divide-border">
           {[0, 1, 2].map((row) => (
             <div key={row} className="space-y-2 py-3">
