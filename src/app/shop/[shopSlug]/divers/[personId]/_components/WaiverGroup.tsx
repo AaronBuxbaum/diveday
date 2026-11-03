@@ -438,7 +438,7 @@ export function WaiverGroup({
                   text: t("divers.stats.sendWaiverViaSms"),
                   link: t("divers.stats.copyWaiverLink"),
                   stateSent: t("divers.stats.waiverChannelSent"),
-                  stateCopied: t("divers.stats.waiverChannelCopied"),
+                  stateCopied: t("words.did.copied"),
                   stateFailed: t("divers.stats.waiverChannelFailed"),
                   stateUnavailable: t("divers.stats.waiverChannelUnavailable"),
                 }}
@@ -523,7 +523,7 @@ export function WaiverGroup({
               <form action={rejectDiverMedicalFormAction.bind(null, shopSlug, personId)}>
                 <input type="hidden" name="recordId" value={diver.diverMedicalForm.recordId} />
                 <SubmitButton
-                  pendingLabel={t("divers.waiver.rejectingDiverForm")}
+                  pendingLabel={t("words.busy.deleting")}
                   className={buttonClass({ variant: "link", size: "sm", flush: true })}
                 >
                   {t("divers.waiver.rejectDiverForm")}

@@ -96,7 +96,7 @@ export function AddUnitForm({
           <DateField name="purchasedOn" />
         </Field>
         <FieldActions>
-          <SubmitButton pendingLabel={t("gear.addUnit.pending")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.adding")} className={buttonClass()}>
             {t("gear.addUnit.submit")}
           </SubmitButton>
           <FormStatus tone={status?.tone}>{status?.text ?? null}</FormStatus>

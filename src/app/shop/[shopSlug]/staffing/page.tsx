@@ -370,7 +370,7 @@ export default async function StaffingPage({
                 </Field>
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("staffing.addShift.saving")}
+                    pendingLabel={t("words.busy.saving")}
                     className={buttonClass()}
                   >
                     {t("staffing.addShift.submit")}
@@ -426,7 +426,7 @@ export default async function StaffingPage({
                 />
               </Field>
               <FieldActions>
-                <SubmitButton pendingLabel={t("staffing.away.saving")} className={buttonClass()}>
+                <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                   {t("staffing.away.save")}
                 </SubmitButton>
               </FieldActions>
@@ -521,7 +521,7 @@ export default async function StaffingPage({
               </Field>
               <FieldActions>
                 <SubmitButton
-                  pendingLabel={t("staffing.crewConsent.saving")}
+                  pendingLabel={t("words.busy.saving")}
                   className={buttonClass({ variant: "secondary", size: "sm" })}
                 >
                   {t("staffing.crewConsent.save")}

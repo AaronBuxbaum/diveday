@@ -253,7 +253,7 @@ export default async function EditDiveSitePage({
           savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
           actions={
             <>
-              <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("diveSites.form.save")}
               </SubmitButton>
               <UnsavedSections
@@ -348,7 +348,7 @@ export default async function EditDiveSitePage({
         <p className="mt-1 max-w-2xl text-muted">{t("diveSites.edit.deleteConfirmBody")}</p>
         <form action={deleteDiveSiteAction.bind(null, id)} className="mt-4">
           <SubmitButton
-            pendingLabel={t("diveSites.edit.deleting")}
+            pendingLabel={t("words.busy.deleting")}
             className={buttonClass({ variant: "danger-solid" })}
           >
             {t("diveSites.edit.deleteSite")}

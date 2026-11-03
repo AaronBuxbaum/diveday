@@ -49,7 +49,7 @@ export function lostItemFormCopy(t: StaffTranslator): LostItemFormCopy {
     seat: t("desk.lostFound.seat"),
     noSeat: t("desk.lostFound.noSeat"),
     submit: t("desk.lostFound.submit"),
-    pending: t("desk.lostFound.pending"),
+    pending: t("words.busy.recording"),
     recorded: t("desk.lostFound.recorded"),
     refusals: refusals(t),
   };

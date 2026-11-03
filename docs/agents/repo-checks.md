@@ -110,6 +110,10 @@ The seat-word one (`scripts/check-seat-word.mjs`) refuses `spot` in every Englis
 
 **What it leaves alone, on purpose.** `src/db/rental-fit.ts`, which writes every one of these columns and is deliberately the layer with no opinion about length — a second cap there puts the number in two places, which is the thing #1728 fixed. The JSX `maxLength` attributes, which already read the constant and are a courtesy to the typist rather than a bound (HTML `maxlength` does not constrain a value the visitor never typed, which is how #1728 reached production). And every reader. It anchors on `z.` rather than on the field name, so an object literal that merely carries a size — every writer's `values()`, every reader's projection — is not mistaken for a door that accepts one. The escape hatch is `diveday:allow-unbounded-size: <why>` on the field or the line above it; there are none today.
 
+### words, written once
+
+The words one (`scripts/check-words.mjs`, issue #2770) refuses a staff key whose en-US value is already in `locales/<locale>/words.json`. That bundle holds the invariant words: progress verbs (`words.busy.saving`), dismissals (`words.dismiss.neverMind`) and speech acts (`words.did.copied`), composed into the diver, staff and offline-manifest translators as the `words` namespace. A word that must keep its own spelling (a participle that agrees with its noun in Spanish) is named in the script's `EXEMPT` map with the reason. The diver bundle still holds its own spellings and joins the scan when its call sites move.
+
 ### locale-coverage, and the count that is now zero on purpose
 
 The locale one (`scripts/check-locale.mjs`) holds three invariants, and only the third needs a write-up.

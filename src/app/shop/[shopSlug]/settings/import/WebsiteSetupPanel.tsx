@@ -179,7 +179,7 @@ export function WebsiteSetupPanel({
                             value={line.text}
                             hint={t("assistsFront.setup.policyHint")}
                             copyLabel={t("assistsFront.setup.copy")}
-                            copiedLabel={t("assistsFront.setup.copied")}
+                            copiedLabel={t("words.did.copied")}
                             failedLabel={t("assistsFront.setup.copyFailed")}
                             layout="inline"
                           />

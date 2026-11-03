@@ -19,7 +19,7 @@ export function translationEditorCopy(t: StaffTranslator): TranslationEditorCopy
     draft: t("deskAssists.translate.draft"),
     drafting: t("deskAssists.drafting"),
     save: t("deskAssists.translate.save"),
-    saving: t("deskAssists.translate.saving"),
+    saving: t("words.busy.saving"),
     saved: t("deskAssists.translate.saved"),
     error: t("deskAssists.translate.error"),
     stale: t("deskAssists.translate.stale"),

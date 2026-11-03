@@ -168,7 +168,7 @@ export function ShopGroup({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.timezone.submitting")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.timezone.submit")}
@@ -278,7 +278,7 @@ export function ShopGroup({
             ) : null}
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.units.submitting")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.units.submit")}
@@ -312,7 +312,7 @@ export function ShopGroup({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.juniorBuddy.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.juniorBuddy.save")}
@@ -349,7 +349,7 @@ export function ShopGroup({
               searchLabel: t("settings.main.address.searchLabel"),
               searchPlaceholder: t("settings.main.address.searchPlaceholder"),
               searching: t("settings.main.address.searching"),
-              saving: t("settings.main.address.saving"),
+              saving: t("words.busy.saving"),
               noMatches: t("settings.main.address.noMatches"),
               lookupFailed: t("settings.main.address.lookupFailed"),
               lookupResting: t("settings.main.address.lookupResting"),

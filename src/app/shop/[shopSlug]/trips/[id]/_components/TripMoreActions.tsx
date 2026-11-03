@@ -88,7 +88,7 @@ export function TripMoreActions({
           triggerLabel={t("trips.about.cancel")}
           message={t("trips.detail.cancelHint")}
           confirmLabel={t("trips.detail.cancelConfirm")}
-          cancelLabel={t("trips.roster.neverMind")}
+          cancelLabel={t("words.dismiss.neverMind")}
           pendingLabel={t("trips.detail.cancelling")}
           triggerClassName={buttonClass({
             variant: "danger-ghost",

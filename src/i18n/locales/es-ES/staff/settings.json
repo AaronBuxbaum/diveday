@@ -6,8 +6,7 @@
       "label": "Parejas por grupo",
       "required": "Exigir un adulto certificado",
       "optional": "No exigir un adulto",
-      "save": "Guardar",
-      "saving": "Guardando…"
+      "save": "Guardar"
     },
     "eyebrow": "Ajustes",
     "notice": {
@@ -73,7 +72,6 @@
       "heading": "Zona horaria",
       "detail": "Cambiarla relee las salidas existentes en su nueva hora local; no las mueve.",
       "label": "Zona horaria",
-      "submitting": "Guardando…",
       "submit": "Guardar zona horaria",
       "groups": {
         "americas": "América",
@@ -114,7 +112,6 @@
       "detail": "Tus conteos de buceadores y salidas parten de esta fecha cada año.",
       "monthLabel": "Mes",
       "dayLabel": "Día",
-      "submitting": "Guardando…",
       "submit": "Guardar inicio de temporada",
       "reopensLabel": "De vuelta en el agua",
       "reopensHint": "Mientras tu calendario público no tenga nada en el próximo mes, dirá que vuelves a salir en esta fecha, o en tu primera salida si es antes.",
@@ -128,10 +125,8 @@
       "phoneLabel": "Teléfono de contacto",
       "phoneHint": "(opcional)",
       "submit": "Guardar datos de contacto",
-      "submitting": "Guardando…",
       "awaitingConfirmation": "Pendiente de confirmación",
-      "resend": "Reenviar correo de confirmación",
-      "resending": "Enviando…"
+      "resend": "Reenviar correo de confirmación"
     },
     "profile": {
       "heading": "Perfil y marca del centro",
@@ -143,7 +138,6 @@
       "logo": "Logotipo del centro",
       "logoHint": "PNG, JPG o WebP. Se recomienda una imagen cuadrada.",
       "removeLogo": "Eliminar logotipo actual",
-      "submitting": "Guardando…",
       "viewStorefront": "Ver la página pública",
       "submit": "Guardar perfil",
       "brandColor": "Color de marca",
@@ -180,7 +174,6 @@
       "searchLabel": "Busca tu centro",
       "searchPlaceholder": "Nombre o dirección de tu centro…",
       "searching": "Buscando…",
-      "saving": "Guardando…",
       "noMatches": "Sin coincidencias. Prueba con el nombre de tu centro o con una dirección cercana.",
       "lookupFailed": "La búsqueda de direcciones no está disponible ahora. Inténtalo en un momento.",
       "lookupResting": "Son muchas búsquedas en una hora: se pausa un rato. Inténtalo más tarde.",
@@ -197,8 +190,7 @@
       "detail": "Cuando está configurada, el recap posterior a la salida invita al buceador a dejar una reseña. Vacía el campo para dejar de pedirlas.",
       "label": "Enlace de reseñas",
       "hint": "(opcional)",
-      "submit": "Guardar enlace de reseñas",
-      "submitting": "Guardando…"
+      "submit": "Guardar enlace de reseñas"
     },
     "deskHours": {
       "heading": "Horario de atención",
@@ -206,8 +198,7 @@
       "description": "Cuándo hay alguien en el mostrador, todos los días en la zona horaria de tu centro. Quien lo pida recibe un aviso de los mensajes de buceadores que lleguen fuera de este horario.",
       "opens": "Abre",
       "closes": "Cierra",
-      "submit": "Guardar horario de atención",
-      "submitting": "Guardando…"
+      "submit": "Guardar horario de atención"
     },
     "shopPhotos": {
       "heading": "Fotos del centro",
@@ -219,8 +210,7 @@
       "tooMany": "{count, plural, one {Elige hasta # foto cada vez.} other {Elige hasta # fotos cada vez.}}",
       "add": "Agregar fotos",
       "remove": "Quitar",
-      "submit": "Guardar fotos",
-      "submitting": "Guardando…"
+      "submit": "Guardar fotos"
     },
     "searchListing": {
       "heading": "Aparecer en buscadores",
@@ -228,8 +218,7 @@
       "valueHidden": "Oculto",
       "detail": "Estar visible también pone tu centro en la página de DiveDay para tu localidad. Si desmarcas esto, lo que ya esté indexado puede tardar unas semanas en desaparecer, y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
       "label": "Mostrar mis páginas públicas en los buscadores",
-      "submit": "Guardar",
-      "submitting": "Guardando…"
+      "submit": "Guardar"
     },
     "packing": {
       "heading": "Lista de equipo de la salida",
@@ -237,7 +226,6 @@
       "label": "Elementos de la lista",
       "logbook": "Sugerir una bitácora de buceo",
       "submit": "Guardar lista de equipo",
-      "submitting": "Guardando…",
       "value": "{count, plural, one {# artículo} other {# artículos}}"
     },
     "deskPayment": {
@@ -251,7 +239,6 @@
     "dockCall": {
       "heading": "Ritmo del día de buceo",
       "description": "Todos estos números están en minutos.",
-      "submitting": "Guardando…",
       "dockCallLabel": "Llegar antes de la salida (minutos)",
       "dockCallDescription": "Con cuánta antelación se pide a los buceadores estar en el muelle.",
       "gearSetupLabel": "Montaje del equipo antes de la salida (minutos)",
@@ -297,7 +284,6 @@
       "currencyLabel": "Cobrar y mostrar en",
       "currencyMismatch": "Cobras en {shopCurrency}, pero Stripe liquida esta cuenta en {accountCurrency} y rechazará un pago que no pueda liquidar. Elige {accountCurrency} aquí o conecta una cuenta que liquide en {shopCurrency}.",
       "submit": "Guardar unidades",
-      "submitting": "Guardando…",
       "currencyRepricingWarning": "Cambiar esto no convierte tus precios. Una salida de 95 $ pasa a ser 95 de la nueva moneda, y los pedidos ya realizados conservan la moneda en la que se cobraron."
     },
     "tax": {
@@ -315,8 +301,7 @@
       "amountLabel": "Importe por buceador",
       "amountHint": "Deja ambos campos vacíos para desactivarla.",
       "clearHint": "Es un cargo repercutido, no un recargo sobre el precio de la inmersión.",
-      "submit": "Guardar cuota repercutida",
-      "submitting": "Guardando…"
+      "submit": "Guardar cuota repercutida"
     },
     "paymentsGate": {
       "notice": "El catálogo de alquiler, sus precios y la conexión con Stripe están limitados a propietarios y gerentes. Los ajustes de arriba están abiertos a todo el equipo."
@@ -351,7 +336,6 @@
         }
       },
       "submit": "Guardar alquiler",
-      "submitting": "Guardando…",
       "droppedFits": "{count, plural, one {El ajuste de alquiler de # buceador aún pide equipo que ya no alquilas.} other {Los ajustes de alquiler de # buceadores aún piden equipo que ya no alquilas.}}"
     },
     "stripe": {
@@ -416,7 +400,6 @@
       "on": "Activado",
       "off": "Desactivado",
       "save": "Guardar",
-      "saving": "Guardando…",
       "saved": "Guardado",
       "reviews": {
         "heading": "Reseñas de buceadores",
@@ -562,7 +545,6 @@
       "label": "Organizar la tripulación en DiveDay",
       "description": "Turnos, días fuera y quién trabaja en cada salida.",
       "save": "Guardar turnos",
-      "saving": "Guardando…",
       "saved": "Turnos de la tripulación guardados",
       "turnOn": "Activar en Funciones"
     },
@@ -617,7 +599,6 @@
         "retry": "Reintentar borrado",
         "retrying": "Reintentando…",
         "discharge": "Marcar como hecho en Stripe",
-        "discharging": "Guardando…",
         "failure": {
           "account_not_owned": "La cuenta de Stripe ya no está conectada",
           "refused": "Stripe rechazó el borrado",
@@ -648,11 +629,9 @@
       "shoreAlertPhone": "Los avisos le dicen que llame al {phone}.",
       "shoreAlertNoPhone": "El centro no tiene teléfono guardado, así que los avisos no le dan ningún número al que llamar.",
       "shoreAlertResend": "Enviar el enlace otra vez",
-      "shoreAlertResending": "Enviando…",
       "shoreAlertDemo": "Los centros de demostración no envían nada: ni enlace ni avisos.",
       "planLabel": "Si algo sale mal",
       "submit": "Guardar referencia de emergencia",
-      "saving": "Guardando…",
       "addContact": "Agregar contacto",
       "responseHeading": "Plan de respuesta",
       "alertHeading": "Avisos del pase de lista",
@@ -670,9 +649,7 @@
       "validityDescription": "Elige la fecha final inclusiva. Déjalo en blanco y no caduca.",
       "scopeLabel": "Cubre",
       "submit": "Agregar paquete",
-      "submitting": "Agregando…",
       "delete": "Eliminar",
-      "deleting": "Eliminando…",
       "rowMenu": "Más para {name}",
       "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})",
       "createTitle": "Agregar un paquete",
@@ -760,14 +737,12 @@
     "languagesLegend": "Idiomas",
     "languagesLabel": "Idiomas",
     "languagesSave": "Guardar",
-    "languagesSaving": "Guardando…",
     "invite": {
       "heading": "Invitar a alguien",
       "description": "Recibirá un correo para establecer su propia contraseña.",
       "fullNameLabel": "Nombre completo",
       "emailLabel": "Correo",
-      "submit": "Enviar invitación",
-      "submitting": "Enviando…"
+      "submit": "Enviar invitación"
     },
     "current": {
       "heading": "Equipo actual",
@@ -776,13 +751,11 @@
     },
     "staffRow": {
       "resendInvite": "Reenviar invitación",
-      "sending": "Enviando…",
       "enable": "Habilitar",
       "disable": "Deshabilitar",
       "enabling": "Habilitando…",
       "disabling": "Deshabilitando…",
       "delete": "Eliminar",
-      "deleting": "Eliminando…",
       "enableAriaLabel": "Habilitar a {name}",
       "disableAriaLabel": "Deshabilitar a {name}",
       "deleteAriaLabel": "Eliminar a {name}",
@@ -792,7 +765,6 @@
       "nameLabel": "Nombre del contacto de emergencia",
       "phoneLabel": "Teléfono del contacto de emergencia",
       "save": "Guardar contacto",
-      "saving": "Guardando…",
       "label": "Contacto de emergencia",
       "addValue": "Agregar"
     },
@@ -1366,7 +1338,6 @@
     "footer": "Cada inserción apunta a <link>tu calendario público</link>. Los cambios en salidas, nuevas salidas y precios aparecen en cuanto un buceador la carga.",
     "snippetField": {
       "copy": "Copiar",
-      "copied": "Copiado",
       "failed": "No se pudo copiar: selecciona el código de arriba."
     },
     "code": "Código de inserción",

@@ -216,7 +216,7 @@ export function DiverRowPanel({
             label: t("trips.roster.addNoteLabel"),
             placeholder: t("trips.roster.addNotePlaceholder"),
             add: t("trips.roster.addPrivateNote"),
-            adding: t("trips.roster.adding"),
+            adding: t("words.busy.adding"),
           }}
         />
       </div>

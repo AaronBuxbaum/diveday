@@ -222,7 +222,7 @@ export function SeriesCadenceEditor({
           }}
         />
         <SubmitButton
-          pendingLabel={t("tripSeries.panel.saving")}
+          pendingLabel={t("words.busy.saving")}
           className={buttonClass({ variant: "primary", className: "mt-5" })}
         >
           {t("tripSeries.panel.saveCadence")}
@@ -311,7 +311,7 @@ export function SeriesMoreActions({
               ) : undefined
             }
             confirmLabel={t("tripSeries.panel.applyConfirm")}
-            cancelLabel={t("tripSeries.panel.neverMind")}
+            cancelLabel={t("words.dismiss.neverMind")}
             pendingLabel={t("tripSeries.panel.applying")}
             triggerClassName={buttonClass({ variant: "link", size: "sm", flush: true })}
             confirmClassName={buttonClass({ variant: "secondary", size: "sm" })}
@@ -325,7 +325,7 @@ export function SeriesMoreActions({
       <form action={repeatAction}>
         <input type="hidden" name="keepRepeating" value={repeating ? "no" : "yes"} />
         <SubmitButton
-          pendingLabel={t("tripSeries.panel.saving")}
+          pendingLabel={t("words.busy.saving")}
           className={buttonClass({ variant: "link", size: "sm", flush: true })}
         >
           {repeating ? t("tripSeries.panel.stopRepeating") : t("tripSeries.panel.startRepeating")}
@@ -343,7 +343,7 @@ export function SeriesMoreActions({
               refundsHeld,
             })}
             confirmLabel={t("tripSeries.panel.cancelAllConfirm")}
-            cancelLabel={t("tripSeries.panel.neverMind")}
+            cancelLabel={t("words.dismiss.neverMind")}
             pendingLabel={t("tripSeries.panel.cancelling")}
             triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
             confirmClassName={buttonClass({ variant: "danger", size: "sm" })}

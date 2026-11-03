@@ -132,7 +132,7 @@ export function BookingsGroup({
             </ChoiceRow>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.packing.submitting")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.packing.submit")}

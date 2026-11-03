@@ -87,7 +87,7 @@ export function WebsiteGroup({ view }: { view: SettingsView }) {
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.shopPhotos.submitting")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.shopPhotos.submit")}

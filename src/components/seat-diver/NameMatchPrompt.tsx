@@ -76,7 +76,7 @@ export function NameMatchPrompt({
                 <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
                 {carried}
                 <SubmitButton
-                  pendingLabel={t("seatDiver.adding")}
+                  pendingLabel={t("words.busy.adding")}
                   className="underline font-medium text-start"
                 >
                   {match.fullName}
@@ -101,7 +101,7 @@ export function NameMatchPrompt({
           <input type="hidden" name="force" value="true" />
           {carried}
           <SubmitButton
-            pendingLabel={t("seatDiver.adding")}
+            pendingLabel={t("words.busy.adding")}
             className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             {t("divers.page.confirmMatchesSubmit")}

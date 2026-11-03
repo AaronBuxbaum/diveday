@@ -21,7 +21,6 @@
     "heading": "Send a test message",
     "phone": "Your WhatsApp number",
     "submit": "Send test message",
-    "submitting": "Sending…",
     "phoneDescription": "In full international form, starting with the country code."
   },
   "disconnect": {

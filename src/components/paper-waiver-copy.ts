@@ -122,9 +122,9 @@ export function paperWaiverCopy(t: StaffTranslator, surface: PaperWaiverSurface)
     markSignedOnPaper: t("shared.paperWaiver.markSignedOnPaper"),
     medicalAttestationLabel: t("shared.paperWaiver.medicalAttestationLabel"),
     medicalAttestationMinorLabel: t("shared.paperWaiver.medicalAttestationMinorLabel"),
-    recording: t("shared.paperWaiver.recording"),
+    recording: t("words.busy.recording"),
     recordPaperSignature: t("shared.paperWaiver.recordPaperSignature"),
-    neverMind: t("shared.waiverSend.neverMind"),
+    neverMind: t("words.dismiss.neverMind"),
     guardian: {
       nameLabel: t("shared.paperWaiver.guardianNameLabel"),
       relationshipLabel: t("shared.paperWaiver.guardianRelationshipLabel"),

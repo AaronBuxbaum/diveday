@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { seatSailed } from "@/lib/closeout";
+import { seatSailed } from "@/lib/seat-sailed";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import type { ReadinessResult } from "@/lib/readiness";
 import { type RollCallCheckpoint, rollCallCheckpointOrdinal } from "@/lib/roll-call";

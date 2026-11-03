@@ -130,7 +130,7 @@ export function CourseFormsSection({
                   <ResignImpact impact={resign.get(form.id)} t={t} />
                   <div className="flex flex-wrap items-center gap-3">
                     <SubmitButton
-                      pendingLabel={t("waiversStaff.courseForms.saving")}
+                      pendingLabel={t("words.busy.saving")}
                       className={buttonClass()}
                     >
                       {t("waiversStaff.courseForms.save")}
@@ -138,7 +138,7 @@ export function CourseFormsSection({
                     <InlineConfirm
                       triggerLabel={t("waiversStaff.courseForms.delete")}
                       confirmLabel={t("waiversStaff.courseForms.deleteConfirm")}
-                      pendingLabel={t("waiversStaff.courseForms.deleting")}
+                      pendingLabel={t("words.busy.deleting")}
                       triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
                       formAction={deleteCourseFormAction}
                       autoResetMs={6000}
@@ -169,7 +169,7 @@ export function CourseFormsSection({
             <CourseFormFields idPrefix="new" title="" body="" t={t} />
             <div>
               <SubmitButton
-                pendingLabel={t("waiversStaff.courseForms.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass()}
               >
                 {t("waiversStaff.courseForms.create")}

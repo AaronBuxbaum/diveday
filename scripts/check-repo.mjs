@@ -81,6 +81,7 @@ const checks = [
   ["infra-ascii", "check-infra-ascii.mjs"],
   ["locale", "check-locale.mjs"],
   ["copy", "check-copy.mjs"],
+  ["words", "check-words.mjs"],
   ["bundle-reach", "check-bundle-reach.mjs"],
   ["domain-strings", "check-domain-strings.mjs"],
   ["migrations", "check-migrations.mjs"],

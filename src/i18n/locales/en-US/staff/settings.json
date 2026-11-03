@@ -6,8 +6,7 @@
       "label": "One-tap party teams",
       "required": "Require a certified adult",
       "optional": "Do not require an adult",
-      "save": "Save",
-      "saving": "Saving…"
+      "save": "Save"
     },
     "eyebrow": "Settings",
     "notice": {
@@ -73,7 +72,6 @@
       "heading": "Timezone",
       "detail": "Changing it re-reads existing departures at their new local times; it does not move them.",
       "label": "Timezone",
-      "submitting": "Saving…",
       "submit": "Save timezone",
       "groups": {
         "americas": "Americas",
@@ -114,7 +112,6 @@
       "detail": "Your diver and boat counts run from this date each year.",
       "monthLabel": "Month",
       "dayLabel": "Day",
-      "submitting": "Saving…",
       "submit": "Save season start",
       "reopensLabel": "Back on the water",
       "reopensHint": "While your public schedule has nothing in the next month, it says you’re back out on this date, or on your first trip if that comes sooner.",
@@ -128,10 +125,8 @@
       "phoneLabel": "Contact phone",
       "phoneHint": "(optional)",
       "submit": "Save contact details",
-      "submitting": "Saving…",
       "awaitingConfirmation": "Awaiting confirmation",
-      "resend": "Resend confirmation email",
-      "resending": "Sending…"
+      "resend": "Resend confirmation email"
     },
     "profile": {
       "heading": "Shop profile & branding",
@@ -143,7 +138,6 @@
       "logo": "Shop logo",
       "logoHint": "PNG, JPG, or WebP. Square image recommended.",
       "removeLogo": "Remove current logo",
-      "submitting": "Saving…",
       "viewStorefront": "View storefront",
       "submit": "Save profile",
       "brandColor": "Brand color",
@@ -180,7 +174,6 @@
       "searchLabel": "Find your shop",
       "searchPlaceholder": "Your shop’s name or address…",
       "searching": "Looking…",
-      "saving": "Saving…",
       "noMatches": "No matches. Try your shop’s name, or a nearby street address.",
       "lookupFailed": "Address lookup isn’t available right now. Try again in a moment.",
       "lookupResting": "That’s a lot of lookups for one hour, so searching pauses for a bit. Try again later.",
@@ -197,8 +190,7 @@
       "detail": "When set, a diver’s post-trip recap invites them to leave a review. Empty the box to stop asking.",
       "label": "Review link",
       "hint": "(optional)",
-      "submit": "Save review link",
-      "submitting": "Saving…"
+      "submit": "Save review link"
     },
     "deskHours": {
       "heading": "Desk hours",
@@ -206,8 +198,7 @@
       "description": "When somebody is at the desk, every day in your shop’s time zone. Staff who ask hear about diver messages that arrive outside these hours.",
       "opens": "Opens",
       "closes": "Closes",
-      "submit": "Save desk hours",
-      "submitting": "Saving…"
+      "submit": "Save desk hours"
     },
     "shopPhotos": {
       "heading": "Shop photos",
@@ -219,8 +210,7 @@
       "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
       "add": "Add photos",
       "remove": "Remove",
-      "submit": "Save photos",
-      "submitting": "Saving…"
+      "submit": "Save photos"
     },
     "searchListing": {
       "heading": "Search listing",
@@ -228,8 +218,7 @@
       "valueHidden": "Hidden",
       "detail": "Being listed also puts your shop on DiveDay’s page for your town. Untick this and anything already indexed can take a few weeks to disappear, and a page someone has linked to stays reachable by that link.",
       "label": "List my public pages in search engines",
-      "submit": "Save",
-      "submitting": "Saving…"
+      "submit": "Save"
     },
     "packing": {
       "heading": "Trip packing checklist",
@@ -237,7 +226,6 @@
       "label": "Checklist items",
       "logbook": "Suggest a logbook",
       "submit": "Save packing checklist",
-      "submitting": "Saving…",
       "value": "{count, plural, one {# item} other {# items}}"
     },
     "deskPayment": {
@@ -251,7 +239,6 @@
     "dockCall": {
       "heading": "Dock-day rhythm",
       "description": "Every number here is in minutes.",
-      "submitting": "Saving…",
       "dockCallLabel": "Arrive before departure (minutes)",
       "dockCallDescription": "How early divers are asked to be at the dock.",
       "gearSetupLabel": "Gear set-up before departure (minutes)",
@@ -297,7 +284,6 @@
       "currencyLabel": "Charge and display in",
       "currencyMismatch": "You charge in {shopCurrency}, but Stripe settles this account in {accountCurrency} and will refuse a payment it can’t settle. Pick {accountCurrency} here, or connect an account that settles in {shopCurrency}.",
       "submit": "Save units",
-      "submitting": "Saving…",
       "currencyRepricingWarning": "Changing this does not convert your prices. A $95 trip becomes 95 of the new currency, and orders already placed keep the currency they were charged in."
     },
     "tax": {
@@ -315,8 +301,7 @@
       "amountLabel": "Amount per diver",
       "amountHint": "Leave both fields blank to disable this fee.",
       "clearHint": "This is a pass-through charge, not a markup on the dive price.",
-      "submit": "Save pass-through fee",
-      "submitting": "Saving…"
+      "submit": "Save pass-through fee"
     },
     "paymentsGate": {
       "notice": "The rental catalog, rental prices, and Stripe connection are limited to owners and managers. The settings above are open to all staff."
@@ -351,7 +336,6 @@
         }
       },
       "submit": "Save rentals",
-      "submitting": "Saving…",
       "droppedFits": "{count, plural, one {# diver’s rental fit still asks for gear you no longer rent.} other {# divers’ rental fits still ask for gear you no longer rent.}}"
     },
     "stripe": {
@@ -416,7 +400,6 @@
       "on": "On",
       "off": "Off",
       "save": "Save",
-      "saving": "Saving…",
       "saved": "Saved",
       "reviews": {
         "heading": "Diver reviews",
@@ -562,7 +545,6 @@
       "label": "Plan crew in DiveDay",
       "description": "Shifts, days away, and who works each departure.",
       "save": "Save crew schedule",
-      "saving": "Saving…",
       "saved": "Crew schedule saved",
       "turnOn": "Turn on in Features"
     },
@@ -617,7 +599,6 @@
         "retry": "Retry delete",
         "retrying": "Retrying…",
         "discharge": "Mark done at Stripe",
-        "discharging": "Saving…",
         "failure": {
           "account_not_owned": "Stripe account no longer connected",
           "refused": "Stripe refused the delete",
@@ -648,11 +629,9 @@
       "shoreAlertPhone": "Alerts tell them to call {phone}.",
       "shoreAlertNoPhone": "No shop phone on file, so alerts give them no number to call.",
       "shoreAlertResend": "Send the link again",
-      "shoreAlertResending": "Sending…",
       "shoreAlertDemo": "Demo shops send nothing: no link and no alerts.",
       "planLabel": "If something goes wrong",
       "submit": "Save emergency reference",
-      "saving": "Saving…",
       "addContact": "Add contact",
       "responseHeading": "Response plan",
       "alertHeading": "Roll-call alerts",
@@ -670,9 +649,7 @@
       "validityDescription": "Choose the inclusive end date. Leave blank and it never expires.",
       "scopeLabel": "Covers",
       "submit": "Add package",
-      "submitting": "Adding…",
       "delete": "Delete",
-      "deleting": "Deleting…",
       "rowMenu": "More for {name}",
       "owed": "Dives owed on packages: {dives, number} ({value})",
       "createTitle": "Add a package",
@@ -760,14 +737,12 @@
     "languagesLegend": "Languages",
     "languagesLabel": "Languages",
     "languagesSave": "Save",
-    "languagesSaving": "Saving…",
     "invite": {
       "heading": "Invite someone",
       "description": "They’ll get an email to set their own password.",
       "fullNameLabel": "Full name",
       "emailLabel": "Email",
-      "submit": "Send invite",
-      "submitting": "Sending…"
+      "submit": "Send invite"
     },
     "current": {
       "heading": "Current team",
@@ -776,13 +751,11 @@
     },
     "staffRow": {
       "resendInvite": "Resend invite",
-      "sending": "Sending…",
       "enable": "Enable",
       "disable": "Disable",
       "enabling": "Enabling…",
       "disabling": "Disabling…",
       "delete": "Delete",
-      "deleting": "Deleting…",
       "enableAriaLabel": "Enable {name}",
       "disableAriaLabel": "Disable {name}",
       "deleteAriaLabel": "Delete {name}",
@@ -792,7 +765,6 @@
       "nameLabel": "Emergency contact name",
       "phoneLabel": "Emergency contact phone",
       "save": "Save contact",
-      "saving": "Saving…",
       "label": "Emergency contact",
       "addValue": "Add"
     },
@@ -1366,7 +1338,6 @@
     "footer": "Every embed points at <link>your public schedule</link>. Trip edits, new departures and price changes show up the moment a diver loads it.",
     "snippetField": {
       "copy": "Copy",
-      "copied": "Copied",
       "failed": "Couldn’t copy. Select the code above instead."
     },
     "code": "Embed code",

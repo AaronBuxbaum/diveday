@@ -345,7 +345,7 @@ function deleteButton(
       <input type="hidden" name="certificationId" value={id} />
       {nitrox ? <input type="hidden" name="cardType" value="nitrox" /> : null}
       <SubmitButton
-        pendingLabel={t("divers.certifications.deleting")}
+        pendingLabel={t("words.busy.deleting")}
         className={buttonClass({ variant: "danger-ghost", size: "sm" })}
       >
         {t("divers.certifications.delete")}

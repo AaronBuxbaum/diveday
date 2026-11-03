@@ -13,8 +13,7 @@
     "notConfigured": "Not sent: messages aren’t set up",
     "failed": "Not sent {date}",
     "send": "Send ready message",
-    "resend": "Resend",
-    "sending": "Sending…"
+    "resend": "Resend"
   },
   "bill": {
     "heading": "Bill",
@@ -23,12 +22,10 @@
     "needsEmail": "Add an email to the customer’s record to send the bill.",
     "send": "Send the bill",
     "sendAgain": "Send a new bill",
-    "sending": "Sending…",
     "sent": "Sent {date}",
     "openOrder": "Open order",
     "description": "Work order #{number}",
-    "paidAtPickup": "Paid at pickup:",
-    "recording": "Recording…"
+    "paidAtPickup": "Paid at pickup:"
   },
   "notice": {
     "readySent": "Ready message sent",
@@ -53,8 +50,7 @@
     "turnOff": "Stop reminders",
     "turnOn": "Send reminders",
     "turnOffFor": "Stop service reminders for {label}",
-    "turnOnFor": "Send service reminders for {label}",
-    "saving": "Saving…"
+    "turnOnFor": "Send service reminders for {label}"
   },
   "today": {
     "pastPromise": "Promised {date}, not ready yet",

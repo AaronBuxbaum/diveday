@@ -42,7 +42,6 @@
     "secretHint": "No vuelve a mostrarse nunca, ni siquiera a ti.",
     "secretKeepHint": "Déjala en blanco para conservar la clave actual.",
     "submit": "Guardar destino",
-    "submitting": "Guardando…",
     "details": "Detalles del destino"
   },
   "how": {

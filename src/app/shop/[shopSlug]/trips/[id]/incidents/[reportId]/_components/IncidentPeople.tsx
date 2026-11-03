@@ -137,7 +137,7 @@ export function IncidentPeople({
           </ChoiceFieldset>
           <div className="flex flex-wrap items-center gap-3">
             <SubmitButton
-              pendingLabel={t("incidents.people.adding")}
+              pendingLabel={t("words.busy.adding")}
               className={buttonClass({ variant: "secondary" })}
             >
               {t("incidents.people.add")}

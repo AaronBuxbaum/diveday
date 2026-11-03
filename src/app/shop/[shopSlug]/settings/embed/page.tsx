@@ -127,7 +127,7 @@ export default async function EmbedSettingsPage({
     qrAlt: t("settings.embed.qrAlt"),
     qrDownload: t("settings.embed.qrDownload"),
     copy: t("settings.embed.snippetField.copy"),
-    copied: t("settings.embed.snippetField.copied"),
+    copied: t("words.did.copied"),
     copyFailed: t("settings.embed.snippetField.failed"),
   };
   const scheduleUrl = `${origin}${publicSchedulePath(shop.slug)}`;

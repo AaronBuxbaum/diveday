@@ -228,7 +228,7 @@ export default async function NewBookingDiverPage({
           findLabel: t("seatDiver.findLabel"),
           findPlaceholder: t("seatDiver.findPlaceholder"),
           noEmailOnFile: t("seatDiver.noEmailOnFile"),
-          adding: t("seatDiver.adding"),
+          adding: t("words.busy.adding"),
           addLabel: t("bookings.new.addToTrip"),
           addPersonAriaLabel: (name) => t("bookings.new.addPersonAriaLabel", { name }),
           noMatchesHeading: t("seatDiver.noMatchesHeading"),

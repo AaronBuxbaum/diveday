@@ -85,7 +85,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
           errorMessages={siteFormErrorMessages(t, "diveSites.new.errorInvalid")}
           actions={
             <>
-              <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("diveSites.form.save")}
               </SubmitButton>
               <UnsavedSections

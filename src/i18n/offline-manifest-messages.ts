@@ -1,6 +1,8 @@
 import { createTranslator } from "next-intl";
+import enWords from "./locales/en-US/words.json";
 import enManifest from "./locales/en-US/staff/manifest.json";
 import enShared from "./locales/en-US/staff/shared.json";
+import esWords from "./locales/es-ES/words.json";
 import esManifest from "./locales/es-ES/staff/manifest.json";
 import esShared from "./locales/es-ES/staff/shared.json";
 import { messageFallback } from "./message-fallback";
@@ -65,8 +67,8 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * in the error boundary instead of the roll call.
  */
 const OFFLINE_MANIFEST_MESSAGES = {
-  "en-US": { manifest: enManifest, shared: enShared },
-  "es-ES": { manifest: esManifest, shared: esShared },
+  "en-US": { manifest: enManifest, shared: enShared, words: enWords },
+  "es-ES": { manifest: esManifest, shared: esShared, words: esWords },
 } as const satisfies Record<DiverLocale, unknown>;
 
 export type OfflineManifestMessages = (typeof OFFLINE_MANIFEST_MESSAGES)["en-US"];

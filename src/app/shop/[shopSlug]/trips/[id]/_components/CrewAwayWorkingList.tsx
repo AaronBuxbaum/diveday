@@ -44,7 +44,7 @@ export function CrewAwayWorkingList({
             )}
           >
             <SubmitButton
-              pendingLabel={t("trips.crew.awayWithdrawing")}
+              pendingLabel={t("words.busy.saving")}
               className={buttonClass({ variant: "secondary", size: "sm" })}
               observabilityAction="crew-away-withdraw"
             >

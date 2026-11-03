@@ -81,6 +81,7 @@
     "check:locale": "node scripts/check-locale.mjs",
     "check:seat-word": "node scripts/check-seat-word.mjs",
     "check:copy": "node scripts/check-copy.mjs",
+    "check:words": "node scripts/check-words.mjs",
     "check:bundle-reach": "node scripts/check-bundle-reach.mjs",
     "check:closing-keywords": "node scripts/check-closing-keywords.mjs",
     "check:critical-text": "node scripts/check-critical-text.mjs",

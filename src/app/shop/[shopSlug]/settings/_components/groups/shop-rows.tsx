@@ -76,7 +76,7 @@ export function seasonRow(view: SettingsView) {
         </Field>
         <FieldActions>
           <SubmitButton
-            pendingLabel={t("settings.main.season.submitting")}
+            pendingLabel={t("words.busy.saving")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("settings.main.season.submit")}
@@ -96,7 +96,7 @@ export function seasonRow(view: SettingsView) {
         </Field>
         <FieldActions>
           <SubmitButton
-            pendingLabel={t("settings.main.season.submitting")}
+            pendingLabel={t("words.busy.saving")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("settings.main.season.reopensSubmit")}
@@ -137,7 +137,7 @@ export function searchListingRow(view: SettingsView) {
         </ChoiceRow>
         <FieldActions>
           <SubmitButton
-            pendingLabel={t("settings.main.searchListing.submitting")}
+            pendingLabel={t("words.busy.saving")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("settings.main.searchListing.submit")}

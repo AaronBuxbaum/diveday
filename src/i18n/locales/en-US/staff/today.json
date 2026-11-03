@@ -32,8 +32,7 @@
     }
   },
   "crewAway": {
-    "working": "{name} is working it",
-    "saving": "Saving…"
+    "working": "{name} is working it"
   },
   "helpRequest": {
     "kind": {
@@ -51,7 +50,6 @@
     "crewSelector": "Crew member",
     "speakFirst": "Speak to them first, then confirm.",
     "meetingLine": "Departure meeting: {where}",
-    "saving": "Saving…",
     "assigned": "Helper saved.",
     "completed": "Help marked complete.",
     "undone": "Assignment restored.",

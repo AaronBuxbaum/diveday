@@ -113,7 +113,7 @@ export function InviteStaffDisclosure({
           </div>
           <FieldActions>
             <SubmitButton
-              pendingLabel={t("settings.team.invite.submitting")}
+              pendingLabel={t("words.busy.sending")}
               className={buttonClass()}
             >
               {t("settings.team.invite.submit")}

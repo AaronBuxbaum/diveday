@@ -49,7 +49,7 @@ export function CertCheckTryPanel({ t, padiOn }: { t: StaffTranslator; padiOn: b
         reportHint: t("settings.certChecks.reportHint"),
         email: t("settings.main.support.emailCta", { email: SUPPORT_EMAIL }),
         copy: t("settings.certChecks.copy"),
-        copied: t("shared.waiverSend.copied"),
+        copied: t("words.did.copied"),
         copyFailed: t("shared.waiverSend.copyFailed"),
       }}
     />

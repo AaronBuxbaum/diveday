@@ -127,7 +127,7 @@ export function OfflineRollCallException({
           }`}
         >
           {busy ? (
-            t("shared.offlineManifest.single.saving")
+            t("words.busy.saving")
           ) : recordedNotBoarded ? (
             isDeparture ? (
               <OfflineStatusLabel variant="checked">
@@ -192,7 +192,7 @@ export function OfflineRollCallException({
               className={`${OFFLINE_BOAT_TARGET_CLASS} border border-success bg-success-tint text-success-strong`}
             >
               {busy
-                ? t("shared.offlineManifest.single.saving")
+                ? t("words.busy.saving")
                 : t("shared.offlineManifest.single.confirmAboard", { name })}
             </button>
           </div>

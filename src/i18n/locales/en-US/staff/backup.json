@@ -42,7 +42,6 @@
     "secretHint": "Never shown again, not even to you.",
     "secretKeepHint": "Leave blank to keep the current key.",
     "submit": "Save destination",
-    "submitting": "Saving…",
     "details": "Destination details"
   },
   "how": {

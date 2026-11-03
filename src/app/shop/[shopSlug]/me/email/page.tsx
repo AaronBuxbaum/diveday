@@ -67,7 +67,7 @@ export default async function EmailSettingsPage({
             <EmailPreferenceSwitch
               wanted={wanted}
               label={t("emailSettings.digest.heading")}
-              saving={t("emailSettings.digest.saving")}
+              saving={t("words.busy.saving")}
               failed={t("emailSettings.saveFailed")}
               save={setWeeklyDigestAction.bind(null, shop.slug)}
             />
@@ -92,7 +92,7 @@ export default async function EmailSettingsPage({
             <EmailPreferenceSwitch
               wanted={pinged}
               label={t("emailSettings.afterHours.heading")}
-              saving={t("emailSettings.digest.saving")}
+              saving={t("words.busy.saving")}
               failed={t("emailSettings.saveFailed")}
               save={setAfterHoursPingAction.bind(null, shop.slug)}
             />

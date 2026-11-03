@@ -79,7 +79,7 @@ export function AddCredentialDisclosure({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("staffing.credentials.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass()}
               >
                 {t("staffing.credentials.add")}

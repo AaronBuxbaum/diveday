@@ -275,7 +275,7 @@ export default async function NewDiverPage({
               <input type="hidden" name="request" value={requestParam ?? ""} />
               <input type="hidden" name="force" value="true" />
               <SubmitButton
-                pendingLabel={t("divers.page.adding")}
+                pendingLabel={t("words.busy.adding")}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("divers.page.confirmMatchesSubmit")}
@@ -360,7 +360,7 @@ export default async function NewDiverPage({
           {/* No margin: the trio's grid gap is the one field gap every form
               stands its action row under (K-182). */}
           <FieldActions>
-            <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>
+            <SubmitButton pendingLabel={t("words.busy.adding")} className={buttonClass()}>
               {submitLabel}
             </SubmitButton>
             <Link

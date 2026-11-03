@@ -130,7 +130,7 @@ export function RentalPersonStep({
               >
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("seatDiver.adding")}
+                    pendingLabel={t("words.busy.adding")}
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("counterRentals.new.addPerson")}

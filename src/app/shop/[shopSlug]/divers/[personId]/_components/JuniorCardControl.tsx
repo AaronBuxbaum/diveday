@@ -74,7 +74,7 @@ export function JuniorCardControl({
           </select>
         </Field>
         <SubmitButton
-          pendingLabel={t("divers.certifications.juniorCardSaving")}
+          pendingLabel={t("words.busy.recording")}
           className={buttonClass({ variant: "secondary" })}
         >
           {t("divers.certifications.juniorCardSave")}

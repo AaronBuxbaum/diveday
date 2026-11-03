@@ -194,7 +194,7 @@ export default async function IntegrationsSettingsPage({
                   </Field>
                   <FieldActions>
                     <SubmitButton
-                      pendingLabel={t("integrations.common.saving")}
+                      pendingLabel={t("words.busy.saving")}
                       className={buttonClass({ variant: "secondary" })}
                     >
                       {t("integrations.common.save")}

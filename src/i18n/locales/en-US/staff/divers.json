@@ -53,7 +53,6 @@
     "juniorCardOptionJunior": "Junior card",
     "juniorCardOptionFull": "Full card",
     "juniorCardSave": "Record card type",
-    "juniorCardSaving": "Recording…",
     "juniorCardVerifiedBy": "Checked by {name} on {date}.",
     "juniorCardStaff": "a staff member",
     "drysuitSeenTitle": "Seen diving dry",
@@ -63,7 +62,6 @@
     "drysuitSeenNoteLabel": "What you saw",
     "drysuitSeenNotePlaceholder": "e.g. Own drysuit, three shore dives with us in October",
     "recordDrysuitSeen": "I’ve seen them dive dry",
-    "recordingDrysuitSeen": "Recording…",
     "clearDrysuitSeen": "Clear",
     "clearingDrysuitSeen": "Clearing…",
     "heading": "Certification records",
@@ -114,7 +112,6 @@
         "lead": "{agency} also shows these certifications. Add them? Each waits for Mark certified.",
         "leadFor": "{agency} also shows these certifications for {name}. Add them? Each waits for Mark certified.",
         "add": "Add",
-        "adding": "Adding…",
         "added": "Added",
         "failed": "Couldn’t add them. Reload to see this diver’s certifications."
       }
@@ -126,7 +123,6 @@
     "sightCardLevelHint": "Prefilled with what the diver said. Change it to match the certification record you verified.",
     "cardNumberShapeHint": "The number recorded in the certification record: at least three characters, including a digit.",
     "markCertified": "Mark certified",
-    "deleting": "Deleting…",
     "delete": "Delete",
     "clearNoCertificationHint": "Someone said on a public form that this diver has no certification. Anyone who knows their name and email can leave that answer, so clear it if they didn’t. Clearing says nothing about certification, never that they’re certified, and the deal and wait lists stop flagging them.",
     "clearNoCertification": "They didn’t tell us that",
@@ -170,7 +166,6 @@
     "fullNameLabel": "Full name",
     "emailLabel": "Email",
     "phoneLabel": "Phone",
-    "adding": "Adding…",
     "cancel": "Cancel",
     "addDiver": "Add diver",
     "confirmMatchesTitle": "Is this the same {name}? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person",
@@ -254,7 +249,6 @@
     "diveInsurancePlaceholder": "DAN #12345",
     "emergencyContactNameLabel": "Emergency contact name",
     "emergencyContactPhoneLabel": "Emergency contact phone",
-    "saving": "Saving…",
     "saveDetails": "Save details",
     "diveDays": "{count, plural, one {# dive day} other {# dive days}}",
     "diveDaysSince": "{count, plural, one {# dive day} other {# dive days}} since {since}",
@@ -279,7 +273,6 @@
   },
   "remove": {
     "removePersonSummary": "Delete {name}",
-    "removing": "Deleting…",
     "removeDiver": "Delete diver",
     "consequence": "Takes {name} off the roster, the booking pickers, manifests, and trip prep. Their waivers, trips, and payments stay on file, and you can restore them.",
     "staffWarning": "They also work here. Deleting them takes them off the team, and they can no longer sign in."
@@ -414,7 +407,6 @@
     "weightPreferenceLabel": "Weight preference",
     "weightPreferencePlaceholder": "Usually 12 lb with 3 mm suit",
     "weightPreferencePlaceholderDry": "Usually 22 lb in a drysuit",
-    "saving": "Saving…",
     "saveRentalFit": "Save rental fit",
     "flaggedHeading": "Flagged for hands-on fitting",
     "cantFillHeading": "Can’t fill a size?",
@@ -440,9 +432,7 @@
     "appliesEverywhere": "Applies across this diver’s departures",
     "addLabel": "Add a note",
     "placeholder": "What should the next staff member know?",
-    "adding": "Adding…",
     "add": "Add note",
-    "deleting": "Deleting…",
     "delete": "Delete",
     "writtenBy": "{name} · {date}"
   },
@@ -473,7 +463,6 @@
     "sendWaiverViaSms": "Text waiver",
     "copyWaiverLink": "Copy link",
     "waiverChannelSent": "Sent",
-    "waiverChannelCopied": "Copied",
     "waiverChannelFailed": "Didn’t go out",
     "waiverChannelUnavailable": "Not set up"
   },
@@ -660,7 +649,6 @@
     "openClearanceDocument": "Open the physician’s evaluation",
     "openDiverForm": "Open the signed form the diver sent on {date}",
     "rejectDiverForm": "Can’t use this form",
-    "rejectingDiverForm": "Deleting…",
     "evaluationFromDiver": "Sent by the diver",
     "openSignedRecord": "Open the signed waiver"
   },
@@ -681,7 +669,6 @@
     "theySaid": "For their {date} trip: {said}",
     "fieldLabel": "Last dive anywhere",
     "save": "Save",
-    "saving": "Saving…",
     "clear": "Clear",
     "clearing": "Clearing…"
   }

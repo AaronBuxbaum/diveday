@@ -1,5 +1,8 @@
 {
-  "fill": { "air": "Air", "eanx": "EANx {percent}" },
+  "fill": {
+    "air": "Air",
+    "eanx": "EANx {percent}"
+  },
   "rentOut": "Rent out",
   "new": {
     "title": "Rent out",
@@ -94,8 +97,7 @@
       "unverified": "{count, plural, one {# card} other {# cards}} on file, not yet verified",
       "minor": "Minor",
       "seen": "Card seen",
-      "record": "Record card",
-      "recording": "Recording…"
+      "record": "Record card"
     },
     "review": "Review rental"
   },

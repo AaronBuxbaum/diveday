@@ -98,7 +98,7 @@ export function RentalCardSeen({
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("counterRentals.new.cards.recording")}
+                pendingLabel={t("words.busy.recording")}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("counterRentals.new.cards.record")}

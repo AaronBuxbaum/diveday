@@ -101,8 +101,7 @@
   },
   "addUnit": {
     "title": "Agregar una unidad",
-    "submit": "Agregar al registro",
-    "pending": "Agregando…"
+    "submit": "Agregar al registro"
   },
   "form": {
     "kind": "Tipo",
@@ -147,7 +146,7 @@
     "importEmpty": "Elige un CSV de equipo para importar.",
     "importNoGearColumn": "El archivo no tiene una columna de etiqueta del equipo. Usa la plantilla.",
     "importFileEmpty": "Ese archivo no tiene filas.",
-    "importFileTooLarge": "Ese archivo pesa más de 8\u00a0MB. Divídelo en archivos más pequeños.",
+    "importFileTooLarge": "Ese archivo pesa más de 8 MB. Divídelo en archivos más pequeños.",
     "importTooManyRows": "Ese archivo tiene más de 2000 filas. Divídelo en archivos más pequeños.",
     "importTooManyColumns": "Ese archivo tiene más de 64 columnas. Usa la plantilla.",
     "importCellTooLong": "Uno de los valores de ese archivo pasa de 2.000 caracteres, así que no se leyó nada.",
@@ -209,7 +208,6 @@
       "addLabel": "Agregar una nota",
       "placeholder": "La correa de la aleta está floja, cambiarla en la próxima visita",
       "add": "Agregar nota",
-      "adding": "Agregando…",
       "writtenBy": "{name} · {date}"
     },
     "rentals": {
@@ -221,7 +219,6 @@
       "title": "Detalles",
       "edit": "Editar los datos",
       "save": "Guardar cambios",
-      "saving": "Guardando…",
       "cancel": "Cancelar"
     },
     "status": {
@@ -230,11 +227,9 @@
       "pulling": "Enviando…",
       "pullNote": "Por qué sale de la pared",
       "pullNotePlaceholder": "El inflador se atasca",
-      "pullCancel": "Cancelar",
       "reinstate": "Devolver al servicio",
       "reinstating": "Devolviendo…",
       "delete": "Eliminar unidad",
-      "deleting": "Eliminando…",
       "deleteHeld": "{name} tiene esta unidad hasta el {until}. Libérala o márcala como devuelta primero.",
       "returnedConcern": "Devuelto el {date} para revisar: {note}"
     },

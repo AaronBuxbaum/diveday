@@ -126,7 +126,7 @@ export function WorkOrdersGroup({
                   <input type="hidden" name="personId" value={personId} />
                   <input type="hidden" name="returnTo" value="diver" />
                   <SubmitButton
-                    pendingLabel={t("workOrders.diver.deletingPiece")}
+                    pendingLabel={t("words.busy.deleting")}
                     className={buttonClass({ variant: "danger-ghost", size: "sm" })}
                     ariaLabel={t("workOrders.diver.deletePiece", { label: kind })}
                   >

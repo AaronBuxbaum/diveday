@@ -45,13 +45,11 @@
   "delete": {
     "action": "Eliminar",
     "actionFor": "Eliminar el mensaje de {address}",
-    "confirm": "¿Eliminar este mensaje?",
-    "pending": "Eliminando…"
+    "confirm": "¿Eliminar este mensaje?"
   },
   "done": {
     "action": "Marcar como resuelto",
-    "reopen": "Volver a pendientes",
-    "pending": "Guardando…"
+    "reopen": "Volver a pendientes"
   },
   "menu": {
     "label": "Más opciones para el mensaje de {name}"
@@ -74,7 +72,6 @@
     "whatsapp": "Responder por WhatsApp a {address}",
     "placeholder": "Escribe tu respuesta",
     "send": "Enviar",
-    "sending": "Enviando…",
     "windowClosed": "Después de 24 horas, WhatsApp requiere un mensaje aprobado; podrás responder cuando {name} conteste.",
     "reopenSent": "Pediste a {name} que escribiera {date}. Cuando lo haga, podrás escribir tu respuesta aquí.",
     "diverRemoved": "El registro de este buceador fue eliminado, así que las respuestas están desactivadas."

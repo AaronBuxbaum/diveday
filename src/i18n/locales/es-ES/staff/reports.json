@@ -141,7 +141,6 @@
     "label": "Correo del contador",
     "description": "El día 2 de cada mes, el informe, los pedidos y la hoja de tripulación del mes anterior se envían a esta dirección. Déjalo vacío para desactivarlo.",
     "save": "Guardar",
-    "saving": "Guardando…",
     "saved": "Guardado. Los archivos salen el día 2.",
     "cleared": "Desactivado. No se enviarán archivos de fin de mes.",
     "invalid": "Eso no es un correo electrónico. Revísalo y guarda de nuevo.",

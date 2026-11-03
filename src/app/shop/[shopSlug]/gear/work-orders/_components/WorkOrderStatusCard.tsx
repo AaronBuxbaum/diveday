@@ -117,7 +117,7 @@ function MoveButton({
       <input type="hidden" name="workOrderId" value={workOrderId} />
       <input type="hidden" name="status" value={status} />
       <SubmitButton
-        pendingLabel={t("workOrders.form.saving")}
+        pendingLabel={t("words.busy.saving")}
         confirmMessage={confirmMessage}
         className={
           quiet ? menuRowClass("quiet", { gutter: false }) : buttonClass({ variant: "secondary" })

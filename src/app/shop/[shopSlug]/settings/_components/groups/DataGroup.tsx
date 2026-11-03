@@ -279,7 +279,7 @@ export async function DataGroup({
                       <form action={dischargeProcessorErasureAction}>
                         <input type="hidden" name="obligationId" value={obligation.id} />
                         <SubmitButton
-                          pendingLabel={t("settings.main.dataJobs.processorErasures.discharging")}
+                          pendingLabel={t("words.busy.saving")}
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
                           {t("settings.main.dataJobs.processorErasures.discharge")}

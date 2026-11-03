@@ -56,7 +56,7 @@ export function SeatLunchNote({
             </Field>
             <div>
               <SubmitButton
-                pendingLabel={t("trips.roster.saving")}
+                pendingLabel={t("words.busy.saving")}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("trips.roster.lunchNoteSave")}

@@ -30,7 +30,6 @@
     "lineItemDescriptionPlaceholder": "Description",
     "quantityLabel": "Quantity",
     "unitPriceLabel": "Unit price ({currency})",
-    "sending": "Sending…",
     "submit": "Create and send invoice",
     "kind": {
       "trip_fee": "Trip fee",
@@ -135,7 +134,6 @@
     },
     "recordPayment": {
       "label": "Record payment",
-      "recording": "Recording…",
       "heldCash": "Recording {amount} cash",
       "heldCardMachine": "Recording {amount} on the card machine",
       "roomCharge": "Charge to room",

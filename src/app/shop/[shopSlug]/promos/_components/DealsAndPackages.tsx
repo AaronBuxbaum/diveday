@@ -145,7 +145,7 @@ export async function DivePackagesSection({
                   <form action={deleteDivePackageAction}>
                     <input type="hidden" name="packageId" value={pkg.id} />
                     <SubmitButton
-                      pendingLabel={t("settings.main.divePackages.deleting")}
+                      pendingLabel={t("words.busy.deleting")}
                       className={menuRowClass("danger", { gutter: false })}
                     >
                       {t("settings.main.divePackages.delete")}
@@ -225,7 +225,7 @@ export async function DivePackagesSection({
           </Field>
           <FieldActions>
             <SubmitButton
-              pendingLabel={t("settings.main.divePackages.submitting")}
+              pendingLabel={t("words.busy.adding")}
               className={buttonClass()}
             >
               {t("settings.main.divePackages.submit")}

@@ -279,7 +279,7 @@ export default async function WorkOrderPage({
           <form action={deleteWorkOrderAction} className="print:hidden">
             <input type="hidden" name="workOrderId" value={workOrder.id} />
             <SubmitButton
-              pendingLabel={t("workOrders.detail.deleting")}
+              pendingLabel={t("words.busy.deleting")}
               className={buttonClass({ variant: "ghost" })}
             >
               {t("workOrders.detail.delete")}

@@ -9,8 +9,7 @@
     "note": "Note",
     "noteHint": "(optional)",
     "notePlaceholder": "Dock, classroom, boat 2",
-    "submit": "Add shift",
-    "saving": "Saving…"
+    "submit": "Add shift"
   },
   "away": {
     "from": "From",
@@ -21,7 +20,6 @@
     "remove": "Remove",
     "removing": "Removing…",
     "save": "Save",
-    "saving": "Saving…",
     "to": "To"
   },
   "credentials": {
@@ -44,8 +42,6 @@
     "markVerified": "Mark reviewed",
     "delete": "Delete",
     "deleteConfirm": "Delete {name}?",
-    "deleting": "Deleting…",
-    "saving": "Saving…",
     "add": "Add a credential",
     "noneOnFile": "No credentials on file",
     "missing": {
@@ -108,7 +104,6 @@
     "continuedUntil": "until {time} · from {day}",
     "crewClash": "Also rostered on {departure}",
     "crewing": "Crewing",
-    "deciding": "Saving…",
     "decline": "Decline",
     "empty": "Nothing scheduled this week",
     "needsCrew": "Needs crew",
@@ -143,7 +138,6 @@
     "rowLabel": "On public pages",
     "shownAs": "Shown as {name}",
     "notShown": "Not shown",
-    "save": "Save",
-    "saving": "Saving…"
+    "save": "Save"
   }
 }

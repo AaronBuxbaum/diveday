@@ -56,7 +56,7 @@ export async function MonthEndSection({
           label: t("reports.bookkeeper.label"),
           description: t("reports.bookkeeper.description"),
           save: t("reports.bookkeeper.save"),
-          saving: t("reports.bookkeeper.saving"),
+          saving: t("words.busy.saving"),
           saved: t("reports.bookkeeper.saved"),
           cleared: t("reports.bookkeeper.cleared"),
           invalid: t("reports.bookkeeper.invalid"),

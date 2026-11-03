@@ -352,7 +352,7 @@ export default async function EditCoursePage({
                 the section holding the unsaved work. Sticky, because Save used
                 to live only at the far end of a four-thousand-pixel form. */}
             <StickyFormActions className="mt-8">
-              <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("courses.edit.save")}
               </SubmitButton>
               <UnsavedChangesNote

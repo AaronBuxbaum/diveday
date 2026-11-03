@@ -123,7 +123,7 @@ export function preDepartureCheckView({
       snagsHeading: t("trips.preDepartureCheck.snagsHeading"),
       snagFixed: t("trips.preDepartureCheck.snagFixed"),
       snagStillThere: t("trips.preDepartureCheck.snagStillThere"),
-      snagSaving: t("trips.preDepartureCheck.snagSaving"),
+      snagSaving: t("words.busy.saving"),
       noteProblem: t("trips.preDepartureCheck.noteProblem"),
       noteItemLabel: t("trips.preDepartureCheck.noteItemLabel"),
       noteItemPlaceholder: t("trips.preDepartureCheck.noteItemPlaceholder"),

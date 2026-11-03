@@ -31,7 +31,6 @@
     "markSignedOnPaper": "Mark signed on paper",
     "medicalAttestationLabel": "I have this diver’s signed release on file, I have reviewed their medical questionnaire, and no answer needs physician sign-off.",
     "medicalAttestationMinorLabel": "I have this diver’s signed release on file, I have reviewed their medical questionnaire, no answer needs physician sign-off, and the parent or guardian answered the health questions.",
-    "recording": "Recording…",
     "recordPaperSignature": "Record paper signature",
     "guardianNameLabel": "Parent or guardian who signed",
     "guardianRelationshipLabel": "Relationship",
@@ -61,14 +60,11 @@
     "documentHint": "An image or PDF of the signed form.",
     "documentChoose": "Choose a file",
     "documentChooseAnother": "Choose a different file",
-    "recording": "Recording…",
     "confirm": "Record the answer",
     "useDiverForm": "Use the form the diver sent as the evaluation. Open it first and type the physician’s name from it.",
     "earlierLetterConfirm": "Tick if this letter is dated before the latest referral: the physician evaluated their current condition, not only the referral signed {date}."
   },
   "waiverSend": {
-    "sending": "Sending…",
-    "copied": "Copied",
     "copyLink": "Copy link",
     "copyFailed": "Try again",
     "reasonNoEmailOne": "No email on file",
@@ -89,7 +85,6 @@
     "alreadyDoneOther": "{names} already have a signed waiver, so nothing was reissued.",
     "errors": "Couldn’t send to {names}. Open the roster to check the booking.",
     "confirmResend": "Yes, resend",
-    "neverMind": "Never mind",
     "emptySelection": "Tick at least one diver, then send the waiver to the whole selection.",
     "unnamedDiver": "A diver"
   },
@@ -456,7 +451,6 @@
       "notOnFile": "Not on file",
       "rentalFit": "Rental fit",
       "nitroxRequestedSuffix": "· Nitrox requested",
-      "saving": "Saving…",
       "markBoarded": "Mark boarded",
       "notBoardedDone": "Not boarded",
       "markNotBoarded": "Mark not boarded",
@@ -627,7 +621,6 @@
     "typedAs": "typed as “{raw}”"
   },
   "sendHold": {
-    "sendingNow": "Sending…",
     "undo": "Undo"
   },
   "rescheduleHold": {

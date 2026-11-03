@@ -64,7 +64,7 @@ export function SeatEmergencyContact({
       </FieldGrid>
       <div>
         <SubmitButton
-          pendingLabel={t("trips.roster.savingContact")}
+          pendingLabel={t("words.busy.saving")}
           className={buttonClass({ variant: "secondary", size: "sm" })}
         >
           {t("trips.roster.saveEmergencyContact")}

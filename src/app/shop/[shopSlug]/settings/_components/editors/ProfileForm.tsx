@@ -227,7 +227,7 @@ export function ProfileForm({
         {/* Save alone: the storefront is a text link in the page header
             (visual review 2026-10-24, A30). */}
         <SubmitButton
-          pendingLabel={t("settings.main.profile.submitting")}
+          pendingLabel={t("words.busy.saving")}
           className={buttonClass()}
         >
           {t("settings.main.profile.submit")}

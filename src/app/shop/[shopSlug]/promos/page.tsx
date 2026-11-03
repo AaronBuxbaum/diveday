@@ -295,7 +295,7 @@ export default async function PromosPage({
                 <input type="hidden" name="promoId" value={promo.id} />
                 <input type="hidden" name="enable" value={String(promo.status !== "active")} />
                 <SubmitButton
-                  pendingLabel={t("promos.saving")}
+                  pendingLabel={t("words.busy.saving")}
                   className={buttonClass({ variant: "secondary", size: "sm" })}
                 >
                   {promo.status === "active" ? t("promos.switchOff") : t("promos.switchOn")}
@@ -319,7 +319,7 @@ export default async function PromosPage({
                 <form action={deletePromoAction}>
                   <input type="hidden" name="promoId" value={promo.id} />
                   <SubmitButton
-                    pendingLabel={t("promos.deleting")}
+                    pendingLabel={t("words.busy.deleting")}
                     className={buttonClass({ variant: "danger", size: "sm" })}
                   >
                     {t("promos.delete")}
@@ -534,7 +534,7 @@ export default async function PromosPage({
           }}
           copy={{
             copyLabel: t("promos.copyCode"),
-            copiedLabel: t("promos.copyCodeCopied"),
+            copiedLabel: t("words.did.copied"),
             failedLabel: t("promos.copyCodeFailed"),
           }}
         />

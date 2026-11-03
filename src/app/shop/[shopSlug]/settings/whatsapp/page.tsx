@@ -234,7 +234,7 @@ export default async function WhatsAppSettingsPage({
                 </Field>
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("whatsapp.test.submitting")}
+                    pendingLabel={t("words.busy.sending")}
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("whatsapp.test.submit")}

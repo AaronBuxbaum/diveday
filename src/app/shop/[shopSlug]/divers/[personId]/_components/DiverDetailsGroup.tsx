@@ -234,7 +234,7 @@ export function DiverDetailsGroup({
           {/* `busy`: it disables itself for its own save, which is "this is
               happening", not "you cannot do this". */}
           <SubmitButton
-            pendingLabel={t("divers.header.saving")}
+            pendingLabel={t("words.busy.saving")}
             className={buttonClass({ variant: "secondary", busy: true })}
           >
             {t("divers.header.saveDetails")}
