@@ -378,9 +378,8 @@ function advisable(req: BookingRequest, refusal: TripAdmissionRefusal): boolean 
   return (
     req.admissionGate === "advise" &&
     Boolean(req.declared?.level) &&
-    Boolean(refusal.requiredLevel) &&
-    refusal.missingSpecialties.length === 0 &&
-    !refusal.nitroxRequired
+    refusal.length > 0 &&
+    refusal.every((blocker) => blocker.code.startsWith("certification_"))
   );
 }
 

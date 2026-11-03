@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 
 /**
  * The seat action's answer when the seat transaction gave up waiting for a
@@ -125,12 +126,11 @@ describe("every refusal lands on the boat with its own words", () => {
   );
 
   it("carries the boat's certification refusal as a gate signed for this departure only", async () => {
-    const refusal = {
-      requiredLevel: "advanced_open_water",
-      heldLevel: "open_water",
-      missingSpecialties: ["deep"],
-      nitroxRequired: true,
-    } as never;
+    const refusal = [
+      levelShort("advanced_open_water", "open_water"),
+      noSpecialty("deep"),
+      NO_NITROX,
+    ] as never;
     vi.mocked(seatDiver).mockResolvedValue({
       ok: false,
       reason: "trip_prerequisite",

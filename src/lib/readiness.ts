@@ -1029,7 +1029,7 @@ export type StandingEvidence = {
  * `sale` for the level: clears when any row, the typed rung, or a course
  * finishing first reaches it. Otherwise `insufficient` naming the highest rung
  * stood on (a course is not a card, so it never counts toward `heldLevel`), or
- * `missing` when nothing names a rung at all.
+ * `missing` naming the rung asked for when nothing names a rung at all.
  */
 function saleLevelBlocker(
   evidence: StandingEvidence,
@@ -1051,7 +1051,7 @@ function saleLevelBlocker(
   }
   return heldLevel
     ? { code: "certification_insufficient", params: { requiredLevel: minimumLevel, heldLevel } }
-    : { code: "certification_missing" };
+    : { code: "certification_missing", params: { requiredLevel: minimumLevel } };
 }
 
 /** The standing against one level, at a threshold. Null when it clears. */

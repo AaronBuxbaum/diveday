@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
+
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { levelShort } from "@/test/admission-refusals";
 import { resolveTripNotice, TripNoticeBanner, type TripNoticeInput } from "./TripNoticeBanner";
 
 afterEach(cleanup);
@@ -26,12 +29,7 @@ function renderBanner(notice?: string, gate?: string | string[], tripId = TRIP) 
   );
 }
 
-const levelRefusal = {
-  requiredLevel: "advanced_open_water" as const,
-  heldLevel: "open_water" as const,
-  missingSpecialties: [],
-  nitroxRequired: false,
-};
+const levelRefusal: TripAdmissionRefusal = [levelShort("advanced_open_water", "open_water")];
 
 describe("TripNoticeBanner", () => {
   it("renders nothing without a notice", () => {
@@ -99,7 +97,7 @@ describe("TripNoticeBanner", () => {
     });
 
     it("falls back to the generic sentence on a hand-written gate", () => {
-      renderBanner("diver-trip-prerequisite", "~~deep~0");
+      renderBanner("diver-trip-prerequisite", "specialty_missing-deep");
       const banner = screen.getByRole("alert");
       expect(banner).toHaveTextContent(
         "That diver’s certifications on file don’t reach what this trip and its dive sites require",
@@ -119,7 +117,10 @@ describe("TripNoticeBanner", () => {
 
     it("renders rather than throwing on a repeated ?gate=", () => {
       expect(() =>
-        renderBanner("diver-trip-prerequisite", ["~~deep~0", "~~wreck~0"]),
+        renderBanner("diver-trip-prerequisite", [
+          "specialty_missing-deep",
+          "specialty_missing-wreck",
+        ]),
       ).not.toThrow();
       expect(screen.getByRole("alert")).not.toHaveTextContent("Deep certification");
     });

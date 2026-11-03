@@ -7,19 +7,18 @@ import type {
   TripRequirement,
   WaiverRecord,
 } from "@/db/schema";
+import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 import {
   type CertificationLevel,
   type CertRequirementSource,
   calculateReadiness,
+  type ReadinessBlocker,
   type SiteCertRequirement,
 } from "./readiness";
 import {
   decideTripAdmission,
-  decodeTripAdmissionRefusal,
-  encodeTripAdmissionRefusal,
   type SelfDeclaration,
   type TripAdmissionEvidence,
-  type TripAdmissionRefusal,
 } from "./trip-admission";
 import { effectiveWaiverForBooking, releaseLapseForBooking, waiverClockInstant } from "./waivers";
 
@@ -97,12 +96,7 @@ describe("decideTripAdmission — nothing is demanded", () => {
     });
     expect(decision).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: "rescue",
-        missingSpecialties: [],
-        nitroxRequired: false,
-        heldLevel: "open_water",
-      },
+      refusal: [levelShort("rescue", "open_water")],
     });
   });
 });
@@ -131,12 +125,7 @@ describe("decideTripAdmission — what the booker just typed", () => {
       }),
     ).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: "advanced_open_water",
-        missingSpecialties: [],
-        nitroxRequired: false,
-        heldLevel: "open_water",
-      },
+      refusal: [levelShort("advanced_open_water", "open_water")],
     });
   });
 
@@ -212,12 +201,7 @@ describe("decideTripAdmission — absence of evidence is never a refusal (H-2026
       }),
     ).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: "advanced_open_water",
-        missingSpecialties: [],
-        nitroxRequired: false,
-        heldLevel: "open_water",
-      },
+      refusal: [levelShort("advanced_open_water", "open_water")],
     });
   });
 
@@ -276,12 +260,7 @@ describe("decideTripAdmission — a course that gets them there first", () => {
       }),
     ).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: "rescue",
-        missingSpecialties: [],
-        nitroxRequired: false,
-        heldLevel: "open_water",
-      },
+      refusal: [levelShort("rescue", "open_water")],
     });
   });
 });
@@ -318,12 +297,7 @@ describe("decideTripAdmission — the ladder", () => {
       }),
     ).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: "advanced_open_water",
-        missingSpecialties: [],
-        nitroxRequired: false,
-        heldLevel: "open_water",
-      },
+      refusal: [levelShort("advanced_open_water", "open_water")],
     });
   });
 
@@ -358,12 +332,7 @@ describe("decideTripAdmission — the ladder", () => {
       }),
     ).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: "divemaster",
-        missingSpecialties: [],
-        nitroxRequired: false,
-        heldLevel: "advanced_open_water",
-      },
+      refusal: [levelShort("divemaster", "advanced_open_water")],
     });
   });
 });
@@ -378,14 +347,7 @@ describe("decideTripAdmission — specialties and nitrox", () => {
       }),
     ).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: null,
-        missingSpecialties: ["deep"],
-        nitroxRequired: false,
-        // Not a ladder refusal, so no rung is named — the diver's level is
-        // not what is wrong.
-        heldLevel: null,
-      },
+      refusal: [noSpecialty("deep")],
     });
   });
 
@@ -420,7 +382,7 @@ describe("decideTripAdmission — specialties and nitrox", () => {
       }),
     ).toMatchObject({
       admitted: false,
-      refusal: { missingSpecialties: ["deep", "night"] },
+      refusal: [noSpecialty("deep"), noSpecialty("night")],
     });
   });
 
@@ -433,12 +395,7 @@ describe("decideTripAdmission — specialties and nitrox", () => {
       }),
     ).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: null,
-        missingSpecialties: [],
-        nitroxRequired: true,
-        heldLevel: null,
-      },
+      refusal: [NO_NITROX],
     });
   });
 
@@ -468,12 +425,7 @@ describe("decideTripAdmission — specialties and nitrox", () => {
       }),
     ).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: "advanced_open_water",
-        missingSpecialties: ["deep"],
-        nitroxRequired: true,
-        heldLevel: "open_water",
-      },
+      refusal: [levelShort("advanced_open_water", "open_water"), noSpecialty("deep"), NO_NITROX],
     });
   });
 });
@@ -504,7 +456,7 @@ describe("decideTripAdmission — a trip that visits several sites", () => {
       }),
     ).toMatchObject({
       admitted: false,
-      refusal: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+      refusal: [levelShort("advanced_open_water", "open_water")],
     });
   });
 
@@ -522,12 +474,7 @@ describe("decideTripAdmission — a trip that visits several sites", () => {
       }),
     ).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: null,
-        missingSpecialties: ["night"],
-        nitroxRequired: false,
-        heldLevel: null,
-      },
+      refusal: [noSpecialty("night")],
     });
   });
 
@@ -546,12 +493,11 @@ describe("decideTripAdmission — a trip that visits several sites", () => {
       }),
     ).toEqual({
       admitted: false,
-      refusal: {
-        requiredLevel: "rescue",
-        missingSpecialties: ["wreck", "night"],
-        nitroxRequired: false,
-        heldLevel: "advanced_open_water",
-      },
+      refusal: [
+        levelShort("rescue", "advanced_open_water"),
+        noSpecialty("wreck"),
+        noSpecialty("night"),
+      ],
     });
   });
 
@@ -612,7 +558,7 @@ describe("decideTripAdmission — a course session is admitted on the course's o
       }),
     ).toMatchObject({
       admitted: false,
-      refusal: { requiredLevel: "advanced_open_water", missingSpecialties: ["deep"] },
+      refusal: [levelShort("advanced_open_water", "open_water"), noSpecialty("deep")],
     });
   });
 
@@ -628,80 +574,19 @@ describe("decideTripAdmission — a course session is admitted on the course's o
   });
 });
 
-describe("the refusal survives a redirect", () => {
-  const cases: TripAdmissionRefusal[] = [
-    {
-      requiredLevel: "advanced_open_water",
-      heldLevel: "open_water",
-      missingSpecialties: [],
-      nitroxRequired: false,
-    },
-    { requiredLevel: null, heldLevel: null, missingSpecialties: ["deep"], nitroxRequired: false },
-    { requiredLevel: null, heldLevel: null, missingSpecialties: [], nitroxRequired: true },
-    {
-      requiredLevel: "rescue",
-      heldLevel: "instructor",
-      missingSpecialties: ["wreck", "night", "drysuit"],
-      nitroxRequired: true,
-    },
-  ];
+/** Two blockers about the same demanded thing: the level, one specialty, or nitrox. */
+function sameDemand(a: ReadinessBlocker, b: ReadinessBlocker): boolean {
+  const item = (blocker: ReadinessBlocker) =>
+    blocker.code.startsWith("certification_")
+      ? "level"
+      : blocker.code.startsWith("specialty_")
+        ? `specialty:${blocker.params?.specialty}`
+        : blocker.code.startsWith("nitrox_")
+          ? "nitrox"
+          : blocker.code;
+  return item(a) === item(b);
+}
 
-  it.each(cases)("round-trips %o", (refusal) => {
-    expect(decodeTripAdmissionRefusal(encodeTripAdmissionRefusal(refusal))).toEqual(refusal);
-  });
-
-  it("stays URL-safe — nothing it writes needs escaping", () => {
-    for (const refusal of cases) {
-      const encoded = encodeTripAdmissionRefusal(refusal);
-      expect(encodeURIComponent(encoded)).toBe(encoded);
-    }
-  });
-
-  const hostile: Array<[string | undefined, string]> = [
-    ["", "empty"],
-    [undefined, "absent"],
-    ["advanced_open_water", "truncated"],
-    ["advanced_open_water~open_water~deep~1~extra", "over-long"],
-    ["instructor~open_water~scooter~0", "an unknown specialty"],
-    ["cave~open_water~~0", "an unknown level"],
-    ["advanced_open_water~open_water~~2", "a bad nitrox flag"],
-    ["~~~0", "a refusal that demands nothing"],
-    ["constructor~~~1", "a prototype-walking level"],
-  ];
-
-  it.each(hostile)("refuses %s (%s) rather than half-decoding it", (value) => {
-    expect(decodeTripAdmissionRefusal(value)).toBeNull();
-  });
-
-  /**
-   * `?gate=a&gate=b` is a shape Next really delivers, and an array is truthy —
-   * so `if (!value)` passed it through to `value.split()`, a `TypeError`, and
-   * the error boundary. A 500 on a staff page, from a repeated query param.
-   * The same class `src/proxy.ts` documents at length for `embed`; every
-   * sibling param on these routes was already hardened and `gate` was not.
-   */
-  const repeated: Array<[string[], string]> = [
-    [["advanced_open_water~open_water~~0", "~~deep~0"], "two well-formed values"],
-    [["advanced_open_water~open_water~~0"], "one well-formed value in an array"],
-    [[], "an empty array"],
-    [["", ""], "two empty values"],
-  ];
-
-  it.each(repeated)("refuses %o (%s) instead of throwing on it", (value) => {
-    expect(() => decodeTripAdmissionRefusal(value)).not.toThrow();
-    expect(decodeTripAdmissionRefusal(value)).toBeNull();
-  });
-});
-
-/**
- * **Admission never refuses anyone readiness would clear.**
- *
- * The whole design rests on admission asking a strictly narrower question than
- * readiness — every gate it applies, readiness applies at least as strictly.
- * The invariant held on the day it shipped and nothing asserted it, so a later
- * tightening could violate it silently and produce the worst artifact in the
- * product: a diver refused a seat they would have been cleared to board on.
- */
 describe("admission is monotone with respect to readiness", () => {
   const levels: Array<CertificationLevel | null> = [
     null,
@@ -843,6 +728,15 @@ describe("admission is monotone with respect to readiness", () => {
                 readiness.status,
                 `admission refused (${level ?? "no level"} / ${specialties.join("+") || "no specialty"} / nitrox ${requiresNitrox}) for a diver with ${name} who ${claim}, but readiness cleared them`,
               ).toBe("blocked");
+              // Stronger than "blocked": every item the sale refused on is an
+              // item readiness holds the diver on too, so the refusal names
+              // nothing the boat would let go.
+              for (const refused of admission.refusal) {
+                expect(
+                  readiness.blockers.some((held) => sameDemand(held, refused)),
+                  `admission refused on ${refused.code} ${JSON.stringify(refused.params ?? {})} for a diver with ${name} who ${claim}, but readiness raised nothing on that item`,
+                ).toBe(true);
+              }
             }
           }
         }

@@ -1369,7 +1369,6 @@
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
-          "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
       },
@@ -1384,12 +1383,6 @@
         "files": {
           "src/db/reviews.test.ts": "1004 -> 1034",
           "src/db/work-order-follow-up.test.ts": "0 -> 1213"
-        }
-      },
-      {
-        "why": "merge of the ready-for-human batch's worker branches (#2611 tests from two sides)",
-        "files": {
-          "src/lib/trip-admission.test.ts": "984 -> 992"
         }
       },
       {
@@ -1440,7 +1433,6 @@
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
-          "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
       },
@@ -1485,7 +1477,6 @@
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
-          "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
       },
@@ -1530,7 +1521,6 @@
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
-          "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
       },
@@ -1608,7 +1598,7 @@
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
     "src/db/anonymize.test.ts": 1629,
-    "src/db/bookings.test.ts": 3539,
+    "src/db/bookings.test.ts": 3529,
     "src/db/buddy-teams.test.ts": 975,
     "src/db/check-in.test.ts": 1212,
     "src/db/checkouts.test.ts": 2966,
@@ -1658,7 +1648,6 @@
     "src/lib/offline-manifests.test.ts": 2179,
     "src/lib/readiness.test.ts": 1575,
     "src/lib/staffing-week.test.ts": 1125,
-    "src/lib/trip-admission.test.ts": 992,
     "src/lib/waivers.test.ts": 1402,
     "src/proxy.test.ts": 1171
   },

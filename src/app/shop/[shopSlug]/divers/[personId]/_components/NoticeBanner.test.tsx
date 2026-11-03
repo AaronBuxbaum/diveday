@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
+
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { resolveDiverNotice } from "@/lib/diver-notices";
+import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { noSpecialty } from "@/test/admission-refusals";
 import { DiverFormStatus, NoticeBanner } from "./NoticeBanner";
 
 afterEach(cleanup);
@@ -113,12 +116,7 @@ describe("NoticeBanner", () => {
    * or to nothing at all.
    */
   describe("trip-prerequisite's structured detail", () => {
-    const deepCardRefusal = {
-      requiredLevel: null,
-      heldLevel: null,
-      missingSpecialties: ["deep" as const],
-      nitroxRequired: false,
-    };
+    const deepCardRefusal: TripAdmissionRefusal = [noSpecialty("deep")];
 
     it("says which card is missing when the gate is signed for this diver", () => {
       renderBanner(
@@ -133,7 +131,7 @@ describe("NoticeBanner", () => {
     it("falls back to the generic sentence on a hand-written gate", () => {
       // The exact forgery from the review: well-formed to the codec, signed by
       // nobody.
-      renderBanner("trip-prerequisite", "~~deep~0");
+      renderBanner("trip-prerequisite", "specialty_missing-deep");
       const banner = screen.getByRole("alert");
       expect(banner).toHaveTextContent(
         "This diver’s certifications on file don’t reach what that trip and its dive sites require",
@@ -157,7 +155,9 @@ describe("NoticeBanner", () => {
     });
 
     it("renders rather than throwing on a repeated ?gate=", () => {
-      expect(() => renderBanner("trip-prerequisite", ["~~deep~0", "~~wreck~0"])).not.toThrow();
+      expect(() =>
+        renderBanner("trip-prerequisite", ["specialty_missing-deep", "specialty_missing-wreck"]),
+      ).not.toThrow();
       expect(screen.getByRole("alert")).not.toHaveTextContent("Deep certification");
     });
 

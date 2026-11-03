@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
+import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
@@ -59,12 +60,7 @@ describe("the seeded cert-gate departures", () => {
       // Nothing but the rung: no specialty, no nitrox, and the level the diver
       // actually holds — which is what lets the staff banner say "add a card"
       // only when there is one to add.
-      refusal: {
-        requiredLevel: "advanced_open_water",
-        missingSpecialties: [],
-        nitroxRequired: false,
-        heldLevel: "open_water",
-      },
+      refusal: [levelShort("advanced_open_water", "open_water")],
     });
   });
 
@@ -85,12 +81,7 @@ describe("the seeded cert-gate departures", () => {
     ).toEqual({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: {
-        requiredLevel: null,
-        missingSpecialties: ["deep"],
-        nitroxRequired: false,
-        heldLevel: null,
-      },
+      refusal: [noSpecialty("deep")],
     });
   });
 
@@ -123,12 +114,7 @@ describe("the seeded cert-gate departures", () => {
     ).toEqual({
       ok: false,
       reason: "trip_prerequisite",
-      refusal: {
-        requiredLevel: null,
-        missingSpecialties: [],
-        nitroxRequired: true,
-        heldLevel: null,
-      },
+      refusal: [NO_NITROX],
     });
   });
 

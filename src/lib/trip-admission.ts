@@ -9,6 +9,7 @@ import { isDiver, type ParticipantType } from "./participant-types";
 import {
   type CertificationLevel,
   levelStanding,
+  type ReadinessBlocker,
   type StandingEvidence,
   standing,
 } from "./readiness";
@@ -111,33 +112,25 @@ export type TripAdmissionEvidence = {
 };
 
 /**
- * Why the sale was refused, as data rather than a sentence (`src/lib` returns
- * codes — docs ADR 20260731-domain-layer-copy-leaks). Between them these four
- * fields say *which* requirement failed and *what the diver holds*, which is
- * what a staffer needs to act: capture the missing card, or put the diver on a
- * trip they can actually dive.
+ * Why the sale was refused: **the ladder's own blockers at the sale threshold**
+ * (`standing(…, "sale")` in src/lib/readiness.ts), never a second shape. Codes,
+ * not sentences (ADR 20260731-domain-layer-copy-leaks), and only four of them
+ * can appear, in the ladder's order (level, then each specialty, then nitrox):
+ *
+ * - `certification_insufficient` with `requiredLevel` and `heldLevel`: the
+ *   highest rung this decision saw, whatever its status, **including the claim
+ *   this submitter just typed**. On a refusal nothing is persisted, so a
+ *   declared rung here is in no record at all; the staff copy that words it as
+ *   "on file" is only reachable from staff doors, which pass no declaration.
+ * - `certification_missing` with `requiredLevel`: nothing names a rung at all.
+ * - `specialty_missing` with `specialty`, once per specialty with no card of
+ *   that specialty in any state.
+ * - `nitrox_missing`: no enriched-air card in any state, and no tick.
+ *
+ * Each is a blocker readiness raises too, on the same demand item, because a
+ * `verified` clear is also a `sale` clear (`readiness-standing.test.ts`).
  */
-export type TripAdmissionRefusal = {
-  /** Demanded by the trip or one of its sites, and above everything on file. Null when the level was met. */
-  requiredLevel: CertificationLevel | null;
-  /** Specialties demanded with no card of that specialty on file at all. */
-  missingSpecialties: DiveSpecialty[];
-  /** Nitrox demanded with no enriched-air card on file at all. */
-  nitroxRequired: boolean;
-  /**
-   * The highest rung this decision saw, whatever its status: the record, **or
-   * the claim this submitter just typed**, whichever is higher.
-   *
-   * On a refusal nothing is persisted, so a declared rung here is in no record
-   * at all — a surface that words this as "on file" would be wrong. The one that
-   * does (`staff/shared.json`'s level refusal) is only reachable from staff
-   * doors, and no staff door passes a declaration today; if one ever does, that
-   * copy needs a variant before it. The honest complement of "nothing on file
-   * reaches {requiredLevel}". Null only when the refusal is about a specialty
-   * or nitrox card rather than the ladder.
-   */
-  heldLevel: CertificationLevel | null;
-};
+export type TripAdmissionRefusal = ReadinessBlocker[];
 
 export type TripAdmission = { admitted: true } | { admitted: false; refusal: TripAdmissionRefusal };
 
@@ -327,46 +320,26 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
     levelsInTraining: evidence.levelsInTraining,
   };
   const blockers = standing(effective, sale, "sale");
-  const levelBlocker = blockers.find((blocker) => blocker.code.startsWith("certification_"));
   // A course seat a staff mark could make this a training dive for, with the
-  // course's instructor aboard, is a level readiness would clear on (#2731).
+  // course's instructor aboard, is a level readiness would clear on (#2731):
+  // the level blocker goes, and a specialty or nitrox one still stands.
   const asked = effective.minimumCertificationLevel;
-  const requiredLevel =
-    asked &&
-    levelBlocker &&
-    !(evidence.trainingDives ?? []).some((course) => {
-      const lowered = trainingDiveRequiredLevel(asked, course);
-      return lowered === null || levelStanding(lowered, sale, "sale") === null;
-    })
-      ? asked
-      : null;
-
-  const missingSpecialties = blockers.flatMap((blocker) =>
-    blocker.code === "specialty_missing" && blocker.params?.specialty
-      ? [blocker.params.specialty]
-      : [],
-  );
-  const nitroxRequired = blockers.some((blocker) => blocker.code === "nitrox_missing");
-
-  if (!requiredLevel && missingSpecialties.length === 0 && !nitroxRequired) return ADMITTED;
-  return {
-    admitted: false,
-    refusal: {
-      requiredLevel,
-      missingSpecialties,
-      nitroxRequired,
-      // Only meaningful alongside a level refusal; a diver refused purely for a
-      // missing Deep card is not being told their ladder rung is the problem.
-      heldLevel: requiredLevel ? (levelBlocker?.params?.heldLevel ?? null) : null,
-    },
-  };
+  const markWouldClear = (evidence.trainingDives ?? []).some((course) => {
+    if (!asked) return false;
+    const lowered = trainingDiveRequiredLevel(asked, course);
+    return lowered === null || levelStanding(lowered, sale, "sale") === null;
+  });
+  const refusal = markWouldClear
+    ? blockers.filter((blocker) => !blocker.code.startsWith("certification_"))
+    : blockers;
+  return refusal.length === 0 ? ADMITTED : { admitted: false, refusal };
 }
 
 /**
- * Every code either half of the refusal can hold, as a runtime set. Written as
- * an exhaustive `Record` rather than an array so adding a rung or a specialty
- * is a type error here — a code the decoder silently rejects would turn a
- * specific refusal notice into a blank one at the worst possible moment.
+ * Every value a refusal's params can hold, as a runtime set. Written as an
+ * exhaustive `Record` rather than an array so adding a rung or a specialty is a
+ * type error here: a code the decoder silently rejects would turn a specific
+ * refusal notice into a blank one at the worst possible moment.
  */
 const LEVEL_CODES: Record<CertificationLevel, true> = {
   open_water: true,
@@ -384,26 +357,44 @@ const SPECIALTY_CODES: Record<DiveSpecialty, true> = {
   cavern: true,
 };
 
-/** Field separator in the encoded value — unreserved in a URI, and in no code. */
-const FIELD = "~";
-/** Separator inside the specialty list, for the same reason. */
-const ITEM = "-";
+/**
+ * The four blockers the sale threshold can raise, each with the params it
+ * carries in order and its place on the ladder. Anything else on the wire was
+ * not written by `encodeTripAdmissionRefusal`.
+ */
+const REFUSAL_CODES = {
+  certification_insufficient: { rank: 0, params: ["requiredLevel", "heldLevel"] },
+  certification_missing: { rank: 0, params: ["requiredLevel"] },
+  specialty_missing: { rank: 1, params: ["specialty"] },
+  nitrox_missing: { rank: 2, params: [] },
+} as const satisfies Partial<
+  Record<
+    ReadinessBlocker["code"],
+    { rank: number; params: readonly ("requiredLevel" | "heldLevel" | "specialty")[] }
+  >
+>;
+
+type RefusalCode = keyof typeof REFUSAL_CODES;
+
+/** Between blockers: unreserved in a URI, and in no code or param. */
+const BLOCKER = "~";
+/** Between a blocker's code and its params, for the same reason. */
+const PARAM = "-";
 
 /**
- * The refusal, flattened into **one** query-param value.
+ * The refusal, flattened into **one** query-param value: each blocker as its
+ * code and params, in ladder order.
  *
  * A staff seating is a server action that redirects back to the door that
  * submitted it, so the only channel a refusal has to the page that must explain
- * it is the URL. Without this the structured detail — the ADR's whole
- * justification for carrying `{requiredLevel, missingSpecialties,
- * nitroxRequired, heldLevel}` at all — died in `seatDiver` and every surface
- * rendered one static sentence that could not tell "your Deep card isn't on
- * file" from "you are not an Advanced diver".
+ * it is the URL. Without this the structured detail died in `seatDiver` and
+ * every surface rendered one static sentence that could not tell "your Deep
+ * card isn't on file" from "you are not an Advanced diver".
  *
- * Codes, never words: this is the same domain vocabulary readiness puts on the
- * wire, and `src/i18n` picks the sentence. Staff-only by construction — every
- * consumer sits behind `/shop/**` — and it says nothing the staffer reading it
- * cannot already open the diver's record and see.
+ * Codes, never words: these are readiness's own blocker codes, and `src/i18n`
+ * picks the sentence. Staff-only by construction (every consumer sits behind
+ * `/shop/**`), and it says nothing the staffer reading it cannot already open
+ * the diver's record and see.
  *
  * **This is the codec, not the credential.** Nothing here proves the refusal
  * ever happened, so no surface reads a `?gate=` through this function directly:
@@ -411,55 +402,70 @@ const ITEM = "-";
  * (or the diver) whose page will render it, and that is what the banners call.
  */
 export function encodeTripAdmissionRefusal(refusal: TripAdmissionRefusal): string {
-  return [
-    refusal.requiredLevel ?? "",
-    refusal.heldLevel ?? "",
-    refusal.missingSpecialties.join(ITEM),
-    refusal.nitroxRequired ? "1" : "0",
-  ].join(FIELD);
+  return refusal
+    .map((blocker) => {
+      const shape = REFUSAL_CODES[blocker.code as RefusalCode];
+      const params = shape ? shape.params.map((name) => blocker.params?.[name] ?? "") : [];
+      return [blocker.code, ...params].join(PARAM);
+    })
+    .join(BLOCKER);
+}
+
+function decodeBlocker(item: string): ReadinessBlocker | null {
+  const [code, ...values] = item.split(PARAM);
+  if (!code || !Object.hasOwn(REFUSAL_CODES, code)) return null;
+  const shape = REFUSAL_CODES[code as RefusalCode];
+  if (values.length !== shape.params.length) return null;
+  const params: NonNullable<ReadinessBlocker["params"]> = {};
+  for (const [index, name] of shape.params.entries()) {
+    const value = values[index] ?? "";
+    if (name === "specialty") {
+      if (!Object.hasOwn(SPECIALTY_CODES, value)) return null;
+      params.specialty = value as DiveSpecialty;
+    } else {
+      if (!Object.hasOwn(LEVEL_CODES, value)) return null;
+      params[name] = value as CertificationLevel;
+    }
+  }
+  return shape.params.length > 0
+    ? { code: code as RefusalCode, params }
+    : { code: code as RefusalCode };
 }
 
 /**
  * The inverse, over an attacker-supplied query string: anything that is not
- * exactly what `encodeTripAdmissionRefusal` writes returns null, and the caller
- * falls back to the generic notice. Unknown codes are rejected rather than
- * dropped, because a half-decoded refusal would state a requirement the trip
- * does not have.
+ * exactly what `encodeTripAdmissionRefusal` writes for a refusal
+ * `decideTripAdmission` could return is null, and the caller falls back to the
+ * generic notice. Unknown codes are rejected rather than dropped, because a
+ * half-decoded refusal would state a requirement the trip does not have; so is
+ * a list out of ladder order, a second level blocker or a repeated specialty.
  *
  * **`string[]` is a shape Next really delivers**, not a defensive flourish:
- * `?gate=a&gate=b` arrives as an array, and the old `if (!value)` let one
- * through (an array is truthy) straight into `value.split()` — a `TypeError`
- * and a 500 on a staff page, from a query param. Same class `src/proxy.ts`
- * documents for `embed`. Hardened here rather than at each reader so every
- * call site inherits it.
+ * `?gate=a&gate=b` arrives as an array, and an `if (!value)` lets one through
+ * (an array is truthy) straight into `value.split()`: a `TypeError` and a 500
+ * on a staff page, from a query param. Same class `src/proxy.ts` documents for
+ * `embed`. Hardened here rather than at each reader so every call site
+ * inherits it.
  */
 export function decodeTripAdmissionRefusal(
   value: string | readonly string[] | undefined | null,
 ): TripAdmissionRefusal | null {
   if (typeof value !== "string" || !value) return null;
-  const parts = value.split(FIELD);
-  if (parts.length !== 4) return null;
-  const [required, held, specialties, nitrox] = parts as [string, string, string, string];
-  if (required && !Object.hasOwn(LEVEL_CODES, required)) return null;
-  if (held && !Object.hasOwn(LEVEL_CODES, held)) return null;
-  if (nitrox !== "0" && nitrox !== "1") return null;
-  const missingSpecialties = specialties ? specialties.split(ITEM) : [];
-  if (missingSpecialties.some((specialty) => !Object.hasOwn(SPECIALTY_CODES, specialty))) {
-    return null;
-  }
-  const refusal: TripAdmissionRefusal = {
-    requiredLevel: (required || null) as CertificationLevel | null,
-    heldLevel: (held || null) as CertificationLevel | null,
-    missingSpecialties: missingSpecialties as DiveSpecialty[],
-    nitroxRequired: nitrox === "1",
-  };
-  // A refusal that demands nothing is not a refusal this function produced.
-  if (
-    !refusal.requiredLevel &&
-    refusal.missingSpecialties.length === 0 &&
-    !refusal.nitroxRequired
-  ) {
-    return null;
+  const refusal: ReadinessBlocker[] = [];
+  let lastRank = -1;
+  const specialties = new Set<string>();
+  for (const item of value.split(BLOCKER)) {
+    const blocker = decodeBlocker(item);
+    if (!blocker) return null;
+    const rank = REFUSAL_CODES[blocker.code as RefusalCode].rank;
+    // Level, then specialties, then nitrox; only specialties repeat, each once.
+    if (rank < lastRank || (rank === lastRank && rank !== 1)) return null;
+    if (blocker.params?.specialty) {
+      if (specialties.has(blocker.params.specialty)) return null;
+      specialties.add(blocker.params.specialty);
+    }
+    lastRank = rank;
+    refusal.push(blocker);
   }
   return refusal;
 }
