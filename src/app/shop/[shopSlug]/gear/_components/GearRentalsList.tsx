@@ -128,7 +128,7 @@ function RentalRow({
   // own ticket, which any of its reservation ids opens.
   const ticketHref = rental.bookingId
     ? trip
-      ? shopPath(shopSlug, "trips", trip.id, "prep", "ticket", rental.bookingId)
+      ? `${shopPath(shopSlug, "trips", trip.id, "prep")}?diver=${rental.bookingId}`
       : null
     : first
       ? shopPath(shopSlug, "gear", "rentals", first.reservationId)

@@ -86,7 +86,7 @@ describe("GearRentalsList", () => {
     expect(screen.getByText("BCD · M")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Rental ticket for Ana Diaz" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/trip-wreck/prep/ticket/booking-ana",
+      "/shop/blue-mantis/trips/trip-wreck/prep?diver=booking-ana",
     );
     // One state word for the set, not one per unit that agrees with it.
     expect(screen.getAllByText("Reserved")).toHaveLength(1);

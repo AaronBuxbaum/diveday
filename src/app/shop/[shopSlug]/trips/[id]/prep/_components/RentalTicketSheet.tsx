@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getRentalTicket } from "@/db/trip-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
@@ -11,19 +10,12 @@ import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { PACKET_PAPER } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
-import { uuidParam } from "@/lib/uuid";
-import { RentalSlip } from "../../../../../gear/_components/RentalSlip";
-import { SheetDocument } from "../../../../../print/_components/SheetDocument";
-import { sheetPrinted } from "../../../../../print/_components/ShopSheet";
-
-export const instant = true;
-
-export const metadata: Metadata = {
-  title: "Rental ticket — DiveDay",
-};
+import { RentalSlip } from "../../../../gear/_components/RentalSlip";
+import { SheetDocument } from "../../../../print/_components/SheetDocument";
+import { sheetPrinted } from "../../../../print/_components/ShopSheet";
 
 /**
- * One diver's rental slip: what they have and when it is due back, for the
+ * One diver's rental slip, the packing list printed for one booking (`?diver=<bookingId>`): what they have and when it is due back, for the
  * counter to print and hand over (ADR 20260815-minimal-gear-register), as one
  * sheet of the shop's paper (`RentalSlip`, issue #2745).
  *
@@ -34,18 +26,15 @@ export const metadata: Metadata = {
  * like the rest of the register (H-20260724-initial-gear-policy-sizing, amended on H-20260724-staff-role-reach's row 2026-08-20):
  * handing gear over is day work.
  */
-export default async function RentalTicketPage({
-  params,
+export async function RentalTicketSheet({
+  shopSlug,
+  tripId,
+  bookingId,
 }: {
-  params: Promise<{ shopSlug: string; id: string; bookingId: string }>;
+  shopSlug: string;
+  tripId: string;
+  bookingId: string;
 }) {
-  const { shopSlug, id: rawTripId, bookingId: rawBookingId } = await params;
-  // Both uuids are narrowed before any read: an unparseable literal raises in
-  // Postgres, so a mistyped URL would be a 500 rather than this page's 404.
-  const tripId = uuidParam(rawTripId);
-  const bookingId = uuidParam(rawBookingId);
-  if (!tripId || !bookingId) notFound();
-
   const { db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);

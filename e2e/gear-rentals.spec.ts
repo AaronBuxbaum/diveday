@@ -30,7 +30,7 @@ test.describe("staff", () => {
     await expect(firstSet.getByRole("link", { name: "Reg #1" })).toBeVisible();
 
     await firstSet.getByRole("link", { name: /^Rental ticket for / }).click();
-    await page.waitForURL(/\/prep\/ticket\/[^/]+$/);
+    await page.waitForURL(/\/prep\?diver=[^&]+$/);
     await expect(page.getByRole("heading", { name: "What you have" })).toBeVisible();
     await expect(page.getByText("BCD #2")).toBeVisible();
 
