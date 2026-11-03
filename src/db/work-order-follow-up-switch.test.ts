@@ -10,7 +10,7 @@ import { sendDueServiceReminders, sendWorkOrderReadyNotice } from "./work-order-
 import {
   addCustomerGearItem,
   createWorkOrder,
-  saveWorkOrder,
+  recordWorkOrder,
   setWorkOrderStatus,
 } from "./work-orders";
 
@@ -62,7 +62,7 @@ async function readyTicketForAPieceDueSoon() {
     reportedProblem: "Free-flows at depth",
   });
   if (!ticket.ok) throw new Error(`ticket refused: ${ticket.reason}`);
-  await saveWorkOrder(db, {
+  await recordWorkOrder(db, {
     shopId: shop.id,
     workOrderId: ticket.workOrder.id,
     reportedProblem: "Free-flows at depth",

@@ -20,12 +20,14 @@ const refusedBefore = {
   guardian: null,
 } as unknown as TripManifest["divers"][number]["medicalWaiver"];
 const deep = {
-  status: "exceeds",
-  siteDepth: 30,
-  limitDepth: 18,
-  unit: "meters",
-  basis: "certification",
-  level: null,
+  code: "depth_exceeds_ceiling",
+  params: {
+    siteDepth: 30,
+    limitDepth: 18,
+    unit: "meters",
+    basis: "certification",
+    level: null,
+  },
 } as const;
 
 describe("diverRowState's one capsule", () => {
@@ -75,8 +77,8 @@ describe("diverRowState's one capsule", () => {
     const at = (overrides: Partial<TripManifest["divers"][number]>) =>
       diverRowState(diver(overrides), "after_dive_1", false, "America/New_York").capsuleKind;
     expect(at({ medicalWaiver: refusedBefore, age: 13, minor: true })).toBe("medical");
-    expect(at({ age: 13, minor: true, depthAdvisory: deep })).toBe("minor");
-    expect(at({ depthAdvisory: deep, birthday: { status: "today" } })).toBe("depth");
+    expect(at({ age: 13, minor: true, advisories: [deep] })).toBe("minor");
+    expect(at({ advisories: [deep], birthday: { status: "today" } })).toBe("depth");
     expect(at({ birthday: { status: "today" } })).toBe("birthday");
   });
 

@@ -4,7 +4,7 @@ import { rentalFitCompleteness } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { authorizesNitroxFill } from "./nitrox";
 import { countOpenOrdersBySeat } from "./orders";
-import { bookings, nitroxCertifications, people, rentalFitProfiles, shops } from "./schema";
+import { bookings, cards, people, rentalFitProfiles, shops } from "./schema";
 
 /**
  * **One reader of a boat's work** (third review, item 4). The jobs a
@@ -136,11 +136,12 @@ async function readSeatWork(
       contactPhone: people.emergencyContactPhone,
       nitroxCard: sql<boolean>`exists (${db
         .select({ one: sql`1` })
-        .from(nitroxCertifications)
+        .from(cards)
         .where(
           and(
-            eq(nitroxCertifications.personId, bookings.personId),
-            eq(nitroxCertifications.shopId, bookings.shopId),
+            eq(cards.personId, bookings.personId),
+            eq(cards.kind, "nitrox"),
+            eq(cards.shopId, bookings.shopId),
             // Shared fill-gate predicate: an imported-but-unconfirmed card does
             // not authorize a fill (ADR 20260724-import-verified-cards).
             authorizesNitroxFill,

@@ -4,7 +4,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/db/weekly-digest", () => ({ sendDueWeeklyDigests: vi.fn() }));
+vi.mock("@/features/weekly-digest", () => ({ sendDueWeeklyDigests: vi.fn() }));
 // The routes report only where a DSN is configured; the suite runs without one.
 vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
 vi.mock("@sentry/nextjs", () => ({
@@ -13,7 +13,7 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 const { getDb } = await import("@/db/client");
-const { sendDueWeeklyDigests } = await import("@/db/weekly-digest");
+const { sendDueWeeklyDigests } = await import("@/features/weekly-digest");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 

@@ -9,7 +9,7 @@ import {
   reviewCertification,
   upsertTripRequirements,
 } from "./readiness";
-import { type CertificationAgency, certificationAgency, certifications } from "./schema";
+import { type CertificationAgency, cards, certificationAgency } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -87,9 +87,9 @@ describe("certification agencies (DOM-L1)", () => {
     if (!card) throw new Error("expected certification to insert");
 
     const [stored] = await db
-      .select({ agency: certifications.agency })
-      .from(certifications)
-      .where(and(eq(certifications.id, card.id), eq(certifications.shopId, shop.id)));
+      .select({ agency: cards.agency })
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id), eq(cards.shopId, shop.id)));
     // Round-tripped through the column, so this fails if the pg enum did not
     // actually gain the value rather than only the TypeScript union.
     expect(stored?.agency).toBe(agency);

@@ -251,6 +251,12 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
     "`queueMediaDeletion` (./media-deletions) — every blob the erasure retires goes through the existing durable ledger rather than a second mechanism invented here (ADR 20260723-media-validation-and-deletion)",
   processor_erasure_obligations:
     "`recordProcessorErasureObligations` (./processor-erasure) — what Stripe still holds, written inside the transaction so a crash a millisecond later cannot lose it (ADR 20260803-processor-erasure-obligations)",
+  certifications:
+    "`forgetPremergeCards` (./premerge-cards-cleanup) — the retired level-card table, kept one release after the card ledger (issue #2722)",
+  specialty_certifications:
+    "`forgetPremergeCards` (./premerge-cards-cleanup) — the retired specialty-card table, kept one release after the card ledger (issue #2722)",
+  nitrox_certifications:
+    "`forgetPremergeCards` (./premerge-cards-cleanup) — the retired nitrox-card table, kept one release after the card ledger (issue #2722)",
 };
 
 /**

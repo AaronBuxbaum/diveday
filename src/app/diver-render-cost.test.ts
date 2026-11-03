@@ -26,7 +26,7 @@ vi.mock("next/server", () => ({ after: vi.fn() }));
  * **What the diver pages whose reads live in `src/app` cost** — the public
  * schedule, `/recap/[token]` and `/ready` once the boat is home (code review 2026-10-13, items
  * 11 and 29). The same instruments as the staff renders and the public
- * booking page (`src/db/staff-render-cost.test.ts`, whose header says what a
+ * booking page (`src/app/shop/[shopSlug]/staff-render-cost.test.ts`, whose header says what a
  * ceiling means); here because the replays call the page's own reader
  * (`readSchedulePage`) and the after-state's (`buildAfterStateProps`), which
  * `src/db` may not import.

@@ -47,7 +47,7 @@ function readiness(status: "ready" | "blocked", depthAdvisory: unknown = null): 
     },
     paymentStatus: "paid",
     paymentProvider: null,
-    depthAdvisory,
+    advisories: depthAdvisory ? [depthAdvisory] : [],
   } as unknown as ReadinessRow;
 }
 
@@ -63,13 +63,15 @@ const signed = {
 } as unknown as WaiverRow;
 
 const deep = {
-  status: "exceeds",
-  limitDepth: 18,
-  siteDepth: 30,
-  unit: "meters",
-  basis: "certification",
-  level: "open_water",
-};
+  code: "depth_exceeds_ceiling",
+  params: {
+    limitDepth: 18,
+    siteDepth: 30,
+    unit: "meters",
+    basis: "certification",
+    level: "open_water",
+  },
+} as const;
 
 function rowsFor(roster: RosterEntry[], readinessById: Record<string, ReadinessRow>) {
   return {

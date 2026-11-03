@@ -11,8 +11,8 @@ import {
   deleteCrewAvailabilityBlock,
   listCrewAssignmentRequests,
   listCrewAvailabilityBlocks,
+  recordCrewAvailabilityBlock,
   requestCrewAssignment,
-  saveCrewAvailabilityBlock,
   tripRatioGapNeedsInstructor,
 } from "./crew-requests";
 import {
@@ -66,7 +66,7 @@ const ctx = fileScopedShopContext();
 describe("crew availability blocks", () => {
   it("lets a crew member record their own days away", async () => {
     const { db, shop, crew } = await context();
-    const outcome = await saveCrewAvailabilityBlock(db, {
+    const outcome = await recordCrewAvailabilityBlock(db, {
       shopId: shop.id,
       personId: crew.id,
       actorPersonId: crew.id,
@@ -99,7 +99,7 @@ describe("crew availability blocks", () => {
    */
   it("sends the note to its person and to owners and managers, and the dates alone to anyone else", async () => {
     const { db, shop, crew, owner } = await context();
-    const saved = await saveCrewAvailabilityBlock(db, {
+    const saved = await recordCrewAvailabilityBlock(db, {
       shopId: shop.id,
       personId: crew.id,
       actorPersonId: crew.id,
@@ -135,7 +135,7 @@ describe("crew availability blocks", () => {
 
   it("refuses a crew member writing somebody else's days", async () => {
     const { db, shop, crew, owner } = await context();
-    const outcome = await saveCrewAvailabilityBlock(db, {
+    const outcome = await recordCrewAvailabilityBlock(db, {
       shopId: shop.id,
       personId: owner.id,
       actorPersonId: crew.id,
@@ -161,7 +161,7 @@ describe("crew availability blocks", () => {
 
   it("lets somebody who manages the roster record it for a person who phoned in", async () => {
     const { db, shop, crew, owner } = await context();
-    const outcome = await saveCrewAvailabilityBlock(db, {
+    const outcome = await recordCrewAvailabilityBlock(db, {
       shopId: shop.id,
       personId: crew.id,
       actorPersonId: owner.id,
@@ -175,7 +175,7 @@ describe("crew availability blocks", () => {
   it("refuses a person who is not this shop's staff at all", async () => {
     const { db, shop } = await context();
     const diver = await diverPerson(db, shop.id);
-    const outcome = await saveCrewAvailabilityBlock(db, {
+    const outcome = await recordCrewAvailabilityBlock(db, {
       shopId: shop.id,
       personId: diver.id,
       actorPersonId: diver.id,
@@ -189,7 +189,7 @@ describe("crew availability blocks", () => {
   it("refuses a range that ends before it starts", async () => {
     const { db, shop, crew } = await context();
     expect(
-      await saveCrewAvailabilityBlock(db, {
+      await recordCrewAvailabilityBlock(db, {
         shopId: shop.id,
         personId: crew.id,
         actorPersonId: crew.id,
@@ -202,7 +202,7 @@ describe("crew availability blocks", () => {
 
   it("deletes softly, and only ever your own", async () => {
     const { db, shop, crew, owner } = await context();
-    const saved = await saveCrewAvailabilityBlock(db, {
+    const saved = await recordCrewAvailabilityBlock(db, {
       shopId: shop.id,
       personId: crew.id,
       actorPersonId: crew.id,

@@ -12,7 +12,7 @@ import { certificationLevel, type diveSpecialty } from "./core";
  * - `requiredSpecialties`: specialty cards demanded on top of the level; a
  *   trip's list is unioned with its sites'.
  * - `requiresNitrox`: whether a verified nitrox card is demanded to board.
- *   Evidence lives in nitrox_certifications (also the mix-request gate), so
+ *   Evidence lives in the nitrox cards (also the mix-request gate), so
  *   this is its own flag, not a member of `requiredSpecialties`; a trip's flag
  *   is OR'd with its sites'.
  *

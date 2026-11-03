@@ -41,7 +41,7 @@
  *     confirms they have seen the card, because a specialty authorizes a materially
  *     riskier dive (deep gates depth past 18 m). An agency number identifies the
  *     diver, not the card, so a cell naming "Deep, Wreck" becomes both cards under
- *     that one number — `specialty_certifications` is keyed on the specialty too.
+ *     that one number — a specialty card is keyed on the specialty too.
  *   - A technical or overhead-environment rating (Advanced Nitrox, Trimix, CCR,
  *     cave, deco procedures…) is **never** bent onto the recreational ladder. It
  *     imports as nothing and says so: a ladder card clears its gate on `status`
@@ -1235,7 +1235,7 @@ export function normalizeSpecialty(raw: string | null | undefined): DiveSpecialt
  * cell is the normal shape of a "Specialties" column, so each one it names
  * becomes its own card. That is safe because the specialties of one diver share
  * one agency number (a PADI number identifies the diver, not the card) and
- * `specialty_certifications` is keyed on the specialty as well as the number.
+ * a specialty card is keyed on the specialty as well as the number.
  *
  * Each pattern requires the dive word, not merely the substring: "Deep Blue
  * Club" is a shop's own label, not a depth clearance, and while an extra card
@@ -1944,8 +1944,8 @@ export function prepareContactImport(
     // and Wreck cards carry the same PADI number (glossary — "C-card"). So a
     // specialty column legitimately uses this row's card number when it has no
     // number column of its own, and a cell naming two specialties becomes two
-    // cards under that one number — `specialty_certifications` is keyed on the
-    // specialty as well, and each lands with its gate held either way.
+    // cards under that one number — a specialty card is keyed on the specialty
+    // as well, and each lands with its gate held either way.
     const specialtyNumber =
       cardNumber(clean(at(cells, "specialty_certification_number"))) ?? certNumber;
     const namedSpecialties = specialtiesNamed(specialtySource);

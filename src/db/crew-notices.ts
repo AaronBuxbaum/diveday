@@ -518,7 +518,7 @@ export async function recordCrewCalledOff(
 
 /**
  * Record a moved start time for everyone on the crew of this departure, inside
- * the transaction that moves it (`moveTrip`, `updateTrip`; #2283). The caller
+ * the transaction that moves it (`moveTrip`, `editTrip`; #2283). The caller
  * tells them once it commits (`flushUrgentCrewNotices`), which sends at once
  * when either the old or the new time is within the urgent window.
  */

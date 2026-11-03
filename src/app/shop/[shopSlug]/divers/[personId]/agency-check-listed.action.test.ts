@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { certifications, nitroxCertifications, people, specialtyCertifications } from "@/db/schema";
+import { cards, people } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";
 
@@ -66,11 +66,12 @@ async function pendingCard(
   db: AppDb,
   shopId: string,
   personId: string,
-  values: Partial<typeof certifications.$inferInsert> = {},
+  values: Partial<typeof cards.$inferInsert> = {},
 ) {
   const [card] = await db
-    .insert(certifications)
+    .insert(cards)
     .values({
+      kind: "level",
       shopId,
       personId,
       agency: "naui",
@@ -93,7 +94,10 @@ function check(certificationId: string, pageText: string | null, intent?: "undo"
 }
 
 async function _cardRow(db: AppDb, id: string) {
-  const [row] = await db.select().from(certifications).where(eq(certifications.id, id));
+  const [row] = await db
+    .select()
+    .from(cards)
+    .where(and(eq(cards.id, id), eq(cards.kind, "level")));
   return row;
 }
 
@@ -117,11 +121,11 @@ describe("agencyCheckAction on a nitrox or specialty card", () => {
     db: AppDb,
     shopId: string,
     personId: string,
-    values: Partial<typeof nitroxCertifications.$inferInsert> = {},
+    values: Partial<typeof cards.$inferInsert> = {},
   ) {
     const [card] = await db
-      .insert(nitroxCertifications)
-      .values({ shopId, personId, agency: "naui", identifier: "N-777", ...values })
+      .insert(cards)
+      .values({ kind: "nitrox", shopId, personId, agency: "naui", identifier: "N-777", ...values })
       .returning();
     if (!card) throw new Error("failed to insert a nitrox card");
     return card;
@@ -129,8 +133,15 @@ describe("agencyCheckAction on a nitrox or specialty card", () => {
 
   async function deepCard(db: AppDb, shopId: string, personId: string) {
     const [card] = await db
-      .insert(specialtyCertifications)
-      .values({ shopId, personId, agency: "naui", specialty: "deep", identifier: "N-777" })
+      .insert(cards)
+      .values({
+        kind: "specialty",
+        shopId,
+        personId,
+        agency: "naui",
+        specialty: "deep",
+        identifier: "N-777",
+      })
       .returning();
     if (!card) throw new Error("failed to insert a specialty card");
     return card;
@@ -160,8 +171,8 @@ describe("agencyCheckAction on a nitrox or specialty card", () => {
     });
     const [gasRow] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, gas.id));
+      .from(cards)
+      .where(and(eq(cards.id, gas.id), eq(cards.kind, "nitrox")));
     expect(gasRow).toMatchObject({ status: "verified", reviewedByPersonId: owner });
     expect(gasRow?.agencyCheckedAt).toBeInstanceOf(Date);
     expect(gasRow?.reviewNote).toContain("Enriched Air Nitrox Diver");
@@ -175,14 +186,14 @@ describe("agencyCheckAction on a nitrox or specialty card", () => {
     expect(undone).toEqual({ ok: true, verdict: "undone" });
     const [after] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, gas.id));
+      .from(cards)
+      .where(and(eq(cards.id, gas.id), eq(cards.kind, "nitrox")));
     expect(after).toMatchObject({ status: "pending", agencyCheckedAt: null, reviewedAt: null });
     // The other card was not touched by it.
     const [deepRow] = await db
-      .select({ status: specialtyCertifications.status })
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.id, deep.id));
+      .select({ status: cards.status })
+      .from(cards)
+      .where(and(eq(cards.id, deep.id), eq(cards.kind, "specialty")));
     expect(deepRow?.status).toBe("verified");
   });
 
@@ -198,8 +209,8 @@ describe("agencyCheckAction on a nitrox or specialty card", () => {
     expect(result).toMatchObject({ ok: true, verdict: "level_unconfirmed", listedCard: true });
     const [row] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, gas.id));
+      .from(cards)
+      .where(and(eq(cards.id, gas.id), eq(cards.kind, "nitrox")));
     expect(row).toMatchObject({ status: "pending", reviewedAt: null, agencyCheckedAt: null });
   });
 
@@ -216,9 +227,9 @@ describe("agencyCheckAction on a nitrox or specialty card", () => {
     );
     expect(result).toEqual({ ok: false, reason: "invalid" });
     const [row] = await db
-      .select({ status: nitroxCertifications.status })
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, claim.id));
+      .select({ status: cards.status })
+      .from(cards)
+      .where(and(eq(cards.id, claim.id), eq(cards.kind, "nitrox")));
     expect(row?.status).toBe("pending");
   });
 

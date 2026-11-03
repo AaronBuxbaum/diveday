@@ -11,7 +11,7 @@ import {
   getShopBySlug,
   listShopsForDiverPicker,
   listShopsForSitemap,
-  saveShopRentals,
+  recordShopRentals,
   setShopAddress,
   setShopCrewLead,
   setShopDepthUnit,
@@ -149,12 +149,12 @@ describe("nitrox fill method default", () => {
 });
 
 /** Issue 3355: the Rentals page's save is one UPDATE, so it lands whole or not at all. */
-describe("saveShopRentals", () => {
+describe("recordShopRentals", () => {
   const rentalPricing = { setCents: 6000, perItemCents: { wetsuit: 4000 }, nitroxCents: 1200 };
 
   it("writes the catalog, prices, terms and given settings in one update", async () => {
     const { db, shop } = ctx;
-    const saved = await saveShopRentals(db, shop.id, {
+    const saved = await recordShopRentals(db, shop.id, {
       rentalItems: ["wetsuit", "bcd"],
       rentalPricing,
       rentalTerms: "Rinse it.",
@@ -172,14 +172,14 @@ describe("saveShopRentals", () => {
 
   it("leaves an omitted interval and fill method as they were stored", async () => {
     const { db, shop } = ctx;
-    await saveShopRentals(db, shop.id, {
+    await recordShopRentals(db, shop.id, {
       rentalItems: ["wetsuit"],
       rentalPricing,
       rentalTerms: null,
       customerRegulatorServiceMonths: 24,
       nitroxFillMethod: "membrane_premix",
     });
-    const after = await saveShopRentals(db, shop.id, {
+    const after = await recordShopRentals(db, shop.id, {
       rentalItems: ["bcd"],
       rentalPricing: { setCents: null, perItemCents: {}, nitroxCents: null },
       rentalTerms: "Changed.",
@@ -194,7 +194,7 @@ describe("saveShopRentals", () => {
 
   it("changes none of its columns when the database refuses one of them", async () => {
     const { db, shop } = ctx;
-    await saveShopRentals(db, shop.id, {
+    await recordShopRentals(db, shop.id, {
       rentalItems: ["wetsuit"],
       rentalPricing,
       rentalTerms: "Kept.",
@@ -204,7 +204,7 @@ describe("saveShopRentals", () => {
     // A savepoint, so the refusal does not abort the test's transaction.
     await expect(
       db.transaction((tx) =>
-        saveShopRentals(tx, shop.id, {
+        recordShopRentals(tx, shop.id, {
           rentalItems: ["bcd", "regulator"],
           rentalPricing: { setCents: null, perItemCents: {}, nitroxCents: null },
           rentalTerms: "Refused.",

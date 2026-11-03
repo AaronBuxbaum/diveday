@@ -127,7 +127,7 @@ describe("a review row", () => {
   /**
    * A contract with two callers, not decoration: Today's row and the close-out
    * both deep-link one waiting review as `/reviews#review-<id>`
-   * (`src/db/today.ts`).
+   * (`src/features/today/today-reader.ts`).
    */
   it("keeps the fragment Today and the close-out link to", () => {
     const { container } = row({});

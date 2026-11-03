@@ -25,7 +25,7 @@ import {
   completeWaiver,
   getSignedWaiverForDiver,
   issueWaiverRequest,
-  saveWaiverDraft,
+  recordWaiverDraft,
 } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -200,7 +200,7 @@ describe("eraseGuardianEmail", () => {
       now,
     });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-    await saveWaiverDraft(db, issued.token, {
+    await recordWaiverDraft(db, issued.token, {
       acknowledged: false,
       medicalAnswers: clearAnswers,
       guardian: {

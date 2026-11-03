@@ -5,11 +5,11 @@ import { createBookingParty } from "./bookings";
 import { recordFlySafeTold } from "./fly-safe-correction";
 import { bookings, trips as tripRows } from "./schema";
 import { createTrip, upcomingTripsWithCounts } from "./trips";
-import { updateTrip } from "./trips-record";
+import { editTrip } from "./trips-record";
 
 /**
  * **Every save that marks decompression diving corrects the fly-safe figure**
- * (issue #2927, domain review): the correction lives in `updateTrip`, after
+ * (issue #2927, domain review): the correction lives in `editTrip`, after
  * the commit, so no door that sets the flag skips it, and a send that throws
  * never turns a saved departure into a failed save.
  */
@@ -58,11 +58,11 @@ function markDecoPatch(trip: typeof tripRows.$inferSelect, on: boolean) {
   };
 }
 
-describe("updateTrip and the fly-safe correction (#2927)", () => {
+describe("editTrip and the fly-safe correction (#2927)", () => {
   it("attempts the correction for each seat told a figure when the save marks decompression", async () => {
     const { db, shop, trip, bookingId } = await toldOnReef("record-deco@example.com");
     hooks.explode = false;
-    const outcome = await updateTrip(db, shop.id, trip.id, markDecoPatch(trip, true));
+    const outcome = await editTrip(db, shop.id, trip.id, markDecoPatch(trip, true));
     if (!outcome.ok) throw new Error(`save refused: ${outcome.reason}`);
     expect(outcome.flySafe).toBeDefined();
     if (!outcome.flySafe || outcome.flySafe === "failed") throw new Error("no pass ran");
@@ -101,7 +101,7 @@ describe("updateTrip and the fly-safe correction (#2927)", () => {
       hours: 24,
       recipientEmail: "itinerary-record@example.com",
     });
-    const outcome = await updateTrip(db, shop.id, trip.id, markDecoPatch(trip, true));
+    const outcome = await editTrip(db, shop.id, trip.id, markDecoPatch(trip, true));
     if (!outcome.ok || !outcome.flySafe || outcome.flySafe === "failed")
       throw new Error("correction pass missing");
     expect(outcome.flySafe.told + outcome.flySafe.failed).toBeGreaterThanOrEqual(1);
@@ -116,14 +116,14 @@ describe("updateTrip and the fly-safe correction (#2927)", () => {
   it("runs no pass when the departure is not marked", async () => {
     const { db, shop, trip } = await toldOnReef("record-nodeco@example.com");
     hooks.explode = false;
-    const outcome = await updateTrip(db, shop.id, trip.id, markDecoPatch(trip, false));
+    const outcome = await editTrip(db, shop.id, trip.id, markDecoPatch(trip, false));
     expect(outcome.ok && outcome.flySafe).toBeFalsy();
   });
 
   it("keeps the save when sending the corrections throws", async () => {
     const { db, shop, trip } = await toldOnReef("record-throw@example.com");
     hooks.explode = true;
-    const outcome = await updateTrip(db, shop.id, trip.id, markDecoPatch(trip, true));
+    const outcome = await editTrip(db, shop.id, trip.id, markDecoPatch(trip, true));
     hooks.explode = false;
     expect(outcome).toMatchObject({ ok: true, flySafe: "failed" });
     const [saved] = await db.select().from(tripRows).where(eq(tripRows.id, trip.id));

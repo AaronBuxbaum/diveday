@@ -9,11 +9,11 @@ import {
   cancelFutureSeriesTrips,
   cancelOffCadenceSeriesTrips,
   createTripSeries,
+  editSeriesCadence,
   getTripWithBooked,
   listOffCadenceSeriesTrips,
   listStaff,
   type NewTripSeries,
-  updateSeriesCadence,
 } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -94,7 +94,7 @@ describe("cancelOffCadenceSeriesTrips and a boat at sea", () => {
       occurredAt: now,
     });
 
-    await updateSeriesCadence(
+    await editSeriesCadence(
       db,
       shop.id,
       result.series.id,

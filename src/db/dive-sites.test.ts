@@ -11,6 +11,8 @@ import {
   currentGlobalDiveSiteVersions,
   deleteDiveSite,
   diveSiteLibrarySize,
+  editDiveSite,
+  editDiveSiteForForm,
   getDiveSiteBySlug,
   getDiveSiteTemplateUpdate,
   groupSiteLibrary,
@@ -25,8 +27,6 @@ import {
   SITE_NAME_TAKEN,
   shopSearchAnchor,
   undoDiveSiteTemplateUpdate,
-  updateDiveSite,
-  updateDiveSiteForForm,
 } from "./dive-sites";
 import { bookings, diveSites, globalDiveSites, globalDiveSiteVersions } from "./schema";
 import { listStaff } from "./trips";
@@ -121,7 +121,7 @@ describe("dive-site library", () => {
     // `security-reviewer` pass, not by a test.
     expect(updated?.rowVersion).toBe((beforePull?.rowVersion ?? 0) + 1);
     expect(
-      await updateDiveSiteForForm(
+      await editDiveSiteForForm(
         db,
         shop.id,
         imported.id,
@@ -167,7 +167,7 @@ describe("dive-site library", () => {
 
     const other = await createDiveSite(db, { shopId: shop.id, name: "Rename Me Reef" });
     expect(
-      await updateDiveSiteForForm(db, shop.id, other.id, { shopId: shop.id, name: existing.name }),
+      await editDiveSiteForForm(db, shop.id, other.id, { shopId: shop.id, name: existing.name }),
     ).toBe(SITE_NAME_TAKEN);
     // Refused, not half-applied: the site the staffer was editing is untouched.
     expect((await listDiveSites(db, shop.id)).find((s) => s.id === other.id)?.name).toBe(
@@ -191,7 +191,7 @@ describe("dive-site library", () => {
     );
     const other = await createDiveSite(db, { shopId: shop.id, name: "Savepoint Spur" });
     expect(
-      await updateDiveSiteForForm(db, shop.id, other.id, {
+      await editDiveSiteForForm(db, shop.id, other.id, {
         shopId: shop.id,
         name: "Savepoint Shoal",
       }),
@@ -228,7 +228,7 @@ describe("dive-site library", () => {
     const bare = await createDiveSite(db, { shopId: shop.id, name: "Quiet Ledge" });
     expect(bare).toMatchObject({ tideStationId: null, tidePreference: "any" });
     // The form posts "" for a cleared box; the row reads null.
-    const cleared = await updateDiveSite(db, shop.id, site.id, {
+    const cleared = await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: "Carysfort Wall",
       tideStationId: "",
@@ -264,7 +264,7 @@ describe("dive-site library", () => {
     // Re-saving the same pairing leaves the answer standing: nothing about the
     // question has changed, and a shop that has to re-tick on every edit is
     // back where it started.
-    const resaved = await updateDiveSite(db, shop.id, site.id, {
+    const resaved = await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: "Flower Garden Banks",
       tideStationId: "8771450",
@@ -274,7 +274,7 @@ describe("dive-site library", () => {
 
     // The id moves and the tick arrives with it in the same submission — the
     // typo case. The new pairing is unanswered.
-    const mistyped = await updateDiveSite(db, shop.id, site.id, {
+    const mistyped = await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: "Flower Garden Banks",
       tideStationId: "8723970",
@@ -283,14 +283,14 @@ describe("dive-site library", () => {
     expect(mistyped).toMatchObject({ tideStationId: "8723970", tideStationConfirmed: false });
 
     // And the shop can take its answer back on a pairing that has not moved.
-    const reconfirmed = await updateDiveSite(db, shop.id, site.id, {
+    const reconfirmed = await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: "Flower Garden Banks",
       tideStationId: "8723970",
       tideStationConfirmed: true,
     });
     expect(reconfirmed).toMatchObject({ tideStationConfirmed: true });
-    const withdrawn = await updateDiveSite(db, shop.id, site.id, {
+    const withdrawn = await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: "Flower Garden Banks",
       tideStationId: "8723970",
@@ -317,7 +317,7 @@ describe("dive-site library", () => {
     });
     // Clearing the station takes the answer with it: the briefing says nothing
     // about the tide any more, so there is nothing left to have meant.
-    const cleared = await updateDiveSite(db, shop.id, stationed.id, {
+    const cleared = await editDiveSite(db, shop.id, stationed.id, {
       shopId: shop.id,
       name: "Galveston Wall",
       tideStationId: "",
@@ -374,7 +374,7 @@ describe("dive-site library", () => {
       requiresNitrox: true,
     });
 
-    const edited = await updateDiveSite(db, shop.id, site.id, {
+    const edited = await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
       difficultyLevel: "advanced" as const,
@@ -782,7 +782,7 @@ describe("a dive site's planning note", () => {
 
   it("stamps who noted it and when, on a save that changes the words", async () => {
     const { db, shop, site, personId } = await noteContext();
-    await updateDiveSite(db, shop.id, site.id, {
+    await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
       planningNote: { words: "  The entry silted up after the storm.  ", byPersonId: personId },
@@ -798,14 +798,14 @@ describe("a dive site's planning note", () => {
     // ninety-day window would measure the last press of Save instead.
     const { db, shop, site, personId } = await noteContext();
     const note = { words: "The entry silted up after the storm.", byPersonId: personId };
-    await updateDiveSite(db, shop.id, site.id, {
+    await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
       planningNote: note,
     });
     const first = await rowFor(db, site.id);
 
-    await updateDiveSite(db, shop.id, site.id, {
+    await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
       currentNote: "Ripping on the flood.",
@@ -818,12 +818,12 @@ describe("a dive site's planning note", () => {
 
   it("clears all three columns when the words are taken away", async () => {
     const { db, shop, site, personId } = await noteContext();
-    await updateDiveSite(db, shop.id, site.id, {
+    await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
       planningNote: { words: "Brief the swim-through first.", byPersonId: personId },
     });
-    await updateDiveSite(db, shop.id, site.id, {
+    await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
       planningNote: { words: "   ", byPersonId: personId },
@@ -838,12 +838,12 @@ describe("a dive site's planning note", () => {
     // The CSV import and a template pull write briefings without ever seeing
     // this box, and neither may wipe what a colleague wrote.
     const { db, shop, site, personId } = await noteContext();
-    await updateDiveSite(db, shop.id, site.id, {
+    await editDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
       planningNote: { words: "Brief the swim-through first.", byPersonId: personId },
     });
-    await updateDiveSite(db, shop.id, site.id, { shopId: shop.id, name: site.name });
+    await editDiveSite(db, shop.id, site.id, { shopId: shop.id, name: site.name });
     expect((await rowFor(db, site.id))?.planningNote).toBe("Brief the swim-through first.");
   });
 });
@@ -854,7 +854,7 @@ describe("a dive-site briefing saved from two tabs", () => {
     const site = await createDiveSite(db, { shopId: shop.id, name: "Two Tabs Reef" });
     const opened = site.rowVersion;
 
-    const first = await updateDiveSiteForForm(
+    const first = await editDiveSiteForForm(
       db,
       shop.id,
       site.id,
@@ -865,7 +865,7 @@ describe("a dive-site briefing saved from two tabs", () => {
 
     // The second tab still holds the generation it opened with.
     expect(
-      await updateDiveSiteForForm(
+      await editDiveSiteForForm(
         db,
         shop.id,
         site.id,
@@ -891,7 +891,7 @@ describe("a dive-site briefing saved from two tabs", () => {
     const site = await createDiveSite(db, { shopId: shop.id, name: "Never Saved Reef" });
     expect(site.rowVersion).toBe(0);
 
-    await updateDiveSiteForForm(
+    await editDiveSiteForForm(
       db,
       shop.id,
       site.id,
@@ -899,7 +899,7 @@ describe("a dive-site briefing saved from two tabs", () => {
       { expectedVersion: 0 },
     );
     expect(
-      await updateDiveSiteForForm(
+      await editDiveSiteForForm(
         db,
         shop.id,
         site.id,
@@ -918,14 +918,14 @@ describe("a dive-site briefing saved from two tabs", () => {
   it("allows a save that carries no generation at all", async () => {
     const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Old Release Reef" });
-    await updateDiveSiteForForm(
+    await editDiveSiteForForm(
       db,
       shop.id,
       site.id,
       { shopId: shop.id, name: "Old Release Reef", currentNote: "first" },
       { expectedVersion: 0 },
     );
-    const written = await updateDiveSiteForForm(db, shop.id, site.id, {
+    const written = await editDiveSiteForForm(db, shop.id, site.id, {
       shopId: shop.id,
       name: "Old Release Reef",
       currentNote: "second",
@@ -943,7 +943,7 @@ describe("a dive-site briefing saved from two tabs", () => {
     const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Other Shop Reef" });
     expect(
-      await updateDiveSiteForForm(
+      await editDiveSiteForForm(
         db,
         randomUUID(),
         site.id,
@@ -959,7 +959,7 @@ describe("a dive-site briefing saved from two tabs", () => {
     const site = await createDiveSite(db, { shopId: shop.id, name: "Deleted Reef" });
     await deleteDiveSite(db, shop.id, site.id);
     expect(
-      await updateDiveSiteForForm(
+      await editDiveSiteForForm(
         db,
         shop.id,
         site.id,
@@ -1038,7 +1038,7 @@ describe("a dive site's public slug", () => {
 
     // The whole reason the column exists rather than being derived per render:
     // a spelling fix must not 404 the link a diver shared yesterday.
-    await updateDiveSite(db, shop.id, site.id, { shopId: shop.id, name: "Carysfort wall" });
+    await editDiveSite(db, shop.id, site.id, { shopId: shop.id, name: "Carysfort wall" });
     expect((await getDiveSiteBySlug(db, shop.id, "carysfort-wall"))?.id).toBe(site.id);
     expect(await getDiveSiteBySlug(db, shop.id, "carysfort-wall-2")).toBeNull();
   });

@@ -11,7 +11,7 @@ import { type AssistOptions, assistsAvailable, runAssist } from "./assists";
 import type { AppDb, AppTransaction } from "./client";
 import { listActiveCourses } from "./courses";
 import { setShopDeskHours } from "./desk-pings";
-import { saveFormDraft } from "./form-drafts";
+import { recordFormDraft } from "./form-drafts";
 import { courses, shops, websiteSetupDrafts } from "./schema";
 
 /**
@@ -198,7 +198,7 @@ async function writeLine(
       if (line.priceCents !== undefined) {
         fields.push(["priceDollars", (line.priceCents / 100).toFixed(2).replace(/\.00$/, "")]);
       }
-      await saveFormDraft(db, {
+      await recordFormDraft(db, {
         shopId: input.shopId,
         personId: input.personId,
         form: "add_departure",

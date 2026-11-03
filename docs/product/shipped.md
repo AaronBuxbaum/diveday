@@ -541,7 +541,7 @@ re-rendered Today's own evidence in a different order; it is now a **state the h
 into**, and `/close-out` is a 308. Nothing about `day_closeouts`, the recorded act or the departure
 log changed underneath — only where they render, which was the whole finding.
 
-**A station settles, one at a time.** `assembleEveningClose` (`src/lib/closeout.ts`) joins the
+**A station settles, one at a time.** `assembleEveningClose` (`src/features/today/closeout.ts`) joins the
 day's departures to the clock: a station settles when its head count closed or its scheduled return
 is an hour behind it, and a settled one renders as `ClosingStation` — the time, the title, a drawn
 `SettledCheck` beside the state in words, "10 of 10 back by 10:26 AM · head count closed by Keiko
@@ -590,7 +590,7 @@ the headline and the parting-glance card they existed for.
 
 Pinned rather than remembered: `DaySpine.test.tsx` holds the closing block back while a boat is
 still out, refuses an acknowledgement control at every leftover count, hides the log door from a
-non-owner, and proves at most one coral element renders; `src/lib/closeout.test.ts` pins the
+non-owner, and proves at most one coral element renders; `src/features/today/closeout.test.ts` pins the
 late-arrival buffer on both sides of the hour and the once-ever wording's condition;
 `staff-destinations.test.ts` pins four primary tabs and no `/close-out` suffix anywhere in the
 registry; `e2e/day-close.spec.ts` runs J4 end to end and checks the 308, the dock and the palette
@@ -1922,7 +1922,7 @@ pools under **At the desk**; tomorrow is a collapsed disclosure whose body reuse
 renderer, and the rest of the week is one link to the board. A day with no boats and nothing waiting
 collapses to a heading, one sentence and the one act.
 
-Nothing about *what counts as work* moved: `assembleDaySpine` (`src/lib/today.ts`) is a pure
+Nothing about *what counts as work* moved: `assembleDaySpine` (`src/features/today/today.ts`) is a pure
 re-filing of the queue `getTodayWork` already ranked — a `tripId` picks the station, its absence
 picks the desk — and tomorrow comes from a second bounded read of the next shop-day sharing the same
 readiness pass, never a widened window. `DepartureSummary` gained the station's three meta facts
@@ -2645,7 +2645,7 @@ path ever populated it, so an Open Water weekend went on the board as unrelated 
 title: separate rosters, separate waivers, separate crew. "Schedule a trip" and the trip's own
 details editor now take a day count (1–14, `src/lib/trip-days.ts`); the day-one window repeats on
 consecutive days, each converted through the shop's own zone on its own date so a departure that
-straddles a DST change keeps the wall-clock time the shop promised. `updateTrip` rebuilds the day
+straddles a DST change keeps the wall-clock time the shop promised. `editTrip` rebuilds the day
 rows when the schedule moves, and a weekly series gives every occurrence its own days.
 
 **A shop's timezone is no longer a one-shot question.** Sign-up's picker opened on US Eastern for
@@ -3723,7 +3723,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   trip-fee line. Each diver's gear subtotal is snapshotted onto `booking_checkout_bookings.gear_cents`
   so a later refund or report can attribute money back to trip vs. gear.
 - **The chosen fit and nitrox request are saved the moment the booking exists** — the same
-  `saveRentalFit`/`setBookingNitrox` writes the post-booking form already made, just a step earlier;
+  `recordRentalFit`/`setBookingNitrox` writes the post-booking form already made, just a step earlier;
   that form still exists for a diver who skipped the step or wants to add sizes afterward.
   Was the highest-leverage of [roadmap.md](features/roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
   candidates. See

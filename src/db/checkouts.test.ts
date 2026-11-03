@@ -33,7 +33,7 @@ import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency, setShopPassThroughFee, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode } from "./trip-promos";
-import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { editTrip, getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`). The last-use race hydrates its
@@ -101,7 +101,7 @@ async function pricedReefTrip(
   const trips = await upcomingTripsWithCounts(db, shopId, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  await updateTrip(db, shopId, reef.id, {
+  await editTrip(db, shopId, reef.id, {
     title: reef.title,
     startsAt: reef.startsAt,
     endsAt: reef.endsAt,
@@ -168,7 +168,7 @@ function startInput(shopId: string, tripId: string, bookingIds: string[]) {
 describe("startBookingCheckout", () => {
   it("charges a pass-through fee for a zero-priced trip", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -274,7 +274,7 @@ describe("startBookingCheckout", () => {
 
   it("labels a deposit through the caller's deposit branch", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -297,7 +297,7 @@ describe("startBookingCheckout", () => {
 
   it("adds a per-diver gear line, always in full even under a deposit policy", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -437,7 +437,7 @@ describe("startBookingCheckout", () => {
 
   it("refuses an unpriced trip rather than charging $0", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -585,7 +585,7 @@ describe("startBookingCheckout", () => {
     reef: Awaited<ReturnType<typeof checkoutContext>>["reef"],
     patch: { priceCents?: number | null; depositCents?: number | null },
   ) {
-    await updateTrip(db, shopId, reef.id, {
+    await editTrip(db, shopId, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -1104,7 +1104,7 @@ describe("retirePendingCheckoutIfRepriced", () => {
     reef: Awaited<ReturnType<typeof checkoutContext>>["reef"],
     patch: { priceCents?: number | null; depositCents?: number | null },
   ) {
-    await updateTrip(db, shopId, reef.id, {
+    await editTrip(db, shopId, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -1181,7 +1181,7 @@ describe("deposit checkout", () => {
     shopId: string,
     reef: Awaited<ReturnType<typeof checkoutContext>>["reef"],
   ) {
-    await updateTrip(db, shopId, reef.id, {
+    await editTrip(db, shopId, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,

@@ -79,7 +79,7 @@ that legitimately has no guide.
 So `insertTripInstance` now coerces `self_guided` to false whenever `course_id` is non-null — there
 rather than in `createTrip`, because it is the one function all three creation doors pass through
 (`createTrip`, `duplicateTrip`, and the series horizon roll, which copies the template's flag
-nightly and would otherwise re-mint the state forever). `updateTrip` applies the same rule, read
+nightly and would otherwise re-mint the state forever). `editTrip` applies the same rule, read
 against the existing row's course rather than the patch's, since a departure's course is fixed at
 creation and `UpdateTripPatch` carries no `course_id`. Both editors drop the checkbox rather than
 ignoring it, and the board's sits *below* the course select so a tick cannot vanish above the fold

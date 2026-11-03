@@ -9,7 +9,7 @@ import {
   INTEGRATION_PROVIDER_REGISTRY,
   integrationCallbackUrl,
   quickBooksConfigFromEnvironment,
-  saveShopIntegration,
+  recordShopIntegration,
 } from "@/features/integrations";
 import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(destination(request, session.user.shopSlug, "failed"));
   try {
     const existing = await getShopIntegration(db, session.user.shopId, "quickbooks");
-    await saveShopIntegration(db, {
+    await recordShopIntegration(db, {
       shopId: session.user.shopId,
       provider: "quickbooks",
       credentials: result.credentials,

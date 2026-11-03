@@ -9,6 +9,7 @@ import {
   participantTypeRefusal,
 } from "@/lib/booking-gates";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
+import { asLevelCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
@@ -78,7 +79,7 @@ import {
   bookingPayments,
   bookings,
   buddyTeamMembers,
-  certifications,
+  cards,
   courses,
   gearItemKind,
   gearReservations,
@@ -1520,18 +1521,20 @@ async function courseEnrollmentFor(
   startsAt: Date,
 ): Promise<"course_prerequisite" | "course_min_age" | null> {
   if (!course.minimumCertificationLevel && !course.minimumAge) return null;
-  const cards =
+  const levelCards =
     person && course.minimumCertificationLevel
       ? await tx
           .select()
-          .from(certifications)
+          .from(cards)
           .where(
             and(
-              eq(certifications.shopId, req.shopId),
-              eq(certifications.personId, person.id),
-              isNull(certifications.deletedAt),
+              eq(cards.kind, "level"),
+              eq(cards.shopId, req.shopId),
+              eq(cards.personId, person.id),
+              isNull(cards.deletedAt),
             ),
           )
+          .then((rows) => rows.map(asLevelCard))
       : [];
   let courseDate: string | null = null;
   if (req.actor !== "public" && course.minimumAge && person?.dateOfBirth) {
@@ -1546,7 +1549,7 @@ async function courseEnrollmentFor(
   return courseEnrollmentRefusal({
     actor: req.actor,
     course,
-    diver: person ? { cards, dateOfBirth: person.dateOfBirth } : null,
+    diver: person ? { cards: levelCards, dateOfBirth: person.dateOfBirth } : null,
     courseDate,
   });
 }
@@ -2000,17 +2003,19 @@ async function courseGateRefusal(
   startsAt: Date,
 ): Promise<"course_prerequisite" | "course_min_age" | null> {
   if (!course || (!course.minimumCertificationLevel && !course.minimumAge)) return null;
-  const cards = course.minimumCertificationLevel
+  const levelCards = course.minimumCertificationLevel
     ? await tx
         .select()
-        .from(certifications)
+        .from(cards)
         .where(
           and(
-            eq(certifications.shopId, shopId),
-            eq(certifications.personId, personId),
-            isNull(certifications.deletedAt),
+            eq(cards.kind, "level"),
+            eq(cards.shopId, shopId),
+            eq(cards.personId, personId),
+            isNull(cards.deletedAt),
           ),
         )
+        .then((rows) => rows.map(asLevelCard))
     : [];
   const [row] = await tx
     .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
@@ -2024,7 +2029,7 @@ async function courseGateRefusal(
   return courseEnrollmentRefusal({
     actor: "staff",
     course,
-    diver: { cards, dateOfBirth: row?.dateOfBirth ?? null },
+    diver: { cards: levelCards, dateOfBirth: row?.dateOfBirth ?? null },
     courseDate: row ? calendarDateInTimezone(startsAt, row.timezone) : null,
   });
 }

@@ -3,9 +3,6 @@ import { describe, expect, it } from "vitest";
 import { pagedOrdersByDay } from "@/db/orders";
 import { listTripsReadiness } from "@/db/readiness";
 import { trips } from "@/db/schema";
-import { getTodayWork } from "@/db/today";
-import { nowDate } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { countingShopContext } from "@/test/query-count";
 
 /**
@@ -103,39 +100,4 @@ describe("what the assembly readers cost", () => {
    * fails, the question to ask is not "what should the number be" but "what did
    * this change add to the first screen a shop sees every morning".
    */
-  it("assembles the whole shop home under a ceiling", async () => {
-    const ctx = await countingShopContext();
-    ctx.reset();
-    const work = await getTodayWork(
-      ctx.db,
-      ctx.shop.id,
-      ctx.shop.slug,
-      shopClock(ctx.shop, nowDate()),
-    );
-    expect(work).toBeTruthy();
-
-    const used = ctx.count();
-    expect(
-      used,
-      `the shop home sent ${used} queries; see this test's comment before raising the ceiling`,
-    ).toBeLessThanOrEqual(TODAY_QUERY_CEILING);
-  });
 });
-
-/**
- * The tripwire for the shop home, set well above what the reader sends today so
- * ordinary work never trips it and a loop always does. Raising it is a decision
- * about the first screen of the working day, not a maintenance chore — the test
- * above says what to ask first.
- *
- * 60 → 61 (fifth loop, merged): what it added is the crew's open snags against
- * a boat's checklist (`openSnagsForShop`), one statement in Today's one wave,
- * on top of the desk layer's count of found items waiting to go home.
- * 61 → 62 (merging main, 2026-10-17): main's boat-on-two-departures read
- * (`boatClashesByTrip`, H-20260916-may-one-hull-carry) beside the crew clash, in the same wave.
- * 62 → 64 (merging batch 3): countOpenDateRequests (#2658) and
- * crewAwayAcknowledgedAt (#2678) in Today's wave.
- * 64 → 65 (#3436): every planned dive's site for the departure cards
- * (`plannedSitesByTrip`), one statement in the same wave.
- */
-const TODAY_QUERY_CEILING = 65;

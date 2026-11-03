@@ -15,12 +15,12 @@ import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { countGearItems } from "@/db/gear";
 import { listShopRolesPresent } from "@/db/shop-roles";
 import { shopBySlugCached } from "@/db/shops-cached";
+import { countWorkOrders } from "@/db/work-orders";
 import {
   countBlockedDiversNextBoatDay,
   nextOfTodaysDepartures,
   todaysDepartures,
-} from "@/db/today";
-import { countWorkOrders } from "@/db/work-orders";
+} from "@/features/today";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";

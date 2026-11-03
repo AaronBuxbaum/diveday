@@ -27,7 +27,7 @@ export async function issueAccountToken(
     // forgot-password submit) could otherwise both read zero outstanding
     // tokens and both insert, leaving two live at once and violating the
     // "a fresh token supersedes the prior one" invariant (security review
-    // finding). Matches saveWaiverTemplate's shop-row lock exactly. PGlite is
+    // finding). Matches recordWaiverTemplate's shop-row lock exactly. PGlite is
     // single-connection so tests can't exhibit the race — the lock is for
     // production Postgres.
     await tx

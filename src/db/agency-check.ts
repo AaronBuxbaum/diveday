@@ -12,18 +12,13 @@ import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { needsImportConfirm } from "@/lib/certification-cards";
 import { nowDate } from "@/lib/clock";
 import { isUnsightedSelfDeclaration, needsCardSighting } from "@/lib/readiness";
+import { levelCardLevel, specialtyCardSpecialty } from "./card-columns";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import { reverseNitroxReview } from "./nitrox";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { reverseCertificationReview, reverseSpecialtyReview } from "./readiness";
-import {
-  certifications,
-  nitroxCertifications,
-  people,
-  shops,
-  specialtyCertifications,
-} from "./schema";
+import { type Card, type Certification, cards, people, shops } from "./schema";
 
 /**
  * One level card the DiveDay browser extension may check with its agency
@@ -39,7 +34,7 @@ export async function certificationForAgencyCheck(
   input: { shopId: string; personId: string; certificationId: string },
 ): Promise<{
   query: AgencyCheckQuery;
-  level: (typeof certifications.$inferSelect)["level"];
+  level: Certification["level"];
   /**
    * What the shop holds to tell this diver from a namesake, whichever the
    * lookup typed: DiveChek is searched by birth date, and the record must
@@ -49,27 +44,28 @@ export async function certificationForAgencyCheck(
 } | null> {
   const [row] = await db
     .select({
-      agency: certifications.agency,
-      level: certifications.level,
-      identifier: certifications.identifier,
-      status: certifications.status,
-      selfDeclaredAt: certifications.selfDeclaredAt,
-      importedAt: certifications.importedAt,
-      reviewedAt: certifications.reviewedAt,
+      agency: cards.agency,
+      level: levelCardLevel,
+      identifier: cards.identifier,
+      status: cards.status,
+      selfDeclaredAt: cards.selfDeclaredAt,
+      importedAt: cards.importedAt,
+      reviewedAt: cards.reviewedAt,
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
       padiChecksEnabled: shops.padiChecksEnabled,
     })
-    .from(certifications)
-    .innerJoin(people, eq(people.id, certifications.personId))
-    .innerJoin(shops, eq(shops.id, certifications.shopId))
+    .from(cards)
+    .innerJoin(people, eq(people.id, cards.personId))
+    .innerJoin(shops, eq(shops.id, cards.shopId))
     .where(
       and(
-        eq(certifications.id, input.certificationId),
-        eq(certifications.shopId, input.shopId),
-        eq(certifications.personId, input.personId),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, "level"),
+        eq(cards.personId, input.personId),
         eq(people.shopId, input.shopId),
-        isNull(certifications.deletedAt),
+        isNull(cards.deletedAt),
         isNull(people.deletedAt),
         isNull(people.anonymizedAt),
       ),
@@ -96,9 +92,9 @@ export async function certificationForAgencyCheck(
  * for a card the action would refuse.
  */
 function checkableQuery(row: {
-  agency: (typeof certifications.$inferSelect)["agency"];
-  level: (typeof certifications.$inferSelect)["level"];
-  status: (typeof certifications.$inferSelect)["status"];
+  agency: Card["agency"];
+  level: Certification["level"];
+  status: Card["status"];
   identifier: string | null;
   selfDeclaredAt: Date | null;
   importedAt: Date | null;
@@ -117,12 +113,12 @@ function checkableQuery(row: {
   return agencyCheckQuery(row);
 }
 
-/** The two card tables beside the level ladder that an agency check can also certify (issue #2592). */
+/** The two card kinds beside the level ladder that an agency check can also certify (issue #2592). */
 export type AgencyListedCardType = "nitrox" | "specialty";
 
 /** What {@link checkableListedQuery} reads off a nitrox or specialty card and its diver. */
 type ListedCardRow = {
-  agency: (typeof nitroxCertifications.$inferSelect)["agency"];
+  agency: Card["agency"];
   identifier: string | null;
   status: "pending" | "verified";
   selfDeclaredAt: Date | null;
@@ -194,25 +190,26 @@ export async function listedCardForAgencyCheck(
     [row] = (
       await db
         .select({
-          agency: nitroxCertifications.agency,
-          identifier: nitroxCertifications.identifier,
-          status: nitroxCertifications.status,
-          selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
-          issuedByShopAt: nitroxCertifications.issuedByShopAt,
-          listedFromCertificationId: nitroxCertifications.listedFromCertificationId,
-          importedAt: nitroxCertifications.importedAt,
-          reviewedAt: nitroxCertifications.reviewedAt,
+          agency: cards.agency,
+          identifier: cards.identifier,
+          status: cards.status,
+          selfDeclaredAt: cards.selfDeclaredAt,
+          issuedByShopAt: cards.issuedByShopAt,
+          listedFromCertificationId: cards.listedFromCertificationId,
+          importedAt: cards.importedAt,
+          reviewedAt: cards.reviewedAt,
           ...person,
         })
-        .from(nitroxCertifications)
-        .innerJoin(people, eq(people.id, nitroxCertifications.personId))
-        .innerJoin(shops, eq(shops.id, nitroxCertifications.shopId))
+        .from(cards)
+        .innerJoin(people, eq(people.id, cards.personId))
+        .innerJoin(shops, eq(shops.id, cards.shopId))
         .where(
           and(
-            eq(nitroxCertifications.id, input.certificationId),
-            eq(nitroxCertifications.shopId, input.shopId),
-            eq(nitroxCertifications.personId, input.personId),
-            isNull(nitroxCertifications.deletedAt),
+            eq(cards.id, input.certificationId),
+            eq(cards.shopId, input.shopId),
+            eq(cards.kind, "nitrox"),
+            eq(cards.personId, input.personId),
+            isNull(cards.deletedAt),
             live,
           ),
         )
@@ -222,26 +219,27 @@ export async function listedCardForAgencyCheck(
     [row] = (
       await db
         .select({
-          agency: specialtyCertifications.agency,
-          specialty: specialtyCertifications.specialty,
-          identifier: specialtyCertifications.identifier,
-          status: specialtyCertifications.status,
-          selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
-          issuedByShopAt: specialtyCertifications.issuedByShopAt,
-          listedFromCertificationId: specialtyCertifications.listedFromCertificationId,
-          importedAt: specialtyCertifications.importedAt,
-          reviewedAt: specialtyCertifications.reviewedAt,
+          agency: cards.agency,
+          specialty: specialtyCardSpecialty,
+          identifier: cards.identifier,
+          status: cards.status,
+          selfDeclaredAt: cards.selfDeclaredAt,
+          issuedByShopAt: cards.issuedByShopAt,
+          listedFromCertificationId: cards.listedFromCertificationId,
+          importedAt: cards.importedAt,
+          reviewedAt: cards.reviewedAt,
           ...person,
         })
-        .from(specialtyCertifications)
-        .innerJoin(people, eq(people.id, specialtyCertifications.personId))
-        .innerJoin(shops, eq(shops.id, specialtyCertifications.shopId))
+        .from(cards)
+        .innerJoin(people, eq(people.id, cards.personId))
+        .innerJoin(shops, eq(shops.id, cards.shopId))
         .where(
           and(
-            eq(specialtyCertifications.id, input.certificationId),
-            eq(specialtyCertifications.shopId, input.shopId),
-            eq(specialtyCertifications.personId, input.personId),
-            isNull(specialtyCertifications.deletedAt),
+            eq(cards.id, input.certificationId),
+            eq(cards.shopId, input.shopId),
+            eq(cards.kind, "specialty"),
+            eq(cards.personId, input.personId),
+            isNull(cards.deletedAt),
             live,
           ),
         )
@@ -287,47 +285,43 @@ export async function listAgencyCheckableCards(
   const personIds = [...new Set(input.personIds)];
   if (personIds.length === 0) return byPerson;
   const add = (card: AgencyCheckableCard) => {
-    const cards = byPerson.get(card.personId) ?? [];
-    cards.push(card);
-    byPerson.set(card.personId, cards);
+    const list = byPerson.get(card.personId) ?? [];
+    list.push(card);
+    byPerson.set(card.personId, list);
   };
   const readLevel = () =>
     db
       .select({
-        certificationId: certifications.id,
-        personId: certifications.personId,
-        agency: certifications.agency,
-        level: certifications.level,
-        identifier: certifications.identifier,
-        status: certifications.status,
-        selfDeclaredAt: certifications.selfDeclaredAt,
-        importedAt: certifications.importedAt,
-        reviewedAt: certifications.reviewedAt,
+        certificationId: cards.id,
+        personId: cards.personId,
+        agency: cards.agency,
+        level: levelCardLevel,
+        identifier: cards.identifier,
+        status: cards.status,
+        selfDeclaredAt: cards.selfDeclaredAt,
+        importedAt: cards.importedAt,
+        reviewedAt: cards.reviewedAt,
         fullName: people.fullName,
         dateOfBirth: people.dateOfBirth,
         padiChecksEnabled: shops.padiChecksEnabled,
       })
-      .from(certifications)
-      .innerJoin(people, eq(people.id, certifications.personId))
-      .innerJoin(shops, eq(shops.id, certifications.shopId))
+      .from(cards)
+      .innerJoin(people, eq(people.id, cards.personId))
+      .innerJoin(shops, eq(shops.id, cards.shopId))
       .where(
         and(
-          eq(certifications.shopId, input.shopId),
-          inArray(certifications.personId, personIds),
+          eq(cards.shopId, input.shopId),
+          eq(cards.kind, "level"),
+          inArray(cards.personId, personIds),
           eq(people.shopId, input.shopId),
-          isNull(certifications.deletedAt),
+          isNull(cards.deletedAt),
           isNull(people.deletedAt),
           isNull(people.anonymizedAt),
           // Narrowed again by `checkableQuery`; this only keeps settled cards out of the read.
-          or(eq(certifications.status, "pending"), isNotNull(certifications.importedAt)),
+          or(eq(cards.status, "pending"), isNotNull(cards.importedAt)),
         ),
       )
-      .orderBy(
-        asc(certifications.createdAt),
-        asc(certifications.agency),
-        asc(certifications.level),
-        asc(certifications.id),
-      );
+      .orderBy(asc(cards.createdAt), asc(cards.agency), asc(cards.level), asc(cards.id));
   // The nitrox and specialty cards, narrowed by the same rule the action
   // judges them by (`checkableListedQuery`).
   const person = {
@@ -339,81 +333,68 @@ export async function listAgencyCheckableCards(
     () =>
       db
         .select({
-          certificationId: nitroxCertifications.id,
-          personId: nitroxCertifications.personId,
-          agency: nitroxCertifications.agency,
-          identifier: nitroxCertifications.identifier,
-          status: nitroxCertifications.status,
-          selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
-          issuedByShopAt: nitroxCertifications.issuedByShopAt,
-          listedFromCertificationId: nitroxCertifications.listedFromCertificationId,
-          importedAt: nitroxCertifications.importedAt,
-          reviewedAt: nitroxCertifications.reviewedAt,
+          certificationId: cards.id,
+          personId: cards.personId,
+          agency: cards.agency,
+          identifier: cards.identifier,
+          status: cards.status,
+          selfDeclaredAt: cards.selfDeclaredAt,
+          issuedByShopAt: cards.issuedByShopAt,
+          listedFromCertificationId: cards.listedFromCertificationId,
+          importedAt: cards.importedAt,
+          reviewedAt: cards.reviewedAt,
           ...person,
         })
-        .from(nitroxCertifications)
-        .innerJoin(people, eq(people.id, nitroxCertifications.personId))
-        .innerJoin(shops, eq(shops.id, nitroxCertifications.shopId))
+        .from(cards)
+        .innerJoin(people, eq(people.id, cards.personId))
+        .innerJoin(shops, eq(shops.id, cards.shopId))
         .where(
           and(
-            eq(nitroxCertifications.shopId, input.shopId),
-            inArray(nitroxCertifications.personId, personIds),
+            eq(cards.shopId, input.shopId),
+            eq(cards.kind, "nitrox"),
+            inArray(cards.personId, personIds),
             eq(people.shopId, input.shopId),
-            isNull(nitroxCertifications.deletedAt),
+            isNull(cards.deletedAt),
             isNull(people.deletedAt),
             isNull(people.anonymizedAt),
-            or(
-              eq(nitroxCertifications.status, "pending"),
-              isNotNull(nitroxCertifications.importedAt),
-            ),
+            or(eq(cards.status, "pending"), isNotNull(cards.importedAt)),
           ),
         )
-        .orderBy(
-          asc(nitroxCertifications.createdAt),
-          asc(nitroxCertifications.agency),
-          asc(nitroxCertifications.id),
-        ),
+        .orderBy(asc(cards.createdAt), asc(cards.agency), asc(cards.id)),
     () =>
       db
         .select({
-          certificationId: specialtyCertifications.id,
-          personId: specialtyCertifications.personId,
-          agency: specialtyCertifications.agency,
-          specialty: specialtyCertifications.specialty,
-          identifier: specialtyCertifications.identifier,
-          status: specialtyCertifications.status,
-          selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
-          issuedByShopAt: specialtyCertifications.issuedByShopAt,
-          listedFromCertificationId: specialtyCertifications.listedFromCertificationId,
-          importedAt: specialtyCertifications.importedAt,
-          reviewedAt: specialtyCertifications.reviewedAt,
+          certificationId: cards.id,
+          personId: cards.personId,
+          agency: cards.agency,
+          specialty: specialtyCardSpecialty,
+          identifier: cards.identifier,
+          status: cards.status,
+          selfDeclaredAt: cards.selfDeclaredAt,
+          issuedByShopAt: cards.issuedByShopAt,
+          listedFromCertificationId: cards.listedFromCertificationId,
+          importedAt: cards.importedAt,
+          reviewedAt: cards.reviewedAt,
           ...person,
         })
-        .from(specialtyCertifications)
-        .innerJoin(people, eq(people.id, specialtyCertifications.personId))
-        .innerJoin(shops, eq(shops.id, specialtyCertifications.shopId))
+        .from(cards)
+        .innerJoin(people, eq(people.id, cards.personId))
+        .innerJoin(shops, eq(shops.id, cards.shopId))
         .where(
           and(
-            eq(specialtyCertifications.shopId, input.shopId),
-            inArray(specialtyCertifications.personId, personIds),
+            eq(cards.shopId, input.shopId),
+            eq(cards.kind, "specialty"),
+            inArray(cards.personId, personIds),
             eq(people.shopId, input.shopId),
-            isNull(specialtyCertifications.deletedAt),
+            isNull(cards.deletedAt),
             isNull(people.deletedAt),
             isNull(people.anonymizedAt),
-            or(
-              eq(specialtyCertifications.status, "pending"),
-              isNotNull(specialtyCertifications.importedAt),
-            ),
+            or(eq(cards.status, "pending"), isNotNull(cards.importedAt)),
           ),
         )
-        .orderBy(
-          asc(specialtyCertifications.createdAt),
-          asc(specialtyCertifications.agency),
-          asc(specialtyCertifications.specialty),
-          asc(specialtyCertifications.id),
-        ),
+        .orderBy(asc(cards.createdAt), asc(cards.agency), asc(cards.specialty), asc(cards.id)),
   ] as const;
-  // One wave: the level cards and, when asked for, the other two tables, so a
+  // One wave: the level cards and, when asked for, the other two kinds, so a
   // departure's roster waits for the slowest of them and no longer.
   const [rows, nitroxRows, specialtyRows] = input.includeListedCards
     ? await queryAll(db, [readLevel, ...readListed])
@@ -467,15 +448,16 @@ export async function isAgencyCheckedCard(
   input: { shopId: string; personId: string; certificationId: string },
 ): Promise<boolean> {
   const [row] = await db
-    .select({ id: certifications.id })
-    .from(certifications)
+    .select({ id: cards.id })
+    .from(cards)
     .where(
       and(
-        eq(certifications.id, input.certificationId),
-        eq(certifications.shopId, input.shopId),
-        eq(certifications.personId, input.personId),
-        isNotNull(certifications.agencyCheckedAt),
-        isNull(certifications.deletedAt),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, "level"),
+        eq(cards.personId, input.personId),
+        isNotNull(cards.agencyCheckedAt),
+        isNull(cards.deletedAt),
       ),
     )
     .limit(1);
@@ -496,30 +478,29 @@ export async function agencyListedKindsHeld(
   const [specialties, nitrox] = await queryAll(db, [
     () =>
       db
-        .select({ specialty: specialtyCertifications.specialty })
-        .from(specialtyCertifications)
+        .select({ specialty: specialtyCardSpecialty })
+        .from(cards)
         .where(
           and(
-            eq(specialtyCertifications.shopId, input.shopId),
-            eq(specialtyCertifications.personId, input.personId),
-            isNull(specialtyCertifications.deletedAt),
+            eq(cards.shopId, input.shopId),
+            eq(cards.kind, "specialty"),
+            eq(cards.personId, input.personId),
+            isNull(cards.deletedAt),
           ),
         ),
     () =>
       db
-        .select({ id: nitroxCertifications.id })
-        .from(nitroxCertifications)
+        .select({ id: cards.id })
+        .from(cards)
         .where(
           and(
-            eq(nitroxCertifications.shopId, input.shopId),
-            eq(nitroxCertifications.personId, input.personId),
-            isNull(nitroxCertifications.deletedAt),
+            eq(cards.shopId, input.shopId),
+            eq(cards.kind, "nitrox"),
+            eq(cards.personId, input.personId),
+            isNull(cards.deletedAt),
             // The diver's own unsighted "nitrox certified?" is a claim, not a
             // card: the agency's page may answer it (D6).
-            or(
-              isNull(nitroxCertifications.selfDeclaredAt),
-              ne(nitroxCertifications.status, "pending"),
-            ),
+            or(isNull(cards.selfDeclaredAt), ne(cards.status, "pending")),
           ),
         )
         .limit(1),
@@ -543,7 +524,7 @@ export async function certificationForAgencyOffer(
   input: { shopId: string; personId: string; certificationId: string },
 ): Promise<{
   query: AgencyCheckQuery;
-  level: (typeof certifications.$inferSelect)["level"];
+  level: Certification["level"];
   identity: { birthDate: string | null; cardNumber: string | null };
   /** The agency's number for this diver, as the matched card holds it. */
   identifier: string;
@@ -551,25 +532,26 @@ export async function certificationForAgencyOffer(
 } | null> {
   const [row] = await db
     .select({
-      agency: certifications.agency,
-      level: certifications.level,
-      identifier: certifications.identifier,
+      agency: cards.agency,
+      level: levelCardLevel,
+      identifier: cards.identifier,
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
       padiChecksEnabled: shops.padiChecksEnabled,
     })
-    .from(certifications)
-    .innerJoin(people, eq(people.id, certifications.personId))
-    .innerJoin(shops, eq(shops.id, certifications.shopId))
+    .from(cards)
+    .innerJoin(people, eq(people.id, cards.personId))
+    .innerJoin(shops, eq(shops.id, cards.shopId))
     .where(
       and(
-        eq(certifications.id, input.certificationId),
-        eq(certifications.shopId, input.shopId),
-        eq(certifications.personId, input.personId),
-        eq(certifications.status, "verified"),
-        isNotNull(certifications.agencyCheckedAt),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, "level"),
+        eq(cards.personId, input.personId),
+        eq(cards.status, "verified"),
+        isNotNull(cards.agencyCheckedAt),
         eq(people.shopId, input.shopId),
-        isNull(certifications.deletedAt),
+        isNull(cards.deletedAt),
         isNull(people.deletedAt),
         isNull(people.anonymizedAt),
       ),
@@ -651,16 +633,17 @@ export async function addAgencyListedCards(
       // The level card, read again under a share lock so the check's Undo
       // (which updates it) waits for this to commit, or this sees it undone.
       const [matched] = await tx
-        .select({ agency: certifications.agency, identifier: certifications.identifier })
-        .from(certifications)
+        .select({ agency: cards.agency, identifier: cards.identifier })
+        .from(cards)
         .where(
           and(
-            eq(certifications.id, input.certificationId),
-            eq(certifications.shopId, input.shopId),
-            eq(certifications.personId, input.personId),
-            eq(certifications.status, "verified"),
-            isNotNull(certifications.agencyCheckedAt),
-            isNull(certifications.deletedAt),
+            eq(cards.id, input.certificationId),
+            eq(cards.shopId, input.shopId),
+            eq(cards.kind, "level"),
+            eq(cards.personId, input.personId),
+            eq(cards.status, "verified"),
+            isNotNull(cards.agencyCheckedAt),
+            isNull(cards.deletedAt),
           ),
         )
         .for("share")
@@ -674,15 +657,16 @@ export async function addAgencyListedCards(
       const numbersTheDiver = AGENCY_CHECKS[matched.agency].numbersTheDiver;
       if (input.cards.some((card) => card.kind === "nitrox")) {
         await tx
-          .update(nitroxCertifications)
+          .update(cards)
           .set({ deletedAt: nowDate(), deletedByPersonId: input.filedByPersonId })
           .where(
             and(
-              eq(nitroxCertifications.shopId, input.shopId),
-              eq(nitroxCertifications.personId, input.personId),
-              isNotNull(nitroxCertifications.selfDeclaredAt),
-              eq(nitroxCertifications.status, "pending"),
-              isNull(nitroxCertifications.deletedAt),
+              eq(cards.shopId, input.shopId),
+              eq(cards.kind, "nitrox"),
+              eq(cards.personId, input.personId),
+              isNotNull(cards.selfDeclaredAt),
+              eq(cards.status, "pending"),
+              isNull(cards.deletedAt),
             ),
           );
       }
@@ -697,9 +681,9 @@ export async function addAgencyListedCards(
           listedFromCertificationId: input.certificationId,
         };
         if (card.kind === "nitrox") {
-          await tx.insert(nitroxCertifications).values(values);
+          await tx.insert(cards).values({ ...values, kind: "nitrox" });
         } else {
-          await tx.insert(specialtyCertifications).values({ ...values, specialty: card.kind });
+          await tx.insert(cards).values({ ...values, kind: "specialty", specialty: card.kind });
         }
       }
       return { ok: true, added: input.cards.map((card) => card.kind) } as const;
@@ -723,17 +707,17 @@ async function undoListedCardCheck(
     cardType: AgencyListedCardType;
   },
 ): Promise<{ ok: true; archived: number } | { ok: false }> {
-  const table = input.cardType === "nitrox" ? nitroxCertifications : specialtyCertifications;
   const [card] = await tx
-    .select({ id: table.id, reviewedAt: table.reviewedAt })
-    .from(table)
+    .select({ id: cards.id, reviewedAt: cards.reviewedAt })
+    .from(cards)
     .where(
       and(
-        eq(table.id, input.certificationId),
-        eq(table.shopId, input.shopId),
-        eq(table.personId, input.personId),
-        isNotNull(table.agencyCheckedAt),
-        isNull(table.deletedAt),
+        eq(cards.id, input.certificationId),
+        eq(cards.shopId, input.shopId),
+        eq(cards.kind, input.cardType),
+        eq(cards.personId, input.personId),
+        isNotNull(cards.agencyCheckedAt),
+        isNull(cards.deletedAt),
       ),
     )
     .for("update")
@@ -768,24 +752,25 @@ export async function undoAgencyCheck(
     personId: string;
     certificationId: string;
     undoneByPersonId: string;
-    /** The table the card is in; the level ladder when absent. */
+    /** The card's kind; the level ladder when absent. */
     cardType?: AgencyListedCardType;
   },
 ): Promise<{ ok: true; archived: number } | { ok: false }> {
   const outcome = await db.transaction(async (tx) => {
     // A nitrox or specialty card (issue #2592): the same Undo, on its own
-    // table. It lists no cards of its own, so there is nothing else to take back.
+    // kind. It lists no cards of its own, so there is nothing else to take back.
     if (input.cardType) return undoListedCardCheck(tx, { ...input, cardType: input.cardType });
     const [card] = await tx
-      .select({ id: certifications.id, reviewedAt: certifications.reviewedAt })
-      .from(certifications)
+      .select({ id: cards.id, reviewedAt: cards.reviewedAt })
+      .from(cards)
       .where(
         and(
-          eq(certifications.id, input.certificationId),
-          eq(certifications.shopId, input.shopId),
-          eq(certifications.personId, input.personId),
-          isNotNull(certifications.agencyCheckedAt),
-          isNull(certifications.deletedAt),
+          eq(cards.id, input.certificationId),
+          eq(cards.shopId, input.shopId),
+          eq(cards.kind, "level"),
+          eq(cards.personId, input.personId),
+          isNotNull(cards.agencyCheckedAt),
+          isNull(cards.deletedAt),
         ),
       )
       .for("update")
@@ -804,31 +789,21 @@ export async function undoAgencyCheck(
       deletedAt: nowDate(),
       deletedByPersonId: input.undoneByPersonId,
     };
-    const nitrox = await tx
-      .update(nitroxCertifications)
+    // The nitrox and specialty cards its page listed; never a level card.
+    const archived = await tx
+      .update(cards)
       .set(archive)
       .where(
         and(
-          eq(nitroxCertifications.shopId, input.shopId),
-          eq(nitroxCertifications.listedFromCertificationId, input.certificationId),
-          eq(nitroxCertifications.status, "pending"),
-          isNull(nitroxCertifications.deletedAt),
+          eq(cards.shopId, input.shopId),
+          inArray(cards.kind, ["nitrox", "specialty"]),
+          eq(cards.listedFromCertificationId, input.certificationId),
+          eq(cards.status, "pending"),
+          isNull(cards.deletedAt),
         ),
       )
-      .returning({ id: nitroxCertifications.id });
-    const specialties = await tx
-      .update(specialtyCertifications)
-      .set(archive)
-      .where(
-        and(
-          eq(specialtyCertifications.shopId, input.shopId),
-          eq(specialtyCertifications.listedFromCertificationId, input.certificationId),
-          eq(specialtyCertifications.status, "pending"),
-          isNull(specialtyCertifications.deletedAt),
-        ),
-      )
-      .returning({ id: specialtyCertifications.id });
-    return { ok: true, archived: nitrox.length + specialties.length } as const;
+      .returning({ id: cards.id });
+    return { ok: true, archived: archived.length } as const;
   });
   // After the commit, so a device that re-reads sees the review gone
   // (issue #2613).

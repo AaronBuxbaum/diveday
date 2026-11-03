@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { sealCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { fileScopedShopContext } from "@/test/db";
 import { people, waiverRecords } from "./schema";
-import { completeWaiver, saveWaiverDraft } from "./waivers-completion";
+import { completeWaiver, recordWaiverDraft } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import * as templates from "./waivers-templates";
 import { clearAnswers, waiverContextFor } from "./waivers-test-fixtures";
@@ -49,7 +49,7 @@ describe("waiver expiry during validation", () => {
               medicalAnswers: clearAnswers,
               emergencyContact: { name: "Jordan", phone: "1234567890" },
             })
-          : await saveWaiverDraft(db, envelope, {
+          : await recordWaiverDraft(db, envelope, {
               acknowledged: true,
               medicalAnswers: clearAnswers,
               shopAnswers: {},

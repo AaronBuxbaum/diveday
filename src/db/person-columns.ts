@@ -68,12 +68,10 @@ const rows = [
   { table: "bookings", column: "person_id", kind: "subject", merge: "move" },
   { table: "internal_notes", column: "person_id", kind: "subject", merge: "move" },
   { table: "interests", column: "person_id", kind: "subject", merge: "move" },
-  {
-    table: "person_courtesy_email_unsubscribe_tokens",
-    column: "person_id",
-    kind: "subject",
-    merge: "move",
-  },
+  // A courtesy-email unsubscribe link (`purpose = 'courtesy_email_unsubscribe'`)
+  // follows the person, so a link the source was mailed still opts the kept
+  // record out. Rows of other purposes leave `person_id` null.
+  { table: "capabilities", column: "person_id", kind: "subject", merge: "move" },
   { table: "dive_package_entitlements", column: "person_id", kind: "subject", merge: "move" },
   { table: "orders", column: "person_id", kind: "subject", merge: "move" },
   { table: "waiver_records", column: "person_id", kind: "subject", merge: "move" },
@@ -83,9 +81,8 @@ const rows = [
   // verified before the move; its unique key is per booking, so the two
   // sides cannot collide.
   { table: "course_form_records", column: "person_id", kind: "subject", merge: "move" },
-  { table: "certifications", column: "person_id", kind: "subject", merge: "move" },
+  { table: "cards", column: "person_id", kind: "subject", merge: "move" },
   { table: "certification_junior_reviews", column: "person_id", kind: "subject", merge: "move" },
-  { table: "specialty_certifications", column: "person_id", kind: "subject", merge: "move" },
   { table: "prior_visits", column: "person_id", kind: "subject", merge: "move" },
   { table: "imported_payment_history", column: "person_id", kind: "subject", merge: "move" },
   {
@@ -108,7 +105,6 @@ const rows = [
   { table: "customer_gear_items", column: "person_id", kind: "subject", merge: "move" },
   { table: "work_orders", column: "person_id", kind: "subject", merge: "move" },
   { table: "prior_gear_assignments", column: "person_id", kind: "subject", merge: "move" },
-  { table: "nitrox_certifications", column: "person_id", kind: "subject", merge: "move" },
   { table: "trip_reviews", column: "person_id", kind: "subject", merge: "move" },
   // The private half of the same act (ADR 20260904-reef-all-the-way-down,
   // D40): the diver's own word about how the day went, on the booking they
@@ -218,7 +214,7 @@ const rows = [
     why: "the staff member who sighted the card",
   },
   {
-    table: "certifications",
+    table: "cards",
     column: "junior_status_verified_by_person_id",
     kind: "actor",
     merge: "leave",
@@ -365,28 +361,28 @@ const rows = [
     why: "who recorded the team change",
   },
   {
-    table: "certifications",
+    table: "cards",
     column: "deleted_by_person_id",
     kind: "actor",
     merge: "leave",
     why: "who removed the card",
   },
   {
-    table: "certifications",
+    table: "cards",
     column: "issued_by_person_id",
     kind: "actor",
     merge: "leave",
     why: "who entered the card",
   },
   {
-    table: "certifications",
+    table: "cards",
     column: "processed_by_person_id",
     kind: "actor",
     merge: "leave",
     why: "who told the agency about the card",
   },
   {
-    table: "certifications",
+    table: "cards",
     column: "reviewed_by_person_id",
     kind: "actor",
     merge: "leave",
@@ -547,34 +543,6 @@ const rows = [
     why: "which staffer asked for the species",
   },
   {
-    table: "nitrox_certifications",
-    column: "deleted_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who removed the card",
-  },
-  {
-    table: "nitrox_certifications",
-    column: "issued_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who entered the card",
-  },
-  {
-    table: "nitrox_certifications",
-    column: "processed_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who told the agency about the card",
-  },
-  {
-    table: "nitrox_certifications",
-    column: "reviewed_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who confirmed the card",
-  },
-  {
     table: "orders",
     column: "created_by_person_id",
     kind: "actor",
@@ -720,34 +688,6 @@ const rows = [
     kind: "actor",
     merge: "leave",
     why: "who wrote the code",
-  },
-  {
-    table: "specialty_certifications",
-    column: "deleted_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who removed the card",
-  },
-  {
-    table: "specialty_certifications",
-    column: "issued_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who entered the card",
-  },
-  {
-    table: "specialty_certifications",
-    column: "processed_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who told the agency about the card",
-  },
-  {
-    table: "specialty_certifications",
-    column: "reviewed_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who confirmed the card",
   },
   {
     table: "staff_credentials",

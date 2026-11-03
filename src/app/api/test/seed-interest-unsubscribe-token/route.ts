@@ -8,7 +8,7 @@ import { getShopBySlug } from "@/db/shops";
 import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
- * Mints a real, valid `interest_unsubscribe_tokens` row for an existing anytime
+ * Mints a real, valid `interest_unsubscribe` capability for an existing anytime
  * interest (the last-minute list) and hands back the raw token — the only way an
  * e2e spec can drive `/unsubscribe/[token]`'s actual happy path through its real
  * page and server action, mirroring `/api/test/seed-account-token`'s reasoning:

@@ -30,6 +30,7 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { shopDaysBounds, shopMonthBounds, wallTimeToUtc } from "@/lib/zoned";
 import { readActiveStaffRoles } from "./authz";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
+import { levelCardLevel } from "./card-columns";
 import { fareCheckout, tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -40,7 +41,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
-  certifications,
+  cards,
   diveSites,
   importedPaymentHistory,
   orders,
@@ -1298,18 +1299,19 @@ export async function certifiedHere(
   window: { startUtc: Date; endUtc: Date },
 ): Promise<CertifiedHere> {
   const rows = await db
-    .select({ level: certifications.level, count: count() })
-    .from(certifications)
+    .select({ level: levelCardLevel, count: count() })
+    .from(cards)
     .where(
       and(
-        eq(certifications.shopId, shopId),
-        isNotNull(certifications.issuedByShopAt),
-        isNull(certifications.deletedAt),
-        gte(certifications.issuedByShopAt, window.startUtc),
-        lt(certifications.issuedByShopAt, window.endUtc),
+        eq(cards.shopId, shopId),
+        eq(cards.kind, "level"),
+        isNotNull(cards.issuedByShopAt),
+        isNull(cards.deletedAt),
+        gte(cards.issuedByShopAt, window.startUtc),
+        lt(cards.issuedByShopAt, window.endUtc),
       ),
     )
-    .groupBy(certifications.level);
+    .groupBy(cards.level);
   const byLevel = rows
     .map((row) => ({ level: row.level, count: Number(row.count) }))
     .sort((left, right) => right.count - left.count || left.level.localeCompare(right.level));
@@ -1337,18 +1339,19 @@ export async function crewYearFacts(
   const [issued, days] = await queryAll(db, [
     () =>
       db
-        .select({ personId: certifications.issuedByPersonId, certified: count() })
-        .from(certifications)
+        .select({ personId: cards.issuedByPersonId, certified: count() })
+        .from(cards)
         .where(
           and(
-            eq(certifications.shopId, shopId),
-            isNotNull(certifications.issuedByPersonId),
-            isNull(certifications.deletedAt),
-            gte(certifications.issuedByShopAt, from),
-            lt(certifications.issuedByShopAt, to),
+            eq(cards.shopId, shopId),
+            eq(cards.kind, "level"),
+            isNotNull(cards.issuedByPersonId),
+            isNull(cards.deletedAt),
+            gte(cards.issuedByShopAt, from),
+            lt(cards.issuedByShopAt, to),
           ),
         )
-        .groupBy(certifications.issuedByPersonId),
+        .groupBy(cards.issuedByPersonId),
     () =>
       db
         .select({

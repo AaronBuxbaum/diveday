@@ -6,7 +6,7 @@ import { drainNotificationRetries } from "@/db/notifications";
 import { sendDueRecaps } from "@/db/recap";
 import { sendDueReminders } from "@/db/reminders";
 import { sendStaleRollCallAlerts } from "@/db/roll-call-alerts";
-import { bringDemoBoatsAtSeaHome } from "@/db/seed-boat-at-sea";
+import { bringDemoBoatsAtSeaHome } from "@/db/seed";
 import { sendDueServiceReminders } from "@/db/work-order-follow-up";
 import { log } from "@/lib/log";
 import { sentry } from "@/lib/observability";

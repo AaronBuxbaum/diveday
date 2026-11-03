@@ -4,7 +4,7 @@ import {
   assignHelpRequestHelper,
   completeHelpRequest,
   getHelpRequestForBooking,
-  saveHelpRequest,
+  recordHelpRequest,
   undoHelpRequestCompletion,
 } from "./help-requests";
 import { getTripCrewAssignments, getTripRoster, upcomingTripsWithCounts } from "./trips";
@@ -20,7 +20,7 @@ async function requestFixture() {
   const [helper] = await getTripCrewAssignments(db, shop.id, trip.id);
   if (!seat || !helper) throw new Error("missing seat or crew");
   const now = new Date(trip.startsAt.getTime() - 60 * 60 * 1000);
-  const saved = await saveHelpRequest(db, {
+  const saved = await recordHelpRequest(db, {
     shopId: shop.id,
     bookingId: seat.booking.id,
     kind: "first_timer",
@@ -64,7 +64,7 @@ describe("help request generation guards", () => {
     const f = await requestFixture();
     const original = await f.assign(f.saved.request.revision);
     if (!original.ok) throw new Error("assign refused");
-    const replacement = await saveHelpRequest(f.db, {
+    const replacement = await recordHelpRequest(f.db, {
       shopId: f.shop.id,
       bookingId: f.seat.booking.id,
       kind: "carry_gear",
@@ -84,7 +84,7 @@ describe("help request generation guards", () => {
 
   it("refuses a requested assignment form for the previous kind even at the same clock instant", async () => {
     const f = await requestFixture();
-    await saveHelpRequest(f.db, {
+    await recordHelpRequest(f.db, {
       shopId: f.shop.id,
       bookingId: f.seat.booking.id,
       kind: "carry_gear",

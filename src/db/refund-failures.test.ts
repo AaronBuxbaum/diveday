@@ -27,7 +27,7 @@ import { recordStripeRefundFailure } from "./refund-failures";
 import { refundBookingOnCancellation } from "./refunds";
 import { bookingCheckouts, orders } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { editTrip, getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { listUnfinished } from "./unfinished";
 
 /**
@@ -194,7 +194,7 @@ describe("recordStripeRefundFailure on an order", () => {
 describe("recordStripeRefundFailure on a checkout", () => {
   async function paidSeat() {
     const { db, shop, reef } = await connected();
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -278,7 +278,7 @@ describe("recordStripeRefundFailure on a checkout", () => {
       { actor: "staff", shopId: shop.id, tripId: reef.id, fullName: "Lou Late" },
     ]);
     if (!party.ok) throw new Error(party.reason);
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,

@@ -14,7 +14,7 @@ export { aboardText, gearUnitHull } from "./AboardBoatField";
  * A regulator says whether the shop keeps it for enriched air (issue #2207).
  * The box is posted beside a hidden `off`, so an unticked box saves "no"
  * while a form that never drew it (any other kind) leaves the answer alone;
- * `updateGearItem` clears it anyway once the unit is not a regulator.
+ * `editGearItem` clears it anyway once the unit is not a regulator.
  *
  * A wetsuit says its thickness in whole millimetres (issue #2206), which is
  * what the Gear tab matches against the day's wetsuit. Blank is "not said".

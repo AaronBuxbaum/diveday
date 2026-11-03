@@ -19,7 +19,7 @@ import {
   bookingCheckouts,
   bookingPaymentEvents,
   bookings,
-  certifications,
+  cards,
   courses,
   diveSites,
   people,
@@ -300,7 +300,8 @@ describe("certifiedHere and crewYearFacts (item 32)", () => {
       at: string,
       deleted = false,
     ) =>
-      db.insert(certifications).values({
+      db.insert(cards).values({
+        kind: "level",
         shopId,
         personId: await person(db, shopId, `Student ${level} ${at}`),
         agency: "padi",
@@ -317,7 +318,8 @@ describe("certifiedHere and crewYearFacts (item 32)", () => {
     await issue("open_water", "2026-05-02T15:00:00Z", true);
     await issue("open_water", "2025-12-01T15:00:00Z");
     // A card someone else issued, captured rather than issued here.
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId,
       personId: await person(db, shopId, "Walk-in"),
       agency: "padi",

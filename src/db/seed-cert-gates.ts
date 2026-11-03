@@ -2,7 +2,7 @@ import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import {
   bookings,
-  certifications,
+  cards,
   type courses,
   type DiveSpecialty,
   type diveSites,
@@ -118,7 +118,8 @@ export async function seedCertGates(
     .returning();
   if (!instructorDiver) throw new Error("seed: cert-gate instructor diver insert returned no row");
   await db.insert(personRoles).values({ personId: instructorDiver.id, role: "diver" as const });
-  await db.insert(certifications).values({
+  await db.insert(cards).values({
+    kind: "level",
     shopId,
     personId: instructorDiver.id,
     agency: "padi" as const,

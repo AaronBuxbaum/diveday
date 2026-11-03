@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TodayAction } from "@/lib/today";
+import type { TodayAction } from "@/features/today";
 import {
   rankBoatRows,
   rowLine,
@@ -104,7 +104,7 @@ describe("rankBoatRows (A43)", () => {
     ({ id, kind, ...(tone ? { tone } : {}) }) as unknown as TodayAction;
 
   it("puts readiness and medical first, then contact, prep, money and the rest", () => {
-    // An order with money and prep above contact, which `src/lib/today.ts`
+    // An order with money and prep above contact, which `src/features/today/today.ts`
     // no longer hands over (A43) and this still must not trust.
     const rows = [
       row("payment", "payment"),

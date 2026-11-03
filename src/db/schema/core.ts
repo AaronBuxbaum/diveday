@@ -962,7 +962,7 @@ export const people = pgTable(
      * makes it an adult by someone's say-so.
      *
      * A date of birth replaces it: the guardian rule and the age gate read the
-     * date and never this, and typing a date (`updateDiver`) or merging onto
+     * date and never this, and typing a date (`editDiver`) or merging onto
      * one nulls this pair, so clearing that date later cannot bring back an
      * adult claim the date may have disproved. Null everywhere else, which is
      * the ordinary H-20260724-certification-levels-agency-rules case of a record nobody asked about.
@@ -1063,7 +1063,7 @@ export const people = pgTable(
      * When a staff member recorded that they have seen this diver dive dry
      * (issue #2136, Aaron 2026-10-13). Clears the roster's drysuit-card
      * advisory (`checkDrysuitCard`) and nothing else: it is **not a card**,
-     * never reaches `specialty_certifications`, `calculateReadiness` or
+     * never reaches a specialty card, `calculateReadiness` or
      * admission, and a site or trip that requires the `drysuit` specialty
      * still refuses without one. Staff-only: no diver-facing writer, and
      * `/ready` never sets it. Null means nobody has recorded it.
@@ -1408,7 +1408,7 @@ export const certificationStatus = pgEnum("certification_status", ["pending", "v
  * Activity-gating specialties that attach to a site or trip ("this wreck
  * requires AOW + Deep"). Each is a distinct yes/no gate, never a ladder rung,
  * so they live apart from the recreational-level rank map in readiness.ts.
- * Nitrox is deliberately absent: nitrox_certifications gates the per-booking
+ * Nitrox is deliberately absent: the nitrox card gates the per-booking
  * mix request, not a site.
  */
 export const diveSpecialty = pgEnum("dive_specialty", [

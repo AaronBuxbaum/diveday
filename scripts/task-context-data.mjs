@@ -221,15 +221,20 @@ export const areas = {
   },
   today: {
     goal: "Maintain the Today work queue: urgency ranking, blocker collapse, and actionable next steps.",
-    docs: [],
+    docs: ["src/features/today/README.md"],
     code: [
-      "src/lib/today.ts",
-      "src/db/today.ts",
+      "src/features/today/today.ts",
+      "src/features/today/today-reader.ts",
+      "src/db/roll-call-gaps.ts",
       "src/lib/blockers.ts",
       "src/db/blockers.ts",
       "src/app/shop/[shopSlug]/page.tsx",
     ],
-    tests: ["src/lib/today.test.ts", "src/db/today.test.ts", "src/lib/blockers.test.ts"],
+    tests: [
+      "src/features/today/today.test.ts",
+      "src/features/today/today-reader.test.ts",
+      "src/lib/blockers.test.ts",
+    ],
     invariants: [
       "The earlier departure's problems come first; severity ranks only within one departure.",
       "Undated work sorts last — never presented as urgent.",
@@ -237,7 +242,10 @@ export const areas = {
       "A diver who is already clear produces no action.",
       "An action acts in place or points at the record where the work happens — never a dead end.",
     ],
-    validate: ["pnpm test src/lib/today.test.ts src/db/today.test.ts --reporter=dot", GATE],
+    validate: [
+      "pnpm test src/features/today/today.test.ts src/features/today/today-reader.test.ts --reporter=dot",
+      GATE,
+    ],
   },
   design: {
     goal: "Deliver a calm, clear, accessible interface that follows DiveDay's semantic design system.",

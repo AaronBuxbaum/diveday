@@ -6,11 +6,11 @@ import { z } from "zod";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
+  editCourse,
+  editCourseContent,
   getCourseBySlug,
   pullCourseTemplateUpdates,
   setCourseVisibility,
-  updateCourse,
-  updateCourseContent,
 } from "@/db/courses";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
@@ -268,14 +268,14 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   }
 
   // The row's edit generation as this page last saw it. Absent means the page
-  // was rendered by a release that did not send one — see `updateCourseContent`.
+  // was rendered by a release that did not send one — see `editCourseContent`.
   // A non-numeric value is treated as absent rather than thrown: this page is
   // the only thing that writes the field, so a bad one means an old release or
   // a hand-crafted post, and neither is worth a 500 over an input that can only
   // ever tighten the write.
   const expectedVersion = Number.parseInt(extras.expectedVersion, 10);
 
-  const saved = await updateCourseContent(
+  const saved = await editCourseContent(
     db,
     staff.user.shopId,
     course.id,
@@ -312,7 +312,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   // Pricing and the nitrox answer are the shop's own decisions rather than
   // marketing copy, but the editor saves everything in one submit, so they land
   // together with the page.
-  await updateCourse(db, staff.user.shopId, course.id, {
+  await editCourse(db, staff.user.shopId, course.id, {
     priceCents: centsFromAmount(value.price, currency),
     eLearningPriceCents: centsFromAmount(value.eLearningPrice, currency),
     privatePriceCents: centsFromAmount(value.privatePrice, currency),

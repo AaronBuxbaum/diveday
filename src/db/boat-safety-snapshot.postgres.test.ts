@@ -6,7 +6,7 @@ import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } fro
 import { captureDepartureBoatSafety, departureBoatSafetySnapshot } from "./boat-safety";
 import { createBoat } from "./boats";
 import { shops, trips } from "./schema";
-import { updateTrip } from "./trips-record";
+import { editTrip } from "./trips-record";
 
 describePostgres("boat snapshot capture against a hull swap", () => {
   it("cannot read the old hull while a swap waits to replace its snapshot", async () => {
@@ -44,7 +44,7 @@ describePostgres("boat snapshot capture against a hull swap", () => {
       pg,
       sql`select id from departure_boat_safety_snapshots where trip_id = ${trip.id} for update`,
     );
-    const swap = updateTrip(pg.connect(), shop.id, trip.id, {
+    const swap = editTrip(pg.connect(), shop.id, trip.id, {
       title: trip.title,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,

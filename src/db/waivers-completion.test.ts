@@ -8,8 +8,8 @@ import {
   completeWaiver,
   getEmergencyContactForBearer,
   getWaiverForToken,
-  saveBookingEmergencyContact,
-  saveWaiverDraft,
+  recordBookingEmergencyContact,
+  recordWaiverDraft,
 } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import {
@@ -240,14 +240,14 @@ describe("emergency contact captured with the waiver", () => {
   });
 });
 
-// The roster's staff-facing capture (task 144) calls `saveBookingEmergencyContact`
+// The roster's staff-facing capture (task 144) calls `recordBookingEmergencyContact`
 // directly rather than through a bearer token, so its shop-scoping is the only
 // thing standing between a staffer and another shop's booking — covered here
 // rather than only indirectly through `completeWaiver`.
-describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () => {
+describe("recordBookingEmergencyContact (staff-facing write path, task 144)", () => {
   it("writes a contact for a booking scoped to the given shop", async () => {
     const { db, shop, booking } = await waiverContext();
-    const saved = await saveBookingEmergencyContact(db, {
+    const saved = await recordBookingEmergencyContact(db, {
       shopId: shop.id,
       bookingId: booking.id,
       name: "Alex Rivera",
@@ -273,7 +273,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
     // not a specific starting value.
     const before = await getEmergencyContactForBearer(db, shop.id, booking.id);
 
-    const saved = await saveBookingEmergencyContact(db, {
+    const saved = await recordBookingEmergencyContact(db, {
       shopId: otherShop.id,
       bookingId: booking.id,
       name: "Should Not Land",
@@ -295,7 +295,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       .set({ emergencyContactName: "Old Contact", emergencyContactPhone: "555-0000" })
       .where(eq(people.id, booking.personId));
 
-    const saved = await saveBookingEmergencyContact(db, {
+    const saved = await recordBookingEmergencyContact(db, {
       shopId: shop.id,
       bookingId: booking.id,
       name: "New Person",
@@ -317,7 +317,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       .set({ emergencyContactName: "Old Contact", emergencyContactPhone: "555-0000" })
       .where(eq(people.id, booking.personId));
 
-    const saved = await saveBookingEmergencyContact(db, {
+    const saved = await recordBookingEmergencyContact(db, {
       shopId: shop.id,
       bookingId: booking.id,
       name: "",
@@ -358,7 +358,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
     if (!stranger) throw new Error("stranger insert failed");
     await db.update(bookings).set({ personId: stranger.id }).where(eq(bookings.id, booking.id));
 
-    const saved = await saveBookingEmergencyContact(db, {
+    const saved = await recordBookingEmergencyContact(db, {
       shopId: shop.id,
       bookingId: booking.id,
       name: "Should Not Land",
@@ -384,7 +384,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       .set({ emergencyContactName: "Kept Contact", emergencyContactPhone: "555-0099" })
       .where(eq(people.id, booking.personId));
 
-    const saved = await saveBookingEmergencyContact(db, {
+    const saved = await recordBookingEmergencyContact(db, {
       shopId: shop.id,
       bookingId: booking.id,
       name: "   ",
@@ -443,7 +443,7 @@ describe("an emergency contact on a held seat", () => {
 
   it("refuses the bearer and leaves the matched person's contact alone", async () => {
     const { db, shop, booking } = await heldSeat();
-    const saved = await saveBookingEmergencyContact(db, {
+    const saved = await recordBookingEmergencyContact(db, {
       shopId: shop.id,
       bookingId: booking.id,
       name: "Someone Else",
@@ -457,7 +457,7 @@ describe("an emergency contact on a held seat", () => {
     });
 
     expect(
-      await saveBookingEmergencyContact(db, {
+      await recordBookingEmergencyContact(db, {
         shopId: shop.id,
         bookingId: booking.id,
         name: "Staff Entered",
@@ -590,7 +590,7 @@ describe("a release on a held seat (issue #2125)", () => {
 
     expect((await getWaiverForToken(db, issued.token, now)).state).toBe("held");
     expect(
-      await saveWaiverDraft(db, issued.token, {
+      await recordWaiverDraft(db, issued.token, {
         signerName: person.fullName,
         acknowledged: true,
         medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

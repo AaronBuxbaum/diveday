@@ -2,13 +2,7 @@ import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import { seatMarks } from "./roll-call-subject";
-import {
-  certifications,
-  nitroxCertifications,
-  people,
-  rollCallEvents,
-  specialtyCertifications,
-} from "./schema";
+import { cards, people, rollCallEvents } from "./schema";
 
 /**
  * A per-shop transaction lock serializes person merge/erasure with shared
@@ -44,40 +38,35 @@ export async function lockBoardingCertificationEvidence(
   }
 }
 
-type Cards = typeof certifications | typeof specialtyCertifications | typeof nitroxCertifications;
-
 /**
- * One INSERT statement reads all card tables and reviewer names from one
+ * One INSERT statement reads every card of every kind (the snapshot is the
+ * diver's whole ledger, so it names no kind) and reviewer names from one
  * READ COMMITTED database snapshot. The shop advisory lock prevents merge or
  * erasure until this transaction commits; this must not run in an outer
  * REPEATABLE READ transaction whose snapshot predates that lock.
  */
 export function boardingCertificationSnapshot(shopId: string, personId: string): SQL {
-  const cards = (table: Cards, kind: string, level: SQL, specialty: SQL, selfDeclared: SQL) => sql`
-    select jsonb_build_object(
-      'kind', ${kind}::text, 'agency', ${table.agency}, 'level', ${level}, 'specialty', ${specialty},
-      'identifier', ${table.identifier}, 'status', ${table.status},
-      'reviewedAt', case when ${table.reviewedAt} is null then null else
-        to_char(${table.reviewedAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') end,
-      'reviewedByPersonId', reviewer.id, 'reviewedByName', reviewer.full_name,
-      'imported', ${table.importedAt} is not null, 'selfDeclared', ${selfDeclared}
-    ) as card
-    from ${table}
-    left join ${people} as reviewer on reviewer.id = ${table.reviewedByPersonId}
-      and reviewer.shop_id = ${shopId} and reviewer.anonymized_at is null
-    where ${table.shopId} = ${shopId} and ${table.personId} = ${personId}
-      and ${table.deletedAt} is null`;
-  const unsighted = (table: typeof certifications | typeof nitroxCertifications) =>
-    sql`${table.selfDeclaredAt} is not null and ${table.status} = 'pending'`;
+  // A still-unsighted claim, of any kind: a specialty a diver typed on /ready
+  // is as much a claim as a level they typed, and the record says so.
+  const selfDeclared = sql`${cards.selfDeclaredAt} is not null and ${cards.status} = 'pending'`;
   return sql`(
     select coalesce(jsonb_agg(card order by card ->> 'kind', card ->> 'agency',
       card ->> 'level', card ->> 'specialty', card ->> 'identifier'), '[]'::jsonb)
     from (
-      ${cards(certifications, "level", sql`${certifications.level}`, sql`null`, unsighted(certifications))}
-      union all
-      ${cards(specialtyCertifications, "specialty", sql`null`, sql`${specialtyCertifications.specialty}`, sql`false`)}
-      union all
-      ${cards(nitroxCertifications, "nitrox", sql`null`, sql`null`, unsighted(nitroxCertifications))}
+      select jsonb_build_object(
+        'kind', ${cards.kind}::text, 'agency', ${cards.agency}, 'level', ${cards.level},
+        'specialty', ${cards.specialty},
+        'identifier', ${cards.identifier}, 'status', ${cards.status},
+        'reviewedAt', case when ${cards.reviewedAt} is null then null else
+          to_char(${cards.reviewedAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') end,
+        'reviewedByPersonId', reviewer.id, 'reviewedByName', reviewer.full_name,
+        'imported', ${cards.importedAt} is not null, 'selfDeclared', ${selfDeclared}
+      ) as card
+      from ${cards}
+      left join ${people} as reviewer on reviewer.id = ${cards.reviewedByPersonId}
+        and reviewer.shop_id = ${shopId} and reviewer.anonymized_at is null
+      where ${cards.shopId} = ${shopId} and ${cards.personId} = ${personId}
+        and ${cards.deletedAt} is null
     ) as evidence
   )`;
 }

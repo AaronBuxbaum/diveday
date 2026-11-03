@@ -97,8 +97,15 @@ function nameOf(personName: ReadonlyMap<string, string>, personId: string | null
   return personId ? personName.get(personId) : null;
 }
 
-export const CERTIFICATIONS_CSV = sharedFile<ShopRow<"certificationRows">>({
-  file: "certifications.csv",
+/**
+ * Every card the shop holds, of every kind, in one file (issue #2722): `kind`
+ * says whether a row is a level, specialty or nitrox card, and `level` or
+ * `specialty` carries the rung or the specialty. Every provenance stamp travels
+ * for every kind, so a file read back cannot launder one kind of card into
+ * another.
+ */
+export const CARDS_CSV = sharedFile<ShopRow<"cardRows">>({
+  file: "cards.csv",
   columns: [
     { header: "id", in: "both", value: (row) => row.id },
     { header: "person_id", in: "shop", value: (row) => row.personId },
@@ -107,8 +114,10 @@ export const CERTIFICATIONS_CSV = sharedFile<ShopRow<"certificationRows">>({
       in: "shop",
       value: (row, { personName }) => personName.get(row.personId),
     },
+    { header: "kind", in: "both", value: (row) => row.kind },
     { header: "agency", in: "both", value: (row) => row.agency },
     { header: "level", in: "both", value: (row) => row.level },
+    { header: "specialty", in: "both", value: (row) => row.specialty },
     { header: "identifier", in: "both", value: (row) => row.identifier },
     // The number the *diver* typed, which is never the number above: one
     // is a claim and one is what the shop holds, and a file that
@@ -172,17 +181,25 @@ export const CERTIFICATIONS_CSV = sharedFile<ShopRow<"certificationRows">>({
       value: (row) => row.processedWithAgencyAt,
     },
     { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
+    // The level card whose agency check listed this specialty or nitrox card
+    // (layer 3 of ADR 20261008-cert-check-extension): review_note then holds
+    // the agency's words, not a staffer's.
+    {
+      header: "listed_from_certification_id",
+      in: "shop",
+      value: (row) => row.listedFromCertificationId,
+    },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],
   shop: {
-    rows: ({ certificationRows }) => certificationRows,
-    note: EXPORT_FILE_NOTES["certifications.csv"],
+    rows: ({ cardRows }) => cardRows,
+    note: EXPORT_FILE_NOTES["cards.csv"],
   },
   diver: {
-    rows: ({ certificationRows }) => certificationRows,
-    note: "Certification records this shop holds on file, with their verification status.",
+    rows: ({ cardRows }) => cardRows,
+    note: "Every card this shop holds on file (level, specialty and nitrox), with its verification status.",
   },
 });
 
@@ -208,121 +225,6 @@ export const CERTIFICATION_JUNIOR_REVIEWS_CSV = sharedFile<ShopRow<"juniorReview
   diver: {
     rows: ({ juniorReviewRows }) => juniorReviewRows,
     note: EXPORT_FILE_NOTES["certification_junior_reviews.csv"],
-  },
-});
-
-export const SPECIALTY_CERTIFICATIONS_CSV = sharedFile<ShopRow<"specialtyRows">>({
-  file: "specialty_certifications.csv",
-  columns: [
-    { header: "id", in: "both", value: (row) => row.id },
-    { header: "person_id", in: "shop", value: (row) => row.personId },
-    {
-      header: "person_name",
-      in: "shop",
-      value: (row, { personName }) => personName.get(row.personId),
-    },
-    { header: "agency", in: "both", value: (row) => row.agency },
-    { header: "specialty", in: "both", value: (row) => row.specialty },
-    { header: "identifier", in: "both", value: (row) => row.identifier },
-    { header: "status", in: "both", value: (row) => row.status },
-    { header: "review_note", in: "both", value: (row) => row.reviewNote },
-    { header: "reviewed_at", in: "both", value: (row) => row.reviewedAt },
-    {
-      header: "reviewed_by_name",
-      in: "diver",
-      value: (row, { personName }) =>
-        row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
-    },
-    { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
-    // The agency's own page, read through the DiveDay browser extension
-    // (H-20261008-cert-check-extension, as certifications.csv above): review_note then holds its words.
-    { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
-    // The level card whose agency check listed this one (layer 3 of ADR
-    // 20261008-cert-check-extension): review_note then holds the agency's
-    // words, not a staffer's. Another provenance stamp, and it travels for
-    // the same reason as the others.
-    {
-      header: "listed_from_certification_id",
-      in: "shop",
-      value: (row) => row.listedFromCertificationId,
-    },
-    // The shop's own record that it told the agency (item 46), as on certifications.csv.
-    {
-      header: "processed_with_agency_at",
-      in: "shop",
-      value: (row) => row.processedWithAgencyAt,
-    },
-    { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
-    { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
-    { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
-    { header: "created_at", in: "both", value: (row) => row.createdAt },
-  ],
-  shop: {
-    rows: ({ specialtyRows }) => specialtyRows,
-    note: EXPORT_FILE_NOTES["specialty_certifications.csv"],
-  },
-  diver: {
-    rows: ({ specialtyRows }) => specialtyRows,
-    note: "Specialty certifications (deep, wreck, night, drysuit) with their verification status.",
-  },
-});
-
-export const NITROX_CERTIFICATIONS_CSV = sharedFile<ShopRow<"nitroxRows">>({
-  file: "nitrox_certifications.csv",
-  columns: [
-    { header: "id", in: "both", value: (row) => row.id },
-    { header: "person_id", in: "shop", value: (row) => row.personId },
-    {
-      header: "person_name",
-      in: "shop",
-      value: (row, { personName }) => personName.get(row.personId),
-    },
-    { header: "agency", in: "both", value: (row) => row.agency },
-    { header: "identifier", in: "both", value: (row) => row.identifier },
-    { header: "status", in: "both", value: (row) => row.status },
-    { header: "review_note", in: "both", value: (row) => row.reviewNote },
-    { header: "reviewed_at", in: "both", value: (row) => row.reviewedAt },
-    {
-      header: "reviewed_by_name",
-      in: "diver",
-      value: (row, { personName }) =>
-        row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
-    },
-    { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
-    // The agency's own page, read through the DiveDay browser extension
-    // (H-20261008-cert-check-extension, as certifications.csv above): review_note then holds its words.
-    { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
-    { header: "imported_at", in: "both", value: (row) => row.importedAt },
-    { header: "imported_from_label", in: "both", value: (row) => row.importedFromLabel },
-    // Same reason as the level card's — see certifications.csv above.
-    { header: "self_declared_at", in: "both", value: (row) => row.selfDeclaredAt },
-    // The level card whose agency check listed this one (layer 3 of ADR
-    // 20261008-cert-check-extension): review_note then holds the agency's
-    // words, not a staffer's. Another provenance stamp, and it travels for
-    // the same reason as the others.
-    {
-      header: "listed_from_certification_id",
-      in: "shop",
-      value: (row) => row.listedFromCertificationId,
-    },
-    // The shop's own record that it told the agency (item 46), as on certifications.csv.
-    {
-      header: "processed_with_agency_at",
-      in: "shop",
-      value: (row) => row.processedWithAgencyAt,
-    },
-    { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
-    { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
-    { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
-    { header: "created_at", in: "both", value: (row) => row.createdAt },
-  ],
-  shop: {
-    rows: ({ nitroxRows }) => nitroxRows,
-    note: EXPORT_FILE_NOTES["nitrox_certifications.csv"],
-  },
-  diver: {
-    rows: ({ nitroxRows }) => nitroxRows,
-    note: "Nitrox (EANx) certification with its verification status.",
   },
 });
 

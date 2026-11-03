@@ -28,13 +28,13 @@ import {
 } from "@/lib/readiness";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 import { SUIT_CHOICES } from "@/lib/rentals";
+import { ROLL_CALL_GAP_KINDS } from "@/lib/roll-call-gaps";
 import {
   type ReviewModerationLineCode,
   SHOP_ACTIVITY_KINDS,
   type TripChangeLineCode,
 } from "@/lib/shop-activity";
 import type { TemperatureUnit } from "@/lib/temperature-units";
-import { ROLL_CALL_GAP_KINDS } from "@/lib/today";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
 import { stripComments } from "@/test/source";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";

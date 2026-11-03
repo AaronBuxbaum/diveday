@@ -15,8 +15,8 @@ import {
   markMissingDiverFound,
   markMissingSubjectFound,
   raiseMissingDiverAlert,
+  recordIncidentDraft,
   removeIncidentPerson,
-  saveIncidentDraft,
   setIncidentLegalHold,
   startIncidentReport,
   startMissingDiverReport,
@@ -355,7 +355,7 @@ export async function saveIncidentDraftAction(
   if (parsed.fields.diveSiteId !== null && !uuidParam(parsed.fields.diveSiteId)) {
     redirect(noticeUrl(back, "site-not-found", { form: "draft" }));
   }
-  const result = await saveIncidentDraft(await getDb(), {
+  const result = await recordIncidentDraft(await getDb(), {
     shopId: shop.id,
     reportId,
     tripId,
