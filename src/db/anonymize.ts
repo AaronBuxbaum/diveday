@@ -77,6 +77,7 @@ import { forgetClaudeCallContent } from "./claude-call-content";
 import type { AppDb, AppTransaction } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import { queueMediaDeletion } from "./media-deletions";
+import { forgetPremergeCards } from "./premerge-cards-cleanup";
 import {
   attemptProcessorErasures,
   type ProcessorErasureTargetInput,
@@ -141,11 +142,6 @@ import {
   workOrderLines,
   workOrders,
 } from "./schema";
-import {
-  premergeCertifications,
-  premergeNitroxCertifications,
-  premergeSpecialtyCertifications,
-} from "./schema-retired/premerge-cards";
 import { customerProviderFromEnvironment } from "./stripe-providers";
 import { forgetTrainingPlanPeople } from "./training-plan-privacy";
 import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
@@ -1007,43 +1003,9 @@ async function scrubCertificationEvidence(
       })
       .where(eq(cards.id, card.id));
   }
-  await scrubPremergeCards(tx, shopId, personId, now);
+  // The retired tables' copy too, until they drop (issue #2722).
+  await forgetPremergeCards(tx, shopId, personId, now);
   return [];
-}
-
-/**
- * The three card tables the ledger replaced (issue #2722) still hold a copy of
- * every card for one release, until the drop migration. Erasure has to reach
- * that copy too, or the diver's agency number outlives the request in a table
- * no screen reads.
- */
-async function scrubPremergeCards(
-  tx: AppTransaction,
-  shopId: string,
-  personId: string,
-  now: Date,
-): Promise<void> {
-  const redacted = sql<string>`'redacted-' || gen_random_uuid()::text`;
-  const shared = { identifier: redacted, reviewNote: null, importedFromLabel: null };
-  await tx
-    .update(premergeCertifications)
-    .set({
-      ...shared,
-      declaredIdentifier: null,
-      juniorStatus: null,
-      juniorStatusVerifiedAt: null,
-      juniorStatusVerifiedByPersonId: null,
-      deletedAt: sql`coalesce(${premergeCertifications.deletedAt}, ${now})`,
-    })
-    .where(
-      and(eq(premergeCertifications.shopId, shopId), eq(premergeCertifications.personId, personId)),
-    );
-  for (const table of [premergeSpecialtyCertifications, premergeNitroxCertifications]) {
-    await tx
-      .update(table)
-      .set({ ...shared, deletedAt: sql`coalesce(${table.deletedAt}, ${now})` })
-      .where(and(eq(table.shopId, shopId), eq(table.personId, personId)));
-  }
 }
 
 /** The erasure's "rows that are only about the person, and are not evidence" sweep. */
