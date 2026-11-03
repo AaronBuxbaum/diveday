@@ -3,6 +3,7 @@ import { inHorizonReadiness } from "@/db/blockers";
 import { getTripManifest } from "@/db/manifests";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "@/db/trips";
 import { turnBookingAway } from "@/db/turn-away";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS } from "@/lib/clock";
 import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -29,7 +30,14 @@ async function turnedAwaySeat() {
   if (!seat) throw new Error("seeded booking missing");
   const now = new Date(trip.startsAt.getTime() - HOUR_MS);
   const before = await getTripManifest(db, shop.id, trip.id);
-  const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
+  const work = await getTodayWork(
+    db,
+    shop.id,
+    shop.slug,
+    shopClock(shop, now),
+    undefined,
+    staffTranslator("en-US"),
+  );
   const result = await turnBookingAway(db, {
     shopId: shop.id,
     bookingId: seat.booking.id,
@@ -60,7 +68,14 @@ describe("a seat the desk turned away (issue #2907)", () => {
     expect(evidence.readinessByTrip.get(trip.id)?.map((row) => row.booking.id)).not.toContain(
       bookingId,
     );
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop, now),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const card = (w: typeof work) => w.departures.find((departure) => departure.tripId === trip.id);
     expect(card(work)?.blocked).toBe((card(before)?.blocked ?? 0) - 1);
     const aboutHer = work.actions.filter(

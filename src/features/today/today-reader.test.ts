@@ -15,6 +15,7 @@ import {
   upcomingTripsWithCounts,
 } from "@/db/trips";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { shopClock } from "@/lib/shop-clock";
@@ -46,7 +47,16 @@ const ctx = fileScopedShopContext();
 describe("today's work queue (in-memory PGlite)", () => {
   it("names every planned dive's site on the departure card, in dive order, once each", async () => {
     const { db, shop } = ctx;
-    const [departure] = (await getTodayWork(db, shop.id, shop.slug, shopClock(shop))).departures;
+    const [departure] = (
+      await getTodayWork(
+        db,
+        shop.id,
+        shop.slug,
+        shopClock(shop),
+        undefined,
+        staffTranslator("en-US"),
+      )
+    ).departures;
     if (!departure) throw new Error("seed has no departure today");
     const [second] = await db
       .insert(diveSites)
@@ -61,7 +71,16 @@ describe("today's work queue (in-memory PGlite)", () => {
     if (!last || dives.length < 2) throw new Error("seed departure is not a two-dive day");
     await db.update(tripDives).set({ diveSiteId: second.id }).where(eq(tripDives.id, last.id));
 
-    const after = (await getTodayWork(db, shop.id, shop.slug, shopClock(shop))).departures[0];
+    const after = (
+      await getTodayWork(
+        db,
+        shop.id,
+        shop.slug,
+        shopClock(shop),
+        undefined,
+        staffTranslator("en-US"),
+      )
+    ).departures[0];
     expect(after?.siteName?.split(", ")).toHaveLength(2);
     expect(after?.siteName?.endsWith("Zed Wall")).toBe(true);
   });
@@ -69,7 +88,14 @@ describe("today's work queue (in-memory PGlite)", () => {
   it("puts the seeded departure that sails today on the board with live readiness counts", async () => {
     const { db, shop } = ctx;
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     expect(work.departures).toHaveLength(1);
     const [departure] = work.departures;
@@ -94,7 +120,16 @@ describe("today's work queue (in-memory PGlite)", () => {
    */
   it("counts a departure's open seats against its boat's certificate, not the stated number", async () => {
     const { db, shop } = ctx;
-    const today = (await getTodayWork(db, shop.id, shop.slug, shopClock(shop))).departures[0];
+    const today = (
+      await getTodayWork(
+        db,
+        shop.id,
+        shop.slug,
+        shopClock(shop),
+        undefined,
+        staffTranslator("en-US"),
+      )
+    ).departures[0];
     if (!today) throw new Error("expected today's departure");
     const [trip] = (await upcomingTripsWithCounts(db, shop.id)).filter(
       (row) => row.id === today.tripId,
@@ -102,7 +137,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     if (!trip?.boatId) throw new Error("expected today's departure on a boat");
     await db.update(boats).set({ certifiedPassengers: 12 }).where(eq(boats.id, trip.boatId));
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const [departure] = work.departures;
     expect(departure?.capacity).toBe(14);
     expect(departure?.sellableCapacity).toBe(12);
@@ -124,7 +166,14 @@ describe("today's work queue (in-memory PGlite)", () => {
       .map((diver) => diver.fullName)
       .sort();
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const named = work.actions
       .filter((action) => action.departure?.tripId === wreck.id && action.diver)
       .map((action) => action.subject);
@@ -146,7 +195,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     const [entry] = await getTripRoster(db, shop.id, reef.id);
     if (!entry) throw new Error("demo booking missing");
 
-    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const before = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     // Every reef diver but the seed's first-booked one already has a waiver
     // issued (waiver_pending, collapsed into its own group row); that one
     // diver alone is genuinely unsent, so she gets a named row of her own
@@ -164,7 +220,14 @@ describe("today's work queue (in-memory PGlite)", () => {
       medicalAnswers: clearAnswers,
     });
 
-    const after = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const after = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(waiverRow(after)).toBeUndefined();
     // She was the boat's one remaining straggler — clearing her leaves the
     // whole roster ready.
@@ -196,7 +259,14 @@ describe("today's work queue (in-memory PGlite)", () => {
       status: "boarded",
     });
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(work.departures[0]?.boarded).toBe(1);
   });
 
@@ -210,7 +280,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     const { db, shop } = ctx;
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("demo staff missing");
-    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const before = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const untapped = before.departures.find((row) => row.stage === null);
     const departure = untapped ?? before.departures[0];
     if (!departure) throw new Error("demo departure missing");
@@ -224,7 +301,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     });
     expect(recorded.ok).toBe(true);
 
-    const after = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const after = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(after.departures.find((row) => row.tripId === departure.tripId)?.stage?.stage).toBe(
       "boarding",
     );
@@ -244,7 +328,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     const { db, shop } = ctx;
     await db.update(shopsTable).set({ unitsConfirmedAt: null }).where(eq(shopsTable.id, shop.id));
 
-    const asking = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const asking = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const row = asking.actions.find((action) => action.kind === "units_unconfirmed");
     expect(row).toBeDefined();
     // Bottom of the queue and neutral in tone: nothing has gone wrong, and it
@@ -265,7 +356,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     // **Answering it empties the row for good.** The row is derived from the
     // column, not from a dismissal, so there is no state to get stuck.
     await markShopUnitsConfirmed(db, shop.id);
-    const answered = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const answered = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(answered.actions.find((action) => action.kind === "units_unconfirmed")).toBeUndefined();
   });
 
@@ -318,7 +416,14 @@ describe("today's work queue (in-memory PGlite)", () => {
       await db.insert(tripAssignments).values({ tripId: reef.id, personId: member.person.id });
     }
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const departure = work.departures.find((candidate) => candidate.tripId === reef.id);
     if (!departure) throw new Error("the reef departure is not on the board");
 
@@ -364,7 +469,14 @@ describe("today's work queue (in-memory PGlite)", () => {
       expect(recorded).toMatchObject({ ok: true });
     }
 
-    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const before = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const uncounted = before.departures.find((row) => row.tripId === reef.id);
     if (!uncounted) throw new Error("reef departure missing from today’s board");
     // The condition the card used to celebrate on, still true — which is the
@@ -389,7 +501,14 @@ describe("today's work queue (in-memory PGlite)", () => {
       });
     }
 
-    const after = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const after = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const counted = after.departures.find((row) => row.tripId === reef.id);
     expect(counted?.crewAccountedFor).toBe(true);
     expect(counted?.crewReason).toBeNull();
@@ -412,7 +531,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     const blockedEntry = roster.find((row) => row.readiness.status === "blocked");
     if (!blockedEntry || !staff) throw new Error("demo fixture missing a blocked diver");
 
-    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const before = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const departure = before.departures.find((row) => row.tripId === reef.id);
     if (!departure) throw new Error("reef departure missing from today’s board");
     // Nobody aboard yet: every blocked diver is genuinely still ashore, which
@@ -441,7 +567,14 @@ describe("today's work queue (in-memory PGlite)", () => {
       status: "boarded",
     });
 
-    const after = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const after = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const boardedDeparture = after.departures.find((row) => row.tripId === reef.id);
     if (!boardedDeparture) throw new Error("reef departure missing after roll call");
     // Either the waiver was this diver's only blocker (they are now ready, and
@@ -476,7 +609,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     const blockedEntry = roster.find((row) => row.readiness.status === "blocked");
     if (!blockedEntry || !staff) throw new Error("demo fixture missing a blocked diver");
 
-    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const before = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const wasDeparture = before.departures.find((row) => row.tripId === reef.id);
     if (!wasDeparture) throw new Error("reef departure missing from today’s board");
     expect(wasDeparture.blockedAshore).toBeGreaterThan(0);
@@ -491,7 +631,14 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     // Still at the dock: the blocker stays on the card, because a diver marked
     // not boarded before the lines are off is still someone the desk can chase.
-    const atDock = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const atDock = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const stillHere = atDock.departures.find((row) => row.tripId === reef.id);
     if (!stillHere) throw new Error("reef departure missing after roll call");
     expect(stillHere.blockedAshore).toBe(wasDeparture.blockedAshore);
@@ -507,7 +654,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     // widens that window — but nobody should go looking for the silenced case
     // on this card, because there isn't one.
     const sailed = new Date(reef.startsAt.getTime() + 61 * 60 * 1000);
-    const after = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, sailed));
+    const after = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop, sailed),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(after.departures.find((row) => row.tripId === reef.id)).toBeUndefined();
   });
 
@@ -537,7 +691,14 @@ describe("today's work queue (in-memory PGlite)", () => {
       recordedByPersonId: staff.person.id,
       status: "boarded",
     });
-    const boarded = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const boarded = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(boarded.departures[0]?.booked).toBe(11);
     expect(boarded.departures[0]?.boarded).toBe(1);
 
@@ -548,7 +709,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     // letting the two totals coincidentally match while other divers on this
     // trip remain genuinely unboarded.
     await cancelBooking(db, shop.id, entry.booking.id);
-    const afterCancel = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const afterCancel = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(afterCancel.departures[0]?.booked).toBe(10);
     expect(afterCancel.departures[0]?.boarded).toBe(0);
   });
@@ -575,7 +743,14 @@ describe("today's work queue (in-memory PGlite)", () => {
       kind: "booking_confirmation",
       delivery: { status: "failed" },
     });
-    const withConfirm = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const withConfirm = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const confirmRow = withConfirm.actions.find((action) => action.kind === "email_delivery");
     expect(confirmRow?.actionLabel).toBe("Resend confirmation");
     expect(confirmRow?.resend).toEqual({ bookingIds: [entry.booking.id] });
@@ -587,7 +762,14 @@ describe("today's work queue (in-memory PGlite)", () => {
       kind: "waiver_request",
       delivery: { status: "failed" },
     });
-    const withWaiver = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const withWaiver = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const waiverRow = withWaiver.actions.find(
       (action) => action.kind === "email_delivery" && action.waiver,
     );
@@ -598,7 +780,14 @@ describe("today's work queue (in-memory PGlite)", () => {
   it("never looks past its one-week horizon", async () => {
     const { db, shop } = ctx;
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const horizon = nowMs() + 7 * 24 * 60 * 60 * 1000;
 
     for (const action of work.actions) {
@@ -609,7 +798,14 @@ describe("today's work queue (in-memory PGlite)", () => {
   it("points every action at a route inside this shop", async () => {
     const { db, shop } = ctx;
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     expect(work.actions.length).toBeGreaterThan(0);
     for (const action of work.actions) {
@@ -632,7 +828,14 @@ describe("role lens raw material", () => {
     const instructor = staff.find((entry) => entry.roles.includes("instructor"))?.person;
     if (!captain || !instructor) throw new Error("seed staff missing");
 
-    const forCaptain = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), captain.id);
+    const forCaptain = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      captain.id,
+      staffTranslator("en-US"),
+    );
     // The seed assigns the captain to every charter, so today's boat is theirs.
     for (const departure of forCaptain.departures.filter((d) => !d.courseTitle)) {
       expect(forCaptain.crewedTripIds).toContain(departure.tripId);
@@ -653,6 +856,7 @@ describe("role lens raw material", () => {
       shop.slug,
       shopClock(shop),
       instructor.id,
+      staffTranslator("en-US"),
     );
     expect(forInstructor.crewedSessions.length).toBeGreaterThan(0);
     for (const session of forInstructor.crewedSessions) {
@@ -660,7 +864,14 @@ describe("role lens raw material", () => {
       expect(session.ready + session.blocked).toBeLessThanOrEqual(session.booked);
     }
 
-    const anonymous = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const anonymous = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(anonymous.crewedTripIds).toHaveLength(0);
     expect(anonymous.crewedSessions).toHaveLength(0);
   });
@@ -690,7 +901,14 @@ describe("role lens raw material", () => {
     if (!sailed) throw new Error("failed to create the sailed boat");
     await setTripCrew(db, shop.id, sailed.id, [{ personId: captain.id, tripRole: "captain" }]);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), captain.id);
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      captain.id,
+      staffTranslator("en-US"),
+    );
     expect(work.crewedTripIds).toContain(sailed.id);
     // A session list is the window's, and stays so.
     expect(work.crewedSessions.map((session) => session.tripId)).not.toContain(sailed.id);
@@ -731,7 +949,14 @@ describe("the high-wind row (issue #722)", () => {
     const { db, shop } = ctx;
     const fetcher = stubProvider(30);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     expect(work.actions.filter((action) => action.kind === "high_wind_alert")).toEqual([]);
     const windRows = await work.highWind;
@@ -754,7 +979,7 @@ describe("the high-wind row (issue #722)", () => {
       shop.slug,
       shopClock(shop),
       undefined,
-      undefined,
+      staffTranslator("en-US"),
       undefined,
       false,
       undefined,
@@ -771,7 +996,14 @@ describe("the high-wind row (issue #722)", () => {
     const { db, shop } = ctx;
     stubProvider(8);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     expect(await work.highWind).toEqual([]);
   });
@@ -783,7 +1015,14 @@ describe("the high-wind row (issue #722)", () => {
       .spyOn(globalThis, "fetch")
       .mockImplementation(() => new Promise<Response>((resolve) => (answer = resolve)));
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     // The queue is whole without the forecast; only the wind rows wait.
     expect(fetcher).toHaveBeenCalled();
@@ -801,7 +1040,14 @@ describe("the high-wind row (issue #722)", () => {
     const { db, shop } = ctx;
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     await expect(work.highWind).resolves.toEqual([]);
   });
@@ -816,7 +1062,7 @@ describe("the high-wind row (issue #722)", () => {
       shop.slug,
       shopClock(shop),
       undefined,
-      undefined,
+      staffTranslator("en-US"),
       undefined,
       false,
       undefined,

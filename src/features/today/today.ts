@@ -1,5 +1,5 @@
 import type { HandledHelpRequest } from "@/db/help-requests";
-import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import {
   blockerItemText,
   blockerLabelCopy,
@@ -479,15 +479,13 @@ export type DiverBlockerInput = {
  * headline blocker, in a few words (`blockerRowText`). The full sentence and
  * every other blocker the diver owes are one tap away on the record.
  *
- * `t` defaults to English so every existing call site (tests, and any caller
- * that hasn't threaded a request-locale translator through yet) keeps working
- * unchanged; a locale-aware caller passes its own.
+ * `t` is the request-locale translator; the caller passes its own.
  */
 export function diverBlockerAction(
   input: DiverBlockerInput,
   shopSlug: string,
   now: Date,
-  t: StaffTranslator = staffTranslator("en-US"),
+  t: StaffTranslator,
 ): TodayAction | null {
   const headline = headlineFor(input);
   if (!headline) return null;
@@ -549,7 +547,7 @@ export function blockedDiverActions(
   divers: readonly DiverBlockerInput[],
   shopSlug: string,
   now: Date,
-  t: StaffTranslator = staffTranslator("en-US"),
+  t: StaffTranslator,
 ): TodayAction[] {
   return divers.flatMap((diver) => diverBlockerAction(diver, shopSlug, now, t) ?? []);
 }
@@ -567,7 +565,7 @@ export function waiverBatchActions(
   divers: readonly DiverBlockerInput[],
   shopSlug: string,
   now: Date,
-  t: StaffTranslator = staffTranslator("en-US"),
+  t: StaffTranslator,
 ): TodayAction[] {
   const byTripAndCode = new Map<string, { code: WaiverBatchCode; rows: DiverBlockerInput[] }>();
   for (const diver of divers) {
@@ -618,10 +616,7 @@ export function waiverBatchActions(
  * Runs after `filterActionsForRoles`, so a row names only the items its reader
  * may see. The merged row sits where the diver's first row stood.
  */
-export function oneRowPerDiver(
-  actions: readonly TodayAction[],
-  t: StaffTranslator = staffTranslator("en-US"),
-): TodayAction[] {
+export function oneRowPerDiver(actions: readonly TodayAction[], t: StaffTranslator): TodayAction[] {
   const keyOf = (action: TodayAction) =>
     action.diver && action.departure ? `${action.departure.tripId}:${action.diver.personId}` : null;
   const byDiver = new Map<string, TodayAction[]>();
@@ -713,7 +708,7 @@ export function collapseEmailDeliveries(
   issues: readonly EmailDeliveryIssueInput[],
   shopSlug: string,
   now: Date,
-  t: StaffTranslator = staffTranslator("en-US"),
+  t: StaffTranslator,
 ): TodayAction[] {
   const batches = new Map<string, EmailDeliveryIssueInput[]>();
   for (const issue of issues) {
@@ -806,7 +801,7 @@ export function collapseOwedRefunds(
   rows: readonly OwedRefundInput[],
   shopSlug: string,
   locale: string,
-  t: StaffTranslator = staffTranslator("en-US"),
+  t: StaffTranslator,
 ): TodayAction[] {
   const byTrip = new Map<string, OwedRefundInput[]>();
   for (const row of rows) {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { primaryBlocker } from "@/lib/blockers";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { KIND_AUDIENCE } from "@/lib/today-kinds";
@@ -79,7 +80,7 @@ describe("diverBlockerAction", () => {
   };
 
   it("sends waiver work in place, keeping the verb and the booking payload", () => {
-    const result = diverBlockerAction(input, "blue-reef", NOW);
+    const result = diverBlockerAction(input, "blue-reef", NOW, staffTranslator("en-US"));
     // href stays the row's real destination, the roster row.
     expect(result?.href).toBe("/shop/blue-reef/trips/t1#booking-b1");
     expect(result?.actionLabel).toBe("Send waiver");
@@ -93,6 +94,7 @@ describe("diverBlockerAction", () => {
       { ...input, blockers: [blocker("certification_pending")] },
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(result?.href).toBe("/shop/blue-reef/divers/p1");
     // The tap only opens the record, so the label points rather than commands.
@@ -110,12 +112,18 @@ describe("diverBlockerAction", () => {
       { ...input, blockers: [blocker("certification_pending")] },
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(pending?.agencyCheck).toEqual({ personId: "p1", cards: [] });
     expect(pending?.href).toBe("/shop/blue-reef/divers/p1");
 
     for (const code of ["certification_missing", "nitrox_pending", "waiver_not_sent"] as const) {
-      const other = diverBlockerAction({ ...input, blockers: [blocker(code)] }, "blue-reef", NOW);
+      const other = diverBlockerAction(
+        { ...input, blockers: [blocker(code)] },
+        "blue-reef",
+        NOW,
+        staffTranslator("en-US"),
+      );
       expect(other?.agencyCheck).toBeUndefined();
     }
   });
@@ -131,7 +139,12 @@ describe("diverBlockerAction", () => {
       [blocker("identity_unconfirmed"), blocker("certification_pending")],
     ]) {
       for (const aboard of [false, true]) {
-        const held = diverBlockerAction({ ...input, blockers, aboard }, "blue-reef", NOW);
+        const held = diverBlockerAction(
+          { ...input, blockers, aboard },
+          "blue-reef",
+          NOW,
+          staffTranslator("en-US"),
+        );
         expect(held?.agencyCheck).toBeUndefined();
       }
     }
@@ -147,6 +160,7 @@ describe("diverBlockerAction", () => {
       },
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(result?.detail).toBe("Medical answer needs a doctor’s sign-off.");
   });
@@ -157,6 +171,7 @@ describe("diverBlockerAction", () => {
       { ...input, blockers: [blocker("identity_unconfirmed")] },
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(result?.detail).toBe(
       "Booking matched on a guess. Confirm who this is before the waiver goes out.",
@@ -176,6 +191,7 @@ describe("diverBlockerAction", () => {
       },
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(result?.detail).toBe("Not certified for this trip");
   });
@@ -184,10 +200,16 @@ describe("diverBlockerAction", () => {
     // Aboard, an unsigned waiver is a missing medical declaration; ashore the
     // card ranks first because it takes longer to fix (dive-domain-expert).
     const blockers = [blocker("certification_insufficient"), blocker("waiver_pending")];
-    expect(diverBlockerAction({ ...input, blockers }, "blue-reef", NOW)?.detail).toBe(
-      "Not certified for this trip",
+    expect(
+      diverBlockerAction({ ...input, blockers }, "blue-reef", NOW, staffTranslator("en-US"))
+        ?.detail,
+    ).toBe("Not certified for this trip");
+    const aboard = diverBlockerAction(
+      { ...input, blockers, aboard: true },
+      "blue-reef",
+      NOW,
+      staffTranslator("en-US"),
     );
-    const aboard = diverBlockerAction({ ...input, blockers, aboard: true }, "blue-reef", NOW);
     expect(aboard?.kind).toBe("blocked_aboard");
     expect(aboard?.detail).toBe("Waiver not signed, link sent");
   });
@@ -197,6 +219,7 @@ describe("diverBlockerAction", () => {
       { ...input, blockers: [blocker("payment_due")], aboard: true },
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(result?.kind).toBe("payment");
   });
@@ -209,6 +232,7 @@ describe("diverBlockerAction", () => {
       { ...input, blockers: [blocker("medical_review")], aboard: true },
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(result?.detail).toBe("Medical answer needs a doctor’s sign-off.");
     if (!result) throw new Error("expected a row");
@@ -217,14 +241,21 @@ describe("diverBlockerAction", () => {
   });
 
   it("takes the aboard kind once the diver is on the boat, keeping the fix", () => {
-    const result = diverBlockerAction({ ...input, aboard: true }, "blue-reef", NOW);
+    const result = diverBlockerAction(
+      { ...input, aboard: true },
+      "blue-reef",
+      NOW,
+      staffTranslator("en-US"),
+    );
     expect(result?.kind).toBe("blocked_aboard");
     expect(result?.detail).toBe("Waiver not signed, not sent yet");
     expect(result?.waiver).toEqual({ bookingIds: ["b1"] });
   });
 
   it("produces nothing for a diver with no blockers", () => {
-    expect(diverBlockerAction({ ...input, blockers: [] }, "blue-reef", NOW)).toBeNull();
+    expect(
+      diverBlockerAction({ ...input, blockers: [] }, "blue-reef", NOW, staffTranslator("en-US")),
+    ).toBeNull();
   });
 
   it("marks a payment_due row with the single booking it can act on in place", () => {
@@ -232,6 +263,7 @@ describe("diverBlockerAction", () => {
       { ...input, blockers: [blocker("payment_due")] },
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     // Only the bookingId — src/features/today/today-reader.ts fills in orderId/hostedInvoiceUrl
     // once it knows the booking was actually invoiced through Stripe.
@@ -244,12 +276,13 @@ describe("diverBlockerAction", () => {
       { ...input, blockers: [blocker("payment_refunded")] },
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(result?.payment).toEqual({ bookingId: "b1" });
   });
 
   it("never marks a non-payment row for the inline payment control", () => {
-    const result = diverBlockerAction(input, "blue-reef", NOW);
+    const result = diverBlockerAction(input, "blue-reef", NOW, staffTranslator("en-US"));
     expect(result?.payment).toBeUndefined();
   });
 });
@@ -1139,7 +1172,12 @@ describe("collapseOwedRefunds", () => {
   });
 
   it("leaves one owed seat exactly as it was: the diver is the row", () => {
-    const [row, ...rest] = collapseOwedRefunds([seat()], "blue-reef", "en-US");
+    const [row, ...rest] = collapseOwedRefunds(
+      [seat()],
+      "blue-reef",
+      "en-US",
+      staffTranslator("en-US"),
+    );
     expect(rest).toHaveLength(0);
     expect(row?.id).toBe("owed-refund:b1");
     expect(row?.subject).toBe("Ana Ruiz");
@@ -1156,6 +1194,7 @@ describe("collapseOwedRefunds", () => {
       ],
       "blue-reef",
       "en-US",
+      staffTranslator("en-US"),
     );
 
     expect(rows).toHaveLength(1);
@@ -1179,6 +1218,7 @@ describe("collapseOwedRefunds", () => {
       ],
       "blue-reef",
       "en-US",
+      staffTranslator("en-US"),
     );
     expect(rows.map((row) => row.id)).toEqual(["owed-refunds:t1", "owed-refund:b3"]);
   });
@@ -1190,6 +1230,7 @@ describe("collapseOwedRefunds", () => {
       [seat({ bookingId: "b1" }), seat({ bookingId: "b2", amountCents: null })],
       "blue-reef",
       "en-US",
+      staffTranslator("en-US"),
     );
     expect(missing[0]?.detail).not.toContain("$");
 
@@ -1197,6 +1238,7 @@ describe("collapseOwedRefunds", () => {
       [seat({ bookingId: "b1" }), seat({ bookingId: "b2", currency: "eur" })],
       "blue-reef",
       "en-US",
+      staffTranslator("en-US"),
     );
     expect(mixed[0]?.detail).not.toContain("$");
   });
@@ -1218,7 +1260,12 @@ describe("collapseEmailDeliveries", () => {
   });
 
   it("keeps one failed email named, with its own resend", () => {
-    const [row, ...rest] = collapseEmailDeliveries([issue("Ana Ruiz")], "blue-reef", NOW);
+    const [row, ...rest] = collapseEmailDeliveries(
+      [issue("Ana Ruiz")],
+      "blue-reef",
+      NOW,
+      staffTranslator("en-US"),
+    );
     expect(rest).toHaveLength(0);
     expect(row?.subject).toBe("Ana Ruiz");
     expect(row?.detail).toBe("Confirmation email didn’t send.");
@@ -1234,7 +1281,7 @@ describe("collapseEmailDeliveries", () => {
       issue("Ben", { trip: { id: "t1", startsAt: at, label: "Reef Drift · 8:00 AM" } }),
     ];
     for (const order of [pair, [...pair].reverse()]) {
-      const [row] = collapseEmailDeliveries(order, "blue-reef", NOW);
+      const [row] = collapseEmailDeliveries(order, "blue-reef", NOW, staffTranslator("en-US"));
       expect(row?.href).toBe("/shop/blue-reef/trips/t1");
       expect(row?.resend).toEqual({ bookingIds: ["b-Ben", "b-Ana"] });
     }
@@ -1245,6 +1292,7 @@ describe("collapseEmailDeliveries", () => {
       [issue("Ana"), issue("Ben"), issue("Cara")],
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.subject).toBe("3 confirmation emails didn’t send.");
@@ -1262,6 +1310,7 @@ describe("collapseEmailDeliveries", () => {
       ],
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.departure).toBeUndefined();
@@ -1281,6 +1330,7 @@ describe("collapseEmailDeliveries", () => {
       ],
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(rows.map((row) => row.subject)).toEqual([
       "2 confirmation emails didn’t send.",

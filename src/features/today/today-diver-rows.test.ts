@@ -59,6 +59,7 @@ describe("blockedDiverActions", () => {
       ["Ana Ruiz", "Ben Cole", "Cara Diaz"].map((name) => diver(name, ["waiver_not_sent"])),
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(result.map((row) => row.subject)).toEqual(["Ana Ruiz", "Ben Cole", "Cara Diaz"]);
     // Each row sends its own diver's waiver, never a batch on someone else's behalf.
@@ -83,6 +84,7 @@ describe("blockedDiverActions", () => {
       ],
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(rest).toEqual([]);
     expect(row?.kind).toBe("medical_review");
@@ -109,7 +111,7 @@ describe("blockedDiverActions", () => {
       diver("Fay", [], "t2"),
       diver("Ana", ["certification_missing"], "t2"),
     ];
-    const result = blockedDiverActions(divers, "blue-reef", NOW);
+    const result = blockedDiverActions(divers, "blue-reef", NOW, staffTranslator("en-US"));
     const named = result.map((row) => `${row.departure?.tripId}:${row.subject}`);
     expect(named.sort()).toEqual(["t1:Ana", "t1:Cara", "t1:Dev", "t2:Ana", "t2:Eli"]);
   });
@@ -119,6 +121,7 @@ describe("blockedDiverActions", () => {
       [diver("Ana", ["waiver_not_sent"]), { ...diver("Cara", ["waiver_not_sent"]), aboard: true }],
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(result.map((row) => [row.subject, row.kind])).toEqual([
       ["Ana", "waiver"],
@@ -131,6 +134,7 @@ describe("blockedDiverActions", () => {
       [diver("Ana Ruiz", ["certification_pending"])],
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(row?.href).toBe("/shop/blue-reef/divers/p-Ana Ruiz");
   });
@@ -158,6 +162,7 @@ describe("oneRowPerDiver", () => {
       ],
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
   /** A boat-work gap as `pushDepartureRows` raises it: one diver, one item. */
   const gap = (
@@ -187,10 +192,13 @@ describe("oneRowPerDiver", () => {
   });
 
   it("names a diver once with every open item, keeping the first fix's button", () => {
-    const rows = oneRowPerDiver([
-      ...blocked("Priya Sharma", ["waiver_not_sent"]),
-      gap("Priya Sharma", "emergency_contact", "emergency contact"),
-    ]);
+    const rows = oneRowPerDiver(
+      [
+        ...blocked("Priya Sharma", ["waiver_not_sent"]),
+        gap("Priya Sharma", "emergency_contact", "emergency contact"),
+      ],
+      staffTranslator("en-US"),
+    );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.subject).toBe("Priya Sharma");
     // The blocker's own sentence leads, "not sent yet" and all (review N2).
@@ -200,12 +208,15 @@ describe("oneRowPerDiver", () => {
   });
 
   it("folds a diver with five gaps into one row, worst first", () => {
-    const rows = oneRowPerDiver([
-      gap("Sam Lee", "dive_prep", "rental size"),
-      gap("Sam Lee", "emergency_contact", "emergency contact"),
-      ...blocked("Sam Lee", ["certification_insufficient", "waiver_pending"]),
-      gap("Sam Lee", "nitrox_gate", "nitrox certification"),
-    ]);
+    const rows = oneRowPerDiver(
+      [
+        gap("Sam Lee", "dive_prep", "rental size"),
+        gap("Sam Lee", "emergency_contact", "emergency contact"),
+        ...blocked("Sam Lee", ["certification_insufficient", "waiver_pending"]),
+        gap("Sam Lee", "nitrox_gate", "nitrox certification"),
+      ],
+      staffTranslator("en-US"),
+    );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.kind).toBe("certification");
     // The emergency contact before the rental size: contact gaps rank above
@@ -216,21 +227,27 @@ describe("oneRowPerDiver", () => {
   });
 
   it("says an item once when two rows name it", () => {
-    const rows = oneRowPerDiver([
-      ...blocked("Sam Lee", ["nitrox_pending"]),
-      gap("Sam Lee", "nitrox_gate", "nitrox certification"),
-    ]);
+    const rows = oneRowPerDiver(
+      [
+        ...blocked("Sam Lee", ["nitrox_pending"]),
+        gap("Sam Lee", "nitrox_gate", "nitrox certification"),
+      ],
+      staffTranslator("en-US"),
+    );
     expect(rows).toHaveLength(1);
     // One item left, so the row keeps its own sentence.
     expect(rows[0]?.detail).toBe("Nitrox certification not verified yet");
   });
 
   it("names a diver on two boats under each boat, never folding one boat into the other", () => {
-    const rows = oneRowPerDiver([
-      ...blocked("Ana", ["waiver_not_sent"]),
-      gap("Ana", "dive_prep", "rental size", wreck),
-      gap("Ana", "emergency_contact", "emergency contact", reef),
-    ]);
+    const rows = oneRowPerDiver(
+      [
+        ...blocked("Ana", ["waiver_not_sent"]),
+        gap("Ana", "dive_prep", "rental size", wreck),
+        gap("Ana", "emergency_contact", "emergency contact", reef),
+      ],
+      staffTranslator("en-US"),
+    );
     expect(rows.map((row) => [row.departure?.tripId, row.subject, row.detail])).toEqual([
       ["t1", "Ana", "Waiver not signed, not sent yet; also emergency contact"],
       ["t2", "Ana", "rental size sentence"],
@@ -248,7 +265,7 @@ describe("oneRowPerDiver", () => {
       gap("Dev", "dive_prep", "rental size", wreck),
       gap("Eli", "nitrox_gate", "nitrox certification", wreck),
     ];
-    const rows = oneRowPerDiver(input);
+    const rows = oneRowPerDiver(input, staffTranslator("en-US"));
     expect(rows.map((row) => `${row.departure?.tripId}:${row.subject}`)).toEqual([
       "t1:Ana",
       "t1:Ben",
@@ -274,6 +291,7 @@ describe("oneRowPerDiver", () => {
         ],
         ["captain"],
       ),
+      staffTranslator("en-US"),
     );
     expect(rows.map((row) => [row.kind, row.detail])).toEqual([
       ["dive_prep", "rental size sentence"],
@@ -281,7 +299,9 @@ describe("oneRowPerDiver", () => {
   });
 
   it("adds nothing for divers with no gaps", () => {
-    expect(oneRowPerDiver([...blocked("Ana", []), orders])).toEqual([orders]);
+    expect(oneRowPerDiver([...blocked("Ana", []), orders], staffTranslator("en-US"))).toEqual([
+      orders,
+    ]);
   });
 });
 
@@ -354,7 +374,7 @@ describe("waiverBatchActions", () => {
 
   it("keeps one tap for a boat's unsent waivers, beside the named rows", () => {
     const divers = ["Ana", "Ben", "Cara"].map((name) => diver(name, "waiver_not_sent"));
-    const [batch, ...rest] = waiverBatchActions(divers, "blue-reef", NOW);
+    const [batch, ...rest] = waiverBatchActions(divers, "blue-reef", NOW, staffTranslator("en-US"));
     expect(rest).toEqual([]);
     // The sentence is the detail, as on the open-orders row: an `aboutDeparture`
     // row renders its detail and never its subject (review B1).
@@ -364,10 +384,13 @@ describe("waiverBatchActions", () => {
     expect(batch?.waiver).toEqual({ bookingIds: ["b-Ana", "b-Ben", "b-Cara"] });
     expect(batch?.aboutDeparture).toBe(true);
     // No diver, so the per-diver fold leaves it standing beside them.
-    const rows = oneRowPerDiver([
-      ...(batch ? [batch] : []),
-      ...blockedDiverActions(divers, "blue-reef", NOW),
-    ]);
+    const rows = oneRowPerDiver(
+      [
+        ...(batch ? [batch] : []),
+        ...blockedDiverActions(divers, "blue-reef", NOW, staffTranslator("en-US")),
+      ],
+      staffTranslator("en-US"),
+    );
     expect(rows).toHaveLength(4);
   });
 
@@ -386,6 +409,7 @@ describe("waiverBatchActions", () => {
       ],
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(rows).toEqual([]);
   });
@@ -400,6 +424,7 @@ describe("waiverBatchActions", () => {
       ],
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     expect(rows.map((row) => row.actionLabel)).toEqual(["Send waivers", "Nudge waivers"]);
   });
@@ -430,10 +455,18 @@ describe("a merged row keeps what the blocker says and does", () => {
     });
 
   it("lets a payment blocker lead over a rental size, keeping its invoice control (desk B1)", () => {
-    const [row, ...rest] = oneRowPerDiver([
-      ...blockedDiverActions([input("Cara", ["payment_due"])], "blue-reef", NOW),
-      gap("Cara", "dive_prep", "rental size"),
-    ]);
+    const [row, ...rest] = oneRowPerDiver(
+      [
+        ...blockedDiverActions(
+          [input("Cara", ["payment_due"])],
+          "blue-reef",
+          NOW,
+          staffTranslator("en-US"),
+        ),
+        gap("Cara", "dive_prep", "rental size"),
+      ],
+      staffTranslator("en-US"),
+    );
     expect(rest).toEqual([]);
     expect(row?.kind).toBe("payment");
     expect(row?.payment).toEqual({ bookingId: "b-Cara" });
@@ -442,24 +475,36 @@ describe("a merged row keeps what the blocker says and does", () => {
   });
 
   it("says a physician's no in full on an aboard row, the other gaps after it (auditor B2)", () => {
-    const [row] = oneRowPerDiver([
-      ...blockedDiverActions(
-        [input("Ben", ["waiver_not_sent", "medical_not_cleared"], true)],
-        "blue-reef",
-        NOW,
-      ),
-      gap("Ben", "emergency_contact", "emergency contact"),
-    ]);
+    const [row] = oneRowPerDiver(
+      [
+        ...blockedDiverActions(
+          [input("Ben", ["waiver_not_sent", "medical_not_cleared"], true)],
+          "blue-reef",
+          NOW,
+          staffTranslator("en-US"),
+        ),
+        gap("Ben", "emergency_contact", "emergency contact"),
+      ],
+      staffTranslator("en-US"),
+    );
     expect(row?.kind).toBe("blocked_aboard");
     expect(row?.detail).toBe("Not cleared to dive by a physician; also waiver, emergency contact");
   });
 
   it("never words a card that does not reach the site like one waiting to be verified", () => {
     const detail = (code: ReadinessBlocker["code"]) =>
-      oneRowPerDiver([
-        ...blockedDiverActions([input("Cara", [code])], "blue-reef", NOW),
-        gap("Cara", "emergency_contact", "emergency contact"),
-      ])[0]?.detail;
+      oneRowPerDiver(
+        [
+          ...blockedDiverActions(
+            [input("Cara", [code])],
+            "blue-reef",
+            NOW,
+            staffTranslator("en-US"),
+          ),
+          gap("Cara", "emergency_contact", "emergency contact"),
+        ],
+        staffTranslator("en-US"),
+      )[0]?.detail;
     expect(detail("certification_insufficient")).toBe(
       "Not certified for this trip; also emergency contact",
     );
@@ -471,6 +516,7 @@ describe("a merged row keeps what the blocker says and does", () => {
       [input("Eli", ["identity_unconfirmed", "certification_insufficient", "medical_not_cleared"])],
       "blue-reef",
       NOW,
+      staffTranslator("en-US"),
     );
     // The physician's no heads the row; the identity hold and the card follow it.
     expect(row?.diver?.items).toEqual([
@@ -511,10 +557,18 @@ describe("a merged row keeps what the blocker says and does", () => {
       diver: { personId: "p-Cara", items: ["nitrox certification"] },
       dueAt: hoursFromNow(3),
     });
-    const [row] = oneRowPerDiver([
-      ...blockedDiverActions([input("Cara", ["payment_due"])], "blue-reef", NOW),
-      nitrox,
-    ]);
+    const [row] = oneRowPerDiver(
+      [
+        ...blockedDiverActions(
+          [input("Cara", ["payment_due"])],
+          "blue-reef",
+          NOW,
+          staffTranslator("en-US"),
+        ),
+        nitrox,
+      ],
+      staffTranslator("en-US"),
+    );
     expect(row?.kind).toBe("payment");
     expect(row?.payment).toEqual({ bookingId: "b-Cara" });
     expect(row?.detail).toBe("Payment due; also nitrox certification");
