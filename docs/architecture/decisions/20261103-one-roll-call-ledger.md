@@ -16,9 +16,8 @@ folds the first pair. Aaron chose to build it on 2026-11-02 (group 6).
 1. **One table.** `roll_call_events` carries `subject_kind` (`seat` | `crew`, enum
    `roll_call_subject_kind`), a nullable `booking_id` and a nullable `crew_person_id`.
    `roll_call_events_subject` is the invariant the separate table used to give us: a seat row names
-   a booking and no crew member, a crew row names a crew member and no booking. Nothing can be
-   written about nobody, and the guarantee is a check constraint, the mechanism the schema already
-   prefers (`buddy_pair_members_one_subject`).
+   a booking and no crew member, a crew row names a crew member and no booking. A check
+   constraint, as in `buddy_pair_members_one_subject`.
 2. **Each half keeps its own evidence.** A seat's readiness and card snapshots and its
    `offline_snapshot_saved_at`, and a crew member's credential snapshot, are refused on the other
    kind by check constraints.
@@ -30,8 +29,10 @@ folds the first pair. Aaron chose to build it on 2026-11-02 (group 6).
    `roll_call_events_shop_client_event_unique`; the replay subject names its kind, so a crew event
    under an id a seat mark holds is `client_event_conflict`, never `duplicate`.
 5. **Expand, then contract.** The column defaults to `seat` so the release serving during the
-   migration keeps writing diver rows. `roll_call_crew_events` stays declared, unread and unwritten,
-   for one release and is dropped in the next. No backfill (H-20260815-no-legacy).
+   migration keeps writing diver rows. A custom migration copies `roll_call_crew_events` across and
+   a trigger follows the outgoing release's inserts, updates (erasure) and deletes by id; the new
+   release never touches it. Old screens miss new crew taps until rollout ends.
+   All three drop next release (#3729).
 6. **The export keeps its two files.** `roll_call_events.csv` holds seats and
    `roll_call_crew_events.csv` holds crew, split by `subject_kind`; a shop diffing last week's
    bundle sees the same files.

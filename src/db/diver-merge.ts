@@ -165,10 +165,11 @@ export const DIVER_HISTORY_TABLES = movedPersonTables();
 export const STAFF_HISTORY_TABLES = refusedPersonTables();
 export const STAFF_PERSON_ONLY_TABLES = refusedPersonOnlyTables();
 
-function quotedTable(tableName: string) {
-  // The only callers pass the two static lists above; quoting here keeps the
-  // raw SQL identifier separate from all user-controlled values.
-  return `"${tableName}"`;
+function quotedTable(identifier: string) {
+  // The only callers pass names from the static person-columns registry; the
+  // shape check keeps a future registry edit from ever reaching raw SQL.
+  if (!/^[a-z_]+$/.test(identifier)) throw new Error(`Not a SQL identifier: ${identifier}`);
+  return `"${identifier}"`;
 }
 
 async function hasPersonRow(

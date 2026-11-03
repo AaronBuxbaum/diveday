@@ -342,6 +342,43 @@ describe("the deploy-window bridge from the retired crew table", () => {
       checkpoint: "after_dive_1",
     });
   });
+
+  it("carries the old release's erasure scrub and delete onto the forwarded copy", async () => {
+    const { db, shop } = ctx;
+    const { tripId, staffId } = await reefWithCrew(db, shop.id);
+    const [old] = await db
+      .insert(retiredRollCallCrewEvents)
+      .values({
+        shopId: shop.id,
+        tripId,
+        personId: staffId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        checkpoint: "departure",
+        note: "Ankle strapped, said she was fine",
+        credentialSnapshot: [],
+        credentialSnapshotStartedAt: nowDate(),
+        credentialSnapshotCapturedAt: nowDate(),
+        occurredAt: nowDate(),
+      })
+      .returning({ id: retiredRollCallCrewEvents.id });
+    const id = old?.id ?? "";
+    // The release still serving erases this crew member: it scrubs only the retired row.
+    // diveday:roll-call-both-subjects: reads back one row by its id.
+    const copy = () => db.select().from(rollCallEvents).where(eq(rollCallEvents.id, id));
+    await db
+      .update(retiredRollCallCrewEvents)
+      .set({
+        note: null,
+        credentialSnapshot: null,
+        credentialSnapshotStartedAt: null,
+        credentialSnapshotCapturedAt: null,
+      })
+      .where(eq(retiredRollCallCrewEvents.id, id));
+    expect(await copy()).toMatchObject([{ note: null, credentialSnapshot: null }]);
+    await db.delete(retiredRollCallCrewEvents).where(eq(retiredRollCallCrewEvents.id, id));
+    expect(await copy()).toHaveLength(0);
+  });
 });
 
 describe("reading a row by its subject", () => {
