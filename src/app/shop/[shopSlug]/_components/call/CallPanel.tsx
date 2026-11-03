@@ -12,7 +12,7 @@ import {
 } from "@/components/seat-diver/BookingRequestCards";
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { buttonClass } from "@/components/ui/button";
-import { cardSummaryClass, SectionCard, sectionCardClass } from "@/components/ui/card";
+import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { FieldActions, FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -265,17 +265,21 @@ export async function CallPanel({
   }));
 
   return (
-    <SectionCard
+    // Not a card: what it holds are cards and a ledger, and a card around
+    // cards is a box drawn twice.
+    <section
       id="add-a-booking"
-      title={t(STAFF_DESTINATION_LABEL_KEYS.addBooking)}
-      actions={
+      aria-labelledby="add-a-booking-title"
+      className="scroll-mt-24 print:hidden"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="add-a-booking-title" className={SECTION_TITLE_CLASS}>
+          {t(STAFF_DESTINATION_LABEL_KEYS.addBooking)}
+        </h2>
         <Link href={shopPath(shopSlug)} className={buttonClass({ variant: "ghost", size: "sm" })}>
           {t("shared.commandPalette.close")}
         </Link>
-      }
-      padding="lg"
-      className="scroll-mt-24 print:hidden"
-    >
+      </div>
       {selectedRequest ? (
         <BookingRequestContext
           className="mt-6"
@@ -385,6 +389,6 @@ export async function CallPanel({
           </FieldActions>
         </form>
       </AutoOpenDetails>
-    </SectionCard>
+    </section>
   );
 }
