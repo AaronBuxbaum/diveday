@@ -7,14 +7,8 @@ import { LedgerRow, ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/u
 import { WeekPager } from "@/components/ui/week-pager";
 import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
-import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
-import {
-  formatDayParts,
-  formatShortDate,
-  formatTimeRangeTz,
-  formatTimeZoneGeneric,
-} from "@/lib/format";
+import { formatTimeRangeTz } from "@/lib/format";
 import {
   GAP_TONE,
   type PlacedGap,
@@ -25,6 +19,7 @@ import {
 import { StaffingDepartureCrew } from "./StaffingDepartureCrew";
 import { StaffingPersonalRows } from "./StaffingPersonalRows";
 import { StaffingWeekHeader } from "./StaffingWeekHeader";
+import { weekDayFaces } from "./staffing-day-faces";
 import type { GapWords, StaffingWeekLinks, StaffingWeekWords } from "./staffing-week-types";
 
 export type { GapWords, StaffingWeekLinks, StaffingWeekWords } from "./staffing-week-types";
@@ -150,10 +145,7 @@ function CrewChip({
       <span className="font-semibold tabular-nums">
         {windowOnThisDay(trip, words, locale, timeZone, "range")}
       </span>
-      <span
-        className="block truncate font-medium print:overflow-visible print:whitespace-normal"
-        title={trip.title}
-      >
+      <span className="block truncate font-medium" title={trip.title}>
         {trip.title}
       </span>
       {/* Conflicting crew times are advisory; the blackout warning below is
@@ -178,7 +170,7 @@ function AwayChip({ block, words }: { block: AvailabilityBlock; words: StaffingW
   return (
     <span className={chipClass("away")}>
       <span className="font-semibold">{words.away}</span>
-      {block.note ? <span className="font-medium print:hidden">{block.note}</span> : null}
+      {block.note ? <span className="font-medium">{block.note}</span> : null}
     </span>
   );
 }
@@ -267,12 +259,7 @@ function GapChip({
             <Link
               href={tripHref(shopSlug, gap.tripId)}
               aria-label={fill(words.assignAria, { trip: gap.title })}
-              className={buttonClass({
-                variant: "link",
-                size: "md",
-                flush: true,
-                className: "print:hidden",
-              })}
+              className={buttonClass({ variant: "link", size: "md", flush: true })}
             >
               {words.assign}
               <DiveDayIcon name="chevron-right" className="size-3.5" />
@@ -386,7 +373,6 @@ export function StaffingWeek({
   locale,
   timeZone,
   shopSlug,
-  shopName,
   canManage,
   canDecide,
   deleteShiftAction,
@@ -400,7 +386,6 @@ export function StaffingWeek({
   locale: string;
   timeZone: string;
   shopSlug: string;
-  shopName: string;
   canManage: boolean;
   /** Whether this reader may answer a crew member's request (issue #1235). */
   canDecide: boolean;
@@ -409,11 +394,7 @@ export function StaffingWeek({
   decideRequestAction: (formData: FormData) => void;
 }) {
   // Preserve calendar-day labels; shift instants are formatted in shop time.
-  const dayFaces = week.days.map((day) => {
-    const instant = calendarDateToUtcMidnight(day.date);
-    const parts = formatDayParts(instant, locale, "UTC");
-    return { ...day, ...parts, label: formatShortDate(instant, locale, "UTC") };
-  });
+  const dayFaces = weekDayFaces(week.days, locale);
   // Mobile omits days with no shifts, crew, away time or staffing gaps.
   const listDays = dayFaces
     .map((day, index) => ({
@@ -441,19 +422,12 @@ export function StaffingWeek({
         />
       </div>
 
-      {/* Keep table semantics for print/PDF header repetition; screen rows use
-          the same grid layout. */}
-      <table className="staffing-print-grid mt-4 hidden w-full lg:block print:table">
-        <StaffingWeekHeader
-          days={dayFaces}
-          shopName={shopName}
-          rangeLabel={links.rangeLabel}
-          timeZoneLabel={formatTimeZoneGeneric(locale, timeZone)}
-          words={words}
-          grid={WEEK_GRID}
-        />
+      {/* Table semantics for the weekday and person headers; the rows lay
+          out on the grid. Paper is the rota sheet (`StaffingRotaSheet`). */}
+      <table className="mt-4 hidden w-full lg:block">
+        <StaffingWeekHeader days={dayFaces} words={words} grid={WEEK_GRID} />
 
-        <tbody className="block print:table-row-group">
+        <tbody className="block">
           {/* Empty gap rows say nothing; only short-handed departures render. */}
           {week.hasGaps ? (
             <tr className={WEEK_GRID.row}>
@@ -528,7 +502,7 @@ export function StaffingWeek({
       {/* Mobile presents the same work and actions as a day list; empty days
           are omitted, while away-only days remain visible (ADR
           20260902-crew-requests-and-blackouts). */}
-      <div className="mt-4 lg:hidden print:hidden">
+      <div className="mt-4 lg:hidden">
         {listDays.map(({ day, rows, departures }) => {
           return (
             <div key={day.date} className="mt-6 first:mt-0">
@@ -549,11 +523,7 @@ export function StaffingWeek({
                         <Link
                           href={tripHref(shopSlug, gap.tripId)}
                           aria-label={fill(words.assignAria, { trip: gap.title })}
-                          className={buttonClass({
-                            variant: "link",
-                            size: "md",
-                            className: "print:hidden",
-                          })}
+                          className={buttonClass({ variant: "link", size: "md" })}
                         >
                           {words.assign}
                         </Link>

@@ -1110,7 +1110,7 @@
     "src/lib/dive-prep.test.ts": 1935,
     "src/lib/import.test.ts": 1403,
     "src/lib/incident-export.test.ts": 1067,
-    "src/lib/manifests.test.ts": 1028,
+    "src/lib/manifests.test.ts": 1027,
     "src/lib/notifications/email.test.ts": 1096,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
@@ -1212,7 +1212,7 @@
     "src/app/shop/[shopSlug]/reports/page.tsx": 493,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 580,
-    "src/app/shop/[shopSlug]/staffing/page.tsx": 590,
+    "src/app/shop/[shopSlug]/staffing/page.tsx": 506,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 492
   },
   "tokens": {

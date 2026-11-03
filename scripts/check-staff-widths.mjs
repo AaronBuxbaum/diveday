@@ -48,10 +48,6 @@ export const ALLOWED = new Map([
     "trips/[id]/manifest/loading.tsx",
     { count: 1, why: "the stage strip's five taps, as the manifest draws them" },
   ],
-  [
-    "gear/work-orders/[workOrderId]/tag/page.tsx",
-    { count: 1, why: "the printed tag's card: a sheet of paper on screen, not a page shell" },
-  ],
 ]);
 
 /**

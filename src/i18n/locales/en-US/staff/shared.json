@@ -133,7 +133,6 @@
     "calloutRecent": "Birthday {days, plural, one {# day} other {# days}} ago"
   },
   "printButton": {
-    "label": "Print / save PDF",
     "popupBlocked": "Your browser blocked the print window. Allow pop-ups, then try again."
   },
   "printPacket": {
