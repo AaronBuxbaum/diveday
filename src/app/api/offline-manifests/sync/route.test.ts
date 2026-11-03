@@ -7,7 +7,6 @@ import {
   bookings,
   people,
   personRoles,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   userAccounts,
@@ -443,20 +442,18 @@ describe("POST /api/offline-manifests/sync", () => {
 
     expect(response.status).toBe(200);
     expect((await response.json()).results).toEqual([{ clientEventId, status: "applied" }]);
-    // Written to the crew table, marked as having come off a device, and
+    // Written as a crew mark, marked as having come off a device, and
     // idempotent on the key the device generated.
     const rows = await db
       .select()
-      .from(rollCallCrewEvents)
-      .where(
-        and(eq(rollCallCrewEvents.tripId, trip.id), eq(rollCallCrewEvents.personId, member.id)),
-      );
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.tripId, trip.id), eq(rollCallEvents.crewPersonId, member.id)));
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ source: "offline", clientEventId, status: "boarded" });
-    // And nothing landed on the diver table, which has its own subject column.
+    // And it is the trip's only mark: nothing landed on a seat.
     expect(
       await db.select().from(rollCallEvents).where(eq(rollCallEvents.tripId, trip.id)),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
   });
 
   /**
@@ -500,7 +497,7 @@ describe("POST /api/offline-manifests/sync", () => {
       await db.select().from(rollCallEvents).where(eq(rollCallEvents.tripId, trip.id)),
     ).toHaveLength(0);
     expect(
-      await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, trip.id)),
+      await db.select().from(rollCallEvents).where(eq(rollCallEvents.tripId, trip.id)),
     ).toHaveLength(0);
   });
 

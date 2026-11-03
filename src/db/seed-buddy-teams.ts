@@ -1,5 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
+import { oldestMarkFirst } from "./roll-call-order";
+import { seatMarks } from "./roll-call-subject";
 import {
   bookings,
   buddyTeamEvents,
@@ -166,12 +168,14 @@ export async function seedDawnBuddyTeams(
     .from(rollCallEvents)
     .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(and(eq(rollCallEvents.tripId, dawn.id), eq(rollCallEvents.checkpoint, "departure")))
-    .orderBy(
-      asc(rollCallEvents.occurredAt),
-      asc(rollCallEvents.createdAt),
-      asc(rollCallEvents.seq),
-    );
+    .where(
+      and(
+        eq(rollCallEvents.tripId, dawn.id),
+        seatMarks(),
+        eq(rollCallEvents.checkpoint, "departure"),
+      ),
+    )
+    .orderBy(...oldestMarkFirst());
   // The newest word per booking stands; a `cleared` undo leaves none.
   const standing = new Map<string, (typeof dockEvents)[number]>();
   for (const event of dockEvents) {

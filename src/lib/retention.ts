@@ -130,6 +130,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "trip_stage_events",
   "buddy_team_events",
   "roll_call_events",
+  // Retired by issue #2700 (crew marks are roll_call_events rows); dropped next release.
   "roll_call_crew_events",
   "booking_arrival_events",
   "pre_departure_check_events",

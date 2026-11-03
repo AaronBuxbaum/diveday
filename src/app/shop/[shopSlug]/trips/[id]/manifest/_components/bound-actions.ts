@@ -1,3 +1,4 @@
+import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
 import {
   markMissingSubjectFoundAction,
   raiseMissingDiverAlertAction,
@@ -24,7 +25,6 @@ import {
   emergencyShowSeatMedicalAlertAction,
   showSeatMedicalAlertAction,
 } from "../medical-alert-action";
-import { type ManifestSearchParams, PRINTED_MEDICAL_ALERTS } from "./manifest-search-params";
 
 /**
  * **Every mutation on this page, bound once to the departure and checkpoint it
@@ -50,8 +50,11 @@ export function bindManifestActions(
     /** Whether to offer them in an emergency instead, until the trip's days end (issue #2990). */
     mayEmergencyReadMedicalAlerts?: boolean;
   } = { mayStartIncidentReport: false },
-  /** The page's own search params: the printed words ride on them, never on the URL. */
-  query: ManifestSearchParams = {},
+  /**
+   * The words, only when "Print with medical alerts" composed the packet's
+   * manifest sheet (issue #2990): an argument, never a URL value.
+   */
+  printedMedicalAlerts?: PrintedMedicalAlerts,
 ) {
   const { shopSlug, tripId } = actionContext;
   return {
@@ -103,9 +106,8 @@ export function bindManifestActions(
           ? (bookingId: string) =>
               emergencyShowSeatMedicalAlertAction.bind(null, shopSlug, tripId, bookingId)
           : undefined,
-      // The words, only when "Print with medical alerts" composed this page,
-      // under a key no URL can carry (`PRINTED_MEDICAL_ALERTS`, issue #2990).
-      printedMedicalAlerts: query[PRINTED_MEDICAL_ALERTS],
+      // The words, only when "Print with medical alerts" composed the sheet.
+      printedMedicalAlerts,
     },
     // Named as `BuddyTeamsPanel` takes them, so the page hands them on whole.
     buddyTeams: {

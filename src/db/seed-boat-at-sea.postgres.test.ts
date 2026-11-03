@@ -3,11 +3,12 @@ import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { crewSubject } from "./roll-call-subject";
 import {
   executedDives,
   people,
   personRoles,
-  rollCallCrewEvents,
+  rollCallEvents,
   shops,
   tripAssignments,
   trips,
@@ -70,7 +71,7 @@ describePostgres("the demo boat at sea under a doubled pass", () => {
     const mark = (personId: string, checkpoint: string, hoursAgo: number) => ({
       shopId: shop.id,
       tripId: trip.id,
-      personId,
+      ...crewSubject(personId),
       recordedByPersonId: captain.id,
       status: "boarded" as const,
       checkpoint,
@@ -79,7 +80,7 @@ describePostgres("the demo boat at sea under a doubled pass", () => {
     });
     // The captain is counted back after dive 2; the guide is still down.
     await pg.db
-      .insert(rollCallCrewEvents)
+      .insert(rollCallEvents)
       .values([
         mark(captain.id, "after_dive_1", 4),
         mark(guide.id, "after_dive_1", 4),
@@ -94,13 +95,13 @@ describePostgres("the demo boat at sea under a doubled pass", () => {
 
     expect((await first) + (await second)).toBe(1);
     const guideBack = await pg.db
-      .select({ id: rollCallCrewEvents.id })
-      .from(rollCallCrewEvents)
+      .select({ id: rollCallEvents.id })
+      .from(rollCallEvents)
       .where(
         and(
-          eq(rollCallCrewEvents.tripId, trip.id),
-          eq(rollCallCrewEvents.personId, guide.id),
-          eq(rollCallCrewEvents.checkpoint, "after_dive_2"),
+          eq(rollCallEvents.tripId, trip.id),
+          eq(rollCallEvents.crewPersonId, guide.id),
+          eq(rollCallEvents.checkpoint, "after_dive_2"),
         ),
       );
     expect(guideBack).toHaveLength(1);

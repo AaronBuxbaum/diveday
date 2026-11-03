@@ -30,12 +30,12 @@ import {
 } from "./manifests";
 import { clearAnswers, ctx, manifestContext } from "./manifests-test-fixtures";
 import { markBookingNoShow } from "./no-show";
+import { crewSubject } from "./roll-call-subject";
 import {
   activityEvents,
   bookings,
   people,
   personRoles,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripAssignments,
@@ -709,7 +709,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    *
    * On a shop where staff dive too, one person can be on `trip_assignments`
    * *and* hold a seat on the same departure. Their crew result lives in
-   * `roll_call_crew_events`, keyed on the person rather than the booking, so a
+   * the crew half of `roll_call_events`, keyed on the person rather than the booking, so a
    * reader of the diver trail alone answered "nothing stands" about a human the
    * crew half of the head count had recorded as not back aboard — and the desk
    * could mark that seat absent. Missing crew is severity 2 in this product's
@@ -1736,11 +1736,11 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .onConflictDoNothing();
     const occurredAt = new Date("2026-07-20T14:00:00.000Z");
     await db.transaction(async (tx) => {
-      await tx.insert(rollCallCrewEvents).values([
+      await tx.insert(rollCallEvents).values([
         {
           shopId: shop.id,
           tripId: reef.id,
-          personId: staff.id,
+          ...crewSubject(staff.id),
           recordedByPersonId: staff.id,
           status: "not_boarded",
           checkpoint: "departure",
@@ -1749,7 +1749,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         {
           shopId: shop.id,
           tripId: reef.id,
-          personId: staff.id,
+          ...crewSubject(staff.id),
           recordedByPersonId: staff.id,
           status: "boarded",
           checkpoint: "departure",
@@ -1758,11 +1758,9 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       ]);
     });
     const written = await db
-      .select({ at: rollCallCrewEvents.createdAt, seq: rollCallCrewEvents.seq })
-      .from(rollCallCrewEvents)
-      .where(
-        and(eq(rollCallCrewEvents.tripId, reef.id), eq(rollCallCrewEvents.personId, staff.id)),
-      );
+      .select({ at: rollCallEvents.createdAt, seq: rollCallEvents.seq })
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.tripId, reef.id), eq(rollCallEvents.crewPersonId, staff.id)));
     expect(new Set(written.map((row) => row.at.getTime())).size).toBe(1);
     expect(new Set(written.map((row) => row.seq)).size).toBe(2);
     const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
@@ -2369,12 +2367,9 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       expect(
         await db
           .select()
-          .from(rollCallCrewEvents)
+          .from(rollCallEvents)
           .where(
-            and(
-              eq(rollCallCrewEvents.tripId, reef.id),
-              eq(rollCallCrewEvents.personId, missing.id),
-            ),
+            and(eq(rollCallEvents.tripId, reef.id), eq(rollCallEvents.crewPersonId, missing.id)),
           ),
       ).toHaveLength(2);
     });
@@ -2412,13 +2407,13 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       // record alive — but nothing was written the second time.
       expect(replay).toMatchObject({ ok: true, duplicate: true });
       expect(
-        (await db.select().from(rollCallCrewEvents)).filter(
+        (await db.select().from(rollCallEvents)).filter(
           (event) => event.clientEventId === offlineInput.clientEventId,
         ),
       ).toHaveLength(1);
       // The row records where it came from, which is what makes an offline
       // result auditable afterwards rather than indistinguishable from a tap.
-      const [written] = (await db.select().from(rollCallCrewEvents)).filter(
+      const [written] = (await db.select().from(rollCallEvents)).filter(
         (event) => event.clientEventId === offlineInput.clientEventId,
       );
       expect(written?.source).toBe("offline");
@@ -2578,7 +2573,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       // Nothing was written by either, so the checkpoint stays open — the
       // fail-closed direction.
       expect(
-        await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id)),
+        await db.select().from(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id)),
       ).toHaveLength(0);
     });
 
@@ -2688,7 +2683,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
 
       // Nothing was written by any of the refusals above.
       expect(
-        await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id)),
+        await db.select().from(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id)),
       ).toEqual([]);
     });
 
@@ -2721,7 +2716,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
         }),
       ).resolves.toEqual({ ok: false, reason: "crew_not_assigned" });
       expect(
-        await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id)),
+        await db.select().from(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id)),
       ).toEqual([]);
     });
 
@@ -3478,7 +3473,7 @@ describe("roll call on a cancelled trip that is already counting heads", () => {
       .values({ tripId: reef.id, personId: staff.id })
       .onConflictDoNothing();
     await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id));
-    await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id));
+    await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id));
     await cancel(db, reef.id);
     expect(
       await recordRollCall(db, {
@@ -3511,11 +3506,11 @@ describe("roll call on a cancelled trip that is already counting heads", () => {
     });
     if (!other) throw new Error("other trip not created");
     await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id));
-    await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id));
-    await db.insert(rollCallCrewEvents).values({
+    await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id));
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: other.id,
-      personId: staff.id,
+      ...crewSubject(staff.id),
       recordedByPersonId: staff.id,
       status: "not_boarded",
       checkpoint: "departure",
