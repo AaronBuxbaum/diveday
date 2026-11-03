@@ -34,6 +34,26 @@ export type FormDraftProps = {
 
 const SAVE_DEBOUNCE_MS = 600;
 
+/**
+ * **What this tab last typed, per form and page, in memory only.** An add
+ * panel opens on its index (`/divers?add=1`), so leaving it and pressing Back
+ * stays on one route: the router hands back the page it cached on the way in,
+ * whose draft was read before anything was typed. The server draft is still
+ * written; this is only so a Back inside the same document shows the newest
+ * input. A fresh document starts empty here and reads the server draft. No
+ * browser storage is used.
+ */
+const unsaved = new Map<string, Array<[string, string]>>();
+
+function unsavedKey(form: FormDraftKind): string {
+  return `${form} ${typeof window === "undefined" ? "" : window.location.pathname}`;
+}
+
+/** Tests only: forget what earlier renders typed. */
+export function forgetUnsavedDrafts() {
+  unsaved.clear();
+}
+
 function snapshot(element: HTMLFormElement): Array<[string, string]> {
   return Object.entries(
     draftableFields(
@@ -84,10 +104,17 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
    * later is what is already in the form.
    */
   const [openingDraft] = useState(draft);
+  const key = useRef("");
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, on mount — the whole point of this effect (see above).
   useEffect(() => {
+    key.current = unsavedKey(form);
     const element = anchor.current?.closest("form");
-    if (element && openingDraft && applyFormFields(element, openingDraft.fields)) setApplied(true);
+    if (!element) return;
+    const remembered = unsaved.get(key.current);
+    if (remembered) {
+      applyFormFields(element, Object.fromEntries(remembered));
+      if (openingDraft) setApplied(true);
+    } else if (openingDraft && applyFormFields(element, openingDraft.fields)) setApplied(true);
   }, []);
 
   // A server refresh can replace the action references without rebinding the
@@ -116,6 +143,7 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
     if (JSON.stringify(fields) !== JSON.stringify(latest.current)) {
       latest.current = fields;
       revision.current += 1;
+      if (key.current) unsaved.set(key.current, fields);
     }
   });
 
@@ -209,6 +237,8 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
       cancelTimer();
       // Retain the last input snapshot: React may already have removed the
       // form's fields by passive-effect cleanup. No browser storage is used.
+      // A submission that navigated away succeeded: nothing is left to recover.
+      if (dispatchedSubmit.current) unsaved.delete(key.current);
       if (!dispatchedSubmit.current) submitted.current = false;
       void save();
     };
@@ -226,6 +256,7 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
       await actions.discard(form);
       // Do not wipe edits made while the discard was in flight.
       if (version === revision.current) {
+        unsaved.delete(key.current);
         element?.reset();
         if (element) latest.current = snapshot(element);
         savedRevision.current = revision.current;

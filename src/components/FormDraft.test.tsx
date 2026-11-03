@@ -5,7 +5,7 @@ import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { rendersFlush } from "@/test/button-flush";
-import { FormDraft } from "./FormDraft";
+import { FormDraft, forgetUnsavedDrafts } from "./FormDraft";
 
 const saveFormDraftAction = vi.fn(async (_form: string, _fields: Array<[string, string]>) => {});
 const discardFormDraftAction = vi.fn(async (_form: string) => {});
@@ -39,6 +39,7 @@ function renderForm(draft: { fields: Record<string, string>; savedAtLabel: strin
 
 afterEach(() => {
   cleanup();
+  forgetUnsavedDrafts();
   vi.resetAllMocks();
   vi.useRealTimers();
 });
@@ -185,6 +186,17 @@ describe("FormDraft", () => {
       ["fullName", "Ada"],
       ["seats", "1"],
     ]);
+  });
+
+  it("a remount in the same document shows the newest input over an older cached draft", async () => {
+    // An add panel's Back reuses the page the router cached before anything
+    // was typed, so the draft it hands in is stale (#2737).
+    const first = renderForm(null);
+    fireEvent.input(screen.getByLabelText("Name"), { target: { value: "Ada" } });
+    first.unmount();
+    await act(async () => {});
+    renderForm(null);
+    expect(screen.getByLabelText("Name")).toHaveValue("Ada");
   });
 
   it("flushes a pending blur save on unmount instead of cancelling it", async () => {
