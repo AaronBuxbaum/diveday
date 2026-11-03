@@ -60,6 +60,7 @@ import {
 } from "./notifications";
 import { queryAll } from "./query-helpers";
 import { autoFillRecapLine } from "./recap-assist";
+import { tripsWithSomebodyMissing } from "./roll-call-gaps";
 import {
   bookings,
   cards,
@@ -75,7 +76,6 @@ import {
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking } from "./tips";
-import { tripsWithSomebodyMissing } from "./today";
 import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives, seatNotCancelled } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
@@ -635,7 +635,7 @@ export async function bookingsLeftAtTheDock(
  * real incident, the email lands in an inbox a family may be reading. So while
  * any diver or rostered crew member on a departure has an after-dive
  * `not_boarded` standing — the condition Today raises its missing-diver and
- * missing-crew rows on (`tripsWithSomebodyMissing`, src/db/today.ts)
+ * missing-crew rows on (`tripsWithSomebodyMissing`, src/db/roll-call-gaps.ts)
  * — **every** recap on that departure waits: the email, a staff send, and the
  * page. That covers the diver themselves, whose last word is the not-back one,
  * and the boatmates, whose "welcome back" would be the same email to a group

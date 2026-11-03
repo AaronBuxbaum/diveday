@@ -39,7 +39,7 @@ export type OpenSeatsDebrief = {
    * same trip filled before. A seat sold and then not turned up for is a
    * different failure with a different remedy, and #1209's no-show release is
    * where that one is already answered. `sailed` is on the row beside this
-   * one (`src/lib/closeout.ts`) for anything that does want the rail count.
+   * one (`src/features/today/closeout.ts`) for anything that does want the rail count.
    */
   openSeats: number;
   /**

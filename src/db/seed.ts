@@ -358,11 +358,16 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
 }
 
 /**
+ * The demo's dusk boat, by title and clock, for the close-out's carry-over read
+ * (`src/features/today/closeout-reader.ts`), which lives outside `src/db`.
+ */
+export { DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "./seed-clock";
+/**
  * The colour a branded minted shop wears: mantis green, chosen because it is
  * not the product's teal and dark enough for white text as typed. Exported for
  * `e2e/storefront-brand.spec.ts`, which proves the storefront wears it.
  */
-export { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
+export { AT_SEA_DUSK_TITLE, MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 export { DEMO_SHOP_BRAND } from "./seed-shop-brand";
 
 /**

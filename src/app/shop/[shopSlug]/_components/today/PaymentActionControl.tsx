@@ -47,7 +47,7 @@ function CopyLinkButton({
  * The Today queue's in-place fix for a `payment_due` row that was actually
  * invoiced through Stripe: copy the diver's hosted payment link, or resend
  * the invoice email, without leaving the queue for the roster. Only rendered
- * when `src/db/today.ts` found a still-open order for the booking — a
+ * when `src/features/today/today-reader.ts` found a still-open order for the booking — a
  * booking never invoiced (paid at the counter, or invoicing wasn't wired up)
  * has nothing here to act on, and the caller keeps its plain roster link
  * instead of rendering this with no order to work from.

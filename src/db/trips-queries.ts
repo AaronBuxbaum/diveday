@@ -244,7 +244,7 @@ export type ShopDayDeparture = {
  * instant-based window would print tomorrow's board on this morning's paper.
  *
  * Cancelled departures are excluded for the reason `todaysTrips` excludes them
- * in `src/db/closeout.ts` — a boat that will not sail has nothing to hand a
+ * in `src/features/today/closeout-reader.ts` — a boat that will not sail has nothing to hand a
  * captain — and `liveTrip()` keeps a deleted departure off the sheet the same
  * way it keeps it off every other read of `trips`.
  */

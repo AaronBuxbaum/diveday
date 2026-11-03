@@ -1,4 +1,4 @@
-import type { DayLoadOut } from "@/lib/closeout";
+import type { DayLoadOut } from "@/lib/closeout-kinds";
 import type { StaffTranslator } from "./staff-messages";
 
 /**

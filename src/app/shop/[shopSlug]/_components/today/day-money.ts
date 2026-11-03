@@ -2,8 +2,8 @@ import type { CrewReading } from "@/app/shop/[shopSlug]/_components/today/CrewLi
 import type { DbExecutor } from "@/db/client";
 import { crewMonth, crewTipShare, tipsByDeparture } from "@/db/crew-tips";
 import { getMonthlyReport } from "@/db/reporting";
+import { type DayTakings, dayTakings } from "@/features/today";
 import { nowDate } from "@/lib/clock";
-import { type DayTakings, dayTakings } from "@/lib/closeout";
 import { summarizeMonth } from "@/lib/reporting";
 import { shiftInstantByCalendarDays, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 

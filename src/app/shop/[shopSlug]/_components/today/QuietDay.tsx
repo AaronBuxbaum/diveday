@@ -2,7 +2,7 @@ import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { DayLoadOut } from "@/lib/closeout";
+import type { DayLoadOut } from "@/lib/closeout-kinds";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { QuietDayThinBoats } from "./QuietDayThinBoats";
 import { TomorrowFromTonight } from "./TomorrowFromTonight";

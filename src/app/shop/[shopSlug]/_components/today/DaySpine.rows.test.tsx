@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assembleDaySpine, type FactOfScale } from "@/lib/today";
+import { assembleDaySpine, type FactOfScale } from "@/features/today";
 
 // The spine composes WaiverSendControl/ResendConfirmationControl/
 // PaymentActionControl, each of which statically imports its own `"use server"`
@@ -33,7 +33,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
 
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StatusMark } from "@/components/ui/StatusMark";
-import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
+import type { DayTakings as DayTakingsReading } from "@/features/today";
 import { DaySpine } from "./DaySpine";
 import {
   action,

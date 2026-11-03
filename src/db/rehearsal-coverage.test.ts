@@ -57,7 +57,7 @@ const OUTWARD_MODULES = [
   "src/db/reporting.ts",
   "src/db/report-lines.ts",
   "src/db/founder-metrics.ts",
-  "src/db/weekly-digest.ts",
+  "src/features/weekly-digest/digest.ts",
   "src/db/season-scale.ts",
   // The public site.
   "src/db/dive-sites.ts",
@@ -298,7 +298,7 @@ const SENDERS: Record<string, string> = {
   "src/db/stripe-restricted.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/shore-alert-tokens.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/staff-reply.ts": NOT_ABOUT_A_DEPARTURE,
-  "src/db/weekly-digest.ts": "its counts carry `notRehearsal()`",
+  "src/features/weekly-digest/digest.ts": "its counts carry `notRehearsal()`",
   "src/db/work-order-follow-up.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/actions/demo-instrumentation.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/actions/inquiry.ts": NOT_ABOUT_A_DEPARTURE,

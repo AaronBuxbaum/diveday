@@ -646,7 +646,7 @@ export function groupRoster({
       Boolean(booking.identityUnconfirmedAt) ||
       Boolean(readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));
     // A name with no number reads as "on file" but is unreachable in an
-    // incident — same both-fields rule Today's nudge uses (src/db/today.ts).
+    // incident — same both-fields rule Today's nudge uses (src/features/today/today-reader.ts).
     const hasEmergencyContact = Boolean(
       person.emergencyContactName && person.emergencyContactPhone,
     );

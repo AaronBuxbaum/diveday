@@ -6,7 +6,6 @@ import {
   shiftCalendarDate,
 } from "@/lib/calendar-date";
 import { DEFAULT_SEND_WINDOW, isWithinSendWindow } from "@/lib/send-window";
-import type { TodayAction } from "@/lib/today";
 import type { TodayActionKind } from "@/lib/today-kinds";
 import { wallTimeToUtc } from "@/lib/zoned";
 
@@ -109,7 +108,7 @@ const OVERDUE_BY_KIND: ReadonlySet<TodayActionKind> = new Set<TodayActionKind>([
 ]);
 
 export function overdueTodayActions(
-  actions: readonly Pick<TodayAction, "kind" | "dueAt">[],
+  actions: readonly { kind: TodayActionKind; dueAt: Date | null }[],
   now: Date,
 ): number {
   return actions.filter(

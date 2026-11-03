@@ -14,6 +14,9 @@ const EXPLICIT = [
   "src/db/refunds.ts",
   "src/db/promo-caps.ts",
   "src/db/account-security.ts",
+  // Today's roll-call rows moved above the graph into a feature (issue #2756); the
+  // path match below walks only src/lib and src/db, so it is named here to keep its floor.
+  "src/features/today/today-roll-call-rows.ts",
 ];
 
 /** Never a safety file: tests and fixtures, seed scenarios, copy resolvers, type declarations. */

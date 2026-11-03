@@ -11,7 +11,7 @@ import { HOUR_MS } from "@/lib/clock";
  * sailed / is it back / is it in the past" question in this app allows an hour
  * past the scheduled time before it answers yes (AGENTS.md's hard rule).
  *
- * This constant used to live in `src/lib/closeout.ts`, where its own docstring
+ * This constant used to live in `src/features/today/closeout.ts`, where its own docstring
  * said it was here "in one place rather than four literals". It was not. The
  * hour was written **fifteen** times: nine separate `const … = 60 * 60 * 1000`
  * declarations (`closeout`, `ready`, `today`, `roster-facts`,

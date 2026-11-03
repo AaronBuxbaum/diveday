@@ -1,4 +1,4 @@
-import { previewWeeklyDigest } from "@/db/weekly-digest";
+import { previewWeeklyDigest } from "@/features/weekly-digest";
 import { recipientLocale } from "@/lib/notifications";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { wrapEmailHtml } from "@/lib/notifications/email";

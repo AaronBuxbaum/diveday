@@ -40,7 +40,7 @@ barrels, bookings, seating, retention, integrations). What they do not say:
 - **A table module** (`src/db/<table>.ts`) holds a table's rows and the transitions on them, named
   by the transition (`record`, `mark`, `issue`, `claim`, `release`, `consume`, `restore`,
   `cancel`, `edit`), never `update` or `save` (`check-architecture.mjs` rule 7).
-- **A surface reader** (`src/db/<surface>.ts`, e.g. `today.ts`, `closeout.ts`) answers one page's
+- **A surface reader** (`src/db/<surface>.ts`, e.g. `recap.ts`; Today's are in `src/features/today`) answers one page's
   question in one call. Every staff `page.tsx` reads through `requireShopSurface` plus exactly one
   `@/db/*` module, its reader; permissions and constants the page needs come back from it
   (`check-architecture.mjs` rule 6). The trip page's readers (`trip-overview.ts`, `trip-guests.ts`,
@@ -49,7 +49,7 @@ barrels, bookings, seating, retention, integrations). What they do not say:
   `@/i18n/staff-messages`, and `src/lib` may not value-import `drizzle-orm` (`scripts/check-architecture.mjs`
   seams; files that still do are banked in `scripts/ratchets.json`, and a new one fails). A
   page that needs a rule from Today's queue takes the small file below it (`src/lib/today-kinds.ts`,
-  `today-urgency.ts`), not the queue.
+  `today-urgency.ts`, `roll-call-gaps.ts`), not the queue, which no `src/db` module may import.
 
 ## Rules
 
