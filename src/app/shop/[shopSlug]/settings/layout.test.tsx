@@ -85,15 +85,10 @@ describe("the settings frame the pane's left edge reads", () => {
     expect(main.matches(BESIDE_THE_RAIL)).toBe(true);
   });
 
-  it("does not gate the segment itself: a page's own refusal names its own reason", async () => {
-    // A frame-level redirect beats the page's and sends every refused captain
-    // to the generic notice; see settings-gates.test.ts for the per-page rule.
+  it("draws no rail for a reader who cannot manage the shop, and does not redirect (each page refuses with its own words)", async () => {
     vi.mocked(canPersonManageShopSettings).mockResolvedValue(false);
-    await renderFrame();
+    const { pane } = await renderFrame();
     expect(requireShopSurface).toHaveBeenCalledWith("blue-mantis");
-    expect(requireShopSurface).not.toHaveBeenCalledWith(
-      "blue-mantis",
-      expect.objectContaining({ refusal: expect.anything() }),
-    );
+    expect(pane.previousElementSibling?.tagName).not.toBe("NAV");
   });
 });
