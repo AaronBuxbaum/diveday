@@ -150,7 +150,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "booking_checkout_bookings",
   "orders",
   "order_line_items",
-  "tips",
   // A card dispute on one of those orders or checkouts: one mutable row per dispute,
   // kept current by Stripe (ADR 20261009-stripe-reversals-reach-diveday). Not a trail.
   "payment_disputes",

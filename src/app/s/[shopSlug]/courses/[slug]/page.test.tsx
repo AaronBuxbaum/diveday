@@ -11,6 +11,7 @@ const request = vi.hoisted(() => ({ locale: "en-US" as DiverLocale }));
 
 vi.mock("next/server", () => ({ connection: vi.fn(async () => undefined) }));
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/s/blue-mantis/courses/open-water",
   notFound: vi.fn(() => {
     throw new Error("NOT_FOUND");
   }),

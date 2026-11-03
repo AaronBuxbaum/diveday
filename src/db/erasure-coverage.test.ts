@@ -349,16 +349,6 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     raises: "stripe_customer",
     why: 'the `cus_…` Stripe minted for that session, recorded so an obligation can name a customer object that actually exists (issue #1621). Null when `customer_creation: "if_required"` created none, and then nothing is owed',
   },
-  "tips.stripe_session_id": {
-    held: "person",
-    raises: "stripe_checkout_session_snapshot",
-    why: "the tipping diver's own Checkout Session — same shape and same manual discharge as a booking checkout's",
-  },
-  "tips.stripe_customer_id": {
-    held: "person",
-    raises: "stripe_customer",
-    why: "the `cus_…` that tip's session created, on the same `if_required` rule as booking_checkouts",
-  },
 
   // --- the shop's own furniture at a processor or provider -----------------
   "orders.stripe_account_id": {
@@ -366,7 +356,6 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     why: "the connected account the order lives on — the shop's, and the scope an obligation is discharged against, never a person's object",
   },
   "booking_checkouts.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
-  "tips.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
   "shop_subscriptions.stripe_customer_id": {
     held: "shop",
     why: "the shop as DiveDay's own billing customer, on DiveDay's account; no diver is behind it",
@@ -430,10 +419,6 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "copy",
     why: "the PaymentIntent behind the session `booking_checkouts.stripe_session_id` already names; same discharge as orders.stripe_payment_intent_id",
   },
-  "tips.stripe_payment_intent_id": {
-    held: "copy",
-    why: "the PaymentIntent behind the tip's session `tips.stripe_session_id` already names; same discharge as orders.stripe_payment_intent_id",
-  },
   "payment_disputes.stripe_payment_intent_id": {
     held: "copy",
     why: "the disputed payment, already censused on the order or checkout the dispute row points at",
@@ -461,7 +446,6 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "copy",
     why: "Stripe's hosted page for the session on this row, and it embeds the `cs_…` it was built from. Expiring that session is what `stripe_session_id` already owes",
   },
-  "tips.checkout_url": { held: "copy", why: "as booking_checkouts.checkout_url" },
   "orders.hosted_invoice_url": {
     held: "copy",
     why: "Stripe's hosted page for the invoice on this row. It renders the diver's name and address, which is precisely what the `stripe_invoice_snapshot` obligation is raised for",
@@ -953,7 +937,7 @@ describe("erasure coverage", () => {
     );
     // A floor, not a target: it catches a census that stopped tagging anything
     // `person`, which would make every assertion below pass over an empty list.
-    expect(declared.length).toBeGreaterThan(5);
+    expect(declared.length).toBeGreaterThan(3);
 
     const enumValues = new Set<string>(processorErasureTarget.enumValues);
     const built = erasureTargetLiterals();

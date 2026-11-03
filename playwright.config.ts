@@ -99,6 +99,9 @@ const serverEnv = {
   // report `not_configured` here, as every other provider in this fleet does.
   MEDIA_BUCKET_NAME: "diveday-media",
   MEDIA_AWS_REGION: "us-east-1",
+  MEDIA_AWS_ACCESS_KEY_ID: "",
+  MEDIA_AWS_SECRET_ACCESS_KEY: "",
+  MEDIA_PUBLIC_URL_BASE: "",
   NEXT_TELEMETRY_DISABLED: "1",
   // `next start` loads `.env.local` itself (via `@next/env`) before this
   // config ever runs, and `...process.env` above only reflects this CLI

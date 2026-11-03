@@ -1,11 +1,11 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { log } from "@/lib/log";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { recordCheckoutPaymentIntent } from "./checkouts";
-import type { AppDb, DbExecutor } from "./client";
+import type { AppDb } from "./client";
 import { recordOrderPaymentIntent, stripeInvoiceOf } from "./orders";
 import type { BookingCheckout, Order } from "./schema";
-import { bookingCheckouts, orders, tips } from "./schema";
+import { bookingCheckouts, orders } from "./schema";
 import { paymentSourceLookupFromEnvironment } from "./stripe-providers";
 
 /**
@@ -63,6 +63,7 @@ export async function findStripePaymentTarget(
 
   const [checkout] = await db
     .select()
+    // diveday:any-checkout-purpose: a tip's charge is found here too, and answered below.
     .from(bookingCheckouts)
     .where(
       and(
@@ -71,21 +72,7 @@ export async function findStripePaymentTarget(
       ),
     )
     .limit(1);
-  if (checkout) return { kind: "checkout", checkout };
-
-  // A tip's charge: DiveDay's, but nothing records a tip's reversal yet, so it
-  // is answered here without asking Stripe on every refund or dispute of one.
-  const [tip] = await db
-    .select({ id: tips.id })
-    .from(tips)
-    .where(
-      and(
-        eq(tips.stripePaymentIntentId, input.paymentIntentId),
-        eq(tips.stripeAccountId, input.stripeAccountId),
-      ),
-    )
-    .limit(1);
-  if (tip) return tipCharge(input.stripeAccountId);
+  if (checkout) return checkoutTarget(checkout);
 
   const source = await lookup.findSource(input.stripeAccountId, input.paymentIntentId);
   if (source.status === "failed") throw new PaymentSourceLookupFailed();
@@ -117,6 +104,7 @@ export async function findStripePaymentTarget(
   if (source.status === "checkout_session") {
     const [found] = await db
       .select()
+      // diveday:any-checkout-purpose: a tip's session is found here too, and answered by checkoutTarget.
       .from(bookingCheckouts)
       .where(
         and(
@@ -131,16 +119,7 @@ export async function findStripePaymentTarget(
         paymentIntentId: input.paymentIntentId,
         expectedAccountId: input.stripeAccountId,
       });
-      return { kind: "checkout", checkout: found };
-    }
-    if (
-      await recordTipPaymentIntent(db, {
-        stripeSessionId: source.stripeSessionId,
-        paymentIntentId: input.paymentIntentId,
-        expectedAccountId: input.stripeAccountId,
-      })
-    ) {
-      return tipCharge(input.stripeAccountId);
+      return checkoutTarget(found);
     }
   }
 
@@ -153,35 +132,14 @@ export async function findStripePaymentTarget(
   return { kind: "none" };
 }
 
-function tipCharge(stripeAccountId: string): StripePaymentTarget {
-  log("stripe_payment_target.tip", "info", { account: stripeAccountId });
-  return { kind: "none" };
-}
-
 /**
- * Write a tip's PaymentIntent once, as its session completes or when Stripe
- * names it — the tip twin of `recordCheckoutPaymentIntent`. True when a tip on
- * that session and account took the id (or already had it).
+ * A fare's charge is the checkout's to reverse. A tip's is DiveDay's too, but
+ * nothing records a tip's reversal yet, so it is answered as nothing to record:
+ * a tip refund must never reach the fare's refund path and unpay a seat
+ * (ADR 20260726-post-trip-tipping, issue #2718).
  */
-export async function recordTipPaymentIntent(
-  db: DbExecutor,
-  input: { stripeSessionId: string; paymentIntentId: string; expectedAccountId: string },
-): Promise<boolean> {
-  if (input.paymentIntentId.trim().length === 0) return false;
-  const scope = and(
-    eq(tips.stripeSessionId, input.stripeSessionId),
-    eq(tips.stripeAccountId, input.expectedAccountId),
-  );
-  const [updated] = await db
-    .update(tips)
-    .set({ stripePaymentIntentId: input.paymentIntentId })
-    .where(and(scope, isNull(tips.stripePaymentIntentId)))
-    .returning({ id: tips.id });
-  if (updated) return true;
-  const [held] = await db
-    .select({ id: tips.id })
-    .from(tips)
-    .where(and(scope, eq(tips.stripePaymentIntentId, input.paymentIntentId)))
-    .limit(1);
-  return held !== undefined;
+function checkoutTarget(checkout: BookingCheckout): StripePaymentTarget {
+  if (checkout.purpose === "fare") return { kind: "checkout", checkout };
+  log("stripe_payment_target.tip", "info", { account: checkout.stripeAccountId });
+  return { kind: "none" };
 }

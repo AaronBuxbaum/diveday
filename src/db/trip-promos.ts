@@ -298,6 +298,7 @@ export async function lastMinuteDealOutcomes(
           seats: countDistinct(bookingCheckoutBookings.bookingId),
         })
         .from(bookingCheckouts)
+        // diveday:any-checkout-purpose: keyed by a promotion, which a tip never carries (booking_checkouts_tip_shape)
         .innerJoin(
           bookingCheckoutBookings,
           and(
@@ -320,6 +321,7 @@ export async function lastMinuteDealOutcomes(
           cents: sql<string>`coalesce(sum(greatest(coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents}) - coalesce(${bookingCheckouts.taxCents}, 0), 0)), 0)`,
         })
         .from(bookingCheckouts)
+        // diveday:any-checkout-purpose: keyed by a promotion, which a tip never carries (booking_checkouts_tip_shape)
         .where(
           and(
             eq(bookingCheckouts.shopId, shopId),

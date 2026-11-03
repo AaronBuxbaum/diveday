@@ -29,14 +29,8 @@ const SEGMENT_FILES = ["layout.tsx", "template.tsx", "page.tsx", "error.tsx"];
  * client provider (ADR 20260803-error-boundary-copy-bridge).
  */
 export const ERROR_BOUNDARIES_WITH_COPY = [
-  "(token)/claim/[token]/error.tsx",
-  "(token)/confirm-contact/[token]/error.tsx",
-  "(token)/invite/[token]/error.tsx",
-  "(token)/ready/[token]/error.tsx",
+  "(token)/error.tsx",
   "(token)/recap/[token]/error.tsx",
-  "(token)/reset-password/[token]/error.tsx",
-  "(token)/unsubscribe/[token]/error.tsx",
-  "(token)/verify/[token]/error.tsx",
   "(token)/waivers/[token]/error.tsx",
   "s/[shopSlug]/error.tsx",
 ];

@@ -7,6 +7,7 @@ import { capturedPaymentStatuses, isCapturedPaymentStatus } from "@/lib/payment-
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
+import { fareCheckout } from "./checkout-purpose";
 import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { checkoutRefundKey, enqueueCheckoutIntegrationEvent } from "./integration-events";
@@ -256,6 +257,7 @@ async function checkoutHasUnreconciledReversal(
         awaitingStripeReconciliation(),
         eq(bookingCheckouts.stripeSessionId, plan.providerRef),
         eq(bookingCheckouts.stripeAccountId, plan.stripeAccountId),
+        fareCheckout(),
       ),
     )
     .limit(1);
@@ -347,6 +349,7 @@ async function countCheckoutRefund(
       and(
         eq(bookingCheckouts.stripeSessionId, plan.providerRef),
         eq(bookingCheckouts.stripeAccountId, plan.stripeAccountId),
+        fareCheckout(),
       ),
     )
     .returning({
@@ -949,7 +952,7 @@ async function countPaidAfterCloseRefund(
     const [current] = await tx
       .select()
       .from(bookingCheckouts)
-      .where(eq(bookingCheckouts.id, checkoutId))
+      .where(and(eq(bookingCheckouts.id, checkoutId), fareCheckout()))
       .for("update");
     if (current?.paidAfterCloseCents === null || current === undefined) {
       return { status: "not_found" };
@@ -975,7 +978,7 @@ async function countPaidAfterCloseRefund(
     await tx
       .update(bookingCheckouts)
       .set({ refundedCents: reversedTotal })
-      .where(eq(bookingCheckouts.id, current.id));
+      .where(and(eq(bookingCheckouts.id, current.id), fareCheckout()));
     return { status: "checkout_refunded" };
   });
 }
@@ -1023,6 +1026,7 @@ async function applyStripeChargeRefund(
   const covered = await db
     .select({ bookingId: bookingCheckoutBookings.bookingId })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the links of the fare findStripePaymentTarget returned
     .where(
       and(
         eq(bookingCheckoutBookings.shopId, checkout.shopId),
@@ -1042,7 +1046,7 @@ async function applyStripeChargeRefund(
     const [current] = await tx
       .select()
       .from(bookingCheckouts)
-      .where(eq(bookingCheckouts.id, checkout.id))
+      .where(and(eq(bookingCheckouts.id, checkout.id), fareCheckout()))
       .for("update");
     if (!current) return { status: "not_found" };
     const captured = current.settledTotalCents ?? current.totalCents;
@@ -1053,7 +1057,7 @@ async function applyStripeChargeRefund(
     await tx
       .update(bookingCheckouts)
       .set({ refundedCents: current.refundedCents + delta })
-      .where(eq(bookingCheckouts.id, current.id));
+      .where(and(eq(bookingCheckouts.id, current.id), fareCheckout()));
     await enqueueCheckoutRefundEvent(
       tx,
       { id: current.id, shopId: current.shopId, refundedCents: current.refundedCents + delta },

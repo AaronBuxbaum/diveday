@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { allocateSettledTotal } from "@/lib/payments/settlement";
+import { fareCheckout, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import {
   bookingCheckoutBookings,
@@ -13,7 +14,6 @@ import {
   orders,
   people,
   shopIntegrations,
-  tips,
   trips,
 } from "./schema";
 
@@ -263,7 +263,9 @@ async function loadCheckoutIntegrationPayload(
     .from(bookingCheckouts)
     // diveday:allow-rehearsal: read only to refuse; a rehearsal's checkout never reaches an integration.
     .innerJoin(trips, and(eq(trips.id, bookingCheckouts.tripId), eq(trips.shopId, shopId)))
-    .where(and(eq(bookingCheckouts.shopId, shopId), eq(bookingCheckouts.id, checkoutId)))
+    .where(
+      and(eq(bookingCheckouts.shopId, shopId), eq(bookingCheckouts.id, checkoutId), fareCheckout()),
+    )
     .limit(1);
   if (!row || row.isRehearsal || row.checkout.status !== "completed") return null;
   const { checkout } = row;
@@ -278,6 +280,7 @@ async function loadCheckoutIntegrationPayload(
       gearCents: bookingCheckoutBookings.gearCents,
       passThroughCents: bookingCheckoutBookings.passThroughCents,
     })
+    // diveday:any-checkout-purpose: the links of the checkout just read above as a fare.
     .from(bookingCheckoutBookings)
     .innerJoin(
       bookings,
@@ -390,26 +393,43 @@ export async function enqueueTipIntegrationEvent(
 ): Promise<IntegrationEvent | null> {
   const [row] = await db
     .select({
-      tip: tips,
+      tip: bookingCheckouts,
       personId: bookings.personId,
       tripTitle: trips.title,
       isRehearsal: trips.isRehearsal,
     })
-    .from(tips)
-    .innerJoin(bookings, and(eq(bookings.id, tips.bookingId), eq(bookings.shopId, input.shopId)))
+    .from(bookingCheckouts)
+    .innerJoin(
+      bookingCheckoutBookings,
+      and(
+        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+        eq(bookingCheckoutBookings.shopId, input.shopId),
+      ),
+    )
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, input.shopId)),
+    )
     // diveday:allow-rehearsal: read only to refuse; a rehearsal's tip never reaches an integration.
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId)))
-    .where(and(eq(tips.shopId, input.shopId), eq(tips.id, input.tipId)))
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, input.shopId),
+        eq(bookingCheckouts.id, input.tipId),
+        tipCheckout(),
+      ),
+    )
     .limit(1);
-  if (!row || row.isRehearsal || row.tip.status !== "paid") return null;
+  if (!row || row.isRehearsal || row.tip.status !== "completed") return null;
+  const amountCents = row.tip.settledTotalCents ?? row.tip.totalCents;
   const payload: OrderIntegrationPayload = {
     source: "tip",
     orderId: row.tip.id,
     customer: { id: row.personId },
     status: "paid",
     currency: row.tip.currency,
-    totalCents: row.tip.amountCents,
-    amountPaidCents: row.tip.amountCents,
+    totalCents: amountCents,
+    amountPaidCents: amountCents,
     refundedCents: 0,
     description: row.tripTitle,
     createdAt: (row.tip.completedAt ?? row.tip.createdAt).toISOString(),
@@ -419,7 +439,7 @@ export async function enqueueTipIntegrationEvent(
         kind: "tip",
         description: `Tip: ${row.tripTitle}`,
         quantity: 1,
-        unitAmountCents: row.tip.amountCents,
+        unitAmountCents: amountCents,
       },
     ],
   };
