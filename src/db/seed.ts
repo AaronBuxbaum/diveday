@@ -93,7 +93,6 @@ import {
   staffShifts,
   stripePayouts,
   stripeRefundFailures,
-  tips,
   todayReadMarks,
   tripAssignments,
   tripBlowoutDivers,
@@ -1546,10 +1545,6 @@ export async function clearDemoSchedule(
   // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
   // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
-  // Tips reference bookings, so they must go before them — same FK this
-  // cascade's sibling (deleteDemoShopCascade) already fixed (Codex finding:
-  // this reset path had its own, separate child-first list and was missed).
-  await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.

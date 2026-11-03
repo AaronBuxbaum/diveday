@@ -22,14 +22,8 @@ import {
   disconnectShopStripeAccount,
   stripeAccountHolder,
 } from "@/db/stripe-accounts";
-import { recordTipPaymentIntent } from "@/db/stripe-payment-targets";
 import { paymentSourceLookupFromEnvironment } from "@/db/stripe-providers";
 import { tellOwnersPaymentsRestricted } from "@/db/stripe-restricted";
-import {
-  markTipExpiredBySessionId,
-  markTipPaidBySessionId,
-  recordTipStripeCustomer,
-} from "@/db/tips";
 import {
   claimStripeWebhookEvent,
   hasNewerAccountUpdate,
@@ -254,8 +248,8 @@ const disputeObjectSchema = z.object({
 });
 
 /**
- * Record the PaymentIntent a session settled through, on whichever checkout
- * owns the session. Best-effort for the same reason the Customer write above
+ * Record the PaymentIntent a session settled through, on the checkout (a fare
+ * or a tip) that owns the session. Best-effort for the same reason the Customer write above
  * is: it must never swallow a settlement, and a refund that later finds no
  * recorded intent asks Stripe instead.
  */
@@ -268,19 +262,12 @@ async function recordSessionPaymentIntent(
   const paymentIntentId = idOf(session.payment_intent);
   if (!paymentIntentId) return;
   try {
-    const onCheckout = await recordCheckoutPaymentIntent(db, {
+    // A fare and a tip are both checkouts (issue #2718): one writer.
+    await recordCheckoutPaymentIntent(db, {
       stripeSessionId: session.id,
       paymentIntentId,
       expectedAccountId,
     });
-    // A tip shares the session id space (ADR 20260726-post-trip-tipping).
-    if (!onCheckout && expectedAccountId) {
-      await recordTipPaymentIntent(db, {
-        stripeSessionId: session.id,
-        paymentIntentId,
-        expectedAccountId,
-      });
-    }
   } catch (error) {
     logOutcome("payment_intent_record_failed", {
       errorCode: error instanceof Error ? error.name : "unknown_error",
@@ -289,8 +276,8 @@ async function recordSessionPaymentIntent(
 }
 
 /**
- * Record the Customer object this event says Stripe holds, on whichever of the
- * two session-shaped tables owns the id.
+ * Record the Customer object this event says Stripe holds on the checkout
+ * (a fare or a tip) that owns the session.
  *
  * Run on **every** `checkout.session.*` branch rather than only the paid one:
  * an `async_payment_failed` session still leaves a Customer behind at Stripe,
@@ -310,20 +297,11 @@ async function recordSessionCustomer(
   if (!customer) return;
   const stripeCustomerId = typeof customer === "string" ? customer : customer.id;
   try {
-    const recorded = await recordCheckoutStripeCustomer(db, {
+    await recordCheckoutStripeCustomer(db, {
       stripeSessionId: session.id,
       stripeCustomerId,
       expectedAccountId,
     });
-    if (!recorded) {
-      // The same try-checkout-then-tip fallback the settlement paths use: one
-      // session id belongs to at most one of the two tables.
-      await recordTipStripeCustomer(db, {
-        stripeSessionId: session.id,
-        stripeCustomerId,
-        expectedAccountId,
-      });
-    }
   } catch (error) {
     logOutcome("customer_record_failed", {
       errorCode: error instanceof Error ? error.name : "unknown_error",
@@ -431,6 +409,12 @@ async function applyAccountUpdate(
  * the call that completed the checkout, so a replay or a fresh-id redelivery
  * sends nothing; it never throws, so a mail failure cannot make Stripe retry.
  */
+/** The log word for a paid session: a fare, a tip, or nothing DiveDay opened. */
+function paidOutcome(checkout: { purpose: "fare" | "tip" } | null): string {
+  if (!checkout) return "session_not_found";
+  return checkout.purpose === "tip" ? "tip_paid" : "checkout_paid";
+}
+
 async function settleCheckoutPaid(
   db: AppDb,
   session: z.infer<typeof checkoutSessionObjectSchema>,
@@ -445,7 +429,9 @@ async function settleCheckoutPaid(
     session.total_details?.amount_tax,
     settlement,
   );
-  if (checkout && settlement.firstCompletion) {
+  // Only a fare sends the party receipt; a tip never reports as a first
+  // completion, and the purpose is checked here as well (issue #2718).
+  if (checkout && checkout.purpose === "fare" && settlement.firstCompletion) {
     await sendPartyPaymentReceipt(db, checkout, {
       currency: session.currency ?? null,
       overCeiling: settlement.reportedOverCeiling,
@@ -625,17 +611,9 @@ export async function POST(request: Request) {
         // session before the money settles. Only Stripe saying paid clears the
         // booking payment gate (docs ADR 20260721-checkout-at-booking).
         if (session.success && session.data.payment_status === "paid") {
-          // A tip and a booking checkout share the Stripe session id space but
-          // live in separate tables (docs ADR 20260726-post-trip-tipping); a
-          // session id belongs to at most one, so try the booking-payment path
-          // first and only fall back to tips when it finds nothing to mark.
-          const checkout = await settleCheckoutPaid(db, session.data, event.account);
-          if (checkout) {
-            logOutcome("checkout_paid");
-          } else {
-            const tip = await markTipPaidBySessionId(db, session.data.id, event.account);
-            logOutcome(tip ? "tip_paid" : "session_not_found");
-          }
+          // A tip is a checkout too (issue #2718); `markCheckoutPaidBySessionId`
+          // settles it without reaching the seat (ADR 20260726-post-trip-tipping).
+          logOutcome(paidOutcome(await settleCheckoutPaid(db, session.data, event.account)));
         } else if (session.success) {
           logOutcome("payment_not_settled");
         } else {
@@ -648,13 +626,7 @@ export async function POST(request: Request) {
         if (session.success) {
           await recordSessionCustomer(db, session.data, event.account, logOutcome);
           await recordSessionPaymentIntent(db, session.data, event.account, logOutcome);
-          const checkout = await settleCheckoutPaid(db, session.data, event.account);
-          if (checkout) {
-            logOutcome("checkout_paid");
-          } else {
-            const tip = await markTipPaidBySessionId(db, session.data.id, event.account);
-            logOutcome(tip ? "tip_paid" : "session_not_found");
-          }
+          logOutcome(paidOutcome(await settleCheckoutPaid(db, session.data, event.account)));
         } else {
           logOutcome("malformed_payload");
         }
@@ -674,19 +646,19 @@ export async function POST(request: Request) {
           // money: `markCheckoutPaymentFailedBySessionId` only matches a
           // `pending` row and touches no `booking_payments` row at all, so a
           // redelivery, or a failure event racing a completion, is a no-op.
-          // Falls back to the tip table on the same session-id space as the
-          // completion/expiry handlers do.
+          // A tip's failed payment closes it the same way (issue #2718).
           const checkout = await markCheckoutPaymentFailedBySessionId(
             db,
             session.data.id,
             event.account,
           );
-          if (checkout) {
-            logOutcome("checkout_payment_failed");
-          } else {
-            const tip = await markTipExpiredBySessionId(db, session.data.id, event.account);
-            logOutcome(tip ? "tip_expired" : "session_not_found");
-          }
+          logOutcome(
+            !checkout
+              ? "session_not_found"
+              : checkout.purpose === "tip"
+                ? "tip_expired"
+                : "checkout_payment_failed",
+          );
         } else {
           logOutcome("malformed_payload");
         }
@@ -697,12 +669,13 @@ export async function POST(request: Request) {
         if (session.success) {
           await recordSessionCustomer(db, session.data, event.account, logOutcome);
           const checkout = await markCheckoutExpiredBySessionId(db, session.data.id, event.account);
-          if (checkout) {
-            logOutcome("checkout_expired");
-          } else {
-            const tip = await markTipExpiredBySessionId(db, session.data.id, event.account);
-            logOutcome(tip ? "tip_expired" : "session_not_found");
-          }
+          logOutcome(
+            !checkout
+              ? "session_not_found"
+              : checkout.purpose === "tip"
+                ? "tip_expired"
+                : "checkout_expired",
+          );
         } else {
           logOutcome("malformed_payload");
         }
@@ -822,8 +795,8 @@ export async function POST(request: Request) {
     // `applyInvoicePaid`/`markOrderVoidedByInvoiceId` are transactional
     // and transition-gated, `markCheckoutPaidBySessionId` never overwrites a
     // recorded settled total and dedupes its promo redemption,
-    // `markTipPaidBySessionId` early-returns once paid, both
-    // `*ExpiredBySessionId` and `markCheckoutPaymentFailedBySessionId` only
+    // a tip's settlement early-returns once completed,
+    // `markCheckoutExpiredBySessionId` and `markCheckoutPaymentFailedBySessionId` only
     // touch a `pending` row,
     // `recordStripeRefundFailure` writes one row per refund, reversing with it,
     // `applyStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and

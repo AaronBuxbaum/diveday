@@ -161,7 +161,6 @@ export const EXPORTED_TABLES = [
   "order_line_items",
   "work_order_bills",
   "customer_gear_reminder_settings",
-  "tips",
   "dive_sites",
   "dive_site_creatures",
   "recap_photos",

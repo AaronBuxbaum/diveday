@@ -794,6 +794,18 @@ export const stripeWebhookEvents = pgTable(
  */
 export const checkoutStatus = pgEnum("checkout_status", ["pending", "completed", "expired"]);
 
+/**
+ * What a checkout pays for (issue #2718). `fare` is a seat: the one purpose
+ * whose completion settles the covered bookings through the payment gate. `tip`
+ * is a post-trip tip on the diver's recap page: always exactly one booking,
+ * never a deposit or a promotion, and its completion settles nothing but the
+ * checkout itself (ADR 20260726-post-trip-tipping, amended 2026-11-03). Every
+ * read of this table names the purposes it means (`fareCheckout()` /
+ * `tipCheckout()` in `src/db/checkout-purpose.ts`): the checkout-purpose guard
+ * (`scripts/check-checkout-purpose.mjs`).
+ */
+export const checkoutPurpose = pgEnum("checkout_purpose", ["fare", "tip"]);
+
 export const bookingCheckouts = pgTable(
   "booking_checkouts",
   {
@@ -805,6 +817,8 @@ export const bookingCheckouts = pgTable(
       .notNull()
       .references(() => trips.id),
     status: checkoutStatus("status").notNull().default("pending"),
+    /** See `checkoutPurpose`: only a `fare` completion settles a seat. */
+    purpose: checkoutPurpose("purpose").notNull().default("fare"),
     stripeAccountId: text("stripe_account_id").notNull(),
     stripeSessionId: text("stripe_session_id").notNull(),
     /**
@@ -1028,6 +1042,14 @@ export const bookingCheckouts = pgTable(
     check(
       "booking_checkouts_single_promo_source",
       sql`${table.promoCodeId} is null or ${table.tripPromoId} is null`,
+    ),
+    // A tip is a whole amount the diver chose: no deposit, no promotion, no
+    // discount snapshot and no tax (ADR 20260726-post-trip-tipping), so a fare
+    // reader that forgets the purpose still cannot read a tip as a discounted
+    // or deposit seat.
+    check(
+      "booking_checkouts_tip_shape",
+      sql`${table.purpose} <> 'tip' or (not ${table.isDeposit} and ${table.promoCodeId} is null and ${table.tripPromoId} is null and ${table.appliedDiscountPercent} is null and ${table.appliedDiscountCents} is null and not ${table.taxEnabled} and ${table.passThroughCents} = 0)`,
     ),
     // The abandoned-checkout-recovery scan's exact predicate (pending, not yet
     // recovered), so the daily cron doesn't force a sequential scan of the
@@ -1257,63 +1279,6 @@ export const stripeRefundFailures = pgTable(
       sql`(${table.orderId} is null) <> (${table.checkoutId} is null)`,
     ),
     check("stripe_refund_failures_status", sql`${table.refundStatus} in ('failed', 'canceled')`),
-  ],
-);
-
-export const tipStatus = pgEnum("tip_status", ["pending", "paid", "expired"]);
-
-/**
- * A post-trip tip, a hosted Stripe Checkout the diver's own recap page
- * offers. Deliberately its own small table rather than reusing
- * `booking_checkouts`: a tip is always exactly one booking (never a party),
- * settles no booking-payment gate, and its webhook handling must never be
- * able to cascade into `markCheckoutPaidBySessionId`'s booking-paid logic —
- * same shape (status/session/checkout URL lifecycle), separate concern
- * (docs ADR 20260726-post-trip-tipping).
- */
-export const tips = pgTable(
-  "tips",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    bookingId: uuid("booking_id")
-      .notNull()
-      .references(() => bookings.id),
-    status: tipStatus("status").notNull().default("pending"),
-    stripeAccountId: text("stripe_account_id").notNull(),
-    stripeSessionId: text("stripe_session_id").notNull(),
-    /**
-     * The `cus_…` object Stripe created for this tip's session, once Stripe
-     * says one exists — same rule as `booking_checkouts.stripe_customer_id`:
-     * `customer_creation: "if_required"` means null is "Stripe created no
-     * Customer", never "we forgot to write it" (issue #1621) — and the same
-     * exception, that a row written before
-     * `20260911222255_checkout-stripe-customer` is null too, unbackfilled under
-     * H-20260815-no-legacy, with the session snapshot still owed for it
-     * (`security-reviewer`, 2026-09-12).
-     */
-    stripeCustomerId: text("stripe_customer_id"),
-    /**
-     * The PaymentIntent the tip was paid with, written once when the session
-     * completes. Only so a refund or a dispute of a tip is recognised as one
-     * and Stripe is not asked about it (ADR 20261009-stripe-reversals-reach-diveday);
-     * nothing records a tip's reversal yet.
-     */
-    stripePaymentIntentId: text("stripe_payment_intent_id"),
-    checkoutUrl: text("checkout_url"),
-    currency: text("currency").notNull(),
-    amountCents: integer("amount_cents").notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
-    completedAt: timestamp("completed_at", { withTimezone: true }),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("tips_stripe_session_unique").on(table.stripeSessionId),
-    index("tips_shop_booking_idx").on(table.shopId, table.bookingId),
-    index("tips_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
-    check("tips_amount_positive", sql`${table.amountCents} > 0`),
   ],
 );
 
@@ -1583,8 +1548,6 @@ export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 
 export type PaymentDispute = typeof paymentDisputes.$inferSelect;
 export type StripePayout = typeof stripePayouts.$inferSelect;
-
-export type Tip = typeof tips.$inferSelect;
 
 export type ShopPromoCode = typeof shopPromoCodes.$inferSelect;
 
