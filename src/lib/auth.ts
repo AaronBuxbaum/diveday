@@ -37,6 +37,7 @@ import { clientIp } from "@/lib/request-ip";
 import { readSessionCookieCache } from "@/lib/session-cookie-cache";
 import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
 import { withHashedSessionTokens } from "@/lib/session-token-hash";
+import { runtimeMode } from "./runtime-mode";
 
 /**
  * Our own credentials chokepoint as a better-auth plugin, rather than
@@ -67,7 +68,7 @@ import { withHashedSessionTokens } from "@/lib/session-token-hash";
  */
 function diveDayCredentialsPlugin(db: DbExecutor) {
   const origins = signInOrigins(publicAppUrl() ?? APP_ORIGIN, process.env);
-  const cookie = pendingCookie(origins[0], process.env.DIVEDAY_E2E === "1");
+  const cookie = pendingCookie(origins[0], !runtimeMode().secureSessionCookies);
   return {
     id: "diveday-credentials",
     endpoints: {
@@ -304,7 +305,7 @@ export function createAuth(db: DbExecutor) {
       // which makes direct authenticated API assertions look signed out.
       // Keep real deployments secure while giving the HTTP test fleet the
       // same cookie visibility as the browser.
-      useSecureCookies: process.env.DIVEDAY_E2E !== "1",
+      useSecureCookies: runtimeMode().secureSessionCookies,
     },
     emailAndPassword: { enabled: false },
     disabledPaths: [...DIGEST_BLIND_SESSION_PATHS],

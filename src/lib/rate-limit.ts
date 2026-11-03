@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { nowMs } from "./clock";
 import { log } from "./log";
+import { runtimeMode } from "./runtime-mode";
 
 /**
  * A shared per-source abuse-control seam for public write boundaries
@@ -267,7 +268,7 @@ let memoryStoreAnnounced = false;
 function announceMemoryStoreInProduction(store: RateLimitStore): void {
   if (memoryStoreAnnounced || store !== defaultStore || defaultStoreKind !== "memory") return;
   memoryStoreAnnounced = true;
-  if (process.env.NODE_ENV !== "production" || process.env.DIVEDAY_E2E === "1") return;
+  if (!runtimeMode().warnMemoryRateLimit) return;
   log("rate_limit.memory_store_in_production", "warn", { store: "memory" });
 }
 

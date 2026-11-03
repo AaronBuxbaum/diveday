@@ -11,6 +11,10 @@ describe("runtimeMode", () => {
       frozenClockMs: null,
       testRoutesOpen: true,
       capturePhotos: false,
+      syntheticFixtures: false,
+      secureCookies: false,
+      secureSessionCookies: true,
+      warnMemoryRateLimit: false,
     });
   });
 
@@ -21,6 +25,10 @@ describe("runtimeMode", () => {
         frozenClockMs: Date.parse(CLOCK),
         testRoutesOpen: true,
         capturePhotos: true,
+        syntheticFixtures: false,
+        secureCookies: false,
+        secureSessionCookies: false,
+        warnMemoryRateLimit: false,
       },
     );
   });
@@ -36,6 +44,7 @@ describe("runtimeMode", () => {
         NODE_ENV,
         DATABASE_URL: REAL,
         DIVEDAY_E2E: "1",
+        DIVEDAY_DISABLE_EXTERNAL_HTTP: "1",
         DIVEDAY_CLOCK: CLOCK,
       });
       expect(mode).toEqual({
@@ -43,6 +52,10 @@ describe("runtimeMode", () => {
         frozenClockMs: null,
         testRoutesOpen: false,
         capturePhotos: false,
+        syntheticFixtures: false,
+        secureCookies: true,
+        secureSessionCookies: true,
+        warnMemoryRateLimit: NODE_ENV === "production",
       });
     }
   });
@@ -61,5 +74,24 @@ describe("runtimeMode", () => {
   it("returns a frozen record", () => {
     expect(Object.isFrozen(runtimeMode({}))).toBe(true);
     expect(Object.isFrozen(runtimeMode({ DATABASE_URL: REAL }))).toBe(true);
+  });
+
+  it("serves tide fixtures only under the harness or outside production, and never with a real database", () => {
+    const off = { DIVEDAY_DISABLE_EXTERNAL_HTTP: "1" };
+    expect(runtimeMode({ ...off, NODE_ENV: "development" }).syntheticFixtures).toBe(true);
+    expect(
+      runtimeMode({ ...off, NODE_ENV: "production", DIVEDAY_E2E: "1" }).syntheticFixtures,
+    ).toBe(true);
+    expect(runtimeMode({ ...off, NODE_ENV: "production" }).syntheticFixtures).toBe(false);
+    expect(runtimeMode({ NODE_ENV: "development" }).syntheticFixtures).toBe(false);
+  });
+
+  it("marks cookies Secure in production and under a real database, not on the e2e loopback", () => {
+    expect(runtimeMode({ NODE_ENV: "production" }).secureCookies).toBe(true);
+    expect(runtimeMode({ NODE_ENV: "production", DIVEDAY_E2E: "1" }).secureCookies).toBe(false);
+    expect(runtimeMode({ NODE_ENV: "development", DATABASE_URL: REAL }).secureCookies).toBe(true);
+    expect(runtimeMode({ NODE_ENV: "production", DIVEDAY_E2E: "1" }).secureSessionCookies).toBe(
+      false,
+    );
   });
 });

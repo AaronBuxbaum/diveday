@@ -1,5 +1,6 @@
 import { getCookieCache } from "better-auth/cookies";
 import { authSecret } from "@/lib/auth-secret";
+import { runtimeMode } from "./runtime-mode";
 
 /**
  * The session snapshot in better-auth's short-lived cookie cache
@@ -20,6 +21,6 @@ export function readSessionCookieCache(source: Request | Headers) {
   return getCookieCache(source, {
     secret: authSecret,
     strategy: "jwe",
-    isSecure: process.env.DIVEDAY_E2E !== "1",
+    isSecure: runtimeMode().secureSessionCookies,
   }).catch(() => null);
 }

@@ -6,6 +6,8 @@
  * signing post and never in a URL. The waiver action re-checks it
  * (`partyLeadReturnToken`) before it sends anyone anywhere.
  */
+
+import { runtimeMode } from "./runtime-mode";
 export const PARTY_RETURN_COOKIE = "diveday_party_return";
 
 /** An hour: long enough to read and sign a release, short enough to forget. */
@@ -13,7 +15,7 @@ export const PARTY_RETURN_MAX_AGE_SECONDS = 60 * 60;
 
 /** Production cookies require HTTPS; the e2e fleet uses HTTP loopback. */
 export function partyReturnCookieSecure(): boolean {
-  return process.env.NODE_ENV === "production" && process.env.DIVEDAY_E2E !== "1";
+  return runtimeMode().secureCookies;
 }
 
 /** The one path the cookie is sent on: the release the parent was handed. */
