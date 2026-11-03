@@ -61,7 +61,7 @@ describe("noShowSalvageCopy", () => {
   it("links to seating that diver on the day, not to the day's staff page", () => {
     expect(copyFor({ kind: "rebook", departures: [departure] }).links).toEqual([
       {
-        href: "/shop/blue-mantis/bookings/new/trip-2?diverq=Nadia%20Petrov",
+        href: "/shop/blue-mantis/trips/trip-2?add=1&diverq=Nadia%20Petrov",
         label: "Add them to Two-Tank Reef, Sat 8:00 AM",
         offer: {
           tripId: "trip-2",
@@ -181,7 +181,7 @@ describe("sailedRebookCopy", () => {
     });
     expect(copy.line).toBe("Nothing else booked · Thu 7:00 AM has 3 seats");
     expect(copy.add).toEqual({
-      href: "/shop/blue-mantis/bookings/new/trip-2?diverq=Nadia%20Petrov",
+      href: "/shop/blue-mantis/trips/trip-2?add=1&diverq=Nadia%20Petrov",
       label: "Add them",
       ariaLabel: "Add Nadia Petrov to Two-Tank Reef, Thu 7:00 AM",
     });

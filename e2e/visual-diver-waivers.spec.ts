@@ -238,7 +238,7 @@ for (const scheme of ["light", "dark"] as const) {
         // A minted diver keeps the capture's own name out of the frame: the
         // page prints the diver's name in the guardian card's opening line, so
         // a per-run stamp would change the picture on every run. Pinned words.
-        await staffPage.goto("/shop/blue-mantis/divers/new");
+        await staffPage.goto("/shop/blue-mantis/divers?add=1");
         await staffPage.getByLabel("Full name").fill("Robin Delgado");
         await staffPage.getByLabel("Email").fill("robin.delgado@example.com");
         await staffPage.getByRole("button", { name: "Add diver" }).click();

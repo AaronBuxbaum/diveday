@@ -1930,7 +1930,9 @@ export async function capture(
  * app's longest form had lost its only primary action, silently.
  *
  * Scrolled to the foot the sticky offset is zero, so the element is at its
- * static position and paints normally — which is what this does. Viewport-
+ * static position and paints normally — which is what this does. The foot is
+ * the form's: an add panel's bottom when one is open (its index's list follows
+ * it), the document's otherwise. Viewport-
  * sized rather than full-page: the bar in its own context is the whole
  * subject, and a second 8,000 px image of the same form is not.
  *
@@ -1946,7 +1948,23 @@ export async function captureStickyFoot(page: Page, name: string, scheme: "light
     for (const viewport of schemeViewports(scheme)) {
       await page.setViewportSize(viewport);
       await paintWholeDocument(page);
-      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      // A form in an add panel ends at the panel, not at the page: the index's
+      // list follows below it (#2737), so the document's end is the list's.
+      // The panel's end goes just above the phone's tab bar, not under it.
+      await page.evaluate(() => {
+        const panel = document.querySelector("[data-add-panel]");
+        if (!panel) {
+          window.scrollTo(0, document.documentElement.scrollHeight);
+          return;
+        }
+        const probe = document.createElement("div");
+        probe.style.height = "var(--tabbar-h)";
+        document.body.append(probe);
+        const tabBar = probe.getBoundingClientRect().height;
+        probe.remove();
+        const bottom = panel.getBoundingClientRect().bottom;
+        window.scrollTo(0, window.scrollY + bottom - window.innerHeight + tabBar);
+      });
       // The scroll is a layout change like any other; let it commit before the shot.
       await page.evaluate(
         () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),

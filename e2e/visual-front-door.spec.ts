@@ -929,7 +929,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The first (and only-ever-first) departure, dated off the frozen
         // clock so the card and queue rows render pixel-identically per run.
-        await page.goto(`/shop/${unique}/schedule/board/new`);
+        await page.goto(`/shop/${unique}/schedule/board?add=1`);
         const tomorrow = new Date(Date.parse(E2E_FROZEN_CLOCK) + 24 * 60 * 60 * 1000)
           .toISOString()
           .slice(0, 10);
@@ -955,10 +955,13 @@ for (const scheme of ["light", "dark"] as const) {
         // One hand-entered diver is enough: seating owes a waiver on join
         // (src/db/seat-diver.ts), the departure is inside the operational
         // horizon, so Today gains a waiver row.
-        await page.goto(`/shop/${unique}/bookings/new`);
-        await page.getByRole("link", { name: /Two-Tank Morning Reef/ }).click();
+        await page.goto(`/shop/${unique}?call=1`);
+        // The departure card is one big link to its add band; its title is a
+        // second link to the departure itself.
+        await page.locator('a[href*="?add=1"][aria-label*="Two-Tank Morning Reef"]').click();
+        await page.waitForURL(/\/trips\/[^/?]+\?add=1/);
         await page.getByRole("link", { name: "Add diver" }).click();
-        await page.waitForURL(/\/divers\/new\?/);
+        await page.waitForURL(/\/divers\?add=1&/);
         await page.getByLabel("Full name").fill("Marisol Vega");
         await page.getByLabel("Email", { exact: true }).fill(`marisol-${scheme}@example.com`);
         await page.getByRole("button", { name: "Add to trip" }).click();

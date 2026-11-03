@@ -385,12 +385,11 @@ test.describe("schedule builder", () => {
     const addDay = page.getByRole("link", { name: /^Add a departure on / }).first();
     await addDay.click();
     await expect(page.getByLabel("What is it")).toBeVisible();
-    const back = page.getByRole("main").getByRole("link", { name: "Schedule", exact: true });
-    const href = await back.getAttribute("href");
-    expect(href).toContain("?week=");
-    const returnUrl = new URL(href ?? "", page.url()).href;
+    // The panel opens on the board itself (#2737); closing it keeps the week.
     await page.getByRole("button", { name: "Cancel" }).click();
-    await expect(page).toHaveURL(returnUrl);
+    await expect(page.getByLabel("What is it")).not.toBeVisible();
+    await expect(page).toHaveURL(/[?&]week=/);
+    await expect(page).not.toHaveURL(/[?&]add=/);
   });
 
   test("opening and canceling the add/move panels manages keyboard focus", async ({ page }) => {
@@ -403,9 +402,6 @@ test.describe("schedule builder", () => {
     const addToggle = page.getByRole("link", { name: "Add a departure", exact: true });
     await addToggle.click();
     await expect(page.getByLabel("What is it")).toBeFocused();
-    await expect(
-      page.getByRole("main").getByRole("link", { name: "Schedule", exact: true }),
-    ).toHaveAttribute("href", BOARD);
 
     // Cancelling hands focus back to the header link that opened the panel,
     // not to <body> — and clears ?add so the link works a second time.

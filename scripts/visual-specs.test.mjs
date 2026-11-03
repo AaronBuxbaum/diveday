@@ -83,7 +83,7 @@ test("evidence preserves a private image copy and cannot imply image review", (t
 test("route contract matches dynamic segments without recording bearer tokens", () => {
   expect(matchesRoute("/ready/[token]", "/ready/secret-value")).toBe(true);
   expect(matchesRoute("/ready/[token]", "/shop/blue-mantis")).toBe(false);
-  expect(matchesRoute("/shop/[shopSlug]/dive-sites/new", "/shop/demo/dive-sites/new")).toBe(true);
+  expect(matchesRoute("/shop/[shopSlug]/divers/download", "/shop/demo/divers/download")).toBe(true);
 });
 
 test("hashes only at boundaries while every capture uses the bound build", () => {

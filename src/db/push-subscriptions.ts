@@ -1,7 +1,7 @@
 import { and, desc, eq, exists, inArray, isNull, lt, or, sql } from "drizzle-orm";
-import { staffTranslator } from "@/i18n/staff-messages";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { manifestChangedPush, type StaffPushWords } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { sendWebPush, type WebPushTarget, webPushConfig } from "@/lib/notifications/web-push";
 import { isInPushWindow } from "@/lib/push-window";
@@ -305,10 +305,7 @@ async function sendPushTargets(
   localeByPerson: Map<string, string | null>,
   defaultLocale: string,
   config: NonNullable<ReturnType<typeof webPushConfig>>,
-  payloadFor: (
-    target: PushDeliveryTarget,
-    t: ReturnType<typeof staffTranslator>,
-  ) => Parameters<typeof sendWebPush>[1],
+  payloadFor: (target: PushDeliveryTarget, locale: string) => Parameters<typeof sendWebPush>[1],
 ): Promise<number> {
   let sent = 0;
   const gone: string[] = [];
@@ -316,12 +313,10 @@ async function sendPushTargets(
     const chunk = targets.slice(index, index + PUSH_SEND_CONCURRENCY);
     const results = await Promise.all(
       chunk.map(async (target) => {
-        const t = staffTranslator(
-          recipientLocale(localeByPerson.get(target.personId), defaultLocale),
-        );
+        const locale = recipientLocale(localeByPerson.get(target.personId), defaultLocale);
         return {
           id: target.id,
-          result: await sendWebPush(target, payloadFor(target, t), config),
+          result: await sendWebPush(target, payloadFor(target, locale), config),
         };
       }),
     );
@@ -422,12 +417,11 @@ export async function pushManifestChanged(
       localeByPerson,
       shop.defaultLocale,
       config,
-      (_target, t) => ({
+      (_target, locale) => ({
         kind: "manifest-changed",
         tripId,
         url,
-        title: t("trips.offlineManifestManager.pushNotificationTitle"),
-        body: t("trips.offlineManifestManager.pushNotificationBody"),
+        ...manifestChangedPush(locale),
       }),
     );
   } catch {
@@ -460,7 +454,8 @@ export async function pushTripAlert(
   tripId: string,
   message: {
     url: string;
-    words: (t: ReturnType<typeof staffTranslator>) => { title: string; body: string };
+    /** The push's words in one device owner's locale (`src/lib/notifications/staff-push.ts`). */
+    words: (locale: string) => StaffPushWords;
   },
 ): Promise<number> {
   try {
@@ -535,11 +530,11 @@ export async function pushTripAlert(
       localeByPerson,
       shop.defaultLocale,
       config,
-      (_target, t) => ({
+      (_target, locale) => ({
         kind: "manifest-changed",
         tripId,
         url: message.url,
-        ...message.words(t),
+        ...message.words(locale),
       }),
     );
   } catch {

@@ -1,8 +1,6 @@
 import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
-import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   heldSendPayloadSchema,
   heldSendRunAt,
@@ -16,6 +14,7 @@ import {
   notificationProviderSignal,
   publicAppUrl,
   recipientLocale,
+  rescheduledText,
 } from "@/lib/notifications";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { notificationTripTitle } from "@/lib/notifications/kinds";
@@ -625,7 +624,6 @@ async function tellSeatWithinFence(
     return "failed";
   }
   const locale = recipientLocale(person.locale, shop.defaultLocale);
-  const t = diverTranslator(locale);
   // A STOP-listed phone-only seat mints nothing (#2451); the one-seat path
   // checks here what the whole-departure path checks in a batch.
   const refusedText =
@@ -655,38 +653,22 @@ async function tellSeatWithinFence(
   const readinessUrl = capability
     ? new URL(readinessLinkPath(capability.token), `${channels.origin}/`).toString()
     : undefined;
-  // A save that moved only the meeting point says the place alone (#2443).
-  const timeMoved = previousStartsAt.getTime() !== trip.startsAt.getTime();
-  const date = formatShortDate(trip.startsAt, locale, shop.timezone);
-  const time = formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone);
-  const smsBody = [
-    seatMovedAt || timeMoved
-      ? t(seatMovedAt ? "notifications.sms.rescheduledSeat" : "notifications.sms.rescheduled", {
-          shopName: shop.name,
-          tripTitle: trip.title,
-          date,
-          time,
-        })
-      : t("notifications.sms.meetingPointMoved", {
-          shopName: shop.name,
-          tripTitle: trip.title,
-          date,
-          time,
-        }),
-    meetingPoint
-      ? t("trip.calendarMeetingPoint", {
-          place: [meetingPoint.label, meetingPoint.address].filter(Boolean).join(", "),
-        })
-      : null,
-    readinessUrl ? t("notifications.sms.readyLink", { url: readinessUrl }) : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const smsBody = rescheduledText({
+    locale,
+    shopName: shop.name,
+    timezone: shop.timezone,
+    trip,
+    seatMoved: Boolean(seatMovedAt),
+    // A save that moved only the meeting point says the place alone (#2443).
+    timeMoved: previousStartsAt.getTime() !== trip.startsAt.getTime(),
+    meetingPoint,
+    readinessUrl,
+  });
   const courtesy = phone
     ? {
         to: phone,
         body: smsBody,
-        smsStopLine: t("notifications.sms.stopLine"),
+        locale,
         shopName: shop.name,
       }
     : null;

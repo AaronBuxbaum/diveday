@@ -43,11 +43,13 @@ barrels, bookings, seating, retention, integrations). What they do not say:
 - **A surface reader** (`src/db/<surface>.ts`, e.g. `recap.ts`; Today's are in `src/features/today`) answers one page's
   question in one call. Every staff `page.tsx` reads through `requireShopSurface` plus exactly one
   `@/db/*` module, its reader; permissions and constants the page needs come back from it
-  (`check-architecture.mjs` rule 6). The trip page's readers (`trip-overview.ts`, `trip-guests.ts`,
-  `trip-prep.ts`) are not in the `@/db/trips` barrel, which holds only the departure aggregate. It detects nothing of its own (a rule lives in `src/lib`, once) and returns
+  (`check-architecture.mjs` rule 6). The trip page's readers (`trip-page.ts`, over `trip-overview.ts` and
+  `trip-guests.ts`; `trip-prep.ts`) are not in the `@/db/trips` barrel, which holds only the departure aggregate. It detects nothing of its own (a rule lives in `src/lib`, once) and returns
   codes and data, not a sentence: `src/db` may not value-import `@/i18n/messages` or
   `@/i18n/staff-messages`, and `src/lib` may not value-import `drizzle-orm` (`scripts/check-architecture.mjs`
-  seams; files that still do are banked in `scripts/ratchets.json`, and a new one fails). A
+  seams; files that still do are banked in `scripts/ratchets.json`, and a new one fails). An outbound
+  message's words live in its renderer under `src/lib/notifications/` (`waiver-text.ts`,
+  `staff-push.ts`, …); the db sender passes the recipient's locale and the facts. A
   page that needs a rule from Today's queue takes the small file below it (`src/lib/today-kinds.ts`,
   `today-urgency.ts`, `roll-call-gaps.ts`), not the queue, which no `src/db` module may import.
 

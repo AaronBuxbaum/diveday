@@ -72,8 +72,8 @@ const dynamicCount = (route) => (route.match(/\[[^\]]+\]/g) ?? []).length;
 
 /**
  * The route a concrete path is an instance of, or `null`. A static route wins
- * over a dynamic one that also matches, so `/divers/new` is the new-diver form
- * and not a diver whose id is "new".
+ * over a dynamic one that also matches, so `/divers/download` is the roster download
+ * and not a diver whose id is "download".
  */
 export function routeFor(routes, pathname) {
   const matches = routes.filter((route) => routePattern(route).test(pathname));

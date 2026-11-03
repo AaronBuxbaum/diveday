@@ -1,15 +1,10 @@
 import { and, eq, gt, inArray, isNull, lte } from "drizzle-orm";
 import type { TripRequirement } from "@/db/schema";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import { reminderActionText } from "@/i18n/reminder-labels";
-import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { readLearningMaterials } from "@/lib/courses";
 import { log } from "@/lib/log";
-import { type MeetingPoint, meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
-import { forecastText } from "@/lib/night-before-brief";
+import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import {
   type Notification,
@@ -18,6 +13,8 @@ import {
   notificationProviderSignal,
   publicAppUrl,
   recipientLocale,
+  reminderForecast,
+  reminderSmsBody,
 } from "@/lib/notifications";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { inboundEmailDomain } from "@/lib/notifications/inbound-address";
@@ -28,11 +25,7 @@ import {
 } from "@/lib/notifications/sms";
 import { isDiver, type ParticipantType } from "@/lib/participant-types";
 import type { ReadinessResult } from "@/lib/readiness";
-import {
-  buildDiverChecklist,
-  type ReminderActionCode,
-  reminderReadiness,
-} from "@/lib/readiness-summary";
+import { buildDiverChecklist, reminderReadiness } from "@/lib/readiness-summary";
 import {
   dueReminder,
   MAX_REMINDER_LEAD_HOURS,
@@ -119,7 +112,8 @@ type EmailReminderWork = {
   kind: ReminderKind;
   phone: string | null;
   smsBody: string;
-  smsStopLine: string;
+  /** The diver's language: the text's STOP line is worded in it. */
+  locale: string;
   whatsAppBody: string;
   notification: Notification;
 };
@@ -134,7 +128,7 @@ type SmsReminderWork = {
   kind: ReminderKind;
   phone: string;
   smsBody: string;
-  smsStopLine: string;
+  locale: string;
   whatsAppBody: string;
 };
 
@@ -152,139 +146,6 @@ export type SendDueRemindersOptions = {
   /** Origin for readiness links; defaults to the configured public app URL. */
   appOrigin?: string | null;
 };
-
-/**
- * A short text; the email carries the full detail and the link. The night-before
- * (day) lead adds the plain-language conditions line and who to text, the SMS
- * half of the confidence arc — kept compact so it stays a single readable text.
- * Resolved against the recipient's own locale, the same as the email that
- * accompanies it (docs ADR 20260731-per-person-notification-locale) — no
- * downstream renderer picks words for a sent text, so this composes its own
- * via `t()` rather than returning a code (docs ADR
- * 20260731-notification-locale, whose terminal-renderer exception stands).
- */
-function reminderSmsBody(
-  t: DiverTranslator,
-  locale: DiverLocale,
-  input: {
-    shopName: string;
-    tripTitle: string;
-    startsAt: Date;
-    endsAt: Date;
-    timezone: string;
-    lead: "week" | "day";
-    dockCallMinutes: number;
-    outstanding: ReminderActionCode[];
-    medicalReview: boolean;
-    forecast?: string | null;
-    whoToText?: string | null;
-    /** Whether this body may end with the reply line (ADR 20260909-reply-keywords). */
-    replyKeywords?: boolean;
-    /**
-     * Unfinished course materials (ADR 20261008-course-learning-materials).
-     * Their own clause under the materials heading, never the boarding to-do:
-     * the eLearning is not something the boat checks.
-     */
-    materials?: CourseLearningMaterial[];
-    /** A course session: it starts rather than sails, and names no dock. */
-    courseSession?: boolean;
-    /**
-     * The departure's dive mode (`trips.dive_mode`). Only a boat leaves
-     * without anyone, so only a boat's day-before text teaches LATE.
-     */
-    diveMode?: "boat" | "shore" | "pool";
-    /**
-     * Where to go, short form: the label and the address, no landmark or
-     * parking (ux review 2026-10-11, item 4). The email carries the rest.
-     */
-    meetingPoint?: MeetingPoint;
-    /**
-     * The diver's own trip prep (ux review 2026-10-11, item 6): a phone-only
-     * diver had no way to reach the page that says what is left.
-     */
-    readinessUrl?: string;
-  },
-): string {
-  const when =
-    input.lead === "week" ? t("notifications.sms.whenWeek") : t("notifications.sms.whenDay");
-  const date = formatShortDate(input.startsAt, locale, input.timezone);
-  const time = formatTimeRangeTz(input.startsAt, input.endsAt, locale, input.timezone);
-  const conditions =
-    input.lead === "day" && input.forecast
-      ? ` ${t("notifications.brief.conditionsLabel")} ${input.forecast}`
-      : "";
-  // Name the diver's own outstanding items rather than a generic nudge.
-  const todo = input.outstanding.map((code) => reminderActionText(t, code));
-  if (input.medicalReview) todo.push(t("notifications.sms.medicalReviewNote"));
-  const todoText = todo.length
-    ? ` ${t("notifications.common.outstandingHeading")} ${todo.join("; ")}.`
-    : "";
-  // A phone-only student has no email to click through, so the text carries
-  // the first material's own https link. The readiness link has its own clause
-  // below, once, for every diver.
-  const materials = input.materials ?? [];
-  const names = materials.map((material) => material.name).join("; ");
-  const firstLink = materials.find((material) => material.url)?.url;
-  const materialsText =
-    materials.length === 0
-      ? ""
-      : ` ${
-          firstLink
-            ? t("notifications.sms.materialsWithLink", { names, url: firstLink })
-            : t("notifications.sms.materials", { names })
-        }`;
-  const meet = input.meetingPoint
-    ? ` ${t("trip.calendarMeetingPoint", {
-        place: [input.meetingPoint.label, input.meetingPoint.address].filter(Boolean).join(", "),
-      })}`
-    : "";
-  // **Measured for #2449 (2026-10-15), no short link built.** The week-ahead
-  // text for the demo's reef and night boats is ~304 characters before this
-  // clause, and UCS-2 (the "—" in a trip title and the "–" in the time range
-  // are outside GSM-7): 5 segments at 67 each. The full link adds ~86
-  // characters (6 segments); a short redirect would still be 6. The link is
-  // not what makes the text long, so a second bearer-URL shape (`/r/<id>`) buys
-  // nothing here. The lever, if the segment cost matters, is the text's own
-  // characters, not the link.
-  // The same capability the email's button carries, minted once per reminder:
-  // it goes only to this seat's own phone, as the email goes to its own inbox.
-  const ready = input.readinessUrl
-    ? ` ${t("notifications.sms.readyLink", { url: input.readinessUrl })}`
-    : "";
-  const contact =
-    input.lead === "day" && input.whoToText
-      ? ` ${t("notifications.sms.contact", { phone: input.whoToText })}`
-      : "";
-  const body = input.courseSession
-    ? t("notifications.sms.courseBody", {
-        shopName: input.shopName,
-        tripTitle: input.tripTitle,
-        when,
-        date,
-        time,
-      })
-    : t("notifications.sms.body", {
-        shopName: input.shopName,
-        tripTitle: input.tripTitle,
-        when,
-        date,
-        time,
-        minutes: input.dockCallMinutes,
-      });
-  // **The night-before brief's text teaches LATE** (J3): both of the channels a text can
-  // leave on hear it — WhatsApp through the reply keywords, platform SMS
-  // through `/api/webhooks/sms` — and the morning of a boat is the one time a
-  // diver needs it. Only on a boat (`dive_mode`), whatever else it is: a
-  // shore or pool day has no departure to hold, and a course session at sea
-  // does.
-  const late =
-    input.lead === "day" && input.diveMode === "boat"
-      ? ` ${t("notifications.replyKeyword.lateOffer")}`
-      : "";
-  // Last, and only on a channel that can hear the answer.
-  const keywords = input.replyKeywords ? ` ${t("notifications.replyKeyword.offer")}` : "";
-  return `${body}${conditions}${meet}${todoText}${materialsText}${ready}${contact}${late}${keywords}`;
-}
 
 /**
  * The trip-prep link each sending reminder carries, by booking id, carried by
@@ -610,7 +471,7 @@ async function deliverReminderChannels(
             {
               to: phone,
               body: work.smsBody,
-              smsStopLine: work.smsStopLine,
+              locale: work.locale,
               whatsAppBody: work.whatsAppBody,
               shopName: work.shopName,
             },
@@ -641,7 +502,7 @@ async function deliverReminderChannels(
           {
             to: work.phone,
             body: work.smsBody,
-            smsStopLine: work.smsStopLine,
+            locale: work.locale,
             whatsAppBody: work.whatsAppBody,
             shopName: work.shopName,
           },
@@ -917,7 +778,6 @@ export async function sendDueReminders(
       // as the calendar feed does (ADR 20260731-per-person-notification-locale).
       // Email and SMS take this one value, so the channels never differ in language.
       const locale = recipientLocale(person.locale, shop.defaultLocale);
-      const t = diverTranslator(locale);
       const readinessUrl = links.urlFor(booking.id);
       const phone = smsRecipient(person.phone);
       // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
@@ -935,8 +795,7 @@ export async function sendDueReminders(
       // for a first-timer. The 7-day nudge carries none of it.
       const isDay = cadence.kind === "trip_reminder_24h";
       const forecast = isDay
-        ? forecastText(
-            t,
+        ? reminderForecast(
             locale,
             {
               conditionsSummary: trip.conditionsSummary,
@@ -953,7 +812,7 @@ export async function sendDueReminders(
       const whoToText = isDay ? shop.contactPhone?.trim() || null : null;
 
       const reminderText = (replyKeywords: boolean) =>
-        reminderSmsBody(t, locale, {
+        reminderSmsBody(locale, {
           shopName: shop.name,
           tripTitle: trip.title,
           startsAt: trip.startsAt,
@@ -991,7 +850,7 @@ export async function sendDueReminders(
           kind: cadence.kind,
           phone,
           smsBody,
-          smsStopLine: t("notifications.sms.stopLine"),
+          locale,
           whatsAppBody,
           notification: {
             kind: cadence.kind,
@@ -1025,7 +884,7 @@ export async function sendDueReminders(
           kind: cadence.kind,
           phone,
           smsBody,
-          smsStopLine: t("notifications.sms.stopLine"),
+          locale,
           whatsAppBody,
         });
       } else {

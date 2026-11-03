@@ -13,7 +13,6 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { diverTranslator } from "@/i18n/messages";
 import { isStaff } from "@/lib/authz";
 import type { BrandDisplayFontCode } from "@/lib/brand";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -27,6 +26,7 @@ import {
   type Notification,
   type NotificationProvider,
   publicAppUrl,
+  recapText,
   recipientLocale,
 } from "@/lib/notifications";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
@@ -1818,7 +1818,7 @@ async function sendRecaps(
     shopName: string;
     phone: string | null;
     smsBody: string;
-    smsStopLine: string;
+    locale: string;
     notification: Notification;
   }> = [];
   const smsWork: Array<{
@@ -1827,7 +1827,7 @@ async function sendRecaps(
     shopName: string;
     phone: string;
     smsBody: string;
-    smsStopLine: string;
+    locale: string;
   }> = [];
 
   for (const { booking, person, trip, shop } of rows) {
@@ -1854,8 +1854,7 @@ async function sendRecaps(
     // 20260731-per-person-notification-locale). Null falls back to the shop
     // locale, exactly as before the column existed.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
-    const t = diverTranslator(locale);
-    const smsBody = recapUrl ? t("notifications.sms.recap", { shopName: shop.name, recapUrl }) : "";
+    const smsBody = recapUrl ? recapText(locale, { shopName: shop.name, recapUrl }) : "";
 
     if (recapUrl && person.email && !person.courtesyEmailOptOutAt) {
       const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {
@@ -1868,7 +1867,7 @@ async function sendRecaps(
         shopName: shop.name,
         phone,
         smsBody,
-        smsStopLine: t("notifications.sms.stopLine"),
+        locale,
         notification: {
           kind: "trip_recap",
           bookingId: booking.id,
@@ -1891,7 +1890,7 @@ async function sendRecaps(
         shopName: shop.name,
         phone,
         smsBody,
-        smsStopLine: t("notifications.sms.stopLine"),
+        locale,
       });
     } else if (recapUrl && person.email && person.courtesyEmailOptOutAt) {
       // Opted out of courtesy email and no phone to fall back to — not a
@@ -1924,7 +1923,7 @@ async function sendRecaps(
         {
           to: work.phone,
           body: work.smsBody,
-          smsStopLine: work.smsStopLine,
+          locale: work.locale,
           shopName: work.shopName,
         },
         { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
@@ -1947,7 +1946,7 @@ async function sendRecaps(
       {
         to: work.phone,
         body: work.smsBody,
-        smsStopLine: work.smsStopLine,
+        locale: work.locale,
         shopName: work.shopName,
       },
       { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },

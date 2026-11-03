@@ -67,7 +67,7 @@ async function installFakeExtension(page: Page, answer: "match" | "captcha", ver
 
 async function diverWithPendingCard(page: Page, agency: "gue" | "ssi" = "gue", offersCheck = true) {
   const stamp = Date.now();
-  await page.goto(`/shop/${SHOP}/divers/new`);
+  await page.goto(`/shop/${SHOP}/divers?add=1`);
   await page.getByLabel("Full name").fill(`Agency ${stamp} Checker`);
   await page.getByLabel("Email").fill(`agency-check-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add diver" }).click();

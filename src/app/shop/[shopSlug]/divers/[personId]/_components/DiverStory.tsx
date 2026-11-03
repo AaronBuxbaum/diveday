@@ -10,8 +10,8 @@ import { formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { bookingIsAhead } from "@/lib/diver-status";
 import { formatMoneyCents, formatNearDay, formatShortDate, formatTime } from "@/lib/format";
+import { canRaiseInvoiceFor } from "@/lib/invoice-door";
 import { SHOP_HISTORY_PREVIEW_COUNT } from "@/lib/prior-visits";
-import { canRaiseInvoiceFor } from "../_lib/invoice-door";
 import { seatMayBeFirstDive, storyNotes } from "../_lib/story-notes";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { bookingMoney, bookingMoneyStatusKey, type DiverProfile, type Shop } from "./shared";
@@ -115,7 +115,7 @@ type StoryEntry = {
  * (found by review on #1921).
  *
  * `canManageOrders` is the live `src/db/authz.ts` answer for the signed-in
- * staffer. `orders/new` already refuses one without it — `requireShopSurface`'s
+ * staffer. `orders?add=1` already refuses one without it — `requireShopSurface`'s
  * `allow` gate bounces to the Orders index with `notice=not-authorized` — so
  * unasked, the foot offers a captain an act they cannot perform and answers by
  * taking the person off the screen. The route guard is the boundary and stays;
@@ -156,13 +156,13 @@ export function DiverStory({
   t: StaffTranslator;
   /**
    * A shop with no payable Stripe account cannot raise an invoice at all —
-   * `orders/new` refuses outright — so the foot's one act is simply absent
+   * `orders?add=1` refuses outright — so the foot's one act is simply absent
    * rather than a link that bounces. Connecting payments is a Settings errand
    * and the ADR took its CTA off the person page.
    */
   paymentsConnected: boolean;
   /**
-   * This ledger's own outcome — in practice the one bounce `orders/new` can
+   * This ledger's own outcome — in practice the one bounce `orders?add=1` can
    * still send back here, when a shop that cannot take money reaches the
    * invoice door by a stale tab or a hand-typed URL.
    */
@@ -283,7 +283,7 @@ export function DiverStory({
   const invoice =
     offersInvoice && canRaiseInvoiceFor(diver, { canManageOrders, paymentsConnected }) ? (
       <Link
-        href={`/shop/${shopSlug}/orders/new?personId=${personId}`}
+        href={`/shop/${shopSlug}/orders?add=1&personId=${personId}`}
         className={buttonClass({ variant: "link", size: "sm", flush: true })}
       >
         {t("divers.story.newInvoice")}

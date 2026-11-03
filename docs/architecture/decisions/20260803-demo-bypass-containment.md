@@ -42,7 +42,7 @@ a constant-work compare and a named constant respectively.
 
 ## Decision
 
-- **The bypass moves out of `src/lib/credentials.ts` into `src/lib/demo-bypass.ts`.** That module is
+- **The bypass moves out of `src/db/credentials.ts` into `src/lib/demo-bypass.ts`.** That module is
   the whole decision: the password constant, the environment gate, and one predicate,
   `demoBypassAccepted(candidate, env)`. `verifyCredentials` imports the predicate and never spells
   the rule out itself. `credentials.ts` re-exports `DEMO_BYPASS_PASSWORD` for the surfaces that

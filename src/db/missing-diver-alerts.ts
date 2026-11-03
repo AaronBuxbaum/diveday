@@ -1,7 +1,12 @@
 import { and, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
-import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
+import {
+  missingDiverPush,
+  type NotificationProvider,
+  publicAppUrl,
+  recipientLocale,
+} from "@/lib/notifications";
 import { notificationTripTitle } from "@/lib/notifications/kinds";
 import { shopPath } from "@/lib/staff-notices";
 import type { AppDb } from "./client";
@@ -246,10 +251,7 @@ export async function sendMissingDiverAlerts(
       if (withinPushWindow(report, now) && !(await foundSince(db, report))) {
         const pushes = await pushTripAlert(db, report.shopId, report.tripId, {
           url: reportPath,
-          words: (t) => ({
-            title: t("manifest.missingDiverAlert.pushTitle"),
-            body: t("manifest.missingDiverAlert.pushBody", { title: tripTitle }),
-          }),
+          words: (locale) => missingDiverPush(locale, { title: tripTitle }),
         });
         summary.pushes += pushes;
       }

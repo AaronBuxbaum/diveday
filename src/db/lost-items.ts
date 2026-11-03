@@ -1,6 +1,5 @@
 import { and, count, desc, eq, gte, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { diverTranslator } from "@/i18n/messages";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { containsLink } from "@/lib/departure-notes";
 import { type NotificationProvider, recipientLocale } from "@/lib/notifications";
@@ -240,7 +239,6 @@ export async function tellLostItemOwner(
       const senders =
         providers.whatsAppProviders ?? (await whatsAppProvidersForShops(db, [shop.id]));
       const sms = stopListedSmsProvider(db, providers.smsProvider ?? smsProviderFromEnvironment());
-      const t = diverTranslator(locale);
       const sent = await sendCourtesyMessage(
         {
           to: phone,
@@ -250,7 +248,7 @@ export async function tellLostItemOwner(
             tripTitle: trip.title,
             description: item.description,
           }),
-          smsStopLine: t("notifications.sms.stopLine"),
+          locale,
           shopName: shop.name,
         },
         { sms, whatsapp: senders.get(shop.id) ?? null },

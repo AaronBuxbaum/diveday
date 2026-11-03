@@ -49,7 +49,7 @@ signedInAsOwner();
 /** What a keyboard user can actually tell about the element that has focus. */
 type FocusStop = {
   /**
-   * `a "Two-Tank Reef…" → /shop/blue-mantis/bookings/new/<id>` — the element,
+   * `a "Two-Tank Reef…" → /shop/blue-mantis/trips/<id>?add=1` — the element,
    * its accessible-ish name, and where it goes. Enough to read a whole tab
    * order out of one failure message, and enough to match a stop on. Form
    * controls take their name from their `<label>`, because an `<input>` has no
@@ -143,7 +143,9 @@ async function snapshotFocus(page: Page): Promise<FocusStop | null> {
     const name = (el.getAttribute("aria-label") ?? (labelled || el.textContent) ?? "")
       .replace(/\s+/g, " ")
       .trim();
-    const target = el instanceof HTMLAnchorElement && el.href ? new URL(el.href).pathname : null;
+    // Path and query: the departure door is told apart by its `?add=1`.
+    const url = el instanceof HTMLAnchorElement && el.href ? new URL(el.href) : null;
+    const target = url ? `${url.pathname}${url.search}` : null;
     return {
       label: `${el.tagName.toLowerCase()}${role ? `[${role}]` : ""} "${name.slice(0, 60)}"${
         target ? ` → ${target}` : ""
@@ -357,10 +359,9 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   ).toMatch(/\(\d+\)/);
 
   await page.keyboard.press("Enter");
-  await page.waitForURL(/\/bookings\/new$/);
-  // A route change puts focus on the new page's heading, so a screen reader
-  // reads the page's name and the next Tab starts below it (#2638).
-  await expect(page.getByRole("heading", { level: 1, name: "New booking" })).toBeFocused();
+  // No departure is known yet, so the door is the shop home's panel (#2737).
+  await page.waitForURL(/\/shop\/blue-mantis\?call=1$/);
+  await expect(page.getByRole("heading", { level: 2, name: "Add a booking" })).toBeVisible();
 
   // ── Leg 3. Choose the departure. Every stop between the top of the page and
   // the first departure is checked, which is the part of "keyboard accessible"
@@ -369,20 +370,21 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   // The day control sits above the list (UX audit 2026-10-07, item 19): a
   // date input is four stops in Chromium (three segments and its calendar
   // button), then Show and Later days.
-  await tabUntil(page, /→ \/shop\/blue-mantis\/bookings\/new\/./, {
-    limit: 48,
+  await tabUntil(page, /→ \/shop\/blue-mantis\/trips\/[^?]+\?add=1/, {
+    limit: 64,
     where: "departure picker",
   });
   await page.keyboard.press("Enter");
-  await page.waitForURL(/\/bookings\/new\/[^/]+$/);
-  await expect(page.getByRole("heading", { level: 1, name: "New booking" })).toBeFocused();
+  // The departure opens with the cursor already in its add band's search.
+  await page.waitForURL(/\/trips\/[^/?]+\?add=1/);
+  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeFocused();
 
   // ── Leg 4. Navigate to Add diver, type the diver in and seat them.
   await beginWalk(page);
   await tabUntil(page, /"Add diver"/, { limit: 25, where: "diver search" });
   await page.keyboard.press("Enter");
-  await page.waitForURL(/\/divers\/new\?/);
-  await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeFocused();
+  await page.waitForURL(/\/divers\?add=1&/);
+  await expect(page.getByRole("heading", { level: 2, name: "Add a diver" })).toBeFocused();
 
   await beginWalk(page);
   await recordAnnouncements(page);
@@ -417,7 +419,7 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
 
   // And the outcome was *announced*, not merely rendered. The e2e fleet
   // configures no email provider, so seating always resolves to the
-  // waiver-undelivered wording (`SEAT_SURFACES["new-booking"]` →
+  // waiver-undelivered wording (`SEAT_SURFACES.departure` →
   // `trips.notices.diverAddedWaiverUndelivered`); what matters here is that the
   // sentence arrived as a mutation inside a live region while the observer
   // installed back in leg 4 was watching.

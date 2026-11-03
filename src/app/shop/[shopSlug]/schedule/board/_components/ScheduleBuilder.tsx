@@ -503,7 +503,7 @@ function CopyPanel({
  * on the title. This surface is deliberately shallow.
  */
 
-/** The header's add panel is the only add key: a day's "+ Add" navigates to the standalone form. */
+/** The header's add panel is the only add key: a day's "+ Add" opens it on that day (`?add=1&date=`). */
 const isAddKey = (key: string | null) => key === "add:top";
 
 /** Everything `ScheduleBuilder` draws, assembled once by its caller and handed over as one object. */
@@ -547,7 +547,6 @@ export type ScheduleBuilderContext = {
    * create a departure open this panel at the requested depth.
    */
   openAdd: "closed" | "quick" | "expanded";
-  createPage?: boolean;
   returnWeek?: string;
   /**
    * The same departures read as a seven-column week, for `xl` and up (ADR
@@ -577,7 +576,6 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
     initialSite,
     requestPlan,
     openAdd,
-    createPage = false,
     returnWeek,
     week,
   } = context;
@@ -602,10 +600,6 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const cancelTopAdd = () => {
-    if (createPage) {
-      router.push(`/shop/${shopSlug}/schedule/board${returnWeek ? `?week=${returnWeek}` : ""}`);
-      return;
-    }
     setOpen(null);
     const params = new URLSearchParams(searchParams);
     for (const key of ["add", "date", "course", "requests", "site"]) params.delete(key);
@@ -774,7 +768,6 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
           initialSite={initialSite}
           requestPlan={requestPlan}
           startExpanded={openAdd === "expanded"}
-          standalone={createPage}
           onCancel={cancelTopAdd}
         />
       ) : null}

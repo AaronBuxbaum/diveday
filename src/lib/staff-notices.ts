@@ -80,7 +80,7 @@ export type NoticeMessages<Code extends string = string> = Record<Code, NoticeMe
  * The vocabulary had forked. Three meanings existed in *both* casings at once
  * — `not_authorized`/`not-authorized`, `payment_not_connected`/
  * `payment-not-connected`, `demo_disabled`/`demo-disabled` — and
- * `orders/new/page.tsx` emitted two casings of one concept on adjacent lines
+ * `orders/_components/NewOrderPanel.tsx` emitted two casings of one concept on adjacent lines
  * of a single ternary, because the two destination pages' notice maps had been
  * written by different hands. The branch whose map had no matching key
  * rendered no banner at all: the refusal was silent, which is the one outcome
@@ -184,7 +184,7 @@ export function shopPath(slug: string, ...segments: (string | number)[]): string
  * reduced to a path inside *this* shop, or nothing.
  *
  * `shopPath` makes the paths this app *emits* safe. Nothing made the paths it
- * *accepts* safe, and two surfaces accept one. `divers/new` was the sharp case:
+ * *accepts* safe, and two surfaces accept one. `divers?add=1` was the sharp case:
  * it read `?returnTo=` straight off the query, rendered it as the back link's
  * href, and after a successful create handed it to `revalidateAndRedirect` as
  * both the `revalidatePath` key and the redirect target — so a staffer who

@@ -4,10 +4,8 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { BoardHeaderActions } from "./BoardHeaderActions";
 
-/** The board is full-width; the standalone creation form has a reading measure. */
+/** The board, full-width; its add panel (`?add=1`) opens inside it. */
 export function BoardPageShell({
-  createPage,
-  boardHref,
   hasUpcoming,
   canConfigure,
   shopSlug,
@@ -15,8 +13,6 @@ export function BoardPageShell({
   st,
   children,
 }: {
-  createPage: boolean;
-  boardHref: string;
   hasUpcoming: boolean;
   canConfigure: boolean;
   shopSlug: string;
@@ -25,13 +21,11 @@ export function BoardPageShell({
   children: ReactNode;
 }) {
   return (
-    <StaffPage width={createPage ? "reading" : "full"}>
+    <StaffPage width="full">
       <ShopPageHeader
-        eyebrow={createPage ? st("schedule.boardTitle") : undefined}
-        returnTo={createPage ? boardHref : undefined}
-        title={st(createPage ? "schedule.builder.addDeparture" : "schedule.boardTitle")}
+        title={st("schedule.boardTitle")}
         actions={
-          !createPage && hasUpcoming ? (
+          hasUpcoming ? (
             <BoardHeaderActions
               st={st}
               shopSlug={shopSlug}

@@ -19,6 +19,7 @@ import {
 import { createOrder, type NewOrderLineItem, recordCounterOrder } from "@/db/orders";
 import { certificationAgency, certificationLevel } from "@/db/schema";
 import { getShopById } from "@/db/shops";
+import { hasRequiredStepUp } from "@/db/step-up";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { requestLocale } from "@/i18n/request";
@@ -42,7 +43,7 @@ import {
   blankableDiverNameSchema,
   diverPhoneSchema,
 } from "@/lib/person-fields";
-import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
+import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
@@ -111,7 +112,7 @@ export async function createCounterRentalAction(formData: FormData) {
     until: fields.until,
     units: fields[UNIT_FIELD].map(String),
   });
-  const blankForm = shopPath(slug, "gear", "rentals", "new");
+  const blankForm = counterRentalFormPath(slug);
   if (!parsed.success) redirect(noticeUrl(blankForm, "invalid"));
   const { personId, from, until, units } = parsed.data;
   const form = counterRentalFormPath(slug, { personId, from, until });
@@ -300,7 +301,7 @@ export async function addCounterRentalPersonAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
   const slug = session.user.shopSlug;
-  const blankForm = shopPath(slug, "gear", "rentals", "new");
+  const blankForm = counterRentalFormPath(slug);
   const parsed = personSchema.safeParse(readForm(rentalPersonForm, formData));
   if (!parsed.success) redirect(noticeUrl(blankForm, "invalid"));
   const person = await createDiver(db, { shopId: session.user.shopId, ...parsed.data });
@@ -342,7 +343,7 @@ export async function recordCounterRentalCardAction(formData: FormData) {
     const personId = landing.personId;
     const back = z.uuid().safeParse(personId).success
       ? counterRentalFormPath(slug, { personId, from: landing.from, until: landing.until })
-      : shopPath(slug, "gear", "rentals", "new");
+      : counterRentalFormPath(slug);
     redirect(noticeUrl(back, "card-invalid"));
   }
   const { personId, from, until, card, agency, identifier } = parsed.data;

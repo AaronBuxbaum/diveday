@@ -23,13 +23,22 @@ function resetRequest() {
   });
 }
 
-/** VACUUM reports its completed work directly, without pending DML counters. */
+/** VACUUM and ANALYZE report their completed work directly, without pending DML counters. */
 async function vacuumCounts(db: Awaited<ReturnType<typeof seededTestDb>>) {
   const result = await db.execute(
-    sql`select relname, vacuum_count from pg_stat_user_tables where schemaname = 'public'`,
+    sql`select relname, vacuum_count, analyze_count from pg_stat_user_tables where schemaname = 'public'`,
   );
-  const rows = (result as unknown as { rows: { relname: string; vacuum_count: number }[] }).rows;
-  return new Map(rows.map((row) => [row.relname, Number(row.vacuum_count)]));
+  const rows = (
+    result as unknown as {
+      rows: { relname: string; vacuum_count: number; analyze_count: number }[];
+    }
+  ).rows;
+  return new Map(
+    rows.map((row) => [
+      row.relname,
+      { vacuumed: Number(row.vacuum_count), analyzed: Number(row.analyze_count) },
+    ]),
+  );
 }
 
 afterEach(() => {
@@ -37,7 +46,7 @@ afterEach(() => {
 });
 
 describe("POST /api/test/reset — reclaiming what it deleted", () => {
-  it("successfully vacuums every reset-owned table across repeated resets", async () => {
+  it("successfully vacuums and analyzes every reset-owned table across repeated resets", async () => {
     const db = await seededTestDb();
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("DIVEDAY_E2E_SECRET", SECRET);
@@ -54,7 +63,13 @@ describe("POST /api/test/reset — reclaiming what it deleted", () => {
       await db.execute(sql`select pg_stat_force_next_flush()`);
       const after = await vacuumCounts(db);
       for (const table of tables) {
-        expect(after.get(table), `${table}, reset ${round}`).toBe((before.get(table) ?? 0) + round);
+        // Analyzed as well as vacuumed: PGlite has no autovacuum daemon to
+        // refresh planner statistics, and a re-written table planned on stale
+        // ones turned the Orders ledger from ~40ms into ~1.4s per render.
+        expect(after.get(table), `${table}, reset ${round}`).toEqual({
+          vacuumed: (before.get(table)?.vacuumed ?? 0) + round,
+          analyzed: (before.get(table)?.analyzed ?? 0) + round,
+        });
       }
     }
 

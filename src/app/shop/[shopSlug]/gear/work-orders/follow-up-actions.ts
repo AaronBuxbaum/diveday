@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import type { WorkOrderLine } from "@/db/schema";
 import { counterPaymentActivity, recordShopActivity } from "@/db/shop-activity";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
+import { hasRequiredStepUp } from "@/db/step-up";
 import {
   billWorkOrder,
   recordWorkOrderCounterPayment,
@@ -20,7 +21,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
+import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { billLinesForWorkOrder } from "@/lib/work-order-follow-up";

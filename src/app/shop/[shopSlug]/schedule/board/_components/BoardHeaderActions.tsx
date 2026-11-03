@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { menuRowClass } from "@/components/ui/menu";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { callPanelHref } from "@/lib/took-a-call";
 
 /**
  * **One primary, the board's own act; its peers at one weight**
@@ -30,7 +31,7 @@ export function BoardHeaderActions({
     <>
       {canConfigure ? (
         <Link
-          href={`/shop/${shopSlug}/schedule/board/new${week ? `?week=${encodeURIComponent(week)}` : ""}`}
+          href={`/shop/${shopSlug}/schedule/board?add=1${week ? `&week=${encodeURIComponent(week)}` : ""}`}
           data-board-add
           scroll={false}
           className={buttonClass()}
@@ -38,16 +39,13 @@ export function BoardHeaderActions({
           {st("schedule.builder.addDeparture")}
         </Link>
       ) : (
-        <Link href={`/shop/${shopSlug}/bookings/new`} className={buttonClass()}>
+        <Link href={callPanelHref(shopSlug)} className={buttonClass()}>
           {st("schedule.addBooking")}
         </Link>
       )}
       <div className="flex gap-3 max-md:hidden">
         {canConfigure ? (
-          <Link
-            href={`/shop/${shopSlug}/bookings/new`}
-            className={buttonClass({ variant: "secondary" })}
-          >
+          <Link href={callPanelHref(shopSlug)} className={buttonClass({ variant: "secondary" })}>
             {st("schedule.addBooking")}
           </Link>
         ) : null}
@@ -57,10 +55,7 @@ export function BoardHeaderActions({
       </div>
       <MoreMenu label={st("schedule.more")} className="md:hidden">
         {canConfigure ? (
-          <Link
-            href={`/shop/${shopSlug}/bookings/new`}
-            className={menuRowClass("quiet", { gutter: false })}
-          >
+          <Link href={callPanelHref(shopSlug)} className={menuRowClass("quiet", { gutter: false })}>
             {st("schedule.addBooking")}
           </Link>
         ) : null}

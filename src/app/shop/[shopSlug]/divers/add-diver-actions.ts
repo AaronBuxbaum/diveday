@@ -1,0 +1,149 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import {
+  refuseClosedWalkIn,
+  seatNewDiverAction,
+  seatWalkInPartyAction,
+} from "@/app/actions/seat-diver";
+import type { SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
+import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
+import { getDb } from "@/db/client";
+import { createDiver, findSimilarDivers } from "@/db/divers";
+import { discardFormDraft } from "@/db/form-drafts";
+import { ADD_ONE, addPanelHref } from "@/lib/add-panel";
+import { parseForm } from "@/lib/form-parse";
+import { revalidateAndRedirect } from "@/lib/navigation";
+import {
+  blankableDiverEmailSchema,
+  blankableDiverNameSchema,
+  diverPhoneSchema,
+} from "@/lib/person-fields";
+import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
+import { readWalkInParty } from "@/lib/walk-in-party";
+
+const newDiverContextForm = z.object({
+  surface: z.string().optional(),
+  // `true`: the departure door's counter mode.
+  walkIn: z.string().optional(),
+  tripId: z.string().optional(),
+  waitlist: z.string().optional(),
+  // The date request a booking door was opened from; carried back so the seat
+  // that answers it can close it (third UX review, item 13).
+  request: z.string().optional(),
+  force: z.string().optional(),
+});
+
+const diverSchema = z
+  .object({
+    fullName: blankableDiverNameSchema,
+    email: blankableDiverEmailSchema,
+    phone: diverPhoneSchema,
+  })
+  .refine(({ fullName, email, phone }) => Boolean(fullName || email || phone));
+
+/**
+ * The roster's add-diver panel, from whichever door opened it: the roster's "Add diver",
+ * or a seat flow (`surface` + `tripId`, and `waitlist` from a full trip) that
+ * sent the staffer here to type someone the search did not find.
+ *
+ * A name that matches someone on file goes back to the panel with the typed
+ * values as `confirm*` params, so the staffer picks the existing diver or says
+ * `force` and creates anyway. Every door's context is a claim from the form:
+ * the seat and wait-list actions it hands on re-prove the trip against the
+ * session's shop, and the tenant here is the session's own.
+ */
+export async function createDiverFormAction(formData: FormData) {
+  const staff = await requireStaffSession();
+  const activeDb = await getDb();
+  const parsed = parseForm(diverSchema, formData);
+  // Where the form was opened from; a context that does not read as strings
+  // is no context, and the diver's own fields decide the rest.
+  const opened = parseForm(newDiverContextForm, formData);
+  const context = opened.ok ? opened.data : {};
+  const activeSurface = (context.surface ?? null) as SeatSurfaceId | null;
+  const activeTripId = context.tripId ? context.tripId : null;
+  const activeWalkIn = context.walkIn === "true";
+  const activeWaitlist = context.waitlist === "true";
+  const force = context.force === "true";
+
+  // Back to the roster's add panel, open, with the door it came from kept.
+  const buildNewDiverUrl = (extraParams: Record<string, string>) =>
+    addPanelHref(shopPath(staff.user.shopSlug, "divers"), ADD_ONE, extraParams);
+
+  if (!parsed.ok) {
+    const search: Record<string, string> = { notice: "invalid" };
+    if (activeSurface) search.surface = activeSurface;
+    if (activeWalkIn) search.walkIn = "true";
+    if (activeTripId) search.tripId = activeTripId;
+    if (activeWaitlist) search.waitlist = "true";
+    redirect(buildNewDiverUrl(search));
+  }
+
+  // **A walk-in family** (fifth loop, item 9): party rows, or a first person
+  // ticked "Under 18" or settled on the party's on-file prompt, send the whole
+  // form to the party seating, which runs its own on-file check over every
+  // name. A malformed party goes there too, to be refused rather than trimmed.
+  const party = readWalkInParty(formData.entries());
+  if (
+    activeSurface === "departure" &&
+    activeWalkIn &&
+    !activeWaitlist &&
+    activeTripId &&
+    (party.rows.length > 0 || party.first.minor || party.first.match !== undefined || party.invalid)
+  ) {
+    await seatWalkInPartyAction(staff.user.shopSlug, formData);
+    return;
+  }
+
+  // A counter walk-in on a boat the counter can no longer seat is refused
+  // before any name lookup, by the door that owns the refusal.
+  if (activeSurface === "departure" && activeWalkIn && !activeWaitlist && activeTripId) {
+    await refuseClosedWalkIn(staff.user.shopSlug, formData);
+  }
+
+  if (!force) {
+    const matches = await findSimilarDivers(activeDb, staff.user.shopId, parsed.data.fullName);
+    if (matches.length > 0) {
+      const search: Record<string, string> = {
+        confirmName: parsed.data.fullName,
+      };
+      if (parsed.data.email) search.confirmEmail = parsed.data.email;
+      if (parsed.data.phone) search.confirmPhone = parsed.data.phone;
+      if (activeSurface) search.surface = activeSurface;
+      if (activeWalkIn) search.walkIn = "true";
+      if (activeTripId) search.tripId = activeTripId;
+      if (activeWaitlist) search.waitlist = "true";
+      if (context.request) search.request = context.request;
+      redirect(buildNewDiverUrl(search));
+    }
+  }
+  // The form was accepted: whatever draft of it was kept is finished with.
+  await discardFormDraft(activeDb, staff.user.shopId, staff.user.personId, "new_diver");
+
+  if (activeSurface === "departure" && activeWaitlist && activeTripId) {
+    await addToWaitlistAction(staff.user.shopSlug, activeTripId, formData);
+  } else if (activeSurface === "departure" && activeTripId) {
+    await seatNewDiverAction(
+      activeWalkIn ? "walk-in" : activeSurface,
+      staff.user.shopSlug,
+      formData,
+    );
+  } else {
+    const diver = await createDiver(activeDb, {
+      shopId: staff.user.shopId,
+      fullName: parsed.data.fullName,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+    });
+    if (!diver) {
+      redirect(buildNewDiverUrl({ notice: "duplicate" }));
+    }
+    revalidateAndRedirect(
+      shopPath(staff.user.shopSlug, "divers"),
+      `${shopPath(staff.user.shopSlug, "divers", diver.id)}?edit=1`,
+    );
+  }
+}

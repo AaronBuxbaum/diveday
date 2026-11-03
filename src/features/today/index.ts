@@ -21,12 +21,22 @@ export {
 } from "./closeout";
 export {
   getDayCloseout,
+  getPastDay,
   listHeadCountCloses,
   listNotBackAfterDive,
   readDayLoadOut,
   shopHasSailedBefore,
 } from "./closeout-reader";
+export type { CrewReading } from "./day-money";
+export { getDayPrintPage } from "./day-print-page";
 export { pastDayStationNotes } from "./past-day-notes";
+export {
+  canAcceptPayments,
+  daySummaryBlocked,
+  getHomeShop,
+  getShopHome,
+  type HomeShop,
+} from "./shop-home";
 export {
   ACTION_KIND_META,
   assembleDaySpine,

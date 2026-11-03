@@ -24,6 +24,18 @@ export const DETAILS_FORMS: ReadonlySet<string> = new Set([
   "last-minute-deal",
 ]);
 
+/**
+ * **Details is its own tab**, and a save on it lands back on it. `?add=1`
+ * wins over `?view=details`: the add band is on Divers (#2737).
+ */
+export function showsDetailsTab(
+  view: string | undefined,
+  add: string | undefined,
+  tripNotice: FormNotice | undefined,
+): boolean {
+  return (view === "details" && !add) || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
+}
+
 /** Forms whose answer belongs with the roster, on the Divers tab. */
 export const ROSTER_FORMS: ReadonlySet<string> = new Set(["roster", "add-diver"]);
 

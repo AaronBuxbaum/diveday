@@ -61,7 +61,7 @@ test("PADI showing the eLearning finished ticks the student's materials, and Und
   const student = `Lena Ortiz${e2eNow().getTime()}`;
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
+  await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill(student);
   await page.getByLabel("Email").fill(`lena-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();

@@ -391,7 +391,7 @@ function repeatWeekdaysFrom(formData: FormData): WeekdaySet {
 }
 
 export async function addDepartureAction(shopSlug: string, formData: FormData) {
-  const back = `${boardPath(shopSlug)}/new`;
+  const back = `${boardPath(shopSlug)}?add=1`; // a refusal keeps the add panel open
   const submittedWeek = formData.get("boardWeek");
   const returnWeek =
     typeof submittedWeek === "string" && isValidCalendarDate(submittedWeek)
@@ -400,7 +400,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   const { db, shop, session } = await requireBoardAuthor(shopSlug);
   const invalid = async () => {
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
-    redirect(`${back}?builder=invalid${returnWeek}`);
+    redirect(`${back}&builder=invalid${returnWeek}`);
   };
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return await invalid();
@@ -442,7 +442,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       action: "add",
       outcome: "invalid",
     });
-    redirect(`${back}?builder=rehearsal-repeats${returnWeek}`);
+    redirect(`${back}&builder=rehearsal-repeats${returnWeek}`);
   }
   const crewPersonIds = crewPersonIdsFrom(formData);
   if (!crewPersonIds) return await invalid();
@@ -486,7 +486,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
         action: "add",
         outcome: "capacity_above_certificate",
       });
-      redirect(`${back}?builder=capacity-above-certificate&count=${details.limit}${returnWeek}`);
+      redirect(`${back}&builder=capacity-above-certificate&count=${details.limit}${returnWeek}`);
     }
     if (details.reason === "end_before_start") {
       await trackEvent({
@@ -494,11 +494,11 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
         action: "add",
         outcome: "end_before_start",
       });
-      redirect(`${back}?builder=end-before-start${returnWeek}`);
+      redirect(`${back}&builder=end-before-start${returnWeek}`);
     }
     if (details.reason === "days_out_of_order") {
       await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
-      redirect(`${back}?builder=days-out-of-order${returnWeek}`);
+      redirect(`${back}&builder=days-out-of-order${returnWeek}`);
     }
     return await invalid();
   }
@@ -514,7 +514,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     lastDay.startsAt.getTime() - startsAt.getTime() >= repeatIntervalWeeks * 7 * 86_400_000
   ) {
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
-    redirect(`${back}?builder=days-span-repeat${returnWeek}`);
+    redirect(`${back}&builder=days-span-repeat${returnWeek}`);
   }
 
   // The per-dive cards only exist while the panel is expanded, so an all-blank

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Suspense } from "react";
+import { type ComponentProps, Suspense } from "react";
 import { type WaiverSendCopy, waiverSendCopy } from "@/app/actions/waiver-send-types";
 import {
   AgencyCheckHost,
@@ -7,7 +7,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { agencyCheckCopies } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
-import { CrewLines, type CrewReading } from "@/app/shop/[shopSlug]/_components/today/CrewLines";
+import { CrewLines } from "@/app/shop/[shopSlug]/_components/today/CrewLines";
 import {
   addAgencyListedCardsAction,
   agencyCheckAction,
@@ -681,7 +681,7 @@ export type DaySpineContext = {
    */
   factOfScale?: FactOfScale | null;
   /** The reader's own crew lines: this week's tips, this month's boats (`CrewLines`). */
-  crew?: CrewReading;
+  crew?: ComponentProps<typeof CrewLines>["crew"];
   /** The instructor lens's own labeled group, above the first station. */
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */

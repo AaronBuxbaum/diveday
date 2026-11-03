@@ -670,6 +670,7 @@ export async function associateDateRequestOfferBooking(
       tripId: input.tripId,
       requestId: input.requestId,
       excludeBookingId: input.bookingId,
+      newLink: true,
     });
     if (typeof offer === "string") return false;
 

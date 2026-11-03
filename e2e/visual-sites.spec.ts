@@ -110,7 +110,7 @@ for (const scheme of ["light", "dark"] as const) {
        * "(optional)", and the empty states of both list editors.
        */
       test(`the new-dive-site form renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/dive-sites/new");
+        await page.goto("/shop/blue-mantis/dive-sites?add=1");
         await page.locator("form[data-hydrated]").filter({ visible: true }).waitFor();
         await capture(page, "dive-site-new", scheme);
       });
@@ -118,7 +118,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the empty site editors fit intermediate widths (${scheme})`, async ({
         page,
       }, testInfo) => {
-        await page.goto("/shop/blue-mantis/dive-sites/new");
+        await page.goto("/shop/blue-mantis/dive-sites?add=1");
         await page.locator("form[data-hydrated]").filter({ visible: true }).waitFor();
         await openIfClosed(page.locator("details#briefing-route").filter({ visible: true }));
         await openIfClosed(page.locator("details#briefing-landmarks").filter({ visible: true }));
@@ -157,7 +157,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the briefing editor mid-edit renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/dive-sites/new");
+        await page.goto("/shop/blue-mantis/dive-sites?add=1");
         await page.locator("form[data-hydrated]").filter({ visible: true }).waitFor();
         await page.getByLabel("Name").fill("Turtle Ledge");
         await page.getByLabel("Depth note").fill("20-45 ft");

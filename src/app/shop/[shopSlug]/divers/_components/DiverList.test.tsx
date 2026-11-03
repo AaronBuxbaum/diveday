@@ -116,6 +116,27 @@ describe("DiverList search", () => {
     expect(document.activeElement).toBe(screen.getByRole("searchbox"));
   });
 
+  it("leaves the focus to an open add panel", () => {
+    // `/divers?add=1` draws the Add-a-diver panel above the roster, and the
+    // panel takes the focus for its heading (`AddPanelFocus`). The roster's own
+    // grab, running after it, sent a keyboard user to the search box instead
+    // (keyboard-booking.spec.ts, leg 4).
+    const panel = document.createElement("section");
+    panel.id = "add";
+    const heading = document.createElement("h2");
+    heading.tabIndex = -1;
+    heading.dataset.addPanelHeading = "";
+    panel.append(heading);
+    document.body.append(panel);
+    heading.focus();
+    try {
+      renderList();
+      expect(document.activeElement).toBe(heading);
+    } finally {
+      panel.remove();
+    }
+  });
+
   it("takes the focus without moving the page under the reader", () => {
     // A plain `focus()` scrolls the box into view, and it runs when the page
     // hydrates — by which time a staffer may already have scrolled down to the
@@ -146,7 +167,7 @@ describe("DiverList empty state", () => {
     expect(screen.getByText("No divers on file yet")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new",
+      "/shop/blue-mantis/divers?add=1",
     );
   });
 
@@ -237,7 +258,7 @@ describe("DiverList empty state", () => {
     expect(screen.queryByRole("button", { name: "Add diver" })).toBeNull();
     expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new",
+      "/shop/blue-mantis/divers?add=1",
     );
 
     fireEvent.change(search, { target: { value: "Nora" } });

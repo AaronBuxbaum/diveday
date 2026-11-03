@@ -19,8 +19,8 @@ const NAMESAKE = "Jordan Alexanderson";
 
 /** Each duplicate is created through the counter's actual confirmation door. */
 async function addNamesake(page: Page, shopSlug: string, index: number) {
-  await page.goto(`/shop/${shopSlug}/divers/new`);
-  await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
+  await page.goto(`/shop/${shopSlug}/divers?add=1`);
+  await page.getByRole("heading", { level: 2, name: "Add a diver" }).waitFor();
   await page.getByLabel("Full name").fill(NAMESAKE);
   await page.getByLabel("Email").fill(`jordan.review.${index}@example.com`);
   await page.getByRole("button", { name: "Add diver", exact: true }).click();
@@ -93,7 +93,7 @@ export function registerRequestPaymentOverlayAuditCaptures(
         .locator("#add-diver")
         .getByRole("link", { name: "Add diver", exact: true })
         .click();
-      await page.waitForURL(/\/divers\/new/);
+      await page.waitForURL(/\/divers\?add=1/);
       await page.getByLabel("Full name").fill(NAMESAKE);
       // This trip hand-entry door requires contact details before its on-file prompt.
       await page

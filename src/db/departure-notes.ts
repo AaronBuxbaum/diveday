@@ -1,5 +1,4 @@
 import { and, asc, count, desc, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
-import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import {
@@ -339,7 +338,6 @@ export async function sendDepartureNote(
       if (!phone) return false;
       try {
         const locale = recipientLocale(person.locale, shop.defaultLocale);
-        const t = diverTranslator(locale);
         const { delivery } = await sendCourtesyMessage(
           {
             to: phone,
@@ -350,7 +348,7 @@ export async function sendDepartureNote(
               body,
               readinessUrl: readinessUrlFor(booking.id),
             }),
-            smsStopLine: t("notifications.sms.stopLine"),
+            locale,
             shopName: shop.name,
           },
           { sms, whatsapp: senders.get(shop.id) ?? null },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { claudeSpendUsdBetween } from "@/db/assists";
 import { getDb } from "@/db/client";
+import { claimUsageAlert, releaseUsageAlert } from "@/db/usage-alert-ledger";
 import { nowDate } from "@/lib/clock";
 import {
   type CeilingEvaluation,
@@ -16,7 +17,6 @@ import { notify } from "@/lib/notifications";
 import { flushLogs } from "@/lib/observability";
 import { sentry } from "@/lib/observability/sentry";
 import { alertRecipient } from "@/lib/platform-mail";
-import { claimUsageAlert, releaseUsageAlert } from "@/lib/usage/alert-ledger";
 import { collectUsageSamples } from "@/lib/usage/collect";
 
 /**

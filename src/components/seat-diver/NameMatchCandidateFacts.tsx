@@ -9,7 +9,7 @@ import { candidateBirthDate } from "@/lib/name-match-evidence";
  * What one candidate on the counter's "is this the same person?" prompt
  * carries after its name: the contact on file, the date of birth (H-20260916-unconfirmed-identity-withhold-cost, issue
  * #1698) and the last dive day this shop can put behind the name (issue
- * #1556). Shared by the trip's Add-diver section, `/divers/new` and the seat
+ * #1556). Shared by the trip's Add-diver section, `/divers?add=1` and the seat
  * panel.
  *
  * Each fact prints only when it has a value, so a candidate with nothing on

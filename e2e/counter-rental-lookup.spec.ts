@@ -58,10 +58,10 @@ test.describe("counter rental lookup at 390px", () => {
         name: t("counterRentals.new.fillAria", { label: rentalLookup.tankTarget }),
       });
     };
-    await page.goto(`/shop/blue-mantis/gear/rentals/new?personId=${rentalLookup.personId}`);
+    await page.goto(`/shop/blue-mantis/gear?add=rental&personId=${rentalLookup.personId}`);
     const certifiedFill = await chooseTank();
     await expect(certifiedFill.locator('option[value="32"]')).toHaveCount(1);
-    await page.goto("/shop/blue-mantis/gear/rentals/new?q=Lena");
+    await page.goto("/shop/blue-mantis/gear?add=rental&q=Lena");
     await page.getByRole("link", { name: "Rent to Lena Fischer" }).click();
     const unconfirmedFill = await chooseTank();
     await expect(unconfirmedFill.locator('option[value="32"]')).toHaveCount(0);
@@ -82,7 +82,7 @@ test.describe("counter rental lookup at 390px", () => {
     expect(seeded.ok()).toBe(true);
     const { rentalLookup } = (await seeded.json()) as { rentalLookup: RentalLookupFleet };
     expect(rentalLookup.personId).toBeTruthy();
-    await page.goto(`/shop/blue-mantis/gear/rentals/new?personId=${rentalLookup.personId}`);
+    await page.goto(`/shop/blue-mantis/gear?add=rental&personId=${rentalLookup.personId}`);
     const gear = page.getByRole("region", { name: t("counterRentals.new.gearHeading") });
     const kinds = gear.getByRole("group", { name: t("counterRentals.new.kindsAria") });
     const grid = gear.getByRole("list");

@@ -20,7 +20,11 @@ export async function mixedDepthStateResponse(request: Request, db: AppDb) {
   if (!tenant.ok) return tenant.response;
   const { shop } = tenant;
   const catalog = await db.select().from(courses).where(eq(courses.shopId, shop.id));
-  const intro = catalog.find((course) => course.isIntroCourse);
+  // The demo seeds two intro courses; an unordered read returned either one,
+  // whichever the planner liked (#2737). By title, it is always the same one.
+  const intro = catalog
+    .filter((course) => course.isIntroCourse)
+    .sort((a, b) => a.title.localeCompare(b.title, "en"))[0];
   const other = catalog.find(
     (course) => !course.isIntroCourse && course.certifiesLevel === "open_water",
   );

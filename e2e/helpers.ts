@@ -383,7 +383,7 @@ export async function createTrip(
     boat?: string;
   },
 ): Promise<void> {
-  await page.goto(`/shop/${options.shopSlug ?? "blue-mantis"}/schedule/board/new?add=full`);
+  await page.goto(`/shop/${options.shopSlug ?? "blue-mantis"}/schedule/board?add=full`);
   if (options.course !== undefined) {
     // By name, not label: board rows carry aria-labels naming their departure,
     // which a label match would sweep up alongside the panel's own select.
@@ -602,7 +602,7 @@ export function counterPath(shopSlug: string, tripId: string): string {
  * to it.
  */
 export function walkInFormPath(shopSlug: string, tripId: string): string {
-  return `/shop/${shopSlug}/divers/new?surface=departure&walkIn=true&tripId=${tripId}`;
+  return `/shop/${shopSlug}/divers?add=1&surface=departure&walkIn=true&tripId=${tripId}`;
 }
 
 /**

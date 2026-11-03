@@ -11,17 +11,16 @@ vi.mock("@/db/divers", () => ({
 }));
 vi.mock("@/db/export", () => ({ canPersonExportShopData: vi.fn(async () => true) }));
 vi.mock("@/db/shops", () => ({ getShopById: vi.fn() }));
-vi.mock("@/lib/security-step-up", () => ({
-  hasRequiredStepUp: vi.fn(async () => true),
-  stepUpChallengeUrl: vi.fn(),
-}));
+vi.mock("@/db/step-up", () => ({ hasRequiredStepUp: vi.fn(async () => true) }));
+vi.mock("@/lib/security-step-up", () => ({ stepUpChallengeUrl: vi.fn() }));
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { listDiversForExport } = await import("@/db/divers");
 const { canPersonExportShopData } = await import("@/db/export");
 const { getShopById } = await import("@/db/shops");
-const { hasRequiredStepUp, stepUpChallengeUrl } = await import("@/lib/security-step-up");
+const { stepUpChallengeUrl } = await import("@/lib/security-step-up");
+const { hasRequiredStepUp } = await import("@/db/step-up");
 const { requireStaffSession } = await import("@/lib/session");
 const { GET } = await import("./route");
 

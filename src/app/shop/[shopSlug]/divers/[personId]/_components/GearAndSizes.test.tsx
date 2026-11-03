@@ -109,7 +109,7 @@ describe("GearAndSizes", () => {
             ],
           },
         ]}
-        rentGearHref="/shop/blue-mantis/gear/rentals/new?personId=person-1"
+        rentGearHref="/shop/blue-mantis/gear?add=rental&personId=person-1"
       />,
     );
     // A rental out opens the group with the record: it is gear somebody has.
@@ -119,7 +119,7 @@ describe("GearAndSizes", () => {
     ).toHaveAttribute("href", "/shop/blue-mantis/gear/rentals/ticket-1");
     expect(screen.getByRole("link", { name: "Rent gear" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/gear/rentals/new?personId=person-1",
+      "/shop/blue-mantis/gear?add=rental&personId=person-1",
     );
   });
 

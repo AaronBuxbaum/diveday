@@ -56,27 +56,20 @@ const SETTINGS = "settings";
 export const STAFF_ROUTES = {
   "": {},
   boats: { parent: SETTINGS },
-  // Seating a diver is an act on the board, wherever its form lives.
-  "bookings/new": { parent: BOARD },
-  "bookings/new/[tripId]": { parent: BOARD },
   courses: {},
   "courses/[slug]/edit": {},
   "dive-sites": {},
   "dive-sites/[id]": {},
-  "dive-sites/new": {},
   divers: {},
   "divers/[personId]": {},
   "divers/[personId]/merge/[survivorId]": {},
   "divers/[personId]/waivers/[recordId]": { upHash: "#waiver" },
-  "divers/new": {},
   gear: {},
   "gear/[id]": {},
   "gear/rentals/[ticketId]": {},
-  "gear/rentals/new": {},
   "gear/work-orders": {},
   "gear/work-orders/[workOrderId]": {},
   "gear/work-orders/[workOrderId]/tag": {},
-  "gear/work-orders/new": {},
   inbox: {},
   "lost-found": {},
   // `/me` has no page: the account hub is `me/security`, and the staffer's own
@@ -87,7 +80,6 @@ export const STAFF_ROUTES = {
   orders: {},
   "orders/[id]": {},
   "orders/[id]/print/dispute": {},
-  "orders/new": {},
   print: {},
   "print/counter-card": { parent: SETTINGS },
   "print/pass/[bookingId]": {},
@@ -101,7 +93,6 @@ export const STAFF_ROUTES = {
   "schedule/blowout/[tripId]": { parent: "trips/[tripId]" },
   "schedule/blowout/day/[date]": { parent: BOARD },
   "schedule/board": {},
-  "schedule/board/new": {},
   "schedule/day/[date]": { parent: BOARD },
   settings: {},
   "settings/activity": {},
@@ -178,7 +169,7 @@ function bind(key: string, segments: readonly string[]): Record<string, string> 
 
 /**
  * A static segment outranks a param at the first place two keys differ, as the
- * router decides it: `divers/new` is not `divers/[personId]`.
+ * router decides it: `gear/work-orders` is not `gear/[id]`.
  */
 function moreSpecific(a: string, b: string): boolean {
   const left = segmentsOf(a);

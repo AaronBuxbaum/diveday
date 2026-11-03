@@ -23,7 +23,7 @@ just not through a register UI:
   `e_learning_fee`, `rental`, `nitrox`, `deposit`, `merchandise`, and `other` (free-form, for
   anything the catalog doesn't anticipate).
 - Every one of "create a special order," "establish a rental booking," "enroll in a class," "add to
-  a trip" already happens through DiveDay's own front desk (`bookings/new`, course enrollment,
+  a trip" already happens through DiveDay's own front desk (Add a booking, course enrollment,
   `seat-diver.ts`) — never a separate register a staff member switches to.
 - **A giveaway is already representable, not a gap:** `PROMO_DISCOUNT_MAX = 100`
   (`src/lib/promo-codes.ts`) means a 100%-off code produces a normal `paid` order with $0 collected

@@ -78,7 +78,7 @@ describe("RouteFocus", () => {
   it("keeps a field the new page focused itself", () => {
     const { rerender, getByRole } = render(<Shell page={<h1>Today</h1>} />);
     navigate(
-      "/shop/blue-mantis/divers/new",
+      "/shop/blue-mantis/divers",
       <>
         <h1>Add a diver</h1>
         {/* biome-ignore lint/a11y/noAutofocus: the case under test */}

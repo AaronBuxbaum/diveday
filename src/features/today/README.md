@@ -17,6 +17,9 @@ Module shape: [20260730-feature-module-contracts](../../../docs/architecture/dec
   row is; it never queries.
 - `closeout-reader.ts` and `closeout.ts`: the evening's reads and the day's closing state.
 - `past-day-notes.ts`: what a past day's page says about its stations.
+- `shop-home.ts`: the shop home's surface reader (`getShopHome`), its waves of reads in one call,
+  and `day-money.ts`, the evening's takings and the reader's crew tips behind it.
+- `day-print-page.ts`: the day's print packet reader (`getDayPrintPage`): its departures and load-out.
 
 ## Does not own
 

@@ -155,9 +155,7 @@ const READY_PATH_HASH_HEADER = "x-diveday-path-sha256";
  * page's copy (by its own path: another booking's copy stays). Answers
  * whether this page's copy is gone; never throws.
  *
- * A worker that answers `ok: false` has already deleted this path's copy
- * (or has none to delete), so the page does nothing more. With no worker, or
- * one that does not answer in time, the page deletes only the cached entry
+ * Unless the worker confirms it forgot the copy, the page deletes only the cached entry
  * stamped with the hash of its own path, never the whole cache.
  */
 export async function forgetThisReadyPage(): Promise<boolean> {
@@ -176,10 +174,11 @@ export async function forgetThisReadyPage(): Promise<boolean> {
     }
     const answer = worker ? await askWorkerToForget(worker) : null;
     if (answer === true) return true;
-    if (answer === false) return false;
-    // No worker, or one that did not answer in time: the page is the last
-    // thing standing between a cancelled seat and its saved summary, so it
-    // drops its own path's copy itself.
+    // No worker, one that did not answer in time, or one that answered it could
+    // not forget (it lost the race with its own navigation delete, or could not
+    // read the page's path): the page is the last thing standing between a
+    // cancelled seat and its saved summary, so it drops its own path's copy
+    // itself. Deleting is idempotent and bounded to this path.
     return await dropThisPagesReadyCopy();
   } catch {
     return false;

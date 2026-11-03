@@ -97,7 +97,7 @@ test.describe("staff", () => {
     // Saving lands on the site's own page, whose header is its name.
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
-    await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
+    await page.goto("/shop/blue-mantis/schedule/board?add=full");
     await page.getByLabel("What is it").fill(tripTitle);
     // Dive one's site, by name: expanded, the panel keeps the quick row's
     // single "Dive site" select mounted-but-hidden (so nothing typed is lost on
@@ -313,7 +313,7 @@ test.describe("staff", () => {
     // never wired up, so a Spanish-locale shop read one English line among the
     // translated cards.
     const siteName = `Unplaced Ledge ${e2eNow().getTime()}`;
-    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.goto("/shop/blue-mantis/dive-sites?add=1");
     await page.getByLabel("Name").fill(siteName);
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
@@ -365,7 +365,7 @@ test.describe("staff", () => {
     const siteName = `Drawn Ledge ${e2eNow().getTime()}`;
     const tripTitle = `Drawn Ledge charter ${e2eNow().getTime()}`;
 
-    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.goto("/shop/blue-mantis/dive-sites?add=1");
     await page.getByLabel("Name").fill(siteName);
     // No coordinates yet: there is no frame to draw on, and the editor says so
     // rather than showing a map centred on a guess.
@@ -410,7 +410,7 @@ test.describe("staff", () => {
     await expect(page.getByText(/^3 waypoints/)).toBeVisible();
 
     // And it reaches the diver, which is the only reason to draw it.
-    await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
+    await page.goto("/shop/blue-mantis/schedule/board?add=full");
     await page.getByLabel("What is it").fill(tripTitle);
     // By name, like the flow above: the collapsed quick row keeps its own
     // "Dive site" select mounted, so a label match finds the wrong one.
@@ -457,7 +457,7 @@ test.describe("staff", () => {
     test.setTimeout(30_000);
     const siteName = `Half Point ${e2eNow().getTime()}`;
 
-    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.goto("/shop/blue-mantis/dive-sites?add=1");
     await page.getByLabel("Name").fill(siteName);
     await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
     await openSection(page, "underwater");
@@ -475,7 +475,7 @@ test.describe("staff", () => {
     // button that did nothing.
     await expect(page.locator("form").filter({ has: refusal })).toHaveCount(1);
     // The whole point: still on the form, still filled in.
-    await expect(page).toHaveURL(/\/dive-sites\/new$/);
+    await expect(page).toHaveURL(/\/dive-sites\?add=1$/);
     await expect(page.getByLabel("Name")).toHaveValue(siteName);
     await expect(page.getByRole("textbox", { name: "Location" })).toHaveValue("Key Largo");
     await expect(page.getByLabel("What might divers see?")).toHaveValue("Green turtles");
@@ -510,13 +510,13 @@ test.describe("staff", () => {
     test.setTimeout(30_000);
     const taken = `Twin Ledges ${e2eNow().getTime()}`;
 
-    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.goto("/shop/blue-mantis/dive-sites?add=1");
     await page.getByLabel("Name").fill(taken);
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: taken })).toBeVisible();
 
     // A second site reaching for the same name gets an answer, not a stack.
-    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.goto("/shop/blue-mantis/dive-sites?add=1");
     await page.getByLabel("Name").fill(taken);
     await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
     await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -526,7 +526,7 @@ test.describe("staff", () => {
     await expect(refusal).toBeVisible();
     await expect(page.locator("form").filter({ has: refusal })).toHaveCount(1);
     // Still on the form, still filled in — a rename is all it takes.
-    await expect(page).toHaveURL(/\/dive-sites\/new$/);
+    await expect(page).toHaveURL(/\/dive-sites\?add=1$/);
     await expect(page.getByRole("textbox", { name: "Location" })).toHaveValue("Key Largo");
     await page.getByLabel("Name").fill(`${taken} south`);
     await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -620,7 +620,7 @@ test.describe("staff", () => {
   // arrive as URLs in a CSV, and are covered by
   // src/lib/storage/ingest-url.test.ts.
   test("the briefing takes photos as files, never as a pasted link", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.goto("/shop/blue-mantis/dive-sites?add=1");
     // Three file inputs — map still, route still, and the gallery — and not one
     // box asking for a URL. They sit in the closed Photos row.
     await openSection(page, "photos");
@@ -722,7 +722,7 @@ test.describe("staff", () => {
   }) => {
     const siteName = `Two Tabs Reef ${e2eNow().getTime()}`;
     const first = page;
-    await first.goto("/shop/blue-mantis/dive-sites/new");
+    await first.goto("/shop/blue-mantis/dive-sites?add=1");
     await first.getByLabel("Name").fill(siteName);
     await first.getByRole("button", { name: "Save", exact: true }).click();
     await expect(first.getByRole("heading", { name: siteName })).toBeVisible();
@@ -1108,7 +1108,7 @@ test("map labels keep saved site text literal and details navigation works", asy
 }) => {
   const name = "Z Reef <img src=x onerror=alert(1)>";
   const subtitle = "<b onmouseover=alert(2)>Bank</b>";
-  await page.goto(`/shop/${privateShop.slug}/dive-sites/new`);
+  await page.goto(`/shop/${privateShop.slug}/dive-sites?add=1`);
   await page.getByLabel("Name").fill(name);
   await page.getByRole("textbox", { name: "Location" }).fill(subtitle);
   // Keep this label/keyboard/navigation case separate from the seeded Keys
