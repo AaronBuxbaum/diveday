@@ -433,8 +433,9 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "gear-register-rentals-waiver", scheme);
       });
 
-      // The front desk's invoice builder. It redirects to Divers for a shop
-      // that can't take money, so mark the demo shop connected first:
+      // The front desk's invoice builder. The Orders index answers a shop that
+      // can't take money with a notice instead of the panel, so mark the demo
+      // shop connected first:
       // /api/test/seed-stripe-account is a pure DB write that never calls
       // Stripe (same use as the recap tip section above), and no order is
       // created here — this is the empty form, which is the whole surface.
