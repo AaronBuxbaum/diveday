@@ -79,7 +79,7 @@ describe("the waiver group", () => {
       diver({
         email: "priya@dive.day",
         waiver: {
-          state: "current",
+          state: "signed",
           signedAt: new Date("2026-07-21T15:00:00.000Z"),
           expiresAt: new Date("2027-07-21T15:00:00.000Z"),
         } as DiverProfile["waiver"],
@@ -97,7 +97,7 @@ describe("the waiver group", () => {
     const profile = (runsOutBeforeTrip: boolean) =>
       diver({
         waiver: {
-          state: "current",
+          state: "signed",
           signedAt: new Date("2026-07-21T15:00:00.000Z"),
           expiresAt: new Date("2027-07-21T00:00:00.000Z"),
           runsOutBeforeTrip,
@@ -131,7 +131,7 @@ describe("the waiver group", () => {
       diver({
         email: "priya@dive.day",
         waiver: {
-          state: "current",
+          state: "signed",
           recordId: "waiver-9",
           signedAt: new Date("2026-07-21T15:00:00.000Z"),
           expiresAt: new Date("2027-07-21T15:00:00.000Z"),
@@ -152,7 +152,7 @@ describe("the waiver group", () => {
       diver({
         email: "priya@dive.day",
         waiver: {
-          state: "current",
+          state: "signed",
           signedAt: new Date("2026-07-21T15:00:00.000Z"),
           expiresAt: new Date("2027-07-21T15:00:00.000Z"),
           medical: {
@@ -350,7 +350,7 @@ describe("the waiver group", () => {
       diver({
         email: "priya@dive.day",
         waiver: {
-          state: "current",
+          state: "signed",
           signedAt: new Date("2026-07-21T15:00:00.000Z"),
           expiresAt: new Date("2027-07-21T15:00:00.000Z"),
           medical: {
@@ -384,7 +384,7 @@ describe("the waiver group", () => {
       diver({
         email: "priya@dive.day",
         waiver: {
-          state: "current",
+          state: "signed",
           signedAt: new Date("2026-07-21T15:00:00.000Z"),
           expiresAt: new Date("2027-07-21T15:00:00.000Z"),
           medical: {
@@ -425,7 +425,7 @@ describe("the waiver group", () => {
       diver({
         email: "priya@dive.day",
         waiver: {
-          state: "current",
+          state: "signed",
           signedAt: new Date("2026-07-21T15:00:00.000Z"),
           expiresAt: new Date("2027-07-21T15:00:00.000Z"),
           medical: {
@@ -479,7 +479,7 @@ describe("the waiver group", () => {
       diver({
         email: "priya@dive.day",
         waiver: {
-          state: "current",
+          state: "signed",
           signedAt: new Date("2026-07-21T15:00:00.000Z"),
           expiresAt: new Date("2027-07-21T15:00:00.000Z"),
           medical: {
@@ -549,7 +549,7 @@ describe("the waiver group", () => {
         email: "priya@dive.day",
         phone: "+13055550142",
         waiver: {
-          state: "current",
+          state: "signed",
           expiresAt: new Date("2027-01-01T00:00:00Z"),
         } as DiverProfile["waiver"],
       }),
@@ -573,7 +573,7 @@ describe("the waiver group", () => {
   function clearedDiver(documentOnFile: boolean, fromDiver = false) {
     return diver({
       waiver: {
-        state: "current",
+        state: "signed",
         expiresAt: new Date("2027-01-01T00:00:00Z"),
         medical: {
           at: new Date("2026-05-01T00:00:00Z"),
@@ -725,7 +725,7 @@ describe("the waiver group", () => {
     renderCard(
       diver({
         email: "priya@dive.day",
-        waiver: { state: "expired", signedAt: new Date("2025-08-27T14:00:00.000Z") },
+        waiver: { state: "lapsed", signedAt: new Date("2025-08-27T14:00:00.000Z") },
         waiverRequest: "failed",
       } as Parameters<typeof diver>[0]),
     );

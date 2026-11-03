@@ -1,6 +1,6 @@
 import type { Certification } from "@/db/schema";
 import { validVerifiedCertification } from "./readiness";
-import type { ShopWaiverStatus } from "./waivers";
+import type { ShopWaiverStanding } from "./waivers";
 
 /**
  * **What survives a day that did not happen** (issue #1197, delight report D37).
@@ -40,8 +40,8 @@ export type CarriedPreparation = "waiver" | "certification" | "fit";
  * an error: the surface renders nothing rather than an empty panel.
  */
 export function carriedPreparation(input: {
-  /** Where the diver stands with this shop's release, `shopWaiverStatus`. */
-  waiver: ShopWaiverStatus;
+  /** Where the diver stands with this shop's release, `shopWaiverStanding`. */
+  waiver: ShopWaiverStanding;
   /** Their level cards at this shop, whatever status each is in. */
   certifications: readonly Certification[];
   /** Whether the shop holds their sizes (`rental_fit_profiles`). */
@@ -51,7 +51,7 @@ export function carriedPreparation(input: {
   // `current` and nothing else. `expired` means they sign again, and
   // `medical_review` is an open question rather than a thing kept — neither is
   // reassuring to read on the day a trip was called off.
-  if (input.waiver.state === "current") carried.push("waiver");
+  if (input.waiver.state === "signed") carried.push("waiver");
   // A card the shop has actually seen. A self-declared one is still only
   // somebody's word for it (ADR 20260820-attested-at-booking-verified-at-boarding),
   // and telling a diver it was kept would be the shop vouching for a claim it

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Certification } from "@/db/schema";
 import { carriedPreparation } from "./carried-preparation";
-import type { ShopWaiverStatus } from "./waivers";
+import type { ShopWaiverStanding } from "./waivers";
 
 /**
  * The rule behind the short list a diver reads on a day that did not happen
@@ -10,8 +10,8 @@ import type { ShopWaiverStatus } from "./waivers";
  * beside a cancellation, and a reassurance that turns out to be false is worse
  * than the silence it replaced.
  */
-const SIGNED: ShopWaiverStatus = {
-  state: "current",
+const SIGNED: ShopWaiverStanding = {
+  state: "signed",
   recordId: "w-1",
   signedAt: new Date("2026-08-01T10:00:00Z"),
   runsOutBeforeTrip: false,
@@ -94,9 +94,9 @@ describe("carriedPreparation", () => {
    */
   it.each([
     { state: "none" },
-    { state: "expired", signedAt: new Date("2024-01-01T00:00:00Z") },
+    { state: "lapsed", signedAt: new Date("2024-01-01T00:00:00Z") },
     { state: "medical_review", at: new Date("2026-08-02T00:00:00Z") },
-  ] as ShopWaiverStatus[])("keeps no release in the $state state", (waiver) => {
+  ] as ShopWaiverStanding[])("keeps no release in the $state state", (waiver) => {
     expect(
       carriedPreparation({ waiver, certifications: [card("verified")], hasRentalFit: true }),
     ).toEqual(["certification", "fit"]);

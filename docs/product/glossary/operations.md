@@ -1576,6 +1576,15 @@
   (`recordInPersonWaiver`), a party panel's "signed" and the diver record ("Runs out <date>, before
   the trip"), so the diver can sign again the day the roster blocks them. Cards, payment and age
   keep their own instants, and admission still never refuses a seat for it. See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
+- **Waiver standing** — the one word for where a release stands, read from its signature and
+  clearance stamps by one derivation (`waiverStanding` for a record, `shopWaiverStanding` for the
+  diver at the shop, issue #2705): `none`, `awaiting_signature`, `link_expired`, `signed`,
+  `lapsed`, `guardian_missing`, `medical_review` or `medical_not_cleared`. Readiness, the roster,
+  the diver record and the counter all ask it, so one release is never called two things on two
+  screens. The record's stored `status` (`pending`, `completed`, `medical_review`) is where the
+  record was parked, history only: a cleared referral keeps `medical_review` and stands as
+  `signed`. The departure log prints its own frozen codes, mapped from the standing, because its
+  words are sealed in the log's content hash.
 - **Medical hold** — a signed release the medical questionnaire **referred** to a physician and no
   physician has cleared: an open referral, or one the physician refused. It is the record's status
   (`medical_review`), never the stored answers, because a paper or status-only hold stores none and

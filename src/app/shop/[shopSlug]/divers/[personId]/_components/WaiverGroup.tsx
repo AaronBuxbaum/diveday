@@ -63,7 +63,7 @@ function waiverDetail(
   timezone: string,
 ): string {
   const date = (value: Date) => formatCalendarDate(calendarDateInTimezone(value, timezone), locale);
-  if (diver.waiver.state === "current") {
+  if (diver.waiver.state === "signed") {
     // Valid today, gone before the trip: the roster blocks that seat, so the
     // record says why instead of "Good until" (issue #2611).
     const goodUntil = t(
@@ -93,7 +93,7 @@ function waiverDetail(
     return t("divers.stats.waiverNotClearedOn", { date: date(diver.waiver.declinedAt) });
   }
   if (diver.waiverRequest === "failed") return t("divers.stats.waiverFailed");
-  if (diver.waiver.state === "expired") {
+  if (diver.waiver.state === "lapsed") {
     return t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) });
   }
   // A copied link and a delivered one are different facts, and the card said
@@ -122,7 +122,7 @@ function waiverSummary(
 ): string {
   const text = waiverRowStateText(t, state);
   const date = (value: Date) => formatCalendarDate(calendarDateInTimezone(value, timezone), locale);
-  if (diver.waiver.state === "current") {
+  if (diver.waiver.state === "signed") {
     const dated = `${text} · ${t(
       diver.waiver.runsOutBeforeTrip
         ? "divers.stats.waiverRunsOut"
@@ -155,12 +155,12 @@ function waiverSummary(
   if (diver.waiver.state === "medical_not_cleared") {
     return `${text} · ${t("divers.stats.waiverNotClearedOn", { date: date(diver.waiver.declinedAt) })}`;
   }
-  if (diver.waiver.state === "expired") {
+  if (diver.waiver.state === "lapsed") {
     // The expired word, not `text`: a failed send turns `state` into
     // "failed", whose word is "Not signed", and "Not signed · Last signed …"
     // contradicts itself. The failure rides along, since the door is now the
     // only status line the group draws (dive-domain review, 2026-10-03).
-    const lastSigned = `${waiverRowStateText(t, "expired")} · ${t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) })}`;
+    const lastSigned = `${waiverRowStateText(t, "lapsed")} · ${t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) })}`;
     return state === "failed" ? `${lastSigned} · ${t("divers.stats.waiverFailed")}` : lastSigned;
   }
   if (state === "failed") return `${text} · ${t("divers.stats.waiverFailed")}`;
@@ -208,14 +208,14 @@ export function WaiverGroup({
   // that is a signed release (ADR 20260907-guardian-co-signature), and letting
   // a stale pending link overwrite its word read "Not signed" over a record
   // whose own line underneath said the diver had signed it that morning.
-  const hasSigned = diver.waiver.state === "current" || diver.waiver.state === "guardian_missing";
+  const hasSigned = diver.waiver.state === "signed" || diver.waiver.state === "guardian_missing";
   const state: WaiverRowState =
     diver.waiverRequest === "failed" && !hasSigned ? "failed" : diver.waiver.state;
   const needsAction =
     diver.waiver.state === "none" ||
-    diver.waiver.state === "expired" ||
+    diver.waiver.state === "lapsed" ||
     diver.waiver.state === "guardian_missing" ||
-    (diver.waiver.state === "current" && diver.waiver.runsOutBeforeTrip);
+    (diver.waiver.state === "signed" && diver.waiver.runsOutBeforeTrip);
   // A physician's evaluation is the only way to clear this booking's own hold.
   // H-20261007-after-physician-says-no separately allows a newer person-scoped clean release to stand for
   // other bookings, while keeping the open referral visible as a warning.
@@ -228,22 +228,22 @@ export function WaiverGroup({
   // Whether that should be refused is a call for a person; saying it out loud
   // is not, and the record is where the staffer who can act is standing.
   const overriddenReferralAt =
-    diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferralAt ?? null) : null;
+    diver.waiver.state === "signed" ? (diver.waiver.medical?.overriddenReferralAt ?? null) : null;
   // The owner kept that override (2026-10-09, issue #2195, amending H-20261007-after-physician-says-no), so
   // the line links back to the referral, the way the refusal's does below.
   const overriddenReferral =
-    diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferral ?? null) : null;
+    diver.waiver.state === "signed" ? (diver.waiver.medical?.overriddenReferral ?? null) : null;
   // **A physician refused an earlier release, and a new one cleared the diver
   // anyway** (Aaron, 2026-10-07, issue #2158). Allowed, and said out loud with
   // the refused record one tap away.
   const earlierRefusal =
-    diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenRefusal ?? null) : null;
+    diver.waiver.state === "signed" ? (diver.waiver.medical?.overriddenRefusal ?? null) : null;
   // **The evaluation the shop stored, and a door to it** (issue #1283). Drawn
   // only when there is a file *and* this reader may open it — a link that
   // 404s for a divemaster teaches them the record is broken rather than that
   // the document is not theirs.
   const clearance =
-    diver.waiver.state === "current"
+    diver.waiver.state === "signed"
       ? (diver.waiver.medical?.clearance ?? null)
       : // A refusal's own letter gets the same door as a clearance's. It is the
         // one a claims adjuster asks for first, and the reader who may open one
@@ -266,7 +266,7 @@ export function WaiverGroup({
     timezone,
     // A referral line on a current release does not say why a departure
     // still refuses it, so only a non-current state speaks for itself.
-    factSaysIt: diver.waiver.state !== "current",
+    factSaysIt: diver.waiver.state !== "signed",
   });
   // The routes to a signature, wherever the release needs one: its own state
   // says so, or the next departure does (a release that reads "Signed" here
@@ -285,7 +285,7 @@ export function WaiverGroup({
   // item 27): a plain "Signed" row was the one row in the file with no arrow
   // and no way to the document a claims adjuster asks for.
   const signedRecordHref =
-    diver.waiver.state === "current" && diver.waiver.recordId
+    diver.waiver.state === "signed" && diver.waiver.recordId
       ? shopPath(shopSlug, "divers", personId, "waivers", diver.waiver.recordId)
       : undefined;
   return (

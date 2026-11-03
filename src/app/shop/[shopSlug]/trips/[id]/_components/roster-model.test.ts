@@ -370,8 +370,8 @@ describe("groupRoster", () => {
 describe("the roster's worded controls", () => {
   it("words every waiver state, and offers no tap on a settled one", () => {
     const controls = waiverControls(t);
-    expect(controls.not_sent.action).toBe("send");
-    expect(controls.complete.action).toBeNull();
+    expect(controls.none.action).toBe("send");
+    expect(controls.signed.action).toBeNull();
     expect(controls.medical_not_cleared.action).toBeNull();
     for (const control of Object.values(controls)) expect(control.label).not.toBe("");
   });

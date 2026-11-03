@@ -36,7 +36,7 @@ import { hasSailed } from "@/lib/trips";
  * nobody has looked at, a release never signed, money outstanding, no
  * emergency contact — come straight off the profile, and each is the same
  * condition an existing surface already counts (`cardsNeedingLookCount`,
- * `shopWaiverStatus`, `unpaidBookingCount`, the roster's `missing_contact`
+ * `shopWaiverStanding`, `unpaidBookingCount`, the roster's `missing_contact`
  * filter).
  *
  * **Rows carry codes, never sentences.** A `DiverStatusRow` names a message
@@ -370,13 +370,13 @@ export function buildDiverStatus(
       tone: "danger",
       sentence: { key: "divers.status.waiverNotCleared" },
     });
-  } else if (diver.waiver.state !== "current") {
+  } else if (diver.waiver.state !== "signed") {
     rows.push({
       kind: "waiver",
       tone: "warning",
       sentence: {
         key:
-          diver.waiver.state === "expired"
+          diver.waiver.state === "lapsed"
             ? "divers.status.waiverExpired"
             : "divers.status.waiverMissing",
       },

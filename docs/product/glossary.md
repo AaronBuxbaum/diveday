@@ -355,6 +355,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Waiver / release
 - Waiver activity
 - Waiver completion
+- Waiver standing
 - Walk-in
 - Walk-in party
 - Weather day

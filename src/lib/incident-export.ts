@@ -21,7 +21,7 @@ import {
 import { countParticipants, type ParticipantCounts } from "./participant-types";
 import { isUnsightedSelfDeclaration } from "./readiness";
 import { isTurnAwayReason, type TurnAwayReason } from "./turn-away";
-import { type WaiverState, type WaiverStateFields, waiverState } from "./waivers";
+import { type RecordWaiverStanding, type WaiverStateFields, waiverStanding } from "./waivers";
 
 /**
  * Incident-ready export: one departure's recorded safety evidence, assembled
@@ -92,6 +92,30 @@ export type IncidentCertificationEvidence = {
   selfDeclared: boolean;
 };
 
+/**
+ * **The waiver words this sealed document prints** (issue #2705). They are part
+ * of the content hash, so a log printed last season must hash the same today:
+ * the document keeps its own frozen codes, and each is read from the one
+ * standing ({@link waiverStanding}) through {@link INCIDENT_WAIVER_CODES} rather
+ * than derived a second time.
+ */
+export type IncidentWaiverState =
+  | "not_sent"
+  | "awaiting_signature"
+  | "expired"
+  | "complete"
+  | "medical_review"
+  | "medical_not_cleared";
+
+const INCIDENT_WAIVER_CODES: Record<RecordWaiverStanding, IncidentWaiverState> = {
+  none: "not_sent",
+  awaiting_signature: "awaiting_signature",
+  link_expired: "expired",
+  signed: "complete",
+  medical_review: "medical_review",
+  medical_not_cleared: "medical_not_cleared",
+};
+
 export type IncidentWaiverStatus = {
   /**
    * The governing record's state after the sign-once rule — the same
@@ -100,7 +124,7 @@ export type IncidentWaiverStatus = {
    * missing. A superseded-only or absent record reads `not_sent`: a stated
    * absence, never a blank and never a stale "signed".
    */
-  state: WaiverState;
+  state: IncidentWaiverState;
   signedAt: string | null;
   templateTitle: string | null;
   templateVersion: number | null;
@@ -817,7 +841,9 @@ function waiverStatus(
   // a superseded completion — but if a caller ever hands one in anyway, it is
   // a signature that no longer stands and must read as the stated absence, not
   // as signed evidence on a document handed to an insurer.
-  const state = record?.supersededAt ? "not_sent" : waiverState(record, now);
+  const state = record?.supersededAt
+    ? "not_sent"
+    : INCIDENT_WAIVER_CODES[waiverStanding(record, now)];
   if (!record || state === "not_sent") {
     return {
       state: "not_sent",

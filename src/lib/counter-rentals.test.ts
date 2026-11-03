@@ -222,9 +222,9 @@ describe("the set price", () => {
  */
 describe("counterRentalWaiverFlag", () => {
   it.each([
-    ["current", null],
+    ["signed", null],
     ["none", { offerLink: true }],
-    ["expired", { offerLink: true }],
+    ["lapsed", { offerLink: true }],
     ["guardian_missing", { offerLink: true }],
     ["medical_review", { offerLink: false }],
     ["medical_not_cleared", { offerLink: false }],
@@ -239,7 +239,7 @@ describe("counterRentalWaiverFlag", () => {
  */
 describe("counterRentalWaiverStanding", () => {
   const signed = {
-    state: "current" as const,
+    state: "signed" as const,
     recordId: "w-1",
     signedAt: new Date("2026-09-01T15:00:00Z"),
     expiresAt: new Date("2027-09-01T15:00:00Z"),
@@ -265,12 +265,12 @@ describe("counterRentalWaiverStanding", () => {
         },
         "America/New_York",
       ),
-    ).toEqual({ state: "current", refusedOn: "2026-07-18", referredOn: "2026-07-20" });
+    ).toEqual({ state: "signed", refusedOn: "2026-07-18", referredOn: "2026-07-20" });
   });
 
   it("is the bare state otherwise", () => {
     expect(counterRentalWaiverStanding({ ...signed, medical: null }, "America/New_York")).toEqual({
-      state: "current",
+      state: "signed",
     });
     expect(counterRentalWaiverStanding({ state: "none" }, "America/New_York")).toEqual({
       state: "none",

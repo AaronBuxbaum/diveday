@@ -496,8 +496,8 @@ describe("counterRentalWaiverStandings", () => {
       timezone: shop.timezone,
       personIds: [ana.id],
     });
-    expect(standings.get(ana.id)?.state).toBe("current");
-    expect(counterRentalWaiverFlag("current")).toBeNull();
+    expect(standings.get(ana.id)?.state).toBe("signed");
+    expect(counterRentalWaiverFlag("signed")).toBeNull();
   });
 
   /**
@@ -578,8 +578,8 @@ describe("counterRentalWaiverStandings", () => {
         personIds: [booking.personId],
       })
     ).get(booking.personId);
-    expect(standing?.state).toBe("current");
-    expect(standing?.state === "current" ? standing.medical?.overriddenRefusal : null).toEqual(
+    expect(standing?.state).toBe("signed");
+    expect(standing?.state === "signed" ? standing.medical?.overriddenRefusal : null).toEqual(
       expect.objectContaining({ recordId: expect.any(String) }),
     );
   });

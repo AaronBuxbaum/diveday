@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { overriddenReferral, shopWaiverStatus } from "./waivers";
+import { overriddenReferral, shopWaiverStanding } from "./waivers";
 
 type TestWaiver = NonNullable<Parameters<typeof overriddenReferral>[0]>;
 
@@ -65,14 +65,14 @@ describe("medical referral warnings use the shop-local calendar", () => {
     expect(overriddenReferral(standing, records, "Asia/Tokyo")?.recordId).toBe(referral.id);
     expect(overriddenReferral(standing, records, "UTC")).toBeNull();
     expect(
-      shopWaiverStatus({
+      shopWaiverStanding({
         personSignedWaivers: records,
         currentTemplateVersion: 1,
         now: new Date("2026-07-20T00:00:00.000Z"),
         signer: { dateOfBirth: null, minorDeclared: false, timezone: "Asia/Tokyo" },
       }),
     ).toMatchObject({
-      state: "current",
+      state: "signed",
       medical: { overriddenReferral: { recordId: referral.id, personId: referral.personId } },
     });
   });
