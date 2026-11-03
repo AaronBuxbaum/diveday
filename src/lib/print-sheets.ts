@@ -18,13 +18,28 @@ import { shopPath } from "./staff-notices";
  * letter-sized render down to A6 ({@link PRINT_SHEET_PAPER_MM} is how it is
  * told).
  */
-export type PrintSheetPaper = "A6 portrait";
+export type PrintSheetPaper = "A6 portrait" | "Letter or A4";
 
 /** The paper pass's paper. */
 export const PAPER_PASS_PAPER: PrintSheetPaper = "A6 portrait";
 
 /** The counter card's paper: the same A6, stood on the desk. */
 export const COUNTER_CARD_PAPER: PrintSheetPaper = "A6 portrait";
+
+/**
+ * **The packets' paper: whatever the shop's printer holds** (issue #2745).
+ * The trip, day and medical-alerts packets run to several pages, so they never
+ * name a size: a US shop loads Letter and everyone else A4, and the sheet is
+ * drawn to the narrower of the two so it fits either without scaling.
+ */
+export const PACKET_PAPER: PrintSheetPaper = "Letter or A4";
+
+/**
+ * The app-wide `@page` margin (`globals.css`), which the packets keep: their
+ * named departure pages add the identity lines above it and the page count
+ * below it.
+ */
+const PACKET_MARGIN_MM = 12.7;
 
 /**
  * The `@page` block a sheet carries.
@@ -44,11 +59,15 @@ export const PRINT_SHEET_MARGIN_MM = 6;
  * declaration went and the counter card printed as a postcard in the corner of
  * a Letter page. Two lengths are understood by every engine that reads `size`.
  */
-export const PRINT_SHEET_PAPER_MM: Record<PrintSheetPaper, { width: number; height: number }> = {
+export const PRINT_SHEET_PAPER_MM = {
   "A6 portrait": { width: 105, height: 148 },
-};
+  // A4's width and Letter's height: the box that fits on both.
+  "Letter or A4": { width: 210, height: 279.4 },
+} satisfies Record<PrintSheetPaper, { width: number; height: number }>;
 
 export function printSheetPageRule(paper: PrintSheetPaper): string {
+  // The packets keep the app's own `@page`: the printer's paper, the page count.
+  if (paper === PACKET_PAPER) return "";
   const { width, height } = PRINT_SHEET_PAPER_MM[paper];
   // The page number the app's own `@page` prints in its corner is for a
   // packet that runs to several pages; a card is one sheet, and the number
@@ -62,12 +81,18 @@ export function printSheetPageRule(paper: PrintSheetPaper): string {
  * The height is a **floor**. A sheet whose content outgrows its paper takes a
  * second page rather than clipping.
  */
-export const PRINT_SHEET_BOX_MM: Record<PrintSheetPaper, { width: number; height: number }> = {
-  "A6 portrait": {
-    width: PRINT_SHEET_PAPER_MM["A6 portrait"].width - 2 * PRINT_SHEET_MARGIN_MM,
-    height: PRINT_SHEET_PAPER_MM["A6 portrait"].height - 2 * PRINT_SHEET_MARGIN_MM,
-  },
-};
+export const PRINT_SHEET_BOX_MM: Record<PrintSheetPaper, { width: number; height: number | null }> =
+  {
+    "A6 portrait": {
+      width: PRINT_SHEET_PAPER_MM["A6 portrait"].width - 2 * PRINT_SHEET_MARGIN_MM,
+      height: PRINT_SHEET_PAPER_MM["A6 portrait"].height - 2 * PRINT_SHEET_MARGIN_MM,
+    },
+    // No floor: a packet sheet is as long as its roster, over as many pages.
+    "Letter or A4": {
+      width: PRINT_SHEET_PAPER_MM["Letter or A4"].width - 2 * PACKET_MARGIN_MM,
+      height: null,
+    },
+  };
 
 /**
  * What the paper pass's code carries: the booking's id, and nothing else.

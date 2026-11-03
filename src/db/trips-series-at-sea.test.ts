@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { calendarDateWeekday } from "@/lib/calendar-date";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
-import { rollCallCrewEvents, tripStageEvents } from "./schema";
+import { crewSubject } from "./roll-call-subject";
+import { rollCallEvents, tripStageEvents } from "./schema";
 import {
   cancelFutureSeriesTrips,
   cancelOffCadenceSeriesTrips,
@@ -67,10 +68,10 @@ describe("cancelOffCadenceSeriesTrips and a boat at sea", () => {
     if (!staff) throw new Error("seed staff missing");
     // Out before its time: an after-dive result on the crew list, and a stage
     // past Boarding with no roll call at all.
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: early.id,
-      personId: staff.person.id,
+      ...crewSubject(staff.person.id),
       recordedByPersonId: staff.person.id,
       status: "boarded",
       checkpoint: "after_dive_1",
@@ -83,10 +84,10 @@ describe("cancelOffCadenceSeriesTrips and a boat at sea", () => {
       recordedByPersonId: staff.person.id,
     });
     // Counted aboard at the dock, still tied up.
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: tiedUp.id,
-      personId: staff.person.id,
+      ...crewSubject(staff.person.id),
       recordedByPersonId: staff.person.id,
       status: "boarded",
       checkpoint: "departure",

@@ -9,7 +9,6 @@ import {
   DeparturePaperIdentity,
   departurePaperRule,
 } from "../src/app/shop/[shopSlug]/trips/[id]/_components/DeparturePaperIdentity";
-import { PacketSummary } from "../src/app/shop/[shopSlug]/trips/[id]/print/_components/PacketDocument";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { decode } from "./crew-pdf-pixels";
 import { expect, signedInAsOwner, test } from "./fixtures";
@@ -124,10 +123,10 @@ test("day packet continuation sheets retain exactly their own departure identity
       exact: true,
     }),
   ).toBeVisible();
-  const packet = page.locator(".trip-print-bundle[data-paper-screen]").filter({ visible: true });
+  const packet = page.locator(".paper-sheet-frame").filter({ visible: true });
   await expect(packet).toBeVisible();
   await expect(packet.locator("[data-packet-ready]")).toBeAttached();
-  const departureTitles = packet.locator("[data-trip-page-header] h1").filter({ visible: true });
+  const departureTitles = packet.locator("[data-packet-departure]").filter({ visible: true });
   await expect(departureTitles.first()).toBeVisible();
   const titles = [...new Set(await departureTitles.allTextContents())];
   expect(titles.length).toBeGreaterThan(1);
@@ -180,14 +179,20 @@ test("changed-first and empty-day summaries do not create isolated cover sheets"
   for (const changed of [true, false]) {
     const heading = changed ? t("shared.printPacket.changedHeading") : summary;
     const pageName = changed ? "departure-isolated-changed" : undefined;
-    const children = createElement(
-      "p",
-      null,
-      changed
-        ? t("shared.printPacket.changed", { id: "isolated-departure" })
-        : t("shared.printPacket.dayEmpty"),
-    );
-    const warning = changed
+    // The day's summary leads the first sheet it shares (`PacketSheets`):
+    // inside the changed warning's named page, or alone on an empty day.
+    const children = [
+      createElement("h1", { key: "title" }, summary),
+      createElement("p", { key: "printed" }, "27 October 2026 America/New_York"),
+      createElement(
+        "p",
+        { key: "body" },
+        changed
+          ? t("shared.printPacket.changed", { id: "isolated-departure" })
+          : t("shared.printPacket.dayEmpty"),
+      ),
+    ];
+    const document = changed
       ? createElement(DeparturePaperIdentity, {
           pageName: pageName ?? "",
           identity: ["Isolated shop", heading, "27 October 2026 America/New_York"],
@@ -195,16 +200,7 @@ test("changed-first and empty-day summaries do not create isolated cover sheets"
           children,
         })
       : children;
-    const summaryProps = {
-      openingPageName: pageName,
-      children: [
-        createElement("h1", { key: "title" }, summary),
-        createElement("p", { key: "printed" }, "27 October 2026 America/New_York"),
-      ],
-    };
-    const html = renderToStaticMarkup(
-      createElement("main", null, createElement(PacketSummary, summaryProps), warning),
-    );
+    const html = renderToStaticMarkup(createElement("main", null, document));
     // Local composition exercises production summary ownership without modifying shared shop data.
     await page.setContent(
       `<html><head><style>@page{margin:.5in;@bottom-right{content:counter(page) " / " counter(pages)}}body{font:12pt sans-serif}</style></head><body>${html}</body></html>`,

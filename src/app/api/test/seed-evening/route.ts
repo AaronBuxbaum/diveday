@@ -2,6 +2,8 @@ import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-o
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
+import { oldestMarkFirst } from "@/db/roll-call-order";
+import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "@/db/roll-call-subject";
 import {
   bookings,
   diveSites,
@@ -10,7 +12,6 @@ import {
   gearReservations,
   people,
   rentalFitProfiles,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   tripDives,
@@ -247,7 +248,7 @@ type CloseOutcome =
  * Divers are every non-cancelled booking. **Crew are the trip's assigned
  * crew** — `trip_assignments` — and not merely whoever already has a crew
  * result on it. That distinction was the bug in the first version of this: no
- * seed in the repository writes a `roll_call_crew_events` row, so "whoever has
+ * seed in the repository writes a crew mark (`roll_call_events`, `subject_kind = 'crew'`), so "whoever has
  * a result" was empty on every departure, no crew rows were written, and the
  * day reached `allHome` on the shop home while every one of its manifests
  * still read `crew_awaiting`. `rollCallCompleteness` (`src/lib/manifests.ts`)
@@ -284,37 +285,39 @@ async function closeHeadCounts(
       .where(and(liveTrip(), eq(trips.shopId, shopId), inArray(tripAssignments.tripId, tripIds))),
     db
       .select({
-        bookingId: rollCallEvents.bookingId,
+        bookingId: markBookingId(),
         checkpoint: rollCallEvents.checkpoint,
         status: rollCallEvents.status,
         occurredAt: rollCallEvents.occurredAt,
       })
       .from(rollCallEvents)
-      .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
+          inArray(rollCallEvents.tripId, tripIds),
+        ),
+      )
       // Oldest first, so the last row read per subject and checkpoint is the
       // one that stands — the same order every reader of this trail uses.
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
     db
       .select({
-        tripId: rollCallCrewEvents.tripId,
-        personId: rollCallCrewEvents.personId,
-        checkpoint: rollCallCrewEvents.checkpoint,
-        status: rollCallCrewEvents.status,
-        occurredAt: rollCallCrewEvents.occurredAt,
+        tripId: rollCallEvents.tripId,
+        personId: markCrewPersonId(),
+        checkpoint: rollCallEvents.checkpoint,
+        status: rollCallEvents.status,
+        occurredAt: rollCallEvents.occurredAt,
       })
-      .from(rollCallCrewEvents)
+      .from(rollCallEvents)
       .where(
-        and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          crewMarks(),
+          inArray(rollCallEvents.tripId, tripIds),
+        ),
       )
-      .orderBy(
-        asc(rollCallCrewEvents.occurredAt),
-        asc(rollCallCrewEvents.createdAt),
-        asc(rollCallCrewEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
   ]);
 
   const latestByBooking = new Map<string, (typeof events)[number]>();
@@ -337,7 +340,7 @@ async function closeHeadCounts(
   const crewByTrip = byTrip(crewRoster, (row) => row.personId);
 
   const diverRows: (typeof rollCallEvents.$inferInsert)[] = [];
-  const crewRows: (typeof rollCallCrewEvents.$inferInsert)[] = [];
+  const crewRows: (typeof rollCallEvents.$inferInsert)[] = [];
 
   for (const trip of departures) {
     const checkpoints = rollCallCheckpoints(trip.plannedDives);
@@ -414,7 +417,8 @@ async function closeHeadCounts(
         crewRows.push({
           shopId,
           tripId: trip.id,
-          personId,
+          subjectKind: "crew",
+          crewPersonId: personId,
           recordedByPersonId,
           status: "boarded",
           checkpoint: write.checkpoint,
@@ -426,7 +430,7 @@ async function closeHeadCounts(
   }
 
   if (diverRows.length > 0) await db.insert(rollCallEvents).values(diverRows);
-  if (crewRows.length > 0) await db.insert(rollCallCrewEvents).values(crewRows);
+  if (crewRows.length > 0) await db.insert(rollCallEvents).values(crewRows);
   return { ok: true, eventsWritten: diverRows.length + crewRows.length };
 }
 

@@ -227,7 +227,7 @@ export function PreDepartureCheckList({
   /** Present when the departure has a boat to hang a snag on. */
   snagActions?: SnagActions;
   /**
-   * Composed as the trip packet's paper (`PAPER_PACKET`, B03): only the
+   * Composed as the trip packet's paper (`TripPacket`, B03): only the
    * printed list below, never the checks, the snag answers or the note form.
    */
   paper?: boolean;
@@ -277,11 +277,9 @@ export function PreDepartureCheckList({
           ) : null}
         </details>
       )}
-      {/* The trip packet's print stylesheet hides every button/input in
-          `.trip-print-bundle` on the strength that nothing value-bearing lives
-          inside one — and a collapsed disclosure prints nothing at all. Both
-          are why the printed list is restated here, outside the control, so the
-          sheet a captain carries offline still says what was checked. */}
+      {/* A collapsed disclosure prints nothing at all, so the printed list is
+          restated here, outside the control, and the sheet a captain carries
+          offline still says what was checked. */}
       <div data-print-only className="hidden px-4 py-3 print:block">
         <h2 className="text-base font-semibold">{copy.heading}</h2>
         <ul className="mt-1 flex flex-col gap-1">
