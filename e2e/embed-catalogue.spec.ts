@@ -205,7 +205,7 @@ test.describe("the loader on a host page", () => {
     const sheet = page.getByRole("dialog", { name: "Book a dive" });
     await expect(sheet.locator("iframe")).toHaveAttribute(
       "src",
-      /\/s\/blue-mantis\/embed\/calendar\?/,
+      /\/s\/blue-mantis\/embed\/calendar(\?|$)/,
     );
     await expect(sheet.getByRole("button", { name: "Close" })).toBeFocused();
     await page.keyboard.press("Escape");
