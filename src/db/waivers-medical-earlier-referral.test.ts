@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { getBookingReadiness, upsertTripRequirements } from "./readiness";
@@ -420,6 +421,9 @@ describe("a physician's letter that predates a re-signed referral", () => {
         requiresPayment: false,
       });
     }
+    // Readiness reads the app clock, which must have reached the re-signed
+    // referral: a signature dated after the clock is not one yet (issue #3781).
+    advanceClock(TODAY.getTime() - nowDate().getTime());
     const blocked = async (bookingId: string) =>
       (await getBookingReadiness(db, shop.id, bookingId))?.blockers.map((b) => b.code) ?? [];
     expect(await blocked(booking.id)).toContain("medical_review");

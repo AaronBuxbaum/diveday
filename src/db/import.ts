@@ -31,7 +31,7 @@
  * roster.
  */
 
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { declinedSizeNote } from "@/i18n/import-notes";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
@@ -44,13 +44,14 @@ import { NOTHING_RENTED } from "@/lib/rentals";
 import { storeImportReceiptDocument, storeImportWaiverDocument } from "@/lib/storage";
 import { ingestImageUrl } from "@/lib/storage/ingest-url";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
-import { isCompletedWaiverCurrent } from "@/lib/waivers";
+import { isCompletedWaiverCurrent, isUnclearedReferral } from "@/lib/waivers";
 import { readActiveStaffRoles } from "./authz";
 import { specialtyCardSpecialty } from "./card-columns";
 import type { AppDb } from "./client";
 import { createPerson } from "./people";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
+  bookings,
   cards,
   importedPaymentHistory,
   internalNotes,
@@ -845,23 +846,42 @@ async function writeEvidence(
   // completed record does not block the import — the diver already needs
   // a fresh signature per the shop's own currency rule, so a row with a
   // more current claim should fill that gap, not be silently dropped.
+  //
+  // **Superseding never ends a hold** (glossary: Medical hold, issue #3780):
+  // a refusal the owner retired, or a referral a rider's fresh link moved off
+  // its seat, still outranks every signature older than it, so an uncleared
+  // referral blocks the import superseded or not. A superseded record counts
+  // only from the signer's own seat or no seat, the rule
+  // `listSignedWaiversByPerson` reads the diver's evidence by.
   if (row.waiver) {
     if (!template) {
       summary.waiversSkippedNoTemplate += 1;
     } else {
       const existingRecords = await tx
-        .select()
+        .select({ record: waiverRecords })
         .from(waiverRecords)
+        .leftJoin(
+          bookings,
+          and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
+        )
         .where(
           and(
             eq(waiverRecords.shopId, shopId),
             eq(waiverRecords.personId, personId),
             inArray(waiverRecords.status, ["completed", "medical_review"]),
-            isNull(waiverRecords.supersededAt),
+            or(
+              isNull(waiverRecords.supersededAt),
+              isNull(waiverRecords.bookingId),
+              eq(bookings.personId, waiverRecords.personId),
+            ),
           ),
-        );
-      const hasActiveHold = existingRecords.some((r) => r.status === "medical_review");
-      const hasCurrentCompleted = existingRecords.some(
+        )
+        .then((rows) => rows.map((joined) => joined.record));
+      const liveRecords = existingRecords.filter((r) => !r.supersededAt);
+      const hasActiveHold =
+        liveRecords.some((r) => r.status === "medical_review") ||
+        existingRecords.some(isUnclearedReferral);
+      const hasCurrentCompleted = liveRecords.some(
         (r) =>
           r.status === "completed" && isCompletedWaiverCurrent(r, template.materialGeneration, now),
       );

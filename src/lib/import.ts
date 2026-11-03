@@ -652,6 +652,7 @@ export type ImportIssueCode =
   | "nitrox_imported_pending"
   | "nitrox_no_card_number"
   | "waiver_date_invalid"
+  | "waiver_date_future"
   | "waiver_imported"
   | "dob_invalid"
   | "visit_date_unreadable"
@@ -2131,10 +2132,23 @@ export function prepareContactImport(
     // waiver_accepted claims the diver already accepted a waiver — and its
     // medical clearance — at the prior shop. A signed date is kept only when
     // it is a real calendar date; an unparseable one is dropped with a note
-    // rather than silently misdating legal evidence.
+    // rather than silently misdating legal evidence. A date after the shop's
+    // today refuses the claim outright (issue #3781): a dd/mm system's
+    // `2026-12-03` for 12 March would otherwise stand until next December and
+    // outrank a referral the diver gives meanwhile, and dating it today
+    // instead would invent a signature nobody gave.
     let waiver: PreparedWaiver | null = null;
-    if (isTrueish(at(cells, "waiver_accepted"))) {
-      const signedAtRaw = clean(at(cells, "waiver_signed_at"));
+    const signedAtClaim = clean(at(cells, "waiver_signed_at"));
+    const signedInFuture =
+      signedAtClaim !== null && isValidCalendarDate(signedAtClaim) && signedAtClaim > today;
+    if (isTrueish(at(cells, "waiver_accepted")) && signedInFuture) {
+      issues.push({
+        level: "error",
+        code: "waiver_date_future",
+        params: { value: echoedCell(signedAtClaim) },
+      });
+    } else if (isTrueish(at(cells, "waiver_accepted"))) {
+      const signedAtRaw = signedAtClaim;
       let signedAt: string | null = null;
       if (signedAtRaw) {
         if (isValidCalendarDate(signedAtRaw)) {

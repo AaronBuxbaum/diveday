@@ -1150,6 +1150,7 @@
       "nitroxImportedPending": "Nitrox certification imported for staff review. A nitrox-required departure holds this diver until it is confirmed.",
       "nitroxNoCardNumber": "Nitrox marked on the source with no certification number. Add and verify the nitrox certification in DiveDay.",
       "waiverDateInvalid": "Waiver accepted date “{value}” isn’t a real calendar date (expected YYYY-MM-DD), so it was imported dated to today instead.",
+      "waiverDateFuture": "Waiver accepted date “{value}” is after today, so the waiver wasn’t imported. Check the file’s date order (YYYY-MM-DD) and send the diver a waiver.",
       "waiverImported": "Waiver imported as accepted: trusted from the prior shop, medical clearance included, and marked “imported”.",
       "dobInvalid": "Date of birth “{value}” isn’t a plausible calendar date (expected YYYY-MM-DD, 1900 or later, not in the future), so the diver was imported without it.",
       "visitDateUnreadable": "Visit date “{value}” isn’t a date we can read, so the diver imports without this visit.",

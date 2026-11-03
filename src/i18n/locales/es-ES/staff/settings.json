@@ -1150,6 +1150,7 @@
       "nitroxImportedPending": "Certificación de nitrox importada para revisión del personal. Una salida que exige nitrox retiene a este buceador hasta que se confirme.",
       "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de certificación. Agrega y verifica la certificación de nitrox en DiveDay.",
       "waiverDateInvalid": "La fecha de aceptación de la exención “{value}” no es una fecha de calendario real (se espera AAAA-MM-DD), así que se importó fechada hoy en su lugar.",
+      "waiverDateFuture": "La fecha de aceptación de la exención “{value}” es posterior a hoy, así que la exención no se importó. Revisa el orden de la fecha en el archivo (AAAA-MM-DD) y envía una exención al buceador.",
       "waiverImported": "Exención importada como aceptada: se acepta la del centro anterior, incluida la aptitud médica, y se marca como “importada”.",
       "dobInvalid": "La fecha de nacimiento “{value}” no es una fecha de calendario plausible (se espera AAAA-MM-DD, 1900 o posterior, no en el futuro), así que el buceador se importó sin ella.",
       "visitDateUnreadable": "La fecha de visita “{value}” no es una fecha que podamos leer, así que el buceador se importa sin esta visita.",
