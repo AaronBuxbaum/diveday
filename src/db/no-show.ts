@@ -377,9 +377,9 @@ export async function undoBookingNoShow(
     // A course session's gates at `restore` strictness, the ratio alone, which
     // counts its students, its divers (G5 of #2226): a priced rider beside the
     // class is a passenger, and a passenger's seat coming back asks no ratio
-    // at all. A gated session that has since lost its last instructor caps at
-    // zero and refuses too: a seat cannot be handed back to a session that
-    // could not sell it in the first place.
+    // at all. A ratio-gated session that has since lost its last instructor
+    // caps at zero and refuses too; one with no ratio takes the seat back,
+    // because staffing is a sale's gate, not an undo's (`COURSE_GATES`).
     const session = await readCourseSession(tx, trip);
     const courseRefusal = decideCourseAdmission({
       strictness: "restore",
