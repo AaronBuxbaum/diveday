@@ -124,8 +124,10 @@ export async function queueAndAttemptMediaDeletion(
   await attemptMediaDeletion(db, attempt, deleteFn);
 }
 
-function defaultStaleBefore(): Date | null {
-  return stuckBefore("media_deletion", nowDate());
+function defaultStaleBefore(): Date {
+  // The media window is never zero, so this is never null; a null here would
+  // retry deletes still in flight.
+  return stuckBefore("media_deletion", nowDate()) as Date;
 }
 
 /** Retry one attempt by id, scoped to the shop — the owner-visible "Retry" action. */
@@ -155,7 +157,7 @@ export async function retryMediaDeletion(
 export async function retryPendingMediaDeletions(
   db: AppDb,
   limit = 50,
-  staleBefore: Date | null = defaultStaleBefore(),
+  staleBefore: Date = defaultStaleBefore(),
   deleteFn: DeleteFn = deleteStoredImageTracked,
 ): Promise<{ attempted: number; succeeded: number }> {
   const rows = await db

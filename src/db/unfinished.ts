@@ -102,7 +102,8 @@ export type UnfinishedOptions = {
    * Rows that became unfinished before this count. Defaults to the kind's own
    * window from the app clock (`stuckBefore`); Today passes its own `now`
    * through `raisedOnTodayBefore`, and tests inject a fixed date. `null` reads
-   * with no window.
+   * with no window. Owed erasures and failed refunds take no cutoff at all:
+   * they are listed at any age, whatever a caller passes.
    */
   olderThan?: Date | null;
   /** How many rows one read returns. The money queues are panels, not ledgers. */
@@ -135,6 +136,9 @@ function ledgerUnfinished(
         : inArray(status, windowed),
     );
   }
+  // An empty `or()` is no filter at all: every row of the shop, done ones
+  // included. A kind that lists nothing is a mistake in ATTEMPT_RULES.
+  if (clauses.length === 0) throw new Error(`unfinished: ${kind} lists no status`);
   return or(...clauses) as SQL;
 }
 
@@ -301,7 +305,7 @@ const mediaDeletions: KindReader<"media_deletion"> = async (db, shopId, olderTha
  * Settings' Data group. An obligation names a record in one shop's Stripe
  * account and has no business being readable from another's.
  */
-const processorErasures: KindReader<"processor_erasure"> = async (db, shopId, olderThan) =>
+const processorErasures: KindReader<"processor_erasure"> = async (db, shopId) =>
   db
     .select()
     .from(processorErasureObligations)
@@ -314,7 +318,6 @@ const processorErasures: KindReader<"processor_erasure"> = async (db, shopId, ol
           processorErasureObligations.createdAt,
           null,
         ),
-        olderThan ? lt(processorErasureObligations.createdAt, olderThan) : undefined,
       ),
     )
     .orderBy(asc(processorErasureObligations.createdAt));
@@ -404,7 +407,7 @@ const QUEUE_LIMIT = 50;
  * Money captured after its checkout closed is left to its own queue
  * (`listPaidAfterCloseCheckouts`), which already owes it.
  */
-const failedRefunds: KindReader<"failed_refund"> = async (db, shopId, olderThan, options) => {
+const failedRefunds: KindReader<"failed_refund"> = async (db, shopId, _olderThan, options) => {
   const targetRefunded = sql<number>`coalesce(${orders.refundedCents}, ${bookingCheckouts.refundedCents}, 0)`;
   const rows = await db
     .select({
@@ -436,7 +439,6 @@ const failedRefunds: KindReader<"failed_refund"> = async (db, shopId, olderThan,
         eq(stripeRefundFailures.shopId, shopId),
         isNull(bookingCheckouts.paidAfterCloseAt),
         sql`${targetRefunded} < ${stripeRefundFailures.owedUntilRefundedCents}`,
-        olderThan ? lt(stripeRefundFailures.failedAt, olderThan) : undefined,
       ),
     )
     .orderBy(asc(stripeRefundFailures.failedAt))
