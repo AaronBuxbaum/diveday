@@ -9,10 +9,10 @@ import { createDiver, getDiverProfile } from "./divers";
 import { clearDrysuitExperienceSeen, recordDrysuitExperienceSeen } from "./drysuit-experience";
 import {
   activityEvents,
+  cards,
   people,
   personRoles,
   rentalFitProfiles,
-  specialtyCertifications,
   userAccounts,
 } from "./schema";
 
@@ -97,11 +97,11 @@ describe("drysuit experience seen (#2136)", () => {
     const { db, shop } = ctx;
     const diver = await dryDiver("Cardless Cal");
     await record(diver.id, await ownerId());
-    const cards = await db
-      .select({ id: specialtyCertifications.id })
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.personId, diver.id));
-    expect(cards).toEqual([]);
+    const specialtyCards = await db
+      .select({ id: cards.id })
+      .from(cards)
+      .where(and(eq(cards.kind, "specialty"), eq(cards.personId, diver.id)));
+    expect(specialtyCards).toEqual([]);
     expect((await getDiverProfile(db, shop.id, diver.id))?.specialtyCertifications).toEqual([]);
   });
 
@@ -148,7 +148,8 @@ describe("drysuit experience seen (#2136)", () => {
     expect(await record(wet.id, by)).toEqual({ ok: false, reason: "not_recordable" });
 
     const carded = await dryDiver("Pending Pia");
-    await db.insert(specialtyCertifications).values({
+    await db.insert(cards).values({
+      kind: "specialty",
       shopId: shop.id,
       personId: carded.id,
       specialty: "drysuit",
@@ -159,9 +160,9 @@ describe("drysuit experience seen (#2136)", () => {
     expect(await record(carded.id, by)).toEqual({ ok: false, reason: "not_recordable" });
     // A deleted card is not a card on file: recording is open again.
     await db
-      .update(specialtyCertifications)
+      .update(cards)
       .set({ deletedAt: nowDate() })
-      .where(eq(specialtyCertifications.personId, carded.id));
+      .where(and(eq(cards.kind, "specialty"), eq(cards.personId, carded.id)));
     expect(await record(carded.id, by)).toEqual({ ok: true });
 
     await db.insert(rentalFitProfiles).values({ shopId: shop.id, personId: by, divesDry: true });

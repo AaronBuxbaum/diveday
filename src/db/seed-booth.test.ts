@@ -15,7 +15,7 @@ import { getSafetyMonth } from "./safety-report";
 import {
   bookingPayments,
   bookings,
-  certifications,
+  cards,
   diveSites,
   executedDives,
   interests,
@@ -124,16 +124,18 @@ describe("the demo's booth stories", () => {
     const { db, shop } = context;
     const rows = await db
       .select({
-        level: certifications.level,
-        issuedAt: certifications.issuedByShopAt,
-        tripId: certifications.issuedFromTripId,
+        level: cards.level,
+        issuedAt: cards.issuedByShopAt,
+        tripId: cards.issuedFromTripId,
         title: trips.title,
         tripEnds: trips.endsAt,
-        by: certifications.issuedByPersonId,
+        by: cards.issuedByPersonId,
       })
-      .from(certifications)
-      .innerJoin(trips, eq(trips.id, certifications.issuedFromTripId))
-      .where(and(eq(certifications.shopId, shop.id), isNotNull(certifications.issuedByShopAt)));
+      .from(cards)
+      .innerJoin(trips, eq(trips.id, cards.issuedFromTripId))
+      .where(
+        and(eq(cards.kind, "level"), eq(cards.shopId, shop.id), isNotNull(cards.issuedByShopAt)),
+      );
     const fromSession = rows.filter((row) => row.title === SHOP_CERTIFIED_TITLE);
     expect(fromSession).toHaveLength(2);
     for (const row of fromSession) {

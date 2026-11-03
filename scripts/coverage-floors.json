@@ -17,21 +17,18 @@
       }
     },
     {
-      "why": "Issue #2703 (PR #3715) moved listOwedShopCancellationRefunds and its tested olderThan/limit branches out of refunds.ts into src/db/unfinished.ts, where the same tests still cover them",
+      "why": "Issue #2722 (card ledger, #3733): anonymize.ts and readiness.ts read one cards table instead of three; promo-caps.ts and refunds.ts changed on the base layer this stack merged. Measured by CI on #3733 at 9db4a0d4; the coverage artifact cannot be downloaded from an agent session, so the values are copied from the job log",
       "files": {
-        "src/db/refunds.ts": "84.18 -> 83.76"
-      }
-    },
-    {
-      "why": "Arrived with the #2718 WIP commit b7cd4bfe3 that rode into main under PR #3715; the #2718 thread restores this coverage in its own PR",
-      "files": {
-        "src/db/promo-caps.ts": "75 -> 73.33"
+        "src/db/anonymize.ts": "91.77 -> 91.55",
+        "src/db/promo-caps.ts": "75 -> 73.33",
+        "src/db/refunds.ts": "84.18 -> 83.76",
+        "src/lib/readiness.ts": "99.06 -> 99.05"
       }
     }
   ],
   "src/db/aboard-at-sea.ts": 94.82,
   "src/db/account-security.ts": 94.02,
-  "src/db/anonymize.ts": 91.77,
+  "src/db/anonymize.ts": 91.55,
   "src/db/boarding-certification-snapshot.ts": 83.33,
   "src/db/bookings.ts": 87.66,
   "src/db/certification-evidence.ts": 50,
@@ -105,7 +102,7 @@
   "src/lib/payments/erasure-failure.ts": 100,
   "src/lib/pre-departure-check.ts": 100,
   "src/lib/readiness-summary.ts": 96.15,
-  "src/lib/readiness.ts": 99.06,
+  "src/lib/readiness.ts": 99.05,
   "src/lib/requirement.ts": 91.66,
   "src/lib/roll-call-alerts.ts": 100,
   "src/lib/roll-call-population.ts": 100,

@@ -75,6 +75,8 @@ export function SuggestShopLink({
     };
     name.addEventListener("input", onNameInput);
     slugField.addEventListener("input", onSlugInput);
+    // A name typed before hydration fired no listener: suggest from it now.
+    if (name.value) onNameInput();
     return () => {
       name.removeEventListener("input", onNameInput);
       slugField.removeEventListener("input", onSlugInput);

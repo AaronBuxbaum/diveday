@@ -8,19 +8,21 @@ import { SharedDepthAdvisories, sharedDepthAdvisories } from "./SharedDepthAdvis
 afterEach(cleanup);
 
 const deep = {
-  status: "exceeds",
-  siteDepth: 30,
-  limitDepth: 18,
-  unit: "meters",
-  basis: "certification",
-  level: null,
+  code: "depth_exceeds_ceiling",
+  params: {
+    siteDepth: 30,
+    limitDepth: 18,
+    unit: "meters",
+    basis: "certification",
+    level: null,
+  },
 } as const;
 
 function deepDiver(index: number, name: string) {
   return diver({
     bookingId: `00000000-0000-4000-8000-00000000000${index}`,
     fullName: name,
-    depthAdvisory: deep,
+    advisories: [deep],
   });
 }
 

@@ -4,13 +4,7 @@ import type { AppDb } from "@/db/client";
 import { createNitroxCertification } from "@/db/nitrox";
 import { addDiverNote, listDiverRecordNotes } from "@/db/operations";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
-import {
-  certifications,
-  internalNotes,
-  nitroxCertifications,
-  people,
-  specialtyCertifications,
-} from "@/db/schema";
+import { cards, internalNotes, people } from "@/db/schema";
 import { readUndoOffer } from "@/lib/undo";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -104,8 +98,8 @@ async function undo(slug: string, fields: Record<string, string>) {
   return redirectedTo(() => undoAction(slug, form(fields)));
 }
 
-async function rowOf(db: AppDb, table: typeof certifications, id: string) {
-  const [row] = await db.select().from(table).where(eq(table.id, id));
+async function rowOf(db: AppDb, id: string) {
+  const [row] = await db.select().from(cards).where(eq(cards.id, id));
   return row;
 }
 
@@ -120,12 +114,12 @@ describe("an Undo puts back exactly what was removed", () => {
       identifier: "UNDO-L-1",
     });
     if (!card) throw new Error("card insert failed");
-    const before = await rowOf(db, certifications, card.id);
+    const before = await rowOf(db, card.id);
 
     const removed = await redirectedTo(() =>
       deleteCertificationAction(shop.slug, personId, form({ certificationId: card.id })),
     );
-    expect((await rowOf(db, certifications, card.id))?.deletedAt).not.toBeNull();
+    expect((await rowOf(db, card.id))?.deletedAt).not.toBeNull();
     const offer = offerFrom(removed);
     expect(offer).toEqual({
       undo: "diver-card",
@@ -137,7 +131,7 @@ describe("an Undo puts back exactly what was removed", () => {
     const landed = await undo(shop.slug, offer);
 
     expect(landed).toContain("notice=card-restored");
-    const after = await rowOf(db, certifications, card.id);
+    const after = await rowOf(db, card.id);
     expect({ ...after, deletedByPersonId: before?.deletedByPersonId }).toEqual(before);
   });
 
@@ -158,11 +152,11 @@ describe("an Undo puts back exactly what was removed", () => {
     });
     if (!specialty || !nitrox) throw new Error("card insert failed");
 
-    for (const [card, cardType, table] of [
-      [specialty, "specialty", specialtyCertifications],
-      [nitrox, "nitrox", nitroxCertifications],
+    for (const [card, cardType] of [
+      [specialty, "specialty"],
+      [nitrox, "nitrox"],
     ] as const) {
-      const [before] = await db.select().from(table).where(eq(table.id, card.id));
+      const before = await rowOf(db, card.id);
       const removed = await redirectedTo(() =>
         deleteSpecialtyAction(shop.slug, personId, form({ certificationId: card.id, cardType })),
       );
@@ -170,7 +164,7 @@ describe("an Undo puts back exactly what was removed", () => {
       expect(offer).toMatchObject({ undo: "diver-card", undoCard: card.id, cardType });
 
       expect(await undo(shop.slug, offer)).toContain("notice=card-restored");
-      const [after] = await db.select().from(table).where(eq(table.id, card.id));
+      const after = await rowOf(db, card.id);
       expect({ ...after, deletedByPersonId: before?.deletedByPersonId }).toEqual(before);
     }
   });
@@ -257,7 +251,7 @@ describe("an Undo is an endpoint, so every field of it is refused when it is wro
     );
 
     await expect(undoAction("another-shop", form(offerFrom(removed)))).rejects.toThrow("NOT_FOUND");
-    expect((await rowOf(db, certifications, card.id))?.deletedAt).not.toBeNull();
+    expect((await rowOf(db, card.id))?.deletedAt).not.toBeNull();
   });
 
   it.each([
@@ -342,7 +336,7 @@ describe("an Undo is an endpoint, so every field of it is refused when it is wro
     });
 
     expect(landed).toContain("notice=card-restore-conflict");
-    expect((await rowOf(db, certifications, card.id))?.deletedAt).not.toBeNull();
+    expect((await rowOf(db, card.id))?.deletedAt).not.toBeNull();
   });
 
   it("never brings an erased diver's card or note text back", async () => {
@@ -378,7 +372,7 @@ describe("an Undo is an endpoint, so every field of it is refused when it is wro
 
     expect(card_).toContain("notice=card-restore-conflict");
     expect(note).toContain("notice=invalid");
-    expect((await rowOf(db, certifications, card.id))?.deletedAt).not.toBeNull();
+    expect((await rowOf(db, card.id))?.deletedAt).not.toBeNull();
     expect(await listDiverRecordNotes(db, shop.id, personId)).toEqual([]);
   });
 });

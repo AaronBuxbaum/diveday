@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
-import { certifications, nitroxCertifications, people, specialtyCertifications } from "./schema";
+import { type CardKind, cards, people } from "./schema";
 
 /**
  * **What an Undo may put back** (issue #2764). An undo offer arrives as URL
@@ -28,28 +28,22 @@ export async function isPersonErased(
   return row?.anonymizedAt != null;
 }
 
-const CARD_TABLES = {
-  level: certifications,
-  specialty: specialtyCertifications,
-  nitrox: nitroxCertifications,
-} as const;
-
 /**
- * The person a card of this shop belongs to, from the table its type names,
- * or null for no such card. Lets a card's Undo refuse an offer that names one
- * diver's record and another diver's card.
+ * The person a card of this shop belongs to, when it is a card of the kind the
+ * offer names, or null for no such card. Lets a card's Undo refuse an offer
+ * that names one diver's record and another diver's card, and an offer that
+ * names a level card's Undo with a nitrox card's id.
  */
 export async function cardOwner(
   db: DbExecutor,
   shopId: string,
-  cardType: keyof typeof CARD_TABLES,
+  cardType: CardKind,
   cardId: string,
 ): Promise<string | null> {
-  const table = CARD_TABLES[cardType];
   const [row] = await db
-    .select({ personId: table.personId })
-    .from(table)
-    .where(and(eq(table.id, cardId), eq(table.shopId, shopId)))
+    .select({ personId: cards.personId })
+    .from(cards)
+    .where(and(eq(cards.id, cardId), eq(cards.shopId, shopId), eq(cards.kind, cardType)))
     .limit(1);
   return row?.personId ?? null;
 }

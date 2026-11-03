@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-30
+- **Amended by:** [20261103-advisory-is-a-finding](20261103-advisory-is-a-finding.md) — the depth advisory is an entry in `advisories` beside `readiness`, a finding at strictness zero; it still never becomes a blocker.
 
 > The junior age-only assumptions in this decision were amended by
 > [Junior card evidence](20261027-junior-card-evidence.md). Agency rules and

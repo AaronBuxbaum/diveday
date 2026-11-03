@@ -1,3 +1,4 @@
+import { depthAdvisoryIn } from "@/lib/findings";
 import {
   blockedAtRail,
   medicalHoldAfterDive,
@@ -155,8 +156,7 @@ export function diverRowState(
                 ? "medical"
                 : minorAge
                   ? "minor"
-                  : diver.depthAdvisory?.status === "exceeds" ||
-                      diver.depthAdvisory?.status === "verification_required"
+                  : depthAdvisoryIn(diver.advisories)
                     ? "depth"
                     : diver.birthday
                       ? "birthday"

@@ -77,6 +77,7 @@ import { forgetClaudeCallContent } from "./claude-call-content";
 import type { AppDb, AppTransaction } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import { queueMediaDeletion } from "./media-deletions";
+import { forgetPremergeCards } from "./premerge-cards-cleanup";
 import {
   attemptProcessorErasures,
   type ProcessorErasureTargetInput,
@@ -101,8 +102,8 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   capabilities,
+  cards,
   certificationJuniorReviews,
-  certifications,
   courseFormRecords,
   customerGearItems,
   emailBounces,
@@ -114,7 +115,6 @@ import {
   interests,
   internalNotes,
   lostItems,
-  nitroxCertifications,
   notificationDeliveries,
   notificationSendQueue,
   orderLineItems,
@@ -132,7 +132,6 @@ import {
   rollCallEvents,
   shopShoreAlertTokens,
   shops,
-  specialtyCertifications,
   staffCredentialHistory,
   staffCredentials,
   staffReplies,
@@ -987,10 +986,10 @@ async function scrubCertificationEvidence(
   // Nothing to retire from the blob store here any more: a card never carried a
   // photograph after ADR 20260811-retire-the-digital-card dropped
   // `card_image_url`. Recap photos and waiver documents still do, below.
-  const levelCards = await tx
+  const personCards = await tx
     .select()
-    .from(certifications)
-    .where(and(eq(certifications.shopId, shopId), eq(certifications.personId, personId)));
+    .from(cards)
+    .where(and(eq(cards.shopId, shopId), eq(cards.personId, personId)));
   await tx
     .delete(certificationJuniorReviews)
     .where(
@@ -999,9 +998,13 @@ async function scrubCertificationEvidence(
         eq(certificationJuniorReviews.personId, personId),
       ),
     );
-  for (const card of levelCards) {
+  // Every kind of card at once: erasure is the one reader that means them all.
+  // The level-only columns (the diver's own claimed number, the junior wording)
+  // are null on the other kinds already, so clearing them on every row is the
+  // same act for each.
+  for (const card of personCards) {
     await tx
-      .update(certifications)
+      .update(cards)
       .set({
         identifier: redactedUniqueValue("redacted"),
         // The diver's own claimed number is theirs too, and it is the one a
@@ -1014,47 +1017,10 @@ async function scrubCertificationEvidence(
         juniorStatusVerifiedByPersonId: null,
         deletedAt: card.deletedAt ?? now,
       })
-      .where(eq(certifications.id, card.id));
+      .where(eq(cards.id, card.id));
   }
-
-  const specialtyCards = await tx
-    .select()
-    .from(specialtyCertifications)
-    .where(
-      and(
-        eq(specialtyCertifications.shopId, shopId),
-        eq(specialtyCertifications.personId, personId),
-      ),
-    );
-  for (const card of specialtyCards) {
-    await tx
-      .update(specialtyCertifications)
-      .set({
-        identifier: redactedUniqueValue("redacted"),
-        reviewNote: null,
-        importedFromLabel: null,
-        deletedAt: card.deletedAt ?? now,
-      })
-      .where(eq(specialtyCertifications.id, card.id));
-  }
-
-  const nitroxCards = await tx
-    .select()
-    .from(nitroxCertifications)
-    .where(
-      and(eq(nitroxCertifications.shopId, shopId), eq(nitroxCertifications.personId, personId)),
-    );
-  for (const card of nitroxCards) {
-    await tx
-      .update(nitroxCertifications)
-      .set({
-        identifier: redactedUniqueValue("redacted"),
-        reviewNote: null,
-        importedFromLabel: null,
-        deletedAt: card.deletedAt ?? now,
-      })
-      .where(eq(nitroxCertifications.id, card.id));
-  }
+  // The retired tables' copy too, until they drop (issue #2722).
+  await forgetPremergeCards(tx, shopId, personId, now);
   return [];
 }
 

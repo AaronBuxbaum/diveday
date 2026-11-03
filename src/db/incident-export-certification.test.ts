@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -10,7 +10,7 @@ import { mergeDiverRecords } from "./diver-merge";
 import { getIncidentExport } from "./incident-export";
 import { recordRollCall } from "./manifests";
 import { createCertification, reviewCertification } from "./readiness";
-import { bookings, certifications, people, personRoles, rollCallEvents } from "./schema";
+import { bookings, cards, people, personRoles, rollCallEvents } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -100,9 +100,9 @@ describe("departure-log certification captures", () => {
     ).toMatchObject({ ok: true });
     const before = await getIncidentExport(db, shop.id, reef.id, staff.id);
     await db
-      .update(certifications)
+      .update(cards)
       .set({ status: "pending", reviewedAt: null, reviewedByPersonId: null })
-      .where(eq(certifications.id, card.id));
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     const after = await getIncidentExport(db, shop.id, reef.id, staff.id);
     const entry = after?.roster.find((row) => row.bookingId === first.booking.id);
     expect(
@@ -259,7 +259,8 @@ describe("departure-log certification captures", () => {
       { personId: source.id, role: "diver" },
       { personId: survivor.id, role: "diver" },
     ]);
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: first.person.id,
       agency: "padi",
@@ -344,7 +345,8 @@ describe("departure-log certification captures", () => {
     await db
       .insert(bookings)
       .values({ shopId: shop.id, tripId: reef.id, personId: survivor.id, bookedAs: "diver" });
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: first.person.id,
       agency: "padi",

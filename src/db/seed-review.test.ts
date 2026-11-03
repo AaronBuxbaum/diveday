@@ -4,14 +4,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import {
-  bookings,
-  certifications,
-  nitroxCertifications,
-  people,
-  specialtyCertifications,
-  trips,
-} from "./schema";
+import { bookings, cards, people, trips } from "./schema";
 
 /**
  * **A verified card names who checked it, and when** — across the whole seeded
@@ -34,11 +27,8 @@ import {
  * scenario belongs to, and nothing about writing it would prompt anyone to
  * think about a reviewer.
  */
-const CARD_TABLES = [
-  { name: "certifications", table: certifications },
-  { name: "specialty certifications", table: specialtyCertifications },
-  { name: "nitrox certifications", table: nitroxCertifications },
-] as const;
+// One ledger since issue #2722: every kind of card is checked at once.
+const CARD_TABLES = [{ name: "cards", table: cards }] as const;
 
 /** Verified cards that are nobody's review to claim — see `seed-review.ts`. */
 function notAReview(table: (typeof CARD_TABLES)[number]["table"]) {
@@ -116,13 +106,10 @@ describe("the seeded shop's verified cards", () => {
     // 20260725-import-specialty-cards); stamping a reviewer would silence it.
     const { db, shop } = await seededShopContext();
     const imported = await db
-      .select({ reviewedAt: specialtyCertifications.reviewedAt })
-      .from(specialtyCertifications)
+      .select({ reviewedAt: cards.reviewedAt })
+      .from(cards)
       .where(
-        and(
-          eq(specialtyCertifications.shopId, shop.id),
-          isNotNull(specialtyCertifications.importedAt),
-        ),
+        and(eq(cards.shopId, shop.id), eq(cards.kind, "specialty"), isNotNull(cards.importedAt)),
       );
     expect(imported.length).toBeGreaterThan(0);
     expect(imported.every((row) => row.reviewedAt === null)).toBe(true);
@@ -131,9 +118,9 @@ describe("the seeded shop's verified cards", () => {
   it("leaves a pending card unreviewed, because that is what pending means", async () => {
     const { db, shop } = await seededShopContext();
     const pending = await db
-      .select({ reviewedByPersonId: certifications.reviewedByPersonId })
-      .from(certifications)
-      .where(and(eq(certifications.shopId, shop.id), eq(certifications.status, "pending")));
+      .select({ reviewedByPersonId: cards.reviewedByPersonId })
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.shopId, shop.id), eq(cards.status, "pending")));
     expect(pending.length).toBeGreaterThan(0);
     expect(pending.every((row) => row.reviewedByPersonId === null)).toBe(true);
   });

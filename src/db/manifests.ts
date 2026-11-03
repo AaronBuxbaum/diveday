@@ -1060,8 +1060,8 @@ export async function getTripManifests(
   const trainingAttributionByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.trainingSiteAttributionUnknown] as const),
   );
-  const depthByBooking = new Map(
-    readinessRows.map((row) => [row.booking.id, row.depthAdvisory] as const),
+  const advisoriesByBooking = new Map(
+    readinessRows.map((row) => [row.booking.id, row.advisories] as const),
   );
   // When/how each diver's medical currency was last established, for spotting a
   // stale medical. Digital and staff-attested paper reviews both resolve here;
@@ -1289,7 +1289,7 @@ export async function getTripManifests(
         }),
         tripEndsAt: trip.endsAt,
       }),
-      depthAdvisory: depthByBooking.get(booking.id),
+      advisories: advisoriesByBooking.get(booking.id),
       // Said whether or not the shop still offers hotel pickups (the Features
       // page): switching the offer off stops new ones, and a diver already
       // promised a pickup is still collected.

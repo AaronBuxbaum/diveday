@@ -35,7 +35,7 @@ import { recordSelfDeclaredCards } from "./self-declared-cards";
  * design.
  *
  * **Written through `recordSelfDeclaredCards`, never by inserting a
- * `certifications` row directly**, so the seed cannot drift from the writer's
+ * `cards` row directly**, so the seed cannot drift from the writer's
  * own anti-displacement rules and so a change to what a declaration *is* reaches
  * the demo automatically.
  *

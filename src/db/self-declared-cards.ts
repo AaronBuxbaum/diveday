@@ -5,14 +5,9 @@ import {
   certificationRank,
   isUnsightedSelfDeclaration,
 } from "@/lib/readiness";
+import { levelCardLevel } from "./card-columns";
 import type { DbExecutor } from "./client";
-import {
-  type CertificationAgency,
-  certifications,
-  nitroxCertifications,
-  people,
-  specialtyCertifications,
-} from "./schema";
+import { type CertificationAgency, cards, people } from "./schema";
 
 /**
  * **What a diver said about themselves on a public opt-in, written down as
@@ -37,9 +32,9 @@ import {
  * **The third answer is "I'm not certified yet", and it is not a card.** A
  * large share of joiners at a Florida or Caribbean shop hold none — Discover
  * Scuba customers, snorkellers, the non-diving half of a couple — and it lands
- * on `people.no_certification_declared_at` rather than in `certifications`,
+ * on `people.no_certification_declared_at` rather than in `cards`,
  * because a Discover Scuba experience is not a certification and every row in
- * that table asserts a card exists (`recordNoCertification` below, ADR
+ * that ledger asserts a card exists (`recordNoCertification` below, ADR
  * 20260814-self-declared-cards).
  *
  * **This is informing, never gating.** Nothing written here filters a blast or
@@ -85,7 +80,7 @@ export type RecordSelfDeclaredCardsInput = {
    * The joiner answered "I'm not certified yet" — a statement that there is no
    * card, which is why it can never be a `level`. It lands as its own stamp on
    * the person (`people.no_certification_declared_at`) and never as a
-   * `certifications` row: a Discover Scuba experience is not a certification.
+   * `cards` row: a Discover Scuba experience is not a certification.
    */
   noCertification?: boolean;
   /**
@@ -100,7 +95,7 @@ export type RecordSelfDeclaredCardsInput = {
    * types what is on the card in their hand. What they change is what the verify
    * queue has to work with before the dive date, which until now was nothing.
    *
-   * The number lands in `certifications.declared_identifier`, a column outside
+   * The number lands in `cards.declared_identifier` (level cards only), a column outside
    * the unique index and outside every evidence read — see that column.
    */
   agency?: CertificationAgency | null;
@@ -197,7 +192,7 @@ export async function recordSelfDeclaredCards(
  *
  * The three rules it inherits, and the one it adds:
  *
- * - **Anti-displacement, unchanged and widened to all three card tables.** The
+ * - **Anti-displacement, unchanged and widened to every kind of card.** The
  *   claim here is "there is no card", so *any* live card the shop actually
  *   holds refutes it — a level card, a nitrox card or a specialty card,
  *   `pending` or `verified`, captured or imported, or a claim this shop has
@@ -237,15 +232,13 @@ export async function recordSelfDeclaredCards(
  * A row is real when a staffer verified it, **or** when nobody ever declared it
  * — a staff capture and a CSV import both land with a null stamp.
  */
-function isRealCard(
-  table: typeof certifications | typeof nitroxCertifications | typeof specialtyCertifications,
-) {
-  return or(eq(table.status, "verified"), isNull(table.selfDeclaredAt));
+function isRealCard() {
+  return or(eq(cards.status, "verified"), isNull(cards.selfDeclaredAt));
 }
 
 /**
- * True when this shop holds a card for this person in either of the two tables
- * {@link recordLevel} does not read — a nitrox card a staffer sighted, or any
+ * True when this shop holds a card for this person of either kind
+ * {@link recordLevel} does not read (`cards`, kind = nitrox or specialty) — a nitrox card a staffer sighted, or any
  * specialty row at all.
  *
  * `recordNoCertification` asks the identical question inline rather than
@@ -254,9 +247,8 @@ function isRealCard(
  * stay in step — the whole reason this exists is that they were not
  * (`security-reviewer`, 2026-08-20).
  *
- * `specialty_certifications` has no `self_declared_at` column, so every row
- * there is staff-captured or imported and its existence alone settles it — the
- * only one of the three tables where a row's mere presence is the answer.
+ * A specialty card counts only when it is real (`isRealCard`), like a nitrox
+ * card: a diver can type a specialty claim on their own readiness link.
  */
 async function holdsRealCardOutsideLevels(
   tx: DbExecutor,
@@ -265,14 +257,15 @@ async function holdsRealCardOutsideLevels(
   // Sequential, never `Promise.all`: this runs inside the caller's transaction,
   // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
   const [realNitrox] = await tx
-    .select({ id: nitroxCertifications.id })
-    .from(nitroxCertifications)
+    .select({ id: cards.id })
+    .from(cards)
     .where(
       and(
-        eq(nitroxCertifications.shopId, input.shopId),
-        eq(nitroxCertifications.personId, input.personId),
-        isNull(nitroxCertifications.deletedAt),
-        isRealCard(nitroxCertifications),
+        eq(cards.kind, "nitrox"),
+        eq(cards.shopId, input.shopId),
+        eq(cards.personId, input.personId),
+        isNull(cards.deletedAt),
+        isRealCard(),
       ),
     )
     .limit(1);
@@ -284,14 +277,16 @@ async function holdsRealCardOutsideLevels(
   // level declaration. Before the column existed, every row here was
   // staff-captured or imported and presence was the right test.
   const [liveSpecialty] = await tx
-    .select({ id: specialtyCertifications.id })
-    .from(specialtyCertifications)
+    .select({ id: cards.id })
+    .from(cards)
     .where(
       and(
-        eq(specialtyCertifications.shopId, input.shopId),
-        eq(specialtyCertifications.personId, input.personId),
-        isNull(specialtyCertifications.deletedAt),
-        isRealCard(specialtyCertifications),
+        eq(cards.kind, "specialty"),
+        eq(cards.shopId, input.shopId),
+        eq(cards.personId, input.personId),
+        isNull(cards.deletedAt),
+        isRealCard(),
+        isRealCard(),
       ),
     )
     .limit(1);
@@ -307,16 +302,17 @@ async function recordNoCertification(
 
   const liveLevels = await tx
     .select({
-      id: certifications.id,
-      status: certifications.status,
-      selfDeclaredAt: certifications.selfDeclaredAt,
+      id: cards.id,
+      status: cards.status,
+      selfDeclaredAt: cards.selfDeclaredAt,
     })
-    .from(certifications)
+    .from(cards)
     .where(
       and(
-        eq(certifications.shopId, input.shopId),
-        eq(certifications.personId, input.personId),
-        isNull(certifications.deletedAt),
+        eq(cards.kind, "level"),
+        eq(cards.shopId, input.shopId),
+        eq(cards.personId, input.personId),
+        isNull(cards.deletedAt),
       ),
     );
   if (liveLevels.some((card) => !isUnsightedSelfDeclaration(card))) return "card_on_file";
@@ -330,32 +326,33 @@ async function recordNoCertification(
   // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
   const liveNitrox = await tx
     .select({
-      id: nitroxCertifications.id,
-      status: nitroxCertifications.status,
-      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
+      id: cards.id,
+      status: cards.status,
+      selfDeclaredAt: cards.selfDeclaredAt,
     })
-    .from(nitroxCertifications)
+    .from(cards)
     .where(
       and(
-        eq(nitroxCertifications.shopId, input.shopId),
-        eq(nitroxCertifications.personId, input.personId),
-        isNull(nitroxCertifications.deletedAt),
+        eq(cards.kind, "nitrox"),
+        eq(cards.shopId, input.shopId),
+        eq(cards.personId, input.personId),
+        isNull(cards.deletedAt),
       ),
     );
   if (liveNitrox.some((card) => !isUnsightedSelfDeclaration(card))) return "card_on_file";
 
-  // The third table, and the only one where a row's mere existence settles it.
-  // `specialty_certifications` has no `self_declared_at` at all — these forms
-  // cannot write there, so every row is a card a staffer captured or a CSV
-  // brought in, and a diver holding a Deep card is not a diver with no card.
+  // The third kind: a Deep card the shop holds says the diver is not a diver
+  // with no card. A Deep claim typed on /ready and never sighted is a claim,
+  // not a card, so it settles nothing (`isRealCard`).
   const [liveSpecialty] = await tx
-    .select({ id: specialtyCertifications.id })
-    .from(specialtyCertifications)
+    .select({ id: cards.id })
+    .from(cards)
     .where(
       and(
-        eq(specialtyCertifications.shopId, input.shopId),
-        eq(specialtyCertifications.personId, input.personId),
-        isNull(specialtyCertifications.deletedAt),
+        eq(cards.kind, "specialty"),
+        eq(cards.shopId, input.shopId),
+        eq(cards.personId, input.personId),
+        isNull(cards.deletedAt),
       ),
     )
     .limit(1);
@@ -363,33 +360,35 @@ async function recordNoCertification(
 
   for (const claim of liveLevels) {
     await tx
-      .update(certifications)
+      .update(cards)
       .set({ deletedAt: now })
       .where(
         and(
-          eq(certifications.id, claim.id),
-          eq(certifications.shopId, input.shopId),
+          eq(cards.kind, "level"),
+          eq(cards.id, claim.id),
+          eq(cards.shopId, input.shopId),
           // Defence in depth, the same shape the level writer uses: the read
           // above already proved every one of these is a still-unsighted claim,
           // and re-stating it in the writing statement means no later refactor
           // of the read can archive a card a staffer holds.
-          eq(certifications.status, "pending"),
-          isNotNull(certifications.selfDeclaredAt),
-          isNull(certifications.deletedAt),
+          eq(cards.status, "pending"),
+          isNotNull(cards.selfDeclaredAt),
+          isNull(cards.deletedAt),
         ),
       );
   }
   for (const claim of liveNitrox) {
     await tx
-      .update(nitroxCertifications)
+      .update(cards)
       .set({ deletedAt: now })
       .where(
         and(
-          eq(nitroxCertifications.id, claim.id),
-          eq(nitroxCertifications.shopId, input.shopId),
-          eq(nitroxCertifications.status, "pending"),
-          isNotNull(nitroxCertifications.selfDeclaredAt),
-          isNull(nitroxCertifications.deletedAt),
+          eq(cards.kind, "nitrox"),
+          eq(cards.id, claim.id),
+          eq(cards.shopId, input.shopId),
+          eq(cards.status, "pending"),
+          isNotNull(cards.selfDeclaredAt),
+          isNull(cards.deletedAt),
         ),
       );
   }
@@ -441,8 +440,8 @@ async function recordNoCertification(
  * **It cannot launder a claim into evidence, structurally.** Its only effect is
  * to move this person from a *stated* absence of a card to *no statement at
  * all* — the silence of somebody nobody asked. Evidence lives in
- * `certifications`, `nitrox_certifications` and `specialty_certifications`, and
- * this function touches none of them; nothing it writes can raise a level, add
+ * `cards` (kind = level, specialty or nitrox), and this function touches none
+ * of it; nothing it writes can raise a level, add
  * a card, or move a row toward `verified`. That is the whole reason it is safe
  * to open to every staff role, which is what capturing a card already is —
  * H-20260814-may-sight-card is the open question about who may *sight* one, and this deliberately
@@ -486,26 +485,27 @@ async function recordLevel(
 
   const live = await tx
     .select({
-      id: certifications.id,
+      id: cards.id,
       // `status` is not decoration here: the rule is "still an unsighted
       // claim", and a claim a staffer has since verified off a real card keeps
       // its `selfDeclaredAt` stamp forever (provenance is history). Selecting
       // only the stamp asks "is this row not self-declared", which is a
       // different and much weaker question — see the guard below.
-      status: certifications.status,
-      selfDeclaredAt: certifications.selfDeclaredAt,
+      status: cards.status,
+      selfDeclaredAt: cards.selfDeclaredAt,
     })
-    .from(certifications)
+    .from(cards)
     .where(
       and(
-        eq(certifications.shopId, input.shopId),
-        eq(certifications.personId, input.personId),
-        isNull(certifications.deletedAt),
+        eq(cards.kind, "level"),
+        eq(cards.shopId, input.shopId),
+        eq(cards.personId, input.personId),
+        isNull(cards.deletedAt),
       ),
     )
     // Deterministic, so "their own earlier statement" is the oldest one every
     // time rather than whatever the planner happened to return first.
-    .orderBy(asc(certifications.createdAt));
+    .orderBy(asc(cards.createdAt));
 
   // The anti-displacement rule, stated with the shared predicate rather than
   // re-derived. `selfDeclaredAt !== null` was the bug: a card the diver
@@ -516,12 +516,12 @@ async function recordLevel(
   // escalation to Instructor on evidence the shop believes it checked.
   if (live.some((card) => !isUnsightedSelfDeclaration(card))) return "card_on_file";
 
-  // **And any real card in the other two tables settles it too.**
+  // **And any real card of the other two kinds settles it too.**
   //
-  // Reading only `certifications` was a gap with no teeth while a claim was
+  // Reading only level cards was a gap with no teeth while a claim was
   // inert: a diver whose shop had captured their verified nitrox card but never
   // typed a level card — an ordinary state, since the rung is the one a
-  // divemaster eyeballs and does not transcribe — had an empty level table, so
+  // divemaster eyeballs and does not transcribe — had no level card, so
   // an anonymous poster could write a level onto their record. Harmless while
   // `decideTripAdmission` ignored the row; not harmless from the moment it
   // started believing it (ADR 20260820-attested-at-booking-verified-at-boarding,
@@ -560,27 +560,29 @@ async function recordLevel(
   const own = live.find(isUnsightedSelfDeclaration);
   if (own) {
     await tx
-      .update(certifications)
+      .update(cards)
       .set({ level: input.level, selfDeclaredAt: now, ...card })
       .where(
         and(
-          eq(certifications.id, own.id),
-          eq(certifications.shopId, input.shopId),
+          eq(cards.kind, "level"),
+          eq(cards.id, own.id),
+          eq(cards.shopId, input.shopId),
           // The read above filtered deleted rows; a staff `deleteCertification`
           // landing between the two would otherwise let an anonymous post edit
           // a card the shop has just retracted (`security-reviewer`).
-          isNull(certifications.deletedAt),
+          isNull(cards.deletedAt),
           // Defence in depth: the guard above already proved this row is a
           // still-unsighted claim, and this re-states it in the statement that
           // actually writes, where no later refactor of the read can lose it.
-          eq(certifications.status, "pending"),
-          isNotNull(certifications.selfDeclaredAt),
+          eq(cards.status, "pending"),
+          isNotNull(cards.selfDeclaredAt),
         ),
       );
     return "recorded";
   }
 
-  await tx.insert(certifications).values({
+  await tx.insert(cards).values({
+    kind: "level",
     shopId: input.shopId,
     personId: input.personId,
     level: input.level,
@@ -626,7 +628,7 @@ export type CertificationSummary = {
    * contradicts it**.
    *
    * The stamp is ignored rather than deleted (ADR 20260814-self-declared-cards),
-   * and *ignored* is decided here, on the same three-table test the writer
+   * and *ignored* is decided here, on the same every-kind test the writer
    * applies: any live card that is not itself a still-unsighted claim — a
    * level, a nitrox card, or a specialty — supersedes it. A reader that
    * suppressed the stamp on a *level* alone would put "Not certified yet —
@@ -712,17 +714,18 @@ export async function listCertificationSummaries(
 
   const levelRows = await db
     .select({
-      personId: certifications.personId,
-      level: certifications.level,
-      status: certifications.status,
-      selfDeclaredAt: certifications.selfDeclaredAt,
+      personId: cards.personId,
+      level: levelCardLevel,
+      status: cards.status,
+      selfDeclaredAt: cards.selfDeclaredAt,
     })
-    .from(certifications)
+    .from(cards)
     .where(
       and(
-        eq(certifications.shopId, shopId),
-        inArray(certifications.personId, [...personIds]),
-        isNull(certifications.deletedAt),
+        eq(cards.kind, "level"),
+        eq(cards.shopId, shopId),
+        inArray(cards.personId, [...personIds]),
+        isNull(cards.deletedAt),
       ),
     );
 
@@ -750,16 +753,17 @@ export async function listCertificationSummaries(
 
   const nitroxRows = await db
     .select({
-      personId: nitroxCertifications.personId,
-      status: nitroxCertifications.status,
-      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
+      personId: cards.personId,
+      status: cards.status,
+      selfDeclaredAt: cards.selfDeclaredAt,
     })
-    .from(nitroxCertifications)
+    .from(cards)
     .where(
       and(
-        eq(nitroxCertifications.shopId, shopId),
-        inArray(nitroxCertifications.personId, [...personIds]),
-        isNull(nitroxCertifications.deletedAt),
+        eq(cards.kind, "nitrox"),
+        eq(cards.shopId, shopId),
+        inArray(cards.personId, [...personIds]),
+        isNull(cards.deletedAt),
       ),
     );
 
@@ -782,18 +786,20 @@ export async function listCertificationSummaries(
   // **Only for the stamp**, and only when there is a stamp to refute. A
   // specialty card says nothing about a rung, so it never joins the phrase —
   // but it is a card the shop holds, and "this diver has no card at all" is
-  // false in front of one. `specialty_certifications` has no `self_declared_at`
-  // at all, so a live row is always evidence.
+  // false in front of one. A specialty the diver typed on /ready and nobody has
+  // sighted is a claim, not a card, so it refutes nothing (`isRealCard`).
   const unrefuted = [...declared].filter((id) => !carded.has(id));
   if (unrefuted.length > 0) {
     const specialtyRows = await db
-      .select({ personId: specialtyCertifications.personId })
-      .from(specialtyCertifications)
+      .select({ personId: cards.personId })
+      .from(cards)
       .where(
         and(
-          eq(specialtyCertifications.shopId, shopId),
-          inArray(specialtyCertifications.personId, unrefuted),
-          isNull(specialtyCertifications.deletedAt),
+          eq(cards.kind, "specialty"),
+          eq(cards.shopId, shopId),
+          inArray(cards.personId, unrefuted),
+          isNull(cards.deletedAt),
+          isRealCard(),
         ),
       );
     for (const row of specialtyRows) carded.add(row.personId);
@@ -837,19 +843,20 @@ async function recordNitrox(
 
   const live = await tx
     .select({
-      id: nitroxCertifications.id,
-      status: nitroxCertifications.status,
-      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
+      id: cards.id,
+      status: cards.status,
+      selfDeclaredAt: cards.selfDeclaredAt,
     })
-    .from(nitroxCertifications)
+    .from(cards)
     .where(
       and(
-        eq(nitroxCertifications.shopId, input.shopId),
-        eq(nitroxCertifications.personId, input.personId),
-        isNull(nitroxCertifications.deletedAt),
+        eq(cards.kind, "nitrox"),
+        eq(cards.shopId, input.shopId),
+        eq(cards.personId, input.personId),
+        isNull(cards.deletedAt),
       ),
     )
-    .orderBy(asc(nitroxCertifications.createdAt));
+    .orderBy(asc(cards.createdAt));
 
   // The same one-line bug as the level twin, and the same fix. It costs less
   // here — a nitrox row has no level to escalate — but it still let an
@@ -862,20 +869,22 @@ async function recordNitrox(
     // Nothing to change but the date they last said it — a nitrox card carries
     // no level, so re-declaring is only a fresher timestamp.
     await tx
-      .update(nitroxCertifications)
+      .update(cards)
       .set({ selfDeclaredAt: now })
       .where(
         and(
-          eq(nitroxCertifications.id, own.id),
-          eq(nitroxCertifications.shopId, input.shopId),
-          eq(nitroxCertifications.status, "pending"),
-          isNotNull(nitroxCertifications.selfDeclaredAt),
+          eq(cards.kind, "nitrox"),
+          eq(cards.id, own.id),
+          eq(cards.shopId, input.shopId),
+          eq(cards.status, "pending"),
+          isNotNull(cards.selfDeclaredAt),
         ),
       );
     return "recorded";
   }
 
-  await tx.insert(nitroxCertifications).values({
+  await tx.insert(cards).values({
+    kind: "nitrox",
     shopId: input.shopId,
     personId: input.personId,
     agency: "other",
