@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
+import net from "node:net";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,8 +12,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * arguments). This file imports every route the directory holds and asks it:
  *
  * - **Refused, it does nothing.** No secret, no header, a wrong token: the
- *   answer is the gate's 503 or 401, and the database, Sentry and the network
- *   were never touched, neither while the module loaded nor while it answered.
+ *   answer is the gate's 503 or 401, and the database, Sentry, `fetch` and any
+ *   socket were never touched, neither while the module loaded nor while it answered.
  * - **Admitted, its monitor schedule is the one Vercel runs.** The first Sentry
  *   check-in names the crontab vercel.json deploys for that path, so a monitor
  *   cannot drift from its cron and page for a tick that was never due (or stay
@@ -57,6 +58,14 @@ const fetchSpy = vi.fn(async () => {
   throw new Error("a cron route reached the network in a test");
 });
 
+/**
+ * Every Node client that is not `fetch` (the AWS and Stripe SDKs, SMTP, a
+ * Postgres driver) opens a socket through `net.Socket#connect`, TLS included.
+ */
+const connectSpy = vi.spyOn(net.Socket.prototype, "connect").mockImplementation(() => {
+  throw new Error("a cron route opened a socket in a test");
+});
+
 function cronRequest(name: string, authorization?: string): Request {
   const headers: Record<string, string> = {};
   if (authorization !== undefined) headers.authorization = authorization;
@@ -69,6 +78,7 @@ function expectUntouched(name: string) {
   expect(Sentry.captureException, name).not.toHaveBeenCalled();
   expect(Sentry.captureMessage, name).not.toHaveBeenCalled();
   expect(fetchSpy, name).not.toHaveBeenCalled();
+  expect(connectSpy, name).not.toHaveBeenCalled();
 }
 
 beforeEach(() => {
@@ -79,6 +89,7 @@ beforeEach(() => {
   vi.mocked(Sentry.captureException).mockClear();
   vi.mocked(Sentry.captureMessage).mockClear();
   fetchSpy.mockClear();
+  connectSpy.mockClear();
 });
 
 afterEach(() => {
@@ -123,6 +134,20 @@ describe("every cron route", () => {
         expect(response.status, name).toBe(401);
         expect(await response.text()).toBe("");
       }
+      expectUntouched(name);
+    });
+
+    it("refuses a by-hand rerun (`?scan=`) the same way, touching nothing", async () => {
+      const { GET } = await load();
+      const rerun = (authorization?: string) => {
+        const headers: Record<string, string> = {};
+        if (authorization !== undefined) headers.authorization = authorization;
+        return new Request(`http://localhost/api/cron/${name}?scan=recaps`, { headers });
+      };
+      expect((await GET(rerun())).status, name).toBe(401);
+      expect((await GET(rerun("Bearer wrong"))).status, name).toBe(401);
+      vi.stubEnv("CRON_SECRET", "");
+      expect((await GET(rerun(`Bearer ${SECRET}`))).status, name).toBe(503);
       expectUntouched(name);
     });
 
