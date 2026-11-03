@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, getViewSelectedFields, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { AppTransaction, DbExecutor } from "./client";
@@ -12,11 +12,10 @@ import type {
 import { bookingPaymentEvents, bookingPayments, bookings, trips } from "./schema";
 
 /**
- * Serializes every write to one booking's payment row through a lock on the
- * always-existing `bookings` row, rather than locking `booking_payments`
- * itself — `SELECT ... FOR UPDATE` on a row that doesn't exist yet takes no
- * lock at all in Postgres, and a booking's *first* payment event is exactly
- * that case. Without this, a staff "waived" write (via `setBookingPayment`,
+ * Serializes every write to one booking's payment entries through a lock on
+ * the always-existing `bookings` row: there is no current-state row to lock
+ * (`booking_payments` is a view), and an append takes no lock that would stop
+ * a concurrent append from reading the same "current" entry. Without this, a staff "waived" write (via `setBookingPayment`,
  * which trusts the caller and previously took no lock at all) could race a
  * webhook's first payment cascade (via `setBookingPaymentIfNotFinal`) and
  * regress the booking back to "paid" — the exact regression CR-004 exists to
@@ -80,22 +79,30 @@ export type SetPaymentInput = {
 };
 
 /**
- * Whether two payment states differ in any way worth a trail row. Deliberately
- * compares the whole material payload rather than just `status`: a deposit
- * topped up to a full fare, a refund re-pointed at a different Stripe object,
- * or a staff note added are all real transitions even when the status word is
+ * Whether a write differs from the booking's current state in any way worth an
+ * entry. Deliberately compares the whole material payload rather than just
+ * `status`: a deposit topped up to a full fare, a refund re-pointed at a
+ * different Stripe object, a staff note added, or the same mark made by a
+ * different staffer are all real transitions even when the status word is
  * unchanged.
  *
- * `updatedAt` is *not* compared — a replayed Stripe webhook re-running the
- * self-healing cascade in `markCheckoutPaidBySessionId` touches it every time
- * and changes nothing else, and appending a row for each redelivery would turn
- * this table into a delivery log (ADR 20260803-booking-payment-events).
+ * A replayed Stripe webhook re-running the self-healing cascade in
+ * `markCheckoutPaidBySessionId` changes none of these, so it appends nothing
+ * and the booking's `updatedAt` keeps the time of the real transition
+ * (ADR 20260803-booking-payment-events).
  */
 function paymentStateChanged(
   previous: BookingPayment | null,
   next: Pick<
     BookingPayment,
-    "status" | "amountCents" | "currency" | "provider" | "providerRef" | "note" | "method"
+    | "status"
+    | "amountCents"
+    | "currency"
+    | "provider"
+    | "providerRef"
+    | "note"
+    | "method"
+    | "recordedByPersonId"
   >,
 ): boolean {
   if (!previous) return true;
@@ -106,34 +113,54 @@ function paymentStateChanged(
     previous.provider !== next.provider ||
     previous.providerRef !== next.providerRef ||
     previous.note !== next.note ||
-    previous.method !== next.method
+    previous.method !== next.method ||
+    previous.recordedByPersonId !== next.recordedByPersonId
   );
 }
 
+/** The booking's current state: the newest entry, read through the fold. */
+async function currentPayment(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<BookingPayment | null> {
+  const [payment] = await db
+    .select()
+    .from(bookingPayments)
+    .where(and(eq(bookingPayments.shopId, shopId), eq(bookingPayments.bookingId, bookingId)))
+    .limit(1);
+  return payment ?? null;
+}
+
 /**
- * Record a booking's current payment state — one row per booking. Tenant-safe:
- * the booking must belong to the shop, so this is callable outside a route.
- * Accepts a `DbExecutor` (not just `AppDb`) so a caller already inside a
- * transaction can pass its `tx` through and get one atomic commit.
+ * Record a booking's payment state by appending one entry to
+ * `booking_payment_events`; the `booking_payments` view folds the newest entry
+ * into the current state (issue #2716). Tenant-safe: the booking must belong
+ * to the shop, so this is callable outside a route. Accepts a `DbExecutor`
+ * (not just `AppDb`) so a caller already inside a transaction can pass its
+ * `tx` through and get one atomic commit.
  *
- * A full-row upsert: every call replaces `note`/`amountCents`/etc. wholesale,
- * not just `status`. No current caller writes a `note` on a non-final status,
- * so this is only a latent concern today — but a future non-final write that
- * sets `note` would have it silently reset to null by the next replay of
- * `setBookingPaymentIfNotFinal`'s cascade (CR-004 review finding).
+ * Every call states the whole state, not a patch: `note`, `amountCents` and
+ * the rest are what this call passes, so a later write that omits a note
+ * clears it.
  *
- * **This is the one funnel.** Every writer of `booking_payments` in the repo
- * lands here — `setBookingPaymentIfNotFinal` delegates to it, and the checkout,
- * order and refund cascades all go through one of the two. That is what lets
- * the append-only `booking_payment_events` trail be written *here*, inside the
- * same transaction and under the same per-booking lock as the mutation it
- * records, rather than at each call site where one could be forgotten
- * (DATA-M3, ADR 20260803-booking-payment-events).
+ * **This is the one funnel.** Nothing else writes a booking's payment state —
+ * `setBookingPaymentIfNotFinal` delegates here, and the checkout, order and
+ * refund cascades all go through one of the two — so the read of the current
+ * state, the comparison and the append all happen under the one per-booking
+ * lock (DATA-M3, ADR 20260803-booking-payment-events).
+ *
+ * Returns the booking's state after the call: the new entry, or the unchanged
+ * current state when nothing material changed. Null when the booking is not
+ * this shop's.
  */
-export async function setBookingPayment(db: DbExecutor, input: SetPaymentInput) {
+export async function setBookingPayment(
+  db: DbExecutor,
+  input: SetPaymentInput,
+): Promise<BookingPayment | null> {
   return withBookingPaymentLock(db, input.shopId, input.bookingId, async (tx) => {
     const now = nowDate();
-    const values = {
+    const next = {
       shopId: input.shopId,
       bookingId: input.bookingId,
       status: input.status,
@@ -144,46 +171,24 @@ export async function setBookingPayment(db: DbExecutor, input: SetPaymentInput) 
       note: input.note ?? null,
       method: input.method ?? null,
       recordedByPersonId: input.recordedByPersonId ?? null,
-      updatedAt: now,
     };
-    // Read under the same lock that guards the write below, never before it:
-    // this is both the trail's `previous_status` and the "did anything
+    // Read under the same lock that guards the append below, never before it:
+    // this is both the entry's `previous_status` and the "did anything
     // actually change?" comparison, and a value read outside the lock could
     // describe a state a concurrent write has already replaced.
-    const [previous] = await tx
-      .select()
-      .from(bookingPayments)
-      .where(
-        and(
-          eq(bookingPayments.shopId, input.shopId),
-          eq(bookingPayments.bookingId, input.bookingId),
-        ),
-      )
-      .limit(1);
-    const [payment] = await tx
-      .insert(bookingPayments)
-      .values(values)
-      .onConflictDoUpdate({ target: bookingPayments.bookingId, set: values })
-      .returning();
-    if (!payment) return null;
-    if (paymentStateChanged(previous ?? null, values)) {
-      await tx.insert(bookingPaymentEvents).values({
-        shopId: input.shopId,
-        bookingId: input.bookingId,
-        status: values.status,
+    const previous = await currentPayment(tx, input.shopId, input.bookingId);
+    if (!paymentStateChanged(previous, next)) return previous;
+    const [entry] = await tx
+      .insert(bookingPaymentEvents)
+      .values({
+        ...next,
         previousStatus: previous?.status ?? null,
-        amountCents: values.amountCents,
-        currency: values.currency,
-        provider: values.provider,
-        providerRef: values.providerRef,
         operation: input.operation ?? "manual_mark",
-        note: values.note,
-        method: values.method,
-        recordedByPersonId: values.recordedByPersonId,
         occurredAt: now,
-      });
-    }
-    return payment;
+      })
+      .returning({ id: bookingPaymentEvents.id, occurredAt: bookingPaymentEvents.occurredAt });
+    if (!entry) return null;
+    return { ...next, id: entry.id, updatedAt: entry.occurredAt };
   });
 }
 
@@ -207,9 +212,8 @@ const FINAL_PAYMENT_STATUSES: ReadonlySet<PaymentStatus> = new Set(["refunded", 
  * lock (`withBookingPaymentLock`), so a staff refund/waive write and a
  * replayed/duplicate webhook cascade landing concurrently always serialize
  * against each other, regardless of which function either one calls or
- * whether a `booking_payments` row exists yet (CR-004 review finding — see
- * `withBookingPaymentLock`'s comment for why locking `booking_payments`
- * itself was insufficient).
+ * whether the booking has any entry yet (CR-004 review finding — see
+ * `withBookingPaymentLock`'s comment for why the lock is on `bookings`).
  *
  * When this does swallow a write — a real payment landing after a refund or
  * waive, which today has no legitimate path back to "paid" — it logs rather
@@ -237,16 +241,7 @@ export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: Set
       return null;
     }
     if (!FINAL_PAYMENT_STATUSES.has(input.status)) {
-      const [current] = await tx
-        .select()
-        .from(bookingPayments)
-        .where(
-          and(
-            eq(bookingPayments.shopId, input.shopId),
-            eq(bookingPayments.bookingId, input.bookingId),
-          ),
-        )
-        .limit(1);
+      const current = await currentPayment(tx, input.shopId, input.bookingId);
       if (current && FINAL_PAYMENT_STATUSES.has(current.status)) {
         log("payment.refused_final_status_regression", "error", {
           shopId: input.shopId,
@@ -263,8 +258,8 @@ export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: Set
 
 /**
  * One booking's money history, newest first — every recorded transition of its
- * payment state, including the captures a later refund overwrote in
- * `booking_payments` (DATA-M3). Tenant-scoped like every other read here.
+ * payment state, including the captures a later refund superseded (DATA-M3).
+ * Tenant-scoped like every other read here.
  *
  * `limit` bounds the read because this is a per-booking trail with no natural
  * ceiling: a long-lived booking can accumulate a deposit, a balance, a partial
@@ -284,17 +279,13 @@ export async function listBookingPaymentEvents(
     .where(
       and(eq(bookingPaymentEvents.shopId, shopId), eq(bookingPaymentEvents.bookingId, bookingId)),
     )
-    .orderBy(desc(bookingPaymentEvents.occurredAt), desc(bookingPaymentEvents.createdAt))
+    .orderBy(desc(bookingPaymentEvents.seq))
     .limit(limit);
 }
 
+/** One booking's current payment state, or null when it has no entry yet. */
 export async function getBookingPayment(db: DbExecutor, shopId: string, bookingId: string) {
-  const [payment] = await db
-    .select()
-    .from(bookingPayments)
-    .where(and(eq(bookingPayments.shopId, shopId), eq(bookingPayments.bookingId, bookingId)))
-    .limit(1);
-  return payment ?? null;
+  return currentPayment(db, shopId, bookingId);
 }
 
 /**
@@ -320,7 +311,7 @@ export async function paymentsByBooking(db: DbExecutor, shopId: string, bookingI
 /** Current booking payment records for one diver, with the trip that owns each booking. */
 export async function listPersonBookingPayments(db: DbExecutor, shopId: string, personId: string) {
   return db
-    .select({ payment: bookingPayments, booking: bookings, trip: trips })
+    .select({ payment: getViewSelectedFields(bookingPayments), booking: bookings, trip: trips })
     .from(bookingPayments)
     .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -332,4 +323,39 @@ export async function listPersonBookingPayments(db: DbExecutor, shopId: string, 
       ),
     )
     .orderBy(trips.startsAt);
+}
+
+export type PaymentEntrySeed = {
+  shopId: string;
+  bookingId: string;
+  status: PaymentStatus;
+  amountCents?: number | null;
+  currency: string;
+  provider?: string | null;
+  providerRef?: string | null;
+  note?: string | null;
+  method?: ManualPaymentMethod | null;
+  recordedByPersonId?: string | null;
+  operation?: PaymentEventOperation;
+  /** When the state was reached; falls back to `createdAt`, then the clock. */
+  updatedAt?: Date;
+  createdAt?: Date;
+};
+
+/**
+ * Entry rows for demo data and tests that set a booking's payment state
+ * directly, without the lock and comparison of {@link setBookingPayment}. Each
+ * seed becomes one first entry (no `previous_status`), stamped with the time
+ * the state was reached. A Stripe payment reads as a settled checkout, anything
+ * else as a manual mark.
+ */
+export function paymentEntries(seeds: PaymentEntrySeed | readonly PaymentEntrySeed[]) {
+  const list: readonly PaymentEntrySeed[] = Array.isArray(seeds) ? seeds : [seeds];
+  return list.map(({ updatedAt, createdAt, operation, ...seed }) => ({
+    ...seed,
+    previousStatus: null,
+    operation: operation ?? (seed.provider === "stripe" ? "checkout_settled" : "manual_mark"),
+    occurredAt: updatedAt ?? createdAt ?? nowDate(),
+    ...(createdAt ? { createdAt } : {}),
+  }));
 }

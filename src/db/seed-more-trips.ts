@@ -1,10 +1,11 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
+import { paymentEntries } from "./payments";
 import { listTripReadiness } from "./readiness";
 import {
   boats,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   certifications,
   type DiveSpecialty,
@@ -756,7 +757,8 @@ export async function seedMoreTrips(
         amountCents: row.amountCents,
         currency: "usd",
       }));
-    if (duanePaymentSeed.length > 0) await db.insert(bookingPayments).values(duanePaymentSeed);
+    if (duanePaymentSeed.length > 0)
+      await db.insert(bookingPaymentEvents).values(paymentEntries(duanePaymentSeed));
   }
 
   // Front-desk texture: a wait-list interest on Pickles Reef, a promo midweek.

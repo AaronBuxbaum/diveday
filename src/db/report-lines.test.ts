@@ -2,11 +2,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
+import { type PaymentEntrySeed, paymentEntries } from "./payments";
 import { getMonthMoneyDetail } from "./report-lines";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   courses,
   divePackageEntitlements,
@@ -452,10 +453,7 @@ describe("money taken outside Stripe", () => {
     const reef = await trip(db, shop.shopId, new Date("2031-07-04T13:00:00Z"));
     const lesson = await trip(db, shop.shopId, new Date("2031-06-20T13:00:00Z"), course.id);
 
-    async function marked(
-      tripId: string,
-      values: Partial<typeof bookingPayments.$inferInsert> & { updatedAt: Date },
-    ) {
+    async function marked(tripId: string, values: Partial<PaymentEntrySeed> & { updatedAt: Date }) {
       seq += 1;
       const bookingId = await book(
         db,
@@ -463,15 +461,17 @@ describe("money taken outside Stripe", () => {
         tripId,
         await person(db, shop.shopId, `D${seq}`),
       );
-      await db.insert(bookingPayments).values({
-        shopId: shop.shopId,
-        bookingId,
-        status: "paid",
-        amountCents: 9_000,
-        currency: "usd",
-        provider: null,
-        ...values,
-      });
+      await db.insert(bookingPaymentEvents).values(
+        paymentEntries({
+          shopId: shop.shopId,
+          bookingId,
+          status: "paid",
+          amountCents: 9_000,
+          currency: "usd",
+          provider: null,
+          ...values,
+        }),
+      );
     }
 
     await marked(reef, { updatedAt: MID_JUNE });

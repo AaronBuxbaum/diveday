@@ -1,0 +1,6 @@
+-- diveday:allow-destructive drop-table booking_payments: replaced by a view of the same name and shape that folds booking_payment_events (issue #2716), so the serving release keeps reading it; pre-pilot, no users (H-20260815-no-legacy)
+DROP TABLE "booking_payments";--> statement-breakpoint
+DROP INDEX "booking_payment_events_shop_booking_occurred_idx";--> statement-breakpoint
+ALTER TABLE "booking_payment_events" ADD COLUMN "seq" bigserial;--> statement-breakpoint
+CREATE INDEX "booking_payment_events_shop_booking_seq_idx" ON "booking_payment_events" ("shop_id","booking_id","seq");--> statement-breakpoint
+CREATE VIEW "booking_payments" AS (select distinct on (shop_id, booking_id) id, shop_id, booking_id, status, amount_cents, currency, provider, provider_ref, note, method, recorded_by_person_id, occurred_at as updated_at from booking_payment_events order by shop_id, booking_id, seq desc);

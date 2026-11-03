@@ -408,13 +408,9 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "copy",
     why: "the idempotency ledger's record of which object an attempt produced — a pointer to an object already censused under the table that owns it, never a second one",
   },
-  "booking_payments.provider_ref": {
-    held: "copy",
-    why: "whichever object moved this booking's money, spelled without the vendor's name: `booking_checkouts.stripe_session_id`, `orders.stripe_invoice_id`, the `re_…` a refund returned, or a package entitlement id that is at no processor at all. Each is owed against where it is stored, which is why this column raises nothing of its own",
-  },
   "booking_payment_events.provider_ref": {
     held: "copy",
-    why: "the same pointer on the append-only twin, copied from the mutation that caused the row (`setBookingPayment`, src/db/payments.ts)",
+    why: "whichever object moved this booking's money, spelled without the vendor's name: `booking_checkouts.stripe_session_id`, `orders.stripe_invoice_id`, the `re_…` a refund returned, or a package entitlement id that is at no processor at all. Each is owed against where it is stored, which is why this column raises nothing of its own",
   },
   "orders.stripe_payment_intent_id": {
     held: "copy",
@@ -527,11 +523,10 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "none",
     why: "a display label for the connection, which the schema already states is never a token or a URL secret",
   },
-  "booking_payments.provider": {
+  "booking_payment_events.provider": {
     held: "none",
     why: '"stripe", or null for a manual mark: which system moved the money, not a handle on anything it holds',
   },
-  "booking_payment_events.provider": { held: "none", why: "as booking_payments.provider" },
   "inbound_messages.assist_intent": {
     held: "none",
     why: "Claude's code for what a message asks (cancel, move, question…): a tag from a fixed list, not a handle on anything",

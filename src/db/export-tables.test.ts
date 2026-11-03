@@ -65,17 +65,19 @@ describe("the export read list", () => {
     const bookingIds = seats.map((seat) => seat.id);
     const diver = (shopId: string, ids: string[]) =>
       ({ kind: "diver", shopId, personId: randomUUID(), bookingIds: ids }) as const;
-    const rows = await readScoped(db, "bookingPayments", diver(shop.id, bookingIds));
+    const rows = await readScoped(db, "bookingPaymentEvents", diver(shop.id, bookingIds));
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((row) => bookingIds.includes(row.bookingId))).toBe(true);
-    expect(await readScoped(db, "bookingPayments", diver(randomUUID(), bookingIds))).toEqual([]);
+    expect(await readScoped(db, "bookingPaymentEvents", diver(randomUUID(), bookingIds))).toEqual(
+      [],
+    );
 
     const noQuery = {
       select: () => {
         throw new Error("an empty booking list must not reach the database");
       },
     } as unknown as typeof db;
-    expect(await readScoped(noQuery, "bookingPayments", diver(shop.id, []))).toEqual([]);
+    expect(await readScoped(noQuery, "bookingPaymentEvents", diver(shop.id, []))).toEqual([]);
   });
 
   it("refuses to read a shop-only table for a diver, rather than widening to the shop", async () => {
@@ -90,13 +92,13 @@ describe("the export read list", () => {
     await expect(readScoped(db, "people", scope)).rejects.toThrow(/no diver scope/);
   });
 
-  it("declares a total order for every table except the three the loader reorders", () => {
+  it("declares a total order for every table except the two the loader reorders", () => {
     const unordered = Object.entries(EXPORT_TABLES as Record<string, ExportTableRead>)
       .filter(([, entry]) => entry.order.length === 0)
       .map(([key]) => key)
       .sort();
     // `buddyTeamMembers` is put in team order after the read (issue #1795).
-    expect(unordered).toEqual(["bookingPayments", "buddyTeamMembers", "tripRequirements"]);
+    expect(unordered).toEqual(["buddyTeamMembers", "tripRequirements"]);
   });
 
   it("reads one field's translations in locale order, whatever order they were written in", async () => {

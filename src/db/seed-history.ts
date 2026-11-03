@@ -4,9 +4,10 @@ import { rollCallCheckpoints } from "@/lib/manifests";
 import { demoEmail } from "@/lib/simulator-email";
 import { utcToWallTime } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
+import { paymentEntries } from "./payments";
 import {
   boats,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   certifications,
   type DiveSpecialty,
@@ -760,7 +761,7 @@ export async function seedHistory(
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
-  if (payments.length > 0) await db.insert(bookingPayments).values(payments);
+  if (payments.length > 0) await db.insert(bookingPaymentEvents).values(paymentEntries(payments));
 
   // Signed releases for the divers who boarded, on paper at the desk (`withinDeskHours`).
   const signedName = await signingNames(db, shopId);

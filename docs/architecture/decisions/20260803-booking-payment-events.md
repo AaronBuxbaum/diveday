@@ -1,6 +1,7 @@
 # 20260803-booking-payment-events — Keep a local append-only money trail beside the mutable payment row
 
-- **Status:** Accepted
+- **Status:** Accepted; amended 2026-11-03 (issue #2716): the entries are now the only store, and
+  `booking_payments` is a view that folds them. See "Amendment 2026-11-03" below.
 - **Date:** 2026-08-03
 
 ## Context
@@ -115,3 +116,39 @@ If the write cost ever shows up on the booking path, the append can move behind 
 `db.transaction` the caller already opens without changing the table (it is already there today) —
 or, at the cost of the guarantee this record exists for, become an after-commit write. Dropping the
 table entirely is one migration and deleting one function; nothing reads it on a hot path.
+
+## Amendment 2026-11-03: the entries are the store, `booking_payments` is their fold
+
+Issue #2716 (codebase review idea L06-1, Aaron chose "Build all three" for the payments group).
+
+The trail had become the better record of the two: every write already went through the one funnel,
+every transition already appended a row, and the newest row already restated the current state. The
+mutable row was a second copy that could only drift from it, and a refund still overwrote it in place.
+
+- **`booking_payments` is a view**, `select distinct on (shop_id, booking_id) … from
+  booking_payment_events order by shop_id, booking_id, seq desc`, with the old table's name and its
+  columns except `created_at`. Its `updated_at` is the newest entry's `occurred_at`. Every reader
+  (the roster, readiness's `PAYMENT_CLEARED` gate, Reports, refunds) keeps reading it unchanged, and
+  a release still serving during the deploy keeps reading it too. Nothing can write it.
+- **`setBookingPayment` only appends.** Under the same per-booking lock it reads the fold, compares,
+  and appends one entry when something material changed; it returns the new state, or the unchanged
+  one. The comparison now also covers `method` and `recorded_by_person_id`: with no mutable row, a
+  change the trail skipped would be a change lost, so the same mark made by another staffer is an
+  entry of its own.
+- **`seq` (bigserial) orders the entries**, not `occurred_at`. The app clock can give two writes in
+  one transaction, or under a pinned `DIVEDAY_CLOCK`, the same instant; the fold must never tie.
+  The index is now `(shop_id, booking_id, seq)`, and leading with `shop_id` in the `distinct on`
+  lets a reader's shop predicate reach it.
+- **A replay no longer moves `updated_at`.** It used to bump the mutable row on every redelivery;
+  now the time is when the state was last really reached, which is what the owed-refunds list and
+  the month's report lines meant by it.
+- **Erasure scrubs `note` on the entries,** which also scrubs the current state, since the state is
+  the newest entry.
+- **Export** reads the entries once: `booking_payment_events.csv` in write order, and the bookings
+  file's `payment_*` columns from the newest entry per booking.
+- **No backfill** (H-20260815-no-legacy): bookings whose state lived only on the dropped table
+  read as unpaid.
+
+The rest of #2716 (one `money_entries` table with components and directions, tips, orders and
+checkouts as entries, one monthly report grouped by component) is not part of this amendment.
+

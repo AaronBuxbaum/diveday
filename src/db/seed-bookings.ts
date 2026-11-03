@@ -4,8 +4,9 @@ import { nowDate } from "@/lib/clock";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
+import { paymentEntries } from "./payments";
 import {
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   type people,
   recapPhotos,
@@ -263,8 +264,8 @@ export async function seedBookings(
     }));
   if (paymentSeed.length > 0) {
     await db
-      .insert(bookingPayments)
-      .values(paymentSeed.map((row) => ({ shopId, currency: "usd", ...row })));
+      .insert(bookingPaymentEvents)
+      .values(paymentEntries(paymentSeed.map((row) => ({ shopId, currency: "usd", ...row }))));
   }
 
   // Post-trip recap demo: a crew shout-out on the pinned reef trip and a couple

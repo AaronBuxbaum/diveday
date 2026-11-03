@@ -314,9 +314,10 @@ describe("pruneExpiredRecords", () => {
       amountCents: 18_000,
       operation: "checkout_settled",
     });
+    const before = await db.select().from(bookingPaymentEvents);
     const summary = await pruneExpiredRecords(db, { now: NOW });
     expect(outcomeFor(summary, "booking_payment_events").deleted).toBe(0);
-    expect(await db.select().from(bookingPaymentEvents)).toHaveLength(1);
+    expect(await db.select().from(bookingPaymentEvents)).toHaveLength(before.length);
   });
 
   it("is idempotent: a second pass with nothing eligible deletes nothing", async () => {

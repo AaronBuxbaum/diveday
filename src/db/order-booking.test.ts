@@ -2,6 +2,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { getOrderBookingContext } from "./order-booking";
+import { setBookingPayment } from "./payments";
 import { bookingPayments, bookings, shops, trips } from "./schema";
 
 const ctx = fileScopedShopContext();
@@ -47,10 +48,13 @@ describe("getOrderBookingContext", () => {
 
   it("owes nothing once the seat is paid", async () => {
     const seat = await depositSeat();
-    await ctx.db
-      .update(bookingPayments)
-      .set({ status: "paid", amountCents: seat.priceCents })
-      .where(eq(bookingPayments.bookingId, seat.bookingId));
+    await setBookingPayment(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: seat.bookingId,
+      status: "paid",
+      amountCents: seat.priceCents,
+      currency: "usd",
+    });
     const context = await getOrderBookingContext(ctx.db, ctx.shop.id, seat.bookingId);
     expect(context?.balanceOwedCents).toBeNull();
   });
