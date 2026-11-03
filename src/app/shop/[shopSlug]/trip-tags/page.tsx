@@ -66,11 +66,7 @@ export default async function TripTagsSettingsPage({
   return (
     <main className={registerPaneClass()}>
       <FlashParams params={["notice", "lens"]} />
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
-        title={t("lenses.heading")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("lenses.heading")} />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
 
       <DisclosureRowList>

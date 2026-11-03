@@ -11,7 +11,7 @@ import {
   signCourseFormForLink,
   verifyCourseFormsLink,
 } from "@/db/course-forms";
-import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
+import { issueWaiverRequest, recordBookingEmergencyContact } from "@/db/waivers";
 import { emergencyContactSchema, readEmergencyContact } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
@@ -54,7 +54,7 @@ export async function signWaiverFromReady(token: string) {
  * written from the *waiver* token until now — and bounded the same way that one
  * is: the shared `emergencyContactSchema` (max 120/40, the bound CR-014 added
  * precisely because this page's equivalent action once had none), and
- * `saveBookingEmergencyContact`, which resolves the person from the booking the
+ * `recordBookingEmergencyContact`, which resolves the person from the booking the
  * verified capability names rather than from anything posted.
  *
  * It never blanks a field, which is that writer's own standing rule: a diver
@@ -78,7 +78,7 @@ export async function saveEmergencyContactFromReady(token: string, formData: For
     phone: parsed.data.emergencyContactPhone,
   });
   if (submitted.kind === "half") redirect(`${base(token)}?error=contact-pair`);
-  const saved = await saveBookingEmergencyContact(ctx.db, {
+  const saved = await recordBookingEmergencyContact(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
     name: parsed.data.emergencyContactName,

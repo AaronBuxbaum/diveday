@@ -32,16 +32,16 @@ import {
   deleteCustomerGearItem,
   deleteWorkOrder,
   deleteWorkOrderLine,
+  editWorkOrderLine,
   getWorkOrderDetail,
   listCustomerGearItems,
   listDeletedWorkOrders,
   listWorkOrdersForPerson,
+  recordWorkOrder,
   recordWorkOrderWork,
   restoreCustomerGearItem,
   restoreWorkOrder,
-  saveWorkOrder,
   setWorkOrderStatus,
-  updateWorkOrderLine,
   workOrderBoard,
 } from "./work-orders";
 
@@ -567,7 +567,7 @@ describe("moving a ticket", () => {
     const piece = await customerPiece(db, shop.id, maya.id);
     const ticket = await customerTicket(db, shop.id, maya.id, piece.id);
 
-    const saved = await saveWorkOrder(db, {
+    const saved = await recordWorkOrder(db, {
       shopId: shop.id,
       workOrderId: ticket.id,
       reportedProblem: "Free-flows below 20 m",
@@ -599,19 +599,19 @@ describe("moving a ticket", () => {
       ) ?? [];
 
     // Saving the notes with nobody on the ticket hands it to nobody.
-    await saveWorkOrder(db, { ...base, technicianPersonId: null });
+    await recordWorkOrder(db, { ...base, technicianPersonId: null });
     expect(await handOvers()).toHaveLength(0);
 
-    await saveWorkOrder(db, { ...base, technicianPersonId: tech.id });
+    await recordWorkOrder(db, { ...base, technicianPersonId: tech.id });
     // A second save that leaves the technician alone is a notes edit, not a hand-over.
-    await saveWorkOrder(db, {
+    await recordWorkOrder(db, {
       ...base,
       technicianPersonId: tech.id,
       technicianNotes: "Ordered kit",
     });
     expect(await handOvers()).toHaveLength(1);
 
-    await saveWorkOrder(db, { ...base, technicianPersonId: null });
+    await recordWorkOrder(db, { ...base, technicianPersonId: null });
     const events = await handOvers();
     expect(events).toHaveLength(2);
     expect(events.at(-1)?.technicianPersonId).toBeNull();
@@ -629,13 +629,13 @@ describe("moving a ticket", () => {
     const base = { shopId: shop.id, workOrderId: ticket.id, technicianPersonId: null };
 
     expect(
-      await saveWorkOrder(db, { ...base, reportedProblem: "   ", technicianNotes: "lost" }),
+      await recordWorkOrder(db, { ...base, reportedProblem: "   ", technicianNotes: "lost" }),
     ).toEqual({ ok: false, reason: "empty_problem" });
     expect(
-      await saveWorkOrder(db, { ...base, reportedProblem: "Leaks", promisedOn: "2026-13-40" }),
+      await recordWorkOrder(db, { ...base, reportedProblem: "Leaks", promisedOn: "2026-13-40" }),
     ).toEqual({ ok: false, reason: "invalid_date" });
     expect(
-      await saveWorkOrder(db, {
+      await recordWorkOrder(db, {
         ...base,
         reportedProblem: "Leaks",
         technicianPersonId: outsider.id,
@@ -643,7 +643,7 @@ describe("moving a ticket", () => {
       }),
     ).toEqual({ ok: false, reason: "unknown_technician" });
     expect(
-      await saveWorkOrder(db, { ...base, reportedProblem: "Leaks", technicianPersonId: sam.id }),
+      await recordWorkOrder(db, { ...base, reportedProblem: "Leaks", technicianPersonId: sam.id }),
     ).toEqual({ ok: false, reason: "unknown_technician" });
 
     const detail = await getWorkOrderDetail(db, shop.id, ticket.id, { todayLocal: TODAY });
@@ -670,7 +670,7 @@ describe("moving a ticket", () => {
       }),
     ).toEqual({ ok: false, reason: "not_found" });
     expect(
-      await saveWorkOrder(db, {
+      await recordWorkOrder(db, {
         shopId: rival.id,
         workOrderId: ticket.id,
         reportedProblem: "nothing",
@@ -1158,7 +1158,7 @@ describe("parts and labor", () => {
     let detail = await getWorkOrderDetail(db, shop.id, ticket.id, { todayLocal: TODAY });
     expect(detail?.totalCents).toBe(4500 + 12000);
 
-    await updateWorkOrderLine(db, {
+    await editWorkOrderLine(db, {
       shopId: shop.id,
       workOrderLineId: labor.line.id,
       kind: "labor",

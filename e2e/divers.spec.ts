@@ -268,7 +268,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   ).toBeVisible();
 
   // The diver's own record reads the same value straight through
-  // `updateDiver`/`saveBookingEmergencyContact` sharing the same columns —
+  // `editDiver`/`recordBookingEmergencyContact` sharing the same columns —
   // one write path regardless of who fills it in.
   await card.getByRole("link", { name: diverName }).click();
   await page.getByText("Contact details", { exact: true }).click();

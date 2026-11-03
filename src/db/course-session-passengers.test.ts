@@ -17,8 +17,8 @@ import {
   studentOnSeat,
 } from "./readiness";
 import { bookings, courses, people, shops, trips } from "./schema";
+import { getTripOverview } from "./trip-overview";
 import { createTrip, listStaff, setTripCrew, setTripParticipantTerms } from "./trips";
-import { getTripOverview } from "./trips-overview";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

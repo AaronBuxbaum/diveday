@@ -31,8 +31,8 @@ import { liveTrip } from "./trips-live";
 /**
  * The boat's papers and the safety kit aboard it, read for the pre-departure
  * check and Today (roadmap N-08, N-10). Readers only: the papers are written by
- * the fleet row (`updateBoat`) and the kit by the gear register
- * (`updateGearItem`, `recordGearService`). Every read is scoped by shop.
+ * the fleet row (`editBoat`) and the kit by the gear register
+ * (`editGearItem`, `recordGearService`). Every read is scoped by shop.
  */
 
 type RegisteredSafetyKit = SafetyKitUnit & { aboardBoatId: string | null };
@@ -394,7 +394,7 @@ async function captureInTransaction(
     .for("update", { of: trips });
   if (!trip?.boatId) return "no_boat";
   if (hasSailed(trip.startsAt, asOf)) return "sailed";
-  // Share updateTrip's lock: a capture cannot read hull A, wait on the
+  // Share editTrip's lock: a capture cannot read hull A, wait on the
   // snapshot, then overwrite the evidence a swap has just kept for hull B.
   // A first late offline tap may fill an absent record, but never rewrite
   // evidence already kept for a departure that has sailed.

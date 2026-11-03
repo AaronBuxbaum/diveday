@@ -26,7 +26,7 @@ import { FEATURE_ROWS, type FeatureRowGate } from "./features/feature-rows";
  * It used to carry a second list, `SETTINGS_DESTINATIONS`: the six full-page
  * settings surfaces, which a sub-nav card rendered as grouped pills above
  * every one of their `<h1>`s. That card is gone (a sub-page's way back is now
- * its own eyebrow, `ShopPageHeader`'s `eyebrowHref`); what stands in its place
+ * its own eyebrow, linked to the parent the route tree reads off its URL); what stands in its place
  * is not that card returning but `SETTINGS_RAIL_ROWS` below — a left rail at
  * `lg` and up only, never above the phone's content (ADR
  * 20260827-clearwater-surface-language, decision 6).

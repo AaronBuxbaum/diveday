@@ -21,7 +21,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, shopPath } from "@/lib/staff-notices";
+import type { NoticeTone } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
 import { BlankReleaseLink } from "./_components/BlankReleaseLink";
@@ -225,7 +225,6 @@ export default async function WaiversPage({
       <FlashParams params={["notice", "count", "form"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("waiversStaff.title")}
         // The version line is a fact about the release the page is named
         // after, so it rides under the title where a reader meets it before

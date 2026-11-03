@@ -4,7 +4,7 @@ import { issuePartyWaiver } from "@/db/party-waiver-queue";
 import { people, personRoles } from "@/db/schema";
 import { seatParty } from "@/db/seat-diver";
 import { upcomingTripsWithCounts } from "@/db/trips";
-import { getWaiverForToken, saveWaiverDraft } from "@/db/waivers-completion";
+import { getWaiverForToken, recordWaiverDraft } from "@/db/waivers-completion";
 import { clearAnswers } from "@/db/waivers-test-fixtures";
 import { fileScopedShopContext } from "@/test/db";
 
@@ -46,7 +46,7 @@ it("leaves the existing link and draft intact when QR sealing is unavailable", a
   });
   if (!issued) throw new Error("link missing");
   expect(
-    await saveWaiverDraft(db, issued.token, {
+    await recordWaiverDraft(db, issued.token, {
       signerName: "Draft in progress",
       acknowledged: false,
       medicalAnswers: clearAnswers,

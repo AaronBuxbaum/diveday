@@ -687,7 +687,7 @@ const STUCK_OPERATION_KIND_KEYS: Record<PaymentOperationKind, StaffMessageKey> =
  *
  * Keyed by the `media_deletion_kind` enum, which is what closes the gap this
  * map shipped with: it held seven of the enum's nine kinds, and
- * `listPendingMediaDeletions` filters by shop and staleness and by nothing
+ * the media-deletion read (`src/db/unfinished.ts`) filters by shop and staleness and by nothing
  * else, so a stuck shop-logo or cover-photo deletion — both queued from
  * Settings' own image forms — put the raw `shop_logo` through as the Today
  * row's subject and again inside its sentence. `certification_card` is

@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { TripPrep } from "@/db/trips";
+import type { TripPrep } from "@/db/trip-prep";
 import type { GearServiceState } from "@/lib/gear";
 import { rendersFlush } from "@/test/button-flush";
 import { PrepAssignments } from "./PrepAssignments";

@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { listDiveSites } from "./dive-sites";
 import { tripChangeEvents } from "./schema";
-import { applyDetailsToFutureSeries, createTripSeries, updateTrip } from "./trips";
+import { applyDetailsToFutureSeries, createTripSeries, editTrip } from "./trips";
 
 const ctx = fileScopedShopContext();
 const WED = 3;
@@ -48,7 +48,7 @@ describe("applyDetailsToFutureSeries and the site-change ledger", () => {
       dives: [{ diveSiteId: siteOne.id }, { diveSiteId: siteTwo.id }],
     };
     for (const trip of [source, alreadyThere]) {
-      await updateTrip(db, shop.id, trip.id, {
+      await editTrip(db, shop.id, trip.id, {
         title: trip.title,
         startsAt: trip.startsAt,
         endsAt: trip.endsAt,

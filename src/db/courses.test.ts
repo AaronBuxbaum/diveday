@@ -14,6 +14,8 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {
   courseIdsEverOnBoard,
+  editCourse,
+  editCourseContent,
   getCourseBySlug,
   getCourseTemplateUpdate,
   hasActiveCourses,
@@ -23,8 +25,6 @@ import {
   pagedCourses,
   pullCourseTemplateUpdates,
   setCourseVisibility,
-  updateCourse,
-  updateCourseContent,
 } from "./courses";
 import {
   certifications,
@@ -705,7 +705,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
 
     // A shop sets only its two prices; the agency owns the rest, so an update
     // never rewrites the title or the prerequisite card.
-    const updated = await updateCourse(db, shop.id, course.id, {
+    const updated = await editCourse(db, shop.id, course.id, {
       priceCents: 49900,
       eLearningPriceCents: 21000,
     });
@@ -736,14 +736,14 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     if (!course) throw new Error("course not created");
     expect(course.nitroxCompatible).toBe(true);
 
-    const offAir = await updateCourse(db, shop.id, course.id, {
+    const offAir = await editCourse(db, shop.id, course.id, {
       priceCents: 42500,
       eLearningPriceCents: null,
       nitroxCompatible: false,
     });
     expect(offAir?.nitroxCompatible).toBe(false);
     // And back, from the same control — never a one-way switch.
-    const backOn = await updateCourse(db, shop.id, course.id, {
+    const backOn = await editCourse(db, shop.id, course.id, {
       priceCents: 42500,
       eLearningPriceCents: null,
       nitroxCompatible: true,
@@ -1268,7 +1268,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     });
     if (!course) throw new Error("course not created");
 
-    const saved = await updateCourseContent(db, shop.id, course.id, {
+    const saved = await editCourseContent(db, shop.id, course.id, {
       ...emptyContent,
       summary: "Plan and make dives to 40 meters",
       overview: "Four training dives over two days.",
@@ -1293,7 +1293,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
 
   /**
    * **Two writers, one page, and the second must not silently revert the
-   * first.** `updateCourseContent` writes every field it is given, so the loss
+   * first.** `editCourseContent` writes every field it is given, so the loss
    * is the whole page — nine sections, pricing, photos, the day-by-day plan and
    * the FAQ — not one field (issue #820).
    */
@@ -1303,7 +1303,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     if (!course) throw new Error("expected a seeded course");
     const asBothTabsSawIt = course.rowVersion;
 
-    const first = await updateCourseContent(
+    const first = await editCourseContent(
       db,
       shop.id,
       course.id,
@@ -1313,7 +1313,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     expect(first.ok).toBe(true);
 
     // The second tab still holds the generation it loaded.
-    const second = await updateCourseContent(
+    const second = await editCourseContent(
       db,
       shop.id,
       course.id,
@@ -1339,7 +1339,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     if (!course) throw new Error("expected a seeded course");
     expect(course.rowVersion).toBe(0);
 
-    const first = await updateCourseContent(
+    const first = await editCourseContent(
       db,
       shop.id,
       course.id,
@@ -1348,7 +1348,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     );
     expect(first.ok).toBe(true);
     expect(
-      await updateCourseContent(
+      await editCourseContent(
         db,
         shop.id,
         course.id,
@@ -1368,8 +1368,8 @@ describe("course content and public pages (in-memory PGlite)", () => {
     const { db, shop } = ctx;
     const [course] = await listCourses(db, shop.id);
     if (!course) throw new Error("expected a seeded course");
-    await updateCourseContent(db, shop.id, course.id, { ...emptyContent, summary: "First" });
-    const second = await updateCourseContent(db, shop.id, course.id, {
+    await editCourseContent(db, shop.id, course.id, { ...emptyContent, summary: "First" });
+    const second = await editCourseContent(db, shop.id, course.id, {
       ...emptyContent,
       summary: "Second",
     });
@@ -1383,7 +1383,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     const [course] = await listCourses(db, shop.id);
     if (!course) throw new Error("expected a seeded course");
     expect(
-      await updateCourseContent(db, randomUUID(), course.id, emptyContent, {
+      await editCourseContent(db, randomUUID(), course.id, emptyContent, {
         expectedVersion: course.rowVersion,
       }),
     ).toEqual({ ok: false, reason: "missing" });
@@ -1398,7 +1398,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
     if (!course) throw new Error("course not created");
 
-    await updateCourseContent(db, shop.id, course.id, {
+    await editCourseContent(db, shop.id, course.id, {
       ...emptyContent,
       galleryPhotos: [
         { url: "/a.jpg", alt: "Fitting a mask" },
@@ -1427,7 +1427,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
     if (!course) throw new Error("course not created");
 
-    await updateCourseContent(db, shop.id, course.id, {
+    await editCourseContent(db, shop.id, course.id, {
       ...emptyContent,
       galleryPhotos: [
         { url: "/a.jpg", alt: "Fitting a mask" },
@@ -1462,7 +1462,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     });
     if (!course) throw new Error("course not created");
 
-    await updateCourseContent(db, shop.id, course.id, { ...emptyContent, galleryPhotos: [] });
+    await editCourseContent(db, shop.id, course.id, { ...emptyContent, galleryPhotos: [] });
 
     expect((await getCourseBySlug(db, shop.id, course.slug))?.galleryPhotos).toEqual([]);
   });
@@ -1671,7 +1671,7 @@ describe("course template updates", () => {
     // `security-reviewer` pass named it.
     expect(updated?.rowVersion).toBe((beforePull?.rowVersion ?? 0) + 1);
     expect(
-      await updateCourseContent(db, shop.id, course.id, emptyContent, {
+      await editCourseContent(db, shop.id, course.id, emptyContent, {
         expectedVersion: beforePull?.rowVersion ?? 0,
       }),
     ).toEqual({ ok: false, reason: "conflict" });
@@ -1711,7 +1711,7 @@ describe("course template updates", () => {
     const found = activeList.find((c) => c.slug === "private-navigation");
     expect(found?.privatePriceCents).toBe(65000);
 
-    const updated = await updateCourse(db, shop.id, course.id, {
+    const updated = await editCourse(db, shop.id, course.id, {
       privatePriceCents: 72000,
     });
     expect(updated?.privatePriceCents).toBe(72000);

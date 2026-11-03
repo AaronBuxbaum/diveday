@@ -172,7 +172,6 @@ export default async function NewOrderPage({
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.orders)}
-        eyebrowHref={shopPath(shopSlug, "orders")}
         title={t("orders.new.title")}
         actions={
           <Link

@@ -24,6 +24,7 @@ import {
   buddyTeamEvents,
   buddyTeamMembers,
   calendarFeeds,
+  capabilities,
   certifications,
   courseFormRecords,
   courseFormRequirements,
@@ -51,7 +52,6 @@ import {
   integrationEvents,
   integrationOauthStates,
   interests,
-  interestUnsubscribeTokens,
   internalNotes,
   marineLifeRequests,
   mediaDeletionAttempts,
@@ -63,7 +63,6 @@ import {
   paymentDisputes,
   paymentOperationIntents,
   people,
-  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
@@ -251,14 +250,11 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos),
-  // including the unsubscribe tokens that reference the interests.
-  await db.delete(interestUnsubscribeTokens).where(eq(interestUnsubscribeTokens.shopId, shopId));
+  // including the unsubscribe capabilities that reference the interests and
+  // the people (both purposes go in one delete, before either parent).
+  await db.delete(capabilities).where(eq(capabilities.shopId, shopId));
   await db.delete(interests).where(eq(interests.shopId, shopId));
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
-  // References people, same reasoning as resetDemoSchedule above.
-  await db
-    .delete(personCourtesyEmailUnsubscribeTokens)
-    .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(executedDives).where(inArray(executedDives.tripId, tripIds));

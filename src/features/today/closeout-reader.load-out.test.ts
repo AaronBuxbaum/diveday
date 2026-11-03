@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { trips } from "@/db/schema";
-import { getTripPrep, listShopDayDepartures } from "@/db/trips";
+import { getTripPrep } from "@/db/trip-prep";
+import { listShopDayDepartures } from "@/db/trips";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getDayCloseout, readDayLoadOut } from "./closeout-reader";

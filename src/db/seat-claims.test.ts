@@ -34,7 +34,7 @@ import {
 } from "./seat-claims";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
 import { getWaiverSignerOnFile } from "./waiver-signing";
-import { issueWaiverRequest, saveWaiverTemplate } from "./waivers";
+import { issueWaiverRequest, recordWaiverTemplate } from "./waivers";
 import { getWaiverForToken } from "./waivers-completion";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -374,7 +374,7 @@ describe("issuePartySeatClaims", () => {
     expect(await seatSigned(memberOne.bookingId)).toBe(false);
     expect(await seatSigned(memberTwo.bookingId)).toBe(true);
 
-    const terms = await saveWaiverTemplate(db, {
+    const terms = await recordWaiverTemplate(db, {
       shopId: shop.id,
       body: `${DEFAULT_WAIVER_BODY}\n\nRevised terms.`,
       material: true,

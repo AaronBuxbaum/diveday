@@ -77,7 +77,7 @@ export interface SavePushSubscriptionInput {
  * to this shop (which is also the tenant check), and `too_many` when the caps
  * below are already reached.
  */
-export async function savePushSubscription(
+export async function recordPushSubscription(
   db: AppDb,
   input: SavePushSubscriptionInput,
 ): Promise<{ ok: true } | { ok: false; reason: "not_found" | "too_many" }> {
@@ -256,7 +256,7 @@ export async function claimDuePushTargets(
         // subscribe time meant a trip that moved kept its old window — see
         // src/lib/push-window.ts.
         // Belt to the caps' braces: even if rows arrive by some path that does
-        // not go through savePushSubscription, one event can never claim more
+        // not go through recordPushSubscription, one event can never claim more
         // than this. Ordering is unspecified and deliberately so — this is a
         // safety ceiling, not a fairness queue.
         sql`${pushSubscriptions.id} in (

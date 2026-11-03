@@ -163,7 +163,9 @@ describe("site cert gate across a trip's dive rows (DOM-C1)", () => {
     const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
       (row) => row.booking.id === rosterEntry.booking.id,
     );
-    expect(diver?.depthAdvisory).toMatchObject({ status: "exceeds", siteDepth: 35 });
+    expect(diver?.advisories).toMatchObject([
+      { code: "depth_exceeds_ceiling", params: { siteDepth: 35 } },
+    ]);
     // An advisory, never a gate (H-20260724-certification-levels-agency-rules).
     expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
   });

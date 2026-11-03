@@ -103,7 +103,6 @@ export default async function PastDayPage({
     <StaffPage width="full">
       <ShopPageHeader
         eyebrow={t("shared.shopNavLinks.board")}
-        eyebrowHref={shopPath(shopSlug, "schedule", "board")}
         title={formatCalendarDate(date, locale)}
         meta={
           <span className="text-sm text-muted">

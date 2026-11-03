@@ -15,6 +15,7 @@ import type { AppDb } from "./client";
 import {
   createDiver,
   deleteDiver,
+  editDiver,
   findLiveDiverIdByEmail,
   findSimilarDivers,
   getDiverProfile,
@@ -22,10 +23,8 @@ import {
   listBookableDivers,
   listDiverSummaries,
   restoreDiver,
-  updateDiver,
 } from "./divers";
-import { listOwedProcessorErasures } from "./processor-erasure";
-import { saveRentalFit } from "./rental-fit";
+import { recordRentalFit } from "./rental-fit";
 import {
   activityEvents,
   bookingArrivalEvents,
@@ -36,11 +35,11 @@ import {
   bookings,
   buddyTeamEvents,
   calendarFeeds,
+  capabilities,
   certifications,
   courses,
   executedDives,
   interests,
-  interestUnsubscribeTokens,
   internalNotes,
   mediaDeletionAttempts,
   nitroxCertifications,
@@ -48,7 +47,6 @@ import {
   notificationSendQueue,
   orders,
   people,
-  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   priorVisits,
   recapPhotos,
@@ -65,6 +63,7 @@ import {
 import { clearNoCertificationDeclaration, recordSelfDeclaredCards } from "./self-declared-cards";
 import { upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts } from "./trips";
+import { listUnfinished } from "./unfinished";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 /**
@@ -76,8 +75,8 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
 const DATE_INTEREST = { scope: "date", askedBy: "diver" } as const;
 const ctx = fileScopedShopContext();
 /** The saved row, or a failure naming the refusal. */
-function saved(result: Awaited<ReturnType<typeof updateDiver>>) {
-  if (!result.ok) throw new Error(`updateDiver refused: ${result.reason}`);
+function saved(result: Awaited<ReturnType<typeof editDiver>>) {
+  if (!result.ok) throw new Error(`editDiver refused: ${result.reason}`);
   return result.person;
 }
 describe("person-first diver records", () => {
@@ -193,7 +192,7 @@ describe("person-first diver records", () => {
     });
     if (!diver) throw new Error("diver insert failed");
     const edited = saved(
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId: diver.id,
         fullName: "Edited Eli",
@@ -203,7 +202,7 @@ describe("person-first diver records", () => {
     expect(edited.phone).toBe("+13055550302");
 
     const cleared = saved(
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId: diver.id,
         fullName: "Edited Eli",
@@ -262,7 +261,7 @@ describe("person-first diver records", () => {
       emergencyContactPhone: null,
     });
 
-    const profile = await saveRentalFit(db, {
+    const profile = await recordRentalFit(db, {
       shopId: shop.id,
       personId: priya.id,
       rentsBcd: true,
@@ -390,7 +389,7 @@ describe("person-first diver records", () => {
     ).toBeNull();
 
     const updated = saved(
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId: diver.id,
         fullName: "Returning Riley Updated",
@@ -403,7 +402,7 @@ describe("person-first diver records", () => {
     // The dive-insurance field is trimmed and persisted; blanking it clears it.
     expect(updated.diveInsurance).toBe("DAN #12345");
     const cleared = saved(
-      await updateDiver(db, {
+      await editDiver(db, {
         shopId: shop.id,
         personId: diver.id,
         fullName: "Returning Riley Updated",
@@ -422,14 +421,14 @@ describe("person-first diver records", () => {
   // Task 144 (safety-adjacent — this prints on the manifest): staff can now
   // type an emergency contact straight onto the diver record, not just "ask
   // at the counter" with nowhere to record it.
-  describe("updateDiver emergency contact fields", () => {
+  describe("editDiver emergency contact fields", () => {
     it("writes both fields, leaves them untouched when omitted, and clears them on blank", async () => {
       const { db, shop } = ctx;
       const diver = await createDiver(db, { shopId: shop.id, fullName: "Contact Casey" });
       if (!diver) throw new Error("diver insert failed");
 
       const withContact = saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId: diver.id,
           fullName: "Contact Casey",
@@ -446,7 +445,7 @@ describe("person-first diver records", () => {
       // existing value alone — a staffer editing only the phone number must
       // never silently wipe the name.
       const untouched = saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId: diver.id,
           fullName: "Contact Casey",
@@ -458,10 +457,10 @@ describe("person-first diver records", () => {
       });
 
       // "" is an explicit clear — unlike the diver-facing capture on
-      // /ready and /waivers (saveBookingEmergencyContact), a staffer
+      // /ready and /waivers (recordBookingEmergencyContact), a staffer
       // correcting a wrong entry here must be able to blank it out.
       const cleared = saved(
-        await updateDiver(db, {
+        await editDiver(db, {
           shopId: shop.id,
           personId: diver.id,
           fullName: "Contact Casey",
@@ -485,7 +484,7 @@ describe("person-first diver records", () => {
       const diver = await createDiver(db, { shopId: shop.id, fullName: "Cross Shop Devon" });
       if (!diver) throw new Error("diver insert failed");
 
-      const result = await updateDiver(db, {
+      const result = await editDiver(db, {
         shopId: otherShop.id,
         personId: diver.id,
         fullName: "Cross Shop Devon",
@@ -980,7 +979,7 @@ describe("listBookableDivers (returning-diver picker)", () => {
       email: "marina@example.com",
     });
     if (!diver) throw new Error("diver setup failed");
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId: shop.id,
       personId: diver.id,
       rentsBcd: true,
@@ -1105,7 +1104,7 @@ describe("diver erasure", () => {
       phone: "+1 305 555 0142",
     });
     if (!diver) throw new Error("diver insert failed");
-    await updateDiver(db, {
+    await editDiver(db, {
       shopId: shop.id,
       personId: diver.id,
       fullName: "Erasure Elena",
@@ -1214,7 +1213,7 @@ describe("diver erasure", () => {
       status: "verified",
     });
 
-    await saveRentalFit(db, {
+    await recordRentalFit(db, {
       shopId: shop.id,
       personId: diver.id,
       rentsBcd: true,
@@ -1445,12 +1444,14 @@ describe("diver erasure", () => {
       .update(interests)
       .set({ promoId: promo.id, parentInterestId: listInterest.id, offeredAt: erasureNow })
       .where(and(eq(interests.personId, diver.id), eq(interests.scope, "departure")));
-    await db.insert(interestUnsubscribeTokens).values({
+    await db.insert(capabilities).values({
+      purpose: "interest_unsubscribe",
       shopId: shop.id,
       interestId: listInterest.id,
       tokenHash: "elena-unsub-hash",
     });
-    await db.insert(personCourtesyEmailUnsubscribeTokens).values({
+    await db.insert(capabilities).values({
+      purpose: "courtesy_email_unsubscribe",
       shopId: shop.id,
       personId: diver.id,
       tokenHash: "elena-courtesy-hash",
@@ -1574,14 +1575,11 @@ describe("diver erasure", () => {
       await db.select().from(internalNotes).where(eq(internalNotes.personId, diver.id)),
     ).toHaveLength(0);
     expect(await db.select().from(interests).where(eq(interests.personId, diver.id))).toEqual([]);
-    expect(await db.select().from(interestUnsubscribeTokens)).toHaveLength(0);
+    expect(await db.select().from(capabilities)).toHaveLength(0);
     // Who a deal went to is the departure row it was copied onto, deleted whole
     // with the diver (the interests assertion above): no address is kept anywhere on it.
     expect(
-      await db
-        .select()
-        .from(personCourtesyEmailUnsubscribeTokens)
-        .where(eq(personCourtesyEmailUnsubscribeTokens.personId, diver.id)),
+      await db.select().from(capabilities).where(eq(capabilities.personId, diver.id)),
     ).toHaveLength(0);
     expect(
       await db.select().from(recapPhotos).where(eq(recapPhotos.bookingId, bookingId)),
@@ -2408,7 +2406,7 @@ describe("diver erasure", () => {
       );
 
       // What remains is the one thing no call can clear.
-      const owed = await listOwedProcessorErasures(db, shop.id);
+      const owed = await listUnfinished(db, shop.id, "processor_erasure");
       expect(owed).toHaveLength(1);
       expect(owed[0]).toMatchObject({
         shopId: shop.id,
@@ -2486,7 +2484,7 @@ describe("diver erasure", () => {
       expect(person?.anonymizedAt).toBeInstanceOf(Date);
 
       // And the unfinished work is visible, with the reason on the row.
-      const owed = await listOwedProcessorErasures(db, shop.id);
+      const owed = await listUnfinished(db, shop.id, "processor_erasure");
       const customerRow = owed.find((row) => row.target === "stripe_customer");
       expect(customerRow).toMatchObject({ attempts: 1, lastError: "HTTP 503" });
     });
@@ -2508,7 +2506,7 @@ describe("diver erasure", () => {
         owedProcessorErasures: 0,
       });
       expect(provider.deleteCustomer).not.toHaveBeenCalled();
-      expect(await listOwedProcessorErasures(db, shop.id)).toEqual([]);
+      expect(await listUnfinished(db, shop.id, "processor_erasure")).toEqual([]);
     });
 
     it("never deletes a bystander's Stripe customer", async () => {
@@ -2567,8 +2565,8 @@ describe("diver erasure", () => {
         { customerProvider: providerReturning({ status: "failed", error: "HTTP 503" }) },
       );
 
-      expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(2);
-      expect(await listOwedProcessorErasures(db, rival.id)).toEqual([]);
+      expect(await listUnfinished(db, shop.id, "processor_erasure")).toHaveLength(2);
+      expect(await listUnfinished(db, rival.id, "processor_erasure")).toEqual([]);
     });
   });
 

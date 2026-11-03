@@ -505,7 +505,7 @@ async function rowCounts(db: DbExecutor, tables: string[]): Promise<Map<string, 
  *
  * `media_deletion_attempts` used to be a deliberate `RESET_KEEPS` entry —
  * "internal reconciliation ledger, not schedule data", which is true and was
- * not the whole story. `listPendingMediaDeletions` feeds Today an
+ * not the whole story. the media-deletion read (`src/db/unfinished.ts`) feeds Today an
  * `urgency: "now"` row, so a stale attempt written by one test (which is what
  * `/api/test/seed-trouble-states` exists to do) left a "Recap photo" cleanup
  * card on Today for whichever spec Playwright's sharding ran next in that

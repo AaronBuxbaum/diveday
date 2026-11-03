@@ -10,10 +10,10 @@ import type { AppDb } from "./client";
 import {
   createDiveSite,
   type DiveSiteInput,
+  editDiveSite,
   refusingNameClash,
   replaceDiveSiteCreatures,
   SITE_NAME_TAKEN,
-  updateDiveSite,
 } from "./dive-sites";
 import type { MarineLifeSlug } from "./marine-life-catalog";
 import type { DiveSiteFitTone, DiveSpecialty } from "./schema";
@@ -46,7 +46,7 @@ export type DiveSiteImportSummary = {
  * around it described a shop exporting and re-importing, while nothing in the
  * tree could read one back. This is that half.
  *
- * **It writes through `createDiveSite` and `updateDiveSite` rather than
+ * **It writes through `createDiveSite` and `editDiveSite` rather than
  * touching the table**, which is the whole of its design. Those two own rules a
  * restore must not be able to skip, and every one of them was written for a
  * caller exactly like this: `confirmedStationWrite` grants a tide
@@ -138,14 +138,14 @@ export async function commitDiveSiteImport(
     const input = diveSiteInput(shopId, row, importedByPersonId, Boolean(match));
     if (match) {
       // **Both refusals the writer can hand back, and neither used to be
-      // read** (security review, issue #1771). `updateDiveSite` carries
+      // read** (security review, issue #1771). `editDiveSite` carries
       // `deleted_at is null`, so a row matching a *deleted* site by name
       // matched nothing and wrote nothing — and this counted it as updated,
       // then `applyDeletedState` counted it as deleted. "1 updated, 1 deleted"
       // over a library that had not changed at all, on exactly the scenario
       // the name match exists for.
       const updated = await refusingNameClash(db, (savepoint) =>
-        updateDiveSite(savepoint, shopId, match.id, input),
+        editDiveSite(savepoint, shopId, match.id, input),
       );
       if (updated === SITE_NAME_TAKEN) {
         summary.skipped.push({ rowNumber: row.rowNumber, issues: ["name_taken"] });

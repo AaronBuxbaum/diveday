@@ -8,8 +8,8 @@ import {
   type BoatPapersInput,
   createBoat,
   deleteBoat,
+  editBoatWithinCertificate,
   replaceBoatPhoto,
-  updateBoatWithinCertificate,
 } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
@@ -229,7 +229,7 @@ export async function updateBoatAction(formData: FormData) {
   // keeps sailing, but this is the save that has to put it right. Upcoming
   // departures are read too, so a certificate cannot be lowered under seats
   // a departure is still selling — checked and written in one transaction.
-  const saved = await updateBoatWithinCertificate(db, {
+  const saved = await editBoatWithinCertificate(db, {
     shopId: session.user.shopId,
     boatId,
     name,

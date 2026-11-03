@@ -5,12 +5,12 @@ import { getDb } from "@/db/client";
 import { planDiveSitePhotoRelease } from "@/db/dive-site-photos";
 import {
   deleteDiveSite,
+  editDiveSiteForForm,
   getDiveSite,
   pullDiveSiteTemplateUpdates,
   SITE_EDIT_CONFLICT,
   SITE_NAME_TAKEN,
   undoDiveSiteTemplateUpdate,
-  updateDiveSiteForForm,
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { readRequiredSpecialties } from "@/db/requirement-form";
@@ -117,7 +117,7 @@ export async function saveDiveSiteAction(
     id,
     supersededDiveSitePhotos(stored, photos.photos),
   );
-  const updated = await updateDiveSiteForForm(
+  const updated = await editDiveSiteForForm(
     activeDb,
     activeSession.user.shopId,
     id,

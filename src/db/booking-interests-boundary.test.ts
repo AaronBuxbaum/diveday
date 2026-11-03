@@ -32,13 +32,7 @@ const BOOKING_PATH = [
 const INTEREST_MODULE = /(^|\/)(interests|interest-[a-z-]+)(\.ts)?$/;
 
 /** The schema bindings that are the interest tables. */
-const INTEREST_TABLES = new Set([
-  "interests",
-  "Interest",
-  "interestUnsubscribeTokens",
-  "interestScope",
-  "interestAskedBy",
-]);
+const INTEREST_TABLES = new Set(["interests", "Interest", "interestScope", "interestAskedBy"]);
 
 function importsOf(file: string): { spec: string; names: string[] }[] {
   const source = fs.readFileSync(path.join(ROOT, file), "utf8");

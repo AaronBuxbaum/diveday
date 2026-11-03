@@ -26,7 +26,7 @@ import {
   trips,
 } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
-import { createTrip, pagedUpcomingTripsWithCounts, updateTrip } from "./trips";
+import { createTrip, editTrip, pagedUpcomingTripsWithCounts } from "./trips";
 import { tripExistsForShop } from "./trips-record";
 
 /**
@@ -398,7 +398,7 @@ describe("rehearsal coverage: a real rehearsal", () => {
   it("is created private and unpriced, and an edit cannot change either", async () => {
     const { db, shop, trip } = await rehearsalWithASeat();
     expect(trip).toMatchObject({ isRehearsal: true, isPrivate: true, priceCents: null });
-    const edited = await updateTrip(db, shop.id, trip.id, {
+    const edited = await editTrip(db, shop.id, trip.id, {
       title: trip.title,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,

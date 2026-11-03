@@ -5,7 +5,7 @@ import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { savePushSubscription } from "./push-subscriptions";
+import { recordPushSubscription } from "./push-subscriptions";
 import { people, personRoles, pushSubscriptions, shops, userAccounts } from "./schema";
 import {
   inviteStaffMember,
@@ -336,7 +336,7 @@ describe("removeStaffMember", () => {
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const trip = trips[0];
     if (!trip) throw new Error("expected a seeded trip");
-    await savePushSubscription(db, {
+    await recordPushSubscription(db, {
       shopId: shop.id,
       tripId: trip.id,
       personId: staff.personId,

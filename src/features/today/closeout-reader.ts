@@ -16,17 +16,10 @@ import {
   tripDives,
   trips,
 } from "@/db/schema";
-import { DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "@/db/seed-clock";
-import { AT_SEA_DUSK_TITLE } from "@/db/seed-identifiers";
+import { AT_SEA_DUSK_TITLE, DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "@/db/seed";
+import { getTripPrep, type TripPrepShop } from "@/db/trip-prep";
 import { latestTripStagesByTrip } from "@/db/trip-stages";
-import {
-  getTripPrep,
-  listShopDayDepartures,
-  liveTrip,
-  notRehearsal,
-  seatNotCancelled,
-  type TripPrepShop,
-} from "@/db/trips";
+import { listShopDayDepartures, liveTrip, notRehearsal, seatNotCancelled } from "@/db/trips";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DayLoadOut } from "@/lib/closeout-kinds";

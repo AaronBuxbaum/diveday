@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createPerson } from "./people";
-import { getRentalFit, saveRentalFit } from "./rental-fit";
+import { getRentalFit, recordRentalFit } from "./rental-fit";
 import { certifications, people, waiverDeliveries, waiverRecords } from "./schema";
 import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "./self-registration";
 import { completeWaiver, getWaiverForToken, issueWaiverRequest } from "./waivers";
@@ -325,7 +325,7 @@ describe("self-registration", () => {
       const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
       // What the shop and the diver settled on together: sizes, and the gear
       // the boat packs for them.
-      await saveRentalFit(db, {
+      await recordRentalFit(db, {
         shopId: shop.id,
         personId,
         rentsBcd: true,
@@ -352,7 +352,7 @@ describe("self-registration", () => {
         fit: { wetsuitSize: "XS", bootSize: "5", finSize: "S" },
       });
 
-      // Unchanged — flags included. `saveRentalFit` upserts all seven, so a
+      // Unchanged — flags included. `recordRentalFit` upserts all seven, so a
       // matched write here would drop this diver's BCD, regulator, wetsuit and
       // weights off the packing list and they would find out at the dock.
       const fit = await getRentalFit(db, shop.id, personId);

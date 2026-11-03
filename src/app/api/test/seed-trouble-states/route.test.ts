@@ -5,9 +5,9 @@ import { getGearItemDetail } from "@/db/gear-register";
 import { listGearRentals } from "@/db/gear-rentals";
 import { getTripManifest } from "@/db/manifests";
 import { listTripReadiness } from "@/db/readiness";
-import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { bookings, people, trips } from "@/db/schema";
 import { liveTrip } from "@/db/trips-live";
+import { listUnfinished } from "@/db/unfinished";
 import { getShopDayDepartures } from "@/features/today";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -112,7 +112,7 @@ describe("POST /api/test/seed-trouble-states", () => {
     expect(response.status).toBe(200);
 
     expect(await cancelledTripIds(db)).toEqual(before);
-    expect(await listOwedShopCancellationRefunds(db, shop.id)).toEqual([]);
+    expect(await listUnfinished(db, shop.id, "shop_cancellation_refund")).toEqual([]);
   }, 60_000);
 
   it("owes a refund on a cancelled departure when the caller asks for it", async () => {
@@ -122,7 +122,9 @@ describe("POST /api/test/seed-trouble-states", () => {
     const response = await POST(seedRequest("?owedRefund=1"));
     expect(response.status).toBe(200);
 
-    expect((await listOwedShopCancellationRefunds(db, shop.id)).length).toBeGreaterThan(0);
+    expect((await listUnfinished(db, shop.id, "shop_cancellation_refund")).length).toBeGreaterThan(
+      0,
+    );
   }, 60_000);
 
   /**

@@ -2231,3 +2231,13 @@
   assist works the same without it. Code: `runAssist` in `src/db/assists.ts`; on screen, the
   controls in `src/components/assists/` (`AssistDraftButton` and its siblings). Not "AI": the copy
   names Claude.
+- **Unfinished work** — a row a ledger still owes someone, in one grammar (issue #2703): `pending`
+  until a worker takes it, `in_flight` while a call is out, then `done` or `failed` with a reason.
+  Each ledger keeps its own status word and `src/lib/attempts.ts` places it (`LEDGER_STATES`); the
+  rule for when each kind is stuck, and when Today raises it, is `ATTEMPT_RULES`. Five kinds today:
+  payment operations in flight past five minutes, media deletes that failed or died mid-call,
+  processor erasures still owed, captured seats on cancelled departures, and refunds Stripe
+  reversed. One reader, `listUnfinished` / `readUnfinished` in `src/db/unfinished.ts`, answers for
+  all of them; each surface shows its own kinds in its own words (Orders the money, Settings' Data
+  group the erasure halves, Today what is loud). The notification send queue is not one of them: its
+  parked rows go to operator logging (#1826).

@@ -1,6 +1,7 @@
 import { StatusMark } from "@/components/ui/StatusMark";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { depthAdvisoryIn } from "@/lib/findings";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { TripManifest } from "@/lib/manifests";
 import { SHARED_FACT_MIN } from "../../_components/shared-facts";
@@ -21,12 +22,9 @@ export function sharedDepthAdvisories(divers: TripManifest["divers"], t: StaffTr
   // a capsule pointing at a strip is a reference paper cannot follow.
   const advisoryDivers = new Map<string, string[]>();
   for (const diver of divers) {
-    if (
-      diver.depthAdvisory?.status !== "exceeds" &&
-      diver.depthAdvisory?.status !== "verification_required"
-    )
-      continue;
-    const text = depthWarningText(t, diver.depthAdvisory);
+    const depthAdvisory = depthAdvisoryIn(diver.advisories);
+    if (!depthAdvisory) continue;
+    const text = depthWarningText(t, depthAdvisory);
     advisoryDivers.set(text, [...(advisoryDivers.get(text) ?? []), diver.fullName]);
   }
   const sharedAdvisories = [...advisoryDivers.entries()].filter(

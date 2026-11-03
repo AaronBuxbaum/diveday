@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { getShopById, saveShopRentals } from "@/db/shops";
+import { getShopById, recordShopRentals } from "@/db/shops";
 import { defineAction, land, type NoticeOf } from "@/features/server-action";
 import { formValue } from "@/lib/form-parse";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
@@ -115,7 +115,7 @@ export const saveRentalsAction = defineAction({
       return land(page, "nitrox-fill-invalid");
     }
 
-    await saveShopRentals(db, shopId, {
+    await recordShopRentals(db, shopId, {
       rentalItems,
       rentalPricing: { setCents: set.cents, perItemCents, nitroxCents },
       rentalTerms: terms.terms,

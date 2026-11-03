@@ -47,10 +47,14 @@ it("keeps the junior advisory when a young diver has no verified card or site de
   const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
     (row) => row.booking.id === seat.booking.id,
   );
-  expect(diver?.depthAdvisory).toMatchObject({
-    status: "verification_required",
-    verificationReasons: ["junior_limits"],
-  });
+  expect(diver?.advisories).toMatchObject([
+    {
+      code: "depth_verification_required",
+      params: {
+        verificationReasons: ["junior_limits"],
+      },
+    },
+  ]);
   expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
 });
 
@@ -73,10 +77,14 @@ it("keeps age and supervision checks visible without a verified card, birthday, 
   const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
     (row) => row.booking.id === seat.booking.id,
   );
-  expect(diver?.depthAdvisory).toMatchObject({
-    status: "verification_required",
-    verificationReasons: ["junior_limits"],
-  });
+  expect(diver?.advisories).toMatchObject([
+    {
+      code: "depth_verification_required",
+      params: {
+        verificationReasons: ["junior_limits"],
+      },
+    },
+  ]);
   expect(diver?.readiness.blockers).toContainEqual(
     expect.objectContaining({ code: "certification_pending" }),
   );
@@ -99,10 +107,14 @@ it("keeps the PADI junior advisory when date of birth and site depth are missing
   const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
     (row) => row.booking.id === seat.booking.id,
   );
-  expect(diver?.depthAdvisory).toMatchObject({
-    status: "verification_required",
-    verificationReasons: expect.arrayContaining(["junior_limits"]),
-  });
+  expect(diver?.advisories).toMatchObject([
+    {
+      code: "depth_verification_required",
+      params: {
+        verificationReasons: expect.arrayContaining(["junior_limits"]),
+      },
+    },
+  ]);
   expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
 });
 
@@ -118,10 +130,14 @@ it("keeps unclassified PADI Advanced card and age checks visible without gating 
     const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
       (row) => row.booking.id === seat.booking.id,
     );
-    expect(diver?.depthAdvisory).toMatchObject({
-      status: "verification_required",
-      verificationReasons: ["card_status", "junior_limits"],
-    });
+    expect(diver?.advisories).toMatchObject([
+      {
+        code: "depth_verification_required",
+        params: {
+          verificationReasons: ["card_status", "junior_limits"],
+        },
+      },
+    ]);
     expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
   }
 });
@@ -138,10 +154,14 @@ it("keeps unclassified PADI card evidence visible for a known adult without gati
     const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
       (row) => row.booking.id === seat.booking.id,
     );
-    expect(diver?.depthAdvisory).toMatchObject({
-      status: "verification_required",
-      verificationReasons: expect.arrayContaining(["card_status"]),
-    });
+    expect(diver?.advisories).toMatchObject([
+      {
+        code: "depth_verification_required",
+        params: {
+          verificationReasons: expect.arrayContaining(["card_status"]),
+        },
+      },
+    ]);
     expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
   }
 });

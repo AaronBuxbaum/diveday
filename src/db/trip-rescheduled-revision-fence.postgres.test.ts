@@ -14,7 +14,7 @@ import { holdRescheduleNotice, sendRescheduleNotices } from "./trip-rescheduled"
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { createTrip, moveTrip } from "./trips";
 import { cancelDeparturesBelowMinimum } from "./trips-minimum";
-import { setTripStatus, updateTrip } from "./trips-record";
+import { editTrip, setTripStatus } from "./trips-record";
 
 function barrier() {
   let resolve!: () => void;
@@ -605,7 +605,7 @@ describePostgres("initial held reschedule revision fence", () => {
     const atA = new Date(original.getTime() + HOUR_MS);
     const atB = new Date(original.getTime() + 2 * HOUR_MS);
 
-    const firstMove = await updateTrip(
+    const firstMove = await editTrip(
       pg.connect(),
       shop.id,
       trip.id,
@@ -663,7 +663,7 @@ describePostgres("initial held reschedule revision fence", () => {
       .set({ identityUnconfirmedAt: now })
       .where(eq(bookings.id, booking.bookingId));
 
-    const firstMove = await updateTrip(
+    const firstMove = await editTrip(
       pg.connect(),
       shop.id,
       trip.id,

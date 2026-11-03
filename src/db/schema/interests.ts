@@ -266,33 +266,3 @@ export const dateRequestOfferBookings = pgTable(
     index("date_request_offer_bookings_shop_interest_idx").on(table.shopId, table.interestId),
   ],
 );
-
-/**
- * A diver-facing, self-serve bearer link to unsubscribe one **anytime** interest
- * (the last-minute list; docs features/story-backlog.md "Leo — self-serve email
- * unsubscribe"). A fresh token is minted for every deal blast rather than one
- * stable token per interest (mirrors `bookingCapabilities`, not `calendarFeeds`), so
- * an old email's link keeps working even after a later blast mints another.
- * Deliberately never expires: an expired unsubscribe link would leave someone
- * unable to opt out, silently. Consuming a token only ever closes the interest as
- * `unsubscribed`, an idempotent write, so there is nothing to mark used or
- * revoke. Same semantics as the `last_minute_list_unsubscribe_tokens` it
- * replaces (ADR 20261017-one-interest-with-a-scope).
- */
-export const interestUnsubscribeTokens = pgTable(
-  "interest_unsubscribe_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    interestId: uuid("interest_id")
-      .notNull()
-      .references(() => interests.id),
-    tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: appNowTimestamp("issued_at").notNull(),
-  },
-  (table) => [index("interest_unsubscribe_tokens_interest_idx").on(table.interestId)],
-);
-
-export type InterestUnsubscribeToken = typeof interestUnsubscribeTokens.$inferSelect;

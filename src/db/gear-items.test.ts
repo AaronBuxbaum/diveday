@@ -5,9 +5,9 @@ import {
   countGearItems,
   createGearItem,
   deleteGearItem,
+  editGearItem,
   restoreGearItem,
   setGearItemStatus,
-  updateGearItem,
 } from "./gear-items";
 import {
   countGearItemsByKind,
@@ -108,7 +108,7 @@ describe("gear items", () => {
     expect(page.rows[0]?.serviceState).toEqual({ state: "no_clock" });
     expect(page.rows[0]?.reservation).toBeNull();
 
-    const updated = await updateGearItem(db, {
+    const updated = await editGearItem(db, {
       shopId: shop.id,
       gearItemId: bcd.id,
       kind: "bcd",
@@ -143,7 +143,7 @@ describe("gear items", () => {
     );
     expect(bcd.nitroxDesignated).toBeNull();
 
-    const untouched = await updateGearItem(db, {
+    const untouched = await editGearItem(db, {
       shopId: shop.id,
       gearItemId: reg.id,
       kind: "regulator",
@@ -151,7 +151,7 @@ describe("gear items", () => {
     });
     expect(untouched).toMatchObject({ ok: true, item: { nitroxDesignated: true } });
 
-    const unticked = await updateGearItem(db, {
+    const unticked = await editGearItem(db, {
       shopId: shop.id,
       gearItemId: reg.id,
       kind: "regulator",
@@ -160,14 +160,14 @@ describe("gear items", () => {
     });
     expect(unticked).toMatchObject({ ok: true, item: { nitroxDesignated: false } });
 
-    await updateGearItem(db, {
+    await editGearItem(db, {
       shopId: shop.id,
       gearItemId: reg.id,
       kind: "regulator",
       label: "Reg #nx-1",
       nitroxDesignated: true,
     });
-    const nowAnOctopus = await updateGearItem(db, {
+    const nowAnOctopus = await editGearItem(db, {
       shopId: shop.id,
       gearItemId: reg.id,
       kind: "other",
@@ -195,7 +195,7 @@ describe("gear items", () => {
     );
     expect(bcd.thicknessMm).toBeNull();
 
-    const untouched = await updateGearItem(db, {
+    const untouched = await editGearItem(db, {
       shopId: shop.id,
       gearItemId: suit.id,
       kind: "wetsuit",
@@ -203,7 +203,7 @@ describe("gear items", () => {
       size: "L",
     });
     expect(untouched).toMatchObject({ ok: true, item: { thicknessMm: 7 } });
-    const cleared = await updateGearItem(db, {
+    const cleared = await editGearItem(db, {
       shopId: shop.id,
       gearItemId: suit.id,
       kind: "wetsuit",
@@ -324,7 +324,7 @@ describe("gear items", () => {
       reason: "duplicate_label",
     });
 
-    await updateGearItem(db, {
+    await editGearItem(db, {
       shopId: shop.id,
       gearItemId: replacement.id,
       kind: "gopro",

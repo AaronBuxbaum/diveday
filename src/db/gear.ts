@@ -35,13 +35,13 @@ export {
   createGearItem,
   type DeleteGearItemOutcome,
   deleteGearItem,
+  editGearItem,
   type GearItemInput,
   type RestoreGearItemOutcome,
   restoreGearItem,
   type SetGearItemStatusOutcome,
   setGearItemStatus,
   type UpdateGearItemOutcome,
-  updateGearItem,
 } from "./gear-items";
 export {
   countGearItemsByKind,

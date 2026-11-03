@@ -502,7 +502,6 @@ export default async function TeamSettingsPage({
       />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.team.title")}
         description={
           needReview > 0

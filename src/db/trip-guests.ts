@@ -39,8 +39,8 @@ import { type CertificationSummary, listCertificationSummaries } from "./self-de
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { trainingMarksForRoster } from "./training-marks";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
+import type { TripSharedReads } from "./trip-shared-reads";
 import { getTripWithBooked } from "./trips-record";
-import type { TripSharedReads } from "./trips-shared-reads";
 
 /**
  * Everything the trip's Guests page is about, in one call — the last of the
@@ -143,7 +143,7 @@ export async function getTripGuests(
   shop: TripGuestsShop,
   tripId: string,
   filters: TripGuestsFilters = {},
-  /** The reads shared with `getTripOverview` (`./trips-shared-reads`); omitted, this reads its own. */
+  /** The reads shared with `getTripOverview` (`./trip-shared-reads`); omitted, this reads its own. */
   sharedReads?: TripSharedReads | null | Promise<TripSharedReads | null>,
 ) {
   const shared = await sharedReads;

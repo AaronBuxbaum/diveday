@@ -148,7 +148,6 @@ export default async function DayBlowoutPage({
       <FlashParams params={["notice", "count", "called", "skipped"]} />
       <ShopPageHeader
         eyebrow={t("shared.shopNavLinks.board")}
-        eyebrowHref={shopPath(shopSlug, "schedule", "board")}
         title={reviewed ? t("blowout.day.confirmTitle") : t("blowout.day.title")}
         meta={<span className="text-sm text-muted">{formatCalendarDate(date, locale)}</span>}
       />

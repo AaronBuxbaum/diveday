@@ -6,8 +6,8 @@ import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
 import { listTripUnitsToCheckIn } from "@/db/gear";
 import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
+import { getTripPrep } from "@/db/trip-prep";
 import { latestTripStage } from "@/db/trip-stages";
-import { getTripPrep } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -175,7 +175,6 @@ export default async function TripPrepPage({
     <>
       <FlashParams params={["notice", "count"]} />
       <TripPageHeader
-        boardHref={shopPath(shopSlug, "schedule", "board")}
         backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
         trip={trip}
         locale={locale}

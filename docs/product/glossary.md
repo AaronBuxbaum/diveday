@@ -14,6 +14,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Aboard blocker kind
 - Admission advisory
 - Adventure Diver
+- Advisory
 - Agency
 - Agency check
 - Agency check of a card
@@ -38,6 +39,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - DSD (Discover Scuba Diving)
 - eLearning check
 - Entry-level in-water ratio
+- Finding
 - Guardian co-signature
 - Guardian's copy
 - GUE
@@ -344,6 +346,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Turned away
 - Unaccounted for
 - Under 18
+- Unfinished work
 - Wait list
 - Wait-list party
 - Wait-list roll
@@ -439,6 +442,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 [glossary/security.md](glossary/security.md)
 
 - Address confirmation token
+- Capability
 - Pending sign-in challenge
 - Recovery code
 - Step-up

@@ -21,6 +21,9 @@ import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
+import { getTripGuests } from "@/db/trip-guests";
+import { getTripOverview } from "@/db/trip-overview";
+import { loadTripSharedReads } from "@/db/trip-shared-reads";
 import { siteSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import {
@@ -31,10 +34,7 @@ import {
   pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
 } from "@/db/trips";
-import { getTripGuests } from "@/db/trips-guests";
 import { liveTrip } from "@/db/trips-live";
-import { getTripOverview } from "@/db/trips-overview";
-import { loadTripSharedReads } from "@/db/trips-shared-reads";
 import {
   countBlockedDiversNextBoatDay,
   getShopDayDepartures,
@@ -65,7 +65,7 @@ import { phaseCountingDb, report } from "@/test/render-phases";
  * `render.db_queries` line each staff render logs. The savings below are the
  * structural ones: a reader that no longer runs twice whatever React does.
  *
- * `DIVEDAY_PRINT_QUERY_COUNTS=1 pnpm test src/app/shop/[shopSlug]/staff-render-cost.test.ts
+ * `DIVEDAY_PRINT_QUERY_COUNTS=1 pnpm test src/db/staff-render-cost.test.ts
  * --reporter=dot --silent=false` prints each number, for the PR description.
  *
  * **Statements are half the cost; the other half is how many of them wait on
@@ -647,7 +647,7 @@ const TRIP_CEILING = 69;
  * The trip page measured 10: its shared reads, then `getTripOverview`'s four
  * steps after its fan-out. 10 → 7: the overview's dependent reads (ratings and
  * shifts on the crew, the off-cadence list, both clash reads) now chain inside
- * its one wave (`src/db/trips-overview.ts`, issue #2353).
+ * its one wave (`src/db/trip-overview.ts`, issue #2353).
  */
 // 7 → 8: not a new wait, an old one made visible. The marine provider now
 // answers after the database goes quiet, as a real one does, and Today's queue

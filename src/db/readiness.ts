@@ -4,6 +4,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
+import { type BookingAdvisory, depthFinding } from "@/lib/findings";
 import { type CourseSeatInTraining, courseEndedBefore, inTrainingBefore } from "@/lib/in-training";
 import {
   isDiver,
@@ -1537,28 +1538,30 @@ export async function listTripReadiness(
       depthLimit.basis === "no_card" &&
       row.readiness.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "certification");
 
+    // A snorkeler or a rider is not going to the site's depth, so a ceiling
+    // has nothing to say about them — silence, not "within".
+    const depth = !isDiver(row.booking.participantType)
+      ? null
+      : certificationBlocked && depthLimit.verificationReasons?.length
+        ? ({
+            status: "verification_required",
+            verificationReasons: depthLimit.verificationReasons,
+          } as const)
+        : certificationBlocked
+          ? null
+          : checkDepthCeiling(tripMaxDepthMeters, depthLimit, depthUnit);
+    const depthAdvisory = depthFinding(depth);
     return {
       ...row,
       /**
-       * Whether the deepest site on this trip goes past what this diver's card
-       * (and junior age band) is trained for — H-20260724-certification-levels-agency-rules, decided as a **warning,
-       * not a block**. Deliberately a sibling of `readiness` rather than a
-       * blocker inside it: an instructor may keep a diver shallower than the
-       * site's maximum, so this must never be able to flip a `ready` diver to
-       * `blocked`. Nothing downstream treats it as a gate.
+       * What this seat's readiness does not say: findings at strictness zero
+       * (`src/lib/findings.ts`). Today, whether the deepest site on this trip
+       * goes past what this diver's card (and junior age band) is trained for
+       * (H-20260724-certification-levels-agency-rules, a **warning, not a
+       * block**). A sibling list of `readiness`, never inside it, so nothing
+       * here can flip a `ready` diver to `blocked`.
        */
-      // A snorkeler or a rider is not going to the site's depth, so a ceiling
-      // has nothing to say about them — silence, not "within".
-      depthAdvisory: !isDiver(row.booking.participantType)
-        ? ({ status: "unknown" } as const)
-        : certificationBlocked && depthLimit.verificationReasons?.length
-          ? ({
-              status: "verification_required",
-              verificationReasons: depthLimit.verificationReasons,
-            } as const)
-          : certificationBlocked
-            ? ({ status: "unknown" } as const)
-            : checkDepthCeiling(tripMaxDepthMeters, depthLimit, depthUnit),
+      advisories: depthAdvisory ? [depthAdvisory] : ([] as BookingAdvisory[]),
     };
   });
 }

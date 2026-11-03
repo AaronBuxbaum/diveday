@@ -178,7 +178,7 @@ describe("ops alerts on the queue (task 157)", () => {
     const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
     // No wall-clock trickery needed on the write side: reading the queue from
     // ten minutes in the *database's* future is what makes the just-started
-    // intent read as stuck (same trick `listStuckPaymentOperations`' own
+    // intent read as stuck (same trick the stuck-payment read's own
     // tests use; `started_at` is a `defaultNow()` column, so Postgres' clock
     // is the one that has to move — see `dbNow` in src/test/db.ts).
     const future = await dbNowPlus(db, 10 * 60 * 1000);

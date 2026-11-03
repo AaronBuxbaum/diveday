@@ -962,7 +962,7 @@ export const people = pgTable(
      * makes it an adult by someone's say-so.
      *
      * A date of birth replaces it: the guardian rule and the age gate read the
-     * date and never this, and typing a date (`updateDiver`) or merging onto
+     * date and never this, and typing a date (`editDiver`) or merging onto
      * one nulls this pair, so clearing that date later cannot bring back an
      * adult claim the date may have disproved. Null everywhere else, which is
      * the ordinary H-20260724-certification-levels-agency-rules case of a record nobody asked about.

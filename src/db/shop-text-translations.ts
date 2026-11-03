@@ -86,7 +86,7 @@ export function readsTranslations(locale: string, shopLocale: string): boolean {
  * added (dive-domain copy review, B1). `refused` is a field outside the list
  * or text too long.
  */
-export async function saveTranslation(
+export async function recordTranslation(
   db: AppDb,
   shopId: string,
   subject: Subject,

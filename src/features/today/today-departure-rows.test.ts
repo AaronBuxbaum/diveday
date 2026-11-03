@@ -13,9 +13,9 @@ import {
   shops,
 } from "@/db/schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
+import { getTripOverview } from "@/db/trip-overview";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import { listStaff } from "@/db/trips-crew";
-import { getTripOverview } from "@/db/trips-overview";
 import { setWelcomeConsent } from "@/db/welcome-cues";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";

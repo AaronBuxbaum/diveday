@@ -395,6 +395,18 @@
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
   blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
+- **Finding** — one thing DiveDay says about a seat or a departure, as a code and its values
+  (`src/lib/findings.ts`). Each code has one **strictness**: `blocks` (a readiness blocker) or
+  `informs` (an **advisory**). One table records it, and a code it does not know blocks. A finding is
+  about a **booking** or a **departure**; a departure finding (crew, ratio, minimum seats,
+  pre-departure check) is meant for the trip's own row, never beside a diver.
+- **Advisory** — a finding of strictness `informs`: a depth past the diver's ceiling, a long gap
+  since the last dive, a course session with no instructor or over its in-water ratio (refused at
+  sale; staff must fix it before the dive), a boat under the shop's divemaster target, a departure
+  short of its minimum, a safety checklist not yet ticked. It never makes a diver blocked; blockers
+  and advisories are two lists, and making an advisory gate is an owner decision, not a table edit.
+  Not an **Admission advisory**, which is advice about a sale.
+  See [20261103-advisory-is-a-finding](../../architecture/decisions/20261103-advisory-is-a-finding.md).
 - **Aboard blocker kind** — what a blocker is asking of the crew once the diver is *already on the
   boat*, which is not the same question as which requirement family it belongs to. Four kinds,
   worst first: **medical** (a review hold — a doctor must confirm in writing, so nobody aboard can

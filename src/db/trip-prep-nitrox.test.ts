@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { proposalKey } from "@/lib/gear-proposals";
 import { fileScopedShopContext } from "@/test/db";
 import { bookings, gearItems, nitroxCertifications } from "./schema";
+import { getTripPrep, screenGearPicks } from "./trip-prep";
 import { upcomingTripsWithCounts } from "./trips";
-import { getTripPrep, screenGearPicks } from "./trips-prep";
 
 const fileCtx = fileScopedShopContext();
 

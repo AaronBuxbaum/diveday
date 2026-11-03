@@ -581,7 +581,7 @@ export type SaveWorkOrderOutcome =
  * ticket must still be about a live person of this shop: the shop does not
  * keep writing onto a diver it has erased.
  */
-export async function saveWorkOrder(
+export async function recordWorkOrder(
   db: AppDb,
   input: {
     shopId: string;
@@ -1155,7 +1155,7 @@ export async function addWorkOrderLine(
 }
 
 /** Correct a line in place. */
-export async function updateWorkOrderLine(
+export async function editWorkOrderLine(
   db: AppDb,
   input: {
     shopId: string;

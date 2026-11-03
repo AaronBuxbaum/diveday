@@ -34,6 +34,7 @@ import {
   buddyTeamEvents,
   buddyTeamMembers,
   calendarFeeds,
+  capabilities,
   certifications,
   courseFormRecords,
   courseFormRequirements,
@@ -58,7 +59,6 @@ import {
   integrationEvents,
   integrationOauthStates,
   interests,
-  interestUnsubscribeTokens,
   internalNotes,
   marineLifeRequests,
   mediaDeletionAttempts,
@@ -70,7 +70,6 @@ import {
   paymentDisputes,
   paymentOperationIntents,
   people,
-  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   platformBackupProgress,
   preDepartureCheckEvents,
@@ -361,11 +360,16 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
 }
 
 /**
+ * The demo's dusk boat, by title and clock, for the close-out's carry-over read
+ * (`src/features/today/closeout-reader.ts`), which lives outside `src/db`.
+ */
+export { DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "./seed-clock";
+/**
  * The colour a branded minted shop wears: mantis green, chosen because it is
  * not the product's teal and dark enough for white text as typed. Exported for
  * `e2e/storefront-brand.spec.ts`, which proves the storefront wears it.
  */
-export { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
+export { AT_SEA_DUSK_TITLE, MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 export { DEMO_SHOP_BRAND } from "./seed-shop-brand";
 
 /**
@@ -1586,7 +1590,7 @@ export async function clearDemoSchedule(
   // **A stuck media deletion is not schedule data, and it still has to go.**
   // The seed creates none, so clearing them restores exactly the seeded state —
   // and leaving them made the reset non-restoring in the one direction that
-  // shows: `listPendingMediaDeletions` feeds Today an `urgency: "now"` row, so
+  // shows: the media-deletion read (`src/db/unfinished.ts`) feeds Today an `urgency: "now"` row, so
   // a test that seeded a stale attempt (`/api/test/seed-trouble-states`) left a
   // "Recap photo" cleanup card on Today for whichever spec Playwright's
   // sharding ran next in that worker. That surfaced as three visual captures —
@@ -1600,26 +1604,19 @@ export async function clearDemoSchedule(
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
-  // The last-minute list's unsubscribe links name an interest by foreign key, so
-  // they go before the interests. Added with Leo's self-serve unsubscribe (docs ADR
+  // The unsubscribe capabilities name an interest or a person by foreign key, so
+  // they go before the interests and the people. Added with Leo's self-serve unsubscribe (docs ADR
   // 20260731-self-serve-unsubscribe) but not to this ordering once, which made
   // every `/api/test/reset` throw 23503 mid-run and leave the demo shop
   // half-reset — the e2e fleet then failed in whichever spec happened to read
   // the wreckage next, which is why the flake moved around between runs.
-  await db.delete(interestUnsubscribeTokens).where(eq(interestUnsubscribeTokens.shopId, shopId));
+  await db.delete(capabilities).where(eq(capabilities.shopId, shopId));
   await db.delete(interests).where(eq(interests.shopId, shopId));
   // References trips (last-minute-deal blasts) and the interests that carry a deal's
   // `promo_id`, so it goes after them and before the trips/people deletes below
   // or this FK-violates and aborts the whole reset mid-run (docs ADR
   // 20260727-last-minute-fill-promos).
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
-  // References people (courtesy-email opt-out tokens minted for waitlist
-  // invites and trip recaps), so it must go before the people deletes below
-  // or this FK-violates and aborts the whole reset mid-run — the same class
-  // of bug the last-minute-list unsubscribe token comment above already walks.
-  await db
-    .delete(personCourtesyEmailUnsubscribeTokens)
-    .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
   // The blow-out cascade's two tables, innermost first: the per-diver rows
   // reference both `bookings` and `trip_blowouts`, and the cascade row
   // references `trips`. Missing from this ordering when the cascade shipped,
@@ -2023,6 +2020,7 @@ async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promis
   if (owedRoles.length > 0) await db.insert(personRoles).values(owedRoles);
 }
 
+export { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
 export { demoTodayDepartureStart } from "./seed-clock";
 /**
  * The demo-shop lifecycle, re-exported so `@/db/seed` stays the one import for

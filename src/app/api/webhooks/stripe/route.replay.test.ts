@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
+import { listUnfinished } from "@/db/unfinished";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout } from "@/test/fakes";
@@ -51,12 +52,8 @@ const { getBookingPayment, listBookingPaymentEvents, setBookingPayment } = await
 const { bookingCheckouts, integrationEvents, orders, paymentDisputes, tips } = await import(
   "@/db/schema"
 );
-const {
-  listStuckPaymentOperations,
-  recordPaymentOperationStripeObject,
-  resolvePaymentOperation,
-  startPaymentOperation,
-} = await import("@/db/payment-operations");
+const { recordPaymentOperationStripeObject, resolvePaymentOperation, startPaymentOperation } =
+  await import("@/db/payment-operations");
 const { paymentOperationIntents } = await import("@/db/schema");
 const { refundBookingOnShopCancellation } = await import("@/db/refunds");
 const { listOpenPaymentDisputes } = await import("@/db/payment-disputes");
@@ -64,7 +61,7 @@ const { getShopStripeAccount, setShopStripeAccountStatus, upsertShopStripeAccoun
   "@/db/stripe-accounts"
 );
 const { startTipCheckout } = await import("@/db/tips");
-const { upcomingTripsWithCounts, updateTrip } = await import("@/db/trips");
+const { upcomingTripsWithCounts, editTrip } = await import("@/db/trips");
 const { POST } = await import("./route");
 
 type Db = AppDb;
@@ -175,7 +172,7 @@ async function pricedReef(db: Db, shopId: string) {
   const trips = await upcomingTripsWithCounts(db, shopId, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  await updateTrip(db, shopId, reef.id, {
+  await editTrip(db, shopId, reef.id, {
     title: reef.title,
     startsAt: reef.startsAt,
     endsAt: reef.endsAt,
@@ -1081,7 +1078,9 @@ describe("charge.refunded hostile sequences (real handlers, real db)", () => {
   /** Every `started` refund intent this shop holds, however fresh. */
   async function stuckRefunds(db: Db, shopId: string) {
     // Any age: `started_at` is the database clock, which the frozen test clock is not.
-    const stuck = await listStuckPaymentOperations(db, shopId, new Date("2100-01-01T00:00:00Z"));
+    const stuck = await listUnfinished(db, shopId, "payment_operation", {
+      olderThan: new Date("2100-01-01T00:00:00Z"),
+    });
     return stuck
       .map((op) => op.intent)
       .filter((intent) => intent.kind === "refund")

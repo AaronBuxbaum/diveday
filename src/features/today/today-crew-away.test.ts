@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { acknowledgeCrewAway } from "@/db/crew-away-acknowledgements";
-import { saveCrewAvailabilityBlock } from "@/db/crew-requests";
+import { recordCrewAvailabilityBlock } from "@/db/crew-requests";
 import { createTrip, listStaff, setTripCrew } from "@/db/trips";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowMs } from "@/lib/clock";
@@ -40,7 +40,7 @@ describe("crew rostered while away", () => {
       ]),
     ).toBe(true);
     const day = calendarDateInTimezone(startsAt, shop.timezone);
-    const saved = await saveCrewAvailabilityBlock(db, {
+    const saved = await recordCrewAvailabilityBlock(db, {
       shopId: shop.id,
       personId: instructor.id,
       actorPersonId: instructor.id,

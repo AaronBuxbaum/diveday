@@ -1,6 +1,6 @@
 import type { BirthdayCallout } from "./age";
-import type { DepthCeilingCheck } from "./depth-ceiling";
 import type { RentalFitLine } from "./dive-prep";
+import type { BookingAdvisory } from "./findings";
 import type { IdentityMatchKind } from "./identity-match";
 import {
   countParticipants,
@@ -233,9 +233,10 @@ export type ManifestDiverInput = {
    * Whether the trip's deepest site goes past this diver's ceiling (H-20260724-certification-levels-agency-rules).
    * Carried here and not only on the roster because the plan for dive two is
    * made on the boat during the surface interval, from this list — which is
-   * exactly when a depth advisory is actionable. Never a gate.
+   * exactly when a depth advisory is actionable. Findings at strictness zero
+   * (`src/lib/findings.ts`): never a gate.
    */
-  depthAdvisory?: DepthCeilingCheck;
+  advisories?: readonly BookingAdvisory[];
   /**
    * When and how the diver's medical currency was last established, for spotting
    * a statement going stale. Null unless the governing waiver is a clean

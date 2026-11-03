@@ -2,13 +2,12 @@ import type { ReactNode } from "react";
 import { departureVessels } from "@/db/boats";
 import { getDb } from "@/db/client";
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
+import { getTripOverview, type TripOverviewShop } from "@/db/trip-overview";
 import { readTripPaperIdentity } from "@/db/trip-paper-identity";
-import { getTripOverview, type TripOverviewShop } from "@/db/trips";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { stablePacket } from "@/lib/stable-packet";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { shopPath } from "@/lib/staff-notices";
 import {
   DeparturePaperIdentity,
   formatPaperDateTime,
@@ -126,7 +125,6 @@ async function composeTripPacket({
   const header = (
     <TripPageHeader
       trip={details.trip}
-      boardHref={shopPath(shopSlug, "schedule", "board")}
       backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
       locale={locale}
       timeZone={shop.timezone}

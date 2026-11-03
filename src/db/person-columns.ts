@@ -68,12 +68,10 @@ const rows = [
   { table: "bookings", column: "person_id", kind: "subject", merge: "move" },
   { table: "internal_notes", column: "person_id", kind: "subject", merge: "move" },
   { table: "interests", column: "person_id", kind: "subject", merge: "move" },
-  {
-    table: "person_courtesy_email_unsubscribe_tokens",
-    column: "person_id",
-    kind: "subject",
-    merge: "move",
-  },
+  // A courtesy-email unsubscribe link (`purpose = 'courtesy_email_unsubscribe'`)
+  // follows the person, so a link the source was mailed still opts the kept
+  // record out. Rows of other purposes leave `person_id` null.
+  { table: "capabilities", column: "person_id", kind: "subject", merge: "move" },
   { table: "dive_package_entitlements", column: "person_id", kind: "subject", merge: "move" },
   { table: "orders", column: "person_id", kind: "subject", merge: "move" },
   { table: "waiver_records", column: "person_id", kind: "subject", merge: "move" },

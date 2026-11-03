@@ -21,13 +21,13 @@ import { getShopById } from "@/db/shops";
 import { getTripLens } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
+  editTrip,
+  editTripSection,
   getTripWithBooked,
   listTripScheduleDays,
   reinstateTripClearingMinimum,
   type TripPatch,
   type UpdateTripOutcome,
-  updateTrip,
-  updateTripSection,
 } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
@@ -400,10 +400,10 @@ async function saveDepartureDetails(
   };
   if (section && !formData.has("lensId")) delete patch.lensId;
   const outcome = section
-    ? await updateTripSection(dbi, s.user.shopId, tripId, departureSectionPatch(section, patch), {
+    ? await editTripSection(dbi, s.user.shopId, tripId, departureSectionPatch(section, patch), {
         captureRescheduleStart: true,
       })
-    : await updateTrip(dbi, s.user.shopId, tripId, patch, { captureRescheduleStart: true });
+    : await editTrip(dbi, s.user.shopId, tripId, patch, { captureRescheduleStart: true });
   if (!outcome.ok) {
     await photo.discardUpload();
     redirectUpdateRefusal(back, outcome, section);
@@ -447,7 +447,7 @@ async function saveDepartureDetails(
           actorPersonId: s.user.personId,
         })
       : null;
-  // The save sent any fly-safe corrections it owed (#2927, `updateTrip`); one
+  // The save sent any fly-safe corrections it owed (#2927, `editTrip`); one
   // that reached nobody, or threw, is said here, never as a failed save.
   const flySafe = outcome.flySafe;
   const savedNotice =
@@ -527,7 +527,7 @@ async function arrivalPhotoChange(
   };
 }
 
-/** `updateTrip`'s refusal, as its notice. */
+/** `editTrip`'s refusal, as its notice. */
 function redirectUpdateRefusal(
   back: string,
   outcome: Extract<UpdateTripOutcome, { ok: false }>,

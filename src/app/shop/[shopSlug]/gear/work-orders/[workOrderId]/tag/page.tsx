@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { PrintButton } from "@/components/PrintButton";
-import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getWorkOrderDetail } from "@/db/work-orders";
@@ -60,7 +61,6 @@ export default async function ClaimTagPage({
   // but nothing goes on paper for a job the shop has taken back off the bench.
   if (detail.workOrder.deletedAt !== null) notFound();
 
-  const order = shopPath(shopSlug, "gear", "work-orders", workOrderId);
   const subject = detail.personName ?? detail.gearItemLabel ?? t("workOrders.tag.eyebrow");
 
   return (
@@ -74,9 +74,7 @@ export default async function ClaimTagPage({
               tapped in from; on paper it is the tag's own name instead, because
               the sheet a diver walks off with has to say what it is and has no
               navigation. */}
-          <EyebrowBackLink href={order} className="print:hidden">
-            {t("workOrders.detail.eyebrow")}
-          </EyebrowBackLink>
+          <EyebrowWayUp className="print:hidden">{t("workOrders.detail.eyebrow")}</EyebrowWayUp>
           <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("workOrders.tag.eyebrow")}</p>
           <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{subject}</h1>
           <p className="mt-1 text-muted">

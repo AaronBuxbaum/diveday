@@ -19,12 +19,12 @@ import {
   createTrip,
   deleteTrip,
   duplicateTrip,
+  editTrip,
   getTripWithBooked,
   listTripScheduleDays,
   moveTrip,
   pagedUpcomingTripsWithCounts,
   upcomingTripsWithCounts,
-  updateTrip,
 } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -584,7 +584,7 @@ describe("a course session is never self-guided", () => {
     // at creation — so the refusal has to read the existing row inside the
     // transaction. A patch that could be trusted for the course would be no
     // guard at all.
-    const result = await updateTrip(db, shop.id, trip.id, {
+    const result = await editTrip(db, shop.id, trip.id, {
       title: "Open Water — session 3",
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,

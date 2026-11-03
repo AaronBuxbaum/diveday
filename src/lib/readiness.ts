@@ -16,6 +16,7 @@ import {
   courseFormGaps,
   type RequiredCourseForm,
 } from "./course-forms";
+import { findingsStatus } from "./findings";
 import { guardianSignatureMissing } from "./guardian";
 import { isDiver, isHeldToMedical, type ParticipantType } from "./participant-types";
 import {
@@ -1284,5 +1285,8 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       blockers.push({ code: status === "refunded" ? "payment_refunded" : "payment_due" });
     }
   }
-  return { status: blockers.length === 0 ? "ready" : "blocked", blockers };
+  // By the strictness table (`src/lib/findings.ts`), which fails closed. Every
+  // code `blockers` can hold is tabled "blocks", so this is `blockers.length`
+  // spelled through the one place strictness is recorded.
+  return { status: findingsStatus(blockers), blockers };
 }

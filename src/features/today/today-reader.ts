@@ -31,13 +31,10 @@ import {
   listDepartureCrewRollCallByTrip,
   listDepartureRollCallByTrip,
 } from "@/db/manifests";
-import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "@/db/media-deletions";
 import { listNotificationDeliveryIssues } from "@/db/notifications";
 import { openOrdersForBookings } from "@/db/orders";
 import { listOpenPaymentDisputes } from "@/db/payment-disputes";
-import { listStuckPaymentOperations, STALE_AFTER_MS } from "@/db/payment-operations";
 import { listTripsReadiness } from "@/db/readiness";
-import { listOwedShopCancellationRefunds, OWED_REFUND_STALE_AFTER_MS } from "@/db/refunds";
 import { readReviewsAwaitingModeration } from "@/db/reviews";
 import { listRollCallGaps } from "@/db/roll-call-gaps";
 import {
@@ -68,6 +65,7 @@ import {
   liveTrip,
   seatNotCancelled,
 } from "@/db/trips";
+import { listUnfinished } from "@/db/unfinished";
 import { sharedWelcomeSeatsByTrip } from "@/db/welcome-cues";
 import { listWorkOrdersNeedingAttention } from "@/db/work-order-follow-up";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -79,6 +77,7 @@ import {
   unitsUnconfirmedSubjectText,
 } from "@/i18n/today-labels";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
+import { raisedOnTodayBefore } from "@/lib/attempts";
 import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
@@ -1282,10 +1281,15 @@ async function readTodayWave(
     // `includeOpsAlerts`; the rows are built further down.
     includeOpsAlerts
       ? Promise.all([
-          listStuckPaymentOperations(db, shopId, new Date(now.getTime() - STALE_AFTER_MS)),
-          listPendingMediaDeletions(db, shopId, new Date(now.getTime() - STALE_PENDING_AFTER_MS)),
-          listOwedShopCancellationRefunds(db, shopId, {
-            olderThan: new Date(now.getTime() - OWED_REFUND_STALE_AFTER_MS),
+          // Each kind's Today cutoff from Today's own `now` (`ATTEMPT_RULES`).
+          listUnfinished(db, shopId, "payment_operation", {
+            olderThan: raisedOnTodayBefore("payment_operation", now),
+          }),
+          listUnfinished(db, shopId, "media_deletion", {
+            olderThan: raisedOnTodayBefore("media_deletion", now),
+          }),
+          listUnfinished(db, shopId, "shop_cancellation_refund", {
+            olderThan: raisedOnTodayBefore("shop_cancellation_refund", now),
           }),
           listOpenPaymentDisputes(db, shopId),
           stripeAccount().then(paymentsRestrictedSince),

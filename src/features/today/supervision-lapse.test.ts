@@ -12,8 +12,8 @@ import {
   tripAssignments,
 } from "@/db/schema";
 import { getStaffingView } from "@/db/staffing";
+import { getTripOverview } from "@/db/trip-overview";
 import { createTrip } from "@/db/trips";
-import { getTripOverview } from "@/db/trips-overview";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { lastDayOfDeparture } from "@/lib/crew-roles";

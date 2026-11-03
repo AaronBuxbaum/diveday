@@ -16,8 +16,8 @@ import {
   listShopIncidentReports,
   listTripIncidentReports,
   listUnfiledIncidentDrafts,
+  recordIncidentDraft,
   removeIncidentPerson,
-  saveIncidentDraft,
   setIncidentLegalHold,
   startIncidentReport,
 } from "./incident-reports";
@@ -86,7 +86,7 @@ describe("starting a report", () => {
     const input = { shopId: shop.id, tripId: trip.id, actorPersonId: crew.id };
     const written = await startIncidentReport(db, input);
     if (!written.ok) throw new Error("expected a draft");
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...input,
       reportId: written.reportId,
       fields: { ...blank, whatHappened: "Regulator free-flowing at 12 m." },
@@ -135,7 +135,7 @@ describe("starting a report", () => {
     const input = { shopId: shop.id, tripId: trip.id, actorPersonId: crew.id };
     const first = await startIncidentReport(db, input);
     if (!first.ok) throw new Error("expected a draft");
-    await saveIncidentDraft(db, { ...input, reportId: first.reportId, fields: complete });
+    await recordIncidentDraft(db, { ...input, reportId: first.reportId, fields: complete });
     expect(await fileIncidentReport(db, { ...input, reportId: first.reportId })).toEqual({
       ok: true,
     });
@@ -196,7 +196,7 @@ describe("a draft, then a filed report", () => {
     const { db, shop } = ctx;
     const { reportId, crew } = await draftBy("crew");
     const elsewhere = { shopId: shop.id, reportId, tripId: OTHER_TRIP, actorPersonId: crew.id };
-    expect(await saveIncidentDraft(db, { ...elsewhere, fields: complete })).toEqual({
+    expect(await recordIncidentDraft(db, { ...elsewhere, fields: complete })).toEqual({
       ok: false,
       reason: "not_found",
     });
@@ -221,7 +221,7 @@ describe("a draft, then a filed report", () => {
         involvement: "witness",
       }),
     ).toEqual({ ok: false, reason: "too_long" });
-    await saveIncidentDraft(db, { ...base, fields: complete });
+    await recordIncidentDraft(db, { ...base, fields: complete });
     await fileIncidentReport(db, base);
     expect(await addIncidentAddendum(db, { ...base, body: "x".repeat(5001) })).toEqual({
       ok: false,
@@ -233,7 +233,7 @@ describe("a draft, then a filed report", () => {
     const { db, shop } = ctx;
     const { reportId, tripId, crew, trip } = await draftBy("crew");
     expect(
-      await saveIncidentDraft(db, {
+      await recordIncidentDraft(db, {
         shopId: shop.id,
         reportId,
         tripId,
@@ -255,7 +255,7 @@ describe("a draft, then a filed report", () => {
     expect(line?.params).toEqual({ actor: crew.fullName });
 
     expect(
-      await saveIncidentDraft(db, {
+      await recordIncidentDraft(db, {
         shopId: shop.id,
         reportId,
         tripId,
@@ -278,7 +278,7 @@ describe("a draft, then a filed report", () => {
     const { reportId, tripId, crew } = await draftBy("crew");
     const fields = { ...complete, kind: "fatality" as const, severity: "serious" as const };
     expect(
-      await saveIncidentDraft(db, {
+      await recordIncidentDraft(db, {
         shopId: shop.id,
         reportId,
         tripId,
@@ -302,7 +302,7 @@ describe("a draft, then a filed report", () => {
   it("drops oxygen minutes that stand beside a no", async () => {
     const { db, shop } = ctx;
     const { reportId, tripId, crew } = await draftBy("crew");
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       shopId: shop.id,
       reportId,
       tripId,
@@ -317,7 +317,7 @@ describe("a draft, then a filed report", () => {
     const { db, shop } = ctx;
     const { reportId, tripId, crew } = await draftBy("crew");
     expect(
-      await saveIncidentDraft(db, {
+      await recordIncidentDraft(db, {
         shopId: shop.id,
         reportId,
         tripId,
@@ -339,7 +339,7 @@ describe("a draft, then a filed report", () => {
         body: "Too early",
       }),
     ).toEqual({ ok: false, reason: "draft" });
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       shopId: shop.id,
       reportId,
       tripId,
@@ -428,7 +428,7 @@ describe("who reads what", () => {
     });
     if (!owners.ok) throw new Error("expected a draft");
     expect(
-      await saveIncidentDraft(db, {
+      await recordIncidentDraft(db, {
         shopId: shop.id,
         reportId: owners.reportId,
         tripId: f.trip.id,
@@ -447,7 +447,7 @@ describe("who reads what", () => {
       actorPersonId: f.crew.id,
     });
     if (!started.ok) throw new Error("expected a draft");
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       shopId: shop.id,
       reportId: started.reportId,
       tripId: f.trip.id,
@@ -491,7 +491,7 @@ describe("who reads what", () => {
     const input = { shopId: shop.id, tripId: f.trip.id, actorPersonId: f.crew.id };
     const filed = await startIncidentReport(db, input);
     if (!filed.ok) throw new Error("expected a draft");
-    await saveIncidentDraft(db, { ...input, reportId: filed.reportId, fields: complete });
+    await recordIncidentDraft(db, { ...input, reportId: filed.reportId, fields: complete });
     await fileIncidentReport(db, { ...input, reportId: filed.reportId });
     const crews = await startIncidentReport(db, input);
     const owners = await startIncidentReport(db, { ...input, actorPersonId: f.owner.id });
@@ -626,7 +626,7 @@ describe("erasing a diver named in a report", () => {
       tripId: f.trip.id,
       actorPersonId: f.crew.id,
     };
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...base,
       fields: { ...complete, whatHappened: `${name} surfaced coughing. Oxygen started at once.` },
     });
@@ -683,7 +683,7 @@ describe("erasing a diver named in a report under a legal hold", () => {
       tripId: f.trip.id,
       actorPersonId: f.crew.id,
     };
-    await saveIncidentDraft(db, {
+    await recordIncidentDraft(db, {
       ...base,
       fields: { ...complete, whatHappened: `${name} surfaced coughing.` },
     });
@@ -728,7 +728,7 @@ describe("retention", () => {
       tripId: f.trip.id,
       actorPersonId: f.crew.id,
     };
-    await saveIncidentDraft(db, { ...base, fields: complete });
+    await recordIncidentDraft(db, { ...base, fields: complete });
     await addIncidentPerson(db, {
       ...base,
       subject: { kind: "outsider", name: "Harbor master" },
@@ -837,10 +837,12 @@ describe("discarding a draft", () => {
     const to = new Date("2100-01-01T00:00:00Z");
     expect(await listShopIncidentReports(d.db, d.shop.id, d.f.owner.id, from, to)).toHaveLength(0);
     expect(await getIncidentReport(d.db, d.shop.id, d.started.reportId, d.f.owner.id)).toBeNull();
-    expect(await saveIncidentDraft(d.db, { ...d.target(d.f.crew.id), fields: complete })).toEqual({
-      ok: false,
-      reason: "not_found",
-    });
+    expect(await recordIncidentDraft(d.db, { ...d.target(d.f.crew.id), fields: complete })).toEqual(
+      {
+        ok: false,
+        reason: "not_found",
+      },
+    );
     expect(await fileIncidentReport(d.db, d.target(d.f.owner.id))).toEqual({
       ok: false,
       reason: "not_found",
@@ -860,7 +862,7 @@ describe("discarding a draft", () => {
 
   it("refuses a filed report by every route, and the database refuses it too", async () => {
     const d = await draftBy((await fixture(ctx.db, ctx.shop.id)).crew.id);
-    await saveIncidentDraft(d.db, { ...d.target(d.f.crew.id), fields: complete });
+    await recordIncidentDraft(d.db, { ...d.target(d.f.crew.id), fields: complete });
     expect(await fileIncidentReport(d.db, d.target(d.f.crew.id))).toEqual({ ok: true });
     expect(await discardIncidentDraft(d.db, d.target(d.f.owner.id))).toEqual({
       ok: false,
@@ -946,7 +948,7 @@ describe("a legal hold", () => {
       tripId: f.trip.id,
       actorPersonId: actor,
     });
-    await saveIncidentDraft(db, { ...base(f.crew.id), fields: complete });
+    await recordIncidentDraft(db, { ...base(f.crew.id), fields: complete });
     await fileIncidentReport(db, base(f.crew.id));
     return { db, shop, f, started, base };
   }

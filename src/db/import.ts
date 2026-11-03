@@ -902,7 +902,7 @@ async function writeEvidence(
    * **A declined size becomes a staff note, not a rental-fit note.**
    *
    * `rental_fit_profiles.note` is the diver's own words to the crew: it is
-   * diver-visible and diver-editable on their gear form (`saveRentalFitNote`,
+   * diver-visible and diver-editable on their gear form (`recordRentalFitNote`,
    * issue 627). A prior shop's staff shorthand there is words put in the
    * diver's mouth that the diver can then delete. `internal_notes` is the
    * staff-side record, shared across the diver record and the live boat

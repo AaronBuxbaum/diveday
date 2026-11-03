@@ -23,11 +23,12 @@ import {
   refundOrder,
 } from "./orders";
 import { getBookingPayment, listBookingPaymentEvents } from "./payments";
-import { listFailedRefunds, recordStripeRefundFailure } from "./refund-failures";
+import { recordStripeRefundFailure } from "./refund-failures";
 import { refundBookingOnCancellation } from "./refunds";
 import { bookingCheckouts, orders } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { editTrip, getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { listUnfinished } from "./unfinished";
 
 /**
  * A refund Stripe accepted and later reported failed or canceled (issue
@@ -146,7 +147,7 @@ describe("recordStripeRefundFailure on an order", () => {
     const [latest] = await listBookingPaymentEvents(db, shop.id, entry.booking.id, 1);
     expect(latest?.operation).toBe("refund_failed");
 
-    expect(await listFailedRefunds(db, shop.id)).toEqual([
+    expect(await listUnfinished(db, shop.id, "failed_refund")).toEqual([
       expect.objectContaining({
         amountCents: 20_000,
         currency: "usd",
@@ -173,7 +174,7 @@ describe("recordStripeRefundFailure on an order", () => {
     await recordStripeRefundFailure(db, failure("re_order", "pi_order", 20_000));
     const again = await refundOrder(db, shop.id, order.id, invoicing("re_order_2"));
     expect(again.status).toBe("refunded");
-    expect(await listFailedRefunds(db, shop.id)).toEqual([]);
+    expect(await listUnfinished(db, shop.id, "failed_refund")).toEqual([]);
   });
 
   it("reverses only the part that failed of a partial refund history", async () => {
@@ -193,7 +194,7 @@ describe("recordStripeRefundFailure on an order", () => {
 describe("recordStripeRefundFailure on a checkout", () => {
   async function paidSeat() {
     const { db, shop, reef } = await connected();
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -262,7 +263,7 @@ describe("recordStripeRefundFailure on a checkout", () => {
       amountCents: 18_000,
       providerRef: checkout.stripeSessionId,
     });
-    expect(await listFailedRefunds(db, shop.id)).toEqual([
+    expect(await listUnfinished(db, shop.id, "failed_refund")).toEqual([
       expect.objectContaining({
         checkoutId: checkout.id,
         diverNames: ["Rita Refund"],
@@ -277,7 +278,7 @@ describe("recordStripeRefundFailure on a checkout", () => {
       { actor: "staff", shopId: shop.id, tripId: reef.id, fullName: "Lou Late" },
     ]);
     if (!party.ok) throw new Error(party.reason);
-    await updateTrip(db, shop.id, reef.id, {
+    await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
@@ -322,7 +323,7 @@ describe("recordStripeRefundFailure on a checkout", () => {
       status: "reversed",
     });
     expect(await listPaidAfterCloseCheckouts(db, shop.id)).toHaveLength(1);
-    expect(await listFailedRefunds(db, shop.id)).toEqual([]);
+    expect(await listUnfinished(db, shop.id, "failed_refund")).toEqual([]);
   });
 });
 

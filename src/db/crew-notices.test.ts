@@ -13,7 +13,7 @@ import {
 } from "./crew-notices";
 import { decideCrewAssignmentRequest, requestCrewAssignment } from "./crew-requests";
 import { crewNotices, people, shops, trips, userAccounts } from "./schema";
-import { createTrip, updateTrip } from "./trips";
+import { createTrip, editTrip } from "./trips";
 import { changeTripCrew, listStaff, setTripCrew } from "./trips-crew";
 import { moveTrip } from "./trips-schedule";
 
@@ -402,7 +402,7 @@ describe("a departure that moves (#2283)", () => {
     // A title-only edit is no news.
     expect(
       (
-        await updateTrip(db, shop.id, trip.id, {
+        await editTrip(db, shop.id, trip.id, {
           ...patch,
           startsAt: trip.startsAt,
           endsAt: trip.endsAt,
@@ -410,7 +410,7 @@ describe("a departure that moves (#2283)", () => {
       ).ok,
     ).toBe(true);
     expect(await countPendingCrewNotices(db, shop.id, crew.id)).toBe(0);
-    expect((await updateTrip(db, shop.id, trip.id, { ...patch, startsAt: later })).ok).toBe(true);
+    expect((await editTrip(db, shop.id, trip.id, { ...patch, startsAt: later })).ok).toBe(true);
     const preview = await previewCrewNotices(db, {
       shopId: shop.id,
       personId: crew.id,

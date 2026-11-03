@@ -35,7 +35,7 @@ Crew changes reach the database through three functions, and every surface calls
   again writes nothing.
 - **Call-offs** are recorded for everyone on the crew by `setTripStatus` (blow-out, day call, plain
   cancel), the minimum-seats sweep and both series cancellations, inside the cancelling transaction.
-- **Moves** are recorded for everyone on the crew by `moveTrip` (the schedule board) and `updateTrip`
+- **Moves** are recorded for everyone on the crew by `moveTrip` (the schedule board) and `editTrip`
   (the departure's own page) when the start instant changes, and never when it does not.
 - **Late news goes now.** After a change commits, `flushUrgentCrewNotices` sends at once for every
   call-off, and for any change on a departure leaving within 24 hours (`CREW_NOTICE_URGENT_MS`) —
