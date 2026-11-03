@@ -3,7 +3,7 @@
  * guardian's co-signature, emergency contacts, and completing the release.
  * Imported through the `./waivers` barrel.
  */
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { readEmergencyContact } from "@/lib/contact";
 import { isCounterWaiverToken, openCounterWaiverToken } from "@/lib/counter-waiver-token";
@@ -20,12 +20,13 @@ import { localTypedConsentProvider } from "@/lib/signatures";
 import { computeWaiverIntegrityHash } from "@/lib/waiver-integrity";
 import { buildShopAnswers, draftShopAnswersFrom } from "@/lib/waiver-questions";
 import { hashWaiverToken } from "@/lib/waiver-tokens";
-import { needsMedicalReview } from "@/lib/waivers";
+import { isUnresolvedMedicalHold, needsMedicalReview } from "@/lib/waivers";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
 import { bookings, people, waiverRecords } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 import { seatMinorDeclared } from "./waiver-signing";
 import { getWaiverTemplateQuestions, shopTimezone } from "./waivers-templates";
 
@@ -46,12 +47,102 @@ export type TokenWaiverState =
   | { state: "completed"; record: typeof waiverRecords.$inferSelect };
 
 /**
+ * **Which record a signing request is about.** Either the waiver link's own
+ * bearer token (a counter token is opened to the one inside it), or the record
+ * the diver's readiness link resolved for its own seat (`ThreadWaiverKey`).
+ */
+export type WaiverKey = string | ThreadWaiverKey;
+
+/**
+ * **The release signed in the diver's own thread** (issue #2743): the seat's
+ * record, pinned by id at the start of the request, so every re-read inside the
+ * lock reaches the same row a token would. Only `threadWaiverKey` makes one,
+ * and only a caller that has already verified the readiness capability for
+ * `bookingId` may call that: the key is the authority, as the token is.
+ */
+export type ThreadWaiverKey = {
+  readonly kind: "thread";
+  readonly shopId: string;
+  readonly bookingId: string;
+  readonly recordId: string;
+};
+
+/**
+ * The seat's own current release, for a caller holding a verified readiness
+ * capability for `bookingId`. The newest record not superseded, issued for this
+ * booking, and naming the person who holds the seat now: a release issued
+ * before the seat moved to someone else is not theirs to see or sign. A
+ * cancelled seat has no release to sign, as it has no link to issue one.
+ */
+export async function threadWaiverKey(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string },
+): Promise<ThreadWaiverKey | null> {
+  const [row] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.id, waiverRecords.bookingId),
+        eq(bookings.shopId, waiverRecords.shopId),
+        eq(bookings.personId, waiverRecords.personId),
+      ),
+    )
+    .where(
+      and(
+        eq(waiverRecords.shopId, input.shopId),
+        eq(waiverRecords.bookingId, input.bookingId),
+        isNull(waiverRecords.supersededAt),
+        seatNotCancelled,
+      ),
+    )
+    // diveday:allow-time-id-order: picks the seat's one current release; nobody is shown this order.
+    .orderBy(desc(waiverRecords.createdAt), desc(waiverRecords.id))
+    .limit(1);
+  return row
+    ? { kind: "thread", shopId: input.shopId, bookingId: input.bookingId, recordId: row.id }
+    : null;
+}
+
+/**
+ * Whether the seat's own release, as the thread reaches it, was signed and now
+ * waits on a physician: the one case the thread's Sign step offers its receipt
+ * again (`/ready/<token>/waiver`), where the doctor's page is.
+ */
+export async function threadWaiverAwaitsPhysician(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string },
+): Promise<boolean> {
+  const key = await threadWaiverKey(db, input);
+  if (!key) return false;
+  const state = await getWaiverForToken(db, key);
+  return state.state === "completed" && isUnresolvedMedicalHold(state.record);
+}
+
+/**
  * `bookingId` is nullable for imported, paper, and independent digital waivers.
  * A bearer token only needs the record's shop and person, so token pages handle
- * both booking-scoped and person-scoped releases.
+ * both booking-scoped and person-scoped releases. A thread key reaches only the
+ * one record it was resolved to, and only while it is still that seat's.
  */
-async function currentRecordForToken(db: DbExecutor, token: string, now = nowDate()) {
-  const raw = isCounterWaiverToken(token) ? openCounterWaiverToken(token, now) : token;
+async function currentRecordForToken(db: DbExecutor, key: WaiverKey, now = nowDate()) {
+  if (typeof key !== "string") {
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(
+          eq(waiverRecords.id, key.recordId),
+          eq(waiverRecords.shopId, key.shopId),
+          eq(waiverRecords.bookingId, key.bookingId),
+          isNull(waiverRecords.supersededAt),
+        ),
+      )
+      .limit(1);
+    return record ?? null;
+  }
+  const raw = isCounterWaiverToken(key) ? openCounterWaiverToken(key, now) : key;
   if (!raw) return null;
   const [record] = await db
     .select()
@@ -66,7 +157,7 @@ async function currentRecordForToken(db: DbExecutor, token: string, now = nowDat
 /** A bearer token reveals only its own record and is rejected on expiry/supersession. */
 export async function getWaiverForToken(
   db: DbExecutor,
-  token: string,
+  token: WaiverKey,
   now: Date = nowDate(),
 ): Promise<TokenWaiverState> {
   const record = await currentRecordForToken(db, token, now);
@@ -138,7 +229,7 @@ type SaveWaiverDraftInput = {
 
 export async function saveWaiverDraft(
   db: AppDb,
-  token: string,
+  token: WaiverKey,
   input: SaveWaiverDraftInput,
 ): Promise<boolean> {
   const initial = await currentRecordForToken(db, token, input.now);
@@ -151,7 +242,7 @@ export async function saveWaiverDraft(
 
 async function saveWaiverDraftLocked(
   db: DbExecutor,
-  token: string,
+  token: WaiverKey,
   input: SaveWaiverDraftInput,
 ): Promise<boolean> {
   const state = await getWaiverForToken(db, token, input.now);
@@ -564,7 +655,7 @@ async function lockWaiverForWriting(
 
 export async function completeWaiver(
   db: AppDb,
-  token: string,
+  token: WaiverKey,
   input: CompleteWaiverInput,
 ): Promise<CompleteWaiverOutcome> {
   const initial = await currentRecordForToken(db, token, input.now);
@@ -582,7 +673,7 @@ export async function completeWaiver(
 
 async function completeWaiverLocked(
   db: DbExecutor,
-  token: string,
+  token: WaiverKey,
   input: CompleteWaiverInput,
 ): Promise<CompleteWaiverOutcome> {
   const now = input.now ?? nowDate();

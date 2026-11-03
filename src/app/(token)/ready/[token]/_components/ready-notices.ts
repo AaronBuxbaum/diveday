@@ -79,6 +79,7 @@ export const READY_NOTICES: Record<
   "saved-tanks": { tone: "success", key: "ready.savedTanks" },
   "error-tanks": { tone: "danger", key: "ready.errorTanks" },
   "saved-contact": { tone: "success", key: "ready.savedContact" },
+  "saved-waiver": { tone: "success", key: "ready.waiverSigned" },
   "error-contact": { tone: "danger", key: "ready.errorContact" },
   // A name without a number, or a number without a name. Its own row because
   // "try it again" is the wrong instruction for it: the fix is to fill the

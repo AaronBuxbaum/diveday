@@ -3,11 +3,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
-import { bookingCapabilities, bookings, people, trips, waiverRecords } from "@/db/schema";
+import { bookingCapabilities, people, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
-import { hashCapabilityToken } from "@/lib/booking-capabilities";
-import { nowDate } from "@/lib/clock";
 import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 
@@ -216,7 +214,7 @@ describe("the signing doors", () => {
     expect(after).toHaveLength(before.length);
   });
 
-  it("returns a signer to their separately authorized trip prep", async () => {
+  it("never returns a signer to a readiness link they only carried in a cookie (issue #2743)", async () => {
     const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
@@ -246,11 +244,12 @@ describe("the signing doors", () => {
         signedForm(shop, { signerName: "Taylor Readiness", acknowledged: "on" }),
       ),
     );
-    expect(target === `/ready/${readiness.token}`).toBe(true);
-    expect(cookieJar.has("diveday_waiver_return")).toBe(false);
+    // The thread signs its own release in place now; a waiver link names no
+    // other door, so nothing a browser carries can route it to one.
+    expect(target === `/waivers/${issued.token}`).toBe(true);
   });
 
-  it("shows a referred signer the waiver receipt before returning to their trip prep", async () => {
+  it("shows a referred signer the waiver receipt", async () => {
     const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
@@ -273,70 +272,11 @@ describe("the signing doors", () => {
     });
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
     if (!issued.ok || !readiness) throw new Error("links unavailable");
-    cookieJar.set("diveday_waiver_return", readiness.token);
     const form = signedForm(shop, { signerName: "Sam Referral", acknowledged: "on" });
     form.set(medicalQuestionField("q3"), "yes");
     const target = await redirectedTo(() => completeWaiverAction(issued.token, form));
     expect(target === `/waivers/${issued.token}`).toBe(true);
-    expect(cookieJar.has("diveday_waiver_return")).toBe(true);
   });
-
-  it.each([
-    "other booking",
-    "wrong purpose",
-    "expired",
-    "revoked",
-    "cancelled booking",
-    "cancelled departure",
-  ] as const)(
-    "does not return through an independently held link that is %s",
-    async (condition) => {
-      const { db, shop } = ctx;
-      vi.mocked(getDb).mockResolvedValue(db);
-      const [trip] = await upcomingTripsWithCounts(db, shop.id);
-      if (!trip) throw new Error("seeded shop has no upcoming trip");
-      const party = await createBookingParty(db, [
-        {
-          actor: "public",
-          shopId: shop.id,
-          tripId: trip.id,
-          fullName: "Avery Scope",
-          email: "avery.scope@example.com",
-        },
-        { actor: "public", shopId: shop.id, tripId: trip.id, fullName: "Riley Scope" },
-      ]);
-      if (!party.ok || !party.bookings[0] || !party.bookings[1]) throw new Error("booking failed");
-      const bookingId = party.bookings[0].bookingId;
-      const readiness = await issueBookingCapability(db, {
-        shopId: shop.id,
-        bookingId: condition === "other booking" ? party.bookings[1].bookingId : bookingId,
-        purpose: condition === "wrong purpose" ? "confirm" : "readiness",
-      });
-      const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
-      if (!issued.ok || !readiness) throw new Error("links unavailable");
-      if (condition === "expired" || condition === "revoked") {
-        await db
-          .update(bookingCapabilities)
-          .set(condition === "expired" ? { expiresAt: nowDate() } : { revokedAt: nowDate() })
-          .where(eq(bookingCapabilities.tokenHash, hashCapabilityToken(readiness.token)));
-      }
-      if (condition === "cancelled booking") {
-        await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
-      }
-      if (condition === "cancelled departure") {
-        await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
-      }
-      cookieJar.set("diveday_waiver_return", readiness.token);
-      const target = await redirectedTo(() =>
-        completeWaiverAction(
-          issued.token,
-          signedForm(shop, { signerName: "Avery Scope", acknowledged: "on" }),
-        ),
-      );
-      expect(target === `/waivers/${issued.token}`).toBe(true);
-      expect(cookieJar.has("diveday_waiver_return")).toBe(false);
-    },
-  );
 
   /**
    * Dive-domain review F6 of layer r4-1: a parent who opened this from their

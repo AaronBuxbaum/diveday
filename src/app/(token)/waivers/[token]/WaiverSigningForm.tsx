@@ -1,0 +1,314 @@
+import Link from "next/link";
+import { FlashParams } from "@/components/FlashParams";
+import { ShopNotice } from "@/components/ShopNotice";
+import { ThreadShell } from "@/components/thread/ThreadShell";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import type { AppDb } from "@/db/client";
+import { medicalAlertPrefill } from "@/db/medical-alerts";
+import type { waiverRecords } from "@/db/schema";
+import type { getShopById } from "@/db/shops";
+import { getWaiverSignerOnFile, getWaiverTripHeader } from "@/db/waiver-signing";
+import { getEmergencyContactForBearer, getEmergencyContactForPerson } from "@/db/waivers";
+import type { DiverTranslator } from "@/i18n/messages";
+import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
+import { nowDate } from "@/lib/clock";
+import { formatDateTimeTz } from "@/lib/format";
+import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
+import { questionnaireForJurisdiction } from "@/lib/medical";
+import { EmergencyContactSection } from "./EmergencyContactSection";
+import { GuardianCard } from "./GuardianCard";
+import { MEDICAL_ALERT_ANCHOR, MedicalAlertSection } from "./MedicalAlertSection";
+import { MedicalQuestionnaireSection } from "./MedicalQuestionnaireSection";
+import { medicalDraftState } from "./medical-draft-state";
+import { ShopQuestionsSection } from "./ShopQuestionsSection";
+import { SignatureCard } from "./SignatureCard";
+import { isShopQuestionRefusal, shopQuestionsForPage } from "./shop-questions-state";
+import { WaiverHelpLine } from "./WaiverHelpLine";
+import { WaiverPacing } from "./WaiverPacing";
+import { WaiverRelease } from "./WaiverRelease";
+import { WaiverSignBlock } from "./WaiverSignBlock";
+import { refusalRailAnchors } from "./WaiverStepRail";
+import { WaiverTripMeta } from "./WaiverTripMeta";
+import { WAIVER_FIELD_ERROR, type WaiverInvalidField } from "./waiver-fields";
+import { railLabels } from "./waiver-rail-copy";
+
+/** What the signing form reads off its page's URL: the refusal or save it was redirected back with. */
+export type WaiverFormSearch = {
+  saved?: string;
+  error?: string;
+  field?: string;
+  /** The shop question a refusal names (`shopQuestionsForPage`). */
+  q?: string;
+  at?: string;
+};
+
+/**
+ * **The release, the medical questions and the signature: one form, two doors**
+ * (issue #2743). The waiver link (`/waivers/<token>`) and the diver's own
+ * thread (`/ready/<token>/waiver`) render exactly this, bound to their own
+ * actions, so the words, the step rail and the typed-name standard (ADR
+ * 20260827-the-divers-thread, decision 5) cannot drift between them.
+ *
+ * A function the page awaits rather than an async component, so each page
+ * returns finished markup, as it did when the form was inline.
+ */
+export async function waiverSigningForm({
+  db,
+  record,
+  shop,
+  locale,
+  t,
+  search,
+  completeAction,
+  saveAction,
+  showLinkExpiry,
+  backHref,
+}: {
+  db: AppDb;
+  record: typeof waiverRecords.$inferSelect;
+  shop: NonNullable<Awaited<ReturnType<typeof getShopById>>>;
+  locale: DiverLocale;
+  t: DiverTranslator;
+  search: WaiverFormSearch;
+  completeAction: (formData: FormData) => Promise<void>;
+  saveAction: (formData: FormData) => Promise<void>;
+  /** A waiver link runs out; the thread's release is reopened from the thread. */
+  showLinkExpiry: boolean;
+  /** The thread's way back to its checklist; none on the waiver link. */
+  backHref?: string;
+}) {
+  const { saved, error, field, q, at } = search;
+  const shopName = shop.name;
+  // `Object.hasOwn`, not `in` — `field` is attacker-supplied and `in` walks
+  // the prototype chain (`?field=toString` would mint a fieldError whose
+  // anchor is a built-in function).
+  const fieldError =
+    error === "invalid" && field && Object.hasOwn(WAIVER_FIELD_ERROR, field)
+      ? WAIVER_FIELD_ERROR[field as WaiverInvalidField]
+      : undefined;
+  // A refusal that names a control renders *beside that control* (Field
+  // `error` / the line under the checkbox), never as a page banner — the rule
+  // in docs/design/forms-and-controls.md. That is the signature card, the
+  // guardian's card, and the emergency contact's two boxes. The banner below
+  // keeps only what has no single control to sit with: the medical section,
+  // the generic incomplete, and the link-level refusals.
+  // A shop question's is named only once its version is known to ask it, below.
+  const shopQuestionRefusal = isShopQuestionRefusal(field);
+  let namedFieldError =
+    fieldError && fieldError.anchor !== "medical-questionnaire" && !shopQuestionRefusal
+      ? fieldError
+      : undefined;
+  const recordBookingId = record.bookingId;
+  const emergencyContact = recordBookingId
+    ? await getEmergencyContactForBearer(db, record.shopId, recordBookingId)
+    : await getEmergencyContactForPerson(db, record.shopId, record.personId);
+  // The name this release has to be signed under (`completeWaiver` refuses
+  // anything else). Shown as the field's hint so the rule is guidance before
+  // it is ever a refusal — and it discloses nothing this booking-scoped
+  // bearer link doesn't already stand for.
+  const signerOnFile = await getWaiverSignerOnFile(db, record);
+  /**
+   * **A minor signs twice** (ADR 20260907-guardian-co-signature). Decided from
+   * the date of birth the shop holds or, with none, the seat's "Under 18"
+   * (H-20261013-under-18-on-party), on the shop's calendar day this page is being signed: the rule
+   * `completeWaiver` refuses on, so the section is never rendered for a diver
+   * the writer would not ask, and never absent for one it would.
+   */
+  const guardianRequired = guardianSignatureRequired(
+    signerOnFile?.dateOfBirth,
+    signingDate(nowDate(), shop.timezone),
+    signerOnFile?.minorDeclared ?? false,
+  );
+  const draftGuardian = record.draftGuardian;
+  const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
+  const { draftResponses, primaryQuestionCount, draftAnsweredFields, draftFollowUpsRemaining } =
+    medicalDraftState(questionnaire, record.draftMedicalAnswers);
+  // The trip this waiver is for (task 42) — named on the page itself so the
+  // diver can verify what they're signing for, rather than trusting a link
+  // that names only the shop.
+  const tripHeader = recordBookingId
+    ? await getWaiverTripHeader(db, record.shopId, recordBookingId)
+    : null;
+  const shopQuestions = await shopQuestionsForPage(db, record, { field, q, fieldError }, t);
+  namedFieldError = shopQuestions.refusedFieldError ?? namedFieldError;
+  // Only the segment owning a refused field links to it (`refusalRailAnchors`).
+  const railAnchors = refusalRailAnchors({
+    refusedAnchor: fieldError?.anchor,
+    shopQuestionAnchor: shopQuestionRefusal
+      ? (namedFieldError?.anchor ?? fieldError?.anchor)
+      : undefined,
+    medicalAlertAnchor: MEDICAL_ALERT_ANCHOR,
+  });
+  const errorText =
+    error === "invalid" && !namedFieldError
+      ? t(fieldError?.textKey ?? "waiver.incomplete")
+      : error === "unavailable"
+        ? t("waiver.linkInactive")
+        : error === "rate"
+          ? t("waiver.rateLimited")
+          : undefined;
+
+  const signBlock = (
+    <WaiverSignBlock
+      saveAction={saveAction}
+      expiresAt={showLinkExpiry ? formatDateTimeTz(record.expiresAt, locale, shop.timezone) : null}
+      t={t}
+    />
+  );
+
+  return (
+    <ThreadShell
+      shopName={shopName}
+      title={
+        recordBookingId && !tripHeader ? t("waiver.independentTitle") : t("waiver.beforeDockTitle")
+      }
+      meta={
+        <WaiverTripMeta tripHeader={tripHeader} locale={locale} timezone={shop.timezone} t={t} />
+      }
+    >
+      <FlashParams params={["saved", "error", "field", "at"]} />
+
+      {/* **The step rail, and everything that reads its count** (ADR
+          20260827-the-divers-thread, decision 5). `WaiverPacing` wraps from
+          here down because the rail sits above the release and the sticky
+          questionnaire counter sits inside the form, and both read one count
+          off one delegated listener. */}
+      <WaiverPacing
+        labels={railLabels(t, shopQuestions.pacing !== undefined)}
+        anchors={railAnchors}
+        progressOne={t.raw("waiver.railProgressOne")}
+        progressOther={t.raw("waiver.railProgressOther")}
+        medicalTotal={primaryQuestionCount}
+        initialAnswered={draftAnsweredFields}
+        initialFollowUpsRemaining={draftFollowUpsRemaining}
+        shopQuestions={shopQuestions.pacing}
+        locale={locale}
+      >
+        {/* **One notice grammar** — the four treatments this page grew, one per
+            message, converge on `ShopNotice`: tone tint, status mark, words.
+            They stack in one slot above the release rather than scattering down
+            the page.
+
+            At most one *flash* has something to say: a refused submit and a
+            saved draft arrive on different redirects, and the refusal wins if
+            both codes ever land on one URL. A refusal that names a control in
+            the signature card is not here at all — its words render beside that
+            control and `FieldErrorFocus` below carries the reader to them.
+
+            The English-only note is not a flash; it is a standing fact about
+            the document underneath, so it renders alongside whatever the flash
+            is saying rather than replacing it, and it is second because a
+            refusal is the answer to something the diver just did. */}
+        {errorText || saved || locale !== DEFAULT_DIVER_LOCALE ? (
+          <div className="mt-6 flex flex-col gap-3">
+            {errorText ? (
+              <ShopNotice tone="danger" role="alert">
+                {errorText}{" "}
+                {fieldError ? (
+                  <a href={`#${fieldError.anchor}`} className="underline underline-offset-2">
+                    {t("waiver.errorJumpToField")}
+                  </a>
+                ) : null}
+              </ShopNotice>
+            ) : saved ? (
+              <ShopNotice tone="success">{t("waiver.progressSaved")}</ShopNotice>
+            ) : null}
+            {locale !== DEFAULT_DIVER_LOCALE ? (
+              <ShopNotice tone="warning">{t("waiver.englishOnlyNotice")}</ShopNotice>
+            ) : null}
+          </div>
+        ) : null}
+        {/* The refusal redirect lands the reader back at the top of a long page;
+            this scrolls them to the refused control, focuses it, and rings it
+            briefly — and the control's own error text (rendered beside it, per
+            docs/design/forms-and-controls.md) is waiting there to say why. Keyed
+            on the submit's nonce so an identical repeat refusal remounts and
+            re-fires. Only for refusals that name a real control: "medical" names
+            a whole section, and focusing eleven fieldsets at once helps nobody —
+            the banner's jump link handles that one. */}
+        {namedFieldError ? (
+          <FieldErrorFocus
+            key={`${namedFieldError.anchor}:${at ?? ""}`}
+            field={namedFieldError.anchor}
+          />
+        ) : null}
+
+        <WaiverRelease record={record} t={t} />
+
+        <form action={completeAction} className="mt-8 flex flex-col gap-10">
+          <MedicalQuestionnaireSection
+            questionnaire={questionnaire}
+            draftResponses={draftResponses}
+            primaryQuestionCount={primaryQuestionCount}
+            t={t}
+          />
+
+          {/* Right after the questionnaire, its own heading, optional, and
+              not a step on the rail (issue #2960). */}
+          <MedicalAlertSection
+            prefill={await medicalAlertPrefill(db, record)}
+            minorName={guardianRequired ? (signerOnFile?.fullName ?? null) : null}
+            error={
+              namedFieldError?.anchor === MEDICAL_ALERT_ANCHOR
+                ? t(namedFieldError.textKey)
+                : undefined
+            }
+            t={t}
+          />
+
+          <EmergencyContactSection
+            emergencyContact={emergencyContact}
+            namedFieldError={namedFieldError}
+            t={t}
+          />
+
+          {/* After everything DiveDay asks, before the signature; nothing when this version asks none. */}
+          <ShopQuestionsSection
+            questions={shopQuestions.questions}
+            draft={shopQuestions.draft}
+            shopName={shopName}
+            minorName={guardianRequired ? (signerOnFile?.fullName ?? null) : null}
+            refused={shopQuestions.refused}
+            t={t}
+          />
+
+          <SignatureCard
+            signerOnFile={signerOnFile}
+            record={record}
+            namedFieldError={namedFieldError}
+            t={t}
+          >
+            {guardianRequired ? null : signBlock}
+          </SignatureCard>
+
+          {/* **The guardian's card** (ADR 20260907-guardian-co-signature): the
+              second signature a minor's release takes, in the same shape as
+              the first — a typed name, a consent box, the same fine print —
+              plus who they are to the diver and how to reach them. It carries
+              the page's one Sign button whenever it renders, so the last thing
+              on the page is still the act, and nobody signs above a section
+              they have not read. */}
+          {guardianRequired ? (
+            <GuardianCard
+              diverName={signerOnFile?.fullName ?? ""}
+              draftGuardian={draftGuardian}
+              namedFieldError={namedFieldError}
+              t={t}
+            >
+              {signBlock}
+            </GuardianCard>
+          ) : null}
+        </form>
+      </WaiverPacing>
+      <WaiverHelpLine shop={shop} t={t} />
+      <p className="mt-2 text-center text-sm text-muted">{t("waiver.signatureNote")}</p>
+      {backHref ? (
+        <p className="mt-8 text-center text-sm print:hidden">
+          <Link href={backHref} className="font-medium text-primary hover:underline">
+            {t("waiver.backToPrep")}
+          </Link>
+        </p>
+      ) : null}
+    </ThreadShell>
+  );
+}

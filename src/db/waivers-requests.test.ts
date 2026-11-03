@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { waiverRecords } from "./schema";
 import { setTripStatus } from "./trips";
-import { completeWaiver, getWaiverForToken } from "./waivers-completion";
-import { issueWaiverRequest } from "./waivers-requests";
+import { completeWaiver, getWaiverForToken, threadWaiverKey } from "./waivers-completion";
+import { issueWaiverRequest, openWaiverInThread } from "./waivers-requests";
 import { saveWaiverTemplate } from "./waivers-templates";
 import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 
@@ -277,5 +277,53 @@ describe("waiver records (in-memory PGlite)", () => {
         now,
       }),
     ).toEqual({ ok: false, reason: "booking_unavailable" });
+  });
+
+  /**
+   * **The thread signs by record, not by token** (issue #2743). A deployment
+   * with no sealing key cannot read a sent link back, and minting over it would
+   * kill the link a staffer just sent and the draft typed into it. The thread
+   * never needs the token, so it keeps the live record whatever the key says.
+   */
+  it("keeps the live release for the thread even without a sealing key", async () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+    const { db, shop, booking } = await waiverContext();
+    const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!sent.ok) throw new Error("expected the link to issue");
+    const later = new Date(now.getTime() + 60_000);
+    expect(
+      await openWaiverInThread(db, { shopId: shop.id, bookingId: booking.id, now: later }),
+    ).toEqual({ ok: true, recordId: sent.recordId });
+    expect(await getWaiverForToken(db, sent.token, later)).toMatchObject({ state: "available" });
+    const key = await threadWaiverKey(db, { shopId: shop.id, bookingId: booking.id });
+    expect(key?.recordId).toBe(sent.recordId);
+  });
+
+  it("starts a fresh release for the thread once the old one has run out", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!sent.ok) throw new Error("expected the link to issue");
+    const muchLater = new Date(sent.expiresAt.getTime() + 1);
+    const opened = await openWaiverInThread(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: muchLater,
+    });
+    if (!opened.ok) throw new Error(`expected a fresh release: ${opened.reason}`);
+    expect(opened.recordId).not.toBe(sent.recordId);
+    expect(await getWaiverForToken(db, sent.token, muchLater)).toEqual({ state: "unavailable" });
+  });
+
+  it("reaches the thread's record only through its own seat", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!sent.ok) throw new Error("expected the link to issue");
+    const forged = {
+      kind: "thread" as const,
+      shopId: shop.id,
+      bookingId: crypto.randomUUID(),
+      recordId: sent.recordId,
+    };
+    expect(await getWaiverForToken(db, forged, now)).toEqual({ state: "unavailable" });
   });
 });

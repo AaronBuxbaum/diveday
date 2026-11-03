@@ -1,7 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
-import { saveWaiverDraftAction } from "./actions";
 
 /**
  * `buttonClass` bakes in `text-sm`, and a plain `text-base` in `className` loses
@@ -29,12 +28,14 @@ const labelTextBase = "text-(length:--text-base) leading-6";
  * 2026-10-24, B56).
  */
 export function WaiverSignBlock({
-  token,
+  saveAction,
   expiresAt,
   t,
 }: {
-  token: string;
-  expiresAt: string;
+  /** "Save and finish later", bound to whichever door opened the form. */
+  saveAction: (formData: FormData) => Promise<void>;
+  /** When the link runs out; null in the thread, whose release is reopened from it. */
+  expiresAt: string | null;
   t: DiverTranslator;
 }) {
   return (
@@ -61,7 +62,7 @@ export function WaiverSignBlock({
       <div className="mt-1 flex items-baseline gap-x-2 text-sm text-muted max-sm:flex-col max-sm:items-start">
         <button
           type="submit"
-          formAction={saveWaiverDraftAction.bind(null, token)}
+          formAction={saveAction}
           // Drafts intentionally accept partial answers — the `required`
           // on signerName/acknowledged (and the pre-existing one on each
           // medical radio) would otherwise let the browser block a
@@ -80,14 +81,18 @@ export function WaiverSignBlock({
         >
           {t("waiver.saveForLater")}
         </button>
-        <span aria-hidden="true" className="max-sm:hidden">
-          ·
-        </span>
-        <span>
-          {t("waiver.linkExpiresAt", {
-            date: expiresAt,
-          })}
-        </span>
+        {expiresAt ? (
+          <>
+            <span aria-hidden="true" className="max-sm:hidden">
+              ·
+            </span>
+            <span>
+              {t("waiver.linkExpiresAt", {
+                date: expiresAt,
+              })}
+            </span>
+          </>
+        ) : null}
       </div>
     </>
   );

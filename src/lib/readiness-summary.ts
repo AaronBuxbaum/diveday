@@ -103,28 +103,28 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // can hand over the link on arrival.
   waiver_not_sent: "waiting",
   // No email claim: in a no-email deployment the link was issued but never
-  // sent, and on the readiness page the button hands it over in place.
+  // sent, and on the readiness page the release is signed in place.
   waiver_pending: "action",
   // "action", because the diver can clear this one themselves now: the
-  // readiness page mints a fresh signing link on the spot, and the expired
-  // waiver page mails one to the address on the booking. It read "waiting"
+  // readiness page opens a fresh release in place (issue #2743), and the
+  // expired waiver page mails a link to the address on the booking. It read "waiting"
   // (and told the diver to go ask the shop) only while there was genuinely
   // nothing on this end for them to tap — a dead end for a link that ages out
   // in a week on a booking made months ahead.
   waiver_expired: "action",
-  // "action", like `waiver_expired`: the diver signed once and the readiness
-  // page mints the fresh link they sign again on.
+  // "action", like `waiver_expired`: the diver signed once and signs again
+  // in place on the readiness page.
   waiver_lapsed: "action",
-  // "action", like `waiver_lapsed`: the readiness page mints the fresh link
-  // the diver signs again on, today, while the old release still stands.
+  // "action", like `waiver_lapsed`: the diver signs again in place on the
+  // readiness page, today, while the old release still stands.
   waiver_runs_out: "action",
   medical_review: "waiting",
   // "waiting", like the hold it settles: there has never been anything here for
   // the diver to do, and a refusal is the one state where that is most
   // emphatically true.
   medical_not_cleared: "waiting",
-  // "action", like `waiver_expired`: the fix is a fresh link the readiness
-  // page can mint in place, and the parent holding this page is the person
+  // "action", like `waiver_expired`: the fix is a fresh release the readiness
+  // page opens in place, and the parent holding this page is the person
   // who has to sign it (ADR 20260907-guardian-co-signature).
   guardian_signature_missing: "action",
   // The student signs it on this very page (ADR 20261008-course-forms).

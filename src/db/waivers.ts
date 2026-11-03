@@ -45,7 +45,11 @@ export {
   savePersonEmergencyContact,
   saveWaiverDraft,
   staleWaiverRecordForToken,
+  type ThreadWaiverKey,
   type TokenWaiverState,
+  threadWaiverAwaitsPhysician,
+  threadWaiverKey,
+  type WaiverKey,
 } from "./waivers-completion";
 export {
   type DiverWaiverRequestStatus,
@@ -86,6 +90,8 @@ export {
   hasLiveWaiverRequest,
   type IssueWaiverOutcome,
   issueWaiverRequest,
+  type OpenThreadWaiverOutcome,
+  openWaiverInThread,
 } from "./waivers-requests";
 export {
   getCurrentWaiverGeneration,
