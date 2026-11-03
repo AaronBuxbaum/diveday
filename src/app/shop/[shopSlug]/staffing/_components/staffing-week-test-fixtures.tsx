@@ -117,7 +117,6 @@ export function renderWeek({
       locale={DEFAULT_DIVER_LOCALE}
       timeZone={TZ}
       shopSlug="blue-mantis"
-      shopName="Blue Mantis Divers"
       canManage={canManage}
       canDecide={canDecide}
       deleteShiftAction={vi.fn()}

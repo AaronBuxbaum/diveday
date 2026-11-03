@@ -1,30 +1,7 @@
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { sectionCardClass } from "@/components/ui/card";
-import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { PACKET_PAPER } from "@/lib/print-sheets";
+import { SheetLoading } from "../../../print/_components/SheetLoading";
 
-/**
- * Ticket-shaped skeleton: the page's own wrapping header row (name block,
- * then the Print button), then the units list frame and the due-back line —
- * the trip slip's skeleton (K-282) inside the register's page frame.
- */
+/** The counter ticket's slip, held at the packet paper's width while the rental is read (issue #2745). */
 export default function CounterRentalTicketLoading() {
-  return (
-    <StaffPage width="reading">
-      <div className="animate-pulse">
-        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
-          <div className="w-md max-w-full">
-            <div className="h-4 w-16 rounded bg-surface-sunken" />
-            <div
-              className={`mt-1 h-lh ${SHELL_TITLE_CLASS} w-56 max-w-full rounded bg-surface-sunken`}
-            />
-            <div className="mt-1 h-6 w-48 max-w-full rounded bg-surface-sunken" />
-          </div>
-          <div className="h-12 w-40 rounded-lg bg-surface-sunken" />
-        </div>
-        <div className={`mt-8 h-lh ${SECTION_TITLE_CLASS} w-40 rounded bg-surface-sunken`} />
-        <div className={sectionCardClass({ padding: "none", className: "mt-3 h-40 w-full" })} />
-        <div className="mt-6 h-lh w-64 max-w-full rounded bg-surface-sunken text-lg" />
-      </div>
-    </StaffPage>
-  );
+  return <SheetLoading paper={PACKET_PAPER} />;
 }

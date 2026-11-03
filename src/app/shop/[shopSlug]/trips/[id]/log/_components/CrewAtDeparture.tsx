@@ -5,7 +5,6 @@ import { rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { staffJobWithRatings } from "@/i18n/staff-role-labels";
 import type { IncidentExportDocument, IncidentRollCallResult } from "@/lib/incident-export";
-import { rollCallTableMinWidth } from "./roll-call-columns";
 
 /**
  * **The crew at the departure** on the departure log: who crewed, their jobs
@@ -18,14 +17,14 @@ export function CrewAtDeparture({
   t,
   dateTime,
   checkpointText,
-  checkpointPrintClass,
+  checkpointClass,
   children,
 }: {
   doc: Pick<IncidentExportDocument, "crew" | "meta">;
   t: StaffTranslator;
   dateTime: (isoString: string) => string;
   checkpointText: (checkpoint: string) => string;
-  checkpointPrintClass: string;
+  checkpointClass: string;
   children?: ReactNode;
 }) {
   return (
@@ -41,7 +40,7 @@ export function CrewAtDeparture({
           t={t}
           dateTime={dateTime}
           checkpointText={checkpointText}
-          checkpointPrintClass={checkpointPrintClass}
+          checkpointClass={checkpointClass}
         />
       )}
       {children}
@@ -54,23 +53,21 @@ type CrewTableProps = {
   t: StaffTranslator;
   dateTime: (value: string) => string;
   checkpointText: (value: string) => string;
-  checkpointPrintClass: string;
+  checkpointClass: string;
 };
 
 function CrewTables(props: CrewTableProps) {
   const checkpoints = props.doc.meta.checkpoints;
-  if (checkpoints.length <= 5)
-    return <CrewTable {...props} checkpoints={checkpoints} shellClassName="mt-3" />;
+  // Six checkpoints print as two-checkpoint sections, as the roster does.
+  if (checkpoints.length <= 5) return <CrewTable {...props} checkpoints={checkpoints} />;
   return (
     <>
-      <CrewTable {...props} checkpoints={checkpoints} shellClassName="mt-3 print:hidden" />
       {[0, 2, 4].map((start) => (
         <CrewTable
           key={start}
           {...props}
           checkpoints={checkpoints.slice(start, start + 2)}
-          shellClassName="mt-3 hidden print:block"
-          printSegment
+          checkpointClass="w-auto"
         />
       ))}
     </>
@@ -82,30 +79,19 @@ function CrewTable({
   t,
   dateTime,
   checkpointText,
-  checkpointPrintClass,
+  checkpointClass,
   checkpoints,
-  shellClassName,
-  printSegment,
 }: CrewTableProps & {
   checkpoints: IncidentExportDocument["meta"]["checkpoints"];
-  shellClassName: string;
-  printSegment?: boolean;
 }) {
   return (
-    <Table
-      minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)}
-      shellClassName={shellClassName}
-    >
+    <Table shellClassName="mt-3">
       <THead>
         <Th>{t("incidentExport.colCrewMember")}</Th>
         <Th>{t("incidentExport.colRoles")}</Th>
         <Th>{t("incidentExport.colCrewTeams")}</Th>
         {checkpoints.map((checkpoint) => (
-          <Th
-            key={checkpoint}
-            width="8rem"
-            className={printSegment ? "print:w-auto" : checkpointPrintClass}
-          >
+          <Th key={checkpoint} className={checkpointClass}>
             {checkpointText(checkpoint)}
           </Th>
         ))}

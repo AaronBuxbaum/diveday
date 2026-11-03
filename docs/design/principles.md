@@ -482,8 +482,8 @@ to *look for* anything. Content leads; chrome defers. Concretely:
 - **A surface below depth 1 names its parent and links to it.** Through the page's eyebrow where it
   has one — `ShopPageHeader`'s eyebrow, or `EyebrowWayUp` for a header that is not that
   component — and through an explicit "← Parent" link only where the page has no eyebrow to spend
-  (the printed sheets under `print/**`, whose `SheetDocument` shell wears a band rather than a
-  header and carries a `print:hidden` link to the print register). Two forms, chosen by whether
+  (every printed document, whose `SheetDocument` shell wears a band rather than a header and
+  carries a screen-only link back to the screen it was opened from). Two forms, chosen by whether
   the header has an eyebrow, and never a third: three ways up existed before this rule and which one
   a page got was a function of when it was written (issue #823).
   A "Back to …" **button** in the header's actions slot is a third form, and so is a "← Back to …"

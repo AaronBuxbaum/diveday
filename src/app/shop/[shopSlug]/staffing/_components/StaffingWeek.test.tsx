@@ -33,12 +33,6 @@ const GAP: WeekGap = {
 };
 
 describe("StaffingWeek", () => {
-  it("includes the shop's generic timezone in its repeated print context", () => {
-    const { container } = renderWeek();
-    const context = container.querySelector("thead [data-crew-print-context]");
-    expect(context).toHaveTextContent("ET");
-  });
-
   it("associates week data with weekday columns and person rows", () => {
     const { container } = renderWeek({ gaps: [GAP] });
     const table = container.querySelector("table");

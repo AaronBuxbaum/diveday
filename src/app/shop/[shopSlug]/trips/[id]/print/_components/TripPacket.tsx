@@ -8,13 +8,11 @@ import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
 import { getTripOverview } from "@/db/trip-overview";
 import { readTripPaperIdentity } from "@/db/trip-paper-identity";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
-import { publicAppUrl } from "@/lib/notifications";
-import { PACKET_PAPER, storefrontAddress } from "@/lib/print-sheets";
+import { PACKET_PAPER } from "@/lib/print-sheets";
 import type { requireShopSurface } from "@/lib/session";
 import { stablePacket } from "@/lib/stable-packet";
-import { PaperSheet, SheetMark, type SheetTone } from "../../../../print/_components/PaperSheet";
+import { ShopSheet } from "../../../../print/_components/ShopSheet";
 import {
   DeparturePaperIdentity,
   formatPaperDateTime,
@@ -54,16 +52,9 @@ type TripPacketProps = Pick<ShopSurface, "shop" | "session"> & {
   printedMedicalAlerts?: PrintedMedicalAlerts;
 };
 
-/** The shop's band, as every sheet the shop prints wears it. */
-export function shopSheetTone(shop: { brandColor: string | null }): SheetTone {
-  const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
-  return { band: theme.primary, bandInk: theme.primaryForeground };
-}
-
 /**
- * **One sheet of a packet**: the shop's band with the sheet's own name in it,
- * and the fold line every sheet carries (the print time in the shop's zone,
- * and the storefront's address).
+ * **One sheet of a packet**: the shop's sheet (`ShopSheet`) on the packets'
+ * paper, with the sheet's own name in the band.
  */
 export function PacketSheet({
   shop,
@@ -80,21 +71,9 @@ export function PacketSheet({
   children: ReactNode;
 }) {
   return (
-    <PaperSheet
-      paper={PACKET_PAPER}
-      tone={shopSheetTone(shop)}
-      band={
-        <>
-          <SheetMark name={shop.name} size="sm" />
-          <span className="font-brand-display text-sm font-bold">{shop.name}</span>
-          <span className="ms-auto text-sm font-semibold">{name}</span>
-        </>
-      }
-      foldLeft={printed}
-      foldRight={storefrontAddress(shopSlug, publicAppUrl())}
-    >
+    <ShopSheet paper={PACKET_PAPER} shop={shop} shopSlug={shopSlug} name={name} printed={printed}>
       {children}
-    </PaperSheet>
+    </ShopSheet>
   );
 }
 

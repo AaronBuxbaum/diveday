@@ -12,8 +12,8 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  * these units and agrees to nothing DiveDay wrote. The terms are the shop's
  * words verbatim (`shops.rental_terms`), never a default of ours, and the one
  * shop-wide waiver stays the only liability page (CR-015). No money either:
- * billing lives on the order. On screen as well as on paper, so the counter
- * sees what will print.
+ * billing lives on the order. Drawn inside the ticket's sheet (`RentalSlip`),
+ * so the counter sees on screen what will print.
  */
 export function RentalTicketReceipt({ terms, t }: { terms: string | null; t: StaffTranslator }) {
   return (
@@ -28,10 +28,10 @@ export function RentalTicketReceipt({ terms, t }: { terms: string | null; t: Sta
           </p>
         </>
       ) : null}
-      {/* Three blanks to write on, the widest for the signature. They stay on
-          one row on paper whatever the screen width, because a printed ticket
-          is a page, not a phone. */}
-      <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-[2fr_2fr_1fr] print:grid-cols-[2fr_2fr_1fr]">
+      {/* Three blanks to write on, the widest for the signature. One row
+          whatever the screen width: the ticket is a sheet of paper (issue
+          #2745), as wide on a phone as on the printer, never a reflowed page. */}
+      <div className="mt-10 grid grid-cols-[2fr_2fr_1fr] gap-8">
         <WriteOnLine label={t("gear.ticket.receivedBy")} />
         <WriteOnLine label={t("gear.ticket.printedName")} />
         <WriteOnLine label={t("gear.ticket.date")} />

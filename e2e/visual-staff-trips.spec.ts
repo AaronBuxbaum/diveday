@@ -698,9 +698,7 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
         await page.goto(`${tripPath}/log`);
-        const section = page.locator("section", {
-          has: page.getByRole("heading", { name: "Incident reports" }),
-        });
+        const section = page.locator('section[aria-labelledby="incident-reports-heading"]');
         await section.getByText(/^Draft not filed, started by /).waitFor();
         await section.scrollIntoViewIfNeeded();
         await capture(page, "departure-log-incident-reports", scheme);

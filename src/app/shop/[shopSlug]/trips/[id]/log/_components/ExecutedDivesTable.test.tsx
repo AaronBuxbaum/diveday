@@ -87,7 +87,7 @@ describe("ExecutedDivesTable", () => {
     expect(row?.textContent?.match(/Oct\s14/g)).toHaveLength(1);
   });
 
-  it("says every field as a labeled card below md, and keeps the table for md and paper", () => {
+  it("says every field under its own column, on screen and on paper alike", () => {
     const { container } = render(
       <ExecutedDivesTable
         dives={[
@@ -108,11 +108,11 @@ describe("ExecutedDivesTable", () => {
         t={t}
       />,
     );
-    const card = container.querySelector("[data-dive-cards] li");
-    expect(card?.className).not.toContain("print:block");
-    expect(container.querySelector("[data-dive-cards]")?.className).toContain("md:hidden");
-    const labels = [...(card?.querySelectorAll("dt") ?? [])].map((dt) => dt.textContent);
-    expect(labels).toEqual([
+    // One face: no phone card list, and the table is never hidden.
+    expect(container.querySelector("[data-dive-cards]")).toBeNull();
+    expect(container.querySelector("table")?.closest(".hidden")).toBeNull();
+    const labels = [...container.querySelectorAll("thead th")].map((th) => th.textContent);
+    expect(labels.slice(1)).toEqual([
       "Actual site",
       "Water times",
       "Maximum depth",
@@ -120,9 +120,10 @@ describe("ExecutedDivesTable", () => {
       "Surface interval",
       "Recorded by",
     ]);
-    // An absent fact is said, never dropped, in the card as in the table.
-    expect(card?.textContent).toContain("Maximum depthNot recorded");
-    expect(card?.textContent).toContain("Recorded byNot on file");
+    // An absent fact is said, never dropped.
+    const cells = [...container.querySelectorAll("tbody td")].map((td) => td.textContent);
+    expect(cells[2]).toBe("Not recorded");
+    expect(cells[5]).toBe("Not on file");
     expect(container.querySelector("tbody tr")?.textContent).toContain("50 min");
   });
 });

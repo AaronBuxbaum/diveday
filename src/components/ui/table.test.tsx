@@ -98,7 +98,7 @@ describe("Table", () => {
     // animation on the region's own inline scroll, so a table that fits has an
     // inactive timeline and no fade, and paper never gets one.
     render(
-      <Table minWidth="72rem">
+      <Table minWidth="40rem">
         <TBody>
           <tr>
             <Td>Row</Td>

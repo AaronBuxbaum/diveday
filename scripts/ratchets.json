@@ -27,6 +27,7 @@
           "src/app/(token)/verify/[token]/page.tsx": "0 -> 1",
           "src/app/(token)/waivers/[token]/doctor/doctor-form-upload.ts": "0 -> 1",
           "src/app/(token)/waivers/[token]/doctor/DoctorFormUpload.tsx": "0 -> 1",
+          "src/app/(token)/waivers/[token]/doctor/page.tsx": "0 -> 2",
           "src/app/(token)/waivers/[token]/GuardianCard.tsx": "0 -> 1",
           "src/app/(token)/waivers/[token]/page.tsx": "0 -> 1",
           "src/app/api/cron/backup-export/route.ts": "0 -> 2",
@@ -192,6 +193,7 @@
           "src/app/(token)/verify/[token]/page.tsx": "0 -> 1",
           "src/app/(token)/waivers/[token]/doctor/doctor-form-upload.ts": "0 -> 1",
           "src/app/(token)/waivers/[token]/doctor/DoctorFormUpload.tsx": "0 -> 1",
+          "src/app/(token)/waivers/[token]/doctor/page.tsx": "0 -> 2",
           "src/app/(token)/waivers/[token]/GuardianCard.tsx": "0 -> 1",
           "src/app/(token)/waivers/[token]/page.tsx": "0 -> 1",
           "src/app/api/cron/backup-export/route.ts": "0 -> 2",
@@ -419,7 +421,7 @@
     "src/app/(token)/verify/[token]/page.tsx": 1,
     "src/app/(token)/waivers/[token]/doctor/doctor-form-upload.ts": 1,
     "src/app/(token)/waivers/[token]/doctor/DoctorFormUpload.tsx": 1,
-    "src/app/(token)/waivers/[token]/doctor/page.tsx": 1,
+    "src/app/(token)/waivers/[token]/doctor/page.tsx": 2,
     "src/app/(token)/waivers/[token]/GuardianCard.tsx": 1,
     "src/app/(token)/waivers/[token]/page.tsx": 1,
     "src/app/api/cron/backup-export/route.ts": 2,
@@ -1085,15 +1087,6 @@
         }
       },
       {
-        "why": "Merge of #3723 (#2716) onto main's #2718 fix-up: it dropped main's absorbs for the tip fold (anonymize, reporting tests) and brings the payment-entry tests (retention, divers) and seed line",
-        "files": {
-          "src/db/anonymize.test.ts": "1627 -> 1629",
-          "src/db/divers.test.ts": "3052 -> 3056",
-          "src/db/reporting.test.ts": "1379 -> 1384",
-          "src/db/retention.test.ts": "1051 -> 1084"
-        }
-      },
-      {
         "why": "the trip page readers left the trips barrel (issue #2757): two import lines, removed again when the page reads through one reader in the next layer",
         "files": {
           "src/db/incident-reports.test.ts": "1011 -> 1013",
@@ -1121,7 +1114,7 @@
         }
       },
       {
-        "why": "Merge of the card ledger (#3733) into the tips/payment-entries layer (#3735); no branch added by hand",
+        "why": "Merge of main and the lower stack layers; no branch added by hand",
         "files": {
           "src/db/divers.test.ts": "3060 -> 3064",
           "src/db/retention.test.ts": "1051 -> 1084"
@@ -1187,7 +1180,7 @@
     "src/lib/dive-prep.test.ts": 1935,
     "src/lib/import.test.ts": 1403,
     "src/lib/incident-export.test.ts": 1067,
-    "src/lib/manifests.test.ts": 1028,
+    "src/lib/manifests.test.ts": 1027,
     "src/lib/notifications/email.test.ts": 1096,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
@@ -1207,13 +1200,7 @@
         }
       },
       {
-        "why": "Merge of #3723 (#2716) onto main's #2718 fix-up: it dropped main's absorbs for the tip fold (anonymize, reporting tests) and brings the payment-entry tests (retention, divers) and seed line",
-        "files": {
-          "src/db/seed-more-trips.ts#seedMoreTrips": "624 -> 625"
-        }
-      },
-      {
-        "why": "Merge of the card ledger (#3733) into the tips/payment-entries layer (#3735); no branch added by hand",
+        "why": "Merge of main and the lower stack layers; no branch added by hand",
         "files": {
           "src/db/seed-more-trips.ts#seedMoreTrips": "624 -> 625"
         }
@@ -1299,7 +1286,7 @@
     "src/app/shop/[shopSlug]/reports/page.tsx": 493,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 580,
-    "src/app/shop/[shopSlug]/staffing/page.tsx": 590,
+    "src/app/shop/[shopSlug]/staffing/page.tsx": 506,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 494
   },
   "tokens": {

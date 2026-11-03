@@ -119,6 +119,10 @@
   "/shop/[shopSlug]/print/pass/[bookingId]": {
     "e2e": ["shop-on-paper.spec.ts"]
   },
+  "/shop/[shopSlug]/staffing/print": {
+    "e2e": ["visual-print.spec.ts"],
+    "visual": ["crew-week"]
+  },
   "/shop/[shopSlug]/safety": {
     "e2e": ["incident-reports.spec.ts"]
   },

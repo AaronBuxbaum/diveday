@@ -34,15 +34,10 @@ describe("StaffingWeek away note", () => {
     expect(screen.getAllByText(/Hospital appointment/).length).toBeGreaterThan(0);
   });
 
-  it("keeps a privileged reader's note off the shared printed noticeboard", () => {
-    const { container } = weekAs({ personId: "person-owner", canReadCrewAwayNote: true });
-    const grid = container.querySelector(".staffing-print-grid");
-    if (!grid) throw new Error("the week must have a printable rota");
-    const note = [...grid.querySelectorAll("span")].find((span) => span.textContent === AWAY.note);
-    expect(note).toBeDefined();
+  it("keeps a privileged reader's note off the page when someone prints the screen", () => {
+    weekAs({ personId: "person-owner", canReadCrewAwayNote: true });
+    const note = screen.getAllByText(/Hospital appointment/)[0];
     expect(note).toHaveClass("print:hidden");
-    expect(grid).toHaveTextContent("Away");
-    expect(grid).toHaveTextContent("Thu, Aug 27");
   });
 
   it("shows a colleague that she is away, and not why", () => {
