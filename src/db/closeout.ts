@@ -11,7 +11,7 @@ import {
   tomorrowNoon,
 } from "@/lib/closeout";
 import type { CrewRollCallSubject } from "@/lib/manifests";
-import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
+import { carryForwardNotBoarded, compareMarkOrder, rollCallCheckpoints } from "@/lib/roll-call";
 import { seatSailed } from "@/lib/seat-sailed";
 import { settleWithLimit } from "@/lib/settle-with-limit";
 import { shopDayBounds, shopDaysBounds } from "@/lib/zoned";
@@ -590,6 +590,7 @@ export async function listHeadCountCloses(
         checkpoint: rollCallEvents.checkpoint,
         occurredAt: rollCallEvents.occurredAt,
         createdAt: rollCallEvents.createdAt,
+        seq: rollCallEvents.seq,
         closedBy: people.fullName,
       })
       .from(rollCallEvents)
@@ -611,6 +612,7 @@ export async function listHeadCountCloses(
             checkpoint: rollCallEvents.checkpoint,
             occurredAt: rollCallEvents.occurredAt,
             createdAt: rollCallEvents.createdAt,
+            seq: rollCallEvents.seq,
             closedBy: people.fullName,
           })
           .from(rollCallEvents)
@@ -639,10 +641,7 @@ export async function listHeadCountCloses(
   };
   const diverLast = newestPerTrip(diverRows);
   const crewLast = newestPerTrip(crewRows);
-  const crewIsLater = (crew: Mark, diver: Mark) =>
-    crew.occurredAt.getTime() !== diver.occurredAt.getTime()
-      ? crew.occurredAt > diver.occurredAt
-      : crew.createdAt > diver.createdAt;
+  const crewIsLater = (crew: Mark, diver: Mark) => compareMarkOrder(crew, diver) > 0;
   for (const tripId of new Set([...diverLast.keys(), ...crewLast.keys()])) {
     const diver = diverLast.get(tripId);
     const crew = crewLast.get(tripId);

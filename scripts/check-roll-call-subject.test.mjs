@@ -120,6 +120,18 @@ describe("the order of roll-call marks", () => {
     ).toEqual([3]);
   });
 
+  it("is refused for the anti-join that leaves seq out, a bare orderBy and raw sql", () => {
+    expect(
+      ordered(`
+        const newer = alias(rollCallEvents, "newer");
+        or(gt(newer.occurredAt, rollCallEvents.occurredAt), gt(newer.createdAt, rollCallEvents.createdAt));
+        .orderBy(rollCallEvents.occurredAt)
+        sql\`order by \${rollCallEvents.createdAt} DESC\`;
+        and(gte(rollCallEvents.occurredAt, from), lt(rollCallEvents.occurredAt, to));
+      `),
+    ).toEqual([3, 4, 5]);
+  });
+
   it("passes the helpers and a projection of seq for an in-memory sort", () => {
     expect(
       ordered(`

@@ -322,6 +322,7 @@ describe("buildTripManifest", () => {
       status: "boarded",
       occurredAt,
       createdAt: occurredAt,
+      seq: 0,
     });
 
     expect(maxRecordedDiveNumber([])).toBe(0);
@@ -356,6 +357,7 @@ describe("buildTripManifest", () => {
           status: "boarded",
           occurredAt: t0,
           createdAt: t0,
+          seq: 0,
         },
         {
           bookingId: "b1",
@@ -363,6 +365,7 @@ describe("buildTripManifest", () => {
           status: "cleared",
           occurredAt: t1,
           createdAt: t1,
+          seq: 0,
         },
         {
           bookingId: "b1",
@@ -370,6 +373,7 @@ describe("buildTripManifest", () => {
           status: "boarded",
           occurredAt: t0,
           createdAt: t0,
+          seq: 0,
         },
       ]),
     ).toBe(2);
@@ -384,6 +388,7 @@ describe("buildTripManifest", () => {
           status: "boarded",
           occurredAt: t0,
           createdAt: t0,
+          seq: 0,
         },
         {
           bookingId: "b1",
@@ -391,6 +396,7 @@ describe("buildTripManifest", () => {
           status: "cleared",
           occurredAt: t1,
           createdAt: t1,
+          seq: 0,
         },
         {
           bookingId: "b2",
@@ -398,6 +404,7 @@ describe("buildTripManifest", () => {
           status: "boarded",
           occurredAt: t0,
           createdAt: t0,
+          seq: 0,
         },
       ]),
     ).toBe(3);

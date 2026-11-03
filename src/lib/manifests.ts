@@ -90,7 +90,7 @@ export function maxRecordedDiveNumber(
      * a live result or the live result stands, which is the difference
      * between a dive count that can be shrunk and one that cannot.
      */
-    seq?: number | null;
+    seq: number;
   }[],
 ): number {
   const latestByKey = new Map<string, (typeof events)[number]>();

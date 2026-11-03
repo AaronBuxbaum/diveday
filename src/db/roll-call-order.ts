@@ -7,7 +7,8 @@ import { rollCallEvents } from "./schema";
  * two taps in the same millisecond, or an offline batch replayed with one
  * `occurred_at`, are still told apart. Forgetting `seq` once left every test green
  * and a diver reading as back aboard. `scripts/check-roll-call-subject.mjs`
- * refuses a reference to a roll-call `.seq` anywhere but here.
+ * refuses a hand-written sort or newer-than comparison anywhere but here; it
+ * reads text, so it catches the usual shapes, not every one.
  *
  * Each helper takes the table or an `alias()` of it.
  */

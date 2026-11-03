@@ -45,16 +45,17 @@ export type RollCallSubjectKind = (typeof ROLL_CALL_SUBJECT_KINDS)[number];
 /**
  * Oldest first on `occurredAt`, then `createdAt`, then `seq`: the one order of roll-call marks
  * (ADR 20260815-roll-call-order-is-a-property-of-the-data). The SQL twin is
- * `src/db/roll-call-order.ts`; a missing `seq` (a row from before the column) sorts first.
+ * `src/db/roll-call-order.ts`. `seq` is required: a reader that did not select it would tie
+ * two same-transaction taps and let the first one seen win.
  */
 export function compareMarkOrder(
-  a: { occurredAt: Date; createdAt: Date; seq?: number | null },
-  b: { occurredAt: Date; createdAt: Date; seq?: number | null },
+  a: { occurredAt: Date; createdAt: Date; seq: number },
+  b: { occurredAt: Date; createdAt: Date; seq: number },
 ): number {
   return (
     a.occurredAt.getTime() - b.occurredAt.getTime() ||
     a.createdAt.getTime() - b.createdAt.getTime() ||
-    (a.seq ?? 0) - (b.seq ?? 0)
+    a.seq - b.seq
   );
 }
 

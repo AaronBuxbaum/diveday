@@ -31,9 +31,9 @@ import { filesUnder } from "./files-under.mjs";
  *
  * ## The order of marks
  *
- * The same scan refuses sorting a roll-call mark by hand (`asc(`/`desc(` on
- * `occurredAt`, `createdAt` or `seq`, or a raw `${T.seq}`) and comparing its
- * `seq` (`gt(`, `lt(`, …) anywhere but
+ * The same scan refuses sorting a roll-call mark by hand (`asc(`/`desc(`/a bare
+ * `.orderBy(` on `occurredAt`, `createdAt` or `seq`, a raw `${T.x} desc`, a raw
+ * `${T.seq}`) and comparing two marks' order columns (`gt(`, `lt(`, …) anywhere but
  * `src/db/roll-call-order.ts`. Newest wins on `occurred_at`, `created_at`,
  * `seq`; the rule was written by hand 39 times, and forgetting `seq` once
  * left every test green and a diver reading as back aboard (ADR
@@ -109,7 +109,16 @@ export function findHandOrderedMarks(source) {
   const lines = source.split("\n");
   const name = `(?:${rollCallNames(source).join("|")})`;
   const pattern = new RegExp(
-    String.raw`\b(?:asc|desc)\(\s*${name}\.(?:occurredAt|createdAt|seq)\b|\b(?:gt|lt|gte|lte)\(\s*${name}\.seq\b|,\s*${name}\.seq\s*\)|\$\{${name}\.(?:occurredAt|seq)\}\s+(?:asc|desc)\b|\$\{${name}\.seq\}`,
+    [
+      String.raw`\b(?:asc|desc)\(\s*${name}\.(?:occurredAt|createdAt|seq)\b`,
+      String.raw`\b(?:gt|lt|gte|lte)\(\s*${name}\.(?:occurredAt|createdAt|seq)\s*,\s*\w+\.(?:occurredAt|createdAt|seq)\b`,
+      String.raw`\b(?:gt|lt|gte|lte)\(\s*${name}\.seq\b`,
+      String.raw`,\s*${name}\.seq\s*\)`,
+      String.raw`\.orderBy\(\s*${name}\.(?:occurredAt|createdAt|seq)\b`,
+      String.raw`\$\{${name}\.(?:occurredAt|createdAt|seq)\}\s+(?:asc|desc)\b`,
+      String.raw`\$\{${name}\.seq\}`,
+    ].join("|"),
+    "i",
   );
   const findings = [];
   lines.forEach((line, index) => {
