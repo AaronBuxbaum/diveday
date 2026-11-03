@@ -78,11 +78,13 @@ describe("the person-column registry", () => {
         expect([key, row.column, row.kind]).toEqual([key, "person_id", "subject"]);
       }
       if (row.merge === "refuse") {
-        expect([key, row.column, ["crew", "login"].includes(row.kind)]).toEqual([
+        // `crew_person_id` is the crew subject of the roll-call ledger, which
+        // holds seat marks too and so cannot name its crew column `person_id`.
+        expect([
           key,
-          "person_id",
-          true,
-        ]);
+          row.column === "crew_person_id" ? "person_id" : row.column,
+          ["crew", "login"].includes(row.kind),
+        ]).toEqual([key, "person_id", true]);
       }
       if (row.merge === "leave" || row.merge === "delete") {
         expect([key, (row.why ?? "").length > 0]).toEqual([key, true]);

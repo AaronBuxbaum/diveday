@@ -32,6 +32,7 @@ import {
   setTripRecapShoutout,
   unpauseTripRecapAutoSend,
 } from "./recap";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookings,
   cards,
@@ -40,7 +41,6 @@ import {
   people,
   priorVisits,
   recapPhotos,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   trips,
@@ -815,10 +815,10 @@ describe("a departure with somebody not back aboard", () => {
       status: "boarded" | "not_boarded" | "cleared",
       checkpoint: string,
     ) =>
-      ctx.db.insert(rollCallCrewEvents).values({
+      ctx.db.insert(rollCallEvents).values({
         shopId: ctx.shop.id,
         tripId: ctx.reef.id,
-        personId,
+        ...crewSubject(personId),
         recordedByPersonId: staff.person.id,
         status,
         checkpoint,

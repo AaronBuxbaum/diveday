@@ -248,7 +248,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
      * `listTripCrew` then dropped the person, the assigned count fell, and a
      * checkpoint that was open **because a named crew member had been recorded
      * as not back aboard** flipped to complete — with their event rows still
-     * sitting in `roll_call_crew_events`, read by nothing. One tap made a
+     * sitting in the crew half of `roll_call_events`, read by nothing. One tap made a
      * stated "did not come back" disappear. Divers have had the analogous
      * guard from the start (`deleteTrip` refuses `already_sailed`).
      */

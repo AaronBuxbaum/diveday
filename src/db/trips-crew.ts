@@ -12,10 +12,11 @@ import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewNotices } from "./crew-notices";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
 import { publishManifestEvent } from "./manifest-events";
+import { crewMarks, markCrewPersonId } from "./roll-call-subject";
 import {
   people,
   personRoles,
-  rollCallCrewEvents,
+  rollCallEvents,
   tripAssignments,
   tripHelpRequests,
   tripScheduleDays,
@@ -526,13 +527,14 @@ async function crewWithRollCallHistory(
 ): Promise<Set<string>> {
   if (personIds.length === 0) return new Set();
   const rows = await tx
-    .selectDistinct({ personId: rollCallCrewEvents.personId })
-    .from(rollCallCrewEvents)
+    .selectDistinct({ personId: markCrewPersonId() })
+    .from(rollCallEvents)
     .where(
       and(
-        eq(rollCallCrewEvents.shopId, shopId),
-        eq(rollCallCrewEvents.tripId, tripId),
-        inArray(rollCallCrewEvents.personId, [...personIds]),
+        eq(rollCallEvents.shopId, shopId),
+        crewMarks(),
+        eq(rollCallEvents.tripId, tripId),
+        inArray(rollCallEvents.crewPersonId, [...personIds]),
       ),
     );
   return new Set(rows.map((row) => row.personId));

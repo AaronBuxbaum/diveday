@@ -20,7 +20,6 @@ import {
   orderLineItems,
   orders,
   people,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   tripBlowoutDivers,
@@ -831,11 +830,12 @@ async function seedShopCertified(
       ),
     );
   }
-  await db.insert(rollCallCrewEvents).values(
+  await db.insert(rollCallEvents).values(
     counts.map(({ checkpoint, occurredAt }) => ({
       shopId,
       tripId: trip.id,
-      personId: ctx.instructorId,
+      subjectKind: "crew" as const,
+      crewPersonId: ctx.instructorId,
       recordedByPersonId: ctx.instructorId,
       status: "boarded" as const,
       checkpoint,

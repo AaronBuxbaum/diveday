@@ -1,4 +1,4 @@
-import { type RollCallCheckpoint, rollCallCheckpoints } from "./roll-call";
+import { compareMarkOrder, type RollCallCheckpoint, rollCallCheckpoints } from "./roll-call";
 
 /**
  * **The per-seat dispute sheet** (issue #2390, opportunities B6): what a shop
@@ -207,12 +207,7 @@ export type DisputeSheet = {
 function newestFirst<T extends { occurredAt: Date; createdAt: Date; seq: number }>(
   rows: readonly T[],
 ): T[] {
-  return [...rows].sort(
-    (a, b) =>
-      b.occurredAt.getTime() - a.occurredAt.getTime() ||
-      b.createdAt.getTime() - a.createdAt.getTime() ||
-      b.seq - a.seq,
-  );
+  return [...rows].sort((a, b) => compareMarkOrder(b, a));
 }
 
 function signatureMethodOf(method: string | null): DisputeSignatureMethod {

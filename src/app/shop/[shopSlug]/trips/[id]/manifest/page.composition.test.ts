@@ -10,6 +10,9 @@ import { routeSource } from "@/test/route-source";
  */
 const SOURCE = routeSource(import.meta.dirname, "page.tsx");
 const READS = routeSource(import.meta.dirname, "_components/manifest-reads.ts");
+/** The view the Boat tab and the packet's manifest sheet both read. */
+const VIEW = routeSource(import.meta.dirname, "_components/manifest-view.ts");
+const PACKET = routeSource(import.meta.dirname, "../print/_components/TripPacket.tsx");
 
 /**
  * **A held seat's particulars stay withheld on every reader** (`held-seat.ts`,
@@ -21,12 +24,12 @@ const READS = routeSource(import.meta.dirname, "_components/manifest-reads.ts");
  */
 describe("the dock desk's seat list", () => {
   it("reads the withheld manifest, never the raw departure one", () => {
-    // One prop set for the live dock desk and the packet's paper.
+    // One prop set, from the shared view, for the live dock desk and the sheet.
     expect(SOURCE).toContain("<DockDesk {...dockDesk} />");
-    expect(SOURCE).toContain("dockDesk={dockDesk}");
-    const dockDesk = SOURCE.slice(
-      SOURCE.indexOf("const dockDesk = {"),
-      SOURCE.indexOf("};", SOURCE.indexOf("const dockDesk = {")),
+    expect(PACKET).toContain("dockDesk={manifest.dockDesk}");
+    const dockDesk = VIEW.slice(
+      VIEW.indexOf("const dockDesk = {"),
+      VIEW.indexOf("};", VIEW.indexOf("const dockDesk = {")),
     );
     expect(dockDesk).toContain("seats: manifest.divers");
     expect(dockDesk).not.toContain("departureManifest.divers");
@@ -40,8 +43,9 @@ describe("the dock desk's seat list", () => {
  */
 describe("a stale checkpoint in the URL", () => {
   it("redirects to the manifest without it", () => {
-    const at = SOURCE.indexOf('"stale" in opened');
-    expect(at, "the page reads openCheckpoint's stale answer").toBeGreaterThan(-1);
+    expect(VIEW).toContain('if ("stale" in opened) return { status: "stale" as const };');
+    const at = SOURCE.indexOf('view.status === "stale"');
+    expect(at, "the page reads the view's stale answer").toBeGreaterThan(-1);
     const branch = SOURCE.slice(at, SOURCE.indexOf(";", at));
     expect(branch).toContain('redirect(shopPath(shopSlug, "trips", tripId, "manifest"))');
   });
@@ -57,10 +61,10 @@ describe("a cancelled departure's roll call", () => {
     expect(READS).toMatch(/cancelledRollCall\(\{[^}]*rollCallOpen/s);
     expect(SOURCE).toContain("    cancelled,\n");
     // One set of props per list, read by the screen and the packet's paper alike.
-    expect(SOURCE).toContain('rollCallClosed: cancelled === "closed",');
+    expect(VIEW).toContain('rollCallClosed: read.cancelled === "closed",');
     expect(SOURCE).toContain("<DiverRollCall context={rollCall.divers} />");
     expect(SOURCE).toContain("<CrewRollCall {...rollCall.crew} />");
-    expect(SOURCE).toContain("rollCall={rollCall}");
+    expect(PACKET).toContain("rollCall={manifest.rollCall}");
     const props = readFileSync(
       path.join(import.meta.dirname, "_components/roll-call-props.ts"),
       "utf8",

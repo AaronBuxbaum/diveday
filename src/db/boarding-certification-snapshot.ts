@@ -1,6 +1,7 @@
 import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
+import { seatMarks } from "./roll-call-subject";
 import { cards, people, rollCallEvents } from "./schema";
 
 /**
@@ -93,6 +94,7 @@ export async function rewriteBoardingSnapshotReviewer(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         sql`${rollCallEvents.certificationSnapshot} @> ${JSON.stringify([{ reviewedByPersonId: fromPersonId }])}::jsonb`,
       ),
     );

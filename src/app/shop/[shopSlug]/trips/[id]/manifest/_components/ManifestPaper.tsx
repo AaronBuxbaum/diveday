@@ -13,8 +13,8 @@ import type { manifestRollCallProps } from "./roll-call-props";
 
 /**
  * **The manifest as the trip packet's paper** (visual review 2026-10-24, B03,
- * B55). Only the packet composes the manifest page under `PAPER_PACKET`, and
- * this is what it renders: what the printed sheet has always carried, in the
+ * B55; issue #2745). The packet's manifest sheet renders this from the same
+ * view the Boat tab reads (`readManifestView`): what the printed sheet has always carried, in the
  * same order — the souls on board, the boat's safety notices, the boat
  * check's printed list, the roll call's printed rows, what was found
  * aboard, and the boat's procedure and numbers. The stage strip's printed
@@ -51,7 +51,9 @@ export function ManifestPaper({
   t: StaffTranslator;
 }) {
   return (
-    <div className="boat-mode">
+    // No `.boat-mode` here: the sheet is its own face (`.paper-sheet`'s
+    // tokens), and Boat mode's palette is for a screen held at the rail.
+    <div>
       <CancelledRollCallBanner state={cancelled} t={t} />
       <PrintedSoulsOnBoard manifest={manifest} vesselName={vesselName} t={t} />
       <div className="mt-5 space-y-10">

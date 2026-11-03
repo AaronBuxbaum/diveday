@@ -6,10 +6,10 @@ import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { createBoat, deleteBoat } from "./boats";
 import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookings,
   people,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripChangeEvents,
@@ -388,10 +388,10 @@ describe("trip records (in-memory PGlite)", () => {
     if (!reef) throw new Error("expected seeded reef trip missing");
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("expected seeded staff missing");
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: reef.id,
-      personId: staff.person.id,
+      ...crewSubject(staff.person.id),
       recordedByPersonId: staff.person.id,
       status: "not_boarded",
       checkpoint: "after_dive_2",
@@ -413,10 +413,10 @@ describe("trip records (in-memory PGlite)", () => {
     expect((await getTripWithBooked(db, shop.id, reef.id))?.plannedDives).toBe(reef.plannedDives);
 
     // A crew result that was undone is no history: the floor lifts.
-    await db.insert(rollCallCrewEvents).values({
+    await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: reef.id,
-      personId: staff.person.id,
+      ...crewSubject(staff.person.id),
       recordedByPersonId: staff.person.id,
       status: "cleared",
       checkpoint: "after_dive_2",

@@ -83,6 +83,7 @@ import {
   type ProcessorErasureTargetInput,
   recordProcessorErasureObligations,
 } from "./processor-erasure";
+import { crewMarks, seatMarks } from "./roll-call-subject";
 import type { ProcessorErasureObligation } from "./schema";
 import {
   accountSecurity,
@@ -125,9 +126,9 @@ import {
   recapPhotos,
   recapPulses,
   rentalFitProfiles,
+  retiredRollCallCrewEvents,
   reviewModerationEvents,
   reviewReplies,
-  rollCallCrewEvents,
   rollCallEvents,
   shopShoreAlertTokens,
   shops,
@@ -764,7 +765,7 @@ async function scrubPersonRecord(
   );
 
   await tx
-    .update(rollCallCrewEvents)
+    .update(rollCallEvents)
     .set({
       note: null,
       credentialSnapshot: null,
@@ -773,9 +774,26 @@ async function scrubPersonRecord(
     })
     .where(
       and(
-        eq(rollCallCrewEvents.shopId, shopId),
-        eq(rollCallCrewEvents.personId, personId),
-        or(isNotNull(rollCallCrewEvents.note), isNotNull(rollCallCrewEvents.credentialSnapshot)),
+        eq(rollCallEvents.shopId, shopId),
+        crewMarks(),
+        eq(rollCallEvents.crewPersonId, personId),
+        or(isNotNull(rollCallEvents.note), isNotNull(rollCallEvents.credentialSnapshot)),
+      ),
+    );
+  // The retired crew table still holds the rows the bridge migration copied
+  // (#2700) until the next release drops it; the erasure promise covers them too.
+  await tx
+    .update(retiredRollCallCrewEvents)
+    .set({
+      note: null,
+      credentialSnapshot: null,
+      credentialSnapshotStartedAt: null,
+      credentialSnapshotCapturedAt: null,
+    })
+    .where(
+      and(
+        eq(retiredRollCallCrewEvents.shopId, shopId),
+        eq(retiredRollCallCrewEvents.personId, personId),
       ),
     );
 
@@ -1212,6 +1230,7 @@ async function scrubBookingRows(
       .where(
         and(
           eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
           inArray(
             rollCallEvents.bookingId,
             snapshotSeats.map((seat) => seat.id),
@@ -1299,6 +1318,7 @@ async function scrubBookingRows(
       .where(
         and(
           eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
           inArray(rollCallEvents.bookingId, bookingIds),
           isNotNull(rollCallEvents.note),
         ),
@@ -1320,6 +1340,7 @@ async function scrubBookingRows(
       .where(
         and(
           eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
           inArray(rollCallEvents.bookingId, bookingIds),
           or(
             isNotNull(rollCallEvents.readinessBlockers),

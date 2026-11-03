@@ -61,7 +61,7 @@ import {
   incidentReports,
   people,
   personRoles,
-  rollCallCrewEvents,
+  retiredRollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   trips,
@@ -1556,8 +1556,10 @@ export async function deleteDemoSafetyTrail(db: DbExecutor, shopId: string): Pro
   // Each report takes its people rows with it (cascade): a raised report
   // points at its subject's row, so that row cannot go first.
   await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
-  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
+  // diveday:roll-call-both-subjects: the demo shop's whole ledger goes, seat and crew.
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // Retired by #2700 and dropped next release; until then it may still hold rows naming the shop.
+  await db.delete(retiredRollCallCrewEvents).where(eq(retiredRollCallCrewEvents.shopId, shopId));
 }
 
 /**

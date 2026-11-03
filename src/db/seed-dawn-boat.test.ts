@@ -11,7 +11,6 @@ import {
   executedDives,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   trips,
@@ -71,12 +70,12 @@ describe("the seeded dawn boat's record", () => {
     expect(crew.length).toBeGreaterThan(0);
     const counted = await db
       .select()
-      .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.tripId, dawn.id));
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.tripId, dawn.id));
     for (const { personId } of crew) {
       expect(
         counted
-          .filter((row) => row.personId === personId && row.status === "boarded")
+          .filter((row) => row.crewPersonId === personId && row.status === "boarded")
           .map((row) => row.checkpoint)
           .sort(),
       ).toEqual([...rollCallCheckpoints(dawn.plannedDives)].sort());
@@ -97,10 +96,7 @@ describe("the seeded dawn boat's record", () => {
     // Domain review of layer 2, finding 2: the last count used to land on the
     // docking minute, with dive 2 still in the water at a quarter past eight.
     const { db, dawn } = await dawnBoat();
-    const counts = await db
-      .select()
-      .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.tripId, dawn.id));
+    const counts = await db.select().from(rollCallEvents).where(eq(rollCallEvents.tripId, dawn.id));
     const dives = await db.select().from(executedDives).where(eq(executedDives.tripId, dawn.id));
     for (const count of counts) {
       expect(count.occurredAt.getTime()).toBeLessThan(dawn.endsAt.getTime());
@@ -139,6 +135,7 @@ describe("the seeded dawn boat's record", () => {
       .where(
         and(
           eq(rollCallEvents.tripId, dawn.id),
+          eq(rollCallEvents.subjectKind, "seat"),
           eq(rollCallEvents.checkpoint, "departure"),
           eq(rollCallEvents.status, "boarded"),
         ),
@@ -165,7 +162,13 @@ describe("the seeded dawn boat's record", () => {
     const dockEvents = await db
       .select()
       .from(rollCallEvents)
-      .where(and(eq(rollCallEvents.tripId, dawn.id), eq(rollCallEvents.checkpoint, "departure")));
+      .where(
+        and(
+          eq(rollCallEvents.tripId, dawn.id),
+          eq(rollCallEvents.subjectKind, "seat"),
+          eq(rollCallEvents.checkpoint, "departure"),
+        ),
+      );
     const [turnedAway, undone] = dockEvents.filter((event) => event.status === "boarded");
     if (!turnedAway || !undone) throw new Error("expected boarded divers on the dawn boat");
     // A boarded the crew took back: one turned away, one tap undone.
