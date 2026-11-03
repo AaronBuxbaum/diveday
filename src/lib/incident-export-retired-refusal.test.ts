@@ -159,3 +159,23 @@ describe("a superseded hold on the departure log (issue #3774)", () => {
     }
   });
 });
+
+/**
+ * The flag is unsealed, so a body that carries it on a row it does not
+ * describe must not change what versions 1 to 3 hash (security-reviewer,
+ * issue #3774): only a seat printing a hold is rewritten to the absence.
+ */
+describe("an injected superseded-hold flag", () => {
+  it.each([1, 2, 3, 4] as const)("never rewrites a signed seat under version %i", (version) => {
+    const signed = exportWith(completedWaiver());
+    expect(signed.roster[0]?.waiver?.state).toBe("complete");
+    const { contentHash: _hash, ...body } = signed;
+    const forged = {
+      ...body,
+      roster: body.roster.map((row) => ({ ...row, waiverSupersededHold: true as const })),
+    };
+    expect(incidentExportContentHash(forged, version)).toBe(
+      incidentExportContentHash(body, version),
+    );
+  });
+});

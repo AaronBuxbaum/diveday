@@ -118,6 +118,15 @@ function signatureTime(record: WaiverRecord): number {
 }
 
 /**
+ * When the shop had the record: the later of its signature and the instant
+ * the signature reached the shop (`completedAt`), or the row's creation for a
+ * record never completed. What {@link recordAsOf} asks of a past departure.
+ */
+function receivedTime(record: WaiverRecord): number {
+  return Math.max(signatureTime(record), (record.completedAt ?? record.createdAt).getTime());
+}
+
+/**
  * A medical hold nobody has resolved — the thing that fails closed.
  *
  * The questionnaire refers a diver, the record parks in `medical_review`, and
@@ -306,6 +315,14 @@ export function isSignatureCurrent(
   // (issue #3781). The year runs from {@link signatureTime}, which a claimed
   // date can only move earlier.
   if (signedAt.getTime() > now.getTime() + SIGNATURE_FUTURE_TOLERANCE_MS) return false;
+  // Nor is one dated past the moment the shop received it, at any instant a
+  // reader passes: a roster read for a later departure passes that departure.
+  if (
+    record.completedAt &&
+    signedAt.getTime() > record.completedAt.getTime() + SIGNATURE_FUTURE_TOLERANCE_MS
+  ) {
+    return false;
+  }
   return signatureTime(record) + WAIVER_SIGNATURE_VALIDITY_MS > now.getTime();
 }
 
@@ -363,9 +380,10 @@ export function waiverClockInstant(input: {
  * season, or a referral cleared after the boat came home, out of that record.
  */
 export function recordAsOf(record: WaiverRecord, at: Date): WaiverRecord | null {
-  // The signing instant every resolver orders by, down to the row's own
-  // creation for a record with neither stamp.
-  if (signatureTime(record) > at.getTime()) return null;
+  // It existed once the shop had it: a date it claims cannot place it on an
+  // earlier departure's record (an import run after the boat sailed, dated
+  // before it; dive-domain-expert review of issue #3781).
+  if (receivedTime(record) > at.getTime()) return null;
   const later = (stamp: Date | null | undefined) =>
     stamp ? stamp.getTime() > at.getTime() : false;
   if (

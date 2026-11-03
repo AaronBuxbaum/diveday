@@ -1383,9 +1383,15 @@ export function incidentExportContentHash(
         certificationsAtCapture,
         ...current
       } = row;
-      // Versions 1 to 3 printed a retired refusal's seat as the absence.
+      // Versions 1 to 3 printed a retired refusal's seat as the absence. The
+      // flag is not sealed, so it rewrites only a seat that prints a hold.
+      const printsHold =
+        current.waiver?.state === "medical_review" ||
+        current.waiver?.state === "medical_not_cleared";
       const entry =
-        version < 4 && waiverSupersededHold ? { ...current, waiver: NOT_SENT_WAIVER } : current;
+        version < 4 && waiverSupersededHold && printsHold
+          ? { ...current, waiver: NOT_SENT_WAIVER }
+          : current;
       if (version < 3) return entry;
       const { certifications: _currentCards, ...historical } = entry;
       return {

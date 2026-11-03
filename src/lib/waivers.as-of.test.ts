@@ -175,3 +175,45 @@ describe("a live reading with no asOf", () => {
     expect(effectiveWaiverForBooking(read)?.id).toBe("fresh-hold");
   });
 });
+
+/**
+ * **A release the shop received after the boat left did not exist when it
+ * sailed**, whatever date it claims (dive-domain-expert review of issue #3781).
+ * An import run in November, dated September, must not turn an October seat
+ * that read "not sent" into "signed" on a reprinted departure log.
+ */
+describe("a backdated import read as of an earlier departure", () => {
+  const cutoff = new Date("2026-10-01T12:00:00.000Z");
+  const imported = completedWaiver({
+    bookingId: null,
+    signatureMethod: "imported",
+    signedAt: new Date("2026-09-15T00:00:00.000Z"),
+    completedAt: new Date("2026-11-03T09:00:00.000Z"),
+    createdAt: new Date("2026-11-03T09:00:00.000Z"),
+  });
+
+  it("names no release at the departure", () => {
+    expect(
+      effectiveWaiverForBooking({
+        bookingWaiver: null,
+        personSignedWaivers: [imported],
+        currentTemplateVersion: 1,
+        now: cutoff,
+        asOf: cutoff,
+      }),
+    ).toBeNull();
+  });
+
+  it("names it once the departure follows the import", () => {
+    const later = new Date("2026-11-10T12:00:00.000Z");
+    expect(
+      effectiveWaiverForBooking({
+        bookingWaiver: null,
+        personSignedWaivers: [imported],
+        currentTemplateVersion: 1,
+        now: later,
+        asOf: later,
+      }),
+    ).toBe(imported);
+  });
+});
