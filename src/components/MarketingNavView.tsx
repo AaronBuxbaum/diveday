@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChromeBar } from "@/components/chrome/ChromeBar";
 import { FunnelTag } from "@/components/FunnelTag";
 import { Wordmark } from "@/components/Logo";
 import { MarketingNavLinks } from "@/components/MarketingNavLinks";
@@ -35,11 +36,9 @@ export function MarketingNavView({
   shopSlug: string | null;
   locale: DiverLocale;
   /**
-   * The onboard artboard keeps only the wordmark in the phone header, and it
-   * keeps it for as long as the full header would take two rows (below lg), so
-   * /onboard never opens on the 132px two-row header. It keeps the `px-6`
-   * gutter every marketing header and the page column under it sit on; a
-   * `px-5` here put the wordmark 4px left of both (K-245).
+   * The onboard artboard keeps only the wordmark in the phone header (below
+   * lg). The bar is one row at every width, so this hides the links and the CTA
+   * and nothing else.
    */
   compactMobile?: boolean;
   /** Static navigation placeholder: the menu must wait for the resolved header. */
@@ -55,66 +54,65 @@ export function MarketingNavView({
     { href: "/about", label: t("nav.about") },
   ];
 
+  const phoneHidden = compactMobile ? "max-lg:hidden" : "";
+
   return (
-    <header
-      className={`bg-background/95 ${compactMobile ? "border-b-0 lg:border-b lg:border-border" : "border-b border-border"}`}
-    >
-      <nav
-        aria-label={t("nav.mainNavigation")}
-        className={`relative mx-auto flex w-full max-w-7xl items-center gap-2 px-6 py-3 lg:gap-4 ${compactMobile ? "max-lg:h-[52px] max-lg:flex-nowrap max-lg:py-0" : ""}`}
-      >
-        <Wordmark href="/" className="text-foreground" />
-        <MarketingNavLinks
-          links={shopSlug ? links : [...links, { href: "/sign-in", label: t("nav.signIn") }]}
-          menuLabel={t("nav.menu")}
-          compactMobile={compactMobile}
-          pending={pending}
-        />
-        {/* One CTA slot, two audiences. Somebody already signed in cannot try
-            the demo or start a trial — they have a shop — so the slot becomes
-            the door back to it. Every marketing page carries it, the funnel's
-            own pages included (visual review 2026-10-24, B43). */}
-        {shopSlug ? (
-          <Link
-            href={staffShopRoot(shopSlug)}
-            className={buttonClass({
-              variant: "outline",
-              className: `ml-auto whitespace-nowrap print:hidden lg:ml-0 ${compactMobile ? "max-lg:hidden" : ""}`,
-            })}
-          >
-            {t("nav.goToShop")}
-          </Link>
-        ) : (
-          // The demo leads everywhere in the funnel (docs/product/marketing.md,
-          // "The two doors, and which one leads"); the nav is a single door,
-          // not the pair `FunnelCtas` renders, so it carries that same door
-          // rather than the trial it used to. Secondary weight: each marketing
-          // page carries its own primary CTA, and two competing primaries on
-          // first paint was a real "what do I click?" cost (design review).
-          <form
-            action={demoAction}
-            className={`ml-auto print:hidden lg:ml-0 ${compactMobile ? "max-lg:hidden" : ""}`}
-          >
-            <FunnelTag source="nav" />
-            <SubmitButton
-              pendingLabel={t("nav.gettingReady")}
+    <ChromeBar
+      wide
+      leading={<Wordmark href="/" className="text-foreground" />}
+      trailing={
+        <nav
+          aria-label={t("nav.mainNavigation")}
+          className="flex items-center gap-1.5 sm:gap-2 lg:gap-3"
+        >
+          <MarketingNavLinks
+            links={shopSlug ? links : [...links, { href: "/sign-in", label: t("nav.signIn") }]}
+            menuLabel={t("nav.menu")}
+            compactMobile={compactMobile}
+            pending={pending}
+          />
+          {/* One CTA slot, two audiences. Somebody already signed in cannot try
+              the demo or start a trial — they have a shop — so the slot becomes
+              the door back to it. Every marketing page carries it, the funnel's
+              own pages included (visual review 2026-10-24, B43). */}
+          {shopSlug ? (
+            <Link
+              href={staffShopRoot(shopSlug)}
               className={buttonClass({
                 variant: "outline",
-                busy: true,
-                className: "whitespace-nowrap",
+                className: `whitespace-nowrap print:hidden ${phoneHidden}`,
               })}
             >
-              <span className="lg:hidden" aria-hidden="true">
-                {t("nav.tryDemoShort")}
-              </span>
-              <span className="hidden lg:inline" aria-hidden="true">
-                {t("nav.tryDemo")}
-              </span>
-              <span className="sr-only">{t("nav.tryDemo")}</span>
-            </SubmitButton>
-          </form>
-        )}
-      </nav>
-    </header>
+              {t("nav.goToShop")}
+            </Link>
+          ) : (
+            // The demo leads everywhere in the funnel (docs/product/marketing.md,
+            // "The two doors, and which one leads"); the nav is a single door,
+            // not the pair `FunnelCtas` renders. Secondary weight: each marketing
+            // page carries its own primary CTA, and two competing primaries on
+            // first paint was a real "what do I click?" cost (design review).
+            <form action={demoAction} className={`print:hidden ${phoneHidden}`}>
+              <FunnelTag source="nav" />
+              <SubmitButton
+                pendingLabel={t("nav.gettingReady")}
+                className={buttonClass({
+                  variant: "outline",
+                  busy: true,
+                  className: "whitespace-nowrap",
+                })}
+              >
+                <span className="lg:hidden" aria-hidden="true">
+                  {t("nav.tryDemoShort")}
+                </span>
+                <span className="hidden lg:inline" aria-hidden="true">
+                  {t("nav.tryDemo")}
+                </span>
+                <span className="sr-only">{t("nav.tryDemo")}</span>
+              </SubmitButton>
+            </form>
+          )}
+        </nav>
+      }
+    />
   );
 }

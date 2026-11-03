@@ -27,6 +27,7 @@ export function ChromeBar({
   staffChrome = false,
   stackedOnPhone = false,
   naturalHeight = false,
+  wide = false,
 }: {
   /** The shop's own identity — the staff shell's menu, the shopfront's name. */
   leading: ReactNode;
@@ -44,6 +45,11 @@ export function ChromeBar({
   stackedOnPhone?: boolean;
   /** Public navigation can wrap; its observer publishes the actual sticky clearance. Staff stay fixed. */
   naturalHeight?: boolean;
+  /**
+   * The marketing face: the page column's own width and gutter (`max-w-7xl`,
+   * `px-6`), so the wordmark sits over the first word of every page body.
+   */
+  wide?: boolean;
 }) {
   return (
     // `data-chrome-bar` is what `globals.css` asks the document for before it
@@ -64,7 +70,7 @@ export function ChromeBar({
           horizontal inset aligned with the page content. Staff chrome spans
           the window above its sidebar (ADR 20261001-logbook). */}
       <div
-        className={`mx-auto flex ${naturalHeight ? "flex-wrap max-sm:flex-nowrap" : "h-full"} w-full items-center gap-x-2 px-4 sm:gap-x-3 sm:px-6 ${staffChrome ? "" : "max-w-6xl"} ${stackedOnPhone ? "max-sm:flex-col max-sm:items-stretch max-sm:justify-center max-sm:gap-0" : ""}`}
+        className={`mx-auto flex ${naturalHeight ? "flex-wrap max-sm:flex-nowrap" : "h-full"} w-full items-center gap-x-2 ${wide ? "max-w-7xl px-6" : "px-4 sm:px-6"} sm:gap-x-3 ${staffChrome || wide ? "" : "max-w-6xl"} ${stackedOnPhone ? "max-sm:flex-col max-sm:items-stretch max-sm:justify-center max-sm:gap-0" : ""}`}
       >
         <div className="flex min-w-0 shrink items-center">{leading}</div>
         {trailing ? (
