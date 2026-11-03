@@ -1213,7 +1213,6 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 580,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 590,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 472,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 492
   },
   "tokens": {
