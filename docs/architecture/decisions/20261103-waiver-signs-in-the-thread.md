@@ -25,18 +25,19 @@ A referred signer lands on the receipt in the thread; the doctor's page has a tw
   live capability, live seat; then the held-seat refusal) and resolves the record from the verified
   booking (`threadWaiverKey`): the newest release not superseded, on that seat, naming its current
   holder. The key pins the record id, so the re-read inside the signing lock is the same row. Only
-  the readiness token is bound into the page, and no key-taking function is a server action.
+  the readiness token is bound into the page, and no key-taking function is a server action. A key
+  is honoured only if `threadWaiverKey` made it, and the form pins the drawn release's id so a
+  signature never lands on words the diver did not read.
 - **The thread never needs the token.** `openWaiverInThread` keeps a live release on current terms
   even without a sealing key, so it never supersedes a link staff sent or the draft typed into it.
 - **The waiver link stays** for releases with no seat, counter tablets, party leads and links staff
   send. It no longer reads a return cookie.
-- **No schema change.** `token_hash`, `token_sealed` and `expires_at` serve the waiver link.
+- **No schema change.**
 
 ## Alternatives considered
 
 - **Fold the whole waiver into the thread and drop the token columns** (the issue as filed).
-  Rejected for now: bookingless releases, party leads and counter tablets need a credential that is
-  not one diver's thread.
+  Rejected: releases with no seat, party leads and counter tablets need their own credential.
 - **Render the release inline in the spine page.** Rejected: the paced release (rail, eleven
   questions) would make the five-step page long; a sub-page of the same link keeps the pacing, as
   course forms do (`/ready/<token>/forms`).

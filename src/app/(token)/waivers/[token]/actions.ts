@@ -68,7 +68,9 @@ export async function emailFreshWaiverLinkAction(token: string) {
 }
 
 /** The waiver link's own door: the per-IP waiver bucket, then the token is the authority. */
-async function tokenDoor(token: string): Promise<SigningDoor> {
+async function tokenDoor(token: unknown): Promise<SigningDoor> {
+  // The bound argument is whatever the browser posts: only a string is a link.
+  if (typeof token !== "string") redirect("/");
   const ip = await clientIp();
   if (
     !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction)).allowed

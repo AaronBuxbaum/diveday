@@ -31,6 +31,7 @@ export async function revealDoctorAnswersAction(
   _previous: DoctorAnswersState,
   formData: FormData,
 ): Promise<DoctorAnswersState> {
+  if (typeof token !== "string") return { status: "closed" };
   if (!(await waiverLinkAllowed())) return { status: "rate" };
   return revealDoctorAnswersFor(token, formData);
 }
@@ -54,6 +55,7 @@ export async function sendDoctorFormAction(
   _previous: DoctorFormState,
   formData: FormData,
 ): Promise<DoctorFormState> {
+  if (typeof token !== "string") return { status: "closed" };
   if (!(await waiverLinkAllowed())) return { status: "rate" };
   return sendDoctorFormFor(token, formData);
 }

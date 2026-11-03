@@ -326,4 +326,16 @@ describe("waiver records (in-memory PGlite)", () => {
     };
     expect(await getWaiverForToken(db, forged, now)).toEqual({ state: "unavailable" });
   });
+
+  it("refuses a key with the right ids that this module never made", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!sent.ok) throw new Error("expected the link to issue");
+    const minted = await threadWaiverKey(db, { shopId: shop.id, bookingId: booking.id });
+    if (!minted) throw new Error("expected the seat's own key");
+    // A copy carries every id the real key does, as a server action's arguments would.
+    const copy = { ...minted };
+    expect(await getWaiverForToken(db, copy, now)).toEqual({ state: "unavailable" });
+    expect((await getWaiverForToken(db, minted, now)).state).toBe("available");
+  });
 });

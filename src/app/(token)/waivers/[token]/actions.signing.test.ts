@@ -131,6 +131,16 @@ describe("the signing doors", () => {
     );
   });
 
+  it("refuse anything but a string posted as the link (security review of issue 2743, F1)", async () => {
+    const { db, shop, recordId } = await openLink();
+    const forged = { kind: "thread", shopId: shop.id, bookingId: crypto.randomUUID(), recordId };
+    const posted = forged as unknown as string;
+    expect(await redirectedTo(() => completeWaiverAction(posted, signedForm(shop, {})))).toBe("/");
+    expect(await redirectedTo(() => saveWaiverDraftAction(posted, signedForm(shop, {})))).toBe("/");
+    const [record] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
+    expect(record?.status).toBe("pending");
+  });
+
   it("save a draft through the link", async () => {
     const { db, token, shop, recordId } = await openLink();
     expect(

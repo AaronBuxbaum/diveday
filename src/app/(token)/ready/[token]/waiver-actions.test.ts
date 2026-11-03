@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
-import { bookingCapabilities, bookings, waiverRecords } from "@/db/schema";
+import { bookingCapabilities, bookings, people, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
@@ -51,7 +51,7 @@ vi.mock("next/headers", () => ({
 
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
-const { issueWaiverRequest } = await import("@/db/waivers");
+const { issueWaiverRequest, threadWaiverAwaitsPhysician } = await import("@/db/waivers");
 const { completeWaiverFromReady, openWaiverFromReady, saveWaiverDraftFromReady } = await import(
   "./waiver-actions"
 );
@@ -112,6 +112,12 @@ function signedForm(
   return form;
 }
 
+/** The release the thread page drew for this seat, as its form pins it. */
+async function drawnId(bookingId: string): Promise<string> {
+  const [record] = await liveRecords(ctx.db, bookingId);
+  return record?.id ?? "";
+}
+
 async function liveRecords(db: typeof ctx.db, bookingId: string) {
   return db
     .select()
@@ -143,7 +149,9 @@ beforeEach(() => {
 describe("signing the release in the diver's thread", () => {
   it("opens the seat's release on the readiness link itself", async () => {
     const { db, shop, bookingId, token } = await bookedSeat("Iris Inplace");
-    expect(await redirectedTo(() => openWaiverFromReady(token))).toBe(`/ready/${token}/waiver`);
+    expect(await redirectedTo(async () => openWaiverFromReady(token))).toBe(
+      `/ready/${token}/waiver`,
+    );
     const [record] = await liveRecords(db, bookingId);
     expect(record?.status).toBe("pending");
     expect(record?.shopId).toBe(shop.id);
@@ -159,26 +167,55 @@ describe("signing the release in the diver's thread", () => {
     const { db, shop, bookingId, token } = await bookedSeat("Kit Keeper");
     const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
     if (!sent.ok) throw new Error("waiver request refused");
-    await redirectedTo(() => openWaiverFromReady(token));
+    await redirectedTo(async () => openWaiverFromReady(token));
     expect(
-      await redirectedTo(() =>
-        saveWaiverDraftFromReady(token, signedForm(shop, { signerName: "Kit Keeper" })),
+      await redirectedTo(async () =>
+        saveWaiverDraftFromReady(
+          token,
+          await drawnId(bookingId),
+          signedForm(shop, { signerName: "Kit Keeper" }),
+        ),
       ),
     ).toBe(`/ready/${token}/waiver?saved=1`);
-    await redirectedTo(() => openWaiverFromReady(token));
+    await redirectedTo(async () => openWaiverFromReady(token));
     const live = await liveRecords(db, bookingId);
     expect(live.map((record) => record.id)).toEqual([sent.recordId]);
     expect(live[0]?.draftSignerName).toBe("Kit Keeper");
   });
 
-  it("signs under the name on file and returns to the checklist, minting nothing", async () => {
-    const { db, shop, bookingId, token } = await bookedSeat("Noa Nomint");
-    await redirectedTo(() => openWaiverFromReady(token));
-    const before = await capabilityCount(db, bookingId);
+  it("signs only the release the page drew, never one that replaced it", async () => {
+    const { db, shop, bookingId, token } = await bookedSeat("Wren Wording");
+    await redirectedTo(async () => openWaiverFromReady(token));
+    const drawn = await drawnId(bookingId);
+    // Staff resend on new terms while the form is open: the seat's release is now another.
+    await db
+      .update(waiverRecords)
+      .set({ supersededAt: new Date() })
+      .where(eq(waiverRecords.id, drawn));
+    const resent = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!resent.ok) throw new Error("waiver request refused");
     expect(
-      await redirectedTo(() =>
+      await redirectedTo(async () =>
         completeWaiverFromReady(
           token,
+          drawn,
+          signedForm(shop, { signerName: "Wren Wording", acknowledged: "on" }),
+        ),
+      ),
+    ).toBe(`/ready/${token}/waiver`);
+    const [record] = await liveRecords(db, bookingId);
+    expect(record).toMatchObject({ id: resent.recordId, status: "pending" });
+  });
+
+  it("signs under the name on file and returns to the checklist, minting nothing", async () => {
+    const { db, shop, bookingId, token } = await bookedSeat("Noa Nomint");
+    await redirectedTo(async () => openWaiverFromReady(token));
+    const before = await capabilityCount(db, bookingId);
+    expect(
+      await redirectedTo(async () =>
+        completeWaiverFromReady(
+          token,
+          await drawnId(bookingId),
           signedForm(shop, { signerName: "Noa Nomint", acknowledged: "on" }),
         ),
       ),
@@ -188,16 +225,17 @@ describe("signing the release in the diver's thread", () => {
     expect(record?.signedName).toBe("Noa Nomint");
     expect(record?.integrityHash).toBeTruthy();
     // Reloading the signed release mints nothing and sends the diver home.
-    expect(await redirectedTo(() => renderPage(token))).toBe(`/ready/${token}`);
+    expect(await redirectedTo(async () => renderPage(token))).toBe(`/ready/${token}`);
     expect(await capabilityCount(db, bookingId)).toBe(before);
   });
 
   it("sends a signature under another name back to the name field", async () => {
     const { db, shop, bookingId, token } = await bookedSeat("Rowan Right");
-    await redirectedTo(() => openWaiverFromReady(token));
-    const target = await redirectedTo(() =>
+    await redirectedTo(async () => openWaiverFromReady(token));
+    const target = await redirectedTo(async () =>
       completeWaiverFromReady(
         token,
+        await drawnId(bookingId),
         signedForm(shop, { signerName: "Someone Else", acknowledged: "on" }),
       ),
     );
@@ -210,12 +248,14 @@ describe("signing the release in the diver's thread", () => {
 
   it("shows a referred signer the receipt, with the doctor's page on the same link", async () => {
     const { db, shop, bookingId, token } = await bookedSeat("Sky Referral");
-    await redirectedTo(() => openWaiverFromReady(token));
+    await redirectedTo(async () => openWaiverFromReady(token));
     const form = signedForm(shop, { signerName: "Sky Referral", acknowledged: "on" });
     form.set(medicalQuestionField("q3"), "yes");
-    expect(await redirectedTo(() => completeWaiverFromReady(token, form))).toBe(
-      `/ready/${token}/waiver`,
-    );
+    expect(
+      await redirectedTo(async () =>
+        completeWaiverFromReady(token, await drawnId(bookingId), form),
+      ),
+    ).toBe(`/ready/${token}/waiver`);
     const [record] = await liveRecords(db, bookingId);
     expect(record?.status).toBe("medical_review");
     const html = await renderPage(token);
@@ -225,13 +265,16 @@ describe("signing the release in the diver's thread", () => {
   });
 
   it("throttles before reading anything", async () => {
-    const { shop, token } = await bookedSeat("Tess Throttle");
+    const { shop, bookingId, token } = await bookedSeat("Tess Throttle");
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, retryAfterMs: 1_000 });
-    expect(await redirectedTo(() => openWaiverFromReady(token))).toBe(`/ready/${token}?error=rate`);
+    expect(await redirectedTo(async () => openWaiverFromReady(token))).toBe(
+      `/ready/${token}?error=rate`,
+    );
     expect(
-      await redirectedTo(() =>
+      await redirectedTo(async () =>
         completeWaiverFromReady(
           token,
+          await drawnId(bookingId),
           signedForm(shop, { signerName: "Tess Throttle", acknowledged: "on" }),
         ),
       ),
@@ -244,14 +287,15 @@ describe("signing the release in the diver's thread", () => {
     const buddy = await issueWaiverRequest(db, { shopId: shop.id, bookingId: buddyBookingId });
     if (!buddy.ok) throw new Error("waiver request refused");
     expect(
-      await redirectedTo(() =>
+      await redirectedTo(async () =>
         completeWaiverFromReady(
           token,
+          await drawnId(bookingId),
           signedForm(shop, { signerName: "Lee Lead Buddy", acknowledged: "on" }),
         ),
       ),
     ).toBe(`/ready/${token}`);
-    expect(await redirectedTo(() => renderPage(token))).toBe(`/ready/${token}`);
+    expect(await redirectedTo(async () => renderPage(token))).toBe(`/ready/${token}`);
     const [buddyRecord] = await liveRecords(db, buddyBookingId);
     expect(buddyRecord?.status).toBe("pending");
     expect(await liveRecords(db, bookingId)).toHaveLength(0);
@@ -259,7 +303,7 @@ describe("signing the release in the diver's thread", () => {
 
   it("refuses a release issued before the seat changed hands", async () => {
     const { db, shop, bookingId, buddyBookingId, token } = await bookedSeat("Moe Mover");
-    await redirectedTo(() => openWaiverFromReady(token));
+    await redirectedTo(async () => openWaiverFromReady(token));
     // The seat moves to the buddy, whose own seat is let go; the release still names Moe.
     const [buddySeat] = await db
       .select({ personId: bookings.personId })
@@ -272,9 +316,10 @@ describe("signing the release in the diver's thread", () => {
       .set({ personId: buddySeat.personId })
       .where(eq(bookings.id, bookingId));
     expect(
-      await redirectedTo(() =>
+      await redirectedTo(async () =>
         completeWaiverFromReady(
           token,
+          await drawnId(bookingId),
           signedForm(shop, { signerName: "Moe Mover", acknowledged: "on" }),
         ),
       ),
@@ -285,16 +330,145 @@ describe("signing the release in the diver's thread", () => {
 
   it("closes on a cancelled seat", async () => {
     const { db, shop, bookingId, token } = await bookedSeat("Cam Cancel");
-    await redirectedTo(() => openWaiverFromReady(token));
+    await redirectedTo(async () => openWaiverFromReady(token));
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
     expect(
-      await redirectedTo(() =>
+      await redirectedTo(async () =>
         completeWaiverFromReady(
           token,
+          await drawnId(bookingId),
           signedForm(shop, { signerName: "Cam Cancel", acknowledged: "on" }),
         ),
       ),
     ).toBe(`/ready/${token}`);
-    expect(await redirectedTo(() => renderPage(token))).toBe(`/ready/${token}`);
+    expect(await redirectedTo(async () => renderPage(token))).toBe(`/ready/${token}`);
+  });
+});
+
+/** The seat's own diver made a minor, so a guardian must co-sign beside them. */
+async function makeMinor(db: typeof ctx.db, bookingId: string) {
+  const [seat] = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId));
+  if (!seat) throw new Error("seat missing");
+  await db.update(people).set({ dateOfBirth: "2014-05-01" }).where(eq(people.id, seat.personId));
+}
+
+describe("the thread keeps every signing rule the waiver link has", () => {
+  it("refuses a minor signing alone", async () => {
+    const { db, shop, bookingId, token } = await bookedSeat("Pip Minor");
+    await makeMinor(db, bookingId);
+    await redirectedTo(async () => openWaiverFromReady(token));
+    const target = await redirectedTo(async () =>
+      completeWaiverFromReady(
+        token,
+        await drawnId(bookingId),
+        signedForm(shop, { signerName: "Pip Minor", acknowledged: "on" }),
+      ),
+    );
+    expect(target.startsWith(`/ready/${token}/waiver?error=`)).toBe(true);
+    const [record] = await liveRecords(db, bookingId);
+    expect(record?.status).toBe("pending");
+  });
+
+  it("refuses a guardian who types the minor's own name", async () => {
+    const { db, shop, bookingId, token } = await bookedSeat("Bo Minor");
+    await makeMinor(db, bookingId);
+    await redirectedTo(async () => openWaiverFromReady(token));
+    const target = await redirectedTo(async () =>
+      completeWaiverFromReady(
+        token,
+        await drawnId(bookingId),
+        signedForm(shop, {
+          signerName: "Bo Minor",
+          acknowledged: "on",
+          guardianName: "Bo Minor",
+          guardianRelationship: "parent",
+          guardianAcknowledged: "on",
+        }),
+      ),
+    );
+    expect(target.startsWith(`/ready/${token}/waiver?error=`)).toBe(true);
+    const [record] = await liveRecords(db, bookingId);
+    expect(record?.status).toBe("pending");
+  });
+
+  it("signs a minor's seat with the guardian beside them", async () => {
+    const { db, shop, bookingId, token } = await bookedSeat("Ada Minor");
+    await makeMinor(db, bookingId);
+    await redirectedTo(async () => openWaiverFromReady(token));
+    expect(
+      await redirectedTo(async () =>
+        completeWaiverFromReady(
+          token,
+          await drawnId(bookingId),
+          signedForm(shop, {
+            signerName: "Ada Minor",
+            acknowledged: "on",
+            guardianName: "Gale Parent",
+            guardianRelationship: "parent",
+            guardianAcknowledged: "on",
+          }),
+        ),
+      ),
+    ).toBe(`/ready/${token}?saved=waiver`);
+    const [record] = await liveRecords(db, bookingId);
+    expect(record).toMatchObject({ status: "completed", guardianName: "Gale Parent" });
+  });
+
+  it("opens no release on terms the shop has since changed, and starts a fresh one", async () => {
+    const { db, shop, bookingId, token } = await bookedSeat("Val Stale");
+    await redirectedTo(async () => openWaiverFromReady(token));
+    const [opened] = await liveRecords(db, bookingId);
+    if (!opened) throw new Error("no release opened");
+    await db
+      .update(waiverRecords)
+      .set({ templateGeneration: opened.templateGeneration + 1 })
+      .where(eq(waiverRecords.id, opened.id));
+    expect(await redirectedTo(async () => renderPage(token))).toBe(`/ready/${token}`);
+    expect(
+      await redirectedTo(async () =>
+        completeWaiverFromReady(
+          token,
+          await drawnId(bookingId),
+          signedForm(shop, { signerName: "Val Stale", acknowledged: "on" }),
+        ),
+      ),
+    ).toBe(`/ready/${token}`);
+    await redirectedTo(async () => openWaiverFromReady(token));
+    const live = await liveRecords(db, bookingId);
+    expect(live).toHaveLength(1);
+    expect(live[0]?.id).not.toBe(opened.id);
+    expect(live[0]?.status).toBe("pending");
+  });
+
+  it("offers the doctor's needs only while a physician referral waits on the diver", async () => {
+    const { db, shop, bookingId, token } = await bookedSeat("Dee Doctor");
+    expect(await threadWaiverAwaitsPhysician(db, { shopId: shop.id, bookingId })).toBe(false);
+    await redirectedTo(async () => openWaiverFromReady(token));
+    const form = signedForm(shop, { signerName: "Dee Doctor", acknowledged: "on" });
+    form.set(medicalQuestionField("q3"), "yes");
+    await redirectedTo(async () => completeWaiverFromReady(token, await drawnId(bookingId), form));
+    expect(await threadWaiverAwaitsPhysician(db, { shopId: shop.id, bookingId })).toBe(true);
+    // Once the doctor's form is with the shop, there is nothing left for the doctor.
+    await db
+      .update(waiverRecords)
+      .set({ diverMedicalFormSentAt: new Date() })
+      .where(eq(waiverRecords.bookingId, bookingId));
+    expect(await threadWaiverAwaitsPhysician(db, { shopId: shop.id, bookingId })).toBe(false);
+  });
+
+  it("offers nothing for a clean signature", async () => {
+    const { db, shop, bookingId, token } = await bookedSeat("Cy Clean");
+    await redirectedTo(async () => openWaiverFromReady(token));
+    await redirectedTo(async () =>
+      completeWaiverFromReady(
+        token,
+        await drawnId(bookingId),
+        signedForm(shop, { signerName: "Cy Clean", acknowledged: "on" }),
+      ),
+    );
+    expect(await threadWaiverAwaitsPhysician(db, { shopId: shop.id, bookingId })).toBe(false);
   });
 });

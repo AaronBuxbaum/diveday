@@ -32,8 +32,15 @@ import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helper
 
 const waiverPath = (token: string) => `${base(token)}/waiver`;
 
-/** The seat's own release, through the verified readiness link; a bounce otherwise. */
-async function threadDoor(token: string): Promise<SigningDoor> {
+/**
+ * The seat's own release, through the verified readiness link; a bounce
+ * otherwise. `drawnRecordId` is the release the page drew: it grants nothing
+ * (the key still comes from the capability), but a signature lands only on
+ * the words the diver read. If the seat's release has changed since (a staff
+ * resend on new terms, the Sign step tapped in another tab), the page draws
+ * the current one again instead (records review of #2743, F1).
+ */
+async function threadDoor(token: string, drawnRecordId: unknown): Promise<SigningDoor> {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   refuseWhileHeld(token, ctx.data);
@@ -42,6 +49,7 @@ async function threadDoor(token: string): Promise<SigningDoor> {
     bookingId: ctx.bookingId,
   });
   if (!key) redirect(base(token));
+  if (key.recordId !== drawnRecordId) redirect(waiverPath(token));
   return { key, path: waiverPath(token) };
 }
 
@@ -63,8 +71,12 @@ export async function openWaiverFromReady(token: string) {
   redirect(waiverPath(token));
 }
 
-export async function saveWaiverDraftFromReady(token: string, formData: FormData) {
-  await saveWaiverDraftThrough(await threadDoor(token), formData);
+export async function saveWaiverDraftFromReady(
+  token: string,
+  drawnRecordId: string,
+  formData: FormData,
+) {
+  await saveWaiverDraftThrough(await threadDoor(token, drawnRecordId), formData);
 }
 
 /**
@@ -72,8 +84,12 @@ export async function saveWaiverDraftFromReady(token: string, formData: FormData
  * on the release's receipt instead, which carries the physician instructions
  * and the doctor's page, as the waiver link's receipt does.
  */
-export async function completeWaiverFromReady(token: string, formData: FormData) {
-  const { status } = await completeWaiverThrough(await threadDoor(token), formData);
+export async function completeWaiverFromReady(
+  token: string,
+  drawnRecordId: string,
+  formData: FormData,
+) {
+  const { status } = await completeWaiverThrough(await threadDoor(token, drawnRecordId), formData);
   if (status === "medical_review") revalidateAndRedirect(waiverPath(token), waiverPath(token));
   revalidateAndRedirect(base(token), `${base(token)}?saved=waiver`);
 }
@@ -82,6 +98,7 @@ export async function completeWaiverFromReady(token: string, formData: FormData)
 async function threadDoctorKey(token: string) {
   const ctx = await contextFor(token);
   if (!ctx.ok) return ctx.reason === "rate_limited" ? "rate" : null;
+  if (ctx.data.identityHeld) return null;
   return threadWaiverKey(ctx.db, { shopId: ctx.data.shop.id, bookingId: ctx.bookingId });
 }
 
