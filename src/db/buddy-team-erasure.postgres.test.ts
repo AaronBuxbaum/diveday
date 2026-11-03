@@ -147,7 +147,7 @@ describePostgres("manual buddy team trail against erasure", () => {
       const { pg, card, mutate, erase, noName } = await fixture(operation);
       const gate = await holdRowLock(
         pg,
-        sql`select id from certifications where id = ${card.id} for update`,
+        sql`select id from cards where id = ${card.id} for update`,
       );
       const erasing = erase();
       try {
