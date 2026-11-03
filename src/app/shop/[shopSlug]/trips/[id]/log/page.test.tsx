@@ -7,8 +7,11 @@ const TRIP_ID = "5a5bd26d-553a-4c5c-9609-ca048049f010";
 const exportRead = vi.hoisted(() => vi.fn());
 const mayExport = vi.hoisted(() => vi.fn());
 
-vi.mock("@/db/incident-export", () => ({ getIncidentExport: exportRead }));
-vi.mock("@/db/authz", () => ({ canPersonExportIncidentRecord: mayExport }));
+// `getTripLogPage` is the gate then the read, so the mock keeps that order.
+vi.mock("@/db/incident-export", () => ({
+  getTripLogPage: async () =>
+    (await mayExport()) ? { allowed: true, doc: await exportRead() } : { allowed: false },
+}));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("next/navigation", () => ({
