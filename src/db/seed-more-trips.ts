@@ -15,7 +15,6 @@ import {
   personRoles,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
-  rollCallCrewEvents,
   rollCallEvents,
   type TripAssignmentRole,
   tripAssignments,
@@ -918,7 +917,8 @@ async function seedDawnBoatRecord(
     checkpoints.map((checkpoint, index) => ({
       shopId,
       tripId: trip.id,
-      personId,
+      subjectKind: "crew" as const,
+      crewPersonId: personId,
       recordedByPersonId: recorderId,
       status: "boarded" as const,
       checkpoint,
@@ -926,7 +926,7 @@ async function seedDawnBoatRecord(
       occurredAt: dawnCheckpointAt(trip, index),
     })),
   );
-  if (crewRows.length > 0) await db.insert(rollCallCrewEvents).values(crewRows);
+  if (crewRows.length > 0) await db.insert(rollCallEvents).values(crewRows);
 
   // Both tanks logged at the reef's ordinary depth, each dive ending a few
   // minutes before the after-dive count that closes it.

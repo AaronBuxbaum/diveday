@@ -5,6 +5,7 @@ import { formBuddyTeam } from "@/db/buddy-teams";
 import type { AppDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
+import { seatMarks } from "@/db/roll-call-subject";
 import {
   boats,
   bookings,
@@ -67,6 +68,7 @@ export async function operationalStateResponse(request: Request, db: AppDb) {
       .where(
         and(
           eq(rollCallEvents.shopId, shop.id),
+          seatMarks(),
           eq(rollCallEvents.bookingId, seat.bookingId),
           eq(rollCallEvents.checkpoint, "departure"),
         ),

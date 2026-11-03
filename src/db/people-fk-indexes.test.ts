@@ -31,6 +31,7 @@ const MUST_LEAD = [
   "inbound_messages.person_id",
   "orders.person_id",
   "roll_call_crew_events.person_id",
+  "roll_call_events.crew_person_id",
   "roll_call_events.recorded_by_person_id",
   "staff_replies.person_id",
   "trip_change_events.actor_person_id",

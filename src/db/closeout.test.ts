@@ -11,11 +11,11 @@ import { recordRollCall } from "./manifests";
 import { markBookingNoShow } from "./no-show";
 import { getTripOpenSeatsDebrief } from "./open-seats";
 import { addCrewRecapPhoto } from "./recap";
+import { crewSubject } from "./roll-call-subject";
 import {
   bookingArrivalEvents,
   bookings as bookingsTable,
   people,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   trips as tripsTable,
@@ -37,7 +37,7 @@ async function uncountDawnBoatCrew(db: AppDb, shopId: string): Promise<void> {
     .select({ id: tripsTable.id })
     .from(tripsTable)
     .where(and(eq(tripsTable.shopId, shopId), eq(tripsTable.title, DEMO_COMPLETED_TRIP_TITLE)));
-  if (dawn) await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, dawn.id));
+  if (dawn) await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, dawn.id));
 }
 
 describe("day close-out (in-memory PGlite)", () => {
@@ -203,7 +203,7 @@ describe("day close-out (in-memory PGlite)", () => {
         checkpoints.map((checkpoint, step) => ({
           shopId: shop.id,
           tripId: completed.tripId,
-          personId: crew.personId,
+          ...crewSubject(crew.personId),
           recordedByPersonId: staff.person.id,
           status: "boarded" as const,
           checkpoint,
@@ -211,7 +211,7 @@ describe("day close-out (in-memory PGlite)", () => {
           occurredAt: new Date(completed.startsAt.getTime() + (step * 10 + index) * 60_000),
         })),
       );
-      await db.insert(rollCallCrewEvents).values(boarded);
+      await db.insert(rollCallEvents).values(boarded);
 
       const counted = await getDayCloseout(db, shop.id, shop.timezone, now);
       const withCrew = counted.departures.find(
@@ -226,10 +226,10 @@ describe("day close-out (in-memory PGlite)", () => {
       const firstCrew = assigned[0];
       const closing = checkpoints.at(-1);
       if (!firstCrew || !closing) throw new Error("no crew or checkpoint");
-      await db.insert(rollCallCrewEvents).values({
+      await db.insert(rollCallEvents).values({
         shopId: shop.id,
         tripId: completed.tripId,
-        personId: firstCrew.personId,
+        ...crewSubject(firstCrew.personId),
         recordedByPersonId: staff.person.id,
         status: "cleared",
         checkpoint: closing,
@@ -308,10 +308,10 @@ describe("day close-out (in-memory PGlite)", () => {
           ...(createdAt ? { createdAt } : {}),
         });
       const crewMark = (occurredAt: Date, createdAt?: Date, options: MarkOptions = {}) =>
-        db.insert(rollCallCrewEvents).values({
+        db.insert(rollCallEvents).values({
           shopId: shop.id,
           tripId: completed.tripId,
-          personId: crew.personId,
+          ...crewSubject(crew.personId),
           recordedByPersonId: options.recordedBy ?? crewMarker.person.id,
           status: options.status ?? "boarded",
           checkpoint: options.checkpoint ?? closing,

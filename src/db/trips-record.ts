@@ -53,7 +53,6 @@ import {
   executedDives,
   people,
   personRoles,
-  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   tripDives,
@@ -1222,7 +1221,8 @@ export async function updateTripConditions(
 
 /** Whether anybody, diver or crew, has a roll-call or boarding event on this trip. */
 export function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
-  return sql<boolean>`(exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId}) or exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId}))`.mapWith(
+  // diveday:roll-call-both-subjects: a mark on either half means roll call has started.
+  return sql<boolean>`exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId})`.mapWith(
     Boolean,
   );
 }

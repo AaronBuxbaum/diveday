@@ -19,7 +19,7 @@ import type { CrewCredentialSnapshot } from "@/lib/crew-credential-snapshot";
 import type { IncidentCertificationEvidence } from "@/lib/incident-export";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
-import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
+import { ROLL_CALL_EVENT_STATUSES, ROLL_CALL_SUBJECT_KINDS } from "@/lib/roll-call";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -40,10 +40,29 @@ export const rollCallStatus = pgEnum("roll_call_status", ROLL_CALL_EVENT_STATUSE
 
 export const rollCallSource = pgEnum("roll_call_source", ["live", "offline"]);
 
+/** Seat or crew: see `ROLL_CALL_SUBJECT_KINDS` (src/lib/roll-call.ts). */
+export const rollCallSubjectKind = pgEnum("roll_call_subject_kind", ROLL_CALL_SUBJECT_KINDS);
+
 /**
- * Append-only safety history. Absence means a diver is still awaiting roll
- * call; the newest event answers their current boarding state without
- * rewriting what staff recorded earlier.
+ * Append-only safety history: one row per tap, about one subject at one
+ * checkpoint. Absence means the subject is still awaiting roll call; the
+ * newest row per (trip, checkpoint, subject) answers their current state
+ * without rewriting what staff recorded earlier.
+ *
+ * **Every read names its subject kind** (`seatMarks()` or `crewMarks()` in
+ * `src/db/roll-call-subject.ts`): a diver count that picked up a crew row, or
+ * the reverse, would put somebody aboard who is not. The roll-call subject
+ * guard (`scripts/check-roll-call-subject.mjs`) refuses a read that does not.
+ *
+ * `roll_call_events_subject` is the shape: a seat row names a booking and no
+ * crew member, a crew row names a crew member and no booking, so neither
+ * subject column is ever optional for the row that needs it. This replaces
+ * the separate `roll_call_crew_events` table, which existed only to keep
+ * `booking_id` NOT NULL; the check keeps that invariant per kind.
+ *
+ * `recorded_by_person_id` is who said so. For a crew row it is routinely the
+ * subject too (a divemaster boarding herself), and that is fine: the count
+ * names somebody, not a second witness.
  */
 export const rollCallEvents = pgTable(
   "roll_call_events",
@@ -55,9 +74,21 @@ export const rollCallEvents = pgTable(
     tripId: uuid("trip_id")
       .notNull()
       .references(() => trips.id),
-    bookingId: uuid("booking_id")
-      .notNull()
-      .references(() => bookings.id),
+    /**
+     * Seat or crew. The database default is `seat` only so a release still
+     * serving while this migration runs keeps writing diver rows; every crew
+     * writer names `crew`, and a crew row left at the default fails
+     * `roll_call_events_subject` for want of a booking.
+     */
+    subjectKind: rollCallSubjectKind("subject_kind").notNull().default("seat"),
+    /** The seat this is about. Set exactly when `subject_kind = 'seat'`. */
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    /**
+     * The crew member this is about, a `trip_assignments` row's person. Set
+     * exactly when `subject_kind = 'crew'`. Writers prove the person is
+     * assigned to the trip, joining through `trips`.
+     */
+    crewPersonId: uuid("crew_person_id").references(() => people.id),
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
       .references(() => people.id),
@@ -65,9 +96,19 @@ export const rollCallEvents = pgTable(
     /** `departure` or `after_dive_N`; validated against the trip's planned dive count. */
     checkpoint: text("checkpoint").notNull().default("departure"),
     source: rollCallSource("source").notNull().default("live"),
-    /** Device-generated idempotency key. Live events leave this null. */
+    /**
+     * Device-generated idempotency key. Live events leave this null. Seat and
+     * crew keys share one namespace, so a replayed sync is idempotent across
+     * both halves; the sync reader still checks the stored row's subject
+     * before treating a key as already applied.
+     */
     clientEventId: uuid("client_event_id"),
-    /** Which encrypted snapshot supplied the offline readiness evidence. */
+    /**
+     * Which encrypted snapshot supplied the offline readiness evidence. Seat
+     * rows only: crew have no readiness to evidence (nothing gates a crew
+     * member at departure), so a crew row leaves it null even though the
+     * snapshot time is still the input its staleness bound is computed from.
+     */
     offlineSnapshotSavedAt: timestamp("offline_snapshot_saved_at", { withTimezone: true }),
     /**
      * What a crew member observed about a person who is unaccounted for
@@ -86,15 +127,15 @@ export const rollCallEvents = pgTable(
     /**
      * **What readiness said when this diver was counted aboard**
      * (ADR 20261015-roll-call-records-readiness, issue #2414): `ready` or
-     * `blocked`, written with a `boarded` event and null on every other one.
-     * Readiness is recomputed live, so without this a card verified at 09:00
-     * after a 05:30 boat would make "was blocked" unsayable afterwards, and a
-     * finished departure's record would file a diver counted aboard while
-     * blocked under "Sailed" with no trace. A record of what was true, never a
-     * gate: nothing reads it to refuse or allow anything.
+     * `blocked`, written with a seat's `boarded` event and null on every other
+     * one. Readiness is recomputed live, so without this a card verified at
+     * 09:00 after a 05:30 boat would make "was blocked" unsayable afterwards,
+     * and a finished departure's record would file a diver counted aboard
+     * while blocked under "Sailed" with no trace. A record of what was true,
+     * never a gate: nothing reads it to refuse or allow anything.
      */
     readinessStatus: text("readiness_status"),
-    /** The card evidence captured in the live boarding INSERT; null means unavailable. */
+    /** The card evidence captured in a seat's live boarding INSERT; null means unavailable. */
     certificationSnapshot:
       jsonb("certification_snapshot").$type<
         (IncidentCertificationEvidence & { reviewedByPersonId: string | null })[]
@@ -109,6 +150,17 @@ export const rollCallEvents = pgTable(
     }),
     /** The blockers behind a `blocked` snapshot, as the engine raised them; null otherwise. */
     readinessBlockers: jsonb("readiness_blockers").$type<ReadinessBlocker[]>(),
+    /**
+     * A crew member's live boarding mark: the credential state observed, never
+     * an assertion about sailing time. Crew rows only.
+     */
+    credentialSnapshot: jsonb("credential_snapshot").$type<CrewCredentialSnapshot[]>(),
+    credentialSnapshotStartedAt: timestamp("credential_snapshot_started_at", {
+      withTimezone: true,
+    }),
+    credentialSnapshotCapturedAt: timestamp("credential_snapshot_captured_at", {
+      withTimezone: true,
+    }),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: appNowTimestamp("created_at").notNull(),
     /**
@@ -125,7 +177,9 @@ export const rollCallEvents = pgTable(
      * the moment anything moves rows (a `VACUUM` does). The read-back order
      * that the offline device's own tie-break was pinned against would then
      * silently stop holding, with every test still green — the same failure
-     * mode as the bug that prompted this, one layer down.
+     * mode as the bug that prompted this, one layer down. Seat and crew share
+     * it, so the two halves of a head count, read minutes apart on one
+     * screen, can never order differently.
      *
      * `id` cannot stand in for it: `defaultRandom()` is as arbitrary as the
      * heap, merely arbitrary consistently. `activity_events.seq` is the same
@@ -135,86 +189,57 @@ export const rollCallEvents = pgTable(
      * a value reaching a response body, an export file or a client component
      * would publish a monotonic counter every tenant shares — one shop able to
      * read another's roll-call volume from two samples (security review,
-     * 2026-08-15). Two readers here select the whole row
-     * (`select({ event: rollCallEvents, … })`); they reduce it to named fields,
-     * and a `...event` spread would quietly undo that.
+     * 2026-08-15). Readers that select the whole row
+     * (`select({ event: rollCallEvents, … })`) reduce it to named fields, and
+     * a `...event` spread would quietly undo that.
      */
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
-    // Leads on the person column so deleting a person (a demo shop's cascade,
-    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // Lead on the person columns so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes each foreign key by index, not by scanning
     // every shop's rows; a (shop_id, …) composite cannot serve that probe.
     // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
     index("roll_call_events_recorded_by_person_id_idx").on(table.recordedByPersonId),
-    index("roll_call_events_shop_trip_checkpoint_booking_occurred_idx").on(
-      table.shopId,
-      table.tripId,
-      table.checkpoint,
-      table.bookingId,
-      table.occurredAt,
-    ),
+    index("roll_call_events_crew_person_id_idx").on(table.crewPersonId),
+    index("roll_call_events_shop_trip_checkpoint_booking_occurred_idx")
+      .on(table.shopId, table.tripId, table.checkpoint, table.bookingId, table.occurredAt)
+      .where(sql`${table.subjectKind} = 'seat'`),
+    index("roll_call_events_shop_trip_checkpoint_crew_occurred_idx")
+      .on(table.shopId, table.tripId, table.checkpoint, table.crewPersonId, table.occurredAt)
+      .where(sql`${table.subjectKind} = 'crew'`),
     uniqueIndex("roll_call_events_shop_client_event_unique").on(table.shopId, table.clientEventId),
     check(
+      "roll_call_events_subject",
+      sql`(${table.subjectKind} = 'seat' and ${table.bookingId} is not null and ${table.crewPersonId} is null) or (${table.subjectKind} = 'crew' and ${table.crewPersonId} is not null and ${table.bookingId} is null)`,
+    ),
+    check(
+      "roll_call_events_offline_snapshot_seat_only",
+      sql`${table.offlineSnapshotSavedAt} is null or ${table.subjectKind} = 'seat'`,
+    ),
+    check(
       "roll_call_events_certification_snapshot_shape",
-      sql`(${table.certificationSnapshot} is null and ${table.certificationSnapshotStartedAt} is null and ${table.certificationSnapshotCapturedAt} is null) or (${table.certificationSnapshot} is not null and ${table.certificationSnapshotStartedAt} is not null and ${table.certificationSnapshotCapturedAt} is not null and ${table.certificationSnapshotStartedAt} <= ${table.certificationSnapshotCapturedAt} and ${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.certificationSnapshot}) = 'array')`,
+      sql`(${table.certificationSnapshot} is null and ${table.certificationSnapshotStartedAt} is null and ${table.certificationSnapshotCapturedAt} is null) or (${table.certificationSnapshot} is not null and ${table.certificationSnapshotStartedAt} is not null and ${table.certificationSnapshotCapturedAt} is not null and ${table.certificationSnapshotStartedAt} <= ${table.certificationSnapshotCapturedAt} and ${table.subjectKind} = 'seat' and ${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.certificationSnapshot}) = 'array')`,
     ),
     check(
       "roll_call_events_readiness_snapshot_shape",
-      sql`(${table.readinessStatus} is null and ${table.readinessBlockers} is null) or (${table.status} = 'boarded' and ${table.readinessStatus} in ('ready', 'blocked'))`,
+      sql`(${table.readinessStatus} is null and ${table.readinessBlockers} is null) or (${table.subjectKind} = 'seat' and ${table.status} = 'boarded' and ${table.readinessStatus} in ('ready', 'blocked'))`,
+    ),
+    check(
+      "roll_call_events_credential_snapshot_shape",
+      sql`(${table.credentialSnapshot} is null and ${table.credentialSnapshotStartedAt} is null and ${table.credentialSnapshotCapturedAt} is null) or (${table.credentialSnapshot} is not null and ${table.credentialSnapshotStartedAt} is not null and ${table.credentialSnapshotCapturedAt} is not null and ${table.credentialSnapshotStartedAt} <= ${table.credentialSnapshotCapturedAt} and ${table.subjectKind} = 'crew' and ${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.credentialSnapshot}) = 'array')`,
     ),
   ],
 );
 
 /**
- * The crew half of the head count: one staff member said one **assigned crew
- * member** is aboard, not aboard, or cleared, at one checkpoint. Append-only
- * history, exactly like `rollCallEvents` — the newest row per person per
- * checkpoint is the current answer and nothing is rewritten (ADR
- * 20260803-per-person-crew-roll-call).
- *
- * This is the *whole* crew half. A count-level `roll_call_crew_attestations`
- * table ("how many crew are aboard", ADR 20260802-crew-roll-call-attestation)
- * preceded it and was retired by ADR 20260804-crew-roll-call-is-per-person;
- * the table itself was dropped on 2026-08-15 under H-20260815-no-legacy, having had no
- * production writer since.
- *
- * Its own table rather than a widened `rollCallEvents`: carrying crew there
- * would have meant making `booking_id` nullable, weakening a NOT NULL invariant
- * on the safety spine so a *diver* event could be written with no subject at
- * all. The subjects genuinely differ — a booking is a paid seat, an assignment
- * is a roster line — so they are separate rows, and each table's subject column
- * stays `notNull`.
- *
- * `person_id` is the subject; `recorded_by_person_id` is who said so. They are
- * routinely the same human (a divemaster boarding herself) and that is fine —
- * the point is that the count names somebody, not that a second person
- * witnesses it.
- *
- * `source`/`client_event_id` carry the same offline contract `roll_call_events`
- * does, and for the same reason: crew roll call **is** recordable with no
- * signal, so a device-generated event has to be deduplicable on retry. Without
- * them a captain offshore could count divers but not crew, and
- * `rollCallCompleteness` needs both halves — so an after-dive checkpoint, the
- * one where a person may still be in the water, could not be closed at sea
- * (H-20260814-where-diveday-sit-between, 2026-08-14). The partial unique index on `(shop_id, client_event_id)`
- * is what makes a replayed sync idempotent; live events leave both at their
- * defaults.
- *
- * Deliberately **no** `offline_snapshot_saved_at` here, unlike the diver table.
- * That column records *which snapshot supplied the readiness evidence*, and
- * crew have no readiness to evidence — nothing gates a crew member at
- * departure. The snapshot timestamp is still required as an *input* on an
- * offline crew write (it is what the staleness bound is computed against, the
- * same arithmetic `recordRollCall` does); it simply has nothing to attest to
- * once the row is written.
- *
- * Tenancy: `shop_id` is carried here (unlike `trip_assignments`, CR-007) so a
- * read never has to reach through `trips` to know whose row it is — the same
- * shape `roll_call_events` already has. Writers still prove the *subject* is
- * assigned to the trip, joining through `trips`.
+ * **Retired: nothing reads or writes this table.** Crew marks are
+ * `roll_call_events` rows with `subject_kind = 'crew'` (issue #2700). The
+ * declaration stays one release so the release still serving while that
+ * migration runs keeps its table; the next release drops it (expand/contract,
+ * `.agents/skills/schema-change/removing.md`). Do not add a reader.
  */
-export const rollCallCrewEvents = pgTable(
+export const retiredRollCallCrewEvents = pgTable(
   "roll_call_crew_events",
   {
     id: uuid("id").primaryKey().defaultRandom(),
