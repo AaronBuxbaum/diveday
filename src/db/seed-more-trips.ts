@@ -9,6 +9,7 @@ import {
   bookings,
   cards,
   type DiveSpecialty,
+  deals,
   executedDives,
   interests,
   notificationDeliveries,
@@ -20,7 +21,6 @@ import {
   type TripAssignmentRole,
   tripAssignments,
   tripDives,
-  tripLastMinutePromos,
   tripRequirements,
   tripScheduleDays,
   trips,
@@ -769,11 +769,11 @@ export async function seedMoreTrips(
   }
   if (quietTrip) {
     await db
-      .insert(tripLastMinutePromos)
+      .insert(deals)
       .values({
         shopId,
         tripId: quietTrip.id,
-        status: "sent",
+        status: "active",
         discountPercent: 20,
         code: "DEMO-MIDWEEK-20",
         stripeCouponId: "coupon_demo_midweek",

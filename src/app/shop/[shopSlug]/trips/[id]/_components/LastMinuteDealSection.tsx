@@ -4,8 +4,7 @@ import { proseLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { TripLastMinutePromo } from "@/db/schema";
-import type { TripLastMinutePromoRecipientItem } from "@/db/trip-promos";
+import type { TripLastMinutePromo, TripLastMinutePromoRecipientItem } from "@/db/trip-promos";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatMoneyScanned } from "@/lib/format";
 import { promoDiscountOf } from "@/lib/promo-codes";
@@ -13,7 +12,7 @@ import type { FormNotice } from "@/lib/staff-notices";
 import { WHO_WANTS_IN_ID } from "./WhoWantsInPanel";
 
 const STATUS_TONE: Record<TripLastMinutePromo["status"], BadgeTone> = {
-  sent: "success",
+  active: "success",
   pending: "neutral",
   failed: "danger",
 };
@@ -22,7 +21,7 @@ const STATUS_TONE: Record<TripLastMinutePromo["status"], BadgeTone> = {
 // the translated label the bundle carries for it (docs ADR
 // 20260730-staff-copy-localization), the same shape as `promos.status`.
 const STATUS_KEYS: Record<TripLastMinutePromo["status"], StaffMessageKey> = {
-  sent: "trips.lastMinute.status.sent",
+  active: "trips.lastMinute.status.sent",
   pending: "trips.lastMinute.status.pending",
   failed: "trips.lastMinute.status.failed",
 };

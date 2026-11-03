@@ -582,7 +582,11 @@
   whose date range covers the trip. The diver redeems it by typing the code on the booking form; it
   is validated against that specific trip before being handed to Stripe Checkout, so a code issued
   for one trip cannot discount a different one. See
-  [20260727-last-minute-fill-promos](../../architecture/decisions/20260727-last-minute-fill-promos.md).
+  [20260727-last-minute-fill-promos](../../architecture/decisions/20260727-last-minute-fill-promos.md). Stored as a **deal** with its trip set.
+- **Deal** — one discount a shop minted on its own Stripe account: a `deals` row. With no trip it
+  is a shop-wide promo code staff wrote; with a trip it is a **last-minute deal**. A checkout that
+  applied one names it by `deal_id`, and a completed one is a redemption. See
+  [20261103-a-deal-is-one-row](../../architecture/decisions/20261103-a-deal-is-one-row.md).
 - **Thin boat** — a departure in the next 14 days (`THIN_BOATS_HORIZON_DAYS`) that could use
   divers: short of the minimum it must reach to run while that call is still ahead, or, with no
   minimum, less than half of its sellable seats sold (`thinBoatNeed`, `src/lib/thin-boats.ts`).

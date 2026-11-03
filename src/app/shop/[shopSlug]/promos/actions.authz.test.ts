@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { shopPromoCodes } from "@/db/schema";
+import { deals } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -46,16 +46,16 @@ const { deletePromoAction, setPromoEnabledAction } = await import("./actions");
 async function seededPromo(db: AppDb, shopId: string) {
   const [promo] = await db
     .select()
-    .from(shopPromoCodes)
-    .where(eq(shopPromoCodes.shopId, shopId))
-    .orderBy(shopPromoCodes.code)
+    .from(deals)
+    .where(and(eq(deals.shopId, shopId), isNull(deals.tripId)))
+    .orderBy(deals.code)
     .limit(1);
   if (!promo) throw new Error("seeded shop has no promo codes");
   return promo;
 }
 
 async function promoById(db: AppDb, promoId: string) {
-  const [promo] = await db.select().from(shopPromoCodes).where(eq(shopPromoCodes.id, promoId));
+  const [promo] = await db.select().from(deals).where(eq(deals.id, promoId));
   return promo ?? null;
 }
 

@@ -73,7 +73,7 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const QUERY_WINDOW = 60;
 
 const ANCHOR =
-  /\.from\(trips\)|\.(?:inner|left)Join\(\s*trips,\s*eq\(trips\.id,\s*(tripAssignments|tripDives|tripScheduleDays|tripRequirements|tripLastMinutePromos|activityEvents|tripBlowouts)\./;
+  /\.from\(trips\)|\.(?:inner|left)Join\(\s*trips,\s*eq\(trips\.id,\s*(tripAssignments|tripDives|tripScheduleDays|tripRequirements|deals|activityEvents|tripBlowouts)\./;
 const ALLOW = /diveday:allow-deleted-trips:/;
 const IS_TEST = /\.test\.tsx?$/;
 

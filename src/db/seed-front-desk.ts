@@ -5,13 +5,13 @@ import type { DbExecutor } from "./client";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
+  deals,
   interests,
   notificationDeliveries,
   paymentOperationIntents,
   people,
   personRoles,
   rollCallEvents,
-  tripLastMinutePromos,
 } from "./schema";
 import { CAPTAIN_NAME, type Cast } from "./seed-cast";
 import { at, dateAt, nextCreatedAt } from "./seed-clock";
@@ -82,11 +82,11 @@ export async function seedFrontDesk(
     }
 
     await db
-      .insert(tripLastMinutePromos)
+      .insert(deals)
       .values({
         shopId,
         tripId: wreckId,
-        status: "sent",
+        status: "active",
         discountPercent: 25,
         code: "DEMO-REEF-25",
         stripeCouponId: "coupon_demo_reef",

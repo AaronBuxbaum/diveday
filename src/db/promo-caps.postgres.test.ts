@@ -74,7 +74,7 @@ describePostgres("reserveDiscountUse under real concurrency", () => {
     const tagged = await pg.db
       .select({ id: paymentOperationIntents.id })
       .from(paymentOperationIntents)
-      .where(eq(paymentOperationIntents.promoCodeId, promoId));
+      .where(eq(paymentOperationIntents.dealId, promoId));
     expect(tagged).toHaveLength(1);
   });
 });

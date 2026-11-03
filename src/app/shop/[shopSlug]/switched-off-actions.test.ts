@@ -2,6 +2,7 @@ import { count, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { recordLostItem } from "@/db/lost-items";
 import {
+  deals,
   divePackages,
   diveSites,
   executedDives,
@@ -9,7 +10,6 @@ import {
   interests,
   lostItems,
   people,
-  shopPromoCodes,
   shops,
   tripSightings,
   workOrders,
@@ -115,10 +115,7 @@ describe("actions behind a switched-off feature", () => {
       createPromoAction(form({ code: "HANDBUILT", description: "", discount: "10", scope: "all" })),
     );
     expect(to).toBe(`/shop/${shop.slug}/promos`);
-    const made = await db
-      .select({ id: shopPromoCodes.id })
-      .from(shopPromoCodes)
-      .where(eq(shopPromoCodes.code, "HANDBUILT"));
+    const made = await db.select({ id: deals.id }).from(deals).where(eq(deals.code, "HANDBUILT"));
     expect(made).toEqual([]);
   });
 

@@ -203,6 +203,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Date-request party bookings
 - Days at sea
 - Days away
+- Deal
 - Decompression card reminder
 - Default course page
 - Delivery receipt
