@@ -48,15 +48,10 @@ export default function SettingsLayout({
 
 /**
  * The rail's own reads, gathered where a `<Suspense>` boundary can hold them.
- *
- * **The frame does not gate; every page under it does.** A redirect here runs
- * beside the page's own and wins, so a captain sent to Today read the generic
- * "Shop settings are managed by the owner or a manager" where each page
- * explains its own reason ("Billing is limited to the owner", "Data export is
- * limited to owners and managers", H-20260724-staff-role-reach). So the tenant
- * assert runs for everyone, the map is drawn only for a reader who may manage
- * the shop, and `settings-gates.test.ts` fails a page here that names no gate
- * of its own (issue #2739: no ungated reader).
+ * The rail is drawn only for an owner or manager (`canPersonManageShopSettings`,
+ * read live). It does not redirect: each page refuses with its own words, and a
+ * redirect here, streamed after the page's, overrode them with a generic notice.
+ * Hiding a row is convenience; every destination re-checks its own permission.
  */
 async function SettingsRailPanel({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
