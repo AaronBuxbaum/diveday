@@ -8,6 +8,7 @@ import {
   type ShopMilestone,
 } from "@/lib/founder-metrics";
 import type { AppDb, DbExecutor } from "./client";
+import { markBookingId, seatMarks } from "./roll-call-subject";
 import {
   notificationRateLimitState,
   people,
@@ -55,7 +56,7 @@ export async function departureRollCallEvents(
     db
       .select({
         shopId: rollCallEvents.shopId,
-        bookingId: rollCallEvents.bookingId,
+        bookingId: markBookingId(),
         localDay,
         status: rollCallEvents.status,
         occurredAt: rollCallEvents.occurredAt,
@@ -75,6 +76,7 @@ export async function departureRollCallEvents(
           realShop(),
           liveTrip(),
           notRehearsal(),
+          seatMarks(),
           eq(rollCallEvents.checkpoint, "departure"),
           gte(localDay, range.from),
           lte(localDay, range.to),
@@ -145,7 +147,7 @@ export async function syncShopMilestones(db: AppDb): Promise<void> {
         // shop in one pass, grouped by shop.
         .from(rollCallEvents)
         .innerJoin(shops, eq(shops.id, rollCallEvents.shopId))
-        .where(and(realShop(), eq(rollCallEvents.status, "boarded")))
+        .where(and(realShop(), seatMarks(), eq(rollCallEvents.status, "boarded")))
         .groupBy(rollCallEvents.shopId),
     },
   ];

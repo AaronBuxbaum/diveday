@@ -18,15 +18,19 @@ import { AutoPrint } from "../../trips/[id]/_components/AutoPrint";
  *   these routes *is* one document; the rule lands after the stylesheet, so it
  *   is the one that decides the paper.
  * - **The shop's face.** `BrandStyle` with the display font only — the band's
- *   colour is resolved by the sheet itself and handed down as a value, because
- *   print redefines the colour tokens (`globals.css`'s paper-sheet block says
- *   why).
- * - **The way back and the way out**, both `print:hidden`: the counter this
- *   was opened from (the departure's Divers tab), and a second Print for a staffer who dismissed the dialog.
+ *   colour is resolved by the sheet itself and handed down as a value.
+ * - **The way back and the way out**, both `print:hidden`: the screen this
+ *   was opened from, and a second Print for a staffer who dismissed the
+ *   dialog. A packet may add one more door beside them (`doors`).
  *
- * `AutoPrint` opens the dialog on arrival, the same as the trip and day
- * packets: the door that reached this page said Print, so the page does not
- * ask again.
+ * `AutoPrint` opens the dialog on arrival: the door that reached this page
+ * said Print, so the page does not ask again. A packet composed from many
+ * readers names the marker it renders last (`readySelector`), so the dialog
+ * never opens on half a document.
+ *
+ * **Every document the app prints is this page around `PaperSheet`s**
+ * (issue #2745): the passes, the counter card, and the trip, day and
+ * medical-alerts packets. One paper face, on `--sheet-*`.
  */
 export function SheetDocument({
   backHref,
@@ -34,6 +38,9 @@ export function SheetDocument({
   brandDisplayFont,
   backLabel,
   printLabel,
+  readySelector,
+  doors,
+  printOnly,
   children,
 }: {
   /** The counter this sheet was printed from. */
@@ -43,6 +50,17 @@ export function SheetDocument({
   brandDisplayFont: BrandDisplayFontCode | null;
   backLabel: string;
   printLabel: string;
+  /** What `AutoPrint` waits for; see `PACKET_READY_SELECTOR`. */
+  readySelector?: string;
+  /** One more screen-only door beside Back and Print. */
+  doors?: ReactNode;
+  /**
+   * **The sheets reach paper and never the screen**, which shows this
+   * instead. The medical-alerts packet only (layer 4 security review, note 1):
+   * an alert's words are for the sheet in the crew's hands, never for a tablet
+   * left open after the print dialog closes.
+   */
+  printOnly?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -51,14 +69,21 @@ export function SheetDocument({
           `printSheetPageRule` — never a request value. */}
       <style data-print-sheet="">{printSheetPageRule(paper)}</style>
       <BrandStyle brandColor={null} brandDisplayFont={brandDisplayFont} />
-      <AutoPrint />
+      <AutoPrint readySelector={readySelector} />
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 print:hidden">
         <Link href={backHref} className={buttonClass({ variant: "ghost", size: "sm" })}>
           {backLabel}
         </Link>
-        <PrintButton label={printLabel} />
+        <div className="flex flex-wrap items-center gap-3">
+          {doors}
+          <PrintButton label={printLabel} />
+        </div>
       </div>
-      <div className="paper-sheet-frame">
+      {printOnly ? <div className="px-4 py-3 print:hidden">{printOnly}</div> : null}
+      {/* `data-paper-print-only`, not Tailwind's `hidden`: the frame's own
+          rule sits outside every cascade layer and would beat a utility, so
+          the screen-side hide is an unlayered rule too (`globals.css`). */}
+      <div className="paper-sheet-frame" data-paper-print-only={printOnly ? "" : undefined}>
         <div>{children}</div>
       </div>
     </>

@@ -9,7 +9,7 @@ import {
 } from "./participant-types";
 import type { ReadinessResult } from "./readiness";
 import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
-import { isNotBackAboard, isRollCallCheckpoint } from "./roll-call";
+import { compareMarkOrder, isNotBackAboard, isRollCallCheckpoint } from "./roll-call";
 import type { TurnAwayReason } from "./turn-away";
 import type { MedicalWaiverMark, RiderMedicalHold } from "./waivers";
 import type { WelcomeCue } from "./welcome-cue";
@@ -90,25 +90,14 @@ export function maxRecordedDiveNumber(
      * a live result or the live result stands, which is the difference
      * between a dive count that can be shrunk and one that cannot.
      */
-    seq?: number | null;
+    seq: number;
   }[],
 ): number {
   const latestByKey = new Map<string, (typeof events)[number]>();
   for (const event of events) {
     const key = `${event.bookingId}\u0000${event.checkpoint}`;
     const current = latestByKey.get(key);
-    if (
-      !current ||
-      event.occurredAt > current.occurredAt ||
-      (event.occurredAt.getTime() === current.occurredAt.getTime() &&
-        (event.createdAt > current.createdAt ||
-          // Same instant *and* same transaction: the sequence is the only
-          // thing left that records what actually came first. Both null (rows
-          // predating the column) falls through to "keep what we have", which
-          // is the behaviour this had before the column existed.
-          (event.createdAt.getTime() === current.createdAt.getTime() &&
-            (event.seq ?? 0) > (current.seq ?? 0))))
-    ) {
+    if (!current || compareMarkOrder(event, current) > 0) {
       latestByKey.set(key, event);
     }
   }

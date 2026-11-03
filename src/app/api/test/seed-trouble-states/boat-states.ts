@@ -2,6 +2,7 @@ import { and, eq, gte, inArray, isNull, notInArray } from "drizzle-orm";
 import { checkInBooking } from "@/db/check-in";
 import type { AppDb } from "@/db/client";
 import { getBookingReadiness } from "@/db/readiness";
+import { seatMarks } from "@/db/roll-call-subject";
 import { bookings, people, personRoles, rollCallEvents, trips, waiverRecords } from "@/db/schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "@/db/seed-more-trips";
 import { livePerson, liveTrip } from "@/db/trips-live";
@@ -158,7 +159,7 @@ async function leaveASeatUncounted(
   const [counted] = await db
     .select({ recorderId: rollCallEvents.recordedByPersonId })
     .from(rollCallEvents)
-    .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, trip.id)))
+    .where(and(eq(rollCallEvents.shopId, shopId), seatMarks(), eq(rollCallEvents.tripId, trip.id)))
     .limit(1);
   if (turnedAway && counted) {
     const [refused] = await db.insert(bookings).values(seat(turnedAway.id)).returning();

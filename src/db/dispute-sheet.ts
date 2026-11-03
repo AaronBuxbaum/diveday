@@ -10,6 +10,7 @@ import { isUuid } from "@/lib/uuid";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
 import { queryAll } from "./query-helpers";
+import { seatMarks } from "./roll-call-subject";
 import {
   activityEvents,
   bookingArrivalEvents,
@@ -178,7 +179,13 @@ export async function getDisputeSheet(
           recorders,
           and(eq(recorders.id, rollCallEvents.recordedByPersonId), eq(recorders.shopId, shopId)),
         )
-        .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.bookingId, bookingId))),
+        .where(
+          and(
+            eq(rollCallEvents.shopId, shopId),
+            seatMarks(),
+            eq(rollCallEvents.bookingId, bookingId),
+          ),
+        ),
     () =>
       db
         .select({
