@@ -870,12 +870,6 @@
         }
       },
       {
-        "why": "Merge CI coverage updates with the independently shortened safety test baselines",
-        "files": {
-          "src/lib/manifests.test.ts": "1053 -> 1054"
-        }
-      },
-      {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
@@ -887,12 +881,6 @@
           "src/db/recap.test.ts": "2114 -> 2138",
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
-        }
-      },
-      {
-        "why": "merge current main into PR #3132",
-        "files": {
-          "src/lib/manifests.test.ts": "1053 -> 1054"
         }
       },
       {
@@ -1122,7 +1110,7 @@
     "src/lib/dive-prep.test.ts": 1935,
     "src/lib/import.test.ts": 1403,
     "src/lib/incident-export.test.ts": 1067,
-    "src/lib/manifests.test.ts": 1054,
+    "src/lib/manifests.test.ts": 1028,
     "src/lib/notifications/email.test.ts": 1096,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
