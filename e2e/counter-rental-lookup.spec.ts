@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import type { RentalLookupFleet } from "../src/app/api/test/seed-trouble-states/rental-lookup-state";
+import type { RentalLookupFleet } from "../src/db/facts/rental-lookup-state";
 import { gearItemKindLabel } from "../src/i18n/gear-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
@@ -42,7 +42,9 @@ test.describe("counter rental lookup at 390px", () => {
     page,
     request,
   }, info) => {
-    const seeded = await request.post("/api/test/seed-trouble-states?rentalLookup=1");
+    const seeded = await request.post(
+      "/api/test/seed-trouble-states?facts=troublePanels,rentalLookup",
+    );
     expect(seeded.ok()).toBe(true);
     const { rentalLookup } = (await seeded.json()) as { rentalLookup: RentalLookupFleet };
     const chooseTank = async () => {
@@ -78,7 +80,9 @@ test.describe("counter rental lookup at 390px", () => {
     page,
     request,
   }, info) => {
-    const seeded = await request.post("/api/test/seed-trouble-states?rentalLookup=1");
+    const seeded = await request.post(
+      "/api/test/seed-trouble-states?facts=troublePanels,rentalLookup",
+    );
     expect(seeded.ok()).toBe(true);
     const { rentalLookup } = (await seeded.json()) as { rentalLookup: RentalLookupFleet };
     expect(rentalLookup.personId).toBeTruthy();

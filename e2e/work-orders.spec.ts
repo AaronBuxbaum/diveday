@@ -386,7 +386,7 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-trouble-states?bench=1");
+    await request.post("/api/test/seed-trouble-states?facts=troublePanels,bench");
     await request.post("/api/test/seed-stripe-account");
     await page.goto("/shop/blue-mantis/gear/work-orders");
     await page

@@ -11,7 +11,7 @@ import { HOUR_MS } from "@/lib/clock";
  * first boat, then the later one is moved onto the earlier one. Returns the
  * departure that moved and the one it landed on.
  */
-async function slideOneDepartureOntoAnotherHull(
+export async function slideOneDepartureOntoAnotherHull(
   db: Awaited<ReturnType<typeof getDb>>,
   shopId: string,
   now: Date,
@@ -66,19 +66,4 @@ async function slideOneDepartureOntoAnotherHull(
   });
   if (!outcome.ok) return null;
   return { tripId: mover.id, otherTitle: host.title };
-}
-
-/**
- * `?boatClash=1`: opt-in, and it moves a departure (the board, Today's queue
- * and every calendar feed go with it), so only the capture that wants it asks.
- */
-export async function boatClashState(
-  request: Request,
-  db: Awaited<ReturnType<typeof getDb>>,
-  shopId: string,
-  now: Date,
-): Promise<{ boatClash?: { tripId: string; otherTitle: string } }> {
-  if (new URL(request.url).searchParams.get("boatClash") !== "1") return {};
-  const boatClash = await slideOneDepartureOntoAnotherHull(db, shopId, now);
-  return boatClash ? { boatClash } : {};
 }

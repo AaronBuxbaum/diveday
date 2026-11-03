@@ -227,7 +227,9 @@ test.describe("a seeded lapse on the demo's reef boat", () => {
     page,
     request,
   }) => {
-    const seeded = await request.post("/api/test/seed-trouble-states?boatSafety=1");
+    const seeded = await request.post(
+      "/api/test/seed-trouble-states?facts=troublePanels,boatSafety",
+    );
     expect(seeded.ok()).toBe(true);
     const { boatSafety } = (await seeded.json()) as { boatSafety?: { tripId: string } };
     if (!boatSafety) throw new Error("seed-trouble-states found no reef departure on a boat");

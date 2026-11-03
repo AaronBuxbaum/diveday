@@ -31,12 +31,14 @@ export async function seedRentalLookupFleet(
   const tanks = Array.from({ length: 100 }, (_, index) => ({
     shopId,
     kind: "tank" as const,
+    // i18n-exempt: fixture inventory name, not copy
     label: `UX tank ${String(index + 1).padStart(3, "0")}`,
     size: "AL80",
   }));
   const suits = Array.from({ length: 80 }, (_, index) => ({
     shopId,
     kind: "wetsuit" as const,
+    // i18n-exempt: fixture inventory name, not copy
     label: `UX suit ${String(index + 1).padStart(3, "0")}`,
     size: index < 60 ? ["S", "M", "L"][Math.floor(index / 20)] : index < 70 ? "XL" : "2XL",
     thicknessMm: 3,

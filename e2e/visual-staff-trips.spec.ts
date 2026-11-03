@@ -125,7 +125,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?crewClash=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,crewClash",
+        );
         expect(seeded.ok()).toBe(true);
         const { crewClash } = (await seeded.json()) as {
           crewClash?: { tripId: string; otherTitle: string; date: string };
@@ -439,7 +441,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?boatSafety=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,boatSafety",
+        );
         expect(seeded.ok()).toBe(true);
         const { boatSafety } = (await seeded.json()) as { boatSafety?: { tripId: string } };
         if (!boatSafety) throw new Error("seed-trouble-states found no reef departure on a boat");
@@ -457,7 +461,9 @@ for (const scheme of ["light", "dark"] as const) {
        * state: a training-day departure with one test diver.
        */
       test(`a rehearsal's trip page carries its banner (${scheme})`, async ({ page, request }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?rehearsal=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,rehearsal",
+        );
         expect(seeded.ok()).toBe(true);
         const { rehearsal } = (await seeded.json()) as { rehearsal?: { tripId: string } };
         if (!rehearsal) throw new Error("seed-trouble-states could not put a rehearsal on");
@@ -474,7 +480,9 @@ for (const scheme of ["light", "dark"] as const) {
        * a fold, opened before the shot.
        */
       test(`the week board carries a rehearsal's badge (${scheme})`, async ({ page, request }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?rehearsal=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,rehearsal",
+        );
         expect(seeded.ok()).toBe(true);
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
@@ -491,7 +499,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?rehearsal=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,rehearsal",
+        );
         expect(seeded.ok()).toBe(true);
         await page.goto("/shop/blue-mantis");
         await page
@@ -519,7 +529,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?crewClash=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,crewClash",
+        );
         expect(seeded.ok()).toBe(true);
         const { crewClash } = (await seeded.json()) as { crewClash?: { tripId: string } };
         if (!crewClash) throw new Error("seed-trouble-states found no two departures to clash");
@@ -541,7 +553,9 @@ for (const scheme of ["light", "dark"] as const) {
        * since the boarding gate refuses the other.
        */
       test(`a manifest counts a blocked diver aboard (${scheme})`, async ({ page, request }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?blockedAboard=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,blockedAboard",
+        );
         expect(seeded.ok()).toBe(true);
         const { blockedAboard } = (await seeded.json()) as { blockedAboard?: { tripId: string } };
         if (!blockedAboard) throw new Error("seed-trouble-states boarded nobody to block");
@@ -789,7 +803,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?droppedRental=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,droppedRental",
+        );
         expect(seeded.ok()).toBe(true);
         const { droppedRental } = (await seeded.json()) as { droppedRental?: { fullName: string } };
         if (!droppedRental) throw new Error("seed-trouble-states found no fit to contradict");
@@ -830,7 +846,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?unitsNeedingCare=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,unitsNeedingCare",
+        );
         expect(seeded.ok()).toBe(true);
         const { unitsNeedingCare } = (await seeded.json()) as {
           unitsNeedingCare?: { tripId: string };

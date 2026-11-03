@@ -145,7 +145,7 @@ for (const scheme of ["light", "dark"] as const) {
       // one ready for a week that nobody has collected, through the opt-in
       // `?bench=1` trouble state (never seeded into blue-mantis).
       test(`Today asks about the bench (${scheme})`, async ({ page, request }) => {
-        await request.post("/api/test/seed-trouble-states?bench=1");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels,bench");
         await page.goto("/shop/blue-mantis");
         const benchDate = (daysAgo: number) =>
           formatCalendarDate(
@@ -191,7 +191,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?gearConcern=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,gearConcern",
+        );
         expect(seeded.ok()).toBe(true);
         const { gearConcern } = (await seeded.json()) as {
           gearConcern?: { gearItemId: string; label: string };
@@ -349,7 +351,7 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         const seeded = await request.post(
-          "/api/test/seed-trouble-states?gearOut=1&gearUncollected=1",
+          "/api/test/seed-trouble-states?facts=troublePanels,gearOut,gearUncollected",
         );
         expect(seeded.ok()).toBe(true);
         await page.goto("/shop/blue-mantis/gear");
@@ -401,7 +403,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?gearOut=1");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels,gearOut");
         await page.goto("/shop/blue-mantis/gear?view=rentals");
         await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
         const rentals = page.getByRole("region", { name: "Rentals" });
@@ -419,7 +421,7 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         const seeded = await request.post(
-          "/api/test/seed-trouble-states?gearOut=1&rentalWaiverWarning=1",
+          "/api/test/seed-trouble-states?facts=troublePanels,gearOut,rentalWaiverWarning",
         );
         expect(seeded.ok()).toBe(true);
         await page.goto("/shop/blue-mantis/gear?view=rentals");

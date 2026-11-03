@@ -5,24 +5,21 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { gearRegisterGroup } from "@/lib/gear";
 import { seededShopContext } from "@/test/db";
-import { gearSliceStates } from "./gear-states";
+import { applyFacts } from "./index";
 
 describe("the uncollected overdue gear fixture", () => {
   it("adds two overdue uncollected units only when requested, and is repeatable", async () => {
     const { db, shop } = await seededShopContext();
     const now = nowDate();
-    const run = (query: string) =>
-      gearSliceStates(
-        new Request(`http://localhost/api/test/seed-trouble-states?${query}`),
-        db,
-        shop.id,
-        now,
-      );
-    const calm = await run("gearOut=1");
+    const run = (fact: string) =>
+      applyFacts([fact], { db, shop, actorId: "", now }) as Promise<{
+        gearUncollected?: { labels: string[] };
+      }>;
+    const calm = await run("gearOut");
     expect(calm.gearUncollected).toBeUndefined();
-    const seeded = await run("gearUncollected=1");
+    const seeded = await run("gearUncollected");
     expect(seeded.gearUncollected?.labels).toEqual(["BCD #3", "BCD #4"]);
-    expect((await run("gearUncollected=1")).gearUncollected).toEqual(seeded.gearUncollected);
+    expect((await run("gearUncollected")).gearUncollected).toEqual(seeded.gearUncollected);
     const rows = await db
       .select({ reservation: gearReservations })
       .from(gearReservations)

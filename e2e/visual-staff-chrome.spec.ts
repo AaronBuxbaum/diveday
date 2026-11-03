@@ -147,7 +147,9 @@ for (const scheme of ["light", "dark"] as const) {
           page,
           request,
         }) => {
-          const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+          const seeded = await request.post(
+            "/api/test/seed-trouble-states?facts=troublePanels,mixedBoat",
+          );
           expect(seeded.ok()).toBe(true);
           const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
           if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
@@ -304,7 +306,7 @@ for (const scheme of ["light", "dark"] as const) {
           page,
           request,
         }) => {
-          await request.post("/api/test/seed-trouble-states?crewGap=1");
+          await request.post("/api/test/seed-trouble-states?facts=troublePanels,crewGap");
           await page.goto("/shop/blue-mantis/staffing");
           await page.getByText("Sin divemaster").first().waitFor();
           await capture(page, "staffing-week-gap", scheme, { locale: SPANISH });

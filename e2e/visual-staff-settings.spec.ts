@@ -346,7 +346,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?owedRefund=1");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels,owedRefund");
         await page.goto("/shop/blue-mantis/orders");
         await page.getByRole("region", { name: "Payments that need a check" }).waitFor();
         await page.getByRole("region", { name: "Refunds you still owe" }).waitFor();
@@ -545,7 +545,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels");
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("region", { name: "Photos that didn’t finish deleting" }).waitFor();
         await page.getByRole("region", { name: "Erasures not finished at Stripe" }).waitFor();

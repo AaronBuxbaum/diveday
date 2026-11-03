@@ -81,7 +81,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?farStation=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,farStation",
+        );
         expect(seeded.ok()).toBe(true);
         const { farStation } = (await seeded.json()) as {
           farStation?: { siteId: string; name: string; slug: string };

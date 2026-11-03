@@ -136,7 +136,7 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-trouble-states?gearOut=1");
+    await request.post("/api/test/seed-trouble-states?facts=troublePanels,gearOut");
     await page.goto("/shop/blue-mantis/gear");
     await expect(page.getByRole("heading", { level: 2, name: /^Overdue/ })).toBeVisible();
 
@@ -334,7 +334,7 @@ test.describe("staff", () => {
     // The trip id first: `seed-trouble-states` reshapes the board, and paging
     // it afterwards is a race this test has no reason to run.
     const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
-    await request.post("/api/test/seed-trouble-states?gearOut=1");
+    await request.post("/api/test/seed-trouble-states?facts=troublePanels,gearOut");
     await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
     const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
 

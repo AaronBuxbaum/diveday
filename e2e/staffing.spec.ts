@@ -404,7 +404,9 @@ test.describe("approving a divemaster onto an intro session over its ratio", () 
     staffStorageState,
   }) => {
     test.setTimeout(60_000);
-    const seeded = await request.post("/api/test/seed-trouble-states?introOverRatio=1");
+    const seeded = await request.post(
+      "/api/test/seed-trouble-states?facts=troublePanels,introOverRatio",
+    );
     expect(seeded.ok()).toBe(true);
     const { introOverRatio } = (await seeded.json()) as {
       introOverRatio?: { tripId: string; title: string; asker: string; date: string };

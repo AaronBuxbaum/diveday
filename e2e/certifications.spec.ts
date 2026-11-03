@@ -260,7 +260,7 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   request,
 }) => {
   test.setTimeout(30_000);
-  const seeded = await request.post("/api/test/seed-trouble-states");
+  const seeded = await request.post("/api/test/seed-trouble-states?facts=troublePanels");
   expect(seeded.ok()).toBe(true);
 
   // Rowan's seeded self-declared level is the card-sighting path: a bad number

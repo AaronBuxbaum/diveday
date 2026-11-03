@@ -21,7 +21,7 @@ import { seededShopContext } from "@/test/db";
  * The owed-refund state cancels a departure that carries a paid seat, which in
  * the demo is an upcoming departure every other spec and capture may expect to
  * be on the board. It ran on every call, whatever flags the caller passed, so a
- * spec that seeded `?boatSafety=1` also lost that departure and a capture's
+ * spec that seeded `?facts=boatSafety` also lost that departure and a capture's
  * picture depended on which spec had seeded first. It is opt-in now, like the
  * other states that move what unrelated pages read.
  */
@@ -75,7 +75,7 @@ describe("POST /api/test/seed-trouble-states", () => {
       .limit(1);
     if (!trip) throw new Error("party waiver visual departure was not seeded");
 
-    const response = await POST(seedRequest("?partyWaiverCapacity=1"));
+    const response = await POST(seedRequest("?facts=partyWaiverCapacity"));
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       partyWaiverCapacity?: { tripId: string; capacity: number };
@@ -93,13 +93,13 @@ describe("POST /api/test/seed-trouble-states", () => {
   it("does not seed the rental lookup without its bearer or against a real database", async () => {
     vi.mocked(getDb).mockClear();
     const denied = await POST(
-      new Request("http://localhost/api/test/seed-trouble-states?rentalLookup=1", {
+      new Request("http://localhost/api/test/seed-trouble-states?facts=rentalLookup", {
         method: "POST",
       }),
     );
     expect(denied.status).toBe(404);
     vi.stubEnv("DATABASE_URL", "postgres://example.invalid/not-a-test-database");
-    expect((await POST(seedRequest("?rentalLookup=1"))).status).toBe(404);
+    expect((await POST(seedRequest("?facts=rentalLookup"))).status).toBe(404);
     expect(getDb).not.toHaveBeenCalled();
   });
 
@@ -108,7 +108,7 @@ describe("POST /api/test/seed-trouble-states", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     const before = await cancelledTripIds(db);
 
-    const response = await POST(seedRequest("?boatSafety=1"));
+    const response = await POST(seedRequest("?facts=boatSafety"));
     expect(response.status).toBe(200);
 
     expect(await cancelledTripIds(db)).toEqual(before);
@@ -119,7 +119,7 @@ describe("POST /api/test/seed-trouble-states", () => {
     const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
 
-    const response = await POST(seedRequest("?owedRefund=1"));
+    const response = await POST(seedRequest("?facts=owedRefund"));
     expect(response.status).toBe(200);
 
     expect((await listUnfinished(db, shop.id, "shop_cancellation_refund")).length).toBeGreaterThan(
@@ -135,7 +135,7 @@ describe("POST /api/test/seed-trouble-states", () => {
     const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
 
-    const response = await POST(seedRequest("?checkedInBlocked=1"));
+    const response = await POST(seedRequest("?facts=checkedInBlocked"));
     const body = (await response.json()) as {
       checkedInBlocked?: { tripId: string; personName: string };
     };
@@ -157,12 +157,12 @@ describe("POST /api/test/seed-trouble-states", () => {
     const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
 
-    const calm = (await (await POST(seedRequest("?boatSafety=1"))).json()) as {
+    const calm = (await (await POST(seedRequest("?facts=boatSafety"))).json()) as {
       gearConcern?: unknown;
     };
     expect(calm.gearConcern).toBeUndefined();
 
-    const body = (await (await POST(seedRequest("?gearConcern=1"))).json()) as {
+    const body = (await (await POST(seedRequest("?facts=gearConcern"))).json()) as {
       gearConcern?: { gearItemId: string; label: string };
     };
     if (!body.gearConcern) throw new Error("no concern was returned");
@@ -179,7 +179,7 @@ describe("POST /api/test/seed-trouble-states", () => {
     expect(concerns[0]?.note).toMatch(/Mouthpiece split/);
 
     // Idempotent: a second ask does not stack a second return.
-    await POST(seedRequest("?gearConcern=1"));
+    await POST(seedRequest("?facts=gearConcern"));
     const again = await getGearItemDetail(db, shop.id, body.gearConcern.gearItemId);
     expect(
       benchReturnConcerns(again?.item ?? detail.item, again?.reservations ?? [], [], shop.timezone),
@@ -194,7 +194,7 @@ describe("POST /api/test/seed-trouble-states", () => {
     const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
 
-    const body = (await (await POST(seedRequest("?rentalWaiverWarning=1"))).json()) as {
+    const body = (await (await POST(seedRequest("?facts=rentalWaiverWarning"))).json()) as {
       rentalWaiverWarning?: { personId: string; label: string };
     };
     if (!body.rentalWaiverWarning) throw new Error("no rental was made");
@@ -217,7 +217,7 @@ describe("POST /api/test/seed-trouble-states", () => {
     const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
 
-    const response = await POST(seedRequest("?uncountedSeat=1"));
+    const response = await POST(seedRequest("?facts=uncountedSeat"));
     const body = (await response.json()) as {
       uncountedSeat?: { tripId: string; personName: string };
     };
@@ -267,7 +267,7 @@ describe("POST /api/test/seed-trouble-states", () => {
     if (!seat) throw new Error("the next boat has no booked seat");
     await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, seat.id));
 
-    const response = await POST(seedRequest("?crewUncounted=1"));
+    const response = await POST(seedRequest("?facts=crewUncounted"));
     expect(response.status).toBe(200);
 
     const next = await nextOf();
@@ -276,4 +276,46 @@ describe("POST /api/test/seed-trouble-states", () => {
     expect(next.blocked).toBe(0);
     expect(next.crewAccountedFor).toBe(false);
   }, 60_000);
+
+  describe("the facts list (issue #2759)", () => {
+    it("refuses a name nobody knows, and says which names there are", async () => {
+      const { db } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      const response = await POST(seedRequest("?facts=troublePanels,gearOutt"));
+      expect(response.status).toBe(400);
+      const body = (await response.json()) as { unknown: string[]; known: string[] };
+      expect(body.unknown).toEqual(["gearOutt"]);
+      expect(body.known).toEqual(expect.arrayContaining(["gearOut", "troublePanels"]));
+    }, 60_000);
+
+    it("writes nothing for an empty list", async () => {
+      const { db, shop } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      const response = await POST(seedRequest());
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ ok: true });
+      expect(await listUnfinished(db, shop.id, "payment_operation")).toEqual([]);
+    }, 60_000);
+
+    it("writes the back-office panels when the set is named, and not otherwise", async () => {
+      const { db, shop } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      expect((await POST(seedRequest("?facts=gearOut"))).status).toBe(200);
+      expect(await listUnfinished(db, shop.id, "payment_operation")).toEqual([]);
+
+      expect((await POST(seedRequest("?facts=troublePanels"))).status).toBe(200);
+      expect((await listUnfinished(db, shop.id, "payment_operation")).length).toBeGreaterThan(0);
+    }, 60_000);
+
+    it("writes in the registry's order whatever order the caller names", async () => {
+      const { resolveFacts } = await import("@/db/facts");
+      const forward = resolveFacts(["gearOut", "troublePanels", "bench"]);
+      const reversed = resolveFacts(["bench", "troublePanels", "gearOut"]);
+      expect(forward).toEqual(reversed);
+      expect(forward.ok && forward.facts.slice(-2)).toEqual(["gearOut", "bench"]);
+    });
+  });
 });

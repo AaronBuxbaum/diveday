@@ -1,19 +1,15 @@
 import type { AppDb } from "@/db/client";
 import { people, personRoles } from "@/db/schema";
-import { boatSliceStates } from "./boat-states";
-import { manifestOverCapacityState } from "./manifest-overcapacity-state";
 
-/** Opt-in fixture, reached only after the trouble route's secret and demo-shop gates. */
+/** Nine divers who share a phone number, so the merge panel has a source and eight candidates. */
 export async function mergeCandidatesState(
-  request: Request,
   db: AppDb,
   shopId: string,
   now: Date,
-): Promise<{ mergeCandidates?: { sourceId: string; candidateIds: string[] } }> {
-  if (new URL(request.url).searchParams.get("mergeCandidates") !== "1") return {};
-
+): Promise<{ sourceId: string; candidateIds: string[] }> {
   return db.transaction(async (tx) => {
     const records = await tx
+      // diveday:allow-person-insert: duplicate-looking fixture rows the merge panel ranks, with roles written below
       .insert(people)
       .values([
         {
@@ -37,17 +33,6 @@ export async function mergeCandidatesState(
     await tx
       .insert(personRoles)
       .values(records.map(({ id }) => ({ personId: id, role: "diver" as const })));
-    return {
-      mergeCandidates: { sourceId: source.id, candidateIds: candidates.map(({ id }) => id) },
-    };
+    return { sourceId: source.id, candidateIds: candidates.map(({ id }) => id) };
   });
-}
-
-/** Supplementary opt-in fixtures keep the route's response assembly bounded. */
-export async function boatAndMergeStates(request: Request, db: AppDb, shopId: string, now: Date) {
-  return {
-    ...(await boatSliceStates(request, db, shopId, now)),
-    ...(await mergeCandidatesState(request, db, shopId, now)),
-    ...(await manifestOverCapacityState(request, db, shopId, now)),
-  };
 }
