@@ -1371,7 +1371,6 @@
     "phone": "Phone",
     "website": "Website",
     "submit": "Send",
-    "sending": "Sending…",
     "errors": {
       "required": "Fill this in.",
       "invalid": "Check this one.",

@@ -6,8 +6,8 @@ import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import type { DepthUnit } from "@/lib/depth-units";
+import { cachedListFormat } from "@/lib/intl-cache";
 import type { TemperatureUnit } from "@/lib/temperature-units";
-import { cachedListFormat } from "./intl-cache";
 
 /**
  * The night-before brief, shared by both channels (`src/lib/notifications/email.ts`

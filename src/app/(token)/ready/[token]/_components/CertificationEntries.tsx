@@ -306,7 +306,7 @@ function CertificationEntry({
         </FieldGrid>
         <div>
           <SubmitButton
-            pendingLabel={t("ready.certSubmitting")}
+            pendingLabel={t("words.busy.adding")}
             // The step's one action, as every step's is (visual review
             // 2026-10-24, B26).
             className={buttonClass({ variant: "primary" })}
@@ -342,8 +342,8 @@ function NotYetAnswer({ token, t }: { token: string; t: DiverTranslator }) {
         triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
         message={t("ready.certNotYetConfirm")}
         confirmLabel={t("ready.certNotYetConfirmButton")}
-        cancelLabel={t("ready.neverMind")}
-        pendingLabel={t("common.saving")}
+        cancelLabel={t("words.dismiss.neverMind")}
+        pendingLabel={t("words.busy.saving")}
         confirmClassName={buttonClass({ size: "sm" })}
       />
     </form>
@@ -426,7 +426,7 @@ function SpecialtyEntry({
         </FieldGrid>
         <div>
           <SubmitButton
-            pendingLabel={t("ready.certSubmitting")}
+            pendingLabel={t("words.busy.adding")}
             className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             {t("ready.certSubmit")}
@@ -500,7 +500,7 @@ function NitroxEntry({
         </FieldGrid>
         <div>
           <SubmitButton
-            pendingLabel={t("ready.certSubmitting")}
+            pendingLabel={t("words.busy.adding")}
             className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             {t("ready.certSubmit")}

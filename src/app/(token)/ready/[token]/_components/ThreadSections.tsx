@@ -256,7 +256,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
                   ) : undefined
                 }
                 confirmLabel={t("ready.cancelConfirmButton")}
-                cancelLabel={t("ready.neverMind")}
+                cancelLabel={t("words.dismiss.neverMind")}
                 pendingLabel={t("ready.cancelling")}
                 confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
               />

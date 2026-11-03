@@ -1,4 +1,3 @@
-import { identityReasonMessage } from "@/i18n/identity-check-labels";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import {
@@ -8,6 +7,7 @@ import {
   firstOpenOrderId,
   unpaidBookingCount,
 } from "@/lib/diver-profile";
+import { identityReasonMessage } from "@/lib/identity-match";
 import {
   BLOCKER_CATEGORY,
   type ReadinessBlocker,

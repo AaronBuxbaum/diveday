@@ -42,7 +42,7 @@ export function dateRequestCopy(t: DiverTranslator, subject: "course" | "dive"):
     callLabel: t("inquiry.callLabel"),
     orCall: t("inquiry.orCall"),
     send: t("inquiry.send"),
-    sending: t("inquiry.sending"),
+    sending: t("words.busy.sending"),
     sentHeading: t("inquiry.sentHeading"),
     sentBody: t("inquiry.sentBody"),
   };

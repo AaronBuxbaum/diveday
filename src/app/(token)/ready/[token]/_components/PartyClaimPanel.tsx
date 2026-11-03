@@ -107,7 +107,7 @@ export function PartyClaimPanel({
                   flush
                   value={seat.claimUrl}
                   copyLabel={t("seatClaim.copyReminder")}
-                  copiedLabel={t("seatClaim.copiedLabel")}
+                  copiedLabel={t("words.did.copied")}
                   failedLabel={t("seatClaim.copyFailedLabel")}
                 />
                 {/* Collapsed by default, deliberately: the raw URL is a bearer

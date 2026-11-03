@@ -240,7 +240,7 @@ export function RegisterForm({
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-3">
-        <SubmitButton pendingLabel={t("register.submitting")} className={buttonClass()}>
+        <SubmitButton pendingLabel={t("words.busy.sending")} className={buttonClass()}>
           {t("register.submit")}
         </SubmitButton>
         <FormStatus tone={state.error ? "danger" : undefined}>{state.error}</FormStatus>

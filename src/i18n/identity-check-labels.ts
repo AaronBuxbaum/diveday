@@ -1,7 +1,7 @@
-import type { IdentityMatchKind } from "@/lib/identity-match";
+import { type IdentityMatchKind, identityReasonMessage } from "@/lib/identity-match";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { readinessBlockerText } from "./readiness-labels";
-import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
+import type { StaffTranslator } from "./staff-messages";
 
 /**
  * The words of a held seat's two answers (`src/components/IdentityCheck.tsx`),
@@ -26,34 +26,6 @@ export function identityCheckWords(t: StaffTranslator, recordName: string) {
     openRecord: t("shared.identityCheck.openRecord"),
     repoint: t("shared.identityCheck.repoint"),
     repointing: t("shared.identityCheck.repointing"),
-  };
-}
-
-/**
- * **The held seat's reason, naming both people** (Aaron, 2026-10-05: the old
- * sentence did not say what the issue was). "Booked as Hana Park with June
- * Park's email" is the whole question in one line, so the two answers under it
- * need no explanation of their own.
- *
- * A key and its values rather than words, so the diver record's status rows,
- * which carry codes, can hold it too. Null for a seat whose booked-as name was
- * never kept, where the generic blocker sentence stands.
- */
-export function identityReasonMessage(
-  claim: { bookedAs: string | null; matchedBy: IdentityMatchKind | null },
-  recordName: string,
-): { key: StaffMessageKey; values: Record<string, string> } | null {
-  const { bookedAs, matchedBy } = claim;
-  if (!bookedAs || !matchedBy) return null;
-  if (bookedAs.trim().toLowerCase() === recordName.trim().toLowerCase()) {
-    return { key: "shared.identityCheck.reasonSameName", values: { name: recordName } };
-  }
-  return {
-    key:
-      matchedBy === "shared_email"
-        ? "shared.identityCheck.reasonSharedEmail"
-        : "shared.identityCheck.reasonPickedName",
-    values: { bookedAs, name: recordName },
   };
 }
 

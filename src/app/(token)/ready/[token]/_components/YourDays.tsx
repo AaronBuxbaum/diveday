@@ -41,7 +41,7 @@ export async function YourDays({
 
   const words: YourDayRowWords = {
     send: t("yourDays.send"),
-    sending: t("yourDays.sending"),
+    sending: t("words.busy.sending"),
     sent: t("yourDays.sent"),
     rateLimited: t("yourDays.rateLimited"),
     failed: t("yourDays.failed"),

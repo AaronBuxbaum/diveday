@@ -39,7 +39,7 @@ export function AddSeat({
             />
           </Field>
           <SubmitButton
-            pendingLabel={t("seatClaim.addPending")}
+            pendingLabel={t("words.busy.adding")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("seatClaim.addSubmit")}

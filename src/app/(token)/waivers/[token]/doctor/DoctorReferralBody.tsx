@@ -143,7 +143,7 @@ export function DoctorReferralBody({
                 choose: t("waiver.doctor.formChoose"),
                 chooseAnother: t("waiver.doctor.formChooseAnother"),
                 submit: t("waiver.doctor.formSubmit"),
-                sending: t("waiver.doctor.formSending"),
+                sending: t("words.busy.sending"),
                 sent: t("waiver.doctor.formSent"),
                 invalid: t("waiver.doctor.formInvalid", { mb: MAX_IMAGE_MB }),
                 rate: t("waiver.doctor.formRate"),

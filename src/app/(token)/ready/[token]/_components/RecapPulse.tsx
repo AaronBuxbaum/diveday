@@ -135,7 +135,7 @@ export function RecapPulse({
         ) : null}
         <div>
           <SubmitButton
-            pendingLabel={t("recap.pulseSending")}
+            pendingLabel={t("words.busy.sending")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("recap.pulseSubmit")}
@@ -153,7 +153,7 @@ export function RecapPulse({
       {ownPulse ? (
         <form action={action} className="mt-3">
           <SubmitButton
-            pendingLabel={t("recap.pulseSending")}
+            pendingLabel={t("words.busy.sending")}
             className={buttonClass({ variant: "link", size: "sm", flush: true })}
           >
             {t("recap.pulseWithdraw")}

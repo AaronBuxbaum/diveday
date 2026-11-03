@@ -90,7 +90,7 @@ export default async function InvitePage({
         passwordLabel={t("account.common.password")}
         confirmPasswordLabel={t("account.invite.confirmPassword")}
         submitLabel={t("account.invite.submit")}
-        savingLabel={t("account.common.saving")}
+        savingLabel={t("words.busy.saving")}
         submitClassName={buttonClass()}
         errorKey={error}
         errorField={errorField}

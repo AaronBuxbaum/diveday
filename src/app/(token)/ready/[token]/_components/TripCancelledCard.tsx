@@ -81,7 +81,7 @@ export function TripCancelledCard({
             {t("ready.moveOffer.lead", { title: offer.title })}
           </p>
           <input type="hidden" name="tripId" value={offer.tripId} />
-          <SubmitButton pendingLabel={t("ready.moveAsk.pending")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.sending")} className={buttonClass()}>
             {t("ready.moveOffer.action", {
               when: formatPlannedDateTimeTz(offer.startsAt, locale, data.detail.shop.timezone),
             })}

@@ -74,10 +74,7 @@ export default async function ForgotPasswordPage({
                 />
               </Field>
             </FieldGrid>
-            <SubmitButton
-              pendingLabel={t("account.forgotPassword.sending")}
-              className={buttonClass()}
-            >
+            <SubmitButton pendingLabel={t("words.busy.sending")} className={buttonClass()}>
               {t("account.forgotPassword.submit")}
             </SubmitButton>
           </form>

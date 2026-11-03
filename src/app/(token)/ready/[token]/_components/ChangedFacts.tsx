@@ -222,7 +222,7 @@ export function ChangedFacts({
                 stretched across the column, and every other Save is as wide
                 as its word (K-470). */}
             <div>
-              <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={saveButton}>
                 {t("ready.saveChange")}
               </SubmitButton>
             </div>
@@ -260,7 +260,7 @@ export function ChangedFacts({
             </Field>
           </FieldGrid>
           <div className="mt-3">
-            <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
+            <SubmitButton pendingLabel={t("words.busy.saving")} className={saveButton}>
               {t("ready.saveChange")}
             </SubmitButton>
           </div>
@@ -268,7 +268,7 @@ export function ChangedFacts({
       </FactRow>
       {/* The one primary act, and the answer this step expects: nothing moved. */}
       <form action={actions.confirm} className="pt-4">
-        <SubmitButton pendingLabel={t("common.saving")} className={buttonClass({ size: "sm" })}>
+        <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass({ size: "sm" })}>
           {t("ready.changesNothing")}
         </SubmitButton>
       </form>

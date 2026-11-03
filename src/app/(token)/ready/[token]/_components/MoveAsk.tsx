@@ -69,7 +69,7 @@ export function MoveAsk({
           />
         </Field>
         <SubmitButton
-          pendingLabel={t("ready.moveAsk.pending")}
+          pendingLabel={t("words.busy.sending")}
           className={buttonClass({ variant: "secondary" })}
         >
           {t("ready.moveAsk.action")}

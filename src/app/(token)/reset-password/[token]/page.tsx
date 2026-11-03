@@ -85,7 +85,7 @@ export default async function ResetPasswordPage({
         passwordLabel={t("account.resetPassword.newPassword")}
         confirmPasswordLabel={t("account.resetPassword.confirmPassword")}
         submitLabel={t("account.resetPassword.submit")}
-        savingLabel={t("account.common.saving")}
+        savingLabel={t("words.busy.saving")}
         submitClassName={buttonClass()}
         errorKey={error}
         errorField={errorField}

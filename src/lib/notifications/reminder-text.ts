@@ -4,8 +4,8 @@ import type { DiverLocale } from "@/i18n/settings";
 import type { CourseLearningMaterial } from "@/lib/courses";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import type { MeetingPoint } from "@/lib/meeting-point";
-import { type BriefConditions, type BriefUnits, forecastText } from "@/lib/night-before-brief";
 import type { ReminderActionCode } from "@/lib/readiness-summary";
+import { type BriefConditions, type BriefUnits, forecastText } from "./night-before-brief";
 
 // i18n-exempt-file: the terminal renderer for the trip-reminder text, on the
 // same footing as `./desk-notes.ts`.
