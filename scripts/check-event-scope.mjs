@@ -7,7 +7,7 @@ import { filesUnder } from "./files-under.mjs";
 /**
  * Every read of an append-only event table names the shop.
  *
- * The event tables (`roll_call_events`, `roll_call_crew_events`, the payment,
+ * The event tables (`roll_call_events`, the payment,
  * review-moderation and work-order trails, and the rest) are written for ever
  * and read by a trip, a person or a parent row. Each carries `shop_id`, and
  * each one's index leads with it. A read by `tripId` alone is correct today

@@ -8,6 +8,7 @@ import {
   unitsUnconfirmedSubjectText,
 } from "@/i18n/today-labels";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
+import { raisedOnTodayBefore } from "@/lib/attempts";
 import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -78,14 +79,13 @@ import {
   listDepartureCrewRollCallByTrip,
   listDepartureRollCallByTrip,
 } from "./manifests";
-import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { openOrdersForBookings } from "./orders";
 import { listOpenPaymentDisputes } from "./payment-disputes";
-import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations";
 import { listTripsReadiness } from "./readiness";
-import { listOwedShopCancellationRefunds, OWED_REFUND_STALE_AFTER_MS } from "./refunds";
 import { readReviewsAwaitingModeration } from "./reviews";
+import { newestMarkFirst, oldestMarkFirst } from "./roll-call-order";
+import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
   boats,
   bookings,
@@ -93,7 +93,6 @@ import {
   interests,
   people,
   personRoles,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripAssignments,
@@ -125,6 +124,7 @@ import {
   seatNotCancelled,
 } from "./trips";
 import { liveTrip } from "./trips-live";
+import { listUnfinished } from "./unfinished";
 import { sharedWelcomeSeatsByTrip } from "./welcome-cues";
 import { listWorkOrdersNeedingAttention } from "./work-order-follow-up";
 
@@ -612,7 +612,7 @@ export async function listRollCallGaps(
       .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled)),
     db
       .select({
-        bookingId: rollCallEvents.bookingId,
+        bookingId: markBookingId(),
         checkpoint: rollCallEvents.checkpoint,
         status: rollCallEvents.status,
         occurredAt: rollCallEvents.occurredAt,
@@ -622,25 +622,27 @@ export async function listRollCallGaps(
       // boat left keeps its event rows, and they must not answer for a roster
       // it is no longer on.
       .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
-      .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
+          inArray(rollCallEvents.tripId, tripIds),
+        ),
+      )
       // `seq` is the final key for the same reason `src/db/manifests.ts` gives:
       // `created_at` is transaction time, so a batched write inside one
       // transaction leaves the order arbitrary — and Today's missing-diver row
       // and the manifest must never disagree about who is still in the water.
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
     db
       .select({
-        tripId: rollCallCrewEvents.tripId,
-        personId: rollCallCrewEvents.personId,
-        checkpoint: rollCallCrewEvents.checkpoint,
-        status: rollCallCrewEvents.status,
-        occurredAt: rollCallCrewEvents.occurredAt,
+        tripId: rollCallEvents.tripId,
+        personId: markCrewPersonId(),
+        checkpoint: rollCallEvents.checkpoint,
+        status: rollCallEvents.status,
+        occurredAt: rollCallEvents.occurredAt,
       })
-      .from(rollCallCrewEvents)
+      .from(rollCallEvents)
       // The crew counterpart of the cancelled-booking guard above: a person
       // taken off the roster keeps their event rows, and they must not answer
       // for a crew list they are no longer on. (`changeTripCrew` refuses to
@@ -649,18 +651,18 @@ export async function listRollCallGaps(
       .innerJoin(
         tripAssignments,
         and(
-          eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
-          eq(tripAssignments.personId, rollCallCrewEvents.personId),
+          eq(tripAssignments.tripId, rollCallEvents.tripId),
+          eq(tripAssignments.personId, rollCallEvents.crewPersonId),
         ),
       )
       .where(
-        and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          crewMarks(),
+          inArray(rollCallEvents.tripId, tripIds),
+        ),
       )
-      .orderBy(
-        asc(rollCallCrewEvents.occurredAt),
-        asc(rollCallCrewEvents.createdAt),
-        asc(rollCallCrewEvents.seq),
-      ),
+      .orderBy(...oldestMarkFirst()),
   ]);
 
   // Seats the desk turned away: off the boat at any checkpoint nobody at the
@@ -1180,7 +1182,7 @@ async function boardedAfterLastDive(
   const rows = await db
     .select({
       tripId: rollCallEvents.tripId,
-      bookingId: rollCallEvents.bookingId,
+      bookingId: markBookingId(),
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
     })
@@ -1188,17 +1190,14 @@ async function boardedAfterLastDive(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         inArray(
           rollCallEvents.tripId,
           departures.map((trip) => trip.id),
         ),
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    );
+    .orderBy(...newestMarkFirst());
   const seen = new Set<string>();
   for (const row of rows) {
     if (row.checkpoint !== lastCheckpoint.get(row.tripId)) continue;
@@ -1894,10 +1893,15 @@ async function readTodayWave(
     // `includeOpsAlerts`; the rows are built further down.
     includeOpsAlerts
       ? Promise.all([
-          listStuckPaymentOperations(db, shopId, new Date(now.getTime() - STALE_AFTER_MS)),
-          listPendingMediaDeletions(db, shopId, new Date(now.getTime() - STALE_PENDING_AFTER_MS)),
-          listOwedShopCancellationRefunds(db, shopId, {
-            olderThan: new Date(now.getTime() - OWED_REFUND_STALE_AFTER_MS),
+          // Each kind's Today cutoff from Today's own `now` (`ATTEMPT_RULES`).
+          listUnfinished(db, shopId, "payment_operation", {
+            olderThan: raisedOnTodayBefore("payment_operation", now),
+          }),
+          listUnfinished(db, shopId, "media_deletion", {
+            olderThan: raisedOnTodayBefore("media_deletion", now),
+          }),
+          listUnfinished(db, shopId, "shop_cancellation_refund", {
+            olderThan: raisedOnTodayBefore("shop_cancellation_refund", now),
           }),
           listOpenPaymentDisputes(db, shopId),
           stripeAccount().then(paymentsRestrictedSince),

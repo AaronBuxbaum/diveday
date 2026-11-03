@@ -5,7 +5,7 @@ import {
   CourseFormsQrButton,
   CourseFormsQrProvider,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/CourseFormsQr";
-import { EyebrowBackLink } from "@/components/ShopPageHeader";
+import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { buttonClass } from "@/components/ui/button";
 import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
 import { getPartyWaiverQueue, type PartyWaiverState } from "@/db/party-waiver-queue";
@@ -53,9 +53,7 @@ export default async function PartyWaiversPage({
   return (
     <StaffPage width="reading">
       <div className="space-y-6">
-        <EyebrowBackLink href={shopPath(shopSlug, "trips", id)}>
-          {t("trips.partyWaiverQueue.back")}
-        </EyebrowBackLink>
+        <EyebrowWayUp>{t("trips.partyWaiverQueue.back")}</EyebrowWayUp>
         <div>
           <h1 className={PAGE_TITLE_CLASS}>{t("trips.partyWaiverQueue.title")}</h1>
           <p className="mt-1 text-muted">{queue.tripTitle}</p>

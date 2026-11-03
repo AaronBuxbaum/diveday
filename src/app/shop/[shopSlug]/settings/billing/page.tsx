@@ -185,11 +185,7 @@ export default async function BillingSettingsPage({
   return (
     <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
-        title={t("billing.title")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("billing.title")} />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
 
       <SectionCard

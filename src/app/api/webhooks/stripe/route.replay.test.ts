@@ -1,7 +1,8 @@
 import { createHmac } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
+import { listUnfinished } from "@/db/unfinished";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout } from "@/test/fakes";
@@ -48,15 +49,12 @@ const { createOrder, recordPaymentOnOpenOrder, refundOrder } = await import("@/d
 const { getBookingPayment, listBookingPaymentEvents, setBookingPayment } = await import(
   "@/db/payments"
 );
-const { bookingCheckouts, integrationEvents, orders, paymentDisputes, tips } = await import(
+const { tipCheckout } = await import("@/db/checkout-purpose");
+const { bookingCheckouts, integrationEvents, orders, paymentDisputes } = await import(
   "@/db/schema"
 );
-const {
-  listStuckPaymentOperations,
-  recordPaymentOperationStripeObject,
-  resolvePaymentOperation,
-  startPaymentOperation,
-} = await import("@/db/payment-operations");
+const { recordPaymentOperationStripeObject, resolvePaymentOperation, startPaymentOperation } =
+  await import("@/db/payment-operations");
 const { paymentOperationIntents } = await import("@/db/schema");
 const { refundBookingOnShopCancellation } = await import("@/db/refunds");
 const { listOpenPaymentDisputes } = await import("@/db/payment-disputes");
@@ -420,7 +418,11 @@ describe("tip session hostile sequences (real handlers, real db)", () => {
   }
 
   async function tipState(db: Db) {
-    const [tip] = await db.select().from(tips).where(eq(tips.stripeSessionId, "cs_1")).limit(1);
+    const [tip] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(and(eq(bookingCheckouts.stripeSessionId, "cs_1"), tipCheckout()))
+      .limit(1);
     return { status: tip?.status ?? null, completedAt: tip?.completedAt ?? null };
   }
 
@@ -429,7 +431,7 @@ describe("tip session hostile sequences (real handlers, real db)", () => {
 
     expect((await deliver(completedPaid("evt_t1", "cs_1"))).status).toBe(200);
     const paid = await tipState(db);
-    expect(paid.status).toBe("paid");
+    expect(paid.status).toBe("completed");
 
     await deliver(completedPaid("evt_t1", "cs_1")); // same-id redelivery
     await deliver(completedPaid("evt_t2", "cs_1")); // fresh-id redelivery
@@ -1081,7 +1083,9 @@ describe("charge.refunded hostile sequences (real handlers, real db)", () => {
   /** Every `started` refund intent this shop holds, however fresh. */
   async function stuckRefunds(db: Db, shopId: string) {
     // Any age: `started_at` is the database clock, which the frozen test clock is not.
-    const stuck = await listStuckPaymentOperations(db, shopId, new Date("2100-01-01T00:00:00Z"));
+    const stuck = await listUnfinished(db, shopId, "payment_operation", {
+      olderThan: new Date("2100-01-01T00:00:00Z"),
+    });
     return stuck
       .map((op) => op.intent)
       .filter((intent) => intent.kind === "refund")

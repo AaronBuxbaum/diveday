@@ -8,13 +8,13 @@ import { isUuid } from "@/lib/uuid";
 import { releasePackageCoverageForBooking } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear-reservations";
+import { crewMarks, seatMarks } from "./roll-call-subject";
 import {
   bookingCheckouts,
   bookings,
   executedDives,
   incidentReports,
   interests,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   trips,
@@ -144,6 +144,7 @@ export async function notificationHeldForRehearsal(
     const [row] = await db
       .select({ tripId: bookingCheckouts.tripId })
       .from(bookingCheckouts)
+      // diveday:any-checkout-purpose: a checkout of either purpose names its departure the same way
       .where(and(eq(bookingCheckouts.id, handles.checkoutId), eq(bookingCheckouts.shopId, shopId)))
       .limit(1);
     if (row) tripIds.add(row.tripId);
@@ -269,21 +270,20 @@ export async function rehearsalsWithEvidence(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         inArray(rollCallEvents.tripId, [...tripIds]),
         or(eq(rollCallEvents.status, "boarded"), ne(rollCallEvents.checkpoint, "departure")),
       ),
     );
   const crew = await db
-    .selectDistinct({ tripId: rollCallCrewEvents.tripId })
-    .from(rollCallCrewEvents)
+    .selectDistinct({ tripId: rollCallEvents.tripId })
+    .from(rollCallEvents)
     .where(
       and(
-        eq(rollCallCrewEvents.shopId, shopId),
-        inArray(rollCallCrewEvents.tripId, [...tripIds]),
-        or(
-          eq(rollCallCrewEvents.status, "boarded"),
-          ne(rollCallCrewEvents.checkpoint, "departure"),
-        ),
+        eq(rollCallEvents.shopId, shopId),
+        crewMarks(),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+        or(eq(rollCallEvents.status, "boarded"), ne(rollCallEvents.checkpoint, "departure")),
       ),
     );
   const reported = await db

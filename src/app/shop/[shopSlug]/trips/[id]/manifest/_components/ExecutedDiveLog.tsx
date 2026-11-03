@@ -210,11 +210,10 @@ export function ExecutedDiveLog({
                   depthUnit={depthUnit}
                 />
               </details>
-              {/* A closed `<details>` contributes nothing to print, and the
-                  packet's stylesheet hides every input inside
-                  `.trip-print-bundle` anyway — so what paper carried here was a
-                  blank form. It carries the state instead, restated outside the
-                  disclosure the same way the checklist's lines are. */}
+              {/* A closed `<details>` contributes nothing to print, so what
+                  paper carried here was a blank form. It carries the state
+                  instead, restated outside the disclosure the same way the
+                  checklist's lines are. */}
               <p className="hidden px-4 py-3 text-base print:block">{summaryLine}</p>
             </div>
           ))}

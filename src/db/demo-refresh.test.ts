@@ -18,7 +18,6 @@ import {
   executedDives,
   people,
   personRoles,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   staffCredentials,
@@ -240,7 +239,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // A shop as it looks when it was seeded by a version of this code that had
     // never heard of her.
     await db.delete(tripAssignments).where(eq(tripAssignments.personId, relief[0].id));
-    await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.personId, relief[0].id));
+    await db.delete(rollCallEvents).where(eq(rollCallEvents.crewPersonId, relief[0].id));
     await db.delete(staffShifts).where(eq(staffShifts.personId, relief[0].id));
     await db.delete(staffCredentials).where(eq(staffCredentials.personId, relief[0].id));
     await db.delete(personRoles).where(eq(personRoles.personId, relief[0].id));
@@ -524,9 +523,9 @@ describe("refreshCanonicalDemoSchedule", () => {
         .from(rollCallEvents)
         .where(eq(rollCallEvents.tripId, tripId));
       const crew = await db
-        .select({ at: rollCallCrewEvents.occurredAt })
-        .from(rollCallCrewEvents)
-        .where(eq(rollCallCrewEvents.tripId, tripId));
+        .select({ at: rollCallEvents.occurredAt })
+        .from(rollCallEvents)
+        .where(eq(rollCallEvents.tripId, tripId));
       return [...divers, ...crew].map((row) => row.at.getTime());
     }
 
@@ -706,12 +705,13 @@ describe("refreshCanonicalDemoSchedule", () => {
       expect(afterDiveTwo?.summary.awaiting).toBe(0);
       expect(afterDiveTwo?.summary.boarded).toBe(afterDiveTwo?.summary.totalDivers);
       const crewBack = await db
-        .select({ personId: rollCallCrewEvents.personId })
-        .from(rollCallCrewEvents)
+        .select({ personId: rollCallEvents.crewPersonId })
+        .from(rollCallEvents)
         .where(
           and(
-            eq(rollCallCrewEvents.tripId, boat.id),
-            eq(rollCallCrewEvents.checkpoint, "after_dive_2"),
+            eq(rollCallEvents.tripId, boat.id),
+            eq(rollCallEvents.subjectKind, "crew"),
+            eq(rollCallEvents.checkpoint, "after_dive_2"),
           ),
         );
       const crew = await db
@@ -801,12 +801,13 @@ describe("refreshCanonicalDemoSchedule", () => {
       expect(afterDiveTwo?.summary.notBackAboard).toBe(0);
       expect(afterDiveTwo?.summary.boarded).toBe(afterDiveTwo?.summary.totalDivers);
       const crewBack = await db
-        .select({ personId: rollCallCrewEvents.personId })
-        .from(rollCallCrewEvents)
+        .select({ personId: rollCallEvents.crewPersonId })
+        .from(rollCallEvents)
         .where(
           and(
-            eq(rollCallCrewEvents.tripId, boat.id),
-            eq(rollCallCrewEvents.checkpoint, "after_dive_2"),
+            eq(rollCallEvents.tripId, boat.id),
+            eq(rollCallEvents.subjectKind, "crew"),
+            eq(rollCallEvents.checkpoint, "after_dive_2"),
           ),
         );
       const crew = await db

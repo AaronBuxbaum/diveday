@@ -6,7 +6,7 @@ import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
-import { people, rollCallCrewEvents, rollCallEvents, shops } from "./schema";
+import { people, rollCallEvents, shops } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const context = fileScopedShopContext();
@@ -66,12 +66,12 @@ async function fixture() {
   const crewNote = async (clientEventId: string) => {
     const [event] = await db
       .select({
-        note: rollCallCrewEvents.note,
-        status: rollCallCrewEvents.status,
-        occurredAt: rollCallCrewEvents.occurredAt,
+        note: rollCallEvents.note,
+        status: rollCallEvents.status,
+        occurredAt: rollCallEvents.occurredAt,
       })
-      .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.clientEventId, clientEventId));
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.clientEventId, clientEventId));
     return event;
   };
   return {

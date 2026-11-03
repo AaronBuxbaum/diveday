@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { FlashParams } from "@/components/FlashParams";
 import { keptTypedScope } from "@/components/kept-typed-scope";
-import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -139,7 +139,7 @@ export default async function WorkOrderPage({
       </p>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <EyebrowBackLink href={board}>{t("workOrders.title")}</EyebrowBackLink>
+          <EyebrowWayUp>{t("workOrders.title")}</EyebrowWayUp>
           <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{subject}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-muted">
             <span className="font-medium text-foreground tabular-nums">

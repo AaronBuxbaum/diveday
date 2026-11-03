@@ -22,7 +22,7 @@ describe("the paper", () => {
     expect(rule).toMatch(/margin:\d+mm/);
     const box = PRINT_SHEET_BOX_MM[PAPER_PASS_PAPER];
     expect(box.width).toBeGreaterThan(0);
-    expect(box.height).toBeGreaterThan(box.width);
+    expect(box.height ?? 0).toBeGreaterThan(box.width);
   });
 });
 

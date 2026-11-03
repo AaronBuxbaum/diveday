@@ -120,9 +120,8 @@ describe("the executed-dive record is collapsed, and paper still carries it", ()
     const { container } = renderLog("Dive 1 — Molasses Reef, 18 m, 8:05 – 8:47");
 
     const disclosure = container.querySelector("details");
-    // A closed `<details>` prints nothing, and the packet's stylesheet hides
-    // every input inside `.trip-print-bundle` anyway — so what paper carried
-    // here was a blank form. The line outside is what it carries instead.
+    // A closed `<details>` prints nothing, so what paper carried here was a
+    // blank form. The line outside is what it carries instead.
     const printed = [...container.querySelectorAll<HTMLElement>("p")].find(
       (node) => node.className.includes("print:block") && !disclosure?.contains(node),
     );

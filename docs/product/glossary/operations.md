@@ -1204,8 +1204,9 @@
 - **Crew roll-call event** — the crew half of a head count: a named staff member said one **assigned crew
   member** is aboard, not aboard, or cleared, at one checkpoint. Same append-only history, same
   supersession, and the same two meanings of "not boarded" as a diver's roll-call event; the subject
-  is a person on the trip's crew list rather than a booking, which is why it is its own table
-  (`roll_call_crew_events`) and `roll_call_events.booking_id` stays `NOT NULL`. It exists because a
+  is a person on the trip's crew list rather than a booking. It is a `roll_call_events` row with
+  `subject_kind = 'crew'` and `crew_person_id` set, beside the seat rows, and a check refuses a row
+  about nobody (ADR 20261103-one-roll-call-ledger). It exists because a
   count **names nobody**: "3 of 3 aboard" cannot tell the boat that the third body is the deckhand
   rather than the divemaster who has not surfaced — which is why it is now the *only* crew evidence
   a checkpoint reads. A trip with **no crew assigned is not exempt**: an empty crew list holds the
@@ -1396,8 +1397,8 @@
   wins. That is what lets a crew member who marks the wrong row and corrects it within the same
   millisecond keep the correction, on the screen and after the sync alike — and it is a rule with
   two halves that have to agree, so changing either one alone is a bug. On the server side that
-  order is now a property of the rows rather than of the clock's resolution: `roll_call_events` and
-  `roll_call_crew_events` carry a monotonic `seq` that is the final ordering key everywhere they are
+  order is now a property of the rows rather than of the clock's resolution: `roll_call_events`, seat
+  and crew alike, carries a monotonic `seq` that is the final ordering key everywhere it is
   read, because `created_at` is *transaction* time and a synced offline batch ties on it exactly.
   A **rejected** device event is the one asymmetric case: it may never *downgrade* a "not back
   aboard" that a non-rejected source states — silently demoting a missing diver to "awaiting" is the
@@ -2231,3 +2232,15 @@
   assist works the same without it. Code: `runAssist` in `src/db/assists.ts`; on screen, the
   controls in `src/components/assists/` (`AssistDraftButton` and its siblings). Not "AI": the copy
   names Claude.
+- **Unfinished work** — work DiveDay or the shop still has to finish for someone, in one grammar
+  (issue #2703): `pending` until it is done or attested, `in_flight` while a call is out, then
+  `done` or `failed` with a reason. Each ledger keeps its own status word and `src/lib/attempts.ts`
+  places it (`LEDGER_STATES`); the rule for when each kind is stuck, and when Today raises it, is
+  `ATTEMPT_RULES`. Five kinds today: payment operations still in flight past five minutes, media
+  deletes that failed or died mid-call, processor erasures still owed to a diver, a
+  shop-cancellation refund (a seat still holding its money on a departure the shop called off,
+  except a diver who cancelled and forfeited), and a **failed refund**. One reader,
+  `listUnfinished` / `readUnfinished` in `src/db/unfinished.ts`, answers for all of them; each
+  surface shows its own kinds in its own words (Orders the money, Settings' Data group the erasure
+  halves, Today the stuck payments, failed deletes and day-old cancellation refunds). The
+  notification send queue is not one of them: its parked rows go to operator logging (#1826).

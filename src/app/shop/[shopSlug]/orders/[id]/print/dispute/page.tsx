@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { PrintButton } from "@/components/PrintButton";
-import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportDisputeSheet } from "@/db/authz";
@@ -19,7 +20,6 @@ import {
   formatTimeZoneName,
 } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { lineKindKey, STATUS_KEYS } from "../../order-detail-keys";
 
@@ -86,9 +86,7 @@ export default async function DisputeSheetPage({
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <EyebrowBackLink href={shopPath(shopSlug, "orders", orderId)} className="print:hidden">
-              {t("disputeSheet.back")}
-            </EyebrowBackLink>
+            <EyebrowWayUp className="print:hidden">{t("disputeSheet.back")}</EyebrowWayUp>
             <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("disputeSheet.title")}</p>
             <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{sheet.diverName}</h1>
             <p className="mt-1 text-muted">

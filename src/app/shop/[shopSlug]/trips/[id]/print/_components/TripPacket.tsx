@@ -1,65 +1,49 @@
+import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { EmptyState } from "@/components/EmptyState";
+import { SECTION_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { departureVessels } from "@/db/boats";
 import { getDb } from "@/db/client";
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
 import { readTripPaperIdentity } from "@/db/trip-paper-identity";
-import { getTripOverview, type TripOverviewShop } from "@/db/trips";
+import { getTripOverview } from "@/db/trips";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
+import { publicAppUrl } from "@/lib/notifications";
+import { PACKET_PAPER, storefrontAddress } from "@/lib/print-sheets";
+import type { requireShopSurface } from "@/lib/session";
 import { stablePacket } from "@/lib/stable-packet";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { shopPath } from "@/lib/staff-notices";
+import { PaperSheet, SheetMark, type SheetTone } from "../../../../print/_components/PaperSheet";
 import {
   DeparturePaperIdentity,
   formatPaperDateTime,
 } from "../../_components/DeparturePaperIdentity";
-import { TripPageHeader } from "../../_components/TripPageHeader";
-import {
-  PAPER_PACKET,
-  PRINTED_MEDICAL_ALERTS,
-} from "../../manifest/_components/manifest-search-params";
-import TripManifestPage from "../../manifest/page";
-import TripPrepPage from "../../prep/page";
+import { ManifestPaper } from "../../manifest/_components/ManifestPaper";
+import { readManifestView } from "../../manifest/_components/manifest-view";
+import { PrintedBoatPaper } from "../../manifest/_components/PrintedBoatProcedure";
+import { PrepBody } from "../../prep/_components/PrepBody";
+import { readPrepView } from "../../prep/_components/prep-reads";
 import { PacketDives } from "./PacketDives";
-import type { PacketDocument } from "./PacketDocument";
 
 /**
  * The marker `AutoPrint` waits for before it opens the print dialog: the last
- * thing either packet renders, so its presence means the whole document has
+ * thing every packet renders, so its presence means the whole document has
  * mounted.
  */
 export const PACKET_READY_SELECTOR = "[data-packet-ready]";
 
-/** Renders {@link PACKET_READY_SELECTOR}. Place it last, inside the bundle. */
+/** Renders {@link PACKET_READY_SELECTOR}. Place it last, inside the document. */
 export function PacketReady() {
   return <div data-packet-ready className="contents" />;
 }
 
-/**
- * **One departure as three printed sections** — the dive plan, the manifest,
- * and the morning packing list.
- *
- * Extracted from the trip packet page so the day's paper (N-54) is the *same*
- * document repeated per departure rather than a second assembly of the same
- * facts. Both callers wrap it in `.trip-print-bundle`, which is what hides any
- * control that reaches paper and what breaks each section onto its own sheet.
- *
- * The two composed pages stay the source of truth for their own facts, exactly
- * as the packet's docblock argues: they contribute zero controls, and reusing
- * the page means the sheet cannot drift from the screen staff just reviewed.
- * The dive plan is the one part rendered here, because on the Overview tab
- * those facts live inside form controls and paper has no forms.
- *
- * Returns `null` for a departure that is gone. A missing trip is a `notFound()`
- * for the single-trip packet, whose whole subject it is; on the day's sheet it
- * is one boat of several, and the honest answer is to print the rest.
- */
-type TripPacketProps = {
+type ShopSurface = Awaited<ReturnType<typeof requireShopSurface>>;
+
+type TripPacketProps = Pick<ShopSurface, "shop" | "session"> & {
   shopSlug: string;
-  shop: TripOverviewShop & { name: string };
   /** Already validated as a UUID by the caller. */
   tripId: string;
-  actorPersonId: string;
   locale: string;
   t: StaffTranslator;
   /**
@@ -70,135 +54,263 @@ type TripPacketProps = {
   printedMedicalAlerts?: PrintedMedicalAlerts;
 };
 
+/** The shop's band, as every sheet the shop prints wears it. */
+export function shopSheetTone(shop: { brandColor: string | null }): SheetTone {
+  const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
+  return { band: theme.primary, bandInk: theme.primaryForeground };
+}
+
+/**
+ * **One sheet of a packet**: the shop's band with the sheet's own name in it,
+ * and the fold line every sheet carries (the print time in the shop's zone,
+ * and the storefront's address).
+ */
+export function PacketSheet({
+  shop,
+  shopSlug,
+  name,
+  printed,
+  children,
+}: {
+  shop: { name: string; brandColor: string | null };
+  shopSlug: string;
+  /** What this sheet is: "Manifest", "Prep", the day's title. */
+  name: string;
+  printed: string;
+  children: ReactNode;
+}) {
+  return (
+    <PaperSheet
+      paper={PACKET_PAPER}
+      tone={shopSheetTone(shop)}
+      band={
+        <>
+          <SheetMark name={shop.name} size="sm" />
+          <span className="font-brand-display text-sm font-bold">{shop.name}</span>
+          <span className="ms-auto text-sm font-semibold">{name}</span>
+        </>
+      }
+      foldLeft={printed}
+      foldRight={storefrontAddress(shopSlug, publicAppUrl())}
+    >
+      {children}
+    </PaperSheet>
+  );
+}
+
+/**
+ * What a packet's document is: its sheets, given what leads the first one.
+ *
+ * **The lead rides on the first sheet rather than a cover of its own.** The
+ * day's paper opens with which day it is and how many boats it holds; on a
+ * sheet by itself that was a page with three lines on it, so it heads the
+ * first boat's manifest sheet instead (or the warning that replaced it).
+ */
+export type PacketSheets = (lead?: ReactNode) => ReactNode;
+
+/**
+ * **One departure as two sheets** (issue #2745): the dive plan with the
+ * manifest under it, for the boat, and the morning packing list, for the gear
+ * room.
+ *
+ * Shared by the trip packet, the medical-alerts packet and the day's paper
+ * (N-54), so the day is the *same* document repeated per departure rather
+ * than a second assembly of the same facts.
+ *
+ * **Sheets, read from the readers the tabs use.** The Boat and Gear tabs and
+ * these sheets build their facts in one place each (`readManifestView`,
+ * `readPrepView`), so the sheet cannot drift from the screen a captain just
+ * reviewed; the sheets render the paper half of each (`ManifestPaper`,
+ * `PrepBody`'s paper), which holds no control at all. Nothing interactive
+ * reaches paper because nothing interactive is rendered, not because a
+ * stylesheet hides it.
+ *
+ * Returns `null` for a departure that is gone. A missing trip is a `notFound()`
+ * for the single-trip packet, whose whole subject it is; on the day's sheet it
+ * is one boat of several, and the honest answer is to print the rest.
+ */
 async function composeTripPacket({
   shopSlug,
   shop,
+  session,
   tripId,
-  actorPersonId,
   locale,
   t,
   printedMedicalAlerts,
-}: TripPacketProps): Promise<ReactNode> {
-  const params = Promise.resolve({ shopSlug, id: tripId });
-  // **The composed pages scope their own element ids to this departure.** Both
-  // carry fixed ids (`roll-call-list`, `tanks-heading`, …) that are correct on
-  // a route showing one boat and silently wrong on a document showing several:
-  // every reference in the second departure resolves to the first departure's
-  // element, and two of those sections are the ones that say whether a boat is
-  // safe to leave. `src/lib/element-id.ts` carries the full reasoning, and the
-  // reason this rides on `searchParams` rather than a prop is that a page
-  // component's props are pinned to Next's `PageProps`.
-  const searchParams = Promise.resolve({
-    idPrefix: tripId,
-    // The composed pages render their paper, not their controls (B03, B55).
-    [PAPER_PACKET]: true as const,
-    ...(printedMedicalAlerts ? { [PRINTED_MEDICAL_ALERTS]: printedMedicalAlerts } : {}),
-  });
+}: TripPacketProps): Promise<PacketSheets | null> {
   const db = await getDb();
-  // **The overview resolves alone, first.** It is the cheapest of the three
-  // reads and the one that answers "is this departure still there", and the
-  // other two cannot answer it politely: the manifest page's own reply to a
-  // vanished trip is `notFound()`, which throws, and a throw inside a
-  // `Promise.all` beside it is the *caller's* answer rather than this
-  // departure's. Sequencing it costs one round trip on a document nobody
-  // navigates twice, and buys the day's paper a boat that can go missing
-  // without taking the rest of the stack with it.
-  const details = await getTripOverview(db, shop, tripId, actorPersonId);
+  // **The overview resolves alone, first.** It is the cheapest read and the
+  // one that answers "is this departure still there", so the day's paper can
+  // lose a boat without losing the rest of the stack.
+  const details = await getTripOverview(db, shop, tripId, session.user.personId);
   if (!details) return null;
 
-  const vessel = (await departureVessels(db, shop.id, [tripId])).get(tripId);
+  // **Ids scoped to this departure.** The day's document holds one of these
+  // per boat, and a repeated `aria-labelledby` target would point every
+  // heading at the first boat's (`src/lib/element-id.ts`).
+  const idPrefix = tripId;
+  const now = nowDate();
+  const [vessels, manifest, prep] = await Promise.all([
+    departureVessels(db, shop.id, [tripId]),
+    readManifestView({
+      db,
+      shop,
+      session,
+      shopSlug,
+      tripId,
+      idPrefix,
+      printedMedicalAlerts,
+      locale,
+      t,
+    }),
+    readPrepView(db, shop, tripId, now),
+  ]);
+  // A departure whose overview resolved but whose manifest or packing list
+  // did not is gone in the window between the reads: the same `notFound()`
+  // the tab pages answer with, which the trip packet turns into its 404 and
+  // the day's paper settles into a dropped boat (`keptSheets`).
+  if (manifest.status !== "ready" || !prep) notFound();
+  const vessel = vessels.get(tripId);
   const identity = [
     shop.name,
     details.trip.title,
     `${formatPaperDateTime(details.trip.startsAt, locale, shop.timezone)} · ${shop.timezone}`,
     vessel?.name ?? "",
   ];
-  const printed = `${t("print.sheet.printed", { date: formatPaperDateTime(nowDate(), locale, shop.timezone) })} · ${shop.timezone}`;
-
-  const [manifest, prep] = await Promise.all([
-    TripManifestPage({ params, searchParams }),
-    TripPrepPage({ params, searchParams }),
-  ]);
-
-  // The one title block per departure (B55), and the same header again on the
-  // packing list's sheet on paper only: that sheet starts a page of its own
-  // and goes to the gear room, so it still says which boat it is for.
-  const header = (
-    <TripPageHeader
-      trip={details.trip}
-      boardHref={shopPath(shopSlug, "schedule", "board")}
-      backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-      locale={locale}
-      timeZone={shop.timezone}
-    />
+  const printed = `${t("print.sheet.printed", { date: formatPaperDateTime(now, locale, shop.timezone) })} · ${shop.timezone}`;
+  // Which departure, at the head of each sheet: each starts a page of its
+  // own, and the gear room's sheet still has to say which boat it is for.
+  const head = (
+    <header className="mb-6 border-b border-border pb-4">
+      <h3 className={SECTION_TITLE_CLASS} data-packet-departure>
+        {details.trip.title}
+      </h3>
+      <p className="mt-1 text-sm text-muted">
+        {[
+          // Out and due back: the return time is what an overdue-boat call
+          // is measured against (dock-operator review of #3724).
+          `${formatPaperDateTime(details.trip.startsAt, locale, shop.timezone)} – ${formatPaperDateTime(details.trip.endsAt, locale, shop.timezone)} · ${shop.timezone}`,
+          vessel?.name,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
+    </header>
   );
+  const sheetShop = { name: shop.name, brandColor: shop.brandColor };
 
-  return (
+  return (lead) => (
     <>
-      {/* Section ids carry the trip id: the day's sheet holds one of these
-          blocks per departure, and a repeated `aria-labelledby` target would
-          point every heading at the first boat's. */}
       <DeparturePaperIdentity
         pageName={`departure-${tripId}-dives`}
-        identity={[...identity, t("shared.printPacket.divesHeading")]}
+        // The manifest's own running header: the boat, "Manifest" and the
+        // roll-call checkpoint, on every page this sheet runs to.
+        identity={manifest.paperIdentity.identity}
         printed={printed}
       >
-        <section aria-labelledby={`print-dives-${tripId}`} className="print-bundle-page">
-          <h2 id={`print-dives-${tripId}`} className="sr-only">
-            {t("shared.printPacket.divesHeading")}
-          </h2>
-          {/* Each section breaks onto its own page, so page one has to say which
-            departure it is — through the same header its sub-pages wear, not a
-            hand-rolled title line that would drift from them. */}
-          {header}
-          <PacketDives
-            dives={details.tripDiveList.map(({ dive, diveSite }) => ({
-              diveNumber: dive.diveNumber,
-              heading: diveSite?.name ?? dive.title,
-              travelMinutes: dive.travelMinutes,
-              description: dive.description,
-            }))}
-            description={details.trip.description}
-            meetingPointLabel={details.trip.meetingPointLabel}
-            meetingPointAddress={details.trip.meetingPointAddress}
-            conditions={details.trip.conditionsSummary}
-            t={t}
-          />
-        </section>
+        <PacketSheet
+          shop={sheetShop}
+          shopSlug={shopSlug}
+          name={t("trips.surfaces.manifest")}
+          printed={printed}
+        >
+          {lead}
+          <section data-packet-section aria-labelledby={`print-dives-${tripId}`}>
+            <h2 id={`print-dives-${tripId}`} className="sr-only">
+              {t("shared.printPacket.divesHeading")}
+            </h2>
+            {head}
+            <PacketDives
+              dives={details.tripDiveList.map(({ dive, diveSite }) => ({
+                diveNumber: dive.diveNumber,
+                heading: diveSite?.name ?? dive.title,
+                travelMinutes: dive.travelMinutes,
+                description: dive.description,
+              }))}
+              description={details.trip.description}
+              meetingPointLabel={details.trip.meetingPointLabel}
+              meetingPointAddress={details.trip.meetingPointAddress}
+              conditions={details.trip.conditionsSummary}
+              t={t}
+            />
+          </section>
+          {/* **The dive plan and the roll call share a sheet.** The plan is a
+              title, a meeting point and a line per dive; on a page of its own
+              it left most of the first sheet blank. */}
+          <section
+            data-packet-section
+            aria-labelledby={`print-manifest-${tripId}`}
+            className="mt-6 border-t border-border pt-6"
+          >
+            <h2 id={`print-manifest-${tripId}`} className="sr-only">
+              {t("trips.surfaces.manifest")}
+            </h2>
+            <ManifestPaper
+              cancelled={manifest.cancelled}
+              manifest={manifest.manifest}
+              vesselName={manifest.vessel?.name ?? null}
+              boatSafety={manifest.boatSafety ? { ...manifest.boatSafety, idPrefix } : null}
+              checklist={manifest.checklistProps}
+              rollCall={manifest.rollCall}
+              boatPaper={<PrintedBoatPaper {...manifest.boatPaper} />}
+              stage={manifest.stage}
+              dockDesk={manifest.dockDesk}
+              t={t}
+            />
+          </section>
+        </PacketSheet>
       </DeparturePaperIdentity>
-      <section
-        aria-labelledby={`print-manifest-${tripId}`}
-        className="print-bundle-page print-bundle-continues"
-      >
-        <h2 id={`print-manifest-${tripId}`} className="sr-only">
-          {t("trips.surfaces.manifest")}
-        </h2>
-        {manifest}
-      </section>
       <DeparturePaperIdentity
         pageName={`departure-${tripId}-prep`}
         identity={[...identity, t("trips.surfaces.prep")]}
         printed={printed}
       >
-        <section aria-labelledby={`print-prep-${tripId}`} className="print-bundle-page">
-          <h2 id={`print-prep-${tripId}`} className="sr-only">
-            {t("trips.surfaces.prep")}
-          </h2>
-          <div className="hidden print:block">{header}</div>
-          {prep}
-        </section>
+        <PacketSheet
+          shop={sheetShop}
+          shopSlug={shopSlug}
+          name={t("trips.surfaces.prep")}
+          printed={printed}
+        >
+          <section data-packet-section aria-labelledby={`print-prep-${tripId}`}>
+            <h2 id={`print-prep-${tripId}`} className="sr-only">
+              {t("trips.surfaces.prep")}
+            </h2>
+            {head}
+            <PrepBody
+              prep={prep.prep}
+              t={t}
+              locale={locale}
+              shopSlug={shopSlug}
+              tripId={tripId}
+              rentalItems={shop.rentalItems}
+              notice={undefined}
+              grouping="item"
+              cancelled={prep.prep.trip.status === "cancelled"}
+              sailed={prep.sailed}
+              home={prep.finished}
+              backFromBoat={prep.backFromBoat}
+              groupPath=""
+              emptyState={
+                <EmptyState title={t("tripPrep.emptyHeading")} body={t("tripPrep.noDivers")} />
+              }
+              idPrefix={idPrefix}
+              paper
+              className="space-y-10"
+            />
+          </section>
+        </PacketSheet>
       </DeparturePaperIdentity>
     </>
   );
 }
 
 /** Identity rows must stay unchanged throughout all independently composed readers. */
-export async function TripPacket(props: TripPacketProps): Promise<PacketDocument | null> {
+export async function TripPacket(props: TripPacketProps): Promise<PacketSheets | null> {
   const db = await getDb();
   const result = await stablePacket(
     () => readTripPaperIdentity(db, props.shop.id, props.tripId),
     async (identity) => {
-      // The composed routes resolve the same authenticated shop; an identity edit
+      // The readers resolve the same authenticated shop; an identity edit
       // after that resolution must never be papered over with a newer header.
       if (identity.shopName !== props.shop.name || identity.timezone !== props.shop.timezone)
         return null;
@@ -206,25 +318,26 @@ export async function TripPacket(props: TripPacketProps): Promise<PacketDocument
     },
   );
   if (result.status === "missing") return null;
-  if (result.status === "stable" && result.packet)
-    return {
-      document: result.packet,
-      openingPageName: `departure-${props.tripId.toLowerCase()}-dives`,
-    };
-  const openingPageName = `departure-${props.tripId.toLowerCase()}-changed`;
-  return {
-    openingPageName,
-    document: (
-      <DeparturePaperIdentity
-        pageName={openingPageName}
-        identity={[props.shop.name, props.t("shared.printPacket.changedHeading"), props.tripId]}
-        printed={`${formatPaperDateTime(nowDate(), props.locale, props.shop.timezone)} · ${props.shop.timezone}`}
+  if (result.status === "stable" && result.packet) return result.packet;
+  const printed = `${formatPaperDateTime(nowDate(), props.locale, props.shop.timezone)} · ${props.shop.timezone}`;
+  return (lead) => (
+    <DeparturePaperIdentity
+      pageName={`departure-${props.tripId.toLowerCase()}-changed`}
+      identity={[props.shop.name, props.t("shared.printPacket.changedHeading"), props.tripId]}
+      printed={printed}
+    >
+      <PacketSheet
+        shop={{ name: props.shop.name, brandColor: props.shop.brandColor }}
+        shopSlug={props.shopSlug}
+        name={props.t("shared.printPacket.changedHeading")}
+        printed={printed}
       >
-        <section className="print-bundle-page" role="alert">
-          <h2>{props.t("shared.printPacket.changedHeading")}</h2>
-          <p>{props.t("shared.printPacket.changed", { id: props.tripId })}</p>
+        {lead}
+        <section role="alert">
+          <h2 className={SUB_TITLE_CLASS}>{props.t("shared.printPacket.changedHeading")}</h2>
+          <p className="mt-2">{props.t("shared.printPacket.changed", { id: props.tripId })}</p>
         </section>
-      </DeparturePaperIdentity>
-    ),
-  };
+      </PacketSheet>
+    </DeparturePaperIdentity>
+  );
 }

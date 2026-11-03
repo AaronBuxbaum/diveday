@@ -78,6 +78,7 @@ export function findCiChangeDetectionViolations(contents) {
 
   if (step.includes("pull_request.base.ref") || /origin\/\$\{?BASE_REF/.test(step)) {
     violations.push(
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: quotes the shell variable as written in the workflow.
       "it resolves the pull-request base through the live base branch (`pull_request.base.ref` / `origin/${BASE_REF}`). That ref advances during the run and can come to contain the PR head, which empties the range (issue #3259). Use `github.event.pull_request.base.sha`.",
     );
   }

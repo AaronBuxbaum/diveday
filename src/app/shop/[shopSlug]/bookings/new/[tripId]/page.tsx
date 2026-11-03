@@ -24,7 +24,7 @@ import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { SeatDiverPanel } from "../../../_components/SeatDiverPanel";
 
@@ -148,7 +148,6 @@ export default async function NewBookingDiverPage({
           step one names. */}
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-        eyebrowHref={shopPath(shopSlug, "schedule", "board")}
         title={t("bookings.new.title")}
       />
 

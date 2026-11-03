@@ -177,7 +177,9 @@ export default async function NewDiverPage({
     <StaffPage width="reading">
       <ShopPageHeader
         eyebrow={backLink.label}
-        eyebrowHref={backLink.href}
+        // Opened from a departure, the way back is that departure, which only
+        // the query knows; otherwise the route tree's parent, the roster.
+        returnTo={surface === "departure" && tripId ? backLink.href : undefined}
         title={t("divers.page.newDiverTitle")}
         // Not where the form asks for an email: the lead would say the opposite.
         description={emailRequired ? undefined : t("divers.page.newDiverLead")}

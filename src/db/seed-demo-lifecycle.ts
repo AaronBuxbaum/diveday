@@ -74,9 +74,9 @@ import {
   recapPhotos,
   recapPulses,
   rentalFitProfiles,
+  retiredRollCallCrewEvents,
   reviewModerationEvents,
   reviewReplies,
-  rollCallCrewEvents,
   rollCallEvents,
   shopBackupDeliveries,
   shopBackupDeliveryClaims,
@@ -96,7 +96,6 @@ import {
   staffShifts,
   stripePayouts,
   stripeRefundFailures,
-  tips,
   tripAssignments,
   tripBlowoutDivers,
   tripBlowouts,
@@ -204,7 +203,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
-  await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
   // lever W) — two of them, and neither is deleted first — so it goes before them.
@@ -215,8 +213,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // Each report takes its people rows with it (cascade): a raised report
   // points at its subject's row, so that row cannot go first.
   await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
-  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
+  // diveday:roll-call-both-subjects: the demo shop's whole ledger goes, seat and crew.
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // Retired by #2700 and dropped next release; until then it may still hold rows naming the shop.
+  await db.delete(retiredRollCallCrewEvents).where(eq(retiredRollCallCrewEvents.shopId, shopId));
   // Events before the shop's own item list they reference.
   // A snag names its boat, its departures and its checklist line, none cascading.
   await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));

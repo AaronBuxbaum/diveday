@@ -49,11 +49,14 @@ import { SHOP_EXPORT_FILES } from "./export-shop-files";
 import {
   buildExportTables,
   countShopScoped,
+  countShopTips,
   type DiverExportScope,
   readScoped,
+  readTipRows,
   type ShopExportScope,
 } from "./export-tables";
 import { shopRehearsalIds } from "./rehearsals";
+import { countRollCallMarks, splitRollCallRows } from "./roll-call-subject";
 import {
   bookingReferrals,
   bookings,
@@ -473,7 +476,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const tripHelpRequestRows = await readScoped(tx, "tripHelpRequests", scope);
 
-  const tipRows = await readScoped(tx, "tips", scope);
+  const tipRows = await readTipRows(tx, scope);
 
   const paymentRows = await readScoped(tx, "bookingPayments", scope);
   const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
@@ -504,9 +507,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const arrivalRows = await readScoped(tx, "bookingArrivalEvents", scope);
 
-  const rollCallRows = await readScoped(tx, "rollCallEvents", scope);
-
-  const crewRollCallRows = await readScoped(tx, "rollCallCrewEvents", scope);
+  const rollCallMarks = splitRollCallRows(await readScoped(tx, "rollCallEvents", scope));
 
   // **`buddy_teams.csv` is a file a person reads** (H-20260916-tiebreaker-user-visible-list, issue #1795): teams
   // in the panel's order — formation time, then the members' names, then
@@ -690,8 +691,8 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     activityRows,
     notificationRows,
     arrivalRows,
-    rollCallRows,
-    crewRollCallRows,
+    rollCallRows: rollCallMarks.seats,
+    crewRollCallRows: rollCallMarks.crew,
     buddyPairRows,
     ...cardRows,
     specialtyRows,
@@ -953,7 +954,8 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
 
   const arrivalRows = await readScoped(tx, "bookingArrivalEvents", scope);
 
-  const rollCallRows = await readScoped(tx, "rollCallEvents", scope);
+  // Scoped by booking, so seats only; the split types them as such.
+  const { seats: rollCallRows } = splitRollCallRows(await readScoped(tx, "rollCallEvents", scope));
 
   // Either this diver's own seat, or — if they are also a staff member —
   // a team they were recorded as crewing. Two rows can never collide: a
@@ -1002,7 +1004,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         .orderBy(asc(orderLineItems.orderId), asc(orderLineItems.createdAt), asc(orderLineItems.id))
     : [];
 
-  const tipRows = await readScoped(tx, "tips", scope);
+  const tipRows = await readTipRows(tx, scope);
 
   const recapPhotoRows = await readScoped(tx, "recapPhotos", scope);
 
@@ -1299,8 +1301,8 @@ export async function loadShopExportCounts(
     ),
     "trip_last_minute_promos.csv": await countShopScoped(db, "tripLastMinutePromos", shopId),
     "booking_arrival_events.csv": await countShopScoped(db, "bookingArrivalEvents", shopId),
-    "roll_call_events.csv": await countShopScoped(db, "rollCallEvents", shopId),
-    "roll_call_crew_events.csv": await countShopScoped(db, "rollCallCrewEvents", shopId),
+    "roll_call_events.csv": await countRollCallMarks(db, shopId, "seat"),
+    "roll_call_crew_events.csv": await countRollCallMarks(db, shopId, "crew"),
     "buddy_teams.csv": await countShopScoped(db, "buddyTeamMembers", shopId),
     "waiver_templates.csv": await countShopScoped(db, "waiverTemplates", shopId),
     "waiver_materiality_decisions.csv": await countShopScoped(
@@ -1345,7 +1347,7 @@ export async function loadShopExportCounts(
       "customerGearReminderSettings",
       shopId,
     ),
-    "tips.csv": await countShopScoped(db, "tips", shopId),
+    "tips.csv": await countShopTips(db, shopId),
     "dive_sites.csv": await countShopScoped(db, "diveSites", shopId),
     "dive_site_creatures.csv": await countShopScoped(db, "diveSiteCreatures", shopId),
     "recap_photos.csv": await countShopScoped(db, "recapPhotos", shopId),

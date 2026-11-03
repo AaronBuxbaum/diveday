@@ -9,11 +9,9 @@ afterEach(cleanup);
 
 /**
  * **The name prints.** The name is the trigger that opens the person's sheet,
- * so it lives inside a `<button>`, and the packet's print backstop hides every
- * button in `.trip-print-bundle` (`globals.css`). Both packets printed every
- * roll-call row without its name until the trigger declared that its content
- * is the fact (`print-bundle.test.ts` reads the rule). The caret is the one
- * part of it that is only a control, so it stays off paper.
+ * so it lives inside a `<button>`, which declares that its content is the
+ * fact. The caret is the one part of it that is only a control, so it stays
+ * off paper.
  */
 describe("the roll call on paper", () => {
   it("marks the name trigger as content the packet prints, and keeps its caret off paper", () => {

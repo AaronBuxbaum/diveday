@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
@@ -50,6 +50,7 @@ import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
+import { fareCheckout } from "./checkout-purpose";
 import type { AppDb, DbExecutor } from "./client";
 import {
   completeDateRequestOfferParty,
@@ -69,6 +70,8 @@ import { type CreatePersonInput, createPerson, findOrCreatePerson } from "./peop
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "./readiness";
+import { newestMarkFirst } from "./roll-call-order";
+import { seatMarks } from "./roll-call-subject";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -2206,7 +2209,13 @@ export async function moveBooking(
     const [rolled] = await tx
       .select({ id: rollCallEvents.id })
       .from(rollCallEvents)
-      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.bookingId, booking.id)))
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          seatMarks(),
+          eq(rollCallEvents.bookingId, booking.id),
+        ),
+      )
       .limit(1);
     if (rolled) return { ok: false, reason: "roll_call_started" };
 
@@ -2312,6 +2321,7 @@ export async function moveBooking(
     const linked = tx
       .select({ id: bookingCheckoutBookings.checkoutId })
       .from(bookingCheckoutBookings)
+      // diveday:any-checkout-purpose: the update below names the fare.
       .where(
         and(
           eq(bookingCheckoutBookings.shopId, shopId),
@@ -2325,6 +2335,7 @@ export async function moveBooking(
         and(
           eq(bookingCheckouts.shopId, shopId),
           eq(bookingCheckouts.status, "pending"),
+          fareCheckout(),
           inArray(bookingCheckouts.id, linked),
         ),
       );
@@ -2606,16 +2617,13 @@ async function boardedAtDeparture(
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.bookingId, bookingId),
         eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    )
+    .orderBy(...newestMarkFirst())
     .limit(1);
   return newest?.status === "boarded";
 }
@@ -2782,6 +2790,7 @@ async function changeParticipantType(
     const linked = tx
       .select({ id: bookingCheckoutBookings.checkoutId })
       .from(bookingCheckoutBookings)
+      // diveday:any-checkout-purpose: the update below names the fare.
       .where(
         and(
           eq(bookingCheckoutBookings.shopId, shopId),
@@ -2795,6 +2804,7 @@ async function changeParticipantType(
         and(
           eq(bookingCheckouts.shopId, shopId),
           eq(bookingCheckouts.status, "pending"),
+          fareCheckout(),
           inArray(bookingCheckouts.id, linked),
         ),
       );

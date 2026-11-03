@@ -841,7 +841,7 @@ describe("money on the trip page", () => {
    * Three consequences, none of them cosmetic: reported revenue rises on money
    * that was returned (`COLLECTED_PAYMENT_STATUSES`), the row stops pointing at
    * the real Stripe refund, and the seat re-enters
-   * `listOwedShopCancellationRefunds` — whose own docstring calls a `paid` row
+   * the owed-refund read (`src/db/unfinished.ts`) — whose own docstring calls a `paid` row
    * on a cancelled trip "the obvious way to get this wrong".
    *
    * Found by `security-reviewer` after #714 shipped.

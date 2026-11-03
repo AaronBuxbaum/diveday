@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { DbExecutor } from "./client";
-import { rollCallCrewEvents, rollCallEvents } from "./schema";
+import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
+import { rollCallEvents } from "./schema";
 
 /**
  * **Every roll-call statement recorded on these departures, divers and crew,**
@@ -34,7 +35,7 @@ export async function recordedRollCallRows(
   const divers = await db
     .select({
       tripId: rollCallEvents.tripId,
-      bookingId: rollCallEvents.bookingId,
+      bookingId: markBookingId(),
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
       occurredAt: rollCallEvents.occurredAt,
@@ -42,20 +43,30 @@ export async function recordedRollCallRows(
       seq: rollCallEvents.seq,
     })
     .from(rollCallEvents)
-    .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])));
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+      ),
+    );
   const crew = await db
     .select({
-      tripId: rollCallCrewEvents.tripId,
-      personId: rollCallCrewEvents.personId,
-      checkpoint: rollCallCrewEvents.checkpoint,
-      status: rollCallCrewEvents.status,
-      occurredAt: rollCallCrewEvents.occurredAt,
-      createdAt: rollCallCrewEvents.createdAt,
-      seq: rollCallCrewEvents.seq,
+      tripId: rollCallEvents.tripId,
+      personId: markCrewPersonId(),
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+      occurredAt: rollCallEvents.occurredAt,
+      createdAt: rollCallEvents.createdAt,
+      seq: rollCallEvents.seq,
     })
-    .from(rollCallCrewEvents)
+    .from(rollCallEvents)
     .where(
-      and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, [...tripIds])),
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        crewMarks(),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+      ),
     );
   return [
     ...divers,

@@ -19,11 +19,11 @@ import { rewindowTripGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { queryAll } from "./query-helpers";
 import { rearmTripReminders } from "./reminder-rearm";
+import { crewMarks, seatMarks } from "./roll-call-subject";
 import type { Trip } from "./schema";
 import {
   bookings,
   interests,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripDives,
@@ -136,12 +136,16 @@ export async function countRollCallEvidence(
       tx
         .select({ n: count() })
         .from(rollCallEvents)
-        .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId))),
+        .where(
+          and(eq(rollCallEvents.shopId, shopId), seatMarks(), eq(rollCallEvents.tripId, tripId)),
+        ),
     () =>
       tx
         .select({ n: count() })
-        .from(rollCallCrewEvents)
-        .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId))),
+        .from(rollCallEvents)
+        .where(
+          and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)),
+        ),
   ]);
   return (divers?.n ?? 0) + (crew?.n ?? 0);
 }

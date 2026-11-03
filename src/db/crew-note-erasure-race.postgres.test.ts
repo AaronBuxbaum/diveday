@@ -13,7 +13,6 @@ import {
   personRoles,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
-  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripAssignments,
@@ -174,11 +173,9 @@ async function fixture() {
     });
   const notes = async () =>
     pg.db
-      .select({ note: rollCallCrewEvents.note })
-      .from(rollCallCrewEvents)
-      .where(
-        and(eq(rollCallCrewEvents.shopId, shop.id), eq(rollCallCrewEvents.personId, owner.id)),
-      );
+      .select({ note: rollCallEvents.note })
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.shopId, shop.id), eq(rollCallEvents.crewPersonId, owner.id)));
   const diverNotes = async () =>
     pg.db
       .select({
@@ -221,7 +218,7 @@ describePostgres("crew note writes ordered with erasure", () => {
       sql`create function test_hold_crew_note_insert() returns trigger language plpgsql as $$ begin perform pg_advisory_xact_lock(281033); return new; end $$`,
     );
     await f.pg.db.execute(
-      sql`create trigger test_hold_crew_note_insert before insert on roll_call_crew_events for each row execute function test_hold_crew_note_insert()`,
+      sql`create trigger test_hold_crew_note_insert before insert on roll_call_events for each row when (new.subject_kind = 'crew') execute function test_hold_crew_note_insert()`,
     );
     const gate = await holdRowLock(f.pg, sql`select pg_advisory_xact_lock(281033)`);
     const noteWrite = f.writeOfflineNote(
