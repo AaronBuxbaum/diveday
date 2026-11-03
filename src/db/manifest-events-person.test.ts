@@ -19,7 +19,7 @@ import {
   unreviewCertification,
   unreviewSpecialtyCertification,
 } from "./readiness";
-import { bookings, certifications } from "./schema";
+import { bookings, cards } from "./schema";
 import { createTrip } from "./trips";
 import { recordInPersonWaiver } from "./waivers-in-person";
 
@@ -284,9 +284,9 @@ describe("a change to a diver's readiness evidence signals their manifests", () 
     const heard = await heardDuring(shop.id, [first, second, elsewhere], async () => {
       const unsubscribe = subscribeManifestEvents(shop.id, first.id, () => {
         void db
-          .select({ status: certifications.status })
-          .from(certifications)
-          .where(eq(certifications.id, card.id))
+          .select({ status: cards.status })
+          .from(cards)
+          .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)))
           .then((rows) => {
             standingAtEvent = rows[0]?.status;
           });

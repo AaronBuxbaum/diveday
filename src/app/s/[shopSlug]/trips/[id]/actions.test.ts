@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import type { AppDb } from "@/db/client";
-import { bookingCapabilities, bookings, certifications, people, shops } from "@/db/schema";
+import { bookingCapabilities, bookings, cards, people, shops } from "@/db/schema";
 import { createTrip } from "@/db/trips-create";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -188,19 +188,20 @@ describe("the booking form's certification fields", () => {
       "booker@example.com",
       "victim@example.com",
     ]);
-    const cards = await db
-      .select({ id: certifications.id })
-      .from(certifications)
+    const cardRows = await db
+      .select({ id: cards.id })
+      .from(cards)
       .where(
         and(
-          eq(certifications.shopId, shop.id),
+          eq(cards.shopId, shop.id),
+          eq(cards.kind, "level"),
           inArray(
-            certifications.personId,
+            cards.personId,
             booked.map((seat) => seat.personId),
           ),
         ),
       );
-    expect(cards).toEqual([]);
+    expect(cardRows).toEqual([]);
   });
 
   it("costs one token per submission, not one per claim", async () => {

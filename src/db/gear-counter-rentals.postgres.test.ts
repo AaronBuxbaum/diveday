@@ -7,7 +7,7 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createGearItem, reserveGearUnit } from "./gear";
 import { createCounterRental } from "./gear-counter-rentals";
-import { certifications, gearReservations, people, personRoles, shops, trips } from "./schema";
+import { cards, gearReservations, people, personRoles, shops, trips } from "./schema";
 
 /** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
 const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
@@ -53,7 +53,8 @@ async function counterShop(db: AppDb, people_: number) {
     await db.insert(personRoles).values({ personId: row.id, role: "diver" });
     // A BCD is life support: each walk-in carries a verified card, so the race
     // is about the unit and never about the card rule.
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId: shop.id,
       personId: row.id,
       agency: "padi",

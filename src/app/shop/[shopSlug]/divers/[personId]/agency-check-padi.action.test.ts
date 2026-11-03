@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { certifications, people, shops } from "@/db/schema";
+import { cards, people, shops } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";
 
@@ -65,11 +65,12 @@ async function pendingCard(
   db: AppDb,
   shopId: string,
   personId: string,
-  values: Partial<typeof certifications.$inferInsert> = {},
+  values: Partial<typeof cards.$inferInsert> = {},
 ) {
   const [card] = await db
-    .insert(certifications)
+    .insert(cards)
     .values({
+      kind: "level",
       shopId,
       personId,
       agency: "naui",
@@ -92,7 +93,10 @@ function check(certificationId: string, pageText: string | null, intent?: "undo"
 }
 
 async function cardRow(db: AppDb, id: string) {
-  const [row] = await db.select().from(certifications).where(eq(certifications.id, id));
+  const [row] = await db
+    .select()
+    .from(cards)
+    .where(and(eq(cards.id, id), eq(cards.kind, "level")));
   return row;
 }
 

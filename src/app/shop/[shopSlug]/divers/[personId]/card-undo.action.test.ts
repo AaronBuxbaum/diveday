@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createNitroxCertification, verifiedNitroxPersonIds } from "@/db/nitrox";
 import {
@@ -6,7 +6,7 @@ import {
   createSpecialtyCertification,
   reviewCertification,
 } from "@/db/readiness";
-import { certifications, nitroxCertifications, people, specialtyCertifications } from "@/db/schema";
+import { cards, people } from "@/db/schema";
 import { recordSelfDeclaredCards } from "@/db/self-declared-cards";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";
@@ -112,7 +112,10 @@ describe("undoing a one-tap card review", () => {
     );
 
     expect(undone).toEqual({ ok: true, effect: "undone" });
-    const [row] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [row] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(row).toMatchObject({ status: "pending", reviewedAt: null, reviewedByPersonId: null });
   });
 
@@ -138,8 +141,8 @@ describe("undoing a one-tap card review", () => {
     expect(undone).toEqual({ ok: true, effect: "undone" });
     const [row] = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.id, card.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "specialty"), eq(cards.id, card.id)));
     expect(row).toMatchObject({ status: "pending", reviewedAt: null });
   });
 
@@ -165,8 +168,8 @@ describe("undoing a one-tap card review", () => {
     expect(undone).toEqual({ ok: true, effect: "undone" });
     const [row] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, card.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.id, card.id)));
     expect(row).toMatchObject({ status: "pending", reviewedAt: null });
     expect(await verifiedNitroxPersonIds(db, shop.id)).not.toContain(personId);
   });
@@ -176,20 +179,20 @@ describe("undoing a one-tap card review", () => {
     await recordSelfDeclaredCards(db, { shopId: shop.id, personId, level: "rescue" });
     const [claim] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, personId));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, personId)));
     if (!claim) throw new Error("self-declaration wrote no card");
     // Verified by a staffer with the card in hand: the sighting path rewrites
     // the row from the plastic, which is why there is nothing to put back.
     await db
-      .update(certifications)
+      .update(cards)
       .set({
         status: "verified",
         agency: "padi",
         identifier: "PADI-SIGHTED",
         reviewedAt: new Date("2026-07-20T12:00:00Z"),
       })
-      .where(eq(certifications.id, claim.id));
+      .where(and(eq(cards.kind, "level"), eq(cards.id, claim.id)));
 
     const undone = await markCertifiedAction(
       shop.slug,
@@ -199,7 +202,10 @@ describe("undoing a one-tap card review", () => {
     );
 
     expect(undone).toEqual({ ok: false, reason: "not-undoable" });
-    const [row] = await db.select().from(certifications).where(eq(certifications.id, claim.id));
+    const [row] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, claim.id)));
     expect(row?.status).toBe("verified");
   });
 
@@ -224,7 +230,10 @@ describe("undoing a one-tap card review", () => {
       );
       expect(undone).toEqual({ ok: false, reason: "not-undoable" });
     }
-    const [row] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [row] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(row?.status).toBe("verified");
   });
 
@@ -266,7 +275,10 @@ describe("undoing a one-tap card review", () => {
     );
 
     expect(undone).toEqual({ ok: false, reason: "not-undoable" });
-    const [row] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [row] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(row?.status).toBe("verified");
     expect(row?.agencyCheckedAt).not.toBeNull();
     expect(row?.reviewNote).toBe("PADI page lists this diver at Rescue.");
@@ -300,7 +312,10 @@ describe("undoing a one-tap card review", () => {
     );
 
     expect(undone).toEqual({ ok: false, reason: "not-undoable" });
-    const [row] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    const [row] = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.id, card.id)));
     expect(row?.agencyCheckedAt).not.toBeNull();
     expect(row?.status).toBe("verified");
   });
@@ -352,12 +367,12 @@ describe("undoing a one-tap card review", () => {
     }
     const [wreck] = await db
       .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.id, specialty.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "specialty"), eq(cards.id, specialty.id)));
     const [eanx] = await db
       .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.id, nitrox.id));
+      .from(cards)
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.id, nitrox.id)));
     expect(wreck?.status).toBe("verified");
     expect(eanx?.status).toBe("verified");
     expect(await verifiedNitroxPersonIds(db, shop.id)).toContain(personId);

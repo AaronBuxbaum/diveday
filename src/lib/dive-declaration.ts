@@ -27,7 +27,7 @@ import type { CertificationLevel } from "./readiness";
  *
  * 1. **A code, never free text.** The level is validated against the closed
  *    five-rung ladder rather than trusted from the post, so nothing
- *    attacker-controlled reaches the `certifications.level` column or the staff
+ *    attacker-controlled reaches the `cards.level` column or the staff
  *    panels that render it. Nitrox is a boolean.
  * 2. **Absent is a real answer.** Every declaration value is optional and a joiner who
  *    skips them is "not said" — never a default, never a zero-value that reads
@@ -164,7 +164,7 @@ export function diveDeclarationInput(formData: FormData) {
  * The one `<select>` carries two different kinds of answer, and they are split
  * here rather than downstream: a level is a rung on the ladder, while "not
  * certified yet" is a statement that there is no card to hold at all, and it
- * lands on the person instead of in `certifications`. Splitting at the parse
+ * lands on the person instead of in `cards`. Splitting at the parse
  * boundary is what keeps `level` typed as a `CertificationLevel` all the way to
  * the column.
  */

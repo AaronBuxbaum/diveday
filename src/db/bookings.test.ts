@@ -30,11 +30,10 @@ import { recordRentalFit } from "./rental-fit";
 import {
   bookingCapabilities,
   bookings,
-  certifications,
+  cards,
   courses,
   diveSites,
   internalNotes,
-  nitroxCertifications,
   people,
   personRoles,
   shops,
@@ -2322,13 +2321,14 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
     const { db, shop, open } = await seededContext();
     const selfDeclaredFor = async (personId: string) =>
       db
-        .select({ id: certifications.id })
-        .from(certifications)
+        .select({ id: cards.id })
+        .from(cards)
         .where(
+          // A claim of any kind: none may be written under someone else's name.
           and(
-            eq(certifications.shopId, shop.id),
-            eq(certifications.personId, personId),
-            isNotNull(certifications.selfDeclaredAt),
+            eq(cards.shopId, shop.id),
+            eq(cards.personId, personId),
+            isNotNull(cards.selfDeclaredAt),
           ),
         );
 
@@ -2630,9 +2630,10 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     db: AppDb,
     shopId: string,
     personId: string,
-    overrides: Partial<typeof certifications.$inferInsert> = {},
+    overrides: Partial<typeof cards.$inferInsert> = {},
   ) {
-    await db.insert(certifications).values({
+    await db.insert(cards).values({
+      kind: "level",
       shopId,
       personId,
       agency: "padi",
@@ -2685,8 +2686,8 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     // queue works from before the dive date.
     const [card] = await db
       .select()
-      .from(certifications)
-      .where(eq(certifications.personId, outcome.personId));
+      .from(cards)
+      .where(and(eq(cards.kind, "level"), eq(cards.personId, outcome.personId)));
     expect(card).toMatchObject({ level: "advanced_open_water", status: "pending" });
     expect(card?.selfDeclaredAt).toBeInstanceOf(Date);
   });
@@ -2709,11 +2710,8 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     // The half that matters for an anonymous form: a submission that fails
     // leaves no mark on the record it was judged against, so nobody can edit a
     // stranger's certification history by guessing their email and failing.
-    const cards = await db
-      .select()
-      .from(certifications)
-      .where(eq(certifications.personId, person.id));
-    expect(cards).toHaveLength(0);
+    // No card of any kind.
+    expect(await db.select().from(cards).where(eq(cards.personId, person.id))).toEqual([]);
   });
 
   it("refuses the carded diver whose level cannot reach the trip's, naming the gap", async () => {
@@ -2877,9 +2875,11 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     // And each claim landed on its own person, which is what the verify queue
     // works from before the dive date.
     const rows = await db
-      .select({ level: certifications.level, personId: certifications.personId })
-      .from(certifications)
-      .where(and(eq(certifications.shopId, shop.id), isNotNull(certifications.selfDeclaredAt)));
+      .select({ level: cards.level, personId: cards.personId })
+      .from(cards)
+      .where(
+        and(eq(cards.kind, "level"), eq(cards.shopId, shop.id), isNotNull(cards.selfDeclaredAt)),
+      );
     const byPerson = new Map(rows.map((row) => [row.personId, row.level]));
     expect(byPerson.get(outcome.bookings[0]?.personId ?? "")).toBe("rescue");
     expect(byPerson.get(outcome.bookings[1]?.personId ?? "")).toBe("open_water");
@@ -3323,17 +3323,16 @@ describe("createBookingParty declaration writes", () => {
   /** Every self-declared claim this shop holds, in either table, plus the stamps. */
   async function declarationsHeldBy(db: AppDb, shopId: string) {
     const levels = await db
-      .select({ personId: certifications.personId })
-      .from(certifications)
-      .where(and(eq(certifications.shopId, shopId), isNotNull(certifications.selfDeclaredAt)));
-    const nitrox = await db
-      .select({ personId: nitroxCertifications.personId })
-      .from(nitroxCertifications)
+      .select({ personId: cards.personId })
+      .from(cards)
       .where(
-        and(
-          eq(nitroxCertifications.shopId, shopId),
-          isNotNull(nitroxCertifications.selfDeclaredAt),
-        ),
+        and(eq(cards.kind, "level"), eq(cards.shopId, shopId), isNotNull(cards.selfDeclaredAt)),
+      );
+    const nitrox = await db
+      .select({ personId: cards.personId })
+      .from(cards)
+      .where(
+        and(eq(cards.kind, "nitrox"), eq(cards.shopId, shopId), isNotNull(cards.selfDeclaredAt)),
       );
     const stamped = await db
       .select({ id: people.id })

@@ -13,8 +13,8 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   buddyTeamMembers,
+  cards,
   certificationJuniorReviews,
-  certifications,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -39,7 +39,6 @@ import {
   incidentReports,
   interests,
   internalNotes,
-  nitroxCertifications,
   notificationDeliveries,
   orderLineItems,
   orders,
@@ -53,7 +52,6 @@ import {
   rollCallEvents,
   shopPromoCodes,
   shopTextTranslations,
-  specialtyCertifications,
   staffCredentialHistory,
   staffCredentials,
   tripChangeEvents,
@@ -388,10 +386,12 @@ export const EXPORT_TABLES = {
     order: [],
     scope: { shopColumn: buddyTeamMembers.shopId },
   },
-  certifications: {
-    table: certifications,
-    order: [asc(certifications.createdAt), asc(certifications.id)],
-    scope: { shopColumn: certifications.shopId, personColumn: certifications.personId },
+  // Every kind of card, in one file (issue #2722): `kind` says which, and
+  // `level`/`specialty` carry the rung or the specialty.
+  cards: {
+    table: cards,
+    order: [asc(cards.createdAt), asc(cards.id)],
+    scope: { shopColumn: cards.shopId, personColumn: cards.personId },
   },
   certificationJuniorReviews: {
     table: certificationJuniorReviews,
@@ -400,19 +400,6 @@ export const EXPORT_TABLES = {
       shopColumn: certificationJuniorReviews.shopId,
       personColumn: certificationJuniorReviews.personId,
     },
-  },
-  specialtyCertifications: {
-    table: specialtyCertifications,
-    order: [asc(specialtyCertifications.createdAt), asc(specialtyCertifications.id)],
-    scope: {
-      shopColumn: specialtyCertifications.shopId,
-      personColumn: specialtyCertifications.personId,
-    },
-  },
-  nitroxCertifications: {
-    table: nitroxCertifications,
-    order: [asc(nitroxCertifications.createdAt), asc(nitroxCertifications.id)],
-    scope: { shopColumn: nitroxCertifications.shopId, personColumn: nitroxCertifications.personId },
   },
   waiverTemplates: {
     table: waiverTemplates,

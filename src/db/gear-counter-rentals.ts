@@ -1,6 +1,7 @@
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lte, type SQL, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
+import { splitCardsByKind } from "@/lib/card-ledger";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { nowDate } from "@/lib/clock";
 import {
@@ -46,14 +47,12 @@ import {
 } from "./readiness";
 import {
   type CertificationAgency,
-  certifications,
+  cards,
   gearItems,
   gearReservations,
-  nitroxCertifications,
   orders,
   people,
   shops,
-  specialtyCertifications,
 } from "./schema";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 
@@ -142,40 +141,32 @@ export async function counterRentalPerson(
  * (`counterRentalCardRefusal`) decides which of them count.
  */
 export async function counterRentalCards(db: AppDb, shopId: string, personId: string) {
-  const [levels, specialties] = await Promise.all([
-    db
-      .select()
-      .from(certifications)
-      .where(
-        and(
-          eq(certifications.shopId, shopId),
-          eq(certifications.personId, personId),
-          isNull(certifications.deletedAt),
-        ),
+  // One read of the two kinds that count; a nitrox card is never a rung.
+  const rows = await db
+    .select()
+    .from(cards)
+    .where(
+      and(
+        eq(cards.shopId, shopId),
+        eq(cards.personId, personId),
+        inArray(cards.kind, ["level", "specialty"]),
+        isNull(cards.deletedAt),
       ),
-    db
-      .select()
-      .from(specialtyCertifications)
-      .where(
-        and(
-          eq(specialtyCertifications.shopId, shopId),
-          eq(specialtyCertifications.personId, personId),
-          isNull(specialtyCertifications.deletedAt),
-        ),
-      ),
-  ]);
-  return { certifications: levels, specialtyCertifications: specialties };
+    );
+  const { certifications, specialtyCertifications } = splitCardsByKind(rows);
+  return { certifications, specialtyCertifications };
 }
 
 /** Picker hint only; the rental transaction rechecks the same predicate. */
 export async function counterRentalHasNitroxFillCard(db: AppDb, shopId: string, personId: string) {
   const [card] = await db
-    .select({ id: nitroxCertifications.id })
-    .from(nitroxCertifications)
+    .select({ id: cards.id })
+    .from(cards)
     .where(
       and(
-        eq(nitroxCertifications.shopId, shopId),
-        eq(nitroxCertifications.personId, personId),
+        eq(cards.shopId, shopId),
+        eq(cards.kind, "nitrox"),
+        eq(cards.personId, personId),
         authorizesNitroxFill,
       ),
     )
@@ -530,12 +521,13 @@ export async function createCounterRental(
       // highest-consequence mistake a counter can make.
       if (fillShape.some((fill) => isEnrichedFill(fill.o2Percent))) {
         const [card] = await tx
-          .select({ id: nitroxCertifications.id })
-          .from(nitroxCertifications)
+          .select({ id: cards.id })
+          .from(cards)
           .where(
             and(
-              eq(nitroxCertifications.shopId, input.shopId),
-              eq(nitroxCertifications.personId, person.id),
+              eq(cards.shopId, input.shopId),
+              eq(cards.kind, "nitrox"),
+              eq(cards.personId, person.id),
               authorizesNitroxFill,
             ),
           )
@@ -831,12 +823,13 @@ export async function correctCounterTankFill(
     if (shapeRefusal) return { ok: false, reason: shapeRefusal };
     if (isEnrichedFill(input.o2Percent)) {
       const [card] = await tx
-        .select({ id: nitroxCertifications.id })
-        .from(nitroxCertifications)
+        .select({ id: cards.id })
+        .from(cards)
         .where(
           and(
-            eq(nitroxCertifications.shopId, input.shopId),
-            eq(nitroxCertifications.personId, row.personId),
+            eq(cards.shopId, input.shopId),
+            eq(cards.kind, "nitrox"),
+            eq(cards.personId, row.personId),
             authorizesNitroxFill,
           ),
         )

@@ -31,6 +31,13 @@
   CPR/EFR and O₂-provider tickets expire too, and are a real prerequisite for Rescue and above.
   What a card cannot tell you either way is when this diver was last in the water — that is
   **Dive recency**, a different question asked of the diver, and it is not a gate.
+- **Card ledger** — every **C-card** a shop holds on a diver, of every kind, in one table (`cards`,
+  issue #2722). `kind` says what the card is for: `level` (a rung on the ladder, in `level`),
+  `specialty` (a yes/no gate such as Deep, in `specialty`) or `nitrox` (the enriched-air card the
+  fill gate reads). The review, provenance and soft-delete columns are shared, and the database's
+  checks keep a kind's columns to that kind. Every gate reads one kind and names it in its query;
+  erasure, merge and the export read all of them, and the export writes one `cards.csv`. The staff
+  credentials a crew member holds are not on it.
 - **Verified certification** — a card is evidence, not clearance. `validVerifiedCertification` is one
   predicate, `status === "verified"`, read identically by every gate — but there is more than one
   path to it: a staffer looks a card number up with the issuing agency (in the agency's own portal,
@@ -192,8 +199,8 @@
   shop has submitted the student to the agency (PADI, SSI and the rest), dated and naming who
   ticked it, and read back as "Processed with PADI · Oct 25". Any card this shop issued carries it:
   a level card, an Enriched Air card or a specialty card (`processed_with_agency_at`,
-  `processed_by_person_id` on `certifications`, `nitrox_certifications` and
-  `specialty_certifications`, each with its `*_processed_only_when_issued` check). It records the
+  `processed_by_person_id` on the **Card ledger**, held by its `cards_processed_only_when_issued`
+  check). It records the
   shop's own act and issues nothing: the agency sends its own card. The same tap takes it back, and
   the course page lists every issued card still to process, oldest first and with no lookback, a
   card waiting more than 30 days saying so. A card issued before the stamp existed
@@ -222,8 +229,8 @@
   and more strongly: an import is trusted because of a system nobody at this shop watched, this
   because of a specific instructor on this shop's own roster. Refuses a level the diver already holds
   a live verified card for, any provenance, so a repeat tap cannot mint a second numberless row the
-  unique index (keyed on `identifier`) cannot catch. Scoped to `certifications` only — the level
-  ladder — not the **specialty** or **nitrox** tables, which stay one-tap-away from this treatment on
+  unique index (keyed on `identifier`) cannot catch. Scoped to level cards only — the level
+  ladder — not **specialty** or **nitrox** cards, which stay one-tap-away from this treatment on
   purpose (see their own entries on why even an *imported* row waits for a staff confirm there).
 - **In training** — a diver with no card at a trip's level yet, holding a seat on a course session
   that certifies that level (or higher), ends before the trip starts, and has not ended yet. A
@@ -300,7 +307,7 @@
   and Try Scuba customers, snorkelers, the non-diving half of a couple,
   somebody booked onto a course they have not started. It is **not a Self-declared certification and
   not a level**: it lands as one nullable stamp on the person (`people.no_certification_declared_at`)
-  and never as a `certifications` row, because a Discover Scuba experience is not a certification and
+  and never as a `cards` row, because a Discover Scuba experience is not a certification and
   every row in that table asserts that a card exists. Nor is it a rung on the ladder —
   `certification_level` is an ordering, and a "none" member would eventually be compared as a level.
   It exists because the alternative was worse than silence: an uncertified joiner had to pick
@@ -556,9 +563,9 @@
 - **Bundled nitrox** — **RAID and GUE issue no standalone enriched-air card.** EANx is trained
   inside the level card (RAID Open Water 20, GUE Rec 1), so there is no second number to type, and
   a staffer filling enriched air for one of those divers enters the **level card's own number** in
-  the nitrox row. That is correct and it works: `nitrox_certifications`' unique index is per shop,
-  per agency and per table, so the same number on a `certifications` row and a `nitrox_certifications`
-  row is not a collision. It is written down because it looks like a mistake to whoever does it, and
+  the nitrox row. That is correct and it works: the **Card ledger**'s unique indexes are per shop,
+  per agency and per kind, so the same number on a level card and a nitrox card is not a
+  collision. It is written down because it looks like a mistake to whoever does it, and
   the two things a staffer does instead — refuse a fill to a properly trained diver, or hand the
   tank over off-system — are both worse than an entry that looks odd. An **Agency check** of a GUE Rec 1 card offers the
   nitrox card on that number for the same reason (**Agency-listed certification**).
@@ -698,9 +705,9 @@
   answers parked the record in medical review, it says a physician has to sign off, because the
   adult reading it is the one who takes the child to that physician.
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
-  OW divers), **Night**, **Wreck**, **Drysuit**, **Cavern** gate a **site/activity** and live in
-  `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence
-  lives in `nitrox_certifications`) because it gates a **per-booking mix request**; a site or trip may
+  OW divers), **Night**, **Wreck**, **Drysuit**, **Cavern** gate a **site/activity** and are
+  `specialty` cards on the **Card ledger**. **Nitrox/EANx** (enriched air) is its own kind (a
+  `nitrox` card) because it gates a **per-booking mix request**; a site or trip may
   *also* require a nitrox card to **board** (a nitrox charter), enforced as its own requirement flag
   — the same card, two independent gates (see Operations, below).
   **DiveDay's specialties are flat; the industry tiers some of them.** `wreck` is one value, but

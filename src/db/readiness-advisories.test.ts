@@ -7,7 +7,7 @@ import {
   reviewCertification,
   upsertTripRequirements,
 } from "./readiness";
-import { bookings, certifications, diveSites, shops } from "./schema";
+import { bookings, cards, diveSites, shops } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -29,9 +29,11 @@ async function fixture({ card }: { card: boolean }) {
   if (!card) {
     // A card on file but none verified: a certification blocker, and no ceiling.
     await db
-      .update(certifications)
+      .update(cards)
       .set({ status: "pending" })
-      .where(and(eq(certifications.shopId, shop.id), eq(certifications.personId, seat.person.id)));
+      .where(
+        and(eq(cards.kind, "level"), eq(cards.shopId, shop.id), eq(cards.personId, seat.person.id)),
+      );
   } else {
     const created = await createCertification(db, {
       shopId: shop.id,

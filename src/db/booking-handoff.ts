@@ -29,7 +29,7 @@ import { getRentalFit } from "./rental-fit";
 import {
   bookingCapabilities,
   bookings,
-  nitroxCertifications,
+  cards,
   notificationDeliveries,
   people,
   shops,
@@ -197,12 +197,13 @@ export async function lastGearFor(
   let nitrox = false;
   if (last.wantsNitrox) {
     const [card] = await db
-      .select({ id: nitroxCertifications.id })
-      .from(nitroxCertifications)
+      .select({ id: cards.id })
+      .from(cards)
       .where(
         and(
-          eq(nitroxCertifications.shopId, input.shopId),
-          eq(nitroxCertifications.personId, input.personId),
+          eq(cards.kind, "nitrox"),
+          eq(cards.shopId, input.shopId),
+          eq(cards.personId, input.personId),
           authorizesNitroxFill,
         ),
       )

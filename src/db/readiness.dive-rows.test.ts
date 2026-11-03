@@ -9,7 +9,7 @@ import {
 } from "./readiness";
 import { readinessFixturesFor } from "./readiness-test-fixtures";
 import type { DiveSpecialty } from "./schema";
-import { diveSites, nitroxCertifications, shops, tripDives } from "./schema";
+import { cards, diveSites, shops, tripDives } from "./schema";
 import { getTripRoster } from "./trips";
 
 /** One PGlite for the file, a rolled-back transaction per test (issue #1244). */
@@ -123,11 +123,9 @@ describe("site cert gate across a trip's dive rows (DOM-C1)", () => {
     const nitroxHolders = new Set(
       (
         await db
-          .select({ personId: nitroxCertifications.personId })
-          .from(nitroxCertifications)
-          .where(
-            and(eq(nitroxCertifications.shopId, shop.id), isNull(nitroxCertifications.deletedAt)),
-          )
+          .select({ personId: cards.personId })
+          .from(cards)
+          .where(and(eq(cards.kind, "nitrox"), eq(cards.shopId, shop.id), isNull(cards.deletedAt)))
       ).map((r) => r.personId),
     );
     const entry = (await getTripRoster(db, shop.id, reef.id)).find(
