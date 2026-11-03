@@ -312,12 +312,6 @@
         }
       },
       {
-        "why": "#2756: blockerDestination moved down from src/lib/today.ts (banked at 2) with its one Copy-key import, so the counter and palette no longer import Today",
-        "files": {
-          "src/lib/blockers.ts": "0 -> 1"
-        }
-      },
-      {
         "why": "Three new seams (lib to db values, app to drizzle-orm, the trips barrel): what was left after draining the 2026-10-10 review's list",
         "files": {
           "src/lib/auth.ts": "0 -> 3",
@@ -1072,7 +1066,6 @@
     "src/lib/auth.ts": 4,
     "src/lib/billing/events.ts": 1,
     "src/lib/billing/stripe-billing.ts": 1,
-    "src/lib/blockers.ts": 1,
     "src/lib/dive-declaration.ts": 1,
     "src/lib/dive-site-field-guide.ts": 1,
     "src/lib/dive-site-import.ts": 2,

@@ -1,17 +1,17 @@
 import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
+import type { BlockerLabelRef } from "@/lib/blockers";
 import { calendarDateInTimezone, calendarDaysBetween } from "@/lib/calendar-date";
 import { type Copy, resolveCopy } from "@/lib/copy";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import type { DepthUnit } from "@/lib/depth-units";
 import { formatDateTimeTz, formatRelativeDay, formatShortDate, formatWeekday } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
 import type { RollCallGapReason } from "@/lib/roll-call-gaps";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { TodayActionKind } from "@/lib/today-kinds";
 import { awayDatesText } from "./away-labels";
-import { SPECIALTY_KEYS } from "./readiness-labels";
+import { pointingLabelCopy, SPECIALTY_KEYS } from "./readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /** Every `TodayActionKind` chip, to its label key. Tone stays in `src/features/today/today.ts` (not copy). */
@@ -129,21 +129,11 @@ export function blockerActionLabelText(t: StaffTranslator, code: ReadinessBlocke
   return resolveCopy(t, blockerActionLabelCopy(code));
 }
 
-/**
- * A label for a row whose fix lives on another screen: it points, it does not
- * command ("Open Priya's record", "Open roster"). Card work waits on the
- * person record; everything else on the trip roster.
- */
-export function pointingLabelCopy(target: "trip" | "diver", fullName: string): Copy {
-  return target === "diver"
-    ? // Falls back to the whole name rather than a word: this is a pointing
-      // label ("Open Priya's record"), so an unsplittable name is still the
-      // best thing to point at.
-      {
-        key: "today.pointingLabel.diver",
-        params: { name: firstNameOf(fullName, fullName) },
-      }
-    : { key: "today.pointingLabel.trip" };
+/** A blocked row's action word from the reference `src/lib/blockers.ts` decided on. */
+export function blockerLabelCopy(ref: BlockerLabelRef): Copy {
+  return ref.how === "send"
+    ? blockerActionLabelCopy(ref.code)
+    : pointingLabelCopy(ref.target, ref.fullName);
 }
 
 export function pointingLabelText(

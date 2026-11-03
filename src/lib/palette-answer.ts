@@ -1,4 +1,8 @@
-import { readinessBlockerText, readinessStatusText } from "@/i18n/readiness-labels";
+import {
+  pointingLabelCopy,
+  readinessBlockerText,
+  readinessStatusText,
+} from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type BlockerFix, blockerFixFor } from "./blockers";
 import type { CalendarDate } from "./calendar-date";
@@ -131,9 +135,12 @@ export function paletteAnswerView(
       // The palette never sends: a waiver fix lands on the roster row that
       // does, worded as the door it is rather than the verb the row keeps.
       const act: PaletteAct = fix
-        ? fix.sendsWaiver
+        ? fix.label.how === "send"
           ? { label: t("shared.commandPalette.answer.openRoster"), href: fix.href }
-          : { label: resolveCopy(t, fix.label), href: fix.href }
+          : {
+              label: resolveCopy(t, pointingLabelCopy(fix.label.target, fix.label.fullName)),
+              href: fix.href,
+            }
         : record;
       return {
         kind: "diver",

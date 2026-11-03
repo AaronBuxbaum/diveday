@@ -9,8 +9,10 @@ import {
   REQUIRABLE_CERTIFICATION_LEVELS,
   type RequirableCertificationLevel,
 } from "@/lib/certification-levels";
+import type { Copy } from "@/lib/copy";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { cachedListFormat } from "@/lib/intl-cache";
+import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessStatus } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import type { DiverMessageKey, DiverTranslator } from "./messages";
@@ -574,3 +576,20 @@ export const DIVER_CERTIFICATION_AGENCY_KEYS: Record<CertificationAgency, DiverM
   iantd: "common.certification.agencies.iantd",
   other: "common.certification.agencies.other",
 };
+
+/**
+ * A label for a row whose fix lives on another screen: it points, it does not
+ * command ("Open Priya's record", "Open roster"). Card work waits on the
+ * person record; everything else on the trip roster.
+ */
+export function pointingLabelCopy(target: "trip" | "diver", fullName: string): Copy {
+  return target === "diver"
+    ? // Falls back to the whole name rather than a word: this is a pointing
+      // label ("Open Priya's record"), so an unsplittable name is still the
+      // best thing to point at.
+      {
+        key: "today.pointingLabel.diver",
+        params: { name: firstNameOf(fullName, fullName) },
+      }
+    : { key: "today.pointingLabel.trip" };
+}
