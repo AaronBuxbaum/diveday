@@ -156,7 +156,6 @@
       {
         "why": "Two new seams: src/lib value-importing drizzle-orm (3 files that still hold a query half) and src/db value-importing the translators (17 files, outbound-message composers among them), banked until the queries and sentences have a home (issue 3665)",
         "files": {
-          "src/db/export.ts": "0 -> 1",
           "src/db/import.ts": "1 -> 2",
           "src/db/recap-assist.ts": "0 -> 1"
         }
@@ -464,7 +463,6 @@
       {
         "why": "Two new seams: src/lib value-importing drizzle-orm (3 files that still hold a query half) and src/db value-importing the translators (17 files, outbound-message composers among them), banked until the queries and sentences have a home (issue 3665)",
         "files": {
-          "src/db/export.ts": "0 -> 1",
           "src/db/import.ts": "1 -> 2",
           "src/db/recap-assist.ts": "0 -> 1"
         }
@@ -772,7 +770,6 @@
       {
         "why": "Two new seams: src/lib value-importing drizzle-orm (3 files that still hold a query half) and src/db value-importing the translators (17 files, outbound-message composers among them), banked until the queries and sentences have a home (issue 3665)",
         "files": {
-          "src/db/export.ts": "0 -> 1",
           "src/db/import.ts": "1 -> 2",
           "src/db/recap-assist.ts": "0 -> 1"
         }
@@ -1016,7 +1013,6 @@
     "src/db/departure-notes.ts": 3,
     "src/db/email-bounces.ts": 1,
     "src/db/erasure-coordinated-send.ts": 1,
-    "src/db/export.ts": 1,
     "src/db/find-my-booking.ts": 1,
     "src/db/import.ts": 2,
     "src/db/integration-events.ts": 1,
