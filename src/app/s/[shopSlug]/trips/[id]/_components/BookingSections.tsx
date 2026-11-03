@@ -16,6 +16,7 @@ import {
   DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS,
 } from "@/i18n/participant-labels";
 import type { DeskPayment } from "@/lib/desk-payment";
+import { embedCalendarPath } from "@/lib/embed-routes";
 import { formatMoneyScanned } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import { type ParticipantType, rentsGear } from "@/lib/participant-types";
@@ -79,7 +80,7 @@ export function WaitlistConfirmation({
       </h2>
       <p className="mt-2 text-muted">{t("booking.waitlistConfirmedBody")}</p>
       <Link
-        href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
+        href={embed ? embedCalendarPath(shopSlug) : publicSchedulePath(shopSlug)}
         className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
       >
         {t("common.backToSchedule")}
@@ -99,7 +100,7 @@ export function TripSailedNotice({ shopSlug, embed }: { shopSlug: string; embed?
       <h2 className={`${SECTION_TITLE_CLASS} text-muted`}>{t("sailedHeading")}</h2>
       <p className="mt-1 text-muted">
         <Link
-          href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
+          href={embed ? embedCalendarPath(shopSlug) : publicSchedulePath(shopSlug)}
           className="font-medium text-primary hover:underline"
         >
           {t("sailedCheckSchedule")}
@@ -134,7 +135,7 @@ export function CancelledTripNotice({
       <h2 className={`${LEAD_TITLE_CLASS} text-balance`}>{t("cancelledHeading")}</h2>
       <p className="mt-2 text-muted">
         <Link
-          href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
+          href={embed ? embedCalendarPath(shopSlug) : publicSchedulePath(shopSlug)}
           className="font-medium text-primary hover:underline"
         >
           {t("sailedCheckSchedule")}
@@ -240,7 +241,7 @@ export function TripFullSection({
       {alternatives.length === 0 && !offerWaitlist ? (
         <p className="mt-2">
           <Link
-            href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}`}
+            href={tripRef.embed ? embedCalendarPath(shopSlug) : publicSchedulePath(shopSlug)}
             className="font-medium text-primary hover:underline"
           >
             {t("findAnotherTrip")}

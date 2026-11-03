@@ -1,6 +1,5 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import type { Page } from "@playwright/test";
-import { embedRenderPath } from "../src/lib/embed-routes";
 import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { makeActivitySafe } from "./fixtures";
 import { E2E_TEST_ROUTE_SECRET } from "./servers";
@@ -27,10 +26,7 @@ async function routeFor(url: URL): Promise<string | null> {
   coverage ??= import("../scripts/check-route-coverage.mjs");
   const { collectRoutes, routesForPath } = await coverage;
   routes ??= collectRoutes(process.cwd());
-  // These canonical URLs are rewritten to distinct skeleton-bearing segments.
-  const renderedPath =
-    (url.searchParams.get("embed") === "1" && embedRenderPath(url.pathname)) || url.pathname;
-  return routesForPath(await routes, renderedPath)[0] ?? null;
+  return routesForPath(await routes, url.pathname)[0] ?? null;
 }
 
 function record(value: {

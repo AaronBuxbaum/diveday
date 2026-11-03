@@ -1,45 +1,65 @@
-/**
- * The two diver surfaces a shop is meant to frame on its own website: the
- * public schedule (`/s/<shopSlug>`) and one departure's booking page
- * (`/s/<shopSlug>/trips/<tripId>`). Deliberately not every public route —
- * a course page is public but is not a supported widget, and everything else,
- * including this same shop's staff and sign-in pages, keeps the site's default
- * deny (src/proxy.ts) so a third-party page can never frame them for a
- * clickjacking attempt (ADR 20260726-schedule-embed).
- */
-const EMBEDDABLE_SCHEDULE = /^\/s\/[a-z0-9-]+\/?$/;
-const EMBEDDABLE_TRIP_PAGE = /^\/s\/[a-z0-9-]+\/trips\/[^/]+\/?$/;
+import { publicSchedulePath } from "./public-routes";
 
 /**
- * The widget views of the embed catalogue (Harbor — ADR
- * 20260901-diveday-reimagined, decision 2): `/s/<slug>/embed/grid`,
- * `/embed/departure`, `/embed/courses`, `/embed/reviews`. Each exists only to be framed, so it
- * is an embed request by path alone — no `?embed=1` to forget or to smuggle.
- * The calendar is the schedule page in its `?embed=1` mode, as before. It
- * renders from `embed/schedule` (see `embedRenderPath`), which is deliberately
- * not on this list: a widget is framable by path alone, and that segment is
- * framable only in the shape the proxy's rewrite gives it, with `?embed=1`.
+ * **A frame is where the URL is** (issue #2744; ADR 20260726-schedule-embed,
+ * amendment 2026-11-03). Everything a shop can frame on its own website lives
+ * under one path prefix, `/s/<shopSlug>/embed/`, and nothing outside it is
+ * framable: the storefront, the trip page, this same shop's staff and sign-in
+ * pages all keep the site's default deny (src/proxy.ts), so a third-party page
+ * can never frame them for a clickjacking attempt.
+ *
+ * - the widget views of the embed catalogue (Harbor — ADR
+ *   20260901-diveday-reimagined, decision 2): `embed/grid`, `embed/departure`,
+ *   `embed/courses`, `embed/reviews`;
+ * - the calendar, the next few departures as a compact ledger:
+ *   `embed/calendar`;
+ * - one departure's booking page, which the calendar's rows and a departure's
+ *   lightbox open: `embed/trip/<tripId>`.
+ *
+ * There is no query parameter that turns a page into a frame. `?embed=1` used
+ * to, on the storefront and the trip page, and it was deleted rather than
+ * redirected (H-20260815-no-legacy): a query is something to forget on one
+ * link or to smuggle onto another, and a segment's `loading.tsx` cannot read
+ * it. A path is neither, and each of these segments has the frame's own
+ * skeleton.
  */
 export const EMBED_WIDGETS = ["grid", "departure", "courses", "reviews"] as const;
 export type EmbedWidget = (typeof EMBED_WIDGETS)[number];
-const EMBEDDABLE_WIDGET = /^\/s\/[a-z0-9-]+\/embed\/(grid|departure|courses|reviews)\/?$/;
 
-export function isEmbedWidgetRoute(pathname: string): boolean {
-  return EMBEDDABLE_WIDGET.test(pathname);
+/** The static segment under `embed/` the framed schedule renders from. Never a widget. */
+export const EMBED_CALENDAR_SEGMENT = "calendar";
+/** The static segment under `embed/` whose `[id]` child is the framed trip page. */
+export const EMBED_TRIP_SEGMENT = "trip";
+
+const EMBED_ROUTE = new RegExp(
+  `^/s/[a-z0-9-]+/embed/(?:${[...EMBED_WIDGETS, EMBED_CALENDAR_SEGMENT].join("|")}|${EMBED_TRIP_SEGMENT}/[^/]+)/?$`,
+);
+
+/**
+ * True for exactly the paths a shop may frame — the one framing exception the
+ * proxy grants, decided by the path alone.
+ */
+export function isEmbedRoute(pathname: string): boolean {
+  return EMBED_ROUTE.test(pathname);
 }
 
 export function isEmbedWidget(value: unknown): value is EmbedWidget {
   return typeof value === "string" && (EMBED_WIDGETS as readonly string[]).includes(value);
 }
 
-const EMBED_WIDGET_SHAPE = /^\/s\/[a-z0-9-]+\/embed\/([^/]+)\/?$/;
+/** A widget, or the calendar: every one-segment name under `embed/` that renders. */
+export function isEmbedSegment(value: unknown): boolean {
+  return isEmbedWidget(value) || value === EMBED_CALENDAR_SEGMENT;
+}
+
+const EMBED_SEGMENT_SHAPE = /^\/s\/[a-z0-9-]+\/embed\/([^/]+)\/?$/;
 
 /**
- * `/s/<slug>/embed/<something>` where the something is not a widget. The page
- * would answer with `notFound()`, but under partial prerendering the static
- * shell has already gone out with a 200 by the time the page body runs, so a
- * crawler or a host page with a typo would get a 200 not-found. The proxy
- * answers these with a plain 404 before any shell is sent.
+ * `/s/<slug>/embed/<something>` where the something is neither a widget nor
+ * the calendar. The page would answer with `notFound()`, but under partial
+ * prerendering the static shell has already gone out with a 200 by the time
+ * the page body runs, so a crawler or a host page with a typo would get a 200
+ * not-found. The proxy answers these with a plain 404 before any shell is sent.
  *
  * This was the first edge refusal in the namespace and for a while the only
  * one, which made it look like a property of the embed *page* — a wrong reading
@@ -47,86 +67,27 @@ const EMBED_WIDGET_SHAPE = /^\/s\/[a-z0-9-]+\/embed\/([^/]+)\/?$/;
  * that names nothing is now refused in `src/proxy.ts` for exactly this reason
  * (ADR 20260912-the-public-namespace-refuses-at-the-edge). This predicate stays
  * as the widget-catalogue half of that one rule — the only segment here whose
- * answer is a closed list rather than a row.
+ * answer is a closed list rather than a row. `embed/trip/<id>` is a row, and
+ * `public-route-shape.ts` judges it like the trip page.
  */
 export function isUnknownEmbedWidgetRoute(pathname: string): boolean {
-  const match = EMBED_WIDGET_SHAPE.exec(pathname);
-  return match !== null && !isEmbedWidget(match[1]);
+  const match = EMBED_SEGMENT_SHAPE.exec(pathname);
+  return match !== null && !isEmbedSegment(match[1]);
 }
 
-export function isEmbeddableShopRoute(pathname: string): boolean {
-  return (
-    EMBEDDABLE_SCHEDULE.test(pathname) ||
-    EMBEDDABLE_TRIP_PAGE.test(pathname) ||
-    EMBEDDABLE_WIDGET.test(pathname)
-  );
+/** The framed calendar: `/s/<slug>/embed/calendar`. */
+export function embedCalendarPath(shopSlug: string): string {
+  return `${publicSchedulePath(shopSlug)}/embed/${EMBED_CALENDAR_SEGMENT}`;
 }
 
-/** The static segment under `embed/` the framed schedule renders from. Never a widget. */
-export const EMBEDDED_SCHEDULE_SEGMENT = "schedule";
-/** The segment under `trips/<id>/` the framed trip page renders from. */
-export const EMBEDDED_TRIP_SEGMENT = "embed";
-
-/**
- * **Where a framed schedule or trip page renders from** (K-371, K-382; ADR
- * 20260726-schedule-embed, amendment 2026-09-25).
- *
- * `?embed=1` is a query parameter, and a segment's `loading.tsx` cannot read
- * one, so both pages streamed into a shop's iframe under their full-page
- * skeletons — the storefront's identity band in a `max-w-6xl` column, the trip
- * page's centred `max-w-xl` one — and then snapped to the frame's full-width
- * `px-3 py-4` column once the body arrived. The proxy is the one layer that
- * reads the query before the shell goes out, so it rewrites an embed request
- * onto one of these internal segments, whose page renders the very same page
- * function in embed mode and whose skeleton is the frame's own:
- *
- * - `/s/<slug>` → `/s/<slug>/embed/schedule`, a static segment beside
- *   `embed/[widget]` that the router prefers to it;
- * - `/s/<slug>/trips/<id>` → `/s/<slug>/trips/<id>/embed`.
- *
- * The browser's URL does not change, so the host page's snippet, the
- * canonical, every link inside the frame and `usePathname()` all still read
- * the public path. A widget is `null` here: it is already its own segment.
- */
-export function embedRenderPath(pathname: string): string | null {
-  const bare = pathname.replace(/\/$/, "");
-  if (EMBEDDABLE_SCHEDULE.test(pathname)) return `${bare}/embed/${EMBEDDED_SCHEDULE_SEGMENT}`;
-  if (EMBEDDABLE_TRIP_PAGE.test(pathname)) return `${bare}/${EMBEDDED_TRIP_SEGMENT}`;
-  return null;
+/** One catalogue widget: `/s/<slug>/embed/<widget>`. */
+export function embedWidgetPath(shopSlug: string, widget: EmbedWidget): string {
+  return `${publicSchedulePath(shopSlug)}/embed/${widget}`;
 }
 
-const INTERNAL_EMBED_ROUTE = new RegExp(
-  `^/s/[^/]+/(?:embed/${EMBEDDED_SCHEDULE_SEGMENT}|trips/[^/]+/${EMBEDDED_TRIP_SEGMENT})/?$`,
-);
-
-/**
- * Either internal segment, named in the URL. They exist to be rewritten onto:
- * the proxy passes one on only in the shape its own rewrite gives it (see
- * `embedPublicPath`) and refuses it with a plain 404 in any other, before
- * anything else runs. The shop segment is matched at any spelling, because
- * refusing more than the router would serve costs nothing here.
- */
-export function isInternalEmbedRoute(pathname: string): boolean {
-  return INTERNAL_EMBED_ROUTE.test(pathname);
-}
-
-const EMBEDDED_SCHEDULE_PATH = new RegExp(`^(/s/[a-z0-9-]+)/embed/${EMBEDDED_SCHEDULE_SEGMENT}/?$`);
-const EMBEDDED_TRIP_PATH = new RegExp(`^(/s/[a-z0-9-]+/trips/[^/]+)/${EMBEDDED_TRIP_SEGMENT}/?$`);
-
-/**
- * **The public page an internal segment stands for** — `embedRenderPath`
- * undone, or `null` for any path that is not one of its results.
- *
- * On a server started on `127.0.0.1` the proxy's rewrite is not routed
- * internally: Next hands it back to the same server as a request of its own,
- * and the proxy runs a second time with the internal path as its pathname
- * ("Whether the proxy runs twice" in `src/proxy.ts`). That pass has to judge
- * the page the host framed — its existence, its framing exception, the path
- * the shell is told — and this is how it knows which page that is, from the
- * URL alone rather than from a header a client could send.
- */
-export function embedPublicPath(pathname: string): string | null {
-  return (EMBEDDED_SCHEDULE_PATH.exec(pathname) ?? EMBEDDED_TRIP_PATH.exec(pathname))?.[1] ?? null;
+/** The framed trip page: `/s/<slug>/embed/trip/<tripId>`. */
+export function embedTripPath(shopSlug: string, tripId: string): string {
+  return `${publicSchedulePath(shopSlug)}/embed/${EMBED_TRIP_SEGMENT}/${tripId}`;
 }
 
 /**
@@ -135,6 +96,7 @@ export function embedPublicPath(pathname: string): string | null {
  * link colour, its body face, and — when the shop fixed one — the language.
  * Each rides a query parameter the proxy validates and forwards as a header,
  * so the layout can read it without a `searchParams` prop it does not have.
+ * These are options of a frame, never what makes one: the path does that.
  */
 export const EMBED_BRAND_HEADER = "x-diveday-embed-brand";
 export const EMBED_FONT_HEADER = "x-diveday-embed-font";
@@ -161,9 +123,8 @@ export function parseEmbedFontParam(value: string | null): string | null {
 /**
  * Set on the request (never trusted from the response side) by `src/proxy.ts`
  * when — and only when — the current request is a genuine embed request
- * (`isEmbeddableShopRoute` route + `?embed=1`). The public shop layout reads it
- * to suppress chrome, since a layout (unlike a page) is never handed
- * `searchParams` directly. On every proxied request the incoming copy of this
+ * (`isEmbedRoute`). The public shop layout reads it to suppress chrome, since a
+ * layout (unlike a page) is never handed the URL, only its own `params`. On every proxied request the incoming copy of this
  * header is explicitly overwritten (set or deleted), so a client-supplied
  * value can never survive to reach a reader downstream. The proxy matcher's
  * static-asset escape hatch means "proxied" is not "all", so readers must stay

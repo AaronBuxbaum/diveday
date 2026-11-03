@@ -52,7 +52,7 @@ describe("the loader", () => {
     expect(credits[0]?.textContent).toBe("Bookings by DiveDay");
   });
 
-  it("frames the calendar as the schedule's compact mode and pins a departure by id", () => {
+  it("frames the calendar by its own path and pins a departure by id", () => {
     host(`
       <div data-diveday="calendar" data-shop="blue-mantis" data-look="light" data-lang="auto"></div>
       <div data-diveday="departure" data-shop="blue-mantis" data-look="light" data-lang="auto" data-show="t1"></div>
@@ -60,8 +60,8 @@ describe("the loader", () => {
     const calendar = new URL(
       document.querySelector<HTMLIFrameElement>('iframe[data-diveday-frame="calendar"]')?.src ?? "",
     );
-    expect(calendar.pathname).toBe("/s/blue-mantis");
-    expect(calendar.searchParams.get("embed")).toBe("1");
+    expect(calendar.pathname).toBe("/s/blue-mantis/embed/calendar");
+    expect(calendar.searchParams.has("embed")).toBe(false);
     // DiveDay's own look reads nothing off the host page.
     expect(calendar.searchParams.has("brand")).toBe(false);
     const departure = new URL(
@@ -152,7 +152,9 @@ describe("the loader", () => {
     expect(sheet?.getAttribute("aria-label")).toBe("Book a dive");
     expect(document.body.style.overflow).toBe("hidden");
     const frame = sheet?.querySelector("iframe");
-    expect(new URL(frame?.src ?? "").searchParams.get("embed")).toBe("1");
+    // The link is the real storefront; the sheet frames its twin under embed/.
+    expect(new URL(frame?.src ?? "").pathname).toBe("/s/blue-mantis/embed/calendar");
+    expect(new URL(frame?.src ?? "").searchParams.has("embed")).toBe(false);
     const close = sheet?.querySelector<HTMLButtonElement>("button[aria-label=Close]");
     expect(document.activeElement).toBe(close);
     // The sheet's look is one !important stylesheet, so a host `dialog {}` rule
@@ -172,6 +174,27 @@ describe("the loader", () => {
     document.querySelector<HTMLButtonElement>("button[aria-label=Close]")?.click();
     expect(open()).toBeNull();
     expect(document.querySelectorAll("style").length).toBe(1);
+  });
+
+  it("frames a departure's lightbox at the framed trip page, never the page itself", () => {
+    const proto = HTMLDialogElement.prototype;
+    proto.showModal = function showModal(this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    };
+    host(`
+      <a href="/s/blue-mantis/trips/t1" data-diveday="lightbox" data-shop="blue-mantis" data-look="light" data-lang="es-ES">Book this dive</a>
+    `);
+    document.querySelector<HTMLAnchorElement>("[data-diveday=lightbox]")?.click();
+    const src = new URL(
+      document.querySelector("dialog[data-diveday-lightbox] iframe")?.getAttribute("src") ?? "",
+    );
+    expect(src.pathname).toBe("/s/blue-mantis/embed/trip/t1");
+    expect(src.searchParams.has("embed")).toBe(false);
+    expect(src.searchParams.get("lang")).toBe("es-ES");
+    // The link itself stays the real page, so it works with the loader missing.
+    expect(document.querySelector("[data-diveday=lightbox]")?.getAttribute("href")).toBe(
+      "/s/blue-mantis/trips/t1",
+    );
   });
 
   it("grows a frame to the height it reports, and believes only its own origin", () => {

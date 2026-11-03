@@ -76,8 +76,9 @@
   }
   function frameUrl(el, kind) {
     const slug = el.getAttribute("data-shop") || "";
-    const url = new URL(kind === "calendar" ? `/s/${slug}` : `/s/${slug}/embed/${kind}`, origin);
-    if (kind === "calendar") url.searchParams.set("embed", "1");
+    // Every framed kind is a path under /s/<slug>/embed/ (issue #2744):
+    // the calendar included, so nothing in the query makes a frame.
+    const url = new URL(`/s/${slug}/embed/${kind}`, origin);
     // A trip id on "departure", a course slug on "courses" (issue #1284) —
     // told apart by the kind, never by the value. Kept as a list rather than
     // an equality so the mirror in src/lib/embed-snippets.ts (SHOWS_ONE) has
@@ -97,6 +98,18 @@
     // one line per widget, never two.
     url.searchParams.set("credit", "host");
     return url.toString();
+  }
+  // The lightbox's link is the real page, so it still works with this file
+  // missing; the sheet frames that page's twin under /s/<slug>/embed/ —
+  // the schedule's is the calendar, a departure's is embed/trip/<id>.
+  function framedHref(href) {
+    const match = /^\/s\/([^/]+)(?:\/trips\/([^/]+))?\/?$/.exec(href.pathname);
+    if (match) {
+      href.pathname = match[2]
+        ? `/s/${match[1]}/embed/trip/${match[2]}`
+        : `/s/${match[1]}/embed/calendar`;
+    }
+    return href;
   }
   function frame(el, kind) {
     const iframe = document.createElement("iframe");
@@ -167,8 +180,7 @@
       close.style.cssText =
         "position:absolute;top:8px;right:8px;width:44px;height:44px;border:0;border-radius:999px;background:rgba(12,42,53,.08);font:24px/1 system-ui,sans-serif;cursor:pointer;z-index:1";
       const iframe = document.createElement("iframe");
-      const href = new URL(el.getAttribute("href"), origin);
-      href.searchParams.set("embed", "1");
+      const href = framedHref(new URL(el.getAttribute("href"), origin));
       const lang = el.getAttribute("data-lang");
       if (lang && lang !== "auto") href.searchParams.set("lang", lang);
       if ((el.getAttribute("data-look") || "site") === "site") {

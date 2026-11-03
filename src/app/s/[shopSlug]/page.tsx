@@ -367,7 +367,7 @@ export default async function SchedulePage({
               `e2e/schedule-filters.spec.ts` and `e2e/trip-admission.spec.ts`
               address the departures as `form + ul`. None of it renders in the
               frame (issue #805): `FilterChips` is a `<nav>` landmark and
-              `?embed=1` promises the host page none. The URL carries the
+              the frame promises the host page none. The URL carries the
               filters and the list re-renders server-side (ADR
               20260812-javascript-is-required). */}
           {hasUpcoming ? (
@@ -410,7 +410,7 @@ export default async function SchedulePage({
               composer below it (N-45) — a heading, a dashed box and a "check
               back soon" underneath that card would be the same news three times,
               and the middle one is the sentence that reads as a shop which has
-              stopped. The widget keeps it: `?embed=1` renders neither of those
+              stopped. The widget keeps it: `embed/calendar` renders neither of those
               two, and a blank iframe on a shop's own website says nothing at
               all. The list itself renders on `showsWeekLedger`, the name the
               pager row's margin below reads too. */}

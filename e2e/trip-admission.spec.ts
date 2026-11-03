@@ -511,7 +511,7 @@ test.describe("what the public schedule card says a departure requires", () => {
   });
 
   test("the embed carries the gate too", { tag: READ_ONLY }, async ({ page }) => {
-    // `?embed=1` drops the shop chrome and is the surface a shop pastes into
+    // The framed calendar drops the shop chrome and is the surface a shop pastes into
     // its own site — the one most likely to be the only schedule a diver ever
     // sees (ADR 20260726-schedule-embed).
     //
@@ -519,7 +519,7 @@ test.describe("what the public schedule card says a departure requires", () => {
     // shorter list and Spiegel Grove sails past the end of it. This one is the
     // better witness anyway: its Advanced Open Water and Deep come from the
     // Duane, and its nitrox from the trip row.
-    await page.goto("/s/blue-mantis?embed=1");
+    await page.goto("/s/blue-mantis/embed/calendar");
     await expect(
       page
         .getByRole("listitem")

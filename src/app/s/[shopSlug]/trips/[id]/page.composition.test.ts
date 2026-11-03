@@ -36,10 +36,15 @@ describe("the trip page's gates", () => {
   });
 
   it("leaves the embed contract exactly where it was", () => {
-    // `?embed=1` drops the chrome and the back link, the `confirm` capability
+    // The frame drops the chrome and the back link, the `confirm` capability
     // is the whole gate on `?booking=`, and no structured data is emitted in
-    // the frame (the embed points its canonical at this page).
-    expect(SOURCE).toContain('const isEmbed = embed === "1";');
+    // the frame (the embed points its canonical at this page). Which page it
+    // is comes from the route file, never from the query (issue #2744).
+    expect(SOURCE).toContain("isEmbed = false,");
+    expect(routeSource(import.meta.dirname, "../../embed/trip/[id]/page.tsx")).toContain(
+      "<TripDetailPage params={params} searchParams={searchParams} isEmbed />",
+    );
+    expect(SOURCE).not.toMatch(/^\s+embed,$/m);
     expect(SOURCE).toContain("const structuredData = isEmbed\n    ? null");
     expect(READS_SOURCE).toContain(
       'isEmbed && bookingToken\n      ? verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" }).then(',

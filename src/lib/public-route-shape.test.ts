@@ -95,11 +95,21 @@ describe("publicRouteShape", () => {
     });
   });
 
-  it("calls the framed pages' own segments malformed, because nobody may ask for one by name", () => {
-    // `src/proxy.ts` rewrites `?embed=1` onto these and refuses them by path
-    // (`isInternalEmbedRoute`) before it asks for a shape; said again here so
-    // this function stays true on its own terms, and so the route tree's
-    // coverage guard has an opinion to read.
+  it("judges the framed calendar as the shop and the framed trip page as the departure", () => {
+    expect(publicRouteShape(`/s/${SHOP}/embed/calendar`)).toEqual({ kind: "shop", shopSlug: SHOP });
+    expect(publicRouteShape(`/s/${SHOP}/embed/trip/${TRIP_ID}`)).toEqual({
+      kind: "trip",
+      shopSlug: SHOP,
+      tripId: TRIP_ID,
+    });
+    // A junk id is malformed here, as it is on the trip page.
+    expect(publicRouteShape(`/s/${SHOP}/embed/trip/nope`)).toEqual({
+      kind: "malformed",
+      shopSlug: SHOP,
+    });
+  });
+
+  it("calls the segments the deleted ?embed=1 rewrite used to land on malformed", () => {
     const malformed = { kind: "malformed", shopSlug: SHOP };
     expect(publicRouteShape(`/s/${SHOP}/embed/schedule`)).toEqual(malformed);
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/embed`)).toEqual(malformed);
