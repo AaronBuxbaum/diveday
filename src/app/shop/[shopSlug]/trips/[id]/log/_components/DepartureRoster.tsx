@@ -82,8 +82,7 @@ function RosterTable({
               ) : diver.emergencyContactName && diver.emergencyContactPhone ? (
                 <>
                   {diver.emergencyContactName}
-                  {"\u00a0"}·{" "}
-                  <span>{diver.emergencyContactPhone}</span>
+                  {"\u00a0"}· <span>{diver.emergencyContactPhone}</span>
                 </>
               ) : (
                 t("incidentExport.notOnFile")
