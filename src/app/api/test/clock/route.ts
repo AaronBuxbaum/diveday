@@ -3,6 +3,7 @@ import { getDb } from "@/db/client";
 import { bringDemoBoatsAtSeaHome } from "@/db/seed-boat-at-sea";
 import { nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
+import { moveServerClock } from "@/lib/test-clock";
 
 /**
  * Move this server's frozen clock — the one-day simulation's hand on time.
@@ -14,11 +15,11 @@ import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes"
  * *Underway* at eleven, close the day at seven and fire the recap pass after
  * the four-hour floor — one server, one database, one honest clock.
  *
- * **The e2e fleet never calls this.** A worker's clock is process-wide, shared
- * by every spec that worker runs (`e2e/servers.ts`, and `seed-evening`'s
- * docblock on why the departures move instead). A spec that moved it would
- * move it for the rest of the run. The simulation owns its server outright,
- * which is the only reason this is safe there.
+ * **The fleet calls this through the `clock` fixture** (`e2e/fixtures.ts`). A
+ * worker's clock is process-wide, shared by every spec that worker runs, so a
+ * move is safe only because `/api/test/reset` puts the clock back to the
+ * instant the server booted at before the next test (`src/lib/test-clock.ts`,
+ * issue #2761). Only the reset moves it backwards; this route refuses to.
  *
  * Moving it past the demo's boat at sea brings her home
  * (`bringDemoBoatsAtSeaHome`), the one write this route makes.
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
   if (requested < nowDate().getTime()) {
     return NextResponse.json({ error: "clock_would_move_backwards" }, { status: 409 });
   }
-  process.env.DIVEDAY_CLOCK = new Date(requested).toISOString();
+  moveServerClock(new Date(requested));
   // A clock moved past the demo's boat at sea brings her home the way the
   // nightly refresh does, rather than leaving dive 2's count open hours after
   // she was due (visual triage of PR #2918, item 1a). A boat still out by the

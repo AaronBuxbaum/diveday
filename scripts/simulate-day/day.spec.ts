@@ -9,6 +9,7 @@ import {
   type Page,
   test,
 } from "@playwright/test";
+import { BROWSER_CLOCK_COOKIE, pinBrowserClock } from "../../e2e/browser-clock";
 import { makeActivitySafe } from "../../e2e/fixtures";
 import {
   offlineCopySaved,
@@ -563,7 +564,7 @@ async function advanceClock(instant: Date): Promise<void> {
   }
   for (const context of [diverContext, staffContext]) {
     await context.addCookies([
-      { name: "diveday_sim_clock", value: instant.toISOString(), url: SIMULATION_BASE_URL },
+      { name: BROWSER_CLOCK_COOKIE, value: instant.toISOString(), url: SIMULATION_BASE_URL },
     ]);
   }
 }
@@ -591,16 +592,7 @@ async function newActorContext(): Promise<BrowserContext> {
     colorScheme: "light",
     viewport: { width: 1279, height: 720 },
   });
-  await context.addInitScript((fallback: string) => {
-    const match = document.cookie.match(/(?:^|; )diveday_sim_clock=([^;]+)/);
-    const fixed = new Date(match ? decodeURIComponent(match[1]) : fallback).getTime();
-    const RealDate = Date;
-    globalThis.Date = new Proxy(RealDate, {
-      construct: (target, args) => Reflect.construct(target, args.length === 0 ? [fixed] : args),
-      get: (target, prop, receiver) =>
-        prop === "now" ? () => fixed : Reflect.get(target, prop, receiver),
-    });
-  }, SIMULATION_DAY_START);
+  await pinBrowserClock(context, SIMULATION_DAY_START);
   // As `e2e/fixtures.ts` answers it: an empty page, never an aborted frame.
   await context.route("https://maps.google.com/**", (route) =>
     route.fulfill({

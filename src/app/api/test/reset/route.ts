@@ -6,6 +6,7 @@ import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { purgeMintedDemoShops } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
+import { restoreBootClock } from "@/lib/test-clock";
 
 /**
  * Resets the seeded demo shop's schedule to its canonical fixture state.
@@ -29,6 +30,9 @@ import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes"
 export async function POST(request: Request) {
   if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const startedAt = performance.now();
+  // The clock is a fact the reset restores, ahead of the rows: a test that moved
+  // it (the `clock` fixture) must not hand the next test a later day (#2761).
+  restoreBootClock();
   const db = await getDb();
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
   let reset: DemoReset | null = null;
