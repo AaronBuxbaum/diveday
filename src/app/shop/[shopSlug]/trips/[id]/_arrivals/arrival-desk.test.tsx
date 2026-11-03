@@ -243,7 +243,7 @@ describe("the counter's turned-away door (H-20261015-who-may-turn-someone)", () 
     );
     expect(below).not.toHaveTextContent("Marking someone not here");
     expect(below).not.toHaveTextContent("Open their orders");
-    expect(below.querySelector('a[href*="/bookings/new/"]')).toBeNull();
+    expect(below.querySelector('a[href*="?add=1"]')).toBeNull();
   });
 });
 

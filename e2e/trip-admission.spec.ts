@@ -233,12 +233,11 @@ test.describe("as owner", () => {
     const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER, CHARTERS);
     // Odile Marchand holds a verified Instructor card — the top rung — and no
     // specialty card at all. Nothing about her level can explain this refusal.
-    await page.goto(`/shop/blue-mantis/bookings/new/${tripId}?diverq=Odile+Marchand`);
-    await page.getByRole("button", { name: "Add Odile Marchand to this departure" }).click();
+    await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1&diverq=Odile+Marchand`);
+    await page.getByRole("button", { name: "Add Odile Marchand to the trip" }).click();
 
-    // The global door is the departure door with the boat chosen a step
-    // earlier: its refusal lands on that boat's Divers tab, where the add-diver
-    // form says why.
+    // "Add a booking" is the departure's own add band (#2737): its refusal
+    // lands back on that boat's Divers tab, where the band says why.
     await expect(page).toHaveURL(new RegExp(`/trips/${tripId}(?:\\?|$)`));
     const banner = page.getByText("This charter requires a Deep certification.");
     await expect(banner).toBeVisible();

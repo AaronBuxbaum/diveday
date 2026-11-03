@@ -62,7 +62,7 @@ const { recordSightingAction, deleteSightingAction, saveExecutedDiveAction } = a
 const { addKnownDiverToWaitlistAction, invitePastDiverAction } = await import(
   "./trips/[id]/roster-seating-actions"
 );
-const { tookACallAction } = await import("./bookings/new/call-actions");
+const { tookACallAction } = await import("./call-actions");
 
 async function asOwnerWith(feature: ShopFeature) {
   const { db, shop } = ctx;
@@ -337,7 +337,8 @@ describe("actions behind a switched-off feature", () => {
         }),
       ),
     );
-    expect(to).toContain(`/shop/${shop.slug}/bookings/new`);
+    expect(to).toContain(`/shop/${shop.slug}?call=1&`);
+    expect(to.endsWith("#call")).toBe(true);
     expect(to).toContain("notice=call-waitlist-off");
     expect(to).toContain("outcome=date-request");
     const [draft] = await db

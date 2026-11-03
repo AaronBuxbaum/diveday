@@ -13,15 +13,15 @@ describe("DepartureDayNav", () => {
     render(
       <>
         <DepartureDayNav
-          action="/shop/blue-mantis/bookings/new"
+          action="/shop/blue-mantis"
           day="2026-10-07"
           today="2026-10-07"
-          request={null}
+          carry={{ call: "1" }}
           words={words}
         />
         <DepartureDaySteps
           earlierHref={null}
-          laterHref="/shop/blue-mantis/bookings/new?from=2026-10-09"
+          laterHref="/shop/blue-mantis?call=1&from=2026-10-09"
           words={steps}
         />
       </>,
@@ -29,7 +29,7 @@ describe("DepartureDayNav", () => {
     expect(screen.queryByRole("link", { name: "Earlier days" })).toBeNull();
     expect(screen.getByRole("link", { name: "Later days" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/bookings/new?from=2026-10-09",
+      "/shop/blue-mantis?call=1&from=2026-10-09",
     );
     const day = screen.getByLabelText("Day");
     expect(day).toHaveAttribute("name", "from");
@@ -37,19 +37,19 @@ describe("DepartureDayNav", () => {
     expect(day).toHaveValue("2026-10-07");
   });
 
-  it("carries the request being booked through a jump to another day", () => {
+  it("keeps the panel open, and the request being booked, through a jump to another day", () => {
     const { container } = render(
       <>
         <DepartureDayNav
-          action="/shop/blue-mantis/bookings/new"
+          action="/shop/blue-mantis"
           day="2026-10-20"
           today="2026-10-07"
-          request="0b8a0c9e-0000-4000-8000-000000000001"
+          carry={{ call: "1", request: "0b8a0c9e-0000-4000-8000-000000000001" }}
           words={words}
         />
         <DepartureDaySteps
-          earlierHref="/shop/blue-mantis/bookings/new?from=2026-10-18"
-          laterHref="/shop/blue-mantis/bookings/new?from=2026-10-22"
+          earlierHref="/shop/blue-mantis?call=1&from=2026-10-18"
+          laterHref="/shop/blue-mantis?call=1&from=2026-10-22"
           words={steps}
         />
       </>,
@@ -57,6 +57,10 @@ describe("DepartureDayNav", () => {
     expect(screen.getByRole("link", { name: "Earlier days" })).toBeInTheDocument();
     const hidden = container.querySelector('input[type="hidden"][name="request"]');
     expect(hidden).toHaveAttribute("value", "0b8a0c9e-0000-4000-8000-000000000001");
+    expect(container.querySelector('input[type="hidden"][name="call"]')).toHaveAttribute(
+      "value",
+      "1",
+    );
     expect(container.querySelector("form")).toHaveAttribute("method", "get");
   });
 });

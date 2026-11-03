@@ -5,6 +5,8 @@ import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import type { DeparturePickerWindow } from "@/lib/departure-picker-window";
+import { shopPath } from "@/lib/staff-notices";
+import { callPanelHref } from "@/lib/took-a-call";
 import { DepartureDayNav, DepartureDaySteps } from "./DepartureDayNav";
 import { DeparturePicker, type DeparturePickerDay } from "./DeparturePicker";
 
@@ -18,7 +20,7 @@ import { DeparturePicker, type DeparturePickerDay } from "./DeparturePicker";
  * drops out of the URL when it is today, so the default view has one address.
  */
 export function DepartureWindowSection({
-  self,
+  shopSlug,
   pickerWindow,
   requestId,
   days,
@@ -28,8 +30,8 @@ export function DepartureWindowSection({
   locale,
   t,
 }: {
-  /** This page's own path, which every control here lands back on. */
-  self: string;
+  /** Every control here lands back on the shop home's open call panel. */
+  shopSlug: string;
   pickerWindow: DeparturePickerWindow;
   requestId: string | null;
   days: DeparturePickerDay[];
@@ -41,14 +43,12 @@ export function DepartureWindowSection({
   t: StaffTranslator;
 }) {
   /** This page with a day and a page, the request being booked carried along. */
-  const pickerHref = (target: { from?: string | null; page?: number }) => {
-    const query = new URLSearchParams();
-    if (requestId) query.set("request", requestId);
-    if (target.from && target.from !== pickerWindow.today) query.set("from", target.from);
-    if ((target.page ?? 1) > 1) query.set("page", String(target.page));
-    const encoded = query.toString();
-    return encoded ? `${self}?${encoded}` : self;
-  };
+  const pickerHref = (target: { from?: string | null; page?: number }) =>
+    callPanelHref(shopSlug, {
+      request: requestId ?? undefined,
+      from: target.from && target.from !== pickerWindow.today ? target.from : undefined,
+      page: (target.page ?? 1) > 1 ? String(target.page) : undefined,
+    });
 
   // The list is filtered to departures with a seat left, and a filter nobody
   // announced reads as a missing departure: a sold-out Saturday simply wasn't
@@ -73,10 +73,10 @@ export function DepartureWindowSection({
     <>
       <DepartureDayNav
         className="mt-8"
-        action={self}
+        action={shopPath(shopSlug)}
         day={pickerWindow.day}
         today={pickerWindow.today}
-        request={requestId}
+        carry={requestId ? { call: "1", request: requestId } : { call: "1" }}
         words={{ dayLabel: t("bookings.new.day.label"), show: t("bookings.new.day.show") }}
       />
       {days.length === 0 && nextOpenDay ? (

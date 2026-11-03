@@ -21,6 +21,17 @@ export type TripPageSearchParams = {
   /** `details` opens the Details tab; anything else is the Divers tab. */
   view?: string;
   /**
+   * `1` opens the Divers tab with the cursor in its add band: where every
+   * "Add a booking" door that knows the departure lands (#2737).
+   */
+  add?: string;
+  /**
+   * The date request the band seats from (`readSeatRequest`): its card, its
+   * asker, and the id every seat posts. Kept in the URL while a party is
+   * still being seated.
+   */
+  request?: string;
+  /**
    * A refused Paid mark's status, amount (in cents) and method, so the sheet
    * reopens holding them (issue #2607). Read through `readMarkRetry`, never raw.
    */
@@ -43,6 +54,7 @@ export type TripPageSearchParams = {
 /** Transient outcomes cleared after this route has shown them once. */
 export const TRIP_FLASH_PARAMS = [
   "notice",
+  "add",
   "count",
   "form",
   "bid",

@@ -4,8 +4,8 @@ import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 /**
  * **"Took a call"** (N-22): the desk phone's answer for a caller with no seat
- * to book, kept at the foot of New booking as a disclosure (`#call`) titled
- * "Log a call".
+ * to book, kept at the foot of the shop home's Add a booking panel
+ * (`?call=1`) as a disclosure (`#call`) titled "Log a call".
  *
  * What this pins is the *routing*, because that is the whole feature. Each of
  * the two answers is written by a door that already exists and already has its
@@ -13,7 +13,7 @@ import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
  * the trip page's own writer — so what could break here is a call arriving at
  * the wrong one of them, or a caller's answers being dropped on the way.
  */
-const ADD_BOOKING = "/shop/blue-mantis/bookings/new";
+const ADD_BOOKING = "/shop/blue-mantis?call=1";
 
 /**
  * Open Add a booking with the call form showing. The `#call` hash opens the
@@ -120,7 +120,7 @@ test.describe("took a call", () => {
     await call.getByLabel("What they asked about").fill("Anything in June");
     await call.getByRole("button", { name: "Log the call" }).click();
 
-    await page.waitForURL(/\/bookings\/new\?.*notice=call-reply/);
+    await page.waitForURL(/\/shop\/blue-mantis\?call=1&.*notice=call-reply/);
     // The refusal reopens the disclosure on its own: a shut one would hide the
     // answer the staffer is waiting for.
     const refused = page.locator("details#call");
@@ -151,7 +151,7 @@ test.describe("took a call", () => {
     await chooseDeparture(call, title);
     await call.getByRole("button", { name: "Log the call" }).click();
 
-    await page.waitForURL(/\/bookings\/new\?.*notice=call-email/);
+    await page.waitForURL(/\/shop\/blue-mantis\?call=1&.*notice=call-email/);
     await expect(
       page.locator("details#call").getByText(/A wait-list entry needs an email address/),
     ).toBeVisible();

@@ -313,7 +313,7 @@ export const areas = {
       "src/app/actions/seat-diver-surfaces.ts",
       "src/lib/trips.ts",
       "src/app/s/[shopSlug]",
-      "src/app/shop/[shopSlug]/bookings/new",
+      "src/app/shop/[shopSlug]/_components/call",
       "src/app/shop/[shopSlug]/schedule/board",
       "src/app/shop/[shopSlug]/trips",
     ],

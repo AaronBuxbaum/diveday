@@ -54,9 +54,6 @@
     "e2e": ["returning-diver.spec.ts", "schedule-embed.spec.ts"],
     "visual": ["booking-confirmed-embed"]
   },
-  "/shop/[shopSlug]/bookings/new/[tripId]": {
-    "visual": ["booking-new-diver"]
-  },
   "/shop/[shopSlug]/divers/[personId]": {
     "visual": [
       "diver-medical-clearance-form",

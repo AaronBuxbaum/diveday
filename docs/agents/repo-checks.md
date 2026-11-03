@@ -586,9 +586,9 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   moved to it, the settings pages first; its notice codes are typed (`NoticeOf`), so its page's
   map fails to compile on a code with no words. A removal that offers Undo lands with an undo
   offer (`src/lib/undo.ts`), and its inverse is a row of `src/app/actions/undo-registry.ts`. **Seating a diver** from any surface goes through `src/app/actions/seat-diver.ts`
-  and the per-surface table in `seat-diver-surfaces.ts`; the global door is
-  `src/app/shop/[shopSlug]/bookings/new` then `bookings/new/[tripId]` — the trip is a path segment,
-  not a `?tripId=`, so a refusal can land back on it.
+  and the per-surface table in `seat-diver-surfaces.ts`. "Add a booking" is the departure's add band
+  (`/trips/[id]?add=1`) when the boat is known, else the shop home's panel (`/shop/[slug]?call=1`),
+  whose picker leads to that band; there is no `/new` route for it (#2737).
 - **The schedule builder**: `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx`
   + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`. The add panel is the
   **one place a trip is created**; the retired `/shop/[shopSlug]/trips/new` URL has no

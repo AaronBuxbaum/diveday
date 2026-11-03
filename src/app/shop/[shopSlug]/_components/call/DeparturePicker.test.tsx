@@ -23,7 +23,7 @@ const DAYS: DeparturePickerDay[] = [
     rows: [
       {
         id: "reef",
-        href: "/shop/blue-mantis/bookings/new/reef",
+        href: "/shop/blue-mantis/trips/reef?add=1",
         title: "Two-Tank Reef — Molasses & French",
         time: "7:00 AM — 11:00 AM",
         seats: "4 seats left",
@@ -31,7 +31,7 @@ const DAYS: DeparturePickerDay[] = [
       },
       {
         id: "afternoon",
-        href: "/shop/blue-mantis/bookings/new/afternoon",
+        href: "/shop/blue-mantis/trips/afternoon?add=1",
         title: "Afternoon Reef — Christ of the Abyss",
         time: "1:00 PM — 4:30 PM",
         seats: "9 seats left",
@@ -44,7 +44,7 @@ const DAYS: DeparturePickerDay[] = [
     rows: [
       {
         id: "wreck",
-        href: "/shop/blue-mantis/bookings/new/wreck",
+        href: "/shop/blue-mantis/trips/wreck?add=1",
         title: "Wreck Trip — Spiegel Grove",
         time: "7:30 AM — 12:30 PM",
         seats: "1 seat left",
@@ -83,7 +83,7 @@ describe("the departure picker", () => {
     renderPicker();
     expect(screen.getByRole("link", { name: "Two-Tank Reef — Molasses & French" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/bookings/new/reef",
+      "/shop/blue-mantis/trips/reef?add=1",
     );
   });
 

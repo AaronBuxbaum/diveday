@@ -11,11 +11,17 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { type CallOutcome, type CallRefusal, callRefusal, isCallOutcome } from "@/lib/took-a-call";
+import {
+  type CallOutcome,
+  type CallRefusal,
+  callPanelHref,
+  callRefusal,
+  isCallOutcome,
+} from "@/lib/took-a-call";
 
 /**
  * **A call with no seat to book** (N-22): one submission from the desk phone
- * at the foot of Add a booking, routed to whichever of two existing writers
+ * in the shop home's Add a booking panel (`?call=1`), routed to whichever of two existing writers
  * the call turned out to be about.
  *
  * The routing is the whole feature. Nothing new is written here: a date request
@@ -23,7 +29,7 @@ import { type CallOutcome, type CallRefusal, callRefusal, isCallOutcome } from "
  * `addToWaitlistAction`, so a wait-list join on a departure that turns out to
  * have a seat comes back on the trip page saying so. Only the refusals this
  * form can see before either runs — a caller with no name, no way to ring
- * back, or no answer to what they wanted — land back on Add a booking.
+ * back, or no answer to what they wanted — land back on that panel.
  */
 
 /** A `<input type="date">` value, refused unless it is a date that exists. */
@@ -66,7 +72,7 @@ const REFUSAL_NOTICE: Record<CallRefusal, string> = {
  * themselves.
  */
 function refuse(shopSlug: string, notice: string, outcome: CallOutcome | null): never {
-  const back = shopPath(shopSlug, "bookings", "new");
+  const back = callPanelHref(shopSlug, {}, "call");
   // The chosen branch rides back so the form reopens on it: a refusal that
   // collapsed the caller's answer to "nothing chosen" would make the staffer
   // re-read three options with somebody on the line.
