@@ -29,7 +29,8 @@ export type SeatRequest = {
  * tenant's id, a deleted or erased row, junk, a closed request, or a party
  * already seated. One answer for all of them, so the page cannot tell anyone
  * which ids exist, and a stale link costs the band its card, not the desk its
- * page.
+ * page. `"not_offered"` when the request is open but this departure was
+ * never offered to it: every seat would be refused, so the band posts none.
  */
 export async function readSeatRequest(
   db: AppDb,
@@ -39,15 +40,15 @@ export async function readSeatRequest(
     request,
     typed,
   }: { shopId: string; tripId: string; request: string | undefined; typed: string },
-): Promise<SeatRequest | null | "gone"> {
+): Promise<SeatRequest | null | "gone" | "not_offered"> {
   if (request === undefined || request === "") return null;
   const id = uuidParam(request);
   if (!id) return "gone";
   const [row] = await listDateInterestsByIds(db, shopId, [id]);
   if (!row || row.closedAt) return "gone";
   const party = await dateRequestPartyOnDeparture(db, { shopId, tripId, requestId: row.id });
-  const partySize = party?.partySize ?? Math.max(1, row.partySize ?? 1);
-  const seated = party?.seated ?? 0;
+  if (!party) return "not_offered";
+  const { partySize, seated } = party;
   if (seated >= partySize) return "gone";
   const candidate =
     row.personId && typed === "" ? await getBookableDiver(db, shopId, tripId, row.personId) : null;

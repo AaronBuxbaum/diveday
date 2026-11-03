@@ -77,10 +77,21 @@ async function activeLinkedSeats(
  */
 export async function lockDateRequestOffer(
   tx: DbExecutor,
-  input: { shopId: string; tripId: string; requestId: string; excludeBookingId?: string },
+  input: {
+    shopId: string;
+    tripId: string;
+    requestId: string;
+    excludeBookingId?: string;
+    /**
+     * A new link to the request: a closed request takes none, so a stale form
+     * cannot seat someone against a request the band already calls gone. A seat
+     * already linked (restored, moved, re-seated) keeps its closed request.
+     */
+    newLink?: boolean;
+  },
 ): Promise<{ offerId: string; requestId: string; partySize: number } | DateRequestBookingRefusal> {
   const [request] = await tx
-    .select({ id: interests.id })
+    .select({ id: interests.id, closedAt: interests.closedAt })
     .from(interests)
     .where(
       and(
@@ -145,6 +156,9 @@ export async function lockDateRequestOffer(
     excludeBookingId: input.excludeBookingId,
   });
   if (linked >= (offer.partySize ?? 1)) return "date_request_party_full";
+  // After the party check, so a seat past a completed party still reads as
+  // the party being full rather than the request being gone.
+  if (input.newLink && request.closedAt) return "date_request_offer_unavailable";
   return { offerId: offer.id, requestId: request.id, partySize: offer.partySize ?? 1 };
 }
 

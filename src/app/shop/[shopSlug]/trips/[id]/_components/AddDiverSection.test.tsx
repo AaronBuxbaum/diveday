@@ -140,6 +140,39 @@ describe("AddDiverSection", () => {
     expect(links.at(-1)).toHaveAccessibleName("Add as a walk-in");
   });
 
+  /** Round-2 review, finding 2: under a results list, Booking books first. */
+  it("offers a booking first under a results list in Booking mode", () => {
+    const candidate = {
+      person: { id: "person-1", fullName: "Avery Diaz", email: "avery@example.com" },
+      rentalFit: null,
+    } as unknown as BookableDiver;
+    render(
+      <AddDiverSection
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: false,
+          query: "Avery",
+          candidates: [candidate],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+          mode: "booking",
+        }}
+      />,
+    );
+    // The search's own "Add diver", then under the list: book, then walk in.
+    const links = screen.getAllByRole("link", { name: /^(Add diver|Add as a walk-in)$/ });
+    expect(links.map((link) => link.textContent)).toEqual([
+      "Add diver",
+      "Add diver",
+      "Add as a walk-in",
+    ]);
+  });
+
   it("draws no choice outside the window", () => {
     render(
       <AddDiverSection
@@ -630,7 +663,8 @@ describe("AddDiverSection opened from a date request", () => {
         }}
       />,
     );
-    const href = screen.getByRole("link", { name: "Add diver" }).getAttribute("href") ?? "";
+    const href =
+      screen.getByRole("link", { name: "Add for this request" }).getAttribute("href") ?? "";
     const query = new URL(href, "https://diveday.test").searchParams;
     expect(query.get("name")).toBe("Imani Okafor");
     expect(query.get("email")).toBe("imani@example.com");
@@ -672,6 +706,51 @@ describe("AddDiverSection opened from a date request", () => {
       "href",
       "/shop/blue-mantis/trips/trip-1?add=1&counter=1",
     );
+  });
+
+  /**
+   * Round-2 review, finding 1: a door for someone new that carries the
+   * request says so, exactly like a pick. Label and payload agree.
+   */
+  it("names every new-person door that carries the request", () => {
+    render(
+      <AddDiverSection
+        context={{
+          ...base,
+          mode: "booking",
+          query: "Sam New",
+          candidates: [],
+          request: { id: REQUEST },
+        }}
+      />,
+    );
+    const doors = screen.getAllByRole("link", { name: "Add for this request" });
+    expect(doors.length).toBeGreaterThan(0);
+    for (const door of doors) {
+      const query = new URL(door.getAttribute("href") ?? "", "https://diveday.test").searchParams;
+      expect(query.get("request")).toBe(REQUEST);
+    }
+    // No door for someone new carries the request under another name.
+    for (const link of screen.getAllByRole("link")) {
+      const href = link.getAttribute("href") ?? "";
+      if (!href.includes("/divers?") || href.includes("waitlist=true")) continue;
+      const query = new URL(href, "https://diveday.test").searchParams;
+      if (query.get("request")) expect(link).toHaveAccessibleName("Add for this request");
+    }
+  });
+
+  it("keeps the request on the Booking choice", () => {
+    render(
+      <AddDiverSection
+        context={{ ...base, mode: "booking", query: "", candidates: [], request: { id: REQUEST } }}
+      />,
+    );
+    const nav = screen.getByRole("navigation", { name: "Booking or walk-in" });
+    const booking = Array.from(nav.querySelectorAll("a, [aria-current]")).find((el) =>
+      el.textContent?.includes("Booking"),
+    );
+    const href = booking?.getAttribute("href");
+    if (href) expect(href).toBe(`/shop/blue-mantis/trips/trip-1?add=1&request=${REQUEST}`);
   });
 
   it("carries no request field when the band was not opened from one", () => {

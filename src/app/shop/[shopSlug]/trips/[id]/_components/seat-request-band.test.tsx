@@ -110,6 +110,14 @@ describe("addBandFor", () => {
     expect(screen.getByText(t("trips.addDiver.requestGone"))).toBeInTheDocument();
   });
 
+  it("says a request never offered this departure was not, and carries none of it", async () => {
+    vi.mocked(readSeatRequest).mockResolvedValue("not_offered");
+    const band = await addBandFor(db, where, { add: "1", request: ROW.id });
+    expect(band.request).toBeUndefined();
+    render(<div>{band.requestGone}</div>);
+    expect(screen.getByText(t("trips.addDiver.requestNotOffered"))).toBeInTheDocument();
+  });
+
   it("is the counter only when the desk chose it, and the counter answers no request", async () => {
     vi.mocked(readSeatRequest).mockClear();
     expect(await addBandFor(db, where, { add: "1" })).toMatchObject({ counter: false });

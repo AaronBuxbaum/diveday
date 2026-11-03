@@ -171,7 +171,12 @@ export function AddDiverSection({
     waitlist: true,
     ...fromRequest,
   });
-  const bookLabel = t("trips.addDiver.addNewDiverAction", { query });
+  // A door for someone new that carries the request says so, as a pick does:
+  // its label and its payload agree (round-2 domain review, finding 1).
+  const forRequest = Boolean(request) && !walkInOpen;
+  const bookLabel = forRequest
+    ? t("trips.addDiver.addForRequest")
+    : t("trips.addDiver.addNewDiverAction", { query });
   const walkInLabel = t("trips.addDiver.addAsWalkIn");
   const tripPath = shopPath(shopSlug, "trips", tripId);
   return (
@@ -185,7 +190,11 @@ export function AddDiverSection({
           ariaCurrentValue="true"
           scroll={false}
           items={[
-            { key: "booking", label: t("trips.addDiver.modeBooking"), href: `${tripPath}?add=1` },
+            {
+              key: "booking",
+              label: t("trips.addDiver.modeBooking"),
+              href: `${tripPath}?add=1${request ? `&request=${encodeURIComponent(request.id)}` : ""}`,
+            },
             {
               key: "counter",
               label: t("trips.addDiver.modeWalkIn"),
@@ -265,7 +274,13 @@ export function AddDiverSection({
             // At the counter the band is one field: someone new is offered by
             // the search's own result, never a second door beside it.
             addDiverHref={walkInOpen ? undefined : bookNewDiver}
-            addDiverLabel={walkInOpen ? undefined : t("trips.addDiver.addDiver")}
+            addDiverLabel={
+              walkInOpen
+                ? undefined
+                : forRequest
+                  ? t("trips.addDiver.addForRequest")
+                  : t("trips.addDiver.addDiver")
+            }
           />
 
           {searched ? (
@@ -340,22 +355,28 @@ export function AddDiverSection({
                 />
                 {/* The match list can miss the person at the desk (another Sam);
                   the doors for someone new stay one tap away under it. */}
+                {/* The mode's own door leads: a booking books first, and the
+                    counter walks in first (round-2 domain review, finding 2). */}
                 {mode ? (
                   <div className="flex flex-wrap gap-x-4">
-                    <Link
-                      href={walkInNewDiver}
-                      className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
-                    >
-                      {walkInLabel}
-                    </Link>
-                    {walkInOpen ? (
+                    {(walkInOpen
+                      ? [
+                          { href: walkInNewDiver, label: walkInLabel },
+                          { href: bookNewDiver, label: bookLabel },
+                        ]
+                      : [
+                          { href: bookNewDiver, label: bookLabel },
+                          { href: walkInNewDiver, label: walkInLabel },
+                        ]
+                    ).map((door) => (
                       <Link
-                        href={bookNewDiver}
+                        key={door.href}
+                        href={door.href}
                         className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
                       >
-                        {bookLabel}
+                        {door.label}
                       </Link>
-                    ) : null}
+                    ))}
                   </div>
                 ) : null}
               </>

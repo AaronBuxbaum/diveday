@@ -85,11 +85,17 @@ export async function addBandFor(
     request: search.request,
     typed: search.diverq?.trim() ?? "",
   });
-  if (read === "gone") {
+  if (read === "gone" || read === "not_offered") {
     return {
       open,
       counter: false,
-      requestGone: <p className="text-sm text-muted">{where.t("trips.addDiver.requestGone")}</p>,
+      requestGone: (
+        <p className="text-sm text-muted">
+          {where.t(
+            read === "gone" ? "trips.addDiver.requestGone" : "trips.addDiver.requestNotOffered",
+          )}
+        </p>
+      ),
     };
   }
   return { open, counter: false, request: read ? seatRequestBand(read, where) : undefined };

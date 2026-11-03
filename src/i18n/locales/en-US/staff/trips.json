@@ -462,7 +462,8 @@
     "addPersonForRequestAria": "Add {name} for this request",
     "requestLeft": "{count, plural, one {# diver left to seat} other {# divers left to seat}}",
     "requestDone": "Done with this request",
-    "requestGone": "That request is closed or removed."
+    "requestGone": "That request is closed or removed.",
+    "requestNotOffered": "That request wasn’t offered this departure, so seats here won’t answer it."
   },
   "inviteSuggestions": {
     "heading": "Dived {site} with you before",

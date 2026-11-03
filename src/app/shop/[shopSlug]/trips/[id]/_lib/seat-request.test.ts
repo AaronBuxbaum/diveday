@@ -50,6 +50,24 @@ async function otherShop() {
   return shop;
 }
 
+/** Offer `tripId` to request `requestId`, as the Requests ledger does. */
+async function offerTo(tripId: string, requestId: string, partySize = 1) {
+  const [offer] = await ctx.db
+    .insert(interests)
+    .values({
+      shopId: ctx.shop.id,
+      scope: "departure",
+      askedBy: "diver",
+      tripId,
+      parentInterestId: requestId,
+      partySize,
+      offeredAt: nowDate(),
+    })
+    .returning();
+  if (!offer) throw new Error("setup: offer missing");
+  return offer;
+}
+
 describe("readSeatRequest", () => {
   it("reads nothing when the URL names no request", async () => {
     const trip = await firstTrip();
@@ -70,13 +88,14 @@ describe("readSeatRequest", () => {
       email: diver.email,
       partySize: 2,
     });
+    await offerTo(trip.id, id);
     const read = await readSeatRequest(ctx.db, {
       shopId: ctx.shop.id,
       tripId: trip.id,
       request: id,
       typed: "",
     });
-    if (read === null || read === "gone") throw new Error("request not read");
+    if (read === null || typeof read === "string") throw new Error("request not read");
     expect(read.row.id).toBe(id);
     expect(read.row.partySize).toBe(2);
     expect(read.candidate?.person.id).toBe(diver.id);
@@ -91,13 +110,14 @@ describe("readSeatRequest", () => {
       name: diver.fullName,
       email: diver.email,
     });
+    await offerTo(trip.id, id);
     const read = await readSeatRequest(ctx.db, {
       shopId: ctx.shop.id,
       tripId: trip.id,
       request: id,
       typed: "Somebody else",
     });
-    if (read === null || read === "gone") throw new Error("request not read");
+    if (read === null || typeof read === "string") throw new Error("request not read");
     expect(read.candidate).toBeNull();
   });
 
@@ -110,13 +130,14 @@ describe("readSeatRequest", () => {
       email: "imani.not.on.file@example.com",
       phone: "+1 305 555 0101",
     });
+    await offerTo(trip.id, id);
     const read = await readSeatRequest(ctx.db, {
       shopId: ctx.shop.id,
       tripId: trip.id,
       request: id,
       typed: "",
     });
-    if (read === null || read === "gone") throw new Error("request not read");
+    if (read === null || typeof read === "string") throw new Error("request not read");
     expect(read.candidate).toBeNull();
     expect(read.row).toMatchObject({
       personId: null,
@@ -160,6 +181,29 @@ describe("readSeatRequest", () => {
     ).toBe("gone");
   });
 
+  /**
+   * Round-2 review, finding 3: a seat for a request is refused on a departure
+   * it was never offered, so the band must not offer one, or the refusal
+   * lands back on the same button.
+   */
+  it("answers a request never offered this departure as not offered", async () => {
+    const trip = await firstTrip();
+    const { id } = await askForDate(ctx.db, {
+      shopId: ctx.shop.id,
+      interest: "Reef",
+      name: "Never Offered",
+      email: "never.offered@example.com",
+    });
+    expect(
+      await readSeatRequest(ctx.db, {
+        shopId: ctx.shop.id,
+        tripId: trip.id,
+        request: id,
+        typed: "",
+      }),
+    ).toBe("not_offered");
+  });
+
   it("answers a closed request as gone", async () => {
     const trip = await firstTrip();
     const { id } = await askForDate(ctx.db, {
@@ -191,19 +235,7 @@ describe("readSeatRequest", () => {
       email: "party.lead@example.com",
       partySize,
     });
-    const [offer] = await ctx.db
-      .insert(interests)
-      .values({
-        shopId: ctx.shop.id,
-        scope: "departure",
-        askedBy: "diver",
-        tripId,
-        parentInterestId: id,
-        partySize,
-        offeredAt: nowDate(),
-      })
-      .returning();
-    if (!offer) throw new Error("setup: offer missing");
+    const offer = await offerTo(tripId, id, partySize);
     for (let index = 0; index < seated; index += 1) {
       const [person] = await ctx.db
         .insert(people)
@@ -231,7 +263,7 @@ describe("readSeatRequest", () => {
       request: id,
       typed: "",
     });
-    if (read === null || read === "gone") throw new Error("request not read");
+    if (read === null || typeof read === "string") throw new Error("request not read");
     expect(read).toMatchObject({ seated: 1, partySize: 3 });
   });
 

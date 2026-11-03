@@ -1016,6 +1016,7 @@ async function createBookingRecord(
         shopId: req.shopId,
         tripId: req.tripId,
         requestId: req.dateRequestInterestId,
+        newLink: true,
       })
     : null;
   if (typeof dateOffer === "string") return { ok: false, reason: dateOffer };
