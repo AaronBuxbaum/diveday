@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { check, foreignKey, index, pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { CAPABILITY_PURPOSES } from "@/lib/capabilities";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -39,13 +39,21 @@ export const capabilities = pgTable(
       .notNull()
       .references(() => shops.id),
     personId: uuid("person_id").references(() => people.id),
-    interestId: uuid("interest_id").references(() => interests.id),
+    // Bound to the row's own shop by the composite key below, not a bare id.
+    interestId: uuid("interest_id"),
     tokenHash: text("token_hash").notNull().unique(),
     issuedAt: appNowTimestamp("issued_at").notNull(),
   },
   (table) => [
     index("capabilities_person_idx").on(table.personId),
     index("capabilities_interest_idx").on(table.interestId),
+    // An interest capability can only name an interest of its own shop, so an
+    // erasure, a merge or a demo reset scoped by shop always finds it.
+    foreignKey({
+      name: "capabilities_shop_interest_fkey",
+      columns: [table.shopId, table.interestId],
+      foreignColumns: [interests.shopId, interests.id],
+    }),
     check(
       "capabilities_subject_by_purpose",
       sql`(${table.purpose} = 'interest_unsubscribe' and ${table.interestId} is not null and ${table.personId} is null)

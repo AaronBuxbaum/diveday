@@ -1,12 +1,14 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { CAPABILITY_POLICY, CAPABILITY_PURPOSES, type CapabilityPurpose } from "@/lib/capabilities";
 import { fileScopedShopContext } from "@/test/db";
+import { anonymizeDiver } from "./anonymize";
 import { issueCapability, verifyCapability } from "./capabilities";
+import { mergeDiverRecords } from "./diver-merge";
 import { askAnytime } from "./interests";
 import { findOrCreatePerson } from "./people";
-import { capabilities } from "./schema";
+import { capabilities, people, personRoles, shops } from "./schema";
 
 /**
  * Issue #2710, security-sensitive (bearer tokens): one table, one verify, the
@@ -152,5 +154,94 @@ describe("capabilities_subject_by_purpose", () => {
         }),
       ).rejects.toThrow();
     }
+  });
+});
+
+async function owner() {
+  const { db, shop } = ctx;
+  const [row] = await db
+    .select({ id: people.id })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+    .limit(1);
+  if (!row) throw new Error("expected the seeded owner");
+  return row.id;
+}
+
+describe("a capability and the person it opens", () => {
+  /**
+   * `person-columns.ts` moves `capabilities.person_id` to the survivor of a
+   * merge for every purpose. That is right for an unsubscribe link and would be
+   * wrong for one that grants authority (an account token), so a new person
+   * purpose has to come through here and decide (security review of #2710, F3).
+   */
+  it("moves only purposes whose authority may follow a merged person", () => {
+    const personPurposes = CAPABILITY_PURPOSES.filter(
+      (purpose) => CAPABILITY_POLICY[purpose].subject === "person",
+    );
+    expect(personPurposes).toEqual(["courtesy_email_unsubscribe"]);
+  });
+
+  it("follows a merge: the link mailed to the merged-away record opts the kept one out", async () => {
+    const { db, shop } = ctx;
+    const [source, survivor] = await db
+      .insert(people)
+      .values([
+        { shopId: shop.id, fullName: "Tomas Ruiz", email: "tomas-old@example.com" },
+        { shopId: shop.id, fullName: "Tomas Ruiz", email: "tomas-new@example.com" },
+      ])
+      .returning();
+    if (!source || !survivor) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values([
+      { personId: source.id, role: "diver" },
+      { personId: survivor.id, role: "diver" },
+    ]);
+    const token = await issueCapability(db, {
+      purpose: "courtesy_email_unsubscribe",
+      shopId: shop.id,
+      subjectId: source.id,
+    });
+    const merged = await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: await owner(),
+    });
+    expect(merged.ok).toBe(true);
+    expect(
+      await verifyCapability(db, { purpose: "courtesy_email_unsubscribe", token }),
+    ).toMatchObject({ shopId: shop.id, subjectId: survivor.id });
+  });
+
+  it("goes with the person on erasure, even a row whose shop has drifted", async () => {
+    const { db, shop } = ctx;
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-capability-erasure", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+    const { personId } = await subjects();
+    await db.insert(personRoles).values({ personId, role: "diver" }).onConflictDoNothing();
+    const token = await issueCapability(db, {
+      purpose: "courtesy_email_unsubscribe",
+      shopId: shop.id,
+      subjectId: personId,
+    });
+    await db
+      .update(capabilities)
+      .set({ shopId: otherShop.id })
+      .where(eq(capabilities.tokenHash, hashBearerToken(token)));
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId,
+      actorPersonId: await owner(),
+    });
+    expect(erased.ok).toBe(true);
+    expect(await db.select().from(capabilities).where(eq(capabilities.personId, personId))).toEqual(
+      [],
+    );
   });
 });

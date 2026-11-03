@@ -2,7 +2,7 @@
   "type": "diff",
   "version": "9",
   "dialect": "postgres",
-  "id": "be5fdc70-7768-42fb-b7be-6922c80622d5",
+  "id": "4bb4ebec-d98b-40c7-9981-ad6325847ec3",
   "prevIds": [
     "d5ffaed8-ed8f-4648-b646-0e878d4d73b5",
     "b9f2e9dd-f26c-4863-94d6-7eecda28b03c"
@@ -176,19 +176,21 @@
         "capabilities"
       ],
       "writes": [
-        "s|fk|public.capabilities.capabilities_interest_id_interests_id_fkey",
-        "n|fk|public.capabilities.capabilities_interest_id_interests_id_fkey",
-        "e|fk|public.capabilities.capabilities_interest_id_interests_id_fkey",
-        "n|con|public.capabilities.capabilities_interest_id_interests_id_fkey"
+        "s|fk|public.capabilities.capabilities_shop_interest_fkey",
+        "n|fk|public.capabilities.capabilities_shop_interest_fkey",
+        "e|fk|public.capabilities.capabilities_shop_interest_fkey",
+        "n|con|public.capabilities.capabilities_shop_interest_fkey"
       ],
       "reads": [
         "n|tbl|public.capabilities",
         "n|sch|public",
         "n|tbl|public.interests",
         "n|sch|public",
+        "n|col|public.capabilities.shop_id",
         "n|col|public.capabilities.interest_id",
+        "n|col|public.interests.shop_id",
         "n|col|public.interests.id",
-        "e|uniqueness|public.interests.id"
+        "e|uniqueness|public.interests.id.shop_id"
       ]
     }
   ],
@@ -419,14 +421,16 @@
       "row": {
         "schema": "public",
         "table": "capabilities",
-        "name": "capabilities_interest_id_interests_id_fkey",
-        "nameExplicit": false,
+        "name": "capabilities_shop_interest_fkey",
+        "nameExplicit": true,
         "columns": [
+          "shop_id",
           "interest_id"
         ],
         "schemaTo": "public",
         "tableTo": "interests",
         "columnsTo": [
+          "shop_id",
           "id"
         ],
         "onUpdate": "NO ACTION",

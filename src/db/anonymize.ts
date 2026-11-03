@@ -1059,11 +1059,13 @@ async function scrubPersonOnlyRows(
   // unsubscribe). The interest ones name it by foreign key, so they go here,
   // before `scrubInterests` deletes the interest, or that delete would raise
   // 23503 and roll back every other redaction with it.
+  // The person branch is not shop-filtered: whatever shop a row names, a link
+  // that opens this person goes with them (security review of #2710, F1).
   await tx.delete(capabilities).where(
-    and(
-      eq(capabilities.shopId, shopId),
-      or(
-        eq(capabilities.personId, personId),
+    or(
+      eq(capabilities.personId, personId),
+      and(
+        eq(capabilities.shopId, shopId),
         inArray(
           capabilities.interestId,
           tx

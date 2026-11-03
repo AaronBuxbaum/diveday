@@ -21,4 +21,4 @@ CREATE INDEX "capabilities_person_idx" ON "capabilities" ("person_id");--> state
 CREATE INDEX "capabilities_interest_idx" ON "capabilities" ("interest_id");--> statement-breakpoint
 ALTER TABLE "capabilities" ADD CONSTRAINT "capabilities_shop_id_shops_id_fkey" FOREIGN KEY ("shop_id") REFERENCES "shops"("id");--> statement-breakpoint
 ALTER TABLE "capabilities" ADD CONSTRAINT "capabilities_person_id_people_id_fkey" FOREIGN KEY ("person_id") REFERENCES "people"("id");--> statement-breakpoint
-ALTER TABLE "capabilities" ADD CONSTRAINT "capabilities_interest_id_interests_id_fkey" FOREIGN KEY ("interest_id") REFERENCES "interests"("id");
+ALTER TABLE "capabilities" ADD CONSTRAINT "capabilities_shop_interest_fkey" FOREIGN KEY ("shop_id","interest_id") REFERENCES "interests"("shop_id","id");

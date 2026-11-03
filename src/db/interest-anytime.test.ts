@@ -244,7 +244,7 @@ describe("self-serve unsubscribe token", () => {
     expect(context?.alreadyUnsubscribed).toBe(true);
   });
 
-  it("never trusts a token whose stored shopId drifts from its interest's", async () => {
+  it("refuses to store a token whose shopId drifts from its interest's", async () => {
     const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
@@ -256,11 +256,18 @@ describe("self-serve unsubscribe token", () => {
       shopId: shop.id,
       interestId: joined.interestId,
     });
-    await db
-      .update(capabilities)
-      .set({ shopId: otherShop.id })
-      .where(eq(capabilities.interestId, joined.interestId));
-
-    expect(await resolveInterestUnsubscribeToken(db, token)).toBeNull();
+    // `capabilities_shop_interest_fkey` binds the row to its interest's shop
+    // (security review of #2710, F1), so the drift cannot be written at all.
+    await expect(
+      db.transaction(async (tx) => {
+        await tx
+          .update(capabilities)
+          .set({ shopId: otherShop.id })
+          .where(eq(capabilities.interestId, joined.interestId));
+      }),
+    ).rejects.toThrow();
+    expect(await resolveInterestUnsubscribeToken(db, token)).toMatchObject({
+      interestId: joined.interestId,
+    });
   });
 });
