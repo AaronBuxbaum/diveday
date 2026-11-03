@@ -24,9 +24,7 @@ import {
 } from "@/components/ui/form";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { getDiverProfile } from "@/db/divers";
-import { listStaff } from "@/db/trips";
-import { listBenchUnits, listCustomerGearItems, searchWorkOrderCustomers } from "@/db/work-orders";
+import { getWorkOrderNewPage } from "@/db/work-order-new-page";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -77,19 +75,14 @@ export default async function NewWorkOrderPage({
   if (personId && unitId) notFound();
 
   const query = search.diverq?.trim() ?? "";
-  const [customer, pieces, candidates, units, staff] = await Promise.all([
-    personId ? getDiverProfile(db, shop.id, personId) : null,
-    personId ? listCustomerGearItems(db, shop.id, personId) : [],
-    personId || unitId ? [] : searchWorkOrderCustomers(db, shop.id, query),
-    personId ? [] : listBenchUnits(db, shop.id),
-    listStaff(db, shop.id),
-  ]);
+  const { customer, pieces, candidates, units, staff, chosenUnit } = await getWorkOrderNewPage(
+    db,
+    shop.id,
+    { personId, unitId, query },
+  );
   // A `?personId=` for somebody who is not this shop's diver resolves to
   // nothing rather than rendering a form that cannot save.
   if (personId && !customer) notFound();
-  const unit = unitId ? units.find((row) => row.id === unitId) : undefined;
-  const chosenUnit =
-    unitId && !unit ? (await listBenchUnits(db, shop.id)).find((row) => row.id === unitId) : unit;
   if (unitId && !chosenUnit) notFound();
 
   const notice = noticeFromParam(search.notice, NEW_ORDER_NOTICES);

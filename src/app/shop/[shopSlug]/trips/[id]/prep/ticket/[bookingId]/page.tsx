@@ -5,9 +5,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { listTripGearAssignments } from "@/db/gear";
-import { listTripPrepDivers } from "@/db/rental-fit";
-import { getTripWithBooked } from "@/db/trips";
+import { getRentalTicket } from "@/db/trip-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -52,17 +50,12 @@ export default async function RentalTicketPage({
 
   // Tenancy is the session's shop, never the slug. A trip belonging to another
   // shop — or a booking belonging to another trip — resolves to nothing here
-  // rather than printing one shop's diver on another's paper.
-  const trip = await getTripWithBooked(db, shop.id, tripId);
-  if (!trip) notFound();
-  const divers = await listTripPrepDivers(db, shop.id, tripId);
-  const diver = divers.find((row) => row.bookingId === bookingId);
-  if (!diver) notFound();
-
-  const assignments = (await listTripGearAssignments(db, shop.id, tripId)).get(bookingId) ?? [];
-  // A slip with nothing on it is a wrong one: the prep page's door only appears
-  // once a unit is assigned, so empty means it was released in another tab.
-  if (assignments.length === 0) notFound();
+  // rather than printing one shop's diver on another's paper. A slip with
+  // nothing on it is a wrong one: the prep page's door only appears once a unit
+  // is assigned, so empty means it was released in another tab.
+  const ticket = await getRentalTicket(db, shop.id, tripId, bookingId);
+  if (!ticket) notFound();
+  const { trip, diver, assignments } = ticket;
 
   const dueBack = assignments.reduce(
     (latest, assignment) => (assignment.reservedUntil > latest ? assignment.reservedUntil : latest),

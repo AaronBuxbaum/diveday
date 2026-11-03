@@ -3,8 +3,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { readAfterHoursPingChoice } from "@/db/desk-pings";
-import { readWeeklyDigestChoice } from "@/db/weekly-digest";
+import { getStaffEmailPage } from "@/db/staff-email-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -39,15 +38,11 @@ export default async function EmailSettingsPage({
   const { db, shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const choice = await readWeeklyDigestChoice(db, {
+  const { weeklyDigest: choice, afterHours } = await getStaffEmailPage(db, {
     shopId: shop.id,
     personId: session.user.personId,
   });
   const wanted = choice?.wanted ?? false;
-  const afterHours = await readAfterHoursPingChoice(db, {
-    shopId: shop.id,
-    personId: session.user.personId,
-  });
   const pinged = afterHours?.wanted ?? false;
   const now = nowDate();
   const deskTime = (minute: number) =>

@@ -8,9 +8,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { canPersonManageOrders } from "@/db/authz";
-import { getBookingContext, listOrderableCustomers } from "@/db/orders";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { canPersonManageOrders, getOrderNewPage } from "@/db/order-new-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { bookingInvoiceLines } from "@/lib/courses";
@@ -110,8 +108,8 @@ export default async function NewOrderPage({
   // different hands, so the `/orders` branch landed on a page whose map had no
   // matching key and rendered no banner at all (src/lib/staff-notices.ts's
   // `NOTICE_CODE_PATTERN`, enforced by scripts/check-notice-codes.mjs).
-  const account = await getShopStripeAccount(db, session.user.shopId);
-  if (!canAcceptPayments(account)) {
+  const page = await getOrderNewPage(db, session.user.shopId, prefillBookingId);
+  if (!page.acceptsPayments) {
     redirect(
       noticeUrl(
         prefillPersonId
@@ -131,10 +129,7 @@ export default async function NewOrderPage({
    * a real shop is deliberately left to type it.
    */
   const demoAddress = shop.isDemo ? shop : null;
-  const [customers, bookingContext] = await Promise.all([
-    listOrderableCustomers(db, shop.id),
-    prefillBookingId ? getBookingContext(db, shop.id, prefillBookingId) : null,
-  ]);
+  const { customers, bookingContext } = page;
 
   // Auto-fill from the linked booking so staff only review and send. A course
   // session fills two lines — instruction and e-learning — because a student

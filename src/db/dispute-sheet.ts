@@ -23,6 +23,9 @@ import {
   waiverRecords,
 } from "./schema";
 
+/** The page's gate, re-exported so the sheet page reads through this one module. */
+export { canPersonExportDisputeSheet } from "./authz";
+
 /**
  * **The reader behind a seat's dispute sheet** (issue #2390).
  *

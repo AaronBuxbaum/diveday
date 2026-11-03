@@ -1,13 +1,6 @@
-import type { CrewMonth } from "@/db/crew-tips";
+import type { CrewReading } from "@/db/day-money";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyScanned, monthNames } from "@/lib/format";
-
-/**
- * The reader's own crew lines on Today, read by `readDayMoney`: their share of
- * the paid tips on the boats they crewed this week, and their month on the
- * boats so far (null before they have crewed one).
- */
-export type CrewReading = { tipsCents: number; month: (CrewMonth & { month: number }) | null };
 
 /**
  * The reader's share of the week's paid tips on boats they crewed (`crewTipShare`;
