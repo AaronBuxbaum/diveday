@@ -89,9 +89,16 @@ describe("MarketingNavView", () => {
   });
 
   it("keeps the compact onboarding header and localized menu words", () => {
-    const { container } = renderNav({ compactMobile: true, locale: "es-ES" });
+    renderNav({ compactMobile: true, locale: "es-ES" });
     expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
-    expect(container.querySelector("header")).toHaveClass("border-b-0");
     expect(screen.getByRole("button", { name: "Probar la demo en vivo" })).toBeInTheDocument();
+  });
+
+  it("wears the one chrome bar, one row at every width", () => {
+    const { container } = renderNav();
+    const header = container.querySelector("header");
+    expect(header).toHaveAttribute("data-chrome-bar");
+    expect(header).toHaveClass("h-(--chrome-h)");
+    expect(header?.querySelector("a[href='/']")).toBeInTheDocument();
   });
 });

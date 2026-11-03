@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { LedgerRow } from "@/components/ui/ledger";
 import { StaffSectionTabsSkeleton } from "../../_components/StaffSectionTabs";
 
@@ -13,7 +13,7 @@ export default function WorkOrdersLoading() {
   return (
     <StaffPage width="full">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-40" description={false} actions />
+        <ShopPageHeader pending titleWidth="w-40" description={false} actions />
         <StaffSectionTabsSkeleton section="gear" />
         <div className="mt-6 space-y-9">
           {[

@@ -32,7 +32,7 @@ export async function markMixedWaiverDelivery(db: AppDb, shopId: string): Promis
   await recordWaiverDelivery(db, {
     shopId,
     waiverRecordId: issued.recordId,
-    channel: "text",
+    channel: "sms",
     delivery: { status: "sent" },
   });
 }

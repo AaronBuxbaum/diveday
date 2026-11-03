@@ -14,7 +14,7 @@ import {
   publicAppUrl,
   recipientLocale,
   reminderForecast,
-  reminderSmsBody,
+  reminderTexts,
 } from "@/lib/notifications";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { inboundEmailDomain } from "@/lib/notifications/inbound-address";
@@ -811,33 +811,26 @@ export async function sendDueReminders(
         : null;
       const whoToText = isDay ? shop.contactPhone?.trim() || null : null;
 
-      const reminderText = (replyKeywords: boolean) =>
-        reminderSmsBody(locale, {
-          shopName: shop.name,
-          tripTitle: trip.title,
-          startsAt: trip.startsAt,
-          endsAt: trip.endsAt,
-          timezone: shop.timezone,
-          lead,
-          dockCallMinutes: shop.dockCallMinutes,
-          outstanding,
-          medicalReview,
-          forecast,
-          whoToText,
-          replyKeywords,
-          materials: materialsDue,
-          courseSession: student,
-          diveMode: trip.diveMode,
-          meetingPoint,
-          readinessUrl,
-        });
-      const smsBody = reminderText(false);
-      // The same reminder, plus the reply line, for the one text channel that
-      // can hear an answer. Which of the two actually goes out is
-      // `sendCourtesyMessage`'s call, and it may still fall back to SMS after a
-      // failed WhatsApp send — which is exactly why both bodies travel together
-      // rather than one being chosen here (ADR 20260909-reply-keywords).
-      const whatsAppBody = reminderText(true);
+      // Both bodies travel together: `sendCourtesyMessage` picks one and may fall
+      // back to SMS after a failed WhatsApp send (ADR 20260909-reply-keywords).
+      const { sms: smsBody, whatsApp: whatsAppBody } = reminderTexts(locale, {
+        shopName: shop.name,
+        tripTitle: trip.title,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        timezone: shop.timezone,
+        lead,
+        dockCallMinutes: shop.dockCallMinutes,
+        outstanding,
+        medicalReview,
+        forecast,
+        whoToText,
+        materials: materialsDue,
+        courseSession: student,
+        diveMode: trip.diveMode,
+        meetingPoint,
+        readinessUrl,
+      });
 
       if (person.email) {
         emailWork.push({

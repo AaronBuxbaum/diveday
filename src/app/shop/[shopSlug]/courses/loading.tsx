@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
@@ -16,7 +16,7 @@ export default function StaffCoursesLoading() {
   return (
     <StaffPage width="full">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-48" description={false} actions />
+        <ShopPageHeader pending eyebrow={false} titleWidth="w-48" description={false} actions />
         <div className="mt-8 space-y-8">
           {[0, 1].map((group) => (
             <div key={group}>

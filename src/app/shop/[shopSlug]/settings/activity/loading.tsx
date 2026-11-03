@@ -1,4 +1,4 @@
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { settingsPaneClass } from "../_components/settings-pane";
 
 /** Bars for a placeholder list; a bar's place is its only identity. */
@@ -13,7 +13,7 @@ export default function ShopActivityLoading() {
   return (
     <main className={settingsPaneClass()}>
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-40" description={false} />
+        <ShopPageHeader pending titleWidth="w-40" description={false} />
         <div className="space-y-10">
           <div className="space-y-6">
             <div className="flex flex-wrap items-center gap-3">

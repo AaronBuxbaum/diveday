@@ -95,7 +95,7 @@ export const waiverMaterialityDecisions = pgTable(
  * staffer took the URL and is passing it on themselves, and the record of that
  * is what stops the diver's record reading "never sent".
  */
-export const waiverDeliveryChannel = pgEnum("waiver_delivery_channel", ["email", "text", "link"]);
+export const waiverDeliveryChannel = pgEnum("waiver_delivery_channel", ["email", "sms", "link"]);
 
 export const waiverRecordStatus = pgEnum("waiver_record_status", [
   "pending",

@@ -214,7 +214,7 @@ export function TripPageHeader({
 
 /**
  * {@link TripPageHeader} drawn as bars, for a trip sub-page's `loading.tsx`
- * (K-188). `/prep` used `ShopPageHeaderSkeleton`, which is the other header: no
+ * (K-188). `/prep` used `<ShopPageHeader pending>`, which is the other header: no
  * eyebrow where this one always has its way back, a 44px title line where this
  * one's is 26px on a phone and 38px from `sm`, and a description bar this
  * header draws for none of the pages that wait behind a skeleton. Its packing

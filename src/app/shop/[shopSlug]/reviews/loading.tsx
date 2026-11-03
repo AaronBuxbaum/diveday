@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
+import { ShopPageHeader, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { LedgerRow } from "@/components/ui/ledger";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
@@ -45,7 +45,8 @@ export default function ReviewsLoading() {
       <div className="animate-pulse">
         {/* The aggregate line wraps to two lines at 390px, one at 1280; the
             "View public page" door stacks under it on a phone (K-86). */}
-        <ShopPageHeaderSkeleton
+        <ShopPageHeader
+          pending
           eyebrow={false}
           titleWidth="w-32"
           description={false}

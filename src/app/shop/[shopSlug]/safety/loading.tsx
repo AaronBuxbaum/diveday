@@ -1,6 +1,6 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader, SkeletonLineBars } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 import { figureCellClass } from "../reports/_components/MonthFigures";
 
 /**
@@ -12,7 +12,7 @@ export default function SafetyReportLoading() {
   return (
     <StaffPage width="full">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
+        <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
         <div className="mb-6">
           <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-6" width="w-160 max-w-full" />
         </div>
@@ -39,7 +39,7 @@ export default function SafetyReportLoading() {
         <div className="mt-3 h-10 w-full max-w-prose rounded bg-surface-sunken" />
         <div className="mt-10 space-y-10">
           {[0, 1, 2].map((card) => (
-            <div key={card} className={sectionCardClass({ className: "h-36" })} />
+            <SectionCard key={card} as="div" pending className="h-36" />
           ))}
         </div>
       </div>

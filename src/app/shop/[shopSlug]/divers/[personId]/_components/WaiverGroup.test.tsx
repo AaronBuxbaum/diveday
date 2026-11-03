@@ -38,7 +38,7 @@ function diver(overrides: {
     waiverRequest: overrides.waiverRequest ?? "not_sent",
     waiverChannels: {
       email: "unknown",
-      text: "unknown",
+      sms: "unknown",
       link: "unknown",
       ...overrides.waiverChannels,
     },
@@ -623,7 +623,7 @@ describe("the waiver group", () => {
       diver({
         email: "priya@dive.day",
         phone: "+13055550142",
-        waiverChannels: { email: "failed", text: "sent" },
+        waiverChannels: { email: "failed", sms: "sent" },
       }),
     );
 
@@ -651,7 +651,7 @@ describe("the waiver group", () => {
       diver({
         email: "priya@dive.day",
         phone: "+13055550142",
-        waiverChannels: { email: "failed", text: "sent" },
+        waiverChannels: { email: "failed", sms: "sent" },
       }),
     );
 

@@ -1,6 +1,6 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 import { EditorFormSkeleton } from "../_components/EditorFormSkeleton";
 import {
   SITE_FORM_OPEN_SECTIONS,
@@ -22,7 +22,8 @@ export default function DiveSiteLoading() {
     <StaffPage width="reading">
       <div className="animate-pulse">
         {/* The header eyebrow is the back link; do not add a second stub (K-423). */}
-        <ShopPageHeaderSkeleton
+        <ShopPageHeader
+          pending
           titleWidth="w-72 max-w-full"
           description
           descriptionIsCaption
@@ -33,7 +34,7 @@ export default function DiveSiteLoading() {
         />
 
         {/* Edit-only: reserve the UpcomingSiteTrips space for a site with departures (K-416). */}
-        <div className={sectionCardClass({ className: "mt-8 overflow-hidden" })}>
+        <SectionCard as="div" pending className="mt-8 overflow-hidden">
           <div className="h-8 w-56 max-w-full rounded bg-surface-sunken" />
           <div className="-mx-4 mt-4 -mb-4 divide-y divide-border border-t border-border sm:-mx-5 sm:-mb-5">
             {[0, 1, 2].map((row) => (
@@ -45,7 +46,7 @@ export default function DiveSiteLoading() {
               </div>
             ))}
           </div>
-        </div>
+        </SectionCard>
 
         <div className="mt-8">
           <EditorFormSkeleton

@@ -1,4 +1,4 @@
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 
 /**
  * The packages page's own skeleton (ADR 20260804-instant-navigation): the
@@ -11,7 +11,7 @@ export default function PublicPackagesLoading() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-56" description={false} />
+        <ShopPageHeader pending eyebrow={false} titleWidth="w-56" description={false} />
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             {[0, 1].map((row) => (

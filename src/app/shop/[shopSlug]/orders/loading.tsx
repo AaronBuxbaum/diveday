@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
@@ -18,7 +18,7 @@ export default function OrdersIndexLoading() {
   return (
     <StaffPage width="full">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} actions />
+        <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} actions />
         <StaffSectionTabsSkeleton section="money" />
 
         <div className="mt-6 flex flex-wrap items-center gap-3">

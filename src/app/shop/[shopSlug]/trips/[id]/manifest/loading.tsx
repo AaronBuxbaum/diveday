@@ -1,5 +1,5 @@
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 import { segmentedTrackClass } from "@/components/ui/segmented";
 
 /**
@@ -26,7 +26,8 @@ const STAGE_TAPS = ["boarding", "underway", "surface", "heading_in", "home"] as 
 export default function ManifestLoading() {
   return (
     <div className="animate-pulse">
-      <ShopPageHeaderSkeleton
+      <ShopPageHeader
+        pending
         eyebrow={false}
         titleWidth="w-64 max-w-full"
         // The page wears TripPageHeader, which has no description line and
@@ -37,7 +38,7 @@ export default function ManifestLoading() {
         meta={<div className="h-6 w-56 max-w-full rounded bg-surface-sunken" />}
       />
       {/* The count panel at rest: the checkpoint over the figure. */}
-      <div className={sectionCardClass({ padding: "md", className: "mt-4 h-28" })} />
+      <SectionCard as="div" pending padding="md" className="mt-4 h-28" />
       {/* Where the boat is: its label, then the five taps on the strip's own
           equal columns, 3 + 2 on a phone and one line of five from `sm`.
           `mt-6` is the prose line's `pt-2` under the panel and the strip's own
@@ -66,17 +67,17 @@ export default function ManifestLoading() {
             the page streams in can land on a checklist item instead, which
             records a check, never a roll-call result, and the same tap undoes
             it (dive-domain review of UX audit 2026-10-07, item 17). */}
-        <div className={sectionCardClass({ padding: "none", className: "h-14" })} />
+        <SectionCard as="div" pending padding="none" className="h-14" />
         <div>
           <div className="h-7 w-40 max-w-full rounded bg-surface-sunken" />
           {/* The roll call is one ruled list card, so its skeleton is the same
               single card — not a stack of floating bars that redraws into a
               different shape when the list streams in. */}
-          <ul
-            className={sectionCardClass({
-              padding: "none",
-              className: "mt-3 divide-y divide-border overflow-hidden",
-            })}
+          <SectionCard
+            as="ul"
+            pending
+            padding="none"
+            className="mt-3 divide-y divide-border overflow-hidden"
           >
             {[0, 1, 2, 3, 4, 5, 6].map((i) => (
               <li
@@ -88,9 +89,9 @@ export default function ManifestLoading() {
                 <div className="size-14 shrink-0 rounded-full bg-surface-sunken" />
               </li>
             ))}
-          </ul>
+          </SectionCard>
         </div>
-        <div className={sectionCardClass({ padding: "md", className: "h-28" })} />
+        <SectionCard as="div" pending padding="md" className="h-28" />
       </div>
     </div>
   );

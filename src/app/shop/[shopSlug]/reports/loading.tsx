@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { SEGMENT_CORNER, SEGMENT_RAISED, segmentedTrackClass } from "@/components/ui/segmented";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
@@ -26,7 +26,7 @@ export default function ReportsLoading() {
   return (
     <StaffPage width="full">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
+        <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="money" />
         {/* Reserve the loaded segmented track and raised active option. */}
         <div className={`${segmentedTrackClass} mb-6 w-48`}>

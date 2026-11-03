@@ -51,7 +51,7 @@ import { whatsAppProvidersForShops } from "./whatsapp-accounts";
  * standing there with their phone out. So it attempts no delivery at all rather
  * than mailing a copy nobody asked for on its way to the clipboard.
  */
-export type WaiverSendChannel = "email" | "text" | "link";
+export type WaiverSendChannel = "email" | "sms" | "link";
 
 /**
  * How the diver actually got (or did not get) their link. Anything that is not
@@ -237,7 +237,7 @@ async function deliverCourseFormsLink(
     delivery = "no_app_origin";
   } else if (channel === "link") {
     delivery = "link_only";
-  } else if (channel === "text") {
+  } else if (channel === "sms") {
     delivery = (
       await textWaiverLink(db, {
         shopId,
@@ -387,7 +387,7 @@ export async function issueAndDeliverWaiver(
       let providerMessageId: string | undefined;
       if (channel === "link") {
         delivery = completionUrl ? "link_only" : "no_app_origin";
-      } else if (channel === "text") {
+      } else if (channel === "sms") {
         if (!completionUrl) {
           delivery = "no_app_origin";
         } else {
@@ -510,7 +510,7 @@ export async function issueAndDeliverPersonWaiver(
         delivery = "no_app_origin";
       } else if (channel === "link") {
         delivery = "link_only";
-      } else if (channel === "text") {
+      } else if (channel === "sms") {
         const result = await textWaiverLink(tx, {
           shopId,
           phone: ctx.person.phone,

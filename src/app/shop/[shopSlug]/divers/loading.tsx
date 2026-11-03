@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
@@ -29,7 +29,7 @@ export default function DiversLoading() {
     // roster slide sideways when the real page landed.
     <StaffPage width="full">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} eyebrow={false} />
+        <ShopPageHeader pending titleWidth="w-56" description={false} eyebrow={false} />
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex w-full items-center gap-2 sm:w-auto">
             <div className="h-12 min-w-0 flex-1 rounded-lg bg-surface-sunken sm:w-80 sm:flex-none" />

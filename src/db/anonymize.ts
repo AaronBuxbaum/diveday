@@ -48,8 +48,23 @@
  * outcome available, so it either all lands or none of it does.
  */
 
-import { and, asc, eq, inArray, isNotNull, isNull, like, ne, or, type SQL, sql } from "drizzle-orm";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import {
+  and,
+  asc,
+  eq,
+  getTableColumns,
+  getTableName,
+  inArray,
+  is,
+  isNotNull,
+  isNull,
+  like,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
+import { type AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
@@ -77,6 +92,7 @@ import { forgetClaudeCallContent } from "./claude-call-content";
 import type { AppDb, AppTransaction } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import { queueMediaDeletion } from "./media-deletions";
+import { erasedPersonRowDeletes } from "./person-columns";
 import { forgetPremergeCards } from "./premerge-cards-cleanup";
 import {
   attemptProcessorErasures,
@@ -85,6 +101,7 @@ import {
 } from "./processor-erasure";
 import { crewMarks, seatMarks } from "./roll-call-subject";
 import type { ProcessorErasureObligation } from "./schema";
+import * as schema from "./schema";
 import {
   accountSecurity,
   accountSessions,
@@ -112,8 +129,6 @@ import {
   inboundMessages,
   incidentReportPeople,
   interests,
-  internalNotes,
-  lostItems,
   notificationDeliveries,
   notificationSendQueue,
   orderLineItems,
@@ -124,7 +139,6 @@ import {
   priorVisits,
   recapPhotos,
   recapPulses,
-  rentalFitProfiles,
   retiredRollCallCrewEvents,
   reviewModerationEvents,
   reviewReplies,
@@ -1029,12 +1043,13 @@ async function scrubPersonOnlyRows(
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId } = ctx;
-  // Deleted outright rather than blanked: a rental fit is body measurement, a
-  // wait-list place and a deals subscription are live intentions, and a row of
-  // all-nulls preserves nothing worth keeping.
-  await tx
-    .delete(rentalFitProfiles)
-    .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
+  // Deleted outright rather than blanked: a row of all-nulls preserves nothing
+  // worth keeping.
+  // The plain ones first, from the registry: a rental fit is body measurement,
+  // staff prose about a person is personal data end to end (its body column
+  // carries a non-blank check, so there is nothing to redact it *to*), and
+  // something found aboard with their name on it is about their belongings.
+  await deleteRegisteredPersonRows(tx, ctx);
   // Every capability that opens something of this person's: their own
   // (courtesy-email unsubscribe) and their interests' (last-minute-list
   // unsubscribe). The interest ones name it by foreign key, so they go here,
@@ -1057,19 +1072,40 @@ async function scrubPersonOnlyRows(
       ),
     ),
   );
-  // Something found aboard with this diver's name on it (batch 4, J2). The
-  // description is free text about their belongings, so the row goes whole.
-  await tx
-    .delete(lostItems)
-    .where(and(eq(lostItems.shopId, shopId), eq(lostItems.personId, personId)));
-
-  // Staff prose about a person is personal data end to end, and the body column
-  // carries a non-blank check, so there is nothing to redact it *to*.
-  await tx
-    .delete(internalNotes)
-    .where(and(eq(internalNotes.shopId, shopId), eq(internalNotes.personId, personId)));
-
   return [];
+}
+
+/** Every table in the schema by its database name, for the registry's deletes. */
+const SCHEMA_TABLES = new Map<string, PgTable>(
+  Object.values(schema).flatMap((value) =>
+    is(value, PgTable) ? [[getTableName(value), value] as const] : [],
+  ),
+);
+
+/**
+ * The registry's plain deletes (`erasedPersonRowDeletes`, `./person-columns`):
+ * every row of this shop that names the person in a column whose fate is a
+ * bare `delete`. A table or column the schema no longer has throws, which rolls
+ * the erasure back rather than reporting one that skipped a table.
+ */
+async function deleteRegisteredPersonRows(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<void> {
+  for (const { table: name, column: columnName } of erasedPersonRowDeletes()) {
+    // `registeredTable` is the one write `erasure-coverage.test.ts` reads by name
+    // rather than by schema identifier: it stands for every registry delete.
+    const registeredTable = SCHEMA_TABLES.get(name);
+    const columns = registeredTable ? Object.values(getTableColumns(registeredTable)) : [];
+    const shopColumn = columns.find((column) => column.name === "shop_id");
+    const personColumn = columns.find((column) => column.name === columnName);
+    if (!registeredTable || !shopColumn || !personColumn) {
+      throw new Error(`anonymize: registry delete ${name}.${columnName} names no live column`);
+    }
+    await tx
+      .delete(registeredTable)
+      .where(and(eq(shopColumn, ctx.shopId), eq(personColumn, ctx.personId)));
+  }
 }
 
 /** The erasure's "standing credentials" sweep. */

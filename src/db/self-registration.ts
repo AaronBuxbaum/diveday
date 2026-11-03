@@ -230,6 +230,6 @@ export async function deliverSelfRegistrationWaiver(
  */
 function releaseChannel(
   contact: { email: string | null; phone: string | null } | undefined,
-): "email" | "text" {
-  return !contact?.email && contact?.phone ? "text" : "email";
+): "email" | "sms" {
+  return !contact?.email && contact?.phone ? "sms" : "email";
 }

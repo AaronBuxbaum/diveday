@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /** The file's groups that every record renders a door for (`page.tsx`). */
@@ -46,7 +46,8 @@ export default function DiverProfileLoading() {
   return (
     <StaffPage width="reading">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton
+        <ShopPageHeader
+          pending
           titleWidth="w-56"
           description={false}
           meta={

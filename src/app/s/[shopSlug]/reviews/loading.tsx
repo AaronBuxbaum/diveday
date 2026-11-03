@@ -1,4 +1,4 @@
-import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
+import { ShopPageHeader, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
@@ -13,7 +13,7 @@ export default function PublicReviewsLoading() {
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-48" description={false} />
+        <ShopPageHeader pending titleWidth="w-48" description={false} />
 
         {/* Aggregate line. */}
         <div className="flex h-6 items-center gap-2">

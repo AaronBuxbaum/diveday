@@ -54,7 +54,7 @@
  * **The page's own name, Reef's title rung**: 40px bold, tightened, in Plex —
  * the display face was declined, so the display moment is made with the one
  * face's own size and weight (ADR 20260901-diveday-reimagined, decision 1).
- * `leading-[1.1]` gives a 44px line box, which `ShopPageHeaderSkeleton`'s
+ * `leading-[1.1]` gives a 44px line box, which `<ShopPageHeader pending>`'s
  * `h-11` matches.
  *
  * Landed in `ShopPageHeader.tsx` with #1286 and moved here on the merge: this

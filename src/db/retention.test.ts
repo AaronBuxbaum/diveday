@@ -488,7 +488,7 @@ describe("pruneExpiredRecords", () => {
       {
         shopId: shop.id,
         waiverRecordId: record.id,
-        channel: "text",
+        channel: "sms",
         status: "sent",
         attemptedAt: daysAgo(window - 1),
       },
@@ -500,7 +500,7 @@ describe("pruneExpiredRecords", () => {
       .select({ channel: schema.waiverDeliveries.channel })
       .from(schema.waiverDeliveries)
       .where(eq(schema.waiverDeliveries.waiverRecordId, record.id));
-    expect(left).toEqual([{ channel: "text" }]);
+    expect(left).toEqual([{ channel: "sms" }]);
   });
 
   it("prunes a set-up request and receipt metadata past its window, with its setup link, and keeps a recent one", async () => {
@@ -861,7 +861,7 @@ const STALE_AND_FRESH = {
         .values({
           shopId: shop.id,
           waiverRecordId,
-          channel: n === 0 ? "email" : "text",
+          channel: n === 0 ? "email" : "sms",
           status: "sent",
           attemptedAt: at,
         })

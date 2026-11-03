@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { ShopPageHeader, ShopPageHeaderSkeleton } from "./ShopPageHeader";
+import { ShopPageHeader } from "./ShopPageHeader";
 
 afterEach(cleanup);
 
@@ -36,16 +36,16 @@ describe("the skeleton's description bar", () => {
     Array.from(container.querySelectorAll("div")).filter((bar) => bar.classList.contains("h-6"));
 
   it("is drawn only when the page has a description", () => {
-    const without = render(<ShopPageHeaderSkeleton description={false} />);
+    const without = render(<ShopPageHeader pending description={false} />);
     expect(descriptionBars(without.container)).toHaveLength(0);
     without.unmount();
 
-    const withOne = render(<ShopPageHeaderSkeleton description />);
+    const withOne = render(<ShopPageHeader pending description />);
     expect(descriptionBars(withOne.container)).toHaveLength(1);
   });
 
   it("has no default, so every loading file answers for its own page", () => {
     // @ts-expect-error — `description` is required.
-    render(<ShopPageHeaderSkeleton />);
+    render(<ShopPageHeader pending />);
   });
 });

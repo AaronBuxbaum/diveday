@@ -88,3 +88,26 @@ describe("naming the region", () => {
     expect(list.container.querySelector("li")?.hasAttribute("aria-labelledby")).toBe(false);
   });
 });
+
+describe("SectionCard pending", () => {
+  it("wears the resting card's own shell, with no heading or landmark name", () => {
+    const resting = render(<SectionCard padding="lg" className="h-40" title="Backups" />);
+    const restingClass = resting.container.firstElementChild?.className;
+    cleanup();
+
+    const pending = render(<SectionCard pending padding="lg" className="h-40" title="Backups" />);
+    const shell = pending.container.firstElementChild;
+    expect(shell?.className).toBe(restingClass);
+    expect(shell?.hasAttribute("aria-labelledby")).toBe(false);
+    expect(screen.queryByRole("heading")).toBeNull();
+  });
+
+  it("is the element the caller names and holds the bars inside", () => {
+    const { container } = render(
+      <SectionCard pending as="ul">
+        <li>bar</li>
+      </SectionCard>,
+    );
+    expect(container.querySelector("ul > li")).not.toBeNull();
+  });
+});

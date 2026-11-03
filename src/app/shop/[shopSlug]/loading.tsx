@@ -1,6 +1,6 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
@@ -24,13 +24,13 @@ export default function ShopSurfaceLoading() {
   return (
     <StaffPage width="full">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" description descriptionWidth="w-72 max-w-full" />
+        <ShopPageHeader pending titleWidth="w-56" description descriptionWidth="w-72 max-w-full" />
         {/* Three station-shaped panels (ADR 20260904-reef-all-the-way-down,
             slice 16a): the shell the spine paints into, so the skeleton and
             the page share one silhouette. */}
         <div className="mt-8 flex flex-col gap-5">
           {[0, 1, 2].map((i) => (
-            <div key={i} className={sectionCardClass({ padding: "lg" })}>
+            <SectionCard key={i} as="div" pending padding="lg">
               <div className="flex items-start gap-5">
                 <div className="h-15 w-21 shrink-0 rounded-inset bg-surface-sunken" />
                 <div className="min-w-0 flex-1">
@@ -49,7 +49,7 @@ export default function ShopSurfaceLoading() {
                   </div>
                 ))}
               </div>
-            </div>
+            </SectionCard>
           ))}
         </div>
       </div>

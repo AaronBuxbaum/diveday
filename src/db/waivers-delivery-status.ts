@@ -122,7 +122,7 @@ export type WaiverChannelDeliveryStates = Record<WaiverDeliveryChannel, WaiverCh
 
 const NO_WAIVER_CHANNEL_STATES: WaiverChannelDeliveryStates = {
   email: "unknown",
-  text: "unknown",
+  sms: "unknown",
   link: "unknown",
 };
 

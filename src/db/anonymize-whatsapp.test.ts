@@ -171,7 +171,7 @@ describe("anonymizeDiver — WhatsApp (issue #1721)", () => {
     await db.insert(waiverDeliveries).values({
       shopId: shop.id,
       waiverRecordId: record.id,
-      channel: "text",
+      channel: "sms",
       status: "sent",
       providerMessageId: wamid("w"),
       attemptedAt: new Date("2026-03-01T12:00:00.000Z"),

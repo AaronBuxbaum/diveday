@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { EditorFormSkeleton } from "../../../dive-sites/_components/EditorFormSkeleton";
 import {
   COURSE_EDITOR_CLOSED_SECTIONS,
@@ -23,7 +23,8 @@ export default function EditCourseLoading() {
         {/* The header's meta is one `text-sm` line — "Live at /s/…", or
             "Hidden from divers · Preview" — 12px under the title. Without its
             bar everything below the title dropped 32px on load (K-417). */}
-        <ShopPageHeaderSkeleton
+        <ShopPageHeader
+          pending
           description={false}
           meta={<div className="h-5 w-72 max-w-full rounded bg-surface-sunken" />}
         />

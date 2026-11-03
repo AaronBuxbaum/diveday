@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { sectionCardClass } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui/card";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
@@ -23,9 +23,9 @@ export default function WorkOrderLoading() {
           <div className="h-12 w-32 rounded-lg bg-surface-sunken" />
         </div>
         <div className="mt-8 space-y-10">
-          <div className={sectionCardClass({ padding: "none", className: "h-48 w-full" })} />
-          <div className={sectionCardClass({ padding: "none", className: "h-44 w-full" })} />
-          <div className={sectionCardClass({ padding: "none", className: "h-56 w-full" })} />
+          <SectionCard as="div" pending padding="none" className="h-48 w-full" />
+          <SectionCard as="div" pending padding="none" className="h-44 w-full" />
+          <SectionCard as="div" pending padding="none" className="h-56 w-full" />
         </div>
       </div>
     </StaffPage>

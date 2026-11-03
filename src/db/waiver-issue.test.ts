@@ -270,7 +270,7 @@ describe("issueAndDeliverWaiver", () => {
     };
     const sms = { send: vi.fn() };
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId, {
-      channel: "text",
+      channel: "sms",
       textProviders: { whatsapp, sms },
     });
 
@@ -300,7 +300,7 @@ describe("issueAndDeliverWaiver", () => {
 
     const sms = { send: vi.fn().mockResolvedValue({ status: "sent", providerMessageId: "sns" }) };
     const texted = await issueAndDeliverPersonWaiver(db, shop.id, person.id, {
-      channel: "text",
+      channel: "sms",
       textProviders: { whatsapp: null, sms },
     });
     expect(texted).toMatchObject({ ok: true, delivery: "sent" });
@@ -312,7 +312,7 @@ describe("issueAndDeliverWaiver", () => {
     await db.update(people).set({ phone: "555-0143" }).where(eq(people.id, person.id));
     sms.send.mockClear();
     const refused = await issueAndDeliverPersonWaiver(db, shop.id, person.id, {
-      channel: "text",
+      channel: "sms",
       textProviders: { whatsapp: null, sms },
     });
     expect(refused).toMatchObject({ ok: true, delivery: "no_phone" });
@@ -1023,7 +1023,7 @@ describe("getDiverWaiverChannelStates", () => {
     const { db, shop, personId } = await personWithNoWaiver();
     await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toEqual({
       email: "unknown",
-      text: "unknown",
+      sms: "unknown",
       link: "unknown",
     });
   });
@@ -1038,7 +1038,7 @@ describe("getDiverWaiverChannelStates", () => {
     await issueAndDeliverPersonWaiver(db, shop.id, personId, { channel: "email" });
     await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toMatchObject({
       email: "not_configured",
-      text: "unknown",
+      sms: "unknown",
     });
 
     // Taking the link is a different act on the same record, and it must not
@@ -1061,7 +1061,7 @@ describe("getDiverWaiverChannelStates", () => {
     await issueAndDeliverPersonWaiver(db, shop.id, personId, { channel: "link" });
     await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toEqual({
       email: "unknown",
-      text: "unknown",
+      sms: "unknown",
       link: "copied",
     });
   });

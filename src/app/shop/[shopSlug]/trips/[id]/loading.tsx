@@ -1,4 +1,4 @@
-import { sectionCardClass } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui/card";
 import { TripPageHeaderSkeleton } from "./_components/TripPageHeader";
 
 /**
@@ -19,7 +19,7 @@ export default function TripSurfaceLoading() {
     <div className="animate-pulse space-y-10">
       <TripPageHeaderSkeleton className="" />
       <div>
-        <div className={sectionCardClass({ padding: "none", className: "h-80" })} />
+        <SectionCard as="div" pending padding="none" className="h-80" />
         <div className="mt-6 h-11 w-44 rounded bg-surface-sunken" />
       </div>
     </div>

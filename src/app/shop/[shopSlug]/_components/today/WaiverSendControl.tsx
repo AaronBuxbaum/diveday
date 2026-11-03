@@ -91,7 +91,7 @@ export function reasonCopy(
   }
   if (reason === "failed") {
     return fill(
-      channel === "text"
+      channel === "sms"
         ? pluralForm(count, { one: copy.reasonTextFailedOne, other: copy.reasonTextFailedOther })
         : pluralForm(count, { one: copy.reasonFailedOne, other: copy.reasonFailedOther }),
       values,
@@ -104,7 +104,7 @@ export function reasonCopy(
     );
   }
   if (reason === "no_app_origin") return copy.reasonNoAppOrigin;
-  return channel === "text" ? copy.reasonTextUnconfigured : copy.reasonUnconfigured;
+  return channel === "sms" ? copy.reasonTextUnconfigured : copy.reasonUnconfigured;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
@@ -28,7 +28,7 @@ export default function PromosLoading() {
   return (
     <StaffPage width="reading">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
+        <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="money" />
         <div className="mt-8 h-12 w-36 rounded-lg bg-surface-sunken" />
         <div className="mt-10 space-y-8">

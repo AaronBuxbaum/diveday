@@ -1,5 +1,5 @@
 import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
-import { sectionCardClass } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for /waivers (design principle 1) — the token lookup,
@@ -67,7 +67,7 @@ export default function WaiverLoading() {
                   has no box at all — an approximation this file already made,
                   kept here so a refactor of the panel does not quietly restate
                   a medical page's structure. */}
-              <div className={sectionCardClass({ padding: "none", className: "mt-4 h-14" })} />
+              <SectionCard as="div" pending padding="none" className="mt-4 h-14" />
             </div>
           ))}
         </div>

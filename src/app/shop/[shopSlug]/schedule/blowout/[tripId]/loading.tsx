@@ -1,6 +1,6 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for the blow-out page (ADR 20260804-instant-navigation):
@@ -34,7 +34,8 @@ import { sectionCardClass } from "@/components/ui/card";
 export default function BlowoutLoading() {
   return (
     <StaffPage width="full" className="animate-pulse">
-      <ShopPageHeaderSkeleton
+      <ShopPageHeader
+        pending
         titleWidth="w-64 max-w-full"
         // The header carries `meta`, never a description: the trip's name and
         // its date/time line, two `text-sm` rows at `gap-1`.
@@ -47,7 +48,7 @@ export default function BlowoutLoading() {
         }
       />
       {/* The card takes the page's reading width, as the page draws it. */}
-      <div className={sectionCardClass({ padding: "lg" })}>
+      <SectionCard as="div" pending padding="lg">
         {/* The lead, then the money note — `text-sm` paragraphs that wrap. */}
         <div className="flex flex-col gap-1">
           <div className="h-4 w-full rounded bg-surface-sunken" />
@@ -69,7 +70,7 @@ export default function BlowoutLoading() {
         </div>
         {/* The danger submit — `min-h-11`, like every button in the app. */}
         <div className="mt-6 h-11 w-44 rounded-lg bg-surface-sunken" />
-      </div>
+      </SectionCard>
     </StaffPage>
   );
 }

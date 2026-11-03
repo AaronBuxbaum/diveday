@@ -139,6 +139,7 @@ export function SectionCard({
   id,
   className = "",
   "aria-label": ariaLabel,
+  pending = false,
   children,
 }: {
   /** The element this card *is*. A row in a list is an `li`; a disclosure is `details`. */
@@ -158,6 +159,13 @@ export function SectionCard({
   id?: string;
   className?: string;
   "aria-label"?: string;
+  /**
+   * Draw the card's resting shell for a `loading.tsx`: the same radius, border and
+   * `padding` as the real card, from the same class string, so a skeleton cannot
+   * drift from the card it stands for (#1857, #2769). Its `children` are the
+   * bars inside; `title`, `description` and `actions` are not drawn.
+   */
+  pending?: boolean;
   children?: ReactNode;
 }) {
   const Heading = titleAs;
@@ -180,6 +188,9 @@ export function SectionCard({
   // here to satisfy a doubt about that — it would drag every staff page's panels
   // into the client bundle to buy nothing.
   const generatedId = useId();
+  if (pending) {
+    return <Tag className={sectionCardClass({ padding, className })}>{children}</Tag>;
+  }
   // **Prefixed, so this id can never be a `Field`'s.** Under `cacheComponents`
   // a client navigation renders in two passes and each restarts React's server
   // `useId` counter at 1, so two subtrees can be handed the same `_S_n_`

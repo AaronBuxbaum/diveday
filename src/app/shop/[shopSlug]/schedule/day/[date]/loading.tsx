@@ -1,6 +1,6 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for a past day (ADR 20260804-instant-navigation): the
@@ -11,7 +11,8 @@ import { sectionCardClass } from "@/components/ui/card";
 export default function PastDayLoading() {
   return (
     <StaffPage width="full" className="animate-pulse">
-      <ShopPageHeaderSkeleton
+      <ShopPageHeader
+        pending
         titleWidth="w-56 max-w-full"
         description={false}
         meta={<div className="h-5 w-24 max-w-full rounded bg-surface-sunken" />}
@@ -19,12 +20,12 @@ export default function PastDayLoading() {
       <div className="mt-8 h-4 w-24 rounded bg-surface-sunken" />
       <div className="mt-3 flex flex-col gap-5">
         {["w-48", "w-56"].map((width) => (
-          <div key={width} className={sectionCardClass({ padding: "lg" })}>
+          <SectionCard key={width} as="div" pending padding="lg">
             <div className="h-7 w-20 rounded bg-surface-sunken" />
             <div className={`mt-1.5 h-6 ${width} max-w-full rounded bg-surface-sunken`} />
             <div className="mt-1.5 h-5 w-64 max-w-full rounded bg-surface-sunken" />
             <div className="mt-3 h-11 w-32 rounded-lg bg-surface-sunken" />
-          </div>
+          </SectionCard>
         ))}
       </div>
     </StaffPage>

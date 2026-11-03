@@ -1,5 +1,5 @@
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 
 /** The title, compact day plan and booking decision, then supporting detail. */
 export default function TripDetailLoading() {
@@ -12,7 +12,8 @@ export default function TripDetailLoading() {
             11, K-264). */}
         {/* The hero, one cell of the grid as the page sets it. */}
         <div>
-          <ShopPageHeaderSkeleton
+          <ShopPageHeader
+            pending
             titleWidth="w-72 max-w-full"
             description={false}
             meta={
@@ -30,11 +31,11 @@ export default function TripDetailLoading() {
         </div>
         <div className="mt-10 h-28 rounded bg-surface-sunken lg:mt-0 lg:col-start-1 lg:row-start-2" />
         {/* The same right-hand booking column as the loaded page. */}
-        <div
-          className={sectionCardClass({
-            padding: "none",
-            className: "mt-10 h-96 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1",
-          })}
+        <SectionCard
+          as="div"
+          pending
+          padding="none"
+          className="mt-10 h-96 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1"
         />
         {/* The page's one stack of sections, 40px apart (pixel-craft class 4,
             K-162), on the same `mt-10 space-y-10` the page stands them on. */}

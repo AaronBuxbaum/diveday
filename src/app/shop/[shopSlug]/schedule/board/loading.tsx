@@ -1,5 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ScheduleViewsSkeleton } from "../_components/ScheduleViews";
 import {
   WEEK_DAY_GRID_CLASS,
@@ -34,7 +34,7 @@ export default function ScheduleBoardLoading() {
         {/* Two rows of doors on a phone: "View public page", "Add a
             departure" and "Add a booking" wrap to two at 390px for anyone
             who can configure the board. */}
-        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-48" description={false} actions={2} />
+        <ShopPageHeader pending eyebrow={false} titleWidth="w-48" description={false} actions={2} />
         <ScheduleViewsSkeleton />
         <div className="mt-4">
           {/* `WeekPager`: two 48px steps (`icon`) and the range, with the
