@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
+import { paymentEntries } from "./payments";
 import { getMonthlyReport } from "./reporting";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   importedPaymentHistory,
   orders,
@@ -67,14 +68,16 @@ async function pay(
   amountCents: number,
   source: { provider?: string; providerRef?: string } = {},
 ): Promise<void> {
-  await db.insert(bookingPayments).values({
-    shopId,
-    bookingId,
-    status: "paid",
-    amountCents,
-    currency: "usd",
-    ...source,
-  });
+  await db.insert(bookingPaymentEvents).values(
+    paymentEntries({
+      shopId,
+      bookingId,
+      status: "paid",
+      amountCents,
+      currency: "usd",
+      ...source,
+    }),
+  );
 }
 
 describe("each departure's net", () => {

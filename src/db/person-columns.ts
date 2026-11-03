@@ -326,13 +326,6 @@ const rows = [
     why: "who marked the payment by hand",
   },
   {
-    table: "booking_payments",
-    column: "recorded_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who marked the payment by hand",
-  },
-  {
     table: "boat_snags",
     column: "fixed_by_person_id",
     kind: "actor",

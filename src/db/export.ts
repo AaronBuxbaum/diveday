@@ -481,8 +481,10 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const tipRows = await readTipRows(tx, scope);
 
-  const paymentRows = await readScoped(tx, "bookingPayments", scope);
-  const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
+  // A booking's payment state is its newest entry (issue #2716). The entries
+  // come oldest first, so the map keeps the last one per booking.
+  const paymentEventRows = await readScoped(tx, "bookingPaymentEvents", scope);
+  const paymentByBooking = new Map(paymentEventRows.map((row) => [row.bookingId, row]));
 
   // The diver's link that brought a seat, folded into bookings.csv beside
   // `party_lead_booking_id` (ADR 20260908-one-hand, decision 6, lever W).
@@ -491,8 +493,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
       (row) => [row.bookingId, row.referredByBookingId],
     ),
   );
-
-  const paymentEventRows = await readScoped(tx, "bookingPaymentEvents", scope);
 
   const checkoutRows = await readScoped(tx, "bookingCheckouts", scope);
 
@@ -874,8 +874,10 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   const tripTitle = new Map(tripRows.map((row) => [row.id, row.title]));
   const tripStartsAt = new Map(tripRows.map((row) => [row.id, row.startsAt]));
 
-  const paymentRows = await readScoped(tx, "bookingPayments", scope);
-  const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
+  // A booking's payment state is its newest entry (issue #2716). The entries
+  // come oldest first, so the map keeps the last one per booking.
+  const paymentEventRows = await readScoped(tx, "bookingPaymentEvents", scope);
+  const paymentByBooking = new Map(paymentEventRows.map((row) => [row.bookingId, row]));
 
   // Everyone this bundle might need to *name* besides the diver — a
   // staffer who recorded a roll call, moderated a review, or paired a
@@ -934,8 +936,6 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
       tripStartsAt.set(row.id, row.startsAt);
     }
   }
-
-  const paymentEventRows = await readScoped(tx, "bookingPaymentEvents", scope);
 
   const checkoutBookingRows = await readScoped(tx, "bookingCheckoutBookings", scope);
 

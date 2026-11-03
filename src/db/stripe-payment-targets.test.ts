@@ -2,8 +2,8 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { fileScopedShopContext } from "@/test/db";
-import { recordCheckoutPaymentIntent } from "./checkouts";
-import { bookingCheckouts, bookings, orders, people } from "./schema";
+import { insertTip } from "@/test/tips";
+import { bookings, orders, people } from "./schema";
 import { findStripePaymentTarget, PaymentSourceLookupFailed } from "./stripe-payment-targets";
 
 const ctx = fileScopedShopContext();
@@ -121,25 +121,16 @@ describe("findStripePaymentTarget", () => {
     const { db, shop } = ctx;
     const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
     if (!booking) throw new Error("seeded booking missing");
-    await db.insert(bookingCheckouts).values({
+    await insertTip(db, {
       shopId: shop.id,
-      tripId: booking.tripId,
-      purpose: "tip",
-      status: "completed",
+      bookingId: booking.id,
+      status: "paid",
       stripeAccountId: "acct_demo",
       stripeSessionId: "cs_tip_target",
+      stripePaymentIntentId: "pi_tip",
       currency: "usd",
-      amountPerDiverCents: 2_000,
-      totalCents: 2_000,
-      settledTotalCents: 2_000,
+      amountCents: 2_000,
     });
-    expect(
-      await recordCheckoutPaymentIntent(db, {
-        stripeSessionId: "cs_tip_target",
-        paymentIntentId: "pi_tip",
-        expectedAccountId: "acct_demo",
-      }),
-    ).toBe(true);
     const { lookup, calls } = lookupAnswering({ status: "failed" });
 
     expect(
@@ -156,17 +147,14 @@ describe("findStripePaymentTarget", () => {
     const { db, shop } = ctx;
     const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
     if (!booking) throw new Error("seeded booking missing");
-    await db.insert(bookingCheckouts).values({
+    await insertTip(db, {
       shopId: shop.id,
-      tripId: booking.tripId,
-      purpose: "tip",
-      status: "completed",
+      bookingId: booking.id,
+      status: "paid",
       stripeAccountId: "acct_demo",
       stripeSessionId: "cs_tip_named",
       currency: "usd",
-      amountPerDiverCents: 2_000,
-      totalCents: 2_000,
-      settledTotalCents: 2_000,
+      amountCents: 2_000,
     });
     const { lookup, calls } = lookupAnswering({
       status: "checkout_session",

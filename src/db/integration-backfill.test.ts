@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { recordingCheckout } from "@/test/fakes";
+import { insertTip } from "@/test/tips";
 import { createBooking } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import {
@@ -12,7 +13,6 @@ import {
 } from "./integration-backfill";
 import { enqueueCheckoutIntegrationEvent } from "./integration-events";
 import {
-  bookingCheckoutBookings,
   bookingCheckouts,
   integrationDeliveries,
   integrationEvents,
@@ -95,27 +95,15 @@ async function completedCheckout(
 
 async function paidTip(f: Awaited<ReturnType<typeof priced>>, bookingId: string, daysAgo: number) {
   seq += 1;
-  const [row] = await f.db
-    .insert(bookingCheckouts)
-    .values({
-      shopId: f.shop.id,
-      tripId: f.trip.id,
-      purpose: "tip",
-      status: "completed",
-      stripeAccountId: "acct_backfill",
-      stripeSessionId: `cs_tip_backfill_${seq}`,
-      currency: "usd",
-      amountPerDiverCents: 2_000,
-      totalCents: 2_000,
-      settledTotalCents: 2_000,
-      completedAt: new Date(nowDate().getTime() - daysAgo * DAY),
-    })
-    .returning();
-  if (!row) throw new Error("tip insert failed");
-  await f.db.insert(bookingCheckoutBookings).values({
+  const row = await insertTip(f.db, {
     shopId: f.shop.id,
-    checkoutId: row.id,
     bookingId,
+    status: "paid",
+    stripeAccountId: "acct_backfill",
+    stripeSessionId: `cs_tip_backfill_${seq}`,
+    currency: "usd",
+    amountCents: 2_000,
+    completedAt: new Date(nowDate().getTime() - daysAgo * DAY),
   });
   return row.id;
 }
@@ -456,7 +444,11 @@ describe("integration backfill (issue #2606)", () => {
     await f.db
       .update(bookingCheckouts)
       .set({ completedAt: instant })
-      .where(inArray(bookingCheckouts.id, [a.checkoutId, b.checkoutId, tip1, tip2]));
+      .where(inArray(bookingCheckouts.id, [a.checkoutId, b.checkoutId]));
+    await f.db
+      .update(bookingCheckouts)
+      .set({ completedAt: instant })
+      .where(inArray(bookingCheckouts.id, [tip1, tip2]));
     const zap = await connect(f.shop.id, "zapier", ["order.paid", "order.refunded"]);
 
     await runIntegrationBackfill(f.db, {

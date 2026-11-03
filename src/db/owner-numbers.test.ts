@@ -5,6 +5,7 @@ import { summarizeShopYear } from "@/lib/shop-year";
 import { unseededTestDb } from "@/test/db";
 import { weatherCallsInWindow } from "./blowouts";
 import type { AppDb } from "./client";
+import { paymentEntries } from "./payments";
 import {
   bookingLeadTimes,
   certifiedHere,
@@ -16,7 +17,7 @@ import {
   boats,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   cards,
   courses,
@@ -90,8 +91,8 @@ async function booking(
 
 async function paid(db: AppDb, shopId: string, bookingId: string, amountCents: number) {
   await db
-    .insert(bookingPayments)
-    .values({ shopId, bookingId, status: "paid", amountCents, currency: "usd" });
+    .insert(bookingPaymentEvents)
+    .values(paymentEntries({ shopId, bookingId, status: "paid", amountCents, currency: "usd" }));
 }
 
 describe("each departure's net (item 26)", () => {
@@ -141,15 +142,17 @@ describe("each departure's net (item 26)", () => {
       tripCents: 10_000,
       taxCents: 1_000,
     });
-    await db.insert(bookingPayments).values({
-      shopId,
-      bookingId: taxed,
-      status: "paid",
-      amountCents: 11_000,
-      currency: "usd",
-      provider: "stripe",
-      providerRef: "cs_net",
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId,
+        bookingId: taxed,
+        status: "paid",
+        amountCents: 11_000,
+        currency: "usd",
+        provider: "stripe",
+        providerRef: "cs_net",
+      }),
+    );
 
     const report = await getMonthlyReport(
       db,
@@ -410,13 +413,15 @@ describe("weatherCallsInWindow (item 27)", () => {
     });
     const [first, second] = snapshot;
     if (!first || !second) throw new Error("snapshot missing");
-    await db.insert(bookingPayments).values({
-      shopId,
-      bookingId: first.id,
-      status: "refunded",
-      amountCents: 9_500,
-      currency: "usd",
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId,
+        bookingId: first.id,
+        status: "refunded",
+        amountCents: 9_500,
+        currency: "usd",
+      }),
+    );
     // The second diver books the make-up boat after the call.
     await db.insert(bookings).values({
       shopId,

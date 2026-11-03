@@ -313,6 +313,8 @@ Writing it found two live defects, which is the argument for it: a single publis
 
 ### live-trip-read
 
+The checkout-purpose one (`scripts/check-checkout-purpose.mjs`) fails any query on `booking_checkouts` or `booking_checkout_bookings` (a `.from`, an `.update` or a join) that neither carries `fareCheckout()` or `tipCheckout()` (`src/db/checkout-purpose.ts`) nor says `diveday:any-checkout-purpose: <why>`. A seat's checkout and a post-trip tip share the table since issue #2718, and only a fare settles a seat. A reader written before that, such as the abandoned-checkout recovery scan, a refund, the month's revenue or the confirmation page's latest checkout, does not throw when a tip arrives through it: it emails a diver about a seat they already paid for, or counts a tip as fare revenue. A join belongs to the query its `.from` opened, so the one `where` after the joins proves them all.
+
 The live-trip-read one (`scripts/check-live-trips.mjs`) fails any read of `trips` — a `.from(trips)`, or a join from one of the child tables that now survives a delete — that neither carries `liveTrip()` (`src/db/trips-live.ts`) nor says `diveday:allow-deleted-trips: <why>`. Deleting a departure stamps `trips.deleted_at` and leaves the row and its five children in place, and the table is read from 91 places; a reader that forgets the filter does not throw and does not fail a test written before the column existed, it shows an anonymous visitor a departure the shop took off the board. Joins from `bookings`, `tripWaitlistEntries` and the roll-call tables are outside the gate on purpose — `deleteTrip` refuses a departure carrying any of those, so no such row exists to arrive through.
 
 ### live-people-read

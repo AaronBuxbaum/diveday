@@ -1792,12 +1792,12 @@
   [20260816-imported-payment-history-is-evidence](../../architecture/decisions/20260816-imported-payment-history-is-evidence.md).
 - **Payment event** — one recorded *transition* of a booking's payment state: what it moved to,
   what it moved from, the amount and currency at that moment, and which operation caused it. The
-  append-only trail (`booking_payment_events`) beside the single mutable `booking_payments` row,
-  which carries only where the money stands now and which a refund overwrites in place. Written
-  inside the same transaction as the mutation it records, so the two commit or roll back together.
+  booking's money is these entries (`booking_payment_events`); where the money stands now is the
+  newest one, which the `booking_payments` view folds out, and a refund appends rather than
+  overwriting the capture it reverses (issue #2716).
   "Transition, not write" is the load-bearing distinction: a webhook redelivered twice appends
   nothing the second time, and a refused write appends nothing at all, so a row here always means
-  the state genuinely changed — otherwise the money ledger would slowly become a delivery log.
+  something material changed (the same mark by another staffer counts) — otherwise the money ledger would slowly become a delivery log.
 - **Retention window** — how long one append-only table's rows are kept before the weekly prune
   deletes them. Set per table in `RETENTION_DAYS` (`src/lib/retention.ts`), which is the only place
   a human edits. Most windows are a preference; `stripe_webhook_events` is not — its rows are the

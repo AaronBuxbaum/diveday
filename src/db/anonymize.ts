@@ -97,7 +97,6 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPaymentEvents,
-  bookingPayments,
   bookings,
   buddyTeamEvents,
   calendarFeeds,
@@ -1349,19 +1348,10 @@ async function scrubBookingRows(
         ),
       );
 
-    await tx
-      .update(bookingPayments)
-      .set({ note: null })
-      .where(
-        and(eq(bookingPayments.shopId, shopId), inArray(bookingPayments.bookingId, bookingIds)),
-      );
-
-    // The same sentence, one table over. `setBookingPayment` copies `note` onto
-    // every transition it appends (`src/db/payments.ts`), so scrubbing the
-    // current row and leaving the trail left the staffer's words about this
-    // diver's money legible in full history. Found by the sweep below rather
-    // than by anyone reading the line above it (issue #1607) — which is the
-    // whole argument for having a sweep.
+    // A booking's payment state is its newest entry (`booking_payments` is a
+    // view over this table, issue #2716), so scrubbing the entries scrubs the
+    // current state too. Every entry carries the note its write stated, so
+    // all of them go, not just the newest (issue #1607).
     await tx
       .update(bookingPaymentEvents)
       .set({ note: null })

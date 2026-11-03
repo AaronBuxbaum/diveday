@@ -5,10 +5,10 @@ import { reservedTestRecipientDelivery } from "@/lib/notifications/provider";
 import { DEMO_MAIL_DOMAIN, deliveryAddressFor, SES_SIMULATOR_DOMAIN } from "@/lib/simulator-email";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { insertTip, tipsOf } from "@/test/tips";
 import { waiverTemplateHistory } from "@/test/waiver-history";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
-import { tipCheckout } from "./checkout-purpose";
 import { askForDeparture } from "./interests";
 import { shopSenderFor } from "./notifications";
 import {
@@ -123,14 +123,7 @@ describe("resetDemoSchedule", () => {
     expect(
       (await db.select().from(orders).where(eq(orders.shopId, shop.id))).length,
     ).toBeGreaterThan(0);
-    expect(
-      (
-        await db
-          .select()
-          .from(bookingCheckouts)
-          .where(and(eq(bookingCheckouts.shopId, shop.id), tipCheckout()))
-      ).length,
-    ).toBeGreaterThan(0);
+    expect((await tipsOf(db, shop.id)).length).toBeGreaterThan(0);
   });
 
   it("restores the seeded schedule after the playground is churned", async () => {
@@ -462,38 +455,18 @@ describe("resetDemoSchedule", () => {
       email: "tessa@example.com",
     });
     if (!outcome.ok) throw new Error("setup booking failed");
-    const [tipCheckoutRow] = await db
-      .insert(bookingCheckouts)
-      .values({
-        shopId: shop.id,
-        tripId: open.id,
-        purpose: "tip",
-        status: "completed",
-        currency: "usd",
-        stripeAccountId: "acct_demo",
-        stripeSessionId: `cs_demo_${outcome.bookingId}`,
-        amountPerDiverCents: 1000,
-        totalCents: 1000,
-        settledTotalCents: 1000,
-      })
-      .returning();
-    if (!tipCheckoutRow) throw new Error("tip checkout insert failed");
-    await db.insert(bookingCheckoutBookings).values({
+    await insertTip(db, {
       shopId: shop.id,
-      checkoutId: tipCheckoutRow.id,
+      currency: "usd",
       bookingId: outcome.bookingId,
+      stripeAccountId: "acct_demo",
+      stripeSessionId: `cs_demo_${outcome.bookingId}`,
+      amountCents: 1000,
     });
 
     // No FK violation here is the real assertion — tips must go before bookings.
     await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
-    expect(
-      (
-        await db
-          .select()
-          .from(bookingCheckouts)
-          .where(and(eq(bookingCheckouts.shopId, shop.id), tipCheckout()))
-      ).length,
-    ).toBe(0);
+    expect((await tipsOf(db, shop.id)).length).toBe(0);
   });
 
   it("clears issued booking capabilities so a churned playground resets cleanly", async () => {

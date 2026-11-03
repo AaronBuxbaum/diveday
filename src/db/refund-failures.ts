@@ -221,7 +221,7 @@ async function restoreRefundedSeat(
         eq(bookingPaymentEvents.bookingId, seat.bookingId),
       ),
     )
-    .orderBy(desc(bookingPaymentEvents.occurredAt), desc(bookingPaymentEvents.createdAt))
+    .orderBy(desc(bookingPaymentEvents.occurredAt), desc(bookingPaymentEvents.seq))
     .limit(50);
   const refundAt = trail.findIndex((event) => event.providerRef === refundId);
   const before = refundAt === -1 ? undefined : trail[refundAt + 1];

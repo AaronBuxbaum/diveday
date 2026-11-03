@@ -24,6 +24,10 @@ async function referencesToPeople(): Promise<string[]> {
     select table_name, column_name
     from information_schema.columns
     where table_schema = 'public' and column_name like '%person_id'
+      and table_name in (
+        select table_name from information_schema.tables
+        where table_schema = 'public' and table_type = 'BASE TABLE'
+      )
   `);
   const pairs = new Set<string>();
   for (const row of [...byConstraint.rows, ...byName.rows]) {

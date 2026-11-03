@@ -1,17 +1,19 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, recordingCheckout } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
-import { tipCheckout } from "./checkout-purpose";
 import {
+  getLatestCheckoutForBooking,
   markCheckoutExpiredBySessionId,
   markCheckoutPaidBySessionId,
   recordCheckoutStripeCustomer,
   refreshCheckoutFromStripe,
 } from "./checkouts";
-import { bookingCheckouts, bookings, integrationEvents } from "./schema";
+import type { DbExecutor } from "./client";
+import { getBookingPayment } from "./payments";
+import { bookingCheckoutBookings, bookingCheckouts, bookings, integrationEvents } from "./schema";
 import { setShopCurrency, setShopFeature } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
@@ -51,6 +53,19 @@ async function tipContext({ fresh = false }: { fresh?: boolean } = {}) {
   ]);
   if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
   return { db, shop, bookingId: party.bookings[0].bookingId };
+}
+
+/** Every tip checkout on one booking, oldest first. */
+async function tipRowsFor(db: DbExecutor, bookingId: string) {
+  const rows = await db
+    .select({ tip: bookingCheckouts })
+    .from(bookingCheckouts)
+    .innerJoin(bookingCheckoutBookings, eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id))
+    .where(
+      and(eq(bookingCheckoutBookings.bookingId, bookingId), eq(bookingCheckouts.purpose, "tip")),
+    )
+    .orderBy(asc(bookingCheckouts.createdAt));
+  return rows.map((row) => row.tip);
 }
 
 function tipInput(bookingId: string, amountCents = 1000) {
@@ -197,7 +212,7 @@ describe("startTipCheckout", () => {
     await setShopCurrency(db, shop.id, "eur");
     const started = await startTipCheckout(db, tipInput(bookingId, 2000), fakeCheckout());
     expect(started.ok).toBe(true);
-    const row = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [row] = await tipRowsFor(db, bookingId);
     if (!row) throw new Error("tip row missing");
     await markCheckoutPaidBySessionId(db, row.stripeSessionId);
 
@@ -209,7 +224,7 @@ describe("startTipCheckout", () => {
   });
 
   it("reuses a still-open pending tip instead of minting a second Stripe session", async () => {
-    const { db, shop, bookingId } = await tipContext();
+    const { db, bookingId } = await tipContext();
     const provider = fakeCheckout();
     const first = await startTipCheckout(db, tipInput(bookingId), provider);
     if (!first.ok) throw new Error("expected ok");
@@ -217,28 +232,22 @@ describe("startTipCheckout", () => {
     const second = await startTipCheckout(db, tipInput(bookingId, 2000), provider);
     expect(second).toEqual(first); // same session handed back, no second one created
 
-    const rows = await db
-      .select()
-      .from(bookingCheckouts)
-      .where(and(eq(bookingCheckouts.shopId, shop.id), tipCheckout()));
+    const rows = await tipRowsFor(db, bookingId);
     expect(rows).toHaveLength(1); // never two pending sessions for one booking
   });
 
   it("does not reuse a tip that already expired", async () => {
-    const { db, shop, bookingId } = await tipContext();
+    const { db, bookingId } = await tipContext();
     const provider = fakeCheckout();
     const first = await startTipCheckout(db, tipInput(bookingId), provider);
     if (!first.ok) throw new Error("expected ok");
-    const firstRow = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [firstRow] = await tipRowsFor(db, bookingId);
     if (!firstRow) throw new Error("first tip row missing");
     await markCheckoutExpiredBySessionId(db, firstRow.stripeSessionId);
 
     const second = await startTipCheckout(db, tipInput(bookingId, 2000), provider);
     expect(second).not.toEqual(first);
-    const rows = await db
-      .select()
-      .from(bookingCheckouts)
-      .where(and(eq(bookingCheckouts.shopId, shop.id), tipCheckout()));
+    const rows = await tipRowsFor(db, bookingId);
     expect(rows).toHaveLength(2);
   });
 });
@@ -252,7 +261,7 @@ describe("getLatestTipForBooking", () => {
     // A still-pending tip is reused, not duplicated (the concurrent-double-
     // charge fix) — expire the first attempt so the second is a genuinely
     // new one, to exercise "most recent" across two real rows.
-    const firstRow = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [firstRow] = await tipRowsFor(db, bookingId);
     if (!firstRow) throw new Error("first tip row missing");
     await markCheckoutExpiredBySessionId(db, firstRow.stripeSessionId);
     advanceClock();
@@ -265,12 +274,49 @@ describe("getLatestTipForBooking", () => {
   });
 });
 
-describe("markCheckoutPaidBySessionId / markCheckoutExpiredBySessionId", () => {
-  it("marks a tip paid from Stripe evidence, idempotently", async () => {
+describe("a tip's checkout lifecycle", () => {
+  it("settles a tip without touching the seat it was left on (issue #2718)", async () => {
     const { db, shop, bookingId } = await tipContext();
+    const before = await getBookingPayment(db, shop.id, bookingId);
+    const started = await startTipCheckout(db, tipInput(bookingId, 1500), fakeCheckout());
+    if (!started.ok) throw new Error("expected ok");
+    const [row] = await tipRowsFor(db, bookingId);
+    if (!row) throw new Error("tip row missing");
+    expect(row).toMatchObject({ purpose: "tip", isDeposit: false, totalCents: 1500 });
+
+    // The seat's payment panel never reads a tip as its checkout.
+    expect((await getLatestCheckoutForBooking(db, shop.id, bookingId))?.id).not.toBe(row.id);
+
+    const settlement = { firstCompletion: false };
+    const paid = await markCheckoutPaidBySessionId(
+      db,
+      row.stripeSessionId,
+      "acct_test",
+      1500,
+      null,
+      settlement,
+    );
+    expect(paid?.status).toBe("completed");
+    expect(paid?.settledTotalCents).toBe(1500);
+    // No party receipt for a tip, and the seat's payment is exactly as it was.
+    expect(settlement.firstCompletion).toBe(false);
+    expect(await getBookingPayment(db, shop.id, bookingId)).toEqual(before);
+  });
+
+  it("never records more than the diver chose, whatever Stripe reports", async () => {
+    const { db, bookingId } = await tipContext();
+    await startTipCheckout(db, tipInput(bookingId, 1000), fakeCheckout());
+    const [row] = await tipRowsFor(db, bookingId);
+    if (!row) throw new Error("tip row missing");
+    const paid = await markCheckoutPaidBySessionId(db, row.stripeSessionId, undefined, 999_999);
+    expect(paid?.settledTotalCents).toBe(1000);
+  });
+
+  it("marks a tip paid from Stripe evidence, idempotently", async () => {
+    const { db, bookingId } = await tipContext();
     const started = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
     if (!started.ok) throw new Error("expected ok");
-    const row = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [row] = await tipRowsFor(db, bookingId);
     if (!row) throw new Error("tip row missing");
 
     const paid = await markCheckoutPaidBySessionId(db, row.stripeSessionId);
@@ -286,7 +332,7 @@ describe("markCheckoutPaidBySessionId / markCheckoutExpiredBySessionId", () => {
     const { db, shop, bookingId } = await tipContext();
     const started = await startTipCheckout(db, tipInput(bookingId, 1500), fakeCheckout());
     if (!started.ok) throw new Error("expected ok");
-    const row = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [row] = await tipRowsFor(db, bookingId);
     if (!row) throw new Error("tip row missing");
     await markCheckoutPaidBySessionId(db, row.stripeSessionId);
     await markCheckoutPaidBySessionId(db, row.stripeSessionId);
@@ -310,10 +356,10 @@ describe("markCheckoutPaidBySessionId / markCheckoutExpiredBySessionId", () => {
   });
 
   it("expires a pending tip and leaves a paid one alone", async () => {
-    const { db, shop, bookingId } = await tipContext();
+    const { db, bookingId } = await tipContext();
     const started = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
     if (!started.ok) throw new Error("expected ok");
-    const row = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [row] = await tipRowsFor(db, bookingId);
     if (!row) throw new Error("tip row missing");
 
     const expired = await markCheckoutExpiredBySessionId(db, row.stripeSessionId);
@@ -334,10 +380,10 @@ describe("markCheckoutPaidBySessionId / markCheckoutExpiredBySessionId", () => {
   // top-level `account` disagrees with the tip's own connected account is
   // refused even though the session id alone already matched a row.
   it("refuses to mark a tip paid or expired when the expected account doesn't match", async () => {
-    const { db, shop, bookingId } = await tipContext();
+    const { db, bookingId } = await tipContext();
     const started = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
     if (!started.ok) throw new Error("expected ok");
-    const row = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [row] = await tipRowsFor(db, bookingId);
     if (!row) throw new Error("tip row missing");
 
     expect(await markCheckoutPaidBySessionId(db, row.stripeSessionId, "acct_evil")).toBeNull();
@@ -358,10 +404,10 @@ describe("markCheckoutPaidBySessionId / markCheckoutExpiredBySessionId", () => {
 // whole contract — recorded once, never overwritten, never across accounts.
 describe("recordCheckoutStripeCustomer", () => {
   it("records the Customer id once and ignores a replayed event", async () => {
-    const { db, shop, bookingId } = await tipContext();
+    const { db, bookingId } = await tipContext();
     const started = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
     if (!started.ok) throw new Error("expected ok");
-    const row = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [row] = await tipRowsFor(db, bookingId);
     if (!row) throw new Error("tip row missing");
     expect(row.stripeCustomerId).toBeNull();
 
@@ -371,7 +417,7 @@ describe("recordCheckoutStripeCustomer", () => {
         stripeCustomerId: "cus_tipper",
       }),
     ).toBe(true);
-    const first = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [first] = await db.select().from(bookingCheckouts).where(eq(bookingCheckouts.id, row.id));
     expect(first?.stripeCustomerId).toBe("cus_tipper");
 
     // Write-once: a redelivered webhook moves nothing, and Stripe's first
@@ -382,15 +428,18 @@ describe("recordCheckoutStripeCustomer", () => {
         stripeCustomerId: "cus_second_delivery",
       }),
     ).toBe(false);
-    const second = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [second] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, row.id));
     expect(second?.stripeCustomerId).toBe("cus_tipper");
   });
 
   it("refuses a connected account that is not this tip's", async () => {
-    const { db, shop, bookingId } = await tipContext();
+    const { db, bookingId } = await tipContext();
     const started = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
     if (!started.ok) throw new Error("expected ok");
-    const row = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [row] = await tipRowsFor(db, bookingId);
     if (!row) throw new Error("tip row missing");
 
     expect(
@@ -400,7 +449,10 @@ describe("recordCheckoutStripeCustomer", () => {
         expectedAccountId: "acct_evil",
       }),
     ).toBe(false);
-    const untouched = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [untouched] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, row.id));
     expect(untouched?.stripeCustomerId).toBeNull();
 
     expect(
@@ -431,7 +483,7 @@ describe("refreshCheckoutFromStripe", () => {
     const { db, shop, bookingId } = await tipContext();
     const started = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
     if (!started.ok) throw new Error("expected ok");
-    const row = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [row] = await tipRowsFor(db, bookingId);
     if (!row) throw new Error("tip row missing");
 
     const refreshed = await refreshCheckoutFromStripe(
@@ -457,7 +509,10 @@ describe("refreshCheckoutFromStripe", () => {
       }),
     );
     expect(refreshed?.status).toBe("completed");
-    const settled = await getLatestTipForBooking(db, shop.id, bookingId);
+    const [settled] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, row.id));
     expect(settled?.stripeCustomerId).toBe("cus_tip_refreshed");
   });
 });

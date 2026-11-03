@@ -24,6 +24,7 @@ import {
   listDiverSummaries,
   restoreDiver,
 } from "./divers";
+import { paymentEntries } from "./payments";
 import { recordRentalFit } from "./rental-fit";
 import {
   activityEvents,
@@ -31,6 +32,7 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
+  bookingPaymentEvents,
   bookingPayments,
   bookings,
   buddyTeamEvents,
@@ -1284,14 +1286,16 @@ describe("diver erasure", () => {
       status: "boarded",
       occurredAt: erasureNow,
     });
-    await db.insert(bookingPayments).values({
-      shopId: shop.id,
-      currency: "usd",
-      bookingId,
-      status: "paid",
-      amountCents: 13000,
-      note: "Elena paid cash at the counter",
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId: shop.id,
+        currency: "usd",
+        bookingId,
+        status: "paid",
+        amountCents: 13000,
+        note: "Elena paid cash at the counter",
+      }),
+    );
     await db.insert(priorVisits).values({
       shopId: shop.id,
       personId: diver.id,

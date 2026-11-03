@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DateField, Field } from "@/components/ui/form";
-import { type DoctorAnswersState, revealDoctorAnswersAction } from "./actions";
+import type { DoctorAnswersState } from "./doctor-core";
 
 const LOCKED: DoctorAnswersState = { status: "locked" };
 
@@ -29,8 +29,15 @@ export type DoctorAnswersCopy = {
  * printed footer shows the locked form again. Printing after unlocking prints
  * them, which is the point.
  */
-export function DoctorAnswers({ token, copy }: { token: string; copy: DoctorAnswersCopy }) {
-  const [state, formAction] = useActionState(revealDoctorAnswersAction.bind(null, token), LOCKED);
+export function DoctorAnswers({
+  action,
+  copy,
+}: {
+  /** The unlock, bound by the page to its own door's credential. */
+  action: (previous: DoctorAnswersState, formData: FormData) => Promise<DoctorAnswersState>;
+  copy: DoctorAnswersCopy;
+}) {
+  const [state, formAction] = useActionState(action, LOCKED);
 
   if (state.status === "open") {
     return (

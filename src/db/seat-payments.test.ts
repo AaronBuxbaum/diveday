@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import { pagedOrdersByDay } from "./orders";
+import { paymentEntries } from "./payments";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   orders,
   people,
@@ -211,11 +212,13 @@ describe("seats that sailed owing money", () => {
     await book(db, shopId, upcoming, await person(db, shopId, "Next Week"));
     const invoiced = await person(db, shopId, "Invoiced Diver");
     const invoicedBooking = await book(db, shopId, sailed, invoiced);
-    await db.insert(bookingPayments).values([
-      { shopId, bookingId: unpaid, status: "unpaid", currency: "usd" },
-      { shopId, bookingId: deposit, status: "deposit_paid", amountCents: 2_000, currency: "usd" },
-      { shopId, bookingId: paid, status: "paid", amountCents: 9_500, currency: "usd" },
-    ]);
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries([
+        { shopId, bookingId: unpaid, status: "unpaid", currency: "usd" },
+        { shopId, bookingId: deposit, status: "deposit_paid", amountCents: 2_000, currency: "usd" },
+        { shopId, bookingId: paid, status: "paid", amountCents: 9_500, currency: "usd" },
+      ]),
+    );
     // An open order on the seat is counted among the orders, never twice.
     await db.insert(orders).values({
       shopId,

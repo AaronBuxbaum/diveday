@@ -29,7 +29,6 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
   bookingReferrals,
   bookings,
   buddyTeamEvents,
@@ -1538,7 +1537,6 @@ export async function clearDemoSchedule(
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
-  await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,

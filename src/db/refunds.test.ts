@@ -17,7 +17,7 @@ import {
   refundBookingsForShopCancelledTrip,
   shopCancellationPaymentStory,
 } from "./refunds";
-import { bookingPayments, paymentOperationIntents, trips } from "./schema";
+import { bookingPaymentEvents, paymentOperationIntents, trips } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -917,9 +917,9 @@ describe("owed shop-cancellation refunds", () => {
     // soon as the cancellation itself is old enough.
     const { db, shop, bookingIds, reef } = await cancelledDepartureContext();
     await db
-      .update(bookingPayments)
-      .set({ updatedAt: new Date(nowMs()) })
-      .where(eq(bookingPayments.bookingId, bookingIds[0]));
+      .update(bookingPaymentEvents)
+      .set({ occurredAt: new Date(nowMs()) })
+      .where(eq(bookingPaymentEvents.bookingId, bookingIds[0] as string));
     await db
       .update(trips)
       .set({ cancelledAt: new Date(nowMs() - 2 * DAY_MS) })
