@@ -5,7 +5,7 @@ import { SECTION_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography
 import { departureVessels } from "@/db/boats";
 import { getDb } from "@/db/client";
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
-import { getTripOverview, type TripOverviewShop } from "@/db/trip-overview";
+import { getTripOverview } from "@/db/trip-overview";
 import { readTripPaperIdentity } from "@/db/trip-paper-identity";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
