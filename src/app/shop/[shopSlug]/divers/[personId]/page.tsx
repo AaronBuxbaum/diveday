@@ -245,7 +245,6 @@ export default async function DiverDetailPage({
       <FlashParams params={DIVER_RECORD_FLASH_PARAMS} />
       <DiverHeader
         diver={diver}
-        shopSlug={shopSlug}
         t={t}
         standing={standing}
         locale={locale}

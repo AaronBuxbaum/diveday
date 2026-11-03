@@ -180,6 +180,7 @@ export async function listOpenPaymentDisputes(
     .leftJoin(people, and(eq(people.id, orders.personId), eq(people.shopId, shopId)))
     .leftJoin(
       bookingCheckouts,
+      // diveday:any-checkout-purpose: a dispute is only ever recorded against a fare (findStripePaymentTarget)
       and(
         eq(bookingCheckouts.id, paymentDisputes.checkoutId),
         eq(bookingCheckouts.shopId, paymentDisputes.shopId),
@@ -210,6 +211,7 @@ export async function listOpenPaymentDisputes(
             fullName: people.fullName,
           })
           .from(bookingCheckoutBookings)
+          // diveday:any-checkout-purpose: a dispute is only ever recorded against a fare (findStripePaymentTarget)
           .innerJoin(
             bookings,
             and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),

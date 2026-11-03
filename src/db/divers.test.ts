@@ -24,7 +24,6 @@ import {
   restoreDiver,
   updateDiver,
 } from "./divers";
-import { listOwedProcessorErasures } from "./processor-erasure";
 import { saveRentalFit } from "./rental-fit";
 import {
   activityEvents,
@@ -65,6 +64,7 @@ import {
 import { clearNoCertificationDeclaration, recordSelfDeclaredCards } from "./self-declared-cards";
 import { upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts } from "./trips";
+import { listUnfinished } from "./unfinished";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 /**
@@ -2408,7 +2408,7 @@ describe("diver erasure", () => {
       );
 
       // What remains is the one thing no call can clear.
-      const owed = await listOwedProcessorErasures(db, shop.id);
+      const owed = await listUnfinished(db, shop.id, "processor_erasure");
       expect(owed).toHaveLength(1);
       expect(owed[0]).toMatchObject({
         shopId: shop.id,
@@ -2486,7 +2486,7 @@ describe("diver erasure", () => {
       expect(person?.anonymizedAt).toBeInstanceOf(Date);
 
       // And the unfinished work is visible, with the reason on the row.
-      const owed = await listOwedProcessorErasures(db, shop.id);
+      const owed = await listUnfinished(db, shop.id, "processor_erasure");
       const customerRow = owed.find((row) => row.target === "stripe_customer");
       expect(customerRow).toMatchObject({ attempts: 1, lastError: "HTTP 503" });
     });
@@ -2508,7 +2508,7 @@ describe("diver erasure", () => {
         owedProcessorErasures: 0,
       });
       expect(provider.deleteCustomer).not.toHaveBeenCalled();
-      expect(await listOwedProcessorErasures(db, shop.id)).toEqual([]);
+      expect(await listUnfinished(db, shop.id, "processor_erasure")).toEqual([]);
     });
 
     it("never deletes a bystander's Stripe customer", async () => {
@@ -2567,8 +2567,8 @@ describe("diver erasure", () => {
         { customerProvider: providerReturning({ status: "failed", error: "HTTP 503" }) },
       );
 
-      expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(2);
-      expect(await listOwedProcessorErasures(db, rival.id)).toEqual([]);
+      expect(await listUnfinished(db, shop.id, "processor_erasure")).toHaveLength(2);
+      expect(await listUnfinished(db, rival.id, "processor_erasure")).toEqual([]);
     });
   });
 

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { log } from "@/lib/log";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
@@ -11,11 +11,8 @@ import {
   bookingCheckouts,
   bookingPaymentEvents,
   bookingPayments,
-  bookings,
   orders,
-  people,
   stripeRefundFailures,
-  trips,
 } from "./schema";
 import { findStripePaymentTarget } from "./stripe-payment-targets";
 
@@ -40,7 +37,7 @@ import { findStripePaymentTarget } from "./stripe-payment-targets";
  *   on that queue, which already says it is owed.
  *
  * Nothing is re-issued: the diver shows as owed on the Orders index
- * (`listFailedRefunds`) until a new refund, from DiveDay or the dashboard,
+ * (the failed-refund read in `src/db/unfinished.ts`) until a new refund, from DiveDay or the dashboard,
  * brings `refunded_cents` back to where it stood.
  *
  * Not told to the accounting integrations: an `order.refunded` they received
@@ -247,11 +244,15 @@ async function reverseOnCheckout(
   checkout: BookingCheckout,
   input: RefundFailureInput,
 ): Promise<RefundFailureOutcome> {
+  // Only a fare is refunded through DiveDay; a tip's reversal is recorded
+  // nowhere yet (ADR 20260726-post-trip-tipping, issue #2718).
+  if (checkout.purpose !== "fare") return { status: "not_found" };
   const paidAfterClose = checkout.status === "expired" && checkout.paidAfterCloseCents !== null;
   if (checkout.status !== "completed" && !paidAfterClose) return { status: "not_found" };
   const covered = await db
     .select({ bookingId: bookingCheckoutBookings.bookingId })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the fare this reversal was checked against above
     .where(
       and(
         eq(bookingCheckoutBookings.shopId, checkout.shopId),
@@ -265,6 +266,7 @@ async function reverseOnCheckout(
     const [current] = await tx
       .select()
       .from(bookingCheckouts)
+      // diveday:any-checkout-purpose: the fare this reversal was checked against above
       .where(eq(bookingCheckouts.id, checkout.id))
       .for("update");
     if (!current) return { status: "not_found" };
@@ -274,6 +276,7 @@ async function reverseOnCheckout(
 
     await tx
       .update(bookingCheckouts)
+      // diveday:any-checkout-purpose: the fare this reversal was checked against above
       .set({ refundedCents: current.refundedCents - reversed })
       .where(eq(bookingCheckouts.id, current.id));
     const bookingId = paidAfterClose
@@ -294,151 +297,4 @@ async function reverseOnCheckout(
     });
     return { status: "reversed" };
   });
-}
-
-export type FailedRefund = {
-  id: string;
-  orderId: string | null;
-  checkoutId: string | null;
-  tripId: string | null;
-  tripTitle: string | null;
-  diverNames: string[];
-  /** Still owed: the failed amount, less whatever has been refunded again since. */
-  amountCents: number;
-  currency: string;
-  failedAt: Date;
-};
-
-const QUEUE_LIMIT = 50;
-
-/**
- * The Orders index queue: refunds that failed and have not been made again.
- * Money captured after its checkout closed is left to its own queue
- * (`listPaidAfterCloseCheckouts`), which already owes it.
- */
-export async function listFailedRefunds(db: AppDb, shopId: string): Promise<FailedRefund[]> {
-  const targetRefunded = sql<number>`coalesce(${orders.refundedCents}, ${bookingCheckouts.refundedCents}, 0)`;
-  const rows = await db
-    .select({
-      id: stripeRefundFailures.id,
-      orderId: stripeRefundFailures.orderId,
-      checkoutId: stripeRefundFailures.checkoutId,
-      bookingId: stripeRefundFailures.bookingId,
-      orderPersonId: orders.personId,
-      orderBookingId: orders.bookingId,
-      checkoutTripId: bookingCheckouts.tripId,
-      amountCents: stripeRefundFailures.amountCents,
-      owedUntil: stripeRefundFailures.owedUntilRefundedCents,
-      refundedNow: targetRefunded,
-      currency: stripeRefundFailures.currency,
-      failedAt: stripeRefundFailures.failedAt,
-    })
-    .from(stripeRefundFailures)
-    .leftJoin(orders, and(eq(orders.id, stripeRefundFailures.orderId), eq(orders.shopId, shopId)))
-    .leftJoin(
-      bookingCheckouts,
-      and(
-        eq(bookingCheckouts.id, stripeRefundFailures.checkoutId),
-        eq(bookingCheckouts.shopId, shopId),
-      ),
-    )
-    .where(
-      and(
-        eq(stripeRefundFailures.shopId, shopId),
-        isNull(bookingCheckouts.paidAfterCloseAt),
-        sql`${targetRefunded} < ${stripeRefundFailures.owedUntilRefundedCents}`,
-      ),
-    )
-    .orderBy(asc(stripeRefundFailures.failedAt))
-    .limit(QUEUE_LIMIT);
-  if (rows.length === 0) return [];
-
-  // Whose money: the seat the failure restored, the order's customer, or
-  // everyone the checkout covered.
-  const checkoutIds = rows.flatMap((row) =>
-    row.checkoutId && !row.bookingId ? [row.checkoutId] : [],
-  );
-  const seatIds = rows.flatMap((row) => [row.bookingId, row.orderBookingId].filter(isString));
-  const personIds = rows.flatMap((row) => (row.orderPersonId ? [row.orderPersonId] : []));
-  const [checkoutSeats, seats, persons] = await Promise.all([
-    checkoutIds.length
-      ? db
-          .select({
-            checkoutId: bookingCheckoutBookings.checkoutId,
-            fullName: people.fullName,
-          })
-          .from(bookingCheckoutBookings)
-          .innerJoin(
-            bookings,
-            and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
-          )
-          .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
-          .where(
-            and(
-              eq(bookingCheckoutBookings.shopId, shopId),
-              inArray(bookingCheckoutBookings.checkoutId, checkoutIds),
-            ),
-          )
-          .orderBy(asc(bookings.createdAt))
-      : [],
-    seatIds.length
-      ? db
-          .select({ id: bookings.id, tripId: bookings.tripId, fullName: people.fullName })
-          .from(bookings)
-          .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
-          .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, seatIds)))
-      : [],
-    personIds.length
-      ? db
-          .select({ id: people.id, fullName: people.fullName })
-          .from(people)
-          // diveday:allow-deleted-people: the name on a past refund, which a later removal does not change.
-          .where(and(eq(people.shopId, shopId), inArray(people.id, personIds)))
-      : [],
-  ]);
-  const seatById = new Map(seats.map((seat) => [seat.id, seat]));
-  const personById = new Map(persons.map((person) => [person.id, person.fullName]));
-  const namesByCheckout = new Map<string, string[]>();
-  for (const { checkoutId, fullName } of checkoutSeats) {
-    namesByCheckout.set(checkoutId, [...(namesByCheckout.get(checkoutId) ?? []), fullName]);
-  }
-  const tripIds = [
-    ...new Set([
-      ...rows.flatMap((row) => (row.checkoutTripId ? [row.checkoutTripId] : [])),
-      ...seats.map((seat) => seat.tripId),
-    ]),
-  ];
-  const tripRows = tripIds.length
-    ? await db
-        .select({ id: trips.id, title: trips.title })
-        .from(trips)
-        // diveday:allow-deleted-trips: a departure deleted since still names the money owed on it.
-        .where(and(eq(trips.shopId, shopId), inArray(trips.id, tripIds)))
-    : [];
-  const tripTitle = new Map(tripRows.map((trip) => [trip.id, trip.title]));
-
-  return rows.map((row) => {
-    const seat = seatById.get(row.bookingId ?? row.orderBookingId ?? "");
-    const tripId = row.checkoutTripId ?? seat?.tripId ?? null;
-    const diverNames = seat
-      ? [seat.fullName]
-      : row.orderPersonId
-        ? [personById.get(row.orderPersonId) ?? ""].filter(Boolean)
-        : (namesByCheckout.get(row.checkoutId ?? "") ?? []);
-    return {
-      id: row.id,
-      orderId: row.orderId,
-      checkoutId: row.checkoutId,
-      tripId,
-      tripTitle: tripId ? (tripTitle.get(tripId) ?? null) : null,
-      diverNames,
-      amountCents: Math.min(row.amountCents, row.owedUntil - Number(row.refundedNow)),
-      currency: row.currency,
-      failedAt: row.failedAt,
-    };
-  });
-}
-
-function isString(value: string | null): value is string {
-  return value !== null;
 }

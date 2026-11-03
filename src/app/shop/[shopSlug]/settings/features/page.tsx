@@ -169,11 +169,7 @@ export default async function FeaturesPage({
   return (
     <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`${base}/settings`}
-        title={t("settings.features.title")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.features.title")} />
       <form action={saveFeaturesAction} className="space-y-8">
         {FEATURE_GROUPS.map((group) => {
           const rows = FEATURE_ROWS.filter((row) => row.group === group && gates.has(row.gate));

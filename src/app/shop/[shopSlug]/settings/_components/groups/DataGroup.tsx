@@ -6,9 +6,8 @@ import { InsetGroup } from "@/components/ui/ledger";
 import { canPersonErasePersonalData } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { readShopConnections } from "@/db/connections";
-import { listPendingMediaDeletions } from "@/db/media-deletions";
-import { listOwedProcessorErasures } from "@/db/processor-erasure";
 import type { MediaDeletionKind, ProcessorErasureTarget } from "@/db/schema";
+import { readUnfinished } from "@/db/unfinished";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { ConnectionProvider, ConnectionState } from "@/lib/connections";
 import { formatShortDate } from "@/lib/format";
@@ -133,9 +132,8 @@ export async function DataGroup({
   canImport: boolean;
 }) {
   const { shop, shopSlug, t, locale } = view;
-  const [pendingMediaDeletions, owedProcessorErasures, canErase, connections] = await Promise.all([
-    listPendingMediaDeletions(db, shop.id),
-    listOwedProcessorErasures(db, shop.id),
+  const [unfinished, canErase, connections] = await Promise.all([
+    readUnfinished(db, shop.id, { media_deletion: {}, processor_erasure: {} }),
     // Owner-only, and tighter than the gate those panels are *read* behind: a
     // retry fires a destructive call at the shop's Stripe account and a discharge
     // signs an attestation that a diver's data is gone from the processor. The
@@ -145,6 +143,8 @@ export async function DataGroup({
     canPersonErasePersonalData(db, shop.id, personId),
     readShopConnections(db, shop.id),
   ]);
+  const { media_deletion: pendingMediaDeletions, processor_erasure: owedProcessorErasures } =
+    unfinished;
   return (
     <SettingsGroup group={DATA_GROUP} label={t(DATA_GROUP.labelKey)}>
       {/*

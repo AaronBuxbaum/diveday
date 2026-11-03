@@ -849,12 +849,6 @@
         }
       },
       {
-        "why": "merge of the safety layer (#2687/#2688) into the ready-for-human batch",
-        "files": {
-          "src/app/api/webhooks/stripe/route.ts": "902 -> 923"
-        }
-      },
-      {
         "why": "merge of batches 1-5 (#2058 #2129 #2145 #2225 #2226 #2265) into the safety stack top: the batch 2 seat, ratio and youth-form work grew these on that side; the three test files that grew most moved their new tests to siblings",
         "files": {
           "src/db/waiver-issue.test.ts": "1178 -> 1179",
@@ -1064,12 +1058,26 @@
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
+      },
+      {
+        "why": "Merge b7cd4bfe3 folded tips into booking_checkouts",
+        "files": {
+          "src/app/api/webhooks/stripe/route.replay.test.ts": "1307 -> 1312",
+          "src/db/anonymize.test.ts": "1627 -> 1678",
+          "src/db/reporting.test.ts": "1379 -> 1396"
+        }
+      },
+      {
+        "why": "Merge b7cd4bfe3 folded tips into booking_checkouts",
+        "files": {
+          "src/app/api/webhooks/stripe/route.test.ts": "1837 -> 1850",
+          "src/db/anonymize.test.ts": "1678 -> 1684"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
-    "src/app/api/webhooks/stripe/route.replay.test.ts": 1308,
-    "src/app/api/webhooks/stripe/route.test.ts": 1873,
-    "src/app/api/webhooks/stripe/route.ts": 923,
+    "src/app/api/webhooks/stripe/route.replay.test.ts": 1312,
+    "src/app/api/webhooks/stripe/route.test.ts": 1850,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1075,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
@@ -1081,7 +1089,7 @@
     "src/components/ui/button.test.ts": 971,
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
-    "src/db/anonymize.test.ts": 1627,
+    "src/db/anonymize.test.ts": 1684,
     "src/db/bookings.test.ts": 3540,
     "src/db/buddy-teams.test.ts": 975,
     "src/db/check-in.test.ts": 1212,
@@ -1092,7 +1100,7 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1160,
     "src/db/divers.test.ts": 3052,
-    "src/db/erasure-coverage.test.ts": 961,
+    "src/db/erasure-coverage.test.ts": 945,
     "src/db/executed-dives.test.ts": 1084,
     "src/db/export.test.ts": 1182,
     "src/db/import.test.ts": 1074,
@@ -1104,10 +1112,10 @@
     "src/db/participant-types.test.ts": 1195,
     "src/db/readiness.test.ts": 1446,
     "src/db/recap.test.ts": 2138,
-    "src/db/refunds.test.ts": 1151,
+    "src/db/refunds.test.ts": 1150,
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1227,
-    "src/db/reporting.test.ts": 1379,
+    "src/db/reporting.test.ts": 1396,
     "src/db/retention.test.ts": 1051,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,
@@ -1157,12 +1165,12 @@
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 351,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 307,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 353,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 352,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 310,
-    "src/db/reporting.ts#getMonthlyReport": 321,
+    "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
-    "src/db/seed-history.ts#seedHistory": 665,
+    "src/db/seed-history.ts#seedHistory": 645,
     "src/db/seed-more-trips.ts#seedMoreTrips": 624,
     "src/db/seed-trips.ts#seedTrips": 363,
     "src/db/trips-record.ts#updateTripRecord": 309,
@@ -1219,16 +1227,16 @@
     "src/app/page.tsx": 440,
     "src/app/s/[shopSlug]/page.tsx": 645,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 466,
-    "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
+    "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 576,
     "src/app/shop/[shopSlug]/orders/page.tsx": 586,
     "src/app/shop/[shopSlug]/page.tsx": 617,
     "src/app/shop/[shopSlug]/promos/page.tsx": 564,
     "src/app/shop/[shopSlug]/reports/page.tsx": 493,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 581,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 580,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 590,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 473,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 488
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 472,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 487
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

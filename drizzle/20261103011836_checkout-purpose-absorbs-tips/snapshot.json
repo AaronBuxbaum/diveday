@@ -1,0 +1,241 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "f7603f93-17fe-4a36-865d-a0b5220a219e",
+  "prevIds": [
+    "d5ffaed8-ed8f-4648-b646-0e878d4d73b5",
+    "b9f2e9dd-f26c-4863-94d6-7eecda28b03c"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "checkout_purpose"
+      ],
+      "writes": [
+        "s|enum|public.checkout_purpose",
+        "n|enum|public.checkout_purpose",
+        "e|enum|public.checkout_purpose",
+        "n|type|public.checkout_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "tips"
+      ],
+      "writes": [
+        "s|tbl|public.tips",
+        "n|tbl|public.tips",
+        "e|tbl|public.tips",
+        "n|rel|public.tips",
+        "n|type|public.tips"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "booking_checkouts",
+        "purpose"
+      ],
+      "writes": [
+        "s|col|public.booking_checkouts.purpose",
+        "n|col|public.booking_checkouts.purpose",
+        "e|col|public.booking_checkouts.purpose"
+      ],
+      "reads": [
+        "n|tbl|public.booking_checkouts",
+        "n|sch|public",
+        "n|enum|public.checkout_purpose"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_checkouts"
+      ],
+      "writes": [
+        "s|ck|public.booking_checkouts.booking_checkouts_tip_shape",
+        "n|ck|public.booking_checkouts.booking_checkouts_tip_shape",
+        "e|ck|public.booking_checkouts.booking_checkouts_tip_shape",
+        "n|con|public.booking_checkouts.booking_checkouts_tip_shape"
+      ],
+      "reads": [
+        "n|tbl|public.booking_checkouts",
+        "n|sch|public",
+        "n|col|public.booking_checkouts.purpose",
+        "n|col|public.booking_checkouts.is_deposit",
+        "n|col|public.booking_checkouts.promo_code_id",
+        "n|col|public.booking_checkouts.trip_promo_id",
+        "n|col|public.booking_checkouts.applied_discount_percent",
+        "n|col|public.booking_checkouts.applied_discount_cents",
+        "n|col|public.booking_checkouts.tax_enabled",
+        "n|col|public.booking_checkouts.pass_through_cents"
+      ]
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "tip_status"
+      ],
+      "writes": [
+        "s|enum|public.tip_status",
+        "n|enum|public.tip_status",
+        "e|enum|public.tip_status",
+        "n|type|public.tip_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "checkout_purpose",
+        "values": [
+          "fare",
+          "tip"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_checkouts",
+        "name": "purpose",
+        "type": "checkout_purpose",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'fare'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_checkouts",
+        "name": "booking_checkouts_tip_shape",
+        "value": "\"purpose\" <> 'tip' or (not \"is_deposit\" and \"promo_code_id\" is null and \"trip_promo_id\" is null and \"applied_discount_percent\" is null and \"applied_discount_cents\" is null and not \"tax_enabled\" and \"pass_through_cents\" = 0)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"tips\"]"
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"tip_status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"booking_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"stripe_account_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"stripe_session_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"checkout_url\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"currency\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"amount_cents\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"expires_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"completed_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"stripe_customer_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"tips\",\"stripe_payment_intent_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"tips_stripe_session_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"tips_shop_booking_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"tips_stripe_payment_intent_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"tips\",\"tips_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"tips\",\"tips_booking_id_bookings_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"tips\",\"tips_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"tips\",\"tips_amount_positive\"]"
+    }
+  ]
+}

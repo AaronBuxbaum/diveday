@@ -72,7 +72,7 @@ export function AddPanel({
           aria-label={closeLabel}
           title={closeLabel}
           data-add-panel-close=""
-          className={buttonClass({ variant: "ghost", size: "icon", className: "-me-2 shrink-0" })}
+          className={buttonClass({ variant: "ghost", size: "icon", className: "shrink-0" })}
         >
           <DiveDayIcon name="close" className="size-4" />
         </Link>

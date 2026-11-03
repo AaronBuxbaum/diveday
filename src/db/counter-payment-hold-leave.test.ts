@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { heldRows } from "@/test/held-sends";
@@ -7,7 +8,6 @@ import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import type { AppDb } from "./client";
 import { commitCounterPaymentHold, holdCounterPayment } from "./counter-payment-hold";
 import { drainHeldQueueRows } from "./held-sends";
-import { STALE_AFTER_MS } from "./payment-operations";
 import { getMonthlyReport } from "./reporting";
 import { activityEvents, orders, people, shops } from "./schema";
 
@@ -217,7 +217,7 @@ describe("an order left with a stale counter claim", () => {
       .update(orders)
       .set({
         collection: "cash",
-        counterClaimedAt: new Date(now.getTime() - STALE_AFTER_MS - 60_000),
+        counterClaimedAt: new Date(now.getTime() - PAYMENT_CLAIM_STALE_AFTER_MS - 60_000),
       })
       .where(eq(orders.id, order.id));
     const held = await holdCounterPayment(db, {

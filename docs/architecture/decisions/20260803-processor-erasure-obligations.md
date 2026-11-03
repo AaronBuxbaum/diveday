@@ -245,3 +245,10 @@ Stated plainly, because a compliance mechanism that overstates itself is worse t
 
 `notification_delivery_attempts` is dropped; the `wamid.` rewrite runs over `notification_deliveries`
 alone, which now holds every send's row.
+
+## Amendment 2026-11-03: one reader for unfinished work (issue #2703)
+
+The Settings panel's read is now the `processor_erasure` kind of `listUnfinished`
+(`src/db/unfinished.ts`): an `owed` row is `pending` in the attempt grammar (`src/lib/attempts.ts`)
+and listed at any age. `listOwedProcessorErasures` is gone. The automatic retry and its attempt cap
+are unchanged.

@@ -14,7 +14,7 @@ import { pathToFileURL } from "node:url";
  * `docs/engineering/capability-telemetry-runbook.md` rules out.
  *
  * So every `[token]` route that renders a page answers its own dead token in
- * the page: it never calls `notFound()`, and it has an `error.tsx` of its own.
+ * the page: it never calls `notFound()`, and it has an `error.tsx` of its own or one in the `(token)` group above it.
  * The routes are read off the filesystem, because a capability route is
  * created by adding a directory and nothing about that act reminds anyone to
  * come here. `calendar/[token]` is a Route Handler with no page, so it is not
@@ -96,10 +96,17 @@ export async function capabilityRefusalProblems(root = process.cwd()) {
   for (const route of routes) {
     const dir = path.join(app, route);
     const files = {};
+    const entries = await readdir(dir);
+    // A route group's `error.tsx` is the boundary for every route inside it.
+    const trail = route.split("/").slice(0, -1);
+    for (let depth = 1; depth <= trail.length && !entries.includes("error.tsx"); depth++) {
+      const above = await readdir(path.join(app, ...trail.slice(0, depth)));
+      if (above.includes("error.tsx")) entries.push("error.tsx");
+    }
     for (const file of await sourceFilesUnder(dir)) {
       files[path.relative(root, file).replaceAll(path.sep, "/")] = await readFile(file, "utf8");
     }
-    problems.push(...routeProblems(route, files, await readdir(dir)));
+    problems.push(...routeProblems(route, files, entries));
   }
   return { problems, routes: routes.length };
 }

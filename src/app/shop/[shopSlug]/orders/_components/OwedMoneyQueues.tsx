@@ -3,9 +3,8 @@ import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import type { PaidAfterCloseCheckout } from "@/db/checkouts-paid-after-close";
-import type { listFailedRefunds } from "@/db/refund-failures";
-import type { OwedShopCancellationRefund } from "@/db/refunds";
 import type { UnattributedRefund } from "@/db/unattributed-refunds";
+import type { FailedRefund, OwedShopCancellationRefund } from "@/db/unfinished";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate, joinFacts } from "@/lib/format";
 import { matchStripeRefundAction, refundPaidAfterCloseAction } from "../actions";
@@ -25,7 +24,7 @@ export function MoneyOwedQueues({
     owedRefunds: OwedShopCancellationRefund[];
     paidAfterClose: PaidAfterCloseCheckout[];
     unattributedRefunds: UnattributedRefund[];
-    failedRefunds: Awaited<ReturnType<typeof listFailedRefunds>>;
+    failedRefunds: FailedRefund[];
   };
 }) {
   return (
@@ -162,7 +161,7 @@ export function FailedRefundsQueue({
   timeZone,
   locale,
   t,
-}: QueueProps<Awaited<ReturnType<typeof listFailedRefunds>>[number]>) {
+}: QueueProps<FailedRefund>) {
   if (queue.length === 0) return null;
   return (
     <section aria-label={t("orders.index.failedRefunds.sectionLabel")} className="mb-6">

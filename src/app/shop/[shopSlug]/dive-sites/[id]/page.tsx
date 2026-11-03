@@ -26,7 +26,7 @@ import { parseDockDayRhythm } from "@/lib/diver-planning";
 import { formatTime } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { fetchTideStation, tideStationEcho } from "@/lib/tide-stations";
 import { uuidParam } from "@/lib/uuid";
 import { routeEditorCopy } from "../_components/route-editor-copy";
@@ -83,7 +83,6 @@ export default async function EditDiveSitePage({
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
   const { notice, error, undo } = await searchParams;
-  const back = shopPath(shopSlug, "dive-sites");
   const { db, shop } = await requireShopSurface(shopSlug);
   const site = await getDiveSite(db, shop.id, id);
   if (!site) notFound();
@@ -193,7 +192,6 @@ export default async function EditDiveSitePage({
       <div>
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
-          eyebrowHref={back}
           title={site.name}
           description={t("diveSites.edit.description")}
           descriptionIsCaption

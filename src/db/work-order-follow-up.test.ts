@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { PAYMENT_CLAIM_STALE_AFTER_MS as CLAIM_MS } from "@/lib/attempts";
 import { nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications";
 import type {
@@ -25,7 +26,6 @@ import {
   refundOrder,
   voidCounterOrder,
 } from "./orders";
-import { STALE_AFTER_MS } from "./payment-operations";
 import { customerGearItems, customerGearNotices, orders, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
@@ -1077,7 +1077,7 @@ describe("recording a payment taken at the counter", () => {
   async function strandClaim(db: AppDb, orderId: string) {
     await db
       .update(orders)
-      .set({ counterClaimedAt: new Date(nowDate().getTime() - STALE_AFTER_MS - 1_000) })
+      .set({ counterClaimedAt: new Date(nowDate().getTime() - CLAIM_MS - 1_000) })
       .where(eq(orders.id, orderId));
   }
 

@@ -136,7 +136,6 @@ import {
   staffCredentialHistory,
   staffCredentials,
   staffReplies,
-  tips,
   tripReviews,
   userAccounts,
   waiverDeliveries,
@@ -623,9 +622,8 @@ const CHECKOUT_PROCESSOR_HANDLES = {
 } as const;
 
 /**
- * The three columns a Checkout Session row carries at Stripe. `tips` and
- * `booking_checkouts` spell them identically, which is what lets one rule
- * serve both.
+ * The three columns a Checkout Session row carries at Stripe, on a fare's
+ * checkout and a tip's alike (one table since issue #2718).
  */
 type SessionProcessorHandles = {
   stripeAccountId: string;
@@ -1757,55 +1755,6 @@ async function scrubImportedHistory(
   return [];
 }
 
-/** The erasure's "hosted processor pages" sweep. */
-async function scrubHostedProcessorPages(
-  tx: AppTransaction,
-  ctx: ScrubSectionContext,
-): Promise<ProcessorErasureTargetInput[]> {
-  const { shopId, bookingIds, owned } = ctx;
-  const processorTargets: ProcessorErasureTargetInput[] = [];
-  // A Stripe-hosted page is a publicly reachable URL that renders the customer
-  // it was minted for, which is why `orders.hosted_invoice_url` and
-  // `invoice_pdf_url` are already nulled above. Two more of them sit one table
-  // over and were missed: a tip's Checkout page is minted with
-  // `customer_email` straight off `people.email` (`src/db/tips.ts`), and a
-  // booking checkout's is the same object beside the address this file already
-  // clears. Both are bounded by session expiry and both columns are durable,
-  // so the row outlives the window it is safe in (issue #1607).
-  //
-  // The read is separate from the UPDATE on purpose: the UPDATE filters
-  // `isNotNull(checkoutUrl)`, and a tip whose link was already cleared still
-  // names a Stripe session and possibly a Stripe customer that this erasure
-  // owes work against (issue #1621).
-  if (owned) {
-    const tipRows = await tx
-      .select({
-        stripeAccountId: tips.stripeAccountId,
-        stripeSessionId: tips.stripeSessionId,
-        stripeCustomerId: tips.stripeCustomerId,
-      })
-      .from(tips)
-      .where(and(eq(tips.shopId, shopId), inArray(tips.bookingId, bookingIds)));
-    // `tips.booking_id` is the handle, and it is a sound one: a tip belongs to
-    // exactly one booking, and `startTipCheckout` (src/db/tips.ts) mints the
-    // session with `customerEmail` taken straight off that booking's
-    // `people.email`. So the address on the session is this diver's by
-    // construction, not by a name match.
-    pushSessionTargets(processorTargets, tipRows);
-    await tx
-      .update(tips)
-      .set({ checkoutUrl: null })
-      .where(
-        and(
-          eq(tips.shopId, shopId),
-          inArray(tips.bookingId, bookingIds),
-          isNotNull(tips.checkoutUrl),
-        ),
-      );
-  }
-  return processorTargets;
-}
-
 /** The erasure's "gear register" sweep. */
 async function scrubGearRegister(
   tx: AppTransaction,
@@ -2079,6 +2028,7 @@ async function scrubCheckoutAddresses(
   if (ctx.email) {
     const byAddress = await tx
       .update(bookingCheckouts)
+      // diveday:any-checkout-purpose: erasure reaches a diver's fares and tips alike
       .set({ customerEmail: null, checkoutUrl: null })
       .where(
         and(
@@ -2092,9 +2042,14 @@ async function scrubCheckoutAddresses(
   }
   if (owned) {
     const bookingIdSet = new Set(bookingIds);
+    // Every purpose: a post-trip tip is a checkout covering exactly this
+    // diver's one seat, so it is always a sole occupant below, and its hosted
+    // page (minted with `customer_email` off this diver's `people.email`) goes
+    // with the fare's (issues #1607, #1621, #2718).
     const covering = await tx
       .selectDistinct({ checkoutId: bookingCheckoutBookings.checkoutId })
       .from(bookingCheckoutBookings)
+      // diveday:any-checkout-purpose: erasure reaches a diver's fares and tips alike
       .where(
         and(
           eq(bookingCheckoutBookings.shopId, shopId),
@@ -2109,6 +2064,7 @@ async function scrubCheckoutAddresses(
           bookingId: bookingCheckoutBookings.bookingId,
         })
         .from(bookingCheckoutBookings)
+        // diveday:any-checkout-purpose: erasure reaches a diver's fares and tips alike
         // Shop-scoped like every other read in this file. A checkout's links
         // are same-shop by construction and `coveringIds` was itself resolved
         // under the shop scope, so this changes no result today — it is here so
@@ -2125,8 +2081,8 @@ async function scrubCheckoutAddresses(
           .every((link) => bookingIdSet.has(link.bookingId)),
       );
       if (soleOccupant.length > 0) {
-        // The read is separate from the UPDATE for the reason the tips sweep
-        // above states, and here it was not academic: the UPDATE used to filter
+        // The read is separate from the UPDATE on purpose, and it was not
+        // academic: the UPDATE used to filter
         // `isNotNull(customer_email)` and take its ledger entries from
         // `returning()`, so a row whose address was already gone contributed
         // neither an obligation nor a redaction. Both halves were wrong. The
@@ -2144,12 +2100,14 @@ async function scrubCheckoutAddresses(
             checkoutUrl: bookingCheckouts.checkoutUrl,
           })
           .from(bookingCheckouts)
+          // diveday:any-checkout-purpose: erasure reaches a diver's fares and tips alike
           .where(
             and(eq(bookingCheckouts.shopId, shopId), inArray(bookingCheckouts.id, soleOccupant)),
           );
         pushSessionTargets(processorTargets, soleOccupantRows);
         await tx
           .update(bookingCheckouts)
+          // diveday:any-checkout-purpose: erasure reaches a diver's fares and tips alike
           // The hosted page goes with the address: it is the same Stripe object
           // rendering the same customer, on the same reasoning that nulls
           // `orders.hosted_invoice_url` (issue #1607). Not redundant with the
@@ -2840,7 +2798,6 @@ const SCRUB_SECTIONS = [
   scrubReviews,
   scrubPrivateWord,
   scrubImportedHistory,
-  scrubHostedProcessorPages,
   scrubGearRegister,
   scrubBench,
   scrubOrders,

@@ -2,8 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
-import { queueMediaDeletion, STALE_PENDING_AFTER_MS } from "@/db/media-deletions";
-import { STALE_AFTER_MS } from "@/db/payment-operations";
+import { queueMediaDeletion } from "@/db/media-deletions";
 import { recordProcessorErasureObligations } from "@/db/processor-erasure";
 import {
   certifications,
@@ -19,6 +18,7 @@ import {
   trips,
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { ATTEMPT_RULES } from "@/lib/attempts";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
@@ -122,8 +122,8 @@ export async function POST(request: Request) {
     })
     .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Nadia Petrov")));
 
-  // 1. A payment operation nobody ever confirmed. `listStuckPaymentOperations`
-  //    reads `started` intents older than STALE_AFTER_MS, so the row is
+  // 1. A payment operation nobody ever confirmed. the `payment_operation` kind of `listUnfinished`
+  //    reads `started` intents older than ATTEMPT_RULES.payment_operation.stuckAfterMs, so the row is
   //    backdated past that window rather than merely left open.
   const [firstTrip] = await db
     .select({ id: trips.id })
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
       status: "started",
       tripId: firstTrip?.id ?? null,
       stripeObjectId: "cs_e2e_stuck",
-      startedAt: new Date(now.getTime() - STALE_AFTER_MS * 4),
+      startedAt: new Date(now.getTime() - ATTEMPT_RULES.payment_operation.stuckAfterMs * 4),
     })
     .onConflictDoNothing();
 
@@ -163,14 +163,14 @@ export async function POST(request: Request) {
   if (attempt) {
     // `failed` rather than a stale `pending`: both render, but a failure is the
     // one that carries a `lastError` for the panel to show, and it does not
-    // depend on the frozen clock having moved past STALE_PENDING_AFTER_MS.
+    // depend on the frozen clock having moved past ATTEMPT_RULES.media_deletion.stuckAfterMs.
     await db
       .update(mediaDeletionAttempts)
       .set({
         status: "failed",
         attempts: 2,
         lastError: "Blob storage returned 503",
-        createdAt: new Date(now.getTime() - STALE_PENDING_AFTER_MS * 4),
+        createdAt: new Date(now.getTime() - ATTEMPT_RULES.media_deletion.stuckAfterMs * 4),
       })
       .where(eq(mediaDeletionAttempts.id, attempt.id));
   }

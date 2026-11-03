@@ -23,7 +23,10 @@ const identity = vi.hoisted(() => ({
   resolver: null as ((slug: string | null) => void) | null,
 }));
 
-vi.mock("next/navigation", () => ({ useSearchParams: () => search.params }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/offline-manifest",
+  useSearchParams: () => search.params,
+}));
 vi.mock("@/lib/offline-manifest-store", () => ({
   acknowledgeDiscardedOfflineRecords: vi.fn(),
   beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),

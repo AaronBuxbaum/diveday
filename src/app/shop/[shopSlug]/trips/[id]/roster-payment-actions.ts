@@ -69,7 +69,7 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // owner had already refunded and mark it `paid` again. That is not a wording
   // problem — it raises reported revenue on money that was returned, wipes the
   // row's pointer at the real Stripe refund, and puts the seat back into
-  // `listOwedShopCancellationRefunds`, whose own docstring calls a `paid` row on
+  // the owed-refund read (`src/db/unfinished.ts`), whose own docstring calls a `paid` row on
   // a cancelled trip "the obvious way to get this wrong". Found by
   // `security-reviewer` after #714 shipped.
   const db = await getDb();
