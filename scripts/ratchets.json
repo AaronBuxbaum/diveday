@@ -951,12 +951,6 @@
         }
       },
       {
-        "why": "merge of the safety layer (#2687/#2688) into the ready-for-human batch",
-        "files": {
-          "src/app/api/webhooks/stripe/route.ts": "902 -> 923"
-        }
-      },
-      {
         "why": "merge of batches 1-5 (#2058 #2129 #2145 #2225 #2226 #2265) into the safety stack top: the batch 2 seat, ratio and youth-form work grew these on that side; the three test files that grew most moved their new tests to siblings",
         "files": {
           "src/db/waiver-issue.test.ts": "1178 -> 1179",
@@ -1168,6 +1162,21 @@
         }
       },
       {
+        "why": "Merge b7cd4bfe3 folded tips into booking_checkouts",
+        "files": {
+          "src/app/api/webhooks/stripe/route.replay.test.ts": "1307 -> 1312",
+          "src/db/anonymize.test.ts": "1627 -> 1678",
+          "src/db/reporting.test.ts": "1379 -> 1396"
+        }
+      },
+      {
+        "why": "Merge b7cd4bfe3 folded tips into booking_checkouts",
+        "files": {
+          "src/app/api/webhooks/stripe/route.test.ts": "1837 -> 1850",
+          "src/db/anonymize.test.ts": "1678 -> 1684"
+        }
+      },
+      {
         "why": "the trip page readers left the trips barrel (issue #2757): two import lines, removed again when the page reads through one reader in the next layer",
         "files": {
           "src/db/incident-reports.test.ts": "1011 -> 1013",
@@ -1176,9 +1185,8 @@
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
-    "src/app/api/webhooks/stripe/route.replay.test.ts": 1307,
-    "src/app/api/webhooks/stripe/route.test.ts": 1873,
-    "src/app/api/webhooks/stripe/route.ts": 923,
+    "src/app/api/webhooks/stripe/route.replay.test.ts": 1312,
+    "src/app/api/webhooks/stripe/route.test.ts": 1850,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1075,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
@@ -1190,7 +1198,7 @@
     "src/components/ui/button.test.ts": 971,
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
-    "src/db/anonymize.test.ts": 1627,
+    "src/db/anonymize.test.ts": 1684,
     "src/db/bookings.test.ts": 3540,
     "src/db/buddy-teams.test.ts": 975,
     "src/db/check-in.test.ts": 1212,
@@ -1201,7 +1209,7 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1160,
     "src/db/divers.test.ts": 3050,
-    "src/db/erasure-coverage.test.ts": 961,
+    "src/db/erasure-coverage.test.ts": 945,
     "src/db/executed-dives.test.ts": 1084,
     "src/db/export.test.ts": 1182,
     "src/db/import.test.ts": 1074,
@@ -1216,7 +1224,7 @@
     "src/db/refunds.test.ts": 1150,
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1237,
-    "src/db/reporting.test.ts": 1379,
+    "src/db/reporting.test.ts": 1396,
     "src/db/retention.test.ts": 1051,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,
@@ -1263,9 +1271,9 @@
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 352,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 310,
-    "src/db/reporting.ts#getMonthlyReport": 321,
+    "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
-    "src/db/seed-history.ts#seedHistory": 665,
+    "src/db/seed-history.ts#seedHistory": 645,
     "src/db/seed-more-trips.ts#seedMoreTrips": 624,
     "src/db/seed-trips.ts#seedTrips": 363,
     "src/db/trips-record.ts#updateTripRecord": 309,

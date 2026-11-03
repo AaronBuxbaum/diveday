@@ -2,15 +2,9 @@ import { and, eq, gte, inArray, lt, sum } from "drizzle-orm";
 import type { MonthRef } from "@/lib/calendar";
 import type { CrewSheetAssignment, CrewSheetTripTips } from "@/lib/crew-sheet";
 import { shopMonthBounds } from "@/lib/zoned";
+import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
-import {
-  bookings,
-  people,
-  tips as tipsTable,
-  tripAssignments,
-  tripScheduleDays,
-  trips,
-} from "./schema";
+import { bookingCheckouts, people, tripAssignments, tripScheduleDays, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 export type CrewSheetInput = {
@@ -100,11 +94,18 @@ export async function crewSheetForMonth(
   // crewed ones: a tip on a boat with nobody on its crew list is exactly the
   // money the sheet's unassigned row exists to keep visible.
   const tipRows = await db
-    .select({ tripId: trips.id, total: sum(tipsTable.amountCents) })
-    .from(tipsTable)
-    .innerJoin(bookings, and(eq(bookings.id, tipsTable.bookingId), eq(bookings.shopId, shopId)))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(liveTrip(), inMonth, eq(tipsTable.shopId, shopId), eq(tipsTable.status, "paid")))
+    .select({ tripId: trips.id, total: sum(tipAmountCents) })
+    .from(bookingCheckouts)
+    .innerJoin(trips, eq(trips.id, bookingCheckouts.tripId))
+    .where(
+      and(
+        liveTrip(),
+        inMonth,
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "completed"),
+        tipCheckout(),
+      ),
+    )
     .groupBy(trips.id);
 
   return {

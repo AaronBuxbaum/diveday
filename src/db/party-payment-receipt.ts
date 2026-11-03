@@ -84,6 +84,7 @@ async function send(
   const covered = await db
     .select({ id: bookings.id, partyLeadBookingId: bookings.partyLeadBookingId })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the seats of the fare the webhook just settled; tips never reach the receipt
     .leftJoin(
       bookings,
       and(

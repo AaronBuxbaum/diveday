@@ -102,7 +102,8 @@ export type UnfinishedOptions = {
    * Rows that became unfinished before this count. Defaults to the kind's own
    * window from the app clock (`stuckBefore`); Today passes its own `now`
    * through `raisedOnTodayBefore`, and tests inject a fixed date. `null` reads
-   * with no window.
+   * with no window. Owed erasures and failed refunds take no cutoff at all:
+   * they are listed at any age, whatever a caller passes.
    */
   olderThan?: Date | null;
   /** How many rows one read returns. The money queues are panels, not ledgers. */
@@ -135,6 +136,9 @@ function ledgerUnfinished(
         : inArray(status, windowed),
     );
   }
+  // An empty `or()` is no filter at all: every row of the shop, done ones
+  // included. A kind that lists nothing is a mistake in ATTEMPT_RULES.
+  if (clauses.length === 0) throw new Error(`unfinished: ${kind} lists no status`);
   return or(...clauses) as SQL;
 }
 
@@ -217,6 +221,7 @@ const paymentOperations: KindReader<"payment_operation"> = async (
       ? db
           .select({ id: bookingCheckouts.id, tripId: bookingCheckouts.tripId })
           .from(bookingCheckouts)
+          // diveday:any-checkout-purpose: names the trip of whichever checkout a stuck intent is about
           .where(
             and(inArray(bookingCheckouts.id, checkoutIds), eq(bookingCheckouts.shopId, shopId)),
           )
@@ -300,7 +305,7 @@ const mediaDeletions: KindReader<"media_deletion"> = async (db, shopId, olderTha
  * Settings' Data group. An obligation names a record in one shop's Stripe
  * account and has no business being readable from another's.
  */
-const processorErasures: KindReader<"processor_erasure"> = async (db, shopId, olderThan) =>
+const processorErasures: KindReader<"processor_erasure"> = async (db, shopId) =>
   db
     .select()
     .from(processorErasureObligations)
@@ -313,7 +318,6 @@ const processorErasures: KindReader<"processor_erasure"> = async (db, shopId, ol
           processorErasureObligations.createdAt,
           null,
         ),
-        olderThan ? lt(processorErasureObligations.createdAt, olderThan) : undefined,
       ),
     )
     .orderBy(asc(processorErasureObligations.createdAt));
@@ -403,7 +407,7 @@ const QUEUE_LIMIT = 50;
  * Money captured after its checkout closed is left to its own queue
  * (`listPaidAfterCloseCheckouts`), which already owes it.
  */
-const failedRefunds: KindReader<"failed_refund"> = async (db, shopId, olderThan, options) => {
+const failedRefunds: KindReader<"failed_refund"> = async (db, shopId, _olderThan, options) => {
   const targetRefunded = sql<number>`coalesce(${orders.refundedCents}, ${bookingCheckouts.refundedCents}, 0)`;
   const rows = await db
     .select({
@@ -424,6 +428,7 @@ const failedRefunds: KindReader<"failed_refund"> = async (db, shopId, olderThan,
     .leftJoin(orders, and(eq(orders.id, stripeRefundFailures.orderId), eq(orders.shopId, shopId)))
     .leftJoin(
       bookingCheckouts,
+      // diveday:any-checkout-purpose: a refund failure is only ever recorded against a fare
       and(
         eq(bookingCheckouts.id, stripeRefundFailures.checkoutId),
         eq(bookingCheckouts.shopId, shopId),
@@ -434,7 +439,6 @@ const failedRefunds: KindReader<"failed_refund"> = async (db, shopId, olderThan,
         eq(stripeRefundFailures.shopId, shopId),
         isNull(bookingCheckouts.paidAfterCloseAt),
         sql`${targetRefunded} < ${stripeRefundFailures.owedUntilRefundedCents}`,
-        olderThan ? lt(stripeRefundFailures.failedAt, olderThan) : undefined,
       ),
     )
     .orderBy(asc(stripeRefundFailures.failedAt))
@@ -456,6 +460,7 @@ const failedRefunds: KindReader<"failed_refund"> = async (db, shopId, olderThan,
             fullName: people.fullName,
           })
           .from(bookingCheckoutBookings)
+          // diveday:any-checkout-purpose: a refund failure is only ever recorded against a fare
           .innerJoin(
             bookings,
             and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),

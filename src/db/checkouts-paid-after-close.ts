@@ -3,6 +3,7 @@ import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
+import { fareCheckout } from "./checkout-purpose";
 import type { AppDb } from "./client";
 import {
   awaitingStripeReconciliation,
@@ -78,6 +79,7 @@ export async function listPaidAfterCloseCheckouts(
       and(
         eq(bookingCheckouts.shopId, shopId),
         isNotNull(bookingCheckouts.paidAfterCloseAt),
+        fareCheckout(),
         stillOwed,
       ),
     )
@@ -91,6 +93,7 @@ export async function listPaidAfterCloseCheckouts(
       fullName: people.fullName,
     })
     .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the names on the fare rows read above
     .innerJoin(
       bookings,
       and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
@@ -165,7 +168,13 @@ export async function refundPaidAfterCloseCheckout(
     const [row] = await tx
       .select()
       .from(bookingCheckouts)
-      .where(and(eq(bookingCheckouts.id, checkoutId), eq(bookingCheckouts.shopId, shopId)))
+      .where(
+        and(
+          eq(bookingCheckouts.id, checkoutId),
+          eq(bookingCheckouts.shopId, shopId),
+          fareCheckout(),
+        ),
+      )
       .for("update");
     if (!row || row.paidAfterCloseCents === null) return { status: "not_owed" as const };
     const owedCents = row.paidAfterCloseCents - row.refundedCents;
@@ -236,6 +245,7 @@ export async function refundPaidAfterCloseCheckout(
   if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
   await db
     .update(bookingCheckouts)
+    // diveday:any-checkout-purpose: the fare row claimed above, by its id
     .set({ refundedCents: sql`${bookingCheckouts.refundedCents} + ${owedCents}` })
     .where(and(eq(bookingCheckouts.id, row.id), eq(bookingCheckouts.shopId, shopId)));
   await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
