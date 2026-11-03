@@ -126,7 +126,7 @@ test("day packet continuation sheets retain exactly their own departure identity
   const packet = page.locator(".paper-sheet-frame").filter({ visible: true });
   await expect(packet).toBeVisible();
   await expect(packet.locator("[data-packet-ready]")).toBeAttached();
-  const departureTitles = packet.locator("[data-packet-section] h3").filter({ visible: true });
+  const departureTitles = packet.locator("[data-packet-departure]").filter({ visible: true });
   await expect(departureTitles.first()).toBeVisible();
   const titles = [...new Set(await departureTitles.allTextContents())];
   expect(titles.length).toBeGreaterThan(1);

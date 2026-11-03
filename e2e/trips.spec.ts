@@ -711,6 +711,8 @@ test.describe("the printed trip packet", () => {
 
     const clipped = await page.evaluate(() =>
       [...document.querySelectorAll(".paper-sheet-frame *")]
+        // A screen-reader-only heading clips by design and holds no printed ink.
+        .filter((element) => !element.classList.contains("sr-only"))
         .filter((element) => {
           const style = getComputedStyle(element);
           return style.overflowX === "hidden" || style.overflowY === "hidden";

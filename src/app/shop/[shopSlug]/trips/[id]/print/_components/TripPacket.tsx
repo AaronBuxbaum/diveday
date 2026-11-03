@@ -182,7 +182,7 @@ async function composeTripPacket({
   // own, and the gear room's sheet still has to say which boat it is for.
   const head = (
     <header className="mb-6 border-b border-border pb-4">
-      <h3 className={SECTION_TITLE_CLASS}>{details.trip.title}</h3>
+      <h3 className={SECTION_TITLE_CLASS} data-packet-departure>{details.trip.title}</h3>
       <p className="mt-1 text-sm text-muted">
         {[
           // Out and due back: the return time is what an overdue-boat call
