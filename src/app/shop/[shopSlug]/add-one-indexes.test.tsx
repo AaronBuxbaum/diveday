@@ -8,6 +8,7 @@ import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
+import { DiverList } from "./divers/_components/DiverList";
 import { RegisterRentOutPanel } from "./gear/rentals/_components/RentOutPanel";
 import { OrdersAddPanel } from "./orders/_components/NewOrderPanel";
 
@@ -80,16 +81,37 @@ function expandWrappers(node: unknown): unknown {
   };
 }
 
-async function panelsOn(load: () => Promise<{ default: unknown }>, add?: string) {
+async function indexTree(load: () => Promise<{ default: unknown }>, add?: string) {
   await signInOwner();
   const Page = (await load()).default as IndexPage;
-  const tree = expandWrappers(
+  return expandWrappers(
     await Page({
       params: Promise.resolve({ shopSlug: SHOP_SLUG }),
       searchParams: Promise.resolve<Record<string, string>>(add ? { add } : {}),
     }),
   );
-  return findElements<{ open: boolean; title: string; closeHref: string }>(tree, AddPanel);
+}
+
+async function panelsOn(load: () => Promise<{ default: unknown }>, add?: string) {
+  return findElements<{ open: boolean; title: string; closeHref: string }>(
+    await indexTree(load, add),
+    AddPanel,
+  );
+}
+
+/** Every `href` in a tree, through every prop (a header's `actions` too), not only children. */
+function everyHref(node: unknown, found: string[] = [], seen = new Set<unknown>()): string[] {
+  if (node === null || typeof node !== "object" || seen.has(node)) return found;
+  seen.add(node);
+  if (Array.isArray(node)) {
+    for (const child of node) everyHref(child, found, seen);
+    return found;
+  }
+  if (!("props" in node)) return found;
+  const props = (node as { props: Record<string, unknown> }).props ?? {};
+  if (typeof props.href === "string") found.push(props.href);
+  for (const value of Object.values(props)) everyHref(value, found, seen);
+  return found;
 }
 
 const INDEXES = [
@@ -110,6 +132,16 @@ describe.each(INDEXES)("$name", ({ add, load, path }) => {
     const [panel] = await panelsOn(load, add);
     expect(panel?.props.open).toBe(true);
     expect(panel?.props.closeHref).toBe(`/shop/${SHOP_SLUG}${path}`);
+  });
+
+  it("offers no second door to its panel while the panel is open", async () => {
+    const tree = await indexTree(load, add);
+    const door = `/shop/${SHOP_SLUG}${path}?add=${add}`;
+    expect(everyHref(tree).filter((href) => href.startsWith(door))).toEqual([]);
+    // The roster's toolbar door lives in a client list: it takes no quick add.
+    for (const list of findElements<{ quickAddAction?: unknown }>(tree, DiverList)) {
+      expect(list.props.quickAddAction ?? null).toBeNull();
+    }
   });
 
   it("keeps the panel shut without it", async () => {

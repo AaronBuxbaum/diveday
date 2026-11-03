@@ -133,11 +133,15 @@ describe("AddDiverSection", () => {
     );
     expect(container.querySelector('input[name="counter"]')).toBeNull();
 
+    // Before a search, the search's own door is the one way to someone new.
+    expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
+
     rerender(<AddDiverSection context={{ ...props, query: "Zed Quill" }} />);
     // Someone new is a booking first; the walk-in stays one explicit tap away.
+    // An empty result carries both doors, so the search's own is not drawn
+    // beside it as a second "Add diver" (visual triage, #2737).
     const links = screen.getAllByRole("link", { name: /^(Add diver|Add as a walk-in)$/ });
-    expect(links.at(-2)).toHaveAccessibleName("Add diver");
-    expect(links.at(-1)).toHaveAccessibleName("Add as a walk-in");
+    expect(links.map((link) => link.textContent)).toEqual(["Add diver", "Add as a walk-in"]);
   });
 
   /** Round-2 review, finding 2: under a results list, Booking books first. */
@@ -305,6 +309,8 @@ describe("AddDiverSection", () => {
       "href",
       "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&tripId=trip-1&waitlist=true",
     );
+    // The empty result is the door; the search does not draw a second one.
+    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
   });
 
   it("offers direct add-diver link with prefill when no matches are found", () => {
@@ -327,7 +333,7 @@ describe("AddDiverSection", () => {
     );
 
     expect(screen.getByText("No returning diver matches “Nobody Here”.")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Add diver" })[1]).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers?add=1&name=Nobody+Here&surface=departure&tripId=trip-1",
     );

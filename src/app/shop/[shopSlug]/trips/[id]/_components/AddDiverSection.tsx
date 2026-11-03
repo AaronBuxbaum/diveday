@@ -179,6 +179,9 @@ export function AddDiverSection({
     : t("trips.addDiver.addNewDiverAction", { query });
   const walkInLabel = t("trips.addDiver.addAsWalkIn");
   const tripPath = shopPath(shopSlug, "trips", tripId);
+  // An empty result carries the doors for someone new itself, so the search
+  // draws none beside it then: one "Add diver" on the band at a time.
+  const noMatch = searched && candidates.length === 0;
   return (
     <div className={`flex flex-col gap-4 ${className}`.trim()}>
       <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
@@ -235,7 +238,7 @@ export function AddDiverSection({
             hiddenFields={searchFields}
             label={t("trips.addDiver.findLabel")}
             placeholder={t("trips.addDiver.findPlaceholder")}
-            addDiverHref={waitNewDiver}
+            addDiverHref={noMatch ? undefined : waitNewDiver}
             addDiverLabel={t("trips.addDiver.addDiver")}
           />
           {searched ? (
@@ -273,7 +276,7 @@ export function AddDiverSection({
             placeholder={t("trips.addDiver.findPlaceholder")}
             // At the counter the band is one field: someone new is offered by
             // the search's own result, never a second door beside it.
-            addDiverHref={walkInOpen ? undefined : bookNewDiver}
+            addDiverHref={walkInOpen || noMatch ? undefined : bookNewDiver}
             addDiverLabel={
               walkInOpen
                 ? undefined

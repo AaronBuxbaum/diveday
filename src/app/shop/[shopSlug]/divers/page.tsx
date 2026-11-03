@@ -298,7 +298,8 @@ export default async function DiversPage({
         }
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
         canRestore={canDelete}
-        quickAddAction={createDiverFromSearchAction}
+        // The open panel is the add; the toolbar draws no second door to it.
+        quickAddAction={adding ? null : createDiverFromSearchAction}
         pager={
           <div className="print:hidden">
             <Pager
