@@ -86,7 +86,7 @@ async function panelsOn(load: () => Promise<{ default: unknown }>, add?: string)
   const tree = expandWrappers(
     await Page({
       params: Promise.resolve({ shopSlug: SHOP_SLUG }),
-      searchParams: Promise.resolve(add ? { add } : {}),
+      searchParams: Promise.resolve<Record<string, string>>(add ? { add } : {}),
     }),
   );
   return findElements<{ open: boolean; title: string; closeHref: string }>(tree, AddPanel);
