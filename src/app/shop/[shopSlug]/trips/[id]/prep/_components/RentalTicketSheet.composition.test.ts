@@ -6,7 +6,7 @@ import { routeSource } from "@/test/route-source";
  * rather than render it, the way `trips/[id]/page.composition.test.ts` reads
  * the departure's. The slip itself is rendered in `RentalSlip.test.tsx`.
  */
-const SOURCE = routeSource(import.meta.dirname, "page.tsx");
+const SOURCE = routeSource(import.meta.dirname, "RentalTicketSheet.tsx");
 const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
 describe("the rental slip's foot", () => {

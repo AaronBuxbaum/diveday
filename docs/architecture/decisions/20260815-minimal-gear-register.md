@@ -205,7 +205,7 @@ follow-up rather than silently dropped.
 Two pieces this ADR scoped and the first slice deliberately left out, both now
 built at the product owner's direction.
 
-**The per-booking rental slip** (`/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]`).
+**The per-booking rental slip** (`/shop/[shopSlug]/trips/[id]/prep?diver=<bookingId>`).
 Reached from the assignment row it is about, and only once that row has units on
 it — a slip listing nothing is a wrong slip, not a short one. It says what the
 diver has and when it is due back, and deliberately nothing else: no signature
@@ -436,7 +436,7 @@ line is built.
   prices; an empty box stores `null` and prints nothing, and DiveDay supplies no default text. The
   shop export carries it in `shop.csv`.
 - **Both tickets end the same way** (`RentalTicketReceipt`): the trip slip at
-  `/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]` and the counter ticket at
+  `/shop/[shopSlug]/trips/[id]/prep?diver=<bookingId>` and the counter ticket at
   `/shop/[shopSlug]/gear/rentals/[ticketId]` print the terms when set, then three lines to write
   on: "Received by", a printed name, and a date.
 - **It is a receipt for gear, never a waiver.** The signature says the person took these units.
