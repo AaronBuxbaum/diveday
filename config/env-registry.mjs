@@ -37,10 +37,20 @@
  *   through HKDF. Stack-produced by another name.
  * - `manual` -- no system can mint it. A human pastes it from a third-party
  *   console or 1Password. These, and only these, are what `.env.manual` holds.
- * - `harness` -- the Playwright harness sets it on the servers it starts
- *   (`playwright.config.ts`, `e2e/servers.ts`). Nobody supplies it, it goes to
- *   no target, and a deployment carrying it is misconfigured, so these rows
- *   are `forbiddenInProduction`.
+ * - `harness` -- the test and dev harness sets it: Playwright on the servers it
+ *   starts (`playwright.config.ts`, `e2e/servers.ts`), the unit-test setup, or a
+ *   local run. Nobody supplies it, it goes to no target, and a deployment
+ *   carrying it is misconfigured, so these rows are `forbiddenInProduction`.
+ * - `override` -- the value is compiled into the code that reads it, and the
+ *   variable only overrides it for a fork or a self-hosted instance (the origin,
+ *   the SES sender, the Connect client id, the Sentry DSN and cron monitor
+ *   slugs). It goes to no target.
+ * - `platform` -- Node, Next, Vercel, GitHub Actions or the test setup sets it.
+ *   Nobody supplies it, it goes to no target, and `.env.example` leaves it out.
+ *
+ * Every key `src/` reads has a row (`scripts/check-env-reads.mjs` has no
+ * exemption list), so this file answers for the whole configuration surface,
+ * including what nobody supplies.
  *
  * There used to be a fourth, `constant`: a non-secret identifier of DiveDay's
  * own, checked in here and carried through Secrets Manager to Vercel on every
@@ -54,11 +64,18 @@
  * address: every production email failed for an unknown stretch while dev, CI,
  * and the tests stayed green (issue #517). So those values moved into the code
  * that reads them, behind `src/lib/configured.ts`, and their variables survive
- * only as overrides for a fork or a self-hosted instance.
+ * only as overrides for a fork or a self-hosted instance: `override` rows,
+ * which name the variable and go nowhere.
  *
- * This registry is now exactly what its name says -- values that genuinely
- * come from somewhere else -- and a value this repository knows does not
- * belong in it. That is the rule, not an accident of the five being gone.
+ * A value this repository knows is never distributed: no target carries an
+ * `override` row. That is the rule, not an accident of the five being gone.
+ */
+
+/**
+ * Which seam a group configures: the vendor or external system behind it, as a
+ * kebab-case id (`ses`, `stripe-connect`, `sentry`), or null for DiveDay's own
+ * setting with no vendor behind it. Every group names one, so a vendor is
+ * findable from its configuration (issue #2778).
  */
 
 /**
@@ -88,6 +105,7 @@ const NOWHERE = [];
 
 export const ENV_GROUPS = [
   {
+    seam: "neon",
     doc: [
       "Production only. Vercel's Neon integration injects these automatically into",
       "the deployed environment; nothing to set by hand there. Only fill this in if",
@@ -137,6 +155,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: null,
     doc: [
       "Required in production (NextAuth fails loudly without it there); dev/test",
       "fall back to a hardcoded non-production secret. Derived from APP_SECRET_SEED",
@@ -145,6 +164,7 @@ export const ENV_GROUPS = [
     keys: [{ key: "AUTH_SECRET", from: "derived", targets: LOCAL_AND_VERCEL }],
   },
   {
+    seam: null,
     doc: [
       "Dedicated signing keys for three bearer-token families, each optional. Unset,",
       "recap links (src/lib/recap-links.ts) and buddy links (src/lib/buddy-tokens.ts)",
@@ -177,6 +197,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "ses",
     doc: [
       "Transactional email through AWS SES (ADR 20260803-ses-sole-email-provider,",
       "superseding 20260802-ses-adapter-and-webhook). The friendly sender name is",
@@ -208,9 +229,16 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_VERCEL,
         absent: "no mail is sent",
       },
+      {
+        key: "SES_FROM_EMAIL",
+        from: "override",
+        targets: NOWHERE,
+        absent: "mail is sent from the sender compiled into src/lib/configured.ts",
+      },
     ],
   },
   {
+    seam: null,
     doc: [
       "Where the two operational alerts land -- a trial started (operator_alert new_account)",
       "and someone tried the live demo (operator_alert demo_started), ADR",
@@ -227,6 +255,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: null,
     doc: [
       "Who reads the founder's Monday digest: last week's north star, demo entries",
       "and set-up requests by source, and shops stalled between activation steps",
@@ -246,6 +275,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: null,
     doc: [
       "The founder's demo-quiet key (ADR 20260805-demo-try-alerts, amendment",
       "2026-10-09). Opening /api/demo/quiet?key=<this value> once in a browser",
@@ -269,6 +299,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: null,
     doc: [
       "The demo sign-in switch (ADR 20260724-per-visitor-demo-shops; read in",
       "src/lib/demo-bypass.ts). Unset, the shared demo password signs in to a demo",
@@ -303,6 +334,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "ses",
     doc: [
       "SNS topic ARN for /api/webhooks/ses (SesEventNotificationsTopicArn output).",
       "Verified messages whose own TopicArn doesn't match this are rejected even if",
@@ -318,6 +350,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "ses-inbound",
     doc: [
       "Mail divers send back (ADR 20260907-two-way-inbox). SES's receipt rule stores",
       "each message in the inbound bucket and publishes a notification to its own",
@@ -352,6 +385,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "stripe-connect",
     doc: [
       "Stripe Connect: shops bring their own Standard Stripe account (ADR",
       "20260719-stripe-connect-orders). STRIPE_SECRET_KEY is the *platform* account's",
@@ -386,9 +420,16 @@ export const ENV_GROUPS = [
         absent:
           'orders work but paid/void status only updates via the manual "Refresh status" action',
       },
+      {
+        key: "STRIPE_CONNECT_CLIENT_ID",
+        from: "override",
+        targets: NOWHERE,
+        absent: "Connect onboarding uses the client id compiled into src/lib/configured.ts",
+      },
     ],
   },
   {
+    seam: "stripe-connect",
     doc: [
       "The canonical demo shop's Stripe test-mode connection (ADR",
       "20261009-demo-test-mode-payments). STRIPE_DEMO_ACCOUNT_ID is an acct_ id",
@@ -425,6 +466,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "stripe-billing",
     doc: [
       "DiveDay's own subscription billing: what a shop pays DiveDay, on DiveDay's own",
       "Stripe account (ADR 20261007-subscription-billing). Deliberately separate from the",
@@ -461,6 +503,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "stripe-billing",
     doc: [
       "The pricing A/B test (ADR 20261022-pricing-ab-test): flat monthly fee vs a share",
       "of the card money a shop takes through DiveDay. Every value is optional; changing",
@@ -522,6 +565,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "sns-sms",
     doc: [
       "Courtesy SMS reminders through AWS SNS (ADR 20260802-sns-sms-adapter). A",
       "distinct IAM user from SES_AWS_* (least privilege: sns:Publish only).",
@@ -556,6 +600,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "amazon-location",
     doc: [
       "Amazon Location Service, for the settings address type-ahead (ADR",
       "20260804-aws-location-address-lookup). Server-side only -- there is no browser",
@@ -584,6 +629,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "web-push",
     doc: [
       "Web Push for manifest changes (ADR 20260804-manifest-web-push). A VAPID keypair",
       "(`npx web-push generate-vapid-keys`) and a mailto: or https: contact the push",
@@ -612,6 +658,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "sns-sms",
     doc: [
       "SMS delivery receipts (ADR 20260802-sms-delivery-receipts). SNS has no",
       "delivery webhook for a direct-to-phone Publish -- receipts go to CloudWatch",
@@ -629,6 +676,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "whatsapp",
     doc: [
       "WhatsApp via Meta Embedded Signup (ADR 20260802-whatsapp-embedded-signup,",
       "docs/engineering/whatsapp-cloud-api-runbook.md). DiveDay's own Meta app, not a",
@@ -666,6 +714,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: null,
     doc: [
       "Encryption key for secrets DiveDay stores: each staffer's two-factor secret and",
       "recovery codes, each shop's WhatsApp access token and connector credentials, and",
@@ -706,6 +755,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "cloudwatch-logs",
     doc: [
       "Structured-log shipping to CloudWatch Logs (ADR 20260806-cloudwatch-log-shipping,",
       "docs/engineering/cloudwatch-observability-runbook.md). Every line src/lib/log.ts",
@@ -744,6 +794,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "cloudwatch-rum",
     doc: [
       "Amazon CloudWatch RUM -- real-user session, geography, and device context to go",
       "with the Core Web Vitals metrics (ADR 20260806-cloudwatch-rum-and-vitals). All",
@@ -788,6 +839,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "arcgis",
     doc: [
       "ArcGIS location services -- the maps' place names drawn as sharp vector text",
       "(src/lib/basemap.ts). NEXT_PUBLIC_ because the browser sends it with every",
@@ -804,6 +856,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "vercel-cron",
     doc: [
       "Scheduled pre-trip reminders (ADR 20260721-scheduled-reminder-cadence). Vercel",
       "Cron calls GET /api/cron/reminders daily with this as a bearer token (the Hobby",
@@ -821,6 +874,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "kv",
     doc: [
       "The distributed rate-limit store (ADR 20260801-distributed-rate-limit-store):",
       "an Upstash Redis database's REST URL and token, read by src/lib/rate-limit.ts.",
@@ -851,6 +905,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "provider-usage",
     doc: [
       "Provider usage guardrails (ADR 20260806-provider-usage-guardrails,",
       "docs/engineering/cost-guardrails-runbook.md). GET /api/cron/usage polls Vercel's",
@@ -894,6 +949,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "claude",
     doc: [
       "Claude assists (ADR 20261018-claude-assists). Unset, every assist is dark and",
       "each feature works exactly as it does without Claude; DIVEDAY_DISABLE_EXTERNAL_HTTP=1",
@@ -930,6 +986,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "s3-media",
     doc: [
       "Media object storage for course photos, recap memories, dive site maps, and",
       "shop logos (AWS-8, docs/architecture/aws-migration-dossier.md). Replaces Vercel",
@@ -987,6 +1044,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "integrations",
     doc: [
       "Outbound integrations a shop connects for itself (src/features/integrations).",
       "Each is one DiveDay-owned app registration with the provider, shared by every",
@@ -1036,6 +1094,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "s3-backup",
     doc: [
       "DiveDay's own scheduled logical export -- the platform recovery layer, not the",
       "per-shop one (ADR 20260812-platform-backup-runner,",
@@ -1077,6 +1136,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: "reg-suit",
     doc: [
       "reg-suit visual regression testing via S3. The reg-suit-bot IAM user",
       "(infra/lib/infra-stack.ts S2). Locally these values are only for running",
@@ -1114,6 +1174,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: null,
     doc: [
       "CDK-generated root material for AUTH_SECRET, SECRET_ENCRYPTION_KEY, and",
       "CRON_SECRET. It is only an input to scripts/distribute-env.mjs: never put it in",
@@ -1129,6 +1190,7 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: null,
     doc: [
       "The e2e harness's own switches, set by playwright.config.ts on every server it",
       "starts and never anywhere else. DIVEDAY_E2E=1 re-opens the /api/test/* routes in",
@@ -1150,6 +1212,204 @@ export const ENV_GROUPS = [
         targets: NOWHERE,
         forbiddenInProduction: true,
         absent: "every /api/test/* route refuses, whatever else is set",
+      },
+      {
+        key: "DIVEDAY_CLOCK",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "the clock is the real one; src/lib/clock.ts refuses a frozen clock in production",
+      },
+      {
+        key: "DIVEDAY_DISABLE_EXTERNAL_HTTP",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "outbound calls to providers are made",
+      },
+      {
+        key: "DIVEDAY_RATE_LIMIT_DISABLED",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "the rate limiter runs",
+      },
+      {
+        key: "DIVEDAY_TEST_CACHE_DIR",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "the unit tests keep their database template in the default cache directory",
+      },
+      {
+        key: "DIVEDAY_TEST_POSTGRES_URL",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "the real-Postgres unit tests (`*.postgres.test.ts`) skip",
+      },
+      {
+        key: "DIVEDAY_PRINT_QUERY_COUNTS",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "the render-cost tests stay quiet",
+      },
+      {
+        key: "PGLITE_DATA_DIR",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "a local run keeps its embedded database in the default directory",
+      },
+    ],
+  },
+  {
+    seam: null,
+    doc: [
+      "DiveDay's public origin. Compiled into src/lib/configured.ts; the variable is",
+      "an override for a fork or a self-hosted instance.",
+    ],
+    keys: [
+      {
+        key: "APP_HOST",
+        from: "override",
+        targets: NOWHERE,
+        absent: "links and redirects use the origin compiled into src/lib/configured.ts",
+      },
+    ],
+  },
+  {
+    seam: "sentry",
+    doc: [
+      "Sentry error reporting and cron monitors. The DSN is compiled in;",
+      "`pnpm e2e:build` sets it empty to switch reporting off. Each cron monitor slug",
+      "defaults to `diveday-<id>` and Sentry upserts the monitor on its first",
+      "check-in; a variable renames it for a fork's own Sentry project.",
+    ],
+    keys: [
+      {
+        key: "NEXT_PUBLIC_SENTRY_DSN",
+        from: "override",
+        targets: NOWHERE,
+        absent: "errors report to the DSN compiled into the code; empty switches reporting off",
+      },
+      {
+        key: "SENTRY_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_BACKUP_EXPORT_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_DAILY_SWEEPS_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_DEMO_REFRESH_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_PLATFORM_BACKUP_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_RECAP_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_RETENTION_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_TRIP_SERIES_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_USAGE_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_WEEKLY_DIGEST_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+    ],
+  },
+  {
+    seam: null,
+    doc: [
+      "Set by the platform the code runs on: Node, Next, Vercel, GitHub Actions or",
+      "the test setup. Nobody supplies these, and .env.example leaves them out.",
+    ],
+    keys: [
+      {
+        key: "NODE_ENV",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "set by Node and Next",
+      },
+      {
+        key: "NEXT_RUNTIME",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "set by Next per runtime",
+      },
+      {
+        key: "PORT",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "set by Next to the bound server port; isolates loopback e2e auth transport",
+      },
+      {
+        key: "VERCEL_ENV",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "set by Vercel",
+      },
+      {
+        key: "VERCEL_GIT_COMMIT_SHA",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "set by Vercel",
+      },
+      {
+        key: "GITHUB_ACTIONS",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "set by GitHub Actions; the failed-file annotations switch on under it",
+      },
+      {
+        key: "TZ",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "the test setup pins the process zone",
+      },
+      {
+        key: "NEXT_PUBLIC_DIVEDAY_BUILD_ID",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "set by next.config.ts from the build id; names the build in every document",
       },
     ],
   },
@@ -1173,6 +1433,18 @@ const duplicated = duplicateKeys();
 if (duplicated.length > 0) {
   throw new Error(
     `config/env-registry.mjs registers ${duplicated.join(", ")} more than once. Keep one row per key.`,
+  );
+}
+
+// Refused at import for the same reason: a group that does not say which seam it
+// configures, or says it in another shape, is a vendor nobody can find from here.
+const unseamed = ENV_GROUPS.filter(
+  (group) =>
+    !("seam" in group) || (group.seam !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(group.seam)),
+);
+if (unseamed.length > 0) {
+  throw new Error(
+    `config/env-registry.mjs has a group with no kebab-case \`seam\` (or null): ${unseamed.map((group) => group.keys[0]?.key).join(", ")}.`,
   );
 }
 

@@ -50,9 +50,12 @@ const HEADER = [
 
 /** The `.env.example` document this registry describes. */
 export function renderEnvExample() {
-  const blocks = ENV_GROUPS.map((group) => [
+  // A `platform` row is set by the runtime; a blank `NODE_ENV=` copied into a
+  // local file would be worse than no line.
+  const supplied = (entry) => entry.from !== "platform";
+  const blocks = ENV_GROUPS.filter((group) => group.keys.some(supplied)).map((group) => [
     ...group.doc.map((line) => (line ? `# ${line}` : "#")),
-    ...group.keys.map((entry) => `${entry.key}=`),
+    ...group.keys.filter(supplied).map((entry) => `${entry.key}=`),
   ]);
   return [...HEADER, ...blocks.flatMap((block) => [...block, ""])].join("\n").replace(/\n+$/, "\n");
 }

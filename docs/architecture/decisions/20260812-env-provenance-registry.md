@@ -117,6 +117,18 @@ the result, so a malformed override still fails the boot rather than mis-linking
 The rule this leaves is simpler than the four-way split it replaces: **the registry is for values
 that genuinely come from somewhere else.** A value this repository knows does not belong in it.
 
+## Amendment, 2026-11-03 — every key the code reads has a row, and every group names its seam
+
+The registry held only values that come from somewhere else, so the keys nobody supplies lived in an
+exemption list inside `scripts/check-env-reads.mjs`, and a reader of the registry could not see them
+(issue #2778). They are rows now, under three provenances that go to no target: `override` (a value
+compiled into the code, its variable a fork's override: the origin, the SES sender, the Connect
+client id, the Sentry DSN and the cron monitor slugs), `platform` (Node, Next, Vercel, GitHub
+Actions; left out of `.env.example`) and a widened `harness` (the test and dev switches). The
+`constant` removal above still holds: an `override` row is never distributed. Each group also names
+its `seam`, the vendor it configures as a kebab-case id or null for DiveDay's own setting, so a
+vendor is findable from its configuration; the registry refuses at import a group without one.
+
 ## Alternatives considered
 
 - **Add the minted credentials to `stackManaged` and keep the merge.** The one-line version of this
