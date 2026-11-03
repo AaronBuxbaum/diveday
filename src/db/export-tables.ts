@@ -700,36 +700,39 @@ export async function readScoped<K extends ExportTableKey>(
  */
 export async function readTipRows(db: DbExecutor, scope: ExportScope) {
   if (scope.kind === "diver" && scope.bookingIds.length === 0) return [];
-  return db
-    .select({
-      id: bookingCheckouts.id,
-      bookingId: bookingCheckoutBookings.bookingId,
-      status: bookingCheckouts.status,
-      currency: bookingCheckouts.currency,
-      amountCents: tipAmountCents,
-      stripeSessionId: bookingCheckouts.stripeSessionId,
-      expiresAt: bookingCheckouts.expiresAt,
-      completedAt: bookingCheckouts.completedAt,
-      createdAt: bookingCheckouts.createdAt,
-    })
-    .from(bookingCheckouts)
-    .innerJoin(
-      bookingCheckoutBookings,
-      and(
-        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
-        eq(bookingCheckoutBookings.shopId, scope.shopId),
-      ),
-    )
-    .where(
-      and(
-        eq(bookingCheckouts.shopId, scope.shopId),
-        tipCheckout(),
-        scope.kind === "diver"
-          ? inArray(bookingCheckoutBookings.bookingId, [...scope.bookingIds])
-          : undefined,
-      ),
-    )
-    .orderBy(asc(bookingCheckouts.createdAt), asc(bookingCheckouts.id));
+  return (
+    db
+      .select({
+        id: bookingCheckouts.id,
+        bookingId: bookingCheckoutBookings.bookingId,
+        status: bookingCheckouts.status,
+        currency: bookingCheckouts.currency,
+        amountCents: tipAmountCents,
+        stripeSessionId: bookingCheckouts.stripeSessionId,
+        expiresAt: bookingCheckouts.expiresAt,
+        completedAt: bookingCheckouts.completedAt,
+        createdAt: bookingCheckouts.createdAt,
+      })
+      .from(bookingCheckouts)
+      .innerJoin(
+        bookingCheckoutBookings,
+        and(
+          eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+          eq(bookingCheckoutBookings.shopId, scope.shopId),
+        ),
+      )
+      .where(
+        and(
+          eq(bookingCheckouts.shopId, scope.shopId),
+          tipCheckout(),
+          scope.kind === "diver"
+            ? inArray(bookingCheckoutBookings.bookingId, [...scope.bookingIds])
+            : undefined,
+        ),
+      )
+      // diveday:allow-time-id-order: CSV export row stability; CSV exports are not user-facing sorted lists
+      .orderBy(asc(bookingCheckouts.createdAt), asc(bookingCheckouts.id))
+  );
 }
 
 /** How many tips a shop's bundle holds — the settings page's cheap view. */

@@ -9,12 +9,12 @@ import {
   publicAppUrl,
 } from "@/lib/notifications";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
+import { fareCheckout } from "./checkout-purpose";
 import {
   markCheckoutExpiredBySessionId,
   markCheckoutPaidBySessionId,
   recordCheckoutStripeCustomer,
 } from "./checkouts";
-import { fareCheckout } from "./checkout-purpose";
 import type { AppDb } from "./client";
 import {
   findCourtesyEmailRecipientByAddress,

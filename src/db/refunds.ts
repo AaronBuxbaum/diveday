@@ -7,8 +7,8 @@ import { capturedPaymentStatuses, isCapturedPaymentStatus } from "@/lib/payment-
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
-import { lockSeatsInOrder } from "./checkouts";
 import { fareCheckout } from "./checkout-purpose";
+import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { checkoutRefundKey, enqueueCheckoutIntegrationEvent } from "./integration-events";
 import { boundLockWaits } from "./lock-bounds";

@@ -4,8 +4,8 @@ import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import {
-  bookingCheckouts,
   boats,
+  bookingCheckouts,
   executedDives,
   tripAssignments,
   tripDives,

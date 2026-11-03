@@ -49,10 +49,10 @@ import { SHOP_EXPORT_FILES } from "./export-shop-files";
 import {
   buildExportTables,
   countShopScoped,
+  countShopTips,
   type DiverExportScope,
   readScoped,
   readTipRows,
-  countShopTips,
   type ShopExportScope,
 } from "./export-tables";
 import { shopRehearsalIds } from "./rehearsals";

@@ -223,6 +223,30 @@ async function partnerReferredSeatsForWindow(
   return totals;
 }
 
+/** Post-trip tips settled on this month's trips (PAY-M2). */
+async function tipsTotalsForWindow(
+  db: DbExecutor,
+  shopId: string,
+  inWindow: SQL<unknown> | undefined,
+) {
+  const [tipTotals] = await db
+    .select({
+      total: sum(tipAmountCents),
+      tipCount: count(bookingCheckouts.id),
+    })
+    .from(bookingCheckouts)
+    .innerJoin(trips, eq(trips.id, bookingCheckouts.tripId))
+    .where(
+      and(
+        inWindow,
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "completed"),
+        tipCheckout(),
+      ),
+    );
+  return tipTotals;
+}
+
 /**
  * The month's numbers, anchored to trips that *departed* in `[startUtc, endUtc)`.
  * Returns the raw per-trip rows and the revenue total; all the derived rates
@@ -615,21 +639,7 @@ export async function getMonthlyReport(
   // (docs ADR 20260731-shop-currency), so this report is single-currency by
   // assumption throughout — a pre-existing limitation of the whole page, not
   // one tips introduce.
-  const [tipTotals] = await db
-    .select({
-      total: sum(tipAmountCents),
-      tipCount: count(bookingCheckouts.id),
-    })
-    .from(bookingCheckouts)
-    .innerJoin(trips, eq(trips.id, bookingCheckouts.tripId))
-    .where(
-      and(
-        inWindow,
-        eq(bookingCheckouts.shopId, shopId),
-        eq(bookingCheckouts.status, "completed"),
-        tipCheckout(),
-      ),
-    );
+  const tipTotals = await tipsTotalsForWindow(db, shopId, inWindow);
 
   // **How many seats arrived on a partner link this month** — a count, and
   // deliberately not a list of who.

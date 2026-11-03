@@ -20,7 +20,8 @@ describe("findUnnamedCheckoutReads", () => {
   });
 
   it("guards a join prettier broke across two lines", () => {
-    const source = "db.select().from(bookings)\n  .innerJoin(\n    bookingCheckouts,\n    eq(a, b),\n  );";
+    const source =
+      "db.select().from(bookings)\n  .innerJoin(\n    bookingCheckouts,\n    eq(a, b),\n  );";
     expect(findUnnamedCheckoutReads(source).findings).toHaveLength(1);
   });
 

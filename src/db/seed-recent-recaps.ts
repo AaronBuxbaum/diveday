@@ -1,10 +1,18 @@
 import { and, asc, eq, gte, inArray, lt, ne } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
-import type { DbExecutor } from "./client";
-import { bookingCheckoutBookings, bookingCheckouts, bookings, people, shops, tripReviews, trips } from "./schema";
-import { recordSeedTips, type SeedTip } from "./tips";
 import { tipCheckout } from "./checkout-purpose";
+import type { DbExecutor } from "./client";
+import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookings,
+  people,
+  shops,
+  tripReviews,
+  trips,
+} from "./schema";
+import { recordSeedTips, type SeedTip } from "./tips";
 
 /**
  * The recaps the month you are *reading about* should carry.
@@ -138,10 +146,7 @@ export async function seedRecentRecaps(
   const existingTips = await db
     .select({ bookingId: bookingCheckoutBookings.bookingId })
     .from(bookingCheckouts)
-    .innerJoin(
-      bookingCheckoutBookings,
-      eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
-    )
+    .innerJoin(bookingCheckoutBookings, eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id))
     .where(
       and(
         eq(bookingCheckouts.shopId, shopId),
