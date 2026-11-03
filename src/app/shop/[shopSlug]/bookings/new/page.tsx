@@ -18,24 +18,13 @@ import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { FieldActions, FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { readFormDraft } from "@/db/form-drafts";
-import {
-  type DateInterestRow,
-  listDateInterestsByIds,
-  listOpenDateInterestsForDates,
-} from "@/db/interest-dates";
-import { PAGE_SIZE } from "@/db/paging";
-import { offsetUpcomingTripsWithCounts } from "@/db/trips";
+import type { DateInterestRow } from "@/db/interest-dates";
+import { getNewBookingPage } from "@/db/new-booking-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import {
-  calendarDateInTimezone,
-  formatCalendarDate,
-  groupByLocalDay,
-  shiftCalendarDate,
-} from "@/lib/calendar-date";
+import { calendarDateInTimezone, formatCalendarDate, groupByLocalDay } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { dateRequestsByDay, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
+import { dateRequestsByDay } from "@/lib/date-requests";
 import { departurePickerWindow } from "@/lib/departure-picker-window";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
@@ -64,26 +53,6 @@ export const metadata: Metadata = {
   // Staff-only operations surface, never a public document.
   robots: { index: false, follow: false },
 };
-
-/**
- * How many departures the picker offers at once. A page, not a shop's whole
- * future: a busy season has hundreds of upcoming departures, and a picker that
- * rendered all of them would be a screen nobody can scan (AGENTS.md — bound
- * the page, not the capture).
- *
- * The picker shows two days at a time now (`departurePickerWindow`), with a
- * date control and Earlier / Later days beside it, so the pager only appears
- * for a window that holds more than a page (ADR 20260803-one-pagination-model
- * still governs it when it does).
- */
-const TRIP_PAGE_SIZE = PAGE_SIZE.list;
-
-/**
- * How far ahead the call form looks for a full departure to wait-list. A phone
- * call is about the next week or two, and a `<select>` holding a season is a
- * control nobody can use one-handed with a handset to their ear.
- */
-const CALL_DEPARTURE_LOOKAHEAD = 40;
 
 /** The `?notice=` the call form can come back with, from `./call-actions.ts`. */
 const CALL_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
@@ -144,18 +113,24 @@ export default async function NewBookingPage({
   const pickerWindow = departurePickerWindow({ now: nowDate(), timeZone: shop.timezone, from });
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
-  // range so a bookmarked page past the end lands on the last real one.
-  const [tripPage, callDraft, upcoming] = await Promise.all([
-    offsetUpcomingTripsWithCounts(db, shop.id, {
-      hasSpace: true,
-      limit: TRIP_PAGE_SIZE,
-      page: Number.parseInt(page ?? "", 10),
-      now: pickerWindow.start,
-      monthEnd: pickerWindow.end,
-    }),
-    readFormDraft(db, shop.id, session.user.personId, "took_a_call"),
-    offsetUpcomingTripsWithCounts(db, shop.id, { limit: CALL_DEPARTURE_LOOKAHEAD }),
-  ]);
+  // range so a bookmarked page past the end lands on the last real one. An
+  // empty window says where the next open seat is, rather than leaving the
+  // staffer to step through empty days to find it. The date requests are read
+  // for whoever can open this page (issue #1679), scoped to `shop.id`.
+  const {
+    tripPage,
+    trips,
+    callDraft,
+    upcoming,
+    nextOpen,
+    tripDates,
+    selectedRequest,
+    relevantRows,
+  } = await getNewBookingPage(db, shop, session.user.personId, {
+    page: Number.parseInt(page ?? "", 10),
+    window: pickerWindow,
+    requestId,
+  });
   // The wait list is only for a full boat, so the call form offers only those.
   const fullDepartures: CallDeparture[] = upcoming.trips
     .filter((trip) => spotsRemaining(seatsOnSale(trip)) === 0)
@@ -168,43 +143,6 @@ export default async function NewBookingPage({
       }),
     }));
   const callNotice = noticeFromParam(notice, CALL_NOTICES);
-  const trips = tripPage.trips.map(seatsOnSale);
-  // An empty window says where the next open seat is, rather than leaving the
-  // staffer to step through empty days to find it; nothing open anywhere
-  // ahead is the board's empty state below.
-  const nextOpen =
-    trips.length === 0
-      ? ((
-          await offsetUpcomingTripsWithCounts(db, shop.id, {
-            hasSpace: true,
-            limit: 1,
-            now: pickerWindow.end,
-          })
-        ).trips[0] ?? null)
-      : null;
-  const tripDates = [
-    ...new Set(trips.map((trip) => calendarDateInTimezone(trip.startsAt, shop.timezone))),
-  ];
-  const lookupDates = [
-    ...new Set(
-      tripDates.flatMap((date) =>
-        Array.from({ length: FLEXIBLE_WINDOW_DAYS * 2 + 1 }, (_unused, index) =>
-          shiftCalendarDate(date, index - FLEXIBLE_WINDOW_DAYS),
-        ),
-      ),
-    ),
-  ];
-  // Read for whoever can open this page, since 2026-09-16 (issue #1679). It
-  // was behind `canPersonViewShopReports` as the downstream half of the gate
-  // on `/requests`; that page is ungated now, so the check protected nothing
-  // and only emptied the hand-off — a captain following "Create booking" from
-  // a request got no prefilled diver and no matching-request cards. Still
-  // scoped to `shop.id`, so a `?request=` id cannot reach another tenant.
-  const [requestContext, relevantRows]: [DateInterestRow[], DateInterestRow[]] = await Promise.all([
-    requestId ? listDateInterestsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
-    listOpenDateInterestsForDates(db, shop.id, lookupDates),
-  ]);
-  const selectedRequest = requestContext[0] ?? null;
   const { byDay: relevantRequestsByDate, firstDayById: relevantDateById } = dateRequestsByDay(
     relevantRows,
     tripDates,

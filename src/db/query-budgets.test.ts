@@ -1,12 +1,27 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { getDiverRecord } from "@/db/diver-record";
 import { pagedOrdersByDay } from "@/db/orders";
 import { listTripsReadiness } from "@/db/readiness";
-import { trips } from "@/db/schema";
-import { getTodayWork } from "@/db/today";
+import { bookings, people, personRoles, trips } from "@/db/schema";
+import { getShopHome } from "@/db/shop-home";
+import { getTripManifest } from "@/db/trip-page";
+import { liveTrip } from "@/db/trips-live";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { countingShopContext } from "@/test/query-count";
+
+/** The seeded shop's owner: the reader whose gates open every door on these pages. */
+async function seededOwner(ctx: Awaited<ReturnType<typeof countingShopContext>>) {
+  const [owner] = await ctx.uncounted
+    .select({ personId: people.id })
+    .from(personRoles)
+    .innerJoin(people, eq(people.id, personRoles.personId))
+    .where(and(eq(people.shopId, ctx.shop.id), eq(personRoles.role, "owner")))
+    .limit(1);
+  if (!owner) throw new Error("the seeded shop has no owner");
+  return owner.personId;
+}
 
 /**
  * What the assembly readers **cost**, as opposed to what they answer.
@@ -105,20 +120,87 @@ describe("what the assembly readers cost", () => {
    */
   it("assembles the whole shop home under a ceiling", async () => {
     const ctx = await countingShopContext();
+    const personId = await seededOwner(ctx);
     ctx.reset();
-    const work = await getTodayWork(
-      ctx.db,
-      ctx.shop.id,
-      ctx.shop.slug,
-      shopClock(ctx.shop, nowDate()),
-    );
-    expect(work).toBeTruthy();
+    const home = await getShopHome(ctx.db, ctx.shop, {
+      shopSlug: ctx.shop.slug,
+      personId,
+      roles: ["owner"],
+      now: nowDate(),
+      arrivalQuery: "",
+      orientationRole: null,
+      t: staffTranslator("en-US"),
+      locale: "en-US",
+    });
+    expect(home.work).toBeTruthy();
 
     const used = ctx.count();
     expect(
       used,
       `the shop home sent ${used} queries; see this test's comment before raising the ceiling`,
     ).toBeLessThanOrEqual(TODAY_QUERY_CEILING);
+  });
+
+  /**
+   * The departure page's Divers tab (`getTripManifest`): the shared trip
+   * reads, the overview and guests over them, the Details selects, the stage,
+   * the reader's gates and the departure's needs. A ceiling, like the home's,
+   * because its fan-out is one departure's roster and Today's bounded window;
+   * a per-guest read is what it is here to catch.
+   */
+  it("reads the departure page under a ceiling", async () => {
+    const ctx = await countingShopContext();
+    const personId = await seededOwner(ctx);
+    const [trip] = await ctx.uncounted
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, ctx.shop.id), liveTrip(), gt(trips.startsAt, nowDate())))
+      .orderBy(asc(trips.startsAt))
+      .limit(1);
+    if (!trip) throw new Error("the seeded shop has no upcoming departure");
+    ctx.reset();
+    const manifest = await getTripManifest(ctx.db, ctx.shop, trip.id, {
+      session: { user: { personId, roles: ["owner"] } },
+      now: nowDate(),
+      t: staffTranslator("en-US"),
+      locale: "en-US",
+      filters: {},
+    });
+    expect(manifest).not.toBeNull();
+
+    const used = ctx.count();
+    expect(used, `the departure page sent ${used} queries`).toBeLessThanOrEqual(
+      TRIP_PAGE_QUERY_CEILING,
+    );
+  });
+
+  /**
+   * The diver record (`getDiverRecord`): the profile, the gates and the file's
+   * groups, then the reads that need the gates. Bounded by one diver, so a
+   * ceiling; a per-booking or per-piece read is what it catches.
+   */
+  it("reads a diver record under a ceiling", async () => {
+    const ctx = await countingShopContext();
+    const viewerPersonId = await seededOwner(ctx);
+    const [diver] = await ctx.uncounted
+      .select({ id: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, ctx.shop.id), isNotNull(bookings.personId)))
+      .limit(1);
+    if (!diver) throw new Error("the seeded shop has no booked diver");
+    ctx.reset();
+    const record = await getDiverRecord(ctx.db, ctx.shop, diver.id, {
+      viewerPersonId,
+      activityPage: 1,
+      bookingPage: 1,
+      now: nowDate(),
+    });
+    expect(record?.kind).toBe("record");
+
+    const used = ctx.count();
+    expect(used, `the diver record sent ${used} queries`).toBeLessThanOrEqual(
+      DIVER_RECORD_QUERY_CEILING,
+    );
   });
 });
 
@@ -137,5 +219,19 @@ describe("what the assembly readers cost", () => {
  * crewAwayAcknowledgedAt (#2678) in Today's wave.
  * 64 → 65 (#3436): every planned dive's site for the departure cards
  * (`plannedSitesByTrip`), one statement in the same wave.
+ * 65 → 111 (issue #2757): not a new query. The ceiling used to watch `getTodayWork`
+ * alone; it now watches the page's whole reader, `getShopHome` — the first wave (drafts,
+ * money gate, readiness, arrivals, closeout, counts, season scale), the queue and
+ * tomorrow's cards, the closing reads, the day's money — which is what the page sends.
  */
-const TODAY_QUERY_CEILING = 65;
+const TODAY_QUERY_CEILING = 111;
+
+/**
+ * The departure page's tripwire (issue #2757, measured when its reads moved
+ * behind `getTripManifest`). Raising it is a decision about the page the desk
+ * works a departure from.
+ */
+const TRIP_PAGE_QUERY_CEILING = 143;
+
+/** The diver record's tripwire (issue #2757, measured when its reads moved behind `getDiverRecord`). */
+const DIVER_RECORD_QUERY_CEILING = 75;

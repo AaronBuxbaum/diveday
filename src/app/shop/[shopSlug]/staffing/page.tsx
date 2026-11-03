@@ -19,8 +19,7 @@ import {
   FormStatus,
 } from "@/components/ui/form";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
-import { listCrewAssignmentRequests, readStaffingWeekAway } from "@/db/crew-requests";
-import { getStaffingView } from "@/db/staffing";
+import { getStaffingPage } from "@/db/staffing";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabels } from "@/i18n/staff-role-labels";
@@ -171,29 +170,23 @@ export default async function StaffingPage({
   const fromWall = parseWallTime(weekStart, "00:00");
   const toWall = parseWallTime(shiftCalendarDate(weekStart, 7), "00:00");
   if (!fromWall || !toWall) redirect(shopPath(shopSlug, "staffing"));
-  // The grid, options and own consent share one roster read; the independent
-  // away/manager read is not part of a transaction-wide snapshot.
-  const [view, { blocks, canManageStaffAccounts: canManage }] = await Promise.all([
-    getStaffingView(
-      db,
-      shop.id,
-      wallTimeToUtc(fromWall, shop.timezone),
-      wallTimeToUtc(toWall, shop.timezone),
-      // The shop's own supervision target, so this week measures a departure
-      // exactly as Today's queue and the trip page do.
-      { diversPerDivemaster: shop.diversPerDivemaster },
-    ),
-    // The whole week's blackouts, whoever's: a person's own draw as quiet
-    // chips in their row, and everybody's are needed to warn on an assignment.
-    // Each note only as this reader may read it (#2673).
-    readStaffingWeekAway(db, shop.id, { from: weekStart, to: weekEnd }, session.user.personId),
-  ]);
-  // Requests hang off the gaps, so they are asked for after the view knows
-  // which departures are short — one query, over the ids that can carry one.
-  const crewRequests = await listCrewAssignmentRequests(
+  // The grid, the away blocks of the week and the requests hanging off its gaps
+  // (`getStaffingPage`).
+  const {
+    view,
+    blocks,
+    canManageStaffAccounts: canManage,
+    crewRequests,
+  } = await getStaffingPage(
     db,
-    shop.id,
-    view.gapTrips.map((trip) => trip.tripId),
+    shop,
+    {
+      from: wallTimeToUtc(fromWall, shop.timezone),
+      to: wallTimeToUtc(toWall, shop.timezone),
+      firstDay: weekStart,
+      lastDay: weekEnd,
+    },
+    session.user.personId,
   );
   const notice = noticeFromParam(query.notice, notices);
   const onShiftForm =

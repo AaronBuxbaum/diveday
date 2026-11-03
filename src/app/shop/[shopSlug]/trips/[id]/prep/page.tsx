@@ -4,10 +4,7 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
-import { listTripUnitsToCheckIn } from "@/db/gear";
-import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
-import { getTripPrep } from "@/db/trip-prep";
-import { latestTripStage } from "@/db/trip-stages";
+import { getTripPrepPage } from "@/db/trip-prep";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -17,7 +14,6 @@ import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { readDepartureStage } from "../_arrivals/departure-record";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { TripStageBadge, TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
@@ -98,30 +94,17 @@ export default async function TripPrepPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [prep, stageReading] = await Promise.all([
-    getTripPrep(db, shop, tripId),
-    latestTripStage(db, shop.id, tripId),
-  ]);
-  if (!prep) notFound();
-  const { trip } = prep;
   const now = nowDate();
-  // The crew's word for the header chip, and whether the boat has left the dock.
+  // The packing list, the crew's word for the header chip, whether the boat has
+  // left the dock, and — once home — every unit still out on this boat.
+  const page = await getTripPrepPage(db, shop, tripId, now);
+  if (!page) notFound();
   const {
-    shown: shownStage,
-    sailed,
-    finished,
-  } = await readDepartureStage(db, shop.id, tripId, {
-    startsAt: trip.startsAt,
-    endsAt: trip.endsAt,
-    now,
-    timeZone: shop.timezone,
-    stage: stageReading,
-    cancelled: trip.status === "cancelled",
-    meetingWindows: (await meetingWindowsByTrip(db, [trip])).get(tripId),
-  });
-
-  // Once home, every unit still out on this boat (fifth-loop ideas, item 5).
-  const backFromBoat = finished ? await listTripUnitsToCheckIn(db, shop.id, tripId) : [];
+    prep,
+    stage: { shown: shownStage, sailed, finished },
+    backFromBoat,
+  } = page;
+  const { trip } = prep;
 
   // **The packet's paper** (B03, B55): the packing list alone. The packet's
   // dive plan already names the departure once, so this section carries no

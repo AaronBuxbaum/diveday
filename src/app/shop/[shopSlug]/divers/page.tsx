@@ -7,13 +7,9 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice } from "@/components/ShopNotice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { loadActiveStaffRoles } from "@/db/authz";
-import { listDiverMergeDuplicateIds } from "@/db/diver-merge";
-import { isDiverFilter, isDiverSort, listDiverSummaries } from "@/db/divers";
-import { rosterFacts } from "@/db/roster-facts";
+import { getDiversPage } from "@/db/divers-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { canDeleteDiver, canExportShopData, canImportShopData, canMergeDiver } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
@@ -106,40 +102,23 @@ export default async function DiversPage({
   // that was six sequential database round trips on a cold Vercel request,
   // making the otherwise bounded roster occasionally cross the five-second
   // runtime limit.
-  const liveRoles = await loadActiveStaffRoles(db, shop.id, session.user.personId);
-  const canDelete = liveRoles !== null && canDeleteDiver(liveRoles);
-  const canImport = liveRoles !== null && canImportShopData(liveRoles);
-  const canMerge = liveRoles !== null && canMergeDiver(liveRoles);
-  const canDownload = liveRoles !== null && canExportShopData(liveRoles);
-  const sort = isDiverSort(sortParam) ? sortParam : "name";
-  const requested = isDiverFilter(filterParam) ? filterParam : "all";
-  const filter = requested === "removed" && !canDelete ? "all" : requested;
-  // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
-  // range, so a search that narrows the roster never strands the reader on a
-  // page the new result set does not have.
-  const now = nowDate();
-  const [diverPage, possibleDuplicateIds] = await Promise.all([
-    listDiverSummaries(db, shop.id, {
-      query,
-      page: Number.parseInt(page ?? "", 10),
-      filter,
-      sort,
-      // "Diving today" is the shop's own calendar day, not the server's.
-      timeZone: shop.timezone,
-      now,
-    }),
-    canMerge ? listDiverMergeDuplicateIds(db, shop.id) : Promise.resolve([]),
-  ]);
-  // Second, because it takes the ids the first one just returned: the four
-  // roster facts are all `inArray`-bounded to this page rather than read over
-  // the whole roster (`rosterFacts`, src/db/roster-facts.ts).
-  const duplicateIds = new Set<string>(possibleDuplicateIds);
-  const facts = await rosterFacts(
-    db,
-    shop.id,
-    diverPage.divers.map((diver) => diver.id),
-    { now },
-  );
+  const {
+    can: { delete: canDelete, import: canImport, download: canDownload },
+    sort,
+    filter,
+    diverPage,
+    duplicateIds,
+    facts,
+  } = await getDiversPage(db, shop, session.user.personId, {
+    query,
+    // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
+    // range, so a search that narrows the roster never strands the reader on a
+    // page the new result set does not have.
+    page: Number.parseInt(page ?? "", 10),
+    filter: filterParam,
+    sort: sortParam,
+    now: nowDate(),
+  });
   /** The roster's URL with the search, view and order kept and only `page` swapped. */
   const roster = shopPath(shopSlug, "divers");
   const pageHref = (target: number) => rosterHref(roster, { query, filter, sort, page: target });

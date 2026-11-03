@@ -4,13 +4,7 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EYEBROW_CLASS, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import {
-  canPersonReadMedicalAlert,
-  canPersonReadMedicalAnswers,
-  canPersonReadMedicalClearanceDocument,
-  canPersonReadShopAnswers,
-} from "@/db/authz";
-import { getSignedRecordShopAnswers, getSignedWaiverForDiver } from "@/db/waivers";
+import { getSignedWaiverPage } from "@/db/signed-waiver-page";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { requestLocale } from "@/i18n/request";
 import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
@@ -58,30 +52,24 @@ export default async function SignedWaiverPage({
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [readsMedicalAnswers, canOpenEvaluation, readsShopAnswers, readsMedicalAlert] =
-    await Promise.all([
-      canPersonReadMedicalAnswers(db, shop.id, session.user.personId),
-      canPersonReadMedicalClearanceDocument(db, shop.id, session.user.personId),
-      canPersonReadShopAnswers(db, shop.id, session.user.personId),
-      // Owner and manager only here: this page has no departure whose crew
-      // the reader could be on (issue #2960).
-      canPersonReadMedicalAlert(db, shop.id, session.user.personId),
-    ]);
-  // Never the full questionnaire on render: an owner or manager reads it by
-  // tapping "Show answers", whose action records the read (issue #2157).
-  const waiver = await getSignedWaiverForDiver(db, {
-    shopId: shop.id,
-    personId,
-    recordId,
-    readsMedicalAnswers,
-    withholdAnswers: true,
-  });
-  if (!waiver) notFound();
-  // The answers to the shop's own questions: every staff role reads them, as
-  // they read the release (glossary *Shop question*).
-  const shopAnswers = readsShopAnswers
-    ? await getSignedRecordShopAnswers(db, { shopId: shop.id, personId, recordId })
-    : null;
+  // What this reader may read comes from live roles; never the full
+  // questionnaire on render — an owner or manager reads it by tapping "Show
+  // answers", whose action records the read (issue #2157). The medical alert
+  // is owner and manager only here: this page has no departure whose crew the
+  // reader could be on (issue #2960).
+  const record = await getSignedWaiverPage(db, shop.id, personId, recordId, session.user.personId);
+  if (!record) notFound();
+  const {
+    waiver,
+    // The answers to the shop's own questions: every staff role reads them, as
+    // they read the release (glossary *Shop question*).
+    shopAnswers,
+    can: {
+      readMedicalAnswers: readsMedicalAnswers,
+      openEvaluation: canOpenEvaluation,
+      readMedicalAlert: readsMedicalAlert,
+    },
+  } = record;
 
   const when = (date: Date) => formatDateTimeTz(date, locale, shop.timezone);
   const evaluatedOn =

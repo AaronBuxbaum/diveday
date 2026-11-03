@@ -6,6 +6,7 @@ import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import { crewGapFor, type StaffGapCode, type TripMeeting } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip, NO_SUPERVISION } from "./course-crew-counts";
+import { listCrewAssignmentRequests, readStaffingWeekAway } from "./crew-requests";
 import {
   bookings,
   courses,
@@ -558,4 +559,36 @@ export async function deleteStaffShift(
     .where(and(eq(staffShifts.id, shiftId), eq(staffShifts.shopId, shopId)))
     .returning({ id: staffShifts.id });
   return deleted.length > 0;
+}
+
+/**
+ * **The Crew week in one call** (issue #2757). The grid, options and own
+ * consent share one roster read; the independent away/manager read is not part
+ * of a transaction-wide snapshot. Requests hang off the gaps, so they are asked
+ * for after the view knows which departures are short — one query, over the
+ * ids that can carry one.
+ */
+export async function getStaffingPage(
+  db: AppDb,
+  shop: { id: string; diversPerDivemaster: number },
+  week: { from: Date; to: Date; firstDay: string; lastDay: string },
+  personId: string,
+) {
+  const [view, { blocks, canManageStaffAccounts }] = await Promise.all([
+    // The shop's own supervision target, so this week measures a departure
+    // exactly as Today's queue and the trip page do.
+    getStaffingView(db, shop.id, week.from, week.to, {
+      diversPerDivemaster: shop.diversPerDivemaster,
+    }),
+    // The whole week's blackouts, whoever's: a person's own draw as quiet
+    // chips in their row, and everybody's are needed to warn on an assignment.
+    // Each note only as this reader may read it (#2673).
+    readStaffingWeekAway(db, shop.id, { from: week.firstDay, to: week.lastDay }, personId),
+  ]);
+  const crewRequests = await listCrewAssignmentRequests(
+    db,
+    shop.id,
+    view.gapTrips.map((trip) => trip.tripId),
+  );
+  return { view, blocks, canManageStaffAccounts, crewRequests };
 }

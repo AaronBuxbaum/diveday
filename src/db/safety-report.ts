@@ -9,7 +9,8 @@ import {
 } from "@/lib/safety-report";
 import { hasReturned } from "@/lib/trips";
 import { shopMonthBounds } from "@/lib/zoned";
-import type { DbExecutor } from "./client";
+import type { AppDb, DbExecutor } from "./client";
+import { listShopIncidentReports } from "./incident-reports";
 import { queryAll } from "./query-helpers";
 import {
   activityEvents,
@@ -240,4 +241,32 @@ export async function getSafetyYear(
     months.push(await getSafetyMonth(db, shopId, from, to, timeZone, now));
   }
   return summarizeSafetyYear(months);
+}
+
+/**
+ * The safety page's two other reads, kept beside its reader: the Reports gate
+ * (`requireShopSurface`'s `allow`, re-read against the database) and the
+ * earliest departure the page can step back to, which the page needs before
+ * it knows which period it is showing.
+ */
+export { canPersonViewShopReports, earliestReportedTripStart } from "./reporting";
+
+/**
+ * **The safety page's figures for one period** (issue #2757): a year is the sum
+ * of its months, each read by its own rules (review F1); a month is read
+ * directly. Then the period's incident reports as this reader may see them.
+ */
+export async function getSafetyPage(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  period: { year: number | null; from: Date; to: Date; timeZone: string; now: Date },
+) {
+  const { from, to, timeZone, now } = period;
+  const yearMonths =
+    period.year !== null ? await getSafetyYear(db, shopId, period.year, timeZone, now) : null;
+  const safety: SafetyMonth =
+    yearMonths ?? (await getSafetyMonth(db, shopId, from, to, timeZone, now));
+  const incidents = await listShopIncidentReports(db, shopId, personId, from, to);
+  return { yearMonths, safety, incidents };
 }
