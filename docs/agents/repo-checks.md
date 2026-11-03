@@ -784,7 +784,7 @@ A publish toggle is "Hidden", not deleted. The full rule and its exceptions are 
 
 is photographed through `/api/test/seed-trouble-states`
 (`src/app/api/test/seed-trouble-states/route.ts`), never by seeding the failure into the demo shop:
-add the new state to that route and a capture beside the surface's calm one. A demo permanently
+add it as a named fact in `src/db/facts/index.ts` and a capture beside the surface's calm one. A demo permanently
 shouting that four payments are broken is a worse demo. Mutating is safe because each Playwright
 worker owns its own database and resets it before every test (`e2e/servers.ts`).
 
@@ -1126,8 +1126,8 @@ For `e2e/`; the rules themselves are in `.claude/rules/e2e.md`.
   capture to make it cheap silently narrows what it can catch; the orders index was found this way:
   323 seeded orders, no pager, no baseline at all.
 - **A panel that only renders when something has gone wrong** is photographed through
-  `/api/test/seed-trouble-states`, never by seeding the failure into the demo shop. Add the state to
-  `src/app/api/test/seed-trouble-states/route.ts` and a capture beside the surface's calm one.
+  `/api/test/seed-trouble-states`, never by seeding the failure into the demo shop. Add it as a fact in
+  `src/db/facts/index.ts` (the route applies `?facts=name,…`) and a capture beside the surface's calm one.
 - **Route coverage**: every `src/app/**/page.tsx` route has a spec and an `e2e/visual-*.spec.ts`
   capture, or a written `exempt` reason. Coverage is derived from the path literals in `e2e/`
   (a spec that names the route's URL covers it; a capture after that URL inside one `test(`

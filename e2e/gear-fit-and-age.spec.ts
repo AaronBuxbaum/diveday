@@ -89,7 +89,9 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    const seeded = await request.post("/api/test/seed-trouble-states?droppedRental=1");
+    const seeded = await request.post(
+      "/api/test/seed-trouble-states?facts=troublePanels,droppedRental",
+    );
     expect(seeded.ok()).toBe(true);
     const { droppedRental } = (await seeded.json()) as { droppedRental?: { fullName: string } };
     if (!droppedRental) throw new Error("seed-trouble-states found no fit to contradict");

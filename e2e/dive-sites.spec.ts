@@ -980,7 +980,9 @@ test.describe("a site whose station is nowhere near it", () => {
     // Four saves, each its own navigation and status wait — the same
     // aggregate-cost reasoning as the long test at the top of this file.
     test.setTimeout(30_000);
-    const seeded = await request.post("/api/test/seed-trouble-states?farStation=1");
+    const seeded = await request.post(
+      "/api/test/seed-trouble-states?facts=troublePanels,farStation",
+    );
     expect(seeded.ok()).toBe(true);
     const { farStation } = (await seeded.json()) as {
       farStation?: { siteId: string; name: string; slug: string };

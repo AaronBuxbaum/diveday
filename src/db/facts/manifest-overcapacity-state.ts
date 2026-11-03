@@ -8,17 +8,6 @@ import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 
-export async function manifestOverCapacityState(
-  request: Request,
-  db: AppDb,
-  shopId: string,
-  now: Date,
-): Promise<{ manifestOverCapacity?: { tripId: string } }> {
-  if (new URL(request.url).searchParams.get("manifestOverCapacity") !== "1") return {};
-  const manifestOverCapacity = await seedManifestOverCapacityState(db, shopId, now);
-  return manifestOverCapacity ? { manifestOverCapacity } : {};
-}
-
 /**
  * A manifest whose trip and boat capacity warnings can be read together.
  * The no-show and roll-call trails use their domain writers; only the stored

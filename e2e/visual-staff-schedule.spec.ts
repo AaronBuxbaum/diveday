@@ -525,7 +525,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?moveBlocked=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,moveBlocked",
+        );
         expect(seeded.ok()).toBe(true);
         const { moveBlocked } = (await seeded.json()) as {
           moveBlocked?: { tripId: string; title: string };
@@ -572,7 +574,9 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,mixedBoat",
+        );
         expect(seeded.ok()).toBe(true);
         const { mixedBoat } = (await seeded.json()) as {
           mixedBoat?: { tripId: string; snorkeler: string; rider: string };

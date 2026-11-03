@@ -410,7 +410,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?reviewReply=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,reviewReply",
+        );
         expect(seeded.ok()).toBe(true);
         await page.goto("/s/blue-mantis/reviews");
         await page.locator("[data-review-reply]").first().waitFor();
@@ -442,7 +444,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels");
         await page.goto("/shop/blue-mantis/reviews");
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByText(/DiveDay has stopped publishing it/).waitFor();

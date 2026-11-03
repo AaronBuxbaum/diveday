@@ -42,7 +42,7 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-trouble-states?gearOut=1");
+    await request.post("/api/test/seed-trouble-states?facts=troublePanels,gearOut");
     await page.goto("/shop/blue-mantis/gear?view=rentals");
     const rentals = page.getByRole("region", { name: "Rentals" });
     const late = rentals

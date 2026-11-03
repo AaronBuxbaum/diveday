@@ -189,7 +189,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?runningLate=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,runningLate",
+        );
         expect((await seeded.json()) as { runningLate?: unknown }).toHaveProperty("runningLate");
         await page.goto("/shop/blue-mantis?q=Priya%20Sharma");
         await page
@@ -205,7 +207,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?runningLate=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,runningLate",
+        );
         const { runningLate } = (await seeded.json()) as { runningLate?: { tripId: string } };
         if (!runningLate) throw new Error("seed-trouble-states found no seat to say it on");
         await page.goto(`/shop/blue-mantis/trips/${runningLate.tripId}/manifest`);
@@ -316,7 +320,7 @@ for (const scheme of ["light", "dark"] as const) {
         // different checkpoint than the station reads. In production the state
         // arises the other way round: a diver boards while clear and *then*
         // becomes blocked, because readiness is evaluated live.
-        await request.post("/api/test/seed-trouble-states?blockedAboard=1");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels,blockedAboard");
         await page.goto("/shop/blue-mantis");
         // The destination's own words, not a timing guess: this row is what
         // the capture exists for.
@@ -337,7 +341,7 @@ for (const scheme of ["light", "dark"] as const) {
        * comes through the trouble-states route.
        */
       test(`failed emails batch into one row (${scheme})`, async ({ page, request }) => {
-        await request.post("/api/test/seed-trouble-states?failedEmails=1");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels,failedEmails");
         await page.goto("/shop/blue-mantis");
         // A chore on a long boat: the row sits behind "and N more" (foldBoatRows).
         await openTodayBoatFolds(page);
@@ -359,7 +363,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?crewUncounted=1");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels,crewUncounted");
         await page.goto("/shop/blue-mantis");
         // The destination's own words, not a timing guess.
         await page.getByText(/crew roll call is still open/).waitFor();
@@ -377,7 +381,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?crewClash=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,crewClash",
+        );
         expect(seeded.ok()).toBe(true);
         await page.goto("/shop/blue-mantis");
         // The destination's own words, not a timing guess.
@@ -394,7 +400,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?boatClash=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,boatClash",
+        );
         expect(seeded.ok()).toBe(true);
         await page.goto("/shop/blue-mantis");
         await page.getByText("Boat on two departures").first().waitFor();
@@ -410,7 +418,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?crewClashSailed=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,crewClashSailed",
+        );
         expect(seeded.ok()).toBe(true);
         expect(
           ((await seeded.json()) as { crewClashSailed?: unknown }).crewClashSailed,
@@ -484,7 +494,9 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a finished boat's record with an uncounted seat renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        const seeded = await page.request.post("/api/test/seed-trouble-states?uncountedSeat=1");
+        const seeded = await page.request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,uncountedSeat",
+        );
         expect(seeded.ok()).toBe(true);
         const { uncountedSeat } = (await seeded.json()) as {
           uncountedSeat?: { tripId: string; personName: string };
@@ -558,7 +570,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?blockedMinor=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,blockedMinor",
+        );
         expect(seeded.ok()).toBe(true);
         const { blockedMinor } = (await seeded.json()) as {
           blockedMinor?: { bookingId: string; tripId: string };
@@ -612,7 +626,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?identityHeld=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,identityHeld",
+        );
         expect(seeded.ok()).toBe(true);
         const { identityHeld } = (await seeded.json()) as {
           identityHeld?: { diver: string; tripId: string };
@@ -892,7 +908,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?crewGap=1");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels,crewGap");
         await page.goto("/shop/blue-mantis/staffing");
         // The destination's own words, not a timing guess.
         await page.getByText("No divemaster").first().waitFor();
@@ -919,7 +935,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?crewClash=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,crewClash",
+        );
         expect(seeded.ok()).toBe(true);
         const { crewClash } = (await seeded.json()) as {
           crewClash?: { tripId: string; otherTitle: string; date: string };

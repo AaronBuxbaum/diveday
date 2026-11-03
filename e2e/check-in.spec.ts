@@ -204,7 +204,9 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
  * The rule is unit-tested in `CounterInstrument.test.tsx`; this is the browser.
  */
 test("a checked-in diver who is blocked again stays still to clear", async ({ page, request }) => {
-  const seeded = await request.post("/api/test/seed-trouble-states?checkedInBlocked=1");
+  const seeded = await request.post(
+    "/api/test/seed-trouble-states?facts=troublePanels,checkedInBlocked",
+  );
   expect(seeded.ok()).toBe(true);
   const { checkedInBlocked } = (await seeded.json()) as {
     checkedInBlocked?: { tripId: string; personName: string };

@@ -8,13 +8,9 @@ import { DEMO_COMPLETED_TRIP_TITLE } from "@/db/seed-more-trips";
 import { livePerson, liveTrip } from "@/db/trips-live";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS } from "@/lib/clock";
-import { boatClashState } from "./boat-clash";
-import { gearSliceStates } from "./gear-states";
-import { makeRoomForPartyWaiverCaptures } from "./party-waiver-capacity-state";
 
 /**
- * The boat states `seed-trouble-states` writes on request, kept beside the
- * route rather than in it. Each is opt-in for the route's own reason: it moves
+ * The boat facts of the shop's test fixture (`src/db/facts/index.ts`). Each is opt-in for the route's own reason: it moves
  * a departure's counts, and only the spec or capture that asks pays for it.
  *
  * - `checkedInBlocked` (#2410): a diver checked in at the counter, then blocked
@@ -28,23 +24,6 @@ import { makeRoomForPartyWaiverCaptures } from "./party-waiver-capacity-state";
  *   refuse (#2415, UX review 2026-10-13 item 40), so "Didn't sail" is written
  *   here rather than left to the seed's draw.
  */
-export async function boatSliceStates(request: Request, db: AppDb, shopId: string, now: Date) {
-  const asked = (flag: string) => new URL(request.url).searchParams.get(flag) === "1";
-  const checkedInBlocked = asked("checkedInBlocked")
-    ? await checkInADiverThenBlockThem(db, shopId, now)
-    : null;
-  const uncountedSeat = asked("uncountedSeat") ? await leaveASeatUncounted(db, shopId) : null;
-  const partyWaiverCapacity = asked("partyWaiverCapacity")
-    ? await makeRoomForPartyWaiverCaptures(db, shopId)
-    : null;
-  return {
-    ...(checkedInBlocked ? { checkedInBlocked } : {}),
-    ...(uncountedSeat ? { uncountedSeat } : {}),
-    ...(partyWaiverCapacity ? { partyWaiverCapacity } : {}),
-    ...(await gearSliceStates(request, db, shopId, now)),
-    ...(await boatClashState(request, db, shopId, now)),
-  };
-}
 
 /**
  * The first seat by the diver's name on the next departure the counter has
@@ -52,7 +31,7 @@ export async function boatSliceStates(request: Request, db: AppDb, shopId: strin
  * release taken back. By name, because seeded names do not move between runs
  * and booking ids do (`boardADiverThenBlockThem` in the route says why).
  */
-async function checkInADiverThenBlockThem(
+export async function checkInADiverThenBlockThem(
   db: AppDb,
   shopId: string,
   now: Date,
@@ -124,7 +103,7 @@ async function checkInADiverThenBlockThem(
  * roll call is left empty, so the record files it under "Not counted at the
  * dock". Chosen by name for the reason above.
  */
-async function leaveASeatUncounted(
+export async function leaveASeatUncounted(
   db: AppDb,
   shopId: string,
 ): Promise<{ tripId: string; personName: string } | null> {

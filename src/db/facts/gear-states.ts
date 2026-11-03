@@ -1,15 +1,13 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { createCounterRental } from "@/db/gear-counter-rentals";
-import { gearItems, gearReservations, people, shops } from "@/db/schema";
+import { gearItems, gearReservations, people } from "@/db/schema";
 import { livePerson } from "@/db/trips-live";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
-import { seedRentalLookupFleet } from "./rental-lookup-state";
 
 /**
- * The gear states `seed-trouble-states` writes on request, kept beside the
- * route rather than in it. Each is opt-in because the demo's register is calm
+ * The gear facts of the shop's test fixture (`src/db/facts/index.ts`). Each is opt-in because the demo's register is calm
  * on purpose, and only the capture that asks pays for the trouble.
  *
  * - `gearConcern` (#2570): the unit the demo already has on the bench, Reg #4,
@@ -18,34 +16,14 @@ import { seedRentalLookupFleet } from "./rental-lookup-state";
  * - `rentalWaiverWarning` (#2570): a counter rental out to someone with no
  *   waiver on file, so the Rentals list carries its waiver word.
  */
-export async function gearSliceStates(request: Request, db: AppDb, shopId: string, now: Date) {
-  const asked = (flag: string) => new URL(request.url).searchParams.get(flag) === "1";
-  const [shop] = await db
-    .select({ timezone: shops.timezone })
-    .from(shops)
-    .where(eq(shops.id, shopId))
-    .limit(1);
-  const timezone = shop?.timezone ?? "UTC";
-  const gearConcern = asked("gearConcern")
-    ? await returnTheBenchedUnitWithAConcern(db, shopId, now, timezone)
-    : null;
-  const rentalWaiverWarning = asked("rentalWaiverWarning")
-    ? await lendAMaskToSomeoneWithNoWaiver(db, shopId, now, timezone)
-    : null;
-  const rentalLookup = asked("rentalLookup") ? await seedRentalLookupFleet(db, shopId, now) : null;
-  const gearUncollected = asked("gearUncollected")
-    ? await leaveTwoUnitsUncollected(db, shopId, now, timezone)
-    : null;
-  return {
-    ...(gearConcern ? { gearConcern } : {}),
-    ...(rentalWaiverWarning ? { rentalWaiverWarning } : {}),
-    ...(rentalLookup ? { rentalLookup } : {}),
-    ...(gearUncollected ? { gearUncollected } : {}),
-  };
-}
 
 /** Two stale holds still on the wall, independent of the checked-out trouble kit. */
-async function leaveTwoUnitsUncollected(db: AppDb, shopId: string, now: Date, timezone: string) {
+export async function leaveTwoUnitsUncollected(
+  db: AppDb,
+  shopId: string,
+  now: Date,
+  timezone: string,
+) {
   const labels = ["BCD #3", "BCD #4"];
   const units = await db
     .select({ id: gearItems.id })
@@ -92,7 +70,7 @@ const CONCERN_HOLDER = "Dana Reyes";
 const CONCERN_NOTE = "Mouthpiece split on the second dive; the diver switched to the octopus.";
 
 /** Idempotent: a second call finds the return and leaves it be. */
-async function returnTheBenchedUnitWithAConcern(
+export async function returnTheBenchedUnitWithAConcern(
   db: AppDb,
   shopId: string,
   now: Date,
@@ -145,7 +123,7 @@ async function returnTheBenchedUnitWithAConcern(
 const RENTER = "Lena Okafor";
 
 /** A mask is the one kind of unit a counter lends with no certification card to show. */
-async function lendAMaskToSomeoneWithNoWaiver(
+export async function lendAMaskToSomeoneWithNoWaiver(
   db: AppDb,
   shopId: string,
   now: Date,
@@ -170,6 +148,7 @@ async function lendAMaskToSomeoneWithNoWaiver(
     .limit(1);
   if (existing) return { personId: existing.id, label: mask.label };
   const [renter] = await db
+    // diveday:allow-person-insert: a test fixture's renter, with no origin or roles to write
     .insert(people)
     .values({ shopId, fullName: RENTER })
     .returning({ id: people.id });

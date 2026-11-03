@@ -23,7 +23,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const response = await request.post("/api/test/seed-trouble-states?partyWaiverCapacity=1");
+        const response = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,partyWaiverCapacity",
+        );
         if (!response.ok()) throw new Error("party waiver capacity was not seeded");
         const body = (await response.json()) as {
           partyWaiverCapacity?: { tripId: string; capacity: number };
@@ -51,7 +53,9 @@ for (const scheme of ["light", "dark"] as const) {
         workerBaseURL,
         request,
       }) => {
-        const response = await request.post("/api/test/seed-trouble-states?partyWaiverCapacity=1");
+        const response = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,partyWaiverCapacity",
+        );
         if (!response.ok()) throw new Error("party waiver capacity was not seeded");
         const body = (await response.json()) as {
           partyWaiverCapacity?: { tripId: string; capacity: number };

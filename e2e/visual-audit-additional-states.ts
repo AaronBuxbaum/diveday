@@ -93,7 +93,9 @@ export function registerAdditionalAuditCaptures(capture: AuditCapture) {
     });
 
     test("a payment needing a check opens its Stripe reference", async ({ page, request }) => {
-      const seeded = await request.post("/api/test/seed-trouble-states?owedRefund=1");
+      const seeded = await request.post(
+        "/api/test/seed-trouble-states?facts=troublePanels,owedRefund",
+      );
       expect(seeded.ok()).toBe(true);
       await page.goto("/shop/blue-mantis/orders");
       const checks = page.getByRole("region", { name: "Payments that need a check" });

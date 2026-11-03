@@ -12,7 +12,9 @@ for (const activation of ["pointer", "keyboard"] as const) {
     page,
     request,
   }) => {
-    const seeded = await request.post("/api/test/seed-trouble-states?mergeCandidates=1");
+    const seeded = await request.post(
+      "/api/test/seed-trouble-states?facts=troublePanels,mergeCandidates",
+    );
     expect(seeded.ok()).toBe(true);
     const { mergeCandidates } = (await seeded.json()) as {
       mergeCandidates: { sourceId: string; candidateIds: string[] };

@@ -477,7 +477,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post("/api/test/seed-trouble-states?mergeCandidates=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?facts=troublePanels,mergeCandidates",
+        );
         expect(seeded.ok()).toBe(true);
         const { mergeCandidates } = (await seeded.json()) as {
           mergeCandidates: { sourceId: string; candidateIds: string[] };
@@ -826,7 +828,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels");
         await openDiverProfile(page, "Priya", "Priya Sharma");
         await openDiverFileGroup(page, "Waiver");
         // The ringed button itself, so the capture can never land before the
@@ -847,7 +849,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states");
+        await request.post("/api/test/seed-trouble-states?facts=troublePanels");
         await openDiverProfile(page, "Nadia", "Nadia Petrov");
         // The door's fact: a booked diver's card gap opens the group, and the
         // statement inside repeats the words.

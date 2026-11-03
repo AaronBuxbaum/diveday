@@ -217,7 +217,7 @@ test.describe("print", () => {
     page,
     request,
   }, testInfo) => {
-    const seeded = await request.post("/api/test/seed-trouble-states?crewGap=1");
+    const seeded = await request.post("/api/test/seed-trouble-states?facts=troublePanels,crewGap");
     expect(seeded.status()).toBe(200);
     await page.goto("/shop/blue-mantis/staffing/print");
     const sheet = page.locator(".paper-sheet");

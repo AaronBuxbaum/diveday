@@ -164,7 +164,9 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   // both, so the one row this flow needs is seeded rather than built: Lena
   // Fischer, thirteen, with her release taken back out from under her. The
   // seat comes back by id because the queue addresses its departure that way.
-  const seeded = await request.post("/api/test/seed-trouble-states?blockedMinor=1");
+  const seeded = await request.post(
+    "/api/test/seed-trouble-states?facts=troublePanels,blockedMinor",
+  );
   expect(seeded.ok()).toBe(true);
   const { blockedMinor } = (await seeded.json()) as {
     blockedMinor?: { bookingId: string; tripId: string };

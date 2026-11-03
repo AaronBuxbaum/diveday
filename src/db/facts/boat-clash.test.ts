@@ -6,7 +6,7 @@ import { rollCallEvents, trips } from "@/db/schema";
 import { createTrip } from "@/db/trips";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { boatClashState } from "./boat-clash";
+import { slideOneDepartureOntoAnotherHull } from "./boat-clash";
 
 const ctx = fileScopedShopContext();
 
@@ -54,14 +54,9 @@ describe("boat-clash trouble state", () => {
       .where(inArray(trips.id, tripIds))
       .orderBy(trips.startsAt);
 
-    const result = await boatClashState(
-      new Request("http://localhost/api/test/seed-trouble-states?boatClash=1"),
-      db,
-      shop.id,
-      now,
-    );
+    const result = await slideOneDepartureOntoAnotherHull(db, shop.id, now);
 
-    expect(result).toEqual({});
+    expect(result).toBeNull();
     const after = await db
       .select({ id: trips.id, boatId: trips.boatId, startsAt: trips.startsAt })
       .from(trips)

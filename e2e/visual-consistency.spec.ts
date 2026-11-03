@@ -68,7 +68,9 @@ for (const width of [390, 1280]) {
       page,
       request,
     }) => {
-      const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+      const seeded = await request.post(
+        "/api/test/seed-trouble-states?facts=troublePanels,mixedBoat",
+      );
       expect(seeded.ok()).toBe(true);
       const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
       if (!mixedBoat) throw new Error("The mixed departure is missing");
