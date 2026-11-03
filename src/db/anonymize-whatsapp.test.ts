@@ -9,7 +9,6 @@ import {
   bookings,
   inboundMessages,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   people,
   personRoles,
   processorErasureObligations,
@@ -124,10 +123,11 @@ describe("anonymizeDiver — WhatsApp (issue #1721)", () => {
       providerMessageId: wamid("d"),
       attemptedAt: new Date("2026-07-18T10:00:00.000Z"),
     });
-    await db.insert(notificationDeliveryAttempts).values({
+    // A second send of a resendable kind is its own row (issue #2728).
+    await db.insert(notificationDeliveries).values({
       shopId: shop.id,
       bookingId,
-      kind: "trip_reminder_24h",
+      kind: "trip_rescheduled",
       status: "sent",
       providerMessageId: wamid("a"),
       attemptedAt: new Date("2026-07-18T10:00:00.000Z"),
@@ -195,12 +195,6 @@ describe("anonymizeDiver — WhatsApp (issue #1721)", () => {
           .select({ id: notificationDeliveries.providerMessageId })
           .from(notificationDeliveries)
           .where(eq(notificationDeliveries.bookingId, bookingId))
-      ).map((row) => row.id),
-      ...(
-        await db
-          .select({ id: notificationDeliveryAttempts.providerMessageId })
-          .from(notificationDeliveryAttempts)
-          .where(eq(notificationDeliveryAttempts.bookingId, bookingId))
       ).map((row) => row.id),
       ...(
         await db

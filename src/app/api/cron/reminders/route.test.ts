@@ -50,7 +50,13 @@ beforeEach(() => {
   vi.mocked(Sentry.captureException).mockClear();
   vi.mocked(drainNotificationRetries)
     .mockReset()
-    .mockResolvedValue({ scanned: 1, sent: 1, queued: 0, failed: 0 });
+    .mockResolvedValue({
+      scanned: 1,
+      sent: 1,
+      queued: 0,
+      failed: 0,
+      held: { sent: 0, failed: 0 },
+    });
   vi.mocked(sendDueCheckoutRecoveries).mockReset().mockResolvedValue({
     scanned: 4,
     sent: 4,
@@ -188,7 +194,7 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
     expect(body.mediaDeletions).toEqual({ status: "error" });
     expect(body.notificationRetries).toEqual({
       status: "ok",
-      result: { scanned: 1, sent: 1, queued: 0, failed: 0 },
+      result: { scanned: 1, sent: 1, queued: 0, failed: 0, held: { sent: 0, failed: 0 } },
     });
   });
 

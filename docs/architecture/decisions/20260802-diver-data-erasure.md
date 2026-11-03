@@ -437,3 +437,9 @@ internal notes filed under another diver, and incident narratives and addenda. T
 name match" rules above still govern the handles that remain.
 
 **Accepted residual:** a phone number, address or health note a staffer typed next to the name in a kept sentence (another diver's internal note, a change value, a moderation note, an incident narrative) now stays with it, and the full-shop export carries it. Erasure does not search free text for the person's email or phone. Revisit if counsel asks. The stale-offline-note discard is narrowed the same way: only the erased person's own roll-call or crew note is dropped (issue #3569). A stale offline note about somebody else, written from a pre-erasure snapshot and synced after the erasure, may name the erased person in staff prose; that sentence stays, like any other staff prose that mentions them.
+
+## Amendment 2026-11-02: one delivery table (issue #2728)
+
+`notification_delivery_attempts` is dropped. `notification_deliveries` holds one row per send, so
+the scrub of `provider_detail` and `send_error` by booking (and by a guardian's quoted address)
+reaches every send, not only the latest; the rows naming the attempts table above no longer apply.

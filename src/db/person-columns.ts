@@ -657,11 +657,11 @@ const rows = [
     why: "who removed the check",
   },
   {
-    table: "held_sends",
+    table: "notification_send_queue",
     column: "actor_person_id",
     kind: "actor",
     merge: "leave",
-    why: "who tapped Send; the hold lives eight seconds",
+    why: "who tapped Send on a held send; the hold lives eight seconds and settles to null",
   },
   {
     table: "processor_erasure_obligations",

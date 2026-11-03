@@ -45,7 +45,6 @@ import {
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   notificationSendQueue,
   orders,
   people,
@@ -1343,10 +1342,9 @@ describe("diver erasure", () => {
       sendError: "bounce for elena@example.com",
       attemptedAt: erasureNow,
     });
-    // The append-only twin, written from the same `delivery.detail` in the
-    // same call (`sendNotification`, src/db/notifications.ts) — so it quotes
+    // A second send of the same link is its own row (issue #2728), quoting
     // the same address the row above does.
-    await db.insert(notificationDeliveryAttempts).values({
+    await db.insert(notificationDeliveries).values({
       shopId: shop.id,
       bookingId,
       kind: "waiver_request",
@@ -1633,19 +1631,17 @@ describe("diver erasure", () => {
     // rewritten from here — see ADR 20260802-diver-data-erasure.
     expect(order?.stripeCustomerId).toBe("cus_elena");
 
-    const [delivery] = await db
+    // Every send's row is scrubbed, not only the latest; the provider's
+    // status *code* is not prose and stays.
+    const deliveries = await db
       .select()
       .from(notificationDeliveries)
       .where(eq(notificationDeliveries.bookingId, bookingId));
-    expect(delivery).toMatchObject({ providerDetail: null, sendError: null });
-
-    // The history behind that latest state carries the same quoted address and
-    // is scrubbed with it; the provider's status *code* is not prose and stays.
-    const [attempt] = await db
-      .select()
-      .from(notificationDeliveryAttempts)
-      .where(eq(notificationDeliveryAttempts.bookingId, bookingId));
-    expect(attempt).toMatchObject({ sendError: null, sendErrorCode: "bounced" });
+    expect(deliveries).toHaveLength(2);
+    for (const delivery of deliveries) {
+      expect(delivery).toMatchObject({ providerDetail: null, sendError: null });
+    }
+    expect(deliveries.map((delivery) => delivery.sendErrorCode)).toContain("bounced");
 
     // The un-normalized PII blob, matched four ways: by the recipient address,
     // by the booking it names, and — since issue #1298 — by the address *or*

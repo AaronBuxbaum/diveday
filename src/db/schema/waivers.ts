@@ -617,10 +617,9 @@ export const waiverRecords = pgTable(
  * What we know about each *way* a waiver link was handed over — one row per
  * record per channel, holding the current state of that channel.
  *
- * It sits beside `waiver_records.delivery_*` rather than replacing it, and the
- * split is the same one `notification_deliveries` and
- * `notification_delivery_attempts` already draw: the record's own columns are
- * the **latest attempt on this link, whichever channel it used** — what the
+ * It sits beside `waiver_records.delivery_*` rather than replacing it: the
+ * record's own columns are the **latest attempt on this link, whichever
+ * channel it used** — what the
  * webhook keys on and what `getDiverWaiverRequestStatus` answers "has this
  * diver been reached at all?" from — while these rows are **per channel**, and
  * exist because the two questions have different answers the moment a shop
@@ -633,8 +632,7 @@ export const waiverRecords = pgTable(
  *
  * Deliberately out of the export bundle (`src/db/export.test.ts`): the outcome
  * a destination system could use is already on `waiver_records.csv`; this is
- * the per-channel mechanics behind it, exactly like
- * `notification_delivery_attempts`.
+ * the per-channel mechanics behind it.
  *
  * ADR 20260820-waiver-delivery-is-per-channel.
  */

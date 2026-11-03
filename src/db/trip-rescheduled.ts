@@ -28,12 +28,13 @@ import { issueBookingCapability, revokeIssuedCapabilities } from "./booking-capa
 import type { AppDb, DbExecutor } from "./client";
 import { lastDayStartsAt } from "./departure-notes";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
+import { heldQueuedOfKind, heldSendValues } from "./held-send-rows";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
   sendAndRecordNotification,
 } from "./notifications";
-import { bookings, heldSends, people, shops, trips } from "./schema";
+import { bookings, notificationSendQueue, people, shops, trips } from "./schema";
 import { isSmsOptedOut, stopListedSmsProvider } from "./sms-opt-outs";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
@@ -46,7 +47,7 @@ import { whatsAppProvidersForShops } from "./whatsapp-accounts";
  * Moving a departure, on the board or on the trip page, bumped
  * `trips.revision` so every subscribed calendar re-alerted, and told no booked
  * diver: the person most likely to stand at the dock at the old time was the
- * one person nothing reached. Now the move holds one send (`held_sends`, kind
+ * one person nothing reached. Now the move holds one send (a held send, kind
  * `trip_rescheduled`, the same eight seconds and Undo every staff send takes),
  * and when it leaves, every booked seat hears the new time by its usual
  * channel.
@@ -214,9 +215,9 @@ export async function holdRescheduleNotice(
     const placeMoved = trip.diversToldMeetingPoint || (input.meetingPointMoved ?? false);
 
     const pendingRows = await tx
-      .select({ id: heldSends.id, payload: heldSends.payload })
-      .from(heldSends)
-      .where(and(eq(heldSends.shopId, input.shopId), eq(heldSends.kind, "trip_rescheduled")));
+      .select({ id: notificationSendQueue.id, payload: notificationSendQueue.intent })
+      .from(notificationSendQueue)
+      .where(heldQueuedOfKind(input.shopId, "trip_rescheduled"));
     const pending: { id: string; payload: TripRescheduledPayload }[] = [];
     for (const row of pendingRows) {
       const parsed = heldSendPayloadSchema.safeParse(row.payload);
@@ -239,11 +240,13 @@ export async function holdRescheduleNotice(
     // The earlier holds are folded into this one, or there is nothing left to
     // say; either way they must not leave on their own.
     if (pending.length > 0) {
-      await tx.delete(heldSends).where(
+      // Still queued in the delete: a hold a client released meanwhile is
+      // already sending, and folding it would only lose the merge's record.
+      await tx.delete(notificationSendQueue).where(
         and(
-          eq(heldSends.shopId, input.shopId),
+          heldQueuedOfKind(input.shopId, "trip_rescheduled"),
           inArray(
-            heldSends.id,
+            notificationSendQueue.id,
             pending.map((held) => held.id),
           ),
         ),
@@ -320,15 +323,16 @@ export async function holdRescheduleNotice(
     const payload = heldSendPayloadSchema.parse(merged);
     const runAt = heldSendRunAt(payload, now);
     const [held] = await tx
-      .insert(heldSends)
-      .values({
-        shopId: input.shopId,
-        kind: payload.kind,
-        payload,
-        actorPersonId: input.actorPersonId,
-        runAt,
-      })
-      .returning({ id: heldSends.id });
+      .insert(notificationSendQueue)
+      .values(
+        heldSendValues({
+          shopId: input.shopId,
+          payload,
+          actorPersonId: input.actorPersonId,
+          runAt,
+        }),
+      )
+      .returning({ id: notificationSendQueue.id });
     if (!held) throw new Error("held send was not written");
     return { id: held.id, runAt, told };
   });

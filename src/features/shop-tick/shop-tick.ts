@@ -1,8 +1,8 @@
 import type { AppDb } from "@/db/client";
 import { sendDueCrewNotices } from "@/db/crew-notices";
 import { sendTrailingDeskPings } from "@/db/desk-pings";
-import { drainHeldSends } from "@/db/held-sends";
 import { sendMissingDiverAlerts } from "@/db/missing-diver-alerts";
+import { drainNotificationRetries } from "@/db/notifications";
 import { sendDueRecaps } from "@/db/recap";
 import { sendDueReminders } from "@/db/reminders";
 import { sendStaleRollCallAlerts } from "@/db/roll-call-alerts";
@@ -63,7 +63,10 @@ const RUNS = {
   // Pre-trip reminders inside each shop's own waking hours (issue #697).
   "trip-reminders": (db, now) => sendDueReminders(db, { now }),
   // Held sends whose client never came back (ADR 20260906-before-you-ask, decision 2).
-  "held-sends": (db, now) => drainHeldSends(db, now),
+  // The one send queue's held arm alone (issue #2730); its sealed retries stay
+  // on the daily drain, whose backoff is counted in daily ticks.
+  "held-sends": async (db, now) =>
+    (await drainNotificationRetries(db, { now, scope: "held" })).held,
   // A customer's own gear coming due for service (ADR 20261008-work-order-follow-up).
   "service-reminders": (db, now) => sendDueServiceReminders(db, { now }),
   // The post-dive recap, never before four hours, normally within an hour after.

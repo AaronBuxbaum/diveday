@@ -57,7 +57,6 @@ import {
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   notificationSendQueue,
   orderLineItems,
   orders,
@@ -249,9 +248,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
-  await db
-    .delete(notificationDeliveryAttempts)
-    .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos),

@@ -5,6 +5,7 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
+import { latestDeliveryOnly } from "./latest-delivery";
 import { notificationDeliveries, waiverDeliveries, waiverRecords } from "./schema";
 import type { WaiverDeliveryChannel } from "./waivers-templates";
 
@@ -206,6 +207,8 @@ export async function getDiverWaiverRequestStatus(
         eq(notificationDeliveries.shopId, shopId),
         eq(notificationDeliveries.bookingId, waiverRecords.bookingId),
         eq(notificationDeliveries.kind, "waiver_request"),
+        // One row per send: the newest link's outcome is the status.
+        latestDeliveryOnly(db),
       ),
     )
     .where(

@@ -318,8 +318,8 @@ export const DELIVERY_KIND_CLASSIFICATION = {
  * the panel says so before the staffer presses Move.
  *
  * `countDistinct` on the booking, because `notification_deliveries` holds one
- * row per (booking, kind): a diver who has had a confirmation *and* both
- * reminders is one person to write to, not three.
+ * row per send: a diver who has had a confirmation *and* both reminders is one
+ * person to write to, not three.
  */
 async function countToldSeats(db: AppDb, shopId: string, tripId: string): Promise<number> {
   const [counted] = await db

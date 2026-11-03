@@ -115,7 +115,6 @@ import {
   lostItems,
   nitroxCertifications,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   notificationSendQueue,
   orderLineItems,
   orders,
@@ -1387,7 +1386,8 @@ async function scrubBookingRows(
         ),
       );
 
-    // Provider bounce text quotes the address it failed to reach.
+    // Provider bounce text quotes the address it failed to reach. Every send
+    // is its own row (issue #2728), so this scrubs the whole trail.
     await tx
       .update(notificationDeliveries)
       .set({ providerDetail: null, sendError: null })
@@ -1395,23 +1395,6 @@ async function scrubBookingRows(
         and(
           eq(notificationDeliveries.shopId, shopId),
           inArray(notificationDeliveries.bookingId, bookingIds),
-        ),
-      );
-
-    // The append-only twin of the row above. `sendNotification`
-    // (src/db/notifications.ts) writes both from the same `delivery.detail` in
-    // the same call, so this `send_error` carries the same quoted address —
-    // scrubbing only the denormalized latest state would leave the address
-    // sitting in the history table behind it. The provider's own status code
-    // (`send_error_code`) is a code, not prose, and stays, exactly as it does
-    // on the delivery row.
-    await tx
-      .update(notificationDeliveryAttempts)
-      .set({ sendError: null })
-      .where(
-        and(
-          eq(notificationDeliveryAttempts.shopId, shopId),
-          inArray(notificationDeliveryAttempts.bookingId, bookingIds),
         ),
       );
 
@@ -2293,15 +2276,6 @@ async function scrubPiiBlob(
       )
       .returning({ id: notificationDeliveries.id });
     logFuzzyMatch(ctx, "delivery_guardian_address", deliveries.length);
-    await tx
-      .update(notificationDeliveryAttempts)
-      .set({ sendError: null })
-      .where(
-        and(
-          eq(notificationDeliveryAttempts.shopId, shopId),
-          quotes(notificationDeliveryAttempts.sendError),
-        ),
-      );
   }
   await tx
     .update(emailBounces)
@@ -2390,6 +2364,27 @@ async function scrubPiiBlob(
       ),
     );
   }
+  // A held send names its people only inside `intent` (issue #2730): a waiver
+  // send by `personId` or `bookingIds`. One still inside its hold is taken
+  // back, so nothing leaves for the erased diver.
+  await tx
+    .delete(notificationSendQueue)
+    .where(
+      and(
+        eq(notificationSendQueue.shopId, shopId),
+        isNotNull(notificationSendQueue.intent),
+        eq(notificationSendQueue.status, "queued"),
+        or(
+          sql`${notificationSendQueue.intent}->>'personId' = ${ctx.personId}`,
+          ...(owned
+            ? bookingIds.map(
+                (id) =>
+                  sql`${notificationSendQueue.intent} @> ${JSON.stringify({ bookingIds: [id] })}::jsonb`,
+              )
+            : []),
+        ),
+      ),
+    );
   return [];
 }
 
@@ -2638,16 +2633,6 @@ async function forgetWhatsAppMessageIds(
           eq(notificationDeliveries.shopId, shopId),
           inArray(notificationDeliveries.bookingId, bookingIds),
           unforgotten(notificationDeliveries.providerMessageId),
-        ),
-      );
-    await tx
-      .update(notificationDeliveryAttempts)
-      .set({ providerMessageId: forgotten(notificationDeliveryAttempts.providerMessageId) })
-      .where(
-        and(
-          eq(notificationDeliveryAttempts.shopId, shopId),
-          inArray(notificationDeliveryAttempts.bookingId, bookingIds),
-          unforgotten(notificationDeliveryAttempts.providerMessageId),
         ),
       );
   }

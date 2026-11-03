@@ -7,7 +7,6 @@ import {
   bookingCheckouts,
   interests,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   paymentOperationIntents,
   people,
   personRoles,
@@ -186,8 +185,5 @@ export async function seedFrontDesk(
   }));
   if (deliveries.length > 0) {
     await db.insert(notificationDeliveries).values(deliveries);
-    await db
-      .insert(notificationDeliveryAttempts)
-      .values(deliveries.map((delivery) => ({ ...delivery, isRetry: false })));
   }
 }

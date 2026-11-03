@@ -190,9 +190,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "shop_whatsapp_accounts",
   "shop_backup_destinations",
   "shop_backup_deliveries",
-  // A queue that empties itself: a held send is deleted by whichever claimant
-  // reaches it first (its own docblock).
-  "held_sends",
   // An obligation, deleted when it is discharged. A window here would delete
   // exactly the rows that still owe something — the local blob whose provider
   // delete never landed, the Stripe side effect whose response was lost, the

@@ -1732,8 +1732,7 @@ test("the legal pages are published, honest about what is unsettled, and reachab
 
   // The retention windows are RETENTION_DAYS as prose. If that constant moves,
   // this copy is part of that change. "Attempts", not "outcomes": the 400-day
-  // window prunes notification_delivery_attempts, and the first draft attached
-  // that number to notification_deliveries, which has no timer at all.
+  // window prunes notification_deliveries, which holds one row per send attempt.
   await expect(page.getByText("Staff activity history: 3 years.")).toBeVisible();
   await expect(
     page.getByText("Message delivery attempts: 400 days", { exact: false }),

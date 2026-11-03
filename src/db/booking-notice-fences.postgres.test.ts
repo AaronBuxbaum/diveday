@@ -1,7 +1,8 @@
 import { randomBytes } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
 import type { NotificationProvider } from "@/lib/notifications";
+import { advanceClock } from "@/test/clock";
 import {
   describePostgres,
   type PostgresTestDatabase,
@@ -9,6 +10,7 @@ import {
   waitForLockWaiters,
 } from "@/test/postgres";
 import { offerBookingHandoffByEmail } from "./booking-handoff";
+import { latestDeliveryOnly } from "./latest-delivery";
 import { drainNotificationRetries } from "./notifications";
 import {
   bookingCapabilities,
@@ -332,6 +334,8 @@ describePostgres("reschedule and handoff notice fences", () => {
         .where(and(eq(trips.id, trip.id), eq(trips.shopId, shop.id)));
     }
 
+    // The drain's outcome must read as the latest send (issue #2728).
+    advanceClock();
     let retryProviderCalls = 0;
     const retryProvider: NotificationProvider = {
       async send() {
@@ -356,7 +360,8 @@ describePostgres("reschedule and handoff notice fences", () => {
       payloadSealed: null,
       bookingId: null,
     });
-    const [delivery] = await pg.db
+    // One row per send: the first attempt's failure and the drain's verdict.
+    const deliveries = await pg.db
       .select()
       .from(notificationDeliveries)
       .where(
@@ -364,8 +369,23 @@ describePostgres("reschedule and handoff notice fences", () => {
           eq(notificationDeliveries.bookingId, booking.id),
           eq(notificationDeliveries.kind, "trip_rescheduled"),
         ),
+      )
+      .orderBy(asc(notificationDeliveries.attemptedAt));
+    expect(deliveries.map((row) => row.sendErrorCode)).toEqual([
+      "temporary_failure",
+      "stale_reschedule",
+    ]);
+    const [latest] = await pg.db
+      .select()
+      .from(notificationDeliveries)
+      .where(
+        and(
+          eq(notificationDeliveries.bookingId, booking.id),
+          eq(notificationDeliveries.kind, "trip_rescheduled"),
+          latestDeliveryOnly(pg.db),
+        ),
       );
-    expect(delivery).toMatchObject({ status: "failed", sendErrorCode: "stale_reschedule" });
+    expect(latest).toMatchObject({ status: "failed", sendErrorCode: "stale_reschedule" });
   });
 
   it("finishes a normal provider call and tracking before erasure can commit", async () => {
