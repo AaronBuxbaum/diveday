@@ -1123,6 +1123,12 @@
           "src/db/seat-claims.test.ts": "1525 -> 1529",
           "src/db/self-declared-cards.test.ts": "1849 -> 1869"
         }
+      },
+      {
+        "why": "closeout-reader.test.ts is src/db/closeout.test.ts renamed; main allows that file 903 lines, and the merge of the lower layers carried main's 903 over",
+        "files": {
+          "src/features/today/closeout-reader.test.ts": "902 -> 903"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 952,
@@ -1177,7 +1183,7 @@
     "src/db/waivers-medical.test.ts": 1001,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
-    "src/features/today/closeout-reader.test.ts": 902,
+    "src/features/today/closeout-reader.test.ts": 903,
     "src/features/today/today.test.ts": 1452,
     "src/i18n/label-maps.test.ts": 1259,
     "src/lib/agency-check.test.ts": 930,
