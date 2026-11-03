@@ -31,6 +31,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Clearing a declared-uncertified stamp
 - CMAS
 - Confirm to clear
+- Course admission
 - Course ladder
 - Declared uncertified
 - Depth ceiling

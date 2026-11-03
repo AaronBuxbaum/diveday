@@ -98,6 +98,7 @@ export const REVIEWS = [
       /^src\/(db|lib)\/check-in[^/]*\.ts$/,
       /^src\/(db|lib)\/aboard-at-sea[^/]*\.ts$/,
       /(^|\/)booking-gates[^/]*\.ts$/,
+      /(^|\/)course-admission[^/]*\.ts$/,
       /(^|\/)cert-actions[^/]*\.ts$/,
       /^src\/(db|lib)\/guardian[^/]*\.ts$/,
       /^src\/(db|lib)\/course-certified[^/]*\.ts$/,

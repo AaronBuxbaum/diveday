@@ -2,16 +2,23 @@ import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-o
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
+  type BookingActor,
   bookingIdentityColumns,
-  courseEnrollmentRefusal,
-  courseRatioRefusal,
   type IdentityClaim,
   participantTypeRefusal,
 } from "@/lib/booking-gates";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { asLevelCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
-import { courseSeatCapacity } from "@/lib/course-ratios";
+import {
+  type CourseAdmissionRefusal,
+  type CourseAdmissionRule,
+  type CourseCrew,
+  type CourseDiver,
+  type CourseRestoreRefusal,
+  courseStudentCap,
+  decideCourseAdmission,
+} from "@/lib/course-admission";
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
 import { seatListPriceCents } from "@/lib/deposits";
 import { typeChangedDeskEventKind } from "@/lib/desk-events";
@@ -325,10 +332,7 @@ export type BookingRefusal =
          */
         | "participant_type_unavailable"
         | "already_booked"
-        | "course_unstaffed"
-        | "course_prerequisite"
-        | "course_ratio_full"
-        | "course_min_age"
+        | CourseAdmissionRefusal
         | "person_not_found"
         | "date_request_offer_unavailable"
         | "date_request_departure_conflict"
@@ -654,23 +658,47 @@ export async function tripCourseCrewCounts(
  * the wait-list join and the roll read (issue #2679): null when the departure
  * is no course session or its course carries no ratio, 0 when no instructor is
  * rostered (the sale refuses `course_unstaffed`), otherwise
- * `courseSeatCapacity` over the rostered crew. The sale reads the same parts
- * inside its own lock in `createBookingRecord`, which needs the course row for
- * its enrollment gates as well.
+ * `courseSeatCapacity` over the rostered crew (`courseStudentCap`). The sale
+ * reads the same rows inside its own lock (`readCourseSession`).
  */
 export async function courseStudentSeatCap(
   tx: DbExecutor,
   trip: { id: string; shopId: string; courseId: string | null },
 ): Promise<number | null> {
-  if (!trip.courseId) return null;
+  const session = await readCourseSession(tx, trip);
+  return courseStudentCap(session.course, session.crew);
+}
+
+/** What a departure that is no course session reads as: no rule, no crew. */
+const NO_COURSE_SESSION: { course: null; crew: CourseCrew } = {
+  course: null,
+  crew: { instructorCount: 0, assistantCount: 0 },
+};
+
+/**
+ * **A course session's rule and rostered crew**, the rows every door hands
+ * `decideCourseAdmission` (`src/lib/course-admission.ts`). Read under the
+ * caller's trip-row lock, so a crew edit and a seat serialize. A departure
+ * that is no course session, or whose course row this shop cannot see, reads
+ * as no rule at all, and the course gates stand down.
+ */
+export async function readCourseSession(
+  tx: DbExecutor,
+  trip: { id: string; shopId: string; courseId: string | null },
+): Promise<{ course: CourseAdmissionRule | null; crew: CourseCrew }> {
+  if (!trip.courseId) return NO_COURSE_SESSION;
   const [course] = await tx
-    .select()
+    .select({
+      agency: courses.agency,
+      isIntroCourse: courses.isIntroCourse,
+      minimumCertificationLevel: courses.minimumCertificationLevel,
+      minimumAge: courses.minimumAge,
+    })
     .from(courses)
     .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, trip.shopId)))
     .limit(1);
-  const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, trip.id);
-  if (instructorCount === 0) return 0;
-  return courseSeatCapacity(course ?? null, instructorCount, assistantCount);
+  if (!course) return NO_COURSE_SESSION;
+  return { course, crew: await tripCourseCrewCounts(tx, trip.id) };
 }
 
 /**
@@ -1027,40 +1055,10 @@ async function createBookingRecord(
   const typeRefusal = participantTypeRefusal({ actor: req.actor, participantType, trip });
   if (typeRefusal) return { ok: false, reason: typeRefusal };
 
-  const [course] = trip.courseId
-    ? await tx
-        .select()
-        .from(courses)
-        .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, req.shopId)))
-        .limit(1)
-    : [];
-  // A course session is unsafe to market as open until an instructor is on
-  // the session. This is a booking gate, not a cosmetic staff warning.
-  let entryLevelSeatCap: number | null = null;
-  if (course) {
-    const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, trip.id);
-    if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
-    // Which in-water ratio (if any) this session carries is decided in one
-    // place — `courseRatioKind` in src/lib/course-ratios.ts — so a DSD taster
-    // can't be gated at the Open Water number here and something else there.
-    // Null means the session carries no ratio cap and falls back to the trip's
-    // own stated capacity, same as before this gate existed.
-    entryLevelSeatCap = courseSeatCapacity(course, instructorCount, assistantCount);
-  }
-
   const resolved = await resolveBookingPerson(tx, req);
   if (!resolved.ok) return resolved;
   let { person, identityUnconfirmed, identityClaim } = resolved;
   const { pendingInsert } = resolved;
-
-  // Enrollment is a diver's (issue #2226): a snorkeler or a rider on a course
-  // session is a passenger beside the students, asked none of the course's
-  // card or age gates and counted against none of its in-water ratio.
-  const student = Boolean(course) && isDiver(participantType);
-  if (course && student) {
-    const refusal = await courseEnrollmentFor(tx, req, course, person, trip.startsAt);
-    if (refusal) return { ok: false, reason: refusal };
-  }
 
   // `seatHeld`, not "every status but cancelled": a seat a staffer marked
   // absent at the counter is the shop's to sell again, and this count is the
@@ -1087,9 +1085,19 @@ async function createBookingRecord(
   if (seatFull) {
     return { ok: false, reason: seatFull };
   }
-  // The ratio counts students, who are the divers on a course session.
-  const ratioRefusal = student ? courseRatioRefusal(held.divers, entryLevelSeatCap) : null;
-  if (ratioRefusal) return { ok: false, reason: ratioRefusal };
+  // The course session's own gates, after the boat's: staffing, the card, age
+  // and the crew's ratio, decided in one place (`decideCourseAdmission`).
+  // Enrollment is a diver's (issue #2226): a snorkeler or a rider on a course
+  // session is a passenger beside the students, asked none of the card or age
+  // gates and counted against none of the ratio.
+  const courseRefusal = await courseSaleRefusal(tx, {
+    trip,
+    actor: req.actor,
+    personId: person?.id,
+    student: isDiver(participantType),
+    studentsHeld: held.divers,
+  });
+  if (courseRefusal) return { ok: false, reason: courseRefusal };
 
   // The trip's own cert/specialty/nitrox gate (DOM-M6). Every door that sells a
   // seat lands here — the public schedule form, `seatDiver`'s four staff doors,
@@ -1506,50 +1514,83 @@ async function resolveBookingPerson(
 type PendingWalkIn = { fullName: string; email: string | null; phone?: string };
 
 /**
- * **A course's enrollment gates**, read under the trip lock and decided by
- * `courseEnrollmentRefusal` (`src/lib/booking-gates.ts`): the card gate fails
- * closed, the staff-only age gate fails open. Reads the diver's cards only when
- * the course asks for one, and the shop's calendar only when age is in play.
+ * **A course session's answer for a seat put on it**, a new sale or a staff
+ * move alike: the rows read under the caller's trip lock, then
+ * `decideCourseAdmission` at `sale` strictness. Null admits, and a departure
+ * that is no course session reads nothing past its own trip row.
  */
-async function courseEnrollmentFor(
+async function courseSaleRefusal(
   tx: DbExecutor,
-  req: BookingRequest,
-  course: typeof courses.$inferSelect,
-  person: typeof people.$inferSelect | undefined,
-  startsAt: Date,
-): Promise<"course_prerequisite" | "course_min_age" | null> {
-  if (!course.minimumCertificationLevel && !course.minimumAge) return null;
-  const levelCards =
-    person && course.minimumCertificationLevel
-      ? await tx
-          .select()
-          .from(cards)
-          .where(
-            and(
-              eq(cards.kind, "level"),
-              eq(cards.shopId, req.shopId),
-              eq(cards.personId, person.id),
-              isNull(cards.deletedAt),
-            ),
-          )
-          .then((rows) => rows.map(asLevelCard))
-      : [];
-  let courseDate: string | null = null;
-  if (req.actor !== "public" && course.minimumAge && person?.dateOfBirth) {
-    const [shop] = await tx
-      .select({ timezone: shops.timezone })
-      .from(shops)
-      .where(eq(shops.id, req.shopId))
-      .limit(1);
-    if (!shop) throw new Error(`createBookingRecord: shop ${req.shopId} not found`);
-    courseDate = calendarDateInTimezone(startsAt, shop.timezone);
-  }
-  return courseEnrollmentRefusal({
-    actor: req.actor,
-    course,
-    diver: person ? { cards: levelCards, dateOfBirth: person.dateOfBirth } : null,
-    courseDate,
+  input: {
+    trip: { id: string; shopId: string; courseId: string | null; startsAt: Date };
+    actor: BookingActor;
+    /** Undefined for a walk-in whose row is not written yet. */
+    personId: string | undefined;
+    student: boolean;
+    studentsHeld: number;
+  },
+): Promise<CourseAdmissionRefusal | null> {
+  const { trip, actor, student } = input;
+  const session = await readCourseSession(tx, trip);
+  const enrollment =
+    session.course && student
+      ? await readCourseDiver(tx, trip.shopId, actor, session.course, input.personId, trip.startsAt)
+      : { diver: null, courseDate: null };
+  return decideCourseAdmission({
+    strictness: "sale",
+    actor,
+    course: session.course,
+    student,
+    crew: session.crew,
+    studentsHeld: input.studentsHeld,
+    ...enrollment,
   });
+}
+
+/**
+ * **What a course's enrollment gates know about the student**, read only as
+ * far as the course asks: the diver's level cards when it needs one, and
+ * their date of birth with the shop's calendar day of the session when an
+ * age gate is in play at the staff door. A walk-in with no row yet is no
+ * record at all, which the card gate fails closed on and the age gate open.
+ */
+async function readCourseDiver(
+  tx: DbExecutor,
+  shopId: string,
+  actor: BookingActor,
+  course: CourseAdmissionRule,
+  personId: string | undefined,
+  startsAt: Date,
+): Promise<{ diver: CourseDiver | null; courseDate: string | null }> {
+  if (!personId) return { diver: null, courseDate: null };
+  const levelCards = course.minimumCertificationLevel
+    ? await tx
+        .select()
+        .from(cards)
+        .where(
+          and(
+            eq(cards.kind, "level"),
+            eq(cards.shopId, shopId),
+            eq(cards.personId, personId),
+            isNull(cards.deletedAt),
+          ),
+        )
+        .then((rows) => rows.map(asLevelCard))
+    : [];
+  if (actor === "public" || !course.minimumAge) {
+    return { diver: { cards: levelCards, dateOfBirth: null }, courseDate: null };
+  }
+  const [row] = await tx
+    .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
+    .from(people)
+    .innerJoin(shops, eq(shops.id, people.shopId))
+    // diveday:allow-deleted-people: the seat's own diver, whose age the session measures.
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .limit(1);
+  return {
+    diver: { cards: levelCards, dateOfBirth: row?.dateOfBirth ?? null },
+    courseDate: row?.dateOfBirth ? calendarDateInTimezone(startsAt, row.timezone) : null,
+  };
 }
 
 /**
@@ -1774,7 +1815,7 @@ export type RestoreBookingOutcome =
   | "trip_cancelled"
   | "already_active"
   | "trip_full"
-  | "course_ratio_full"
+  | CourseRestoreRefusal
   | "date_request_departure_conflict"
   | "date_request_offer_unavailable"
   | "date_request_party_full"
@@ -1867,23 +1908,20 @@ export async function restoreBooking(
     );
     if (full) return full;
 
-    // The ratio counts students, the divers on a course session; a snorkeler
-    // or a rider beside them is not one (issue #2226).
-    if (trip.courseId && isDiver(booking.participantType)) {
-      const [course] = await tx
-        .select()
-        .from(courses)
-        .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, shopId)))
-        .limit(1);
-      const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, trip.id);
-      // Null means the session carries no ratio at all, so capacity alone binds
-      // — exactly as before. A gated session that has since lost its last
-      // instructor caps at zero and refuses too: a seat cannot be handed back
-      // to a session that could not sell it in the first place.
-      const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      const ratioRefusal = courseRatioRefusal(held.divers, seatCap);
-      if (ratioRefusal) return ratioRefusal;
-    }
+    // The course session's gates at `restore` strictness: the crew's ratio
+    // alone, counting students, the divers on the session (issue #2226). A
+    // gated session that has since lost its last instructor caps at zero and
+    // refuses too: a seat cannot be handed back to a session that could not
+    // sell it in the first place.
+    const session = await readCourseSession(tx, trip);
+    const courseRefusal = decideCourseAdmission({
+      strictness: "restore",
+      course: session.course,
+      student: isDiver(booking.participantType),
+      crew: session.crew,
+      studentsHeld: held.divers,
+    });
+    if (courseRefusal) return courseRefusal;
 
     await tx
       .update(bookings)
@@ -1939,12 +1977,8 @@ export type MoveBookingRefusal =
   | "roll_call_started"
   | "trip_full"
   | "divers_full"
-  | "course_ratio_full"
-  | "course_unstaffed"
-  /** The course's prerequisite card is no longer on file. */
-  | "course_prerequisite"
-  /** Too young for the course on the day that session runs. */
-  | "course_min_age"
+  /** The target session's own gates, re-asked: a card can be revoked since the sale. */
+  | CourseAdmissionRefusal
   | "trip_prerequisite"
   | "date_request_departure_conflict"
   | "date_request_offer_unavailable"
@@ -1986,52 +2020,6 @@ export type MoveBookingOutcome =
  * departure's activity, desk events, arrival marks and sealed course forms,
  * which are a record of what happened there.
  */
-/**
- * A course session's prerequisite card and minimum age, for a person already
- * on the books: the same two checks `createBookingRecord` makes for staff, with
- * the same postures. A missing card fails closed; an unknown date of birth
- * fails open, because nothing collects one at booking and readiness checks age
- * at the dock.
- */
-async function courseGateRefusal(
-  tx: DbExecutor,
-  shopId: string,
-  personId: string,
-  course: typeof courses.$inferSelect | undefined,
-  startsAt: Date,
-): Promise<"course_prerequisite" | "course_min_age" | null> {
-  if (!course || (!course.minimumCertificationLevel && !course.minimumAge)) return null;
-  const levelCards = course.minimumCertificationLevel
-    ? await tx
-        .select()
-        .from(cards)
-        .where(
-          and(
-            eq(cards.kind, "level"),
-            eq(cards.shopId, shopId),
-            eq(cards.personId, personId),
-            isNull(cards.deletedAt),
-          ),
-        )
-        .then((rows) => rows.map(asLevelCard))
-    : [];
-  const [row] = await tx
-    .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
-    .from(people)
-    .innerJoin(shops, eq(shops.id, people.shopId))
-    // diveday:allow-deleted-people: the seat's own diver, whose age the session measures.
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
-    .limit(1);
-  // The sale's own decision (`courseEnrollmentRefusal`), at the staff door: a
-  // move is staff's, so the age gate applies and fails open without a birth date.
-  return courseEnrollmentRefusal({
-    actor: "staff",
-    course,
-    diver: { cards: levelCards, dateOfBirth: row?.dateOfBirth ?? null },
-    courseDate: row ? calendarDateInTimezone(startsAt, row.timezone) : null,
-  });
-}
-
 async function moveAdmissionRefusal(
   tx: DbExecutor,
   shopId: string,
@@ -2055,24 +2043,19 @@ async function moveAdmissionRefusal(
     trip: target,
   });
   if (typeRefusal) return { ok: false, reason: "target_unavailable" };
-  if (target.courseId && isDiver(booking.participantType)) {
-    const [course] = await tx
-      .select()
-      .from(courses)
-      .where(and(eq(courses.id, target.courseId), eq(courses.shopId, shopId)))
-      .limit(1);
-    const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, target.id);
-    if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
-    const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-    const ratioRefusal = courseRatioRefusal(held.divers, seatCap);
-    if (ratioRefusal) return { ok: false, reason: ratioRefusal };
-    // The course's own two gates, read again rather than trusted from the
-    // sale: a card can be revoked since, and age is measured on the day the
-    // session runs, so an earlier session of the same course can be one the
-    // student is still too young for (H-20260724-certification-levels-agency-rules).
-    const gate = await courseGateRefusal(tx, shopId, booking.personId, course, target.startsAt);
-    if (gate) return { ok: false, reason: gate };
-  }
+  // The target session's gates at the sale's strictness, at the staff door,
+  // read again rather than trusted from the sale: a card can be revoked since,
+  // and age is measured on the day the session runs, so an earlier session of
+  // the same course can be one the student is still too young for
+  // (H-20260724-certification-levels-agency-rules).
+  const courseRefusal = await courseSaleRefusal(tx, {
+    trip: target,
+    actor: "staff",
+    personId: booking.personId,
+    student: isDiver(booking.participantType),
+    studentsHeld: held.divers,
+  });
+  if (courseRefusal) return { ok: false, reason: courseRefusal };
   const identityUnconfirmed = booking.identityUnconfirmedAt !== null;
   const admission = await tripAdmissionFor(
     tx,

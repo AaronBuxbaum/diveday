@@ -207,6 +207,16 @@
   (`CARD_PROCESSING_SINCE`, the migration that added it) is listed apart, in one collapsed "N cards
   certified before {date}" line, and never called late: nothing is backfilled, so a card truly
   never sent is still there to tick. Gates nothing.
+- **Course admission** — whether a **course session** takes a seat, asked by every door that puts
+  one on it: a new booking and a staff move at **sale** strictness (staffing, then the course's
+  `minimum_certification_level` card, then its minimum age, then the crew's in-water ratio), an
+  undone removal and an undone no-show at **restore** strictness (the ratio alone). Staffing is
+  asked of everyone aboard; the card, age and ratio are the student's, and a priced snorkeler or
+  rider beside the class is asked none of them. The card gate fails *closed*, the age gate fails
+  open and is staff's alone. The boat's own limits are asked first, so a full boat is refused as
+  full. One pure function, `decideCourseAdmission` (`src/lib/course-admission.ts`), with the
+  strictness table beside it. Distinct from **Trip admission**, which stands down on a course
+  session.
 - **Course ladder** — the Courses page's "N did Discover Scuba in the last 12 months · M went on to Open Water",
   with the names of those who did not and an Invite to the next course's soonest session with a
   seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-20261014-one-to-one-invite's one-at-a-time invite under the

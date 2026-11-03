@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { courseRatioRefusal } from "@/lib/booking-gates";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { courseRatioRefusal } from "@/lib/course-admission";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { DateRequestOutcome } from "@/lib/date-requests";
 import type { DiveDeclaration } from "@/lib/dive-declaration";
