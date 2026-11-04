@@ -60,6 +60,8 @@ import {
   isNull,
   like,
   ne,
+  not,
+  notInArray,
   or,
   type SQL,
   sql,
@@ -1526,6 +1528,30 @@ async function scrubActivityEvents(
       ),
     );
 
+  // The same field-level treatment for a line the erased person wrote about
+  // somebody else (issue #3807): a former staffer's medical clearance, card
+  // verification or roll-call action on another diver's record. The line is
+  // the shop's trail of a safety act on a third party, so its code, subject,
+  // seat and trip stay, and only the actor's name goes, in the one key every
+  // such payload carries it. A line about the erased person themselves, on
+  // their own seat or record, is left to the whole-line statement below.
+  const wroteAboutSomeoneElse = and(
+    eq(activityEvents.actorPersonId, personId),
+    or(isNotNull(activityEvents.subjectPersonId), isNotNull(activityEvents.bookingId)),
+    or(isNull(activityEvents.subjectPersonId), ne(activityEvents.subjectPersonId, personId)),
+    owned
+      ? or(isNull(activityEvents.bookingId), notInArray(activityEvents.bookingId, bookingIds))
+      : undefined,
+    sql`${activityEvents.params} ? 'actor'`,
+    ne(activityEvents.code, ACTIVITY_REDACTED.code),
+  );
+  await tx
+    .update(activityEvents)
+    .set({
+      params: sql`jsonb_set(${activityEvents.params}, '{actor}', to_jsonb(${ANONYMIZED_PERSON_NAME}::text))`,
+    })
+    .where(and(eq(activityEvents.shopId, shopId), wroteAboutSomeoneElse));
+
   await tx
     .update(activityEvents)
     .set(ACTIVITY_REDACTED)
@@ -1534,7 +1560,7 @@ async function scrubActivityEvents(
         eq(activityEvents.shopId, shopId),
         or(
           owned ? inArray(activityEvents.bookingId, bookingIds) : undefined,
-          eq(activityEvents.actorPersonId, personId),
+          and(eq(activityEvents.actorPersonId, personId), not(wroteAboutSomeoneElse)),
           eq(activityEvents.subjectPersonId, personId),
         ),
       ),
