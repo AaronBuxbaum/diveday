@@ -44,6 +44,22 @@ describe("sentry, loaded on first use", () => {
     expect(sdk.captureMessage).toHaveBeenCalledWith("hello", { level: "warning" });
   });
 
+  it("checks in only the monitors SENTRY_CRON_MONITORS lists, when it is set", async () => {
+    vi.stubEnv("SENTRY_CRON_MONITORS", "diveday-shop-tick, diveday-usage");
+    try {
+      const { sentry } = await load("https://key@sentry.invalid/1");
+      expect(await sentry.captureCheckIn({ monitorSlug: "diveday-shop-tick", status: "ok" })).toBe(
+        "check-in-id",
+      );
+      expect(await sentry.captureCheckIn({ monitorSlug: "diveday-recaps", status: "ok" })).toBe(
+        undefined,
+      );
+      expect(sdk.captureCheckIn).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("reports nothing and throws nothing when the SDK cannot load", async () => {
     const { sentry } = await load("https://key@sentry.invalid/1", () => {
       throw new Error("module missing");
