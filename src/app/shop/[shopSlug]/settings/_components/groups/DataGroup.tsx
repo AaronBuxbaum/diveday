@@ -9,7 +9,7 @@ import { readShopConnections } from "@/db/connections";
 import type { MediaDeletionKind, ProcessorErasureTarget } from "@/db/schema";
 import { readUnfinished } from "@/db/unfinished";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import type { ConnectionProvider, ConnectionState } from "@/lib/connections";
+import type { ConnectionProvider } from "@/lib/connections";
 import { formatShortDate } from "@/lib/format";
 import { type ErasureFailure, erasureFailureOf } from "@/lib/payments/erasure-failure";
 import {
@@ -18,7 +18,7 @@ import {
   retryProcessorErasureAction,
 } from "../../data-actions";
 import { SettingsDoorRow } from "../SettingsRows";
-import { DATA_GROUP, SettingsGroup, type SettingsView } from "./kit";
+import { CONNECTION_STATE_KEYS, DATA_GROUP, SettingsGroup, type SettingsView } from "./kit";
 
 /**
  * Which stored file a deletion never finished on. Without an entry here the
@@ -95,14 +95,6 @@ const CONNECTION_PROVIDER_KEYS: Record<ConnectionProvider, StaffMessageKey> = {
   zapier: "settings.main.connections.provider.zapier",
   backups: "settings.main.connections.provider.backups",
   calendarFeeds: "settings.main.connections.provider.calendarFeeds",
-};
-
-/** The one state word, from `connectionState` (src/lib/connections.ts, issue #2741). */
-const CONNECTION_STATE_KEYS: Record<ConnectionState, StaffMessageKey> = {
-  notConnected: "settings.main.connections.state.notConnected",
-  connected: "settings.main.connections.state.connected",
-  needsAttention: "settings.main.connections.state.needsAttention",
-  disconnected: "settings.main.connections.state.disconnected",
 };
 
 function processorErasureFailureFact(t: StaffTranslator, lastError: string | null) {
@@ -344,6 +336,16 @@ export async function DataGroup({
         <SettingsDoorRow
           href={`/shop/${shopSlug}/settings/${canExport ? "export" : canImport ? "import" : "integrations"}`}
           heading={t("settings.main.yourData.heading")}
+          state={
+            connections.some(
+              (c) =>
+                c.provider !== "stripe" &&
+                c.provider !== "whatsapp" &&
+                c.state === "needsAttention",
+            )
+              ? { text: t(CONNECTION_STATE_KEYS.needsAttention), tone: "warning" }
+              : undefined
+          }
         />
       </InsetGroup>
     </SettingsGroup>

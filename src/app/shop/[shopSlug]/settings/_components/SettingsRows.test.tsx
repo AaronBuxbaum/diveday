@@ -179,3 +179,19 @@ describe("one focus ring, whichever kind of row", () => {
     );
   });
 });
+
+describe("SettingsDoorRow state pill (issue #3661)", () => {
+  it("draws the state word beside the caret and none when there is no state", () => {
+    render(
+      <SettingsDoorRow
+        href={DOOR}
+        heading="WhatsApp"
+        state={{ text: "Needs attention", tone: "warning" }}
+      />,
+    );
+    expect(screen.getByText("Needs attention")).toBeTruthy();
+    cleanup();
+    render(<SettingsDoorRow href={DOOR} heading="WhatsApp" />);
+    expect(screen.queryByText("Needs attention")).toBeNull();
+  });
+});
