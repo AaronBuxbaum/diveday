@@ -364,19 +364,27 @@ export type PrintedMedicalAlerts = {
 };
 
 /**
- * **Hands one departure's medical alert words to "Print with medical alerts"**
- * (issue #2990, H-20261023-medical-alert-for-the amendment of 2026-10-24). `not_found` for a departure
- * that is not this shop's live one; `forbidden` unless
- * `canPersonPrintMedicalAlerts` admits the printer now (the owner or a
- * manager). Otherwise one `medical_alert_printed` line per diver on the trail
- * first, every print its own line (each one is another sheet), and the words
- * of each diver whose line the trail took. A held seat prints none.
+ * **Reads one departure's medical alert words for "Print with medical
+ * alerts"** (issue #2990, H-20261023-medical-alert-for-the amendment of
+ * 2026-10-24), writing nothing. `not_found` for a departure that is not this
+ * shop's live one; `forbidden` unless `canPersonPrintMedicalAlerts` admits the
+ * printer now (the owner or a manager). A held seat has no words.
+ *
+ * The words are in memory only: they reach no screen or paper until the caller
+ * has asked whether the packet can print and then
+ * {@link recordMedicalAlertsPrint} has written the trail (issue #3727).
  */
-export async function medicalAlertsForPrint(
+export async function readMedicalAlertsForPrint(
   db: DbExecutor,
   input: { shopId: string; tripId: string; printerId: string },
 ): Promise<
-  { ok: true; printed: PrintedMedicalAlerts } | { ok: false; reason: "not_found" | "forbidden" }
+  | {
+      ok: true;
+      printed: PrintedMedicalAlerts;
+      /** The diver behind each seat in `printed.texts`, whose trail takes one line. */
+      divers: ReadonlyArray<{ bookingId: string; personId: string }>;
+    }
+  | { ok: false; reason: "not_found" | "forbidden" }
 > {
   const [trip] = await db
     .select({ id: trips.id })
@@ -394,17 +402,43 @@ export async function medicalAlertsForPrint(
     .limit(1);
   if (!printer) return { ok: false, reason: "forbidden" };
   const texts = new Map<string, string>();
+  const divers: Array<{ bookingId: string; personId: string }> = [];
   for (const [bookingId, alert] of await medicalAlertsForTrip(db, input.shopId, trip.id)) {
+    texts.set(bookingId, alert.text);
+    divers.push({ bookingId, personId: alert.personId });
+  }
+  return { ok: true, printed: { texts, printedBy: printer.name, printedAt: nowDate() }, divers };
+}
+
+/**
+ * **Records the print** the words were read for: one `medical_alert_printed`
+ * line per diver on the trail, every print its own line (each one is another
+ * sheet), and the words of each diver whose line the trail took. Call it only
+ * once the packet is known to be printable (issue #3727), and hand the sheet
+ * nothing but what it returns: the words never reach paper without a record.
+ */
+export async function recordMedicalAlertsPrint(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    tripId: string;
+    printerId: string;
+    read: Extract<Awaited<ReturnType<typeof readMedicalAlertsForPrint>>, { ok: true }>;
+  },
+): Promise<PrintedMedicalAlerts> {
+  const texts = new Map<string, string>();
+  for (const { bookingId, personId } of input.read.divers) {
     const recorded = await recordDiverActivity(db, {
       shopId: input.shopId,
-      personId: alert.personId,
+      personId,
       actorPersonId: input.printerId,
       code: "medical_alert_printed",
-      departureId: trip.id,
+      departureId: input.tripId,
     });
-    if (recorded) texts.set(bookingId, alert.text);
+    const text = input.read.printed.texts.get(bookingId);
+    if (recorded && text !== undefined) texts.set(bookingId, text);
   }
-  return { ok: true, printed: { texts, printedBy: printer.name, printedAt: nowDate() } };
+  return { ...input.read.printed, texts };
 }
 
 /**

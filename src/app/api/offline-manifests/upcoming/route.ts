@@ -141,9 +141,9 @@ async function getUpcomingManifests() {
             boatSafety,
             undefined,
             (advisory) =>
-        advisory.params.verificationReasons?.length
-          ? t("shared.offlineManifest.juniorCheckRequired")
-          : depthWarningText(t, advisory),
+              advisory.params.verificationReasons?.length
+                ? t("shared.offlineManifest.juniorCheckRequired")
+                : depthWarningText(t, advisory),
           );
           return {
             ...payload,
