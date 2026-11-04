@@ -47,7 +47,7 @@ const linkClass =
  * Packages when something is on sale. Keep the map here rather than adding
  * per-page cross-links.
  *
- * Never rendered in `?embed=1` mode: the layout drops the entire header there
+ * Never rendered in a frame (`/s/<slug>/embed/**`): the layout drops the entire header there
  * (ADR 20260726-schedule-embed), so an iframe on a shop's own site gets the
  * schedule and nothing else.
  */

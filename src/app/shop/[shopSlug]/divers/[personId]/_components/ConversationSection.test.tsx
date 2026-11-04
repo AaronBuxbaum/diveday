@@ -3,9 +3,10 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ThreadEntry } from "@/db/inbound-messages";
+import { resolveDiverNotice } from "@/i18n/diver-notice-text";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS } from "@/lib/clock";
-import { type DiverNotice, resolveDiverNotice } from "@/lib/diver-notices";
+import type { DiverNotice } from "@/lib/diver-notices";
 import { noticeForForm } from "@/lib/staff-notices";
 import { ConversationSection } from "./ConversationSection";
 

@@ -134,3 +134,24 @@ above every public page, and a frame's real chrome is nothing, so there it was a
 vanished and took the frame up with it. The layout sits above both segments and cannot see the
 query, but the segments are the frame: each one's skeleton and page render `EmbedChromeCollapse`, a
 `<style>` that hides the bar from the static shell until the chrome streams in as nothing.
+
+## Amendment, 2026-11-03 — a frame is where the URL is (issue #2744)
+
+`?embed=1` is deleted, not redirected (Aaron, 2026-11-02; H-20260815-no-legacy). Everything a shop
+can frame now lives under one path prefix, `/s/<slug>/embed/`: the four catalogue widgets as before,
+the calendar at `embed/calendar`, and one departure's booking page at `embed/trip/<id>`
+(`isEmbedRoute` in `src/lib/embed-routes.ts`). The proxy grants the framing exception, the embed
+header and the host's look on that path alone, and rewrites nothing: the 2026-09-25 internal
+segments, `embedRenderPath`, `embedPublicPath` and the second-pass handling they needed are gone,
+and `embed/schedule` and `trips/<id>/embed` now answer 404. A query parameter that grants framing
+can be forgotten on one link and smuggled onto another; a path can be neither, and each segment's
+`loading.tsx` is the frame's own skeleton without a rewrite.
+
+The storefront (`/s/<slug>`) and the trip page (`/s/<slug>/trips/<id>`) are never framable, with or
+without a query. The trip page and its framed twin render the same `TripDetail`, with `isEmbed` set
+by the route file rather than read off the URL, so there is still one copy of the booking and its
+capacity check. `TripRef.embed` survives as the action's destination: a booking or wait-list
+redirect from the frame lands on `embed/trip/<id>`. `public/embed.js` frames the calendar at its
+path and maps a lightbox link (still the real page, so it works without the loader) onto its twin
+under `embed/`; no data attribute changed. A raw iframe a shop pasted with `?embed=1` instead of the
+loader now shows the storefront with framing denied.

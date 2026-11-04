@@ -33,6 +33,7 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
+import { embedTripPath } from "@/lib/embed-routes";
 import { formValue, parseForm, readForm, trimmedText } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -71,10 +72,10 @@ import { sendJoinMail } from "./send-join-mail";
 export type TripRef = {
   shopSlug: string;
   tripId: string;
-  /** True inside the embed widget (docs ADR 20260726-schedule-embed) — every
-   * redirect this file constructs carries it forward, so a book/waitlist/pay
-   * transition never drops the diver out of the compact surface and back
-   * into full page chrome. */
+  /** True when the page that called is the framed trip page
+   * (`embed/trip/<id>`, docs ADR 20260726-schedule-embed). A destination, not a
+   * rendering mode: every redirect this file constructs lands back on that
+   * path (`tripPagePath`). */
   embed?: boolean;
 };
 
@@ -100,9 +101,13 @@ function returningDiverOptIn(formData: FormData, embed: boolean | undefined) {
   return { optedIn, deviceToken, deviceGeneration };
 }
 
-/** `&embed=1` after an existing query, `?embed=1` to start one — never plain mode. */
-function embedParam(embed: boolean | undefined, delimiter: "&" | "?"): string {
-  return embed ? `${delimiter}embed=1` : "";
+/**
+ * The page a redirect lands on: the trip page, or — when the action was called
+ * from inside the frame — the framed trip page, so a book, wait-list or pay
+ * transition never drops the diver out of the compact surface.
+ */
+function tripPagePath({ shopSlug, tripId, embed }: TripRef): string {
+  return embed ? embedTripPath(shopSlug, tripId) : publicTripPath(shopSlug, tripId);
 }
 
 /**
@@ -411,7 +416,7 @@ export async function bookSpot(
       failedIndex: outcome.failedIndex ?? 0,
       leadLocale: (await requestFirstHandLocale()) ?? locale,
     });
-    redirect(`${publicTripPath(shopSlug, tripId)}?sent=1${embedParam(embed, "&")}`);
+    redirect(`${tripPagePath({ shopSlug, tripId, embed })}?sent=1`);
   }
   if (!outcome.ok) {
     // This form is anonymous (the schedule route is auth-exempt), and the
@@ -486,7 +491,7 @@ export async function bookSpot(
   );
   const primaryBookingId = outcome.bookings[0]?.bookingId;
   if (!primaryBookingId) {
-    redirect(`${publicTripPath(shopSlug, tripId)}?error=unavailable${embedParam(embed, "&")}`);
+    redirect(`${tripPagePath({ shopSlug, tripId, embed })}?error=unavailable`);
   }
   const [confirmedBooking, tripNow] = await Promise.all([
     getBookingForTrip(dbi, shopNow.id, tripId, primaryBookingId),
@@ -578,10 +583,11 @@ export async function bookSpot(
   // A capability that somehow failed to mint degrades to the plain trip page
   // rather than a broken link — and in the embed it degrades *within the
   // frame*, never out to a `/ready` the frame cannot show.
+  const framed = embedTripPath(shopSlug, tripId);
   const landing = embed
     ? confirmCapability
-      ? `${base}?booking=${confirmCapability.token}&embed=1`
-      : `${base}?embed=1`
+      ? `${framed}?booking=${confirmCapability.token}`
+      : framed
     : redirectCapability
       ? `${readinessLinkPath(redirectCapability.token)}?booked=1`
       : base;
@@ -645,7 +651,7 @@ export async function bookSpot(
     // the confirmation renders it as a `target="_top"` door out to the real
     // page (ADR 20260901-diveday-reimagined, decision 2: "payment still opens
     // the real page, stated").
-    if (embed) redirect(`${landing}&pay=due`);
+    if (embed) redirect(`${landing}${landing.includes("?") ? "&" : "?"}pay=due`);
     redirect(checkoutUrl);
   }
   // The seats are booked either way; a code with nothing left to give is said
@@ -726,7 +732,7 @@ async function startCheckoutUrl(
     bookingIds: string[];
     /**
      * The same path a diver who never paid would have landed on — relative, and
-     * already carrying its own query (`?booked=1`, or `?booking=…&embed=1`).
+     * possibly carrying its own query (`?booked=1`, or `?booking=…` on the framed page).
      * Paying is a detour, not a different destination: passing the decided
      * landing in rather than rebuilding it here is what stops the two from
      * drifting apart the next time either one moves.
@@ -774,7 +780,7 @@ async function startCheckoutUrl(
 export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formData: FormData) {
   const ip = await clientIp();
   if (!(await checkRateLimit(rateLimitKey("waitlist", ip), RATE_LIMITS.waitlistJoin)).allowed) {
-    redirect(`${publicTripPath(shopSlug, tripId)}?error=unavailable${embedParam(embed, "&")}`);
+    redirect(`${tripPagePath({ shopSlug, tripId, embed })}?error=unavailable`);
   }
   const joiner = parseForm(waitlistForm, formData);
   const parsed = bookSchema.safeParse(
@@ -791,7 +797,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
   // said was optional. A declaration that fails validation is simply not said.
   const declaration = diveDeclarationSchema.safeParse(diveDeclarationInput(formData));
   if (!parsed.success) {
-    redirect(`${publicTripPath(shopSlug, tripId)}?error=invalid${embedParam(embed, "&")}`);
+    redirect(`${tripPagePath({ shopSlug, tripId, embed })}?error=invalid`);
   }
   // How many wait together (fourth review, item 34), within the booking form's
   // own bound. The lead's details are the entry; the party is a count.
@@ -802,12 +808,12 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     .max(MAX_PUBLIC_PARTY_SIZE)
     .safeParse(joiner.ok ? joiner.data.partySize : undefined);
   if (!partySize.success) {
-    redirect(`${publicTripPath(shopSlug, tripId)}?error=invalid${embedParam(embed, "&")}`);
+    redirect(`${tripPagePath({ shopSlug, tripId, embed })}?error=invalid`);
   }
   const dbi = await getDb();
   const shopNow = await getShopBySlug(dbi, shopSlug);
   if (!shopNow) {
-    redirect(`${publicTripPath(shopSlug, tripId)}?error=unavailable${embedParam(embed, "&")}`);
+    redirect(`${tripPagePath({ shopSlug, tripId, embed })}?error=unavailable`);
   }
   const outcome = await askForDeparture(dbi, {
     shopId: shopNow.id,
@@ -830,7 +836,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     await trackEvent({ name: "waitlist_joined", source: "diver" });
     revalidateAndRedirect(
       publicTripPath(shopSlug, tripId),
-      `${publicTripPath(shopSlug, tripId)}?interest=${outcome.interestId}${embedParam(embed, "&")}`,
+      `${tripPagePath({ shopSlug, tripId, embed })}?interest=${outcome.interestId}`,
     );
   }
   const code =
@@ -839,7 +845,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
       : outcome.reason === "already_booked"
         ? "already"
         : "unavailable";
-  redirect(`${publicTripPath(shopSlug, tripId)}?error=${code}${embedParam(embed, "&")}`);
+  redirect(`${tripPagePath({ shopSlug, tripId, embed })}?error=${code}`);
 }
 
 /**

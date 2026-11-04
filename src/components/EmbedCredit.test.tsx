@@ -14,7 +14,7 @@ const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 /**
  * **"Bookings by DiveDay" at the foot of a frame is a 44px target** (pixel-craft
  * class 7, K-217 and K-220). It was a `text-xs` link on a 15px line, 115.7×15,
- * under the storefront's `?embed=1` board and under all three catalogue
+ * under the framed calendar (`embed/calendar`) and under all three catalogue
  * widgets, each drawn by hand.
  */
 describe("EmbedCredit", () => {

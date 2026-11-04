@@ -48,8 +48,8 @@ export default function PublicShopLayout({
           negotiated one replaces it. The height matters more: this band sits
           *above* the page, so a fallback of nothing would let the schedule paint
           at the top of the viewport and then jump down when the shop's header
-          arrived. The one case it is wrong for is `?embed=1`, where the real
-          chrome is deliberately nothing: a layout cannot see `searchParams`,
+          arrived. The one case it is wrong for is a frame (`embed/**`), where the
+          real chrome is deliberately nothing: a layout cannot see the path,
           and the proxy's embed header is a request read, which is exactly what
           this component exists to defer. So the frame's own segments hide the
           bar instead (`EmbedChromeCollapse`), from their static shell on. */}

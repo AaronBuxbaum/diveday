@@ -60,7 +60,7 @@ describe("fullTripAlternatives", () => {
       ...where,
       isEmbed: true,
     });
-    expect(rows[0]?.href).toBe("/s/blue-mantis/trips/b?embed=1");
+    expect(rows[0]?.href).toBe("/s/blue-mantis/embed/trip/b");
   });
 
   it("offers nothing that shares neither the course nor the site", () => {

@@ -42,7 +42,7 @@ test("paper keeps a full boat's status and an embedded course's age and contact 
   await expect(page.locator("[data-public-trip-terms]")).toContainText(t("booking.fullHeading"));
   await page.emulateMedia({ media: "screen" });
   const course = await seededTripId(page, "blue-mantis", "Open Water Diver — three-day course");
-  await page.goto(`/s/blue-mantis/trips/${course}?embed=1`);
+  await page.goto(`/s/blue-mantis/embed/trip/${course}`);
   await page.emulateMedia({ media: "print" });
   const facts = page.locator("[data-public-trip-terms]");
   await expect(facts).toContainText(t("course.agesAndUp", { age: 10 }));
