@@ -18,7 +18,7 @@ const TITLE_LINES = [
 
 /**
  * What the static shell paints while the landing's localized body
- * (`LocalizedHomeBody` in src/app/page.tsx) resolves — this page's equivalent
+ * (`LocalizedHomeBody` in src/app/(marketing)/page.tsx) resolves — this page's equivalent
  * of the `loading.tsx` that `/product` and `/pricing` carry, rendered inside
  * the page because the root segment cannot have one (see the `instant` note in
  * the page).
@@ -28,7 +28,7 @@ const TITLE_LINES = [
  * form: that is the fix, not an economy.
  *
  * **The hero is drawn a line box per line, as the page sets it** (K-393). The
- * numbers are read off the hero in src/app/page.tsx and move with its copy;
+ * numbers are read off the hero in src/app/(marketing)/page.tsx and move with its copy;
  * the 2026-10-05 rewrite (H-20261005-public-pages-sell) shortened the title and lengthened the lede:
  *   - the eyebrow, `MARKETING_EYEBROW_CLASS`: one 20px `text-sm` line;
  *   - the title, `mt-4`: `TITLE_LINES` above;

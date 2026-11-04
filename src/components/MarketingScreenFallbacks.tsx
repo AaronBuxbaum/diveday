@@ -14,7 +14,7 @@ import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
 /**
  * Each fallback takes `locale` as a plain prop rather than reading
  * `requestLocale()` itself: these render inside the marketing pages'
- * `"use cache"` bodies (`src/app/page.tsx`, `src/app/product/page.tsx`), and
+ * `"use cache"` bodies (`src/app/(marketing)/page.tsx`, `src/app/(marketing)/product/page.tsx`), and
  * cached scopes cannot call `headers()`-backed functions themselves — see
  * AGENTS.md's `cacheComponents` notes.
  */

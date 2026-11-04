@@ -1483,7 +1483,7 @@ from." — the founder band's question, answered two sections higher — over th
 where a shop's records live, how the plan works, who answers an email, and what the export costs. A
 reader skimming the h2s was told the page repeated itself and given no reason to stop at the terms.
 It now reads "Month to month, and the export is one button." — the plan terms printed directly
-beneath it, and the export the rules band dares the reader to go and run. `src/app/about/copy.test.ts` makes the headline test mechanical for this heading: some
+beneath it, and the export the rules band dares the reader to go and run. `src/app/(marketing)/about/copy.test.ts` makes the headline test mechanical for this heading: some
 clause of it has to appear in the band's own published prose, which no metaphor can satisfy, and
 both retired headings are pinned gone by value rather than by key.
 
@@ -3485,7 +3485,7 @@ archived.
   shared **concierge switch offer** — a person will help you bring your data in *and*, if DiveDay is
   ever not right, take it back out, free (`SwitchingConcierge`, routed to `switch@dive.day`; an
   authorized service claim, H-20260724-contact-importer-trust-shop). Content in `src/lib/migration-guides.ts`, pages in
-  `src/app/switching/` ([marketing.md](marketing.md#where-the-words-live)). Backups and the read API are
+  `src/app/(marketing)/switching/` ([marketing.md](marketing.md#where-the-words-live)). Backups and the read API are
   the open follow-ons in [roadmap.md](features/roadmap.md).
 - **FareHarbor guide (coexist-led)** (2026-07-24) — `/switching/fareharbor`, the same template with
   an optional `coexist` block, because FareHarbor is a booking/distribution *channel* (a general
