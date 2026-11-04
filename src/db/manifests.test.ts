@@ -568,7 +568,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   it("answers one seat's own departure result, for the diver's own page", async () => {
     // `departureRollCallForBooking` is what keeps the thread's after-state
     // from asserting that somebody dived on the strength of a clock
-    // (`isAfterTheDive`, src/lib/thread-steps.ts). Null is the ordinary answer
+    // (`isAfterTheDive`, src/lib/seat-ladder.ts). Null is the ordinary answer
     // — plenty of shops record nothing — and it is the answer that makes that
     // page wait for the four-hour recap floor instead of opening at the
     // one-hour late-arrival buffer.

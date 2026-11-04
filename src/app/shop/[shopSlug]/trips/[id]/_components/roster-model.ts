@@ -25,7 +25,7 @@ import { isDiver } from "@/lib/participant-types";
 import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
-import { seatSailed } from "@/lib/seat-sailed";
+import { readSeatLadder, sailingUnsaid } from "@/lib/seat-ladder";
 import { waiverStanding } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
@@ -756,7 +756,8 @@ export function groupRoster({
 }
 
 /**
- * **The record's groups**, one seat at a time by `seatSailed`, the rule the
+ * **The record's groups**, one seat at a time by its rung on the seat ladder
+ * (`readSeatLadder`, src/lib/seat-ladder.ts) and `seatSailed`, the rule the
  * evening close-out counts by (dive-domain review of UX batch 1):
  *
  * - **Sailed**: boarded at the dock, or counted at an after-dive checkpoint
@@ -784,17 +785,23 @@ function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterR
   const unaccounted: RosterEntry[] = [];
   for (const entry of roster) {
     const id = entry.booking.id;
-    // First: the one group that is still a question, whatever else is on file.
-    if (record.unaccounted.has(id)) {
-      unaccounted.push(entry);
-      continue;
-    }
-    const dockResult = record.dock.get(id) ?? null;
-    const afterDiveResultStands = record.afterDive.has(id);
     const noShow = entry.booking.status === "no_show";
-    if (dockResult === null && !afterDiveResultStands && !noShow) {
+    // No arrival: the record files what the crew and the desk said about
+    // sailing, and an arrival moves no seat between its groups (the ladder's
+    // "changes nothing but booked to arrived" test).
+    const ladder = readSeatLadder({
+      noShow,
+      arrived: false,
+      dockResult: record.dock.get(id) ?? null,
+      afterDiveResultStands: record.afterDive.has(id),
+      missingAfterDive: record.unaccounted.has(id),
+    });
+    // First: the one group that is still a question, whatever else is on file.
+    if (ladder.rung === "missing") {
+      unaccounted.push(entry);
+    } else if (sailingUnsaid(ladder)) {
       (record.rollCallTaken ? uncounted : unrecorded).push(entry);
-    } else if (seatSailed({ noShow, dockResult, afterDiveResultStands })) {
+    } else if (ladder.sailed) {
       sailed.push(entry);
     } else if (noShow && entry.booking.turnedAwayAt) {
       // Did not sail because the desk refused them (H-20261015-who-may-turn-someone), said apart from
