@@ -1935,6 +1935,16 @@ export async function restoreBooking(
     });
     if (courseRefusal) return courseRefusal;
 
+    // **No `tripAdmissionFor` here, on purpose** (issue #3839, attacker F2). A
+    // charter's own card gate is the weaker, booking-time half
+    // (`src/lib/trip-admission.ts`): it never refuses someone the boarding-time
+    // gate would clear, and it refuses nobody it cannot also stop at the rail.
+    // A seat taken back is a seat the shop already sold, so the gate is not
+    // re-asked here; `calculateReadiness` still holds the diver at the dock if
+    // the card that admitted them is gone (`moveBooking` asks it because a move
+    // sells a different departure). A course session is the exception above:
+    // its gates are the session's only admission rule.
+
     await tx
       .update(bookings)
       // A seat back on the boat carries no turned-away reason from its last

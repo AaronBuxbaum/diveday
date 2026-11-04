@@ -385,6 +385,9 @@ export async function undoBookingNoShow(
       studentsHeld: held.divers,
     });
     if (courseRefusal) return await refuse(courseRefusal);
+    // No `tripAdmissionFor` here, for the reason `restoreBooking` records
+    // (issue #3839): a charter's own card gate is the weaker booking-time half,
+    // the seat was already sold, and readiness holds the diver at the dock.
 
     // The seat is held again, and that is all this writes. Whether the desk
     // saw the diver is the arrival trail's, which the release left standing,

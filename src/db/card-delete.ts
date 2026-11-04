@@ -1,6 +1,7 @@
 import { and, asc, eq, gt, inArray, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import { bookings, cards, people, trips } from "./schema";
 
 /**
@@ -33,7 +34,8 @@ export async function softDeleteCard(
     deletedByPersonId: string;
   },
 ): Promise<boolean> {
-  return db.transaction(async (tx) => {
+  let personId: string | undefined;
+  const deleted = await db.transaction(async (tx) => {
     const [card] = await tx
       .select({ personId: cards.personId })
       .from(cards)
@@ -47,6 +49,7 @@ export async function softDeleteCard(
       )
       .limit(1);
     if (!card) return false;
+    personId = card.personId;
     await tx
       .select({ id: people.id })
       .from(people)
@@ -89,4 +92,10 @@ export async function softDeleteCard(
       .returning({ id: cards.id });
     return Boolean(row);
   });
+  // A deleted card changes readiness on every departure the diver is on, so a
+  // roll call cached on a crew device must re-read: a boat may not leave with a
+  // deleted card still showing as a cleared diver (issue #3839). After the
+  // commit, never inside it.
+  if (deleted && personId) await publishManifestEventsForPerson(db, input.shopId, personId);
+  return deleted;
 }
