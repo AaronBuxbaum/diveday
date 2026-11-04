@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -63,9 +62,7 @@ export const instant = true;
 // The flying-guidance follow-up panel is visible from every departure.
 // Staff dates follow the device's requested locale.
 // Departure warnings follow the current shop.
-export const metadata: Metadata = {
-  title: "Manage trip — DiveDay",
-};
+export { departureMetadata as generateMetadata } from "./_components/departure-states";
 
 /**
  * Two of a departure's four tabs (ADR 20261001-logbook, decision 3): Divers,

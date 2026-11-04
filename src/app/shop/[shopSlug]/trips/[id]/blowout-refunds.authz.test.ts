@@ -310,7 +310,7 @@ describe("releasing the refunds a call-off left queued", () => {
     vi.mocked(refundBookingOnShopCancellation).mockClear();
     await signInAs(email);
     const to = await redirectedTo(() => releaseBlowoutRefundsAction(ctx.shop.slug, trip.id));
-    expect(to).toContain("notice=refund-not-authorized");
+    expect(to).toContain(`/trips/${trip.id}?blowout=1&notice=refund-not-authorized`);
     expect(refundBookingsForShopCancelledTrip).not.toHaveBeenCalled();
   });
 

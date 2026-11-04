@@ -351,10 +351,10 @@ section + section, .stack > * + * { margin-top: 32px; }
       <tr><td>Sign-in, the staff invite</td><td>/sign-in, /invite/[token]</td><td>StaffChrome</td><td>—</td><td>—</td></tr>
       <tr class="fam"><td colspan="5">The boats</td></tr>
       <tr><td>The board</td><td>/schedule/board</td><td>StaffSchedule</td><td>the standing crew line, per-day add buttons, the ⋯ menu</td><td>F</td></tr>
-      <tr><td>The blow-out</td><td>/schedule/blowout/[tripId]</td><td>StaffSchedule</td><td>—</td><td>—</td></tr>
+      <tr><td>The blow-out</td><td>/trips/[id]?blowout=1</td><td>StaffSchedule</td><td>—</td><td>—</td></tr>
       <tr><td>Staffing</td><td>/staffing</td><td>StaffSchedule</td><td>the two standing add-forms, the badge stack</td><td>K</td></tr>
       <tr><td>The trip</td><td>/trips/[id]</td><td>StaffTrip</td><td>the Overview tab, the filter chips, the Details caret, the Activity and Promote rows, the Guests route</td><td>H L</td></tr>
-      <tr><td>Prep, the rental ticket, the log, print</td><td>/trips/[id]/prep, /prep/ticket/[id], /log, /print</td><td>StaffTrip</td><td>—</td><td>N</td></tr>
+      <tr><td>Prep, the rental ticket, the log, print</td><td>/trips/[id]/prep (?diver=), /log, /print</td><td>StaffTrip</td><td>—</td><td>N</td></tr>
       <tr><td>The manifest, the roll call, boat mode</td><td>/trips/[id]/manifest</td><td>StaffManifest</td><td>the two-button cluster, the per-row disclosures, the checklist card, the housekeeping card</td><td>—</td></tr>
       <tr><td>The offline viewer</td><td>/offline-manifest</td><td>StaffManifest</td><td>—</td><td>—</td></tr>
       <tr><td>The lobby board</td><td>/board/[token]</td><td>StaffManifest</td><td>—</td><td>L P</td></tr>
