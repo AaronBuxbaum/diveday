@@ -22,20 +22,48 @@ function ListCard({
   id,
   title,
   count,
+  paper,
   children,
 }: {
   id: string;
   title: string;
   count: number;
+  paper: boolean;
   children: React.ReactNode;
 }) {
   if (count === 0) return null;
+  // On the sheet a list is a heading and its rows: no card, no link.
+  if (paper)
+    return (
+      <section id={id} className="break-inside-avoid">
+        <h2 className="mb-1 text-sm font-bold">{title}</h2>
+        <ul className="divide-y divide-border">{children}</ul>
+      </section>
+    );
   return (
     <div id={id} className="scroll-mt-24">
       <SectionCard title={title}>
         <ul className="divide-y divide-border">{children}</ul>
       </SectionCard>
     </div>
+  );
+}
+
+/** A row: a door to its record on the screen, plain words on the sheet. */
+function Row({
+  href,
+  paper,
+  children,
+}: {
+  href: string;
+  paper: boolean;
+  children: React.ReactNode;
+}) {
+  if (paper) return <div className={ROW}>{children}</div>;
+  return (
+    <Link href={href} className={`${ROW} hover:underline`}>
+      {children}
+    </Link>
   );
 }
 
@@ -61,6 +89,7 @@ export function SafetyLists({
   locale,
   timeZone,
   t,
+  paper = false,
 }: {
   month: SafetyMonth;
   incidents: readonly IncidentReportLine[];
@@ -69,21 +98,24 @@ export function SafetyLists({
   locale: string;
   timeZone: string;
   t: StaffTranslator;
+  /** The sheet's rows: no links, no cards. */
+  paper?: boolean;
 }) {
   const kindList = cachedListFormat(locale, { type: "conjunction" });
   const tripHref = (tripId: string) => shopPath(shopSlug, "trips", tripId);
   return (
     <>
       <ListCard
+        paper={paper}
         id={SAFETY_LIST_IDS.incidents}
         title={t("incidents.safety.incidentsTitle")}
         count={incidents.length}
       >
         {incidents.map((report) => (
           <li key={report.id}>
-            <Link
+            <Row
               href={shopPath(shopSlug, "trips", report.tripId, "incidents", report.id)}
-              className={`${ROW} hover:underline`}
+              paper={paper}
             >
               <Badge size="sm" tone={report.status === "filed" ? "neutral" : "warning"}>
                 {t(report.status === "filed" ? "incidents.status.filed" : "incidents.status.draft")}
@@ -103,22 +135,20 @@ export function SafetyLists({
                 {formatDateTimeTz(report.at, locale, timeZone)}
                 {" "}· {t("incidents.trip.writtenBy", { name: report.createdByName })}
               </span>
-            </Link>
+            </Row>
           </li>
         ))}
       </ListCard>
 
       <ListCard
+        paper={paper}
         id={SAFETY_LIST_IDS.open}
         title={t("incidents.safety.openTitle")}
         count={month.openRollCalls.length}
       >
         {month.openRollCalls.map((departure) => (
           <li key={departure.tripId}>
-            <Link
-              href={`${tripHref(departure.tripId)}/manifest`}
-              className={`${ROW} hover:underline`}
-            >
+            <Row href={`${tripHref(departure.tripId)}/manifest`} paper={paper}>
               <span className="font-medium">{departure.title}</span>
               <span className="text-sm text-muted">
                 {formatShortDate(departure.startsAt, locale, timeZone)}
@@ -129,40 +159,39 @@ export function SafetyLists({
                     : "incidents.safety.closureOpen",
                 )}
               </span>
-            </Link>
+            </Row>
           </li>
         ))}
       </ListCard>
 
       {/* Each row opens the departure's crew (fourth review, item 13). */}
       <ListCard
+        paper={paper}
         id={SAFETY_LIST_IDS.noCrew}
         title={t("incidents.safety.noCrewTitle")}
         count={month.noCrewDepartures.length}
       >
         {month.noCrewDepartures.map((departure) => (
           <li key={departure.tripId}>
-            <Link
-              href={`${tripHref(departure.tripId)}?view=details#crew`}
-              className={`${ROW} hover:underline`}
-            >
+            <Row href={`${tripHref(departure.tripId)}?view=details#crew`} paper={paper}>
               <span className="font-medium">{departure.title}</span>
               <span className="text-sm text-muted">
                 {formatShortDate(departure.startsAt, locale, timeZone)}
               </span>
-            </Link>
+            </Row>
           </li>
         ))}
       </ListCard>
 
       <ListCard
+        paper={paper}
         id={SAFETY_LIST_IDS.lapsed}
         title={t("incidents.safety.lapsedTitle")}
         count={month.lapsedSailings.length}
       >
         {month.lapsedSailings.map((sailing) => (
           <li key={`${sailing.tripId}:${sailing.personId}`}>
-            <Link href={tripHref(sailing.tripId)} className={`${ROW} hover:underline`}>
+            <Row href={tripHref(sailing.tripId)} paper={paper}>
               <span className="font-medium">{sailing.name}</span>
               <span className="text-sm text-muted">
                 {sailing.title}
@@ -191,27 +220,25 @@ export function SafetyLists({
                   </>
                 ) : null}
               </span>
-            </Link>
+            </Row>
           </li>
         ))}
       </ListCard>
 
       <ListCard
+        paper={paper}
         id={SAFETY_LIST_IDS.unrecorded}
         title={t("incidents.safety.unrecordedTitle")}
         count={month.unrecordedCrew.length}
       >
         {month.unrecordedCrew.map((person) => (
           <li key={person.personId}>
-            <Link
-              href={shopPath(shopSlug, "settings", "team")}
-              className={`${ROW} hover:underline`}
-            >
+            <Row href={shopPath(shopSlug, "settings", "team")} paper={paper}>
               <span className="font-medium">{person.name}</span>
               <span className="text-sm text-muted">
                 {t("incidents.safety.unrecordedSailings", { count: person.sailings })}
               </span>
-            </Link>
+            </Row>
           </li>
         ))}
       </ListCard>

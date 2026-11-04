@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { runtimeMode } from "./runtime-mode";
 
 export const PENDING_SIGN_IN_TTL_SECONDS = 300;
 export const PENDING_SIGN_IN_ATTEMPTS = 5;
@@ -46,13 +47,7 @@ export function signInOrigins(
   env: Readonly<Record<string, string | undefined>>,
 ): readonly string[] {
   const port = Number(env.PORT);
-  if (
-    env.DIVEDAY_E2E === "1" &&
-    !env.DATABASE_URL &&
-    Number.isInteger(port) &&
-    port > 0 &&
-    port <= 65535
-  )
+  if (runtimeMode(env).e2eHarness && Number.isInteger(port) && port > 0 && port <= 65535)
     return [`http://127.0.0.1:${port}`];
   const origin = new URL(configuredOrigin);
   // The same site under `www.`: a visitor who types it reaches the app (the

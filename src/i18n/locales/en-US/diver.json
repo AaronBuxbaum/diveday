@@ -555,7 +555,6 @@
   "contactConfirm": {
     "title": "Confirm this address for {shopName}?",
     "description": "Divers who reply to {shopName}’s emails will reach {email}.",
-    "confirming": "Confirming…",
     "submit": "Confirm this address",
     "confirmedTitle": "Address confirmed",
     "confirmedText": "Replies from {shopName}’s divers now come here.",
@@ -564,7 +563,6 @@
   "shoreConfirm": {
     "title": "Be {shopName}’s shore contact?",
     "description": "{shopName} will email {email} when a boat’s roll call is still open after the boat was due back. Each alert has a link to stop them.",
-    "confirming": "Confirming…",
     "submit": "Yes, send me these alerts",
     "confirmedTitle": "You’re {shopName}’s shore contact",
     "confirmedText": "If a roll call is still open after a boat was due back, {shopName} will email you. Each alert has a link to stop them.",
@@ -925,7 +923,6 @@
     "stateDone": "Done",
     "stateAction": "Your turn",
     "stateWaiting": "With the shop",
-    "opening": "Opening…",
     "signWaiver": "Sign your waiver",
     "freshWaiverLink": "Sign a fresh waiver",
     "payForTrip": "Pay for this trip",
@@ -1320,7 +1317,6 @@
     "waiverNeeded": "Waiver still needed",
     "copyReminder": "Copy reminder link",
     "minorSign": "Sign {name}’s waiver",
-    "minorSignPending": "Opening…",
     "minorSignBody": "{name} is under 18, so you sign their release with them, as their parent or guardian.",
     "minorWaiverUnavailable": "That waiver can’t be opened from here now. Contact the shop and they can help.",
     "minorNote": "{seatName} is under 18, so a parent or guardian signs the release with them.",
@@ -3322,7 +3318,6 @@
     },
     "verify": {
       "title": "Confirm your email",
-      "confirming": "Confirming…",
       "submit": "Confirm my email",
       "confirmedTitle": "Email confirmed",
       "confirmedText": "You’re all set.",
@@ -4434,7 +4429,6 @@
   "bookkeeperConfirm": {
     "title": "Get {shopName}’s month-end files?",
     "description": "On the 2nd of each month, {shopName} will email last month’s report, orders and crew sheet to {email}. Nothing is sent until you confirm.",
-    "confirming": "Confirming…",
     "submit": "Yes, send me the files",
     "confirmedTitle": "Address confirmed",
     "confirmedText": "{shopName}’s month-end files will come here on the 2nd of each month.",

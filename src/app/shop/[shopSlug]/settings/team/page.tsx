@@ -185,7 +185,7 @@ function StaffRow({
                       <input key={role} type="hidden" name={`role_${role}`} value="on" />
                     ))}
                     <SubmitButton
-                      pendingLabel={t("shared.undoToast.pendingLabel")}
+                      pendingLabel={t("words.busy.undoing")}
                       ariaLabel={t("settings.team.roles.undoAriaLabel", { name: member.fullName })}
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
@@ -517,7 +517,7 @@ export default async function TeamSettingsPage({
             userAccountId: undoUserAccountId,
             roles: undoRoles,
           }}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
+          pendingLabel={t("words.busy.undoing")}
           undoLabel={t("shared.undoToast.undo")}
           dismissLabel={t("shared.undoToast.dismiss")}
         />

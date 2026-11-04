@@ -74,6 +74,16 @@ export function reservedTestRecipientDelivery(to: string): NotificationDelivery 
   };
 }
 
+/**
+ * What a send for a demo shop (`shops.is_demo`) reports: held, never sent.
+ * Non-retryable, so it is never queued.
+ */
+export const DEMO_SHOP_HELD_DELIVERY = {
+  status: "failed",
+  retryable: false,
+  errorCode: "demo_shop_held",
+} as const satisfies NotificationDelivery;
+
 export const disabledNotificationProvider: NotificationProvider = {
   async send() {
     return { status: "not_configured" };

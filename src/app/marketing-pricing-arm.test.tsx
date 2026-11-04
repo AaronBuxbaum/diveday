@@ -18,12 +18,12 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("next/cache", () => ({ cacheLife: () => {} }));
 
-const { default: AboutPage } = await import("./about/page");
-const { default: ProductPage } = await import("./product/page");
-const { default: FeaturePage } = await import("./product/[feature]/page");
-const { default: SwitchHubPage } = await import("./switching/page");
+const { default: AboutPage } = await import("./(marketing)/about/page");
+const { default: ProductPage } = await import("./(marketing)/product/page");
+const { default: FeaturePage } = await import("./(marketing)/product/[feature]/page");
+const { default: SwitchHubPage } = await import("./(marketing)/switching/page");
 const { default: GuidePage, generateMetadata: guideMetadata } = await import(
-  "./switching/[competitor]/page"
+  "./(marketing)/switching/[competitor]/page"
 );
 const { homeSoftwareJsonLd } = await import("./_components/home-json-ld");
 const { requestPricingOffer } = await import("@/lib/pricing-arm-request");

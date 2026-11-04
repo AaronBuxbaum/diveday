@@ -8,7 +8,6 @@ import {
   isNull,
   lt,
   lte,
-  ne,
   notInArray,
   or,
   sql,
@@ -71,7 +70,6 @@ import {
 import { readReminderFlySafeHours } from "./fly-safe-plan";
 import { latestDeliveryOnly } from "./latest-delivery";
 import { isTransactionExecutor } from "./query-helpers";
-import { notificationHeldForRehearsal, REHEARSAL_HELD_DELIVERY } from "./rehearsals";
 import {
   bookingPayments,
   bookings,
@@ -85,6 +83,7 @@ import {
   waiverDeliveries,
   waiverRecords,
 } from "./schema";
+import { HELD_SEND_ERROR_CODES, notificationHeldBeforeSend } from "./send-holds";
 import { shopHasFeatureOn } from "./shops";
 import { livePerson, liveTrip } from "./trips-live";
 import { seatHeld, seatNotCancelled } from "./trips-queries";
@@ -680,7 +679,8 @@ export async function sendNotification(
   // Held here, at the one door every shop-scoped email passes through, before
   // the provider is asked, and reported as a non-retryable code so it is never
   // queued for a second try.
-  if (await notificationHeldForRehearsal(db, input)) return REHEARSAL_HELD_DELIVERY;
+  const held = await notificationHeldBeforeSend(db, input);
+  if (held) return held;
 
   let delivery: NotificationDelivery;
   try {
@@ -747,8 +747,9 @@ export async function sendNotificationBatch(
       if (parsed.success) {
         // A member about a rehearsal is held, not sent (ADR
         // 20261012-rehearsal-departures); the rest of the fan-out goes on.
-        if (await notificationHeldForRehearsal(db, input)) {
-          results[index] = REHEARSAL_HELD_DELIVERY;
+        const held = await notificationHeldBeforeSend(db, input);
+        if (held) {
+          results[index] = held;
           continue;
         }
         sendable.push({ index, input });
@@ -1130,8 +1131,9 @@ async function dispatchQueuedRetry(
   let suppressed = false;
   let trackingRecorded = false;
   try {
-    if (await notificationHeldForRehearsal(db, notification)) {
-      delivery = REHEARSAL_HELD_DELIVERY;
+    const held = await notificationHeldBeforeSend(db, notification);
+    if (held) {
+      delivery = held;
     } else if (claimed.bookingId) {
       const fenced = await withErasureCoordinatedBookingSend<NotificationDelivery>(
         db,
@@ -2443,11 +2445,12 @@ export async function listNotificationDeliveryIssues(
           inArray(notificationDeliveries.status, ["failed", "not_configured"]),
           inArray(notificationDeliveries.providerStatus, ACTIONABLE_PROVIDER_STATUSES),
         ),
-        // A send held for a rehearsal is not an issue: nothing was meant to
-        // leave (#2395, ADR 20261012-rehearsal-departures).
+        // A send held on purpose (a rehearsal, an address that bounced for
+        // good, a demo shop) is not an issue: nothing was meant to leave
+        // (#2395, ADR 20261012-rehearsal-departures).
         or(
           isNull(notificationDeliveries.sendErrorCode),
-          ne(notificationDeliveries.sendErrorCode, REHEARSAL_HELD_DELIVERY.errorCode),
+          notInArray(notificationDeliveries.sendErrorCode, [...HELD_SEND_ERROR_CODES]),
         ),
         seatNotCancelled,
         window.from ? gte(trips.startsAt, window.from) : undefined,

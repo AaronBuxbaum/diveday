@@ -244,7 +244,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           message={t("trips.roster.noteDeletedToast")}
           action={actions.restoreInternalNoteAction}
           fields={noteDeleted}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
+          pendingLabel={t("words.busy.undoing")}
           undoLabel={t("shared.undoToast.undo")}
           dismissLabel={t("shared.undoToast.dismiss")}
         />

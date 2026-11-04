@@ -488,8 +488,8 @@ describe("the continuity promise", () => {
   }
 
   it.each([
-    ["/pricing", "src/app/pricing/faq.ts"],
-    ["/about", "src/app/about/page.tsx"],
+    ["/pricing", "src/app/(marketing)/pricing/faq.ts"],
+    ["/about", "src/app/(marketing)/about/page.tsx"],
   ])("is rendered on %s from the shared key", (_route, file) => {
     const source = readFileSync(join(process.cwd(), file), "utf8");
     expect(source).toContain("t(continuityPromise.claimKey)");

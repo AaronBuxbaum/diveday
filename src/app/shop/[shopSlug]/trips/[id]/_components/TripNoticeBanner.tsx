@@ -33,7 +33,7 @@ export function TripNoticeBanner({
         message={notice.text}
         action={undoAction}
         fields={{ bookingId: undoBookingId }}
-        pendingLabel={t("trips.notices.undoing")}
+        pendingLabel={t("words.busy.undoing")}
         undoLabel={t("trips.notices.undo")}
         dismissLabel={t("shared.undoToast.dismiss")}
       />
@@ -49,7 +49,7 @@ export function TripNoticeBanner({
             <form action={undoAction}>
               <input type="hidden" name="bookingId" value={undoBookingId} />
               <SubmitButton
-                pendingLabel={t("trips.notices.undoing")}
+                pendingLabel={t("words.busy.undoing")}
                 className={buttonClass({
                   variant: "link",
                   size: "sm",

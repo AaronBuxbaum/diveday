@@ -13,6 +13,6 @@ One number, and where a second register goes. **Decided 2026-09-24 (Aaron Buxbau
 
 ## Unblocks / follow-up
 
-Every public page rewritten in the same change; the four shape refusals joined `pnpm check:voice` on the public pages' strings; `e2e/marketing.spec.ts`'s pins and `src/app/about/copy.test.ts` moved with the copy. The owner questions in the strategies doc stay open and nothing was written on his behalf: no town, no date, no name on the homepage, and support still reads "a real person reads it" (H-20260724-public-founding-shop-price/H-20260802-what-game-is-this).
+Every public page rewritten in the same change; the four shape refusals joined `pnpm check:voice` on the public pages' strings; `e2e/marketing.spec.ts`'s pins and `src/app/(marketing)/about/copy.test.ts` moved with the copy. The owner questions in the strategies doc stay open and nothing was written on his behalf: no town, no date, no name on the homepage, and support still reads "a real person reads it" (H-20260724-public-founding-shop-price/H-20260802-what-game-is-this).
 
 Part of the [human decision log](README.md#decision-register).

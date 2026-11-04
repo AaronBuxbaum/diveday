@@ -357,7 +357,7 @@ builds it and what it holds every screen to.
   demo, and what it says about the people is a generality that is true of them. It invents no
   proof, no customer, no number.
 - Contractions, warmth and the occasional pointed sentence are fine; the tells below are not.
-  `src/app/about/copy.test.ts` holds the mechanical half: statement headings, no individual
+  `src/app/(marketing)/about/copy.test.ts` holds the mechanical half: statement headings, no individual
   named, no first-person singular, the Lonergan limits, and the retired question headings by
   value.
 

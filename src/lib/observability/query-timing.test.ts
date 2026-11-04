@@ -213,6 +213,33 @@ describe("timing a request's statements", () => {
   });
 });
 
+describe("a checked-out connection", () => {
+  it("runs overlapping statements one at a time, so pg never warns", async () => {
+    let running = 0;
+    let overlapped = false;
+    const connection = {
+      async query(text: string) {
+        running += 1;
+        if (running > 1) overlapped = true;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        running -= 1;
+        if (text === "boom") throw new Error("boom");
+        return text;
+      },
+      release() {},
+    };
+    const timed = withStatementTiming({ connect: async () => connection });
+    const client = await timed.connect();
+    const results = await Promise.allSettled([
+      client.query("a"),
+      client.query("boom"),
+      client.query("c"),
+    ]);
+    expect(overlapped).toBe(false);
+    expect(results.map((r) => r.status)).toEqual(["fulfilled", "rejected", "fulfilled"]);
+  });
+});
+
 describe("reporting a render", () => {
   it("writes one line after the response, naming the route the page sharpened it to", async () => {
     const { db, shop } = await timedShopContext();

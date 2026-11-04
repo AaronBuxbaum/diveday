@@ -181,8 +181,7 @@
       "suggestionsLabel": "Sugerencias de dirección",
       "currentLabel": "Dirección guardada",
       "noneSet": "Todavía no hay ninguna dirección guardada.",
-      "remove": "Quitar dirección",
-      "removing": "Quitando…"
+      "remove": "Quitar dirección"
     },
     "reviewLink": {
       "heading": "Enlace de reseñas",
@@ -1090,7 +1089,6 @@
       "hiddenRowsNoticeOther": "Mostrando las primeras {limit} filas. Las {total} se importan al confirmar.",
       "submitOne": "Importar 1 contacto",
       "submitOther": "Importar {count} contactos",
-      "submitting": "Importando…",
       "result": {
         "summary": "Importado. {addedPart}, {updatedPart}.",
         "summaryAddedOne": "{added} agregado",

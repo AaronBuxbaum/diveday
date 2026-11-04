@@ -86,7 +86,6 @@
   "disconnect": {
     "heading": "Remove destination",
     "description": "Deletes the stored credential and stops weekly deliveries. The history below and everything already in your bucket stay put.",
-    "submit": "Remove backup destination",
-    "submitting": "Removing…"
+    "submit": "Remove backup destination"
   }
 }

@@ -155,7 +155,7 @@ export function UnitSummary({
           <form action={restoreGearItemAction}>
             <input type="hidden" name="gearItemId" value={item.id} />
             <SubmitButton
-              pendingLabel={t("gear.deleted.restoring")}
+              pendingLabel={t("words.busy.restoring")}
               className={buttonClass({ variant: "secondary" })}
             >
               {t("gear.unit.deleted.restore")}

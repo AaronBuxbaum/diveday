@@ -3,7 +3,6 @@
     "title": "Incident reports",
     "description": "Write down what happened while it is fresh. Owners, managers and the person who wrote a report can read it.",
     "start": "Report an incident",
-    "starting": "Opening…",
     "writtenBy": "Written by {name}",
     "notTimed": "Time not written yet"
   },
@@ -110,7 +109,6 @@
     "add": "Add to the report",
     "remove": "Remove",
     "removeLabel": "Remove {name} from the report",
-    "removing": "Removing…",
     "kindBooking": "On the manifest",
     "kindStaff": "Crew",
     "kindOutsider": "Not on the departure"
