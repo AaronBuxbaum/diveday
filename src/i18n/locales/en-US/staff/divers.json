@@ -653,7 +653,8 @@
       "bounced": "Bounced",
       "complained": "Marked as spam",
       "failed": "Did not send",
-      "suppressed": "Held back"
+      "suppressed": "Held back",
+      "not_configured": "Not set up"
     },
     "sentKind": {
       "booking_confirmation": "Booking confirmation",
