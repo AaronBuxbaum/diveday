@@ -24,9 +24,9 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { storedSealings } from "@/db/account-security";
-import { sealedSecretSamples } from "@/db/sealed-secret-samples";
 import type { AppDb } from "@/db/client";
 import { withExplicitSslMode } from "@/db/connection-string";
+import { sealedSecretSamples } from "@/db/sealed-secret-samples";
 import {
   keyringOpensSamples,
   keyringOpensStored,
@@ -34,10 +34,7 @@ import {
   secretKeyFromEnvironment,
 } from "@/lib/secret-box";
 
-import {
-  sealedSamplesFailureText,
-  sealingKeysFailureText,
-} from "./sealing-keys-message.mjs";
+import { sealedSamplesFailureText, sealingKeysFailureText } from "./sealing-keys-message.mjs";
 
 const NAME = "check-sealing-keys";
 
@@ -45,14 +42,10 @@ async function main(): Promise<number> {
   const key = secretKeyFromEnvironment();
   // Unset or malformed is check-env's to refuse, and it already ran; nothing here can open anything.
   if (key.status !== "ok") {
-    console.log(
-      `${NAME}: no usable ${SECRET_KEY_VARIABLE}; skipped (check-env reports it).`,
-    );
+    console.log(`${NAME}: no usable ${SECRET_KEY_VARIABLE}; skipped (check-env reports it).`);
     return 0;
   }
-  const url =
-    process.env.DATABASE_URL_UNPOOLED?.trim() ||
-    process.env.DATABASE_URL?.trim();
+  const url = process.env.DATABASE_URL_UNPOOLED?.trim() || process.env.DATABASE_URL?.trim();
   if (!url) {
     console.error(
       `${NAME}: FAILED. DATABASE_URL is not set, so the stored secrets cannot be read.`,
@@ -74,10 +67,8 @@ async function main(): Promise<number> {
       );
       return 0;
     }
-    if (result.status !== "ok")
-      console.error(`${NAME}: ${sealingKeysFailureText(result)}`);
-    if (samples.status !== "ok")
-      console.error(`${NAME}: ${sealedSamplesFailureText(samples)}`);
+    if (result.status !== "ok") console.error(`${NAME}: ${sealingKeysFailureText(result)}`);
+    if (samples.status !== "ok") console.error(`${NAME}: ${sealedSamplesFailureText(samples)}`);
     return 1;
   } finally {
     await pool.end().catch(() => undefined);
@@ -87,9 +78,7 @@ async function main(): Promise<number> {
 /** The name and code only: a pg error message can quote a row. */
 function redacted(error: unknown): string {
   // drizzle wraps the driver's error, so its SQLSTATE is on the cause.
-  const failure = error as
-    | { code?: unknown; cause?: { code?: unknown } }
-    | undefined;
+  const failure = error as { code?: unknown; cause?: { code?: unknown } } | undefined;
   const code = failure?.code ?? failure?.cause?.code;
   return `${(error as Error | undefined)?.name ?? "an error"}${typeof code === "string" ? ` (${code})` : ""}`;
 }

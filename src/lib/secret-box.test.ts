@@ -80,12 +80,7 @@ describe("sealSecret / openSecret", () => {
     const [scheme, iv, tag, ciphertext] = sealed.split(".");
     const flipped = Buffer.from(ciphertext, "base64url");
     flipped[0] ^= 0xff;
-    expect(
-      openSecret(
-        [scheme, iv, tag, flipped.toString("base64url")].join("."),
-        key,
-      ),
-    ).toBeNull();
+    expect(openSecret([scheme, iv, tag, flipped.toString("base64url")].join("."), key)).toBeNull();
   });
 
   it("refuses a tampered authentication tag", () => {
@@ -93,23 +88,14 @@ describe("sealSecret / openSecret", () => {
     const [scheme, iv, tag, ciphertext] = sealed.split(".");
     const flipped = Buffer.from(tag, "base64url");
     flipped[0] ^= 0xff;
-    expect(
-      openSecret(
-        [scheme, iv, flipped.toString("base64url"), ciphertext].join("."),
-        key,
-      ),
-    ).toBe(null);
+    expect(openSecret([scheme, iv, flipped.toString("base64url"), ciphertext].join("."), key)).toBe(
+      null,
+    );
   });
 
   it("refuses malformed values and unknown schemes without throwing", () => {
     const sealed = sealSecret("token", key);
-    for (const value of [
-      "",
-      "not-sealed",
-      "v1.a.b",
-      `v2.${sealed.slice(3)}`,
-      "v1.....",
-    ]) {
+    for (const value of ["", "not-sealed", "v1.a.b", `v2.${sealed.slice(3)}`, "v1....."]) {
       expect(openSecret(value, key)).toBeNull();
     }
   });
@@ -128,9 +114,7 @@ describe("secretKeyFromEnvironment", () => {
 
   it("treats an absent key as unset, not an error — the channel is simply dormant", () => {
     expect(secretKeyFromEnvironment({}).status).toBe("unset");
-    expect(
-      secretKeyFromEnvironment({ SECRET_ENCRYPTION_KEY: "   " }).status,
-    ).toBe("unset");
+    expect(secretKeyFromEnvironment({ SECRET_ENCRYPTION_KEY: "   " }).status).toBe("unset");
   });
 
   it("names a wrong-length key so a mis-set value is not silently dormant", () => {
@@ -143,13 +127,11 @@ describe("secretKeyFromEnvironment", () => {
   });
 
   it("names a value that is not base64 at all", () => {
-    expect(secretKeyFromEnvironment({ SECRET_ENCRYPTION_KEY: "!!!!" })).toEqual(
-      {
-        status: "invalid",
-        variable: "SECRET_ENCRYPTION_KEY",
-        reason: "not_base64",
-      },
-    );
+    expect(secretKeyFromEnvironment({ SECRET_ENCRYPTION_KEY: "!!!!" })).toEqual({
+      status: "invalid",
+      variable: "SECRET_ENCRYPTION_KEY",
+      reason: "not_base64",
+    });
   });
 });
 
@@ -180,15 +162,11 @@ describe("key rotation", () => {
     const sealed = sealSecret("new-token", keyring);
     expect(openSecret(sealed, key)).toBe("new-token");
     expect(openSecret(sealed, previous)).toBeNull();
-    expect(openSecretWithKeyring(sealed, keyring)?.sealedWithPrevious).toBe(
-      false,
-    );
+    expect(openSecretWithKeyring(sealed, keyring)?.sealedWithPrevious).toBe(false);
   });
 
   it("still refuses a value sealed under neither key", () => {
-    expect(
-      openSecret(sealSecret("token", randomBytes(32)), keyring),
-    ).toBeNull();
+    expect(openSecret(sealSecret("token", randomBytes(32)), keyring)).toBeNull();
   });
 
   it("ignores a previous key equal to the current one", () => {
@@ -245,9 +223,7 @@ describe("keyringOpensStored", () => {
   });
 
   it("passes an unrotated key, and an account already under the new key", () => {
-    expect(
-      keyringOpensStored({ current: old, previous: null }, [enrolled]),
-    ).toEqual({
+    expect(keyringOpensStored({ current: old, previous: null }, [enrolled])).toEqual({
       status: "ok",
       checked: 1,
     });
@@ -255,18 +231,14 @@ describe("keyringOpensStored", () => {
       sealed: sealSecret("JBSWY3DPEHPK3PXP", next),
       codesKeyId: secretKeyFingerprint(next),
     };
-    expect(
-      keyringOpensStored({ current: next, previous: null }, [moved]),
-    ).toEqual({
+    expect(keyringOpensStored({ current: next, previous: null }, [moved])).toEqual({
       status: "ok",
       checked: 1,
     });
   });
 
   it("refuses a rotated key deployed without its previous", () => {
-    expect(
-      keyringOpensStored({ current: next, previous: null }, [enrolled]),
-    ).toEqual({
+    expect(keyringOpensStored({ current: next, previous: null }, [enrolled])).toEqual({
       status: "cannot_open",
       reason: "previous_missing",
       checked: 1,
@@ -290,9 +262,7 @@ describe("keyringOpensStored", () => {
       sealed: sealSecret("JBSWY3DPEHPK3PXP", next),
       codesKeyId: secretKeyFingerprint(old),
     };
-    expect(
-      keyringOpensStored({ current: next, previous: null }, [half]),
-    ).toMatchObject({
+    expect(keyringOpensStored({ current: next, previous: null }, [half])).toMatchObject({
       status: "cannot_open",
       lockedOut: 1,
     });
@@ -303,10 +273,7 @@ describe("keyringOpensStored", () => {
       sealed: sealSecret("JBSWY3DPEHPK3PXP", next),
       codesKeyId: null,
     };
-    expect(
-      keyringOpensStored({ current: next, previous: null }, [unrecorded])
-        .status,
-    ).toBe("ok");
+    expect(keyringOpensStored({ current: next, previous: null }, [unrecorded]).status).toBe("ok");
     expect(keyringOpensStored({ current: next, previous: null }, [])).toEqual({
       status: "ok",
       checked: 0,
@@ -319,9 +286,7 @@ describe("keyringOpensStored", () => {
       sealed: sealSecret("x", next),
       codesKeyId: secretKeyFingerprint(next),
     };
-    expect(
-      keyringOpensStored(keyring, [moved, enrolled, enrolled]),
-    ).toMatchObject({
+    expect(keyringOpensStored(keyring, [moved, enrolled, enrolled])).toMatchObject({
       checked: 3,
       lockedOut: 2,
     });
@@ -342,9 +307,7 @@ describe("keyringOpensSamples", () => {
   ];
 
   it("passes a rotation with its previous key, and counts the samples", () => {
-    expect(
-      keyringOpensSamples({ current: next, previous: old }, samples),
-    ).toEqual({
+    expect(keyringOpensSamples({ current: next, previous: old }, samples)).toEqual({
       status: "ok",
       checked: 3,
     });
@@ -358,9 +321,7 @@ describe("keyringOpensSamples", () => {
   });
 
   it("names each kind a rotated key without its previous cannot open", () => {
-    expect(
-      keyringOpensSamples({ current: next, previous: null }, samples),
-    ).toEqual({
+    expect(keyringOpensSamples({ current: next, previous: null }, samples)).toEqual({
       status: "cannot_open",
       reason: "previous_missing",
       checked: 3,
@@ -370,10 +331,7 @@ describe("keyringOpensSamples", () => {
 
   it("blames a wrong previous key", () => {
     expect(
-      keyringOpensSamples(
-        { current: next, previous: randomBytes(32) },
-        samples,
-      ),
+      keyringOpensSamples({ current: next, previous: randomBytes(32) }, samples),
     ).toMatchObject({
       status: "cannot_open",
       reason: "keys_do_not_open",

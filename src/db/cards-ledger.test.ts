@@ -2,12 +2,12 @@
 import { randomUUID } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { readCertificationEvidence } from "./certification-evidence";
-import { cards, certificationJuniorReviews, people } from "./schema";
+import { cards, people } from "./schema";
 
 /**
  * **The card ledger's own rules** (issue #2722): one table holds level,
@@ -32,9 +32,7 @@ async function diver(name = "Ledger Diver") {
 }
 
 /** The SQLSTATE of the error a statement raised, or null when it succeeded. */
-async function refusal(
-  statement: () => Promise<unknown>,
-): Promise<string | null> {
+async function refusal(statement: () => Promise<unknown>): Promise<string | null> {
   try {
     // A savepoint on the test's own connection, so a refusal rolls back only
     // this statement and the test goes on.
@@ -43,8 +41,7 @@ async function refusal(
     });
     return null;
   } catch (error) {
-    const cause =
-      (error as { cause?: { code?: string }; code?: string }).cause ?? error;
+    const cause = (error as { cause?: { code?: string }; code?: string }).cause ?? error;
     return (cause as { code?: string }).code ?? "unknown";
   }
 }
@@ -59,11 +56,9 @@ describe("what the database refuses", () => {
       identifier: "K-1",
     };
     // A level card with no rung, or carrying a specialty, is no level card.
-    expect(
-      await refusal(() =>
-        ctx.db.insert(cards).values({ ...base, kind: "level" }),
-      ),
-    ).toBe("23514");
+    expect(await refusal(() => ctx.db.insert(cards).values({ ...base, kind: "level" }))).toBe(
+      "23514",
+    );
     expect(
       await refusal(() =>
         ctx.db.insert(cards).values({
@@ -78,16 +73,12 @@ describe("what the database refuses", () => {
     // that forgot its kind filter.
     expect(
       await refusal(() =>
-        ctx.db
-          .insert(cards)
-          .values({ ...base, kind: "nitrox", level: "divemaster" }),
+        ctx.db.insert(cards).values({ ...base, kind: "nitrox", level: "divemaster" }),
       ),
     ).toBe("23514");
-    expect(
-      await refusal(() =>
-        ctx.db.insert(cards).values({ ...base, kind: "specialty" }),
-      ),
-    ).toBe("23514");
+    expect(await refusal(() => ctx.db.insert(cards).values({ ...base, kind: "specialty" }))).toBe(
+      "23514",
+    );
     expect(
       await refusal(() =>
         ctx.db.insert(cards).values({
@@ -110,9 +101,7 @@ describe("what the database refuses", () => {
       kind: "nitrox" as const,
     };
     expect(
-      await refusal(() =>
-        ctx.db.insert(cards).values({ ...base, declaredIdentifier: "LV-9" }),
-      ),
+      await refusal(() => ctx.db.insert(cards).values({ ...base, declaredIdentifier: "LV-9" })),
     ).toBe("23514");
     expect(
       await refusal(() =>
@@ -222,13 +211,9 @@ describe("one card number, more than one kind", () => {
       agency: "raid" as const,
       identifier: "RAID-77",
     };
-    await ctx.db
-      .insert(cards)
-      .values({ ...base, kind: "level", level: "open_water" });
+    await ctx.db.insert(cards).values({ ...base, kind: "level", level: "open_water" });
     expect(
-      await refusal(() =>
-        ctx.db.insert(cards).values({ ...base, kind: "nitrox" }),
-      ),
+      await refusal(() => ctx.db.insert(cards).values({ ...base, kind: "nitrox" })),
     ).toBeNull();
   });
 
@@ -240,14 +225,10 @@ describe("one card number, more than one kind", () => {
       agency: "padi" as const,
       identifier: "P-55",
     };
-    await ctx.db
-      .insert(cards)
-      .values({ ...base, kind: "specialty", specialty: "deep" });
+    await ctx.db.insert(cards).values({ ...base, kind: "specialty", specialty: "deep" });
     expect(
       await refusal(() =>
-        ctx.db
-          .insert(cards)
-          .values({ ...base, kind: "specialty", specialty: "wreck" }),
+        ctx.db.insert(cards).values({ ...base, kind: "specialty", specialty: "wreck" }),
       ),
     ).toBeNull();
     expect(
@@ -270,9 +251,7 @@ describe("one card number, more than one kind", () => {
       agency: "ssi" as const,
       identifier: "S-12",
     };
-    await ctx.db
-      .insert(cards)
-      .values({ ...base, kind: "level", level: "open_water" });
+    await ctx.db.insert(cards).values({ ...base, kind: "level", level: "open_water" });
     expect(
       await refusal(() =>
         ctx.db.insert(cards).values({
@@ -284,11 +263,9 @@ describe("one card number, more than one kind", () => {
       ),
     ).toBe("23505");
     await ctx.db.insert(cards).values({ ...base, kind: "nitrox" });
-    expect(
-      await refusal(() =>
-        ctx.db.insert(cards).values({ ...base, kind: "nitrox" }),
-      ),
-    ).toBe("23505");
+    expect(await refusal(() => ctx.db.insert(cards).values({ ...base, kind: "nitrox" }))).toBe(
+      "23505",
+    );
   });
 });
 
@@ -310,32 +287,18 @@ describe("the evidence a gate reads", () => {
         identifier: "D-1",
       },
     ]);
-    const evidence = await readCertificationEvidence(
-      ctx.db,
-      ctx.shop.id,
-      personId,
-    );
+    const evidence = await readCertificationEvidence(ctx.db, ctx.shop.id, personId);
     // A verified nitrox card and a verified Deep card say nothing about the
     // diver's rung: the ladder sees no card at all.
     expect(evidence.certifications).toEqual([]);
-    expect(
-      evidence.nitroxCertifications.map((card) => card.identifier),
-    ).toEqual(["N-1"]);
-    expect(
-      evidence.specialtyCertifications.map((card) => card.specialty),
-    ).toEqual(["deep"]);
+    expect(evidence.nitroxCertifications.map((card) => card.identifier)).toEqual(["N-1"]);
+    expect(evidence.specialtyCertifications.map((card) => card.specialty)).toEqual(["deep"]);
   });
 });
 
 const MIGRATIONS = path.join(process.cwd(), "drizzle");
-const COPY_LATE = readdirSync(MIGRATIONS).find((name) =>
-  name.endsWith("_copy-late-cards"),
-);
-const OLD_TABLES = [
-  "certifications",
-  "specialty_certifications",
-  "nitrox_certifications",
-];
+const COPY_LATE = readdirSync(MIGRATIONS).find((name) => name.endsWith("_copy-late-cards"));
+const OLD_TABLES = ["certifications", "specialty_certifications", "nitrox_certifications"];
 
 /**
  * The three card tables are gone from the schema, so the late copy (issue
@@ -375,14 +338,10 @@ describe("the migration that copies late rows from the three old card tables", (
     };
     for (const table of OLD_TABLES) {
       await ctx.db.execute(
-        sql.raw(
-          `create temp table "${table}" as select * from cards with no data`,
-        ),
+        sql.raw(`create temp table "${table}" as select * from cards with no data`),
       );
       await ctx.db.execute(
-        sql.raw(
-          `alter table pg_temp."${table}" alter column created_at set default now()`,
-        ),
+        sql.raw(`alter table pg_temp."${table}" alter column created_at set default now()`),
       );
     }
     await ctx.db.execute(sql`
@@ -406,10 +365,7 @@ describe("the migration that copies late rows from the three old card tables", (
           (${ids.nitrox}, ${ctx.shop.id}, ${kept}, 'nitrox', 'padi', 'verified', 'LATE-EANX', 'Coral Coast Divers'),
           (${ids.erasedNitrox}, ${ctx.shop.id}, ${erased}, 'nitrox', 'padi', 'verified', 'ERASED-EANX', 'Old Shop')`);
 
-    const text = readFileSync(
-      path.join(MIGRATIONS, COPY_LATE, "migration.sql"),
-      "utf8",
-    );
+    const text = readFileSync(path.join(MIGRATIONS, COPY_LATE, "migration.sql"), "utf8");
     for (const statement of text.split("--> statement-breakpoint")) {
       await ctx.db.execute(sql.raw(statement));
     }
@@ -423,9 +379,10 @@ describe("the migration that copies late rows from the three old card tables", (
     }
 
     const byId = new Map(
-      (
-        await ctx.db.select().from(cards).where(eq(cards.shopId, ctx.shop.id))
-      ).map((card) => [card.id, card]),
+      (await ctx.db.select().from(cards).where(eq(cards.shopId, ctx.shop.id))).map((card) => [
+        card.id,
+        card,
+      ]),
     );
     expect(byId.get(ids.level)).toMatchObject({
       kind: "level",
@@ -450,9 +407,7 @@ describe("the migration that copies late rows from the three old card tables", (
     });
     // The row the ledger already held keeps its own state: not overwritten, not doubled.
     expect(byId.get(already.id)?.identifier).toBe("HAVE-1");
-    expect(
-      [...byId.values()].filter((card) => card.identifier === "OLD-COPY"),
-    ).toEqual([]);
+    expect([...byId.values()].filter((card) => card.identifier === "OLD-COPY")).toEqual([]);
 
     // A diver erased since the first copy arrives erased.
     for (const id of [ids.erasedLevel, ids.erasedNitrox]) {

@@ -300,9 +300,7 @@ const nextConfig: NextConfig = {
   // before migrations and the production build; only that build skips Next's
   // duplicate pass.
   // Local `pnpm build` and CI keep their existing checks.
-  ...(process.env.VERCEL === "1"
-    ? { typescript: { ignoreBuildErrors: true } }
-    : {}),
+  ...(process.env.VERCEL === "1" ? { typescript: { ignoreBuildErrors: true } } : {}),
   experimental: {
     useTypeScriptCli: true,
     // Static-generation workers only need to be serialized when they'd share
@@ -364,11 +362,7 @@ const sentryConfig = withSentryConfig(nextConfig, {
     // two that survived its own strip pass are 141,995 bytes of deployed static
     // output that nothing will ever fetch — a browser requests a CSS map only
     // with devtools open.
-    filesToDeleteAfterUpload: [
-      ".next/**/*.js.map",
-      ".next/**/*.mjs.map",
-      ".next/**/*.css.map",
-    ],
+    filesToDeleteAfterUpload: [".next/**/*.js.map", ".next/**/*.mjs.map", ".next/**/*.css.map"],
   },
 
   // Only print logs for uploading source maps in CI

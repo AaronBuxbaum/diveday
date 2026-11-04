@@ -1,12 +1,7 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { SealedSecretSample } from "@/lib/secret-box";
 import type { DbExecutor } from "./client";
-import {
-  shopBackupDestinations,
-  shopIntegrations,
-  shops,
-  shopWhatsappAccounts,
-} from "./schema";
+import { shopBackupDestinations, shopIntegrations, shops, shopWhatsappAccounts } from "./schema";
 
 /**
  * One stored value of each sealed-secret kind the deploy's key check samples
@@ -18,24 +13,20 @@ import {
  * sealed value (`seedBackup`) and would fail every deploy; and a connector
  * that was disconnected, as it is nowhere read.
  */
-export async function sealedSecretSamples(
-  db: DbExecutor,
-): Promise<SealedSecretSample[]> {
+export async function sealedSecretSamples(db: DbExecutor): Promise<SealedSecretSample[]> {
   const [whatsapp] = await db
     .select({ sealed: shopWhatsappAccounts.accessTokenSealed })
     .from(shopWhatsappAccounts)
     .innerJoin(shops, eq(shops.id, shopWhatsappAccounts.shopId))
     .where(eq(shops.isDemo, false))
-    .orderBy(
-      asc(shopWhatsappAccounts.connectedAt),
-      asc(shopWhatsappAccounts.shopId),
-    )
+    .orderBy(asc(shopWhatsappAccounts.connectedAt), asc(shopWhatsappAccounts.shopId))
     .limit(1);
   const [connector] = await db
     .select({ sealed: shopIntegrations.credentialsSealed })
     .from(shopIntegrations)
     .innerJoin(shops, eq(shops.id, shopIntegrations.shopId))
     .where(and(isNull(shopIntegrations.deletedAt), eq(shops.isDemo, false)))
+    // diveday:allow-time-id-order: one row picked for a trial open, never shown
     .orderBy(asc(shopIntegrations.connectedAt), asc(shopIntegrations.id))
     .limit(1);
   const [backup] = await db
@@ -43,10 +34,7 @@ export async function sealedSecretSamples(
     .from(shopBackupDestinations)
     .innerJoin(shops, eq(shops.id, shopBackupDestinations.shopId))
     .where(eq(shops.isDemo, false))
-    .orderBy(
-      asc(shopBackupDestinations.connectedAt),
-      asc(shopBackupDestinations.shopId),
-    )
+    .orderBy(asc(shopBackupDestinations.connectedAt), asc(shopBackupDestinations.shopId))
     .limit(1);
   return [
     whatsapp && { kind: "whatsapp" as const, sealed: whatsapp.sealed },

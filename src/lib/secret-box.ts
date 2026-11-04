@@ -1,9 +1,4 @@
-import {
-  createCipheriv,
-  createDecipheriv,
-  createHash,
-  randomBytes,
-} from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 /**
  * Authenticated encryption for third-party credentials DiveDay stores on a
@@ -62,9 +57,7 @@ export type SecretKeyResult =
   /** Returns a code, never a sentence — the UI picks the words (ADR 20260731-domain-layer-copy-leaks). */
   | {
       status: "invalid";
-      variable:
-        | typeof SECRET_KEY_VARIABLE
-        | typeof PREVIOUS_SECRET_KEY_VARIABLE;
+      variable: typeof SECRET_KEY_VARIABLE | typeof PREVIOUS_SECRET_KEY_VARIABLE;
       reason: "not_base64" | "wrong_length";
     };
 
@@ -107,31 +100,22 @@ export function secretKeyFromEnvironment(
     key: {
       current: current.key,
       // The same value in both places is a rotation that has not started.
-      previous:
-        previous.status === "ok" && !previous.key.equals(current.key)
-          ? previous.key
-          : null,
+      previous: previous.status === "ok" && !previous.key.equals(current.key) ? previous.key : null,
     },
   };
 }
 
-export type SecretKeyRefusal =
-  | "encryption_key_unset"
-  | "encryption_key_invalid";
+export type SecretKeyRefusal = "encryption_key_unset" | "encryption_key_invalid";
 
 /** A supplied key, or the existing refusal codes used by credential stores. */
 export type SecretKeyResolution = SecretKey | SecretKeyRefusal;
 
 /** Resolve at the point of use so omitted keys observe environment changes. */
-export function resolveSecretKey(
-  key: SecretKey | null | undefined,
-): SecretKeyResolution {
+export function resolveSecretKey(key: SecretKey | null | undefined): SecretKeyResolution {
   if (key !== undefined) return key ?? "encryption_key_unset";
   const result = secretKeyFromEnvironment();
   if (result.status === "ok") return result.key;
-  return result.status === "unset"
-    ? "encryption_key_unset"
-    : "encryption_key_invalid";
+  return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
 }
 
 type ParsedKey =
@@ -222,10 +206,8 @@ export function keyringOpensStored(
   const known = new Set(openingKeys(key).map(secretKeyFingerprint));
   let lockedOut = 0;
   for (const account of stored) {
-    const secretOpens =
-      account.sealed === null || openSecret(account.sealed, key) !== null;
-    const codesMatch =
-      account.codesKeyId === null || known.has(account.codesKeyId);
+    const secretOpens = account.sealed === null || openSecret(account.sealed, key) !== null;
+    const codesMatch = account.codesKeyId === null || known.has(account.codesKeyId);
     if (!secretOpens || !codesMatch) lockedOut += 1;
   }
   if (lockedOut === 0) return { status: "ok", checked: stored.length };
@@ -273,10 +255,7 @@ export function keyringOpensSamples(
   samples: readonly SealedSecretSample[],
 ): SampleCheck {
   const unopened = SEALED_SECRET_KINDS.filter((kind) =>
-    samples.some(
-      (sample) =>
-        sample.kind === kind && openSecret(sample.sealed, key) === null,
-    ),
+    samples.some((sample) => sample.kind === kind && openSecret(sample.sealed, key) === null),
   );
   if (unopened.length === 0) return { status: "ok", checked: samples.length };
   return {
@@ -305,14 +284,9 @@ export function sealingKey(key: SecretKey): Buffer {
 export function sealSecret(plaintext: string, key: SecretKey): string {
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv("aes-256-gcm", sealingKey(key), iv);
-  const ciphertext = Buffer.concat([
-    cipher.update(plaintext, "utf8"),
-    cipher.final(),
-  ]);
+  const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return [SCHEME, base64url(iv), base64url(tag), base64url(ciphertext)].join(
-    ".",
-  );
+  return [SCHEME, base64url(iv), base64url(tag), base64url(ciphertext)].join(".");
 }
 
 /**
@@ -358,10 +332,7 @@ function openWith(sealed: string, key: Buffer): string | null {
     decipher.setAuthTag(tag);
     // `final()` is what verifies the GCM tag — it throws on any tampering,
     // which is exactly the check this function exists to perform.
-    return Buffer.concat([
-      decipher.update(ciphertext),
-      decipher.final(),
-    ]).toString("utf8");
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
   } catch {
     return null;
   }

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  sealedSamplesFailureText,
-  sealingKeysFailureText,
-} from "./sealing-keys-message.mjs";
+import { sealedSamplesFailureText, sealingKeysFailureText } from "./sealing-keys-message.mjs";
 
 /**
  * The deploy's refusal (`scripts/check-sealing-keys.ts`, issue #2999) names the
@@ -28,9 +25,7 @@ describe("sealingKeysFailureText", () => {
       checked: 2,
       lockedOut: 2,
     });
-    expect(text).toContain(
-      "Neither SECRET_ENCRYPTION_KEY nor SECRET_ENCRYPTION_KEY_PREVIOUS",
-    );
+    expect(text).toContain("Neither SECRET_ENCRYPTION_KEY nor SECRET_ENCRYPTION_KEY_PREVIOUS");
     expect(text).toContain("set SECRET_ENCRYPTION_KEY_PREVIOUS to the old key");
     expect(text).toContain("turn two-factor off");
   });
@@ -42,9 +37,7 @@ describe("sealedSamplesFailureText", () => {
       reason: "previous_missing",
       unopened: ["whatsapp", "backup"],
     });
-    expect(text).toContain(
-      "a WhatsApp access token, a backup destination's access key",
-    );
+    expect(text).toContain("a WhatsApp access token, a backup destination's access key");
     expect(text).toContain("SECRET_ENCRYPTION_KEY_PREVIOUS is not set");
     expect(text).toContain("set SECRET_ENCRYPTION_KEY_PREVIOUS to the old key");
     expect(text).toContain("reconnect those integrations");
@@ -55,9 +48,7 @@ describe("sealedSamplesFailureText", () => {
       reason: "keys_do_not_open",
       unopened: ["connector"],
     });
-    expect(text).toContain(
-      "Neither SECRET_ENCRYPTION_KEY nor SECRET_ENCRYPTION_KEY_PREVIOUS",
-    );
+    expect(text).toContain("Neither SECRET_ENCRYPTION_KEY nor SECRET_ENCRYPTION_KEY_PREVIOUS");
     expect(text).toContain("a connector's credentials");
   });
 });

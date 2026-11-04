@@ -1,15 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { keyringOpensSamples, sealSecret } from "@/lib/secret-box";
 import { fileScopedShopContext } from "@/test/db";
+import { shopBackupDestinations, shopIntegrations, shops, shopWhatsappAccounts } from "./schema";
 import { sealedSecretSamples } from "./sealed-secret-samples";
-import {
-  shopBackupDestinations,
-  shopIntegrations,
-  shops,
-  shopWhatsappAccounts,
-} from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -48,14 +44,8 @@ describe("sealedSecretSamples", () => {
     const key = randomBytes(32);
     const { db } = await oneOfEach(key);
     const samples = await sealedSecretSamples(db);
-    expect(samples.map((sample) => sample.kind)).toEqual([
-      "whatsapp",
-      "connector",
-      "backup",
-    ]);
-    expect(
-      keyringOpensSamples({ current: key, previous: null }, samples),
-    ).toEqual({
+    expect(samples.map((sample) => sample.kind)).toEqual(["whatsapp", "connector", "backup"]);
+    expect(keyringOpensSamples({ current: key, previous: null }, samples)).toEqual({
       status: "ok",
       checked: 3,
     });
@@ -80,20 +70,16 @@ describe("sealedSecretSamples", () => {
     const { db, shop } = await oneOfEach(key);
     await db
       .update(shopIntegrations)
-      .set({ deletedAt: new Date() })
+      .set({ deletedAt: nowDate() })
       .where(eq(shopIntegrations.shopId, shop.id));
     await db.delete(shopBackupDestinations);
-    expect(
-      (await sealedSecretSamples(db)).map((sample) => sample.kind),
-    ).toEqual(["whatsapp"]);
+    expect((await sealedSecretSamples(db)).map((sample) => sample.kind)).toEqual(["whatsapp"]);
   });
 
   it("leaves a demo shop's seeded placeholder out, so the demo cannot fail a deploy", async () => {
     const { db, shop } = await oneOfEach(randomBytes(32));
     await db.update(shops).set({ isDemo: true }).where(eq(shops.id, shop.id));
-    await db
-      .update(shopBackupDestinations)
-      .set({ secretAccessKeySealed: "v1.demo.demo.demo" });
+    await db.update(shopBackupDestinations).set({ secretAccessKeySealed: "v1.demo.demo.demo" });
     expect(await sealedSecretSamples(db)).toEqual([]);
   });
 });
