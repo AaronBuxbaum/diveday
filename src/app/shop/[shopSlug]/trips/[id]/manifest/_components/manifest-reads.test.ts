@@ -12,7 +12,7 @@ import {
 import { listStaff, upcomingTripsWithCounts } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
-import { fileScopedShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
@@ -49,7 +49,9 @@ describe("readManifestPage (in-memory PGlite)", () => {
   });
 
   it("costs a fixed number of statements, not one per diver, and reads the manifest once", async () => {
-    const { db, shop } = ctx;
+    // Its own database: the file-scoped one is a transaction handle with no
+    // driver of its own to put the counting logger on.
+    const { db, shop } = await seededShopContext();
     const counted = drizzle({
       client: db.$client as PGlite,
       logger: queryTimingLogger,
