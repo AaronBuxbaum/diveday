@@ -120,8 +120,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   bookings: [
     "shop_id",
     "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
-    "arrival_trail_after_seq", // a position on this database's arrival trail (#2702)
-    "seat_reopened_at", // when this database's seat began a new life, for the offline sync (#3830)
+    ...["arrival_trail_after_seq", "seat_reopened_at"], // this database's arrival trail (#2702, #3830)
     "identity_unconfirmed_at", // H-20260724-one-person-per-email review state, not a shop record
     "identity_booked_as", // H-20260724-one-person-per-email review state: the name the held booking was made under
     "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
