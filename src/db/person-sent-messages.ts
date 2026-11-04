@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, notificationDeliveries } from "./schema";
 
@@ -41,6 +41,10 @@ export async function personSentMessages(
       and(eq(bookings.id, notificationDeliveries.bookingId), eq(bookings.shopId, shopId)),
     )
     .where(and(eq(notificationDeliveries.shopId, shopId), eq(bookings.personId, personId)))
-    .orderBy(desc(notificationDeliveries.attemptedAt), desc(notificationDeliveries.id))
+    .orderBy(
+      desc(notificationDeliveries.attemptedAt),
+      asc(notificationDeliveries.kind),
+      desc(notificationDeliveries.id),
+    )
     .limit(SENT_MESSAGES_LIMIT);
 }
