@@ -40,6 +40,7 @@ import { getTodayWork } from "@/features/today";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
+import { errorClassToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import {
   type Notification,
@@ -785,7 +786,7 @@ export async function sendDueWeeklyDigests(
       summary.shopErrors += 1;
       log("weekly_digest.shop_failed", "error", {
         shopId: shop.id,
-        errorCode: error instanceof Error ? error.name : "unknown_error",
+        errorCode: errorClassToken(error),
       });
     }
   }

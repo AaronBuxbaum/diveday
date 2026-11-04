@@ -14,7 +14,7 @@ import {
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { notify } from "@/lib/notifications";
-import { flushLogs } from "@/lib/observability";
+import { flushLogs, reportScrubbedError } from "@/lib/observability";
 import { sentry } from "@/lib/observability/sentry";
 import { alertRecipient } from "@/lib/platform-mail";
 import { collectUsageSamples } from "@/lib/usage/collect";
@@ -150,7 +150,9 @@ export async function GET(request: Request) {
       try {
         claimed = await claimUsageAlert(db, key, end, now);
       } catch (error) {
-        await sentry.captureException(error, {
+        await reportScrubbedError(error, {
+          name: "CronScanFailed",
+          message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
           tags: { ...ceilingTags(evaluation), usage_step: "claim" },
         });
       }
@@ -190,7 +192,9 @@ export async function GET(request: Request) {
       try {
         await releaseUsageAlert(db, key);
       } catch (error) {
-        await sentry.captureException(error, {
+        await reportScrubbedError(error, {
+          name: "CronScanFailed",
+          message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
           tags: { ...ceilingTags(evaluation), usage_step: "release" },
         });
       }
@@ -246,7 +250,11 @@ export async function GET(request: Request) {
     // or an unexpected throw the per-probe guards did not cover. The check-in
     // still has to be closed out or the monitor would read this as a run that
     // is somehow still in progress.
-    await sentry.captureException(error, { tags: { cron_scan: "usage_bootstrap" } });
+    await reportScrubbedError(error, {
+      name: "CronScanFailed",
+      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+      tags: { cron_scan: "usage_bootstrap" },
+    });
     log("cron_usage.scan_failed", "error", { scan: "bootstrap" });
     await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "usage_unavailable" }, { status: 503 });

@@ -4,7 +4,7 @@ import { DEMO_SCHEDULE_MIN_RUNWAY_DAYS, refreshCanonicalDemoSchedule } from "@/d
 import { sqlStateOf } from "@/db/query-helpers";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
-import { flushLogs } from "@/lib/observability";
+import { flushLogs, reportScrubbedError } from "@/lib/observability";
 import { sentry } from "@/lib/observability/sentry";
 
 /**
@@ -99,7 +99,11 @@ export async function GET(request: Request) {
     // restore runs in one transaction, so the demo is whatever it was before
     // this pass -- an aging board, not a half-wiped shop -- and tomorrow's tick
     // re-attempts it.
-    await sentry.captureException(error, { tags: { cron_pass: "demo_refresh" } });
+    await reportScrubbedError(error, {
+      name: "CronScanFailed",
+      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+      tags: { cron_pass: "demo_refresh" },
+    });
     // The payload used to be `{}`, which said a pass failed and nothing about
     // why -- the line that sent someone to Sentry to learn even the shape of
     // the failure (issue #517). Both fields are closed vocabularies rather

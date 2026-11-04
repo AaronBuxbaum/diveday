@@ -9,7 +9,7 @@ import { DAY_MS } from "@/lib/clock";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { DAILY_TICK_CRONTAB } from "@/lib/cron-schedule";
 import { log } from "@/lib/log";
-import { flushLogs } from "@/lib/observability";
+import { flushLogs, reportScrubbedError } from "@/lib/observability";
 import { sentry } from "@/lib/observability/sentry";
 
 /**
@@ -97,7 +97,11 @@ async function runScan<T>(scan: string, run: () => Promise<T>): Promise<ScanOutc
   try {
     return { status: "ok", result: await run() };
   } catch (error) {
-    await sentry.captureException(error, { tags: { cron_scan: scan } });
+    await reportScrubbedError(error, {
+      name: "CronScanFailed",
+      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+      tags: { cron_scan: scan },
+    });
     log("cron_reminders.scan_failed", "error", { scan });
     return { status: "error" };
   }
@@ -248,7 +252,11 @@ export async function GET(request: Request) {
     // migrate. Nothing ran, so there are no counts to report; the check-in
     // still has to be closed out or the monitor would read this as a run that
     // is somehow still in progress.
-    await sentry.captureException(error, { tags: { cron_scan: "bootstrap" } });
+    await reportScrubbedError(error, {
+      name: "CronScanFailed",
+      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+      tags: { cron_scan: "bootstrap" },
+    });
     log("cron_reminders.tick_failed", "error", { scan: "bootstrap" });
     await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });

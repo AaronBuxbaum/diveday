@@ -27,7 +27,7 @@ import {
 } from "@/lib/founder-metrics";
 import { log } from "@/lib/log";
 import { notify } from "@/lib/notifications";
-import { flushLogs } from "@/lib/observability";
+import { flushLogs, reportScrubbedError } from "@/lib/observability";
 import { sentry } from "@/lib/observability/sentry";
 import { founderDigestRecipient } from "@/lib/platform-mail";
 
@@ -111,7 +111,11 @@ export async function GET(request: Request) {
       { status: digest === "failed" ? 500 : 200 },
     );
   } catch (error) {
-    await sentry.captureException(error, { tags: { cron_scan: "founder_metrics" } });
+    await reportScrubbedError(error, {
+      name: "CronScanFailed",
+      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+      tags: { cron_scan: "founder_metrics" },
+    });
     log("cron_founder_metrics.failed", "error", {});
     await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "founder_metrics_unavailable" }, { status: 503 });

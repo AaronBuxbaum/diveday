@@ -3,7 +3,7 @@ import { getDb } from "@/db/client";
 import { pruneExpiredRecords } from "@/db/retention";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
-import { flushLogs } from "@/lib/observability";
+import { flushLogs, reportScrubbedError } from "@/lib/observability";
 import { sentry } from "@/lib/observability/sentry";
 
 /** The 45s batch-admission budget is intended to leave room under the 60s
@@ -101,7 +101,11 @@ export async function GET(request: Request) {
   } catch (error) {
     // Connection, migration or checkpoint failure admits no further batch.
     // Close the monitor even when durable scheduling state is unavailable.
-    await sentry.captureException(error, { tags: { cron_scan: "retention_bootstrap" } });
+    await reportScrubbedError(error, {
+      name: "CronScanFailed",
+      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+      tags: { cron_scan: "retention_bootstrap" },
+    });
     log("cron_retention.prune_failed", "error", { scan: "bootstrap" });
     await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "prune_unavailable" }, { status: 503 });
