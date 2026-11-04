@@ -172,6 +172,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.locator("#emergency-response summary").click();
         await page.locator("#emergency-alerts summary").click();
         await page.locator("#emergency-contact-new summary").click();
+        // Name a toggle that did not take (or was undone by a re-render) here, not as a hidden input 15 s on (#3750).
+        await expect(page.locator("#emergency-contact-new")).toHaveJSProperty("open", true);
         await page.locator('#emergency-contact-new input[name^="emergencyLabel-"]').waitFor();
         await capture(page, "settings-emergency-add", scheme);
       });
