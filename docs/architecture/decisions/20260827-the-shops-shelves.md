@@ -109,7 +109,7 @@ tile restating a group — not the counter's count-led anatomy.
 | Order record | already one card | restyles flat, nothing moves |
 | Settings sub-pages | Clearwater 6g owns them | — |
 | `/shop/[shopSlug]/orders/new` | worked-in form card | restyles flat under 6a, no recomposition |
-| `/shop/[shopSlug]/schedule/blowout/[tripId]` | instrument grammar for its record mode (stat row + ledger), worked-in card for its confirm mode | restyled under 6a, no behavior change |
+| `/shop/[shopSlug]/trips/[id]?blowout=1` | instrument grammar for its record mode (stat row + ledger), worked-in card for its confirm mode | restyled under 6a, no behavior change |
 | `/shop/[shopSlug]/trips/[id]/log` | keeps its composition | 6a mechanics only |
 | `/shop/[shopSlug]/check-in/walk-in` + `/walk-in/[tripId]` | worked-in form | 6a only |
 | `/shop/[shopSlug]/divers/new` | worked-in form | 6a only |

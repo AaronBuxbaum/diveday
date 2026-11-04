@@ -1653,7 +1653,7 @@
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 307,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 312,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 346,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 344,
     "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
@@ -1732,7 +1732,7 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 410,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 578,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 504,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 473
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 468
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

@@ -99,3 +99,7 @@ and local-git resolution, S3 snapshot verification, pagination and deletion, err
 entry-point refusal behavior remain adapters at their original boundaries. Shared-core tests cover
 the policy edges; the former source-regex test that compared two copies is removed because there is
 now one implementation.
+
+## Amended 2026-11-04: the PUT cut was dead until the publisher pin moved
+
+Pull request snapshots skip their passed `actual/` images and every `expected/` image the report viewer never loads (`scripts/visual-build-publish-bundle.mjs`, 2026-11-01), but the bundle is built by the reusable `reg-suit-publish.yml`, which `ci.yml` pins to a commit. The pin still named a 2026-10-31 commit that predates the change, so every run kept uploading the full ~850 `actual/` plus ~850 `expected/`. The pin now names a commit that has it. Pushes to `main` still upload every `actual/` image, because that snapshot is the next baseline. Bump the pin whenever `reg-suit-publish.yml` or a script it runs changes.

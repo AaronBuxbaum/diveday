@@ -84,7 +84,6 @@ describe("staffRouteAt", () => {
     expect(up("/shop/blue-mantis/schedule/day/2026-11-03")).toBe(
       "/shop/blue-mantis/schedule/board",
     );
-    expect(up("/shop/blue-mantis/schedule/blowout/t-1")).toBe("/shop/blue-mantis/trips/t-1");
   });
 
   it("sends a departure's faces to the board, and what is below a face to the face", () => {

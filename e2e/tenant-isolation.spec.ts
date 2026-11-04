@@ -209,7 +209,7 @@ test("a mistyped id in a staff path segment is a 404, never a 500", async ({ pag
     "/shop/blue-mantis/divers/nope",
     "/shop/blue-mantis/dive-sites/nope",
     "/shop/blue-mantis/trips/nope?add=1",
-    "/shop/blue-mantis/schedule/blowout/nope",
+    "/shop/blue-mantis/trips/nope?blowout=1",
   ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBeLessThan(500);

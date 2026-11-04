@@ -173,7 +173,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`a canceled departure shows its reinstate band (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
-        await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?blowout=1`);
         await page.getByRole("button", { name: "Call the blow-out" }).click();
         await page.getByRole("heading", { level: 1, name: "Cancellation record" }).waitFor();
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);

@@ -5,6 +5,7 @@ import { canPersonCallDayBlowout } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { shopPath } from "@/lib/staff-notices";
+import { blowoutPath } from "./blowout/blowout-path";
 
 const DOOR_CLASS = buttonClass({ variant: "danger-ghost", size: "sm", flush: true });
 
@@ -41,7 +42,7 @@ export function BlowoutDoors({
 }) {
   return (
     <>
-      <Link href={shopPath(shop.slug, "schedule", "blowout", tripId)} className={DOOR_CLASS}>
+      <Link href={blowoutPath(shop.slug, tripId)} className={DOOR_CLASS}>
         {tripLabel}
       </Link>
       <Suspense fallback={null}>

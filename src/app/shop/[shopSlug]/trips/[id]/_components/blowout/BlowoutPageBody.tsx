@@ -1,13 +1,11 @@
-import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { getBlowoutPage, readTripBlowout } from "@/db/blowouts";
+import { getBlowoutPage } from "@/db/blowouts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -16,43 +14,15 @@ import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/form
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { uuidParam } from "@/lib/uuid";
-import { BlowoutConfirmation } from "./_components/BlowoutConfirmation";
-import { HeldRefundsCard } from "./_components/HeldRefundsCard";
-import { RecoveryGroups } from "./_components/RecoveryGroups";
-import { blowoutTitleKey } from "./_lib/title";
-import { callBlowoutAction, releaseBlowoutRefundsAction, resumeBlowoutAction } from "./actions";
-
-// `instant = true` asserts that navigating *into* this page paints
-// immediately — this segment's `loading.tsx`, with no request read above it.
-// Since the staff shell became synchronous (issue 1446) that holds for a cold,
-// direct visit too: the shell's session, shop row and nav stream in beside the
-// page from `ShopChrome` rather than above it, so the route gets a static
-// shell and its own reads are the only ones the reader waits on. See ADR
-// 20260804-instant-navigation.
-export const instant = true;
-
-/**
- * Runtime metadata on an instant route. It reads the record only behind
- * `requireShopSurface`, as the page does: a title read before the tenant gate
- * would tell a stranger whether a guessed departure was called off (the lesson
- * of issue 1569). The page's own request reads keep the route dynamic, so the
- * title streams with the body and the static shell still paints first.
- */
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ shopSlug: string; tripId: string }>;
-}): Promise<Metadata> {
-  const { shopSlug, tripId } = await params;
-  if (!uuidParam(tripId)) notFound();
-  const { db, shop } = await requireShopSurface(shopSlug);
-  const [locale, blowout] = await Promise.all([
-    requestLocale(shop.defaultLocale),
-    readTripBlowout(db, shop.id, tripId),
-  ]);
-  return { title: `${staffTranslator(locale)(blowoutTitleKey(blowout))} — DiveDay` };
-}
+import {
+  callBlowoutAction,
+  releaseBlowoutRefundsAction,
+  resumeBlowoutAction,
+} from "../../blowout-actions";
+import { BlowoutConfirmation } from "./BlowoutConfirmation";
+import { HeldRefundsCard } from "./HeldRefundsCard";
+import { RecoveryGroups } from "./RecoveryGroups";
+import { blowoutTitleKey } from "./title";
 
 const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
   called: { tone: "success", key: "blowout.notices.called" },
@@ -64,25 +34,22 @@ const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey
 };
 
 /**
- * The blow-out page, in one of two modes on the same URL. Before the call it
+ * The blow-out, a state of its departure (`?blowout=1`), in one of two modes. Before the call it
  * is the confirmation — the one deliberate step between the captain's word
  * and cancelling real bookings (guardrail: one tap, one confirm, never
  * zero). After the call it is the cascade record: who was messaged, who has
  * rebooked, who is still unresolved — the surface the blow-out morning is
  * worked from until that last column empties.
  */
-export default async function BlowoutPage({
-  params,
-  searchParams,
+export async function BlowoutPageBody({
+  shopSlug,
+  tripId,
+  notice,
 }: {
-  params: Promise<{ shopSlug: string; tripId: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  shopSlug: string;
+  tripId: string;
+  notice: string | undefined;
 }) {
-  const [{ shopSlug, tripId }, { notice }] = await Promise.all([params, searchParams]);
-  // An unparseable id names no row. Guarded here rather than in the query
-  // helper: comparing junk against a `uuid` column raises in Postgres, so
-  // without this the page 500s where its own notFound() belongs.
-  if (!uuidParam(tripId)) notFound();
   const { db, shop, session } = await requireShopSurface(shopSlug);
   const [locale, page] = await Promise.all([
     requestLocale(shop.defaultLocale),
@@ -107,6 +74,7 @@ export default async function BlowoutPage({
       // as a secondary button, where it competed with the one act on the page
       // (principle 10, issue #823).
       eyebrow={t("trips.surfaces.trip")}
+      returnTo={shopPath(shopSlug, "trips", tripId)}
       title={t(blowoutTitleKey(blowout))}
       meta={
         <div className="flex flex-col gap-1 text-sm text-muted">
@@ -171,7 +139,7 @@ export default async function BlowoutPage({
   );
 
   return (
-    <StaffPage width="full">
+    <div>
       <FlashParams params={["notice"]} />
       {header}
       <div className="mt-6">
@@ -234,6 +202,6 @@ export default async function BlowoutPage({
           </SubmitButton>
         </form>
       ) : null}
-    </StaffPage>
+    </div>
   );
 }

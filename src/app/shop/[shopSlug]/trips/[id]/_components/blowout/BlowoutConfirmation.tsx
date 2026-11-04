@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -35,7 +34,7 @@ export function BlowoutConfirmation({
   t: StaffTranslator;
 }) {
   return (
-    <StaffPage width="reading">
+    <div className="mx-auto w-full max-w-2xl">
       <FlashParams params={["notice"]} />
       {header}
       <div className="mt-6">{notice}</div>
@@ -90,6 +89,6 @@ export function BlowoutConfirmation({
           </form>
         )}
       </SectionCard>
-    </StaffPage>
+    </div>
   );
 }

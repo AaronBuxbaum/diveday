@@ -1295,6 +1295,13 @@ export const ENV_GROUPS = [
         absent: "errors report to the DSN compiled into the code; empty switches reporting off",
       },
       {
+        key: "SENTRY_CRON_MONITORS",
+        from: "override",
+        targets: NOWHERE,
+        absent:
+          "every cron route checks in to its monitor; set it to a comma-separated list of slugs (Sentry's free plan allows one, so `diveday-shop-tick`) and the rest skip the check-in",
+      },
+      {
         key: "SENTRY_CRON_MONITOR_SLUG",
         from: "override",
         targets: NOWHERE,
