@@ -18,6 +18,7 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
+import { refileWaiverRecords } from "./waiver-refile";
 import { listSignedWaiversByPerson } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -479,5 +480,85 @@ describe("merging a duplicate over a medical hold (issue #3815)", () => {
     expect(await mergeInto(f, duplicate.id, f.rhea.id)).toMatchObject({ ok: true });
     expect(await standing(f, f.rhea.id)).toBe("signed");
     expect(await trail(f, f.rhea.id)).toHaveLength(0);
+  });
+
+  it("sets the release aside over a retired refusal given on a seat the merge leaves behind", async () => {
+    const f = await twoRecords("behind@example.com");
+    const duplicate = await importDuplicate(f);
+    const [trip] = await f.db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, f.shop.id))
+      .orderBy(trips.id)
+      .limit(1);
+    if (!trip) throw new Error("expected a seeded departure");
+    // Both divers sit on one departure and the duplicate's seat is over: it
+    // stays on the merged-away record, so the retired refusal given on it is
+    // not on a seat the survivor owns.
+    const [keptSeat] = await f.db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId: f.shop.id, tripId: trip.id, personId: f.rhea.id })
+      .returning({ id: bookings.id });
+    const [leftSeat] = await f.db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: f.shop.id,
+        tripId: trip.id,
+        personId: duplicate.id,
+        status: "cancelled",
+      })
+      .returning({ id: bookings.id });
+    if (!keptSeat || !leftSeat) throw new Error("fixture insert failed");
+    await f.db
+      .insert(waiverRecords)
+      .values({ ...refusal(f, 1), personId: duplicate.id, bookingId: leftSeat.id });
+
+    expect(await mergeInto(f, duplicate.id, f.rhea.id)).toMatchObject({ ok: true });
+
+    const [left] = await f.db.select().from(bookings).where(eq(bookings.id, leftSeat.id));
+    expect(left?.personId).toBe(duplicate.id);
+    const [imported] = await f.db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.personId, f.rhea.id), eq(waiverRecords.signatureMethod, "imported")),
+      );
+    expect(imported?.supersededAt).not.toBeNull();
+    expect(await trail(f, f.rhea.id)).toHaveLength(1);
+  });
+
+  it("names the records it moved from the rows it locked, never an erased one", async () => {
+    const f = await twoRecords("ids@example.com");
+    const duplicate = await importDuplicate(f);
+    await f.db
+      .insert(waiverRecords)
+      .values({ ...refusal(f, 1), personId: duplicate.id, tokenHash: "erased-one" });
+    const rows = await f.db
+      .select({ id: waiverRecords.id, tokenHash: waiverRecords.tokenHash })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.personId, duplicate.id));
+    const erased = rows.find((row) => row.tokenHash === "erased-one");
+    await f.db
+      .update(waiverRecords)
+      .set({ anonymizedAt: nowDate() })
+      .where(eq(waiverRecords.id, erased?.id ?? ""));
+
+    const moved = await f.db.transaction((tx) =>
+      refileWaiverRecords(tx, {
+        shopId: f.shop.id,
+        fromPersonId: duplicate.id,
+        toPersonId: f.rhea.id,
+        actorPersonId: f.importer,
+      }),
+    );
+
+    expect([...moved].sort()).toEqual(
+      rows
+        .filter((row) => row.id !== erased?.id)
+        .map((row) => row.id)
+        .sort(),
+    );
+    expect(moved.length).toBeGreaterThan(0);
   });
 });

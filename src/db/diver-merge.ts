@@ -1129,26 +1129,16 @@ export async function mergeDiverRecords(input: {
       // being inside the seal. An erased release stays on the record it was
       // erased under, its version 2 seal covering that record, so the blanket
       // repoint below skips the table rather than undo that.
+      // The ids come back from the refile itself, which holds the rows locked:
+      // a read beforehand would miss a record written between the two.
       const movedWaiverIds = new Set(
-        (
-          await tx
-            .select({ id: waiverRecords.id })
-            .from(waiverRecords)
-            .where(
-              and(
-                eq(waiverRecords.shopId, input.shopId),
-                eq(waiverRecords.personId, source.id),
-                isNull(waiverRecords.anonymizedAt),
-              ),
-            )
-        ).map((row) => row.id),
+        await refileWaiverRecords(tx, {
+          shopId: input.shopId,
+          fromPersonId: source.id,
+          toPersonId: survivor.id,
+          actorPersonId: input.actorPersonId,
+        }),
       );
-      await refileWaiverRecords(tx, {
-        shopId: input.shopId,
-        fromPersonId: source.id,
-        toPersonId: survivor.id,
-        actorPersonId: input.actorPersonId,
-      });
       // Course forms the same way, for the same reason (issue #2266).
       await refileCourseFormRecords(tx, {
         shopId: input.shopId,

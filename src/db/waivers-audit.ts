@@ -418,6 +418,7 @@ export async function listSignedWaiversByPerson(
   db: DbExecutor,
   shopId: string,
   personIds: string[],
+  options: { anySeat?: boolean } = {},
 ): Promise<Map<string, WaiverStateRecord[]>> {
   const byPerson = new Map<string, WaiverStateRecord[]>();
   if (personIds.length === 0) return byPerson;
@@ -447,10 +448,15 @@ export async function listSignedWaiversByPerson(
         // or not: a split or claimed seat's records are superseded under the
         // matched diver's name but were someone else's answers
         // (`splitBookingIdentity`, the seat claim).
-        or(
-          isNull(waiverRecords.supersededAt),
-          or(isNull(waiverRecords.bookingId), eq(bookings.personId, waiverRecords.personId)),
-        ),
+        // `anySeat` (the merge's set-aside, #3815) drops that last rule: a seat
+        // the merge left behind on the merged-away record still carries the
+        // retired refusal given on it.
+        options.anySeat
+          ? undefined
+          : or(
+              isNull(waiverRecords.supersededAt),
+              or(isNull(waiverRecords.bookingId), eq(bookings.personId, waiverRecords.personId)),
+            ),
         // **A clean release signed on a held seat does not carry** (#2082).
         // Until staff confirm who took the seat, whoever held its link may
         // not be this diver, and their "no" to every medical question must

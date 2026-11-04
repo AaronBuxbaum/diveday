@@ -26,6 +26,8 @@ import { listSignedWaiversByPerson } from "./waivers-audit";
  * where they are: nothing personal is left on them, and their version 2 seal
  * covers the record they were erased under.
  *
+ * Returns the ids it moved, read from the rows it locked.
+ *
  * Called by `mergeDiverRecords` for every release of the record merged away,
  * which is also how a wrong split of a held seat is undone. A version 3
  * release verifies again after a second move, re-sealed over its newest owner.
@@ -46,7 +48,7 @@ export async function refileWaiverRecords(
     actorPersonId: string;
     now?: Date;
   },
-): Promise<void> {
+): Promise<string[]> {
   const now = input.now ?? nowDate();
   const records = await tx
     .select()
@@ -91,6 +93,7 @@ export async function refileWaiverRecords(
       })
       .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, input.shopId)));
   }
+  return records.map((record) => record.id);
 }
 
 /**
@@ -108,9 +111,11 @@ export async function setAsideImportedOverHold(
   tx: DbExecutor,
   input: { shopId: string; personId: string; movedRecordIds: ReadonlySet<string>; now: Date },
 ): Promise<string[]> {
-  const evidence = (await listSignedWaiversByPerson(tx, input.shopId, [input.personId])).get(
-    input.personId,
-  );
+  // Without the seat-ownership filter: a retired refusal given on a seat the
+  // merge left behind on the merged-away record is still this diver's hold.
+  const evidence = (
+    await listSignedWaiversByPerson(tx, input.shopId, [input.personId], { anySeat: true })
+  ).get(input.personId);
   const setAside = importedSignaturesOverHold(evidence ?? [], input.movedRecordIds).map(
     (record) => record.id,
   );
