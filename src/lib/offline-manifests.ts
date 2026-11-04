@@ -6,7 +6,7 @@ import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import type { DepartureEmergencyReference } from "./emergency-reference";
 // Its one runtime import, `./dive-recency`, imports nothing at runtime.
-import { depthAdvisoryIn } from "./findings";
+import { type DepthAdvisory, depthAdvisoryIn } from "./findings";
 // Dependency-free too (type-only imports), for the same reason.
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { TrainingMarkCleared, TripManifest } from "./manifests";
@@ -1045,6 +1045,15 @@ export function offlineManifestPayloads(body: unknown): OfflineManifestPayload[]
  */
 const TENANT_LOOKUP_TIMEOUT_MS = 10_000;
 
+function safetyAdvisory(
+  diver: TripManifest["divers"][number],
+  resolve: ((advisory: DepthAdvisory) => string) | undefined,
+): { safetyAdvisoryText?: string } {
+  if (!resolve || diver.identityWithheld) return {};
+  const advisory = depthAdvisoryIn(diver.advisories);
+  return advisory ? { safetyAdvisoryText: resolve(advisory) } : {};
+}
+
 /**
  * Server-verified "which shop is this browser signed in as" — never a
  * client-supplied value, never a slug read off a snapshot this device already
@@ -1109,7 +1118,14 @@ export function serializeManifests(
   boatSafety: BoatSafetySection | null = null,
   /** The boat's open snags, worded; absent or empty carries none. */
   snags?: OfflineManifestPayload["snags"],
-  resolveJuniorAdvisory?: () => string,
+  /**
+   * The one sentence a seat's depth advisory reads as on this copy, for any
+   * depth advisory (issue #3719): a plain "site deeper than the card" line as
+   * well as the junior and card-verification ones. Called only for a confirmed
+   * seat; it never gates, and it never carries the raw numbers beyond the
+   * resolved sentence.
+   */
+  resolveJuniorAdvisory?: (advisory: DepthAdvisory) => string,
 ): OfflineManifestPayload {
   return {
     readinessPolicyVersion: 1,
@@ -1190,11 +1206,10 @@ export function serializeManifests(
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,
         nitroxRequested: diver.nitroxRequested,
-        ...(resolveJuniorAdvisory &&
-        !diver.identityWithheld &&
-        depthAdvisoryIn(diver.advisories)?.params.verificationReasons?.length
-          ? { safetyAdvisoryText: resolveJuniorAdvisory() }
-          : {}),
+        // Any depth advisory on a confirmed seat, not only a verification one
+        // (issue #3719). Additive and optional, so no record-version bump is
+        // owed: a bump purges the roll calls a crew has queued offline.
+        ...safetyAdvisory(diver, resolveJuniorAdvisory),
         participantType: diver.participantType,
         bookedAs: diver.bookedAs,
         ...(diver.dietaryNote ? { dietaryNote: diver.dietaryNote } : {}),
