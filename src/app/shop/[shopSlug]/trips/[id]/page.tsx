@@ -21,12 +21,13 @@ import { shopPath } from "@/lib/staff-notices";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
+import { blowoutPath } from "./_components/blowout/blowout-path";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
+import { departureStateOf } from "./_components/departure-states";
 import { detailsReadRows } from "./_components/details-rows";
 import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
-import { PaperPassSheet } from "./_components/PaperPassSheet";
 import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
 import { addBandFor } from "./_components/seat-request-band";
@@ -104,6 +105,7 @@ export default async function ManageTripPage({
       confirmPhone,
       view,
       pass,
+      blowout,
       held,
       tell,
       ...rest
@@ -111,12 +113,8 @@ export default async function ManageTripPage({
   ] = await Promise.all([params, searchParams]);
   // An unparseable UUID must not reach Postgres.
   if (!uuidParam(tripId)) notFound();
-  if (pass !== undefined) {
-    // The departure's paper pass for one booking: a sheet, not a tab.
-    const bookingId = uuidParam(pass);
-    if (!bookingId) notFound();
-    return <PaperPassSheet shopSlug={shopSlug} tripId={tripId} bookingId={bookingId} />;
-  }
+  const state = await departureStateOf(shopSlug, tripId, { pass, blowout, notice });
+  if (state) return state;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   reportRenderQueries("/shop/[shopSlug]/trips/[id]", after);
   const locale = await requestLocale(shop.defaultLocale);
@@ -325,7 +323,7 @@ export default async function ManageTripPage({
               ) : null}
               {blowoutCalled ? (
                 <Link
-                  href={shopPath(shopSlug, "schedule", "blowout", tripId)}
+                  href={blowoutPath(shopSlug, tripId)}
                   className={buttonClass({ variant: "secondary" })}
                 >
                   {t("trips.detail.viewBlowout", { cause: blowoutCalled })}

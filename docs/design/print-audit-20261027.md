@@ -44,7 +44,7 @@ Staff review covered 73 route templates and inspected 125 pages from 67 unique P
 | `/shop/[shopSlug]/reviews` | Prior PDF reviewed |
 | `/shop/[shopSlug]/safety` | Prior PDF reviewed |
 | `/shop/[shopSlug]/safety-checklist` | Seeded or disposable PDF reviewed before final changes |
-| `/shop/[shopSlug]/schedule/blowout/[tripId]` | Seeded or disposable PDF reviewed before final changes |
+| `/shop/[shopSlug]/trips/[id]?blowout=1` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/schedule/blowout/day/[date]` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/schedule/board` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/schedule/board/new` | Seeded or disposable PDF reviewed before final changes |

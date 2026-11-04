@@ -725,7 +725,7 @@ for (const scheme of ["light", "dark"] as const) {
       // Read-only: nothing is cancelled by rendering it.
       test(`the blow-out confirm page renders true to the design (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
-        await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?blowout=1`);
         await page.getByRole("heading", { level: 1, name: "Call a blow-out?" }).waitFor();
         await capture(page, "blowout-confirm", scheme);
       });
@@ -744,7 +744,7 @@ for (const scheme of ["light", "dark"] as const) {
       // every departure selected. Read-only until the review's button.
       test(`the day's weather call renders true to the design (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
-        await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?blowout=1`);
         await page.getByRole("link", { name: /Call several departures at once/ }).click();
         await page
           .getByRole("heading", { level: 1, name: "Call a blow-out for the day?" })
@@ -774,7 +774,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
-        await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?blowout=1`);
         await page.getByRole("button", { name: "Call the blow-out" }).click();
         await page.getByRole("heading", { level: 1, name: "Cancellation record" }).waitFor();
         await page

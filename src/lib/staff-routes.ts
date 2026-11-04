@@ -86,8 +86,6 @@ export const STAFF_ROUTES = {
   reviews: {},
   safety: {},
   "safety-checklist": { parent: SETTINGS },
-  // A blowout is decided about one departure; its way up is that departure.
-  "schedule/blowout/[tripId]": { parent: "trips/[tripId]" },
   "schedule/blowout/day/[date]": { parent: BOARD },
   "schedule/board": {},
   "schedule/day/[date]": { parent: BOARD },

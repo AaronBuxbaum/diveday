@@ -11,14 +11,7 @@ import { getTripWithBooked } from "@/db/trips";
 import { trackEvent } from "@/lib/analytics";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-
-// `shopPath`, not a template literal: `shopSlug` is a server-action argument and
-// therefore client-supplied, and interpolating it raw let a slug traverse out of
-// the `/shop/` namespace, or carry a `?`/`#` that swallowed the `?notice=`
-// appended after it (see src/lib/staff-notices.ts). Each segment is escaped
-// instead.
-const blowoutPath = (shopSlug: string, tripId: string) =>
-  shopPath(shopSlug, "schedule", "blowout", tripId);
+import { blowoutPath } from "./_components/blowout/blowout-path";
 
 /**
  * The one-tap blow-out (docs ADR 20260804-blowout-cascade). Open to all staff,
@@ -104,7 +97,7 @@ export async function releaseBlowoutRefundsAction(shopSlug: string, tripId: stri
   const back = blowoutPath(shopSlug, tripId);
   const { db, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonRefund,
-    refusal: { notice: "refund-not-authorized", landing: ["schedule", "blowout", tripId] },
+    refusal: { notice: "refund-not-authorized", landing: ["trips", tripId] },
   });
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (trip?.status !== "cancelled") redirect(noticeUrl(back, "error"));

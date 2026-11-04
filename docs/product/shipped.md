@@ -2373,7 +2373,7 @@ departure and confirm once: the trip is cancelled through the existing `setTripS
 and every booked diver gets one message — what happened, their money story, and up to three
 rebooking links filtered through the real booking-time admission gate (`decideTripAdmission`) to
 departures they actually qualify for. A cascade record at
-`/shop/[shopSlug]/schedule/blowout/[tripId]` tracks per diver: message state (sent / retrying /
+`/shop/[shopSlug]/trips/[id]?blowout=1` tracks per diver: message state (sent / retrying /
 failed / no email), payment position, the offers their message carried, and a live
 rebooked-vs-unresolved state — the blow-out isn't over until that column empties. Sends are
 idempotent and resumable; no money moves (refunds stay per-booking, H-20260724-staff-role-reach gate intact).

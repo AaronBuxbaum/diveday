@@ -98,7 +98,6 @@ export async function callDayBlowoutAction(shopSlug: string, date: string, formD
         errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
-    revalidatePath(shopPath(shopSlug, "schedule", "blowout", tripId));
     revalidatePath(shopPath(shopSlug, "trips", tripId));
   }
   revalidatePath(back);
