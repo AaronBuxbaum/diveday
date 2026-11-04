@@ -16,7 +16,7 @@ import {
   markSubjectId,
   splitRollCallRows,
 } from "./roll-call-subject";
-import { retiredRollCallCrewEvents, rollCallEvents, tripAssignments } from "./schema";
+import { rollCallEvents, tripAssignments } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -313,75 +313,6 @@ describe("an after-dive count with a diver still down", () => {
     });
     expect(manifest?.summary.notBackAboard).toBe(1);
     expect(manifest?.completeness.complete).toBe(false);
-  });
-});
-
-describe("the deploy-window bridge from the retired crew table", () => {
-  it("forwards a crew mark the release still serving writes to the old table", async () => {
-    const { db, shop } = ctx;
-    const { tripId, staffId } = await reefWithCrew(db, shop.id);
-    const [old] = await db
-      .insert(retiredRollCallCrewEvents)
-      .values({
-        shopId: shop.id,
-        tripId,
-        personId: staffId,
-        recordedByPersonId: staffId,
-        status: "not_boarded",
-        checkpoint: "after_dive_1",
-        occurredAt: nowDate(),
-      })
-      .returning({ id: retiredRollCallCrewEvents.id });
-    const forwarded = await db
-      .select()
-      .from(rollCallEvents)
-      .where(eq(rollCallEvents.id, old?.id ?? ""));
-    // A crew member called "not back aboard" mid-deploy must not read as awaiting.
-    expect(forwarded).toHaveLength(1);
-    expect(forwarded[0]).toMatchObject({
-      subjectKind: "crew",
-      crewPersonId: staffId,
-      bookingId: null,
-      status: "not_boarded",
-      checkpoint: "after_dive_1",
-    });
-  });
-
-  it("carries the old release's erasure scrub and delete onto the forwarded copy", async () => {
-    const { db, shop } = ctx;
-    const { tripId, staffId } = await reefWithCrew(db, shop.id);
-    const [old] = await db
-      .insert(retiredRollCallCrewEvents)
-      .values({
-        shopId: shop.id,
-        tripId,
-        personId: staffId,
-        recordedByPersonId: staffId,
-        status: "boarded",
-        checkpoint: "departure",
-        note: "Ankle strapped, said she was fine",
-        credentialSnapshot: [],
-        credentialSnapshotStartedAt: nowDate(),
-        credentialSnapshotCapturedAt: nowDate(),
-        occurredAt: nowDate(),
-      })
-      .returning({ id: retiredRollCallCrewEvents.id });
-    const id = old?.id ?? "";
-    // The release still serving erases this crew member: it scrubs only the retired row.
-    // diveday:roll-call-both-subjects: reads back one row by its id.
-    const copy = () => db.select().from(rollCallEvents).where(eq(rollCallEvents.id, id));
-    await db
-      .update(retiredRollCallCrewEvents)
-      .set({
-        note: null,
-        credentialSnapshot: null,
-        credentialSnapshotStartedAt: null,
-        credentialSnapshotCapturedAt: null,
-      })
-      .where(eq(retiredRollCallCrewEvents.id, id));
-    expect(await copy()).toMatchObject([{ note: null, credentialSnapshot: null }]);
-    await db.delete(retiredRollCallCrewEvents).where(eq(retiredRollCallCrewEvents.id, id));
-    expect(await copy()).toHaveLength(0);
   });
 });
 

@@ -81,11 +81,19 @@ export function secretKeyFromEnvironment(
   const current = parseKey(env.SECRET_ENCRYPTION_KEY);
   if (current.status === "unset") return { status: "unset" };
   if (current.status === "invalid") {
-    return { status: "invalid", variable: SECRET_KEY_VARIABLE, reason: current.reason };
+    return {
+      status: "invalid",
+      variable: SECRET_KEY_VARIABLE,
+      reason: current.reason,
+    };
   }
   const previous = parseKey(env.SECRET_ENCRYPTION_KEY_PREVIOUS);
   if (previous.status === "invalid") {
-    return { status: "invalid", variable: PREVIOUS_SECRET_KEY_VARIABLE, reason: previous.reason };
+    return {
+      status: "invalid",
+      variable: PREVIOUS_SECRET_KEY_VARIABLE,
+      reason: previous.reason,
+    };
   }
   return {
     status: "ok",
@@ -130,7 +138,10 @@ function parseKey(value: string | undefined): ParsedKey {
   // to nothing at all was not base64 in any useful sense; anything else decoded
   // fine and is simply the wrong size.
   if (decoded.length !== KEY_BYTES) {
-    return { status: "invalid", reason: decoded.length === 0 ? "not_base64" : "wrong_length" };
+    return {
+      status: "invalid",
+      reason: decoded.length === 0 ? "not_base64" : "wrong_length",
+    };
   }
   return { status: "ok", key: decoded };
 }
@@ -205,6 +216,53 @@ export function keyringOpensStored(
     reason: key.previous ? "keys_do_not_open" : "previous_missing",
     checked: stored.length,
     lockedOut,
+  };
+}
+
+/**
+ * The other kinds of sealed secret the deploy samples (issue #3022): a WhatsApp
+ * access token, a connector's credential envelope and a backup destination's
+ * access key. A wrong key here breaks that integration, not sign-in, but it
+ * breaks it silently until a shop notices, so the deploy says so first.
+ */
+export const SEALED_SECRET_KINDS = ["whatsapp", "connector", "backup"] as const;
+export type SealedSecretKind = (typeof SEALED_SECRET_KINDS)[number];
+
+/** One stored value of a kind, trial-opened by `keyringOpensSamples`. */
+export interface SealedSecretSample {
+  readonly kind: SealedSecretKind;
+  readonly sealed: string;
+}
+
+/** Counts and kind names only: the result is printed into a build log. */
+export type SampleCheck =
+  | { status: "ok"; checked: number }
+  | {
+      status: "cannot_open";
+      reason: "previous_missing" | "keys_do_not_open";
+      checked: number;
+      /** Each kind whose sampled value no key in the keyring opens, in a fixed order. */
+      unopened: SealedSecretKind[];
+    };
+
+/**
+ * **Whether this keyring opens one stored value of each other sealed-secret
+ * kind** (issue #3022), the sibling of `keyringOpensStored`. A kind with no
+ * rows has nothing to open and is not counted.
+ */
+export function keyringOpensSamples(
+  key: SecretKeyring,
+  samples: readonly SealedSecretSample[],
+): SampleCheck {
+  const unopened = SEALED_SECRET_KINDS.filter((kind) =>
+    samples.some((sample) => sample.kind === kind && openSecret(sample.sealed, key) === null),
+  );
+  if (unopened.length === 0) return { status: "ok", checked: samples.length };
+  return {
+    status: "cannot_open",
+    reason: key.previous ? "keys_do_not_open" : "previous_missing",
+    checked: samples.length,
+    unopened,
   };
 }
 

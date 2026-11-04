@@ -38,7 +38,7 @@ export function CourseAfterState({
   /** The card this shop issued from this session, or null — never a guess. */
   certification: { level: CertificationLevel } | null;
   /** The instructor's own words, and who wrote them. */
-  nextStep: { words: string; byName: string } | null;
+  nextStep: { words: string; byName: string | null } | null;
 }) {
   return (
     <section className="mt-10 print:hidden">
@@ -56,7 +56,9 @@ export function CourseAfterState({
             {t("recap.course.nextStepQuote", { words: nextStep.words })}
           </blockquote>
           <figcaption className="mt-2 text-sm text-muted">
-            {t("recap.course.nextStepBy", { name: nextStep.byName })}
+            {nextStep.byName
+              ? t("recap.course.nextStepBy", { name: nextStep.byName })
+              : t("recap.course.nextStepByInstructor")}
           </figcaption>
         </figure>
       ) : null}

@@ -95,7 +95,6 @@ import type { AppDb, AppTransaction } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import { queueMediaDeletion } from "./media-deletions";
 import { erasedPersonRowDeletes } from "./person-columns";
-import { forgetPremergeCards } from "./premerge-cards-cleanup";
 import {
   attemptProcessorErasures,
   type ProcessorErasureTargetInput,
@@ -143,7 +142,6 @@ import {
   pushSubscriptions,
   recapPhotos,
   recapPulses,
-  retiredRollCallCrewEvents,
   reviewModerationEvents,
   reviewReplies,
   rollCallEvents,
@@ -798,22 +796,6 @@ async function scrubPersonRecord(
         or(isNotNull(rollCallEvents.note), isNotNull(rollCallEvents.credentialSnapshot)),
       ),
     );
-  // The retired crew table still holds the rows the bridge migration copied
-  // (#2700) until the next release drops it; the erasure promise covers them too.
-  await tx
-    .update(retiredRollCallCrewEvents)
-    .set({
-      note: null,
-      credentialSnapshot: null,
-      credentialSnapshotStartedAt: null,
-      credentialSnapshotCapturedAt: null,
-    })
-    .where(
-      and(
-        eq(retiredRollCallCrewEvents.shopId, shopId),
-        eq(retiredRollCallCrewEvents.personId, personId),
-      ),
-    );
 
   await tx
     .update(staffCredentials)
@@ -1059,8 +1041,6 @@ async function scrubCertificationEvidence(
       })
       .where(eq(cards.id, card.id));
   }
-  // The retired tables' copy too, until they drop (issue #2722).
-  await forgetPremergeCards(tx, shopId, personId, now);
   return [];
 }
 

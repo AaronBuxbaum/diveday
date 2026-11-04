@@ -25,9 +25,9 @@ form is not proof of which kind of card it names. Erasure, merge and the export 
 `src/lib/card-ledger.ts` turns a row into the narrower `Certification`, `SpecialtyCertification` or
 `NitroxCertification` a rule takes, and throws on the wrong kind.
 
-Ids carried over in a plain copy migration. The three tables stay in the database, declared only
-in `src/db/schema-retired/premerge-cards.ts` for drizzle-kit, for one release, because the release
-serving while the migration runs still reads them; the next release drops them.
+Ids carried over in a plain copy migration. The three tables stayed for one release,
+because the release serving during that migration still read them. The next
+release copied any late row and dropped them (issue #3732).
 
 ## Alternatives considered
 

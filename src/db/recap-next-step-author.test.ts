@@ -34,7 +34,11 @@ describe("the course recap's next-step author", () => {
       instructorPersonId: staff.person.id,
       note: "Book your deep dive before the card arrives.",
     });
-    expect((await getRecapPageData(db, bookingId))?.course?.nextStep?.byName).toBeTruthy();
+    await db
+      .update(people)
+      .set({ crewPublicName: "Captain Kei", crewPublicConsentAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(people.id, staff.person.id));
+    expect((await getRecapPageData(db, bookingId))?.course?.nextStep?.byName).toBe("Captain Kei");
 
     const [other] = await db
       .insert(shops)
@@ -52,5 +56,47 @@ describe("the course recap's next-step author", () => {
       .where(eq(bookings.id, bookingId));
 
     expect((await getRecapPageData(db, bookingId))?.course?.nextStep).toBeNull();
+  });
+
+  it("signs with the crew public name, never full_name, and keeps the words with no name", async () => {
+    const { db, shop } = ctx;
+    const all = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const session = all.find((trip) => trip.title.startsWith("Advanced Open Water Diver"));
+    if (!session) throw new Error("the seeded shop is missing its course session");
+    const [student] = await getTripRoster(db, shop.id, session.id);
+    if (!student) throw new Error("the seeded course session has an empty roster");
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("the seeded shop has no staff");
+    const bookingId = student.booking.id;
+    await recordCourseNextStep(db, {
+      shopId: shop.id,
+      bookingId,
+      instructorPersonId: staff.person.id,
+      note: "Book your deep dive before the card arrives.",
+    });
+
+    // Consented public name: that name, not the free-text full name.
+    await db
+      .update(people)
+      .set({
+        fullName: "Legal Full Name Smith",
+        crewPublicName: "Captain Kei",
+        crewPublicConsentAt: new Date("2026-01-01T00:00:00Z"),
+      })
+      .where(eq(people.id, staff.person.id));
+    expect((await getRecapPageData(db, bookingId))?.course?.nextStep).toEqual({
+      words: "Book your deep dive before the card arrives.",
+      byName: "Captain Kei",
+    });
+
+    // No consent (name and consent clear together): words kept, no name.
+    await db
+      .update(people)
+      .set({ crewPublicName: null, crewPublicConsentAt: null })
+      .where(eq(people.id, staff.person.id));
+    expect((await getRecapPageData(db, bookingId))?.course?.nextStep).toEqual({
+      words: "Book your deep dive before the card arrives.",
+      byName: null,
+    });
   });
 });

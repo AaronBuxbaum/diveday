@@ -2,7 +2,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
-import { pageRoutes } from "./source-tree.mjs";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
+import { pageRoutes, sourceFiles, withoutComments } from "./source-tree.mjs";
 
 /**
  * Every `page.tsx` under `src/app` ships a sibling `loading.tsx`, and where
@@ -78,6 +79,30 @@ export function containerWidth(source) {
   return match ? match[1] : null;
 }
 
+/**
+ * Hand-drawn skeleton literals in a `loading.tsx`: each `bg-surface-sunken` bar and each
+ * `animate-pulse` wrapper. A primitive with a resting shape draws its own pending face
+ * (`<ShopPageHeader pending>`, `<SectionCard pending>`), so a loading file that types the
+ * bar itself is a twin that can drift from the page it stands for (#1857, #2769). Counted
+ * per file, comments stripped, and ratcheted: the number may only fall.
+ */
+export function skeletonLiteralCount(source) {
+  return (withoutComments(source).match(/bg-surface-sunken|animate-pulse/g) ?? []).length;
+}
+
+/** Per-file literal counts for every `loading.tsx` under `src/app`, zero-count files left out. */
+export async function skeletonLiteralCounts(root = ROOT) {
+  const counts = {};
+  const files = sourceFiles(path.join(root, guardedRoot), { ext: [".tsx"] }).filter(
+    (file) => path.basename(file) === "loading.tsx",
+  );
+  for (const file of files) {
+    const count = skeletonLiteralCount(await readFile(file, "utf8"));
+    if (count > 0) counts[path.relative(root, file).split(path.sep).join("/")] = count;
+  }
+  return counts;
+}
+
 async function main() {
   const pages = await pageRoutes(ROOT, guardedRoot);
 
@@ -123,6 +148,38 @@ async function main() {
   }
 
   const failures = [];
+
+  const literals = await skeletonLiteralCounts();
+  const { counts: allowed, exists } = await readCounts(ROOT, "loading-skeleton-literals");
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root: ROOT,
+        guard: "loading-skeleton-literals",
+        script: "check-loading-skeletons",
+        counts: literals,
+        allowed,
+        exists,
+        note: "Hand-typed bg-surface-sunken / animate-pulse in a loading.tsx, per file. Written by `node scripts/check-loading-skeletons.mjs --write`. This number may only go down: compose the page's own primitives with `pending` instead (issue #2769).",
+        refusal:
+          "The ratchet only turns one way. Use <ShopPageHeader pending> and <SectionCard pending> instead of a hand-drawn bar",
+        absorb,
+        summary: (files, total) => `${files} files, ${total} literals`,
+      }),
+    );
+  }
+  if (exists) {
+    const grew = Object.entries(literals).filter(([file, count]) => count > (allowed[file] ?? 0));
+    if (grew.length > 0) {
+      failures.push(
+        `Hand-drawn skeleton bars in a loading.tsx:\n${grew
+          .map(([file, count]) => `- ${file}: ${count} (allowed ${allowed[file] ?? 0})`)
+          .join("\n")}
+A primitive with a resting shape draws its own pending face from its own class strings, so the skeleton cannot drift from the page: <ShopPageHeader pending>, <SectionCard pending>. If a file fell below its allowance, bank it with \`node scripts/check-loading-skeletons.mjs --write\`.`,
+      );
+    }
+  }
 
   if (missing.length > 0) {
     failures.push(

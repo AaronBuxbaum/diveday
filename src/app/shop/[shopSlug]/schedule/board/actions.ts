@@ -14,7 +14,6 @@ import { getShopById } from "@/db/shops";
 import { getTripLens, listTripLenses } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
-  countShopTrips,
   createTrip,
   createTripSeries,
   deleteTrip,
@@ -56,6 +55,7 @@ import { type PatternDeparture, patternDives, patternSiteFields } from "@/lib/we
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { builderCourseOptions } from "./_components/builder-course-options";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
+import { landAfterAdd } from "./add-landing";
 import { attachRequestedInterests } from "./attach-interests";
 import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
 
@@ -586,7 +586,15 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     await attachRequestedInterests(db, shop.id, firstTrip.id, session.user.personId, formData);
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
     await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
-    return await landAfterAdd(db, shop, shopSlug, title, series.trips.length);
+    return await landAfterAdd(
+      db,
+      shop,
+      shopSlug,
+      title,
+      series.trips.length,
+      firstTrip.id,
+      formData,
+    );
   }
 
   const created = await createTrip(db, {
@@ -629,7 +637,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       : false;
   await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
   await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
-  return await landAfterAdd(db, shop, shopSlug, title, addedAlso ? 2 : 1);
+  return await landAfterAdd(db, shop, shopSlug, title, addedAlso ? 2 : 1, created.id, formData);
 }
 
 /**
@@ -709,36 +717,6 @@ async function addPatternDeparture(
     await setTripCrew(db, shop.id, created.id, crew, { actorPersonId: input.actorPersonId });
   }
   return true;
-}
-
-/**
- * Where a staff member lands once the departure is on the board: back on the
- * board, with the departure named in the notice.
- *
- * The exception is a shop's first departure ever, which hands over to Today's
- * `FirstBookableCard`. "First" must stay *exactly* the home page's own test
- * (`src/app/shop/[shopSlug]/page.tsx`) — total equals what was just created,
- * demo shops excluded — or one of the two renders a card the other denies.
- */
-async function landAfterAdd(
-  db: AppDb,
-  shop: { id: string; isDemo: boolean },
-  shopSlug: string,
-  title: string,
-  createdCount: number,
-): Promise<never> {
-  const back = boardPath(shopSlug);
-  const firstBookableMoment =
-    !shop.isDemo && (await countShopTrips(db, shop.id)) === Math.max(createdCount, 1);
-  if (firstBookableMoment) {
-    const home = `/shop/${shopSlug}`;
-    const query = new URLSearchParams({ created: title });
-    if (createdCount > 1) query.set("series", String(createdCount));
-    revalidateAndRedirect(home, `${home}?${query.toString()}`);
-  }
-  const query = new URLSearchParams({ builder: "added", created: title });
-  if (createdCount > 1) query.set("series", String(createdCount));
-  revalidateAndRedirect(back, `${back}?${query.toString()}`);
 }
 
 /**

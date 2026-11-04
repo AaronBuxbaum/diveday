@@ -449,6 +449,15 @@ test.describe("staff", () => {
     // Diver session): a door to its editor, no Schedule.
     await expect(drift.getByRole("link", { name: /^Schedule a session of/ })).toHaveCount(0);
 
+    // The editor is the first session's door (#2561): "Schedule a session"
+    // opens the board's add panel for that course.
+    await drift.getByRole("link", { name: /^Edit Drift Diver/ }).click();
+    await page.getByRole("link", { name: "Schedule a session", exact: true }).click();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/schedule\/board\?course=[0-9a-f-]{36}$/);
+    await expect(page.locator('select[name="courseId"]')).toContainText("Drift Diver");
+    await page.goBack();
+    await page.goBack();
+
     const views = page.getByRole("navigation", { name: "Course views" });
     await views.getByRole("link", { name: "Scheduled" }).click();
     await page.waitForURL(/[?&]view=scheduled/);

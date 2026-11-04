@@ -1,9 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getTripManifest } from "./manifests";
-import { getMonthlyReport } from "./reporting";
+import { getMonthlyReport, getShopYear } from "./reporting";
 import {
   bookings,
   cards,
@@ -111,6 +112,28 @@ describe("seeded history manifests", () => {
     expect(boardedOpenWater.length).toBeGreaterThan(0);
     // Open Water is trained to 18 m.
     expect(boardedOpenWater.filter((row) => (row.maxDepth ?? 0) > 18)).toEqual([]);
+  });
+
+  /**
+   * **The demo's "Our year" names its sites** (#2552). The shopfront prints a
+   * site count only from two sites up (`MIN_SITES_TO_PUBLISH`); the rule is
+   * right and the data must carry it, so every sailed back-fill departure
+   * holds `trip_dives` rows on the shop's own sites, and the year reads more
+   * than one of them.
+   */
+  it("gives the sailed year more than one dive site to name", async () => {
+    const { db, shop } = ctx;
+    await resetDemoSchedule(db, shop.id, { history: true });
+    const now = nowDate();
+    const year = calendarDateInTimezone(now, shop.timezone).slice(0, 4);
+    const sailed = await getShopYear(db, shop.id, {
+      timeZone: shop.timezone,
+      startsOn: `${year}-01-01`,
+      endsOn: `${year}-12-31`,
+      now,
+    });
+    expect(sailed.sites.length).toBeGreaterThanOrEqual(2);
+    expect(sailed.sites.every((site) => site.live)).toBe(true);
   });
 
   /**

@@ -13,9 +13,11 @@
  * It trial-opens every enabled two-factor secret and compares each recovery-code key fingerprint
  * with the pair (`keyringOpensStored`, src/lib/secret-box.ts). It reads and never writes, and it
  * prints the variables' names and a count of accounts: never a key, a fingerprint, an account or a
- * secret. It covers two-factor secrets and recovery codes only: WhatsApp tokens, connector
- * credentials, backup destinations and the other sealed values degrade rather than lock anyone out,
- * and are not checked. There is no bypass flag (`./sealing-keys-message.mjs` says why and gives the
+ * secret. It also trial-opens the oldest stored WhatsApp token, connector credential envelope and
+ * backup destination key (`keyringOpensSamples`; issue #3022): a wrong key there breaks that
+ * integration rather than sign-in, and the check names the kind and never the shop. The other sealed
+ * values (waiver and booking capability tokens, notification payloads, fly-safe recipients) are not
+ * checked. There is no bypass flag (`./sealing-keys-message.mjs` says why and gives the
  * two ways back). Reasoning and the rotation steps: docs/engineering/infrastructure-runbook.md, "Rotating
  * the secret-sealing key".
  */
@@ -24,13 +26,15 @@ import { Pool } from "pg";
 import { storedSealings } from "@/db/account-security";
 import type { AppDb } from "@/db/client";
 import { withExplicitSslMode } from "@/db/connection-string";
+import { sealedSecretSamples } from "@/db/sealed-secret-samples";
 import {
+  keyringOpensSamples,
   keyringOpensStored,
   SECRET_KEY_VARIABLE,
   secretKeyFromEnvironment,
 } from "@/lib/secret-box";
 
-import { sealingKeysFailureText } from "./sealing-keys-message.mjs";
+import { sealedSamplesFailureText, sealingKeysFailureText } from "./sealing-keys-message.mjs";
 
 const NAME = "check-sealing-keys";
 
@@ -56,11 +60,15 @@ async function main(): Promise<number> {
   const db = drizzle({ client: pool }) as unknown as AppDb;
   try {
     const result = keyringOpensStored(key.key, await storedSealings(db));
-    if (result.status === "ok") {
-      console.log(`${NAME}: the sealing keys open all ${result.checked} two-factor account(s).`);
+    const samples = keyringOpensSamples(key.key, await sealedSecretSamples(db));
+    if (result.status === "ok" && samples.status === "ok") {
+      console.log(
+        `${NAME}: the sealing keys open all ${result.checked} two-factor account(s) and ${samples.checked} sampled integration secret(s).`,
+      );
       return 0;
     }
-    console.error(`${NAME}: ${sealingKeysFailureText(result)}`);
+    if (result.status !== "ok") console.error(`${NAME}: ${sealingKeysFailureText(result)}`);
+    if (samples.status !== "ok") console.error(`${NAME}: ${sealedSamplesFailureText(samples)}`);
     return 1;
   } finally {
     await pool.end().catch(() => undefined);

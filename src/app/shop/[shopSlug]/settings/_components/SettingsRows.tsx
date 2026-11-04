@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { Badge } from "@/components/ui/badge";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { LIST_ROW_SUMMARY_RING } from "@/components/ui/disclosure";
 import { type SectionId, settingsSectionFragment } from "../settings-groups";
@@ -232,9 +233,12 @@ export function SettingsDoorRow({
   heading,
   external,
   note,
+  state,
 }: {
   href: string;
   heading: string;
+  /** The connection's state word, a pill beside the caret (issue #3661). */
+  state?: { text: string; tone: "neutral" | "warning" };
   /** A `mailto:`/`https:` destination rather than an app route. */
   external?: boolean;
   /** An errand behind the door, in a line under the heading (the fleet's missing radio identity). */
@@ -270,7 +274,10 @@ export function SettingsDoorRow({
           </h3>
           {note ? <p className="text-sm text-warning-strong">{note}</p> : null}
         </div>
-        <DisclosureCaret direction="right" className="text-muted" />
+        <div className="flex shrink-0 items-center gap-3">
+          {state ? <Badge tone={state.tone}>{state.text}</Badge> : null}
+          <DisclosureCaret direction="right" className="text-muted" />
+        </div>
       </div>
     </div>
   );

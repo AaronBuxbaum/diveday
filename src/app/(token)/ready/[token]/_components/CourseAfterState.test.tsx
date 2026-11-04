@@ -87,4 +87,20 @@ describe("CourseAfterState", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("recap.course.nextStepBy(Keiko Tanaka)")).toBeInTheDocument();
   });
+
+  it("signs the words 'from your instructor' when the instructor shows divers no name", () => {
+    render(
+      <CourseAfterState
+        t={t}
+        courseTitle="Advanced Open Water Diver"
+        shopName="Blue Mantis Divers"
+        certification={null}
+        nextStep={{ words: "Book your deep dive before the card arrives.", byName: null }}
+      />,
+    );
+    expect(
+      screen.getByText("recap.course.nextStepQuote(Book your deep dive before the card arrives.)"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("recap.course.nextStepByInstructor")).toBeInTheDocument();
+  });
 });

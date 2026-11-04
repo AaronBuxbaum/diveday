@@ -5,12 +5,19 @@ import { FactLine } from "@/components/ui/FactLine";
 import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { nowDate } from "@/lib/clock";
+import type { ConnectionState } from "@/lib/connections";
 import { deskTimeOn, deskTimeValue } from "@/lib/desk-hours";
 import { formatTime } from "@/lib/format";
 import { saveDeskHoursAction, saveReviewUrlAction } from "../../messages-actions";
 import { resendContactConfirmationAction, saveContactAction } from "../../shop-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
-import { MESSAGES_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
+import {
+  CONNECTION_STATE_KEYS,
+  MESSAGES_GROUP,
+  SectionNotice,
+  SettingsGroup,
+  type SettingsView,
+} from "./kit";
 
 /**
  * **Messages**: how divers reach the shop and how the shop answers. The address
@@ -22,9 +29,12 @@ import { MESSAGES_GROUP, SectionNotice, SettingsGroup, type SettingsView } from 
 export function MessagesGroup({
   view,
   canManageMessaging,
+  whatsappState,
 }: {
   view: SettingsView;
   canManageMessaging: boolean;
+  /** The sender's connection state, for the pill on its door (issue #3661). */
+  whatsappState?: ConnectionState;
 }) {
   const { shop, shopSlug, t, locale, banner, activeSection, notSet } = view;
   const reviewLinkValue = (() => {
@@ -194,6 +204,14 @@ export function MessagesGroup({
           <SettingsDoorRow
             href={`/shop/${shopSlug}/settings/whatsapp`}
             heading={t("settings.main.whatsapp.heading")}
+            state={
+              whatsappState
+                ? {
+                    text: t(CONNECTION_STATE_KEYS[whatsappState]),
+                    tone: whatsappState === "needsAttention" ? "warning" : "neutral",
+                  }
+                : undefined
+            }
           />
         ) : null}
       </InsetGroup>

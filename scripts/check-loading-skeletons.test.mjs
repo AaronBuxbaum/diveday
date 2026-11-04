@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { containerWidth, SKELETON_EXEMPT } from "./check-loading-skeletons.mjs";
+import {
+  containerWidth,
+  SKELETON_EXEMPT,
+  skeletonLiteralCount,
+} from "./check-loading-skeletons.mjs";
 
 describe("containerWidth", () => {
   it("reads the width off the container idiom every page-owned <main> uses", () => {
@@ -61,5 +65,18 @@ describe("SKELETON_EXEMPT", () => {
     for (const [route, reason] of Object.entries(SKELETON_EXEMPT)) {
       expect(reason, route).toMatch(/\w+\s+\w+/);
     }
+  });
+});
+
+describe("skeletonLiteralCount", () => {
+  it("counts each hand-drawn bar and pulse wrapper", () => {
+    const source =
+      '<div className="animate-pulse"><div className="h-4 bg-surface-sunken" /><div className="bg-surface-sunken" /></div>';
+    expect(skeletonLiteralCount(source)).toBe(3);
+  });
+
+  it("counts nothing for a page composed of pending primitives, or for a comment", () => {
+    expect(skeletonLiteralCount("<ShopPageHeader pending />")).toBe(0);
+    expect(skeletonLiteralCount("// no bg-surface-sunken here\nconst a = 1;")).toBe(0);
   });
 });

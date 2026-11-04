@@ -519,7 +519,7 @@ describe("the course recap's certification", () => {
     });
     const data = await getRecapPageData(db, bookingId);
     expect(data?.course?.nextStep?.words).toBe("Book your deep dive before the card arrives.");
-    expect(data?.course?.nextStep?.byName).toBeTruthy();
+    expect(data?.course?.nextStep?.byName).toBeNull();
   });
 });
 

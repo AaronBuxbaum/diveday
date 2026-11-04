@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { PERSON_COLUMNS, personColumnKey } from "./person-columns";
 import * as schema from "./schema";
-import { PREMERGE_CARD_TABLES } from "./schema-retired/premerge-cards";
 
 const ctx = fileScopedShopContext();
 
@@ -32,8 +31,6 @@ async function referencesToPeople(): Promise<string[]> {
   const pairs = new Set<string>();
   for (const row of [...byConstraint.rows, ...byName.rows]) {
     const { table_name, column_name } = row as { table_name: string; column_name: string };
-    // Kept for the release before `cards` and read by nothing since (issue #2722).
-    if (PREMERGE_CARD_TABLES.includes(table_name)) continue;
     pairs.add(`${table_name}.${column_name}`);
   }
   return [...pairs].sort();

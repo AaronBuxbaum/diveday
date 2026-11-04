@@ -13,6 +13,7 @@ import {
   type FreshPersonDetails,
   type MoveBookingOutcome,
   moveBooking,
+  moveParty as moveWholeParty,
 } from "./bookings";
 import type { AppDb } from "./client";
 import { recordDeskEvent } from "./desk-events";
@@ -589,6 +590,54 @@ export async function moveSeat(
 ): Promise<MoveSeatResult> {
   const moved = await moveBooking(db, input);
   if (!moved.ok) return moved;
+  const result = await afterSeatMoved(db, input, moved, notices);
+  await publishManifestEvent(db, input.shopId, moved.fromTripId);
+  await publishManifestEvent(db, input.shopId, moved.toTripId);
+  return result;
+}
+
+export type MovePartyResult =
+  | { ok: false; bookingId: string; outcome: Extract<MoveBookingOutcome, { ok: false }> }
+  | { ok: true; seats: (Extract<MoveSeatResult, { ok: true }> & { bookingId: string })[] };
+
+/**
+ * **Move a whole party, with every consequence each person is owed** (#2556).
+ * The move is one transaction (`moveParty`: all or nobody); after it commits,
+ * each person gets exactly what a single moved seat gets, **once**: their own
+ * waiver, their own new-time notice, their own fly-safe correction. Both
+ * manifests are refreshed once, not once per seat. Each consequence is
+ * best-effort, as for one seat: the party has moved whatever the mail does.
+ */
+export async function moveParty(
+  db: AppDb,
+  input: {
+    shopId: string;
+    fromTripId: string;
+    toTripId: string;
+    leadBookingId: string;
+    actorPersonId: string;
+  },
+  notices: SendRescheduleNoticesOptions = {},
+): Promise<MovePartyResult> {
+  const moved = await moveWholeParty(db, input);
+  if (!moved.ok) return moved;
+  const seats: Extract<MovePartyResult, { ok: true }>["seats"] = [];
+  for (const seat of moved.moved) {
+    const result = await afterSeatMoved(db, { ...input, bookingId: seat.bookingId }, seat, notices);
+    seats.push({ ...result, bookingId: seat.bookingId });
+  }
+  await publishManifestEvent(db, input.shopId, input.fromTripId);
+  await publishManifestEvent(db, input.shopId, input.toTripId);
+  return { ok: true, seats };
+}
+
+/** What one moved seat is owed once it has moved, whoever moved it: waiver, new-time notice, fly-safe. */
+async function afterSeatMoved(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+  moved: Extract<MoveBookingOutcome, { ok: true }>,
+  notices: SendRescheduleNoticesOptions,
+) {
   const movedAt = notices.now ?? nowDate();
 
   let waiver: SeatDiverWaiver;
@@ -638,7 +687,5 @@ export async function moveSeat(
     flySafe = "failed";
   }
 
-  await publishManifestEvent(db, input.shopId, moved.fromTripId);
-  await publishManifestEvent(db, input.shopId, moved.toTripId);
   return { ...moved, waiver, notice, flySafe };
 }

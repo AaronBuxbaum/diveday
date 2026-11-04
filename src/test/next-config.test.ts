@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -19,7 +20,11 @@ const CONFIG = path.join(process.cwd(), "next.config.ts");
 
 type ImageConfig = {
   images?: {
-    remotePatterns?: { hostname?: string; protocol?: string; pathname?: string }[];
+    remotePatterns?: {
+      hostname?: string;
+      protocol?: string;
+      pathname?: string;
+    }[];
     domains?: string[];
   };
   assetPrefix?: string;
@@ -224,5 +229,102 @@ describe("next.config.ts typescript", () => {
   it("lets Vercel use the separate typecheck preflight", async () => {
     const config = await loadConfig({ ...CONFIGURED, VERCEL: "1" });
     expect(config.typescript?.ignoreBuildErrors).toBe(true);
+  });
+});
+
+/**
+ * **A route that renders an image must keep its rasterizer in the trace**
+ * (issue #1710). `outputFileTracingExcludes` keys are matched as a substring of
+ * the route (picomatch, `contains: true`) and have no negation, so a broad key
+ * such as `/shop/**` silently strips `@vercel/og` from any route under it that
+ * renders an `ImageResponse`: it works from a full checkout and answers a server
+ * error from a traced deploy. A `/shop/**` key did exactly that to the staff
+ * year card, because its comment said no route under `/shop/` renders an image
+ * and a comment cannot notice a new route.
+ */
+const APP_DIR = path.join(process.cwd(), "src", "app");
+const ROUTE_FILE = /^(route|opengraph-image|twitter-image|icon|apple-icon|manifest)\.(ts|tsx)$/;
+const OG_GLOB = "@vercel/og";
+
+/** Every route file under `src/app` that imports `ImageResponse`, as its route path. */
+function imageRoutePaths(dir = APP_DIR, segments: string[] = []): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      // Private folders (`_og`) and route groups (`(token)`) are not URL segments.
+      if (entry.name.startsWith("_")) continue;
+      const group = /^\(.*\)$/.test(entry.name);
+      found.push(
+        ...imageRoutePaths(
+          path.join(dir, entry.name),
+          group ? segments : [...segments, entry.name],
+        ),
+      );
+    } else if (ROUTE_FILE.test(entry.name)) {
+      const source = readFileSync(path.join(dir, entry.name), "utf8");
+      if (/\bImageResponse\b/.test(source) && /from\s+["']next\/og["']/.test(source)) {
+        found.push(`/${[...segments, entry.name.replace(/\.(ts|tsx)$/, "")].join("/")}`);
+      }
+    }
+  }
+  return found;
+}
+
+/** A key's glob as picomatch with `contains: true` reads it, for the shapes the keys use: `*`, `**`, literals. */
+function keyMatches(key: string, route: string): boolean {
+  const pattern = key
+    .split("**")
+    .map((part) =>
+      part
+        .split("*")
+        .map((literal) => literal.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+        .join("[^/]*"),
+    )
+    .join(".*");
+  return new RegExp(pattern).test(route);
+}
+
+/** The keys whose values name the rasterizer and that match one of these routes. */
+function ogExclusionsMatching(
+  excludes: Record<string, string[]>,
+  routes: readonly string[],
+): string[] {
+  const problems: string[] = [];
+  for (const [key, globs] of Object.entries(excludes)) {
+    if (!globs.some((glob) => glob.includes(OG_GLOB))) continue;
+    for (const route of routes) {
+      if (keyMatches(key, route)) problems.push(`${key} strips ${OG_GLOB} from ${route}`);
+    }
+  }
+  return problems;
+}
+
+describe("next.config.ts and the routes that render an image (#1710)", () => {
+  it("finds the image routes, the staff year card among them", () => {
+    const routes = imageRoutePaths();
+    expect(routes).toContain("/shop/[shopSlug]/reports/card/route");
+    expect(routes).toContain("/s/[shopSlug]/opengraph-image");
+    expect(routes).toContain("/recap/[token]/opengraph-image");
+    expect(routes).toContain("/link-card/route");
+  });
+
+  it("excludes the rasterizer from none of them", async () => {
+    const config = await loadConfig(CONFIGURED);
+    expect(ogExclusionsMatching(config.outputFileTracingExcludes ?? {}, imageRoutePaths())).toEqual(
+      [],
+    );
+  });
+
+  it("would have caught the key that broke the staff year card", () => {
+    const widened = {
+      "/shop/**": ["node_modules/**/next/dist/compiled/@vercel/og/**"],
+    };
+    expect(ogExclusionsMatching(widened, imageRoutePaths())).toEqual([
+      "/shop/** strips @vercel/og from /shop/[shopSlug]/reports/card/route",
+    ]);
+    // A key that names something else is none of this guard's business.
+    expect(
+      ogExclusionsMatching({ "/shop/**": ["node_modules/foo/**"] }, imageRoutePaths()),
+    ).toEqual([]);
   });
 });

@@ -2113,317 +2113,468 @@ export async function moveBooking(
     actorPersonId?: string;
   },
 ): Promise<MoveBookingOutcome> {
+  if (input.fromTripId === input.toTripId) return { ok: false, reason: "target_unavailable" };
+  return db.transaction((tx) => moveBookingIn(tx, input));
+}
+
+/**
+ * One seat's move inside a transaction the caller owns: every refusal, every
+ * lock and every consequence of {@link moveBooking}, so a single seat and a
+ * party's seats are measured by the same code. `keepParty` is the party move's
+ * one difference (see {@link moveParty}): the seat keeps its party link and
+ * the lead is not refused for the followers who are moving with it.
+ */
+async function moveBookingIn(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    fromTripId: string;
+    toTripId: string;
+    bookingId: string;
+    now?: Date;
+    actorPersonId?: string;
+    keepParty?: boolean;
+  },
+): Promise<MoveBookingOutcome> {
   const { shopId, fromTripId, toTripId, bookingId } = input;
   const now = input.now ?? nowDate();
-  if (fromTripId === toTripId) return { ok: false, reason: "target_unavailable" };
-  return db.transaction(async (tx): Promise<MoveBookingOutcome> => {
-    // Both trip rows before the seat (the lock order at `tripTakesSeatFrom`),
-    // and the two trips in id order, so two moves crossing between the same
-    // pair of departures never hold one each. The target is `for update`
-    // because a seat is being added to it; the source only loses one.
-    const tripRow = (id: string) =>
-      tx
-        .select()
-        .from(trips)
-        .where(and(eq(trips.id, id), eq(trips.shopId, shopId), liveTrip()))
-        .limit(1);
-    const lockSource = () => tripRow(fromTripId).for("no key update");
-    const lockTarget = () => tripRow(toTripId).for("update");
-    let source: typeof trips.$inferSelect | undefined;
-    let target: typeof trips.$inferSelect | undefined;
-    if (fromTripId < toTripId) {
-      [source] = await lockSource();
-      [target] = await lockTarget();
-    } else {
-      [target] = await lockTarget();
-      [source] = await lockSource();
-    }
-    if (!source) return { ok: false, reason: "not_found" };
-    if (!target) return { ok: false, reason: "target_unavailable" };
-    const dateRequestLink = await dateRequestOfferBookingFor(tx, { shopId, bookingId });
-    const dateRequestOffer =
-      dateRequestLink?.scope === "departure" && dateRequestLink.requestId
-        ? await lockDateRequestOffer(tx, {
-            shopId,
-            tripId: toTripId,
-            requestId: dateRequestLink.requestId,
-            excludeBookingId: bookingId,
-          })
-        : null;
-    if (typeof dateRequestOffer === "string") return { ok: false, reason: dateRequestOffer };
-    const [booking] = await tx
+  // Both trip rows before the seat (the lock order at `tripTakesSeatFrom`),
+  // and the two trips in id order, so two moves crossing between the same
+  // pair of departures never hold one each. The target is `for update`
+  // because a seat is being added to it; the source only loses one.
+  const tripRow = (id: string) =>
+    tx
       .select()
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.id, bookingId),
-          eq(bookings.shopId, shopId),
-          eq(bookings.tripId, fromTripId),
-        ),
-      )
-      .limit(1)
-      .for("update");
-    if (!booking || booking.status === "cancelled") return { ok: false, reason: "not_found" };
-    // **A seat the desk turned away moves too** (layer 3 review, dde-2 #3):
-    // the desk's money line sends staff here before the boat leaves. It lands booked on
-    // the new departure; the turn-away was about the old one and stays on its
-    // trail. A plain no-show does not move: that is the day's own record.
-    const turnedAway = booking.status === "no_show" && booking.turnedAwayAt !== null;
-    if (booking.status !== "booked" && !turnedAway) return { ok: false, reason: "not_movable" };
-    // A diver the desk has checked in on this departure does not move off it:
-    // the sighting belongs to this boat, and a move would leave them on the
-    // new one as still to come (issue #2702).
-    if (
-      booking.status === "booked" &&
-      hasArrived(await standingArrivalStatus(tx, shopId, fromTripId, booking.id))
-    ) {
-      return { ok: false, reason: "not_movable" };
-    }
-    // A turned-away seat moves only before the source's scheduled start
-    // (layer 3 re-review, dde-3 #4 and #5): after it, the boat may be out with
-    // an offline after-dive mark still to sync, and the move would wipe the
-    // turn-away from the departure's record. The door then is Remove.
-    const departed = turnedAway
-      ? now.getTime() >= source.startsAt.getTime()
-      : hasSailed(source.startsAt, now);
-    if (departed) return { ok: false, reason: "departed" };
-    if (!tripTakesSeatFrom(target, "staff") || target.isRehearsal || source.isRehearsal) {
-      return { ok: false, reason: "target_unavailable" };
-    }
-    if ((source.courseId ?? null) !== (target.courseId ?? null)) {
-      return { ok: false, reason: "course_mismatch" };
-    }
+      .from(trips)
+      .where(and(eq(trips.id, id), eq(trips.shopId, shopId), liveTrip()))
+      .limit(1);
+  const lockSource = () => tripRow(fromTripId).for("no key update");
+  const lockTarget = () => tripRow(toTripId).for("update");
+  let source: typeof trips.$inferSelect | undefined;
+  let target: typeof trips.$inferSelect | undefined;
+  if (fromTripId < toTripId) {
+    [source] = await lockSource();
+    [target] = await lockTarget();
+  } else {
+    [target] = await lockTarget();
+    [source] = await lockSource();
+  }
+  if (!source) return { ok: false, reason: "not_found" };
+  if (!target) return { ok: false, reason: "target_unavailable" };
+  const dateRequestLink = await dateRequestOfferBookingFor(tx, { shopId, bookingId });
+  const dateRequestOffer =
+    dateRequestLink?.scope === "departure" && dateRequestLink.requestId
+      ? await lockDateRequestOffer(tx, {
+          shopId,
+          tripId: toTripId,
+          requestId: dateRequestLink.requestId,
+          excludeBookingId: bookingId,
+        })
+      : null;
+  if (typeof dateRequestOffer === "string") return { ok: false, reason: dateRequestOffer };
+  const [booking] = await tx
+    .select()
+    .from(bookings)
+    .where(
+      and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), eq(bookings.tripId, fromTripId)),
+    )
+    .limit(1)
+    .for("update");
+  if (!booking || booking.status === "cancelled") return { ok: false, reason: "not_found" };
+  // **A seat the desk turned away moves too** (layer 3 review, dde-2 #3):
+  // the desk's money line sends staff here before the boat leaves. It lands booked on
+  // the new departure; the turn-away was about the old one and stays on its
+  // trail. A plain no-show does not move: that is the day's own record.
+  const turnedAway = booking.status === "no_show" && booking.turnedAwayAt !== null;
+  if (booking.status !== "booked" && !turnedAway) return { ok: false, reason: "not_movable" };
+  // A diver the desk has checked in on this departure does not move off it:
+  // the sighting belongs to this boat, and a move would leave them on the
+  // new one as still to come (issue #2702).
+  if (
+    booking.status === "booked" &&
+    hasArrived(await standingArrivalStatus(tx, shopId, fromTripId, booking.id))
+  ) {
+    return { ok: false, reason: "not_movable" };
+  }
+  // A turned-away seat moves only before the source's scheduled start
+  // (layer 3 re-review, dde-3 #4 and #5): after it, the boat may be out with
+  // an offline after-dive mark still to sync, and the move would wipe the
+  // turn-away from the departure's record. The door then is Remove.
+  const departed = turnedAway
+    ? now.getTime() >= source.startsAt.getTime()
+    : hasSailed(source.startsAt, now);
+  if (departed) return { ok: false, reason: "departed" };
+  if (!tripTakesSeatFrom(target, "staff") || target.isRehearsal || source.isRehearsal) {
+    return { ok: false, reason: "target_unavailable" };
+  }
+  if ((source.courseId ?? null) !== (target.courseId ?? null)) {
+    return { ok: false, reason: "course_mismatch" };
+  }
 
-    const [earlier] = await tx
-      .select({ status: bookings.status })
-      .from(bookings)
-      .where(and(eq(bookings.tripId, target.id), eq(bookings.personId, booking.personId)))
-      .limit(1);
-    if (earlier) {
-      return {
-        ok: false,
-        reason: earlier.status === "cancelled" ? "earlier_seat" : "already_booked",
-      };
-    }
-    const [follower] = await tx
-      .select({ id: bookings.id })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          eq(bookings.partyLeadBookingId, booking.id),
-          seatNotCancelled,
-        ),
-      )
-      .limit(1);
-    if (follower) return { ok: false, reason: "leads_party" };
-    const [teamed] = await tx
-      .select({ id: buddyTeamMembers.id })
-      .from(buddyTeamMembers)
-      .where(
-        and(
-          eq(buddyTeamMembers.shopId, shopId),
-          eq(buddyTeamMembers.tripId, source.id),
-          eq(buddyTeamMembers.bookingId, booking.id),
-        ),
-      )
-      .limit(1);
-    if (teamed) return { ok: false, reason: "on_buddy_team" };
-    const [rolled] = await tx
-      .select({ id: rollCallEvents.id })
-      .from(rollCallEvents)
-      .where(
-        and(
-          eq(rollCallEvents.shopId, shopId),
-          seatMarks(),
-          eq(rollCallEvents.bookingId, booking.id),
-        ),
-      )
-      .limit(1);
-    if (rolled) return { ok: false, reason: "roll_call_started" };
+  const [earlier] = await tx
+    .select({ status: bookings.status })
+    .from(bookings)
+    .where(and(eq(bookings.tripId, target.id), eq(bookings.personId, booking.personId)))
+    .limit(1);
+  if (earlier) {
+    return {
+      ok: false,
+      reason: earlier.status === "cancelled" ? "earlier_seat" : "already_booked",
+    };
+  }
+  const [follower] = await tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.partyLeadBookingId, booking.id),
+        seatNotCancelled,
+      ),
+    )
+    .limit(1);
+  if (follower && !input.keepParty) return { ok: false, reason: "leads_party" };
+  const [teamed] = await tx
+    .select({ id: buddyTeamMembers.id })
+    .from(buddyTeamMembers)
+    .where(
+      and(
+        eq(buddyTeamMembers.shopId, shopId),
+        eq(buddyTeamMembers.tripId, source.id),
+        eq(buddyTeamMembers.bookingId, booking.id),
+      ),
+    )
+    .limit(1);
+  if (teamed) return { ok: false, reason: "on_buddy_team" };
+  const [rolled] = await tx
+    .select({ id: rollCallEvents.id })
+    .from(rollCallEvents)
+    .where(
+      and(eq(rollCallEvents.shopId, shopId), seatMarks(), eq(rollCallEvents.bookingId, booking.id)),
+    )
+    .limit(1);
+  if (rolled) return { ok: false, reason: "roll_call_started" };
 
-    const identityUnconfirmed = booking.identityUnconfirmedAt !== null;
-    const admissionRefusal = await moveAdmissionRefusal(tx, shopId, target, booking);
-    if (admissionRefusal) return admissionRefusal;
+  const identityUnconfirmed = booking.identityUnconfirmedAt !== null;
+  const admissionRefusal = await moveAdmissionRefusal(tx, shopId, target, booking);
+  if (admissionRefusal) return admissionRefusal;
 
-    // The units held for the old day's window are not the new day's. Units
-    // already handed over stay with the diver, as on a cancel.
-    await releaseUnclaimedGearReservations(tx, { shopId, bookingId: booking.id });
-    // A package dive spent on the old departure is given back and the new one
-    // settles it again, under the new trip's own rules.
-    await releasePackageCoverageForBooking(tx, shopId, booking.id);
-    // A reminder already sent for the old departure is the record the diver was
-    // told it, not the new one's: stamp it superseded so the next reminder run
-    // sends the 7-day and 24-hour reminders for the departure they now sail
-    // (issue #2554). Nothing is resent for the old one, and no row is deleted.
-    await rearmTripReminders(tx, { shopId, bookingId: booking.id });
-    await tx
-      .update(bookings)
-      .set({
-        tripId: target.id,
-        // A plan belongs to the departure where staff made it.
-        trainingPlanInstructorPersonId: null,
-        trainingPlanByPersonId: null,
-        trainingPlanAt: null,
-        // Moving alone leaves the party it was booked in.
-        partyLeadBookingId: null,
-        // Each of these was said about the old departure, so none is true of
-        // the new one. Lateness was about the old start. The briefing was on
-        // the old day's conditions: the notice carries the new time and
-        // meeting point, never the new conditions, so the diver has read
-        // nothing about them yet and /ready must say so. "Anything changed?"
-        // is asked once per departure. A pickup time was set for the old
-        // day's run.
-        runningLateAt: null,
-        conditionsBriefedAt: null,
-        carriedFactsConfirmedAt: null,
-        pickupTime: null,
-        // A turned-away seat is a booked seat on the new departure, and an
-        // arrival from an earlier stay on this one does not come back with a
-        // seat moved away and back (ADR 20261104-arrival-is-a-trail, decision 5).
-        status: "booked",
-        arrivalTrailAfterSeq: arrivalTrailHighWater,
-        turnedAwayReason: null,
-        turnedAwayAt: null,
-      })
-      .where(
-        and(
-          eq(bookings.id, booking.id),
-          eq(bookings.shopId, shopId),
-          eq(bookings.status, booking.status),
-        ),
-      );
-    if (dateRequestLink && dateRequestOffer) {
-      const movedLink = await moveDateRequestOfferBooking(tx, {
-        shopId,
-        bookingId: booking.id,
-        fromOfferId: dateRequestLink.offerId,
-        toOfferId: dateRequestOffer.offerId,
-      });
-      if (!movedLink) throw new Error("locked date request booking link could not follow its move");
-    }
-    // The diver's one open ask follows them: it is about their day, and the
-    // new departure's crew is who answers it now. One the old crew already
-    // handled is a record of that day, and stays with it.
-    await tx
-      .update(tripHelpRequests)
-      .set({ tripId: target.id })
-      .where(
-        and(
-          eq(tripHelpRequests.shopId, shopId),
-          eq(tripHelpRequests.bookingId, booking.id),
-          isNull(tripHelpRequests.handledAt),
-        ),
-      );
-    // An "Ask to move" from the booking page (H-20261014-ask-to-move) was about the old
-    // departure, and this move is its answer: the Inbox row stops waiting,
-    // and the new date's page may be asked about afresh.
-    await tx
-      .update(inboundMessages)
-      .set({ answeredAt: nowDate() })
-      .where(
-        and(
-          eq(inboundMessages.shopId, shopId),
-          eq(inboundMessages.channel, "page"),
-          eq(inboundMessages.keywordIntent, "move"),
-          eq(inboundMessages.bookingId, booking.id),
-          isNull(inboundMessages.answeredAt),
-        ),
-      );
-    await settlePackageCoverage(tx, {
+  // The units held for the old day's window are not the new day's. Units
+  // already handed over stay with the diver, as on a cancel.
+  await releaseUnclaimedGearReservations(tx, { shopId, bookingId: booking.id });
+  // A package dive spent on the old departure is given back and the new one
+  // settles it again, under the new trip's own rules.
+  await releasePackageCoverageForBooking(tx, shopId, booking.id);
+  // A reminder already sent for the old departure is the record the diver was
+  // told it, not the new one's: stamp it superseded so the next reminder run
+  // sends the 7-day and 24-hour reminders for the departure they now sail
+  // (issue #2554). Nothing is resent for the old one, and no row is deleted.
+  await rearmTripReminders(tx, { shopId, bookingId: booking.id });
+  await tx
+    .update(bookings)
+    .set({
+      tripId: target.id,
+      // A plan belongs to the departure where staff made it.
+      trainingPlanInstructorPersonId: null,
+      trainingPlanByPersonId: null,
+      trainingPlanAt: null,
+      // Moving alone leaves the party it was booked in; a party moving
+      // together (`moveParty`) keeps it.
+      ...(input.keepParty ? {} : { partyLeadBookingId: null }),
+      // Each of these was said about the old departure, so none is true of
+      // the new one. Lateness was about the old start. The briefing was on
+      // the old day's conditions: the notice carries the new time and
+      // meeting point, never the new conditions, so the diver has read
+      // nothing about them yet and /ready must say so. "Anything changed?"
+      // is asked once per departure. A pickup time was set for the old
+      // day's run.
+      runningLateAt: null,
+      conditionsBriefedAt: null,
+      carriedFactsConfirmedAt: null,
+      pickupTime: null,
+      // A turned-away seat is a booked seat on the new departure, and an
+      // arrival from an earlier stay on this one does not come back with a
+      // seat moved away and back (ADR 20261104-arrival-is-a-trail, decision 5).
+      status: "booked",
+      arrivalTrailAfterSeq: arrivalTrailHighWater,
+      turnedAwayReason: null,
+      turnedAwayAt: null,
+    })
+    .where(
+      and(
+        eq(bookings.id, booking.id),
+        eq(bookings.shopId, shopId),
+        eq(bookings.status, booking.status),
+      ),
+    );
+  if (dateRequestLink && dateRequestOffer) {
+    const movedLink = await moveDateRequestOfferBooking(tx, {
       shopId,
-      personId: booking.personId,
       bookingId: booking.id,
-      identityUnconfirmed,
-      trip: target,
-      participantType: booking.participantType,
+      fromOfferId: dateRequestLink.offerId,
+      toOfferId: dateRequestOffer.offerId,
     });
+    if (!movedLink) throw new Error("locked date request booking link could not follow its move");
+  }
+  // The diver's one open ask follows them: it is about their day, and the
+  // new departure's crew is who answers it now. One the old crew already
+  // handled is a record of that day, and stays with it.
+  await tx
+    .update(tripHelpRequests)
+    .set({ tripId: target.id })
+    .where(
+      and(
+        eq(tripHelpRequests.shopId, shopId),
+        eq(tripHelpRequests.bookingId, booking.id),
+        isNull(tripHelpRequests.handledAt),
+      ),
+    );
+  // An "Ask to move" from the booking page (H-20261014-ask-to-move) was about the old
+  // departure, and this move is its answer: the Inbox row stops waiting,
+  // and the new date's page may be asked about afresh.
+  await tx
+    .update(inboundMessages)
+    .set({ answeredAt: nowDate() })
+    .where(
+      and(
+        eq(inboundMessages.shopId, shopId),
+        eq(inboundMessages.channel, "page"),
+        eq(inboundMessages.keywordIntent, "move"),
+        eq(inboundMessages.bookingId, booking.id),
+        isNull(inboundMessages.answeredAt),
+      ),
+    );
+  await settlePackageCoverage(tx, {
+    shopId,
+    personId: booking.personId,
+    bookingId: booking.id,
+    identityUnconfirmed,
+    trip: target,
+    participantType: booking.participantType,
+  });
 
-    let owedCents = 0;
-    const payment = await getBookingPayment(tx, shopId, booking.id);
-    if (isCapturedPaymentStatus(payment?.status)) {
-      const before = seatListPriceCents(source, null, booking.participantType) ?? 0;
-      const after = seatListPriceCents(target, null, booking.participantType);
-      if (after !== null && after > before) owedCents = after - before;
-    }
-    // A pending checkout quoted the old departure's price. Withdrawn, as a
-    // type change withdraws it; a completion that already landed is money
-    // that moved, and stays where it is.
-    const linked = tx
-      .select({ id: bookingCheckoutBookings.checkoutId })
-      .from(bookingCheckoutBookings)
-      // diveday:any-checkout-purpose: the update below names the fare.
-      .where(
-        and(
-          eq(bookingCheckoutBookings.shopId, shopId),
-          eq(bookingCheckoutBookings.bookingId, booking.id),
-        ),
-      );
-    await tx
-      .update(bookingCheckouts)
-      .set({ status: "expired" })
-      .where(
-        and(
-          eq(bookingCheckouts.shopId, shopId),
-          eq(bookingCheckouts.status, "pending"),
-          fareCheckout(),
-          inArray(bookingCheckouts.id, linked),
-        ),
-      );
+  let owedCents = 0;
+  const payment = await getBookingPayment(tx, shopId, booking.id);
+  if (isCapturedPaymentStatus(payment?.status)) {
+    const before = seatListPriceCents(source, null, booking.participantType) ?? 0;
+    const after = seatListPriceCents(target, null, booking.participantType);
+    if (after !== null && after > before) owedCents = after - before;
+  }
+  // A pending checkout quoted the old departure's price. Withdrawn, as a
+  // type change withdraws it; a completion that already landed is money
+  // that moved, and stays where it is.
+  const linked = tx
+    .select({ id: bookingCheckoutBookings.checkoutId })
+    .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the update below names the fare.
+    .where(
+      and(
+        eq(bookingCheckoutBookings.shopId, shopId),
+        eq(bookingCheckoutBookings.bookingId, booking.id),
+      ),
+    );
+  await tx
+    .update(bookingCheckouts)
+    .set({ status: "expired" })
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "pending"),
+        fareCheckout(),
+        inArray(bookingCheckouts.id, linked),
+      ),
+    );
 
-    const [person] = await tx
-      .select({ fullName: people.fullName })
-      .from(people)
-      // diveday:allow-deleted-people: the seat's own diver, named on both trails.
-      .where(and(eq(people.id, booking.personId), eq(people.shopId, shopId)))
-      .limit(1);
-    // The crew of each boat reads it on the catch-up strip: one fewer here,
-    // one more there. A turned-away seat left the old boat when the desk
-    // turned them away, so only the new one hears of it.
-    if (!turnedAway) {
-      await recordDeskEvent(tx, {
-        shopId,
-        tripId: source.id,
-        kind: "seat_released",
-        bookingId: booking.id,
-        subjectPersonId: booking.personId,
-        actorPersonId: input.actorPersonId,
-      });
-    }
+  const [person] = await tx
+    .select({ fullName: people.fullName })
+    .from(people)
+    // diveday:allow-deleted-people: the seat's own diver, named on both trails.
+    .where(and(eq(people.id, booking.personId), eq(people.shopId, shopId)))
+    .limit(1);
+  // The crew of each boat reads it on the catch-up strip: one fewer here,
+  // one more there. A turned-away seat left the old boat when the desk
+  // turned them away, so only the new one hears of it.
+  if (!turnedAway) {
     await recordDeskEvent(tx, {
       shopId,
-      tripId: target.id,
-      kind: "seat_taken",
+      tripId: source.id,
+      kind: "seat_released",
       bookingId: booking.id,
       subjectPersonId: booking.personId,
       actorPersonId: input.actorPersonId,
     });
-    // Each departure's trail says what happened to its own roster, committed
-    // with the move so neither line can be missing from the log.
-    if (input.actorPersonId) {
-      for (const [tripId, code] of [
-        [source.id, "seat_moved_away"],
-        [target.id, "seat_moved_here"],
-      ] as const) {
-        await recordSeatChange(tx, {
-          shopId,
-          tripId,
-          actorPersonId: input.actorPersonId,
-          bookingId: booking.id,
-          code,
-        });
-      }
-    }
-    return {
-      ok: true,
-      personId: booking.personId,
-      personName: person?.fullName ?? "",
-      fromTripId: source.id,
-      toTripId: target.id,
-      previousStartsAt: source.startsAt,
-      owedCents,
-    };
+  }
+  await recordDeskEvent(tx, {
+    shopId,
+    tripId: target.id,
+    kind: "seat_taken",
+    bookingId: booking.id,
+    subjectPersonId: booking.personId,
+    actorPersonId: input.actorPersonId,
   });
+  // Each departure's trail says what happened to its own roster, committed
+  // with the move so neither line can be missing from the log.
+  if (input.actorPersonId) {
+    for (const [tripId, code] of [
+      [source.id, "seat_moved_away"],
+      [target.id, "seat_moved_here"],
+    ] as const) {
+      await recordSeatChange(tx, {
+        shopId,
+        tripId,
+        actorPersonId: input.actorPersonId,
+        bookingId: booking.id,
+        code,
+      });
+    }
+  }
+  return {
+    ok: true,
+    personId: booking.personId,
+    personName: person?.fullName ?? "",
+    fromTripId: source.id,
+    toTripId: target.id,
+    previousStartsAt: source.startsAt,
+    owedCents,
+  };
+}
+
+/** A refused seat inside a party move: thrown to roll the whole transaction back. */
+class PartyMoveRefused extends Error {
+  constructor(
+    readonly bookingId: string,
+    readonly outcome: Extract<MoveBookingOutcome, { ok: false }>,
+  ) {
+    super("party move refused");
+  }
+}
+
+export type MovedSeat = Extract<MoveBookingOutcome, { ok: true }> & { bookingId: string };
+
+export type MovePartyOutcome =
+  | { ok: true; moved: MovedSeat[] }
+  | {
+      ok: false;
+      /** The seat that was refused: the lead, or the follower the move stopped at. */
+      bookingId: string;
+      outcome: Extract<MoveBookingOutcome, { ok: false }>;
+    };
+
+/**
+ * **Move a whole party between departures in one step** (#2556, ADR
+ * 20261104-move-a-party-as-one). The lead and every live
+ * follower move together in **one transaction**, keeping `party_lead_booking_id`,
+ * so the new roster shows a family, not four strangers.
+ *
+ * Each seat goes through the very code a single seat does ({@link moveBookingIn}):
+ * both trips are locked in id order first, and the seats then land one by one
+ * under the target's lock, so the second seat's capacity, diver and course-ratio
+ * checks already count the first. That is the check against the combined head
+ * count, with no second rule to drift from the first. **Any refusal rolls the
+ * whole party back**: nobody is moved, and the outcome names the seat that
+ * stopped it. A seat on a buddy team is still refused (teams are rebuilt on the
+ * boat), as is one at roll call, one the desk checked in, or a no-show.
+ *
+ * `leadBookingId` must be a seat that leads a live party on `fromTripId`; a
+ * seat that leads nobody is `not_found` here, and moves through
+ * {@link moveBooking}. Notices, waivers and trails are the caller's
+ * (`moveParty` in `seat-diver.ts`), once per person.
+ */
+export async function moveParty(
+  db: AppDb,
+  input: {
+    shopId: string;
+    fromTripId: string;
+    toTripId: string;
+    leadBookingId: string;
+    now?: Date;
+    actorPersonId?: string;
+  },
+): Promise<MovePartyOutcome> {
+  const { shopId, fromTripId, toTripId, leadBookingId } = input;
+  if (fromTripId === toTripId) {
+    return {
+      ok: false,
+      bookingId: leadBookingId,
+      outcome: { ok: false, reason: "target_unavailable" },
+    };
+  }
+  try {
+    return await db.transaction(async (tx): Promise<MovePartyOutcome> => {
+      // Both trips, in id order, before any seat (the lock order `moveBookingIn` keeps).
+      const lock = (id: string, mode: "update" | "no key update") =>
+        tx
+          .select({ id: trips.id })
+          .from(trips)
+          .where(and(eq(trips.id, id), eq(trips.shopId, shopId), liveTrip()))
+          .limit(1)
+          .for(mode);
+      if (fromTripId < toTripId) {
+        await lock(fromTripId, "no key update");
+        await lock(toTripId, "update");
+      } else {
+        await lock(toTripId, "update");
+        await lock(fromTripId, "no key update");
+      }
+      const [lead] = await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.id, leadBookingId),
+            eq(bookings.shopId, shopId),
+            eq(bookings.tripId, fromTripId),
+            seatNotCancelled,
+          ),
+        )
+        .limit(1)
+        .for("update");
+      const followers = lead
+        ? await tx
+            .select({ id: bookings.id })
+            .from(bookings)
+            .where(
+              and(
+                eq(bookings.shopId, shopId),
+                eq(bookings.partyLeadBookingId, leadBookingId),
+                seatNotCancelled,
+              ),
+            )
+            // diveday:allow-time-id-order: the order the seats land in; nobody is shown it.
+            .orderBy(asc(bookings.createdAt), asc(bookings.id))
+            .for("update")
+        : [];
+      if (!lead || followers.length === 0) {
+        return {
+          ok: false,
+          bookingId: leadBookingId,
+          outcome: { ok: false, reason: "not_found" },
+        };
+      }
+      const moved: MovedSeat[] = [];
+      // The followers first, the lead last: the lead's own refusals (a seat it
+      // cannot take) then stop the move with every follower already measured.
+      for (const id of [...followers.map((row) => row.id), lead.id]) {
+        const outcome = await moveBookingIn(tx, {
+          shopId,
+          fromTripId,
+          toTripId,
+          bookingId: id,
+          now: input.now,
+          actorPersonId: input.actorPersonId,
+          keepParty: true,
+        });
+        if (!outcome.ok) throw new PartyMoveRefused(id, outcome);
+        moved.push({ ...outcome, bookingId: id });
+      }
+      return { ok: true, moved };
+    });
+  } catch (error) {
+    if (error instanceof PartyMoveRefused) {
+      return { ok: false, bookingId: error.bookingId, outcome: error.outcome };
+    }
+    throw error;
+  }
 }
 
 /**

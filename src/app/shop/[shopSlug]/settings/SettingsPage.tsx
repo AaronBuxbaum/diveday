@@ -6,6 +6,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { canPersonManagePaymentSettings, canPersonManageShopSettings } from "@/db/authz";
 import { countBoatsWithoutRadioIdentity } from "@/db/boats";
+import { readShopConnections } from "@/db/connections";
 import { shopHasPricedRecords } from "@/db/shops";
 import { getShopStripeAccount, stripeCurrencyMismatch } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
@@ -226,6 +227,12 @@ export default async function SettingsPage({
   // owner's alone, and a demo shop is never billed (ADR
   // 20261007-subscription-billing). The page re-checks against live roles.
   const canViewBilling = !shop.isDemo && canManageBilling(session.user.roles);
+  // The sender's state word, for the pill on its door; read only for the roles
+  // who see the door (issue #3661).
+  const whatsappState = canManageMessaging
+    ? (await readShopConnections(db, session.user.shopId)).find((c) => c.provider === "whatsapp")
+        ?.state
+    : undefined;
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const banner = noticeFromParam(
@@ -282,7 +289,11 @@ export default async function SettingsPage({
           connectConfigured={connectConfigured}
         />
 
-        <MessagesGroup view={view} canManageMessaging={canManageMessaging} />
+        <MessagesGroup
+          view={view}
+          canManageMessaging={canManageMessaging}
+          whatsappState={whatsappState}
+        />
 
         <WebsiteGroup view={view} />
 

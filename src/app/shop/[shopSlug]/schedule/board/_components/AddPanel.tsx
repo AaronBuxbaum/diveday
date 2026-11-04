@@ -165,6 +165,7 @@ export function AddPanel({
   initialCourse,
   initialSite,
   requestPlan,
+  carryFrom,
   startExpanded,
   onCancel,
 }: {
@@ -173,6 +174,8 @@ export function AddPanel({
   initialCourse: BuilderInitialCourse | null;
   initialSite?: BuilderInitialSite | null;
   requestPlan?: BuilderRequestPlan | null;
+  /** The full departure whose wait list the add carries to the new one (#2559). */
+  carryFrom?: string;
   /** Opened straight into its full depth — a link that meant the whole form. */
   startExpanded: boolean;
   onCancel: () => void;
@@ -247,6 +250,7 @@ export function AddPanel({
       className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       {returnWeek ? <input type="hidden" name="boardWeek" value={returnWeek} /> : null}
+      {carryFrom ? <input type="hidden" name="carryFrom" value={carryFrom} /> : null}
       <span ref={patternAnchor} className="contents" />
       <PatternNote
         copy={copy}

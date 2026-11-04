@@ -80,6 +80,7 @@ export default async function ScheduleBoardPage({
   const query = await searchParams;
   const { builder, count, created, held, tell, series, add, date, course, requests, site, week } =
     query;
+  const carryFrom = uuidParam(query.carryFrom);
   const actionResultKey =
     query.result ??
     (builder ? [builder, count, created, series].filter(Boolean).join(":") : undefined);
@@ -289,6 +290,7 @@ export default async function ScheduleBoardPage({
           initialCourse,
           initialSite,
           requestPlan,
+          carryFrom,
           openAdd: addPanelState,
           returnWeek,
           week: builderWeek,

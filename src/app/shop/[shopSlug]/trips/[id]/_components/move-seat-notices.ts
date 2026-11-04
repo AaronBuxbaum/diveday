@@ -17,4 +17,16 @@ export const MOVE_SEAT_NOTICES = {
   "seat-moved": { form: "roster", tone: "success", key: "trips.notices.seatMoved" },
   "seat-moved-untold": { form: "roster", tone: "warning", key: "trips.notices.seatMovedUntold" },
   "seat-moved-owed": { form: "roster", tone: "warning", key: "trips.notices.seatMovedOwed" },
+  "party-moved": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.partyMoved",
+    countKey: "trips.notices.partyMovedCount",
+  },
+  "party-moved-check": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.partyMovedCheck",
+    countKey: "trips.notices.partyMovedCheckCount",
+  },
 } as const;

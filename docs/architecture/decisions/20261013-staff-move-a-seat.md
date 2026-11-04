@@ -46,4 +46,4 @@ path; the roster row's "Move to another departure" is the one door.**
 
 - A seat moved after a reminder went out gets the new departure's reminders: the move stamps that seat's sent reminders superseded (`rearmTripReminders`, issue #2554), as a moved departure does. Nothing is resent for the old one.
 - A report of money by departure would read the seat's order or payment, not its checkout.
-- A party moves one seat at a time; revisit if shops ask.
+- A party moved one seat at a time; [20261104-move-a-party-as-one](20261104-move-a-party-as-one.md) moves it as one.
