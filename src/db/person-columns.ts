@@ -348,15 +348,6 @@ const rows = [
     erase: "scrub",
     eraseIn: "scrubPersonRecord",
   },
-  // Retired by issue #2700 (no reader or writer); dropped next release.
-  {
-    table: "roll_call_crew_events",
-    column: "person_id",
-    kind: "crew",
-    merge: "refuse",
-    erase: "scrub",
-    eraseIn: "scrubPersonRecord",
-  },
   {
     table: "push_subscriptions",
     column: "person_id",
@@ -967,13 +958,6 @@ const rows = [
     kind: "actor",
     merge: "leave",
     why: "which staffer wrote the shop's reply",
-  },
-  {
-    table: "roll_call_crew_events",
-    column: "recorded_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who called the crew roll",
   },
   {
     table: "roll_call_events",

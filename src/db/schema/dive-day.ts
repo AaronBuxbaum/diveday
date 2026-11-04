@@ -233,93 +233,6 @@ export const rollCallEvents = pgTable(
 );
 
 /**
- * **Retired: nothing reads or writes this table.** Crew marks are
- * `roll_call_events` rows with `subject_kind = 'crew'` (issue #2700). The
- * declaration stays one release so the release still serving while that
- * migration runs keeps its table; the next release drops it (expand/contract,
- * `.agents/skills/schema-change/removing.md`). Do not add a reader.
- */
-export const retiredRollCallCrewEvents = pgTable(
-  "roll_call_crew_events",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    tripId: uuid("trip_id")
-      .notNull()
-      .references(() => trips.id),
-    /** The crew member this is about — a `trip_assignments` row's person. */
-    personId: uuid("person_id")
-      .notNull()
-      .references(() => people.id),
-    recordedByPersonId: uuid("recorded_by_person_id")
-      .notNull()
-      .references(() => people.id),
-    status: rollCallStatus("status").notNull(),
-    /** `departure` or `after_dive_N`; validated against the trip's planned dive count. */
-    checkpoint: text("checkpoint").notNull(),
-    source: rollCallSource("source").notNull().default("live"),
-    /** Device-generated idempotency key. Live events leave this null. */
-    clientEventId: uuid("client_event_id"),
-    /**
-     * What a crew member observed about a person who is unaccounted for
-     * (ADR 20260828-a-missing-diver-gets-a-sentence). **After-dive checkpoints
-     * only** — `rollCallNoteAllowed` in src/lib/roll-call.ts is the rule, and
-     * both writers apply it, so a note arriving on a departure event is
-     * dropped rather than written. At the dock `not_boarded` means "never
-     * left", which is clerical and has never needed a sentence.
-     *
-     * Written with the event and never edited afterwards: it rides the same
-     * submit as the tap that states the alarm, so the recorded fact and the
-     * observation behind it are one append-only row. `updateLatestRollCallNote`
-     * is deliberately gone.
-     */
-    note: text("note"),
-    /** A live boarding mark's observed credential state, never an assertion of sailing time. */
-    credentialSnapshot: jsonb("credential_snapshot").$type<CrewCredentialSnapshot[]>(),
-    credentialSnapshotStartedAt: timestamp("credential_snapshot_started_at", {
-      withTimezone: true,
-    }),
-    credentialSnapshotCapturedAt: timestamp("credential_snapshot_captured_at", {
-      withTimezone: true,
-    }),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: appNowTimestamp("created_at").notNull(),
-    /**
-     * The same final tiebreak the diver table carries, and it has to be the
-     * same one: the two halves of a head count are read minutes apart on one
-     * screen, and a crew member's result ordering differently from a diver's
-     * is how the device and the server come to disagree about who is still in
-     * the water. See `rollCallEvents.seq`.
-     */
-    seq: bigserial("seq", { mode: "number" }).notNull(),
-  },
-  (table) => [
-    // Leads on the person column so deleting a person (a demo shop's cascade,
-    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
-    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
-    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
-    index("roll_call_crew_events_person_id_idx").on(table.personId),
-    index("roll_call_crew_events_shop_trip_checkpoint_person_occurred_idx").on(
-      table.shopId,
-      table.tripId,
-      table.checkpoint,
-      table.personId,
-      table.occurredAt,
-    ),
-    check(
-      "roll_call_crew_credential_snapshot_shape",
-      sql`(${table.credentialSnapshot} is null and ${table.credentialSnapshotStartedAt} is null and ${table.credentialSnapshotCapturedAt} is null) or (${table.credentialSnapshot} is not null and ${table.credentialSnapshotStartedAt} is not null and ${table.credentialSnapshotCapturedAt} is not null and ${table.credentialSnapshotStartedAt} <= ${table.credentialSnapshotCapturedAt} and ${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.credentialSnapshot}) = 'array')`,
-    ),
-    uniqueIndex("roll_call_crew_events_shop_client_event_unique").on(
-      table.shopId,
-      table.clientEventId,
-    ),
-  ],
-);
-
-/**
  * One line a shop wants confirmed before a boat leaves the dock — "Emergency
  * oxygen aboard", "Life jackets counted" — in the order the shop wants it read
  * (ADR 20260824-pre-departure-safety-check).
@@ -672,8 +585,8 @@ export const buddyTeamEventAction = pgEnum("buddy_team_event_action", [
  * resolve them by id afterwards.
  *
  * **Deliberately not pruned** (`RETENTION_DAYS`, src/lib/retention.ts). It is
- * safety evidence about a departure, in the same class as `roll_call_events`
- * and `roll_call_crew_events`, which are not pruned either — a window here
+ * safety evidence about a departure, in the same class as `roll_call_events`,
+ * which is not pruned either — a window here
  * would put an expiry on the answer to "who was this diver with?" precisely
  * when an old incident is being reconstructed. Demo shops still clear it: both
  * reset orderings delete it, and `delete-path-coverage.test.ts` keeps them

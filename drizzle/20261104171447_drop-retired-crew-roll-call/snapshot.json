@@ -1,0 +1,135 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "1117301c-2bd5-4416-832a-9e12b5ef0a61",
+  "prevIds": [
+    "2f49c55f-f983-4a7f-8323-24b56149aaa6"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_crew_events"
+      ],
+      "writes": [
+        "s|tbl|public.roll_call_crew_events",
+        "n|tbl|public.roll_call_crew_events",
+        "e|tbl|public.roll_call_crew_events",
+        "n|rel|public.roll_call_crew_events",
+        "n|type|public.roll_call_crew_events"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"roll_call_crew_events\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"trip_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"recorded_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"checkpoint\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"source\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"client_event_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"note\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"occurred_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"seq\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"credential_snapshot\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"credential_snapshot_started_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"roll_call_crew_events\",\"credential_snapshot_captured_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"roll_call_crew_events_shop_trip_checkpoint_person_occurred_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"roll_call_crew_events_shop_client_event_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"roll_call_crew_events_person_id_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"roll_call_crew_events\",\"roll_call_crew_events_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"roll_call_crew_events\",\"roll_call_crew_events_trip_id_trips_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"roll_call_crew_events\",\"roll_call_crew_events_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"roll_call_crew_events\",\"roll_call_crew_events_recorded_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"roll_call_crew_events\",\"roll_call_crew_events_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"roll_call_crew_events\",\"roll_call_crew_credential_snapshot_shape\"]"
+    }
+  ]
+}

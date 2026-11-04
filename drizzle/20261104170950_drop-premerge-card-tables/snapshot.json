@@ -1,0 +1,585 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2f49c55f-f983-4a7f-8323-24b56149aaa6",
+  "prevIds": [
+    "5764fb81-7fb1-4b19-90b6-4b61521829d8"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "nitrox_certifications"
+      ],
+      "writes": [
+        "s|fk|public.nitrox_certifications.nitrox_certifications_trGZxoDM1PY8_fkey",
+        "n|fk|public.nitrox_certifications.nitrox_certifications_trGZxoDM1PY8_fkey",
+        "e|fk|public.nitrox_certifications.nitrox_certifications_trGZxoDM1PY8_fkey",
+        "n|con|public.nitrox_certifications.nitrox_certifications_trGZxoDM1PY8_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.nitrox_certifications",
+        "n|sch|public",
+        "e|col|public.nitrox_certifications.listed_from_certification_id"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "specialty_certifications"
+      ],
+      "writes": [
+        "s|fk|public.specialty_certifications.specialty_certifications_zCxeEzEswSem_fkey",
+        "n|fk|public.specialty_certifications.specialty_certifications_zCxeEzEswSem_fkey",
+        "e|fk|public.specialty_certifications.specialty_certifications_zCxeEzEswSem_fkey",
+        "n|con|public.specialty_certifications.specialty_certifications_zCxeEzEswSem_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.specialty_certifications",
+        "n|sch|public",
+        "e|col|public.specialty_certifications.listed_from_certification_id"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "certifications"
+      ],
+      "writes": [
+        "s|tbl|public.certifications",
+        "n|tbl|public.certifications",
+        "e|tbl|public.certifications",
+        "n|rel|public.certifications",
+        "n|type|public.certifications"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "nitrox_certifications"
+      ],
+      "writes": [
+        "s|tbl|public.nitrox_certifications",
+        "n|tbl|public.nitrox_certifications",
+        "e|tbl|public.nitrox_certifications",
+        "n|rel|public.nitrox_certifications",
+        "n|type|public.nitrox_certifications"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "specialty_certifications"
+      ],
+      "writes": [
+        "s|tbl|public.specialty_certifications",
+        "n|tbl|public.specialty_certifications",
+        "e|tbl|public.specialty_certifications",
+        "n|rel|public.specialty_certifications",
+        "n|type|public.specialty_certifications"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"certifications\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"nitrox_certifications\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"specialty_certifications\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"agency\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"level\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"identifier\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"declared_identifier\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"review_note\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"reviewed_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"reviewed_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"imported_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"imported_from_label\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"self_declared_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"issued_by_shop_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"issued_from_trip_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"issued_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"deleted_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"deleted_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"agency\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"identifier\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"review_note\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"reviewed_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"reviewed_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"imported_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"imported_from_label\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"self_declared_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"issued_by_shop_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"issued_from_trip_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"issued_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"deleted_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"deleted_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"agency\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"specialty\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"identifier\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"review_note\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"reviewed_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"reviewed_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"imported_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"imported_from_label\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"self_declared_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"issued_by_shop_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"issued_from_trip_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"issued_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"deleted_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"deleted_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"agency_checked_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"listed_from_certification_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"listed_from_certification_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"agency_checked_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"agency_checked_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"processed_with_agency_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"processed_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"processed_with_agency_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"nitrox_certifications\",\"processed_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"processed_with_agency_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"specialty_certifications\",\"processed_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"junior_status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"junior_status_verified_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"certifications\",\"junior_status_verified_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"certifications_shop_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"certifications_shop_agency_identifier_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"nitrox_certifications_shop_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"nitrox_certifications_shop_agency_identifier_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"specialty_certifications_shop_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"specialty_certifications_shop_agency_specialty_identifier_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"certifications_person_id_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"certifications_processed_by_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"nitrox_certifications_processed_by_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"specialty_certifications_processed_by_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"certifications_junior_status_verifier_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"certifications\",\"certifications_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"certifications\",\"certifications_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"certifications\",\"certifications_reviewed_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"certifications\",\"certifications_issued_from_trip_id_trips_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"certifications\",\"certifications_issued_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"certifications\",\"certifications_deleted_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_reviewed_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_issued_from_trip_id_trips_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_issued_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_deleted_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_reviewed_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_issued_from_trip_id_trips_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_issued_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_deleted_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_trGZxoDM1PY8_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_zCxeEzEswSem_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"certifications\",\"certifications_processed_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_processed_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_processed_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"certifications\",\"certifications_uFx0uU65dfWX_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"certifications\",\"certifications_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"certifications\",\"certifications_identifier_present_unless_self_declared\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_identifier_present_unless_self_declared\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_identifier_present_unless_unsighted\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"certifications\",\"certifications_processed_only_when_issued\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"nitrox_certifications\",\"nitrox_certifications_processed_only_when_issued\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"specialty_certifications\",\"specialty_certifications_processed_only_when_issued\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"certifications\",\"certifications_junior_status_valid\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"certifications\",\"certifications_junior_status_evidence\"]"
+    }
+  ]
+}

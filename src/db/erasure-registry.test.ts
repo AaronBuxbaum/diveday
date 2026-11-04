@@ -89,7 +89,6 @@ const NEVER_PLAIN_DELETED = [
   "waiver_records",
   "course_form_records",
   "roll_call_events",
-  "roll_call_crew_events",
   "incident_reports",
   "incident_report_people",
   "incident_report_addenda",

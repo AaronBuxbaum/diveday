@@ -28,7 +28,7 @@
  * window would erase that evidence. Chosen over 30 days (issue #1397,
  * 2026-09-10).
  *
- * **`buddy_team_events`, `roll_call_events`, `roll_call_crew_events`, and
+ * **`buddy_team_events`, `roll_call_events`, and
  * `booking_arrival_events` are deliberately unbounded.** Desk arrivals,
  * roll-call marks and buddy pairings are evidence for reconstructing a departure.
  * The requested-erasure sweep handles person references and matching
@@ -130,8 +130,6 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "trip_stage_events",
   "buddy_team_events",
   "roll_call_events",
-  // Retired by issue #2700 (crew marks are roll_call_events rows); dropped next release.
-  "roll_call_crew_events",
   "booking_arrival_events",
   "pre_departure_check_events",
   "trip_change_events",
