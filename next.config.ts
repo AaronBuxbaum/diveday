@@ -167,7 +167,7 @@ const nextConfig: NextConfig = {
       "node_modules/**/*.d.cts",
       "node_modules/**/*.d.mts",
     ],
-    // **Satori, in staff closures that render no image** (issue #1355).
+    // **Satori (`@vercel/og`) and which closures trace it** (issue #1355).
     //
     // `@vercel/og` is 3.07 MiB of renderer, bundled font and WASM, and Next
     // attaches a **metadata module** to every page entry in that module's
@@ -180,41 +180,37 @@ const nextConfig: NextConfig = {
     // root card off the convention to `src/app/link-card/route.tsx` — a route
     // handler is its own closure and is attached to nothing.
     //
-    // **Measured on a build, 2026-10-10 (issue #1817)**: with this key, 17 of
-    // 190 closures trace the module; without it, 18. The eighteenth is
-    // `/shop/[shopSlug]/reports/card`, the staff year card, which renders an
-    // `ImageResponse` and needs it; no other staff closure traces it either
-    // way. So the key no longer keeps the renderer out of any staff closure
-    // that would otherwise carry it — its one remaining effect is #1710's,
-    // below. Deleting it is #1710's call, deferred with H-20260916-seven-engineering-hygiene-calls until after
-    // pilot. Re-count after any change here with
+    // **`@vercel/og` is excluded from no route here, and the guard is a test**
+    // (issues #1355, #1817, #1710). A `/shop/**` key used to strip the
+    // renderer from every staff closure on the premise that no route under
+    // `/shop/` renders an image. Measured on a build, 2026-10-10: with the key
+    // 17 of 190 closures traced the module, without it 18, the eighteenth
+    // being `/shop/[shopSlug]/reports/card`, the staff year card, which renders
+    // an `ImageResponse` and so had no rasterizer to load on a traced deploy:
+    // "Print the card" would have answered a server error. So the key kept the
+    // renderer out of no staff closure that would carry it, and its one
+    // effect was the bug. It is gone.
+    //
+    // **Why a key cannot come back for this** (the next reader's trap): keys
+    // are matched with picomatch and `contains: true`, so they match a
+    // *substring* of the route and have no negation, and an
+    // `outputFileTracingIncludes` entry for one route does not win over an
+    // exclusion. There is no key meaning "every `/shop/` route except this
+    // one". `src/test/next-config.test.ts` walks `src/app` for every route file
+    // that imports `ImageResponse` and fails if a key naming `@vercel/og`
+    // matches its route path, which is the check the old key's comment
+    // ("no route under `/shop/` renders an image") was missing.
+    //
+    // The seventeen routes that do trace it are the five image routes
+    // (`link-card`, `pwa-icon-maskable`, and the `opengraph-image` cards at
+    // `/recap/[token]`, `/s/[shopSlug]` and `/s/[shopSlug]/trips/[id]`) and
+    // the twelve pages under `/recap/[token]` and `/s/[shopSlug]` those cards'
+    // metadata modules attach to, each reaching only its own subtree.
+    // `src/app/_og/card.test.tsx` refuses a new card in the root segment,
+    // which would put it back in every closure. Re-count after any change
+    // here with
     // `grep -l "@vercel/og" $(find .next -name "*.nft.json") | wc -l`.
     //
-    // The seventeen: the five image routes (`link-card`, `pwa-icon-maskable`,
-    // and the `opengraph-image` cards at `/recap/[token]`, `/s/[shopSlug]` and
-    // `/s/[shopSlug]/trips/[id]`) and the twelve pages under `/recap/[token]`
-    // and `/s/[shopSlug]` those cards' metadata modules attach to, each
-    // reaching only its own subtree. `src/app/_og/card.test.tsx` refuses a new
-    // card in the root segment, which would put it back in every closure.
-    //
-    // **`/shop/**` and never `/shop`.** These keys are matched with picomatch
-    // and `contains: true`, so they match a *substring* of the route: the bare
-    // key would also match `/api/integrations/shopify/callback`, which has
-    // nothing to do with staff pages. The trailing slash is what makes it a
-    // path segment rather than five letters.
-    //
-    // **One route under `/shop/` does render an image, and this key strips the
-    // module out from under it**: `/shop/[shopSlug]/reports/card`, the staff
-    // year card. Confirmed on a build — its `.nft.json` carries no
-    // `@vercel/og` with the key, and does without it — and an
-    // `outputFileTracingIncludes` entry for the same route does **not** win
-    // over this exclusion. Issue #1710 holds the fix.
-    //
-    // The marketing and diver-facing pages cannot be excluded the same way:
-    // substring matching means a `/s/**` key would also match
-    // `/s/[shopSlug]/opengraph-image`, which genuinely needs the module, and
-    // these keys have no negation.
-    "/shop/**": ["node_modules/**/next/dist/compiled/@vercel/og/**"],
     // **sharp's natives, out of the cron functions** (#2486). `process-image.ts`
     // loads sharp with `await import("sharp")` on the first upload, never at
     // import, so a cron closure reaches it only through a path that resizes an
@@ -304,7 +300,9 @@ const nextConfig: NextConfig = {
   // before migrations and the production build; only that build skips Next's
   // duplicate pass.
   // Local `pnpm build` and CI keep their existing checks.
-  ...(process.env.VERCEL === "1" ? { typescript: { ignoreBuildErrors: true } } : {}),
+  ...(process.env.VERCEL === "1"
+    ? { typescript: { ignoreBuildErrors: true } }
+    : {}),
   experimental: {
     useTypeScriptCli: true,
     // Static-generation workers only need to be serialized when they'd share
@@ -366,7 +364,11 @@ const sentryConfig = withSentryConfig(nextConfig, {
     // two that survived its own strip pass are 141,995 bytes of deployed static
     // output that nothing will ever fetch — a browser requests a CSS map only
     // with devtools open.
-    filesToDeleteAfterUpload: [".next/**/*.js.map", ".next/**/*.mjs.map", ".next/**/*.css.map"],
+    filesToDeleteAfterUpload: [
+      ".next/**/*.js.map",
+      ".next/**/*.mjs.map",
+      ".next/**/*.css.map",
+    ],
   },
 
   // Only print logs for uploading source maps in CI
