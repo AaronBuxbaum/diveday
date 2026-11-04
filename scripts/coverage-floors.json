@@ -50,6 +50,7 @@
   "src/db/certification-junior.ts": 88.23,
   "src/db/certifications-in-training.ts": 50,
   "src/db/check-in.ts": 87.5,
+  "src/db/card-restore.ts": 75,
   "src/db/checkouts.ts": 87.5,
   "src/db/course-certified.ts": 70.21,
   "src/db/erasure-coordinated-send.ts": 88.23,
