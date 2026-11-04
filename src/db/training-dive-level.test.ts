@@ -193,6 +193,61 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     expect(await levelCodes(ctx)).toEqual([]);
   });
 
+  it("offers a sale a marked dive only where readiness would lower the site: one planned dive at one site (issue #3839)", async () => {
+    const ctx = await advancedCharter();
+    await ctx.db
+      .update(tripRequirements)
+      .set({ minimumCertificationLevel: null })
+      .where(eq(tripRequirements.tripId, ctx.charter.id));
+    const [siteA, siteB] = await ctx.db
+      .insert(diveSites)
+      .values([
+        {
+          shopId: ctx.shop.id,
+          name: "Attribution site A",
+          slug: "attribution-site-a-3839",
+          minimumCertificationLevel: "open_water",
+        },
+        {
+          shopId: ctx.shop.id,
+          name: "Attribution site B",
+          slug: "attribution-site-b-3839",
+          minimumCertificationLevel: "open_water",
+        },
+      ])
+      .returning({ id: diveSites.id });
+    if (!siteA || !siteB) throw new Error("attribution sites missing");
+    await teachesAndAboard(ctx);
+    const markable = () =>
+      markableTrainingDives(ctx.db, ctx.shop.id, ctx.course.personId, {
+        id: ctx.charter.id,
+        startsAt: ctx.charter.startsAt,
+      });
+    const setPlanned = (plannedDives: number) =>
+      ctx.db.update(trips).set({ plannedDives }).where(eq(trips.id, ctx.charter.id));
+
+    // No site on the itinerary: nothing to attribute the mark to.
+    await setPlanned(1);
+    expect(await markable()).toEqual([]);
+    // One planned dive at one site: the facts readiness lowers on.
+    await ctx.db
+      .insert(tripDives)
+      .values({ tripId: ctx.charter.id, diveNumber: 1, diveSiteId: siteA.id });
+    expect(await markable()).toHaveLength(1);
+    // Two planned dives on that one site: which one is the training dive?
+    await setPlanned(2);
+    expect(await markable()).toEqual([]);
+    // One planned dive again, but the itinerary names two sites.
+    await setPlanned(1);
+    await ctx.db
+      .insert(tripDives)
+      .values({ tripId: ctx.charter.id, diveNumber: 2, diveSiteId: siteB.id });
+    expect(await markable()).toEqual([]);
+    // The same two facts readiness reads: the seat's own mark lowers nothing here.
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+  });
+
   it("keeps the charter's level and warns when no instructor is aboard", async () => {
     const ctx = await advancedCharter();
     await roster(ctx, ctx.course.tripId, ctx.instructor, "instructor");

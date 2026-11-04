@@ -7,7 +7,7 @@ import {
   calculateReadiness,
   type SiteCertRequirement,
 } from "./readiness";
-import type { TrainingDiveCourse } from "./training-mark";
+import { type TrainingDiveCourse, trainingSiteAttributionKnown } from "./training-mark";
 import { decideTripAdmission, type TripAdmissionEvidence } from "./trip-admission";
 
 const aow: TrainingDiveCourse = {
@@ -235,4 +235,15 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
       });
     },
   );
+});
+
+describe("trainingSiteAttributionKnown (issue #3839)", () => {
+  it("names a site only for one planned dive at one site, as readiness does", () => {
+    expect(trainingSiteAttributionKnown(1, 1)).toBe(true);
+    expect(trainingSiteAttributionKnown(2, 1)).toBe(false);
+    expect(trainingSiteAttributionKnown(1, 2)).toBe(false);
+    expect(trainingSiteAttributionKnown(1, 0)).toBe(false);
+    expect(trainingSiteAttributionKnown(null, 1)).toBe(false);
+    expect(trainingSiteAttributionKnown(undefined, 1)).toBe(false);
+  });
 });

@@ -227,9 +227,7 @@ export async function recordMedicalAnswersExported(
   const [actor] = await db
     .select({ name: people.fullName })
     .from(people)
-    .where(
-      and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()),
-    )
+    .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
     .limit(1);
   if (!actor) throw new Error("The export's reader is not a staffer of this shop.");
   const divers = await db

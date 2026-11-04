@@ -36,6 +36,7 @@ import {
   type TrainingMarkState,
   trainingDiveAsksNoCardForSite,
   trainingDiveLevel,
+  trainingSiteAttributionKnown,
 } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
 import {
@@ -1884,8 +1885,10 @@ export async function listTripsReadiness(
     const siteRequirement = siteRequirementsByTrip.get(tripId) ?? null;
     const courseRow = courseByTrip.get(tripId);
     // A seat-level mark cannot identify which of several planned dives is training.
-    const siteAttributionUnknown =
-      courseRow?.plannedDives !== 1 || (siteRowsByTrip.get(tripId)?.length ?? 0) !== 1;
+    const siteAttributionUnknown = !trainingSiteAttributionKnown(
+      courseRow?.plannedDives,
+      siteRowsByTrip.get(tripId)?.length ?? 0,
+    );
     const trainingForSite = siteAttributionUnknown
       ? null
       : trainingDiveLevel(trainingMarks.get(row.booking.id));
