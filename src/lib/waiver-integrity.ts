@@ -400,3 +400,25 @@ export function verifyWaiverIntegrity(
     ? "valid"
     : "invalid";
 }
+
+/**
+ * **The cached verdict a row carries beside its seal** (issue #2562):
+ * `integrity_valid` and `integrity_checked_at`, from exactly what
+ * {@link verifyWaiverIntegrity} says about the record as it will be written.
+ * A row with no seal carries no verdict, so the pair is null. Every writer that
+ * seals, re-seals or declines to re-seal a release spreads this into the same
+ * update, and the nightly re-check writes it again; the signature log's
+ * "Can’t be checked" view filters on it. It caches the check, never replaces
+ * it: a reader that shows a seal still recomputes it.
+ */
+export function waiverIntegrityVerdict(
+  record: Parameters<typeof verifyWaiverIntegrity>[0],
+  checkedAt: Date,
+): { integrityValid: boolean | null; integrityCheckedAt: Date | null } {
+  const state = verifyWaiverIntegrity(record);
+  if (state === "unsealed") return { integrityValid: null, integrityCheckedAt: null };
+  return { integrityValid: state === "valid", integrityCheckedAt: checkedAt };
+}
+
+/** When `/api/cron/waiver-seals` re-checks every seal: nightly, in the 03:00 UTC wake. */
+export const WAIVER_SEAL_CHECK_CRONTAB = "10 3 * * *";

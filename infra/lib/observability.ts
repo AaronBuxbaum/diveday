@@ -204,6 +204,9 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // The percent plan's monthly close: a failed one leaves a shop's fee
       // unreported to Stripe's meter.
       "cron_pricing_volume.scan_failed",
+      // The nightly re-check of every signed release's seal (issue #2562): a
+      // failed one leaves the "Can't be checked" view a night behind.
+      "cron_waiver_seals.scan_failed",
     ],
     threshold: 1,
     periodMinutes: 1_440,

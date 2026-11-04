@@ -11,6 +11,7 @@ import {
   SHOP_TICK_CRONTAB,
 } from "./cron-schedule";
 import { DIETARY_RETENTION_CRONTAB } from "./retention";
+import { WAIVER_SEAL_CHECK_CRONTAB } from "./waiver-integrity";
 import { WEEKLY_DIGEST_CRON_CRONTAB } from "./weekly-digest";
 
 /**
@@ -33,6 +34,11 @@ describe("the daily tick", () => {
       "8 3 * * 0",
     );
   });
+  it("matches the deployed schedule for /api/cron/waiver-seals", () => {
+    const pass = vercelCrons().find((cron) => cron.path === "/api/cron/waiver-seals");
+    expect(pass?.schedule).toBe(WAIVER_SEAL_CHECK_CRONTAB);
+  });
+
   it("matches the deployed vercel.json schedule for /api/cron/reminders", () => {
     const reminders = vercelCrons().find((cron) => cron.path === "/api/cron/reminders");
     expect(reminders?.schedule).toBe(DAILY_TICK_CRONTAB);

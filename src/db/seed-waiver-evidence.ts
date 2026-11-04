@@ -3,6 +3,7 @@ import { nowMs } from "@/lib/clock";
 import {
   computeWaiverIntegrityHash,
   WAIVER_INTEGRITY_VERSION_SIGNED,
+  waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
 import { bookings, trips, type WaiverRecord, waiverRecords } from "./schema";
@@ -209,13 +210,16 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
       integrityVersion: null,
     };
     const hash = sealed ? computeWaiverIntegrityHash(next, WAIVER_INTEGRITY_VERSION_SIGNED) : null;
+    const resealed: WaiverRecord = {
+      ...next,
+      integrityHash: hash,
+      integrityVersion: hash ? WAIVER_INTEGRITY_VERSION_SIGNED : null,
+    };
+    // Checked when it was sealed, as `completeWaiver` stamps it (issue #2562).
+    const checkedAt = resealed.completedAt ?? resealed.signedAt ?? resealed.createdAt;
     updates.push({
       id: record.id,
-      next: {
-        ...next,
-        integrityHash: hash,
-        integrityVersion: hash ? WAIVER_INTEGRITY_VERSION_SIGNED : null,
-      },
+      next: { ...resealed, ...waiverIntegrityVerdict(resealed, checkedAt) },
     });
   }
 
@@ -228,7 +232,7 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
 }
 
 /**
- * How many rows one `UPDATE … FROM (VALUES …)` carries. Seven bound parameters
+ * How many rows one `UPDATE … FROM (VALUES …)` carries. Nine bound parameters
  * per row, so this is nowhere near Postgres's 65535-parameter ceiling; it is
  * sized to keep one statement's plan small rather than to dodge a limit.
  */
@@ -260,7 +264,7 @@ async function applyEvidence(
     const rows = sql.join(
       chunk.map(
         ({ id, next }) =>
-          sql`(${id}::uuid, ${next.signedAt}::timestamptz, ${next.consentedAt}::timestamptz, ${next.completedAt}::timestamptz, ${next.createdAt}::timestamptz, ${next.integrityHash}::text, ${next.integrityVersion}::integer)`,
+          sql`(${id}::uuid, ${next.signedAt}::timestamptz, ${next.consentedAt}::timestamptz, ${next.completedAt}::timestamptz, ${next.createdAt}::timestamptz, ${next.integrityHash}::text, ${next.integrityVersion}::integer, ${next.integrityValid}::boolean, ${next.integrityCheckedAt}::timestamptz)`,
       ),
       sql`, `,
     );
@@ -271,9 +275,12 @@ async function applyEvidence(
         completed_at = source.completed_at,
         created_at = source.created_at,
         integrity_hash = source.integrity_hash,
-        integrity_version = source.integrity_version
+        integrity_version = source.integrity_version,
+        integrity_valid = source.integrity_valid,
+        integrity_checked_at = source.integrity_checked_at
       from (values ${rows}) as source (
-        id, signed_at, consented_at, completed_at, created_at, integrity_hash, integrity_version
+        id, signed_at, consented_at, completed_at, created_at, integrity_hash, integrity_version,
+        integrity_valid, integrity_checked_at
       )
       where target.id = source.id
     `);

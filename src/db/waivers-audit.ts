@@ -105,7 +105,9 @@ export type SignedWaiverEntry = ReturnType<typeof toSignedWaiverEntry>;
  * The signed-record views the Waivers page offers beside "All": records whose
  * seal cannot be checked (`verifyWaiverIntegrity` → `unsealed`: no hash or no
  * seal version, which is every imported record and anything signed before
- * sealing), and every record that went to a physician (`medical_review`): a
+ * sealing) or whose seal failed its last check (`integrity_valid` false: an
+ * edit after signing, the record a reviewer goes looking for, issue #2562),
+ * and every record that went to a physician (`medical_review`): a
  * referral nobody has answered, one the physician did not clear, and one they
  * cleared, which keeps its status and stays in the diver's medical history.
  * Each row carries which of the three it is, and the log says so. The hold
@@ -122,7 +124,11 @@ export function signedRecordViewParam(value: string | undefined): SignedRecordVi
 
 function signedRecordViewWhere(view: SignedRecordView | undefined) {
   if (view === "unchecked")
-    return or(isNull(waiverRecords.integrityHash), isNull(waiverRecords.integrityVersion));
+    return or(
+      isNull(waiverRecords.integrityHash),
+      isNull(waiverRecords.integrityVersion),
+      eq(waiverRecords.integrityValid, false),
+    );
   if (view === "medical") return eq(waiverRecords.status, "medical_review");
   return undefined;
 }
