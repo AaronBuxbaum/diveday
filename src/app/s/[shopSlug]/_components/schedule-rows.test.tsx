@@ -102,7 +102,7 @@ describe("weekLedgerRows", () => {
 
   it("links each row to its trip page, the frame's links staying in the frame", () => {
     expect(rows()[0]?.href).toBe("/s/blue-mantis/trips/t1");
-    expect(rows({ isEmbed: true })[0]?.href).toBe("/s/blue-mantis/trips/t1?embed=1");
+    expect(rows({ isEmbed: true })[0]?.href).toBe("/s/blue-mantis/embed/trip/t1");
   });
 
   it("names the sites and the dives still to confirm", () => {

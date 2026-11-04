@@ -66,7 +66,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
 });
 
 test("the embed widget never prefills or remembers a booker", async ({ page }) => {
-  await page.goto("/s/blue-mantis?embed=1");
+  await page.goto("/s/blue-mantis/embed/calendar");
   await openTripInEmbed(page, "Discover Scuba — Pool & Reef");
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Sal Moretti");

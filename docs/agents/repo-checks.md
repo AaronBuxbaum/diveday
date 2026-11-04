@@ -440,7 +440,7 @@ Do not try to catch this with a guard. `check-e2e-hygiene.mjs` reads lines; know
 
 #### A negative assertion keyed on copy is measured, not guarded
 
-The sibling rule that keeps being proposed for this guard is one refusing `.toHaveCount(0)` / `.not.toBeVisible()` on a locator built from a string literal. The failure is real and this repo has had it: slice 16f renamed a region's accessible name from "Next boat out" to "Next boat with space", the assertion that the card **is** visible failed and was fixed, and the two asserting the card is **absent** kept passing, because a locator that matches nothing satisfies them for the wrong reason. `e2e/schedule-embed.spec.ts`'s was the only assertion in the suite proving `?embed=1` drops that card, and it had stopped proving it silently and permanently (issue #1403).
+The sibling rule that keeps being proposed for this guard is one refusing `.toHaveCount(0)` / `.not.toBeVisible()` on a locator built from a string literal. The failure is real and this repo has had it: slice 16f renamed a region's accessible name from "Next boat out" to "Next boat with space", the assertion that the card **is** visible failed and was fixed, and the two asserting the card is **absent** kept passing, because a locator that matches nothing satisfies them for the wrong reason. `e2e/schedule-embed.spec.ts`'s was the only assertion in the suite proving the framed calendar drops that card, and it had stopped proving it silently and permanently (issue #1403).
 
 It is not built, and the reason is a count rather than an opinion. The rule was implemented as specified — read at statement scope, exempt when the identical string appears in another locator anywhere in the same file — and swept over `e2e/` twice, on 2026-09-10 and again on 2026-09-12 after the suite had grown from 487 negative assertions to 498. The flagged counts did not move:
 
@@ -581,7 +581,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
 - **Where a diver can go**: the header nav in `src/components/PublicShopNav.tsx`, assembled once in
   `src/app/s/[shopSlug]/layout.tsx` and rendered by `src/components/PublicShopChrome.tsx`. Add a
   public destination there, never as a per-page cross-link; the whole header is dropped in
-  `?embed=1`.
+  a frame (`/s/<slug>/embed/**`).
 - **Where staff can go**: derive from `src/lib/staff-destinations.ts`, a registry of
   destinations each filed under one **section** — Today, Schedule, Divers, Inbox, Money, Safety, Courses,
   Gear, Settings (ADR 20261001-logbook). It has **two** consumers:
@@ -688,7 +688,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   the root layout's. `sharedLinkCard` (`src/lib/marketing.ts`) is this plus the card image — and the
   card is deliberately *not* inside `openGraphSite`, because a level that names `images` makes Next
   skip that segment's own `opengraph-image.tsx`. Structured data (`JsonLd`) never renders in
-  `?embed=1` mode or on a bearer-token page.
+  a frame (`/s/<slug>/embed/**`) or on a bearer-token page.
 - **Design for a surface that does not exist yet**: read
   [docs/design/design-artifacts.md](../design/design-artifacts.md) first — the canvas
   argues in pictures, the ADR decides, code obeys the ADR. Reach for a canvas only when a surface is

@@ -64,7 +64,7 @@ export async function readSchedulePage(
     hasSpaceFilter,
     tripTypeFilter,
   }: {
-    /** The framed schedule's reader (`embed/schedule/page.tsx`): no lenses, shelf, fleet or rating. */
+    /** The framed schedule's reader (`embed/calendar/page.tsx`): no lenses, shelf, fleet or rating. */
     isEmbed?: boolean;
     /** The raw `?lens=`; resolved against the shop's own words here. */
     lens: string | undefined;
@@ -83,7 +83,7 @@ export async function readSchedulePage(
    * Read inside the batch below, and the list query waits on it only when the URL names a lens: the
    * narrowing happens in SQL inside `upcomingTripScope`, so the keyset pages stay honest, and it
    * needs the resolved lens id. With no `?lens=` (every first visit) the list starts beside it.
-   * Never in the frame — `FilterChips` renders a `<nav>` landmark and `?embed=1` promises the host
+   * Never in the frame — `FilterChips` renders a `<nav>` landmark and the frame promises the host
    * page zero navigation landmarks.
    *
    * An unknown or malformed `?lens=` resolves to null and renders the whole board with "Every
@@ -104,7 +104,7 @@ export async function readSchedulePage(
   // pop a rating line in under the shop's name or cost a reserved gap on every shop that has no
   // reviews at all. It is handed down to the reviews section rather than read twice.
   //
-  // Both, and the courses shelf, stand down inside the frame: `?embed=1` renders neither the hero
+  // Both, and the courses shelf, stand down inside the frame: `embed/calendar` renders neither the hero
   // nor the shelves.
   //
   // **One batch, its dependents chained inside it** (code review 2026-10-10, item 24).

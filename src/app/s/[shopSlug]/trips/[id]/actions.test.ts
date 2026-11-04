@@ -357,7 +357,7 @@ describe("the readiness link after booking", () => {
     const landing = vi
       .mocked(redirect)
       .mock.calls.map(([path]) => String(path))
-      .find((path) => path.includes("?booking=") && path.includes("&embed=1"));
+      .find((path) => path.startsWith(`/s/${shop.slug}/embed/trip/${tripId}?booking=`));
     const token = landing?.split("?booking=")[1]?.split("&")[0];
     if (!token) throw new Error("the embed booking did not land on its confirmation");
     expect(await verifyBookingCapability(db, { token, purpose: "confirm" })).toMatchObject({
@@ -426,9 +426,7 @@ describe("the readiness link after booking", () => {
     await post(shop.slug, tripId, submission([{ email: "embed-lead@example.com" }]), true);
 
     const redirected = vi.mocked(redirect).mock.calls.map(([path]) => String(path));
-    expect(redirected.some((path) => path.includes("?booking=") && path.includes("&embed=1"))).toBe(
-      false,
-    );
+    expect(redirected.some((path) => path.includes("?booking="))).toBe(false);
     expect(redirected.some((path) => path.startsWith("/ready/"))).toBe(false);
   });
 });

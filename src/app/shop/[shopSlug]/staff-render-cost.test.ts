@@ -41,6 +41,7 @@ import {
   getTodayWork,
   todayNextDepartureTripId,
 } from "@/features/today";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
@@ -150,7 +151,7 @@ describe("what a staff render sends", () => {
         shop.slug,
         shopClock(shop, now),
         undefined,
-        undefined,
+        staffTranslator("en-US"),
         undefined,
         true,
         evidence,
@@ -217,7 +218,7 @@ describe("how many round trips a staff render waits for, one after another", () 
         shop.slug,
         shopClock(shop, now),
         undefined,
-        undefined,
+        staffTranslator("en-US"),
         undefined,
         true,
         evidence,

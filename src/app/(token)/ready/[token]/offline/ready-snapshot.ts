@@ -3,6 +3,7 @@ import type { TripChangeEvent } from "@/db/trip-change-events";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { PERSONAL_GEAR_KEYS } from "@/i18n/packing-labels";
 import { CHECKLIST_DETAIL_KEYS } from "@/i18n/readiness-summary-labels";
+import { tripChangeEntries } from "@/i18n/trip-change-entries";
 import { arrivalCardDocument, escapeHtml, htmlDocument } from "@/lib/arrival-card-document";
 import type { PersonalGearCode } from "@/lib/diver-planning";
 import { type PlannedFlySafe, plannedFlySafeMessageKey } from "@/lib/fly-safe";
@@ -16,7 +17,6 @@ import type { ChecklistDetailCode } from "@/lib/readiness-summary";
 import { type ReadySnapshot, readyCopyKeepUntil } from "@/lib/ready-offline";
 import type { ShopAddressParts } from "@/lib/shop-address";
 import { siteRunsLine } from "@/lib/site-runs";
-import { tripChangeEntries } from "@/lib/trip-change-entries";
 
 /**
  * **Everything the offline copy may say, and nothing else** (issue #3225).

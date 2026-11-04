@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import EmbeddedScheduleLoading from "../embed/schedule/loading";
-import EmbeddedTripLoading from "../trips/[id]/embed/loading";
+import EmbeddedScheduleLoading from "../embed/calendar/loading";
+import EmbeddedTripLoading from "../embed/trip/[id]/loading";
 import { CHROME_PLACEHOLDER_ATTRIBUTE, EmbedChromeCollapse } from "./EmbedChromeCollapse";
 
 afterEach(cleanup);
@@ -66,7 +66,7 @@ describe("the framed segments' chrome collapse", () => {
   it("is carried by both framed pages, so the bar cannot come back between the skeleton and the chrome", () => {
     // The page body can land before the chrome does; when it replaces the
     // skeleton, the skeleton's rule goes with it.
-    for (const file of ["../embed/schedule/page.tsx", "../trips/[id]/embed/page.tsx"]) {
+    for (const file of ["../embed/calendar/page.tsx", "../embed/trip/[id]/page.tsx"]) {
       expect(source(file), file).toMatch(/<EmbedChromeCollapse \/>/);
     }
   });

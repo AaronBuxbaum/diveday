@@ -321,11 +321,12 @@ describe("the synthesized observability stack", () => {
     // absent: they are in the email and global stacks, and this count is what
     // would notice either silently reappearing here, where each would read a
     // metric this region does not publish and sit there saying nothing.
-    // Plus one: SMS month-to-date spend, which AWS publishes in this region.
+    // Plus two: SMS month-to-date spend, which AWS publishes in this region, and
+    // the cron dispatcher's Lambda Errors (S19b).
     expect(alarms).toHaveLength(
       LOG_SIGNALS.filter((signal) => signal.alarm !== false).length +
         WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length +
-        1,
+        2,
     );
     const smsSpend = alarms.find(
       (candidate) => candidate.Properties?.AlarmName === "diveday-sms-month-to-date-spend",

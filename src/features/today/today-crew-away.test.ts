@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { acknowledgeCrewAway } from "@/db/crew-away-acknowledgements";
 import { recordCrewAvailabilityBlock } from "@/db/crew-requests";
 import { createTrip, listStaff, setTripCrew } from "@/db/trips";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowMs } from "@/lib/clock";
 import { shopClock } from "@/lib/shop-clock";
@@ -51,7 +52,14 @@ describe("crew rostered while away", () => {
     });
     expect(saved.ok).toBe(true);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const rows = work.actions.filter(
       (action) => action.kind === "crew_away" && action.departure?.tripId === trip.id,
     );
@@ -76,7 +84,14 @@ describe("crew rostered while away", () => {
         actorPersonId: owner.id,
       }),
     ).toBe("saved");
-    const after = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const after = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(
       after.actions.filter(
         (action) => action.kind === "crew_away" && action.departure?.tripId === trip.id,
@@ -85,7 +100,14 @@ describe("crew rostered while away", () => {
 
     // Not a course session, so it is not on "Your sessions"; the row is the
     // reader's own lead instead. A session the reader teaches carries the days.
-    const own = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), instructor.id);
+    const own = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      instructor.id,
+      staffTranslator("en-US"),
+    );
     expect(own.crewedTripIds).toContain(trip.id);
     for (const session of own.crewedSessions) {
       expect(Array.isArray(session.away)).toBe(true);

@@ -233,7 +233,7 @@ describe("Monday's digest", () => {
 describe("the deployed schedule", () => {
   it("runs nightly at the time the Sentry monitor expects", () => {
     const crons: Array<{ path: string; schedule: string }> = JSON.parse(
-      readFileSync(path.join(process.cwd(), "vercel.json"), "utf8"),
+      readFileSync(path.join(process.cwd(), "config", "crons.json"), "utf8"),
     ).crons;
     expect(crons.find((cron) => cron.path === "/api/cron/founder-metrics")?.schedule).toBe(
       "7 11 * * *",

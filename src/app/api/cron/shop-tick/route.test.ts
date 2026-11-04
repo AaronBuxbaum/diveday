@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -136,7 +137,7 @@ describe("GET /api/cron/shop-tick", () => {
     for (const scan of ALL_SCANS) expect(scan).toHaveBeenCalledTimes(1);
     const now = nowDate();
     expect(sendDueReminders).toHaveBeenCalledWith(FAKE_DB, { now });
-    expect(sendDueRecaps).toHaveBeenCalledWith(FAKE_DB, { now });
+    expect(sendDueRecaps).toHaveBeenCalledWith(FAKE_DB, { marineLifeNamesIn, now });
     expect(sendMissingDiverAlerts).toHaveBeenCalledWith(FAKE_DB, { now });
     expect(bringDemoBoatsAtSeaHome).toHaveBeenCalledWith(FAKE_DB, now);
     expect(body.recaps).toEqual({ sent: 2 });

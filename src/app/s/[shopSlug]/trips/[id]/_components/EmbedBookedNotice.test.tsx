@@ -128,7 +128,7 @@ describe("EmbedBookedNotice", () => {
     renderNotice();
     expect(screen.getByRole("link", { name: /Back to the schedule/ })).toHaveAttribute(
       "href",
-      "/s/reef-shop?embed=1",
+      "/s/reef-shop/embed/calendar",
     );
   });
 

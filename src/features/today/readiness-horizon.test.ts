@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { inHorizonReadiness } from "@/db/blockers";
 import { listCheckInQueue } from "@/db/check-in";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import {
   arrivalsWindow,
@@ -47,7 +48,14 @@ describe("one operational window across the readiness surfaces", () => {
   it("a station's blocked count is the shared readiness pass's own answer", async () => {
     const { db, shop } = ctx;
     const [work, blocked] = await Promise.all([
-      getTodayWork(db, shop.id, shop.slug, shopClock(shop, NOW)),
+      getTodayWork(
+        db,
+        shop.id,
+        shop.slug,
+        shopClock(shop, NOW),
+        undefined,
+        staffTranslator("en-US"),
+      ),
       blockedByTrip(db, shop.id),
     ]);
 
@@ -68,7 +76,14 @@ describe("one operational window across the readiness surfaces", () => {
   it("the nav badge is the sum of the next boat day's cards plus the divers aboard, exactly", async () => {
     const { db, shop } = ctx;
     const [work, badge] = await Promise.all([
-      getTodayWork(db, shop.id, shop.slug, shopClock(shop, NOW)),
+      getTodayWork(
+        db,
+        shop.id,
+        shop.slug,
+        shopClock(shop, NOW),
+        undefined,
+        staffTranslator("en-US"),
+      ),
       countBlockedDiversNextBoatDay(db, shop.id, shopClock(shop, NOW)),
     ]);
     const blockedToday = work.departures.reduce((sum, departure) => sum + departure.blocked, 0);

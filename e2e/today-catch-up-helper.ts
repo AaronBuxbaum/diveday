@@ -32,6 +32,9 @@ export async function todayCatchUpScenario(browser: Browser, owner: Page, worker
     await owner.goto(walkInFormPath("blue-mantis", tripId));
     expect((await confirmed).status()).toBe(200);
     await expect(owner.getByRole("alertdialog", { name: "Session paused" })).toHaveCount(0);
+    // A submit sent while the page hydrates can land without posting the seating, so the
+    // form is filled only once React owns it (the same wait check-in.spec.ts makes).
+    await expect(owner.locator("[data-identity-menu]")).toHaveAttribute("data-hydrated", "true");
     await owner.getByLabel("Full name").fill("Today Catchup Diver");
     await expect(owner.getByLabel("Full name")).toHaveValue("Today Catchup Diver");
     const seated = owner.waitForResponse(

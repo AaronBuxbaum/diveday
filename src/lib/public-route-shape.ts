@@ -9,7 +9,7 @@
  */
 
 import { parseDiveSiteSlug } from "./dive-site-slug";
-import { EMBEDDED_TRIP_SEGMENT, isEmbedWidget } from "./embed-routes";
+import { EMBED_TRIP_SEGMENT, isEmbedSegment } from "./embed-routes";
 import { getFeaturePage } from "./feature-pages";
 import { getMigrationGuide } from "./migration-guides";
 import { PUBLIC_SHOP_PREFIX } from "./public-routes";
@@ -99,12 +99,12 @@ function shopNamespaceShape(segments: string[]): PublicRouteShape | null {
     }
     if (first === "trips") return tripShape(shopSlug, second);
     // Unknown widgets are normally refused earlier by the proxy.
-    if (first === "embed") return isEmbedWidget(second) ? shop : { kind: "malformed", shopSlug };
+    if (first === "embed") return isEmbedSegment(second) ? shop : { kind: "malformed", shopSlug };
     return unrouted;
   }
-  // The proxy handles this internal embed route before shape lookup.
-  if (rest.length === 3 && first === "trips" && third === EMBEDDED_TRIP_SEGMENT) {
-    return { kind: "malformed", shopSlug };
+  // The framed trip page is judged like the trip page it frames.
+  if (rest.length === 3 && first === "embed" && second === EMBED_TRIP_SEGMENT && third) {
+    return tripShape(shopSlug, third);
   }
   if (rest.length === 3 && first === "trips" && second && third && TRIP_CHILDREN.has(third)) {
     return tripShape(shopSlug, second);

@@ -87,7 +87,7 @@ describe("the policy", () => {
   });
 
   it("frames the app's own pages, for the staff embed preview", () => {
-    // settings/embed/EmbedGenerator.tsx frames this app's `?embed=1` page, and
+    // settings/embed/EmbedGenerator.tsx frames this app's own `embed/**` pages, and
     // frame-src does not fall back to default-src once it is set.
     expect(directives(enforcedPolicy(base)).get("frame-src")).toContain("'self'");
   });

@@ -277,7 +277,7 @@ test("the schedule page's canonical stays on the standalone URL in both standalo
   expect(standaloneCanonical).toMatch(new RegExp(`/s/${DEMO_SHOP_SLUG}$`));
   expect(jsonLd(standalone).length).toBeGreaterThan(0);
 
-  const embed = await servedHtml(request, `/s/${DEMO_SHOP_SLUG}?embed=1`);
+  const embed = await servedHtml(request, `/s/${DEMO_SHOP_SLUG}/embed/calendar`);
   expect(hrefOf(canonicalOf(embed))).toBe(standaloneCanonical);
   expect(jsonLd(embed)).toHaveLength(0);
 });
