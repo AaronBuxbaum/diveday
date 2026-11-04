@@ -3,7 +3,6 @@
     "title": "Informes de incidentes",
     "description": "Escribe lo ocurrido mientras lo recuerdas bien. Pueden leer un informe los propietarios, los encargados y quien lo escribió.",
     "start": "Informar de un incidente",
-    "starting": "Abriendo…",
     "writtenBy": "Escrito por {name}",
     "notTimed": "Aún sin hora"
   },
@@ -110,7 +109,6 @@
     "add": "Agregar al informe",
     "remove": "Quitar",
     "removeLabel": "Quitar a {name} del informe",
-    "removing": "Quitando…",
     "kindBooking": "En el manifiesto",
     "kindStaff": "Tripulación",
     "kindOutsider": "No iba en la salida"

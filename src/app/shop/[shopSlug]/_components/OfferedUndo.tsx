@@ -29,7 +29,7 @@ export function OfferedUndo({
       message={undoMessage(offer, by, t)}
       action={undoAction.bind(null, shopSlug)}
       fields={{ ...offer }}
-      pendingLabel={t("shared.undoToast.pendingLabel")}
+      pendingLabel={t("words.busy.undoing")}
       undoLabel={t("shared.undoToast.undo")}
       dismissLabel={t("shared.undoToast.dismiss")}
     />

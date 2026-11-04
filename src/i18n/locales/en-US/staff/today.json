@@ -59,7 +59,6 @@
     "failed": "Couldn’t save this change. Try again.",
     "undoRefused": "Undo didn’t go through: the request, its booking or its departure changed. It stays complete.",
     "undo": "Undo",
-    "undoPending": "Restoring…",
     "dismiss": "Dismiss",
     "handled": {
       "summary": "{count, plural, one {# handled help request} other {# handled help requests}}",

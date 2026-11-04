@@ -555,7 +555,6 @@
   "contactConfirm": {
     "title": "¿Confirmar esta dirección para {shopName}?",
     "description": "Los buceadores que respondan a los correos de {shopName} llegarán a {email}.",
-    "confirming": "Confirmando…",
     "submit": "Confirmar esta dirección",
     "confirmedTitle": "Dirección confirmada",
     "confirmedText": "Las respuestas de los buceadores de {shopName} ahora llegan aquí.",
@@ -564,7 +563,6 @@
   "shoreConfirm": {
     "title": "¿Ser el contacto en tierra de {shopName}?",
     "description": "{shopName} escribirá a {email} cuando el pase de lista de un barco siga abierto pasada su hora de regreso. Cada aviso lleva un enlace para dejar de recibirlos.",
-    "confirming": "Confirmando…",
     "submit": "Sí, enviadme estos avisos",
     "confirmedTitle": "Eres el contacto en tierra de {shopName}",
     "confirmedText": "Si un pase de lista sigue abierto pasada la hora de regreso de un barco, {shopName} te escribirá. Cada aviso lleva un enlace para dejar de recibirlos.",
@@ -925,7 +923,6 @@
     "stateDone": "Hecho",
     "stateAction": "Te toca",
     "stateWaiting": "En manos del centro",
-    "opening": "Abriendo…",
     "signWaiver": "Firmar tu exención",
     "freshWaiverLink": "Firmar una exención nueva",
     "payForTrip": "Pagar esta salida",
@@ -1320,7 +1317,6 @@
     "waiverNeeded": "Falta completar la exención",
     "copyReminder": "Copiar enlace de recordatorio",
     "minorSign": "Firmar la exención de {name}",
-    "minorSignPending": "Abriendo…",
     "minorSignBody": "{name} es menor de 18 años, así que firmas su exención como su madre, padre o tutor.",
     "minorWaiverUnavailable": "Ahora no se puede abrir esa exención desde aquí. Contacta con el centro y te ayudarán.",
     "minorNote": "{seatName} es menor de 18 años, así que su madre, padre o tutor también firma la exención.",
@@ -3322,7 +3318,6 @@
     },
     "verify": {
       "title": "Confirma tu correo electrónico",
-      "confirming": "Confirmando…",
       "submit": "Confirmar mi correo",
       "confirmedTitle": "Correo confirmado",
       "confirmedText": "Todo listo.",
@@ -4434,7 +4429,6 @@
   "bookkeeperConfirm": {
     "title": "¿Recibir los archivos de fin de mes de {shopName}?",
     "description": "El día 2 de cada mes, {shopName} enviará a {email} el informe, los pedidos y la hoja de tripulación del mes anterior. No se envía nada hasta que confirmes.",
-    "confirming": "Confirmando…",
     "submit": "Sí, quiero recibirlos",
     "confirmedTitle": "Dirección confirmada",
     "confirmedText": "Los archivos de fin de mes de {shopName} llegarán aquí el día 2 de cada mes.",

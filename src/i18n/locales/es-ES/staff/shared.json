@@ -323,7 +323,6 @@
   },
   "undoToast": {
     "dismiss": "Cerrar",
-    "pendingLabel": "Deshaciendo…",
     "undo": "Deshacer"
   },
   "tripDiveFields": {

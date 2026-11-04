@@ -292,7 +292,7 @@ export default async function GearRegisterPage({
           message={t("gear.notice.deleted")}
           action={restoreGearItemAction}
           fields={{ gearItemId: search.undoId }}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
+          pendingLabel={t("words.busy.undoing")}
           undoLabel={t("shared.undoToast.undo")}
           dismissLabel={t("shared.undoToast.dismiss")}
         />

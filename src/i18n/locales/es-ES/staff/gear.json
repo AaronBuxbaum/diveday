@@ -96,7 +96,6 @@
     "title": "Eliminadas",
     "on": "Eliminada el {date}",
     "restore": "Restaurar",
-    "restoring": "Restaurando…",
     "restoreUnit": "Restaurar {label}"
   },
   "addUnit": {
@@ -162,7 +161,6 @@
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
     "downloadTemplate": "Descargar plantilla CSV del equipo",
     "submit": "Importar historial",
-    "pending": "Importando…",
     "chooseFile": "Elegir archivo CSV",
     "chooseDifferentFile": "Elegir otro archivo"
   },

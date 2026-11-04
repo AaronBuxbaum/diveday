@@ -80,7 +80,7 @@ export function DiveSiteImportPanel({ t, notice }: { t: StaffTranslator; notice?
             }}
           />
           <SubmitButton
-            pendingLabel={t("diveSites.import.pending")}
+            pendingLabel={t("words.busy.importing")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("diveSites.import.submit")}

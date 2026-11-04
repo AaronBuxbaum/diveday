@@ -227,7 +227,7 @@ export async function buildArrivalDesk({
           bookingId={row.bookingId}
           checkedIn
           label={presenceText(t, "arrived")}
-          pendingLabel={t("checkIn.undoing")}
+          pendingLabel={t("words.busy.undoing")}
           ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
           sendFailedLabel={t("checkIn.sendFailed")}
         />,

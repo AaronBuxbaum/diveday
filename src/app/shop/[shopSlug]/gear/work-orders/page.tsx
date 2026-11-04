@@ -150,7 +150,7 @@ export default async function WorkOrdersPage({
           message={t("workOrders.notice.deleted")}
           action={restoreWorkOrderAction}
           fields={{ workOrderId: search.undoId }}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
+          pendingLabel={t("words.busy.undoing")}
           undoLabel={t("shared.undoToast.undo")}
           dismissLabel={t("shared.undoToast.dismiss")}
         />
@@ -180,7 +180,7 @@ export default async function WorkOrdersPage({
                       <form action={restoreWorkOrderAction}>
                         <input type="hidden" name="workOrderId" value={row.id} />
                         <SubmitButton
-                          pendingLabel={t("workOrders.board.restoring")}
+                          pendingLabel={t("words.busy.restoring")}
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                           ariaLabel={t("workOrders.board.restoreOrder", {
                             name: row.personName ?? row.reportedProblem,
