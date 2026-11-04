@@ -99,3 +99,16 @@ and local-git resolution, S3 snapshot verification, pagination and deletion, err
 entry-point refusal behavior remain adapters at their original boundaries. Shared-core tests cover
 the policy edges; the former source-regex test that compared two copies is removed because there is
 now one implementation.
+
+## Amended 2026-11-04: the PUT cut was dead until the publisher pin moved
+
+Pull request snapshots skip their passed `actual/` images and every `expected/` image the report viewer never loads (`scripts/visual-build-publish-bundle.mjs`, 2026-11-01), but the bundle is built by the reusable `reg-suit-publish.yml`, which `ci.yml` pins to a commit. The pin still named a 2026-10-31 commit that predates the change, so every run kept uploading the full ~850 `actual/` plus ~850 `expected/`. The pin now names a commit that has it. Pushes to `main` still upload every `actual/` image, because that snapshot is the next baseline. Bump the pin whenever `reg-suit-publish.yml` or a script it runs changes.
+
+## Amended 2026-11-04: main stores each actual image once, under its hash
+
+A push to `main` used to write every capture again, about 850 PUTs a merge, although nearly all of them were byte-identical to the last merge. It now writes each actual PNG at `blobs/<sha256>.png` and names it in the report's `actualBlobs` map (capture name to hash); the commit's own `actual/` directory holds none. The publisher HEADs a blob first and uploads only a missing one. Pull request snapshots are unchanged: their changed images stay under the commit, where the hosted report viewer loads them. A main report viewed in the browser shows no unchanged images, as a pull request report already does.
+
+- **The pruner ignores `blobs/`.** It prunes top-level prefixes, and only a commit sha names a snapshot (`infra/lib/visual-bucket-pruner-handler.ts` and `scripts/prune-visual-bucket-lib.mjs`). The deployed Lambda must carry this change before the publisher pin moves to a commit that writes blobs, or it would delete the prefix once its newest object is a day old.
+- **The bucket's 60-day expiry is the garbage collector.** A blob nothing refreshes expires; one a main publish still references is rewritten once it is 14 days old (`BLOB_REFRESH_MS`), so a baseline image that never changes does not expire under a live baseline. The gap longer than 60 days with no push to `main` is the same failure as for any object.
+- **Readers resolve through `actualObjectKey`** (`scripts/visual-report-lib.mjs`): baseline preparation, `pnpm visual:report` and `pnpm visual:diff-layers`.
+- **No new IAM.** The reg-suit role already holds `s3:GetObject` and `s3:PutObject` on every object in the bucket.

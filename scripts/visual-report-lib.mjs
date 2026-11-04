@@ -206,6 +206,26 @@ export function hostedReportUrl(bucket, commit, snapshotVersion = null) {
   return objectUrl(bucket, `${commit}/${reportPath}`);
 }
 
+const BLOB_HASH = /^[0-9a-f]{64}$/u;
+
+/**
+ * Where one `actual` image lives. A main snapshot stores each image once under
+ * its content hash (`blobs/<sha256>.png`) and names it in the report's
+ * `actualBlobs` map instead of copying it into `<commit>/actual/`; a pull
+ * request snapshot and every older one keep the image in its own directory.
+ */
+export function actualObjectKey(commit, report, name) {
+  const blobs = report?.actualBlobs;
+  if (blobs && typeof blobs === "object" && Object.hasOwn(blobs, name)) {
+    const hash = blobs[name];
+    if (typeof hash !== "string" || !BLOB_HASH.test(hash)) {
+      throw new Error(`report names an invalid image hash for ${name}`);
+    }
+    return `blobs/${hash}.png`;
+  }
+  return `${commit}/${report.actualDir}/${name}`;
+}
+
 /** Snapshot version encoded in a reg-suit report's image directories. */
 export function snapshotVersionFromReport(report) {
   const match = /^snapshots\/([0-9a-f]{64})\/actual$/u.exec(report?.actualDir ?? "");
