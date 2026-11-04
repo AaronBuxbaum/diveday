@@ -4,13 +4,19 @@ import { describe, expect, it } from "vitest";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
-import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { signTripAdmissionGate, type TripAdmissionGateScope } from "@/lib/trip-admission-gate";
 import { levelShort } from "@/test/admission-refusals";
 import { resolveDiverNotice } from "./diver-notice-text";
 
 const PERSON = "00000000-0000-4000-8000-000000000001";
 const OTHER_PERSON = "00000000-0000-4000-8000-000000000002";
 const t = staffTranslator("en-US");
+
+const bind = (scope: TripAdmissionGateScope, notice = "trip-prerequisite") => ({
+  scope,
+  notice,
+  bookingId: null,
+});
 
 const REFUSAL: TripAdmissionRefusal = [levelShort("advanced_open_water", "open_water")];
 
@@ -24,7 +30,7 @@ describe("the diver record's notice", () => {
   });
 
   it("answers a trip prerequisite with the signed refusal, when it is this diver's", () => {
-    const gate = signTripAdmissionGate(REFUSAL, { kind: "diver", id: PERSON });
+    const gate = signTripAdmissionGate(REFUSAL, bind({ kind: "diver", id: PERSON }));
     expect(resolve({ notice: "trip-prerequisite", gate })?.text).toBe(
       tripAdmissionRefusalText(t, REFUSAL, "en-US"),
     );
@@ -33,8 +39,9 @@ describe("the diver record's notice", () => {
   it("falls back to the generic sentence for a gate signed for another diver, or for a trip", () => {
     const generic = t("divers.notices.tripPrerequisite");
     for (const gate of [
-      signTripAdmissionGate(REFUSAL, { kind: "diver", id: OTHER_PERSON }),
-      signTripAdmissionGate(REFUSAL, { kind: "trip", id: PERSON }),
+      signTripAdmissionGate(REFUSAL, bind({ kind: "diver", id: OTHER_PERSON })),
+      signTripAdmissionGate(REFUSAL, bind({ kind: "trip", id: PERSON })),
+      signTripAdmissionGate(REFUSAL, bind({ kind: "diver", id: PERSON }, "trip-unavailable")),
     ]) {
       expect(resolve({ notice: "trip-prerequisite", gate })?.text).toBe(generic);
     }
@@ -42,7 +49,7 @@ describe("the diver record's notice", () => {
 
   it("falls back to the generic sentence for a tampered, repeated or missing gate", () => {
     const generic = t("divers.notices.tripPrerequisite");
-    const signed = signTripAdmissionGate(REFUSAL, { kind: "diver", id: PERSON });
+    const signed = signTripAdmissionGate(REFUSAL, bind({ kind: "diver", id: PERSON }));
     const [payload, signature] = signed.split(".");
     const forged = `${payload?.replace("advanced_open_water", "rescue")}.${signature}`;
     for (const gate of [forged, `${signed}x`, [signed, signed], undefined, ""]) {
@@ -51,7 +58,7 @@ describe("the diver record's notice", () => {
   });
 
   it("never reads a gate on any other notice", () => {
-    const gate = signTripAdmissionGate(REFUSAL, { kind: "diver", id: PERSON });
+    const gate = signTripAdmissionGate(REFUSAL, bind({ kind: "diver", id: PERSON }));
     expect(resolve({ notice: "trip-unavailable", gate })?.text).toBe(
       t("divers.notices.tripUnavailable"),
     );

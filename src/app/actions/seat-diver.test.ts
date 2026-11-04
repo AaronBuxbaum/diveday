@@ -141,12 +141,36 @@ describe("every refusal lands on the boat with its own words", () => {
     expect(to.searchParams.get("notice")).toBe("diver-trip-prerequisite");
     const gate = to.searchParams.get("gate");
     expect(gate).not.toBeNull();
+    const bound = (scope: { kind: "trip" | "diver"; id: string }, notice: string) => ({
+      scope,
+      notice,
+      bookingId: null,
+    });
     expect(
-      verifyTripAdmissionGate(gate ?? undefined, { kind: "trip", id: TRIP_ID }),
+      verifyTripAdmissionGate(
+        gate ?? undefined,
+        bound({ kind: "trip", id: TRIP_ID }, "diver-trip-prerequisite"),
+      ),
     ).not.toBeNull();
-    // A signature for this boat is worthless on another, or on a diver's record.
-    expect(verifyTripAdmissionGate(gate ?? undefined, { kind: "trip", id: DIVER_ID })).toBeNull();
-    expect(verifyTripAdmissionGate(gate ?? undefined, { kind: "diver", id: DIVER_ID })).toBeNull();
+    // A signature for this boat is worthless on another, on a diver's record, or beside another notice.
+    expect(
+      verifyTripAdmissionGate(
+        gate ?? undefined,
+        bound({ kind: "trip", id: DIVER_ID }, "diver-trip-prerequisite"),
+      ),
+    ).toBeNull();
+    expect(
+      verifyTripAdmissionGate(
+        gate ?? undefined,
+        bound({ kind: "diver", id: DIVER_ID }, "diver-trip-prerequisite"),
+      ),
+    ).toBeNull();
+    expect(
+      verifyTripAdmissionGate(
+        gate ?? undefined,
+        bound({ kind: "trip", id: TRIP_ID }, "participant-type-cert"),
+      ),
+    ).toBeNull();
   });
 
   it("an unparseable submission lands back on the boat it came from", async () => {

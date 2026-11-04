@@ -885,7 +885,13 @@ export function resolveTripNotice({
   const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
   const refusal =
     notice === "diver-trip-prerequisite" || notice === "participant-type-cert"
-      ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
+      ? verifyTripAdmissionGate(gate, {
+          scope: { kind: "trip", id: tripId },
+          notice,
+          // The seat comes from the same `bid` the row is drawn from; the
+          // sale-time refusal names no seat.
+          bookingId: notice === "participant-type-cert" ? (bid ?? null) : null,
+        })
       : null;
   const text = refusal
     ? tripAdmissionRefusalText(t, refusal, locale)

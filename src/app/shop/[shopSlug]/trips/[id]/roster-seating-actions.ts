@@ -346,13 +346,17 @@ export async function setParticipantTypeAction(
     // cannot act on.
     if (outcome.reason === "not_found") redirect(back);
     if (outcome.reason === "cert_blocked") {
-      // Named, and signed to this departure (src/lib/trip-admission-gate.ts),
+      // Named, and signed to this departure, notice and seat (src/lib/trip-admission-gate.ts),
       // so the row can ask "Change anyway" knowing which card is missing.
       revalidateAndRedirect(
         back,
         noticeUrl(back, "participant-type-cert", {
           bid: bookingId,
-          gate: signTripAdmissionGate(outcome.refusal, { kind: "trip", id: tripId }),
+          gate: signTripAdmissionGate(outcome.refusal, {
+            scope: { kind: "trip", id: tripId },
+            notice: "participant-type-cert",
+            bookingId,
+          }),
         }),
       );
     }

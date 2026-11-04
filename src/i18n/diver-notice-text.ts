@@ -54,7 +54,11 @@ export function resolveDiverNotice({
   const t = staffTranslator(locale);
   const refusal =
     notice === "trip-prerequisite"
-      ? verifyTripAdmissionGate(gate, { kind: "diver", id: personId })
+      ? verifyTripAdmissionGate(gate, {
+          scope: { kind: "diver", id: personId },
+          notice,
+          bookingId: null,
+        })
       : null;
   return {
     form: diverNoticeForm(form, banner.form),

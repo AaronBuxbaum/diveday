@@ -121,7 +121,11 @@ describe("NoticeBanner", () => {
     it("says which card is missing when the gate is signed for this diver", () => {
       renderBanner(
         "trip-prerequisite",
-        signTripAdmissionGate(deepCardRefusal, { kind: "diver", id: PERSON }),
+        signTripAdmissionGate(deepCardRefusal, {
+          scope: { kind: "diver", id: PERSON },
+          notice: "trip-prerequisite",
+          bookingId: null,
+        }),
       );
       expect(screen.getByRole("alert")).toHaveTextContent(
         "This charter requires a Deep certification. There’s none on this diver’s record.",
@@ -142,7 +146,11 @@ describe("NoticeBanner", () => {
     it("falls back to the generic sentence on another diver's genuine gate", () => {
       renderBanner(
         "trip-prerequisite",
-        signTripAdmissionGate(deepCardRefusal, { kind: "diver", id: OTHER_PERSON }),
+        signTripAdmissionGate(deepCardRefusal, {
+          scope: { kind: "diver", id: OTHER_PERSON },
+          notice: "trip-prerequisite",
+          bookingId: null,
+        }),
       );
       expect(screen.getByRole("alert")).not.toHaveTextContent("Deep certification");
     });

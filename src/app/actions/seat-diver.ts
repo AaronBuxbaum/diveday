@@ -167,8 +167,8 @@ function refuse(
    * holds, instead of the one static line that used to point every refusal at
    * the certifications form.
    *
-   * **Signed, and bound to the landing route's own id**
-   * (`signTripAdmissionGate`). Unsigned, the param was an instruction anyone
+   * **Signed, and bound to the landing route's own id, this notice and the
+   * hour it was raised** (`signTripAdmissionGate`). Unsigned, the param was an instruction anyone
    * could write: a hand-made link rendered a specific, fabricated refusal, and
    * the specific ones are exactly what send a staffer to the certifications
    * form (security review finding).
@@ -184,7 +184,8 @@ function refuse(
     // carry — `noticeUrl` omits an `undefined` extra rather than writing the
     // word, which is what the `? … : ""` concatenation here used to guard.
     noticeUrl(back, notice, {
-      gate: gate && scope ? signTripAdmissionGate(gate, scope) : undefined,
+      gate:
+        gate && scope ? signTripAdmissionGate(gate, { scope, notice, bookingId: null }) : undefined,
       ...bandKept(surface, landing, requestId ?? null),
     }),
   );

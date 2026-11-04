@@ -157,7 +157,8 @@ justification for carrying detail at all, and it initially reached no UI: `seatD
 code and every surface rendered one static sentence. It now rides the staff redirect as a single
 `gate=` param (`encodeTripAdmissionRefusal` / `decodeTripAdmissionRefusal`, blocker codes only in
 ladder order, rejected wholesale if anything is unrecognized, out of order or repeated; signed as
-`diveday-trip-admission-gate:v2`) and resolves through
+`diveday-trip-admission-gate:v3`, which also covers the notice, the seat and the minute it was minted and
+expires after a day, issue #3777) and resolves through
 `tripAdmissionRefusalText` (`src/i18n/readiness-labels.ts`). This matters beyond precision: the one
 sentence said *"Add the missing card above"*, and on a **level** refusal there is no missing card —
 telling a staffer to add one points them at the certifications form as the way past a safety gate,
