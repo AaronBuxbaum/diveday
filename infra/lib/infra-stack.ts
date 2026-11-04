@@ -2168,7 +2168,7 @@ exports.handler = async (event) => {
     const appSecretSeed = new secretsmanager.Secret(this, "ApplicationSecretSeed", {
       secretName: APP_SECRET_SEED_NAME,
       description:
-        "Stable root material from which scripts/distribute-env.mjs derives AUTH_SECRET, SECRET_ENCRYPTION_KEY, and CRON_SECRET. Never place this value in a deployed environment.",
+        "Stable root material from which scripts/distribute-env.mjs derives AUTH_SECRET and SECRET_ENCRYPTION_KEY. Never place this value in a deployed environment.",
       generateSecretString: {
         passwordLength: 64,
         excludePunctuation: true,
@@ -2177,6 +2177,19 @@ exports.handler = async (event) => {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    // Its own secret rather than a derivation of the seed above: the cron
+    // dispatcher Lambda (S19b) reads this and must not be able to read the seed.
+    const cronSecret = new secretsmanager.Secret(this, "CronSecret", {
+      secretName: "diveday/cron-secret",
+      description:
+        "Bearer token the cron dispatcher presents to /api/cron/*, and the app's CRON_SECRET. Read by the dispatcher Lambda only; delivered to Vercel through the credentials document.",
+      generateSecretString: {
+        passwordLength: 64,
+        excludePunctuation: true,
+        requireEachIncludedType: true,
+      },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
     // 16. The credentials secret: one Secrets Manager secret holding a filled-in
     // `.env.example`.
     //
@@ -2261,6 +2274,9 @@ exports.handler = async (event) => {
     // document. It never appears in a stack output, and the distribution
     // helper consumes it locally before making target-specific dotenv files.
     envValues.APP_SECRET_SEED = appSecretSeed.secretValue.unsafeUnwrap();
+    // The cron bearer token has its own secret (S19b), so the dispatcher Lambda
+    // never holds the seed the session and credential-sealing keys come from.
+    envValues.CRON_SECRET = cronSecret.secretValue.unsafeUnwrap();
 
     // Not assigned: nothing else in the stack references it. Read access is
     // granted to no principal (see above), and the output below names the secret
@@ -3827,9 +3843,9 @@ exports.handler = async () => {
     // schedules stop depending on the hosting plan's cron cap, and the schedule
     // lives beside the alarms that watch it.
     //
-    // The function reads the app secret seed (S15) and derives CRON_SECRET the
-    // way scripts/distribute-env.mjs does, so there is no second secret to keep
-    // in step. Its role holds that one read and nothing else.
+    // The function reads one secret, CRON_SECRET, minted here and handed to
+    // Vercel through the credentials document. It does not read the app secret
+    // seed (S15): that is the root of the session and credential-sealing keys.
     //
     // No retries: a route that half-ran must not run again on a timer. A
     // non-2xx answer fails the invocation, and the Errors alarm below raises it
@@ -3856,16 +3872,22 @@ exports.handler = async () => {
       }),
       environment: {
         APP_ORIGIN: webhookHost,
-        SEED_SECRET_ID: appSecretSeed.secretArn,
+        CRON_SECRET_ID: cronSecret.secretArn,
       },
+      // Scheduler invokes asynchronously, and Lambda would retry a failed
+      // invocation twice on its own, re-running a route that half-ran. None.
+      retryAttempts: 0,
+      maxEventAge: cdk.Duration.minutes(2),
       code: lambda.Code.fromInline(
         bundleLambdaHandler(path.join(__dirname, "cron-dispatcher-handler.ts")),
       ),
     });
-    appSecretSeed.grantRead(cronDispatcher);
+    cronSecret.grantRead(cronDispatcher);
 
     const cronSchedulerRole = new iam.Role(this, "CronSchedulerRole", {
-      assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com"),
+      assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com").withConditions({
+        StringEquals: { "aws:SourceAccount": this.account },
+      }),
       description: "Lets EventBridge Scheduler invoke the cron dispatcher.",
     });
     cronDispatcher.grantInvoke(cronSchedulerRole);

@@ -861,13 +861,14 @@ export const ENV_GROUPS = [
       "Scheduled routes (ADR 20260721-scheduled-reminder-cadence). EventBridge Scheduler",
       "invokes the cron dispatcher Lambda (infra/lib/cron-dispatcher-handler.ts), which",
       "GETs each /api/cron/* route listed in config/crons.json with this as a bearer",
-      "token. The Lambda derives the same value from APP_SECRET_SEED, so it is never",
-      "stored twice. Derived from APP_SECRET_SEED.",
+      "token. The stack mints it as its own Secrets Manager secret, diveday/cron-secret,",
+      "which only that Lambda reads: the dispatcher never touches APP_SECRET_SEED, from",
+      "which the session and credential-sealing keys derive.",
     ],
     keys: [
       {
         key: "CRON_SECRET",
-        from: "derived",
+        from: "stack",
         targets: LOCAL_AND_VERCEL,
         absent:
           "the endpoint is unavailable (503), so nothing can trigger reminder sends by accident",

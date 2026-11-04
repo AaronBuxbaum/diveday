@@ -82,11 +82,12 @@ describe("the synthesized stack", () => {
     const keys = template.findResources("AWS::IAM::AccessKey");
     const secrets = template.findResources("AWS::SecretsManager::Secret");
 
-    // Three: the credentials document, the app-secret seed, and the direct
+    // Four: the credentials document, the app-secret seed, the cron bearer
+    // token (S19b, read only by the dispatcher Lambda), and the direct
     // connection string the weekly pg_dump reads (S20). The third is the only
     // secret in the stack whose *value* a human supplies -- it deploys holding
     // "unset" -- which is why it is not part of the hand-off document below.
-    expect(Object.keys(secrets)).toHaveLength(3);
+    expect(Object.keys(secrets)).toHaveLength(4);
     const secret = Object.values(secrets).find(
       (resource) =>
         (resource as { Properties?: { Name?: string } }).Properties?.Name === "diveday/env",
