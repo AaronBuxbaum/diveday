@@ -1939,7 +1939,7 @@
   doors for photos and a tip. **When it opens is a domain question, not a clock reading.** Where the
   crew kept a departure roll call it follows that: `not_boarded` never sees it unless an after-dive
   `boarded` shows they joined the boat later (the recap's own rule), and `boarded`
-  opens it once the boat is scheduled home plus the standing one-hour late-arrival buffer. Where a
+  opens it once the boat is scheduled home plus the standing one-hour late-arrival buffer. A seat the crew never counted, on a departure whose roll call was taken, never opens it on the clock (issue #3822). Where a
   shop recorded no roll call it waits four hours after the scheduled return — the floor the recap
   *send* already uses, because nothing else in the product knows whether this person dived
   (`isAfterTheDive`, `src/lib/seat-ladder.ts`). A cancelled booking, a **blow-out**, and a no-show
