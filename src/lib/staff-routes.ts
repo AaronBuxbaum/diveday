@@ -85,6 +85,7 @@ export const STAFF_ROUTES = {
   requests: {},
   reviews: {},
   safety: {},
+  "safety/print": {},
   "safety-checklist": { parent: SETTINGS },
   "schedule/blowout/day/[date]": { parent: BOARD },
   "schedule/board": {},
