@@ -103,8 +103,3 @@ Zero new dependency, zero new cost.
 - The founder alert inbox and the error-alert inbox are the same address (`alerts@dive.day`) today;
   splitting them is a mailbox-and-Sentry-project-settings change, not a code change, if volume ever
   makes that worth doing.
-- Errors only means no trace propagation: `tracesSampleRate` is 0, so after `Sentry.init` the server
-  calls `propagation.disable()` from `@opentelemetry/api` (already in the tree under Sentry, now a
-  direct dependency at the same version so the call is ours). Without it the SDK's propagator logged
-  "Injecting trace data of a different context than the active one" on the crons' outbound calls and
-  injected nothing useful (shop-tick, 2026-11-04). The SDK has no option to skip it.
