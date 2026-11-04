@@ -61,8 +61,8 @@ const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnShopCancellation, refundBookingsForShopCancelledTrip } = await import(
   "@/db/refunds"
 );
-const { callBlowoutAction, releaseBlowoutRefundsAction } = await import("./[tripId]/actions");
-const { callDayBlowoutAction } = await import("./day/[date]/actions");
+const { callBlowoutAction, releaseBlowoutRefundsAction } = await import("./blowout-actions");
+const { callDayBlowoutAction } = await import("../../schedule/blowout/day/[date]/actions");
 const { cancelOffCadenceSeriesAction, cancelSeriesAction } = await import(
   "../../trips/[id]/series-actions"
 );
@@ -310,7 +310,7 @@ describe("releasing the refunds a call-off left queued", () => {
     vi.mocked(refundBookingOnShopCancellation).mockClear();
     await signInAs(email);
     const to = await redirectedTo(() => releaseBlowoutRefundsAction(ctx.shop.slug, trip.id));
-    expect(to).toContain("notice=refund-not-authorized");
+    expect(to).toContain(`/trips/${trip.id}?blowout=1&notice=refund-not-authorized`);
     expect(refundBookingsForShopCancelledTrip).not.toHaveBeenCalled();
   });
 

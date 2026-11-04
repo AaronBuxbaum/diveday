@@ -11,14 +11,7 @@ import { getTripWithBooked } from "@/db/trips";
 import { trackEvent } from "@/lib/analytics";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-
-// `shopPath`, not a template literal: `shopSlug` is a server-action argument and
-// therefore client-supplied, and interpolating it raw let a slug traverse out of
-// the `/shop/` namespace, or carry a `?`/`#` that swallowed the `?notice=`
-// appended after it (see src/lib/staff-notices.ts). Each segment is escaped
-// instead.
-const blowoutPath = (shopSlug: string, tripId: string) =>
-  shopPath(shopSlug, "schedule", "blowout", tripId);
+import { blowoutPath } from "./_components/blowout/blowout-path";
 
 /**
  * The one-tap blow-out (docs ADR 20260804-blowout-cascade). Open to all staff,
@@ -102,10 +95,13 @@ export async function resumeBlowoutAction(shopSlug: string, tripId: string) {
  */
 export async function releaseBlowoutRefundsAction(shopSlug: string, tripId: string) {
   const back = blowoutPath(shopSlug, tripId);
-  const { db, shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonRefund,
-    refusal: { notice: "refund-not-authorized", landing: ["schedule", "blowout", tripId] },
-  });
+  // Checked here rather than through `requireShopSurface`'s refusal, whose landing
+  // is path segments only: the refusal must land back on the blow-out, where
+  // `refund-not-authorized` is worded and the held refunds still show.
+  const { db, shop, session } = await requireShopSurface(shopSlug);
+  if (!(await canPersonRefund(db, shop.id, session.user.personId))) {
+    redirect(noticeUrl(back, "refund-not-authorized"));
+  }
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (trip?.status !== "cancelled") redirect(noticeUrl(back, "error"));
   if (!(await tripBlowoutCause(db, shop.id, tripId))) redirect(noticeUrl(back, "error"));
@@ -116,7 +112,6 @@ export async function releaseBlowoutRefundsAction(shopSlug: string, tripId: stri
 
 /** The surfaces a blow-out changes: this page, the trip, the board, Today. */
 function refreshBlowoutSurfaces(shopSlug: string, tripId: string) {
-  revalidatePath(blowoutPath(shopSlug, tripId));
   revalidatePath(shopPath(shopSlug, "trips", tripId));
   revalidatePath(shopPath(shopSlug, "schedule", "board"));
   revalidatePath(shopPath(shopSlug));

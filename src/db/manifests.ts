@@ -686,7 +686,7 @@ export async function listCountedAboardBlockedByTrip(
  * nothing at all.
  *
  * It exists because the thread's after-state must never assert that somebody
- * dived on the strength of a clock (`isAfterTheDive`, src/lib/thread-steps.ts).
+ * dived on the strength of a clock (`isAfterTheDive`, src/lib/seat-ladder.ts).
  * A departure roll call is the only direct evidence DiveDay holds about who
  * actually got on the boat, and this is the narrowest possible read of it —
  * one booking, and only the answer, never the recorder, the note or the `seq`.

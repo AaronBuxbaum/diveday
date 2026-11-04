@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -21,8 +20,10 @@ import { shopPath } from "@/lib/staff-notices";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
+import { blowoutPath } from "./_components/blowout/blowout-path";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
+import { departureStateOf } from "./_components/departure-states";
 import { detailsReadRows } from "./_components/details-rows";
 import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
@@ -39,7 +40,6 @@ import { TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader"
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
-import { tripCrewNotes } from "./_components/trip-crew-notes";
 import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-price";
 import { showsDetailsTab } from "./_components/trip-notice-tabs";
 import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
@@ -62,9 +62,7 @@ export const instant = true;
 // The flying-guidance follow-up panel is visible from every departure.
 // Staff dates follow the device's requested locale.
 // Departure warnings follow the current shop.
-export const metadata: Metadata = {
-  title: "Manage trip — DiveDay",
-};
+export { departureMetadata as generateMetadata } from "./_components/departure-states";
 
 /**
  * Two of a departure's four tabs (ADR 20261001-logbook, decision 3): Divers,
@@ -103,6 +101,8 @@ export default async function ManageTripPage({
       confirmEmail,
       confirmPhone,
       view,
+      pass,
+      blowout,
       held,
       tell,
       ...rest
@@ -110,6 +110,8 @@ export default async function ManageTripPage({
   ] = await Promise.all([params, searchParams]);
   // An unparseable UUID must not reach Postgres.
   if (!uuidParam(tripId)) notFound();
+  const state = await departureStateOf(shopSlug, tripId, { pass, blowout, notice });
+  if (state) return state;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   reportRenderQueries("/shop/[shopSlug]/trips/[id]", after);
   const locale = await requestLocale(shop.defaultLocale);
@@ -147,12 +149,6 @@ export default async function ManageTripPage({
   } = overview;
   // One hull, one departure at a time (H-20260916-may-one-hull-carry, issue #1780). A called-off
   // departure holds no hull, and `boatClashes` answers nothing for one anyway.
-  const crewNotes = tripCrewNotes({
-    crew: overview.crew,
-    diversPerDivemaster: shop.diversPerDivemaster,
-    locale,
-    t,
-  });
 
   const { tripNotice, lifecycleStatus, rootPageNotice, rosterPageNotice } = tripPageNotices({
     notice,
@@ -324,7 +320,7 @@ export default async function ManageTripPage({
               ) : null}
               {blowoutCalled ? (
                 <Link
-                  href={shopPath(shopSlug, "schedule", "blowout", tripId)}
+                  href={blowoutPath(shopSlug, tripId)}
                   className={buttonClass({ variant: "secondary" })}
                 >
                   {t("trips.detail.viewBlowout", { cause: blowoutCalled })}
@@ -340,7 +336,6 @@ export default async function ManageTripPage({
               rows={[
                 ...tripAboutRows({
                   overview,
-                  crewNotes,
                   liveBoatClashes: cancelled ? [] : boatClashes,
                   shop,
                   shopSlug,

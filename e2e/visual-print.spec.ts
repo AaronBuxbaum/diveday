@@ -11,7 +11,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { ARRIVAL_MAP_PROBES } from "../src/lib/maps";
 import { assertCrewPdfPixels } from "./crew-pdf-pixels";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { bookASeatAndOpenThread, openTripFromBoard } from "./helpers";
+import { bookASeatAndOpenThread, openTripFromBoard, seededTripId } from "./helpers";
 import { staticPrintPage } from "./print-pdf";
 import {
   capturePrint,
@@ -402,7 +402,8 @@ test.describe("print", () => {
   // exists for exactly this: the canonical demo pins its first reef booking so
   // a visual test can address it deterministically.
   test("the paper pass prints A6 with the booking's own code", async ({ page }) => {
-    await page.goto(`/shop/blue-mantis/print/pass/${DEMO_RECAP_BOOKING_ID}`);
+    const reefId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+    await page.goto(`/shop/blue-mantis/trips/${reefId}?pass=${DEMO_RECAP_BOOKING_ID}`);
     await page.getByText("Show this at the counter, or say your name.").waitFor();
     await capturePrint(page, "paper-pass");
   });

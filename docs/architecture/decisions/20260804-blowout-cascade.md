@@ -20,7 +20,7 @@ past the stated deadline, which is exactly when a weather call happens.
 
 - **One tap, one confirm, two phases.** A "Weather blow-out…" control on the trip page (open to all
   staff — the go/no-go is the crew's call, same gate as `cancelTripAction`) leads to a confirm page
-  at `/shop/[shopSlug]/schedule/blowout/[tripId]`. Confirming runs `callTripBlowout`
+  at `/shop/[shopSlug]/trips/[id]?blowout=1`. Confirming runs `callTripBlowout`
   (`src/db/blowouts.ts`): **phase one**, a transaction — cancel the trip through the same
   `setTripStatus` seam the plain cancel uses, insert a `trip_blowouts` row (unique per trip), and
   snapshot every active booking into `trip_blowout_divers` as `pending`; **phase two**, outside the

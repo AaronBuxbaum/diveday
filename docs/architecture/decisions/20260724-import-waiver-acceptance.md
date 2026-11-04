@@ -31,7 +31,8 @@ resolve them — it only decides what an *import* does, not what DiveDay's own w
 
 - A contact-import row may claim a prior waiver acceptance via new columns: `waiver_accepted`
   (truthy), `waiver_signed_at` (a calendar date, best-effort — an unparseable value is dropped with a
-  warning rather than misdating legal evidence), `waiver_source_name` (free text, e.g. the prior
+  warning rather than misdating legal evidence, and a date after the shop's today refuses the
+  claim with an error, issue #3781), `waiver_source_name` (free text, e.g. the prior
   shop/system), and optional `waiver_document_url` / `medical_document_url` (a link to a scanned
   copy).
 - On commit, a truthy claim writes an ordinary immutable `waiver_records` row: `status: "completed"`,

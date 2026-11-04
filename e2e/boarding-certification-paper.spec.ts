@@ -41,7 +41,7 @@ test("boarding evidence stays with its heading and every sheet identifies the de
     expect(evidence).toContain("9:30:45.125 AM EDT");
     expect(evidence).toContain("9:30:45.175 AM EDT");
     expect(sheets.join(" ")).toContain("9:30:00.001 AM EDT");
-    expect(sheets.join(" ")).toContain("Integrity code (SHA-256) · version 3");
+    expect(sheets.join(" ")).toContain("Integrity code (SHA-256) · version 4");
     await info.attach(`boarding-evidence-${format}`, { path: pdf, contentType: "application/pdf" });
   }
 

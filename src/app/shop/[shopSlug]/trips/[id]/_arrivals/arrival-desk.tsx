@@ -242,7 +242,7 @@ export async function buildArrivalDesk({
         below.set(
           row.bookingId,
           <Link
-            href={paperPassPath(shopSlug, row.bookingId)}
+            href={paperPassPath(shopSlug, tripId, row.bookingId)}
             className={buttonClass({ variant: "link", size: "sm", flush: true })}
           >
             {t("print.counter.passDoor")}

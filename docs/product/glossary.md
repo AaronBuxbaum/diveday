@@ -337,6 +337,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Seat
 - Seat claim
 - Seat held
+- Seat ladder
 - Seat move
 - Seat release
 - Self-guided departure

@@ -400,8 +400,9 @@ test("the departure door explains an invalid submission on the boat it came from
 // backstop, and not one line of a pass. Read by what renders, not by status:
 // the segment's `loading.tsx` has the 200 on the wire before `notFound()`.
 test("a pass for a booking the shop does not hold prints nothing", async ({ page }) => {
+  const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
   for (const id of ["00000000-0000-4000-8000-0000000000ff", "not-a-booking"]) {
-    await page.goto(`/shop/blue-mantis/print/pass/${id}`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}?pass=${id}`);
     await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
     await expect(page.locator(".paper-sheet")).toHaveCount(0);
     await expect(page.getByText("Show this at the counter, or say your name.")).toHaveCount(0);

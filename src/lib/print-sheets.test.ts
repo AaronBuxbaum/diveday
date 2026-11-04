@@ -61,15 +61,17 @@ describe("the fold line's address", () => {
 });
 
 describe("where a pass is drawn", () => {
-  it("lives under the shop's own print segment", () => {
-    expect(paperPassPath("blue-mantis", "booking-1")).toBe(
-      "/shop/blue-mantis/print/pass/booking-1",
+  it("lives on the departure it boards", () => {
+    expect(paperPassPath("blue-mantis", "trip-1", "booking-1")).toBe(
+      "/shop/blue-mantis/trips/trip-1?pass=booking-1",
     );
   });
 
   it("escapes a booking id that would otherwise rewrite the route", () => {
-    // `shopPath` escapes each segment, which is what stops a submitted id
-    // traversing out of the print segment.
-    expect(paperPassPath("blue-mantis", "../../orders")).not.toContain("/orders");
+    // Both ids are escaped, so neither can traverse out of the departure.
+    expect(paperPassPath("blue-mantis", "../../orders", "../x")).not.toContain("/orders");
+    expect(paperPassPath("blue-mantis", "trip-1", "a&b=c")).toBe(
+      "/shop/blue-mantis/trips/trip-1?pass=a%26b%3Dc",
+    );
   });
 });

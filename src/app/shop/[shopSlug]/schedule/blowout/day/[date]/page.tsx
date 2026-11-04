@@ -34,6 +34,7 @@ import { formatTimeRangeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { blowoutPath } from "../../../../trips/[id]/_components/blowout/blowout-path";
 import { callDayBlowoutAction } from "./actions";
 
 // The blow-out family's contract (ADR 20260804-instant-navigation): this
@@ -236,7 +237,7 @@ export default async function DayBlowoutPage({
                           ) : null}
                           {block === "called" ? (
                             <Link
-                              href={shopPath(shopSlug, "schedule", "blowout", row.id)}
+                              href={blowoutPath(shopSlug, row.id)}
                               className={buttonClass({ variant: "link", size: "sm" })}
                             >
                               {row.unsent > 0

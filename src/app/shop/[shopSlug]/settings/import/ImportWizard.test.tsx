@@ -57,6 +57,7 @@ const ISSUE_CODES: ImportIssueCode[] = [
   "nitrox_imported_pending",
   "nitrox_no_card_number",
   "waiver_date_invalid",
+  "waiver_date_future",
   "waiver_imported",
   "dob_invalid",
   "visit_date_unreadable",

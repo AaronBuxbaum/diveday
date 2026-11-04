@@ -20,6 +20,10 @@ export type TripPageSearchParams = {
   confirmPhone?: string;
   /** `details` opens the Details tab; anything else is the Divers tab. */
   view?: string;
+  /** A booking id: the page is that booking's paper pass, to print and hand over. */
+  pass?: string;
+  /** `1`: the page is the departure's blow-out, the call-off confirmation or its record. */
+  blowout?: string;
   /**
    * `1` opens the Divers tab with the cursor in its add band: where every
    * "Add a booking" door that knows the departure lands (#2737).

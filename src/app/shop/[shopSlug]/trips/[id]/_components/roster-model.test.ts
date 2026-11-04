@@ -19,7 +19,7 @@ type WaiverRow = WaiverByBooking extends Map<string, infer V> ? V : never;
 
 function seat(
   id: string,
-  over: { status?: string; emergencyContactPhone?: string | null } = {},
+  over: { status?: string; emergencyContactPhone?: string | null; turnedAwayAt?: Date | null } = {},
 ): RosterEntry {
   return {
     booking: {
@@ -28,6 +28,7 @@ function seat(
       reEntryAsk: null,
       lastDivedBand: null,
       identityUnconfirmedAt: null,
+      turnedAwayAt: over.turnedAwayAt ?? null,
     } as unknown as RosterEntry["booking"],
     person: {
       id: `p-${id}`,
@@ -294,6 +295,69 @@ describe("groupRoster", () => {
     expect(ids(groups.didNotSail)).toEqual(["gone"]);
     expect(ids(groups.unrecorded)).toEqual(["a"]);
     expect(groups.uncounted).toEqual([]);
+  });
+
+  it("in the record, files every combination of records as it did before the seat ladder", () => {
+    // The rule `recordGroups` used before it read `readSeatLadder` (#2784),
+    // written out by hand as the oracle: the ladder moved the read, not one seat.
+    type Group =
+      | "unaccounted"
+      | "uncounted"
+      | "unrecorded"
+      | "sailed"
+      | "turnedAway"
+      | "didNotSail";
+    function before(input: {
+      dock: "boarded" | "not_boarded" | null;
+      afterDive: boolean;
+      noShow: boolean;
+      turnedAway: boolean;
+      missing: boolean;
+      rollCallTaken: boolean;
+    }): Group {
+      if (input.missing) return "unaccounted";
+      if (input.dock === null && !input.afterDive && !input.noShow) {
+        return input.rollCallTaken ? "uncounted" : "unrecorded";
+      }
+      const sailed =
+        input.dock === "boarded" ||
+        (input.dock !== "not_boarded" && (input.afterDive || !input.noShow));
+      if (sailed) return "sailed";
+      return input.noShow && input.turnedAway ? "turnedAway" : "didNotSail";
+    }
+    for (const dock of ["boarded", "not_boarded", null] as const)
+      for (const afterDive of [false, true])
+        for (const noShow of [false, true])
+          for (const turnedAway of [false, true])
+            for (const missing of [false, true])
+              for (const rollCallTaken of [false, true]) {
+                const entry = seat("s", {
+                  status: noShow ? "no_show" : "booked",
+                  turnedAwayAt: turnedAway ? new Date("2026-11-03T08:00:00Z") : null,
+                });
+                const groups = recordGroupsFor(
+                  [entry],
+                  recordOf(
+                    dock ? { s: dock } : {},
+                    afterDive ? ["s"] : [],
+                    rollCallTaken,
+                    missing ? ["s"] : [],
+                  ),
+                );
+                const filed = (
+                  [
+                    "unaccounted",
+                    "uncounted",
+                    "unrecorded",
+                    "sailed",
+                    "turnedAway",
+                    "didNotSail",
+                  ] as const
+                ).filter((group) => groups[group].length > 0);
+                expect(filed).toEqual([
+                  before({ dock, afterDive, noShow, turnedAway, missing, rollCallTaken }),
+                ]);
+              }
   });
 
   it("in the record, takes the roll call's existence from its events, not from a boarded seat", () => {

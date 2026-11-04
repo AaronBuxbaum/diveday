@@ -110,7 +110,7 @@ describe("the paper each call site keeps clear of its code", () => {
   }
 
   it("keeps the pass's words four modules beside its code", async () => {
-    const page = source("pass/[bookingId]/page.tsx");
+    const page = source("../trips/[id]/_components/PaperPassSheet.tsx");
     const row = page.match(
       /className="mt-4 flex items-center (gap-[^\s"]+)"[\s\S]*?size=\{(\d+)\}/,
     );
