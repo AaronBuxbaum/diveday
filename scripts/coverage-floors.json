@@ -33,13 +33,19 @@
         "src/lib/booking-gates.ts": "93.75 -> 86.66",
         "src/lib/trip-admission.ts": "98.64 -> 95.52"
       }
+    },
+    {
+      "why": "Issue #2702 (#3829): bookings.ts swapped its checked_in branches for SQL predicates on the arrival trail, so the branch count fell and the ratio moved by under one branch; every branch this change added is covered. Measured by CI on #3829 at 6753ea8d, copied from the job log",
+      "files": {
+        "src/db/bookings.ts": "89.17 -> 89.13"
+      }
     }
   ],
   "src/db/aboard-at-sea.ts": 94.82,
   "src/db/account-security.ts": 94.2,
   "src/db/anonymize.ts": 90.79,
   "src/db/boarding-certification-snapshot.ts": 83.33,
-  "src/db/bookings.ts": 89.17,
+  "src/db/bookings.ts": 89.13,
   "src/db/certification-evidence.ts": 50,
   "src/db/certification-junior.ts": 88.23,
   "src/db/certifications-in-training.ts": 50,

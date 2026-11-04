@@ -306,6 +306,69 @@ describe("a queued tap cannot outrank what the desk said since", () => {
     expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
   });
 
+  it("refuses a queued undo on the departure a seat has since left, and a live one too", async () => {
+    const { db, shop, other, staff, seat } = await context();
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
+    const undo = { shopId: shop.id, bookingId: seat.booking.id, recordedByPersonId: staff.id };
+    expect(
+      await undoCheckInBooking(db, {
+        ...undo,
+        expectedTripId: other.id,
+        ...queued(new Date(nowDate().getTime() - 5 * MINUTE)),
+      }),
+    ).toEqual({ ok: false, reason: "snapshot_invalid" });
+    expect(await undoCheckInBooking(db, { ...undo, expectedTripId: other.id })).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: true });
+  });
+
+  it("refuses a queued undo stamped past the server's clock, and applies a replay once", async () => {
+    const { db, shop, staff, seat } = await context();
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
+    const undo = { shopId: shop.id, bookingId: seat.booking.id, recordedByPersonId: staff.id };
+    expect(
+      await undoCheckInBooking(db, {
+        ...undo,
+        ...queued(new Date(nowDate().getTime() + 60 * MINUTE)),
+      }),
+    ).toEqual({ ok: false, reason: "snapshot_invalid" });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: true });
+
+    // No device instant: the server's own moment stands in for it.
+    const tap = {
+      source: "offline" as const,
+      clientEventId: crypto.randomUUID(),
+      offlineSnapshotSavedAt: new Date(nowDate().getTime() - 10 * MINUTE),
+    };
+    expect(await undoCheckInBooking(db, { ...undo, ...tap })).toMatchObject({ ok: true });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
+    // The sync retried: the same event is a duplicate, never a second `cleared` row.
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
+    expect(await undoCheckInBooking(db, { ...undo, ...tap })).toMatchObject({
+      ok: true,
+      duplicate: true,
+    });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: true });
+  });
+
+  it("stamps a queued check-in that carries no device instant at the server's time", async () => {
+    const { db, shop, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    expect(
+      await checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.id,
+        source: "offline",
+        clientEventId: crypto.randomUUID(),
+        offlineSnapshotSavedAt: new Date(nowDate().getTime() - 10 * MINUTE),
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: true });
+  });
+
   it("judges a queued tap against corrections made before the seat reopened", async () => {
     const { db, shop, staff, seat } = await context();
     await clear(db, shop.id, seat.booking.id, seat.person.fullName);
