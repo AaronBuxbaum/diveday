@@ -9,6 +9,7 @@ import {
 } from "@/db/schema";
 import { getStaffingView } from "@/db/staffing";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "@/db/trips";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowMs } from "@/lib/clock";
 import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -112,7 +113,14 @@ describe("Today and the staffing view count crew the same way (DOM-M3)", () => {
     shop: Awaited<ReturnType<typeof courseSessionToday>>["shop"],
     trip: { id: string; startsAt: Date; endsAt: Date },
   ) {
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const view = await getStaffingView(
       db,
       shop.id,
@@ -203,7 +211,14 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     const { db, shop } = ctx;
     const reef = await uncrewedReefTrip(db, shop.id);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     const row = work.actions.find((action) => action.id === `uncrewed:${reef.id}`);
     expect(row?.kind).toBe("uncrewed_departure");
@@ -230,7 +245,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
       shop.slug,
       shopClock(shop),
       undefined,
-      undefined,
+      staffTranslator("en-US"),
       undefined,
       false,
       undefined,
@@ -258,7 +273,14 @@ describe("uncrewed and below-target departures (issue #732)", () => {
       { personId: divemaster.person.id, tripRole: "divemaster" },
     ]);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     expect(work.actions.some((action) => action.id === `uncrewed:${reef.id}`)).toBe(false);
     const row = work.actions.find((action) => action.id === `crew-target:${reef.id}`);
@@ -285,7 +307,14 @@ describe("uncrewed and below-target departures (issue #732)", () => {
         .map((entry) => ({ personId: entry.person.id, tripRole: "divemaster" as const })),
     );
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     expect(
       work.actions.some(
@@ -306,7 +335,14 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     });
     if (!trip) throw new Error("failed to create trip");
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     expect(
       work.actions.some(
@@ -392,7 +428,14 @@ describe("uncrewed and below-target departures (issue #732)", () => {
         ),
       );
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     // Exactly one *crew-gap* row for this departure — #732's rule, asserted
     // over all three ids rather than as the absence of the two the old
@@ -410,7 +453,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
       shop.slug,
       shopClock(shop),
       undefined,
-      undefined,
+      staffTranslator("en-US"),
       undefined,
       false,
       undefined,
@@ -473,7 +516,14 @@ describe("uncrewed and below-target departures (issue #732)", () => {
         ),
       );
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     expect(crewGapKindsFor(work, trip.id)).toEqual(["instructor_missing"]);
   });
@@ -494,12 +544,26 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     const reef = await uncrewedReefTrip(db, shop.id);
     // The same trip the first test in this block proves *does* raise the row,
     // so the only thing that changed is the mark.
-    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const before = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(before.actions.some((action) => action.id === `uncrewed:${reef.id}`)).toBe(true);
 
     await db.update(tripsTable).set({ selfGuided: true }).where(eq(tripsTable.id, reef.id));
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(
       work.actions.some(
         (action) => action.id === `uncrewed:${reef.id}` || action.id === `crew-target:${reef.id}`,
@@ -557,7 +621,14 @@ describe("uncrewed and below-target departures (issue #732)", () => {
       );
     await db.update(tripsTable).set({ selfGuided: true }).where(eq(tripsTable.id, trip.id));
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(work.actions.some((action) => action.id === `instructor:${trip.id}`)).toBe(true);
   });
 });

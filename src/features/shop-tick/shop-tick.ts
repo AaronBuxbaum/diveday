@@ -8,6 +8,7 @@ import { sendDueReminders } from "@/db/reminders";
 import { sendStaleRollCallAlerts } from "@/db/roll-call-alerts";
 import { bringDemoBoatsAtSeaHome } from "@/db/seed";
 import { sendDueServiceReminders } from "@/db/work-order-follow-up";
+import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { log } from "@/lib/log";
 import { sentry } from "@/lib/observability";
 import { sweepMinimumSeats } from "./minimum-seats";
@@ -70,7 +71,7 @@ const RUNS = {
   // A customer's own gear coming due for service (ADR 20261008-work-order-follow-up).
   "service-reminders": (db, now) => sendDueServiceReminders(db, { now }),
   // The post-dive recap, never before four hours, normally within an hour after.
-  recaps: (db, now) => sendDueRecaps(db, { now }),
+  recaps: (db, now) => sendDueRecaps(db, { marineLifeNamesIn, now }),
   // Crew hear about their boats (ADR 20261009-crew-hear-about-their-boats).
   "crew-notices": (db, now) => sendDueCrewNotices(db, { now }),
   // An after-dive count still open after the boat was due back.

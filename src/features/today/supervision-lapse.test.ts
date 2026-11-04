@@ -14,6 +14,7 @@ import {
 import { getStaffingView } from "@/db/staffing";
 import { getTripOverview } from "@/db/trip-overview";
 import { createTrip } from "@/db/trips";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { lastDayOfDeparture } from "@/lib/crew-roles";
@@ -356,7 +357,14 @@ describe("the surfaces that state the claim say why (issue #1853)", () => {
       shiftCalendarDate(lastDayOfDeparture(trip.endsAt, shop.timezone), -1),
     );
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const row = work.actions.find((action) => action.id === `instructor:${trip.id}`);
     expect(row?.kind).toBe("instructor_missing");
     expect(row?.detail).toBe("Keiko Tanaka has a rating that isn’t current for this departure.");
@@ -377,7 +385,14 @@ describe("the surfaces that state the claim say why (issue #1853)", () => {
       .update(staffCredentials)
       .set({ issuedAt: shiftCalendarDate(calendarDateInTimezone(startsAt, shop.timezone), 1) })
       .where(eq(staffCredentials.personId, keiko));
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const row = work.actions.find((action) => action.id === `instructor:${trip.id}`);
     expect(row?.detail).toBe(
       "Keiko Tanaka has a rating issued after this departure starts. Check the cards.",
@@ -398,7 +413,14 @@ describe("the surfaces that state the claim say why (issue #1853)", () => {
       .update(staffCredentials)
       .set({ issuedAt: shiftCalendarDate(calendarDateInTimezone(startsAt, shop.timezone), 1) })
       .where(eq(staffCredentials.personId, keiko));
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const row = work.actions.find((action) => action.id === `uncrewed:${trip.id}`);
     expect(row?.kindLabelKey).toBe("today.actionKind.crewRatingUnverified");
     expect(row?.detail).toBe(
@@ -452,7 +474,14 @@ describe("a lapse is said only where it opened the gap", () => {
       { personId: bea, fullName: "Bea Lapsed", lost: "certified_assistant" },
     ]);
     // …but she is not why the session has no instructor.
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const row = work.actions.find((action) => action.id === `instructor:${trip.id}`);
     expect(row?.detail).toBe("No instructor assigned.");
 
@@ -482,7 +511,14 @@ describe("a lapse is said only where it opened the gap", () => {
     await rating(db, shop.id, bea, dayBefore(trip, shop.timezone), "divemaster_rating");
 
     // Today: nobody current in the water, and the lapse is why.
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const row = work.actions.find((action) => action.id === `uncrewed:${trip.id}`);
     expect(row?.kind).toBe("uncrewed_departure");
     expect(row?.detail).toContain("Bea Lapsed has a rating that isn’t current for this departure.");
@@ -518,7 +554,14 @@ describe("a lapse is said only where it opened the gap", () => {
     await seat(db, shop.id, trip.id, 12);
     await rating(db, shop.id, bea, dayBefore(trip, shop.timezone), "divemaster_rating");
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const row = work.actions.find((action) => action.id === `crew-target:${trip.id}`);
     expect(row?.kind).toBe("crew_below_target");
     expect(row?.detail).toContain("Bea Lapsed has a rating that isn’t current for this departure.");
@@ -540,7 +583,14 @@ describe("a lapse is said only where it opened the gap", () => {
     await seat(db, shop.id, trip.id, 18);
     await rating(db, shop.id, bea, dayBefore(trip, shop.timezone), "divemaster_rating");
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const row = work.actions.find((action) => action.id === `crew-target:${trip.id}`);
     expect(row?.kind).toBe("crew_below_target");
     expect(row?.detail).not.toContain("isn’t current");

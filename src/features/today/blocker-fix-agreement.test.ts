@@ -57,6 +57,7 @@ describe("blockerFixFor and diverBlockerAction agree on every blocker code", () 
       },
       ctx.shopSlug,
       nowDate(),
+      staffTranslator("en-US"),
     );
 
     expect(fix).not.toBeNull();
@@ -81,6 +82,7 @@ describe("blockerFixFor and diverBlockerAction agree on every blocker code", () 
         },
         ctx.shopSlug,
         nowDate(),
+        staffTranslator("en-US"),
       ),
     ).toBeNull();
   });

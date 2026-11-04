@@ -151,13 +151,6 @@
         }
       },
       {
-        "why": "Two new seams: src/lib value-importing drizzle-orm (3 files that still hold a query half) and src/db value-importing the translators (17 files, outbound-message composers among them), banked until the queries and sentences have a home (issue 3665)",
-        "files": {
-          "src/db/import.ts": "1 -> 2",
-          "src/db/recap-assist.ts": "0 -> 1"
-        }
-      },
-      {
         "why": "Rule 5, an index is a door (issue #2754): every src/lib and src/db directory with an index.ts is a module, and these are the imports that reach past it today; the unwinding is the follow-up waves",
         "files": {
           "src/app/(token)/ready/[token]/_components/RecapDoors.tsx": "0 -> 1",
@@ -292,12 +285,6 @@
           "src/lib/send-window.ts": "0 -> 1",
           "src/lib/session.ts": "3 -> 4",
           "src/lib/setup-request-receipts.ts": "0 -> 1"
-        }
-      },
-      {
-        "why": "New seam (issue #2772): lib and db value-import a translator; words are chosen in a renderer. Seeded at today's count, notifications exempt",
-        "files": {
-          "src/lib/palette-answer.ts": "0 -> 1"
         }
       },
       {
@@ -450,13 +437,6 @@
         }
       },
       {
-        "why": "Two new seams: src/lib value-importing drizzle-orm (3 files that still hold a query half) and src/db value-importing the translators (17 files, outbound-message composers among them), banked until the queries and sentences have a home (issue 3665)",
-        "files": {
-          "src/db/import.ts": "1 -> 2",
-          "src/db/recap-assist.ts": "0 -> 1"
-        }
-      },
-      {
         "why": "Rule 5, an index is a door (issue #2754): every src/lib and src/db directory with an index.ts is a module, and these are the imports that reach past it today; the unwinding is the follow-up waves",
         "files": {
           "src/app/(token)/ready/[token]/_components/RecapDoors.tsx": "0 -> 1",
@@ -593,12 +573,6 @@
           "src/lib/send-window.ts": "0 -> 1",
           "src/lib/session.ts": "3 -> 4",
           "src/lib/setup-request-receipts.ts": "0 -> 1"
-        }
-      },
-      {
-        "why": "New seam (issue #2772): lib and db value-import a translator; words are chosen in a renderer. Seeded at today's count, notifications exempt",
-        "files": {
-          "src/lib/palette-answer.ts": "0 -> 1"
         }
       },
       {
@@ -749,13 +723,6 @@
         }
       },
       {
-        "why": "Two new seams: src/lib value-importing drizzle-orm (3 files that still hold a query half) and src/db value-importing the translators (17 files, outbound-message composers among them), banked until the queries and sentences have a home (issue 3665)",
-        "files": {
-          "src/db/import.ts": "1 -> 2",
-          "src/db/recap-assist.ts": "0 -> 1"
-        }
-      },
-      {
         "why": "Rule 5, an index is a door (issue #2754): every src/lib and src/db directory with an index.ts is a module, and these are the imports that reach past it today; the unwinding is the follow-up waves",
         "files": {
           "src/app/(token)/ready/[token]/_components/RecapDoors.tsx": "0 -> 1",
@@ -890,12 +857,6 @@
           "src/lib/send-window.ts": "0 -> 1",
           "src/lib/session.ts": "3 -> 4",
           "src/lib/setup-request-receipts.ts": "0 -> 1"
-        }
-      },
-      {
-        "why": "New seam (issue #2772): lib and db value-import a translator; words are chosen in a renderer. Seeded at today's count, notifications exempt",
-        "files": {
-          "src/lib/palette-answer.ts": "0 -> 1"
         }
       }
     ],
@@ -987,7 +948,7 @@
     "src/db/email-bounces.ts": 1,
     "src/db/erasure-coordinated-send.ts": 1,
     "src/db/find-my-booking.ts": 1,
-    "src/db/import.ts": 2,
+    "src/db/import.ts": 1,
     "src/db/integration-events.ts": 1,
     "src/db/interest-offers.ts": 1,
     "src/db/lost-items.ts": 3,
@@ -1000,7 +961,6 @@
     "src/db/processor-erasure.ts": 2,
     "src/db/push-subscriptions.ts": 2,
     "src/db/readiness-link-rescue.ts": 2,
-    "src/db/recap-assist.ts": 1,
     "src/db/recap.ts": 3,
     "src/db/refund-failures.ts": 1,
     "src/db/refunds.ts": 2,
@@ -1035,7 +995,6 @@
     "src/lib/dive-site-landmarks.ts": 1,
     "src/lib/dive-site-template-sync.ts": 1,
     "src/lib/notifications/sender.ts": 1,
-    "src/lib/palette-answer.ts": 1,
     "src/lib/same-origin.ts": 1,
     "src/lib/send-window.ts": 1,
     "src/lib/session.ts": 4,
@@ -1516,7 +1475,6 @@
           "src/db/import.test.ts": "1074 -> 1076",
           "src/db/no-show.test.ts": "1156 -> 1158",
           "src/db/participant-types.test.ts": "1195 -> 1197",
-          "src/db/recap.test.ts": "2138 -> 2142",
           "src/db/seat-claims.test.ts": "1525 -> 1529",
           "src/db/self-declared-cards.test.ts": "1849 -> 1869"
         }
@@ -1570,7 +1528,7 @@
     "src/db/orders.test.ts": 3174,
     "src/db/participant-types.test.ts": 1197,
     "src/db/readiness.test.ts": 1427,
-    "src/db/recap.test.ts": 2142,
+    "src/db/recap.test.ts": 2141,
     "src/db/refunds.test.ts": 1150,
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1237,
@@ -1588,7 +1546,7 @@
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
     "src/features/today/closeout-reader.test.ts": 903,
-    "src/features/today/today.test.ts": 1452,
+    "src/features/today/today.test.ts": 1274,
     "src/i18n/label-maps.test.ts": 1259,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1935,

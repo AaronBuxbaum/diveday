@@ -159,14 +159,19 @@ export const seams = [
   {
     // Words are chosen in a renderer and nowhere else (issue #2772, ADR
     // 20260731-domain-layer-copy-leaks): the page, the message (the notification
-    // senders) and the file (`src/db/export.ts`). Everything else in `src/lib` and `src/db` hands back
+    // senders), the file (`src/db/export.ts`) and the palette's spoken answer (`src/lib/palette-answer.ts`). Everything else in `src/lib` and `src/db` hands back
     // codes and keys, so a translator defaulting to "en-US" cannot hide in a domain
     // function. A type (`StaffMessageKey`, `StaffTranslator`) is a shape and passes.
     roots: ["src/lib", "src/db"],
     exempt: (file) => {
       const normal = file.replaceAll(path.sep, "/");
       // The third renderer is the file: the export writes a document in the shop's language.
-      return normal.startsWith("src/lib/notifications/") || normal === "src/db/export.ts";
+      // The fourth is the palette answer: a sentence written for the asker, in the asker's language.
+      return (
+        normal.startsWith("src/lib/notifications/") ||
+        normal === "src/db/export.ts" ||
+        normal === "src/lib/palette-answer.ts"
+      );
     },
     refuses: (target) =>
       target !== null &&

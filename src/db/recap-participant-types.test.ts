@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty, setBookingParticipantType } from "./bookings";
@@ -73,6 +74,7 @@ describe("the recap and flying, by participant type", () => {
 
       const email = fakeEmail();
       await sendDueRecaps(db, {
+        marineLifeNamesIn,
         now: afterTrip,
         emailProvider: email.provider,
         smsProvider: fakeSms().provider,
@@ -146,6 +148,7 @@ describe("the recap and flying, by participant type", () => {
 
       const sender = fakeEmail();
       await sendDueRecaps(db, {
+        marineLifeNamesIn,
         now: afterTrip,
         emailProvider: sender.provider,
         smsProvider: fakeSms().provider,

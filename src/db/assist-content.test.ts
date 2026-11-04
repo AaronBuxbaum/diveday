@@ -1,5 +1,6 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
+import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { CERT_SCAN_FEATURE, certScanCall, certScanFields, scanCard } from "@/lib/assists/cert-scan";
 import { sourceDigest } from "@/lib/assists/shop-translate";
 import type { ClaudeProvider } from "@/lib/claude/provider";
@@ -424,7 +425,7 @@ describe("the recap highlight", () => {
 
   it("names only what the crew logged, in the shop's words", async () => {
     const { tripId, site } = await tripWithSightings(["green-sea-turtle"]);
-    const log = await recapLogFor(ctx.db, ctx.shop.id, tripId);
+    const log = await recapLogFor(ctx.db, ctx.shop.id, tripId, marineLifeNamesIn);
     expect(log?.sites).toEqual([
       {
         name: site,
@@ -436,14 +437,22 @@ describe("the recap highlight", () => {
     const fine = answering({
       text: "{count:1:green-sea-turtle} {species:1:green-sea-turtle} at {site1}.",
     });
-    expect(await draftRecapLine(ctx.db, ctx.shop.id, tripId, { provider: fine, env, now })).toMatch(
-      /^2 green sea turtle at /i,
-    );
+    expect(
+      await draftRecapLine(ctx.db, ctx.shop.id, tripId, marineLifeNamesIn, {
+        provider: fine,
+        env,
+        now,
+      }),
+    ).toMatch(/^2 green sea turtle at /i);
     const invented = answering({
       text: "{species:1:green-sea-turtle} and a whale shark at {site1}.",
     });
     expect(
-      await draftRecapLine(ctx.db, ctx.shop.id, tripId, { provider: invented, env, now }),
+      await draftRecapLine(ctx.db, ctx.shop.id, tripId, marineLifeNamesIn, {
+        provider: invented,
+        env,
+        now,
+      }),
     ).toBeNull();
   });
 
@@ -452,21 +461,19 @@ describe("the recap highlight", () => {
     const provider = answering({ text: "{species:1:green-sea-turtle} at {site1}." });
     const trip = { id: tripId, shopId: ctx.shop.id, recapShoutout: null };
     expect(
-      await autoFillRecapLine(
-        ctx.db,
-        trip,
-        { recapAssistAutoApprove: false },
-        { provider, env, now },
-      ),
+      await autoFillRecapLine(ctx.db, trip, { recapAssistAutoApprove: false }, marineLifeNamesIn, {
+        provider,
+        env,
+        now,
+      }),
     ).toBe(false);
     expect(provider.requests).toHaveLength(0);
     expect(
-      await autoFillRecapLine(
-        ctx.db,
-        trip,
-        { recapAssistAutoApprove: true },
-        { provider, env, now },
-      ),
+      await autoFillRecapLine(ctx.db, trip, { recapAssistAutoApprove: true }, marineLifeNamesIn, {
+        provider,
+        env,
+        now,
+      }),
     ).toBe(true);
     const [row] = await ctx.db
       .select({ line: trips.recapShoutout })
@@ -479,6 +486,7 @@ describe("the recap highlight", () => {
         ctx.db,
         { ...trip, recapShoutout: "Best day of the year." },
         { recapAssistAutoApprove: true },
+        marineLifeNamesIn,
         { provider, env, now },
       ),
     ).toBe(false);
@@ -489,11 +497,15 @@ describe("the recap highlight", () => {
     const provider = refusing();
     const trip = { id: tripId, shopId: ctx.shop.id, recapShoutout: null };
     const shop = { recapAssistAutoApprove: true };
-    expect(await autoFillRecapLine(ctx.db, trip, shop, { provider, env, now })).toBe(false);
-    expect(await autoFillRecapLine(ctx.db, trip, shop, { provider, env, now })).toBe(false);
+    expect(
+      await autoFillRecapLine(ctx.db, trip, shop, marineLifeNamesIn, { provider, env, now }),
+    ).toBe(false);
+    expect(
+      await autoFillRecapLine(ctx.db, trip, shop, marineLifeNamesIn, { provider, env, now }),
+    ).toBe(false);
     expect(provider.requests).toHaveLength(1);
     // A staffer's own tap still asks.
-    await draftRecapLine(ctx.db, ctx.shop.id, tripId, { provider, env, now });
+    await draftRecapLine(ctx.db, ctx.shop.id, tripId, marineLifeNamesIn, { provider, env, now });
     expect(provider.requests).toHaveLength(2);
   });
 
@@ -502,9 +514,9 @@ describe("the recap highlight", () => {
     const provider = failing();
     const trip = { id: tripId, shopId: ctx.shop.id, recapShoutout: null };
     const shop = { recapAssistAutoApprove: true };
-    await autoFillRecapLine(ctx.db, trip, shop, { provider, env, now });
+    await autoFillRecapLine(ctx.db, trip, shop, marineLifeNamesIn, { provider, env, now });
     const before = provider.requests.length;
-    await autoFillRecapLine(ctx.db, trip, shop, { provider, env, now });
+    await autoFillRecapLine(ctx.db, trip, shop, marineLifeNamesIn, { provider, env, now });
     expect(provider.requests.length).toBeGreaterThan(before);
   });
 
@@ -519,6 +531,7 @@ describe("the recap highlight", () => {
         ctx.db,
         { id: tripId, shopId: ctx.shop.id, recapShoutout: null },
         { recapAssistAutoApprove: true },
+        marineLifeNamesIn,
         { provider, env, now },
       ),
     ).toBe(false);
@@ -529,9 +542,9 @@ describe("the recap highlight", () => {
       .where(eq(trips.id, tripId));
     expect(row?.line).toBeNull();
     // The crew can still draft one and read it first.
-    expect(await draftRecapLine(ctx.db, ctx.shop.id, tripId, { provider, env, now })).toMatch(
-      /turtle/i,
-    );
+    expect(
+      await draftRecapLine(ctx.db, ctx.shop.id, tripId, marineLifeNamesIn, { provider, env, now }),
+    ).toMatch(/turtle/i);
     await ctx.db.delete(incidentReports).where(eq(incidentReports.tripId, tripId));
   });
 
@@ -553,6 +566,7 @@ describe("the recap highlight", () => {
         ctx.db,
         { id: tripId, shopId: ctx.shop.id, recapShoutout: null },
         { recapAssistAutoApprove: true },
+        marineLifeNamesIn,
         { provider, env, now },
       ),
     ).toBe(false);
@@ -568,7 +582,7 @@ describe("the recap highlight", () => {
     const { tripId } = await tripWithSightings(["green-sea-turtle"]);
     await ctx.db.update(shops).set({ sightingsEnabled: false }).where(eq(shops.id, ctx.shop.id));
     try {
-      expect(await recapLogFor(ctx.db, ctx.shop.id, tripId)).toBeNull();
+      expect(await recapLogFor(ctx.db, ctx.shop.id, tripId, marineLifeNamesIn)).toBeNull();
     } finally {
       await ctx.db.update(shops).set({ sightingsEnabled: true }).where(eq(shops.id, ctx.shop.id));
     }
@@ -576,7 +590,7 @@ describe("the recap highlight", () => {
 
   it("has nothing to say about a departure with no sightings", async () => {
     const { tripId } = await tripWithSightings([]);
-    expect(await recapLogFor(ctx.db, ctx.shop.id, tripId)).toBeNull();
+    expect(await recapLogFor(ctx.db, ctx.shop.id, tripId, marineLifeNamesIn)).toBeNull();
   });
 });
 

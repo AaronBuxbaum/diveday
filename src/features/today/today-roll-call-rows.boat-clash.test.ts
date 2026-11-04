@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createBoat } from "@/db/boats";
 import { trips } from "@/db/schema";
 import { createTrip, moveTrip, setTripStatus } from "@/db/trips";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -37,7 +38,14 @@ describe("boat clashes on Today (H-20260916-may-one-hull-carry, issue #2135)", (
 
   async function boatClashRows(now: Date) {
     const { db, shop } = ctx;
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop, now),
+      undefined,
+      staffTranslator("en-US"),
+    );
     return work.actions.filter((action) => action.kind === "boat_clash");
   }
 
