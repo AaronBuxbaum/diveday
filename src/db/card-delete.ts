@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import { bookings, cards, people, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * **A card's Delete, serialized with the seats that read it** (issue #3839).
@@ -69,6 +70,7 @@ export async function softDeleteCard(
           inArray(trips.id, seats),
           gt(trips.endsAt, nowDate()),
           ne(trips.status, "cancelled"),
+          liveTrip(),
         ),
       )
       .orderBy(asc(trips.id))

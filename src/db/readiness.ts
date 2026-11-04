@@ -1664,6 +1664,14 @@ function seatRelease(input: {
   return { effectiveWaiver, releaseLapse, ownLapsed };
 }
 
+/** Whether the release a seat stands on was signed by a minor alone (the guardian rule). */
+function seatGuardianMissing(
+  effectiveWaiver: Parameters<typeof guardianSignatureMissing>[0] | null,
+  signer: Parameters<typeof guardianSignatureMissing>[1],
+): boolean {
+  return effectiveWaiver !== null && guardianSignatureMissing(effectiveWaiver, signer);
+}
+
 /**
  * **Reading a roster as it stood, for the departure log only** (issue #3002).
  * Live readers pass nothing and see every record however fresh. The log reads
@@ -1963,14 +1971,11 @@ export async function listTripsReadiness(
         effective: effectiveWaiver,
         own: row.waiver,
         releaseLapse,
-        guardianMissing: Boolean(
-          effectiveWaiver &&
-            guardianSignatureMissing(effectiveWaiver, {
-              dateOfBirth: row.person.dateOfBirth,
-              minorDeclared: minorDeclaredOf(row.booking, trainingMark),
-              timezone,
-            }),
-        ),
+        guardianMissing: seatGuardianMissing(effectiveWaiver, {
+          dateOfBirth: row.person.dateOfBirth,
+          minorDeclared: minorDeclaredOf(row.booking, trainingMark),
+          timezone,
+        }),
         ownLapsed,
         now,
       }),
