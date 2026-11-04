@@ -361,7 +361,8 @@ async function recordNoCertification(
   for (const claim of liveLevels) {
     await tx
       .update(cards)
-      .set({ deletedAt: now })
+      // Replaced by a sighted card: never a card's Undo (#3701).
+      .set({ deletedAt: now, deletionKind: "system" })
       .where(
         and(
           eq(cards.kind, "level"),
@@ -380,7 +381,8 @@ async function recordNoCertification(
   for (const claim of liveNitrox) {
     await tx
       .update(cards)
-      .set({ deletedAt: now })
+      // Replaced by a sighted card: never a card's Undo (#3701).
+      .set({ deletedAt: now, deletionKind: "system" })
       .where(
         and(
           eq(cards.kind, "nitrox"),

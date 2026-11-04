@@ -807,6 +807,13 @@ const rows = [
     why: "who wrote the note",
   },
   {
+    table: "internal_notes",
+    column: "deleted_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who deleted the note (issue #3701)",
+  },
+  {
     table: "marine_life_requests",
     column: "requested_by_person_id",
     kind: "actor",

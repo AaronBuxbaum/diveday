@@ -4,6 +4,8 @@
     "counter_check_in_undone": "Se deshizo el check-in de {diver} en el mostrador",
     "note_added": "{actor} agregó una nota privada sobre {diver}",
     "note_deleted": "{actor} eliminó una nota privada sobre {diver}",
+    "note_restored": "{actor} recuperó una nota privada sobre {diver}",
+    "card_restored": "{actor} recuperó {cardType, select, specialty {la certificación de especialidad} nitrox {la certificación de nitrox} other {la certificación}} de {diver}",
     "booking_removed": "{actor} quitó a {diver} de la salida",
     "booking_restored": "{actor} volvió a poner a {diver} en la salida",
     "booking_no_show": "{actor} marcó que {diver} no se presentó y liberó la plaza",

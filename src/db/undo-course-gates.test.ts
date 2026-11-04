@@ -122,11 +122,15 @@ describe("restoreBooking on a course session", () => {
 
   it("refuses an undo once the student's prerequisite card is gone", async () => {
     const { db, shop } = ctx;
-    const { trip } = await session(db, shop.id, "Advanced Open Water Diver");
+    const { trip, staffId } = await session(db, shop.id, "Advanced Open Water Diver");
     const student = await seatCardedStudent(db, shop.id, trip.id);
     await cancelBooking(db, shop.id, student.bookingId);
     expect(
-      await deleteCertification(db, { shopId: shop.id, certificationId: student.cardId }),
+      await deleteCertification(db, {
+        shopId: shop.id,
+        certificationId: student.cardId,
+        deletedByPersonId: staffId,
+      }),
     ).toBe(true);
 
     expect(await restoreBooking(db, shop.id, student.bookingId)).toBe("course_prerequisite");
@@ -210,8 +214,12 @@ describe("undoBookingNoShow on a course session", () => {
   });
 
   it("refuses once the student's prerequisite card is gone", async () => {
-    const { db, shop, student, undo } = await released("Advanced Open Water Diver");
-    await deleteCertification(db, { shopId: shop.id, certificationId: student.cardId });
+    const { db, shop, staffId, student, undo } = await released("Advanced Open Water Diver");
+    await deleteCertification(db, {
+      shopId: shop.id,
+      certificationId: student.cardId,
+      deletedByPersonId: staffId,
+    });
 
     expect(await undo()).toEqual({ ok: false, reason: "course_prerequisite" });
     expect(await statusOf(db, student.bookingId)).toBe("no_show");

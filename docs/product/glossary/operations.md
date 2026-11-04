@@ -1543,7 +1543,9 @@
   certifies that level. A seat-level mark does not identify one of several planned dives, so
   multi-dive departures and one-dive departures with conflicting site records retain their site
   requirements; the roster and manifest explain why. An explicit
-  departure requirement always stands. A course with no minimum
+  departure requirement always stands, at the sale as at the dock: trip admission lets a
+  marked level through only where the site set it, never a trip-set level (issue #3776). A course
+  with no minimum
   (Open Water) asks no card for a site level it
   certifies; never past it, never for an intro session or a course that certifies none (issue
   #2731). It needs the course's own instructor aboard, rostered by somebody else and not counted

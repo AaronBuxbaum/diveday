@@ -2,11 +2,11 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
+import { restoreCard } from "./card-restore";
 import type { AppDb } from "./client";
 import {
   createNitroxCertification,
   deleteNitroxCertification,
-  restoreNitroxCertification,
   reviewNitroxCertification,
   setBookingNitrox,
   unreviewNitroxCertification,
@@ -243,6 +243,7 @@ describe("setBookingNitrox", () => {
     await deleteNitroxCertification(ctx.db, {
       shopId: ctx.shopId,
       certificationId: cert.id,
+      deletedByPersonId: ctx.personId,
     });
     const outcome = await setBookingNitrox(ctx.db, {
       shopId: ctx.shopId,
@@ -308,6 +309,7 @@ describe("setBookingNitrox", () => {
       await deleteNitroxCertification(ctx.db, {
         shopId: ctx.shopId,
         certificationId: cert.id,
+        deletedByPersonId: ctx.personId,
       }),
     ).toBe(true);
     // The gate reads the card live: with it archived the diver is no longer certified.
@@ -318,21 +320,25 @@ describe("setBookingNitrox", () => {
     const ctx = await context();
     const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
     expect(
-      await deleteNitroxCertification(ctx.db, { shopId: ctx.shopId, certificationId: cert.id }),
+      await deleteNitroxCertification(ctx.db, {
+        shopId: ctx.shopId,
+        certificationId: cert.id,
+        deletedByPersonId: ctx.personId,
+      }),
     ).toBe(true);
     expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).not.toContain(ctx.personId);
 
-    expect(
-      await restoreNitroxCertification(ctx.db, { shopId: ctx.shopId, certificationId: cert.id }),
-    ).toBe(true);
+    const restore = (shopId: string) =>
+      restoreCard(ctx.db, {
+        shopId,
+        kind: "nitrox",
+        certificationId: cert.id,
+        restoredByPersonId: ctx.personId,
+      });
+    expect(await restore(ctx.shopId)).toBe("restored");
     expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).toContain(ctx.personId);
     // A cross-shop restore is refused.
-    expect(
-      await restoreNitroxCertification(ctx.db, {
-        shopId: crypto.randomUUID(),
-        certificationId: cert.id,
-      }),
-    ).toBe(false);
+    expect(await restore(crypto.randomUUID())).toBe("not_found");
   });
 
   it("refuses to archive a card through another shop's id", async () => {
@@ -342,6 +348,7 @@ describe("setBookingNitrox", () => {
       await deleteNitroxCertification(ctx.db, {
         shopId: crypto.randomUUID(),
         certificationId: cert.id,
+        deletedByPersonId: ctx.personId,
       }),
     ).toBe(false);
     expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).toContain(ctx.personId);
@@ -540,7 +547,13 @@ describe("nitrox reads only nitrox cards (issue #2722)", () => {
         status: "verified",
       }),
     ).toEqual({ ok: false, reason: "not_found" });
-    expect(await deleteNitroxCertification(db, { shopId, certificationId: level.id })).toBe(false);
+    expect(
+      await deleteNitroxCertification(db, {
+        shopId,
+        certificationId: level.id,
+        deletedByPersonId: personId,
+      }),
+    ).toBe(false);
     const [after] = await db.select().from(cards).where(eq(cards.id, level.id));
     expect(after).toMatchObject({ status: "pending", reviewedAt: null, deletedAt: null });
 

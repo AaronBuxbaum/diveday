@@ -1,0 +1,188 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "085c44ce-7e4f-475d-807b-1ea826d2bfc3",
+  "prevIds": [
+    "38645df0-7072-45c7-b254-bcfe30669155"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "card_deletion_kind"
+      ],
+      "writes": [
+        "s|enum|public.card_deletion_kind",
+        "n|enum|public.card_deletion_kind",
+        "e|enum|public.card_deletion_kind",
+        "n|type|public.card_deletion_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "internal_notes",
+        "deleted_at"
+      ],
+      "writes": [
+        "s|col|public.internal_notes.deleted_at",
+        "n|col|public.internal_notes.deleted_at",
+        "e|col|public.internal_notes.deleted_at"
+      ],
+      "reads": [
+        "n|tbl|public.internal_notes",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "internal_notes",
+        "deleted_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.internal_notes.deleted_by_person_id",
+        "n|col|public.internal_notes.deleted_by_person_id",
+        "e|col|public.internal_notes.deleted_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.internal_notes",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "cards",
+        "deletion_kind"
+      ],
+      "writes": [
+        "s|col|public.cards.deletion_kind",
+        "n|col|public.cards.deletion_kind",
+        "e|col|public.cards.deletion_kind"
+      ],
+      "reads": [
+        "n|tbl|public.cards",
+        "n|sch|public",
+        "n|enum|public.card_deletion_kind"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "internal_notes"
+      ],
+      "writes": [
+        "s|fk|public.internal_notes.internal_notes_deleted_by_person_id_people_id_fkey",
+        "n|fk|public.internal_notes.internal_notes_deleted_by_person_id_people_id_fkey",
+        "e|fk|public.internal_notes.internal_notes_deleted_by_person_id_people_id_fkey",
+        "n|con|public.internal_notes.internal_notes_deleted_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.internal_notes",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.internal_notes.deleted_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "card_deletion_kind",
+        "values": [
+          "staff",
+          "system"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "internal_notes",
+        "name": "deleted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "internal_notes",
+        "name": "deleted_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "cards",
+        "name": "deletion_kind",
+        "type": "card_deletion_kind",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "internal_notes",
+        "name": "internal_notes_deleted_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "deleted_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    }
+  ]
+}

@@ -59,6 +59,14 @@ type ActivityParamShapes = {
   note_added: { actor: string; diver: string };
   /** That note was deleted. Soft, like every delete; the line stays. */
   note_deleted: { actor: string; diver: string };
+  /** A deleted note was put back by its Undo, the same row (issue #3701). */
+  note_restored: { actor: string; diver: string };
+  /**
+   * A card a staffer deleted was put back by its Undo (issue #3701): the same
+   * row, in the review state it had, so it clears the gates it cleared before.
+   * Written so the shop can see who put a card back.
+   */
+  card_restored: { actor: string; diver: string; cardType: "level" | "specialty" | "nitrox" };
   /**
    * A staffer attested that a booking flagged `identity_unconfirmed` really is
    * the diver it was attached to, **on the trip roster**. The trail is what
@@ -516,6 +524,8 @@ export const ACTIVITY_CODES = [
   "counter_check_in_undone",
   "note_added",
   "note_deleted",
+  "note_restored",
+  "card_restored",
   "booking_removed",
   "booking_restored",
   "booking_no_show",

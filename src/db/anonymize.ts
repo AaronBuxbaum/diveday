@@ -1029,6 +1029,8 @@ async function scrubCertificationEvidence(
         juniorStatusVerifiedAt: null,
         juniorStatusVerifiedByPersonId: null,
         deletedAt: card.deletedAt ?? now,
+        // Erased with its diver: no card's Undo reaches it (#3701).
+        deletionKind: "system",
       })
       .where(eq(cards.id, card.id));
   }

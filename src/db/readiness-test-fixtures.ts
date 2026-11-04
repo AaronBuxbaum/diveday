@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import type { fileScopedShopContext } from "@/test/db";
 import { createCertification, reviewCertification, upsertTripRequirements } from "./readiness";
 import { type DiveSpecialty, diveSites } from "./schema";
-import { getTripRoster, listTripDives, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff, listTripDives, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **What the readiness tests share**: the seeded two-tank reef trip with its
@@ -18,7 +18,10 @@ export function readinessFixturesFor(ctx: ReturnType<typeof fileScopedShopContex
     if (!reef) throw new Error("demo reef trip missing");
     const [rosterEntry] = await getTripRoster(db, shop.id, reef.id);
     if (!rosterEntry) throw new Error("demo booking missing");
-    return { db, shop, reef, rosterEntry };
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("demo staff missing");
+    // The staffer a card's hand delete and its Undo are written under (#3701).
+    return { db, shop, reef, rosterEntry, staffId: staff.person.id };
   }
 
   /**

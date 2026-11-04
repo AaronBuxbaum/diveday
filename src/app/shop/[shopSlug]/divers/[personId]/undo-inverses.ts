@@ -10,22 +10,32 @@
  * the real re-checks.
  */
 import { canPersonDeleteDiver } from "@/db/authz";
+import { type CardRestoreOutcome, restoreCard } from "@/db/card-restore";
 import { restoreDiver } from "@/db/divers";
-import { restoreNitroxCertification } from "@/db/nitrox";
-import { addDiverNote } from "@/db/operations";
-import { restoreCertification, restoreSpecialtyCertification } from "@/db/readiness";
+import { restoreDiverNote as restoreDeletedDiverNote } from "@/db/operations";
 import { cardOwner, isPersonErased } from "@/db/undo-subjects";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { UndoOfferOf } from "@/lib/undo";
 import { backTo, requireDiverActionContext } from "./action-helpers";
 
+/** Where each outcome of a card's Undo lands, beside the card list. */
+const CARD_RESTORE_NOTICES = {
+  restored: "card-restored",
+  conflict: "card-restore-conflict",
+  not_found: "card-restore-conflict",
+  undo_expired: "card-restore-expired",
+  system_archived: "card-restore-system",
+} as const satisfies Record<CardRestoreOutcome, string>;
+
 /**
- * A card archive taken back. Dispatches by the card type stamped into the
- * offer, restoring the exact card that was archived; a re-entered card that
- * now owns the same number blocks the restore rather than being clobbered
- * (readiness.ts). Every card lives in one group, so an undo that could not
- * land says so beside the list it failed to return to.
+ * A card archive taken back (issues #2764, #3701). Restores the exact card
+ * that was archived, and only when a staffer deleted it by hand in the last 15
+ * minutes: `restoreCard` asks that of the row, refuses a card DiveDay set aside
+ * or one deleted too long ago, refuses a re-entered card's number rather than
+ * clobbering it, and writes the restore to the activity log under this
+ * staffer. Every card lives in one group, so an undo that could not land says
+ * so beside the list it failed to return to.
  */
 export async function restoreDiverCard(
   shopSlug: string,
@@ -43,20 +53,21 @@ export async function restoreDiverCard(
   if (!owned || (await isPersonErased(db, shopId, personId))) {
     revalidateAndRedirect(base, backTo(base, "card-restore-conflict", "cards"));
   }
-  const input = { shopId, certificationId: offer.undoCard };
-  const restored =
-    offer.cardType === "level"
-      ? await restoreCertification(db, input)
-      : offer.cardType === "specialty"
-        ? await restoreSpecialtyCertification(db, input)
-        : await restoreNitroxCertification(db, input);
-  revalidateAndRedirect(
-    base,
-    backTo(base, restored ? "card-restored" : "card-restore-conflict", "cards"),
-  );
+  const outcome = await restoreCard(db, {
+    shopId,
+    kind: offer.cardType,
+    certificationId: offer.undoCard,
+    restoredByPersonId: staff.user.personId,
+  });
+  revalidateAndRedirect(base, backTo(base, CARD_RESTORE_NOTICES[outcome], "cards"));
 }
 
-/** A deleted note taken back, through the same audited insert path a new note takes. */
+/**
+ * A deleted note taken back by its id (issue #3701): the same row, written by
+ * whoever wrote it, and only a deleted note of this record. The offer never
+ * carries the note's words, so a URL cannot put text of its author's choosing
+ * on a record under this staffer's name.
+ */
 export async function restoreDiverNote(
   shopSlug: string,
   offer: UndoOfferOf<"diver-note">,
@@ -67,17 +78,17 @@ export async function restoreDiverNote(
     "not-authorized-notes",
     "notes",
   );
-  // An erased diver's note text never comes back, whatever a URL carries.
+  // An erased diver's note never comes back, whatever a URL carries.
   if (await isPersonErased(db, staff.user.shopId, personId)) {
     revalidateAndRedirect(base, backTo(base, "invalid", "notes"));
   }
-  const restored = await addDiverNote(db, {
+  const restored = await restoreDeletedDiverNote(db, {
     shopId: staff.user.shopId,
     personId,
+    noteId: offer.undoNote,
     actorPersonId: staff.user.personId,
-    body: offer.noteBody,
   });
-  revalidateAndRedirect(base, backTo(base, restored ? "note-added" : "invalid", "notes"));
+  revalidateAndRedirect(base, backTo(base, restored ? "note-restored" : "invalid", "notes"));
 }
 
 /**

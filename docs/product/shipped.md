@@ -3567,7 +3567,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   recap, and divers attach their own photos (`recap_photos` + `storeRecapImage`), which staff
   moderate from the roster ([post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md)).
 - **Generic undo** — the reversible card deletes land immediately and offer a 5-second undo toast
-  instead of a confirm dialog (`restoreCertification`/specialty/nitrox; reusable `UndoToast`).
+  instead of a confirm dialog (`restoreCard`, inside the **card undo window**; reusable `UndoToast`).
 - **Optimistic interaction** — a true `useOptimistic` payment-status control flips instantly and
   reconciles on the server; boarding stays server-authoritative (never optimistic on safety state).
 - **One keyboard idiom** — ⌘K opens the command palette, which searches records and reaches every

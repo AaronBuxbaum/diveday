@@ -104,7 +104,8 @@ export type TripRosterContentContext = {
   offersHotelPickup: boolean;
   tripNotice?: FormNotice;
   pageNotice?: FormNotice & { moveRefusalOrigin?: string };
-  noteDeleted?: { bookingId: string; body: string };
+  /** The deleted booking note's id, for its Undo (never its text, #3701). */
+  noteDeleted?: { noteId: string };
   confirmName?: string;
   confirmEmail?: string;
   confirmPhone?: string;

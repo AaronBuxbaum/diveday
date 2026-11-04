@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import type { SystemReason } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
@@ -208,15 +208,11 @@ export async function recordDiverActivity(
 }
 
 /**
- * Return-what-you-deleted, same convention as `deleteRecapPhoto`
- * (`DeleteRecapPhotoResult`): the caller needs the booking + text back to
- * offer a one-tap undo that recreates the note (docs/design/principles.md
- * §7) — a purely reversible edit, unlike the money-moving actions on this
- * page that keep a blocking confirm.
+ * A booking note deleted, softly (ADR 20260820-every-delete-is-soft; issue
+ * #3701): the row stays, so the toast's Undo names it by id
+ * (`restoreInternalNote`) and the note's words never ride in a URL.
  */
-export type DeleteInternalNoteResult =
-  | { deleted: true; bookingId: string; body: string }
-  | { deleted: false };
+export type DeleteInternalNoteResult = { deleted: true; noteId: string } | { deleted: false };
 
 export async function deleteInternalNote(
   db: AppDb,
@@ -229,10 +225,8 @@ export async function deleteInternalNote(
     const [note] = await tx
       .select({
         // `bookings.id`, not the nullable `internalNotes.bookingId` column —
-        // the inner join below already guarantees a match, so this is the
-        // non-null value `DeleteInternalNoteResult` promises callers.
+        // the inner join below already guarantees a match.
         bookingId: bookings.id,
-        body: internalNotes.body,
         tripId: bookings.tripId,
         diverName: people.fullName,
       })
@@ -244,6 +238,7 @@ export async function deleteInternalNote(
           eq(internalNotes.id, input.noteId),
           eq(internalNotes.shopId, input.shopId),
           eq(bookings.tripId, input.tripId),
+          isNull(internalNotes.deletedAt),
         ),
       )
       .limit(1);
@@ -254,9 +249,18 @@ export async function deleteInternalNote(
       .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
       .limit(1);
     if (!actor) return { deleted: false };
-    await tx
-      .delete(internalNotes)
-      .where(and(eq(internalNotes.id, input.noteId), eq(internalNotes.shopId, input.shopId)));
+    const [deleted] = await tx
+      .update(internalNotes)
+      .set({ deletedAt: nowDate(), deletedByPersonId: input.actorPersonId })
+      .where(
+        and(
+          eq(internalNotes.id, input.noteId),
+          eq(internalNotes.shopId, input.shopId),
+          isNull(internalNotes.deletedAt),
+        ),
+      )
+      .returning({ id: internalNotes.id });
+    if (!deleted) return { deleted: false };
     await tx.insert(activityEvents).values({
       shopId: input.shopId,
       tripId: note.tripId,
@@ -266,23 +270,76 @@ export async function deleteInternalNote(
       params: { actor: actor.name, diver: note.diverName },
       occurredAt: nowDate(),
     });
-    return { deleted: true, bookingId: note.bookingId, body: note.body };
+    return { deleted: true, noteId: deleted.id };
   });
 }
 
-export type DeleteDiverNoteResult = { deleted: true; body: string } | { deleted: false };
+/**
+ * The trip page's Undo of a booking note's delete (issue #3701): the same row
+ * back, written by whoever wrote it, found by id among this departure's
+ * deleted booking notes. Null when there is no such deleted note here, or the
+ * restorer is not a live person of this shop.
+ */
+export async function restoreInternalNote(
+  db: AppDb,
+  input: { shopId: string; tripId: string; noteId: string; actorPersonId: string },
+): Promise<{ bookingId: string } | null> {
+  if (![input.shopId, input.tripId, input.noteId, input.actorPersonId].every(isUuid)) return null;
+  return db.transaction(async (tx) => {
+    const [note] = await tx
+      .select({ bookingId: bookings.id, tripId: bookings.tripId, diverName: people.fullName })
+      .from(internalNotes)
+      .innerJoin(bookings, eq(bookings.id, internalNotes.bookingId))
+      .innerJoin(people, eq(people.id, internalNotes.personId))
+      .where(
+        and(
+          eq(internalNotes.id, input.noteId),
+          eq(internalNotes.shopId, input.shopId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, input.tripId),
+          isNotNull(internalNotes.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!note) return null;
+    const actor = await liveActorName(tx, input.shopId, input.actorPersonId);
+    if (!actor) return null;
+    const [restored] = await tx
+      .update(internalNotes)
+      .set({ deletedAt: null, deletedByPersonId: null })
+      .where(
+        and(
+          eq(internalNotes.id, input.noteId),
+          eq(internalNotes.shopId, input.shopId),
+          isNotNull(internalNotes.deletedAt),
+        ),
+      )
+      .returning({ id: internalNotes.id });
+    if (!restored) return null;
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: note.tripId,
+      bookingId: note.bookingId,
+      actorPersonId: input.actorPersonId,
+      code: "note_restored",
+      params: { actor: actor, diver: note.diverName },
+      occurredAt: nowDate(),
+    });
+    return { bookingId: note.bookingId };
+  });
+}
 
-/** Delete a person-scoped note; the caller can offer a one-tap undo. */
+/** Delete a person-scoped note, softly; the caller offers a one-tap Undo by id. */
 export async function deleteDiverNote(
   db: AppDb,
   input: { shopId: string; personId: string; noteId: string; actorPersonId: string },
-): Promise<DeleteDiverNoteResult> {
+): Promise<boolean> {
   if (![input.shopId, input.personId, input.noteId, input.actorPersonId].every(isUuid)) {
-    return { deleted: false };
+    return false;
   }
   return db.transaction(async (tx) => {
     const [note] = await tx
-      .select({ body: internalNotes.body, diverName: people.fullName })
+      .select({ diverName: people.fullName })
       .from(internalNotes)
       .innerJoin(people, eq(people.id, internalNotes.personId))
       .where(
@@ -291,26 +348,27 @@ export async function deleteDiverNote(
           eq(internalNotes.shopId, input.shopId),
           eq(internalNotes.personId, input.personId),
           isNull(internalNotes.bookingId),
+          isNull(internalNotes.deletedAt),
         ),
       )
       .limit(1);
-    if (!note) return { deleted: false };
-    const [actor] = await tx
-      .select({ name: people.fullName })
-      .from(people)
-      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
-      .limit(1);
-    if (!actor) return { deleted: false };
-    await tx
-      .delete(internalNotes)
+    if (!note) return false;
+    const actor = await liveActorName(tx, input.shopId, input.actorPersonId);
+    if (!actor) return false;
+    const [deleted] = await tx
+      .update(internalNotes)
+      .set({ deletedAt: nowDate(), deletedByPersonId: input.actorPersonId })
       .where(
         and(
           eq(internalNotes.id, input.noteId),
           eq(internalNotes.shopId, input.shopId),
           eq(internalNotes.personId, input.personId),
           isNull(internalNotes.bookingId),
+          isNull(internalNotes.deletedAt),
         ),
-      );
+      )
+      .returning({ id: internalNotes.id });
+    if (!deleted) return false;
     await tx.insert(activityEvents).values({
       shopId: input.shopId,
       tripId: null,
@@ -318,11 +376,83 @@ export async function deleteDiverNote(
       actorPersonId: input.actorPersonId,
       subjectPersonId: input.personId,
       code: "note_deleted",
-      params: { actor: actor.name, diver: note.diverName },
+      params: { actor, diver: note.diverName },
       occurredAt: nowDate(),
     });
-    return { deleted: true, body: note.body };
+    return true;
   });
+}
+
+/**
+ * The diver record's Undo of a note's delete (issue #3701): the same row back
+ * on this record, found by id among its deleted record notes. False when this
+ * record holds no such deleted note, or the restorer is not a live person of
+ * this shop.
+ */
+export async function restoreDiverNote(
+  db: AppDb,
+  input: { shopId: string; personId: string; noteId: string; actorPersonId: string },
+): Promise<boolean> {
+  if (![input.shopId, input.personId, input.noteId, input.actorPersonId].every(isUuid)) {
+    return false;
+  }
+  return db.transaction(async (tx) => {
+    const [note] = await tx
+      .select({ diverName: people.fullName })
+      .from(internalNotes)
+      .innerJoin(people, eq(people.id, internalNotes.personId))
+      .where(
+        and(
+          eq(internalNotes.id, input.noteId),
+          eq(internalNotes.shopId, input.shopId),
+          eq(internalNotes.personId, input.personId),
+          isNull(internalNotes.bookingId),
+          isNotNull(internalNotes.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!note) return false;
+    const actor = await liveActorName(tx, input.shopId, input.actorPersonId);
+    if (!actor) return false;
+    const [restored] = await tx
+      .update(internalNotes)
+      .set({ deletedAt: null, deletedByPersonId: null })
+      .where(
+        and(
+          eq(internalNotes.id, input.noteId),
+          eq(internalNotes.shopId, input.shopId),
+          eq(internalNotes.personId, input.personId),
+          isNotNull(internalNotes.deletedAt),
+        ),
+      )
+      .returning({ id: internalNotes.id });
+    if (!restored) return false;
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: null,
+      bookingId: null,
+      actorPersonId: input.actorPersonId,
+      subjectPersonId: input.personId,
+      code: "note_restored",
+      params: { actor, diver: note.diverName },
+      occurredAt: nowDate(),
+    });
+    return true;
+  });
+}
+
+/** A live person of this shop's name, for the trail line about their act. */
+async function liveActorName(
+  tx: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<string | null> {
+  const [actor] = await tx
+    .select({ name: people.fullName })
+    .from(people)
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson()))
+    .limit(1);
+  return actor?.name ?? null;
 }
 
 export async function listBookingNotes(db: AppDb, shopId: string, tripId: string) {
@@ -331,7 +461,13 @@ export async function listBookingNotes(db: AppDb, shopId: string, tripId: string
     .from(internalNotes)
     .innerJoin(bookings, eq(bookings.id, internalNotes.bookingId))
     .innerJoin(people, eq(people.id, internalNotes.createdByPersonId))
-    .where(and(eq(internalNotes.shopId, shopId), eq(bookings.tripId, tripId)))
+    .where(
+      and(
+        eq(internalNotes.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        isNull(internalNotes.deletedAt),
+      ),
+    )
     .orderBy(asc(internalNotes.createdAt));
 }
 
@@ -357,7 +493,13 @@ export async function listDiverRecordNotes(db: AppDb, shopId: string, personId: 
     .innerJoin(people, eq(people.id, internalNotes.createdByPersonId))
     .leftJoin(bookings, eq(bookings.id, internalNotes.bookingId))
     .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
-    .where(and(eq(internalNotes.shopId, shopId), eq(internalNotes.personId, personId)))
+    .where(
+      and(
+        eq(internalNotes.shopId, shopId),
+        eq(internalNotes.personId, personId),
+        isNull(internalNotes.deletedAt),
+      ),
+    )
     .orderBy(asc(internalNotes.createdAt));
 }
 
@@ -380,6 +522,7 @@ export async function listDiverNotesForTrip(db: AppDb, shopId: string, tripId: s
       and(
         eq(internalNotes.shopId, shopId),
         isNull(internalNotes.bookingId),
+        isNull(internalNotes.deletedAt),
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
         isNull(bookings.identityUnconfirmedAt),

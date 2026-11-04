@@ -2059,7 +2059,7 @@ async function moveAdmissionRefusal(
     trip: target,
   });
   if (typeRefusal) return { ok: false, reason: "target_unavailable" };
-  // The target session's gates at the sale's strictness, at the staff door,
+  // The target session's gates, the same every door asks, at the staff door,
   // read again rather than trusted from the sale: a card can be revoked since,
   // and age is measured on the day the session runs, so an earlier session of
   // the same course can be one the student is still too young for

@@ -40,7 +40,7 @@ export async function addDiverNoteAction(shopSlug: string, personId: string, for
   revalidatePath(base);
 }
 
-/** Delete a person-scoped note and offer its text back as a one-tap Undo (`src/lib/undo.ts`). */
+/** Delete a person-scoped note, softly, and offer it back by id as a one-tap Undo (`src/lib/undo.ts`). */
 export async function deleteDiverNoteAction(
   shopSlug: string,
   personId: string,
@@ -54,19 +54,20 @@ export async function deleteDiverNoteAction(
   );
   personId = context.personId;
   const { base, db, staff } = context;
-  const result = await deleteDiverNote(db, {
+  const noteId = readForm(noteIdForm, formData).noteId;
+  const deleted = await deleteDiverNote(db, {
     shopId: staff.user.shopId,
     personId,
     actorPersonId: staff.user.personId,
-    noteId: readForm(noteIdForm, formData).noteId,
+    noteId,
   });
   revalidateAndRedirect(
     base,
-    result.deleted
+    deleted
       ? noticeUrl(
           `${base}#notes`,
           "note-deleted",
-          undoParams({ undo: "diver-note", undoPerson: personId, noteBody: result.body }) ?? {},
+          undoParams({ undo: "diver-note", undoPerson: personId, undoNote: noteId }) ?? {},
         )
       : backTo(base, "invalid", "notes"),
   );

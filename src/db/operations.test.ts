@@ -18,6 +18,7 @@ import {
   listTripActivity,
   pagedDiverActivity,
   recordDiverSelfCancel,
+  restoreInternalNote,
 } from "./operations";
 import { activityEvents, bookings, people, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -255,7 +256,7 @@ describe("staff-only operational context", () => {
         noteId: note.id,
         actorPersonId: actor.person.id,
       }),
-    ).resolves.toEqual({ deleted: true, body: "Remove after the trip." });
+    ).resolves.toBe(true);
     expect(await personScopedNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(0);
     expect(
       (await listTripActivity(db, shop.id, trip.id)).some((row) =>
@@ -290,8 +291,7 @@ describe("staff-only operational context", () => {
       }),
     ).resolves.toEqual({
       deleted: true,
-      bookingId: rosterEntry.booking.id,
-      body: "Needs a size-large wetsuit.",
+      noteId: note.id,
     });
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
     expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
@@ -330,17 +330,16 @@ describe("staff-only operational context", () => {
     if (!result.deleted) throw new Error("expected the note to be deleted");
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
 
-    // The restore recreates a *new* note with the deleted one's content — the
-    // old row's id is gone and isn't needed for that.
-    const restored = await addInternalNote(db, {
+    // The delete is soft and its Undo names the note (#3701): the same row
+    // comes back, never a new one written from text a URL carried.
+    expect(result.noteId).toBe(note.id);
+    const restored = await restoreInternalNote(db, {
       shopId: shop.id,
       tripId: trip.id,
-      bookingId: result.bookingId,
+      noteId: result.noteId,
       actorPersonId: actor.person.id,
-      body: result.body,
     });
-    expect(restored).toMatchObject({ body: "Bring a spare mask for their kid." });
-    expect(restored?.id).not.toBe(note.id);
+    expect(restored).toEqual({ bookingId: note.bookingId });
     const notesAfterRestore = await listBookingNotes(db, shop.id, trip.id);
     expect(notesAfterRestore).toHaveLength(1);
     expect(notesAfterRestore[0]?.note.body).toBe("Bring a spare mask for their kid.");
@@ -557,7 +556,7 @@ describe("a diver's own activity trail", () => {
         noteId: note.id,
         actorPersonId: actor.person.id,
       }),
-    ).resolves.toMatchObject({ deleted: true });
+    ).resolves.toBe(true);
     const afterDelete = await pagedDiverActivity(db, shop.id, priya, { pageSize: 100 });
     expect(afterDelete.rows[0]).toMatchObject({
       code: "note_deleted",

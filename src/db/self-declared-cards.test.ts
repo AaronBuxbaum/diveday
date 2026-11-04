@@ -1333,8 +1333,8 @@ describe("reviewCertification on a self-declared card", () => {
     });
     const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
     if (!card) throw new Error("setup: declaration not recorded");
-    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
-
+    const off = { shopId: shop.id, certificationId: card.id, deletedByPersonId: person.id };
+    expect(await deleteCertification(db, off)).toBe(true);
     const outcome = await reviewCertification(db, {
       shopId: shop.id,
       certificationId: card.id,

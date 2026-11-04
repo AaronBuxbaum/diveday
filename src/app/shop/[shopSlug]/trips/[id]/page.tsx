@@ -95,8 +95,7 @@ export default async function ManageTripPage({
       count,
       form,
       gate,
-      noteBookingId,
-      noteBody,
+      noteId,
       confirmName,
       confirmEmail,
       confirmPhone,
@@ -432,10 +431,7 @@ export default async function ManageTripPage({
                 offersHotelPickup: shop.offersHotelPickup,
                 tripNotice,
                 pageNotice: rosterPageNotice,
-                noteDeleted:
-                  noteBookingId && noteBody
-                    ? { bookingId: noteBookingId, body: noteBody }
-                    : undefined,
+                noteDeleted: noteId ? { noteId } : undefined,
                 confirmName,
                 confirmEmail,
                 confirmPhone,

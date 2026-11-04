@@ -1786,6 +1786,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "created_by_person_id",
       "created_by_name",
       "created_at",
+      "deleted_at",
+      "deleted_by_person_id",
     ],
     rows: ({ personName, noteRows }) =>
       noteRows.map((row) => [
@@ -1797,6 +1799,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.createdByPersonId,
         personName.get(row.createdByPersonId),
         row.createdAt,
+        row.deletedAt,
+        row.deletedByPersonId,
       ]),
     note: EXPORT_FILE_NOTES["internal_notes.csv"],
   },

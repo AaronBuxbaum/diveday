@@ -401,8 +401,9 @@ export function trainingDiveRequiredLevel(
  */
 export function trainingDiveSiteRequirement<
   T extends { minimumCertificationLevel: CertificationLevel | null },
->(site: T | null, course: TrainingDiveCourse | null | undefined): T | null {
-  if (!site || !course) return site;
+>(site: T | null | undefined, course: TrainingDiveCourse | null | undefined): T | null {
+  if (!site) return null;
+  if (!course) return site;
   return {
     ...site,
     minimumCertificationLevel: trainingDiveRequiredLevel(site.minimumCertificationLevel, course),

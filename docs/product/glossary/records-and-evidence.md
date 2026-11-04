@@ -232,6 +232,8 @@
   (`undo=diver-card&undoPerson=…`) and posted back unchanged by the toast's Undo or the record's
   restore card to the one `undoAction`. Each kind's inverse is a row of the undo registry
   (`src/app/actions/undo-registry.ts`), never a server action of its own, and re-runs the live
-  gate of the removal it reverses. The kinds and payloads are in `src/lib/undo.ts`. Not a
+  gate of the removal it reverses. The payload carries ids, never record text: a deleted note
+  comes back as the same row, by id (issue #3701). The kinds and payloads are in
+  `src/lib/undo.ts`. Not a
   **held send**: a removal has already happened, and Undo puts it back; a held send has not left
   yet, and Undo stops it.

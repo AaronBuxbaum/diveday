@@ -39,7 +39,7 @@ function picker(page = 1, upcoming: UpcomingTrip[] = [trip], pageCount = 2) {
         cardType: "open-water",
         by: "Staff",
         form: "book",
-        noteBody: "A removed note",
+        undoNote: "33333333-3333-4333-8333-333333333333",
       }}
     />,
   );
@@ -55,7 +55,7 @@ describe("the record's booking continuation", () => {
     expect(url.searchParams.get("bookingPage")).toBe("2");
     expect(url.searchParams.get("activity")).toBe("3");
     expect(url.searchParams.getAll("gate")).toEqual(["signed-gate", "second-gate"]);
-    for (const key of ["notice", "undo", "cardType", "by", "form", "edit", "noteBody"]) {
+    for (const key of ["notice", "undo", "cardType", "by", "form", "edit", "undoNote"]) {
       expect(url.searchParams.has(key)).toBe(false);
     }
     expect(url.hash).toBe("#book-departure");

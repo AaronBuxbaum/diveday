@@ -51,7 +51,7 @@ const advancedSite = site({ minimumCertificationLevel: "advanced_open_water" });
 function markedLevelBlockers(input: {
   trip: CertRequirementSource;
   site: SiteCertRequirement | null;
-  certifications: Certification[];
+  certifications: readonly Certification[];
   course: TrainingDiveCourse;
 }) {
   return calculateReadiness({

@@ -4,6 +4,8 @@
     "counter_check_in_undone": "{diver}’s counter check-in was undone",
     "note_added": "{actor} added a private note about {diver}",
     "note_deleted": "{actor} deleted a private note about {diver}",
+    "note_restored": "{actor} put back a private note about {diver}",
+    "card_restored": "{actor} put back {diver}’s {cardType, select, specialty {specialty certification} nitrox {nitrox certification} other {certification}}",
     "booking_removed": "{actor} removed {diver} from the trip",
     "booking_restored": "{actor} put {diver} back on the trip",
     "booking_no_show": "{actor} marked {diver} as not here, freeing the seat",

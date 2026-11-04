@@ -55,6 +55,14 @@ export const internalNotes = pgTable(
       .notNull()
       .references(() => people.id),
     createdAt: appNowTimestamp("created_at").notNull(),
+    /**
+     * Soft delete (ADR 20260820-every-delete-is-soft; issue #3701): a deleted
+     * note keeps its row, so its Undo names the note by id and never carries
+     * its words in a URL.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** The staffer who deleted it. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
   },
   (table) => [
     index("internal_notes_shop_person_idx").on(table.shopId, table.personId, table.createdAt),
