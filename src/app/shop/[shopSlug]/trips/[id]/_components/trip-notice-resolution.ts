@@ -195,6 +195,21 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.bookingRestoreRatio",
   },
+  "booking-restore-unstaffed": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.bookingRestoreUnstaffed",
+  },
+  "booking-restore-prerequisite": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.bookingRestorePrerequisite",
+  },
+  "booking-restore-min-age": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.bookingRestoreMinAge",
+  },
   "booking-restore-cancelled": {
     form: "roster",
     tone: "danger",

@@ -110,6 +110,9 @@
     "turnAwayNotBlocked": "Nothing stops them boarding now. Check them in instead.",
     "turnAwayReasonNotBlocking": "Their row changed. Choose a reason it shows now.",
     "noShowCourseRatioFull": "That session is at its instructor-to-student ratio, so that diver can’t go back on it. Assign another instructor first.",
+    "noShowCourseUnstaffed": "That session has no instructor, so that diver can’t go back on it. Assign an instructor first.",
+    "noShowCoursePrerequisite": "That diver no longer holds the card this course asks for, so they can’t go back on it.",
+    "noShowCourseMinAge": "That diver is under this course’s minimum age on the day it runs, so they can’t go back on it. Correct the date of birth if it’s wrong.",
     "walkinPartyAdded": "Everyone is on this boat’s list, together. Check them in on their rows.",
     "walkinPartyAddedWaiverUndelivered": "Everyone is on this boat’s list, together, but their releases weren’t emailed. Send them or share the links from their rows below. A parent or legal guardian signs with anyone under 18."
   }

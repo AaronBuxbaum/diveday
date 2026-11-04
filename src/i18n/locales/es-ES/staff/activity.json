@@ -8,7 +8,7 @@
     "booking_restored": "{actor} volvió a poner a {diver} en la salida",
     "booking_no_show": "{actor} marcó que {diver} no se presentó y liberó la plaza",
     "booking_no_show_undone": "{actor} volvió a poner a {diver} en la lista de personas esperadas",
-    "booking_no_show_undo_refused": "{actor} no pudo volver a poner a {diver}: {reason, select, course_ratio_full {la sesión ya estaba en su ratio de instructor} divers_full {ya se habían ocupado todas las plazas de buceo} other {la plaza liberada ya se había vendido}}",
+    "booking_no_show_undo_refused": "{actor} no pudo volver a poner a {diver}: {reason, select, course_ratio_full {la sesión ya estaba en su ratio de instructor} course_unstaffed {la sesión no tenía instructor} course_prerequisite {ya no tenía la certificación que pide el curso} course_min_age {no tenía la edad mínima del curso} divers_full {ya se habían ocupado todas las plazas de buceo} other {la plaza liberada ya se había vendido}}",
     "booking_no_show_boarded": "{actor} embarcó a {diver} en el barco, así que la plaza liberada vuelve a ser suya",
     "booking_no_show_missing_after_dive": "{actor} registró que {diver} no volvió a bordo después de una inmersión, así que la plaza liberada vuelve a ser suya",
     "booking_turned_away": "{actor} atendió a {diver} en el mostrador y no le permitió embarcar: {reason, select, medical {médico} waiver {exención} card {certificación} age {edad} identity {identidad} payment {pago} other {no está listo}}",

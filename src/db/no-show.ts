@@ -1,13 +1,13 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { decideCourseAdmission } from "@/lib/course-admission";
+import type { CourseAdmissionRefusal } from "@/lib/course-admission";
 import { seatName } from "@/lib/held-seat";
 import { type NoShowGate, noShowGate, type SalvageOffer, salvageOffer } from "@/lib/no-show";
 import { isDiver, seatRefusal } from "@/lib/participant-types";
 import { type SimilarDeparture, similarDepartures } from "@/lib/similar-departures";
 import { loadActiveStaffRoles } from "./authz";
-import { readCourseSession } from "./bookings";
+import { courseSeatRefusal } from "./bookings";
 import { expirePendingCheckoutsForBooking } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { departureOpenToDiver } from "./interest-offers";
@@ -65,7 +65,11 @@ export type UndoNoShowOutcome =
         | "trip_full"
         /** The boat has room, but every diver's seat has gone (ADR 20261007-participant-types). */
         | "divers_full"
-        | "course_ratio_full"
+        /**
+         * The course session's own gates, asked again (issues #3769, #3686):
+         * no instructor, the student's card gone, too young, or the ratio full.
+         */
+        | CourseAdmissionRefusal
         | "trip_cancelled"
         /**
          * The desk turned this diver away and the boat's scheduled start has
@@ -283,6 +287,7 @@ export async function undoBookingNoShow(
         tripId: bookings.tripId,
         participantType: bookings.participantType,
         turnedAwayAt: bookings.turnedAwayAt,
+        personId: bookings.personId,
         personName: people.fullName,
       })
       .from(bookings)
@@ -349,7 +354,7 @@ export async function undoBookingNoShow(
      * and history is what the trail is for.
      */
     const refuse = async (
-      reason: "trip_full" | "divers_full" | "course_ratio_full",
+      reason: "trip_full" | "divers_full" | CourseAdmissionRefusal,
     ): Promise<UndoNoShowOutcome> => {
       await tx.insert(activityEvents).values({
         shopId: input.shopId,
@@ -367,18 +372,16 @@ export async function undoBookingNoShow(
     const full = seatRefusal(seat.participantType, { ...trip, capacity }, held);
     if (full) return await refuse(full);
 
-    // A course session's gates at `restore` strictness, the ratio alone, which
+    // A course session's gates, every one the sale asks (issues #3769,
+    // #3686): staffing, the student's card and age, then the ratio, which
     // counts its students, its divers (G5 of #2226): a priced rider beside the
-    // class is a passenger, and a passenger's seat coming back asks no ratio
-    // at all. A ratio-gated session that has since lost its last instructor
-    // caps at zero and refuses too; one with no ratio takes the seat back,
-    // because staffing is a sale's gate, not an undo's (`COURSE_GATES`).
-    const session = await readCourseSession(tx, trip);
-    const courseRefusal = decideCourseAdmission({
-      strictness: "restore",
-      course: session.course,
+    // class is a passenger, asked only staffing. Asked as the staff door asks,
+    // because only staff take a release back.
+    const courseRefusal = await courseSeatRefusal(tx, {
+      trip,
+      actor: "staff",
+      personId: seat.personId,
       student: isDiver(seat.participantType),
-      crew: session.crew,
       studentsHeld: held.divers,
     });
     if (courseRefusal) return await refuse(courseRefusal);

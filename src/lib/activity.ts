@@ -1,3 +1,4 @@
+import type { CourseAdmissionRefusal } from "./course-admission";
 import type { TurnAwayReason } from "./turn-away";
 
 /**
@@ -113,14 +114,16 @@ type ActivityParamShapes = {
    * the attempt to take it back was not, and the shop reconciling the departure
    * afterwards could only see that somebody was written off.
    *
-   * `reason` is which limit refused, because the two ask for different next
-   * acts: a sold seat means find the diver another boat, a full ratio means
-   * find the session another instructor.
+   * `reason` is which limit refused, because each asks for a different next
+   * act: a sold seat means find the diver another boat, a full ratio or an
+   * unstaffed session means find the session an instructor, and a missing
+   * card or an age under the course's means the student cannot take this
+   * session (issues #3769, #3686).
    */
   booking_no_show_undo_refused: {
     actor: string;
     diver: string;
-    reason: "trip_full" | "divers_full" | "course_ratio_full";
+    reason: "trip_full" | "divers_full" | CourseAdmissionRefusal;
   };
   /**
    * A staffer changed what a seated person is doing aboard (ADR

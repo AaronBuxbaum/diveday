@@ -15,7 +15,6 @@ import {
   type CourseAdmissionRule,
   type CourseCrew,
   type CourseDiver,
-  type CourseRestoreRefusal,
   courseStudentCap,
   decideCourseAdmission,
 } from "@/lib/course-admission";
@@ -1092,7 +1091,7 @@ async function createBookingRecord(
   // Enrollment is a diver's (issue #2226): a snorkeler or a rider on a course
   // session is a passenger beside the students, asked none of the card or age
   // gates and counted against none of the ratio.
-  const courseRefusal = await courseSaleRefusal(tx, {
+  const courseRefusal = await courseSeatRefusal(tx, {
     trip,
     actor: req.actor,
     personId: person?.id,
@@ -1519,12 +1518,14 @@ async function resolveBookingPerson(
 type PendingWalkIn = { fullName: string; email: string | null; phone?: string };
 
 /**
- * **A course session's answer for a seat put on it**, a new sale or a staff
- * move alike: the rows read under the caller's trip lock, then
- * `decideCourseAdmission` at `sale` strictness. Null admits, and a departure
- * that is no course session reads nothing past its own trip row.
+ * **A course session's answer for a seat put on it**: a new sale, a staff
+ * move, an undone removal (`restoreBooking`) and an undone no-show
+ * (`undoBookingNoShow`) alike. The rows are read under the caller's trip
+ * lock, then `decideCourseAdmission`, which asks every door every gate
+ * (issues #3769, #3686). Null admits, and a departure that is no course
+ * session reads nothing past its own trip row.
  */
-async function courseSaleRefusal(
+export async function courseSeatRefusal(
   tx: DbExecutor,
   input: {
     trip: { id: string; shopId: string; courseId: string | null; startsAt: Date };
@@ -1542,7 +1543,6 @@ async function courseSaleRefusal(
       ? await readCourseDiver(tx, trip.shopId, actor, session.course, input.personId, trip.startsAt)
       : { diver: null, courseDate: null };
   return decideCourseAdmission({
-    strictness: "sale",
     actor,
     course: session.course,
     student,
@@ -1820,7 +1820,12 @@ export type RestoreBookingOutcome =
   | "trip_cancelled"
   | "already_active"
   | "trip_full"
-  | CourseRestoreRefusal
+  /**
+   * The session's own gates, asked again: since the removal the session can
+   * have lost its last instructor, the student's card can have been revoked,
+   * or a date of birth recorded that the session's day finds too young.
+   */
+  | CourseAdmissionRefusal
   | "date_request_departure_conflict"
   | "date_request_offer_unavailable"
   | "date_request_party_full"
@@ -1856,8 +1861,10 @@ export type RestoreBookingOutcome =
  *   the two errors are not symmetric: an under-listed manifest costs a
  *   search, an over-listed one costs a tap.
  *
- * Capacity and the course ratio still bind in both cases, so a seat that has
- * genuinely been taken is still refused.
+ * Capacity and every course-session gate still bind in both cases, so a seat
+ * that has genuinely been taken is still refused, and so is a student the
+ * session could not sell to now (no instructor, no card, too young; issues
+ * #3769, #3686).
  */
 export async function restoreBooking(
   db: AppDb,
@@ -1913,17 +1920,15 @@ export async function restoreBooking(
     );
     if (full) return full;
 
-    // The course session's gates at `restore` strictness: the crew's ratio
-    // alone, counting students, the divers on the session (issue #2226). A
-    // ratio-gated session that has since lost its last instructor caps at zero
-    // and refuses too; one with no ratio takes the seat back, because staffing
-    // is a sale's gate, not an undo's (`COURSE_GATES`).
-    const session = await readCourseSession(tx, trip);
-    const courseRefusal = decideCourseAdmission({
-      strictness: "restore",
-      course: session.course,
+    // The course session's gates, every one the sale asks (issues #3769,
+    // #3686): staffing, the student's card and age, then the crew's ratio,
+    // counting students, the divers on the session (issue #2226). Asked as
+    // the staff door asks them, because only staff undo a removal.
+    const courseRefusal = await courseSeatRefusal(tx, {
+      trip,
+      actor: "staff",
+      personId: booking.personId,
       student: isDiver(booking.participantType),
-      crew: session.crew,
       studentsHeld: held.divers,
     });
     if (courseRefusal) return courseRefusal;
@@ -2059,7 +2064,7 @@ async function moveAdmissionRefusal(
   // and age is measured on the day the session runs, so an earlier session of
   // the same course can be one the student is still too young for
   // (H-20260724-certification-levels-agency-rules).
-  const courseRefusal = await courseSaleRefusal(tx, {
+  const courseRefusal = await courseSeatRefusal(tx, {
     trip: target,
     actor: "staff",
     personId: booking.personId,
