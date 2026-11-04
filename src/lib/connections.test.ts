@@ -78,18 +78,15 @@ describe("connectionState: stripe", () => {
 });
 
 describe("connectionState: whatsapp", () => {
-  it("is last seen at the test send that proved it", () => {
-    const rows = { ...none, whatsapp: { connectedAt: t0, verifiedAt: t1 } };
-    expect(connectionState("whatsapp", rows)).toEqual({
-      provider: "whatsapp",
-      state: "connected",
-      lastSeenAt: t1,
-    });
-  });
-
-  it("falls back to when it was connected before any test send", () => {
-    const rows = { ...none, whatsapp: { connectedAt: t0, verifiedAt: null } };
-    expect(connectionState("whatsapp", rows).lastSeenAt).toBe(t0);
+  it("is connected with no last seen: nothing records when Meta last answered (#3661)", () => {
+    for (const verifiedAt of [t1, null]) {
+      const rows = { ...none, whatsapp: { connectedAt: t0, verifiedAt } };
+      expect(connectionState("whatsapp", rows)).toEqual({
+        provider: "whatsapp",
+        state: "connected",
+        lastSeenAt: null,
+      });
+    }
   });
 });
 
@@ -155,7 +152,7 @@ describe("connectionState: backups", () => {
 });
 
 describe("connectionState: calendar feeds", () => {
-  it("is connected while any feed is live, seen at the latest fetch of a live feed", () => {
+  it("is connected while any feed is live, with no last seen: a quiet feed is not a broken one (#3661)", () => {
     const rows = {
       ...none,
       calendarFeeds: [
@@ -167,7 +164,7 @@ describe("connectionState: calendar feeds", () => {
     expect(connectionState("calendarFeeds", rows)).toEqual({
       provider: "calendarFeeds",
       state: "connected",
-      lastSeenAt: t1,
+      lastSeenAt: null,
     });
   });
 

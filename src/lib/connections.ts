@@ -109,16 +109,13 @@ export function stripeConnection(row: StripeConnectionRow | null): Connection {
 
 /**
  * WhatsApp. Disconnecting deletes the row (it holds a live credential), so
- * there is no `disconnected` here: no row is `notConnected`. Last seen is the
- * test send that proved it, else the moment it was connected.
+ * there is no `disconnected` here: no row is `notConnected`. There is no "last
+ * seen": nothing records when Meta last answered, and the test send is a moment
+ * the shop did something, not one the connection proved itself (issue #3661).
  */
 export function whatsappConnection(row: WhatsappConnectionRow | null): Connection {
   if (!row) return { provider: "whatsapp", state: "notConnected", lastSeenAt: null };
-  return {
-    provider: "whatsapp",
-    state: "connected",
-    lastSeenAt: row.verifiedAt ?? row.connectedAt,
-  };
+  return { provider: "whatsapp", state: "connected", lastSeenAt: null };
 }
 
 /**
@@ -154,8 +151,9 @@ export function backupsConnection(row: BackupConnectionRow | null): Connection {
 
 /**
  * The staff calendar feeds, read in by calendar apps. Any live feed is
- * `connected`, seen when a calendar last fetched any of them; only revoked
- * feeds is `disconnected`.
+ * `connected`; only revoked feeds is `disconnected`. A live feed has no "last
+ * seen": a calendar app fetches when it likes, and a quiet feed is not a broken
+ * one (issue #3661).
  */
 export function calendarFeedsConnection(rows: readonly CalendarFeedConnectionRow[]): Connection {
   const live = rows.filter((row) => !row.revokedAt);
@@ -163,7 +161,7 @@ export function calendarFeedsConnection(rows: readonly CalendarFeedConnectionRow
     return {
       provider: "calendarFeeds",
       state: "connected",
-      lastSeenAt: latest(...live.map((row) => row.lastAccessedAt)),
+      lastSeenAt: null,
     };
   }
   const lastRevoke = latest(...rows.map((row) => row.revokedAt));
