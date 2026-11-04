@@ -1001,7 +1001,7 @@ async function countPaidAfterCloseRefund(
  */
 async function refundedTotalNetOfLaterFailures(
   db: DbExecutor,
-  target: { orderId: string } | { checkoutId: string },
+  target: { checkoutId: string },
   input: Pick<ExternalRefundInput, "amountRefundedCents" | "occurredAt">,
 ): Promise<number> {
   const [failures] = await db
@@ -1009,9 +1009,7 @@ async function refundedTotalNetOfLaterFailures(
     .from(stripeRefundFailures)
     .where(
       and(
-        "orderId" in target
-          ? eq(stripeRefundFailures.orderId, target.orderId)
-          : eq(stripeRefundFailures.checkoutId, target.checkoutId),
+        eq(stripeRefundFailures.checkoutId, target.checkoutId),
         gt(stripeRefundFailures.failedAt, input.occurredAt),
       ),
     );
@@ -1040,10 +1038,12 @@ async function applyStripeChargeRefund(
     if (await ownRefundInFlight(db, order.shopId, { orderId: order.id }, staleBefore)) {
       return { status: "deferred" };
     }
+    // Failures since the event's instant come off under the order's lock.
     const outcome = await applyStripeRefundedTotalToOrder(
       db,
       order,
-      await refundedTotalNetOfLaterFailures(db, { orderId: order.id }, input),
+      input.amountRefundedCents,
+      input.occurredAt,
     );
     if (outcome.status === "refunded") return { status: "order_refunded", order: outcome.order };
     if (outcome.status === "not_settled") return { status: "deferred" };

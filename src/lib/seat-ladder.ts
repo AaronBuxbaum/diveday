@@ -209,10 +209,16 @@ export function joinedAtADiveSite(ladder: SeatLadder, dockResult: DepartureRollC
 
 /**
  * **Left at the dock**, for the diver's own page and the recap: the crew wrote
- * `not_boarded` at the dock and no crew count since put them on a boat. The
- * ladder's reading of `bookingsLeftAtTheDock` (src/db/recap.ts), so the record,
- * the ladder and the recap give one answer for the same seat.
+ * `not_boarded` at the dock and no crew count since put them on a boat, by an
+ * after-dive `boarded` at any checkpoint (`bookingsLeftAtTheDock`,
+ * src/db/recap.ts). Not the rung: a chase-boat diver counted aboard after dive
+ * one and said not back after dive two is `missing` by the rung, and was on
+ * the water, so her recap waits on the missing word rather than closing as a
+ * day on land (review of #3823).
  */
-export function leftAtTheDock(ladder: SeatLadder, dockResult: DepartureRollCall): boolean {
-  return dockResult === "not_boarded" && !joinedAtADiveSite(ladder, dockResult);
+export function leftAtTheDock(input: {
+  dockResult: DepartureRollCall;
+  countedAboardAfterDive: boolean;
+}): boolean {
+  return input.dockResult === "not_boarded" && !input.countedAboardAfterDive;
 }

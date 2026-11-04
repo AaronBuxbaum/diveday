@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gt, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
 import { nowDate } from "@/lib/clock";
 import type { IdentityMatchKind } from "@/lib/identity-match";
-import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import { OFFLINE_EVENT_SKEW_MS, offlineEventOutOfBounds } from "@/lib/offline-events";
 import { arrivalsWindow } from "@/lib/operational-window";
 import { hasArrived, type StandingArrival } from "@/lib/presence";
 import { priorVisitStanding } from "@/lib/prior-visits";
@@ -562,8 +562,17 @@ function offlineTapAboutAnotherSeatOrDay(
   booking: { claimedAt: Date | null; seatReopenedAt: Date | null; tripStartsAt: Date },
   input: { occurredAt?: Date; offlineSnapshotSavedAt?: Date },
 ): boolean {
+  // `savedAt` is the tablet's clock, which the sync lets run up to the skew
+  // ahead of ours: a copy counts as saved after a change only when it was
+  // saved more than that after it, so a fast tablet cannot slip a tap from a
+  // copy older than the change past this check. A slow one may see a fresh
+  // tap refused, and the desk taps again live.
   for (const changedAt of [booking.claimedAt, booking.seatReopenedAt]) {
-    if (changedAt && (!input.offlineSnapshotSavedAt || changedAt > input.offlineSnapshotSavedAt)) {
+    if (
+      changedAt &&
+      (!input.offlineSnapshotSavedAt ||
+        changedAt.getTime() > input.offlineSnapshotSavedAt.getTime() - OFFLINE_EVENT_SKEW_MS)
+    ) {
       return true;
     }
   }

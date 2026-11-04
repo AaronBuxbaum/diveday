@@ -161,4 +161,35 @@ describe("a fare refund event delivered after its failure", () => {
     const [after] = await db.select().from(orders).where(eq(orders.id, order.id));
     expect(after?.refundedCents).toBe(20_000);
   });
+  it("nets off a failure delivered before the refund it undoes", async () => {
+    const { db, order } = await paidOrder();
+    const refundedAt = new Date(nowDate().getTime() - 10 * MINUTE);
+    // A dashboard refund DiveDay has not counted yet fails first.
+    expect(
+      await recordStripeRefundFailure(db, {
+        stripeAccountId: "acct_test",
+        paymentIntentId: "pi_order_late",
+        refund: {
+          id: "re_dashboard",
+          amountCents: 20_000,
+          currency: "usd",
+          status: "failed",
+          failureReason: "expired_or_canceled_card",
+        },
+        occurredAt: nowDate(),
+      }),
+    ).toEqual({ status: "not_recorded" });
+
+    const late = await recordStripeChargeRefund(db, {
+      stripeAccountId: "acct_test",
+      paymentIntentId: "pi_order_late",
+      amountRefundedCents: 20_000,
+      chargeId: "ch_order_late",
+      occurredAt: refundedAt,
+    });
+
+    expect(late.status).toBe("already_recorded");
+    const [after] = await db.select().from(orders).where(eq(orders.id, order.id));
+    expect(after).toMatchObject({ status: "paid", amountPaidCents: 20_000, refundedCents: 0 });
+  });
 });

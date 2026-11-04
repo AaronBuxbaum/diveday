@@ -15,7 +15,9 @@ import type { ReadinessByBooking, RosterEntry, WaiverByBooking } from "./types";
 const t = staffTranslator("en-US");
 
 const DOCK = [null, "boarded", "not_boarded"] as const;
-const AFTER = ["none", "back", "missing"] as const;
+// After-dive words: none; counted back; said not back and never counted;
+// counted back after one dive and said not back after the next.
+const AFTER = ["none", "back", "missing", "backThenMissing"] as const;
 
 function seat(id: string, noShow: boolean): RosterEntry {
   return {
@@ -80,7 +82,7 @@ describe("record, seat ladder and recap agree", () => {
       arrived: false,
       dockResult: c.dock,
       afterDiveResultStands: c.after !== "none",
-      missingAfterDive: c.after === "missing",
+      missingAfterDive: c.after === "missing" || c.after === "backThenMissing",
     };
     const ladder = readSeatLadder(records);
     const groups = groupRoster({
@@ -99,7 +101,7 @@ describe("record, seat ladder and recap agree", () => {
         dock: new Map(c.dock ? [[id, c.dock]] : []),
         afterDive: new Set(c.after === "none" ? [] : [id]),
         rollCallTaken: c.rollCallTaken,
-        unaccounted: new Set(c.after === "missing" ? [id] : []),
+        unaccounted: new Set(c.after === "missing" || c.after === "backThenMissing" ? [id] : []),
         countedAboardBlocked: new Map<string, CountedAboardBlocked>(),
       },
     });
@@ -116,12 +118,16 @@ describe("record, seat ladder and recap agree", () => {
     }
 
     // The recap and the diver's page: left at the dock exactly when the dock
-    // said not_boarded and the ladder puts nobody on a boat since.
-    const left = leftAtTheDock(ladder, c.dock);
-    expect(left).toBe(c.dock === "not_boarded" && ladder.rung !== "out");
+    // said not_boarded and no after-dive count put them on a boat since.
+    const countedAboardAfterDive = c.after === "back" || c.after === "backThenMissing";
+    const left = leftAtTheDock({ dockResult: c.dock, countedAboardAfterDive });
+    expect(left).toBe(c.dock === "not_boarded" && !countedAboardAfterDive);
     // A seat filed as dived (Sailed or Joined at a dive site) is never told it
     // stayed ashore, and one filed Didn't sail by the dock is never welcomed back.
     if (band === "sailed" || band === "joinedAtSite") expect(left).toBe(false);
+    // A diver who was on the water and is now missing is never closed out as
+    // a day on land: the recap waits on the missing word instead.
+    if (band === "unaccounted" && c.after === "backThenMissing") expect(left).toBe(false);
     if (band === "didNotSail" && c.dock === "not_boarded") {
       expect(left).toBe(true);
       expect(
