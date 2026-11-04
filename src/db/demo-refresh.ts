@@ -28,7 +28,7 @@ import { liveTrip } from "./trips-live";
  * So the demo has a shelf life. Roughly two months after a database is created,
  * the last seeded departure sails, `upcomingScheduleRange` comes back empty, and
  * `/s/blue-mantis` renders "No trips on the books yet" — which is where the
- * homepage's "See a diver's booking page" link lands a visitor (`src/app/page.tsx`,
+ * homepage's "See a diver's booking page" link lands a visitor (`src/app/(marketing)/page.tsx`,
  * `scheduleAttributionHref`). The staff half of the demo never showed this
  * because "Try the live demo" mints a *fresh* shop per visitor (ADR
  * 20260724-per-visitor-demo-shops); only the canonical fixture ages, and it is

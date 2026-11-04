@@ -87,7 +87,7 @@ describe("a scoped translator, whose call sites write a relative key", () => {
 
 describe("a key assembled at runtime is declined, never reported", () => {
   it("collects the static head of an interpolated translator call", () => {
-    // src/app/switching/_components/guide.tsx — the key cannot be enumerated,
+    // src/app/(marketing)/switching/_components/guide.tsx — the key cannot be enumerated,
     // so every key under the head is treated as reached.
     expect(prefixes(`t(\`switching.common.facts.\${fact}.label\`)`)).toContain(
       "switching.common.facts.",

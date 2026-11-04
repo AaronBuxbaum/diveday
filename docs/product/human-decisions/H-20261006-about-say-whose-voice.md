@@ -13,6 +13,6 @@ Which section stays, what the rest says, and whether the page may speak in gener
 
 ## Unblocks / follow-up
 
-The hero keeps the Lonergan story within its limits, its tie to the product in the plural, and no heading over it (the eyebrow is the h1). Every band under it speaks as the company in plain statements: who builds it, in generalities true of them; the four standards every screen is held to; how a shop gets set up and who answers; the demo. No individual named, no CV, no concessions band. The biography rule and the voice move in [marketing.md](../marketing.md) and [design/brand.md](../../design/brand.md) ("The about page"); `src/app/about/copy.test.ts` and `e2e/marketing.spec.ts` hold the new pins.
+The hero keeps the Lonergan story within its limits, its tie to the product in the plural, and no heading over it (the eyebrow is the h1). Every band under it speaks as the company in plain statements: who builds it, in generalities true of them; the four standards every screen is held to; how a shop gets set up and who answers; the demo. No individual named, no CV, no concessions band. The biography rule and the voice move in [marketing.md](../marketing.md) and [design/brand.md](../../design/brand.md) ("The about page"); `src/app/(marketing)/about/copy.test.ts` and `e2e/marketing.spec.ts` hold the new pins.
 
 Part of the [human decision log](README.md#decision-register).

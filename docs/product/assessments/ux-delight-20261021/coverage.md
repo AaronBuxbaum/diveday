@@ -159,7 +159,7 @@ seeded identifiers, not capability tokens.
 
 ## Route inventory
 
-- `src/app/about/page.tsx`
+- `src/app/(marketing)/about/page.tsx`
 - `src/app/(token)/claim/[token]/page.tsx`
 - `src/app/(token)/confirm-contact/[token]/page.tsx`
 - `src/app/find-your-booking/page.tsx`
@@ -170,10 +170,10 @@ seeded identifiers, not capability tokens.
 - `src/app/offline-manifest/page.tsx`
 - `src/app/onboard/page.tsx`
 - `src/app/page.tsx`
-- `src/app/pricing/page.tsx`
-- `src/app/privacy/page.tsx`
-- `src/app/product/[feature]/page.tsx`
-- `src/app/product/page.tsx`
+- `src/app/(marketing)/pricing/page.tsx`
+- `src/app/(marketing)/privacy/page.tsx`
+- `src/app/(marketing)/product/[feature]/page.tsx`
+- `src/app/(marketing)/product/page.tsx`
 - `src/app/(token)/ready/[token]/forms/page.tsx`
 - `src/app/(token)/ready/[token]/page.tsx`
 - `src/app/(token)/recap/[token]/page.tsx`
@@ -258,11 +258,11 @@ seeded identifiers, not capability tokens.
 - `src/app/shop/[shopSlug]/trips/[id]/print/page.tsx`
 - `src/app/shop/[shopSlug]/waivers/page.tsx`
 - `src/app/sign-in/page.tsx`
-- `src/app/status/page.tsx`
-- `src/app/switching/[competitor]/page.tsx`
-- `src/app/switching/page.tsx`
-- `src/app/switching/spreadsheet/page.tsx`
-- `src/app/terms/page.tsx`
+- `src/app/(marketing)/status/page.tsx`
+- `src/app/(marketing)/switching/[competitor]/page.tsx`
+- `src/app/(marketing)/switching/page.tsx`
+- `src/app/(marketing)/switching/spreadsheet/page.tsx`
+- `src/app/(marketing)/terms/page.tsx`
 - `src/app/(token)/unsubscribe/[token]/page.tsx`
 - `src/app/(token)/verify/[token]/page.tsx`
 - `src/app/(token)/waivers/[token]/doctor/page.tsx`

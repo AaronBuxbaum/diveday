@@ -34,7 +34,7 @@ and listed the rest in a closed index on `/product`.
   payments. The list, its order, and each page's demo role, landing screen and three related pages
   are one registry, `src/lib/feature-pages.ts`. An unknown slug is refused at the edge
   (`src/lib/public-route-shape.ts`), and the sitemap lists all twelve.
-- **One template**, `src/app/product/_components/FeaturePageBody.tsx`: the hero says what the shop
+- **One template**, `src/app/(marketing)/product/_components/FeaturePageBody.tsx`: the hero says what the shop
   gets in one sentence of lede beside the screen that proves it, with three builder's notes, and
   the price under its doors; then how it works in three steps; then everything the feature
   includes, which is that feature's whole group of `productCapabilityIndex`, and the plan's terms beside it (the flat price, and the
@@ -56,7 +56,7 @@ and listed the rest in a closed index on `/product`.
   in the registry's order, plus the groups only the hub lists (divers, the shop, records). A
   shipped workflow joins the group of the page a buyer would look for it on, and a feature page's
   checklist is its group, whole.
-- **The homepage follows one booking** (`src/app/page.tsx`). The title says what the shop gets
+- **The homepage follows one booking** (`src/app/(marketing)/page.tsx`). The title says what the shop gets
   ("Every diver booked, signed, checked and accounted for") and the lede says what DiveDay is: the
   journey from online booking to dock readiness. Then five steps in the order a diver meets the shop:
   book, sign the release and medical form, the morning check, the roll call, and the recap. Each is
@@ -268,7 +268,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   their careers on software that millions of people rely on, and who dive), speaks in the company's
   plural throughout, including the hero's tie to the product ("That story is why we built
   DiveDay"), and no longer carries the concessions band. The Lonergan section and its limits are
-  unchanged. `src/app/about/copy.test.ts` refuses a named individual, a first-person singular, and
+  unchanged. `src/app/(marketing)/about/copy.test.ts` refuses a named individual, a first-person singular, and
   the prevention claim in both locales.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
   factually. Prefer contrasting with the *buyer's fear* (setup fees, add-on stacks, export limits)
@@ -292,7 +292,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   every sentence that shows the price must carry `{price}` and `{cadence}`. H-20260724-public-founding-shop-price also closed two
   commercial terms, now published as
   founding-shop claims (the price hero's "What the price covers" list + FAQ in
-  `src/app/pricing/page.tsx`, the home and product heroes plus the home closing
+  `src/app/(marketing)/pricing/page.tsx`, the home and product heroes plus the home closing
   band, all sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
   two years for the founding cohort** and **founder-direct support** for the founding cohort.
   **H-20260802-what-game-is-this (2026-08-02) confirmed DiveDay's posture is deliberately lifestyle-scale, not
@@ -367,7 +367,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   and the export is one button."** — the plan terms printed six inches beneath it, and the export
   the rules band dares the reader to go and run. `/about`'s headings are the only part of that page
   a skimmer reads, so one that argues nothing costs the band it stands over.
-  `src/app/about/copy.test.ts` makes the test mechanical for that heading: some clause of it has to
+  `src/app/(marketing)/about/copy.test.ts` makes the test mechanical for that heading: some clause of it has to
   appear in the band's own published prose, which no metaphor can satisfy.
   **Since 2026-09-24 (H-20260903-voice-public-pages-speak) `/about` is written as speech**, and every heading on it is the shop
   owner's question repeated back without a mark. **Since the 2026-10-06 rewrite** (Aaron: "I don't
@@ -815,7 +815,7 @@ rendered through the shared wrappers in `src/components/MarketingSections.tsx`:
 
 The nine feature-page screens live in `src/components/MarketingFeatureScreens.tsx`, the rest in
 `src/components/MarketingScreenFallbacks.tsx`; a feature page names its screen in the registry
-(`src/lib/feature-pages.ts`), and the homepage's steps name theirs in `STEPS` (`src/app/page.tsx`).
+(`src/lib/feature-pages.ts`), and the homepage's steps name theirs in `STEPS` (`src/app/(marketing)/page.tsx`).
 
 **A mockup is a claim, so it mirrors a real screen element for element.**
 `ImportPreviewFallback` exists because "we show you exactly what comes across" was the switching
@@ -928,7 +928,7 @@ Revisit the band when the page-level `demo_entered`/`setup_requested` pairs (`ho
 `home-closing`) have numbers.
 
 **`SectionMarker` is deliberately page-local.** The homepage's kicker — a short sentence-case label
-with a hairline rule running out to the edge of its column — lives in `src/app/page.tsx` rather than
+with a hairline rule running out to the edge of its column — lives in `src/app/(marketing)/page.tsx` rather than
 beside `MarketingMockup` and `FeatureDirectory` in `src/components/MarketingSections.tsx`, and that
 is a decision rather than an oversight. It was reviewed on 2026-08-14, after the product-page and
 switching-guide redesigns that made the shared file untouchable had both merged: the homepage is
@@ -963,13 +963,13 @@ structure* live; none of them may contain an English sentence:
 | Mid-season cutover claim shared by home + the guides | `src/lib/marketing.ts` (`midSeasonCutover`) | `marketing.guides.shared.cutover.*` in the bundles |
 | Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
 | Capability index on `/product`, one group per feature page | `src/lib/marketing.ts` (`productCapabilityIndex`, `capabilityGroup()`) | `marketing.capabilities.*` in the bundles; a feature page's group is titled by its `name` |
-| The twelve feature pages | `src/lib/feature-pages.ts` (slugs, demo role and landing, related pages, screen); one template in `src/app/product/_components/FeaturePageBody.tsx` | `marketing.featurePages.<page>.*` for each page's words, `marketing.featureChrome.*` for the template's own |
+| The twelve feature pages | `src/lib/feature-pages.ts` (slugs, demo role and landing, related pages, screen); one template in `src/app/(marketing)/product/_components/FeaturePageBody.tsx` | `marketing.featurePages.<page>.*` for each page's words, `marketing.featureChrome.*` for the template's own |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) | `marketing.home/product/pricing.*` in the bundles |
 | Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` | `account.onboard.*` in the bundles |
-| Why DiveDay exists, who builds it, and how a shop gets set up | `src/app/about/page.tsx` | `marketing.about.*` in the bundles |
+| Why DiveDay exists, who builds it, and how a shop gets set up | `src/app/(marketing)/about/page.tsx` | `marketing.about.*` in the bundles |
 | Mockup copy | `src/components/MarketingScreenFallbacks.tsx`, and the feature pages' screens in `src/components/MarketingFeatureScreens.tsx` | `fallback.*` in the bundles |
 | Nav / footer | `src/components/MarketingNavView.tsx` / `MarketingFooter.tsx` | `nav.*` in the bundles |
-| Switching-guide content (per incumbent) | `src/lib/migration-guides.ts` (key registry; slugs, URLs, source citations); pages in `src/app/switching/` | `marketing.guides.*` in the bundles |
+| Switching-guide content (per incumbent) | `src/lib/migration-guides.ts` (key registry; slugs, URLs, source citations); pages in `src/app/(marketing)/switching/` | `marketing.guides.*` in the bundles |
 
 A claim used on more than one page belongs in `src/lib/marketing.ts` as a shared *key*, not
 copy-pasted. The key-registry files hard-fail `pnpm check:domain-strings` on any unexempted

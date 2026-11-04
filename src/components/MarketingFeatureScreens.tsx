@@ -34,7 +34,7 @@ import {
 } from "./MarketingScreenFallbacks";
 
 /**
- * The feature pages' screens (`src/app/product/_components/FeatureScreen.tsx`),
+ * The feature pages' screens (`src/app/(marketing)/product/_components/FeatureScreen.tsx`),
  * one per page, in the same family as `MarketingScreenFallbacks.tsx`: the
  * shop's bar, a body on the bar's 20px inset, and buttons on the 44px rung.
  *
