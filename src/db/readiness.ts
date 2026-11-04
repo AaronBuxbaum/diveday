@@ -6,6 +6,7 @@ import { nowDate } from "@/lib/clock";
 import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
 import { type BookingAdvisory, depthFinding } from "@/lib/findings";
+import { guardianSignatureMissing } from "@/lib/guardian";
 import { type CourseSeatInTraining, courseEndedBefore, inTrainingBefore } from "@/lib/in-training";
 import {
   isDiver,
@@ -38,12 +39,14 @@ import {
 } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
 import {
+  bookingRecordLapsed,
   effectiveReleaseForRiderSeat,
   effectiveWaiverForBooking,
   overriddenReferral,
   overriddenRefusal,
   releaseLapseForBooking,
   riderMedicalHold,
+  seatWaiverStanding,
   waiverClockInstant,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
@@ -1680,7 +1683,17 @@ function seatRelease(input: {
     heldToMedical ? effectiveWaiverForBooking : effectiveReleaseForRiderSeat
   )({ ...input, now: waiverNow });
   const releaseLapse = releaseLapseForBooking({ ...input, heldToMedical });
-  return { effectiveWaiver, releaseLapse };
+  // The seat's own record read at the same waiver clock, for the roster's word
+  // on a retired refusal's fresh release (`seatWaiverStanding`, issue #3775).
+  const ownLapsed = input.bookingWaiver
+    ? bookingRecordLapsed(
+        input.bookingWaiver,
+        input.currentTemplateVersion,
+        waiverNow,
+        heldToMedical,
+      )
+    : false;
+  return { effectiveWaiver, releaseLapse, ownLapsed };
 }
 
 /**
@@ -1921,7 +1934,7 @@ export async function listTripsReadiness(
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
       : null;
 
-    const { effectiveWaiver, releaseLapse } = seatRelease({
+    const { effectiveWaiver, releaseLapse, ownLapsed } = seatRelease({
       booking: row.booking,
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
@@ -1970,6 +1983,27 @@ export async function listTripsReadiness(
         : [],
       bookingWaiver: row.waiver,
       waiver: effectiveWaiver,
+      /**
+       * Where the seat's waiver stands, in the one word list, for the roster
+       * (issue #3775): `lapsed` and `guardian_missing` as the diver record says
+       * them, and the desk's next step on a retired refusal. A word only; the
+       * blockers above are the gate.
+       */
+      seatWaiver: seatWaiverStanding({
+        effective: effectiveWaiver,
+        own: row.waiver,
+        releaseLapse,
+        guardianMissing: Boolean(
+          effectiveWaiver &&
+            guardianSignatureMissing(effectiveWaiver, {
+              dateOfBirth: row.person.dateOfBirth,
+              minorDeclared: minorDeclaredOf(row.booking, trainingMark),
+              timezone,
+            }),
+        ),
+        ownLapsed,
+        now,
+      }),
       // Carried on the row because the manifest needs it and only this function
       // holds both halves — the governing record and the diver's whole signed
       // history. Deriving it a second time downstream from one of the two would

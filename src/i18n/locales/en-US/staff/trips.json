@@ -670,6 +670,8 @@
     "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file.",
     "viewReferral": "View the referral",
     "waiverColumnHeading": "Waiver",
+    "waiverLapsed": "Needs signing again",
+    "waiverGuardianMissing": "Guardian signature missing",
     "waiverLinkExpired": "Link expired",
     "waiverMedicalReview": "Medical review",
     "waiverMedicalNotCleared": "Not cleared",

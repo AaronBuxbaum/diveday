@@ -895,6 +895,69 @@ export function waiverStanding(
   return record.expiresAt <= now ? "link_expired" : "awaiting_signature";
 }
 
+/**
+ * **What one seat's waiver stands at, in the one word list** (issue #3775).
+ *
+ * {@link waiverStanding} reads one record, so a seat read through it alone
+ * cannot say what the diver record says: a release the diver signed and
+ * outlived reads `none` ("Send waiver") where the diver record reads `lapsed`,
+ * and a minor's solo signature reads `signed` beside the guardian blocker. This
+ * is the seat's own reading, over what the readiness engine already resolved
+ * for it (`effectiveWaiverForBooking` / `effectiveReleaseForRiderSeat`,
+ * `releaseLapseForBooking`, the guardian rule), so the roster and the diver
+ * record name the same standing. It changes no blocker: readiness is the gate,
+ * and this is only the word and the desk's next step.
+ *
+ * - `standing`: the seat's word. A refusal a staffer retired
+ *   (`retireMedicalRefusal`) still governs the seat, so it stays
+ *   `medical_not_cleared`.
+ * - `control`: the word the desk's **next step** reads. It is `standing`,
+ *   except on a retired refusal, where it speaks for the fresh release the seat
+ *   now carries (sent, expired, signed against terms the shop has since
+ *   changed, or not yet) so a refusal-then-re-sign never leaves the desk with
+ *   nothing to do.
+ * - `refusalRetired`: the physician's "no" is on a record a fresh link
+ *   replaced.
+ */
+export type SeatWaiverStanding = {
+  standing: WaiverStanding;
+  control: WaiverStanding;
+  refusalRetired: boolean;
+};
+
+export function seatWaiverStanding(input: {
+  /** The release the seat stands on, as the readiness engine resolved it. */
+  effective: WaiverRecord | null;
+  /** The seat's own current record: the link the desk's next step would resend. */
+  own: WaiverRecord | null;
+  /** {@link releaseLapseForBooking}'s answer for the seat. */
+  releaseLapse: ReleaseLapse | null;
+  /** {@link guardianSignatureMissing} over `effective`, for the diver as the seat sees them. */
+  guardianMissing: boolean;
+  /** {@link bookingRecordLapsed} over `own`, at the seat's waiver clock. */
+  ownLapsed: boolean;
+  now?: Date;
+}): SeatWaiverStanding {
+  const now = input.now ?? nowDate();
+  const word = waiverStanding(input.effective, now);
+  const refusalRetired = word === "medical_not_cleared" && Boolean(input.effective?.supersededAt);
+  if (refusalRetired) {
+    const own = waiverStanding(input.own, now);
+    return {
+      standing: word,
+      control: own === "signed" && input.ownLapsed ? "lapsed" : own,
+      refusalRetired,
+    };
+  }
+  const standing: WaiverStanding =
+    word === "none" && input.releaseLapse
+      ? "lapsed"
+      : word === "signed" && input.guardianMissing
+        ? "guardian_missing"
+        : word;
+  return { standing, control: standing, refusalRetired };
+}
+
 export type MedicalWaiverMark = {
   at: Date;
   /**
