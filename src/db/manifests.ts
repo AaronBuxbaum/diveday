@@ -209,7 +209,7 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
  * The latest per-person crew roll-call result for one trip, keyed
  * `checkpoint\u0000personId`. Same "newest `occurredAt`, then `createdAt`"
  * supersession and the same "a latest `cleared` reads as no result" undo
- * semantics as `listLatestRollCallByBooking` — one rule for both subject kinds
+ * semantics as `listLatestRollCallsByCheckpoint` — one rule for both subject kinds
  * (ADR 20260803-per-person-crew-roll-call).
  */
 async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string) {
@@ -308,7 +308,7 @@ async function listLatestRollCallsByCheckpoint(
  *
  * - **Latest event wins, not latest `boarded` event.** A later `cleared` is
  *   staff undoing a mistake, so it drops the diver back out — the same
- *   semantics `listLatestRollCallByBooking` applies.
+ *   semantics `listLatestRollCallsByCheckpoint` applies.
  * - **A cancelled booking is nobody.** A seat pulled or refunded after the
  *   count keeps its roll-call row; without the join that stale "boarded" still
  *   counted, while `booked` (upcomingTripsWithCounts) had already dropped it —

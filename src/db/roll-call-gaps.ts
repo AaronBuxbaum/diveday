@@ -208,7 +208,7 @@ export type OpenRollCall = {
  * - the roster is the manifest's roster — every booking that is not cancelled;
  * - a diver's result at a checkpoint is their *latest* event there, and a
  *   latest `cleared` is an undo that returns them to awaiting
- *   (`listLatestRollCallByBooking`, src/db/manifests.ts);
+ *   (`listLatestRollCallsByCheckpoint`, src/db/manifests.ts);
  * - a trip still underway raises only a checkpoint that was **started and
  *   abandoned** (at least one result and at least one diver still awaiting).
  *   A four-hour two-tank runs dive one's count about ninety minutes in; if the
