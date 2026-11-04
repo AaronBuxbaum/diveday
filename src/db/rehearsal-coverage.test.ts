@@ -198,12 +198,13 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
     file: "src/db/notifications.ts",
     holds: "notificationHeldBeforeSend(",
     times: 3,
-    why: "every email — the single send, the batch, the retry drain — passes the send holds",
+    why: "every email — the single send, the batch, the retry drain — asks the one door that holds a rehearsal",
   },
   {
     file: "src/db/send-holds.ts",
     holds: "notificationHeldForRehearsal(",
-    why: "the send holds include the rehearsal hold",
+    times: 1,
+    why: "the one door asks the rehearsal check first",
   },
   {
     file: "src/db/waiver-issue.ts",
@@ -255,7 +256,7 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
  * message never leaves through it.
  */
 const HELD_AT_CHOKEPOINT =
-  "email through `sendNotification`, held by `notificationHeldForRehearsal`";
+  "email through `sendNotification`, held by `notificationHeldBeforeSend`, which asks `notificationHeldForRehearsal`";
 const NOT_ABOUT_A_DEPARTURE = "never about a departure";
 const SENDERS: Record<string, string> = {
   "src/lib/notifications/courtesy.ts": "the SMS/WhatsApp primitive; its callers are listed here",
