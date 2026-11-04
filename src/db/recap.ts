@@ -193,7 +193,7 @@ export type RecapPageData = {
    */
   course: {
     title: string;
-    nextStep: { words: string; byName: string } | null;
+    nextStep: { words: string; byName: string | null } | null;
     certification: { level: CertificationLevel; issuedAt: Date } | null;
   } | null;
   trip: {
@@ -876,7 +876,7 @@ async function loadRecapPageData(
     // there are words: an author with nothing under it renders nothing.
     row.courseNextStep && row.courseNextStepByPersonId
       ? db
-          .select({ fullName: people.fullName })
+          .select({ publicName: people.crewPublicName, consentAt: people.crewPublicConsentAt })
           .from(people)
           // diveday:allow-deleted-people: the name of who wrote the course's next step.
           .where(and(eq(people.id, row.courseNextStepByPersonId), eq(people.shopId, row.shopId)))
@@ -988,7 +988,12 @@ async function loadRecapPageData(
 
   const sessionCertification = sessionCertifications[0] ?? null;
   const nextStepWords = row.courseNextStep?.trim() || null;
-  const nextStepAuthor = nextStepAuthors[0]?.fullName?.trim() || null;
+  // Signed as `/ready` signs it (`courseNextStepForBooking`): the crew public
+  // name the instructor consented to show divers, never `full_name`. No
+  // consent keeps the words and drops the name.
+  const nextStepAuthorRow = nextStepAuthors[0];
+  const nextStepAuthor =
+    (nextStepAuthorRow?.consentAt && nextStepAuthorRow.publicName?.trim()) || null;
 
   const data: Omit<RecapPageData, "tip"> = {
     shop: {
@@ -1012,8 +1017,10 @@ async function loadRecapPageData(
     course: trip.course
       ? {
           title: trip.course.title,
+          // An author this shop does not hold gives no note at all, as on
+          // `/ready`: the words only stand under one of its own people.
           nextStep:
-            nextStepWords && nextStepAuthor
+            nextStepWords && nextStepAuthorRow
               ? { words: nextStepWords, byName: nextStepAuthor }
               : null,
           certification:
