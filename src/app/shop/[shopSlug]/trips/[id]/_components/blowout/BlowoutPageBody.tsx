@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
@@ -75,6 +74,7 @@ export async function BlowoutPageBody({
       // as a secondary button, where it competed with the one act on the page
       // (principle 10, issue #823).
       eyebrow={t("trips.surfaces.trip")}
+      returnTo={shopPath(shopSlug, "trips", tripId)}
       title={t(blowoutTitleKey(blowout))}
       meta={
         <div className="flex flex-col gap-1 text-sm text-muted">
@@ -139,7 +139,7 @@ export async function BlowoutPageBody({
   );
 
   return (
-    <StaffPage width="full">
+    <div>
       <FlashParams params={["notice"]} />
       {header}
       <div className="mt-6">
@@ -202,6 +202,6 @@ export async function BlowoutPageBody({
           </SubmitButton>
         </form>
       ) : null}
-    </StaffPage>
+    </div>
   );
 }
