@@ -51,6 +51,7 @@ import {
   countShopScoped,
   countShopTips,
   type DiverExportScope,
+  diverOwnRows,
   readScoped,
   readTipRows,
   type ShopExportScope,
@@ -774,9 +775,13 @@ export type ShopExportContext = NonNullable<Awaited<ReturnType<typeof loadShopEx
  *   what is the shop's own, not a third party's.
  * - **Every person column the bundle leaves out** (`internal_notes`,
  *   `activity_events`, a capability, a conversation, ...) says why in its row
- *   of `./person-columns` (`exportWhy`), and `readScoped` refuses a read by a
- *   column that row does not call the diver's own. A note's `body` and an
- *   event's `message` are free text that routinely names somebody else.
+ *   of `./person-columns` (`exportWhy`), and `diverOwnRows` (under
+ *   `readScoped` and every read by person id written out below) refuses a
+ *   read by a column that row does not call the diver's own. A note's `body`
+ *   and an event's `message` are free text that routinely names somebody
+ *   else. The registry governs reads by the diver's person id only; a read by
+ *   their own booking ids (roll call, deliveries, payments, ...) is outside it
+ *   and answers to this list and the files' `in:` columns.
  * - **`booking_checkouts`** is excluded outright. One checkout attempt can
  *   cover an entire party sharing one Stripe session, so `customer_email` may
  *   belong to whoever submitted the payment rather than this diver, and the
@@ -866,7 +871,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     .select(getTableColumns(bookings))
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)))
+    .where(and(eq(bookings.shopId, shopId), diverOwnRows(bookings.personId, personId)))
     .orderBy(asc(bookings.createdAt), asc(trips.startsAt), asc(trips.title), asc(bookings.id));
   const bookingIds = bookingRows.map((row) => row.id);
   // Every plain read below is this diver's: by their person id, or by these
@@ -975,7 +980,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         eq(buddyTeamMembers.shopId, shopId),
         or(
           bookingIds.length ? inArray(buddyTeamMembers.bookingId, bookingIds) : undefined,
-          eq(buddyTeamMembers.crewPersonId, personId),
+          diverOwnRows(buddyTeamMembers.crewPersonId, personId),
         ),
       ),
     )
@@ -1006,7 +1011,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   const reviewRows = await tx
     .select()
     .from(tripReviews)
-    .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId)))
+    .where(and(eq(tripReviews.shopId, shopId), diverOwnRows(tripReviews.personId, personId)))
     .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
   const reviewIds = reviewRows.map((row) => row.id);
   const reviewModerationRows = reviewIds.length
@@ -1042,7 +1047,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         eq(gearReservations.shopId, shopId),
         or(
           bookingIds.length ? inArray(gearReservations.bookingId, bookingIds) : undefined,
-          eq(gearReservations.personId, personId),
+          diverOwnRows(gearReservations.personId, personId),
         ),
       ),
     )

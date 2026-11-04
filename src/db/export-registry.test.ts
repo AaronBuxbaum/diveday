@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { schemaTableNameOf } from "@/test/schema-tables";
 import { stripCommentsAndStrings } from "./erasure-source.test-support";
 import { loadDiverExportBundleInput } from "./export";
-import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
+import { diverOwnRows, EXPORT_TABLES, type ExportTableRead } from "./export-tables";
 import { addDiverNote } from "./operations";
 import {
   assertDiverExportColumn,
@@ -15,7 +15,14 @@ import {
   personColumnKey,
 } from "./person-columns";
 import * as schema from "./schema";
-import { bookings, people, personRoles } from "./schema";
+import {
+  bookings,
+  internalNotes,
+  people,
+  personRoles,
+  staffCredentials,
+  tripReviews,
+} from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -29,20 +36,39 @@ function columnKeyOf(identifier: string, property: string): string | null {
   return typeof column === "string" ? `${table}.${column}` : null;
 }
 
-/**
- * Every `eq(<table>.<column>, personId)` in the diver loader, as
- * `table.column`: the reads it makes by the diver's own id that are written
- * out rather than taken through the read list.
- */
-function loaderReadsByPersonId(): string[] {
+/** The diver loader's body, comments and strings stripped. */
+function loaderBody(): string {
   const source = stripCommentsAndStrings(readFileSync("src/db/export.ts", "utf8"));
   const start = source.search(/^async function loadDiverExportContext\(/m);
   expect(start).toBeGreaterThan(0);
-  const body = source.slice(start, source.indexOf("\n}\n", start));
-  return [...body.matchAll(/\beq\(\s*(\w+)\.(\w+)\s*,\s*personId\s*\)/g)].map(
+  return source.slice(start, source.indexOf("\n}\n", start));
+}
+
+/**
+ * Every `diverOwnRows(<table>.<column>, personId)` in the diver loader, as
+ * `table.column`: the reads it makes by the diver's own id that are written
+ * out rather than taken through the read list. Each one asserts the registry
+ * at run time too.
+ */
+function loaderReadsByPersonId(): string[] {
+  return [...loaderBody().matchAll(/\bdiverOwnRows\(\s*(\w+)\.(\w+)\s*,\s*personId\s*\)/g)].map(
     (match) =>
       columnKeyOf(match[1] as string, match[2] as string) ?? `${match[1]}.${match[2]} (unknown)`,
   );
+}
+
+/**
+ * Every comparison against the diver's id in the loader that does not go
+ * through `diverOwnRows`, whichever side or spelling it takes: `eq(x, personId)`,
+ * `eq(personId, x)`, `inArray(x, [personId])`, or the same by `person.id`.
+ */
+function loaderRawReadsByPersonId(): string[] {
+  const id = String.raw`(?:personId|person\.id|scope\.personId)`;
+  const raw = new RegExp(
+    String.raw`\b(?:eq|ne|inArray)\(\s*(?:[\w.]+\s*,\s*\[?\s*${id}\b|${id}\s*,)[^)]*\)`,
+    "g",
+  );
+  return [...loaderBody().matchAll(raw)].map((match) => match[0].replace(/\s+/g, " "));
 }
 
 /** Every column the read list takes a diver's rows by, as `table.column`. */
@@ -62,7 +88,7 @@ function readListPersonColumns(): string[] {
  * by the diver's id that the registry has not called theirs.
  */
 describe("the registry's export fates", () => {
-  it("states a fate for every subject column, and why it withholds one", () => {
+  it("states a fate for every subject column, and why it withholds a subject or crew one", () => {
     const wrong: string[] = [];
     for (const row of PERSON_COLUMNS) {
       const key = personColumnKey(row);
@@ -73,7 +99,11 @@ describe("the registry's export fates", () => {
         wrong.push(`${key}: ${(error as Error).message}`);
         continue;
       }
-      if (row.kind === "subject" && fate === "withheld" && !row.exportWhy) {
+      if (
+        (row.kind === "subject" || row.kind === "crew") &&
+        fate === "withheld" &&
+        !row.exportWhy
+      ) {
         wrong.push(`${key}: withheld without a reason`);
       }
       if (row.exportWhy && fate !== "withheld") wrong.push(`${key}: a reason on a column it reads`);
@@ -121,9 +151,17 @@ describe("the registry's export fates", () => {
       PERSON_COLUMNS.filter((row) => exportFate(row) === "own").map(personColumnKey),
     );
     const reads = loaderReadsByPersonId();
-    // The profile itself is `people.id`, the one read that is not a person column.
-    expect(reads).toContain("people.id");
-    expect(reads.filter((key) => key !== "people.id" && !own.has(key))).toEqual([]);
+    expect(reads.length).toBeGreaterThanOrEqual(4);
+    expect(reads.filter((key) => !own.has(key))).toEqual([]);
+  });
+
+  /**
+   * Adversarial: a hand-written read by the diver's id that skips
+   * `diverOwnRows` skips the registry. The profile itself (`people.id`) is the
+   * one such read, and it is not a person column.
+   */
+  it("reads by the diver's id only through diverOwnRows, the profile aside", () => {
+    expect(loaderRawReadsByPersonId()).toEqual(["eq(people.id, personId)"]);
   });
 
   it("reads every column the registry calls theirs", () => {
@@ -143,6 +181,10 @@ describe("the registry's export fates", () => {
       /withheld/,
     );
     expect(() => assertDiverExportColumn("cards", "no_such_person_id")).toThrow(/no registry row/);
+    // The loader's own hand-written reads take the same check.
+    expect(() => diverOwnRows(tripReviews.personId, "p")).not.toThrow();
+    expect(() => diverOwnRows(internalNotes.personId, "p")).toThrow(/withheld/);
+    expect(() => diverOwnRows(staffCredentials.personId, "p")).toThrow(/withheld/);
   });
 
   /**

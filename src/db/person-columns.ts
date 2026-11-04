@@ -76,11 +76,18 @@
  *   otherwise: a staffer who recorded a row appears by name on the diver's own
  *   rows, never as the owner of the rows they wrote.
  *
- * `readScoped` (`./export-tables`) refuses a diver read by a column this
- * registry does not call `own`, and `export-registry.test.ts` holds both
- * directions to the loader: every `own` column is read, and nothing is read by
- * the diver's id that is not `own`. The shop's whole bundle is a per-table
- * decision (`export.test.ts`), not a per-person one, and stays there.
+ * `diverOwnRows` (`./export-tables`), the one way the diver's bundle reads by
+ * their person id (under `readScoped` and in the loader alike), refuses a
+ * column this registry does not call `own`, and `export-registry.test.ts`
+ * holds both directions to the loader: every `own` column is read, and nothing
+ * is read by the diver's id that is not `own`. **This governs reads by person
+ * id only.** A read by the diver's own booking ids (roll call, deliveries,
+ * payments, recap photos, tips) is scoped by those ids and is outside the
+ * registry; what it ships is decided per file. The shop's whole bundle is a
+ * per-table decision (`export.test.ts`), not a per-person one, and stays there.
+ *
+ * `exportWhy` is required on every withheld `subject` and `crew` row: a
+ * staffer asking for their own data reads the same reasons.
  *
  * The reap's fates stay in its own module until its slice lands; adding one
  * here before then would be a second list nobody reads.
@@ -383,6 +390,9 @@ const rows = [
   {
     table: "staff_shifts",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -391,6 +401,9 @@ const rows = [
   {
     table: "staff_credentials",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own pro cards: a staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -416,6 +429,9 @@ const rows = [
   {
     table: "roll_call_events",
     column: "crew_person_id",
+    export: "withheld",
+    exportWhy:
+      "a crew member's own boarding marks, a staff record; a diver's marks are read by their seat",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -436,6 +452,9 @@ const rows = [
   {
     table: "crew_availability_blocks",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -444,6 +463,9 @@ const rows = [
   {
     table: "crew_assignment_requests",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "keep",
@@ -453,6 +475,9 @@ const rows = [
   {
     table: "crew_away_acknowledgements",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "keep",
@@ -461,14 +486,32 @@ const rows = [
   // #1202, #1187). Same shape as `push_subscriptions` above it: written by, and
   // about, somebody who works the boats, so either side of a merge holding one
   // is a staff record and the merge is refused rather than carried across.
-  { table: "trip_read_marks", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
-  { table: "today_read_marks", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
+  {
+    table: "trip_read_marks",
+    column: "person_id",
+    export: "withheld",
+    exportWhy: "where a staffer had read up to in a shift catch-up; app state, not a record",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
+  {
+    table: "today_read_marks",
+    column: "person_id",
+    export: "withheld",
+    exportWhy: "where a staffer had read up to in the day's catch-up; app state, not a record",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
   // The Monday email's claims (`src/db/weekly-digest.ts`). Only somebody with
   // a staff login is ever sent one, so a record holding one is a staff record
   // and the merge is refused, like the calendar feed above.
   {
     table: "weekly_digest_sends",
     column: "person_id",
+    export: "withheld",
+    exportWhy: "that the Monday staff email went out; delivery plumbing, not a record",
     kind: "crew",
     merge: "refuse",
     erase: "keep",
@@ -476,13 +519,24 @@ const rows = [
   // Crew news waiting to be told (ADR 20261009-crew-hear-about-their-boats).
   // Only somebody on a crew is ever its subject, so either side of a merge
   // holding one is a staff record and the merge is refused.
-  { table: "crew_notices", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
+  {
+    table: "crew_notices",
+    column: "person_id",
+    export: "withheld",
+    exportWhy: "crew news waiting to be told; delivery plumbing, not a record",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
   // A staffer named in an incident report (ADR 20261012-incident-reports). A
   // diver is named there by booking, which moves with the seat; only staff are
   // named by person, so a record holding one is a staff record.
   {
     table: "incident_report_people",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer named in an incident report, the shop's liability record; whether a diver's own report ships is a human decision (ADR 20261012-incident-reports)",
     kind: "crew",
     merge: "refuse",
     erase: "keep",
@@ -491,10 +545,22 @@ const rows = [
   },
   // A repeating trip's standing crew (`trip_series_crew`): only staff sail on
   // it, so a record holding one is a staff record and the merge is refused.
-  { table: "trip_series_crew", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
+  {
+    table: "trip_series_crew",
+    column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
   {
     table: "trip_assignments",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -516,7 +582,7 @@ const rows = [
     column: "person_id",
     export: "withheld",
     exportWhy:
-      "which doors the shop opened for the account: its access control, not a record of the diver",
+      "the account's access level at this shop; a staffer's role is part of their staff record, not their diving record",
     kind: "subject",
     merge: "leave",
     erase: "delete",
@@ -1122,6 +1188,9 @@ const rows = [
   {
     table: "trip_help_requests",
     column: "helper_person_id",
+    export: "withheld",
+    exportWhy:
+      "the crew member who said they would help; the ask is about a departure, not about them",
     kind: "crew",
     merge: "leave",
     erase: "keep",
@@ -1207,6 +1276,9 @@ const rows = [
   {
     table: "work_order_events",
     column: "technician_person_id",
+    export: "withheld",
+    exportWhy:
+      "the technician a ticket was handed to; the diver's tickets are read by their own id",
     kind: "crew",
     merge: "leave",
     erase: "keep",
@@ -1229,6 +1301,8 @@ const rows = [
   {
     table: "work_orders",
     column: "technician_person_id",
+    export: "withheld",
+    exportWhy: "the technician working a ticket; the diver's tickets are read by their own id",
     kind: "crew",
     merge: "leave",
     erase: "keep",
@@ -1438,9 +1512,10 @@ export function exportFate(row: PersonColumn): PersonColumnExport {
 
 /**
  * Throws unless the registry says the diver's own bundle reads `table` by
- * `column` as theirs. `readScoped` (`./export-tables`) calls it before every
- * read by a diver's person id, so a read-list entry cannot widen a diver's
- * bundle past what this registry decided.
+ * `column` as theirs. `diverOwnRows` (`./export-tables`) calls it before every
+ * read by a diver's person id, so neither the read list nor a hand-written
+ * read can widen a diver's bundle past what this registry decided. Reads by
+ * the diver's booking ids do not pass through it.
  */
 export function assertDiverExportColumn(table: string, column: string): void {
   const row = PERSON_COLUMNS.find((found) => found.table === table && found.column === column);
