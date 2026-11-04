@@ -772,18 +772,11 @@ export type ShopExportContext = NonNullable<Awaited<ReturnType<typeof loadShopEx
  *   waiver `recorded_by`** are staff, not other divers. Included by name, on
  *   the same rule the shop's own bundle uses: the shop's record of who did
  *   what is the shop's own, not a third party's.
- * - **`internal_notes`** is excluded outright. Its own note in the shop bundle
- *   already says why: "Never shown to a diver, and never part of any gate" —
- *   and its `body` is free text that can name a *different* diver by name
- *   (`anonymize.ts`'s erasure sweep needs a fuzzy word-boundary regex over
- *   exactly this column for exactly this reason).
- * - **`activity_events`** is excluded outright for the same reason at larger
- *   scale: its `message` column is English prose generated at write time that
- *   routinely interpolates a full name — often someone else's, on a shared
- *   booking or a roll-call line. Safely redacting it needs the same
- *   name-matching sweep the erasure path uses, which is expensive to
- *   replicate correctly here; this is recorded as a follow-up rather than
- *   reinvented under this diff.
+ * - **Every person column the bundle leaves out** (`internal_notes`,
+ *   `activity_events`, a capability, a conversation, ...) says why in its row
+ *   of `./person-columns` (`exportWhy`), and `readScoped` refuses a read by a
+ *   column that row does not call the diver's own. A note's `body` and an
+ *   event's `message` are free text that routinely names somebody else.
  * - **`booking_checkouts`** is excluded outright. One checkout attempt can
  *   cover an entire party sharing one Stripe session, so `customer_email` may
  *   belong to whoever submitted the payment rather than this diver, and the

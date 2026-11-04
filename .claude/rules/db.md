@@ -80,10 +80,12 @@ barrels, bookings, seating, retention, integrations). What they do not say:
   HTTP via `src/test/fakes.ts`), never `@/db/*`; a lock or race guard gets a `*.postgres.test.ts`
   ([testing.md](../../docs/engineering/testing.md#what-each-layer-is-for)).
 - **A column that references `people` gets one row in `src/db/person-columns.ts`**: its kind, what a
-  merge does with it, and what an erasure does (`erase`; an `actor` defaults to `keep`). A plain
-  `delete` needs no statement in `anonymize.ts`: the registry runs it. `person-columns.test.ts`
-  fails with the column's name until it has a row, and `erasure-registry.test.ts` until its fate
-  matches the sweep it names (issue #2724). **A person is minted only by `createPerson`** (`src/db/people.ts`), which writes
+  merge does with it, what an erasure does (`erase`; an `actor` defaults to `keep`), and whether a
+  diver's own export reads it as theirs (`export`: `own` or `withheld` with a reason; a `subject`
+  states it). A plain `delete` needs no statement in `anonymize.ts`: the registry runs it.
+  `person-columns.test.ts` fails with the column's name until it has a row,
+  `erasure-registry.test.ts` until its fate matches the sweep it names, and
+  `export-registry.test.ts` until the diver export reads exactly its `own` columns (issue #2724). **A person is minted only by `createPerson`** (`src/db/people.ts`), which writes
   `people.origin` and the roles: person-door guard (`scripts/check-person-door.mjs`, issue #2726).
   **A reader of `bookings.status` says `seatHeld` or `seatNotCancelled`**, never a hand-typed
   `ne(..., "cancelled")`: seat-status guard (`scripts/check-seat-status.mjs`, issue #2758).

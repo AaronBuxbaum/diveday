@@ -1,8 +1,9 @@
-import { and, asc, count, eq, inArray, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, getTableName, inArray, type SQL } from "drizzle-orm";
 import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { CsvValue, ExportTable } from "@/lib/export";
 import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
+import { assertDiverExportColumn } from "./person-columns";
 import { oldestMarkFirst } from "./roll-call-order";
 import {
   activityEvents,
@@ -648,8 +649,11 @@ export async function readScoped<K extends ExportTableKey>(
   if (scope.kind === "shop") {
     return readWhere(db, key, (columns) => eq(columns.shopColumn, scope.shopId));
   }
-  const { personColumn, bookingColumn } = (EXPORT_TABLES[key] as ExportTableRead).scope;
+  const { table, scope: by } = EXPORT_TABLES[key] as ExportTableRead;
+  const { personColumn, bookingColumn } = by;
   if (personColumn) {
+    // The person-column registry decides what a diver's own bundle reads as theirs.
+    assertDiverExportColumn(getTableName(table), personColumn.name);
     return readWhere(db, key, (columns) =>
       and(eq(columns.shopColumn, scope.shopId), eq(personColumn, scope.personId)),
     );
