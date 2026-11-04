@@ -801,7 +801,7 @@ function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterR
       unaccounted.push(entry);
     } else if (sailingUnsaid(ladder)) {
       (record.rollCallTaken ? uncounted : unrecorded).push(entry);
-    } else if (ladder.sailed) {
+    } else if (ladder.countsAsSailed) {
       sailed.push(entry);
     } else if (noShow && entry.booking.turnedAwayAt) {
       // Did not sail because the desk refused them (H-20261015-who-may-turn-someone), said apart from

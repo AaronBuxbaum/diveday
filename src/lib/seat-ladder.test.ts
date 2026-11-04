@@ -31,31 +31,35 @@ const quiet: SeatRecords = {
 
 describe("readSeatLadder", () => {
   it("reads each rung from the record that writes it", () => {
-    expect(readSeatLadder(quiet)).toEqual({ rung: "booked", evidence: "none", sailed: true });
+    expect(readSeatLadder(quiet)).toEqual({
+      rung: "booked",
+      evidence: "none",
+      countsAsSailed: true,
+    });
     expect(readSeatLadder({ ...quiet, arrived: true })).toEqual({
       rung: "arrived",
       evidence: "desk_arrival",
-      sailed: true,
+      countsAsSailed: true,
     });
     expect(readSeatLadder({ ...quiet, noShow: true })).toEqual({
       rung: "released",
       evidence: "desk_release",
-      sailed: false,
+      countsAsSailed: false,
     });
     expect(readSeatLadder({ ...quiet, dockResult: "boarded" })).toEqual({
-      rung: "aboard",
+      rung: "out",
       evidence: "dock",
-      sailed: true,
+      countsAsSailed: true,
     });
     expect(readSeatLadder({ ...quiet, dockResult: "not_boarded" })).toEqual({
       rung: "ashore",
       evidence: "dock",
-      sailed: false,
+      countsAsSailed: false,
     });
     expect(readSeatLadder({ ...quiet, afterDiveResultStands: true })).toEqual({
-      rung: "aboard",
+      rung: "out",
       evidence: "after_dive",
-      sailed: true,
+      countsAsSailed: true,
     });
     expect(
       readSeatLadder({
@@ -64,7 +68,7 @@ describe("readSeatLadder", () => {
         afterDiveResultStands: true,
         missingAfterDive: true,
       }),
-    ).toEqual({ rung: "missing", evidence: "after_dive", sailed: true });
+    ).toEqual({ rung: "missing", evidence: "after_dive", countsAsSailed: true });
   });
 
   // Adversarial: ADR 20260907-the-counter-survives-offline, decision 4.
@@ -74,9 +78,8 @@ describe("readSeatLadder", () => {
       expect(readSeatLadder({ ...quiet, arrived: true }).rung).toBe("arrived");
       for (const seat of everySeat()) {
         const ladder = readSeatLadder(seat);
-        if (ladder.rung === "aboard") {
+        if (ladder.rung === "out") {
           expect(seat.dockResult === "boarded" || seat.afterDiveResultStands).toBe(true);
-          expect(seat.dockResult).not.toBe("not_boarded");
         }
       }
     });
@@ -85,7 +88,7 @@ describe("readSeatLadder", () => {
       for (const seat of everySeat().filter((s) => !s.arrived)) {
         const without = readSeatLadder(seat);
         const withArrival = readSeatLadder({ ...seat, arrived: true });
-        expect(withArrival.sailed).toBe(without.sailed);
+        expect(withArrival.countsAsSailed).toBe(without.countsAsSailed);
         expect(sailingUnsaid(withArrival)).toBe(sailingUnsaid(without));
         if (without.rung === "booked") {
           expect(withArrival).toEqual({ ...without, rung: "arrived", evidence: "desk_arrival" });
@@ -102,13 +105,13 @@ describe("readSeatLadder", () => {
     it("lets the crew's not-boarded stand over an arrival", () => {
       // Checked in at the desk, held on a medical hold, left at the dock.
       const ladder = readSeatLadder({ ...quiet, arrived: true, dockResult: "not_boarded" });
-      expect(ladder).toEqual({ rung: "ashore", evidence: "dock", sailed: false });
+      expect(ladder).toEqual({ rung: "ashore", evidence: "dock", countsAsSailed: false });
     });
 
     it("lets the desk's release stand over its own earlier arrival", () => {
       // Turned away at the counter after arriving: released, not arrived.
       const ladder = readSeatLadder({ ...quiet, arrived: true, noShow: true });
-      expect(ladder).toEqual({ rung: "released", evidence: "desk_release", sailed: false });
+      expect(ladder).toEqual({ rung: "released", evidence: "desk_release", countsAsSailed: false });
     });
   });
 
@@ -130,35 +133,58 @@ describe("readSeatLadder", () => {
   it("answers sailed by seatSailed for every seat, so the ladder and the evening count agree", () => {
     for (const seat of everySeat()) {
       const { noShow, dockResult, afterDiveResultStands } = seat;
-      expect(readSeatLadder(seat).sailed).toBe(
+      expect(readSeatLadder(seat).countsAsSailed).toBe(
         seatSailed({ noShow, dockResult, afterDiveResultStands }),
       );
     }
   });
 
-  it("never files a seat the crew or desk spoke for as aboard and not sailed, or ashore and sailed", () => {
+  it("never counts a seat the dock left ashore, or the desk released, as sailed", () => {
     for (const seat of everySeat()) {
       const ladder = readSeatLadder(seat);
-      if (ladder.rung === "aboard") expect(ladder.sailed).toBe(true);
-      if (ladder.rung === "ashore" || ladder.rung === "released") expect(ladder.sailed).toBe(false);
+      if (ladder.rung === "ashore" || ladder.rung === "released") {
+        expect(ladder.countsAsSailed).toBe(false);
+      }
+      // Out by the dock's own boarded is always counted as sailed.
+      if (ladder.rung === "out" && ladder.evidence === "dock") {
+        expect(ladder.countsAsSailed).toBe(true);
+      }
     }
   });
 
-  it("lets the dock outrank a later count, as the evening's does", () => {
+  it("puts a chase-boat diver on the water by the rung, but not in the vessel's count", () => {
     // Said ashore at the dock, then counted after the dive: a chase boat
-    // brought them out. The vessel did not leave with them.
+    // brought them out. They were in the water; the vessel did not leave
+    // with them, as the evening counts it.
+    const ladder = readSeatLadder({
+      ...quiet,
+      arrived: true,
+      dockResult: "not_boarded",
+      afterDiveResultStands: true,
+    });
+    expect(ladder).toEqual({ rung: "out", evidence: "after_dive", countsAsSailed: false });
+  });
+
+  it("keeps a diver left at the dock and then said missing as missing, not sailed by the count", () => {
     const ladder = readSeatLadder({
       ...quiet,
       dockResult: "not_boarded",
       afterDiveResultStands: true,
+      missingAfterDive: true,
     });
-    expect(ladder).toEqual({ rung: "ashore", evidence: "dock", sailed: false });
+    expect(ladder).toEqual({ rung: "missing", evidence: "after_dive", countsAsSailed: false });
+  });
+
+  it("calls a diver counted at the dock and not yet named after the dive out, never back", () => {
+    // The unfinished head count: no rung says back.
+    const ladder = readSeatLadder({ ...quiet, dockResult: "boarded" });
+    expect(ladder.rung).toBe("out");
   });
 
   it("lets a later count outrank the desk's release", () => {
     // Released at the counter, then counted aboard after dive one.
     const ladder = readSeatLadder({ ...quiet, noShow: true, afterDiveResultStands: true });
-    expect(ladder).toEqual({ rung: "aboard", evidence: "after_dive", sailed: true });
+    expect(ladder).toEqual({ rung: "out", evidence: "after_dive", countsAsSailed: true });
   });
 });
 

@@ -19,7 +19,7 @@ import { hasReturned } from "./trips";
  * built to make impossible (ADR 20260907-the-counter-survives-offline,
  * decision 4; `src/lib/arrival.ts`): the desk asks "are you here?", the rail
  * asks "are you on the boat?". So the only inputs that can put a seat on
- * `aboard` are a crew count: the dock's `boarded`, or a result standing at an
+ * `out` are a crew count: the dock's `boarded`, or a result standing at an
  * after-dive checkpoint. A standing arrival lifts a seat to `arrived` and no
  * further, whatever the clock says.
  *
@@ -29,26 +29,37 @@ import { hasReturned } from "./trips";
  *   counted aboard since (`listUnaccountedForByTrip`). Outranks everything,
  *   because it is the one rung that is still a question about a person in the
  *   water.
- * - **`aboard`** / **`ashore`**: the crew's word, in `seatSailed`'s order
- *   (src/lib/seat-sailed.ts): a dock result wins where it spoke; otherwise a
- *   standing after-dive result means the person was on the boat.
+ * - **`out`**: the crew counted this person on the boat at some checkpoint:
+ *   `boarded` at the dock, or any word standing at an after-dive checkpoint
+ *   (either word there means they were on the boat). **`out` is not "back"**:
+ *   a diver counted at the dock and not yet named at the next after-dive
+ *   checkpoint is `out`, and is the "unfinished head count" the day is still
+ *   asking about (`listRollCallGaps`). No rung here says back.
+ * - **`ashore`**: the crew's `not_boarded` at the dock, and no after-dive word
+ *   since. A diver left at the dock and later counted at a dive site (a chase
+ *   boat) is `out` by the after-dive evidence, though the vessel did not leave
+ *   with them (`countsAsSailed` is false).
  * - **`released`**: the desk's `no_show`, where no crew count says otherwise.
  * - **`arrived`**: the desk saw them, and nobody has counted them at the rail.
  * - **`booked`**: a seat nobody has said anything about yet.
  *
- * `rung` is evidence and never a guess. `sailed` is `seatSailed`'s count rule
- * and is *not* the same thing: a seat nobody spoke for counts as sailed there,
- * because silence is an unfinished dock count rather than a statement, while
- * its rung stays `booked` or `arrived`. A surface that needs "did somebody see
- * this person on the boat" reads the rung; one that needs "how many did the
- * vessel carry" reads `sailed`.
+ * `rung` is evidence and never a guess. `countsAsSailed` is `seatSailed`'s
+ * count rule (how many the vessel left with) and is *not* the same thing. It
+ * presumes a seat nobody spoke for sailed, because silence is an unfinished
+ * dock count rather than a statement, while its rung stays `booked` or
+ * `arrived` (`sailingUnsaid`). And the dock wins it where it spoke, so the
+ * chase-boat diver above, and one left at the dock and then said missing, are
+ * on the water by their rung and not sailed by the count. A surface that
+ * needs "did somebody see this person on the boat" reads the rung; one that
+ * needs "how many did the vessel carry" reads `countsAsSailed`, and only after
+ * `sailingUnsaid` says somebody spoke.
  *
  * Cancellation is a lifecycle, not a rung: the caller decides a cancelled
  * booking or departure before it asks the ladder, as it always has.
  *
  * Framework-free and words-free: the caller resolves every code.
  */
-export type SeatRung = "booked" | "arrived" | "released" | "ashore" | "aboard" | "missing";
+export type SeatRung = "booked" | "arrived" | "released" | "ashore" | "out" | "missing";
 
 /** Which record put the seat on its rung. */
 export type SeatEvidence = "none" | "desk_arrival" | "desk_release" | "dock" | "after_dive";
@@ -80,29 +91,32 @@ export interface SeatRecords {
 export interface SeatLadder {
   rung: SeatRung;
   evidence: SeatEvidence;
-  /** `seatSailed` over the same records: the evening count's rule. */
-  sailed: boolean;
+  /**
+   * `seatSailed` over the same records: the evening count's rule, which
+   * *presumes* a seat nobody spoke for sailed. Ask `sailingUnsaid` first.
+   */
+  countsAsSailed: boolean;
 }
 
-/** Read one seat's rung, the record that put it there, and whether it sailed. */
+/** Read one seat's rung, the record that put it there, and the count's rule. */
 export function readSeatLadder(records: SeatRecords): SeatLadder {
   const { noShow, arrived, dockResult, afterDiveResultStands, missingAfterDive } = records;
-  const sailed = seatSailed({ noShow, dockResult, afterDiveResultStands });
-  if (missingAfterDive) return { rung: "missing", evidence: "after_dive", sailed };
-  if (dockResult === "boarded") return { rung: "aboard", evidence: "dock", sailed };
-  if (dockResult === "not_boarded") return { rung: "ashore", evidence: "dock", sailed };
-  if (afterDiveResultStands) return { rung: "aboard", evidence: "after_dive", sailed };
-  if (noShow) return { rung: "released", evidence: "desk_release", sailed };
-  if (arrived) return { rung: "arrived", evidence: "desk_arrival", sailed };
-  return { rung: "booked", evidence: "none", sailed };
+  const countsAsSailed = seatSailed({ noShow, dockResult, afterDiveResultStands });
+  if (missingAfterDive) return { rung: "missing", evidence: "after_dive", countsAsSailed };
+  if (dockResult === "boarded") return { rung: "out", evidence: "dock", countsAsSailed };
+  if (afterDiveResultStands) return { rung: "out", evidence: "after_dive", countsAsSailed };
+  if (dockResult === "not_boarded") return { rung: "ashore", evidence: "dock", countsAsSailed };
+  if (noShow) return { rung: "released", evidence: "desk_release", countsAsSailed };
+  if (arrived) return { rung: "arrived", evidence: "desk_arrival", countsAsSailed };
+  return { rung: "booked", evidence: "none", countsAsSailed };
 }
 
 /**
  * **Nobody has said whether this seat sailed**: no crew count, no desk
  * release. A finished departure's record files such a seat as "Not counted at
  * the dock" or "No roll call taken", never "Sailed" and never "Didn't sail",
- * even though `sailed` presumes it went. A standing arrival does not change
- * that: the desk saw the diver, not the boat.
+ * even though `countsAsSailed` presumes it went. A standing arrival does not
+ * change that: the desk saw the diver, not the boat.
  */
 export function sailingUnsaid(ladder: SeatLadder): boolean {
   return ladder.rung === "booked" || ladder.rung === "arrived";
@@ -144,7 +158,9 @@ export function sailingUnsaid(ladder: SeatLadder): boolean {
  *   invented for it here.
  *
  * It takes no arrival, on purpose: a desk arrival is not a dock count, so it
- * cannot open the afterglow any sooner than silence would.
+ * cannot open the afterglow any sooner than silence would. It reads the dock
+ * word only, not the rung: the hold while someone is still not back aboard is
+ * the recap's own `waiting` state (`getRecapPageState`, src/db/recap.ts).
  *
  * Still deliberately blind to cancellation — of the booking or of the departure
  * — which are terminal notices the page decides before it ever asks this.
