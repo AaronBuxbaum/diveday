@@ -193,3 +193,26 @@ export function isAfterTheDive(input: {
   // counts as home.
   return now.getTime() > input.endsAt.getTime() + RECAP_AUTOMATIC_DELAY_MS;
 }
+
+/**
+ * **Joined at a dive site**: the crew wrote `not_boarded` at the dock and a
+ * crew count since put this person on a boat (a chase boat, or a pickup at the
+ * second site; issue #3823). Two true answers to two questions: the vessel did
+ * not leave the dock with them (`countsAsSailed` is false, the evening count's
+ * rule), and they dived (`rung` is `out`). The record files them in a band of
+ * their own, and the diver's page and recap treat them as back from a day on
+ * the water.
+ */
+export function joinedAtADiveSite(ladder: SeatLadder, dockResult: DepartureRollCall): boolean {
+  return dockResult === "not_boarded" && ladder.rung === "out";
+}
+
+/**
+ * **Left at the dock**, for the diver's own page and the recap: the crew wrote
+ * `not_boarded` at the dock and no crew count since put them on a boat. The
+ * ladder's reading of `bookingsLeftAtTheDock` (src/db/recap.ts), so the record,
+ * the ladder and the recap give one answer for the same seat.
+ */
+export function leftAtTheDock(ladder: SeatLadder, dockResult: DepartureRollCall): boolean {
+  return dockResult === "not_boarded" && !joinedAtADiveSite(ladder, dockResult);
+}

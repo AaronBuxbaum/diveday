@@ -41,6 +41,7 @@ import { firstNameOf } from "@/lib/person-name";
 import { diveDayOrdinal } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
 import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
+import { leftAtTheDock, readSeatLadder } from "@/lib/seat-ladder";
 import { shopClock } from "@/lib/shop-clock";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
@@ -54,8 +55,8 @@ import { listSiteFieldGuides } from "./dive-sites";
 import { diveDaysBefore, listExecutedDives } from "./executed-dives";
 import {
   departureRollCallTakenTripIds,
-  listAfterDiveRollCallByTrip,
   listDepartureRollCallByTrip,
+  readAfterDiveRollCallByTrip,
 } from "./manifests";
 import {
   notificationProviderForDb,
@@ -655,20 +656,28 @@ async function readDockEvidence(
   // One shop at a time: the readers may share a transaction's single client.
   for (const [shopId, byTrip] of bookingsByShop) {
     const tripIds = [...byTrip.keys()];
-    const [departure, afterDive, taken] = await queryAll(db, [
+    const [departure, { afterDive, unaccounted }, taken] = await queryAll(db, [
       () => listDepartureRollCallByTrip(db, shopId, tripIds),
-      () => listAfterDiveRollCallByTrip(db, shopId, tripIds),
+      () => readAfterDiveRollCallByTrip(db, shopId, tripIds),
       () => departureRollCallTakenTripIds(db, shopId, tripIds),
     ]);
     for (const [tripId, states] of departure) {
-      const sailed = afterDive.get(tripId);
+      const afterDiveHere = afterDive.get(tripId);
+      const missingHere = unaccounted.get(tripId);
       for (const [bookingId, state] of states) {
-        // Only a `boarded` tap is evidence they sailed. A "not back aboard"
+        // The seat ladder decides (issue #3823), so the record, the ladder
+        // and the recap agree: only a crew count since the dock puts a
+        // `not_boarded` diver on a boat, and a "not back aboard" standing
         // after a dock `not_boarded` contradicts the dock, it does not
         // overrule it (dive-domain review of #2105).
-        if (state === "not_boarded" && sailed?.get(bookingId) !== "boarded") {
-          notBoarded.add(bookingId);
-        }
+        const ladder = readSeatLadder({
+          noShow: false,
+          arrived: false,
+          dockResult: state,
+          afterDiveResultStands: afterDiveHere?.has(bookingId) ?? false,
+          missingAfterDive: missingHere?.has(bookingId) ?? false,
+        });
+        if (leftAtTheDock(ladder, state)) notBoarded.add(bookingId);
       }
     }
     for (const [tripId, ids] of byTrip) {

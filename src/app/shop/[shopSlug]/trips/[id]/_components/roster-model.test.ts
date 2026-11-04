@@ -290,9 +290,12 @@ describe("groupRoster", () => {
     expect(groups.unaccounted).toEqual([]);
   });
 
-  it("in the record, a dock not-boarded outranks a later count, as the evening's does", () => {
+  it("in the record, a dock not-boarded counted later joined at a dive site, never Sailed", () => {
     const groups = recordGroupsFor([seat("left")], recordOf({ left: "not_boarded" }, ["left"]));
-    expect(ids(groups.didNotSail)).toEqual(["left"]);
+    // The vessel did not leave with them (the evening's rule), but they dived.
+    expect(ids(groups.joinedAtSite)).toEqual(["left"]);
+    expect(groups.sailed).toEqual([]);
+    expect(groups.didNotSail).toEqual([]);
   });
 
   it("in the record with no roll call taken, guesses nothing", () => {
@@ -305,8 +308,11 @@ describe("groupRoster", () => {
 
   it("in the record, files every combination of records as it did before the seat ladder", () => {
     // The rule `recordGroups` used before it read `readSeatLadder` (#2784),
-    // written out by hand as the oracle: the ladder moved the read, not one seat.
+    // written out by hand as the oracle: the ladder moved the read, not one
+    // seat. One change since, on purpose: a dock not-boarded counted at an
+    // after-dive checkpoint joined at a dive site (#3823).
     type Group =
+      | "joinedAtSite"
       | "unaccounted"
       | "uncounted"
       | "unrecorded"
@@ -329,6 +335,7 @@ describe("groupRoster", () => {
         input.dock === "boarded" ||
         (input.dock !== "not_boarded" && (input.afterDive || !input.noShow));
       if (sailed) return "sailed";
+      if (input.dock === "not_boarded" && input.afterDive) return "joinedAtSite";
       return input.noShow && input.turnedAway ? "turnedAway" : "didNotSail";
     }
     for (const dock of ["boarded", "not_boarded", null] as const)
@@ -358,6 +365,7 @@ describe("groupRoster", () => {
                     "sailed",
                     "turnedAway",
                     "didNotSail",
+                    "joinedAtSite",
                   ] as const
                 ).filter((group) => groups[group].length > 0);
                 expect(filed).toEqual([
