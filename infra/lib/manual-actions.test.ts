@@ -224,14 +224,15 @@ describe("the synthesized stack", () => {
       (statement) =>
         statement.includes("secretsmanager:GetSecretValue") && !statement.includes('"Deny"'),
     );
-    // Exactly three reads exist in the whole stack, each scoped to one secret:
+    // Exactly four reads exist in the whole stack, each scoped to one secret:
     // GitHubActionsCdkDeployRole reads the credentials document and the dump
     // connection for provisioning; the database-dump job reads only that dump
-    // connection (S20). Nothing may read both, and nothing may read on "*".
+    // connection (S20); the cron dispatcher reads only the app secret seed
+    // (S19b). Nothing may read both, and nothing may read on "*".
     expect(
       allows,
       "a new secretsmanager:GetSecretValue Allow appeared -- every read must be scoped to one named secret",
-    ).toHaveLength(3);
+    ).toHaveLength(4);
     for (const statement of allows) {
       expect(statement).not.toContain('"Resource":"*"');
     }

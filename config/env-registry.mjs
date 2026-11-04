@@ -858,10 +858,11 @@ export const ENV_GROUPS = [
   {
     seam: "vercel-cron",
     doc: [
-      "Scheduled pre-trip reminders (ADR 20260721-scheduled-reminder-cadence). Vercel",
-      "Cron calls GET /api/cron/reminders daily with this as a bearer token (the Hobby",
-      "plan caps crons at daily; the cadence buckets are >=24h wide so a daily run",
-      "never misses one). Derived from APP_SECRET_SEED.",
+      "Scheduled routes (ADR 20260721-scheduled-reminder-cadence). EventBridge Scheduler",
+      "invokes the cron dispatcher Lambda (infra/lib/cron-dispatcher-handler.ts), which",
+      "GETs each /api/cron/* route listed in config/crons.json with this as a bearer",
+      "token. The Lambda derives the same value from APP_SECRET_SEED, so it is never",
+      "stored twice. Derived from APP_SECRET_SEED.",
     ],
     keys: [
       {

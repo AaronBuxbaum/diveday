@@ -947,3 +947,13 @@ photo URLs send `no-referrer` and are unaffected. `Strict-Transport-Security` al
 > which gates deletion and the ingest allowlist. On a pre-pilot database that is the correct trade
 > (`.claude/rules/db.md`'s H-20260815-no-legacy); it is also precisely the breakage this section exists to prevent
 > happening later, when it would not be.
+
+## 13. Scheduled routes (the cron dispatcher)
+
+`config/crons.json` lists every `/api/cron/*` route and its UTC crontab. The stack (S19b in `infra/lib/infra-stack.ts`) creates one EventBridge Scheduler schedule per entry, each invoking the `diveday-cron-dispatcher` Lambda with `{ "path": "/api/cron/<route>" }`. The Lambda derives `CRON_SECRET` from the app secret seed (the way `scripts/distribute-env.mjs` does) and GETs the route with a bearer token. `vercel.json` holds no crons.
+
+- **Add or change a schedule**: edit `config/crons.json`, then deploy the stack. The tests that pin each monitor's crontab read the same file.
+- **A pass did not run**: the `diveday-cron-dispatcher-errors` alarm names it; the Lambda log group `/aws/lambda/diveday-cron-dispatcher` has the path and the status. There are no retries, so a route that half-ran never runs again on a timer.
+- **Run one by hand**: `aws lambda invoke --function-name diveday-cron-dispatcher --payload '{"path":"/api/cron/usage"}' --cli-binary-format raw-in-base64-out /dev/stdout`.
+- **Sentry**: set `SENTRY_CRON_MONITORS=diveday-shop-tick` in the app so the free plan's single Cron Monitor watches the hourly tick.
+- **Cutover**: deploying the app (empty `vercel.json` crons) and the stack in either order is safe for a few minutes' overlap only if the routes tolerate a double run; deploy the stack first, then the app.
