@@ -10,6 +10,9 @@ import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
 vi.mock("@/db/divers", () => ({ findSimilarDivers: vi.fn(async () => []) }));
+vi.mock("@/db/interest-dates", () => ({
+  isOpenDateRequestWithoutEmail: vi.fn(async () => false),
+}));
 vi.mock("@/db/seat-diver", () => ({ seatDiver: vi.fn() }));
 vi.mock("@/db/trips", () => ({ getTripWithBooked: vi.fn() }));
 vi.mock("@/lib/navigation", () => ({
@@ -21,6 +24,7 @@ vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { seatDiver } = await import("@/db/seat-diver");
 const { findSimilarDivers } = await import("@/db/divers");
+const { isOpenDateRequestWithoutEmail } = await import("@/db/interest-dates");
 const { getTripWithBooked } = await import("@/db/trips");
 const { HOUR_MS, nowMs } = await import("@/lib/clock");
 const { verifyTripAdmissionGate } = await import("@/lib/trip-admission-gate");
@@ -427,6 +431,83 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
       `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-seat-invalid`,
     );
     expect(seatDiver).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Issue #3743: a date request may carry no email. The departure door waives
+   * its email rule for exactly that request, read in the session's shop, and
+   * for nothing else. The seat stays a regular booking, never a walk-in.
+   */
+  describe("a hand entry for a date request that has no email", () => {
+    const requestId = "66666666-6666-4666-8666-666666666666";
+    const bandForm = (extra: Record<string, string> = {}) => {
+      const data = new FormData();
+      data.set("tripId", TRIP_ID);
+      data.set("fullName", "Dana Walker");
+      for (const [key, value] of Object.entries(extra)) data.set(key, value);
+      return data;
+    };
+
+    it("seats without an email as a regular booking, after reading the request in this shop", async () => {
+      vi.mocked(isOpenDateRequestWithoutEmail).mockResolvedValueOnce(true);
+      vi.mocked(seatDiver).mockResolvedValue({
+        ok: true,
+        personId: DIVER_ID,
+        bookingId: "55555555-5555-4555-8555-555555555555",
+        identityUnconfirmed: false,
+        waiver: "not_delivered",
+        confirmation: "skipped",
+      } as never);
+      await expect(
+        seatNewDiverAction("departure", "blue-mantis", bandForm({ request: requestId })),
+      ).rejects.toThrow(/^REDIRECT:/);
+      expect(isOpenDateRequestWithoutEmail).toHaveBeenCalledWith(
+        expect.anything(),
+        SHOP_ID,
+        requestId,
+      );
+      expect(seatDiver).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          entry: "roster",
+          diver: expect.objectContaining({ fullName: "Dana Walker", email: undefined }),
+          dateRequestInterestId: requestId,
+        }),
+      );
+    });
+
+    it("still requires an email when the request has one, or is not this shop's", async () => {
+      // The read answers false for a request with an email, a closed one and another shop's.
+      vi.mocked(isOpenDateRequestWithoutEmail).mockResolvedValue(false);
+      await expect(
+        seatNewDiverAction("departure", "blue-mantis", bandForm({ request: requestId })),
+      ).rejects.toThrow(
+        `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-seat-invalid&add=1&request=${requestId}`,
+      );
+      expect(seatDiver).not.toHaveBeenCalled();
+    });
+
+    it("never reads a request when the form names none, or a junk one", async () => {
+      for (const extra of [{}, { request: "not-a-uuid" }]) {
+        await expect(
+          seatNewDiverAction("departure", "blue-mantis", bandForm(extra)),
+        ).rejects.toThrow(`REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-seat-invalid`);
+      }
+      expect(isOpenDateRequestWithoutEmail).not.toHaveBeenCalled();
+      expect(seatDiver).not.toHaveBeenCalled();
+    });
+
+    it("does not read the request when an email was typed", async () => {
+      vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason: "trip_full" } as never);
+      await expect(
+        seatNewDiverAction(
+          "departure",
+          "blue-mantis",
+          bandForm({ request: requestId, email: "dana@example.com" }),
+        ),
+      ).rejects.toThrow(/^REDIRECT:/);
+      expect(isOpenDateRequestWithoutEmail).not.toHaveBeenCalled();
+    });
   });
 
   it("does not read a posted walkIn field: the mode is the bound door's alone", async () => {

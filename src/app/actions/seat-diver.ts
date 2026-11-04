@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { findSimilarDivers } from "@/db/divers";
 import { discardFormDraft } from "@/db/form-drafts";
+import { isOpenDateRequestWithoutEmail } from "@/db/interest-dates";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import {
   type SeatDiverPerson,
@@ -400,8 +401,18 @@ export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, f
     personId: "",
     walkIn,
   };
-  if (!parsed.ok || (surface.email === "required" && !landing.walkIn && !email)) {
-    refuse(surface, landing, surface.invalidNotice, undefined, answeredRequestId(formData));
+  const requestId = answeredRequestId(formData);
+  // The door asks for an email, except for the party a date request named when
+  // that request has none itself (issue #3743): the desk would otherwise type a
+  // placeholder into a real person's record. Read here under the shop scope,
+  // never trusted from the form, and only once the email is the one thing missing.
+  const emailMissing = parsed.ok && surface.email === "required" && !landing.walkIn && !email;
+  const emailWaived =
+    emailMissing &&
+    requestId !== null &&
+    (await isOpenDateRequestWithoutEmail(await getDb(), session.user.shopId, requestId));
+  if (!parsed.ok || (emailMissing && !emailWaived)) {
+    refuse(surface, landing, surface.invalidNotice, undefined, requestId);
   }
   if (!(await holdsWalkInOpen(landing, session.user.shopId))) {
     refuse(surface, landing, surface.refusalNotice.trip_unavailable);
