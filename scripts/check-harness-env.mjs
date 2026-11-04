@@ -21,12 +21,6 @@ const SEAM = "src/lib/runtime-mode.ts";
 
 const REMAINING = new Set([
   "src/lib/test-clock.ts", // writes the clock, the one place that sets it
-  "src/app/api/test/seed-trouble-states/auth-state.ts",
-  "src/app/sign-in/page.tsx",
-  "src/proxy.ts", // the dev-only CSP relaxation
-  "src/lib/observability/query-timing.ts",
-  "src/lib/pending-sign-in.ts",
-  "src/lib/assists/e2e-fixtures.ts",
 ]);
 
 async function walk(directory) {

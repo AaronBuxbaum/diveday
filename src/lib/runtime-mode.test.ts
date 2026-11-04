@@ -8,6 +8,7 @@ describe("runtimeMode", () => {
   it("is all off for a plain local run", () => {
     expect(runtimeMode({ NODE_ENV: "development" })).toEqual({
       realDatabase: false,
+      e2eHarness: false,
       frozenClockMs: null,
       testRoutesOpen: true,
       capturePhotos: false,
@@ -23,6 +24,7 @@ describe("runtimeMode", () => {
     expect(runtimeMode({ NODE_ENV: "production", DIVEDAY_E2E: "1", DIVEDAY_CLOCK: CLOCK })).toEqual(
       {
         realDatabase: false,
+        e2eHarness: true,
         frozenClockMs: Date.parse(CLOCK),
         testRoutesOpen: true,
         capturePhotos: true,
@@ -33,6 +35,13 @@ describe("runtimeMode", () => {
         warnMemoryRateLimit: false,
       },
     );
+  });
+
+  it("reads the harness opt-in as exactly 1, and never alongside a database", () => {
+    expect(runtimeMode({ DIVEDAY_E2E: "1" }).e2eHarness).toBe(true);
+    expect(runtimeMode({ DIVEDAY_E2E: "true" }).e2eHarness).toBe(false);
+    expect(runtimeMode({}).e2eHarness).toBe(false);
+    expect(runtimeMode({ DIVEDAY_E2E: "1", DATABASE_URL: REAL }).e2eHarness).toBe(false);
   });
 
   it("keeps test routes shut in a production runtime without the harness opt-in", () => {
@@ -51,6 +60,7 @@ describe("runtimeMode", () => {
       });
       expect(mode).toEqual({
         realDatabase: true,
+        e2eHarness: false,
         frozenClockMs: null,
         testRoutesOpen: false,
         capturePhotos: false,

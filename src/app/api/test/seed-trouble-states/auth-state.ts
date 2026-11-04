@@ -13,6 +13,7 @@ import {
   readPendingHandle,
   signInOrigins,
 } from "@/lib/pending-sign-in";
+import { runtimeMode } from "@/lib/runtime-mode";
 
 /** Called only behind the parent route's existing harness/secret/database gate. */
 export async function authStateResponse(request: Request, db: AppDb) {
@@ -26,7 +27,7 @@ export async function authStateResponse(request: Request, db: AppDb) {
   if (shop.slug === DEMO_SHOP_SLUG) return testRouteRefused();
   const cookie = pendingCookie(
     signInOrigins(publicAppUrl() ?? APP_ORIGIN, process.env)[0],
-    process.env.DIVEDAY_E2E === "1",
+    runtimeMode().e2eHarness,
   );
   const handle = readPendingHandle(request.headers, cookie.name);
   if (!handle) return testRouteRefused();
