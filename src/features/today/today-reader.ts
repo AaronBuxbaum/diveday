@@ -204,7 +204,11 @@ export async function todaysDepartures(
         ),
       ),
     )
-    .orderBy(asc(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`), asc(trips.id));
+    .orderBy(
+      asc(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`),
+      asc(trips.title),
+      asc(trips.id),
+    );
   // Two of one departure's days on the same shop day read as one boat, its first.
   const seen = new Set<string>();
   return rows.filter((row) => !seen.has(row.id) && seen.add(row.id));

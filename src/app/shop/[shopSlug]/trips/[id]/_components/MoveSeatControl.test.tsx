@@ -99,4 +99,35 @@ describe("deliberate seat destinations", () => {
     expect(screen.getByLabelText(copy.label)).toHaveValue("");
     expect(screen.getByRole("button", { name: copy.submit })).toBeDisabled();
   });
+
+  it("moves a party as one: says so, posts the flag, and offers only departures with room for all", () => {
+    const { container } = render(
+      <MoveSeatControl
+        bookingId="lead"
+        targets={targets.map((target) =>
+          target.id === "next-day" ? { ...target, seatsLeft: 4 } : target,
+        )}
+        action={vi.fn()}
+        copy={copy}
+        partySeats={3}
+        partyNote="This seat leads a party of 3."
+      />,
+    );
+    expect(screen.getByText("This seat leads a party of 3.")).toBeInTheDocument();
+    expect(container.querySelector('input[name="party"]')).toHaveValue("1");
+    // Two seats left cannot take three; four can.
+    expect(
+      screen.getByRole("option", { name: /Oct 27.*8:00 AM EDT.*2 seats left/ }),
+    ).toBeDisabled();
+    expect(screen.getByRole("option", { name: /Oct 28.*8:00 AM EDT/ })).toBeEnabled();
+    fireEvent.change(screen.getByLabelText(copy.label), { target: { value: "next-day" } });
+    expect(screen.getByRole("button", { name: copy.submit })).toBeEnabled();
+  });
+
+  it("posts no party flag for a seat that leads nobody", () => {
+    const { container } = render(
+      <MoveSeatControl bookingId="solo" targets={targets} action={vi.fn()} copy={copy} />,
+    );
+    expect(container.querySelector('input[name="party"]')).toBeNull();
+  });
 });

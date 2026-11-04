@@ -14,6 +14,8 @@ export function MoveSeatControl({
   action,
   copy,
   carriedChartersNote,
+  partyNote,
+  partySeats = 1,
   refusal,
 }: {
   bookingId: string;
@@ -29,6 +31,10 @@ export function MoveSeatControl({
     cancel: string;
   };
   carriedChartersNote?: string;
+  /** Said on a party lead's form, which moves the whole party and posts `party=1` (#2556). */
+  partyNote?: string;
+  /** The seats that move together; a departure with fewer left cannot be chosen. */
+  partySeats?: number;
   refusal?: string;
 }) {
   const [selected, setSelected] = useState("");
@@ -38,7 +44,9 @@ export function MoveSeatControl({
     day.push(target);
     groups.set(target.localDay, day);
   }
-  const usableChoice = targets.some((target) => target.id === selected && target.seatsLeft > 0);
+  const usableChoice = targets.some(
+    (target) => target.id === selected && target.seatsLeft >= partySeats,
+  );
   return (
     <AutoOpenDetails
       id={`move-booking-${bookingId}`}
@@ -58,6 +66,7 @@ export function MoveSeatControl({
       </summary>
       <form action={action} className="mt-2 flex flex-col gap-3">
         <input type="hidden" name="bookingId" value={bookingId} />
+        {partyNote ? <input type="hidden" name="party" value="1" /> : null}
         <FormStatus className="text-base">{refusal}</FormStatus>
         <Field label={copy.label} description={copy.note} htmlFor={`move-seat-${bookingId}`}>
           <select
@@ -72,7 +81,11 @@ export function MoveSeatControl({
             {[...groups].map(([day, entries]) => (
               <optgroup key={day} label={entries[0].dayLabel}>
                 {entries.map((target) => (
-                  <option key={target.id} value={target.id} disabled={target.seatsLeft <= 0}>
+                  <option
+                    key={target.id}
+                    value={target.id}
+                    disabled={target.seatsLeft < partySeats}
+                  >
                     {target.dayLabel} · {target.timeLabel} · {target.label} · {target.availability}
                   </option>
                 ))}
@@ -80,6 +93,7 @@ export function MoveSeatControl({
             ))}
           </select>
         </Field>
+        {partyNote ? <p className="text-base">{partyNote}</p> : null}
         {carriedChartersNote ? (
           <p className="text-base text-warning-strong">{carriedChartersNote}</p>
         ) : null}

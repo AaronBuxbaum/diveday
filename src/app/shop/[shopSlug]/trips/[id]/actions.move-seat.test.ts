@@ -25,7 +25,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/db/seat-diver", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/seat-diver")>();
-  return { ...actual, moveSeat: vi.fn() };
+  return { ...actual, moveSeat: vi.fn(), moveParty: vi.fn() };
 });
 vi.mock("@/db/interest-roll", () => ({ carryInterests: vi.fn() }));
 vi.mock("./roster-booking", async (importOriginal) => {
@@ -34,7 +34,7 @@ vi.mock("./roster-booking", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { moveSeat } = await import("@/db/seat-diver");
+const { moveParty, moveSeat } = await import("@/db/seat-diver");
 const { requireShopSurface } = await import("@/lib/session");
 const { requireRosterBooking } = await import("./roster-booking");
 const { carryInterests } = await import("@/db/interest-roll");
@@ -134,6 +134,81 @@ describe("moveSeatAction", () => {
       expect.anything(),
       expect.objectContaining({ toTripId: "not-a-trip" }),
     );
+  });
+});
+
+describe("moveSeatAction, for a party lead", () => {
+  function partyForm() {
+    const data = form();
+    data.set("party", "1");
+    return data;
+  }
+  const partyMoved = {
+    ok: true as const,
+    seats: [moved, moved, moved].map((seat, index) => ({ ...seat, bookingId: `seat-${index}` })),
+  };
+
+  it("moves the whole party and says how many", async () => {
+    signIn();
+    vi.mocked(moveParty).mockResolvedValue(partyMoved);
+    expect(await redirectedTo(() => moveSeatAction(SHOP_SLUG, TRIP_ID, partyForm()))).toBe(
+      noticeUrl(back, "party-moved", { count: 3 }),
+    );
+    expect(moveParty).toHaveBeenCalledWith(
+      {},
+      {
+        shopId: SHOP_ID,
+        fromTripId: TRIP_ID,
+        toTripId: TO_TRIP_ID,
+        leadBookingId: BOOKING_ID,
+        actorPersonId: STAFF_ID,
+      },
+    );
+    expect(moveSeat).not.toHaveBeenCalled();
+  });
+
+  it("asks for a check when anyone was not told or owes the difference", async () => {
+    signIn();
+    vi.mocked(moveParty).mockResolvedValue({
+      ok: true,
+      seats: [moved, { ...moved, notice: "failed" as const }].map((seat, index) => ({
+        ...seat,
+        bookingId: `seat-${index}`,
+      })),
+    });
+    expect(await redirectedTo(() => moveSeatAction(SHOP_SLUG, TRIP_ID, partyForm()))).toBe(
+      noticeUrl(back, "party-moved-check", { count: 2 }),
+    );
+  });
+
+  it("says why nobody moved, on the lead's row", async () => {
+    signIn();
+    vi.mocked(moveParty).mockResolvedValue({
+      ok: false,
+      bookingId: "seat-2",
+      outcome: { ok: false, reason: "divers_full" },
+    });
+    expect(await redirectedTo(() => moveSeatAction(SHOP_SLUG, TRIP_ID, partyForm()))).toBe(
+      noticeUrl(`${back}#move-booking-${BOOKING_ID}`, "seat-move-full", { bid: BOOKING_ID }),
+    );
+  });
+
+  it("goes back to the roster for a seat that leads nobody", async () => {
+    signIn();
+    vi.mocked(moveParty).mockResolvedValue({
+      ok: false,
+      bookingId: BOOKING_ID,
+      outcome: { ok: false, reason: "not_found" },
+    });
+    expect(await redirectedTo(() => moveSeatAction(SHOP_SLUG, TRIP_ID, partyForm()))).toBe(back);
+  });
+
+  it("refuses a party flag that is not the flag, before anything moves", async () => {
+    signIn();
+    const data = form();
+    data.set("party", "yes");
+    expect(await redirectedTo(() => moveSeatAction(SHOP_SLUG, TRIP_ID, data))).toBe(back);
+    expect(moveParty).not.toHaveBeenCalled();
   });
 });
 

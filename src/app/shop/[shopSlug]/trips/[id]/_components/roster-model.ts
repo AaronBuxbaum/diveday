@@ -318,6 +318,11 @@ export type SeatMove = {
   departed: boolean;
   /** The departure's scheduled start has passed: a turned-away seat no longer moves. */
   started: boolean;
+  /**
+   * On a party lead's row only: how many seats (the lead and its followers)
+   * move together (#2556). The form says so and posts `party=1`.
+   */
+  partySeats?: number;
 };
 
 /**
@@ -333,12 +338,15 @@ export function seatMoveForRow(
   /** The desk has them seen on this departure: `moveBooking` refuses (#2702). */
   checkedIn: boolean,
   moveSeat: SeatMove | undefined,
+  /** The seats this one leads, itself included: more than one moves as a party. */
+  partySeats = 1,
 ): SeatMove | undefined {
   if (!moveSeat) return undefined;
+  const row = partySeats > 1 ? { ...moveSeat, partySeats } : moveSeat;
   if (booking.status === "no_show" && booking.turnedAwayAt !== null) {
-    return moveSeat.started ? undefined : moveSeat;
+    return moveSeat.started ? undefined : row;
   }
-  return booking.status === "booked" && !checkedIn && !moveSeat.departed ? moveSeat : undefined;
+  return booking.status === "booked" && !checkedIn && !moveSeat.departed ? row : undefined;
 }
 
 /**

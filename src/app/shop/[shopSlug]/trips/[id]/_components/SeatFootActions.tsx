@@ -89,6 +89,12 @@ export function SeatFootActions({
             action={moveSeat.action}
             refusal={moveSeat.refusal?.bookingId === booking.id ? moveSeat.refusal.text : undefined}
             carriedChartersNote={carriedChartersNote}
+            partySeats={moveSeat.partySeats}
+            partyNote={
+              moveSeat.partySeats
+                ? t("trips.roster.moveSeatParty", { count: moveSeat.partySeats })
+                : undefined
+            }
           />
         ) : null}
         {aboardAtSea ? (

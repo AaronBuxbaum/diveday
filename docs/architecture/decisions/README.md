@@ -446,5 +446,6 @@ script again.
 | 20261103-one-roll-call-ledger | Seat and crew marks are… |
 | 20261103-waiver-signs-in-the-thread | The diver's own release signs… |
 | 20261104-arrival-is-a-trail | Read arrival from its trail;… |
+| 20261104-move-a-party-as-one | A party moves between departures… |
 
 <!-- adr-index:end -->

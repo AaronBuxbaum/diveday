@@ -24,7 +24,7 @@ import {
 import { createInvitationUnderCooldown } from "@/db/invite-suggestions";
 import { getBookingPayment } from "@/db/payments";
 import { refundBookingOnCancellation } from "@/db/refunds";
-import { type MoveSeatRefusal, moveSeat } from "@/db/seat-diver";
+import { type MoveSeatRefusal, moveParty, moveSeat } from "@/db/seat-diver";
 import { recordShopActivity } from "@/db/shop-activity";
 import { shopHasFeatureOn } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
@@ -397,6 +397,8 @@ export async function setParticipantTypeAction(
 const moveSeatForm = z.object({
   bookingId: z.string().refine((id) => uuidParam(id) !== undefined),
   toTripId: z.string().refine((id) => uuidParam(id) !== undefined),
+  // "1" when the form was drawn for a lead with followers: move the whole party (#2556).
+  party: z.literal("1").optional(),
 });
 
 const MOVE_SEAT_NOTICE: Record<Exclude<MoveSeatRefusal, "not_found">, string> = {
@@ -429,6 +431,9 @@ export async function moveSeatAction(shopSlug: string, tripId: string, formData:
   const { bookingId, toTripId } = parsed.data;
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
+  if (parsed.data.party) {
+    return await moveWholeParty(shopSlug, tripId, toTripId, bookingId, s);
+  }
   const moved = await moveSeat(dbi, {
     shopId: s.user.shopId,
     fromTripId: tripId,
@@ -457,6 +462,53 @@ export async function moveSeatAction(shopSlug: string, tripId: string, formData:
         ? "seat-moved-untold"
         : "seat-moved";
   revalidateAndRedirect(back, noticeUrl(back, notice));
+}
+
+/**
+ * **Move the whole party** (#2556): the lead's "Move to another departure"
+ * moves the lead and every live follower in one transaction (`moveParty`), so a
+ * family lands together on the new roster. A refusal anywhere moves nobody and
+ * is said in the seat move's own words, on the lead's row; a seat that leads
+ * nobody is not this action's business and goes back to the roster.
+ */
+async function moveWholeParty(
+  shopSlug: string,
+  tripId: string,
+  toTripId: string,
+  leadBookingId: string,
+  s: Awaited<ReturnType<typeof requireShopSurface>>["session"],
+) {
+  const back = tripPath(shopSlug, tripId);
+  const moved = await moveParty(await getDb(), {
+    shopId: s.user.shopId,
+    fromTripId: tripId,
+    toTripId,
+    leadBookingId,
+    actorPersonId: s.user.personId,
+  });
+  if (!moved.ok) {
+    if (moved.outcome.reason === "not_found") redirect(back);
+    revalidateAndRedirect(
+      back,
+      noticeUrl(`${back}#move-booking-${leadBookingId}`, MOVE_SEAT_NOTICE[moved.outcome.reason], {
+        bid: leadBookingId,
+      }),
+    );
+  }
+  revalidatePath(tripPath(shopSlug, toTripId));
+  // One sentence for the party; anything a person was not told, or owes, is
+  // checked on the roster rather than guessed at here.
+  const clean = moved.seats.every(
+    (seat) =>
+      seat.notice !== "failed" &&
+      seat.owedCents === 0 &&
+      seat.flySafe !== "failed" &&
+      seat.flySafe.unreached.length === 0,
+  );
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, clean ? "party-moved" : "party-moved-check", { count: moved.seats.length }),
+  );
 }
 
 /**
