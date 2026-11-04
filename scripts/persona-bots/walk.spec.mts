@@ -412,6 +412,21 @@ async function signIn(context: BrowserContext, role: string) {
  * spinners never finish).
  */
 async function settlePaint(page: Page) {
+  try {
+    await settleOnce(page);
+  } catch (error) {
+    // A page that redirects after its first load (a shut door sending the visitor to
+    // its refusal) destroys the execution context under the evaluate. That is a
+    // navigation landing, not a crash: wait for the final document and settle it once
+    // more. A second failure is a real one and propagates (#3657).
+    if (!/Execution context was destroyed|navigation/i.test(String(error))) throw error;
+    await page.waitForLoadState("load");
+    await expect(page).toHaveTitle(/.+/);
+    await settleOnce(page);
+  }
+}
+
+async function settleOnce(page: Page) {
   await page.evaluate(() =>
     Promise.all(
       document

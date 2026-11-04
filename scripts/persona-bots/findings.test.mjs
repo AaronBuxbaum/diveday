@@ -485,6 +485,14 @@ describe("the persona registry", () => {
     }
   });
 
+  it("walks the shut /onboard door as a refusal surface, since the walk mints no setup link (#3657)", () => {
+    const victor = PERSONAS.find((persona) => persona.id === "victor");
+    expect(victor?.surfaces).toContainEqual({ path: "/onboard", refusal: true });
+    const visit = walkPlan(PERSONAS).find((entry) => entry.path === "/onboard");
+    expect(visit?.refusal).toBe(true);
+    expect(visit?.personas).toContain("victor");
+  });
+
   it("visits a route two personas share once, and credits both", () => {
     const plan = walkPlan([
       { id: "one", number: 1, name: "One", lens: "a", surfaces: [{ path: "/s/blue-mantis" }] },
