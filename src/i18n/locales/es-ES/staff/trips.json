@@ -431,6 +431,7 @@
     "mixedTrainingTitle": "Posible coincidencia de formación",
     "mixedTrainingBody": "Si los alumnos de estas sesiones entrenan juntos en una salida, revisa los grupos de instructores, la proporción y el límite de profundidad de la actividad introductoria antes de bucear.",
     "fullDescription": "El barco está lleno.",
+    "fullRequestStaysOpen": "Anotar en la lista de espera deja esta petición abierta en Peticiones de fecha.",
     "findLabel": "Buscar un buceador habitual",
     "findPlaceholder": "Nombre, correo o teléfono",
     "noEmailOnFile": "sin correo registrado",
@@ -458,6 +459,7 @@
     "addPersonForRequestAria": "Agregar a {name} para esta petición",
     "requestLeft": "{count, plural, one {Queda # buceador por agregar} other {Quedan # buceadores por agregar}}",
     "requestDone": "Terminar con esta petición",
+    "requestAskerAboard": "{name} ya está en este barco.",
     "requestGone": "Esa petición está cerrada o se eliminó.",
     "requestNotOffered": "Esa petición no recibió esta salida, así que las plazas de aquí no la responden."
   },

@@ -29,7 +29,7 @@ import { recordShopActivity } from "@/db/shop-activity";
 import { shopHasFeatureOn } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { blankAsAbsent, parseForm, readForm, single, text } from "@/lib/form-parse";
+import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/lib/form-parse";
 import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
@@ -58,6 +58,23 @@ const addDiverSchema = z.object({
 
 const offerToDiverSchema = z.object({ personId: single(z.uuid()) });
 
+const waitlistRequestForm = z.object({ request: formValue() });
+
+/**
+ * **Where a wait-list entry lands** (issue #3741). The departure, or, when the
+ * add band was opened from a date request (`?add=1&request=`), the band again,
+ * so the request card stays in front of the desk. Wait-listing does not answer
+ * the request: it stays open in Requests, and a wait-list entry is never linked
+ * to it (a date request is never the wait list). The id is only a place to
+ * land, not a lookup; a junk one is dropped.
+ */
+function waitlistLanding(back: string, formData: FormData): string {
+  const value = readForm(waitlistRequestForm, formData).request;
+  return typeof value === "string" && uuidParam(value)
+    ? `${back}?add=1&request=${encodeURIComponent(value)}`
+    : back;
+}
+
 const rosterBookingForm = z.object({ bookingId: text() });
 
 /**
@@ -82,7 +99,7 @@ const WAITLIST_NOTICE: Record<Extract<DepartureAskOutcome, { ok: false }>["reaso
 
 /** Staff-entered wait-list entry — only valid once the trip is actually full. */
 export async function addToWaitlistAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = tripPath(shopSlug, tripId);
+  const back = waitlistLanding(tripPath(shopSlug, tripId), formData);
   const s = (await requireShopSurface(shopSlug)).session;
   const parsed = parseForm(addDiverSchema, formData);
   // The departure id is narrowed with the diver fields, not after them: a
@@ -114,7 +131,7 @@ export async function addKnownDiverToWaitlistAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = tripPath(shopSlug, tripId);
+  const back = waitlistLanding(tripPath(shopSlug, tripId), formData);
   const s = (await requireShopSurface(shopSlug)).session;
   const parsed = parseForm(offerToDiverSchema, formData);
   if (!uuidParam(tripId) || !parsed.ok) redirect(noticeUrl(back, "diver-invalid"));

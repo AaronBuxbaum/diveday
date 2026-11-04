@@ -225,6 +225,32 @@ describe("AddDiverSection", () => {
     );
   });
 
+  it("says wait-listing leaves a date request open, only on a full boat opened from one", () => {
+    const context = {
+      shopSlug: "blue-mantis",
+      tripId: "trip-1",
+      query: "",
+      candidates: [],
+      addBookingAction: action,
+      addToWaitlistAction: action,
+      addKnownToWaitlistAction: action,
+      addExistingDiverAction: action,
+      locale: "en-US",
+      timeZone: "America/Cancun",
+    };
+    const line = "Wait-listing leaves this request open in Date requests.";
+    const { rerender } = render(
+      <AddDiverSection context={{ ...context, full: true, request: { id: "r-1" } }} />,
+    );
+    expect(screen.getByText(line)).toBeInTheDocument();
+
+    rerender(<AddDiverSection context={{ ...context, full: true }} />);
+    expect(screen.queryByText(line)).toBeNull();
+
+    rerender(<AddDiverSection context={{ ...context, full: false, request: { id: "r-1" } }} />);
+    expect(screen.queryByText(line)).toBeNull();
+  });
+
   it("says a full boat is full and offers no wait list while the wait list is off", () => {
     render(
       <AddDiverSection

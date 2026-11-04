@@ -230,6 +230,9 @@ export function AddDiverSection({
       ) : full ? (
         <>
           <p className="text-sm text-muted">{t("trips.addDiver.fullDescription")}</p>
+          {request ? (
+            <p className="text-sm text-muted">{t("trips.addDiver.fullRequestStaysOpen")}</p>
+          ) : null}
           {/* A full boat leads with the shop's people too (Aaron, 2026-10-23):
               a returning diver is picked onto who's waiting, never typed
               again, and "Add diver" stays the door for someone new. */}
