@@ -5,7 +5,8 @@ import type { DbExecutor } from "./client";
 import { bookings, notificationDeliveries } from "./schema";
 
 /**
- * **A moved departure re-arms its reminders** (#2444).
+ * **A moved departure re-arms its reminders** (#2444), and so does a moved
+ * seat (#2554).
  *
  * The reminder pass dedupes on one `notification_deliveries` row per booking
  * and cadence (`sendDueReminders`), so a diver reminded the night before the
@@ -24,12 +25,19 @@ import { bookings, notificationDeliveries } from "./schema";
  */
 export async function rearmTripReminders(
   tx: DbExecutor,
-  input: { shopId: string; tripId: string },
+  input: { shopId: string; tripId: string } | { shopId: string; bookingId: string },
 ): Promise<void> {
+  // A whole departure's seats, or one seat that changed departure (a staff
+  // move keeps the booking row and changes its trip, issue #2554).
   const seats = tx
     .select({ id: bookings.id })
     .from(bookings)
-    .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        "bookingId" in input ? eq(bookings.id, input.bookingId) : eq(bookings.tripId, input.tripId),
+      ),
+    );
   await tx
     .update(notificationDeliveries)
     .set({ supersededAt: nowDate() })

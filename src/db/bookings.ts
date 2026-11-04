@@ -80,6 +80,7 @@ import { type CreatePersonInput, createPerson, findOrCreatePerson } from "./peop
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "./readiness";
+import { rearmTripReminders } from "./reminder-rearm";
 import { newestMarkFirst } from "./roll-call-order";
 import { seatMarks } from "./roll-call-subject";
 import {
@@ -2241,6 +2242,11 @@ export async function moveBooking(
     // A package dive spent on the old departure is given back and the new one
     // settles it again, under the new trip's own rules.
     await releasePackageCoverageForBooking(tx, shopId, booking.id);
+    // A reminder already sent for the old departure is the record the diver was
+    // told it, not the new one's: stamp it superseded so the next reminder run
+    // sends the 7-day and 24-hour reminders for the departure they now sail
+    // (issue #2554). Nothing is resent for the old one, and no row is deleted.
+    await rearmTripReminders(tx, { shopId, bookingId: booking.id });
     await tx
       .update(bookings)
       .set({
