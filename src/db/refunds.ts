@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, or, sql } from "drizzle-orm";
+import { and, eq, gt, gte, inArray, or, sql, sum } from "drizzle-orm";
 import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
@@ -30,6 +30,7 @@ import {
   bookingPayments,
   bookings,
   paymentOperationIntents,
+  stripeRefundFailures,
   trips,
 } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
@@ -976,7 +977,10 @@ async function countPaidAfterCloseRefund(
       )
       .limit(1);
     if (ownInFlight) return { status: "deferred" };
-    const reversedTotal = Math.min(input.amountRefundedCents, current.paidAfterCloseCents);
+    const reversedTotal = Math.min(
+      await refundedTotalNetOfLaterFailures(tx, { checkoutId: current.id }, input),
+      current.paidAfterCloseCents,
+    );
     if (reversedTotal <= current.refundedCents) return { status: "already_recorded" };
     await tx
       .update(bookingCheckouts)
@@ -984,6 +988,34 @@ async function countPaidAfterCloseRefund(
       .where(and(eq(bookingCheckouts.id, current.id), fareCheckout()));
     return { status: "checkout_refunded" };
   });
+}
+
+/**
+ * **Stripe's running total, less refunds that failed after it** (issue
+ * #3835). A `charge.refunded` stamped no later than a refund failure this
+ * order or checkout has since recorded still counts the refund that failed:
+ * delivered late, it would put the failed refund back on the books. Each
+ * failure written after the event's own instant comes off the total, by the
+ * amount the failure took back. The tip path keeps the same rule
+ * (`recordTipRefund`, src/db/tip-reversals.ts).
+ */
+async function refundedTotalNetOfLaterFailures(
+  db: DbExecutor,
+  target: { orderId: string } | { checkoutId: string },
+  input: Pick<ExternalRefundInput, "amountRefundedCents" | "occurredAt">,
+): Promise<number> {
+  const [failures] = await db
+    .select({ failed: sum(stripeRefundFailures.amountCents) })
+    .from(stripeRefundFailures)
+    .where(
+      and(
+        "orderId" in target
+          ? eq(stripeRefundFailures.orderId, target.orderId)
+          : eq(stripeRefundFailures.checkoutId, target.checkoutId),
+        gt(stripeRefundFailures.failedAt, input.occurredAt),
+      ),
+    );
+  return Math.max(0, input.amountRefundedCents - Number(failures?.failed ?? 0));
 }
 
 async function applyStripeChargeRefund(
@@ -1008,7 +1040,11 @@ async function applyStripeChargeRefund(
     if (await ownRefundInFlight(db, order.shopId, { orderId: order.id }, staleBefore)) {
       return { status: "deferred" };
     }
-    const outcome = await applyStripeRefundedTotalToOrder(db, order, input.amountRefundedCents);
+    const outcome = await applyStripeRefundedTotalToOrder(
+      db,
+      order,
+      await refundedTotalNetOfLaterFailures(db, { orderId: order.id }, input),
+    );
     if (outcome.status === "refunded") return { status: "order_refunded", order: outcome.order };
     if (outcome.status === "not_settled") return { status: "deferred" };
     if (outcome.status === "not_paid") return { status: "not_found" };
@@ -1056,7 +1092,10 @@ async function applyStripeChargeRefund(
       .for("update");
     if (!current) return { status: "not_found" };
     const captured = current.settledTotalCents ?? current.totalCents;
-    const reversedTotal = Math.min(input.amountRefundedCents, captured);
+    const reversedTotal = Math.min(
+      await refundedTotalNetOfLaterFailures(tx, { checkoutId: current.id }, input),
+      captured,
+    );
     const delta = reversedTotal - current.refundedCents;
     if (delta <= 0) return { status: "already_recorded" };
 
