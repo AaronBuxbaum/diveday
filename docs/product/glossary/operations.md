@@ -1538,7 +1538,7 @@
   Checked again at every read: a mark whose enrollment is canceled, held or moved is the
   `training_mark_invalid` blocker until staff clear it. Clearing one with forms still owed takes a
   manager or the enrollment's own instructor, and the manifest names who did. **A training mark is
-  not In training**: it changes boarding only, and buying a seat never reads it. A mark that
+  not In training**: it changes boarding only: buying a seat reads whether a mark *could* lower a site's level, never a mark itself. A mark that
   stands may lower a site's level to the course's minimum, and only when the course
   certifies that level. A seat-level mark does not identify one of several planned dives, so
   multi-dive departures and one-dive departures with conflicting site records retain their site

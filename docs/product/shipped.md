@@ -3566,8 +3566,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
 - **Post-trip recap extras** — a crew shout-out (`trips.recap_shoutout`) renders on every diver's
   recap, and divers attach their own photos (`recap_photos` + `storeRecapImage`), which staff
   moderate from the roster ([post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md)).
-- **Generic undo** — the reversible card deletes land immediately and offer a 5-second undo toast
-  instead of a confirm dialog (`restoreCard`, inside the **card undo window**; reusable `UndoToast`).
+- **Generic undo** — the reversible card deletes land immediately and offer an undo toast that stays until dismissed, instead of a confirm dialog; a card's Undo works for 15 minutes (`restoreCard`, inside the **card undo window**; reusable `UndoToast`).
 - **Optimistic interaction** — a true `useOptimistic` payment-status control flips instantly and
   reconciles on the server; boarding stays server-authoritative (never optimistic on safety state).
 - **One keyboard idiom** — ⌘K opens the command palette, which searches records and reaches every

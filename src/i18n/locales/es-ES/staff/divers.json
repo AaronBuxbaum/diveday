@@ -486,6 +486,7 @@
     "cardRemovedToast": "Certificación eliminada por {name}",
     "cardRestoreConflict": "No se pudo restaurar esa certificación, porque otro registro ahora usa su número. Vuelve a agregarla si aún la necesitas.",
     "cardRestored": "Certificación restaurada. Vuelve a contar para la disposición.",
+    "cardRestoreGone": "No hay nada que deshacer. Esa certificación ya volvió o no se encuentra.",
     "cardRestoreExpired": "Deshacer solo funciona durante 15 minutos después de eliminar. Vuelve a agregar la certificación y márcala como certificada.",
     "cardRestoreSystem": "DiveDay apartó esa certificación por otra evidencia, así que Deshacer no puede recuperarla. Vuelve a agregarla y márcala como certificada.",
     "cardSightingRequired": "Esta certificación es solo lo que nos dijo el buceador. Escribe la agencia y el número del registro de certificación para verificarla.",

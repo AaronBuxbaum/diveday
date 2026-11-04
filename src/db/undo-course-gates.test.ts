@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, createBooking, restoreBooking } from "./bookings";
+import { restoreCard } from "./card-restore";
 import type { AppDb } from "./client";
 import { markBookingNoShow, undoBookingNoShow } from "./no-show";
 import { deleteCertification } from "./readiness";
@@ -154,6 +155,50 @@ describe("restoreBooking on a course session", () => {
 
     expect(await restoreBooking(db, shop.id, student.bookingId)).toBe("course_min_age");
     expect(await statusOf(db, student.bookingId)).toBe("cancelled");
+  });
+
+  it("asks staffing of a rider too: an undo onto an unstaffed session refuses", async () => {
+    const { db, shop } = ctx;
+    const { trip } = await session(db, shop.id, "Advanced Open Water Diver");
+    const rider = await seatCardedStudent(db, shop.id, trip.id);
+    // The sale refuses a rider on a course session, so the seat is written as one.
+    await db
+      .update(bookings)
+      .set({ participantType: "rider" })
+      .where(eq(bookings.id, rider.bookingId));
+    await cancelBooking(db, shop.id, rider.bookingId);
+    await emptyCrew(db, trip.id);
+
+    expect(await restoreBooking(db, shop.id, rider.bookingId)).toBe("course_unstaffed");
+    expect(await statusOf(db, rider.bookingId)).toBe("cancelled");
+  });
+
+  it("holds the seat until the card's own Undo lands, when the card went first", async () => {
+    const { db, shop } = ctx;
+    const { trip, staffId } = await session(db, shop.id, "Advanced Open Water Diver");
+    const student = await seatCardedStudent(db, shop.id, trip.id);
+    // The desk's mistaken order: the card deleted, then the student removed.
+    expect(
+      await deleteCertification(db, {
+        shopId: shop.id,
+        certificationId: student.cardId,
+        deletedByPersonId: staffId,
+      }),
+    ).toBe(true);
+    await cancelBooking(db, shop.id, student.bookingId);
+
+    expect(await restoreBooking(db, shop.id, student.bookingId)).toBe("course_prerequisite");
+    expect(await statusOf(db, student.bookingId)).toBe("cancelled");
+    expect(
+      await restoreCard(db, {
+        shopId: shop.id,
+        kind: "level",
+        certificationId: student.cardId,
+        restoredByPersonId: staffId,
+      }),
+    ).toBe("restored");
+    expect(await restoreBooking(db, shop.id, student.bookingId)).toBe("restored");
+    expect(await statusOf(db, student.bookingId)).toBe("booked");
   });
 
   it("still restores a student who clears every gate", async () => {

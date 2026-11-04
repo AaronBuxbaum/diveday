@@ -52,6 +52,18 @@ describe("which reviewer a diff needs", () => {
     }
   });
 
+  it.each([
+    "src/db/card-restore.ts",
+    "src/lib/card-undo.ts",
+    "src/app/shop/[shopSlug]/divers/[personId]/undo-inverses.ts",
+    "src/db/schema/activity.ts",
+  ])("asks both reviewers for the card-undo path %s", (file) => {
+    const agents = reviewsNeeded([file]).map((r) => r.agent);
+    expect(agents).toContain("security-reviewer");
+    if (file !== "src/db/schema/activity.ts") expect(agents).toContain("dive-domain-expert");
+    expect(bodyProblems({ body: "", files: [file] }).length).toBeGreaterThan(0);
+  });
+
   // Findings 2026-10-29: each of these changed signed consent or its medical answers and matched
   // no reviewer, because waivers matched only `src/(db|lib)/waiver*.ts`.
   it.each([

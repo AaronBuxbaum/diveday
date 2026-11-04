@@ -486,6 +486,7 @@
     "cardRemovedToast": "Certification deleted by {name}",
     "cardRestoreConflict": "Couldn’t restore that certification, because another record now uses its number. Re-add it if you still need it.",
     "cardRestored": "Certification restored. It counts toward readiness again.",
+    "cardRestoreGone": "Nothing to undo. That certification is already back, or it can’t be found.",
     "cardRestoreExpired": "Undo only works for 15 minutes after a delete. Add the certification again, then mark it certified.",
     "cardRestoreSystem": "DiveDay set that certification aside for other evidence, so Undo can’t bring it back. Add it again, then mark it certified.",
     "cardSightingRequired": "This certification is only what the diver told us. Enter the agency and number from the certification record to verify it.",

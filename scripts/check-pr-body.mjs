@@ -110,6 +110,10 @@ export const REVIEWS = [
       /(^|\/)paperwork-actions[^/]*\.tsx?$/,
       /^src\/lib\/assists\/cert-scan[^/]*\.ts$/,
       /^src\/db\/bookings\.ts$/,
+      // A card's Undo returns a verified card to every readiness read, and the window is all
+      // that stops a wrongly verified card coming back (reviews 3837, S1).
+      /(^|\/)card-(restore|undo)[^/]*\.ts$/,
+      /(^|\/)undo-inverses\.ts$/,
     ],
   },
   {
@@ -125,7 +129,9 @@ export const REVIEWS = [
       /^src\/(db|lib)\/(export|import)[^/]*\.ts$/,
       /^src\/features\/backup-export\//,
       /^src\/app\/api\/cron\/(backup-export|platform-backup)\//,
-      /^src\/db\/schema\/(accounts|core|waivers|certifications|erasure)\.ts$/,
+      /^src\/db\/schema\/(accounts|core|waivers|certifications|erasure|activity)\.ts$/,
+      /(^|\/)card-(restore|undo)[^/]*\.ts$/,
+      /(^|\/)undo-inverses\.ts$/,
       /medical/,
       /erase|erasure|anonymi[sz]/,
       WAIVER_MODULES,

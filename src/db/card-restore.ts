@@ -1,6 +1,7 @@
 import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { type CardUndoRefusal, cardUndoCutoff, cardUndoRefusal } from "@/lib/card-undo";
 import { nowDate } from "@/lib/clock";
+import { isUuid } from "@/lib/uuid";
 import type { AppDb } from "./client";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import { activityEvents, cards, people } from "./schema";
@@ -43,6 +44,9 @@ export async function restoreCard(
     now?: Date;
   },
 ): Promise<CardRestoreOutcome> {
+  if (![input.shopId, input.certificationId, input.restoredByPersonId].every(isUuid)) {
+    return "not_found";
+  }
   const now = input.now ?? nowDate();
   const byId = and(
     eq(cards.kind, input.kind),

@@ -439,6 +439,16 @@ describe("a card's Undo is bounded to a recent staff delete", () => {
     expect((await rowOf(db, cardId))?.deletedAt).toBeNull();
   });
 
+  it("answers a double-tapped Undo with its own notice, never the number conflict", async () => {
+    const { db, shop, cardId, offer } = await deletedLevelCard("UNDO-W-3");
+
+    expect(await undo(shop.slug, offer)).toContain("notice=card-restored");
+    const second = await undo(shop.slug, offer);
+    expect(second).toContain("notice=card-restore-gone");
+    expect(second).not.toContain("card-restore-conflict");
+    expect((await rowOf(db, cardId))?.deletedAt).toBeNull();
+  });
+
   it("refuses a card deleted 16 minutes ago, with its own notice", async () => {
     const { db, shop, cardId, offer } = await deletedLevelCard("UNDO-W-2");
     await deletedMinutesAgo(db, cardId, 16);

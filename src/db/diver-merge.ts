@@ -1182,8 +1182,16 @@ export async function mergeDiverRecords(input: {
                 sql`, `,
               )})`
             : sql``;
+        // Moving a card is DiveDay's act, not the deleter's: an archive that was a
+        // staffer's Delete becomes a system one, so its Undo cannot put the card
+        // onto the kept record (issue #3701; the merge's card warning reads live
+        // cards only).
+        const systemArchive =
+          tableName === "cards"
+            ? sql`, "deletion_kind" = case when "deleted_at" is not null then 'system'::card_deletion_kind else "deletion_kind" end`
+            : sql``;
         await tx.execute(
-          sql`update ${sql.raw(quotedTable(tableName))} set "person_id" = ${survivor.id} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}${leftBehind}`,
+          sql`update ${sql.raw(quotedTable(tableName))} set "person_id" = ${survivor.id}${systemArchive} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}${leftBehind}`,
         );
       }
 

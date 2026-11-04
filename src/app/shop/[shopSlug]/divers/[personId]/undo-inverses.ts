@@ -23,7 +23,7 @@ import { backTo, requireDiverActionContext } from "./action-helpers";
 const CARD_RESTORE_NOTICES = {
   restored: "card-restored",
   conflict: "card-restore-conflict",
-  not_found: "card-restore-conflict",
+  not_found: "card-restore-gone",
   undo_expired: "card-restore-expired",
   system_archived: "card-restore-system",
 } as const satisfies Record<CardRestoreOutcome, string>;

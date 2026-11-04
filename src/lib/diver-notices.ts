@@ -70,6 +70,12 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "danger",
     key: "divers.notices.cardRestoreConflict",
   },
+  // A card's Undo with nothing left to restore: already back (a double tap) or gone.
+  "card-restore-gone": {
+    form: "cards",
+    tone: "warning",
+    key: "divers.notices.cardRestoreGone",
+  },
   // A card's Undo outside its window, or on a card DiveDay set aside (#3701).
   "card-restore-expired": {
     form: "cards",
