@@ -196,7 +196,7 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
   },
   {
     file: "src/db/notifications.ts",
-    holds: "notificationHeldForRehearsal(",
+    holds: "notificationHeldBeforeSend(",
     times: 3,
     why: "every email — the single send, the batch, the retry drain — is held",
   },
