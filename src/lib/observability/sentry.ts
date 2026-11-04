@@ -38,6 +38,20 @@ function sdk(): Promise<Sdk | null> {
   return loading;
 }
 
+/**
+ * **Which monitors may check in** (Sentry's free plan allows one Cron Monitor).
+ * `SENTRY_CRON_MONITORS` is a comma-separated list of monitor slugs; set, every
+ * other slug's check-in is skipped here, at the one place all of them pass, so
+ * Sentry never sees a second monitor to refuse. Unset, every route checks in.
+ * Failures still reach Sentry as errors and CloudWatch as `scan_failed`.
+ */
+function monitorAllowed(slug: string): boolean {
+  const list = process.env.SENTRY_CRON_MONITORS?.split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return !list?.length || list.includes(slug);
+}
+
 export const sentry = {
   async captureException(
     ...args: Parameters<Sdk["captureException"]>
@@ -48,6 +62,7 @@ export const sentry = {
     return (await sdk())?.captureMessage(...args);
   },
   async captureCheckIn(...args: Parameters<Sdk["captureCheckIn"]>): Promise<string | undefined> {
+    if (!monitorAllowed(args[0].monitorSlug)) return undefined;
     return (await sdk())?.captureCheckIn(...args);
   },
 };

@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  *   answer is the gate's 503 or 401, and the database, Sentry, `fetch` and any
  *   socket were never touched, neither while the module loaded nor while it answered.
  * - **Admitted, its monitor schedule is the one Vercel runs.** The first Sentry
- *   check-in names the crontab vercel.json deploys for that path, so a monitor
+ *   check-in names the crontab config/crons.json deploys for that path, so a monitor
  *   cannot drift from its cron and page for a tick that was never due (or stay
  *   quiet for one that was missed). The database is made to fail, so no pass
  *   does any work here.
@@ -46,7 +46,7 @@ const ROUTES = readdirSync(ROOT, { withFileTypes: true })
 type VercelCron = { path: string; schedule: string };
 const DEPLOYED = new Map(
   (
-    JSON.parse(readFileSync(path.join(process.cwd(), "vercel.json"), "utf8")) as {
+    JSON.parse(readFileSync(path.join(process.cwd(), "config", "crons.json"), "utf8")) as {
       crons: VercelCron[];
     }
   ).crons.map((cron) => [cron.path, cron.schedule]),
@@ -98,7 +98,7 @@ afterEach(() => {
 });
 
 describe("every cron route", () => {
-  it("is deployed: each route directory has a vercel.json entry and each entry a route", () => {
+  it("is deployed: each route directory has a config/crons.json entry and each entry a route", () => {
     expect(ROUTES.length).toBeGreaterThan(10);
     expect(ROUTES.map((name) => `/api/cron/${name}`)).toEqual([...DEPLOYED.keys()].sort());
   });
@@ -151,7 +151,7 @@ describe("every cron route", () => {
       expectUntouched(name);
     });
 
-    it("opens its Sentry monitor on the schedule vercel.json deploys, in UTC", async () => {
+    it("opens its Sentry monitor on the schedule config/crons.json deploys, in UTC", async () => {
       const { GET, maxDuration } = await load();
       // The platform backup checks in only once its uploader is configured.
       vi.stubEnv("PLATFORM_BACKUP_AWS_ACCESS_KEY_ID", "AKIA-TEST");

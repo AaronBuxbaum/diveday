@@ -947,3 +947,14 @@ photo URLs send `no-referrer` and are unaffected. `Strict-Transport-Security` al
 > which gates deletion and the ingest allowlist. On a pre-pilot database that is the correct trade
 > (`.claude/rules/db.md`'s H-20260815-no-legacy); it is also precisely the breakage this section exists to prevent
 > happening later, when it would not be.
+
+## 13. Scheduled routes (the cron dispatcher)
+
+`config/crons.json` lists every `/api/cron/*` route and its UTC crontab. The stack (S19b in `infra/lib/infra-stack.ts`) creates one EventBridge Scheduler schedule per entry, each invoking the `diveday-cron-dispatcher` Lambda with `{ "path": "/api/cron/<route>" }`. The Lambda reads `diveday/cron-secret` (the only secret it can read; not the app secret seed) and GETs the route over https with it as the bearer token. The same value reaches Vercel as `CRON_SECRET` through the credentials document. `vercel.json` holds no crons.
+
+- **Add or change a schedule**: edit `config/crons.json`, then deploy the stack. The tests that pin each monitor's crontab read the same file.
+- **A pass did not run**: the `diveday-cron-dispatcher-errors` alarm names it; the Lambda log group `/aws/lambda/diveday-cron-dispatcher` has the path and the status. Nothing retries (the schedule and the function's async config both allow zero), so a route that half-ran never runs again on a timer.
+- **Run one by hand**: `aws lambda invoke --function-name diveday-cron-dispatcher --payload '{"path":"/api/cron/usage"}' --cli-binary-format raw-in-base64-out /dev/stdout`.
+- **Sentry**: set `SENTRY_CRON_MONITORS=diveday-shop-tick` in the app so the free plan's single Cron Monitor watches the hourly tick.
+- **Cutover**: deploy the stack, run `pnpm infra:deploy`'s env import so Vercel holds the new `CRON_SECRET` (until it does, the dispatcher's calls answer 401), then deploy the app, whose empty `vercel.json` crons turn Vercel's clock off. Between the stack and the app deploys both clocks run; do not do it near the top of an hour.
+- **Rollback**: a Vercel Instant Rollback restores the old `vercel.json` crons, so every route runs twice (Vercel and AWS) until the next deploy. After a rollback, redeploy the app.

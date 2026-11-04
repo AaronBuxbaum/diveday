@@ -858,15 +858,17 @@ export const ENV_GROUPS = [
   {
     seam: "vercel-cron",
     doc: [
-      "Scheduled pre-trip reminders (ADR 20260721-scheduled-reminder-cadence). Vercel",
-      "Cron calls GET /api/cron/reminders daily with this as a bearer token (the Hobby",
-      "plan caps crons at daily; the cadence buckets are >=24h wide so a daily run",
-      "never misses one). Derived from APP_SECRET_SEED.",
+      "Scheduled routes (ADR 20260721-scheduled-reminder-cadence). EventBridge Scheduler",
+      "invokes the cron dispatcher Lambda (infra/lib/cron-dispatcher-handler.ts), which",
+      "GETs each /api/cron/* route listed in config/crons.json with this as a bearer",
+      "token. The stack mints it as its own Secrets Manager secret, diveday/cron-secret,",
+      "which only that Lambda reads: the dispatcher never touches APP_SECRET_SEED, from",
+      "which the session and credential-sealing keys derive.",
     ],
     keys: [
       {
         key: "CRON_SECRET",
-        from: "derived",
+        from: "stack",
         targets: LOCAL_AND_VERCEL,
         absent:
           "the endpoint is unavailable (503), so nothing can trigger reminder sends by accident",
@@ -1293,6 +1295,13 @@ export const ENV_GROUPS = [
         from: "override",
         targets: NOWHERE,
         absent: "errors report to the DSN compiled into the code; empty switches reporting off",
+      },
+      {
+        key: "SENTRY_CRON_MONITORS",
+        from: "override",
+        targets: NOWHERE,
+        absent:
+          "every cron route checks in to its monitor; set it to a comma-separated list of slugs (Sentry's free plan allows one, so `diveday-shop-tick`) and the rest skip the check-in",
       },
       {
         key: "SENTRY_CRON_MONITOR_SLUG",
