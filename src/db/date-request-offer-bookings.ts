@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, dateRequestOfferBookings, interests } from "./schema";
 import { seatHeld } from "./trips-queries";

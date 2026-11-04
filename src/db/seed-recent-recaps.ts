@@ -113,14 +113,7 @@ export async function seedRecentRecaps(
       startsAt: trips.startsAt,
     })
     .from(trips)
-    .innerJoin(
-      bookings,
-      and(
-        eq(bookings.tripId, trips.id),
-        eq(bookings.shopId, shopId),
-        seatHeld,
-      ),
-    )
+    .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.shopId, shopId), seatHeld))
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(
       and(

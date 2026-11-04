@@ -1,14 +1,9 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { decideCourseAdmission } from "@/lib/course-admission";
 import { seatName } from "@/lib/held-seat";
-import {
-  type NoShowGate,
-  noShowGate,
-  type SalvageOffer,
-  salvageOffer,
-} from "@/lib/no-show";
+import { type NoShowGate, noShowGate, type SalvageOffer, salvageOffer } from "@/lib/no-show";
 import { isDiver, seatRefusal } from "@/lib/participant-types";
 import { type SimilarDeparture, similarDepartures } from "@/lib/similar-departures";
 import { loadActiveStaffRoles } from "./authz";

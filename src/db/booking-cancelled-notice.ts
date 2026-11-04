@@ -8,7 +8,9 @@ import {
 } from "@/lib/notifications";
 import { type Notification, recipientLocale } from "@/lib/notifications/kinds";
 import { isCapturedPaymentStatus, type PaymentStatusValue } from "@/lib/payment-source";
+import { hasArrived } from "@/lib/presence";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { standingArrivalStatus } from "./arrival-provenance";
 import type { AppDb } from "./client";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { recordNotificationDelivery, sendAndRecordNotification } from "./notifications";
@@ -103,8 +105,9 @@ type BookingCancelledNoticeInput = {
   /**
    * The seat's status just before the cancel (`cancelBooking`'s
    * `previousStatus`). Only `booked` is a diver who expected to come: a
-   * checked-in or no-show row taken off the roster, or one already canceled,
-   * is roster tidying the diver is not told about.
+   * no-show row taken off the roster, or one already canceled, is roster
+   * tidying the diver is not told about, and so is a checked-in one, which the
+   * arrival trail says rather than this status (issue #2702).
    */
   from: Booking["status"];
   refund: CancellationRefundSeen;
@@ -134,6 +137,16 @@ async function sendNotice(
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
   if (!observed) return "not_sent";
+  // A seat the desk had checked in is roster tidying too, as it was when the
+  // seat word said so: the cancel leaves the sighting standing, so the trail
+  // still answers (issue #2702).
+  if (
+    hasArrived(
+      await standingArrivalStatus(db, input.shopId, observed.booking.tripId, input.bookingId),
+    )
+  ) {
+    return "not_sent";
+  }
   if (!observed.person.email) return "no_address";
 
   const fenced = await withErasureCoordinatedBookingSend(

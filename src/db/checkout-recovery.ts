@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNull, lte, ne, not, notInArray, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte, ne, not, or } from "drizzle-orm";
 import { toDiverLocale } from "@/i18n/settings";
 import { dueCheckoutRecovery, RECOVERY_DELAY_HOURS } from "@/lib/checkout-recovery";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -341,12 +341,7 @@ export async function sendDueCheckoutRecoveries(
       .from(bookingCheckoutBookings)
       // diveday:any-checkout-purpose: the links of the fare candidates read above
       .innerJoin(bookings, eq(bookings.id, bookingCheckoutBookings.bookingId))
-      .where(
-        and(
-          eq(bookingCheckoutBookings.checkoutId, checkout.id),
-          not(seatHeld),
-        ),
-      )
+      .where(and(eq(bookingCheckoutBookings.checkoutId, checkout.id), not(seatHeld)))
       .limit(1);
     if (freshlyCancelled) {
       await markCheckoutExpiredBySessionId(db, checkout.stripeSessionId);

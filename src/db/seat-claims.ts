@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { hasArrived } from "@/lib/presence";
 import { trackEvent } from "@/lib/analytics";
 import { asLevelCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
@@ -12,10 +11,12 @@ import { seatIsHeld } from "@/lib/no-show";
 import type { ParticipantType } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
+import { hasArrived } from "@/lib/presence";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { isCompletedWaiverCurrent, waiverClockInstant } from "@/lib/waivers";
 import { type AboardHold, heldAtTheDoor } from "./aboard-at-sea";
+import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import {
   type IssuedCapability,
   mintBookingCapabilities,
@@ -24,7 +25,6 @@ import {
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { partySeatGoesWithLead, tripAdmissionFor } from "./bookings";
-import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";

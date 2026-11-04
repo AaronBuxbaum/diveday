@@ -7,9 +7,9 @@ import {
   rollCallEvents as rollCallEventsTable,
   trips as tripsTable,
 } from "./schema";
+import { seedArrivals } from "./seed-arrivals";
 import { listStaff } from "./trips";
 import { livePerson } from "./trips-live";
-import { seedArrivals } from "./seed-arrivals";
 
 /**
  * The unclosed-roll-call suites' fixtures (DOM-H3): a boat that already tied

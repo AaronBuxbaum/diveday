@@ -31,6 +31,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { seedArrivals } from "./seed-arrivals";
 import { CAPTAIN_NAME, LEAD_INSTRUCTOR_NAME, OWNER_NAME } from "./seed-cast";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { HISTORY_DIVER_NAMES } from "./seed-history";
@@ -38,7 +39,6 @@ import { freeHull } from "./seed-hulls";
 import { DEMO_WEEKLY_RUN_TITLE } from "./seed-weekly-run";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
-import { seedArrivals } from "./seed-arrivals";
 
 /**
  * **What a booth visitor is shown in five minutes** (market sheet 2026-10-22,

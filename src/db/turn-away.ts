@@ -1,10 +1,10 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { isCheckedIn } from "@/lib/presence";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
+import { isCheckedIn } from "@/lib/presence";
 import { type TurnAwayGate, type TurnAwayReason, turnAwayGate } from "@/lib/turn-away";
-import { expirePendingCheckoutsForBooking } from "./checkouts";
 import { standingArrivalStatus } from "./arrival-provenance";
+import { expirePendingCheckoutsForBooking } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";

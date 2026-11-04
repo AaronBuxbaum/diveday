@@ -1,4 +1,5 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
+import { seatIsHeld } from "@/lib/no-show";
 import { hasSailed } from "@/lib/trips";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
@@ -13,7 +14,6 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
-import { seatIsHeld } from "@/lib/no-show";
 
 /**
  * **The shop's first booking, while it is still the only one.**

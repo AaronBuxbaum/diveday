@@ -112,13 +112,7 @@ export async function sailedRebooking(
     .select({ bookingId: bookings.id, personId: bookings.personId, personName: people.fullName })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, tripId),
-        seatHeld,
-      ),
-    );
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId), seatHeld));
   const seats = heldSeats.filter((seat) => cameBackAboard(seat.bookingId, rollCall));
   if (seats.length === 0) return result;
   const personIds = [...new Set(seats.map((seat) => seat.personId))];

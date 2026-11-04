@@ -1,5 +1,4 @@
 import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
-import { hasArrived } from "@/lib/presence";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
@@ -42,6 +41,7 @@ import {
 } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
+import { hasArrived } from "@/lib/presence";
 import type { ReEntryAsk } from "@/lib/re-entry";
 import { BLOCKER_CATEGORY, type CertificationLevel } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
@@ -57,11 +57,11 @@ import {
 } from "@/lib/trip-admission";
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
+import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import { fareCheckout } from "./checkout-purpose";
-import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import {
   completeDateRequestOfferParty,

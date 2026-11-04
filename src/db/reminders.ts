@@ -57,8 +57,8 @@ import { type ReminderLink, ReminderLinks } from "./reminder-links";
 import { bookings, courses, notificationDeliveries, people, shops, trips } from "./schema";
 import { optedOutPhones, stopListedSmsProvider } from "./sms-opt-outs";
 import { notRehearsal } from "./trips-live";
-import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 import { seatHeld } from "./trips-queries";
+import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 const REMINDER_KINDS: ReminderKind[] = TRIP_REMINDER_CADENCES.map((c) => c.kind);
 

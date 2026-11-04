@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { canPersonMergeDiver } from "@/db/authz";
-import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "@/db/client";
 import {
   movedPersonTables,
@@ -34,6 +33,7 @@ import {
 import { normalizePersonName, personNamesMatch } from "@/lib/person-name";
 import { hasReturned } from "@/lib/trips";
 import { isStandingRefusal, isUnresolvedMedicalHold } from "@/lib/waivers";
+import { seatCheckedIn } from "./arrival-provenance";
 import {
   lockBoardingCertificationEvidence,
   rewriteBoardingSnapshotReviewer,

@@ -1,4 +1,4 @@
-import { and, asc, countDistinct, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, countDistinct, eq, gte, lt, sql } from "drizzle-orm";
 import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
@@ -56,12 +56,7 @@ export async function seasonScale(
   // A departure the shop deleted takes its seats out of the count with it, and
   // `liveTrip()` is what `pnpm check:repo`'s live-trips guard requires of every
   // read that joins through `trips`.
-  const seatIsLive = and(
-    eq(bookings.shopId, shopId),
-    seatHeld,
-    liveTrip(),
-    notRehearsal(),
-  );
+  const seatIsLive = and(eq(bookings.shopId, shopId), seatHeld, liveTrip(), notRehearsal());
 
   const [before, today, earliest] = await queryAll(db, [
     () =>

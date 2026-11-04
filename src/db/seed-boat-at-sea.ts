@@ -31,6 +31,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { seedArrivals } from "./seed-arrivals";
 import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed-cast";
 import {
   DEMO_SHOP_TIMEZONE,
@@ -45,7 +46,6 @@ import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed-identifiers";
 import { paperRelease } from "./seed-paper-release";
 import { liveTrip } from "./trips-live";
 import { getCurrentWaiverTemplate } from "./waivers";
-import { seedArrivals } from "./seed-arrivals";
 
 /**
  * Who crews the boat at sea, by name, and the job each does aboard: the owner

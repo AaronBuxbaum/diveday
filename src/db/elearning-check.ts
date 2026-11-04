@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { agencyCheckOffered } from "@/lib/agency-check";
 import { type ElearningQuery, elearningCheckQuery } from "@/lib/elearning-check";
 import type { AppDb } from "./client";

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { and, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
+import { seatIsHeld } from "@/lib/no-show";
 import {
   type Notification,
   type NotificationDelivery,
@@ -23,7 +24,6 @@ import { isTransactionExecutor, queryAll } from "./query-helpers";
 import { bookings, notificationSendQueue, people, shops, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 import { seatHeld } from "./trips-queries";
-import { seatIsHeld } from "@/lib/no-show";
 
 /**
  * Correct an interval that no longer matches the diver's current itinerary.
@@ -502,9 +502,7 @@ export function flySafeToldUncorrected(
 ): number {
   return seats.filter(
     (seat) =>
-      seatIsHeld(seat.status) &&
-      seat.flySafeHoursTold !== null &&
-      seat.flySafeCorrectedAt === null,
+      seatIsHeld(seat.status) && seat.flySafeHoursTold !== null && seat.flySafeCorrectedAt === null,
   ).length;
 }
 

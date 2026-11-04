@@ -8,6 +8,7 @@ import {
   type TripRescheduledPayload,
 } from "@/lib/held-sends";
 import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
+import { seatIsHeld } from "@/lib/no-show";
 import {
   type NotificationDelivery,
   type NotificationProvider,
@@ -37,9 +38,8 @@ import { bookings, notificationSendQueue, people, shops, trips } from "./schema"
 import { isSmsOptedOut, stopListedSmsProvider } from "./sms-opt-outs";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
-import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 import { seatHeld } from "./trips-queries";
-import { seatIsHeld } from "@/lib/no-show";
+import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /**
  * **Telling the booked divers a departure moved** (ux review 2026-10-11, item
@@ -523,8 +523,7 @@ async function tellSeat(
         .from(bookings)
         .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shop.id)))
         .limit(1);
-      if (!current || !seatIsHeld(current.status))
-        return "skipped" as const;
+      if (!current || !seatIsHeld(current.status)) return "skipped" as const;
       if (current.identityUnconfirmedAt) {
         await tx
           .update(bookings)

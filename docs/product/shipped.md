@@ -138,7 +138,7 @@ and `/about`'s export check is done in the demo.
 Item 11 of the 2026-08-27 sweep (issue #1209). `bookings.status = 'no_show'` had existed since the
 first schema with a dozen readers branching on it and no writer anywhere; the counter's "Not here?"
 disclosure is that writer. **The staffer's confirm tap is the release** — no second tap, no timer,
-no close-of-day sweep and no `seat_released_at` column: `no_show` leaves `SEAT_HELD_STATUSES`, so
+no close-of-day sweep and no `seat_released_at` column: `no_show` stops holding the seat (`seatIsHeld`), so
 the boat reads one seat lighter the moment the mark commits and the next diver claims it through
 `bookSpot`'s ordinary capacity transaction. The door opens when the boat leaves without the diver
 rather than at the shop's **dock call time**, and closes at the end of the arrivals window; once the

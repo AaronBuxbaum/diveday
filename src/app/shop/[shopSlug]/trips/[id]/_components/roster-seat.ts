@@ -310,10 +310,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     namesakeRefused ||
     participantTypeCertBookingId === booking.id;
   return {
-    booking,
-    person,
-    // The desk's sighting, from the arrival trail (issue #2702).
-    checkedIn: entry.checkedIn,
+    ...entry,
     t,
     actions,
     arrival,

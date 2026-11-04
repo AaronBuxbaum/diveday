@@ -1,6 +1,7 @@
 # 20260907-the-counter-survives-offline — Give arrival its own append-only trail, its own offline queue, and no way to say "aboard"
 
-- **Status:** Accepted
+- **Status:** Accepted; decision 1 (the `bookings.status` projection written beside the trail) amended by
+  [20261104-arrival-is-a-trail](20261104-arrival-is-a-trail.md), which makes the trail the only record of an arrival
 - **Date:** 2026-09-07
 
 ## Context

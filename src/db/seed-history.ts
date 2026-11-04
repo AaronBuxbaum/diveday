@@ -25,6 +25,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { seedArrivals } from "./seed-arrivals";
 import { CAPTAIN_NAME } from "./seed-cast";
 import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt, withinDeskHours } from "./seed-clock";
 import { LAST_YEAR_SAILINGS } from "./seed-last-year";
@@ -32,7 +33,6 @@ import { paperRelease, signingNames } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
 import { recordSeedTips, type SeedTip } from "./tips";
 import { getCurrentWaiverTemplate } from "./waivers";
-import { seedArrivals } from "./seed-arrivals";
 
 /**
  * **What the demo shop's tax line is made of.**
@@ -616,7 +616,6 @@ export async function seedHistory(
     shopId: string;
     tripId: string;
     personId: string;
-    /** `dived`: through the desk and onto the boat; its seat is `booked`. */
     status: "dived" | "no_show" | "cancelled";
     price: number;
     payment: "paid" | "deposit_paid" | "refunded" | "unpaid";
@@ -820,26 +819,7 @@ export async function seedHistory(
       occurredAt: new Date(trip.startsAt.getTime() + index * 90 * 60 * 1000),
     }));
   });
-  if (rollCallRows.length > 0) await db.insert(rollCallEvents).values(rollCallRows);
-  // Everyone who dived came through the desk first: the arrival trail, which
-  // is the only record of a check-in (issue #2702).
-  await seedArrivals(
-    db,
-    plans.flatMap((plan, i) => {
-      const booking = bookingRows[i];
-      const trip = histTrips.find((row) => row.id === plan.tripId);
-      if (!booking || !trip || plan.status !== "dived") return [];
-      return [
-        {
-          shopId,
-          tripId: plan.tripId,
-          bookingId: booking.id,
-          recordedByPersonId: createdByPersonId,
-          occurredAt: new Date(trip.startsAt.getTime() - 30 * 60_000),
-        },
-      ];
-    }),
-  );
+  await writeHistoryTrails(db, { shopId, createdByPersonId, rollCallRows, plans, bookingRows });
 
   // Paid invoices, so a diver's profile shows a real billing history — and, via
   // the `providerRef` written on their payment rows above, so the monthly
@@ -1200,5 +1180,41 @@ async function insertHistoryCards(
       status: "verified" as const,
       ...reviewedBy(createdByPersonId),
     })),
+  );
+}
+
+/**
+ * The rail's head counts, and the desk's arrivals before them: everyone who
+ * dived came through the desk first, and the arrival trail is the only record
+ * of a check-in (issue #2702). A `dived` plan's seat is `booked`. Arrivals are
+ * aligned on plan index, as `bookingRows` is.
+ */
+async function writeHistoryTrails(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    createdByPersonId: string;
+    rollCallRows: (typeof rollCallEvents.$inferInsert)[];
+    plans: readonly { tripId: string; status: string; createdAt: Date }[];
+    bookingRows: readonly ({ id: string } | undefined)[];
+  },
+): Promise<void> {
+  if (input.rollCallRows.length > 0) await db.insert(rollCallEvents).values(input.rollCallRows);
+  await seedArrivals(
+    db,
+    input.plans.flatMap((plan, i) => {
+      const booking = input.bookingRows[i];
+      if (!booking || plan.status !== "dived") return [];
+      return [
+        {
+          shopId: input.shopId,
+          tripId: plan.tripId,
+          bookingId: booking.id,
+          recordedByPersonId: input.createdByPersonId,
+          // `createdAt` is a minute or so before the boat left, per seat.
+          occurredAt: plan.createdAt,
+        },
+      ];
+    }),
   );
 }

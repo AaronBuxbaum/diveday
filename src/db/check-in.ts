@@ -4,14 +4,14 @@ import { nowDate } from "@/lib/clock";
 import type { IdentityMatchKind } from "@/lib/identity-match";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import { arrivalsWindow } from "@/lib/operational-window";
+import { hasArrived, type StandingArrival } from "@/lib/presence";
 import { priorVisitStanding } from "@/lib/prior-visits";
 import type { ReadinessResult } from "@/lib/readiness";
 import { runningLateShown } from "@/lib/running-late";
 import type { TurnAwayReason } from "@/lib/turn-away";
-import { hasArrived, type StandingArrival } from "@/lib/presence";
 import { isUuid } from "@/lib/uuid";
-import { requireActiveStaffId } from "./authz";
 import { seatCheckedIn } from "./arrival-provenance";
+import { requireActiveStaffId } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import {

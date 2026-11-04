@@ -2,11 +2,11 @@ import { and, eq, gte, inArray } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { recordRollCall } from "@/db/manifests";
 import { bookings, cards, people, personRoles, trips } from "@/db/schema";
+import { seatHeld } from "@/db/trips-queries";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { seatHeld } from "@/db/trips-queries";
 
 /**
  * **A full boat whose crew nobody has counted** — the state where somebody may
