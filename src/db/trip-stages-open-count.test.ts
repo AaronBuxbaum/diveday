@@ -1,0 +1,124 @@
+import { and, desc, eq, lt } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import { nowDate, nowMs } from "@/lib/clock";
+import { fileScopedShopContext } from "@/test/db";
+import { boardAtDeparture, HOUR, returnedTrip } from "./roll-call-test-fixtures";
+import { rollCallEvents, trips } from "./schema";
+import { resetDemoSchedule } from "./seed";
+import { latestTripStage, readDepartureStage, recordTripStage } from "./trip-stages";
+import { liveTrip } from "./trips-live";
+
+const ctx = fileScopedShopContext();
+
+/**
+ * **A boat stays live until its after-dive roll call is resolved** (loop 5,
+ * row 4; issue #2404). The clock alone never finishes a departure while a
+ * diver who went out has no word at the last count: a night boat out past
+ * midnight with somebody unmarked must not read as finished. The crew's own
+ * Home still does, as it did.
+ */
+async function boat() {
+  const { db, shop } = ctx;
+  const made = await returnedTrip(db, shop.id, { endedHoursAgo: 6, divers: 2, plannedDives: 2 });
+  await boardAtDeparture(db, {
+    shopId: shop.id,
+    tripId: made.trip.id,
+    staffId: made.staffId,
+    bookingIds: made.bookingIds,
+  });
+  let minute = 0;
+  const say = async (bookingId: string, checkpoint: string, status: "boarded" | "not_boarded") => {
+    minute += 1;
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: made.trip.id,
+      bookingId,
+      recordedByPersonId: made.staffId,
+      status,
+      checkpoint,
+      source: "live",
+      occurredAt: new Date(nowMs() - 5 * HOUR + minute * 60_000),
+    });
+  };
+  const reading = async () =>
+    readDepartureStage(db, shop.id, made.trip.id, {
+      startsAt: made.trip.startsAt,
+      endsAt: made.trip.endsAt,
+      now: nowDate(),
+      timeZone: shop.timezone,
+      stage: await latestTripStage(db, shop.id, made.trip.id),
+      cancelled: false,
+    });
+  return { ...made, say, reading };
+}
+
+describe("readDepartureStage: an after-dive count still open", () => {
+  it("keeps a departure live when a diver who went out has no mark at the last count", async () => {
+    const { bookingIds, say, reading } = await boat();
+    const [first, second] = bookingIds as [string, string];
+    await say(first, "after_dive_1", "boarded");
+    await say(second, "after_dive_1", "boarded");
+    await say(first, "after_dive_2", "boarded");
+    // The second diver has no word at all after dive 2: not "missing", unmarked.
+    expect((await reading()).finished).toBe(false);
+  });
+
+  it("keeps it live when no after-dive count was taken at all", async () => {
+    const { reading } = await boat();
+    expect((await reading()).finished).toBe(false);
+  });
+
+  it("finishes once everyone who went out is counted back at every dive", async () => {
+    const { bookingIds, say, reading } = await boat();
+    for (const checkpoint of ["after_dive_1", "after_dive_2"]) {
+      for (const id of bookingIds) await say(id, checkpoint, "boarded");
+    }
+    expect((await reading()).finished).toBe(true);
+  });
+
+  it("still lets the crew's own Home finish it, the departure's last word", async () => {
+    const { db, shop } = ctx;
+    const { trip, staffId, reading } = await boat();
+    await recordTripStage(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      stage: "home",
+      recordedByPersonId: staffId,
+    });
+    expect((await reading()).finished).toBe(true);
+  });
+});
+
+describe("readDepartureStage over the demo's sailed history", () => {
+  it("reads every recent history departure as finished: its counts were all closed", async () => {
+    const { db, shop } = ctx;
+    await resetDemoSchedule(db, shop.id, { history: true });
+    const sailed = await db
+      .select()
+      .from(trips)
+      .where(
+        and(
+          liveTrip(),
+          eq(trips.shopId, shop.id),
+          eq(trips.status, "scheduled"),
+          lt(trips.endsAt, new Date(nowMs() - 2 * HOUR)),
+        ),
+      )
+      .orderBy(desc(trips.endsAt))
+      .limit(8);
+    expect(sailed.length).toBeGreaterThan(0);
+    const open: string[] = [];
+    for (const trip of sailed) {
+      const reading = await readDepartureStage(db, shop.id, trip.id, {
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        now: nowDate(),
+        timeZone: shop.timezone,
+        stage: await latestTripStage(db, shop.id, trip.id),
+        cancelled: false,
+      });
+      if (!reading.finished) open.push(trip.title);
+    }
+    expect(open).toEqual([]);
+  });
+});

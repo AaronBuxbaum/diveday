@@ -7,6 +7,7 @@ import type { TripStage, TripStageReading } from "@/lib/trip-stages";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { getTripManifests, listUnaccountedForByTrip } from "./manifests";
+import { listRollCallGaps } from "./roll-call-gaps";
 import { diveSites, people, tripDives, tripStageEvents, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -191,8 +192,20 @@ export async function latestTripStagesByTrip(
   return newest;
 }
 
-/** Read departure timing and crew stage with shop-scoped unaccounted-diver
- * data; the clock alone cannot mark a departure home while someone is missing.
+/**
+ * Read departure timing and crew stage with shop-scoped roll-call data; the
+ * clock alone cannot mark a departure home while someone may be in the water.
+ *
+ * Two answers keep it open (loop 5, row 4; issue #2404): a seat recorded not
+ * back aboard and not counted since (`listUnaccountedForByTrip`), and **an
+ * after-dive count still open**: somebody who went out with no word at an
+ * after-dive checkpoint, diver or crew (`listRollCallGaps`, historical mode,
+ * the one detector Today and the close-out read). A night boat out past
+ * midnight with a diver unmarked used to read as finished by the clock. The
+ * crew's own Home still finishes it (`departureStage`): that is the
+ * departure's last word, and the record then names who is unaccounted for.
+ * The gap read runs only once the departure would otherwise read finished, so
+ * a boat still out costs nothing more.
  */
 export async function readDepartureStage(
   db: AppDb,
@@ -202,8 +215,17 @@ export async function readDepartureStage(
 ) {
   const unaccounted =
     (await listUnaccountedForByTrip(db, shopId, [tripId])).get(tripId) ?? new Set<string>();
+  let stage = departureStage({ ...reading, unaccountedFor: unaccounted.size > 0 });
+  if (stage.finished && unaccounted.size === 0) {
+    const gaps = await listRollCallGaps(db, shopId, reading.now, [tripId], { historical: true });
+    // An after-dive checkpoint only: a dock count left open, or no roll call
+    // at all, is paperwork and never holds a boat at sea.
+    if (gaps.some((gap) => gap.diveNumber >= 1)) {
+      stage = departureStage({ ...reading, unaccountedFor: true });
+    }
+  }
   return {
-    ...departureStage({ ...reading, unaccountedFor: unaccounted.size > 0 }),
+    ...stage,
     unaccounted: unaccounted as ReadonlySet<string>,
   };
 }

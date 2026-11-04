@@ -1119,6 +1119,8 @@
   trip *still underway* whose checkpoint was started and abandoned (at least one result and at least
   one person awaiting), and they never age to nothing: past the 48-hour dock-work window they drop a
   band and say plainly that the count was never closed. Kinds 5 and 6 are chased for 48 hours only.
+  Kinds 1–4 also keep a departure **live**: its trip page never reads finished by the clock while
+  one stands, only by the crew's own Home (`readDepartureStage`, loop 5 row 4, issue #2404).
   The population an after-dive count is counting is **who boarded**, never who bought a seat or was
   rostered — a diver who never showed and was never tapped is an unfinished *dock* count, not
   somebody left in the water, and a shop that has never tapped a crew roll call raises no crew rows
