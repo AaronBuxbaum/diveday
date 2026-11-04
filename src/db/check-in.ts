@@ -533,6 +533,38 @@ function offlineArrivalRefusal(input: {
 }
 
 /**
+ * **A queued tap is about the seat and the morning the tablet saw** (issue
+ * #3830). Two facts the device could not know when it tapped, both read from
+ * the seat now:
+ *
+ * - The seat was claimed after the tablet saved its copy. A claim re-points a
+ *   held seat at the claimant (`claimSeatRecord`), so the tap would put
+ *   "checked in" on a person the desk never saw. The live path asks the same
+ *   question of the trail (`seatSeenAtDesk`); a queue has no such trail yet.
+ * - The departure no longer sails in the window the tap was made in
+ *   (`arrivalsWindow` at the tap's own instant): it was moved to another day,
+ *   and the tap says nothing about that morning.
+ *
+ * Both refuse as `snapshot_invalid`, the word the departure check beside it
+ * already uses for "this copy was about something that has changed". Offline
+ * only; the live path re-reads the roster.
+ */
+function offlineTapAboutAnotherSeatOrDay(
+  booking: { claimedAt: Date | null; tripStartsAt: Date },
+  input: { occurredAt?: Date; offlineSnapshotSavedAt?: Date },
+): boolean {
+  if (
+    booking.claimedAt &&
+    (!input.offlineSnapshotSavedAt || booking.claimedAt > input.offlineSnapshotSavedAt)
+  ) {
+    return true;
+  }
+  if (!input.occurredAt) return false;
+  const window = arrivalsWindow(input.occurredAt);
+  return booking.tripStartsAt < window.from || booking.tripStartsAt > window.to;
+}
+
+/**
  * Record a counter check-in atomically. A successful check-in is not boarding:
  * the manifest still performs its own departure-time readiness gate. This
  * mutation only closes the arrival queue and leaves an activity trail.
@@ -571,6 +603,8 @@ export async function checkInBooking(
         id: bookings.id,
         status: bookings.status,
         arrivalTrailAfterSeq: bookings.arrivalTrailAfterSeq,
+        claimedAt: bookings.claimedAt,
+        tripStartsAt: trips.startsAt,
         tripId: trips.id,
         tripStatus: trips.status,
         personId: people.id,
@@ -618,6 +652,9 @@ export async function checkInBooking(
           now: nowDate(),
         })
       ) {
+        return { ok: false, reason: "snapshot_invalid" };
+      }
+      if (offlineTapAboutAnotherSeatOrDay(booking, input)) {
         return { ok: false, reason: "snapshot_invalid" };
       }
       const refusal = offlineArrivalRefusal({
@@ -764,6 +801,8 @@ export async function undoCheckInBooking(
         id: bookings.id,
         status: bookings.status,
         arrivalTrailAfterSeq: bookings.arrivalTrailAfterSeq,
+        claimedAt: bookings.claimedAt,
+        tripStartsAt: trips.startsAt,
         tripId: trips.id,
         personName: people.fullName,
       })
@@ -810,6 +849,9 @@ export async function undoCheckInBooking(
           now: nowDate(),
         })
       ) {
+        return { ok: false, reason: "snapshot_invalid" };
+      }
+      if (offlineTapAboutAnotherSeatOrDay(booking, input)) {
         return { ok: false, reason: "snapshot_invalid" };
       }
       const refusal = offlineArrivalRefusal({

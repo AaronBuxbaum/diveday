@@ -432,3 +432,103 @@ describe("a departure moved to another day is a new morning at the desk", () => 
     ).toEqual({ ok: false, reason: "not_found" });
   });
 });
+
+describe("a queued tap is about the seat and the morning the tablet saw (issue #3830)", () => {
+  const MINUTE = 60_000;
+  const HOUR = 60 * MINUTE;
+  function queued(occurredAt: Date) {
+    return {
+      source: "offline" as const,
+      clientEventId: crypto.randomUUID(),
+      occurredAt,
+      offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 10 * MINUTE),
+    };
+  }
+
+  it("does not check in the claimant of a seat that was claimed after the tablet saved its copy", async () => {
+    const { db, shop, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    const tapped = new Date(nowDate().getTime() - 5 * MINUTE);
+    // Claimed two minutes ago: after the copy (saved 15 minutes ago), before the sync.
+    await db
+      .update(bookings)
+      .set({ claimedAt: new Date(nowDate().getTime() - 2 * MINUTE) })
+      .where(eq(bookings.id, seat.booking.id));
+
+    const outcome = await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      recordedByPersonId: staff.id,
+      ...queued(tapped),
+    });
+
+    expect(outcome).toEqual({ ok: false, reason: "snapshot_invalid" });
+    expect((await checkedIn(db, seat.booking.id))?.checkedIn).toBe(false);
+  });
+
+  it("still applies a tap on a seat claimed before the tablet saved its copy", async () => {
+    const { db, shop, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    await db
+      .update(bookings)
+      .set({ claimedAt: new Date(nowDate().getTime() - HOUR) })
+      .where(eq(bookings.id, seat.booking.id));
+
+    expect(
+      await checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(new Date(nowDate().getTime() - 5 * MINUTE)),
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("refuses a tap from before a departure moved to another day, undo included", async () => {
+    const { db, shop, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    const tapped = new Date(nowDate().getTime() - 5 * MINUTE);
+    // The departure the tablet saw this morning now sails three days on.
+    await db
+      .update(trips)
+      .set({
+        startsAt: new Date(nowDate().getTime() + 72 * HOUR),
+        endsAt: new Date(nowDate().getTime() + 76 * HOUR),
+      })
+      .where(eq(trips.id, seat.booking.tripId));
+
+    const arrived = await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      recordedByPersonId: staff.id,
+      ...queued(tapped),
+    });
+    expect(arrived).toEqual({ ok: false, reason: "snapshot_invalid" });
+
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
+    const undone = await undoCheckInBooking(db, {
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      recordedByPersonId: staff.id,
+      ...queued(tapped),
+    });
+    expect(undone).toEqual({ ok: false, reason: "snapshot_invalid" });
+  });
+
+  it("applies a tap on a departure still inside the arrivals window of the tap", async () => {
+    const { db, shop, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    await db
+      .update(trips)
+      .set({ startsAt: new Date(nowDate().getTime() + 2 * HOUR) })
+      .where(eq(trips.id, seat.booking.tripId));
+    expect(
+      await checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(new Date(nowDate().getTime() - 5 * MINUTE)),
+      }),
+    ).toMatchObject({ ok: true });
+  });
+});
