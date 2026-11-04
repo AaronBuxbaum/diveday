@@ -1,5 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   FLOW_TIMEOUT_MS,
@@ -23,11 +24,9 @@ test.describe("light mode", () => {
     request,
     privateShop,
   }) => {
-    const seeded = await request.post(
-      `/api/test/seed-trouble-states?flySafeFollowUp=1&shop=${privateShop.slug}`,
-    );
-    expect(seeded.ok()).toBe(true);
-    const { flySafeFollowUp } = (await seeded.json()) as {
+    const { flySafeFollowUp } = (await seedFacts(request, ["flySafeFollowUp"], {
+      slug: privateShop.slug,
+    })) as {
       flySafeFollowUp: { tripId: string; otherTripId: string };
     };
     await page.goto(`/shop/${privateShop.slug}/trips/${flySafeFollowUp.tripId}`);

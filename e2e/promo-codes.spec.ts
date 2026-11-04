@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 /**
  * The seven-field composer is a door now, not a standing form: reading the
@@ -111,7 +112,7 @@ test.describe("as owner", () => {
     request,
   }) => {
     // Unlocks the "not_connected" gate without ever calling real Stripe.
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await page.goto("/shop/blue-mantis/promos");
     await openNewCodeForm(page);
 
@@ -132,7 +133,7 @@ test.describe("as owner", () => {
     // Owner decision 2026-10-09 (amendment to ADR 20260729-shop-promo-codes):
     // "$20 off" is per booking, not per diver. The row says so in its own
     // words, even when Stripe refused to mint it.
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await page.goto("/shop/blue-mantis/promos");
     await openNewCodeForm(page);
 
@@ -153,7 +154,7 @@ test.describe("as owner", () => {
     // as a page-level banner under the `<h1>` — above six fields, telling a
     // staffer "that code is taken" without saying which of the things they
     // just typed was the code.
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await page.goto("/shop/blue-mantis/promos");
 
     // REEF10 is seeded, so this is a genuine duplicate. The composer is a door:
@@ -181,7 +182,7 @@ test.describe("as owner", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await page.goto("/shop/blue-mantis/promos");
 
     await openNewCodeForm(page);
@@ -284,7 +285,7 @@ test.describe("as owner", () => {
    * however the origin is configured. Same shape as e2e/refunds.spec.ts's
    * `createPaymentRequiredTrip`.
    *
-   * The Stripe half is the caller's: POST /api/test/seed-stripe-account first
+   * The Stripe half is the caller's: the `stripeAccount` fact first
    * for the payable case, skip it for the fallback case, so each test differs
    * in exactly the one condition it is about.
    *
@@ -327,7 +328,7 @@ test.describe("as owner", () => {
     // runs the promo lookup, the party transaction, waiver-on-join, and the
     // checkout attempt. Several full flows chained, well past the 15s default.
     test.setTimeout(60_000);
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await setSeededCodeLive(page, true);
     await pricedTripAsVisitor(page, `Promo Live Check ${e2eNow().getTime()}`);
 
@@ -386,7 +387,7 @@ test.describe("as owner", () => {
     request,
   }) => {
     test.setTimeout(60_000);
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await setSeededCodeLive(page, true);
     await pricedTripAsVisitor(page, `Promo Refusal Check ${e2eNow().getTime()}`);
     const promoField = page.getByLabel("Promo code");
@@ -428,7 +429,7 @@ test.describe("as owner", () => {
     request,
   }) => {
     test.setTimeout(60_000);
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await setSeededCodeLive(page, false);
     await pricedTripAsVisitor(page, `Promo None Live ${e2eNow().getTime()}`);
     await expect(page.getByRole("button", { name: /^Book and pay/ })).toBeVisible();
@@ -447,7 +448,7 @@ test.describe("as owner", () => {
     page,
   }) => {
     test.setTimeout(45_000);
-    // No /api/test/seed-stripe-account: the demo seed leaves the shop
+    // No the `stripeAccount` fact: the demo seed leaves the shop
     // unconnected, so `canAcceptPayments` is false and pay-at-booking stays off
     // however the origin and the price are configured.
     await pricedTripAsVisitor(page, `Promo Unconnected Check ${e2eNow().getTime()}`);

@@ -2,14 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * The auth gate on every `/api/test/*` route but `reset` and `clock`, one
- * table for all of them (`reset` has its own colocated route.test.ts, which
+ * table for all of them: the `shop` door that writes every named fact, and the
+ * few routes that are not state (`reset` has its own colocated route.test.ts, which
  * also covers its success path). Every case here is a *refusal*: the shared
  * guard
  * (`src/lib/e2e-test-routes.ts`) must close these routes before they touch the
  * database, so none of these tests needs a hydrated PGlite — a stubbed `getDb`
  * that is asserted never to have been called is the assertion.
  *
- * Why it matters most here: `seed-account-token` mints a real, valid
+ * Why it matters most here: the door's `accountToken` fact mints a real, valid
  * password-reset or invite token for any account by email, so a route that
  * answered on a misconfigured deployment would be account takeover
  * (docs/product/archive/specialist-optimization-audit-20260731.md §5).
@@ -23,8 +24,8 @@ vi.mock("@/db/shops", () => ({ getShopBySlug: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { getShopBySlug } = await import("@/db/shops");
-const seedStripeAccount = await import("./seed-stripe-account/route");
-const seedPrivateShop = await import("./seed-private-shop/route");
+const shopDoor = await import("./shop/route");
+const { knownFactNames, resolveFacts } = await import("@/db/facts");
 
 const secret = "e2e-test-secret";
 
@@ -86,213 +87,31 @@ async function expectInvalidBody(response: Response) {
 const routes: SeedRoute[] = [
   { slug: "age-staff-session", expectPastTheGuard: expectInvalidBody },
   {
-    // Not a `seed-*` name, and gated by exactly the same guard: it delivers an
-    // inbound message on a shop's behalf, which on a misconfigured deployment
-    // would let anyone cancel a diver's seat (ADR 20260909-reply-keywords).
+    // It delivers an inbound message on a shop's behalf, which on a
+    // misconfigured deployment would let anyone cancel a diver's seat (ADR
+    // 20260909-reply-keywords).
     slug: "inbound-message",
     expectPastTheGuard: expectInvalidBody,
   },
   {
-    slug: "seed-account-token",
-    expectPastTheGuard: expectInvalidBody,
+    slug: "shop",
+    // No body is a valid ask (no facts, on the canonical demo), so reaching the
+    // database is what proves the guard let it through. Past it are every
+    // fact the registry holds: a password-reset token for any account, a
+    // whole tenant whose staff sign in with a published password, a dive
+    // nobody made in a real shop's log.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
   },
   {
-    slug: "seed-visual-links",
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-payment-overlay",
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-payment-overlay",
+    slug: "shop",
     method: "DELETE",
+    // The teardown half (ADR 20260815-per-test-private-shops). It takes a
+    // caller-supplied slug and deletes a whole tenant, so it is guarded on its
+    // own row. Past the guard with no `?slug=` at all: refused on its shape,
+    // before any tenant is looked up.
     expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-interest-unsubscribe-token",
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    // It writes a joiner onto a shop's last-minute list, self-declared card
-    // and all: on a live deployment that is anyone mailing anyone deals.
-    slug: "seed-last-minute-interest",
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-courtesy-email-unsubscribe-token",
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-stripe-account",
-    // No request body to validate — the first thing this one does past the
-    // guard is open the database, so that call is the signal it got through.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-booking-checkout",
-    // Past the guard it reads its query first: no slug is a 400 before the
-    // database is touched, so the 400 is the signal it got through. It opens a
-    // booking checkout the e2e harness then pays through the signed webhook.
-    expectPastTheGuard: async (response) => {
-      expect(response.status).toBe(400);
-    },
-  },
-  {
-    slug: "seed-open-package-invoice",
-    // Past the guard it reads its query first: no slug is a 400 before the
-    // database is touched, so the 400 is the signal it got through. It raises
-    // an invoice the e2e harness then pays through the signed webhook.
-    expectPastTheGuard: async (response) => {
-      expect(response.status).toBe(400);
-    },
-  },
-  {
-    slug: "seed-setup-link",
-    // No body: the first thing past the guard is the database, so reaching it
-    // is the signal. This one mints a link that creates a shop, so a route
-    // that answered on a misconfigured deployment would be a sign-up door.
-    swallowThrow: true,
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "pin-added-date",
-    // Body first past the guard. It rewrites when a person was added, which on
-    // a misconfigured deployment would be falsifying a real shop's records.
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-trouble-states",
-    // Same shape as seed-stripe-account: no body, so reaching the database is
-    // what proves the guard let it through. This one writes a stuck payment
-    // intent, an owed refund and two erasure obligations, so a route that
-    // answered on a misconfigured deployment would be writing that into a real
-    // shop's tables.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-evening",
-    // Same shape as the two above: no body, so reaching the database is what
-    // proves the guard let it through. This one rewrites the departure times
-    // of a whole shop day, so a route that answered on a misconfigured
-    // deployment would be moving a real shop's boats.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-today-catch-up",
-    query: "?shop=private-fixture",
-    // Reaches the database only after the E2E bearer guard. Past that it writes
-    // a desk event and a Today read mark, so a misconfigured deployment must
-    // never let a caller add fabricated crew activity to any shop.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-changed-dive-site",
-    // Same shape as the three above: no body, so reaching the database is what
-    // proves the guard let it through. This one writes an `executed_dives` row
-    // — a record of a dive that was performed — so a route that answered on a
-    // misconfigured deployment would be putting a fabricated dive into a real
-    // shop's log, which is the table `buildIncidentExport` reads for an
-    // investigator.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-observed-species",
-    // The same `executed_dives` write as the route above, carrying a *claim
-    // about what somebody saw* — so a route answering on a misconfigured
-    // deployment would put a sighting nobody made onto a real diver's keepsake,
-    // over a shop's name. Reaching the database is what proves the guard let it
-    // through.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-certified-recap",
-    // Issues a verified card from a course session, the record a diver's next
-    // booking is admitted on, so a route answering on a misconfigured
-    // deployment would put a credential nobody issued onto a real diver.
-    // Reaching the database is what proves the guard let it through.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-unworded-course-form",
-    // Adds a form to a course's requirements, which every student enrolled
-    // from then on is asked for, so a route answering on a misconfigured
-    // deployment would change what a real shop's divers must sign. Reaching
-    // the database is what proves the guard let it through.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-dive-times",
-    // The same `executed_dives` write as the two above, carrying times in and
-    // out — the instants the fly-safe line counts from. A route answering on a
-    // misconfigured deployment would be telling a real diver when they may
-    // board a plane off a dive nobody made. Reaching the database is what
-    // proves the guard let it through.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-booking-handoff",
-    // A shop slug and an email, refused first — and it must be, because past
-    // that it mints a working ten-minute credential over a diver's booking. A
-    // route answering on a misconfigured deployment would be handing out the
-    // door to a real diver's contact details.
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-returning-diver",
-    // It takes a shop slug and an email, so the body is what it refuses first —
-    // and it must, because past that it writes a diver's sizes and their
-    // emergency contact. A route answering on a misconfigured deployment would
-    // be rewriting the number a coastguard calls.
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-off-season",
-    // No body is a valid ask (the shared fixture is the default), so reaching
-    // the database is what proves the guard let it through. Past that it soft-
-    // deletes every upcoming departure a shop has, so a route answering on a
-    // misconfigured deployment would take a real shop's whole board off its own
-    // storefront.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-private-shop",
-    // `getDb` is stubbed here and returns nothing, so this route's very next
-    // line (`db.transaction`) throws the moment the guard lets it through.
-    // Swallowed on purpose: what this file asserts is *whether* the request
-    // reached the database, never that the mint succeeded against a mock.
-    swallowThrow: true,
-    // Same shape as the two above: no body, so reaching the database is what
-    // proves the guard let it through. This one mints a whole `isDemo` tenant
-    // whose staff sign in with a published password (ADR
-    // 20260815-per-test-private-shops), so a route that answered on a
-    // misconfigured deployment would be handing anyone a shop and the
-    // credentials to it.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
   },
   {
     slug: "crew-notices",
@@ -302,52 +121,16 @@ const routes: SeedRoute[] = [
     expectPastTheGuard: expectInvalidBody,
   },
   {
-    slug: "depart-trip",
-    // Body first past the guard. It names one trip and slides its departure
-    // into the past, so a route answering on a misconfigured deployment would
-    // be telling a real shop's counter that a boat it can still see on the
-    // board has already sailed — which is what opens "Not here" against a
-    // diver who is standing there.
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
     slug: "email-previews",
     method: "GET",
-    // The one read-only route here, and the only one whose past-the-guard
-    // signal is a 200 rather than a refusal or a database call: it renders
-    // fixture notifications and touches nothing. Asserting `getDb` was never
-    // called is still the point — it proves the 200 came from the sample
-    // renderer and not from something that had reached a real shop's rows.
+    // The one read-only route here whose past-the-guard signal is a 200 rather
+    // than a refusal or a database call: it renders fixture notifications and
+    // touches nothing. Asserting `getDb` was never called is still the point —
+    // it proves the 200 came from the sample renderer and not from something
+    // that had reached a real shop's rows.
     expectPastTheGuard: async (response) => {
       expect(response.status).toBe(200);
       expect(getDb).not.toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-contact-email-confirmation-token",
-    // Body first past the guard. Same class as the two unsubscribe-token
-    // routes above it: the token it mints is otherwise only ever readable from
-    // inside the confirmation email and is hashed at rest, so a route that
-    // answered would hand anyone the address-confirmation for any shop.
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-recap-pulse",
-    // No body at all, so reaching the database is the signal. Past that it
-    // files a private pulse against a booking — a diver's own words about
-    // something that went wrong — so a route that answered would be putting
-    // fabricated complaints into a real shop's moderation queue.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-shared-recap-photo",
-    // No body at all, so reaching the database is the signal. Past that it
-    // publishes a diver's photo to every other recap on their boat under their
-    // first name, which only the diver's own tick may do (H-20261014-share-photo-with-boat).
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
     },
   },
   {
@@ -357,40 +140,6 @@ const routes: SeedRoute[] = [
     // database only after the shared E2E bearer guard.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-private-shop",
-    method: "DELETE",
-    // The teardown half (ADR 20260815-per-test-private-shops). It takes a
-    // caller-supplied slug and hard-deletes a whole tenant, so an unguarded
-    // copy is the worst of the set — and a handler is guarded one at a time,
-    // which is why it is its own row rather than riding on the `POST` above.
-    // The `describe` at the foot of this file covers what it does with a slug;
-    // this row is the refusal, asked exactly as every other route is asked.
-    // Past the guard with no `?slug=` at all: refused on its shape, before any
-    // tenant is looked up.
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "claude-fixtures",
-    // Lights Claude's canned assists on a shop and clears its demo flag, so an
-    // unguarded copy would turn a real tenant into a non-demo with fixture
-    // answers. Past the guard it looks the named shop up, which the refusals
-    // never reach; the stubbed lookup finds none, so it then gets the one refusal.
-    query: "?slug=a-minted-shop",
-    expectPastTheGuard: async () => {
-      expect(getShopBySlug).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "claude-fixtures",
-    method: "DELETE",
-    query: "?slug=a-minted-shop",
-    // The disarm half; it flips a shop back to a demo, which the private-shop
-    // teardown then deletes, so it is guarded on its own row.
-    expectPastTheGuard: async () => {
-      expect(getShopBySlug).toHaveBeenCalled();
     },
   },
 ];
@@ -464,16 +213,15 @@ describe.each(routes)(
 );
 
 /**
- * `seed-private-shop` is the one of these with a second handler — the fixture's
- * teardown drops the shop it minted (ADR 20260815-per-test-private-shops) — and
- * a handler is guarded one at a time. This one takes a caller-supplied slug and
- * hard-deletes a whole tenant, so an unguarded copy is the worst of the set.
+ * The door's teardown takes a caller-supplied slug and deletes a whole tenant,
+ * so an unguarded copy is the worst of the set, and its refusals of the
+ * canonical fixture come before any lookup.
  */
-describe("DELETE /api/test/seed-private-shop", () => {
+describe("DELETE /api/test/shop", () => {
   function dropRequest(slug: string, authorization?: string) {
     const headers: Record<string, string> = {};
     if (authorization !== undefined) headers.authorization = authorization;
-    return new Request(`http://localhost/api/test/seed-private-shop?slug=${slug}`, {
+    return new Request(`http://localhost/api/test/shop?slug=${slug}`, {
       method: "DELETE",
       headers,
     });
@@ -482,116 +230,147 @@ describe("DELETE /api/test/seed-private-shop", () => {
   it("404s without the bearer token, before any database work", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("DIVEDAY_E2E", "1");
-    const response = await seedPrivateShop.DELETE(dropRequest("some-shop"));
+    const response = await shopDoor.DELETE(dropRequest("some-shop"));
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: "not_available" });
     expect(getDb).not.toHaveBeenCalled();
   });
 
   it("refuses the canonical demo shop by slug, past the guard", async () => {
-    const response = await seedPrivateShop.DELETE(dropRequest("blue-mantis", `Bearer ${secret}`));
+    const response = await shopDoor.DELETE(dropRequest("blue-mantis", `Bearer ${secret}`));
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "invalid_body" });
     expect(getDb).not.toHaveBeenCalled();
   });
 
-  it("refuses a request naming no shop at all", async () => {
-    const response = await seedPrivateShop.DELETE(dropRequest("", `Bearer ${secret}`));
-    expect(response.status).toBe(400);
-    expect(getDb).not.toHaveBeenCalled();
+  it("leaves a real shop it did not make where it is", async () => {
+    const deleted: string[] = [];
+    vi.mocked(getDb).mockResolvedValue({
+      transaction: () => {
+        deleted.push("transaction");
+        throw new Error("a real shop was about to be dropped");
+      },
+    } as never);
+    vi.mocked(getShopBySlug).mockResolvedValue({ id: "shop-1", isDemo: false } as never);
+    const response = await shopDoor.DELETE(dropRequest("a-real-dive-shop", `Bearer ${secret}`));
+    expect(await response.json()).toEqual({ ok: true, dropped: false });
+    expect(deleted).toEqual([]);
   });
 });
 
 /**
- * `seed-stripe-account` grew a `?slug=` so a spec that takes a shop of its own
- * can still reach a payments surface (`e2e/tax.spec.ts` — the tax opt-in's only
- * consequence is on checkout and invoicing). That parameter is the reason these
- * two cases exist: the slug is caller-supplied, and the route hands whatever it
- * names a connected Stripe account with charges enabled.
- *
- * The `isDemo` check is the whole guarantee, and it sits *after* the lookup, so
+ * **The door's slug is the caller's**, and the `isDemo` check is the whole
+ * guarantee that a real tenant is never written: it sits after the lookup, so
  * asserting the refusal against a non-demo shop is asserting the thing that
- * keeps a real tenant out — the bearer guard above already being no help to
- * anyone who has the secret and a slug.
+ * keeps a real tenant out, the bearer guard being no help to anyone who has
+ * the secret and a slug.
  */
-describe("POST /api/test/seed-stripe-account — the caller-supplied slug", () => {
-  function connectRequest(query: string) {
-    return new Request(`http://localhost/api/test/seed-stripe-account${query}`, {
+describe("POST /api/test/shop — the caller-supplied slug", () => {
+  function connectRequest(body: unknown) {
+    return new Request("http://localhost/api/test/shop", {
       method: "POST",
       headers: { authorization: `Bearer ${secret}` },
+      body: JSON.stringify(body),
     });
   }
 
   it("refuses a malformed slug rather than sanitizing it", async () => {
-    const response = await seedStripeAccount.POST(connectRequest("?slug=Not%20A%20Slug"));
-
+    const response = await shopDoor.POST(
+      connectRequest({ slug: "Not A Slug", facts: ["stripeAccount"] }),
+    );
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "bad_slug" });
+    expect(await response.json()).toEqual({ error: "invalid_body" });
     // Refused on its shape, before the slug is ever used to find a tenant.
     expect(getShopBySlug).not.toHaveBeenCalled();
   });
 
   it("refuses a real shop, however well-formed the slug naming it", async () => {
     vi.mocked(getShopBySlug).mockResolvedValue({ id: "shop-1", isDemo: false } as never);
-
-    const response = await seedStripeAccount.POST(connectRequest("?slug=a-real-dive-shop"));
-
+    const response = await shopDoor.POST(
+      connectRequest({ slug: "a-real-dive-shop", facts: ["stripeAccount"] }),
+    );
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: "not_available" });
   });
 });
 
 /**
- * **One demo-fixture gate, one refusal** (issue #2751). Every fixture route
- * that writes to a shop reaches it through `requireDemoTenant`
+ * **One demo-fixture gate, one refusal** (issue #2751). Every fact, and every
+ * route that reads a shop, reaches it through `requireDemoTenant`
  * (`src/lib/e2e-test-routes.ts`; `check:e2e-fixtures` refuses one that does
  * not): past the bearer guard, a real shop and a missing one get the same
  * `not_available` 404 the guard itself answers with, so a caller holding the
  * secret cannot tell a real tenant's slug from no shop at all, and nothing is
  * written. A demo shop goes through. Each row is a request that reaches the
- * shop lookup.
+ * shop lookup; the door has one per fact in the registry.
  */
-type DemoFixtureRoute = { slug: string; method?: "GET"; query?: string; body?: unknown };
+type DemoFixtureRoute = {
+  slug: string;
+  /** What the row is called in the report: the route, or the fact the door was asked for. */
+  label?: string;
+  method?: "GET";
+  query?: string;
+  body?: unknown;
+};
 
 const SHOP = "a-minted-shop";
 const EMAIL = "diver@example.com";
 
+/**
+ * Arguments for every fact that takes some, so each one is asked for through
+ * the door below. A fact added to the registry with arguments and no row here
+ * fails "every fact has a sample", which is the registry's half of this file.
+ */
+const FACT_SAMPLES: Record<string, Record<string, unknown>> = {
+  operationalTrust: { state: "capacity" },
+  evening: { heads: "closed" },
+  departTrip: { tripId: "trip-1", minutesAgo: 90 },
+  offSeason: { opensInDays: 45 },
+  pinAddedDate: { fullName: "Dana Diver" },
+  returningDiver: { email: EMAIL },
+  lastMinuteInterest: { fullName: "Uma", email: EMAIL },
+  bookingCheckout: { email: EMAIL },
+  openPackageInvoice: { email: EMAIL },
+  bookingHandoff: { email: EMAIL },
+  accountToken: { email: EMAIL, purpose: "invite" },
+  courtesyEmailUnsubscribe: { email: EMAIL },
+  interestUnsubscribe: { email: EMAIL },
+  visualLink: { family: "digest" },
+  claudeAssists: { review: true },
+};
+
+function factRequest(name: string) {
+  const args = FACT_SAMPLES[name];
+  return args ? { name, ...args } : name;
+}
+
+describe("the fact registry", () => {
+  it("has a sample for every fact, so each is asked for at the gate below", () => {
+    const refused = knownFactNames().filter((name) => {
+      const resolved = resolveFacts([factRequest(name)]);
+      return !resolved.ok;
+    });
+    expect(refused).toEqual([]);
+  });
+});
+
 const demoFixtureRoutes: DemoFixtureRoute[] = [
-  { slug: "claude-fixtures", query: `?slug=${SHOP}` },
   { slug: "crew-notices", body: { shopSlug: SHOP, personName: "Dana Deck" } },
   { slug: "demo-recap-trip", method: "GET" },
-  { slug: "depart-trip", body: { tripId: "trip-1", minutesAgo: 90 } },
   {
     slug: "inbound-message",
     body: { shopSlug: SHOP, from: EMAIL, channel: "email", body: "C" },
   },
-  { slug: "pin-added-date", body: { fullName: "Dana Diver" } },
-  { slug: "seed-booking-checkout", query: `?slug=${SHOP}&email=${EMAIL}` },
-  { slug: "seed-booking-handoff", body: { shopSlug: SHOP, email: EMAIL } },
-  { slug: "seed-certified-recap" },
-  { slug: "seed-changed-dive-site" },
-  { slug: "seed-contact-email-confirmation-token", body: { shopSlug: SHOP } },
-  { slug: "seed-courtesy-email-unsubscribe-token", body: { shopSlug: SHOP, email: EMAIL } },
-  { slug: "seed-dive-times" },
-  { slug: "seed-evening" },
-  { slug: "seed-interest-unsubscribe-token", body: { shopSlug: SHOP, email: EMAIL } },
-  { slug: "seed-last-minute-interest", body: { shopSlug: SHOP, fullName: "Uma", email: EMAIL } },
-  { slug: "seed-observed-species" },
-  { slug: "seed-off-season", query: `?slug=${SHOP}` },
-  { slug: "seed-open-package-invoice", query: `?slug=${SHOP}&email=${EMAIL}` },
-  { slug: "seed-payment-overlay", body: { shopSlug: SHOP } },
-  { slug: "seed-recap-pulse" },
-  { slug: "seed-returning-diver", body: { shopSlug: SHOP, email: EMAIL } },
-  { slug: "seed-shared-recap-photo" },
-  { slug: "seed-stripe-account", query: `?slug=${SHOP}` },
-  { slug: "seed-today-catch-up", query: `?shop=${SHOP}` },
-  { slug: "seed-trouble-states" },
-  { slug: "seed-unworded-course-form" },
-  { slug: "seed-visual-links", body: { shopSlug: SHOP, family: "digest" } },
+  { slug: "shop", label: "shop (canonical)", body: {} },
+  ...knownFactNames().map((name) => ({
+    slug: "shop",
+    label: `shop: ${name}`,
+    body: { slug: SHOP, facts: [factRequest(name)] },
+  })),
 ];
 
-describe.each(demoFixtureRoutes)(
-  "/api/test/$slug — demo tenants only, one refusal (issue #2751)",
+describe.each(demoFixtureRoutes.map((route) => ({ ...route, label: route.label ?? route.slug })))(
+  "/api/test/$label — demo tenants only, one refusal (issue #2751)",
   ({ slug, method, query, body }) => {
     /**
      * A database that records every method a route touches and then throws:

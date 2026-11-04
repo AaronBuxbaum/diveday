@@ -11,6 +11,7 @@ import {
   openTripTab,
   rosterRow,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import type { AuditCapture } from "./visual-audit-capture";
 
 const diverCopy = diverTranslator("en-US");
@@ -136,9 +137,7 @@ export function registerRequestPaymentOverlayAuditCaptures(
       privateShop,
       request,
     }) => {
-      expect(
-        (await request.post(`/api/test/seed-stripe-account?slug=${privateShop.slug}`)).ok(),
-      ).toBe(true);
+      await seedFacts(request, ["stripeAccount"], { slug: privateShop.slug });
       await page.goto(`/shop/${privateShop.slug}/promos`);
       const composer = page.locator("#new-code");
       await openIfClosed(composer);
@@ -171,38 +170,27 @@ export function registerRequestPaymentOverlayAuditCaptures(
       privateShop,
       request,
     }) => {
-      expect(
-        (await request.post(`/api/test/seed-stripe-account?slug=${privateShop.slug}`)).ok(),
-      ).toBe(true);
-      const seeded = await request.post("/api/test/seed-payment-overlay", {
-        data: { shopSlug: privateShop.slug },
-      });
-      expect(seeded.ok()).toBe(true);
-      const result = await seeded.json();
-      if (typeof result.orderId !== "string" || typeof result.cleanupLease !== "string") {
-        throw new Error("Payment overlay fixture returned no order or cleanup lease");
-      }
-      try {
-        await page.goto(`/shop/${privateShop.slug}/orders/${result.orderId}`);
-        await page.getByRole("heading", { level: 1, name: "Nina Patel" }).waitFor();
-        const room = page.locator('details:has(input[name="roomNumber"])');
-        await openIfClosed(room);
-        await room
-          .getByLabel(staffCopy("orders.detail.recordPayment.roomNumber"), { exact: true })
-          .fill("214B");
-        await room
-          .getByLabel(staffCopy("orders.detail.recordPayment.roomHotel"), { exact: true })
-          .fill("Harbor House Resort");
-        await room
-          .getByRole("button", { name: staffCopy("orders.detail.recordPayment.roomConfirm") })
-          .waitFor();
-        await capture(page, "order-charge-to-room-editor", "light");
-      } finally {
-        const restored = await request.delete("/api/test/seed-payment-overlay", {
-          data: { cleanupLease: result.cleanupLease },
-        });
-        expect(restored.ok()).toBe(true);
-      }
+      // The fact leaves the shop real-shaped; the private-shop teardown still
+      // drops it, because this server remembers converting it.
+      const { chargeToRoomInvoice } = await seedFacts(
+        request,
+        ["stripeAccount", "chargeToRoomInvoice"],
+        { slug: privateShop.slug },
+      );
+      await page.goto(`/shop/${privateShop.slug}/orders/${chargeToRoomInvoice.orderId}`);
+      await page.getByRole("heading", { level: 1, name: "Nina Patel" }).waitFor();
+      const room = page.locator('details:has(input[name="roomNumber"])');
+      await openIfClosed(room);
+      await room
+        .getByLabel(staffCopy("orders.detail.recordPayment.roomNumber"), { exact: true })
+        .fill("214B");
+      await room
+        .getByLabel(staffCopy("orders.detail.recordPayment.roomHotel"), { exact: true })
+        .fill("Harbor House Resort");
+      await room
+        .getByRole("button", { name: staffCopy("orders.detail.recordPayment.roomConfirm") })
+        .waitFor();
+      await capture(page, "order-charge-to-room-editor", "light");
     });
   });
 

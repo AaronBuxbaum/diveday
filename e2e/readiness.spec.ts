@@ -10,6 +10,7 @@ import {
   openTripAbout,
   threadStatus,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 test.describe("staff-prepared trip", () => {
   signedInAsOwner();
@@ -400,7 +401,7 @@ test("a link into one step of the thread opens that step", async ({ page }) => {
  * The state has no UI that can reach it: `fit_stated_at` must predate the
  * booking, which no form can produce for a seat booked five seconds ago, and
  * the fit confirmation is written by the evening leftover row that has not
- * landed. `/api/test/seed-returning-diver` is the only door to it — the same
+ * landed. The `returningDiver` fact is the only door to it — the same
  * argument the changed-dive-site seed makes one table over.
  */
 test("a returning diver is asked once, and answering one fact leaves the others alone", async ({
@@ -431,10 +432,7 @@ test("a returning diver is asked once, and answering one fact leaves the others 
   await expect(page.locator('[data-thread-step="gear"]')).toHaveCount(1);
   await expect(page.locator('[data-thread-step="changes"]')).toHaveCount(0);
 
-  const seeded = await request.post("/api/test/seed-returning-diver", {
-    data: { shopSlug: "blue-mantis", email },
-  });
-  expect(seeded.ok()).toBe(true);
+  await seedFacts(request, [{ name: "returningDiver", email }]);
 
   await page.goto(thread);
   // Replaced rather than joined: one slot, one question, never two rows for the

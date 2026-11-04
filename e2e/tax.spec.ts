@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 
 /**
  * Per-shop Stripe Tax (issue #959, ADR
@@ -102,10 +103,7 @@ test.describe("Stripe Tax opt-in", () => {
     // A shop with nowhere to send money never gets an order form at all, so
     // connect this one first. Marks the row in the database; nothing reaches
     // Stripe, and this fleet sets no `STRIPE_SECRET_KEY` anyway.
-    const connected = await request.post(
-      `/api/test/seed-stripe-account?slug=${encodeURIComponent(privateShop.slug)}`,
-    );
-    expect(connected.ok()).toBe(true);
+    await seedFacts(request, ["stripeAccount"], { slug: privateShop.slug });
 
     const newOrder = `/shop/${privateShop.slug}/orders?add=1`;
     await page.goto(newOrder);

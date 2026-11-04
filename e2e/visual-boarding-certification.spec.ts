@@ -3,6 +3,7 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { formatEvidenceDateTimeTz } from "../src/lib/format";
 import { expect, test } from "./fixtures";
 import { e2eNow } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   capturePrint,
@@ -26,11 +27,11 @@ for (const scheme of ["light", "dark"] as const) {
       privateShop,
     }) => {
       test.setTimeout(FLOW_TIMEOUT_MS);
-      const response = await request.post(
-        `/api/test/seed-trouble-states?operationalTrust=capacity&certificationInterval=1&shop=${privateShop.slug}`,
+      const { operationalTrust } = await seedFacts(
+        request,
+        [{ name: "operationalTrust", state: "capacity", certificationInterval: true }],
+        { slug: privateShop.slug },
       );
-      expect(response.ok()).toBe(true);
-      const { operationalTrust } = await response.json();
       await page.goto(`/shop/${privateShop.slug}/trips/${operationalTrust.tripId}/log`);
       const t = staffTranslator("en-US");
       const evidence = page.getByRole("listitem").filter({ hasText: "Ari Vale" });

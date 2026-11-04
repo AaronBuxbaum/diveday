@@ -23,6 +23,7 @@ import {
   signOut,
   threadStatus,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 // Sentences come from the bundles by key, so a rewording does not break the walk.
 const diver = diverTranslator("en-US");
@@ -720,7 +721,7 @@ test("a mistyped page under a shop keeps the diver at that shop", async ({ page 
  * 20260721-checkout-at-booking). The booking form opens a Stripe Checkout and
  * the seat is paid only when Stripe says so: a `checkout.session.completed`
  * with `payment_status: "paid"` on the real webhook. This fleet has no Stripe
- * key, so the form falls back to pay-later and `seed-booking-checkout` opens
+ * key, so the form falls back to pay-later and the `bookingCheckout` fact opens
  * the checkout the form would have; the signed event does the rest.
  *
  * A shop of its own (ADR 20260815-per-test-private-shops): connecting a
@@ -748,15 +749,11 @@ test("a diver's card payment at booking settles their Pay step", async ({
   await expect(threadStatus(page)).toBeVisible();
   await expect(settled).toHaveCount(0);
 
-  const connected = await request.post(
-    `/api/test/seed-stripe-account?slug=${encodeURIComponent(SHOP)}`,
+  const { bookingCheckout: checkout } = await seedFacts(
+    request,
+    ["stripeAccount", { name: "bookingCheckout", email }],
+    { slug: SHOP },
   );
-  expect(connected.ok()).toBe(true);
-  const opened = await request.post(
-    `/api/test/seed-booking-checkout?slug=${encodeURIComponent(SHOP)}&email=${encodeURIComponent(email)}`,
-  );
-  expect(opened.ok()).toBe(true);
-  const checkout = await opened.json();
   expect(checkout.amountCents).toBeGreaterThan(0);
 
   // Still unpaid: an open checkout is not a payment.

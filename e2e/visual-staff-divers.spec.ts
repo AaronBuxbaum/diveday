@@ -7,6 +7,7 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openDiverFileGroup, openPaperWaiverForm, openTripFromBoard, openTripTab } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   captureFolded,
@@ -477,11 +478,8 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,mergeCandidates",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { mergeCandidates } = (await seeded.json()) as {
+        const seeded = await seedFacts(request, ["troublePanels", "mergeCandidates"]);
+        const { mergeCandidates } = seeded as {
           mergeCandidates: { sourceId: string; candidateIds: string[] };
         };
         await page.goto(`/shop/blue-mantis/divers/${mergeCandidates.sourceId}`);
@@ -507,7 +505,7 @@ for (const scheme of ["light", "dark"] as const) {
        * reset removes the temporary record afterward.
        *
        * Both records print their "Added" date, a `defaultNow()` stamp from the
-       * database's wall clock, so `/api/test/pin-added-date` moves both onto
+       * database's wall clock, so the `pinAddedDate` fact moves both onto
        * the frozen clock before the preview renders (issue #2297).
        */
       test(`the merge preview renders true to the design (${scheme})`, async ({
@@ -524,10 +522,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: /^Is this the same Priya Sharma\?/ }).waitFor();
         await page.getByRole("button", { name: "Create new diver anyway" }).click();
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
-        const pinned = await request.post("/api/test/pin-added-date", {
-          data: { fullName: "Priya Sharma" },
-        });
-        expect(await pinned.json()).toEqual({ pinned: 2 });
+        const { pinAddedDate } = await seedFacts(request, [
+          { name: "pinAddedDate", fullName: "Priya Sharma" },
+        ]);
+        expect(pinAddedDate).toEqual({ pinned: 2 });
         await page.getByRole("link", { name: "Compare with Priya Sharma" }).first().click();
         await page.getByRole("heading", { level: 1, name: "Merge duplicate records" }).waitFor();
         // Swap so the seeded Priya, with her bookings and releases, is the
@@ -828,7 +826,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels");
+        await seedFacts(request, ["troublePanels"]);
         await openDiverProfile(page, "Priya", "Priya Sharma");
         await openDiverFileGroup(page, "Waiver");
         // The ringed button itself, so the capture can never land before the
@@ -849,7 +847,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels");
+        await seedFacts(request, ["troublePanels"]);
         await openDiverProfile(page, "Nadia", "Nadia Petrov");
         // The door's fact: a booked diver's card gap opens the group, and the
         // statement inside repeats the words.

@@ -4,17 +4,11 @@ import { expect, test } from "./fixtures";
 
 const staff = staffTranslator("en-US");
 
-test("a boat photo reaches public pages and can be removed", async ({
-  page,
-  request,
-  privateShop,
-}) => {
+test.use({ privateShopFacts: ["boatPhoto"] });
+
+test("a boat photo reaches public pages and can be removed", async ({ page, privateShop }) => {
   test.setTimeout(60_000);
-  const seeded = await request.post(
-    `/api/test/seed-trouble-states?settingsState=boat-photo&shop=${privateShop.slug}`,
-  );
-  expect(seeded.ok()).toBe(true);
-  const { boat, trip } = (await seeded.json()) as {
+  const { boat, trip } = privateShop.values.boatPhoto as {
     boat: { id: string; name: string };
     trip: { id: string };
   };

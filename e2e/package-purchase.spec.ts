@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import { bookASeatAndOpenThread, payInvoiceThroughWebhook } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 /**
  * **A diver buys a dive package online** (owner decision 2026-10-09; ADR
@@ -64,10 +65,7 @@ test("a shop's packages earn a tab, and Buy goes to Stripe or says why not", asy
 
   // Connected, but this fleet has no Stripe key: the invoice is attempted and
   // the diver is told plainly that the payment page did not open.
-  const connected = await request.post(
-    `/api/test/seed-stripe-account?slug=${encodeURIComponent(SHOP)}`,
-  );
-  expect(connected.ok()).toBe(true);
+  await seedFacts(request, ["stripeAccount"], { slug: SHOP });
   await buy.click();
   await expect(
     page.getByText("The payment page didn’t open. Nothing was charged. Try again in a moment."),
@@ -98,15 +96,12 @@ test("a paid package shows the dives left on the diver's page", async ({
   const thread = page.url();
   await expect(page.getByText(/package dives? left/)).toHaveCount(0);
 
-  const connected = await request.post(
-    `/api/test/seed-stripe-account?slug=${encodeURIComponent(SHOP)}`,
+  const { openPackageInvoice } = await seedFacts(
+    request,
+    ["stripeAccount", { name: "openPackageInvoice", email }],
+    { slug: SHOP },
   );
-  expect(connected.ok()).toBe(true);
-  const seeded = await request.post(
-    `/api/test/seed-open-package-invoice?slug=${encodeURIComponent(SHOP)}&email=${encodeURIComponent(email)}`,
-  );
-  expect(seeded.ok()).toBe(true);
-  await payInvoiceThroughWebhook(request, await seeded.json());
+  await payInvoiceThroughWebhook(request, openPackageInvoice);
 
   await page.goto(thread);
   await expect(page.getByText("10 package dives left")).toBeVisible();

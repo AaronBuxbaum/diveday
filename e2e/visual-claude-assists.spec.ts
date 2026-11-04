@@ -17,6 +17,7 @@ import {
   openTripFromBoard,
   openTripTab,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   FLOW_TIMEOUT_MS,
@@ -28,7 +29,7 @@ import {
 } from "./visual-harness";
 
 /**
- * The diver on the waiting review `/api/test/claude-fixtures?review=1` seeds:
+ * The diver on the waiting review the `claudeAssists` fact (`review: true`) seeds:
  * the first name, A to Z, among the seats on the latest sailed departure.
  */
 // i18n-exempt: seed data, a diver's name
@@ -47,11 +48,10 @@ test.use(VISUAL_STEP_BOUNDS);
  * on a departure and a dive site, the sightings box and the recap line.
  *
  * Every shop the fleet holds is a demo, and a demo is dark, so each test takes
- * a minted shop and `/api/test/claude-fixtures` clears its demo flag and arms
- * the canned provider for it: every answer comes from
- * `src/lib/assists/e2e-fixtures.ts` and nothing leaves the machine. The route's
- * DELETE makes it a demo again before the private-shop teardown, which drops
- * demo shops only. Light only: the assists draw with the page's own controls,
+ * a minted shop and the `claudeAssists` fact (`POST /api/test/shop`) clears its
+ * demo flag and arms the canned provider for it: every answer comes from
+ * `src/lib/assists/e2e-fixtures.ts` and nothing leaves the machine. The
+ * private-shop teardown disarms it and drops it. Light only: the assists draw with the page's own controls,
  * and dark already shoots those.
  *
  * **A pinned identity**, for the same reason `manifest-emergency-empty` has
@@ -69,15 +69,8 @@ test.describe("light mode — Claude's assists, lit", () => {
     slug: string,
     body: () => Promise<void>,
   ): Promise<void> {
-    const armed = await request.post(
-      `/api/test/claude-fixtures?slug=${encodeURIComponent(slug)}&review=1`,
-    );
-    expect(armed.ok()).toBe(true);
-    try {
-      await body();
-    } finally {
-      await request.delete(`/api/test/claude-fixtures?slug=${encodeURIComponent(slug)}`);
-    }
+    await seedFacts(request, [{ name: "claudeAssists", review: true }], { slug });
+    await body();
   }
 
   /** The page again until `target` shows: these assists read after the response. */

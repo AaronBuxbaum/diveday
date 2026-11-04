@@ -1,5 +1,6 @@
 /** Auth/settings action states on a deterministic private shop; no real delivery or token pixels. */
 import { expect, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   FLOW_TIMEOUT_MS,
@@ -25,10 +26,7 @@ for (const scheme of ["light", "dark"] as const) {
         request,
         privateShop,
       }) => {
-        const seeded = await request.post(
-          `/api/test/seed-trouble-states?settingsState=backup-failed&shop=${privateShop.slug}`,
-        );
-        expect(seeded.ok()).toBe(true);
+        await seedFacts(request, ["backupFailed"], { slug: privateShop.slug });
         await page.goto(`/shop/${privateShop.slug}/settings/export/backups`);
         await page.getByText(/Latest delivery: Failed/).waitFor();
         await page

@@ -2,6 +2,7 @@ import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
 import { offlineCopySaved, STAFF_DAY_HEADING, signInAs, signInAsOwner } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
+import { seedFacts } from "./shop-facts";
 
 /**
  * **The evening, on the shop home** — ADR 20260827-clearwater-surface-language,
@@ -43,7 +44,7 @@ test.describe("the evening on the home", () => {
     // over a boat nobody counted.
     test.setTimeout(45_000);
     await signInAsOwner(page);
-    expect((await request.post("/api/test/seed-evening?heads=closed")).ok()).toBe(true);
+    await seedFacts(request, [{ name: "evening", heads: "closed" }]);
     await page.goto("/shop/blue-mantis");
 
     await expect(
@@ -61,9 +62,10 @@ test.describe("the evening on the home", () => {
     // buffer was standing in for — so the day may settle on it.
     test.setTimeout(45_000);
     await signInAsOwner(page);
-    const seeded = await request.post("/api/test/seed-evening?heads=closed&last=just-in");
-    expect(seeded.ok()).toBe(true);
-    const { departures } = (await seeded.json()) as { departures: { id: string }[] };
+    const { evening } = await seedFacts(request, [
+      { name: "evening", heads: "closed", last: "just-in" },
+    ]);
+    const { departures } = evening as { departures: { id: string }[] };
     const justIn = departures.at(-1);
     if (!justIn) throw new Error("the evening fixture moved no departures");
 
@@ -99,7 +101,7 @@ test.describe("the evening on the home", () => {
     // answer is the tap itself.
     test.setTimeout(45_000);
     await signInAsOwner(page);
-    expect((await request.post("/api/test/seed-evening")).ok()).toBe(true);
+    await seedFacts(request, ["evening"]);
     await page.goto("/shop/blue-mantis");
 
     const keep = page.getByRole("button", { name: "Keep it" });
@@ -132,7 +134,7 @@ test.describe("the evening on the home", () => {
     // A seed write, then a signed-in evening render.
     test.setTimeout(45_000);
     await signInAsOwner(page);
-    expect((await request.post("/api/test/seed-evening")).ok()).toBe(true);
+    await seedFacts(request, ["evening"]);
     await page.goto("/shop/blue-mantis");
 
     const takings = page.getByRole("region", { name: "What today made" });
@@ -150,7 +152,7 @@ test.describe("the evening on the home", () => {
     // A seed write, then a signed-in evening render.
     test.setTimeout(45_000);
     await signInAs(page, DEV_STAFF_LOGINS.captain);
-    expect((await request.post("/api/test/seed-evening")).ok()).toBe(true);
+    await seedFacts(request, ["evening"]);
     await page.goto("/shop/blue-mantis");
 
     // A returned boat's recap line is the positive query that proves this page

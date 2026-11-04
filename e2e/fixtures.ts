@@ -9,6 +9,7 @@ import { shopDayBounds } from "../src/lib/zoned";
 import { BROWSER_CLOCK_COOKIE, pinBrowserClock } from "./browser-clock";
 import { currentStaffStorageStateGeneration, signInAs } from "./helpers";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
+import type { FactRequest } from "./shop-facts";
 
 type StaffRole = keyof typeof DEV_STAFF_LOGINS;
 
@@ -176,6 +177,8 @@ export type PrivateShop = {
   slug: string;
   /** The owner `page` is signed in as. */
   ownerEmail: string;
+  /** What each of `privateShopFacts` answered, keyed by the fact's name. */
+  values: Record<string, unknown>;
 };
 
 /**
@@ -269,6 +272,7 @@ export const test = base.extend<
     privateShopSlug: string | null;
     privateShopBrand: boolean;
     privateShopDemo: boolean;
+    privateShopFacts: FactRequest[];
   },
   { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
 >({
@@ -574,6 +578,15 @@ export const test = base.extend<
    */
   privateShopDemo: [true, { option: true }],
 
+  /**
+   * **The minted shop's state, as named facts** (issue #2759), written in the
+   * same request that mints it, before the owner signs in; each fact's answer
+   * is on `privateShop.values`. A fact that needs the signed-in browser (the
+   * pending sign-in) is asked for in the test instead, through `seedFacts`.
+   * Set it with `test.use({ privateShopFacts: ["backupFailed"] })`.
+   */
+  privateShopFacts: [[], { option: true }],
+
   clock: async ({ request, context, workerBaseURL }, use) => {
     const to = async (instant: Date | string) => {
       const at = new Date(instant);
@@ -597,23 +610,31 @@ export const test = base.extend<
   },
 
   privateShop: async (
-    { demoReset, request, page, privateShopSlug, privateShopBrand, privateShopDemo },
+    {
+      demoReset,
+      request,
+      page,
+      privateShopSlug,
+      privateShopBrand,
+      privateShopDemo,
+      privateShopFacts,
+    },
     use,
   ) => {
     // Named only for ordering: the reset purges the *previous* test's minted
     // shop, and it has to have run before this one mints its replacement.
     void demoReset;
-    const mint = new URLSearchParams();
-    if (privateShopSlug) mint.set("slug", privateShopSlug);
-    if (privateShopBrand) mint.set("brand", "1");
-    if (!privateShopDemo) mint.set("demo", "0");
-    const query = mint.toString();
-    const response = await request.post(
-      query ? `/api/test/seed-private-shop?${query}` : "/api/test/seed-private-shop",
-    );
+    const mint = {
+      ...(privateShopSlug ? { slug: privateShopSlug } : {}),
+      ...(privateShopBrand ? { brand: true } : {}),
+      ...(privateShopDemo ? {} : { demo: false }),
+    };
+    const response = await request.post("/api/test/shop", {
+      data: { mint, facts: privateShopFacts },
+    });
     if (!response.ok()) {
       throw new Error(
-        `private shop mint failed: POST /api/test/seed-private-shop returned ` +
+        `private shop mint failed: POST /api/test/shop returned ` +
           `${response.status()}. Body: ${await response.text()}`,
       );
     }
@@ -621,14 +642,15 @@ export const test = base.extend<
       slug: string;
       ownerEmail: string;
       password: string;
+      values: Record<string, unknown>;
     };
     await signInAs(page, { email: minted.ownerEmail, password: minted.password });
-    await use({ slug: minted.slug, ownerEmail: minted.ownerEmail });
+    await use({ slug: minted.slug, ownerEmail: minted.ownerEmail, values: minted.values });
     // Best-effort: a teardown failure must not turn a passing test red. But it
     // says so here: a cascade that cannot finish leaves the minted shop for
     // `purgeMintedDemoShops`, which then 500s every later reset on the same FK
     // and turns a whole shard red far from the spec that left the rows.
-    const teardownUrl = `/api/test/seed-private-shop?slug=${encodeURIComponent(minted.slug)}`;
+    const teardownUrl = `/api/test/shop?slug=${encodeURIComponent(minted.slug)}`;
     try {
       const teardown = await request.delete(teardownUrl);
       if (!teardown.ok()) {

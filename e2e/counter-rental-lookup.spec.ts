@@ -3,6 +3,7 @@ import type { RentalLookupFleet } from "../src/db/facts/rental-lookup-state";
 import { gearItemKindLabel } from "../src/i18n/gear-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 
 const t = staffTranslator("en-US");
 
@@ -42,11 +43,8 @@ test.describe("counter rental lookup at 390px", () => {
     page,
     request,
   }, info) => {
-    const seeded = await request.post(
-      "/api/test/seed-trouble-states?facts=troublePanels,rentalLookup",
-    );
-    expect(seeded.ok()).toBe(true);
-    const { rentalLookup } = (await seeded.json()) as { rentalLookup: RentalLookupFleet };
+    const seeded = await seedFacts(request, ["troublePanels", "rentalLookup"]);
+    const { rentalLookup } = seeded as { rentalLookup: RentalLookupFleet };
     const chooseTank = async () => {
       const gear = page.getByRole("region", { name: t("counterRentals.new.gearHeading") });
       await gear.getByRole("button", { name: gearItemKindLabel(t, "tank"), exact: true }).click();
@@ -80,11 +78,8 @@ test.describe("counter rental lookup at 390px", () => {
     page,
     request,
   }, info) => {
-    const seeded = await request.post(
-      "/api/test/seed-trouble-states?facts=troublePanels,rentalLookup",
-    );
-    expect(seeded.ok()).toBe(true);
-    const { rentalLookup } = (await seeded.json()) as { rentalLookup: RentalLookupFleet };
+    const seeded = await seedFacts(request, ["troublePanels", "rentalLookup"]);
+    const { rentalLookup } = seeded as { rentalLookup: RentalLookupFleet };
     expect(rentalLookup.personId).toBeTruthy();
     await page.goto(`/shop/blue-mantis/gear?add=rental&personId=${rentalLookup.personId}`);
     const gear = page.getByRole("region", { name: t("counterRentals.new.gearHeading") });

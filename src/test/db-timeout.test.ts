@@ -37,7 +37,7 @@ describe("needsDatabaseTimeout", () => {
   it("gives a db-backed test that lives beside its feature the longer ceiling", () => {
     // Six `seededShopContext()` hydrations, nowhere near `src/db`. It timed out
     // at 20s on a contended runner, which is what added this rule.
-    expect(needsDatabaseTimeout(resolve("src/app/api/test/seed-evening/route.test.ts"))).toBe(true);
+    expect(needsDatabaseTimeout(resolve("src/app/api/test/shop/evening.test.ts"))).toBe(true);
   });
 
   it("gives a test that builds its own database through the factory the longer ceiling", () => {

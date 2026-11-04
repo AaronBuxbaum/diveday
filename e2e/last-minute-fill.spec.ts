@@ -9,6 +9,7 @@ import {
   rosterRow,
   tripPathByTitle,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 const diver = diverTranslator("en-US");
 const staff = staffTranslator("en-US");
@@ -34,11 +35,10 @@ async function joinTheList(
   request: APIRequestContext,
   joiner: { fullName: string; email: string; certificationLevel?: string },
 ): Promise<void> {
-  const response = await request.post("/api/test/seed-last-minute-interest", {
-    // No upper bound, and "around from" 2020 covers today's frozen-clock departure.
-    data: { shopSlug: "blue-mantis", availableFrom: "2020-01-01", ...joiner },
-  });
-  expect(response.ok()).toBe(true);
+  // No upper bound, and "around from" 2020 covers today's frozen-clock departure.
+  await seedFacts(request, [
+    { name: "lastMinuteInterest", availableFrom: "2020-01-01", ...joiner },
+  ]);
 }
 
 /** The reef morning's "Who wants in" panel, opened by the trip's own address. */
@@ -103,7 +103,7 @@ test("a diver joins the last-minute list from the shop's schedule page", async (
   ).toBeVisible();
 });
 
-// /api/test/seed-interest-unsubscribe-token mints a real
+// The `interestUnsubscribe` fact (`/api/test/shop`) mints a real
 // interest_unsubscribe capability (test-only, gated identically to
 // /api/test/reset) so this drives the actual /unsubscribe/[token] page and
 // server action, since the real send flow can't reach a live email in e2e
@@ -114,11 +114,10 @@ test("a diver can self-serve unsubscribe from last-minute deal emails", async ({
   request,
 }) => {
   await joinTheList(request, { fullName: "Uma Torres", email: "uma.e2e@example.com" });
-  const seeded = await request.post("/api/test/seed-interest-unsubscribe-token", {
-    data: { shopSlug: "blue-mantis", email: "uma.e2e@example.com" },
-  });
-  expect(seeded.ok()).toBe(true);
-  const { token } = await seeded.json();
+  const { interestUnsubscribe } = await seedFacts(request, [
+    { name: "interestUnsubscribe", email: "uma.e2e@example.com" },
+  ]);
+  const { token } = interestUnsubscribe;
 
   await page.goto(`/unsubscribe/${token}`);
   await expect(page.getByRole("heading", { name: "Stop last-minute deal emails?" })).toBeVisible();
@@ -178,7 +177,7 @@ test.describe("staff and the list", () => {
     test.setTimeout(45_000);
     // Unlocks the "not_connected" gate without ever calling real Stripe (same
     // route the visual suite uses to render Stripe-gated surfaces).
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await joinTheList(request, {
       fullName: "Nora Quinn",
       email: "nora.e2e@example.com",
@@ -220,7 +219,7 @@ test.describe("staff and the list", () => {
     // and Today. Measured 2026-10-24: 19.6–21.3s locally at one worker, 8s of it
     // the hold, and CI's loaded runners take about twice the rest.
     test.setTimeout(45_000);
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await joinTheList(request, {
       fullName: "Priya Shah",
       email: "priya.e2e@example.com",

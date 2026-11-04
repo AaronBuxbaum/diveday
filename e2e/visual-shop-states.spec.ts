@@ -13,6 +13,7 @@ import {
   openTripFromBoard,
   openTripTab,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   expectOverviewMapSites,
@@ -489,11 +490,11 @@ for (const scheme of ["light", "dark"] as const) {
       privateShop,
     }) => {
       test.setTimeout(FLOW_TIMEOUT_MS);
-      const response = await request.post(
-        `/api/test/seed-trouble-states?operationalTrust=capacity&shop=${privateShop.slug}`,
+      const { operationalTrust: state } = await seedFacts(
+        request,
+        [{ name: "operationalTrust", state: "capacity" }],
+        { slug: privateShop.slug },
       );
-      expect(response.ok()).toBe(true);
-      const { operationalTrust: state } = await response.json();
       await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
       await offlineCopySaved(page);
       await settleOfflineShellWorker(page);
@@ -524,11 +525,11 @@ for (const scheme of ["light", "dark"] as const) {
       privateShop,
     }) => {
       test.setTimeout(FLOW_TIMEOUT_MS);
-      const response = await request.post(
-        `/api/test/seed-trouble-states?operationalTrust=ashore&shop=${privateShop.slug}`,
+      const { operationalTrust: state } = await seedFacts(
+        request,
+        [{ name: "operationalTrust", state: "ashore" }],
+        { slug: privateShop.slug },
       );
-      expect(response.ok()).toBe(true);
-      const { operationalTrust: state } = await response.json();
       await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
       await expect(
         page.getByText(
@@ -559,11 +560,11 @@ for (const scheme of ["light", "dark"] as const) {
       privateShop,
     }) => {
       test.setTimeout(FLOW_TIMEOUT_MS);
-      const response = await request.post(
-        `/api/test/seed-trouble-states?operationalTrust=intro&shop=${privateShop.slug}`,
+      const { operationalTrust: state } = await seedFacts(
+        request,
+        [{ name: "operationalTrust", state: "intro" }],
+        { slug: privateShop.slug },
       );
-      expect(response.ok()).toBe(true);
-      const { operationalTrust: state } = await response.json();
       await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
       await expect(
         page.getByText(
@@ -587,11 +588,11 @@ for (const scheme of ["light", "dark"] as const) {
       privateShop,
     }) => {
       test.setTimeout(FLOW_TIMEOUT_MS);
-      const response = await request.post(
-        `/api/test/seed-trouble-states?operationalTrust=historic&shop=${privateShop.slug}`,
+      const { operationalTrust: state } = await seedFacts(
+        request,
+        [{ name: "operationalTrust", state: "historic" }],
+        { slug: privateShop.slug },
       );
-      expect(response.ok()).toBe(true);
-      const { operationalTrust: state } = await response.json();
       await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/log`);
       await expect(
         page
@@ -610,11 +611,11 @@ for (const scheme of ["light", "dark"] as const) {
         privateShop,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const response = await request.post(
-          `/api/test/seed-trouble-states?operationalTrust=historic&shop=${privateShop.slug}`,
+        const { operationalTrust: state } = await seedFacts(
+          request,
+          [{ name: "operationalTrust", state: "historic" }],
+          { slug: privateShop.slug },
         );
-        expect(response.ok()).toBe(true);
-        const { operationalTrust: state } = await response.json();
         // privateShop signs in through the English form. Carry that real
         // session to a Spanish reader after authentication, including its
         // navigator.language, which capture() checks against the baseline.

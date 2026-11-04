@@ -51,7 +51,7 @@ by anyone's intent."*
 
 **A test that writes shop-wide state takes a whole seeded shop of its own, minted for that one test.**
 
-A new test-scoped fixture, `privateShop` (`e2e/fixtures.ts`), POSTs `/api/test/seed-private-shop`,
+A new test-scoped fixture, `privateShop` (`e2e/fixtures.ts`), POSTs `/api/test/shop` with `mint`,
 which calls the same `createDemoShop` the "Try the live demo" funnel calls, and then signs the
 test's `page` in as that shop's owner through the real sign-in form. The test uses
 `privateShop.slug` everywhere it used to say `blue-mantis`.

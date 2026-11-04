@@ -1,0 +1,460 @@
+import { and, eq } from "drizzle-orm";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { standingArrivalStatus } from "@/db/arrival-provenance";
+import { inHorizonReadiness } from "@/db/blockers";
+import { getGearItemDetail } from "@/db/gear-register";
+import { listGearRentals } from "@/db/gear-rentals";
+import { getTripManifest } from "@/db/manifests";
+import { listTripReadiness } from "@/db/readiness";
+import { bookings, people, shops, trips } from "@/db/schema";
+import { liveTrip } from "@/db/trips-live";
+import { listUnfinished } from "@/db/unfinished";
+import { getShopDayDepartures } from "@/features/today";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { HOUR_MS, nowDate } from "@/lib/clock";
+import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
+import { benchReturnConcerns } from "@/lib/gear";
+import { markArrived } from "@/test/arrivals";
+import { seededShopContext } from "@/test/db";
+
+/**
+ * **The one test door** (issue #2759): a shop's state is a list of named facts.
+ *
+ * **A trouble state lands only on the caller who asked for it** (issue #2338).
+ *
+ * The owed-refund state cancels a departure that carries a paid seat, which in
+ * the demo is an upcoming departure every other spec and capture may expect to
+ * be on the board. It ran on every call, whatever flags the caller passed, so a
+ * spec that seeded `?facts=boatSafety` also lost that departure and a capture's
+ * picture depended on which spec had seeded first. It is opt-in now, like the
+ * other states that move what unrelated pages read.
+ */
+
+vi.mock("@/db/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/client")>();
+  return { ...actual, getDb: vi.fn() };
+});
+
+const { getDb } = await import("@/db/client");
+const { DELETE, POST } = await import("./route");
+
+const secret = "e2e-test-secret";
+
+/** The door, asked for these facts on the canonical demo (or the shop `slug` names). */
+function seedRequest(facts: unknown[] = [], extra: Record<string, unknown> = {}) {
+  return new Request("http://localhost/api/test/shop", {
+    method: "POST",
+    headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
+    body: JSON.stringify({ ...extra, facts }),
+  });
+}
+
+/** What the door answered for each fact, keyed by name. */
+async function valuesOf(response: Response): Promise<Record<string, unknown>> {
+  return (await response.json()).values;
+}
+
+async function cancelledTripIds(db: Awaited<ReturnType<typeof seededShopContext>>["db"]) {
+  const rows = await db.select({ id: trips.id }).from(trips).where(eq(trips.status, "cancelled"));
+  return rows.map((row) => row.id).sort();
+}
+
+beforeEach(() => {
+  vi.stubEnv("DATABASE_URL", "");
+  vi.stubEnv("DIVEDAY_E2E_SECRET", secret);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("POST /api/test/shop", () => {
+  it("opens enough capacity for the party waiver captures when asked", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          eq(trips.title, "Morning Two-Tank — Molasses Reef"),
+          liveTrip(),
+        ),
+      )
+      .limit(1);
+    if (!trip) throw new Error("party waiver visual departure was not seeded");
+
+    const response = await POST(seedRequest(["partyWaiverCapacity"]));
+    expect(response.status).toBe(200);
+    const body = (await valuesOf(response)) as {
+      partyWaiverCapacity?: { tripId: string; capacity: number };
+    };
+    expect(body.partyWaiverCapacity?.tripId).toBe(trip.id);
+    expect(body.partyWaiverCapacity?.capacity).toBeGreaterThanOrEqual(20);
+
+    const [updated] = await db
+      .select({ capacity: trips.capacity })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(updated?.capacity).toBeGreaterThanOrEqual(20);
+  }, 60_000);
+
+  it("does not seed the rental lookup without its bearer or against a real database", async () => {
+    vi.mocked(getDb).mockClear();
+    const denied = await POST(
+      new Request("http://localhost/api/test/shop", {
+        method: "POST",
+        body: JSON.stringify({ facts: ["rentalLookup"] }),
+      }),
+    );
+    expect(denied.status).toBe(404);
+    vi.stubEnv("DATABASE_URL", "postgres://example.invalid/not-a-test-database");
+    expect((await POST(seedRequest(["rentalLookup"]))).status).toBe(404);
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("cancels no departure for a caller who asked for another state", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const before = await cancelledTripIds(db);
+
+    const response = await POST(seedRequest(["boatSafety"]));
+    expect(response.status).toBe(200);
+
+    expect(await cancelledTripIds(db)).toEqual(before);
+    expect(await listUnfinished(db, shop.id, "shop_cancellation_refund")).toEqual([]);
+  }, 60_000);
+
+  it("owes a refund on a cancelled departure when the caller asks for it", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const response = await POST(seedRequest(["owedRefund"]));
+    expect(response.status).toBe(200);
+
+    expect((await listUnfinished(db, shop.id, "shop_cancellation_refund")).length).toBeGreaterThan(
+      0,
+    );
+  }, 60_000);
+
+  /**
+   * **A checked-in diver who can no longer board** (#2410): the state the
+   * counter must keep under "Still to clear", made through the real check-in.
+   */
+  it("checks a diver in and then blocks them when asked", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const response = await POST(seedRequest(["checkedInBlocked"]));
+    const body = (await valuesOf(response)) as {
+      checkedInBlocked?: { tripId: string; personName: string };
+    };
+    if (!body.checkedInBlocked) throw new Error("no checked-in blocked diver was made");
+    const { tripId, personName } = body.checkedInBlocked;
+    const row = (await listTripReadiness(db, shop.id, tripId)).find(
+      (entry) => entry.person.fullName === personName,
+    );
+    // Checked in is the arrival trail's word on a held seat (issue #2702).
+    expect(row?.booking.status).toBe("booked");
+    if (!row) throw new Error("the checked-in diver is not on the trip");
+    expect(await standingArrivalStatus(db, shop.id, tripId, row.booking.id)).toBe("arrived");
+    expect(row.readiness.status).toBe("blocked");
+  }, 60_000);
+
+  /**
+   * **A concern returned onto the unit already on the bench** (#2570): the
+   * status card's "Returned … with a concern" line needs a unit off the wall
+   * and a return whose words are not the unit's own note.
+   */
+  it("returns the benched regulator with a concern when asked, and not otherwise", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const calm = (await valuesOf(await POST(seedRequest(["boatSafety"])))) as {
+      gearConcern?: unknown;
+    };
+    expect(calm.gearConcern).toBeUndefined();
+
+    const body = (await valuesOf(await POST(seedRequest(["gearConcern"])))) as {
+      gearConcern?: { gearItemId: string; label: string };
+    };
+    if (!body.gearConcern) throw new Error("no concern was returned");
+    const detail = await getGearItemDetail(db, shop.id, body.gearConcern.gearItemId);
+    if (!detail) throw new Error("the benched unit is missing");
+    expect(detail.item.status).toBe("needs_service");
+    const concerns = benchReturnConcerns(
+      detail.item,
+      detail.reservations,
+      detail.history,
+      shop.timezone,
+    );
+    expect(concerns).toHaveLength(1);
+    expect(concerns[0]?.note).toMatch(/Mouthpiece split/);
+
+    // Idempotent: a second ask does not stack a second return.
+    await POST(seedRequest(["gearConcern"]));
+    const again = await getGearItemDetail(db, shop.id, body.gearConcern.gearItemId);
+    expect(
+      benchReturnConcerns(again?.item ?? detail.item, again?.reservations ?? [], [], shop.timezone),
+    ).toHaveLength(1);
+  }, 60_000);
+
+  /**
+   * **A counter rental out to someone with no waiver** (#2570): the Rentals
+   * list's waiver word only shows for a holder the shop has no signature for.
+   */
+  it("lends a mask to someone with no waiver when asked", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const body = (await valuesOf(await POST(seedRequest(["rentalWaiverWarning"])))) as {
+      rentalWaiverWarning?: { personId: string; label: string };
+    };
+    if (!body.rentalWaiverWarning) throw new Error("no rental was made");
+    const page = await listGearRentals(db, shop.id, {
+      todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
+      timezone: shop.timezone,
+    });
+    const standing = page.counterWaivers?.get(body.rentalWaiverWarning.personId);
+    expect(standing && counterRentalWaiverFlag(standing.state)).toBeTruthy();
+    expect(page.rows.some((holder) => holder.personId === body.rentalWaiverWarning?.personId)).toBe(
+      true,
+    );
+  }, 60_000);
+
+  /**
+   * **One seat the dock never counted on the finished dawn boat** (#2408), so
+   * its record shows every outcome band.
+   */
+  it("leaves one seat on the finished boat with no dock result when asked", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const response = await POST(seedRequest(["uncountedSeat"]));
+    const body = (await valuesOf(response)) as {
+      uncountedSeat?: { tripId: string; personName: string };
+    };
+    if (!body.uncountedSeat) throw new Error("no uncounted seat was made");
+    const { tripId, personName } = body.uncountedSeat;
+    const manifest = await getTripManifest(db, shop.id, tripId);
+    const states = new Map(
+      manifest?.divers.map((diver) => [diver.fullName, diver.rollCall?.state]),
+    );
+    expect(states.get(personName)).toBeUndefined();
+    expect(states.has(personName)).toBe(true);
+    expect([...states.values()]).toContain("boarded");
+    expect([...states.values()]).toContain("not_boarded");
+    const [seat] = await db
+      .select({ id: bookings.id, status: bookings.status })
+      .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(and(eq(bookings.tripId, tripId), eq(people.fullName, personName)));
+    // Through the desk before the boat left: a held seat the arrival trail has
+    // seen, never a seat status (issue #2702).
+    expect(seat?.status).toBe("booked");
+    if (!seat) throw new Error("the uncounted seat is missing");
+    expect(await standingArrivalStatus(db, shop.id, tripId, seat.id)).toBe("arrived");
+  }, 60_000);
+
+  /**
+   * **A full boat nobody has counted the crew on**: the station's warning
+   * needs every seat aboard. The demo's morning hand-off checks two divers in
+   * on that boat, so a helper that boarded only `booked` seats left them
+   * ashore and the warning never showed.
+   */
+  it("boards every seat on the next boat, checked in or not, and counts no crew", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const now = nowDate();
+    const nextOf = async () => {
+      const evidence = await inHorizonReadiness(db, shop.id, now);
+      const cards = await getShopDayDepartures(db, shop.id, shop.timezone, now, evidence);
+      const card = cards
+        .filter((entry) => entry.startsAt.getTime() >= now.getTime() - HOUR_MS)
+        .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
+      if (!card) throw new Error("no departure left today");
+      return card;
+    };
+    // A diver the counter has already checked in, as the demo's hand-off does.
+    const [seat] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, (await nextOf()).tripId), eq(bookings.status, "booked")))
+      .limit(1);
+    if (!seat) throw new Error("the next boat has no booked seat");
+    await markArrived(db, seat.id);
+
+    const response = await POST(seedRequest(["crewUncounted"]));
+    expect(response.status).toBe(200);
+
+    const next = await nextOf();
+    expect(next.booked).toBeGreaterThan(0);
+    expect(next.boarded).toBe(next.booked);
+    expect(next.blocked).toBe(0);
+    expect(next.crewAccountedFor).toBe(false);
+  }, 60_000);
+
+  describe("the facts list (issue #2759)", () => {
+    it("refuses a name nobody knows, and says which names there are", async () => {
+      const { db } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      const response = await POST(seedRequest(["troublePanels", "gearOutt"]));
+      expect(response.status).toBe(400);
+      const body = (await response.json()) as { unknown: string[]; known: string[] };
+      expect(body.unknown).toEqual(["gearOutt"]);
+      expect(body.known).toEqual(expect.arrayContaining(["gearOut", "troublePanels"]));
+    }, 60_000);
+
+    it("writes nothing for an empty list", async () => {
+      const { db, shop } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      const response = await POST(seedRequest());
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ ok: true, slug: "blue-mantis", values: {} });
+      expect(await listUnfinished(db, shop.id, "payment_operation")).toEqual([]);
+    }, 60_000);
+
+    it("writes the back-office panels when the set is named, and not otherwise", async () => {
+      const { db, shop } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      expect((await POST(seedRequest(["gearOut"]))).status).toBe(200);
+      expect(await listUnfinished(db, shop.id, "payment_operation")).toEqual([]);
+
+      expect((await POST(seedRequest(["troublePanels"]))).status).toBe(200);
+      expect((await listUnfinished(db, shop.id, "payment_operation")).length).toBeGreaterThan(0);
+    }, 60_000);
+
+    it("writes in the registry's order whatever order the caller names", async () => {
+      const { resolveFacts } = await import("@/db/facts");
+      const forward = resolveFacts(["gearOut", "troublePanels", "bench"]);
+      const reversed = resolveFacts(["bench", "troublePanels", "gearOut"]);
+      expect(forward).toEqual(reversed);
+      expect(forward.ok && forward.facts.slice(-2).map((fact) => fact.name)).toEqual([
+        "gearOut",
+        "bench",
+      ]);
+    });
+  });
+
+  describe("the door's grammar (issue #2759)", () => {
+    it("refuses arguments a fact does not take, and a fact that needs some without them", async () => {
+      const { db } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      const response = await POST(
+        seedRequest([{ name: "gearOut", hours: 3 }, "operationalTrust", { name: "evening" }]),
+      );
+      expect(response.status).toBe(400);
+      const body = (await response.json()) as { invalid: Array<{ name: string }> };
+      expect(body.invalid.map((entry) => entry.name)).toEqual(["gearOut", "operationalTrust"]);
+    }, 60_000);
+
+    it("refuses a body it cannot read before it opens the database", async () => {
+      vi.mocked(getDb).mockClear();
+      for (const body of [{ facts: "gearOut" }, { slug: "Not A Slug" }, { shop: "x" }]) {
+        const response = await POST(
+          new Request("http://localhost/api/test/shop", {
+            method: "POST",
+            headers: { authorization: `Bearer ${secret}` },
+            body: JSON.stringify(body),
+          }),
+        );
+        expect(response.status).toBe(400);
+      }
+      expect(getDb).not.toHaveBeenCalled();
+    });
+
+    it("refuses a private fact on the canonical demo, and writes nothing", async () => {
+      const { db, shop } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      const response = await POST(seedRequest(["troublePanels", "todayCatchUp"]));
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({ error: "not_available" });
+      expect(await listUnfinished(db, shop.id, "payment_operation")).toEqual([]);
+    }, 60_000);
+
+    it("writes to another demo shop by slug, and refuses it once it is real", async () => {
+      const { db, shop } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+      await db.update(shops).set({ slug: "operational-private-demo" }).where(eq(shops.id, shop.id));
+
+      const seeded = await POST(
+        seedRequest([{ name: "operationalTrust", state: "boat" }], {
+          slug: "operational-private-demo",
+        }),
+      );
+      expect(seeded.status).toBe(200);
+      const values = (await valuesOf(seeded)) as { operationalTrust: { boatName: string } };
+      expect(values.operationalTrust.boatName).toBe("Trust I");
+
+      await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+      const refused = await POST(
+        seedRequest([{ name: "operationalTrust", state: "boat" }], {
+          slug: "operational-private-demo",
+        }),
+      );
+      expect(refused.status).toBe(404);
+      expect(await refused.json()).toEqual({ error: "not_available" });
+    }, 60_000);
+
+    it("mints a shop of the test's own, writes the facts to it, and its teardown drops it", async () => {
+      const { db, shop: canonical } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      const response = await POST(
+        seedRequest(["todayCatchUp"], { mint: { slug: "door-minted-shop" } }),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        slug: string;
+        ownerEmail: string;
+        password: string;
+        values: { todayCatchUp?: { personName: string } };
+      };
+      expect(body.slug).toBe("door-minted-shop");
+      expect(body.ownerEmail).toContain("door-minted-shop");
+      expect(body.password).toBeTruthy();
+      expect(body.values.todayCatchUp?.personName).toBeTruthy();
+
+      const drop = (slug: string) =>
+        DELETE(
+          new Request(`http://localhost/api/test/shop?slug=${slug}`, {
+            method: "DELETE",
+            headers: { authorization: `Bearer ${secret}` },
+          }),
+        );
+      expect((await drop(canonical.slug)).status).toBe(400);
+      expect(await (await drop("door-minted-shop")).json()).toEqual({ ok: true, dropped: true });
+      // A slug that names nothing is a no-op: the reset may have reaped it already.
+      expect(await (await drop("door-minted-shop")).json()).toEqual({ ok: true, dropped: false });
+    }, 60_000);
+
+    it("drops a real-shaped mint, which only this server may", async () => {
+      const { db } = await seededShopContext();
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      const minted = await POST(
+        seedRequest([], { mint: { slug: "door-real-shaped", demo: false } }),
+      );
+      expect(minted.status).toBe(200);
+      const [row] = await db
+        .select({ isDemo: shops.isDemo })
+        .from(shops)
+        .where(eq(shops.slug, "door-real-shaped"));
+      expect(row?.isDemo).toBe(false);
+      const dropped = await DELETE(
+        new Request("http://localhost/api/test/shop?slug=door-real-shaped", {
+          method: "DELETE",
+          headers: { authorization: `Bearer ${secret}` },
+        }),
+      );
+      expect(await dropped.json()).toEqual({ ok: true, dropped: true });
+    }, 60_000);
+  });
+});

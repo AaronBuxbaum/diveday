@@ -2,24 +2,25 @@ import type { Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
 import { mintOnboardFormPath } from "./setup-link";
+import { seedFacts } from "./shop-facts";
 import type { AuditCapture } from "./visual-audit-capture";
 
 const copy = diverTranslator("en-US");
 
 async function accountLink(page: Page, email: string, purpose: string) {
-  const seeded = await page.request.post("/api/test/seed-account-token", {
-    data: { email, purpose },
-  });
-  expect(seeded.ok()).toBe(true);
-  return ((await seeded.json()) as { token: string }).token;
+  const { accountToken } = await seedFacts(page.request, [
+    { name: "accountToken", email, purpose },
+  ]);
+  return (accountToken as { token: string }).token;
 }
 
 async function visualLink(page: Page, shopSlug: string, family: string, state = "active") {
-  const seeded = await page.request.post("/api/test/seed-visual-links", {
-    data: { shopSlug, family, state },
-  });
-  expect(seeded.ok()).toBe(true);
-  return ((await seeded.json()) as { path: string }).path;
+  const { visualLink: link } = await seedFacts(
+    page.request,
+    [{ name: "visualLink", family, state }],
+    { slug: shopSlug },
+  );
+  return (link as { path: string }).path;
 }
 
 /** Real one-shot links are grouped only where consumption creates the next state. */
@@ -119,11 +120,12 @@ export function registerAccountAuditCaptures(capture: AuditCapture, flowTimeout:
       await page.getByLabel("Contact email").fill("desk.review@example.com");
       await page.getByRole("button", { name: "Save contact details" }).click();
       await expect(page.getByText("Awaiting confirmation")).toBeVisible();
-      const seeded = await page.request.post("/api/test/seed-contact-email-confirmation-token", {
-        data: { shopSlug: privateShop.slug },
-      });
-      expect(seeded.ok()).toBe(true);
-      const { token } = (await seeded.json()) as { token: string };
+      const { contactEmailConfirmation } = await seedFacts(
+        page.request,
+        ["contactEmailConfirmation"],
+        { slug: privateShop.slug },
+      );
+      const { token } = contactEmailConfirmation as { token: string };
       await page.goto(`/confirm-contact/${token}`);
       await page.getByRole("button", { name: copy("contactConfirm.submit") }).waitFor();
       await capture(page, "contact-confirm-active", "light");
@@ -228,15 +230,9 @@ export function registerAccountAuditCaptures(capture: AuditCapture, flowTimeout:
         await list.getByLabel("Email").fill(email);
         await page.getByRole("button", { name: "Notify me" }).click();
         await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
-        const endpoint =
-          family === "courtesy"
-            ? "seed-courtesy-email-unsubscribe-token"
-            : "seed-interest-unsubscribe-token";
-        const seeded = await page.request.post(`/api/test/${endpoint}`, {
-          data: { shopSlug: "blue-mantis", email },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { token } = (await seeded.json()) as { token: string };
+        const fact = family === "courtesy" ? "courtesyEmailUnsubscribe" : "interestUnsubscribe";
+        const values = await seedFacts(page.request, [{ name: fact, email }]);
+        const { token } = values[fact] as { token: string };
         await page.goto(`/unsubscribe/${token}`);
         await page.getByRole("button", { name: "Stop these emails" }).waitFor();
         if (family === "courtesy") await capture(page, "courtesy-unsubscribe-active", "light");

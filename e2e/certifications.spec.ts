@@ -16,6 +16,7 @@ import {
   signOut,
   tripPathByTitle,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 signedInAsOwner();
 
@@ -260,8 +261,7 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   request,
 }) => {
   test.setTimeout(30_000);
-  const seeded = await request.post("/api/test/seed-trouble-states?facts=troublePanels");
-  expect(seeded.ok()).toBe(true);
+  await seedFacts(request, ["troublePanels"]);
 
   // Rowan's seeded self-declared level is the card-sighting path: a bad number
   // must return to the same open disclosure, then a plausible number must

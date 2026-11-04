@@ -8,6 +8,7 @@ import {
   openTripTab,
   seededTripId,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 /**
  * **What the boat day hands to the next one** (fifth-loop ideas, items 1, 2,
@@ -73,7 +74,7 @@ test("the closing evening adds tomorrow's boats together and prints tomorrow", a
   request,
 }) => {
   test.setTimeout(45_000);
-  expect((await request.post("/api/test/seed-evening?heads=closed")).ok()).toBe(true);
+  await seedFacts(request, [{ name: "evening", heads: "closed" }]);
   await page.goto("/shop/blue-mantis");
   const tomorrow = page.getByRole("region", { name: "Tomorrow from tonight" });
   await expect(tomorrow.getByText(/\d+ tanks? to fill/)).toBeVisible();

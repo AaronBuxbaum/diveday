@@ -298,7 +298,7 @@ export async function getMonthlyReport(
   // always read the same boats. `reporting.test.ts` pins the refusal rather
   // than a zero sum, because the refusal is what keeps this true.
   //
-  // Two routes reach a deleted departure with bookings: the e2e-only `api/test/seed-off-season`
+  // Two routes reach a deleted departure with bookings: the e2e-only `offSeason` fact
   // (demo shops only; revenue against no seats after it is that seed, not this report), and a
   // rehearsal cleared overnight, which `inWindow` leaves out as it does every rehearsal.
   const inWindow = and(

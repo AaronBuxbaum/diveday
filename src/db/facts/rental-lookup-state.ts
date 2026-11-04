@@ -11,7 +11,7 @@ export type RentalLookupFleet = {
 };
 
 /**
- * #2863's synthetic lookup workload, only through seed-trouble-states.
+ * #2863's synthetic lookup workload, only through the test door (`/api/test/shop`).
  * Replaces the demo's tank/suit view for this test, never its normal seed.
  * Labels put the exact-tag task at tank 95 and the first 2XL suit at 71.
  * No reservation, certification, fill or authorization rule is changed.

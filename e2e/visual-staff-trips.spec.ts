@@ -22,6 +22,7 @@ import {
   seatFromRoster,
   seededTripId,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   deepDiverLogPath,
@@ -125,14 +126,11 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,crewClash",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { crewClash } = (await seeded.json()) as {
+        const seeded = await seedFacts(request, ["troublePanels", "crewClash"]);
+        const { crewClash } = seeded as {
           crewClash?: { tripId: string; otherTitle: string; date: string };
         };
-        if (!crewClash) throw new Error("seed-trouble-states found no two departures to clash");
+        if (!crewClash) throw new Error("the fact found no two departures to clash");
 
         await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}`);
         await openTripAbout(page);
@@ -441,12 +439,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,boatSafety",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { boatSafety } = (await seeded.json()) as { boatSafety?: { tripId: string } };
-        if (!boatSafety) throw new Error("seed-trouble-states found no reef departure on a boat");
+        const seeded = await seedFacts(request, ["troublePanels", "boatSafety"]);
+        const { boatSafety } = seeded as { boatSafety?: { tripId: string } };
+        if (!boatSafety) throw new Error("the fact found no reef departure on a boat");
         await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}/manifest`);
         await page
           .getByRole("heading", { level: 2, name: "Mantis I: papers and safety kit" })
@@ -461,12 +456,9 @@ for (const scheme of ["light", "dark"] as const) {
        * state: a training-day departure with one test diver.
        */
       test(`a rehearsal's trip page carries its banner (${scheme})`, async ({ page, request }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,rehearsal",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { rehearsal } = (await seeded.json()) as { rehearsal?: { tripId: string } };
-        if (!rehearsal) throw new Error("seed-trouble-states could not put a rehearsal on");
+        const seeded = await seedFacts(request, ["troublePanels", "rehearsal"]);
+        const { rehearsal } = seeded as { rehearsal?: { tripId: string } };
+        if (!rehearsal) throw new Error("the fact could not put a rehearsal on");
         await page.goto(`/shop/blue-mantis/trips/${rehearsal.tripId}`);
         await page.locator("[data-rehearsal-banner]").waitFor();
         await page.getByRole("navigation", { name: "Departure" }).waitFor();
@@ -480,10 +472,7 @@ for (const scheme of ["light", "dark"] as const) {
        * a fold, opened before the shot.
        */
       test(`the week board carries a rehearsal's badge (${scheme})`, async ({ page, request }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,rehearsal",
-        );
-        expect(seeded.ok()).toBe(true);
+        await seedFacts(request, ["troublePanels", "rehearsal"]);
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await page.getByText("Training day drill").filter({ visible: true }).first().waitFor();
@@ -499,10 +488,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,rehearsal",
-        );
-        expect(seeded.ok()).toBe(true);
+        await seedFacts(request, ["troublePanels", "rehearsal"]);
         await page.goto("/shop/blue-mantis");
         await page
           .locator("summary")
@@ -529,12 +515,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,crewClash",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { crewClash } = (await seeded.json()) as { crewClash?: { tripId: string } };
-        if (!crewClash) throw new Error("seed-trouble-states found no two departures to clash");
+        const seeded = await seedFacts(request, ["troublePanels", "crewClash"]);
+        const { crewClash } = seeded as { crewClash?: { tripId: string } };
+        if (!crewClash) throw new Error("the fact found no two departures to clash");
         await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}/manifest`);
         // The destination's own words, not a timing guess.
         await page
@@ -553,12 +536,9 @@ for (const scheme of ["light", "dark"] as const) {
        * since the boarding gate refuses the other.
        */
       test(`a manifest counts a blocked diver aboard (${scheme})`, async ({ page, request }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,blockedAboard",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { blockedAboard } = (await seeded.json()) as { blockedAboard?: { tripId: string } };
-        if (!blockedAboard) throw new Error("seed-trouble-states boarded nobody to block");
+        const seeded = await seedFacts(request, ["troublePanels", "blockedAboard"]);
+        const { blockedAboard } = seeded as { blockedAboard?: { tripId: string } };
+        if (!blockedAboard) throw new Error("the fact boarded nobody to block");
         await page.goto(`/shop/blue-mantis/trips/${blockedAboard.tripId}/manifest`);
         await page.getByText("1 blocked person aboard").first().waitFor();
         await offlineCopySaved(page);
@@ -803,12 +783,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,droppedRental",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { droppedRental } = (await seeded.json()) as { droppedRental?: { fullName: string } };
-        if (!droppedRental) throw new Error("seed-trouble-states found no fit to contradict");
+        const seeded = await seedFacts(request, ["troublePanels", "droppedRental"]);
+        const { droppedRental } = seeded as { droppedRental?: { fullName: string } };
+        if (!droppedRental) throw new Error("the fact found no fit to contradict");
 
         await openReefTrip(page);
         await openTripTab(page, "Prep");
@@ -846,14 +823,11 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,unitsNeedingCare",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { unitsNeedingCare } = (await seeded.json()) as {
+        const seeded = await seedFacts(request, ["troublePanels", "unitsNeedingCare"]);
+        const { unitsNeedingCare } = seeded as {
           unitsNeedingCare?: { tripId: string };
         };
-        if (!unitsNeedingCare) throw new Error("seed-trouble-states assigned no units to flag");
+        if (!unitsNeedingCare) throw new Error("the fact assigned no units to flag");
         await page.goto(`/shop/blue-mantis/trips/${unitsNeedingCare.tripId}/prep`);
         await page.getByRole("heading", { name: "Rental assignments" }).waitFor();
         // The labels themselves, not the heading: a capture on the right route

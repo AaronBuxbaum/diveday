@@ -25,12 +25,11 @@ import { fileURLToPath } from "node:url";
  * 3. Every HTTP handler under `src/app/api/test/**` must call
  *    `e2eTestRouteAuthorized(request)` (`src/lib/e2e-test-routes.ts`). These
  *    routes exist only so the Playwright fleet can reset and seed state, and
- *    they do things no deployment may ever expose: `seed-account-token` mints
- *    a valid password-reset/invite token for any account by email, `reset`
- *    wipes and reseeds, and `seed-private-shop` mints a whole tenant whose
- *    staff sign in with a published password. All six call the guard today;
- *    nothing made the next
- *    one do so, and a missed guard plus one misconfigured deployment is
+ *    they do things no deployment may ever expose: the `accountToken` fact on
+ *    `shop` mints a valid password-reset/invite token for any account by email,
+ *    `reset` wipes and reseeds, and `shop`'s `mint` makes a whole tenant whose
+ *    staff sign in with a published password. Nothing makes the next route
+ *    call the guard but this, and a missed guard plus one misconfigured deployment is
  *    account takeover (the finding behind the guard —
  *    docs/product/archive/specialist-optimization-audit-20260731.md §5).
  * 4. Every one of those **handlers** — not routes: `(path, method)` pairs —
@@ -58,6 +57,17 @@ import { fileURLToPath } from "node:url";
  *    in `SHOP_READERS_BY_DESIGN` with the reason it is safe without. A route
  *    that resolved a caller's slug and wrote to it with no demo check was
  *    seven routes deep before this existed (security review, 2026-11-02).
+ *
+ * And two for the one test door (issue #2759), which every spec reaches state
+ * through as `POST /api/test/shop { facts }`:
+ *
+ * 6. Every `/api/test/<path>` the e2e fleet or the day simulation names must be
+ *    a route that exists. A folded route that a spec still calls answers 404,
+ *    which `seedFacts` and most callers read as a refusal only at run time.
+ * 7. Every fact a spec names (`seedFacts(request, [...])`, `privateShopFacts:
+ *    [...]`) must be a name the registry holds (`src/db/facts/index.ts`'s
+ *    `FACTS` or `FACT_SETS`), so a misspelt fact fails here rather than as a
+ *    400 in a capture run.
  */
 
 const ROOT = process.cwd();
@@ -120,10 +130,6 @@ export const SHOP_READERS_BY_DESIGN = new Map([
   [
     "src/app/api/test/reset/route.ts",
     "resolves only the canonical DEMO_SHOP_SLUG and restores it only when it is a demo; a caller names no shop",
-  ],
-  [
-    "src/app/api/test/seed-private-shop/route.ts",
-    "POST mints a new demo shop; the DELETE teardown is idempotent, answers a real and a missing shop alike ({ ok: true, dropped: false }) and drops only a demo shop",
   ],
 ]);
 /** A shop lookup, a caller's shop slug, or the `shops` table itself. */
@@ -296,8 +302,126 @@ async function unregisteredRoutes(routeHandlers) {
   );
 }
 
+const FACT_REGISTRY = "src/db/facts/index.ts";
+/** The callers that name test routes and facts: the fleet and the day simulation. */
+const CALLER_DIRS = ["e2e", "scripts/simulate-day"];
+
+/**
+ * The names the registry holds: the keys of `const FACTS = {` and of
+ * `export const FACT_SETS = {`, each read from its opening line to the `}` that
+ * closes it at the start of a line. A key is a two-space-indented `name:`.
+ */
+export function registryNames(source) {
+  const names = new Set();
+  for (const open of [/^const FACTS = \{$/m, /^export const FACT_SETS = \{$/m]) {
+    const start = open.exec(source);
+    if (!start) continue;
+    const rest = source.slice(start.index + start[0].length);
+    const close = /^\}/m.exec(rest);
+    const body = close ? rest.slice(0, close.index) : rest;
+    for (const match of body.matchAll(/^ {2}(\w+):/gm)) names.add(match[1]);
+  }
+  return names;
+}
+
+/** `/api/test/<path>` in a caller, up to its query string or closing quote. */
+const testRoutePattern = /\/api\/test\/([a-z0-9-]+(?:\/[a-z0-9-]+)*)/g;
+
+/** Each test route a caller names, as its path under `api/test`. */
+export function namedTestRoutes(contents) {
+  return [...new Set([...contents.matchAll(testRoutePattern)].map((match) => match[1]))];
+}
+
+/** Where a fact list opens: a `seedFacts(` call's array, or `privateShopFacts:`. */
+const factListPattern = /seedFacts\(\s*[\w.]+,\s*\[|privateShopFacts:\s*\[/g;
+
+/**
+ * The fact names in every fact list of `contents`: each string element of the
+ * list, and the `name:` of each object element. Read by bracket depth, so an
+ * argument's own string (an email, a state) is never taken for a name.
+ */
+export function namedFacts(contents) {
+  const names = [];
+  for (const open of contents.matchAll(factListPattern)) {
+    let depth = 1;
+    let i = open.index + open[0].length;
+    while (i < contents.length && depth > 0) {
+      const char = contents[i];
+      if (char === '"' || char === "'" || char === "`") {
+        const end = contents.indexOf(char, i + 1);
+        if (end < 0) break;
+        const literal = contents.slice(i + 1, end);
+        const before = contents.slice(open.index, i);
+        if (depth === 1) names.push(literal);
+        else if (depth === 2 && /[{,]\s*name:\s*$/.test(before)) names.push(literal);
+        i = end + 1;
+        continue;
+      }
+      if (char === "[" || char === "{" || char === "(") depth += 1;
+      else if (char === "]" || char === "}" || char === ")") depth -= 1;
+      i += 1;
+    }
+  }
+  return names;
+}
+
+async function callerFiles() {
+  const files = [];
+  for (const dir of CALLER_DIRS) {
+    let entries;
+    try {
+      entries = await readdir(path.join(ROOT, dir), { recursive: true });
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw error;
+    }
+    for (const entry of entries.filter((name) => /\.(?:[cm]?[jt]s)$/.test(name)).sort()) {
+      const relativePath = path.join(dir, entry);
+      files.push({
+        path: relativePath,
+        contents: await readFile(path.join(ROOT, relativePath), "utf8"),
+      });
+    }
+  }
+  return files;
+}
+
+async function exists(relativePath) {
+  try {
+    await readFile(path.join(ROOT, relativePath));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function checkTestDoorCallers() {
+  const problems = [];
+  const registry = registryNames(await readFile(path.join(ROOT, FACT_REGISTRY), "utf8"));
+  if (registry.size === 0) problems.push(`${FACT_REGISTRY}: no FACTS registry this check can read`);
+  let facts = 0;
+  for (const file of await callerFiles()) {
+    for (const route of namedTestRoutes(file.contents)) {
+      if (!(await exists(path.join(TEST_ROUTE_DIR, route, "route.ts")))) {
+        problems.push(`${file.path}: calls /api/test/${route}, which is no route`);
+      }
+    }
+    for (const name of namedFacts(file.contents)) {
+      facts += 1;
+      if (!registry.has(name)) {
+        problems.push(
+          `${file.path}: names the fact "${name}", which ${FACT_REGISTRY} does not hold`,
+        );
+      }
+    }
+  }
+  return { facts, problems };
+}
+
 async function main() {
   const testRoutes = await checkTestRouteGuards();
+  const door = await checkTestDoorCallers();
+  testRoutes.problems.push(...door.problems);
 
   const absoluteDir = path.join(ROOT, E2E_DIR);
   let entries = [];
@@ -355,7 +479,8 @@ async function main() {
 
   console.log(
     `check:e2e-fixtures: ok — ${specFiles.length} spec files import from ./fixtures, ` +
-      `${testRoutes.count} /api/test route files guarded, ${testRoutes.handlers} handlers registered`,
+      `${testRoutes.count} /api/test route files guarded, ${testRoutes.handlers} handlers registered, ` +
+      `${door.facts} named facts in the registry`,
   );
 }
 

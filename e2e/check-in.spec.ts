@@ -17,6 +17,7 @@ import {
   seededTripId,
   walkInFormPath,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 test.describe.configure({ timeout: 45_000 });
 
@@ -204,14 +205,11 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
  * The rule is unit-tested in `CounterInstrument.test.tsx`; this is the browser.
  */
 test("a checked-in diver who is blocked again stays still to clear", async ({ page, request }) => {
-  const seeded = await request.post(
-    "/api/test/seed-trouble-states?facts=troublePanels,checkedInBlocked",
-  );
-  expect(seeded.ok()).toBe(true);
-  const { checkedInBlocked } = (await seeded.json()) as {
+  const seeded = await seedFacts(request, ["troublePanels", "checkedInBlocked"]);
+  const { checkedInBlocked } = seeded as {
     checkedInBlocked?: { tripId: string; personName: string };
   };
-  if (!checkedInBlocked) throw new Error("seed-trouble-states made no checked-in blocked diver");
+  if (!checkedInBlocked) throw new Error("the fact made no checked-in blocked diver");
   const { tripId, personName } = checkedInBlocked;
 
   await page.goto(counterPath("blue-mantis", tripId));
@@ -608,7 +606,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // (`noShowGate`), while a wait list takes nobody once the boat has left
   // (`joinTripWaitlist`). The fleet's clock is frozen at 09:30 shop time and
   // shared by every spec, so the departure moves instead
-  // (`/api/test/depart-trip`, as `seed-evening` does).
+  // (the `departTrip` fact, as the `evening` fact does).
   const title = `Dock Call ${e2eNow().getTime()}`;
   await createTrip(page, {
     title,
@@ -659,13 +657,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // **The boat leaves.** Ten minutes ago, which is past its departure and
   // inside the hour a late boat is allowed — so the seat is still the shop's to
   // sell, which is what the rest of this flow is about.
-  expect(
-    (
-      await request.post("/api/test/depart-trip", {
-        data: { tripId, minutesAgo: 10 },
-      })
-    ).ok(),
-  ).toBe(true);
+  await seedFacts(request, [{ name: "departTrip", tripId, minutesAgo: 10 }]);
 
   // Back at the desk. Odile has no release on file yet, so she arrives blocked
   // — and the door is on a row a staffer can act on, not on a blocked one. The

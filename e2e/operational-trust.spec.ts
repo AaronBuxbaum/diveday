@@ -1,8 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import type {
-  OperationalState,
-  seedOperationalTrust,
-} from "../src/app/api/test/seed-trouble-states/operational-states";
+import type { OperationalState, seedOperationalTrust } from "../src/db/facts/operational-trust";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { OFFLINE_MANIFEST_SHELL_VERSION } from "../src/lib/offline-manifests";
 import { expect, test } from "./fixtures";
@@ -14,6 +11,7 @@ import {
   openOnThisPhone,
   openTripAboutRow,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 const copy = staffTranslator("en-US");
 type State = Awaited<ReturnType<typeof seedOperationalTrust>>;
@@ -23,11 +21,10 @@ async function seed(
   slug: string,
   state: OperationalState,
 ): Promise<State> {
-  const response = await request.post(
-    `/api/test/seed-trouble-states?operationalTrust=${state}&shop=${slug}`,
-  );
-  expect(response.ok()).toBe(true);
-  return (await response.json()).operationalTrust;
+  const { operationalTrust } = await seedFacts(request, [{ name: "operationalTrust", state }], {
+    slug,
+  });
+  return operationalTrust;
 }
 
 async function openOffline(page: Page, manifest: string) {

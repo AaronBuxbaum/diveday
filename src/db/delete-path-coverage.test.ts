@@ -507,7 +507,7 @@ async function rowCounts(db: DbExecutor, tables: string[]): Promise<Map<string, 
  * "internal reconciliation ledger, not schedule data", which is true and was
  * not the whole story. the media-deletion read (`src/db/unfinished.ts`) feeds Today an
  * `urgency: "now"` row, so a stale attempt written by one test (which is what
- * `/api/test/seed-trouble-states` exists to do) left a "Recap photo" cleanup
+ * a fact on `/api/test/shop` exists to do) left a "Recap photo" cleanup
  * card on Today for whichever spec Playwright's sharding ran next in that
  * worker. It surfaced as three visual captures — `close-out`,
  * `nav-more-menu`, `nav-more-sheet` — reporting as changed on a pull request

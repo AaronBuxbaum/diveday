@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 
 /**
  * Issue #1288: a shop's front-desk address becomes Reply-To on diver mail only
@@ -11,7 +12,7 @@ import { expect, test } from "./fixtures";
  * setting the per-test reset does not restore. The seeded demo shop is
  * confirmed already, which is why it shows no badge.
  *
- * `/api/test/seed-contact-email-confirmation-token` mints a real token for
+ * The `contactEmailConfirmation` fact (`/api/test/shop`) mints a real token for
  * the shop's current address (test-only, gated identically to
  * `/api/test/reset`), since the real link only ever exists inside an email
  * this fleet cannot receive.
@@ -29,11 +30,9 @@ test("a shop confirms its contact email through the real page and action", async
   await page.getByRole("button", { name: "Save contact details" }).click();
   await expect(page.getByText("Awaiting confirmation")).toBeVisible();
 
-  const seeded = await request.post("/api/test/seed-contact-email-confirmation-token", {
-    data: { shopSlug: privateShop.slug },
-  });
-  expect(seeded.ok()).toBe(true);
-  const { token } = await seeded.json();
+  const {
+    contactEmailConfirmation: { token },
+  } = await seedFacts(request, ["contactEmailConfirmation"], { slug: privateShop.slug });
 
   await page.goto(`/confirm-contact/${token}`);
   await expect(page.getByRole("heading", { name: /Confirm this address for/ })).toBeVisible();

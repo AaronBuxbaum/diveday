@@ -1,5 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   installVisualBuildGuard,
@@ -18,9 +19,7 @@ test.describe("mixed training advisory", () => {
     page,
     request,
   }) => {
-    const response = await request.post("/api/test/seed-trouble-states?mixedTraining=1");
-    expect(response.ok()).toBe(true);
-    const { mixedTraining } = (await response.json()) as {
+    const { mixedTraining } = (await seedFacts(request, ["mixedTraining"])) as {
       mixedTraining: { tripId: string; otherTripId: string };
     };
     await page.goto(`/shop/blue-mantis/trips/${mixedTraining.tripId}`);

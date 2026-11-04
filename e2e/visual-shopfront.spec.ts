@@ -7,6 +7,7 @@
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
 import { bookASeatAndOpenThread } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   ADVANCED_CHARTER,
   capture,
@@ -54,10 +55,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,monthSightings",
-        );
-        expect(seeded.ok()).toBe(true);
+        await seedFacts(request, ["troublePanels", "monthSightings"]);
         await page.goto("/s/blue-mantis");
         await page.getByRole("heading", { name: /^What you might see in / }).waitFor();
         await capture(page, "shopfront-month-sightings", scheme);
@@ -80,7 +78,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-off-season");
+        await seedFacts(request, ["offSeason"]);
         await page.goto("/s/blue-mantis");
         // The card itself, not a timing guess: it is server-rendered, so its
         // heading being on the page is the page having rendered as a quiet
@@ -450,19 +448,16 @@ for (const scheme of ["light", "dark"] as const) {
        * **"Joining as", with a price per type** (ADR 20261007-participant-types).
        * A departure that sells snorkeler and rider seats asks each person what
        * they are doing, and the hero states each type's price. Today's reef
-       * boat, through `/api/test/seed-trouble-states?mixedBoat=1`, which names
+       * boat, through `the `mixedBoat` fact (`/api/test/shop`)`, which names
        * the two prices unless the demo seed already has.
        */
       test(`the public trip page offers a snorkeler and a rider seat (${scheme})`, async ({
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,mixedBoat",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
-        if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
+        const seeded = await seedFacts(request, ["troublePanels", "mixedBoat"]);
+        const { mixedBoat } = seeded as { mixedBoat?: { tripId: string } };
+        if (!mixedBoat) throw new Error("the fact found no departure to mix");
         await page.goto(`/s/blue-mantis/trips/${mixedBoat.tripId}`);
         await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
           "data-hydrated",

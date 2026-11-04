@@ -1,5 +1,6 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openIfClosed } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   installVisualBuildGuard,
@@ -75,20 +76,17 @@ for (const scheme of ["light", "dark"] as const) {
        * so no station a spec could type is far from anything. The distance has
        * to come from the site, and a site that remote is one the demo shop must
        * not carry standing (`.claude/rules/surfaces.md`), so it arrives through
-       * `/api/test/seed-trouble-states` and leaves with the next reset.
+       * a fact on `/api/test/shop` and leaves with the next reset.
        */
       test(`the dive-site editor warns about a station nowhere near it (${scheme})`, async ({
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,farStation",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { farStation } = (await seeded.json()) as {
+        const seeded = await seedFacts(request, ["troublePanels", "farStation"]);
+        const { farStation } = seeded as {
           farStation?: { siteId: string; name: string; slug: string };
         };
-        if (!farStation) throw new Error("seed-trouble-states seeded no far-station site");
+        if (!farStation) throw new Error("the fact seeded no far-station site");
 
         await page.goto(`/shop/blue-mantis/dive-sites/${farStation.siteId}`);
         await page.getByRole("heading", { level: 1, name: farStation.name }).waitFor();
