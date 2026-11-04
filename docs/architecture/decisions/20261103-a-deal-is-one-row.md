@@ -46,6 +46,18 @@ Triggers forward that release's writes (a code minted, switched off or deleted, 
 checkout or reservation naming an old column) onto `deals` and `deal_id`. The next release drops
 the tables, enums, columns, triggers and functions.
 
+Known gap while both releases serve: the bridge forwards the old release's writes into `deals`,
+not the reverse. A shop code switched off on the new release still applies on the old one (it
+reads `shop_promo_codes.status`, and switching off is local, not at Stripe), and the old release
+does not see uses the new one records in `deal_id`, so a capped code can overshoot its cap by the
+uses made in that window. Reverse triggers are not worth it before the pilot.
+
+Before production applies the copy, check that no shop's staff code equals one of its generated
+last-minute codes, which would fail the insert on `deals_shop_code_unique` (the copy's
+`ON CONFLICT ("id")` does not cover it): `select shop_id, code from shop_promo_codes intersect
+select shop_id, code from trip_last_minute_promos;` must be empty (generated codes look like
+`SAVE25-A1B2C3`).
+
 ## Consequences
 
 - Readers say which kind they mean with `trip_id` (`shopWide` in `src/db/shop-promos.ts`, and

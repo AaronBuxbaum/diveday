@@ -165,7 +165,7 @@ export async function listOutstandingLastMinutePromos(
       const [counted] = await db
         .select({ total: count() })
         .from(deals)
-        .innerJoin(trips, eq(trips.id, deals.tripId))
+        .innerJoin(trips, and(eq(trips.id, deals.tripId), eq(trips.shopId, deals.shopId)))
         .where(and(scope, liveTrip()));
       return counted?.total ?? 0;
     },
@@ -177,7 +177,7 @@ export async function listOutstandingLastMinutePromos(
           tripStartsAt: trips.startsAt,
         })
         .from(deals)
-        .innerJoin(trips, eq(trips.id, deals.tripId))
+        .innerJoin(trips, and(eq(trips.id, deals.tripId), eq(trips.shopId, deals.shopId)))
         .where(and(scope, liveTrip()))
         .orderBy(asc(deals.expiresAt), asc(trips.startsAt), asc(trips.title), asc(deals.id))
         .limit(limit)
