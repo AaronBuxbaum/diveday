@@ -1,4 +1,17 @@
-import { and, asc, eq, gt, gte, inArray, lt, lte, notExists, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  lt,
+  lte,
+  notExists,
+  or,
+  sql,
+} from "drizzle-orm";
 import { listAgencyCheckableCards } from "@/db/agency-check";
 import {
   blockedOnNextBoatDay,
@@ -48,6 +61,7 @@ import {
   rollCallEvents,
   shops,
   tripAssignments,
+  tripScheduleDays,
   trips,
 } from "@/db/schema";
 import { listStaffCredentials } from "@/db/staff-credentials";
@@ -99,6 +113,7 @@ import {
 import { operationalWindow } from "@/lib/operational-window";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import type { ShopClock } from "@/lib/shop-clock";
+import { meetsOnShopDay } from "@/lib/trip-days";
 import { boatStageOf, tripPhaseOf } from "@/lib/trip-phase";
 import type { TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasSailed } from "@/lib/trips";
@@ -153,19 +168,46 @@ export async function todaysDepartures(
   shopId: string,
   clock: ShopClock,
 ): Promise<{ id: string; title: string; startsAt: Date; endsAt: Date }[]> {
-  return db
-    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
+  // **By meeting day, not by the departure's one window** (#2557): a course
+  // that meets on two Saturdays is today's departure on both and on none of
+  // the days between. The row carries the day's own window, so "still out or
+  // to come" (`nextOfTodaysDepartures`) is that day's, not the whole run's.
+  // A departure with no day rows is read from `trips.starts_at`, as before.
+  const rows = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: sql<Date>`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`.mapWith(
+        tripScheduleDays.startsAt,
+      ),
+      endsAt: sql<Date>`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`.mapWith(
+        tripScheduleDays.endsAt,
+      ),
+    })
     .from(trips)
+    .leftJoin(
+      tripScheduleDays,
+      and(
+        eq(tripScheduleDays.tripId, trips.id),
+        gte(tripScheduleDays.startsAt, clock.day.from),
+        lt(tripScheduleDays.startsAt, clock.day.to),
+      ),
+    )
     .where(
       and(
         liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, clock.day.from),
-        lt(trips.startsAt, clock.day.to),
+        or(
+          isNotNull(tripScheduleDays.id),
+          and(gte(trips.startsAt, clock.day.from), lt(trips.startsAt, clock.day.to)),
+        ),
       ),
     )
-    .orderBy(asc(trips.startsAt));
+    .orderBy(asc(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`), asc(trips.id));
+  // Two of one departure's days on the same shop day read as one boat, its first.
+  const seen = new Set<string>();
+  return rows.filter((row) => !seen.has(row.id) && seen.add(row.id));
 }
 
 /** A departure happening today, with just enough to know whether it can sail. */
@@ -930,7 +972,12 @@ export async function getShopDayDepartures(
   evidence: HorizonReadinessEvidence,
 ): Promise<DepartureSummary[]> {
   const wanted = shopDay(day, timeZone);
-  const trips = evidence.trips.filter((trip) => shopDay(trip.startsAt, timeZone) === wanted);
+  // By meeting day (#2557), as `getTodayWork` reads today's own cards.
+  const trips = evidence.trips.filter((trip) =>
+    (evidence.meetingDays.get(trip.id) ?? [trip]).some(
+      (d) => shopDay(d.startsAt, timeZone) === wanted,
+    ),
+  );
   if (trips.length === 0) return [];
   const tripIds = trips.map((trip) => trip.id);
   const [departureRollCall, departureCrewRollCall, stagesByTrip, facts] = await Promise.all([
@@ -1489,10 +1536,14 @@ export async function getTodayWork(
     trips: inWindow,
     upcoming,
     readinessByTrip,
+    meetingDays: horizonMeetingDays,
   } = evidence ?? (await inHorizonReadiness(db, shopId, now));
   // Today is the clock's own day, the same exact pair `todaysDepartures` reads.
-  const todayTrips = inWindow.filter(
-    (trip) => trip.startsAt >= clock.day.from && trip.startsAt < clock.day.to,
+  // By meeting day (#2557): day two of a course is today's departure on day
+  // two. Only a run of a day or more reads its day rows, so an ordinary
+  // departure costs no query (`meetingWindowsByTrip`).
+  const todayTrips = inWindow.filter((trip) =>
+    meetsOnShopDay(trip, horizonMeetingDays.get(trip.id) ?? [], clock.day),
   );
   const bookingIdsByTrip = new Map(
     inWindow.map((trip) => [

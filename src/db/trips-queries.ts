@@ -254,19 +254,34 @@ export async function listShopDayDepartures(
   now: Date = nowDate(),
 ): Promise<ShopDayDeparture[]> {
   const { from, to } = shopDayBounds(now, timeZone);
-  return db
-    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
+  // By meeting day (#2557): a course that meets on two Saturdays is on the
+  // sheet on both and on none of the days between. The row carries the day's
+  // own start; a departure with no day rows is read from `trips.starts_at`.
+  const dayStart = sql<Date>`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`.mapWith(
+    tripScheduleDays.startsAt,
+  );
+  const rows = await db
+    .select({ id: trips.id, title: trips.title, startsAt: dayStart })
     .from(trips)
+    .leftJoin(
+      tripScheduleDays,
+      and(
+        eq(tripScheduleDays.tripId, trips.id),
+        gte(tripScheduleDays.startsAt, from),
+        lt(tripScheduleDays.startsAt, to),
+      ),
+    )
     .where(
       and(
         liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, from),
-        lt(trips.startsAt, to),
+        or(isNotNull(tripScheduleDays.id), and(gte(trips.startsAt, from), lt(trips.startsAt, to))),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
+    .orderBy(asc(dayStart), asc(trips.title), asc(trips.id));
+  const seen = new Set<string>();
+  return rows.filter((row) => !seen.has(row.id) && seen.add(row.id));
 }
 
 /**
@@ -307,13 +322,26 @@ function upcomingTripScope(
      * "Show later" that promises rows it cannot deliver.
      */
     lensId?: string;
+    /**
+     * Upcoming by **meeting day** (#2557): a departure whose first day has
+     * begun is still upcoming while one of its later days is ahead, so day two
+     * of a course is on the page on day two, and a course on two Saturdays is
+     * not on the water for the fortnight between. Off for the diver pages and
+     * the board, which list a departure by when it leaves.
+     */
+    byMeetingDay?: boolean;
   },
 ) {
   return and(
     eq(trips.shopId, shopId),
     eq(trips.status, "scheduled"),
     bounds.publicOnly ? eq(trips.isPrivate, false) : undefined,
-    gte(trips.startsAt, bounds.from),
+    bounds.byMeetingDay
+      ? or(
+          gte(trips.startsAt, bounds.from),
+          sql`exists (select 1 from ${tripScheduleDays} where ${tripScheduleDays.tripId} = ${trips.id} and ${tripScheduleDays.startsAt} >= ${bounds.from})`,
+        )
+      : gte(trips.startsAt, bounds.from),
     bounds.monthEnd ? lt(trips.startsAt, bounds.monthEnd) : undefined,
     bounds.tripType === "fun_dive" ? isNull(trips.courseId) : undefined,
     bounds.tripType === "course" ? isNotNull(trips.courseId) : undefined,
@@ -594,6 +622,8 @@ export async function pagedUpcomingTripsWithCounts(
     publicOnly?: boolean;
     /** Only departures wearing this one of the shop's own words for a kind of day. */
     lensId?: string;
+    /** Upcoming by meeting day, not by first departure (see `upcomingTripScope`). */
+    byMeetingDay?: boolean;
   } = {},
 ): Promise<{
   trips: TripWithBookedCount[];
@@ -635,6 +665,7 @@ export async function pagedUpcomingTripsWithCounts(
           tripType: options.tripType,
           publicOnly: options.publicOnly,
           lensId: options.lensId,
+          byMeetingDay: options.byMeetingDay,
         }),
         afterDate && after && !Number.isNaN(afterDate.getTime())
           ? or(

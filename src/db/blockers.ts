@@ -5,6 +5,7 @@ import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-wind
 import { addCalendarDays, toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listTripsReadiness } from "./readiness";
+import { meetingWindowsByTrip } from "./trip-meeting-windows";
 import { pagedUpcomingTripsWithCounts } from "./trips-queries";
 
 /**
@@ -52,6 +53,8 @@ export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
   const { trips: fetched, nextCursor } = await pagedUpcomingTripsWithCounts(db, shopId, {
     now,
     limit: OPERATIONAL_MAX_TRIPS,
+    // Day two of a course is on Today on day two (#2557).
+    byMeetingDay: true,
   });
   const inWindow = fetched.filter((trip) => trip.startsAt <= horizon);
   // The cap only truncated anything if more departures exist past what it
@@ -77,10 +80,13 @@ export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
     if (isTurnedAwaySeat(row.booking)) continue;
     readinessByTrip.get(row.booking.tripId)?.push(row);
   }
+  // The meeting days of the runs among them (#2557), read once so "is this
+  // boat today's" is answered from a day row by every reader of this evidence.
+  const meetingDays = await meetingWindowsByTrip(db, inWindow);
   // `upcoming` keeps the pre-horizon fetch alongside the windowed list:
   // Today's "next departure" fallback reads past the window when nothing
   // sails inside it.
-  return { trips: inWindow, upcoming: fetched, readinessByTrip, truncated };
+  return { trips: inWindow, upcoming: fetched, readinessByTrip, meetingDays, truncated };
 }
 
 /** The evidence bundle `inHorizonReadiness` produces, for callers passing it through. */
@@ -161,20 +167,24 @@ export type NextBoatDayBlocked = {
 };
 
 export function blockedOnNextBoatDay(
-  evidence: Pick<HorizonReadinessEvidence, "trips" | "readinessByTrip">,
+  evidence: Pick<HorizonReadinessEvidence, "trips" | "readinessByTrip"> &
+    Partial<Pick<HorizonReadinessEvidence, "meetingDays">>,
   timeZone: string,
   now: Date,
   aboard = 0,
 ): NextBoatDayBlocked {
   const day = (date: Date) => toDateInputValue(utcToWallTime(date, timeZone));
   const today = day(now);
-  const sailsToday = evidence.trips.some((trip) => day(trip.startsAt) === today);
+  // By meeting day (#2557): a boat is a day's when one of its days starts on it.
+  const meetsOn = (trip: { id: string; startsAt: Date }, date: string) =>
+    (evidence.meetingDays?.get(trip.id) ?? [trip]).some((d) => day(d.startsAt) === date);
+  const sailsToday = evidence.trips.some((trip) => meetsOn(trip, today));
   const target = sailsToday
     ? today
     : toDateInputValue(addCalendarDays(utcToWallTime(now, timeZone), 1));
   let onDay = 0;
   for (const trip of evidence.trips) {
-    if (day(trip.startsAt) !== target) continue;
+    if (!meetsOn(trip, target)) continue;
     for (const row of evidence.readinessByTrip.get(trip.id) ?? []) {
       if (row.readiness.status === "blocked") onDay += 1;
     }
@@ -190,7 +200,8 @@ export function blockedOnNextBoatDay(
  * today's boats are all away.
  */
 export function daySummaryBlocked(
-  evidence: Pick<HorizonReadinessEvidence, "trips" | "readinessByTrip">,
+  evidence: Pick<HorizonReadinessEvidence, "trips" | "readinessByTrip"> &
+    Partial<Pick<HorizonReadinessEvidence, "meetingDays">>,
   timeZone: string,
   now: Date,
   aboard: number,

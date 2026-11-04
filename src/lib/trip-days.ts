@@ -33,6 +33,14 @@
  * Saturday and the Saturday after would read as a boat on the water with an
  * open roll call all week, and would not be today's departure on day two.
  * Gaps open when those read the meeting days.
+ *
+ * **Read from the meeting days so far** (#2557): today's departure (the
+ * boarding door, ⌘K, the shop-day cards, the print sheet), Today's own cards,
+ * the blocked-divers badge and the horizon that feeds them
+ * (`meetsOnShopDay`, `byMeetingDay`). **Still the one window**: the open roll
+ * call and "the boat is out" (`listRollCallGaps`, `blockedAboardOnBoatsOut`),
+ * check-in, readiness, `/ready`, closeout and help requests; the cap stays
+ * until they move.
  */
 
 import { type CalendarDate, calendarDaysBetween, isValidCalendarDate } from "./calendar-date";
@@ -155,4 +163,25 @@ export function laterMeetingDates(dayStarts: readonly CalendarDate[]): CalendarD
   if (!first || rest.length === 0) return [];
   const consecutive = rest.every((date, index) => calendarDaysBetween(first, date) === index + 1);
   return consecutive ? [] : rest;
+}
+
+/**
+ * **Whether a departure meets on a shop day** (#2557): one of its meeting days
+ * starts inside `day`, the exact pair of instants around the shop's calendar
+ * date (`ShopClock.day`). A departure with no day rows on file is read from
+ * its one window, as it always was.
+ *
+ * This is "today's departure" for a course that meets on Saturday and the
+ * Saturday two weeks on: it is today's on both Saturdays and on none of the
+ * days between, which `trips.starts_at` alone cannot say.
+ */
+export function meetsOnShopDay(
+  trip: { startsAt: Date },
+  meetingDays: readonly { startsAt: Date }[],
+  day: { from: Date; to: Date },
+): boolean {
+  const within = (instant: Date) => instant >= day.from && instant < day.to;
+  return meetingDays.length > 0
+    ? meetingDays.some((d) => within(d.startsAt))
+    : within(trip.startsAt);
 }

@@ -56,6 +56,32 @@ describe("blockedOnNextBoatDay", () => {
     } as unknown as Parameters<typeof blockedOnNextBoatDay>[0];
   }
 
+  it("counts a course on the day one of its later days falls on, and not on the days between (#2557)", () => {
+    const course = trip("course", "2026-10-03T13:00:00Z"); // Saturday, day one
+    const withDays = (entries: Parameters<typeof evidence>[0]) =>
+      ({
+        ...evidence(entries),
+        meetingDays: new Map([
+          [
+            "course",
+            [{ startsAt: at("2026-10-03T13:00:00Z") }, { startsAt: at("2026-10-17T13:00:00Z") }],
+          ],
+        ]),
+      }) as unknown as Parameters<typeof blockedOnNextBoatDay>[0];
+    // The second Saturday: today's boat, its blocked divers counted.
+    expect(
+      blockedOnNextBoatDay(withDays([[course, rows(2)]]), zone, at("2026-10-17T12:00:00Z")),
+    ).toEqual({ day: "today", onDay: 2, aboard: 0, total: 2 });
+    // A day between: nobody's boat today, and tomorrow is not a meeting day either.
+    expect(
+      blockedOnNextBoatDay(withDays([[course, rows(2)]]), zone, at("2026-10-10T12:00:00Z")),
+    ).toEqual({ day: "tomorrow", onDay: 0, aboard: 0, total: 0 });
+    // The eve of the second Saturday counts it as tomorrow's.
+    expect(
+      blockedOnNextBoatDay(withDays([[course, rows(2)]]), zone, at("2026-10-16T20:00:00Z")),
+    ).toEqual({ day: "tomorrow", onDay: 2, aboard: 0, total: 2 });
+  });
+
   it("counts today's boats while one is still inside the horizon, not tomorrow's", () => {
     const counted = blockedOnNextBoatDay(
       evidence([
