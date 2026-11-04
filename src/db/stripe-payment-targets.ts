@@ -10,11 +10,14 @@ import { paymentSourceLookupFromEnvironment } from "./stripe-providers";
 
 /**
  * What a Stripe charge DiveDay is told about was for: one of its own orders
- * (an invoice), one of its own booking checkouts, or nothing DiveDay raised.
+ * (an invoice), one of its own booking checkouts, a post-trip tip, or nothing
+ * DiveDay raised. A tip is its own kind so that no caller can mistake it for a
+ * seat's money (issue #3736).
  */
 export type StripePaymentTarget =
   | { kind: "order"; order: Order }
   | { kind: "checkout"; checkout: BookingCheckout }
+  | { kind: "tip"; checkout: BookingCheckout }
   | { kind: "none" };
 
 /**
@@ -63,7 +66,7 @@ export async function findStripePaymentTarget(
 
   const [checkout] = await db
     .select()
-    // diveday:any-checkout-purpose: a tip's charge is found here too, and answered below.
+    // diveday:any-checkout-purpose: a tip's charge is found here too, and answered by checkoutTarget.
     .from(bookingCheckouts)
     .where(
       and(
@@ -123,8 +126,8 @@ export async function findStripePaymentTarget(
     }
   }
 
-  // The shop's own till on the same Stripe account, a tip, or an account the
-  // lookup cannot reach without a key: nothing DiveDay should record.
+  // The shop's own till on the same Stripe account, or an account the lookup
+  // cannot reach without a key: nothing DiveDay should record.
   log("stripe_payment_target.not_found", "info", {
     account: input.stripeAccountId,
     lookup: source.status,
@@ -133,13 +136,10 @@ export async function findStripePaymentTarget(
 }
 
 /**
- * A fare's charge is the checkout's to reverse. A tip's is DiveDay's too, but
- * nothing records a tip's reversal yet, so it is answered as nothing to record:
- * a tip refund must never reach the fare's refund path and unpay a seat
- * (ADR 20260726-post-trip-tipping, issue #2718).
+ * A fare's charge is the checkout's to reverse; a tip's is the tip's. They are
+ * told apart here, once, so a tip refund can never reach the fare's refund
+ * path and unpay a seat (ADR 20260726-post-trip-tipping, issues #2718, #3736).
  */
 function checkoutTarget(checkout: BookingCheckout): StripePaymentTarget {
-  if (checkout.purpose === "fare") return { kind: "checkout", checkout };
-  log("stripe_payment_target.tip", "info", { account: checkout.stripeAccountId });
-  return { kind: "none" };
+  return checkout.purpose === "fare" ? { kind: "checkout", checkout } : { kind: "tip", checkout };
 }

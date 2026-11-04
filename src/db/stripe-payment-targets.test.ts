@@ -139,7 +139,10 @@ describe("findStripePaymentTarget", () => {
         { stripeAccountId: "acct_demo", paymentIntentId: "pi_tip" },
         lookup,
       ),
-    ).toEqual({ kind: "none" });
+    ).toMatchObject({
+      kind: "tip",
+      checkout: { purpose: "tip", stripeSessionId: "cs_tip_target" },
+    });
     expect(calls).toEqual([]);
   });
 
@@ -161,8 +164,8 @@ describe("findStripePaymentTarget", () => {
       stripeSessionId: "cs_tip_named",
     });
     const input = { stripeAccountId: "acct_demo", paymentIntentId: "pi_tip_named" };
-    expect(await findStripePaymentTarget(db, input, lookup)).toEqual({ kind: "none" });
-    expect(await findStripePaymentTarget(db, input, lookup)).toEqual({ kind: "none" });
+    expect(await findStripePaymentTarget(db, input, lookup)).toMatchObject({ kind: "tip" });
+    expect(await findStripePaymentTarget(db, input, lookup)).toMatchObject({ kind: "tip" });
     expect(calls).toHaveLength(1);
   });
 });

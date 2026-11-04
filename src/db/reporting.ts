@@ -31,7 +31,7 @@ import { shopDaysBounds, shopMonthBounds, wallTimeToUtc } from "@/lib/zoned";
 import { readActiveStaffRoles } from "./authz";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
 import { levelCardLevel } from "./card-columns";
-import { fareCheckout, tipAmountCents, tipCheckout } from "./checkout-purpose";
+import { fareCheckout, tipCheckout, tipNetCents } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { queryAll } from "./query-helpers";
@@ -246,7 +246,7 @@ async function partnerReferredSeatsForWindow(
  */
 async function monthTipTotals(db: DbExecutor, shopId: string, inWindow: SQL | undefined) {
   const [row] = await db
-    .select({ total: sum(tipAmountCents), tipCount: count(bookingCheckouts.id) })
+    .select({ total: sum(tipNetCents), tipCount: count(bookingCheckouts.id) })
     .from(bookingCheckouts)
     .innerJoin(trips, eq(trips.id, bookingCheckouts.tripId))
     .where(
@@ -255,6 +255,8 @@ async function monthTipTotals(db: DbExecutor, shopId: string, inWindow: SQL | un
         eq(bookingCheckouts.shopId, shopId),
         eq(bookingCheckouts.status, "completed"),
         tipCheckout(),
+        // A tip refunded in full is no tip this month.
+        sql`${tipNetCents} > 0`,
       ),
     );
   return row;

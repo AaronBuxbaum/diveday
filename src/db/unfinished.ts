@@ -435,7 +435,7 @@ const failedRefunds: KindReader<"failed_refund"> = async (db, shopId, _olderThan
     .leftJoin(orders, and(eq(orders.id, stripeRefundFailures.orderId), eq(orders.shopId, shopId)))
     .leftJoin(
       bookingCheckouts,
-      // diveday:any-checkout-purpose: a refund failure is only ever recorded against a fare
+      // diveday:any-checkout-purpose: a refund failure is recorded against a fare or a tip, the checkout findStripePaymentTarget returned
       and(
         eq(bookingCheckouts.id, stripeRefundFailures.checkoutId),
         eq(bookingCheckouts.shopId, shopId),
@@ -467,7 +467,7 @@ const failedRefunds: KindReader<"failed_refund"> = async (db, shopId, _olderThan
             fullName: people.fullName,
           })
           .from(bookingCheckoutBookings)
-          // diveday:any-checkout-purpose: a refund failure is only ever recorded against a fare
+          // diveday:any-checkout-purpose: a refund failure is recorded against a fare or a tip, the checkout findStripePaymentTarget returned
           .innerJoin(
             bookings,
             and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
