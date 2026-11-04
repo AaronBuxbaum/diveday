@@ -2138,7 +2138,6 @@ async function moveBookingIn(
 ): Promise<MoveBookingOutcome> {
   const { shopId, fromTripId, toTripId, bookingId } = input;
   const now = input.now ?? nowDate();
-  if (fromTripId === toTripId) return { ok: false, reason: "target_unavailable" };
   // Both trip rows before the seat (the lock order at `tripTakesSeatFrom`),
   // and the two trips in id order, so two moves crossing between the same
   // pair of departures never hold one each. The target is `for update`
