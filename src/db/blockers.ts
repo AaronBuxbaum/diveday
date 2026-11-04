@@ -66,12 +66,19 @@ export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
   // queue makes, so the two surfaces can never disagree about who is blocked.
   const readinessByTrip = new Map<string, Awaited<ReturnType<typeof listTripsReadiness>>>();
   for (const trip of inWindow) readinessByTrip.set(trip.id, []);
-  for (const row of await listTripsReadiness(
-    db,
-    shopId,
-    inWindow.map((trip) => trip.id),
-    now,
-  )) {
+  // The meeting days of the runs among them (#2557), read once so "is this
+  // boat today's" is answered from a day row by every reader of this evidence.
+  // Asked beside the readiness pass: both need only the window's trip ids.
+  const [readinessRows, meetingDays] = await Promise.all([
+    listTripsReadiness(
+      db,
+      shopId,
+      inWindow.map((trip) => trip.id),
+      now,
+    ),
+    meetingWindowsByTrip(db, inWindow),
+  ]);
+  for (const row of readinessRows) {
     // **A seat the desk turned away is nobody's work any more** (issue #2907):
     // the diver was seen and sent home, and the seat is back on sale. Left in,
     // it read as one more blocked diver on the card, a "Send waiver" row for a
@@ -80,9 +87,6 @@ export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
     if (isTurnedAwaySeat(row.booking)) continue;
     readinessByTrip.get(row.booking.tripId)?.push(row);
   }
-  // The meeting days of the runs among them (#2557), read once so "is this
-  // boat today's" is answered from a day row by every reader of this evidence.
-  const meetingDays = await meetingWindowsByTrip(db, inWindow);
   // `upcoming` keeps the pre-horizon fetch alongside the windowed list:
   // Today's "next departure" fallback reads past the window when nothing
   // sails inside it.
