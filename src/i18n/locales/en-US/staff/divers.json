@@ -665,7 +665,7 @@
       "trip_recap": "Trip recap",
       "trip_blowout": "Trip called off",
       "trip_minimum_not_met": "Trip did not fill",
-      "booking_cancelled": "Booking cancelled",
+      "booking_cancelled": "Booking canceled",
       "trip_rescheduled": "Trip moved"
     }
   },
