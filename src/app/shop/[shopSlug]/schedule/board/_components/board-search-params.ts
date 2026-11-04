@@ -23,6 +23,8 @@ export type BoardSearchParams = {
   course?: string;
   /** Comma-separated request ids carried from the Requests planning link. */
   requests?: string;
+  /** The full departure whose wait list the new departure takes (its demand banner's add). */
+  carryFrom?: string;
   /** Opens the add panel pointed at a dive site (the library's own control). */
   site?: string;
   /**

@@ -270,9 +270,15 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
             {t("trips.guests.demandBody", { count: demand.unmetSeats })}
           </p>
           <Link
-            href={`${shopPath(shopSlug, "schedule", "board")}?add=1&date=${toDateInputValue(
-              utcToWallTime(trip.startsAt, timezone),
-            )}`}
+            // `carryFrom` makes the add itself carry this departure's wait
+            // list (#2559); the course rides along because a wait list only
+            // carries to a departure of the same course.
+            href={`${shopPath(shopSlug, "schedule", "board")}?${new URLSearchParams({
+              add: "1",
+              date: toDateInputValue(utcToWallTime(trip.startsAt, timezone)),
+              ...(trip.courseId ? { course: trip.courseId } : {}),
+              carryFrom: trip.id,
+            }).toString()}`}
             className={buttonClass({
               variant: "secondary",
               size: "sm",

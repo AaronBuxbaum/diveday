@@ -542,6 +542,8 @@ export type ScheduleBuilderContext = {
   initialSite?: BuilderInitialSite | null;
   /** Requests selected from the Requests page, or null for an ordinary add. */
   requestPlan?: BuilderRequestPlan | null;
+  /** The full departure whose wait list this add carries (its demand banner's link). */
+  carryFrom?: string;
   /**
    * Whether to arrive with the add panel already open, and how deep. Links to
    * create a departure open this panel at the requested depth.
@@ -575,6 +577,7 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
     initialCourse,
     initialSite,
     requestPlan,
+    carryFrom,
     openAdd,
     returnWeek,
     week,
@@ -602,7 +605,8 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   const cancelTopAdd = () => {
     setOpen(null);
     const params = new URLSearchParams(searchParams);
-    for (const key of ["add", "date", "course", "requests", "site"]) params.delete(key);
+    for (const key of ["add", "date", "course", "requests", "site", "carryFrom"])
+      params.delete(key);
     router.replace(`${pathname}${params.size > 0 ? `?${params}` : ""}`, { scroll: false });
     document.querySelector<HTMLElement>("[data-board-add]")?.focus();
   };
@@ -767,6 +771,7 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
           initialCourse={initialCourse}
           initialSite={initialSite}
           requestPlan={requestPlan}
+          carryFrom={carryFrom}
           startExpanded={openAdd === "expanded"}
           onCancel={cancelTopAdd}
         />

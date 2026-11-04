@@ -8,6 +8,7 @@ import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { getDiveSite, listDiveSites } from "@/db/dive-sites";
 import { discardFormDraft } from "@/db/form-drafts";
+import { carryInterests } from "@/db/interest-roll";
 import { getMovePreflight } from "@/db/move-preflight";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
@@ -46,7 +47,7 @@ import {
 } from "@/lib/recurrence";
 import { signScheduleMoveResult } from "@/lib/schedule-move-result";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
 import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
@@ -586,6 +587,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     await attachRequestedInterests(db, shop.id, firstTrip.id, session.user.personId, formData);
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
     await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
+    await landCarryingWaitlist(db, shop.id, shopSlug, firstTrip.id, formData);
     return await landAfterAdd(db, shop, shopSlug, title, series.trips.length);
   }
 
@@ -629,7 +631,40 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       : false;
   await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
   await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
+  await landCarryingWaitlist(db, shop.id, shopSlug, created.id, formData);
   return await landAfterAdd(db, shop, shopSlug, title, addedAlso ? 2 : 1);
+}
+
+/**
+ * **Carry the wait list on add** (#2559). The add panel opened from a full
+ * departure's demand banner carries that departure's id (`carryFrom`); once the
+ * new departure exists, every interest still waiting on the source is copied to
+ * it and the staffer lands on it with the `waitlist-carried` notice, so adding
+ * the boat and walking away no longer strands the divers waiting. Nobody is
+ * messaged here, as with the roster's own carry form.
+ *
+ * The id is navigation context, not authority: `carryInterests` reads both
+ * departures inside this shop and refuses a different course. A refusal
+ * changes nothing and falls through to the ordinary landing, where the
+ * source's own "Carry the wait list" form still stands.
+ */
+async function landCarryingWaitlist(
+  db: AppDb,
+  shopId: string,
+  shopSlug: string,
+  toTripId: string,
+  formData: FormData,
+): Promise<void> {
+  const carryFrom = formData.get("carryFrom");
+  const fromTripId = typeof carryFrom === "string" ? uuidParam(carryFrom) : undefined;
+  if (!fromTripId) return;
+  const carried = await carryInterests(db, { shopId, fromTripId, toTripId });
+  if (!carried.ok) return;
+  const landing = shopPath(shopSlug, "trips", toTripId);
+  revalidateAndRedirect(
+    landing,
+    noticeUrl(landing, "waitlist-carried", { count: carried.carried }),
+  );
 }
 
 /**
