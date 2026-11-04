@@ -1,4 +1,4 @@
-import { and, eq, gte, isNotNull, isNull, lte, or } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -21,7 +21,7 @@ import { sendNotification } from "./notifications";
 import { ownerLogins } from "./owner-logins";
 import { pushTripAlert } from "./push-subscriptions";
 import { listRollCallGaps, type OpenRollCall } from "./roll-call-gaps";
-import { shops, trips } from "./schema";
+import { shops, tripScheduleDays, trips } from "./schema";
 import { issueShoreAlertStopToken } from "./shore-alert-tokens";
 import { liveTrip, notRehearsal } from "./trips-live";
 
@@ -40,7 +40,8 @@ import { liveTrip, notRehearsal } from "./trips-live";
  * (`listRollCallGaps`) whether an after-dive count is still open, claims the
  * departure (`trips.roll_call_alerted_at`, a conditional update, so two passes
  * cannot both send), then tells the shop's owners by email and every device
- * following the departure's manifest by push. Once per departure. A pass that
+ * following the departure's manifest by push. Once per departure, and on a
+ * course once per meeting day (#2557): each day's count is its own. A pass that
  * reached none of them gives the claim back, so the next one tries again, and
  * so does one whose send path threw: the claim is released in `finally`, the
  * pass goes on to the next departure, and the first throw is rethrown at the
@@ -83,10 +84,34 @@ const CLAIMS = {
 } as const;
 type Claim = keyof typeof CLAIMS;
 
-/** Take one of the departure's alerts, or learn another pass already has. */
-async function claimAlert(db: DbExecutor, claim: Claim, shopId: string, tripId: string, now: Date) {
+/**
+ * Take one of the departure's alerts for the meeting day that began at
+ * `dayStartsAt`, or learn another pass already has. A course alerts once per
+ * meeting day (#2557): a claim taken before this day began was about an
+ * earlier day, so it does not hold this one. Returns the claim it replaced
+ * (`null` when there was none), or `false` when another pass holds it.
+ */
+async function claimAlert(
+  db: DbExecutor,
+  claim: Claim,
+  shopId: string,
+  tripId: string,
+  now: Date,
+  dayStartsAt: Date,
+): Promise<{ replaced: Date | null } | false> {
   const column = CLAIMS[claim];
-  const where = and(eq(trips.id, tripId), eq(trips.shopId, shopId), isNull(column));
+  const [before] = await db
+    .select({ at: column })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+  if (!before) return false;
+  const replaced = before.at;
+  // Conditional on the value just read: two passes cannot both take it.
+  const where = and(
+    eq(trips.id, tripId),
+    eq(trips.shopId, shopId),
+    replaced === null ? isNull(column) : and(eq(column, replaced), lt(column, dayStartsAt)),
+  );
   const claimed =
     claim === "owners"
       ? await db
@@ -99,7 +124,7 @@ async function claimAlert(db: DbExecutor, claim: Claim, shopId: string, tripId: 
           .set({ rollCallShoreAlertedAt: now })
           .where(where)
           .returning({ id: trips.id });
-  return claimed.length > 0;
+  return claimed.length > 0 ? { replaced } : false;
 }
 
 /** Give a claim back after a send that reached nobody, unless a later claim took it. */
@@ -109,16 +134,19 @@ async function releaseAlert(
   shopId: string,
   tripId: string,
   claimedAt: Date,
+  replaced: Date | null,
 ) {
   const column = CLAIMS[claim];
   const where = and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(column, claimedAt));
-  if (claim === "owners") await db.update(trips).set({ rollCallAlertedAt: null }).where(where);
-  else await db.update(trips).set({ rollCallShoreAlertedAt: null }).where(where);
+  if (claim === "owners") await db.update(trips).set({ rollCallAlertedAt: replaced }).where(where);
+  else await db.update(trips).set({ rollCallShoreAlertedAt: replaced }).where(where);
 }
 
 /** What one departure's alert says: the dive it leads with and both counts. */
 type AlertingGap = {
   title: string;
+  /** The meeting day the alert is about (#2557); a one-day trip's own window. */
+  startsAt: Date;
   endsAt: Date;
   diveNumber: number;
   notBackAboard: number;
@@ -152,6 +180,7 @@ function alertingGap(gaps: readonly OpenRollCall[]): AlertingGap | null {
   }
   return {
     title: lead.title,
+    startsAt: lead.startsAt,
     endsAt: lead.endsAt,
     diveNumber: lead.diveNumber,
     notBackAboard,
@@ -175,6 +204,14 @@ export async function sendStaleRollCallAlerts(
   const origin = input.origin === undefined ? publicAppUrl() : input.origin;
   if (!origin) return summary;
   let failure: unknown;
+  const dueFrom = new Date(now.getTime() - STALE_ROLL_CALL_LOOKBACK_MS);
+  const dueTo = new Date(now.getTime() - STALE_ROLL_CALL_AFTER_MS);
+  // A course's earlier meeting day is due on its own (#2557): the run's
+  // `ends_at` may be a fortnight after the Saturday whose count is open.
+  const dayDue = await db
+    .selectDistinct({ tripId: tripScheduleDays.tripId })
+    .from(tripScheduleDays)
+    .where(and(lte(tripScheduleDays.endsAt, dueTo), gte(tripScheduleDays.endsAt, dueFrom)));
   const due = await db
     .select({ id: trips.id, shopId: trips.shopId })
     .from(trips)
@@ -185,13 +222,26 @@ export async function sendStaleRollCallAlerts(
         // A rehearsal sends nothing to anyone (ADR 20261012-rehearsal-departures).
         notRehearsal(),
         eq(trips.status, "scheduled"),
+        // A claim from before the run's last day may belong to an earlier
+        // meeting day; the claim below decides per day.
         or(
           isNull(trips.rollCallAlertedAt),
+          lt(trips.rollCallAlertedAt, dueTo),
           // The shore copy is owed only where there is somebody to send it to.
-          and(isNull(trips.rollCallShoreAlertedAt), isNotNull(shops.shoreAlertConfirmedAt)),
+          and(
+            or(isNull(trips.rollCallShoreAlertedAt), lt(trips.rollCallShoreAlertedAt, dueTo)),
+            isNotNull(shops.shoreAlertConfirmedAt),
+          ),
         ),
-        lte(trips.endsAt, new Date(now.getTime() - STALE_ROLL_CALL_AFTER_MS)),
-        gte(trips.endsAt, new Date(now.getTime() - STALE_ROLL_CALL_LOOKBACK_MS)),
+        or(
+          and(lte(trips.endsAt, dueTo), gte(trips.endsAt, dueFrom)),
+          dayDue.length > 0
+            ? inArray(
+                trips.id,
+                dayDue.map((row) => row.tripId),
+              )
+            : undefined,
+        ),
         // A demo shop's divers are seeded and its owner's address is anybody's.
         eq(shops.isDemo, false),
       ),
@@ -204,7 +254,16 @@ export async function sendStaleRollCallAlerts(
     const gaps = await listRollCallGaps(db, shopId, now, tripIds);
     const open = new Map<string, AlertingGap>();
     for (const tripId of tripIds) {
-      const gap = alertingGap(gaps.filter((row) => row.tripId === tripId));
+      // Only a meeting day that is itself due: a course's day two still out
+      // is Today's to show, not this pass's to send.
+      const gap = alertingGap(
+        gaps.filter(
+          (row) =>
+            row.tripId === tripId &&
+            row.endsAt.getTime() <= dueTo.getTime() &&
+            row.endsAt.getTime() >= dueFrom.getTime(),
+        ),
+      );
       if (gap) open.set(tripId, gap);
     }
     if (open.size === 0) continue;
@@ -230,8 +289,11 @@ export async function sendStaleRollCallAlerts(
       confirmedAt: shop.shoreAlertConfirmedAt,
     });
     for (const [tripId, gap] of open) {
-      const ownersClaimed = await claimAlert(db, "owners", shopId, tripId, now);
-      const shoreClaimed = shore !== null && (await claimAlert(db, "shore", shopId, tripId, now));
+      const ownersClaim = await claimAlert(db, "owners", shopId, tripId, now, gap.startsAt);
+      const shoreClaim =
+        shore !== null && (await claimAlert(db, "shore", shopId, tripId, now, gap.startsAt));
+      const ownersClaimed = ownersClaim !== false;
+      const shoreClaimed = shoreClaim !== false;
       if (!ownersClaimed && !shoreClaimed) continue;
       const checkpoint = `after_dive_${gap.diveNumber}`;
       const rollCallUrl = `${origin}${shopPath(shop.slug, "trips", tripId, "manifest")}?checkpoint=${checkpoint}`;
@@ -323,10 +385,19 @@ export async function sendStaleRollCallAlerts(
         failure ??= error;
       } finally {
         if (ownersClaimed && ownersReached === 0) {
-          await releaseAlert(db, "owners", shopId, tripId, now);
+          await releaseAlert(
+            db,
+            "owners",
+            shopId,
+            tripId,
+            now,
+            ownersClaim ? ownersClaim.replaced : null,
+          );
           summary.released += 1;
         }
-        if (shoreClaimed && !shoreReached) await releaseAlert(db, "shore", shopId, tripId, now);
+        if (shoreClaim && !shoreReached) {
+          await releaseAlert(db, "shore", shopId, tripId, now, shoreClaim.replaced);
+        }
       }
       if (ownersReached > 0 || shoreReached) summary.alerted += 1;
     }

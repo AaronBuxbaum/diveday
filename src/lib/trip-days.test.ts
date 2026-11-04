@@ -234,7 +234,9 @@ describe("roll-call days (#2557)", () => {
         endsAt: new Date("2026-08-01T17:00:00.000Z"),
       },
     ];
-    expect(rollCallDayStarts(touching)[1]).toBeLessThanOrEqual(touching[1]!.startsAt.getTime());
+    expect(rollCallDayStarts(touching)[1]).toBeLessThanOrEqual(
+      Date.parse("2026-08-01T14:00:00.000Z"),
+    );
   });
 
   it("keeps a one-day trip's whole record on its one day", () => {
