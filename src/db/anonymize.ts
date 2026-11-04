@@ -1233,6 +1233,42 @@ async function scrubDiverLogin(
   return [];
 }
 
+/**
+ * **The card sighting at the rail stays; the number and the reviewer go**
+ * (issue #3806). A boarding mark's captured snapshot is the shop's proof that
+ * somebody looked at this diver's card before the boat left, and ADR
+ * 20260802-diver-data-erasure keeps that sighting: agency, level, status and
+ * when it was reviewed. Nulling the whole snapshot made an incident export
+ * read "card evidence unavailable", as if nobody had checked. So each card
+ * loses only `identifier` and the reviewer's name, the way
+ * `scrubCertificationEvidence` treats `cards`; the capture times, the reviewer
+ * pointer and everything else stand. The crew credential snapshot is a
+ * different question (the legal hold) and is not touched here.
+ */
+async function redactBoardingSnapshots(
+  tx: AppTransaction,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<void> {
+  if (bookingIds.length === 0) return;
+  await tx
+    .update(rollCallEvents)
+    .set({
+      certificationSnapshot: sql`(
+        select coalesce(jsonb_agg(card || '{"identifier": null, "reviewedByName": null}'::jsonb order by ordinal), '[]'::jsonb)
+        from jsonb_array_elements(${rollCallEvents.certificationSnapshot}) with ordinality as item(card, ordinal)
+      )`,
+    })
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
+        inArray(rollCallEvents.bookingId, [...bookingIds]),
+        isNotNull(rollCallEvents.certificationSnapshot),
+      ),
+    );
+}
+
 /** The erasure's "booking-scoped rows" sweep. */
 async function scrubBookingRows(
   tx: AppTransaction,
@@ -1285,24 +1321,11 @@ async function scrubBookingRows(
           ),
         ),
       );
-    await tx
-      .update(rollCallEvents)
-      .set({
-        certificationSnapshot: null,
-        certificationSnapshotStartedAt: null,
-        certificationSnapshotCapturedAt: null,
-      })
-      .where(
-        and(
-          eq(rollCallEvents.shopId, shopId),
-          seatMarks(),
-          inArray(
-            rollCallEvents.bookingId,
-            snapshotSeats.map((seat) => seat.id),
-          ),
-          isNotNull(rollCallEvents.certificationSnapshot),
-        ),
-      );
+    await redactBoardingSnapshots(
+      tx,
+      shopId,
+      snapshotSeats.map((seat) => seat.id),
+    );
   }
   if (owned) {
     // `welcomeSharedAt` is a consent stamp, not a fact about the seat: the
@@ -1396,23 +1419,16 @@ async function scrubBookingRows(
     // made while blocked. The shape check allows a `blocked` status with no list.
     await tx
       .update(rollCallEvents)
-      .set({
-        readinessBlockers: null,
-        certificationSnapshot: null,
-        certificationSnapshotStartedAt: null,
-        certificationSnapshotCapturedAt: null,
-      })
+      .set({ readinessBlockers: null })
       .where(
         and(
           eq(rollCallEvents.shopId, shopId),
           seatMarks(),
           inArray(rollCallEvents.bookingId, bookingIds),
-          or(
-            isNotNull(rollCallEvents.readinessBlockers),
-            isNotNull(rollCallEvents.certificationSnapshot),
-          ),
+          isNotNull(rollCallEvents.readinessBlockers),
         ),
       );
+    await redactBoardingSnapshots(tx, shopId, bookingIds);
 
     // A booking's payment state is its newest entry (`booking_payments` is a
     // view over this table, issue #2716), so scrubbing the entries scrubs the
