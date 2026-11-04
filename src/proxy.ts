@@ -795,7 +795,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
     metaSignup: WHATSAPP_SETTINGS_PATH.test(req.nextUrl.pathname),
     // The maps' sharp place labels, fetched from Esri only with a key.
     vectorLabels: Boolean(arcgisApiKey()),
-    development: process.env.NODE_ENV === "development" || process.env.DIVEDAY_E2E === "1",
+    development: process.env.NODE_ENV === "development" || runtimeMode().e2eHarness,
   };
   res.headers.set("Content-Security-Policy", enforcedPolicy(cspOptions));
   res.headers.set("Reporting-Endpoints", reportingEndpointsHeader());

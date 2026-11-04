@@ -15,6 +15,7 @@ import { setUpHref } from "@/lib/funnel";
 import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications/app-url";
 import { pendingCookie, readPendingHandle, signInOrigins } from "@/lib/pending-sign-in";
 import { publicSchedulePath, shopSlugFromStaffUrl } from "@/lib/public-routes";
+import { runtimeMode } from "@/lib/runtime-mode";
 import { authenticate, cancelSignIn, confirmSignIn } from "./actions";
 import { SignInStatus } from "./SignInStatus";
 
@@ -58,7 +59,7 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
   const t = diverTranslator(await requestLocale());
   const cookie = pendingCookie(
     signInOrigins(publicAppUrl() ?? APP_ORIGIN, process.env)[0],
-    process.env.DIVEDAY_E2E === "1",
+    runtimeMode().e2eHarness,
   );
   const handle = readPendingHandle(await headers(), cookie.name);
   const secondFactorRequired = handle ? await hasPendingSignIn(await getDb(), handle) : false;
