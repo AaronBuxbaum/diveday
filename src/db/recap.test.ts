@@ -4,6 +4,7 @@ import { toDiverLocale } from "@/i18n/settings";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
+import { sendDueRecaps, sendTripRecaps } from "@/test/words-wiring";
 import { createBookingParty } from "./bookings";
 import { recordCourseNextStep } from "./course-next-step";
 import { upsertExecutedDive } from "./executed-dives";
@@ -27,8 +28,6 @@ import {
   MAX_RECAP_CAPTION_LENGTH,
   MAX_RECAP_PHOTOS_PER_BOOKING,
   pauseTripRecapAutoSend,
-  sendDueRecaps,
-  sendTripRecaps,
   setTripRecapShoutout,
   unpauseTripRecapAutoSend,
 } from "./recap";

@@ -858,15 +858,17 @@ export const ENV_GROUPS = [
   {
     seam: "vercel-cron",
     doc: [
-      "Scheduled pre-trip reminders (ADR 20260721-scheduled-reminder-cadence). Vercel",
-      "Cron calls GET /api/cron/reminders daily with this as a bearer token (the Hobby",
-      "plan caps crons at daily; the cadence buckets are >=24h wide so a daily run",
-      "never misses one). Derived from APP_SECRET_SEED.",
+      "Scheduled routes (ADR 20260721-scheduled-reminder-cadence). EventBridge Scheduler",
+      "invokes the cron dispatcher Lambda (infra/lib/cron-dispatcher-handler.ts), which",
+      "GETs each /api/cron/* route listed in config/crons.json with this as a bearer",
+      "token. The stack mints it as its own Secrets Manager secret, diveday/cron-secret,",
+      "which only that Lambda reads: the dispatcher never touches APP_SECRET_SEED, from",
+      "which the session and credential-sealing keys derive.",
     ],
     keys: [
       {
         key: "CRON_SECRET",
-        from: "derived",
+        from: "stack",
         targets: LOCAL_AND_VERCEL,
         absent:
           "the endpoint is unavailable (503), so nothing can trigger reminder sends by accident",
@@ -1314,6 +1316,12 @@ export const ENV_GROUPS = [
         absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
       },
       {
+        key: "SENTRY_BOOKKEEPER_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
         key: "SENTRY_DAILY_SWEEPS_CRON_MONITOR_SLUG",
         from: "override",
         targets: NOWHERE,
@@ -1326,7 +1334,19 @@ export const ENV_GROUPS = [
         absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
       },
       {
+        key: "SENTRY_INTEGRATIONS_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
         key: "SENTRY_PLATFORM_BACKUP_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_PRICING_VOLUME_CRON_MONITOR_SLUG",
         from: "override",
         targets: NOWHERE,
         absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
@@ -1339,6 +1359,12 @@ export const ENV_GROUPS = [
       },
       {
         key: "SENTRY_RETENTION_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_SHOP_TICK_CRON_MONITOR_SLUG",
         from: "override",
         targets: NOWHERE,
         absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",

@@ -70,7 +70,7 @@ test.describe("the storefront wears the shop's brand", () => {
       );
       expect(primary).toBe(expected);
 
-      await page.goto(`/s/${privateShop.slug}?embed=1`);
+      await page.goto(`/s/${privateShop.slug}/embed/calendar`);
       await expect(page.getByText("Bookings by DiveDay")).toBeVisible();
       await expect(page.getByText("Since 1998")).toHaveCount(0);
       const embedPrimary = await page.evaluate(() =>

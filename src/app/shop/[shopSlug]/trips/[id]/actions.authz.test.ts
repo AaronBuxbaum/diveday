@@ -65,24 +65,20 @@ const { saveRequirementsAction } = await import("./terms-actions");
 const { certifyDiverFromRosterAction } = await import("./course-actions");
 
 /**
- * A seeded ordinary charter — not a course session, whose rules are frozen —
- * that already demands a certification and a waiver. Picking a trip with
- * requirements is what makes "the row did not change" mean anything: against a
- * trip with no requirements row, every such assertion would pass vacuously.
+ * A seeded ordinary charter (not a course session, whose rules are frozen) that
+ * already demands a certification and a waiver, so "the row did not change"
+ * means something: with no requirements row every such assertion would pass.
  */
 async function seededTripId(db: AppDb, shopId: string): Promise<string> {
   const [trip] = await db
     .select({ id: trips.id })
     .from(trips)
     .innerJoin(tripRequirements, eq(tripRequirements.tripId, trips.id))
-    .innerJoin(
-      bookings,
-      // A seat still to come at the desk (arrival is a trail, #2702).
-      and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked"), not(seatCheckedIn)),
-    )
+    .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked")))
     .where(
       and(
         eq(trips.shopId, shopId),
+        not(seatCheckedIn), // a seat still to come at the desk (#2702)
         isNull(trips.courseId),
         isNotNull(tripRequirements.minimumCertificationLevel),
         eq(tripRequirements.requiresWaiver, true),
@@ -376,9 +372,8 @@ describe("setting what a trip admits", () => {
 
 /**
  * **An intro session certifies nobody, whatever is posted** (dive-domain
- * review). The roster draws no Certify control on a DSD, but a form post
- * reaches the action regardless, and a forged `award=open_water` must never
- * mint the verified card the booking gate trusts.
+ * review). The roster draws no Certify control on a DSD, but a forged post's
+ * `award=open_water` must never mint the verified card the booking gate trusts.
  */
 describe("certifying from an intro session's roster", () => {
   it("refuses a forged open-water award on a DSD session and writes no card", async () => {
@@ -391,11 +386,7 @@ describe("certifying from an intro session's roster", () => {
         personId: bookings.personId,
       })
       .from(trips)
-      .innerJoin(
-        bookings,
-        // A seat still to come at the desk (arrival is a trail, #2702).
-        and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked"), not(seatCheckedIn)),
-      )
+      .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked")))
       .where(and(eq(trips.shopId, shop.id), isNotNull(trips.courseId)))
       .limit(1);
     if (!seat?.courseId) throw new Error("seeded shop has no booked course session");

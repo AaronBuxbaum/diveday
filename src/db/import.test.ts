@@ -6,9 +6,9 @@ import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
+import { canPersonImportShopData, commitContactImport } from "@/test/words-wiring";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { canPersonImportShopData, commitContactImport } from "./import";
 import { recordRentalFit } from "./rental-fit";
 import {
   bookings,

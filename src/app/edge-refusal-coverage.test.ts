@@ -200,16 +200,6 @@ function storefrontRoutes(dir = SHOP_DIR, trail: string[] = []): string[] {
   return found;
 }
 
-/**
- * The two framed pages' internal segments, which the proxy refuses *by name*
- * before it asks for a shape (`isInternalEmbedRoute`): nobody may request
- * them, so the shape module calls them malformed on purpose.
- */
-const INTERNAL_RENDER_ROUTES = new Set([
-  "/s/[shopSlug]/embed/schedule",
-  "/s/[shopSlug]/trips/[id]/embed",
-]);
-
 /** A concrete, live-shaped URL: each segment is a value its own page would accept. */
 const storefrontProbe = (route: string) =>
   route
@@ -226,12 +216,13 @@ describe("the edge refusal leaves every storefront route served", () => {
     expect(routes).toContain("/s/[shopSlug]");
     expect(routes).toContain("/s/[shopSlug]/trips/[id]/calendar");
     expect(routes).toContain("/s/[shopSlug]/opengraph-image");
+    expect(routes).toContain("/s/[shopSlug]/embed/calendar");
+    expect(routes).toContain("/s/[shopSlug]/embed/trip/[id]");
     expect(routes.length).toBeGreaterThan(10);
   });
 
   it("never calls a real storefront route malformed", () => {
     const failures = routes
-      .filter((route) => !INTERNAL_RENDER_ROUTES.has(route))
       .filter((route) => publicRouteShape(storefrontProbe(route))?.kind === "malformed")
       .map(
         (route) =>

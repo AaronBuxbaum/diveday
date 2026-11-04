@@ -120,14 +120,14 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   bookings: [
     "shop_id",
     "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
+    "arrival_trail_after_seq", // a position on this database's arrival trail (#2702)
     "identity_unconfirmed_at", // H-20260724-one-person-per-email review state, not a shop record
     "identity_booked_as", // H-20260724-one-person-per-email review state: the name the held booking was made under
     "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
     "reschedule_missed_place", // the same: whether the meeting point moved too
     ...FLY_SAFE_EXPORT_EXCLUSIONS,
     "identity_matched_by", // H-20260724-one-person-per-email review state: why the booking was matched
-    // A held seat's desk-recorded emergency contact (#2145): read only while
-    // the seat is held, and moved onto the new record at a split.
+    // A held seat's desk-recorded emergency contact (#2145), moved at a split.
     "held_emergency_contact_name",
     "held_emergency_contact_phone",
     "paid_rental_kinds", // held-seat prep state: the order lines already carry what was paid for

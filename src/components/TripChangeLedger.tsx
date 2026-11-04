@@ -1,8 +1,8 @@
 import { SectionCard } from "@/components/ui/card";
 import type { TripChangeEvent } from "@/db/trip-change-events";
 import { diverTranslator } from "@/i18n/messages";
+import { tripChangeEntries } from "@/i18n/trip-change-entries";
 import { formatDateTimeTz } from "@/lib/format";
-import { tripChangeEntries } from "@/lib/trip-change-entries";
 
 /**
  * **What changed**: the trip's facts that moved, each once with its newest

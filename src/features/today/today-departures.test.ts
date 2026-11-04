@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { inHorizonReadiness, sharedInHorizonReadiness } from "@/db/blockers";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
@@ -32,7 +33,7 @@ describe("one shop-day's departure cards", () => {
         shop.slug,
         shopClock(shop, day),
         undefined,
-        undefined,
+        staffTranslator("en-US"),
         undefined,
         false,
         evidence,
@@ -71,7 +72,7 @@ describe("one shop-day's departure cards", () => {
       shop.slug,
       shopClock(shop, tomorrow),
       undefined,
-      undefined,
+      staffTranslator("en-US"),
       undefined,
       false,
       evidence,

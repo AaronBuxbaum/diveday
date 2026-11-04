@@ -63,7 +63,7 @@ const DOC: IncidentExportDocument = {
   boatSafetyAbsence: "no_boat",
   timeline: [],
   incidentReports: [],
-  hashVersion: 3,
+  hashVersion: 4,
   contentHash: "a".repeat(64),
 };
 

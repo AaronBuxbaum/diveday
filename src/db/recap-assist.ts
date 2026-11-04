@@ -1,5 +1,4 @@
 import { and, eq, isNull, notExists } from "drizzle-orm";
-import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import {
   RECAP_LINE_FEATURE,
@@ -24,9 +23,15 @@ import { liveTrip } from "./trips-live";
  * any of the app's languages).
  */
 
+/**
+ * The catalogue's species names in one language, by slug. The caller passes it in
+ * (`marineLifeNamesIn` in `src/i18n`): words are chosen in a renderer, and `src/db` takes them.
+ */
+export type MarineLifeNamesIn = (locale: string | null | undefined) => Map<string, string>;
+
 /** Every catalog species with its names in each language the app writes, for the refusal check. */
-function catalogNames(): { slug: string; names: string[] }[] {
-  const byLocale = DIVER_LOCALES.map((locale) => marineLifeNamesIn(locale));
+function catalogNames(namesIn: MarineLifeNamesIn): { slug: string; names: string[] }[] {
+  const byLocale = DIVER_LOCALES.map((locale) => namesIn(locale));
   return [...(byLocale[0] ?? [])].map(([slug]) => ({
     slug,
     names: [...new Set(byLocale.flatMap((names) => names.get(slug) ?? []))],
@@ -38,6 +43,7 @@ export async function recapLogFor(
   db: AppDb,
   shopId: string,
   tripId: string,
+  namesIn: MarineLifeNamesIn,
 ): Promise<RecapLog | null> {
   const [row] = await db
     .select({ trip: trips, shop: shops })
@@ -64,7 +70,7 @@ export async function recapLogFor(
     );
   if (sightings.length === 0) return null;
   const locale = row.shop.defaultLocale;
-  const names = marineLifeNamesIn(locale);
+  const names = namesIn(locale);
   // Grouped by the site they were logged at, so the line cannot move a
   // creature to another reef; a count is summed only within its own site.
   const bySite = new Map<string, Map<string, number>>();
@@ -95,9 +101,10 @@ export async function draftRecapLine(
   db: AppDb,
   shopId: string,
   tripId: string,
+  namesIn: MarineLifeNamesIn,
   options: AssistOptions = {},
 ): Promise<string | null> {
-  const log = await recapLogFor(db, shopId, tripId);
+  const log = await recapLogFor(db, shopId, tripId, namesIn);
   if (!log) return null;
   const value = await runAssist(db, {
     ...options,
@@ -105,7 +112,7 @@ export async function draftRecapLine(
     feature: RECAP_LINE_FEATURE,
     call: recapLineCall(log),
   });
-  return recapLine(value, log, catalogNames());
+  return recapLine(value, log, catalogNames(namesIn));
 }
 
 async function hasLiveIncidentReport(db: AppDb, shopId: string, tripId: string) {
@@ -134,6 +141,7 @@ export async function autoFillRecapLine(
   db: AppDb,
   trip: { id: string; shopId: string; recapShoutout: string | null },
   shop: { recapAssistAutoApprove: boolean },
+  namesIn: MarineLifeNamesIn,
   options: AssistOptions = {},
 ): Promise<boolean> {
   if (!shop.recapAssistAutoApprove || trip.recapShoutout?.trim()) return false;
@@ -143,7 +151,7 @@ export async function autoFillRecapLine(
     // may reach the diver it is about, or their family. The crew can still
     // draft one on Today and send it themselves.
     if (await hasLiveIncidentReport(db, trip.shopId, trip.id)) return false;
-    const log = await recapLogFor(db, trip.shopId, trip.id);
+    const log = await recapLogFor(db, trip.shopId, trip.id, namesIn);
     if (!log) return false;
     // A line refused or thrown away for these sightings is remembered, so
     // each send pass does not pay for the same refusal again. A staffer's
@@ -158,7 +166,7 @@ export async function autoFillRecapLine(
       call: recapLineCall(log),
     });
     if (status === "skipped") return false;
-    const line = recapLine(value, log, catalogNames());
+    const line = recapLine(value, log, catalogNames(namesIn));
     if (!line) {
       await recordAssistResult(db, {
         shopId: trip.shopId,

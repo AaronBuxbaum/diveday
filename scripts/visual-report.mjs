@@ -11,6 +11,7 @@ import path from "node:path";
 
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import {
+  actualObjectKey,
   countsLine,
   DEFAULT_BUCKET,
   fetchFromBucket,
@@ -69,7 +70,11 @@ async function main() {
 
   const report = JSON.parse(manifest.body.toString("utf8"));
   const summary = summarizeReport(report);
-  const dirs = { actual: report.actualDir, expected: report.expectedDir, diff: report.diffDir };
+  const dirs = {
+    actual: report.actualDir,
+    expected: report.expectedDir,
+    diff: report.diffDir,
+  };
   const outDir = path.resolve(args.out, commit);
 
   const items = [
@@ -79,9 +84,17 @@ async function main() {
       want: ["expected", "actual", "diff"],
     })),
     ...report.newItems.map((name) => ({ name, kind: "new", want: ["actual"] })),
-    ...report.deletedItems.map((name) => ({ name, kind: "deleted", want: ["expected"] })),
+    ...report.deletedItems.map((name) => ({
+      name,
+      kind: "deleted",
+      want: ["expected"],
+    })),
     ...(args.all
-      ? report.passedItems.map((name) => ({ name, kind: "passed", want: ["expected", "actual"] }))
+      ? report.passedItems.map((name) => ({
+          name,
+          kind: "passed",
+          want: ["expected", "actual"],
+        }))
       : []),
   ];
 
@@ -90,7 +103,10 @@ async function main() {
   for (const item of items) {
     item.files = {};
     for (const dirKind of item.want) {
-      const remote = `${commit}/${dirs[dirKind]}/${item.name}`;
+      const remote =
+        dirKind === "actual"
+          ? actualObjectKey(commit, report, item.name)
+          : `${commit}/${dirs[dirKind]}/${item.name}`;
       const local = path.join(outDir, dirKind, item.name);
       const result = await fetchFromBucket(bucket, remote);
       if (!result.ok) {

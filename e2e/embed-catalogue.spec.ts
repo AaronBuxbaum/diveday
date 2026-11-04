@@ -203,7 +203,10 @@ test.describe("the loader on a host page", () => {
     // A native modal <dialog>: the browser owns the top layer, the inert page
     // behind it, Escape and the Tab loop; this is the loader's side of it.
     const sheet = page.getByRole("dialog", { name: "Book a dive" });
-    await expect(sheet.locator("iframe")).toHaveAttribute("src", /\/s\/blue-mantis\?embed=1/);
+    await expect(sheet.locator("iframe")).toHaveAttribute(
+      "src",
+      /\/s\/blue-mantis\/embed\/calendar(\?|$)/,
+    );
     await expect(sheet.getByRole("button", { name: "Close" })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(sheet).toHaveCount(0);

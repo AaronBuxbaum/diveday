@@ -89,6 +89,24 @@ const CREDENTIALS_SECRET_NAME = "diveday/env";
 const APP_SECRET_SEED_NAME = "diveday/app-secret-seed";
 
 /**
+ * A five-field crontab (as config/crons.json and Sentry spell it) as an
+ * EventBridge six-field expression: a year is added, and whichever of
+ * day-of-month and day-of-week is "*" becomes "?" (both cannot be set).
+ */
+export function eventBridgeCron(crontab: string): string {
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = crontab.trim().split(/\s+/);
+  if (!minute || !hour || !dayOfMonth || !month || !dayOfWeek) {
+    throw new Error(`not a five-field crontab: ${crontab}`);
+  }
+  const weekday = dayOfWeek.replace(/\b[0-7]\b/g, (d) =>
+    String(Number(d) === 0 || Number(d) === 7 ? 1 : Number(d) + 1),
+  );
+  const [dom, dow] =
+    dayOfWeek === "*" ? [dayOfMonth, "?"] : [dayOfMonth === "*" ? "?" : dayOfMonth, weekday];
+  return `cron(${minute} ${hour} ${dom} ${month} ${dow} *)`;
+}
+
+/**
  * Scopes every GitHub Actions OIDC trust condition below (S18) to this repo.
  * Spelled with GitHub's own casing, and it has to be: this string is embedded
  * in an IAM `StringLike` on `token.actions.githubusercontent.com:sub`, and
@@ -2150,7 +2168,7 @@ exports.handler = async (event) => {
     const appSecretSeed = new secretsmanager.Secret(this, "ApplicationSecretSeed", {
       secretName: APP_SECRET_SEED_NAME,
       description:
-        "Stable root material from which scripts/distribute-env.mjs derives AUTH_SECRET, SECRET_ENCRYPTION_KEY, and CRON_SECRET. Never place this value in a deployed environment.",
+        "Stable root material from which scripts/distribute-env.mjs derives AUTH_SECRET and SECRET_ENCRYPTION_KEY. Never place this value in a deployed environment.",
       generateSecretString: {
         passwordLength: 64,
         excludePunctuation: true,
@@ -2159,6 +2177,19 @@ exports.handler = async (event) => {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    // Its own secret rather than a derivation of the seed above: the cron
+    // dispatcher Lambda (S19b) reads this and must not be able to read the seed.
+    const cronSecret = new secretsmanager.Secret(this, "CronSecret", {
+      secretName: "diveday/cron-secret",
+      description:
+        "Bearer token the cron dispatcher presents to /api/cron/*, and the app's CRON_SECRET. Read by the dispatcher Lambda only; delivered to Vercel through the credentials document.",
+      generateSecretString: {
+        passwordLength: 64,
+        excludePunctuation: true,
+        requireEachIncludedType: true,
+      },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
     // 16. The credentials secret: one Secrets Manager secret holding a filled-in
     // `.env.example`.
     //
@@ -2243,6 +2274,9 @@ exports.handler = async (event) => {
     // document. It never appears in a stack output, and the distribution
     // helper consumes it locally before making target-specific dotenv files.
     envValues.APP_SECRET_SEED = appSecretSeed.secretValue.unsafeUnwrap();
+    // The cron bearer token has its own secret (S19b), so the dispatcher Lambda
+    // never holds the seed the session and credential-sealing keys come from.
+    envValues.CRON_SECRET = cronSecret.secretValue.unsafeUnwrap();
 
     // Not assigned: nothing else in the stack references it. Read access is
     // granted to no principal (see above), and the output below names the secret
@@ -3801,6 +3835,92 @@ exports.handler = async () => {
       description:
         "Weekly watchdog over the platform backup bucket. Alerts to the observability topic when the newest export is missing, stale, or empty. Invoke it by hand to test: aws lambda invoke --function-name diveday-backup-freshness-check /dev/stdout",
     });
+
+    // 19b. The scheduled routes' clock (issue #3691). Vercel Cron called every
+    // `/api/cron/*` route; now one EventBridge Scheduler schedule per entry of
+    // config/crons.json invokes one small function, which makes the same bearer
+    // request (infra/lib/cron-dispatcher-handler.ts). Hourly and sub-daily
+    // schedules stop depending on the hosting plan's cron cap, and the schedule
+    // lives beside the alarms that watch it.
+    //
+    // The function reads one secret, CRON_SECRET, minted here and handed to
+    // Vercel through the credentials document. It does not read the app secret
+    // seed (S15): that is the root of the session and credential-sealing keys.
+    //
+    // No retries: a route that half-ran must not run again on a timer. A
+    // non-2xx answer fails the invocation, and the Errors alarm below raises it
+    // to the observability topic. Cost: the first 14 million scheduler
+    // invocations and a million Lambda requests a month are free; this is
+    // about 1,200 a month.
+    const cronEntries = (
+      JSON.parse(
+        readFileSync(path.join(__dirname, "..", "..", "config", "crons.json"), "utf8"),
+      ) as {
+        crons: { path: string; schedule: string }[];
+      }
+    ).crons;
+    const cronDispatcher = new lambda.Function(this, "CronDispatcher", {
+      functionName: "diveday-cron-dispatcher",
+      runtime: lambda.Runtime.NODEJS_24_X,
+      handler: "index.handler",
+      // Above the longest route's maxDuration (300 s), below Lambda's ceiling.
+      timeout: cdk.Duration.seconds(345),
+      logGroup: new logs.LogGroup(this, "CronDispatcherLogs", {
+        logGroupName: "/aws/lambda/diveday-cron-dispatcher",
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      environment: {
+        APP_ORIGIN: webhookHost,
+        CRON_SECRET_ID: cronSecret.secretArn,
+      },
+      // Scheduler invokes asynchronously, and Lambda would retry a failed
+      // invocation twice on its own, re-running a route that half-ran. None.
+      retryAttempts: 0,
+      maxEventAge: cdk.Duration.minutes(2),
+      code: lambda.Code.fromInline(
+        bundleLambdaHandler(path.join(__dirname, "cron-dispatcher-handler.ts")),
+      ),
+    });
+    cronSecret.grantRead(cronDispatcher);
+
+    const cronSchedulerRole = new iam.Role(this, "CronSchedulerRole", {
+      assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com").withConditions({
+        StringEquals: { "aws:SourceAccount": this.account },
+      }),
+      description: "Lets EventBridge Scheduler invoke the cron dispatcher.",
+    });
+    cronDispatcher.grantInvoke(cronSchedulerRole);
+
+    for (const entry of cronEntries) {
+      const routeName = entry.path.replace("/api/cron/", "");
+      new scheduler.CfnSchedule(this, `CronSchedule-${routeName}`, {
+        name: `diveday-cron-${routeName}`,
+        description: `Calls ${entry.path} (${entry.schedule} UTC).`,
+        flexibleTimeWindow: { mode: "OFF" },
+        // Vercel's five-field crontab, as EventBridge's six fields: year added,
+        // and day-of-month or day-of-week becomes "?".
+        scheduleExpression: eventBridgeCron(entry.schedule),
+        scheduleExpressionTimezone: "Etc/UTC",
+        target: {
+          arn: cronDispatcher.functionArn,
+          roleArn: cronSchedulerRole.roleArn,
+          input: JSON.stringify({ path: entry.path }),
+          retryPolicy: { maximumRetryAttempts: 0 },
+        },
+      });
+    }
+
+    new cloudwatch.Alarm(this, "CronDispatcherErrorsAlarm", {
+      alarmName: "diveday-cron-dispatcher-errors",
+      alarmDescription:
+        "A scheduled route did not answer 2xx, or was not reachable. Read the log group /aws/lambda/diveday-cron-dispatcher for the path and status, then the route's own Sentry issue.",
+      metric: cronDispatcher.metricErrors({ period: cdk.Duration.hours(1), statistic: "Sum" }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    }).addAlarmAction(alarmAction);
 
     // 20. The full-cluster dump -- the layer that can restore a login. See ADR
     // 20260812-platform-database-dump, and S11 for DatabaseDumpBucket: its own

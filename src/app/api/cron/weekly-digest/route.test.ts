@@ -85,9 +85,10 @@ describe("GET /api/cron/weekly-digest", () => {
     vi.mocked(sendDueWeeklyDigests).mockRejectedValue(failure);
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(503);
-    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
-      tags: { cron_scan: "weekly_digest" },
-    });
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "CronPassFailed" }),
+      { tags: { cron_scan: "weekly-digest", error_class: "Error" } },
+    );
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(2, {
       checkInId: "check-in-id",
       monitorSlug: "diveday-weekly-digest",

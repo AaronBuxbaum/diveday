@@ -8,7 +8,7 @@ import { acceptAgeAttestation, e2eNow, openTripInEmbed, threadStatus } from "./h
  * the site became framable as a side effect of adding that exception.
  */
 test("the schedule embed renders without page chrome and allows framing", async ({ page }) => {
-  const response = await page.goto("/s/blue-mantis?embed=1");
+  const response = await page.goto("/s/blue-mantis/embed/calendar");
   expect(response?.headers()["x-frame-options"]).toBeUndefined();
   // The exception is `frame-ancestors` alone: an embedded page keeps the rest
   // of the policy, which used to be nothing at all (issue #718).
@@ -16,7 +16,7 @@ test("the schedule embed renders without page chrome and allows framing", async 
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).not.toBeVisible();
 
   // **The shopfront stops at the frame** (ADR
-  // 20260827-clearwater-surface-language, decision 8). `?embed=1` keeps the
+  // 20260827-clearwater-surface-language, decision 8). The calendar keeps the
   // list-first window issue #805 made it: no identity band, no next-boat card,
   // and neither shelf — every one of which would spend a third of a 900px
   // frame on something the shop's own page around it already says.
@@ -37,17 +37,18 @@ test("a non-embed page still denies framing", async ({ page }) => {
   expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
 });
 
-test("a repeated embed param can't smuggle framing past what the page actually renders", async ({
+test("the deleted ?embed=1 frames nothing: the storefront stays the storefront", async ({
   page,
 }) => {
-  // searchParams.get() would silently take just the first "1" here while the
-  // page's own searchParams prop sees the whole repeated param as an array
-  // (never "1") and renders full chrome — the proxy must deny framing in
-  // lockstep, not grant the exception on a value the page itself refused.
-  const response = await page.goto("/s/blue-mantis?embed=1&embed=0");
+  // A frame is where the URL is (issue #2744). The old query renders the
+  // ordinary page, with framing denied, and the segment its rewrite used to
+  // land on is gone.
+  const response = await page.goto("/s/blue-mantis?embed=1");
   expect(response?.headers()["x-frame-options"]).toBe("DENY");
   expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
+  const old = await page.goto("/s/blue-mantis/embed/schedule");
+  expect(old?.status()).toBe(404);
 });
 
 test("a client cannot forge proxy headers to grant framing", async ({ page }) => {
@@ -55,7 +56,7 @@ test("a client cannot forge proxy headers to grant framing", async ({ page }) =>
     "x-diveday-embed-request": "1",
     "x-diveday-request-path": "/s/blue-mantis",
   });
-  const response = await page.goto("/s/blue-mantis?embed=0");
+  const response = await page.goto("/s/blue-mantis");
   expect(response?.status()).toBe(200);
   expect(response?.headers()["x-frame-options"]).toBe("DENY");
   expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
@@ -69,7 +70,7 @@ test.describe("as owner", () => {
     // A shop owner might click their own embed link while signed in — the
     // iframe on their external site must never expose the staff nav, demo
     // banner, or offline-manifest sync regardless of who's viewing it.
-    await page.goto("/s/blue-mantis?embed=1");
+    await page.goto("/s/blue-mantis/embed/calendar");
     await expect(page.getByRole("navigation")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Today" })).not.toBeVisible();
   });
@@ -86,9 +87,9 @@ test.describe("as owner", () => {
 test("booking through the embed keeps embed mode through the confirmation", async ({ page }) => {
   // **Through the widget's own way out.** The embed shows the next four
   // departures (issue #805), and this course sits past that window.
-  await page.goto("/s/blue-mantis?embed=1", { waitUntil: "domcontentloaded" });
+  await page.goto("/s/blue-mantis/embed/calendar", { waitUntil: "domcontentloaded" });
   await openTripInEmbed(page, "Discover Scuba — Pool & Reef");
-  await expect(page).toHaveURL(/embed=1/);
+  await expect(page).toHaveURL(/\/s\/blue-mantis\/embed\/trip\//);
   await expect(page.getByRole("link", { name: "All trips", exact: true })).toHaveCount(0);
 
   // The booking form is controlled, so wait for hydration before typing.
@@ -99,12 +100,12 @@ test("booking through the embed keeps embed mode through the confirmation", asyn
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
 
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Embed/ })).toBeVisible();
-  // The redirect after a successful book-now-pay-later booking must have
-  // carried embed=1 forward, or the confirmation reloads into full chrome.
-  await expect(page).toHaveURL(/embed=1/);
+  // The redirect after a successful book-now-pay-later booking must land on
+  // the framed trip page, or the confirmation reloads into full chrome.
+  await expect(page).toHaveURL(/\/embed\/trip\/[^/?]+\?booking=/);
   await expect(page.getByRole("link", { name: "All trips", exact: true })).toHaveCount(0);
   const backLink = page.getByRole("link", { name: "Back to the schedule" });
-  await expect(backLink).toHaveAttribute("href", /embed=1/);
+  await expect(backLink).toHaveAttribute("href", "/s/blue-mantis/embed/calendar");
 
   // The one door out of the frame, followed for real. It points at a *route*
   // rather than a `/ready/<token>` minted while this page rendered: a
@@ -129,7 +130,7 @@ test("the embed widget carries a discreet Powered-by-DiveDay attribution link wi
   // and still zero JSON-LD (docs ADR 20260726-schedule-embed / the embed
   // canonicalizes to the standalone page, see reviews.spec.ts's parallel
   // assertion on the base case).
-  await page.goto("/s/blue-mantis?embed=1");
+  await page.goto("/s/blue-mantis/embed/calendar");
   const attribution = page.getByRole("link", { name: "Bookings by DiveDay" });
   await expect(attribution).toBeVisible();
   const href = await attribution.getAttribute("href");
@@ -198,7 +199,7 @@ test.describe("settings/embed, as owner", () => {
       .click();
     const buttonCode = await snippet.inputValue();
     expect(buttonCode).toContain("/s/blue-mantis");
-    expect(buttonCode).not.toContain("embed=1");
+    expect(buttonCode).not.toContain("/embed/");
     expect(buttonCode).toContain("Book a dive");
 
     await expect(page.getByRole("link", { name: "your public schedule" })).toHaveAttribute(

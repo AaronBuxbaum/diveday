@@ -30,9 +30,9 @@ describe("the embed grammar", () => {
     ]);
   });
 
-  it("frames the calendar as the schedule's compact mode and a widget by its own path", () => {
+  it("frames the calendar and every widget by a path under embed/", () => {
     expect(embedFrameUrl(ORIGIN, "blue-mantis", "calendar")).toBe(
-      "https://diveday.example/s/blue-mantis?embed=1",
+      "https://diveday.example/s/blue-mantis/embed/calendar",
     );
     expect(embedFrameUrl(ORIGIN, "blue-mantis", "grid")).toBe(
       "https://diveday.example/s/blue-mantis/embed/grid",

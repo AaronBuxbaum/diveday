@@ -231,7 +231,14 @@ describe("ops alerts on the queue (task 157)", () => {
     await resolveMediaDeletion(db, attempt.id, { status: "failed", error: "network error" });
     const t = staffTranslator("en-US");
 
-    const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const withoutFlag = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(
       withoutFlag.actions.find((a) => a.id === `media-deletion:${attempt.id}`),
     ).toBeUndefined();
@@ -322,7 +329,14 @@ describe("ops alerts on the queue (task 157)", () => {
     expect(row?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
 
     // And it is opt-in like every other ops alert.
-    const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, tomorrow));
+    const withoutFlag = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop, tomorrow),
+      undefined,
+      staffTranslator("en-US"),
+    );
     expect(owedRow(withoutFlag)).toBeUndefined();
   });
 
@@ -478,7 +492,14 @@ describe("reviews waiting on moderation (one row, and where it lands)", () => {
   it("emits no row at all when nothing is waiting", async () => {
     const { db, shop } = await shopWithReviewsWaiting([]);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
 
     expect(work.actions.some((action) => action.id === "reviews:pending")).toBe(false);
   });
@@ -486,7 +507,14 @@ describe("reviews waiting on moderation (one row, and where it lands)", () => {
   it("lands on the one waiting review's own anchor when it is the only one", async () => {
     const { db, shop, reviewIds } = await shopWithReviewsWaiting(["Reviewing Diver"]);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const rows = work.actions.filter((action) => action.id === "reviews:pending");
 
     // Still one row — the destination sharpens, the queue never grows.
@@ -504,7 +532,14 @@ describe("reviews waiting on moderation (one row, and where it lands)", () => {
   it("keeps the bare index once there is no single review to mean", async () => {
     const { db, shop } = await shopWithReviewsWaiting(["First Diver", "Second Diver"]);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     const rows = work.actions.filter((action) => action.id === "reviews:pending");
 
     expect(rows).toHaveLength(1);
@@ -528,7 +563,14 @@ describe("unanswered messages", () => {
 
   async function unansweredRow() {
     const { db, shop } = ctx;
-    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop),
+      undefined,
+      staffTranslator("en-US"),
+    );
     return work.actions.filter((action) => action.id === "inbox:unanswered");
   }
 
