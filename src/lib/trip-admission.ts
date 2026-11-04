@@ -438,7 +438,8 @@ function decodeBlocker(item: string): ReadinessBlocker | null {
   if (values.length !== shape.params.length) return null;
   const params: NonNullable<ReadinessBlocker["params"]> = {};
   for (const [index, name] of shape.params.entries()) {
-    const value = values[index] ?? "";
+    // `values` is exactly `shape.params` long: checked above.
+    const value = values[index] as string;
     if (name === "specialty") {
       if (!Object.hasOwn(SPECIALTY_CODES, value)) return null;
       params.specialty = value as DiveSpecialty;
