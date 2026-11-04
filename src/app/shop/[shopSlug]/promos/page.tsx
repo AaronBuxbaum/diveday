@@ -374,7 +374,7 @@ export default async function PromosPage({
             ...(undoStartsAt ? { startsAt: undoStartsAt } : {}),
             ...(undoExpiresAt ? { expiresAt: undoExpiresAt } : {}),
           }}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
+          pendingLabel={t("words.busy.undoing")}
           undoLabel={t("shared.undoToast.undo")}
           dismissLabel={t("shared.undoToast.dismiss")}
         />

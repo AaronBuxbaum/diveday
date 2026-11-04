@@ -37,7 +37,6 @@
     "deletedTitle": "Eliminadas",
     "deletedOn": "Eliminada el {date}",
     "restore": "Restaurar",
-    "restoring": "Restaurando…",
     "restoreOrder": "Restaurar {name}"
   },
   "empty": {
@@ -58,8 +57,7 @@
     "addPieceHeading": "Agregar una pieza",
     "addPiece": "Agregar al registro",
     "jobHeading": "El trabajo",
-    "submit": "Abrir la orden de trabajo",
-    "pending": "Abriendo…"
+    "submit": "Abrir la orden de trabajo"
   },
   "form": {
     "kind": "Tipo",
@@ -101,7 +99,6 @@
     "deletedBadge": "Eliminada",
     "delete": "Eliminar la orden de trabajo",
     "restore": "Restaurar",
-    "restoring": "Restaurando…",
     "claimTag": "Imprimir etiqueta de retiro",
     "jobHeading": "El trabajo",
     "inspectionDue": "Inspección visual el {date}",

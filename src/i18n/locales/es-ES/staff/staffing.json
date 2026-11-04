@@ -18,7 +18,6 @@
     "notePlaceholder": "Algo que el centro deba saber",
     "person": "Quién",
     "remove": "Quitar",
-    "removing": "Quitando…",
     "save": "Guardar",
     "to": "Hasta"
   },
@@ -126,7 +125,6 @@
   },
   "working": {
     "remove": "Quitar",
-    "removing": "Quitando…",
     "rosterEmptyHeading": "Todavía no hay tripulación registrada",
     "rosterEmptyManagerBody": "Invita a los instructores y divemasters que llevan tus barcos y luego asígnales turnos aquí.",
     "rosterEmptyBody": "Un propietario o gerente agrega tripulación desde los ajustes de Equipo. Pídele a alguno que lo ponga en marcha.",

@@ -18,7 +18,6 @@
     "notePlaceholder": "Anything the shop should know",
     "person": "Who",
     "remove": "Remove",
-    "removing": "Removing…",
     "save": "Save",
     "to": "To"
   },
@@ -126,7 +125,6 @@
   },
   "working": {
     "remove": "Remove",
-    "removing": "Removing…",
     "rosterEmptyHeading": "No crew on the books yet",
     "rosterEmptyManagerBody": "Invite the instructors and divemasters who run your boats, then give them shifts here.",
     "rosterEmptyBody": "An owner or manager adds crew from Team settings. Ask one of them to get you started.",

@@ -358,7 +358,7 @@ export function ShopGroup({
               currentLabel: t("settings.main.address.currentLabel"),
               noneSet: t("settings.main.address.noneSet"),
               removeLabel: t("settings.main.address.remove"),
-              removing: t("settings.main.address.removing"),
+              removing: t("words.busy.removing"),
             }}
           />
         </SettingsRow>

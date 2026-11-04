@@ -263,7 +263,7 @@ dock check-in scene (H-20260802-may-public-pages-say).
   features
 - Retain accurate migration and pricing qualifications
 
-**Source:** src/app/page.tsx; src/app/product/; marketing components and bundles
+**Source:** src/app/page.tsx; src/app/(marketing)/product/; marketing components and bundles
 
 **Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
 state was queued). Historical or partial references below remain context and are not automatic
@@ -316,7 +316,7 @@ legible product scene close to the promise. Keep detailed supporting proof below
 
 **Preserve/review:** Do not change CTA strategy to unapproved self-service signup.
 
-**Source:** src/app/page.tsx; src/app/product/
+**Source:** src/app/page.tsx; src/app/(marketing)/product/
 
 **Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
 state was queued). Historical or partial references below remain context and are not automatic
@@ -407,7 +407,7 @@ the motivation.
 **Preserve/review:** Editorial choice for Aaron; do not rewrite personal history or imply the
 software guarantees safety.
 
-**Source:** src/app/about/page.tsx and copy bundle
+**Source:** src/app/(marketing)/about/page.tsx and copy bundle
 
 **GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
 closed records; related items are context only.
@@ -445,7 +445,7 @@ behind and how to start; retain the specific guides and honest migration limitat
 - Headline and guide choices visible together on phone
 - No promise that unsupported records migrate
 
-**Source:** src/app/switching/page.tsx and marketing bundle
+**Source:** src/app/(marketing)/switching/page.tsx and marketing bundle
 
 **Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
 state was queued). Historical or partial references below remain context and are not automatic
@@ -489,7 +489,7 @@ concrete safety/operational promises in supporting text.
 
 **Preserve/review:** Never imply checkout verification equals boarding clearance.
 
-**Source:** src/app/product/[feature]/ and feature copy
+**Source:** src/app/(marketing)/product/[feature]/ and feature copy
 
 **Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
 state was queued). Historical or partial references below remain context and are not automatic

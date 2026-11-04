@@ -96,7 +96,6 @@
     "title": "Deleted",
     "on": "Deleted {date}",
     "restore": "Restore",
-    "restoring": "Restoring…",
     "restoreUnit": "Restore {label}"
   },
   "addUnit": {
@@ -162,7 +161,6 @@
     "help": "One row per unit, service event, or historical rental. Units match by tag first, then serial number; assignments match an existing diver by email or exact name, stay display-only, and never affect current availability.",
     "downloadTemplate": "Download gear CSV template",
     "submit": "Import gear history",
-    "pending": "Importing…",
     "chooseFile": "Choose CSV file",
     "chooseDifferentFile": "Choose a different file"
   },

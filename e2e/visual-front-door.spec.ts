@@ -630,7 +630,7 @@ for (const scheme of ["light", "dark"] as const) {
       // The "Switching from EVE" migration guide: the marketing face of the
       // portability wedge — export click-path, the shared scope table, and the
       // importer, on the market's most motivated switching pool. Represents the
-      // one shared composition (`src/app/switching/_components/guide.tsx`) that
+      // one shared composition (`src/app/(marketing)/switching/_components/guide.tsx`) that
       // every guide, incumbent or not, renders as a single numbered move rail.
       test(`the EVE switching guide renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching/eve");

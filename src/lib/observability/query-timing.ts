@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { cache } from "react";
 import { log } from "@/lib/log";
+import { runtimeMode } from "@/lib/runtime-mode";
 
 /**
  * Count statements through Drizzle's logger and time them at the driver.
@@ -132,7 +133,7 @@ export async function withQueryStats<T>(
  * contains only a fixed route label and numeric timings/counts.
  */
 export async function withE2EApiTiming<T>(route: string, work: () => Promise<T>): Promise<T> {
-  if (process.env.DIVEDAY_E2E !== "1") return work();
+  if (!runtimeMode().e2eHarness) return work();
 
   const stats = freshStats();
   stats.inFlightStatements = new Map();

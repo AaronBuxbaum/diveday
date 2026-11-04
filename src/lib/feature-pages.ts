@@ -71,7 +71,7 @@ export type FeaturePhase = (typeof FEATURE_PHASES)[number];
 
 /**
  * The screen a page draws, as a code; the page maps the code to its mockup
- * (`src/app/product/_components/FeatureScreen.tsx`). Each is a hand-drawn,
+ * (`src/app/(marketing)/product/_components/FeatureScreen.tsx`). Each is a hand-drawn,
  * token-only picture of the real screen, element for element, never a
  * screenshot (docs/product/marketing.md, "Visuals").
  */

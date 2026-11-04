@@ -395,7 +395,7 @@ export function BackupsSection({
           >
             <form action={disconnectBackupAction}>
               <SubmitButton
-                pendingLabel={t("backup.disconnect.submitting")}
+                pendingLabel={t("words.busy.removing")}
                 className={buttonClass({ variant: "danger" })}
               >
                 {t("backup.disconnect.submit")}

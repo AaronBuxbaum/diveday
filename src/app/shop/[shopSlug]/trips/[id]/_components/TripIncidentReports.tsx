@@ -47,7 +47,7 @@ export async function TripIncidentReports({
         mayStart ? (
           <form action={startIncidentReportAction.bind(null, shopSlug, tripId)}>
             <SubmitButton
-              pendingLabel={t("incidents.trip.starting")}
+              pendingLabel={t("words.busy.opening")}
               className={buttonClass({ variant: "secondary" })}
             >
               {t("incidents.trip.start")}

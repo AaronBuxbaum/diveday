@@ -781,7 +781,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
 
   // Every band's heading is a statement the band can be read against, never a
   // question: the spoken register's question headings are retired by value in
-  // src/app/about/copy.test.ts, and the rendered page is held to the same
+  // src/app/(marketing)/about/copy.test.ts, and the rendered page is held to the same
   // here. Asserted as an order too: who, what it is built around, how a shop
   // gets set up, which is the order a reader asks in.
   const headings = await page.getByRole("heading", { level: 2 }).allInnerTexts();

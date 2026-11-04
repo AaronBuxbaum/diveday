@@ -26,7 +26,7 @@ export function staffingWeekWords(t: StaffTranslator, week?: StaffWeek) {
     assignAria: t.raw("staffing.week.assignAria"),
     crewing: t("staffing.week.crewing"),
     remove: t("staffing.working.remove"),
-    removing: t("staffing.working.removing"),
+    removing: t("words.busy.removing"),
     shiftAria: t.raw("staffing.week.shiftAria"),
     empty: t("staffing.week.empty"),
     away: t("staffing.week.away"),
