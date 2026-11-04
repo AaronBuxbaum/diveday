@@ -1,8 +1,8 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, max, sum } from "drizzle-orm";
 import { tipCheckout } from "./checkout-purpose";
 import type { AppDb, AppTransaction } from "./client";
 import type { BookingCheckout } from "./schema";
-import { bookingCheckouts, stripeRefundFailures } from "./schema";
+import { bookingCheckouts, paymentDisputes, stripeRefundFailures } from "./schema";
 
 /**
  * **A tip's money going back** (issue #3736). A tip is a `booking_checkouts`
@@ -17,6 +17,20 @@ import { bookingCheckouts, stripeRefundFailures } from "./schema";
  *
  * Every transition takes the tip's row lock first, so two deliveries of the
  * same event, or a refund beside a dispute, are applied one after the other.
+ *
+ * **Delivery order does not matter** (issue #3835). Stripe promises none, so
+ * each path is written to give the same answer in any order:
+ *
+ * - `refunded_cents` is what came back by a refund (Stripe's running total) plus
+ *   what the bank took by a lost dispute, capped at the tip. A refund event
+ *   recomputes it from its own total and the lost disputes on file, and a lost
+ *   dispute adds to it, so a dispute recorded before a delayed refund event
+ *   leaves both counted.
+ * - A refund event no newer than the tip's newest refund failure is stale: its
+ *   running total was taken before the failure took part of it back, so
+ *   applying it would put the failed refund back. Every failure is written
+ *   down, even one that arrives before the refund it undoes, so a refund event
+ *   delivered after its own failure meets the failure here.
  */
 
 export type TipRefundOutcome =
@@ -46,6 +60,7 @@ export async function recordTipRefund(
   db: AppDb,
   tip: BookingCheckout,
   amountRefundedCents: number,
+  occurredAt: Date,
 ): Promise<TipRefundOutcome> {
   // The completion has not been handled yet: the refund has nothing to land on.
   if (tip.status === "pending") return { status: "deferred" };
@@ -54,7 +69,23 @@ export async function recordTipRefund(
   return db.transaction(async (tx): Promise<TipRefundOutcome> => {
     const current = await lockedTip(tx, tip.id);
     if (!current || current.status !== "completed") return { status: "not_found" };
-    const reversedTotal = Math.min(amountRefundedCents, capturedOf(current));
+    // A running total older than a failure the tip has since had still counts
+    // the refund that failed.
+    const [failures] = await tx
+      .select({ newest: max(stripeRefundFailures.failedAt) })
+      .from(stripeRefundFailures)
+      .where(eq(stripeRefundFailures.checkoutId, current.id));
+    if (failures?.newest && occurredAt <= failures.newest) return { status: "already_recorded" };
+    const [disputes] = await tx
+      .select({ lost: sum(paymentDisputes.amountCents) })
+      .from(paymentDisputes)
+      .where(
+        and(eq(paymentDisputes.checkoutId, current.id), isNotNull(paymentDisputes.reversedAt)),
+      );
+    const reversedTotal = Math.min(
+      amountRefundedCents + Number(disputes?.lost ?? 0),
+      capturedOf(current),
+    );
     if (reversedTotal <= current.refundedCents) return { status: "already_recorded" };
     await tx
       .update(bookingCheckouts)
@@ -121,11 +152,14 @@ export async function reverseTipRefundFailure(
       .limit(1);
     if (seen) return { status: "already_recorded" as const };
     const reversed = Math.min(input.refund.amountCents, current.refundedCents);
-    if (reversed <= 0) return { status: "not_recorded" as const };
-    await tx
-      .update(bookingCheckouts)
-      .set({ refundedCents: current.refundedCents - reversed })
-      .where(and(eq(bookingCheckouts.id, current.id), tipCheckout()));
+    if (reversed > 0) {
+      await tx
+        .update(bookingCheckouts)
+        .set({ refundedCents: current.refundedCents - reversed })
+        .where(and(eq(bookingCheckouts.id, current.id), tipCheckout()));
+    }
+    // Written even when nothing was counted yet (the failure came first): the
+    // refund's own event, delivered later, is then recognised as older.
     await tx.insert(stripeRefundFailures).values({
       shopId: current.shopId,
       stripeAccountId: input.stripeAccountId,
@@ -139,6 +173,6 @@ export async function reverseTipRefundFailure(
       owedUntilRefundedCents: current.refundedCents,
       failedAt: input.occurredAt,
     });
-    return { status: "reversed" as const };
+    return { status: reversed > 0 ? ("reversed" as const) : ("not_recorded" as const) };
   });
 }

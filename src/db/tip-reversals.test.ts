@@ -239,4 +239,82 @@ describe("a disputed tip", () => {
     await recordStripeDispute(db, dispute("both", "lost", "2026-10-20T00:00:00Z", 3_000));
     expect((await refundedOf(db, "both"))?.refundedCents).toBe(3_000);
   });
+
+  // Issue #3835: Stripe promises no delivery order.
+  it("counts a lost dispute and a refund delivered after it, so neither is skipped", async () => {
+    const db = await unseededTestDb();
+    const s = await setup(db);
+    await tip(db, s, 10_000, "dispute-first");
+
+    await recordStripeDispute(db, dispute("dispute-first", "lost", "2026-10-20T00:00:00Z", 7_000));
+    expect((await refundedOf(db, "dispute-first"))?.refundedCents).toBe(7_000);
+    // The refund of 3,000 was made before the dispute closed; its event is late.
+    expect(await recordStripeChargeRefund(db, refund("dispute-first", 3_000))).toEqual({
+      status: "tip_refunded",
+    });
+    expect((await refundedOf(db, "dispute-first"))?.refundedCents).toBe(10_000);
+    expect(await tipsByDeparture(db, s.shop.id, WINDOW)).toEqual([]);
+    // The same event again changes nothing.
+    expect(await recordStripeChargeRefund(db, refund("dispute-first", 3_000))).toEqual({
+      status: "already_recorded",
+    });
+  });
+});
+
+describe("a refund that failed", () => {
+  const failureOf = (name: string, at: string) => ({
+    stripeAccountId: ACCOUNT,
+    paymentIntentId: `pi_${name}`,
+    occurredAt: new Date(at),
+    refund: {
+      id: `re_${name}`,
+      amountCents: 4_000,
+      currency: "usd",
+      status: "failed",
+      failureReason: "expired_or_canceled_card",
+    },
+  });
+
+  it("is not put back by its own refund event delivered after the failure", async () => {
+    const db = await unseededTestDb();
+    const s = await setup(db);
+    await tip(db, s, 4_000, "late-refund");
+    await recordStripeChargeRefund(db, refund("late-refund", 4_000));
+    expect(
+      await recordStripeRefundFailure(db, failureOf("late-refund", "2026-10-10T00:00:00Z")),
+    ).toEqual({
+      status: "reversed",
+    });
+
+    // The refund's event again, stamped before the failure: its total counts the failed refund.
+    expect(await recordStripeChargeRefund(db, refund("late-refund", 4_000))).toEqual({
+      status: "already_recorded",
+    });
+    expect((await refundedOf(db, "late-refund"))?.refundedCents).toBe(0);
+    // A refund made after the failure is a new one and counts.
+    expect(
+      await recordStripeChargeRefund(db, {
+        ...refund("late-refund", 4_000),
+        occurredAt: new Date("2026-10-11T00:00:00Z"),
+      }),
+    ).toEqual({ status: "tip_refunded" });
+  });
+
+  it("is still honored when its failure arrives before the refund's event", async () => {
+    const db = await unseededTestDb();
+    const s = await setup(db);
+    await tip(db, s, 4_000, "failure-first");
+
+    expect(
+      await recordStripeRefundFailure(db, failureOf("failure-first", "2026-10-10T00:00:00Z")),
+    ).toEqual({
+      status: "not_recorded",
+    });
+    // The refund event, stamped before the failure, would count a refund that no longer stands.
+    expect(await recordStripeChargeRefund(db, refund("failure-first", 4_000))).toEqual({
+      status: "already_recorded",
+    });
+    expect((await refundedOf(db, "failure-first"))?.refundedCents).toBe(0);
+    expect((await tipsByDeparture(db, s.shop.id, WINDOW))[0]?.cents).toBe(4_000);
+  });
 });
