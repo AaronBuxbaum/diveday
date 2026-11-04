@@ -52,15 +52,13 @@ test.describe("embed settings on paper", () => {
 
   test("keeps the embed code without the interactive preview frame", async ({ page }) => {
     await page.route(
-      (url) => url.hostname === "e2e.diveday.example" && url.searchParams.get("embed") === "1",
+      (url) => url.pathname === "/s/blue-mantis/embed/calendar",
       (route) => route.fulfill({ contentType: "text/html", body: "<p>Preview</p>" }),
     );
     await page.goto("/shop/blue-mantis/settings/embed");
     const preview = page.locator("iframe");
-    await expect(preview).toBeAttached();
-    // The controlled test origin has no hosted embed; complete its load so
-    // the visible-preview state can be checked without an external service.
-    await preview.dispatchEvent("load");
+    // The same-origin frame uses the real load event; stub its page so the
+    // visible-preview state is checked without an external service.
     await expect(preview).toBeVisible();
     const language = page.getByLabel(staffTranslator("en-US")("settings.embed.language"));
     await expect(language).toBeVisible();
