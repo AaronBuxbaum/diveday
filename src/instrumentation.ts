@@ -69,12 +69,10 @@ export async function register() {
  * SDK's runtime in the two largest server chunks of every route.
  */
 async function initSentry(dsn: string) {
-  const [Sentry, { propagation }, { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION }] =
-    await Promise.all([
-      import("@sentry/nextjs"),
-      import("@opentelemetry/api"),
-      import("@/app/observability"),
-    ]);
+  const [Sentry, { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION }] = await Promise.all([
+    import("@sentry/nextjs"),
+    import("@/app/observability"),
+  ]);
   Sentry.init({
     dsn,
     environment: process.env.NODE_ENV,
@@ -99,14 +97,6 @@ async function initSentry(dsn: string) {
       Sentry.nodeContextIntegration(),
     ],
   });
-  // `init` always registers Sentry's trace propagator, which has nothing to
-  // carry here (`tracesSampleRate` is 0, errors only) and, beside the context
-  // Next.js keeps for its own fetches, logged "Injecting trace data of a
-  // different context than the active one is not supported" on the crons'
-  // outbound calls (shop-tick, 2026-11-04). The SDK has no switch for it in 11.x;
-  // removing the global propagator is the supported way to stop OpenTelemetry
-  // injecting at all (ADR 20260727-sentry-error-monitoring).
-  propagation.disable();
 }
 
 /**
