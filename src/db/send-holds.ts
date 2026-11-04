@@ -18,8 +18,10 @@ export const SUPPRESSED_RECIPIENT_DELIVERY = {
 
 /** Codes for a send held on purpose: nothing was meant to leave, so no one chases it. */
 export const HELD_SEND_ERROR_CODES: readonly string[] = [
-  REHEARSAL_HELD_DELIVERY.errorCode,
-  SUPPRESSED_RECIPIENT_DELIVERY.errorCode,
+  // Literals, not the constants: `rehearsals.ts` sits in an import cycle with
+  // this file, and a constant read at load time can still be undefined.
+  "rehearsal_departure",
+  "recipient_suppressed",
   "demo_shop_held",
 ];
 
