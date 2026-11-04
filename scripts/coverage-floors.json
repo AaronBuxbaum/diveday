@@ -104,6 +104,7 @@
   "src/lib/assists/waiver-draft.ts": 100,
   "src/lib/authz.ts": 100,
   "src/lib/booking-gates.ts": 86.66,
+  "src/lib/card-undo.ts": 100,
   "src/lib/cert-check-extension.ts": 87.69,
   "src/lib/certification-cards.ts": 100,
   "src/lib/certification-levels.ts": 100,
