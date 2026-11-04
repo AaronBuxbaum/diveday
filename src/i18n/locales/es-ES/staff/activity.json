@@ -21,6 +21,7 @@
     "identity_repointed_off": "{actor} pasó una reserva retenida de la ficha de {diver} a otra con el mismo nombre",
     "identity_repointed_onto": "{actor} pasó a la ficha de {diver} una reserva retenida de otra con el mismo nombre, aún sin confirmar",
     "diver_merged": "{actor} unió la ficha de {merged} a la de {diver}",
+    "diver_merge_import_set_aside": "Al unir la ficha de {merged} se apartó una exención importada, así que sigue rigiendo la retención médica de {diver}",
     "crew_assigned": "{actor} asignó a {crew} a la tripulación",
     "crew_removed": "{actor} quitó a {crew} de la tripulación",
     "blowout_called": "{actor} canceló la salida por el clima",

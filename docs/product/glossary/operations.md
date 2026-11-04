@@ -1614,7 +1614,11 @@
   it on every seat the diver has. `isUnresolvedMedicalHold` asks of a seat's own live record;
   `isUnclearedReferral` asks of the diver's evidence, superseded or not. The one record that does
   not count is one given on a seat that has since passed to somebody else (a split or a claim):
-  those answers were never the record's person's, and the seat's new holder signs their own. A
+  those answers were never the record's person's, and the seat's new holder signs their own.
+  **A merge keeps the hold governing**: an imported release newer than an uncleared referral, where
+  the merge moved either of the two, is set aside (`setAsideImportedOverHold`, issue #3815) and
+  the diver's trail says so (`diver_merge_import_set_aside`); a release the diver signed themselves
+  is never set aside. A
   cleared record keeps its status, so the signed records' **Medical holds** view lists every
   referral, and each row says where it stands: Waiting on physician, Cleared by physician, or Not
   cleared. A diver a captain boarded over the hold keeps it named on their manifest row after a

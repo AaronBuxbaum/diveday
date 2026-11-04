@@ -31,6 +31,7 @@ describe("activity lines", () => {
     hasFromBoat: "yes",
     hasToBoat: "yes",
     snapshot: "refreshed",
+    merged: "Priya S. Sharma",
   };
 
   // Records review 2: the paper line names the field and both values.

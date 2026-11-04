@@ -21,6 +21,7 @@
     "identity_repointed_off": "{actor} moved a held booking off {diver}’s record to another diver with the same name",
     "identity_repointed_onto": "{actor} moved a held booking onto {diver}’s record from another diver with the same name, still to confirm",
     "diver_merged": "{actor} merged {merged}’s record into {diver}’s",
+    "diver_merge_import_set_aside": "Merging {merged}’s record set aside an imported waiver, so {diver}’s medical hold still governs",
     "crew_assigned": "{actor} assigned {crew} to crew",
     "crew_removed": "{actor} removed {crew} from crew",
     "blowout_called": "{actor} called a weather blow-out",
