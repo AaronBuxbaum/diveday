@@ -440,11 +440,13 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
    */
   describe("a hand entry for a date request that has no email", () => {
     const requestId = "66666666-6666-4666-8666-666666666666";
-    const bandForm = (extra: Record<string, string> = {}) => {
+    const bandForm = (extra: Record<string, string | undefined> = {}) => {
       const data = new FormData();
       data.set("tripId", TRIP_ID);
       data.set("fullName", "Dana Walker");
-      for (const [key, value] of Object.entries(extra)) data.set(key, value);
+      for (const [key, value] of Object.entries(extra)) {
+        if (value !== undefined) data.set(key, value);
+      }
       return data;
     };
 
@@ -488,7 +490,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     });
 
     it("never reads a request when the form names none, or a junk one", async () => {
-      for (const extra of [{}, { request: "not-a-uuid" }]) {
+      for (const extra of [{}, { request: "not-a-uuid" }] as Record<string, string>[]) {
         await expect(
           seatNewDiverAction("departure", "blue-mantis", bandForm(extra)),
         ).rejects.toThrow(`REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-seat-invalid`);
