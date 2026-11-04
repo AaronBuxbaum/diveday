@@ -311,6 +311,11 @@ export type ExportBundleInput = {
   tables: ExportTable[];
   /** Every DiveDay-stored image or import-document URL referenced in `tables`, deduped. */
   photoUrls: string[];
+  /**
+   * Every diver whose release carries medical answers that `waiver_records.csv`
+   * hands out, so the download can put a read on each one's trail (issue #2618).
+   */
+  medicalAnswerPersonIds: string[];
 };
 
 /** {@link ExportBundleInput}'s per-diver twin — see `buildDiverExportBundle`. */

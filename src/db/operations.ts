@@ -213,6 +213,47 @@ export async function recordDiverActivity(
 }
 
 /**
+ * **The bulk export read these divers' medical answers** (issue #2618): one
+ * `medical_answers_read` line on each trail, the line "Show answers" writes
+ * for one diver, in one insert. Awaited before the ZIP is served and not
+ * swallowed, so a shop that cannot record the read hands nothing out. Only a
+ * live person of this shop gets a line; the actor must be a live staffer.
+ */
+export async function recordMedicalAnswersExported(
+  db: DbExecutor,
+  input: { shopId: string; actorPersonId: string; personIds: readonly string[] },
+): Promise<void> {
+  if (input.personIds.length === 0) return;
+  const [actor] = await db
+    .select({ name: people.fullName })
+    .from(people)
+    .where(
+      and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()),
+    )
+    .limit(1);
+  if (!actor) throw new Error("The export's reader is not a staffer of this shop.");
+  const divers = await db
+    .select({ id: people.id, name: people.fullName })
+    .from(people)
+    // diveday:allow-deleted-people: a removed diver's answers can still be in the file, and the read belongs on their record.
+    .where(and(eq(people.shopId, input.shopId), inArray(people.id, [...input.personIds])));
+  if (divers.length === 0) return;
+  const occurredAt = nowDate();
+  await db.insert(activityEvents).values(
+    divers.map((diver) => ({
+      shopId: input.shopId,
+      tripId: null,
+      bookingId: null,
+      actorPersonId: input.actorPersonId,
+      subjectPersonId: diver.id,
+      code: "medical_answers_read" as const,
+      params: { actor: actor.name, diver: diver.name },
+      occurredAt,
+    })),
+  );
+}
+
+/**
  * A booking note deleted, softly (ADR 20260820-every-delete-is-soft; issue
  * #3701): the row stays, so the toast's Undo names it by id
  * (`restoreInternalNote`) and the note's words never ride in a URL.
