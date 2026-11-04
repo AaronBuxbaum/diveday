@@ -3,11 +3,10 @@ import { z } from "zod";
 import { log } from "@/lib/log";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { setupReceiptOutcome } from "@/lib/setup-request-receipts";
-import { deliveryAddressFor } from "@/lib/simulator-email";
 import { awsProviderErrorInfo } from "./aws-error-info";
 import type { Notification } from "./kinds";
 import type { NotificationProvider } from "./provider";
-import { reservedTestRecipientDelivery } from "./provider";
+import { DEMO_SHOP_HELD_DELIVERY, reservedTestRecipientDelivery } from "./provider";
 import { messageFor } from "./render";
 import { SES_KIND_TAG, SES_PURPOSE_TAG, SES_SENDER_TAG, SES_SHOP_TAG } from "./ses-tags";
 import { fromAddressFor } from "./shop-voice";
@@ -197,11 +196,11 @@ export function sesNotificationProvider(
   return {
     async send(notification, providerOptions) {
       const receipt = notification.kind === "setup_request_receipt";
-      // On a demo shop, a seeded person's address reads like a person's and is
-      // delivered to the SES mailbox simulator (`deliveryAddressFor`); every
-      // other address, and every address on a real shop, as written.
-      const demoShop = { demoShop: !receipt && notification.sender?.demoShop === true };
-      const to = deliveryAddressFor(notification.to, demoShop);
+      // **A demo shop sends nothing** (it has no divers; the visitors who mint
+      // one type addresses nobody vouched for). Held before SES is asked, so a
+      // demo's crons spend no quota and can bounce nothing.
+      if (!receipt && notification.sender?.demoShop === true) return DEMO_SHOP_HELD_DELIVERY;
+      const to = notification.to;
       const invalidRecipient = reservedTestRecipientDelivery(to);
       if (invalidRecipient) return invalidRecipient;
       const message = messageFor(notification);
@@ -221,7 +220,7 @@ export function sesNotificationProvider(
             ...(receipt
               ? { ReplyToAddresses: [SUPPORT_EMAIL] }
               : notification.sender?.replyTo && {
-                  ReplyToAddresses: [deliveryAddressFor(notification.sender.replyTo, demoShop)],
+                  ReplyToAddresses: [notification.sender.replyTo],
                 }),
             EmailTags: emailTagsOf(notification),
             Content: {
