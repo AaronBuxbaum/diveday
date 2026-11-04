@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPassBooking } from "@/db/print-pass";
 import { requestLocale } from "@/i18n/request";
@@ -12,20 +11,12 @@ import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { PAPER_PASS_PAPER, passCodePayload, storefrontAddress } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
-import { uuidParam } from "@/lib/uuid";
-import { PaperSheet, SheetMark } from "../../_components/PaperSheet";
-import { SheetCode } from "../../_components/SheetCode";
-import { SheetDocument } from "../../_components/SheetDocument";
-
-export const instant = true;
-
-export const metadata: Metadata = {
-  title: "Paper pass — DiveDay",
-  robots: { index: false, follow: false },
-};
+import { PaperSheet, SheetMark } from "../../../print/_components/PaperSheet";
+import { SheetCode } from "../../../print/_components/SheetCode";
+import { SheetDocument } from "../../../print/_components/SheetDocument";
 
 /**
- * **The paper pass** (A6, printed at the counter from one booking) — ADR
+ * **The paper pass** (A6, printed at the counter from one booking, `?pass=<bookingId>` on its departure) — ADR
  * 20260908-one-hand, decision 6, lever X.
  *
  * The pass (lever M) for a diver without a phone: where to be (the meeting
@@ -42,20 +33,19 @@ export const metadata: Metadata = {
  * state, no medical answer, no money. This is a document that leaves the
  * building in a stranger's pocket.
  */
-export default async function PaperPassPage({
-  params,
+export async function PaperPassSheet({
+  shopSlug,
+  tripId,
+  bookingId,
 }: {
-  params: Promise<{ shopSlug: string; bookingId: string }>;
+  shopSlug: string;
+  tripId: string;
+  bookingId: string;
 }) {
-  const { shopSlug, bookingId: rawBookingId } = await params;
-  // Narrowed before the read: an unparseable literal raises in Postgres rather
-  // than missing, so without this a mistyped URL is a 500 where a 404 belongs.
-  const bookingId = uuidParam(rawBookingId);
-  if (!bookingId) notFound();
-
   const { db, shop } = await requireShopSurface(shopSlug);
   const booking = await getPassBooking(db, shop.id, bookingId);
-  if (!booking) notFound();
+  // A booking of another departure names nothing here, like one of another shop.
+  if (!booking || booking.tripId !== tripId) notFound();
 
   // **Two languages on one page** (fifth-loop ideas, item 49): the paper is
   // the diver's, so it speaks the language they read, or the shop's when they
@@ -84,7 +74,7 @@ export default async function PaperPassPage({
 
   return (
     <SheetDocument
-      backHref={shopPath(shopSlug, "trips", booking.tripId)}
+      backHref={shopPath(shopSlug, "trips", tripId)}
       paper={PAPER_PASS_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
       backLabel={readerT("trips.tabs.divers")}

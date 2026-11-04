@@ -1624,7 +1624,7 @@
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 307,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 313,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 347,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 346,
     "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,

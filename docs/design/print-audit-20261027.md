@@ -36,7 +36,7 @@ Staff review covered 73 route templates and inspected 125 pages from 67 unique P
 | `/shop/[shopSlug]/orders/new` | Redirect or disabled state captured; active integration state not established |
 | `/shop/[shopSlug]/print` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/print/counter-card` | Seeded or disposable PDF reviewed before final changes |
-| `/shop/[shopSlug]/print/pass/[bookingId]` | Seeded or disposable PDF reviewed before final changes |
+| `/shop/[shopSlug]/trips/[id]?pass=<bookingId>` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/promos` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/promos/packages` | Redirect alias captured |
 | `/shop/[shopSlug]/reports` | Prior PDF reviewed |

@@ -98,3 +98,18 @@ export function tripCrewNotes({
   const overRatioWarning = overRatioWarningText(t, crewGap);
   return { ratingLapsedNote, languageGapNote, underTargetNote, overRatioWarning };
 }
+
+/** The departure's crew notes against its shop's own diver:divemaster target. */
+export function tripCrewNotesOf(
+  overview: TripOverview,
+  shop: { diversPerDivemaster: number },
+  locale: string,
+  t: StaffTranslator,
+) {
+  return tripCrewNotes({
+    crew: overview.crew,
+    diversPerDivemaster: shop.diversPerDivemaster,
+    locale,
+    t,
+  });
+}

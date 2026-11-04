@@ -80,7 +80,6 @@ export const STAFF_ROUTES = {
   "orders/[id]/print/dispute": {},
   print: {},
   "print/counter-card": { parent: SETTINGS },
-  "print/pass/[bookingId]": {},
   promos: {},
   reports: {},
   requests: {},
