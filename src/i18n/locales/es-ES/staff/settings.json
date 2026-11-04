@@ -824,6 +824,7 @@
       "trips": "Salidas",
       "trip_change_events": "Cambios en las salidas",
       "trip_stage_events": "Etapas de las salidas",
+      "deck_counts": "Recuentos en cubierta",
       "trip_series": "Salidas periódicas",
       "trip_series_crew": "Asignaciones periódicas de personal",
       "trip_series_skips": "Fechas omitidas",

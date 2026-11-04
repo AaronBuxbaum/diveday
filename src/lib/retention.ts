@@ -34,6 +34,12 @@
  * The requested-erasure sweep handles person references and matching
  * denormalized names (`src/db/anonymize.ts`; ADR 20260804-buddy-teams).
  *
+ * **`deck_counts` is deliberately unbounded.** The heads a captain counted on
+ * deck at each checkpoint sit beside the roll-call marks they were held
+ * against, and an incident review reads the two together; a window that took
+ * one and left the other would leave half the evidence (loop 5, row 1,
+ * decided 2026-11-02, issue #3648).
+ *
  * **`pre_departure_check_events` is deliberately unbounded.** It records who
  * confirmed the shop's safety checklist before departure, evidence an incident
  * review may need later (ADR 20260824-pre-departure-safety-check; dive-domain
@@ -130,6 +136,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "trip_stage_events",
   "buddy_team_events",
   "roll_call_events",
+  "deck_counts",
   "booking_arrival_events",
   "pre_departure_check_events",
   "trip_change_events",

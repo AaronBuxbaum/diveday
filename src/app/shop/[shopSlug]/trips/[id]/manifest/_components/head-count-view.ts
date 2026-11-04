@@ -4,6 +4,7 @@ import {
 } from "@/lib/boat-safety";
 import {
   blockedAtDock,
+  isTurnedAwayOffBoat,
   type RollCallCheckpoint,
   rollCallRowState,
   splitBuddyTeamIds,
@@ -67,5 +68,34 @@ export function headCountView({
           .length,
       manifest.trip.certifiedTotalPersons,
     ),
+  };
+}
+
+/**
+ * **What the deck count is held against** (loop 5, row 1;
+ * `src/lib/deck-count.ts`): the passengers this checkpoint expects aboard,
+ * how many carry an aboard mark, and who carries no mark at all.
+ *
+ * `expected` is the head count's own denominator, read off the rows rather
+ * than the summary so the names and the number come from one pass: every seat
+ * the boat counts (`isTurnedAwayOffBoat` aside), less whoever is settled
+ * ashore (a dock "not boarded", or one carried forward after a dive) and a
+ * seat the desk released that nobody at the boat has spoken for. A diver
+ * recorded not back aboard stays expected: that is the head the deck is
+ * missing.
+ */
+export function deckCountFacts(manifest: TripManifest, checkpoint: RollCallCheckpoint) {
+  const counted = manifest.divers.filter((diver) => !isTurnedAwayOffBoat(diver));
+  const expected = counted.filter((diver) => {
+    const state = rollCallRowState(checkpoint, diver.rollCall);
+    if (state.explicitNotBoarded || state.impliedNotBoarded) return false;
+    return !(diver.notHere && !diver.rollCall);
+  });
+  return {
+    expected: expected.length,
+    markedAboard: counted.filter((diver) => diver.rollCall?.state === "boarded").length,
+    unmarked: counted
+      .filter((diver) => !diver.rollCall && !diver.notHere)
+      .map((diver) => diver.fullName),
   };
 }

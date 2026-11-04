@@ -1232,6 +1232,13 @@ const rows = [
     why: "who said where the boat was",
   },
   {
+    table: "deck_counts",
+    column: "recorded_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who counted the heads on deck",
+  },
+  {
     table: "customer_gear_notices",
     column: "sent_by_person_id",
     kind: "actor",

@@ -411,6 +411,8 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const tripStageEventRows = await readScoped(tx, "tripStageEvents", scope);
 
+  const deckCountRows = await readScoped(tx, "deckCounts", scope);
+
   const scheduleDayRows = await tx
     .select()
     .from(tripScheduleDays)
@@ -661,6 +663,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     tripStartsAt,
     tripChangeEventRows,
     tripStageEventRows,
+    deckCountRows,
     scheduleDayRows,
     tripDiveRows,
     orderedRequirementRows,
@@ -1227,6 +1230,7 @@ export async function loadShopExportCounts(
     ),
     "trip_change_events.csv": await countShopScoped(db, "tripChangeEvents", shopId),
     "trip_stage_events.csv": await countShopScoped(db, "tripStageEvents", shopId),
+    "deck_counts.csv": await countShopScoped(db, "deckCounts", shopId),
     "trip_series.csv": await countShopScoped(db, "tripSeries", shopId),
     "trip_series_skips.csv": await countShopScoped(db, "tripSeriesSkips", shopId),
     "trip_series_crew.csv": await countShopScoped(db, "tripSeriesCrew", shopId),

@@ -803,6 +803,35 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["trip_stage_events.csv"],
   },
   {
+    file: "deck_counts.csv",
+    header: [
+      "id",
+      "trip_id",
+      "trip_title",
+      "trip_starts_at",
+      "checkpoint",
+      "counted",
+      "recorded_by_person_id",
+      "recorder_name",
+      "recorded_at",
+      "seq",
+    ],
+    rows: ({ personName, tripTitle, tripStartsAt, deckCountRows }) =>
+      deckCountRows.map((row) => [
+        row.id,
+        row.tripId,
+        tripTitle.get(row.tripId),
+        tripStartsAt.get(row.tripId),
+        row.checkpoint,
+        row.counted,
+        row.recordedByPersonId,
+        personName.get(row.recordedByPersonId),
+        row.recordedAt,
+        row.seq,
+      ]),
+    note: EXPORT_FILE_NOTES["deck_counts.csv"],
+  },
+  {
     file: "trip_series.csv",
     header: [
       "id",

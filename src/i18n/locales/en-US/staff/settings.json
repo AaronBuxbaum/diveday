@@ -824,6 +824,7 @@
       "trips": "Departures",
       "trip_change_events": "Departure changes",
       "trip_stage_events": "Departure stages",
+      "deck_counts": "Deck counts",
       "trip_series": "Repeating departures",
       "trip_series_crew": "Repeating crew assignments",
       "trip_series_skips": "Skipped occurrences",

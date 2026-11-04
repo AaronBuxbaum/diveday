@@ -233,6 +233,50 @@ export const rollCallEvents = pgTable(
 );
 
 /**
+ * **The deck count** (loop 5, row 1; `src/lib/deck-count.ts`): the heads the
+ * captain counted on deck at one roll-call checkpoint, typed as one number and
+ * held against the manifest on screen. Append-only, like `trip_stage_events`:
+ * a recount is a new row and the newest per (trip, checkpoint) stands, so a
+ * count is never edited and never deleted (nothing a user points at and asks
+ * to remove). It informs and never gates: no reader closes, opens or refuses
+ * anything on it.
+ *
+ * `checkpoint` is `departure` or `after_dive_N`, validated against the trip's
+ * planned dives by the writer (`recordDeckCount`), the rule roll call keeps.
+ */
+export const deckCounts = pgTable(
+  "deck_counts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    checkpoint: text("checkpoint").notNull(),
+    counted: integer("counted").notNull(),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
+    /** The final tiebreak when two counts share an instant, as on the roll call. Never serialised. */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    index("deck_counts_shop_trip_checkpoint_idx").on(
+      table.shopId,
+      table.tripId,
+      table.checkpoint,
+      table.recordedAt,
+      table.seq,
+    ),
+    index("deck_counts_recorded_by_person_id_idx").on(table.recordedByPersonId),
+    check("deck_counts_counted_range", sql`${table.counted} >= 0 and ${table.counted} <= 999`),
+  ],
+);
+
+/**
  * One line a shop wants confirmed before a boat leaves the dock — "Emergency
  * oxygen aboard", "Life jackets counted" — in the order the shop wants it read
  * (ADR 20260824-pre-departure-safety-check).
