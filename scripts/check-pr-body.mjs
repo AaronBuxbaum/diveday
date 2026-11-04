@@ -136,20 +136,25 @@ export const REVIEWS = [
 ];
 
 /**
- * Screens a safety reader works from, where a page captured empty proves nothing (issue #3650): the
- * departure log, the manifest, readiness, waiver and medical screens. A change to one names, under
- * "## Seen filled in", the filled state it was seen in, or why it has none. Tests, copy bundles and
- * the PWA manifest are not screens.
+ * Screens a safety reader works from, where a page captured empty proves nothing (issues #3650,
+ * #3686): a departure's page and roster, its arrivals desk, log, manifest, print and prep sheets,
+ * the diver record, roll call, check-in, readiness, waiver, medical and nitrox screens, and the
+ * shared components that draw them. A change to one names, under "## Seen filled in", the filled
+ * state it was seen in, or why it has none. Tests, copy bundles and the PWA manifest are not
+ * screens.
  */
 const SEEN_FILLED_SCREENS = [
-  /^src\/app\/.*\/trips\/\[id\]\/(log|manifest)\//,
-  /^src\/app\/.*(readiness|waiver|medical)/,
+  /^src\/app\/.*\/trips\/\[id\]\/(page\.tsx$|_components\/|_arrivals\/|log\/|manifest\/|print\/|prep\/)/,
+  /^src\/app\/.*\/divers\/\[personid\]\//,
+  /^src\/(app|components)\/.*(readiness|waiver|medical|manifest|roll-?call|check-?in|arrival|nitrox)/,
 ];
 
 /** The changed screens that need a "Seen filled in" answer. */
 export function seenFilledScreens(files) {
   return files.filter((file) => {
-    if (!file.startsWith("src/app/") || NOT_SURFACES.some((re) => re.test(file))) return false;
+    if (!/^src\/(app|components)\//.test(file) || NOT_SURFACES.some((re) => re.test(file))) {
+      return false;
+    }
     if (/\.(test|spec)\.tsx?$/.test(file) || /(^|\/)(e2e|__snapshots__)\//.test(file)) return false;
     if (!/\.tsx$/.test(file) || /-copy\.tsx$/.test(file)) return false;
     const lower = file.toLowerCase();
@@ -168,11 +173,28 @@ export function seenFilledSection(body) {
   return match ? match[1] : null;
 }
 
-/** An answer says something: not empty, not "n/a", "none", "yes" or "no" alone. */
-export function seenFilledAnswered(section) {
+/** Words that name a screen a safety reader works from, or the capture of one. */
+const SCREEN_WORDS =
+  /\b(log|manifest|roster|roll ?call|check-?in|arrivals?|desk|readiness|waiver|medical|nitrox|fill|record|print|prep|sheet|page|screen|tab|capture|snapshot|screenshot)s?\b|\.png\b/i;
+
+/**
+ * An answer says something and names what it saw: a screen (by its word or a changed file's
+ * component name) or the reason there is no filled state ("no filled state because …"). Not
+ * empty, not "n/a", "none", "yes" or "no" alone, and not "looked fine" with no screen in it.
+ */
+export function seenFilledAnswered(section, screens = []) {
   if (section === null) return false;
   const text = stripTags(section).replace(/\s+/g, " ").trim();
-  return text.length >= 12 && !/^(n\/?a|none|yes|no|todo|tbd)\.?$/i.test(text);
+  if (text.length < 12 || /^(n\/?a|none|yes|no|todo|tbd)\.?$/i.test(text)) return false;
+  if (/\bno filled state because\s+\S/i.test(text)) return true;
+  if (SCREEN_WORDS.test(text)) return true;
+  return screens.some((file) => {
+    const name = file
+      .split("/")
+      .pop()
+      .replace(/\.tsx$/, "");
+    return name.length > 3 && name !== "page" && text.includes(name);
+  });
 }
 
 /** For each reviewer, the changed paths that need it. Reviewers with none are left out. */
@@ -302,7 +324,7 @@ export function closesProblems({ body, claimed, head }) {
 export function bodyProblems({ body, files }) {
   const problems = [];
   const screens = seenFilledScreens(files);
-  if (screens.length > 0 && !seenFilledAnswered(seenFilledSection(body))) {
+  if (screens.length > 0 && !seenFilledAnswered(seenFilledSection(body), screens)) {
     const shown = screens.slice(0, 5).join(", ");
     const more = screens.length > 5 ? ` and ${screens.length - 5} more` : "";
     problems.push(

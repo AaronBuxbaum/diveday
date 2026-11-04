@@ -474,6 +474,48 @@ describe("seen filled in (issue #3650)", () => {
     ).toEqual([]);
   });
 
+  it("names the roster, the arrivals desk, roll call, the diver record and nitrox screens (issue #3686)", () => {
+    const screens = [
+      "src/app/shop/[shopSlug]/trips/[id]/page.tsx",
+      "src/app/shop/[shopSlug]/trips/[id]/_components/TripRosterContent.tsx",
+      "src/app/shop/[shopSlug]/trips/[id]/_arrivals/ArrivalsDesk.tsx",
+      "src/app/shop/[shopSlug]/trips/[id]/print/page.tsx",
+      "src/app/shop/[shopSlug]/trips/[id]/prep/page.tsx",
+      "src/app/shop/[shopSlug]/divers/[personId]/page.tsx",
+      "src/app/shop/[shopSlug]/roll-call/RollCall.tsx",
+      "src/app/shop/[shopSlug]/check-in/page.tsx",
+      "src/app/shop/[shopSlug]/nitrox/FillLog.tsx",
+      "src/components/manifest/ManifestTable.tsx",
+    ];
+    expect(seenFilledScreens(screens)).toEqual(screens);
+    expect(
+      seenFilledScreens([
+        "src/app/shop/[shopSlug]/trips/[id]/notes-actions.ts",
+        "src/app/shop/[shopSlug]/divers/[personId]/page.test.tsx",
+        "src/components/ui/Button.tsx",
+      ]),
+    ).toEqual([]);
+  });
+
+  it("wants the answer to name a screen, or the reason there is no filled state", () => {
+    const roster = "src/app/shop/[shopSlug]/trips/[id]/_components/TripRosterContent.tsx";
+    expect(
+      bodyProblems({ body: withSeen("Looked at it and it was fine."), files: [roster] }),
+    ).toHaveLength(1);
+    expect(
+      bodyProblems({ body: withSeen("Checked everything carefully, all good."), files: [log] }),
+    ).toHaveLength(1);
+    expect(
+      bodyProblems({
+        body: withSeen("The seeded dawn departure's roster with two divers turned away."),
+        files: [roster],
+      }),
+    ).toEqual([]);
+    expect(
+      bodyProblems({ body: withSeen("TripRosterContent with a restored note."), files: [roster] }),
+    ).toEqual([]);
+  });
+
   it("asks nothing of a change to another screen", () => {
     expect(
       bodyProblems({ body: TEMPLATE, files: ["src/app/shop/[shopSlug]/orders/page.tsx"] }),
