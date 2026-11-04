@@ -159,6 +159,13 @@ if (fill || restored || expectedReady) {
         `visual:compare: verified ${inventory.actualCount} captures against ` +
           `${inventory.expectedCount} trusted baseline screenshots.`,
       );
+      if (inventory.retired) {
+        console.log(
+          `::warning title=Baseline surfaces retired::main no longer captures ` +
+            `${inventory.retired.length} baseline screenshot(s), reported as deleted: ` +
+            inventory.retired.join(", "),
+        );
+      }
     }
     const step = regSuit(stage, ...args);
     if (step.status !== 0) process.exit(step.status ?? 1);
