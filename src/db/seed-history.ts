@@ -25,6 +25,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { seedArrivals } from "./seed-arrivals";
 import { CAPTAIN_NAME } from "./seed-cast";
 import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt, withinDeskHours } from "./seed-clock";
 import { LAST_YEAR_SAILINGS } from "./seed-last-year";
@@ -615,7 +616,7 @@ export async function seedHistory(
     shopId: string;
     tripId: string;
     personId: string;
-    status: "checked_in" | "no_show" | "cancelled";
+    status: "dived" | "no_show" | "cancelled";
     price: number;
     payment: "paid" | "deposit_paid" | "refunded" | "unpaid";
     waiver: boolean;
@@ -636,7 +637,7 @@ export async function seedHistory(
       if (!personId) continue;
       const cancelled = k % 23 === 7;
       const noShow = !cancelled && k % 17 === 5;
-      const status = cancelled ? "cancelled" : noShow ? "no_show" : "checked_in";
+      const status = cancelled ? "cancelled" : noShow ? "no_show" : "dived";
       const payment = historyPayment(k, { cancelled, noShow, daysAgo: plan.daysAgo });
       plans.push({
         shopId,
@@ -651,7 +652,7 @@ export async function seedHistory(
         // on the divers who never got on the boat — a no-show with an unsigned
         // release is a true and common story, and it is the story the manifest
         // should tell beside their "Not boarded".
-        waiver: status === "checked_in" ? true : !cancelled && k % 9 !== 0,
+        waiver: status === "dived" ? true : !cancelled && k % 9 !== 0,
         order: payment === "paid" || payment === "deposit_paid",
         createdAt: new Date(trip.startsAt.getTime() - (seat + 1) * 60 * 1000),
         bookedAt: new Date(
@@ -672,7 +673,7 @@ export async function seedHistory(
         shopId,
         tripId: plan.tripId,
         personId: plan.personId,
-        status: plan.status,
+        status: plan.status === "dived" ? ("booked" as const) : plan.status,
         createdAt: plan.bookedAt,
       })),
     )
@@ -818,7 +819,7 @@ export async function seedHistory(
       occurredAt: new Date(trip.startsAt.getTime() + index * 90 * 60 * 1000),
     }));
   });
-  if (rollCallRows.length > 0) await db.insert(rollCallEvents).values(rollCallRows);
+  await writeHistoryTrails(db, { shopId, createdByPersonId, rollCallRows, plans, bookingRows });
 
   // Paid invoices, so a diver's profile shows a real billing history — and, via
   // the `providerRef` written on their payment rows above, so the monthly
@@ -901,7 +902,7 @@ export async function seedHistory(
   const reviewRows = plans
     .map((plan, i) => {
       const booking = bookingRows[i];
-      if (!booking || plan.status !== "checked_in" || i % 4 !== 0) return null;
+      if (!booking || plan.status !== "dived" || i % 4 !== 0) return null;
       const wantsComment =
         commentedTrips.size < DEMO_REVIEWS.length && !commentedTrips.has(booking.tripId);
       if (wantsComment) commentedTrips.add(booking.tripId);
@@ -1139,7 +1140,7 @@ function demoTipRows(
   return plans
     .map((plan, i) => {
       const booking = bookingRows[i];
-      if (!booking || plan.status !== "checked_in") return null;
+      if (!booking || plan.status !== "dived") return null;
       const state: SeedTip["status"] =
         i % 11 === 0 ? "expired" : i % 7 === 0 ? "pending" : "completed";
       const createdAt = new Date(plan.createdAt.getTime() + 2 * 60 * 60 * 1000);
@@ -1179,5 +1180,41 @@ async function insertHistoryCards(
       status: "verified" as const,
       ...reviewedBy(createdByPersonId),
     })),
+  );
+}
+
+/**
+ * The rail's head counts, and the desk's arrivals before them: everyone who
+ * dived came through the desk first, and the arrival trail is the only record
+ * of a check-in (issue #2702). A `dived` plan's seat is `booked`. Arrivals are
+ * aligned on plan index, as `bookingRows` is.
+ */
+async function writeHistoryTrails(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    createdByPersonId: string;
+    rollCallRows: (typeof rollCallEvents.$inferInsert)[];
+    plans: readonly { tripId: string; status: string; createdAt: Date }[];
+    bookingRows: readonly ({ id: string } | undefined)[];
+  },
+): Promise<void> {
+  if (input.rollCallRows.length > 0) await db.insert(rollCallEvents).values(input.rollCallRows);
+  await seedArrivals(
+    db,
+    input.plans.flatMap((plan, i) => {
+      const booking = input.bookingRows[i];
+      if (!booking || plan.status !== "dived") return [];
+      return [
+        {
+          shopId: input.shopId,
+          tripId: plan.tripId,
+          bookingId: booking.id,
+          recordedByPersonId: input.createdByPersonId,
+          // `createdAt` is a minute or so before the boat left, per seat.
+          occurredAt: plan.createdAt,
+        },
+      ];
+    }),
   );
 }

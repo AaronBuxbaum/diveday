@@ -18,8 +18,8 @@ function seat(id: string, startsAt: string, status = "booked") {
   return {
     booking: { id, status },
     trip: { id: `trip-${id}`, status: "scheduled", startsAt: new Date(startsAt) },
-    numberedDiveDay: status === "booked" || status === "checked_in",
-    outWithShop: status === "booked" || status === "checked_in",
+    numberedDiveDay: status === "booked",
+    outWithShop: status === "booked",
   };
 }
 

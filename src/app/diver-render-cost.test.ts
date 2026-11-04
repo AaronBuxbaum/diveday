@@ -1,5 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { and, asc, desc, eq, inArray, lt } from "drizzle-orm";
+import { and, asc, desc, eq, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { describe, expect, it, vi } from "vitest";
 import { readAfterTheDive } from "@/app/(token)/ready/[token]/_components/after-dive-reads";
@@ -57,7 +57,7 @@ async function readinessLinkForSeatAfterTheDive(plain: AppDb, shopId: string) {
     .where(
       and(
         eq(bookings.shopId, shopId),
-        inArray(bookings.status, ["booked", "checked_in"]),
+        eq(bookings.status, "booked"),
         liveTrip(),
         eq(trips.status, "scheduled"),
         lt(trips.endsAt, new Date(nowDate().getTime() - 6 * HOUR_MS)),

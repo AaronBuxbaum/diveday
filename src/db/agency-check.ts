@@ -658,7 +658,12 @@ export async function addAgencyListedCards(
       if (input.cards.some((card) => card.kind === "nitrox")) {
         await tx
           .update(cards)
-          .set({ deletedAt: nowDate(), deletedByPersonId: input.filedByPersonId })
+          .set({
+            deletedAt: nowDate(),
+            deletedByPersonId: input.filedByPersonId,
+            // Replaced by the agency's listing: never a card's Undo (#3701).
+            deletionKind: "system",
+          })
           .where(
             and(
               eq(cards.shopId, input.shopId),
@@ -788,6 +793,8 @@ export async function undoAgencyCheck(
     const archive = {
       deletedAt: nowDate(),
       deletedByPersonId: input.undoneByPersonId,
+      // Archived with the check it came from: never a card's Undo (#3701).
+      deletionKind: "system" as const,
     };
     // The nitrox and specialty cards its page listed; never a level card.
     const archived = await tx

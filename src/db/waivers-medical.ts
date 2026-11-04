@@ -3,7 +3,7 @@
  * evaluation, the hold an unanswered one keeps, and retiring a refusal.
  * Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { canRetireMedicalRefusal } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -15,7 +15,6 @@ import {
   type PublishedMedicalForm,
   referralItems,
 } from "@/lib/medical";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { isUuid } from "@/lib/uuid";
 import {
   awaitsPhysician,
@@ -37,7 +36,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
-import { seatNotCancelled } from "./trips-queries";
+import { seatHeld, seatNotCancelled } from "./trips-queries";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -979,7 +978,7 @@ async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date
       and(
         eq(bookings.id, record.bookingId),
         eq(bookings.shopId, record.shopId),
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        seatHeld,
         eq(trips.status, "scheduled"),
         liveTrip(),
       ),

@@ -25,6 +25,7 @@ import {
   type WelcomeHello,
 } from "@/lib/welcome-cue";
 import { heldAtTheDoor } from "./aboard-at-sea";
+import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
@@ -384,7 +385,7 @@ export type ReadyPageData = {
    * `selfCancelBooking`'s own two pre-checks exactly — a plain `booked` seat,
    * on a departure that has not sailed — including its one-hour late-departure
    * buffer (AGENTS.md), so the page can never render a control that could only
-   * ever come back refused. A `checked_in`/`no_show` seat is a day-of state a
+   * ever come back refused. A checked-in or `no_show` seat is a day-of state a
    * pre-trip link must not flip back, and a boat that has left cannot un-take
    * someone aboard.
    */
@@ -498,6 +499,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       dietaryNote: bookings.dietaryNote,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
+      checkedIn: seatCheckedIn,
       turnedAwayAt: bookings.turnedAwayAt,
       runningLateAt: bookings.runningLateAt,
       bookingCreatedAt: bookings.createdAt,
@@ -608,6 +610,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     // more for every seat past the free window. A seat that cannot be
     // released, or whose identity is held, never shows it.
     row.status === "booked" &&
+    !row.checkedIn &&
     !hasSailed(row.tripStartsAt, now) &&
     row.identityUnconfirmedAt === null
       ? getPendingMoveAsk(db, row.shopId, bookingId, row.tripId)
@@ -711,6 +714,7 @@ export async function getReadyPageData(
   const identityHeld = row.identityUnconfirmedAt !== null;
   const canCancelBooking =
     row.status === "booked" &&
+    !row.checkedIn &&
     !hasSailed(trip.startsAt, now) &&
     // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-20261015-aboard-diver-removal-at).
     !(
@@ -838,11 +842,16 @@ export async function getReadyPageData(
     runningLate: {
       open: canSayRunningLate({
         bookingStatus: row.status,
+        checkedIn: row.checkedIn,
         tripStatus: trip.status,
         startsAt: trip.startsAt,
         now,
       }),
-      saidAt: runningLateShown({ bookingStatus: row.status, runningLateAt: row.runningLateAt }),
+      saidAt: runningLateShown({
+        bookingStatus: row.status,
+        checkedIn: row.checkedIn,
+        runningLateAt: row.runningLateAt,
+      }),
     },
     departureCancelled: trip.status !== "scheduled",
     // `offerableWelcomeCue`, not `welcomeCueFor`: this is the diver's own page,

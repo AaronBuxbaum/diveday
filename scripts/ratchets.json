@@ -1480,12 +1480,6 @@
         }
       },
       {
-        "why": "closeout-reader.test.ts is src/db/closeout.test.ts renamed; main allows that file 903 lines, and the merge of the lower layers carried main's 903 over",
-        "files": {
-          "src/features/today/closeout-reader.test.ts": "902 -> 903"
-        }
-      },
-      {
         "why": "Merge of main and the lower stack layers; no branch added by hand",
         "files": {
           "src/db/divers.test.ts": "3060 -> 3064",
@@ -1508,9 +1502,9 @@
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
     "src/db/anonymize.test.ts": 1629,
-    "src/db/bookings.test.ts": 3529,
+    "src/db/bookings.test.ts": 3528,
     "src/db/buddy-teams.test.ts": 975,
-    "src/db/check-in.test.ts": 1212,
+    "src/db/check-in.test.ts": 1207,
     "src/db/checkouts.test.ts": 2964,
     "src/db/course-forms.test.ts": 1234,
     "src/db/courses.test.ts": 1713,
@@ -1527,7 +1521,7 @@
     "src/db/notifications.test.ts": 1864,
     "src/db/orders.test.ts": 3174,
     "src/db/participant-types.test.ts": 1197,
-    "src/db/readiness.test.ts": 1427,
+    "src/db/readiness.test.ts": 1347,
     "src/db/recap.test.ts": 2141,
     "src/db/refunds.test.ts": 1150,
     "src/db/reminders.test.ts": 981,
@@ -1545,7 +1539,7 @@
     "src/db/waivers-medical.test.ts": 1001,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
-    "src/features/today/closeout-reader.test.ts": 903,
+    "src/features/today/closeout-reader.test.ts": 902,
     "src/features/today/today.test.ts": 1274,
     "src/i18n/label-maps.test.ts": 1259,
     "src/lib/agency-check.test.ts": 930,
@@ -1581,8 +1575,8 @@
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 396,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 307,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 313,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 344,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 312,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 340,
     "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
@@ -1660,7 +1654,7 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 410,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 578,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 504,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 468
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 464
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

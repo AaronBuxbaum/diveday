@@ -287,13 +287,15 @@ export async function reverseNitroxReview(
  */
 export async function deleteNitroxCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string; deletedByPersonId?: string },
+  input: { shopId: string; certificationId: string; deletedByPersonId: string },
 ) {
   const [row] = await db
     .update(cards)
     .set({
       deletedAt: nowDate(),
-      ...(input.deletedByPersonId ? { deletedByPersonId: input.deletedByPersonId } : {}),
+      deletedByPersonId: input.deletedByPersonId,
+      // A staffer's own Delete, the one archive a card's Undo may take back (#3701).
+      deletionKind: "staff",
     })
     .where(
       and(
@@ -301,54 +303,6 @@ export async function deleteNitroxCertification(
         eq(cards.shopId, input.shopId),
         eq(cards.kind, "nitrox"),
         isNull(cards.deletedAt),
-      ),
-    )
-    .returning({ id: cards.id });
-  return Boolean(row);
-}
-
-/**
- * Undo a nitrox-card delete, mirroring `restoreCertification`. Refuses when
- * a live card already holds the same shop/agency/identifier (partial unique index).
- */
-export async function restoreNitroxCertification(
-  db: AppDb,
-  input: { shopId: string; certificationId: string },
-) {
-  const [deleted] = await db
-    .select()
-    .from(cards)
-    .where(
-      and(
-        eq(cards.id, input.certificationId),
-        eq(cards.shopId, input.shopId),
-        eq(cards.kind, "nitrox"),
-      ),
-    )
-    .limit(1);
-  if (!deleted || deleted.deletedAt === null) return false;
-  const [conflict] = await db
-    .select({ id: cards.id })
-    .from(cards)
-    .where(
-      and(
-        eq(cards.shopId, input.shopId),
-        eq(cards.kind, "nitrox"),
-        eq(cards.agency, deleted.agency),
-        sql`lower(${cards.identifier}) = lower(${deleted.identifier})`,
-        isNull(cards.deletedAt),
-      ),
-    )
-    .limit(1);
-  if (conflict) return false;
-  const [row] = await db
-    .update(cards)
-    .set({ deletedAt: null, deletedByPersonId: null })
-    .where(
-      and(
-        eq(cards.id, input.certificationId),
-        eq(cards.shopId, input.shopId),
-        eq(cards.kind, "nitrox"),
       ),
     )
     .returning({ id: cards.id });

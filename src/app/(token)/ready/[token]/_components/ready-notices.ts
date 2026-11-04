@@ -54,7 +54,7 @@ export const READY_NOTICES: Record<
   "saved-not-yet": { tone: "success", key: "ready.certNotYetSaved" },
   "saved-not-yet-card": { tone: "neutral", key: "ready.certNotYetCardOnFile" },
   "error-cert": { tone: "danger", key: "ready.certInvalid" },
-  // `selfCancelBooking` refused — the seat flipped to checked-in, or the boat
+  // `selfCancelBooking` refused — the desk checked the diver in, or the boat
   // sailed, between this page rendering and the tap. The four refusal reasons
   // are deliberately never distinguished to a diver (a booking-state oracle is
   // still a leak); the shop's number is on the card below.

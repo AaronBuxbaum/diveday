@@ -192,7 +192,8 @@ describe("minorDeclaredOnLiveUpcomingSeat", () => {
 
   it("reads true for a declared seat on a departure still ahead, or still out", () => {
     expect(minorDeclaredOnLiveUpcomingSeat([seat({})], now)).toBe(true);
-    expect(minorDeclaredOnLiveUpcomingSeat([seat({ status: "checked_in" })], now)).toBe(true);
+    // Only a cancel retires the seat: a released one still carries the declaration.
+    expect(minorDeclaredOnLiveUpcomingSeat([seat({ status: "no_show" })], now)).toBe(true);
     // The boat is out: the dive is not over, so the seat still speaks.
     expect(
       minorDeclaredOnLiveUpcomingSeat([seat({ endsAt: new Date(now.getTime() + 60_000) })], now),

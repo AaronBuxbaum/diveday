@@ -67,6 +67,23 @@ export const NOTICE_KEYS: DiverNoticeMap = {
     tone: "danger",
     key: "divers.notices.cardRestoreConflict",
   },
+  // A card's Undo with nothing left to restore: already back (a double tap) or gone.
+  "card-restore-gone": {
+    form: "cards",
+    tone: "warning",
+    key: "divers.notices.cardRestoreGone",
+  },
+  // A card's Undo outside its window, or on a card DiveDay set aside (#3701).
+  "card-restore-expired": {
+    form: "cards",
+    tone: "warning",
+    key: "divers.notices.cardRestoreExpired",
+  },
+  "card-restore-system": {
+    form: "cards",
+    tone: "warning",
+    key: "divers.notices.cardRestoreSystem",
+  },
   // The card-removal toast is handled by the page itself (`UndoToast`); this
   // entry is the fallback for a `?notice=card-deleted` with no id to undo.
   "card-deleted": { form: "cards", tone: "success", key: "divers.notices.cardDeleted" },
@@ -339,6 +356,7 @@ export const NOTICE_KEYS: DiverNoticeMap = {
   // Notes are staff context shared with the boat manifest.
   "note-added": { form: "notes", tone: "success", key: "divers.notices.noteAdded" },
   "note-deleted": { form: "notes", tone: "success", key: "divers.notices.noteDeleted" },
+  "note-restored": { form: "notes", tone: "success", key: "divers.notices.noteRestored" },
   "not-authorized-notes": {
     form: "notes",
     tone: "danger",

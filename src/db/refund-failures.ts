@@ -15,6 +15,7 @@ import {
   stripeRefundFailures,
 } from "./schema";
 import { findStripePaymentTarget } from "./stripe-payment-targets";
+import { reverseTipRefundFailure } from "./tip-reversals";
 
 /**
  * **A refund Stripe accepted and later reported failed or canceled** (issue
@@ -91,7 +92,9 @@ export async function recordStripeRefundFailure(
   const outcome =
     target.kind === "order"
       ? await reverseOnOrder(db, target.order, input)
-      : await reverseOnCheckout(db, target.checkout, input);
+      : target.kind === "tip"
+        ? await reverseTipRefundFailure(db, target.checkout, input)
+        : await reverseOnCheckout(db, target.checkout, input);
   log("stripe_refund.failed_reversed", outcome.status === "reversed" ? "warn" : "info", {
     stripeAccountId: input.stripeAccountId,
     target: target.kind,
@@ -244,8 +247,7 @@ async function reverseOnCheckout(
   checkout: BookingCheckout,
   input: RefundFailureInput,
 ): Promise<RefundFailureOutcome> {
-  // Only a fare is refunded through DiveDay; a tip's reversal is recorded
-  // nowhere yet (ADR 20260726-post-trip-tipping, issue #2718).
+  // A tip's failed refund is `reverseTipRefundFailure`'s; this one is a seat's.
   if (checkout.purpose !== "fare") return { status: "not_found" };
   const paidAfterClose = checkout.status === "expired" && checkout.paidAfterCloseCents !== null;
   if (checkout.status !== "completed" && !paidAfterClose) return { status: "not_found" };

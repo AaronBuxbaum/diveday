@@ -90,7 +90,7 @@ export type MonthMoneyDetail = {
 };
 
 /** Same set the roster and every other report figure count as "on the boat". */
-const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
+const ACTIVE_BOOKING_STATUSES = ["booked"] as const;
 /** An order the shop still holds money on; a fully refunded one holds none. */
 const KEPT_ORDER_STATUSES = ["paid", "partly_refunded"] as const;
 
@@ -527,7 +527,7 @@ async function returningDivers(
         join ${trips} as earlier_trip on earlier_trip.id = earlier.trip_id
         where earlier.shop_id = ${shopId}
           and earlier.person_id = ${bookings.personId}
-          and earlier.status in ('booked', 'checked_in')
+          and earlier.status = 'booked'
           and earlier_trip.shop_id = ${shopId}
           and earlier_trip.status = 'scheduled'
           and earlier_trip.deleted_at is null

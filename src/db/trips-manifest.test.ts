@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { getDepartureInterestForTrip, listDepartureInterests } from "./interests";
@@ -68,25 +69,30 @@ describe("getTripRoster", () => {
     const checkedIn = await makeDiver(db, shop.id);
     const noShow = await makeDiver(db, shop.id);
     const cancelled = await makeDiver(db, shop.id);
-    for (const [person, status] of [
-      [booked, "booked"],
-      [checkedIn, "checked_in"],
-      [noShow, "no_show"],
-      [cancelled, "cancelled"],
+    // Checked in is a `booked` seat with the trail's arrival, not a status
+    // of its own (issue #2702); the roster says it as `checkedIn`.
+    for (const [person, status, arrived] of [
+      [booked, "booked", false],
+      [checkedIn, "booked", true],
+      [noShow, "no_show", false],
+      [cancelled, "cancelled", false],
     ] as const) {
-      await db
+      const [seat] = await db
         .insert(bookings)
-        .values({ bookedAs: "diver", shopId: shop.id, tripId: trip, personId: person.id, status });
+        .values({ bookedAs: "diver", shopId: shop.id, tripId: trip, personId: person.id, status })
+        .returning({ id: bookings.id });
+      if (!seat) throw new Error("failed to insert seat");
+      if (arrived) await markArrived(db, seat.id);
     }
 
     const ours = new Set([booked.id, checkedIn.id, noShow.id, cancelled.id]);
     const roster = (await getTripRoster(db, shop.id, trip)).filter((row) =>
       ours.has(row.person.id),
     );
-    expect(roster.map((row) => [row.person.id, row.booking.status])).toEqual([
-      [booked.id, "booked"],
-      [checkedIn.id, "checked_in"],
-      [noShow.id, "no_show"],
+    expect(roster.map((row) => [row.person.id, row.booking.status, row.checkedIn])).toEqual([
+      [booked.id, "booked", false],
+      [checkedIn.id, "booked", true],
+      [noShow.id, "no_show", false],
     ]);
     expect(roster.every((row) => row.booking.tripId === trip)).toBe(true);
   });

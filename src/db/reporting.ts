@@ -31,7 +31,7 @@ import { shopDaysBounds, shopMonthBounds, wallTimeToUtc } from "@/lib/zoned";
 import { readActiveStaffRoles } from "./authz";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
 import { levelCardLevel } from "./card-columns";
-import { fareCheckout, tipAmountCents, tipCheckout } from "./checkout-purpose";
+import { fareCheckout, tipCheckout, tipNetCents } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { queryAll } from "./query-helpers";
@@ -71,17 +71,18 @@ export async function canPersonViewShopReports(
 }
 
 /**
- * Bookings whose seat earned: the two statuses that hold a seat, and no others.
+ * Bookings whose seat earned: the status that holds a seat, and no other. A
+ * checked-in diver's seat is still `booked`; arrival is the trail's (issue #2702).
  *
  * **Not the roster set**, which is every non-cancelled booking and has included
  * a released `no_show` since the counter gained a writer for it (issue #1209) —
  * a name the crew still account for over a seat the shop may already have sold
- * again. Kept as its own list rather than `SEAT_HELD_STATUSES` on purpose: a
+ * again. Kept as its own list rather than `seatHeld` on purpose: a
  * later change to what holds a seat against capacity should reach a revenue
  * metric as a decision, not as a side effect. `reporting.test.ts` pins the two
  * apart.
  */
-const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
+const ACTIVE_BOOKING_STATUSES = ["booked"] as const;
 /**
  * Payment states that represent money actually collected (a deposit is partial,
  * but real).
@@ -245,7 +246,7 @@ async function partnerReferredSeatsForWindow(
  */
 async function monthTipTotals(db: DbExecutor, shopId: string, inWindow: SQL | undefined) {
   const [row] = await db
-    .select({ total: sum(tipAmountCents), tipCount: count(bookingCheckouts.id) })
+    .select({ total: sum(tipNetCents), tipCount: count(bookingCheckouts.id) })
     .from(bookingCheckouts)
     .innerJoin(trips, eq(trips.id, bookingCheckouts.tripId))
     .where(
@@ -254,6 +255,8 @@ async function monthTipTotals(db: DbExecutor, shopId: string, inWindow: SQL | un
         eq(bookingCheckouts.shopId, shopId),
         eq(bookingCheckouts.status, "completed"),
         tipCheckout(),
+        // A tip refunded in full is no tip this month.
+        sql`${tipNetCents} > 0`,
       ),
     );
   return row;
@@ -1228,7 +1231,7 @@ export type WeekdayLeadTime = {
  *
  * Boat departures only, never a shore day, a pool session or a course
  * session (dive-domain review F6), and whole calendar days in the shop's zone
- * (N2). Seats that held only (`booked`, `checked_in`): a cancelled booking is
+ * (N2). Seats that held only (`booked`, checked in or not): a cancelled booking is
  * not a sale. The shop's own rehearsals and deleted departures stay out, as every
  * other Reports figure keeps them out. The caller decides how much history is
  * enough to say anything (`src/lib/lead-time.ts`).

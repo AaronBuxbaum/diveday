@@ -11,19 +11,30 @@ import { hasVerifiedCertificationAtLeast } from "./readiness";
  * (issue #2709). Every door that puts a seat on a course session reads the
  * rows under the trip lock and asks `decideCourseAdmission`: the sale
  * (`createBookingRecord`), a staff move (`moveBooking`), an undone removal
- * (`restoreBooking`) and an undone no-show (`undoNoShow`). Nothing here reads
- * the database, so each gate is tested on its own rather than only through a
- * seeded booking, and a new gate is a row in {@link COURSE_GATES}, never a new
- * branch in a transaction.
+ * (`restoreBooking`) and an undone no-show (`undoBookingNoShow`). Nothing here
+ * reads the database, so each gate is tested on its own rather than only
+ * through a seeded booking.
+ *
+ * **Every door asks every gate** (issues #3769, #3686). An undo once asked the
+ * ratio alone, on the reasoning that it repairs a misclick; but it is a
+ * seat-granting write like any other, and between the release and the undo
+ * the session can lose its last instructor, the student's card can be
+ * revoked, or a date of birth can be recorded that the session's day finds too
+ * young. What an undo still skips (the conditions hold, the departure-time
+ * check) is the caller's, because it is about the trip, not the course.
  *
  * These decide who may *buy* (or get back) a seat. Who may board is
  * `calculateReadiness`, and admission may never refuse someone readiness
- * would clear (AGENTS.md).
+ * would clear (AGENTS.md): readiness asks the course's card and age too.
  */
 
 /** Every way a course session refuses a seat. Codes, never sentences. */
 export type CourseAdmissionRefusal =
-  /** No instructor is rostered on the session. */
+  /**
+   * No instructor is rostered on the session. Asked of everyone aboard,
+   * student or passenger: a priced rider on an unstaffed session is still a
+   * seat on a session nobody is teaching.
+   */
   | "course_unstaffed"
   /** The course's prerequisite card is not on file, verified. */
   | "course_prerequisite"
@@ -31,41 +42,6 @@ export type CourseAdmissionRefusal =
   | "course_min_age"
   /** The crew's in-water ratio is already full of students. */
   | "course_ratio_full";
-
-/** The only refusal an undo can meet: the restore row of {@link COURSE_GATES}. */
-export type CourseRestoreRefusal = "course_ratio_full";
-
-/**
- * How strictly a door asks. `sale` puts a seat on the session that was not
- * there: a new booking and a staff move alike, because a moved seat is
- * measured exactly as a new staff seat is (ADR 20261013-staff-move-a-seat).
- * `restore` hands back a seat the session already sold, after a misclick.
- */
-export type CourseAdmissionStrictness = "sale" | "restore";
-
-/**
- * **Which gates each strictness asks.** The one place the difference between
- * a sale and an undo is written down.
- *
- * - **staffing**: a course session is unsafe to market as open until an
- *   instructor is on it. Asked of everyone aboard, student or passenger: a
- *   priced rider on an unstaffed session is still a seat sold on a session
- *   nobody is teaching.
- * - **enrollment**: the course's card and age gates, the student's alone.
- *   Not asked again on an undo: the diver passed them when the seat was sold,
- *   and an undo puts back a clerical slip, not a new enrollment.
- * - **ratio**: the crew's in-water cap on students. Asked by every door,
- *   because an undo is a seat-granting write like any other: remove a diver
- *   from a four-seat DSD, let a walk-up take the freed seat, and an
- *   unchecked Undo would put a fifth first-timer with one instructor.
- */
-export const COURSE_GATES: Record<
-  CourseAdmissionStrictness,
-  { staffing: boolean; enrollment: boolean; ratio: boolean }
-> = {
-  sale: { staffing: true, enrollment: true, ratio: true },
-  restore: { staffing: false, enrollment: false, ratio: true },
-};
 
 /** The part of a course row the gates read. */
 export type CourseAdmissionRule = {
@@ -81,7 +57,7 @@ export type CourseCrew = { instructorCount: number; assistantCount: number };
 /** What the enrollment gates know about the student. */
 export type CourseDiver = { cards: readonly Certification[]; dateOfBirth: CalendarDate | null };
 
-type CourseAdmissionCommon = {
+export type CourseAdmissionInput = {
   /** Null when the departure is no course session (or its course row is gone). */
   course: CourseAdmissionRule | null;
   /**
@@ -93,18 +69,12 @@ type CourseAdmissionCommon = {
   crew: CourseCrew;
   /** Students already holding a seat on the session, this one excluded. */
   studentsHeld: number;
-};
-
-export type CourseRestoreInput = CourseAdmissionCommon & { strictness: "restore" };
-export type CourseSaleInput = CourseAdmissionCommon & {
-  strictness: "sale";
   actor: BookingActor;
   /** Null when the booking has no person row yet (a walk-in, written later). */
   diver: CourseDiver | null;
   /** The course day in the shop's calendar; needed only for the age gate. */
   courseDate: CalendarDate | null;
 };
-export type CourseAdmissionInput = CourseRestoreInput | CourseSaleInput;
 
 /**
  * The course session's answer for one seat, in the order the gates apply:
@@ -114,29 +84,20 @@ export type CourseAdmissionInput = CourseRestoreInput | CourseSaleInput;
  * a full boat is refused as full, a cheaper answer that says nothing about
  * the diver.
  */
-export function decideCourseAdmission(input: CourseRestoreInput): CourseRestoreRefusal | null;
-export function decideCourseAdmission(input: CourseSaleInput): CourseAdmissionRefusal | null;
-export function decideCourseAdmission(input: CourseAdmissionInput): CourseAdmissionRefusal | null;
 export function decideCourseAdmission(input: CourseAdmissionInput): CourseAdmissionRefusal | null {
   const { course } = input;
   if (!course) return null;
-  const gates = COURSE_GATES[input.strictness];
-  if (gates.staffing && input.crew.instructorCount <= 0) return "course_unstaffed";
+  if (input.crew.instructorCount <= 0) return "course_unstaffed";
   if (!input.student) return null;
-  if (gates.enrollment && input.strictness === "sale") {
-    const refusal = courseEnrollmentRefusal({
-      actor: input.actor,
-      course,
-      diver: input.diver,
-      courseDate: input.courseDate,
-    });
-    if (refusal) return refusal;
-  }
-  if (gates.ratio) {
-    const cap = courseSeatCapacity(course, input.crew.instructorCount, input.crew.assistantCount);
-    return courseRatioRefusal(input.studentsHeld, cap);
-  }
-  return null;
+  const refusal = courseEnrollmentRefusal({
+    actor: input.actor,
+    course,
+    diver: input.diver,
+    courseDate: input.courseDate,
+  });
+  if (refusal) return refusal;
+  const cap = courseSeatCapacity(course, input.crew.instructorCount, input.crew.assistantCount);
+  return courseRatioRefusal(input.studentsHeld, cap);
 }
 
 /**

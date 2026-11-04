@@ -155,7 +155,6 @@ describe("a seat still ahead", () => {
 describe("which seats count toward the first dive", () => {
   it("counts a seat that went out, and none that did not", () => {
     expect(seatWentToSea(seat())).toBe(true);
-    expect(seatWentToSea(seat({ status: "checked_in" }))).toBe(true);
     expect(seatWentToSea(seat({ status: "cancelled" }))).toBe(false);
     expect(seatWentToSea(seat({ status: "no_show" }))).toBe(false);
     expect(seatWentToSea(seat({ tripStatus: "cancelled" }))).toBe(false);
@@ -181,10 +180,12 @@ describe("a seat the crew marked ashore at the dock", () => {
     expect(seatMayBeFirstDive(ashore)).toBe(false);
   });
 
-  it("outranks a booking still marked checked in", () => {
-    expect(
-      storyNotes(seat({ status: "checked_in", dock: "not_boarded" }), behind, t, "en-US"),
-    ).toEqual(["stayed ashore"]);
+  // A diver the desk checked in holds a plain `booked` seat (arrival is a
+  // trail, issue #2702); the crew's dock word still outranks it.
+  it("outranks a booking still holding its seat", () => {
+    expect(storyNotes(seat({ status: "booked", dock: "not_boarded" }), behind, t, "en-US")).toEqual(
+      ["stayed ashore"],
+    );
   });
 
   it("says it in Spanish too", () => {

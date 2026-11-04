@@ -44,6 +44,17 @@ import { trips } from "./trips";
 export const cardKind = pgEnum("card_kind", ["level", "specialty", "nitrox"]);
 
 /**
+ * **How a card was archived** (issue #3701): `staff` when a staffer deleted it
+ * from the diver's record by hand, `system` when DiveDay archived it in favor of
+ * other evidence (an agency check taken back, a card an agency listing
+ * replaced, a self-declared claim a sighted card replaced). Only a `staff`
+ * delete is undoable, and only for a short window (`cardUndoRefusal`,
+ * `src/lib/card-undo.ts`); a null on an archived row is read as `system`, so a
+ * writer that forgets to say fails closed.
+ */
+export const cardDeletionKind = pgEnum("card_deletion_kind", ["staff", "system"]);
+
+/**
  * **A diver's card, of any kind** (issue #2722): evidence belongs to a person;
  * requirements decide whether it is sufficient for a trip.
  *
@@ -231,6 +242,8 @@ export const cards = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
+    /** Whether a staffer deleted it by hand or DiveDay archived it ({@link cardDeletionKind}). */
+    deletionKind: cardDeletionKind("deletion_kind"),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [

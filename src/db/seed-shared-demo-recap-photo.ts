@@ -21,7 +21,7 @@ export async function seedSharedDemoRecapPhoto(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        eq(bookings.status, "checked_in"),
+        eq(bookings.status, "booked"),
         isNull(bookings.identityUnconfirmedAt),
         inArray(people.fullName, [...HISTORY_DIVER_NAMES]),
         ne(trips.id, primaryTripId),

@@ -52,6 +52,18 @@ describe("which reviewer a diff needs", () => {
     }
   });
 
+  it.each([
+    "src/db/card-restore.ts",
+    "src/lib/card-undo.ts",
+    "src/app/shop/[shopSlug]/divers/[personId]/undo-inverses.ts",
+    "src/db/schema/activity.ts",
+  ])("asks both reviewers for the card-undo path %s", (file) => {
+    const agents = reviewsNeeded([file]).map((r) => r.agent);
+    expect(agents).toContain("security-reviewer");
+    if (file !== "src/db/schema/activity.ts") expect(agents).toContain("dive-domain-expert");
+    expect(bodyProblems({ body: "", files: [file] }).length).toBeGreaterThan(0);
+  });
+
   // Findings 2026-10-29: each of these changed signed consent or its medical answers and matched
   // no reviewer, because waivers matched only `src/(db|lib)/waiver*.ts`.
   it.each([
@@ -471,6 +483,48 @@ describe("seen filled in (issue #3650)", () => {
         body: withSeen("No filled state because only a class name moved."),
         files: [log],
       }),
+    ).toEqual([]);
+  });
+
+  it("names the roster, the arrivals desk, roll call, the diver record and nitrox screens (issue #3686)", () => {
+    const screens = [
+      "src/app/shop/[shopSlug]/trips/[id]/page.tsx",
+      "src/app/shop/[shopSlug]/trips/[id]/_components/TripRosterContent.tsx",
+      "src/app/shop/[shopSlug]/trips/[id]/_arrivals/ArrivalsDesk.tsx",
+      "src/app/shop/[shopSlug]/trips/[id]/print/page.tsx",
+      "src/app/shop/[shopSlug]/trips/[id]/prep/page.tsx",
+      "src/app/shop/[shopSlug]/divers/[personId]/page.tsx",
+      "src/app/shop/[shopSlug]/roll-call/RollCall.tsx",
+      "src/app/shop/[shopSlug]/check-in/page.tsx",
+      "src/app/shop/[shopSlug]/nitrox/FillLog.tsx",
+      "src/components/manifest/ManifestTable.tsx",
+    ];
+    expect(seenFilledScreens(screens)).toEqual(screens);
+    expect(
+      seenFilledScreens([
+        "src/app/shop/[shopSlug]/trips/[id]/notes-actions.ts",
+        "src/app/shop/[shopSlug]/divers/[personId]/page.test.tsx",
+        "src/components/ui/Button.tsx",
+      ]),
+    ).toEqual([]);
+  });
+
+  it("wants the answer to name a screen, or the reason there is no filled state", () => {
+    const roster = "src/app/shop/[shopSlug]/trips/[id]/_components/TripRosterContent.tsx";
+    expect(
+      bodyProblems({ body: withSeen("Looked at it and it was fine."), files: [roster] }),
+    ).toHaveLength(1);
+    expect(
+      bodyProblems({ body: withSeen("Checked everything carefully, all good."), files: [log] }),
+    ).toHaveLength(1);
+    expect(
+      bodyProblems({
+        body: withSeen("The seeded dawn departure's roster with two divers turned away."),
+        files: [roster],
+      }),
+    ).toEqual([]);
+    expect(
+      bodyProblems({ body: withSeen("TripRosterContent with a restored note."), files: [roster] }),
     ).toEqual([]);
   });
 

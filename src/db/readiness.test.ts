@@ -17,8 +17,6 @@ import {
   issueShopSpecialtyCertification,
   listTripReadiness,
   listTripsReadiness,
-  restoreCertification,
-  restoreSpecialtyCertification,
   reviewCertification,
   reviewSpecialtyCertification,
   tripRequirementSummaries,
@@ -497,7 +495,7 @@ describe("trip readiness (in-memory PGlite)", () => {
   });
 
   it("archives a level card so it stops counting and drops out of the shop list", async () => {
-    const { db, shop, reef, rosterEntry } = await readinessContext();
+    const { db, shop, reef, rosterEntry, staffId } = await readinessContext();
     await upsertTripRequirements(db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -525,7 +523,13 @@ describe("trip readiness (in-memory PGlite)", () => {
       blockers: [],
     });
 
-    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
+    expect(
+      await deleteCertification(db, {
+        shopId: shop.id,
+        certificationId: card.id,
+        deletedByPersonId: staffId,
+      }),
+    ).toBe(true);
     const after = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
     // With the rescue card archived the diver falls back to their lower seeded
     // card, so readiness re-blocks — an archived card no longer counts.
@@ -544,47 +548,6 @@ describe("trip readiness (in-memory PGlite)", () => {
       identifier: "PADI-RESCUE-DELETE",
     });
     expect(recaptured).not.toBeNull();
-  });
-
-  it("restores an archived level card, but refuses once its number is re-used", async () => {
-    const { db, shop, rosterEntry } = await readinessContext();
-    const card = await createCertification(db, {
-      shopId: shop.id,
-      personId: rosterEntry.person.id,
-      agency: "padi",
-      level: "rescue",
-      identifier: "PADI-RESTORE-1",
-    });
-    if (!card) throw new Error("expected certification to insert");
-    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
-
-    // The undo path: the same archived card comes back into the shop list.
-    expect(await restoreCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
-      true,
-    );
-    expect(await activeCertificationIds(db, shop.id)).toContain(card.id);
-
-    // Archive it again, then re-capture the same number as a fresh card. Restoring
-    // the old one now would collide on the partial unique index, so it's refused.
-    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
-    const recaptured = await createCertification(db, {
-      shopId: shop.id,
-      personId: rosterEntry.person.id,
-      agency: "padi",
-      level: "rescue",
-      identifier: "PADI-RESTORE-1",
-    });
-    if (!recaptured) throw new Error("expected recapture to insert");
-    expect(await restoreCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
-      false,
-    );
-    // A restore through another shop's id is likewise refused.
-    expect(
-      await restoreCertification(db, {
-        shopId: "00000000-0000-0000-0000-000000000000",
-        certificationId: recaptured.id,
-      }),
-    ).toBe(false);
   });
 
   it("refuses a level card whose identifier only differs by case from a live one (CR-009)", async () => {
@@ -607,32 +570,6 @@ describe("trip readiness (in-memory PGlite)", () => {
     expect(duplicate).toBeNull();
   });
 
-  it("restores an archived level card even when the live conflict differs only by case", async () => {
-    const { db, shop, rosterEntry } = await readinessContext();
-    const card = await createCertification(db, {
-      shopId: shop.id,
-      personId: rosterEntry.person.id,
-      agency: "padi",
-      level: "rescue",
-      identifier: "cd5678",
-    });
-    if (!card) throw new Error("expected certification to insert");
-    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
-    const recaptured = await createCertification(db, {
-      shopId: shop.id,
-      personId: rosterEntry.person.id,
-      agency: "padi",
-      level: "rescue",
-      identifier: "CD5678",
-    });
-    expect(recaptured).not.toBeNull();
-    // The archived card's number is live again under a different case — restoring
-    // it would collide on the case-insensitive index, so it's refused.
-    expect(await restoreCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
-      false,
-    );
-  });
-
   it("refuses a specialty card whose identifier only differs by case from a live one (CR-009)", async () => {
     const { db, shop, rosterEntry } = await readinessContext();
     const card = await createSpecialtyCertification(db, {
@@ -653,31 +590,8 @@ describe("trip readiness (in-memory PGlite)", () => {
     expect(duplicate).toBeNull();
   });
 
-  it("restores an archived specialty card", async () => {
-    const { db, shop, rosterEntry } = await readinessContext();
-    const card = await createSpecialtyCertification(db, {
-      shopId: shop.id,
-      personId: rosterEntry.person.id,
-      agency: "padi",
-      specialty: "wreck",
-      identifier: "PADI-WRECK-RESTORE",
-    });
-    if (!card) throw new Error("expected specialty to insert");
-    expect(
-      await deleteSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
-    ).toBe(true);
-    expect(
-      await restoreSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
-    ).toBe(true);
-    expect(await activeSpecialtyCertificationIds(db, shop.id)).toContain(card.id);
-    // Restoring a card that was never archived is a no-op false.
-    expect(
-      await restoreSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
-    ).toBe(false);
-  });
-
   it("refuses to archive a level card through another shop's id", async () => {
-    const { db, shop, rosterEntry } = await readinessContext();
+    const { db, shop, rosterEntry, staffId } = await readinessContext();
     const card = await createCertification(db, {
       shopId: shop.id,
       personId: rosterEntry.person.id,
@@ -690,13 +604,14 @@ describe("trip readiness (in-memory PGlite)", () => {
       await deleteCertification(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
         certificationId: card.id,
+        deletedByPersonId: staffId,
       }),
     ).toBe(false);
     expect(await activeCertificationIds(db, shop.id)).toContain(card.id);
   });
 
   it("archives a specialty card, shop-scoped", async () => {
-    const { db, shop, rosterEntry } = await readinessContext();
+    const { db, shop, rosterEntry, staffId } = await readinessContext();
     const card = await createSpecialtyCertification(db, {
       shopId: shop.id,
       personId: rosterEntry.person.id,
@@ -709,10 +624,15 @@ describe("trip readiness (in-memory PGlite)", () => {
       await deleteSpecialtyCertification(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
         certificationId: card.id,
+        deletedByPersonId: staffId,
       }),
     ).toBe(false);
     expect(
-      await deleteSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
+      await deleteSpecialtyCertification(db, {
+        shopId: shop.id,
+        certificationId: card.id,
+        deletedByPersonId: staffId,
+      }),
     ).toBe(true);
     expect(await activeSpecialtyCertificationIds(db, shop.id)).not.toContain(card.id);
   });

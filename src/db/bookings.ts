@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, not, sql } from "drizzle-orm";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
@@ -15,7 +15,6 @@ import {
   type CourseAdmissionRule,
   type CourseCrew,
   type CourseDiver,
-  type CourseRestoreRefusal,
   courseStudentCap,
   decideCourseAdmission,
 } from "@/lib/course-admission";
@@ -41,6 +40,7 @@ import {
 } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
+import { hasArrived } from "@/lib/presence";
 import type { ReEntryAsk } from "@/lib/re-entry";
 import { BLOCKER_CATEGORY, type CertificationLevel } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
@@ -56,6 +56,7 @@ import {
 } from "@/lib/trip-admission";
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
+import { arrivalTrailHighWater, seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
@@ -1090,7 +1091,7 @@ async function createBookingRecord(
   // Enrollment is a diver's (issue #2226): a snorkeler or a rider on a course
   // session is a passenger beside the students, asked none of the card or age
   // gates and counted against none of the ratio.
-  const courseRefusal = await courseSaleRefusal(tx, {
+  const courseRefusal = await courseSeatRefusal(tx, {
     trip,
     actor: req.actor,
     personId: person?.id,
@@ -1261,6 +1262,9 @@ async function writeSeat(
       .update(bookings)
       .set({
         status: "booked",
+        // A new life for the seat: the desk's trail is read from here on
+        // (ADR 20261104-arrival-is-a-trail, decision 5).
+        arrivalTrailAfterSeq: arrivalTrailHighWater,
         // A new booking, so no turn-away from the row's last life.
         turnedAwayReason: null,
         turnedAwayAt: null,
@@ -1514,12 +1518,14 @@ async function resolveBookingPerson(
 type PendingWalkIn = { fullName: string; email: string | null; phone?: string };
 
 /**
- * **A course session's answer for a seat put on it**, a new sale or a staff
- * move alike: the rows read under the caller's trip lock, then
- * `decideCourseAdmission` at `sale` strictness. Null admits, and a departure
- * that is no course session reads nothing past its own trip row.
+ * **A course session's answer for a seat put on it**: a new sale, a staff
+ * move, an undone removal (`restoreBooking`) and an undone no-show
+ * (`undoBookingNoShow`) alike. The rows are read under the caller's trip
+ * lock, then `decideCourseAdmission`, which asks every door every gate
+ * (issues #3769, #3686). Null admits, and a departure that is no course
+ * session reads nothing past its own trip row.
  */
-async function courseSaleRefusal(
+export async function courseSeatRefusal(
   tx: DbExecutor,
   input: {
     trip: { id: string; shopId: string; courseId: string | null; startsAt: Date };
@@ -1537,7 +1543,6 @@ async function courseSaleRefusal(
       ? await readCourseDiver(tx, trip.shopId, actor, session.course, input.personId, trip.startsAt)
       : { diver: null, courseDate: null };
   return decideCourseAdmission({
-    strictness: "sale",
     actor,
     course: session.course,
     student,
@@ -1815,7 +1820,12 @@ export type RestoreBookingOutcome =
   | "trip_cancelled"
   | "already_active"
   | "trip_full"
-  | CourseRestoreRefusal
+  /**
+   * The session's own gates, asked again: since the removal the session can
+   * have lost its last instructor, the student's card can have been revoked,
+   * or a date of birth recorded that the session's day finds too young.
+   */
+  | CourseAdmissionRefusal
   | "date_request_departure_conflict"
   | "date_request_offer_unavailable"
   | "date_request_party_full"
@@ -1851,8 +1861,10 @@ export type RestoreBookingOutcome =
  *   the two errors are not symmetric: an under-listed manifest costs a
  *   search, an over-listed one costs a tap.
  *
- * Capacity and the course ratio still bind in both cases, so a seat that has
- * genuinely been taken is still refused.
+ * Capacity and every course-session gate still bind in both cases, so a seat
+ * that has genuinely been taken is still refused, and so is a student the
+ * session could not sell to now (no instructor, no card, too young; issues
+ * #3769, #3686).
  */
 export async function restoreBooking(
   db: AppDb,
@@ -1908,17 +1920,15 @@ export async function restoreBooking(
     );
     if (full) return full;
 
-    // The course session's gates at `restore` strictness: the crew's ratio
-    // alone, counting students, the divers on the session (issue #2226). A
-    // ratio-gated session that has since lost its last instructor caps at zero
-    // and refuses too; one with no ratio takes the seat back, because staffing
-    // is a sale's gate, not an undo's (`COURSE_GATES`).
-    const session = await readCourseSession(tx, trip);
-    const courseRefusal = decideCourseAdmission({
-      strictness: "restore",
-      course: session.course,
+    // The course session's gates, every one the sale asks (issues #3769,
+    // #3686): staffing, the student's card and age, then the crew's ratio,
+    // counting students, the divers on the session (issue #2226). Asked as
+    // the staff door asks them, because only staff undo a removal.
+    const courseRefusal = await courseSeatRefusal(tx, {
+      trip,
+      actor: "staff",
+      personId: booking.personId,
       student: isDiver(booking.participantType),
-      crew: session.crew,
       studentsHeld: held.divers,
     });
     if (courseRefusal) return courseRefusal;
@@ -1926,8 +1936,14 @@ export async function restoreBooking(
     await tx
       .update(bookings)
       // A seat back on the boat carries no turned-away reason from its last
-      // life (`bookings_turned_away_is_released`).
-      .set({ status: "booked", turnedAwayReason: null, turnedAwayAt: null })
+      // life (`bookings_turned_away_is_released`), and none of its arrivals:
+      // the desk sees them again (ADR 20261104-arrival-is-a-trail, decision 5).
+      .set({
+        status: "booked",
+        arrivalTrailAfterSeq: arrivalTrailHighWater,
+        turnedAwayReason: null,
+        turnedAwayAt: null,
+      })
       .where(and(eq(bookings.id, bookingId), eq(bookings.status, "cancelled")));
     await settlePackageCoverage(tx, {
       shopId,
@@ -2043,12 +2059,12 @@ async function moveAdmissionRefusal(
     trip: target,
   });
   if (typeRefusal) return { ok: false, reason: "target_unavailable" };
-  // The target session's gates at the sale's strictness, at the staff door,
+  // The target session's gates, the same every door asks, at the staff door,
   // read again rather than trusted from the sale: a card can be revoked since,
   // and age is measured on the day the session runs, so an earlier session of
   // the same course can be one the student is still too young for
   // (H-20260724-certification-levels-agency-rules).
-  const courseRefusal = await courseSaleRefusal(tx, {
+  const courseRefusal = await courseSeatRefusal(tx, {
     trip: target,
     actor: "staff",
     personId: booking.personId,
@@ -2142,6 +2158,15 @@ export async function moveBooking(
     // trail. A plain no-show does not move: that is the day's own record.
     const turnedAway = booking.status === "no_show" && booking.turnedAwayAt !== null;
     if (booking.status !== "booked" && !turnedAway) return { ok: false, reason: "not_movable" };
+    // A diver the desk has checked in on this departure does not move off it:
+    // the sighting belongs to this boat, and a move would leave them on the
+    // new one as still to come (issue #2702).
+    if (
+      booking.status === "booked" &&
+      hasArrived(await standingArrivalStatus(tx, shopId, fromTripId, booking.id))
+    ) {
+      return { ok: false, reason: "not_movable" };
+    }
     // A turned-away seat moves only before the source's scheduled start
     // (layer 3 re-review, dde-3 #4 and #5): after it, the boat may be out with
     // an offline after-dive mark still to sync, and the move would wipe the
@@ -2236,8 +2261,11 @@ export async function moveBooking(
         conditionsBriefedAt: null,
         carriedFactsConfirmedAt: null,
         pickupTime: null,
-        // A turned-away seat is a booked seat on the new departure.
+        // A turned-away seat is a booked seat on the new departure, and an
+        // arrival from an earlier stay on this one does not come back with a
+        // seat moved away and back (ADR 20261104-arrival-is-a-trail, decision 5).
         status: "booked",
+        arrivalTrailAfterSeq: arrivalTrailHighWater,
         turnedAwayReason: null,
         turnedAwayAt: null,
       })
@@ -2998,9 +3026,10 @@ export type SelfCancelResult =
  * straight to cancelled, but a diver acting through a bearer token gets its
  * own pre-checks `cancelBooking` itself doesn't enforce:
  *
- * - Only a plain `booked` seat is self-cancellable — not one already
- *   `cancelled`, and not `checked_in`/`no_show`, which are day-of states a
- *   diver clicking a pre-trip link should never be able to flip back.
+ * - Only a plain `booked` seat the desk has not checked in is
+ *   self-cancellable — not one already `cancelled`, not a `no_show`, and not
+ *   one with a standing arrival, which are day-of states a diver clicking a
+ *   pre-trip link should never be able to flip back.
  * - The trip must not have already started; cancelling a seat on a boat
  *   that's already left has no honest meaning (mirrors the same
  *   already-departed check the checkout-recovery scan makes, docs ADR
@@ -3026,7 +3055,7 @@ export async function selfCancelBooking(
   return db.transaction(async (tx) => {
     // Locks the row for the rest of this transaction — closes the gap a bare
     // read-then-write would leave open for a concurrent roll-call action to
-    // flip this same seat to checked_in/no_show between the check below and
+    // check this seat in or flip it to no_show between the check below and
     // the write, which the unconditional update this replaced could then
     // blindly stomp back to cancelled (security review finding on this ADR).
     const [row] = await tx
@@ -3043,6 +3072,12 @@ export async function selfCancelBooking(
     if (!row) return { ok: false, reason: "not_found" };
     if (row.status === "cancelled") return { ok: false, reason: "already_cancelled" };
     if (row.status !== "booked") return { ok: false, reason: "not_cancellable" };
+    // A diver the desk has checked in is a day-of state too, read from the
+    // arrival trail under this lock (issue #2702): a pre-trip link must not
+    // cancel somebody the counter is looking at.
+    if (hasArrived(await standingArrivalStatus(tx, input.shopId, row.tripId, input.bookingId))) {
+      return { ok: false, reason: "not_cancellable" };
+    }
 
     const [trip] = await tx
       .select({ startsAt: trips.startsAt })
@@ -3128,8 +3163,10 @@ async function releaseSelfCancelledSeat(
 export function partySeatGoesWithLead(seat: {
   status: (typeof bookings.$inferSelect)["status"];
   claimedAt: Date | null;
+  /** The desk has them seen (`seatCheckedIn`): a seat already checked in stays. */
+  checkedIn: boolean;
 }): boolean {
-  return seat.status === "booked" && seat.claimedAt === null;
+  return seat.status === "booked" && seat.claimedAt === null && !seat.checkedIn;
 }
 
 /**
@@ -3151,7 +3188,12 @@ export async function previewPartyCancel(
     .limit(1);
   if (!lead || lead.partyLeadBookingId !== null) return { goes: 0, stays: 0 };
   const seats = await db
-    .select({ id: bookings.id, status: bookings.status, claimedAt: bookings.claimedAt })
+    .select({
+      id: bookings.id,
+      status: bookings.status,
+      claimedAt: bookings.claimedAt,
+      checkedIn: seatCheckedIn,
+    })
     .from(bookings)
     .where(
       and(
@@ -3200,6 +3242,7 @@ export async function cancelUnclaimedPartySeats(
       bookingId: bookings.id,
       status: bookings.status,
       claimedAt: bookings.claimedAt,
+      checkedIn: seatCheckedIn,
       personId: bookings.personId,
       fullName: people.fullName,
       email: people.email,
@@ -3242,6 +3285,10 @@ export async function cancelUnclaimedPartySeats(
           eq(bookings.shopId, input.shopId),
           eq(bookings.status, "booked"),
           isNull(bookings.claimedAt),
+          // Asked again by a statement that starts after the seat's lock was
+          // won: the read above waited on a check-in holding it, and its
+          // trail subquery kept the snapshot it started with (issue #2702).
+          not(seatCheckedIn),
         ),
       )
       .returning({ id: bookings.id });

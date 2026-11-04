@@ -1,6 +1,7 @@
-import { and, eq, gt, inArray, isNull, max, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, max, ne, not, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DeskEvent, DeskEventKind } from "@/lib/desk-events";
+import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { bookings, people, tripDeskEvents, tripHelpRequests, tripReadMarks, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -115,8 +116,9 @@ export type DeskCatchUp = {
  * 2026-10-13, item 3). The strip sits above the head count on the manifest,
  * so "Priya has checked in" over a roll call that has her at the counter's
  * start is a contradiction on a safety surface. An arrival is read through
- * the seat it names and kept only while that seat is `checked_in` on this
- * departure — the projection the roster and the counter read — so an undone
+ * the seat it names and kept only while that seat is checked in on this
+ * departure (`seatCheckedIn`, the arrival trail the roster and the counter
+ * read) — so an undone
  * check-in, which writes no event of its own, takes its line with it, and so
  * does a seat moved to another boat. A seat taken is kept
  * only while the seat is still held, and a diver's ask for a hand only while
@@ -197,11 +199,13 @@ export function rosterStillSaysIt() {
         eq(bookings.tripId, tripDeskEvents.tripId),
         eq(bookings.status, "booked"),
         sql`${bookings.runningLateAt} is not null`,
+        // Seen at the desk is not late, whatever the stamp says.
+        not(seatCheckedIn),
       ),
     ),
     or(
       ne(tripDeskEvents.kind, "arrival"),
-      and(eq(bookings.tripId, tripDeskEvents.tripId), eq(bookings.status, "checked_in")),
+      and(eq(bookings.tripId, tripDeskEvents.tripId), seatCheckedIn),
     ),
     or(
       ne(tripDeskEvents.kind, "seat_taken"),

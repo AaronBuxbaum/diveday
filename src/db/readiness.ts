@@ -935,13 +935,15 @@ export async function reverseSpecialtyReview(
  */
 export async function deleteCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string; deletedByPersonId?: string },
+  input: { shopId: string; certificationId: string; deletedByPersonId: string },
 ) {
   const [row] = await db
     .update(cards)
     .set({
       deletedAt: nowDate(),
-      ...(input.deletedByPersonId ? { deletedByPersonId: input.deletedByPersonId } : {}),
+      deletedByPersonId: input.deletedByPersonId,
+      // A staffer's own Delete, the one archive a card's Undo may take back (#3701).
+      deletionKind: "staff",
     })
     .where(
       and(
@@ -953,80 +955,6 @@ export async function deleteCertification(
     )
     .returning({ id: cards.id });
   return Boolean(row);
-}
-
-/**
- * Undo a delete: bring a level card back into every readiness/roster read.
- * The inverse of `deleteCertification`, powering the land-then-undo affordance.
- * Refuses (returns false) when a live card already holds the same
- * shop/agency/identifier — the partial unique index would reject it, and a
- * re-entered card must never be clobbered by an undo.
- */
-export async function restoreCertification(
-  db: AppDb,
-  input: { shopId: string; certificationId: string },
-) {
-  const [deleted] = await db
-    .select()
-    .from(cards)
-    .where(
-      and(
-        eq(cards.kind, "level"),
-        eq(cards.id, input.certificationId),
-        eq(cards.shopId, input.shopId),
-      ),
-    )
-    .limit(1);
-  if (!deleted || deleted.deletedAt === null) return false;
-  try {
-    return await db.transaction(async (tx) => {
-      const [person] = await tx
-        .select({ id: people.id })
-        .from(people)
-        // diveday:allow-deleted-people: deleted divers retain their cards for restoration.
-        .where(and(eq(people.id, deleted.personId), eq(people.shopId, input.shopId)))
-        .for("no key update");
-      if (!person) return false;
-      const [current] = await tx
-        .select()
-        .from(cards)
-        .where(
-          and(
-            eq(cards.kind, "level"),
-            eq(cards.id, input.certificationId),
-            eq(cards.shopId, input.shopId),
-            eq(cards.personId, person.id),
-          ),
-        )
-        .limit(1);
-      if (!current || current.deletedAt === null) return false;
-      const [conflict] = await tx
-        .select({ id: cards.id })
-        .from(cards)
-        .where(
-          and(
-            eq(cards.kind, "level"),
-            eq(cards.shopId, input.shopId),
-            eq(cards.agency, current.agency),
-            sql`lower(${cards.identifier}) = lower(${current.identifier})`,
-            isNull(cards.deletedAt),
-          ),
-        )
-        .limit(1);
-      if (conflict) return false;
-      const [row] = await tx
-        .update(cards)
-        .set({ deletedAt: null, deletedByPersonId: null })
-        .where(
-          and(eq(cards.kind, "level"), eq(cards.id, current.id), eq(cards.shopId, input.shopId)),
-        )
-        .returning({ id: cards.id });
-      return Boolean(row);
-    });
-  } catch (error) {
-    if (isUniqueConstraintViolation(error)) return false;
-    throw error;
-  }
 }
 
 export type NewSpecialtyCertification = {
@@ -1450,13 +1378,15 @@ export function reviewNoteFor(note: string | undefined): string | null {
 /** Delete a specialty card. Shop-scoped, mirroring `deleteCertification`. */
 export async function deleteSpecialtyCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string; deletedByPersonId?: string },
+  input: { shopId: string; certificationId: string; deletedByPersonId: string },
 ) {
   const [row] = await db
     .update(cards)
     .set({
       deletedAt: nowDate(),
-      ...(input.deletedByPersonId ? { deletedByPersonId: input.deletedByPersonId } : {}),
+      deletedByPersonId: input.deletedByPersonId,
+      // A staffer's own Delete, the one archive a card's Undo may take back (#3701).
+      deletionKind: "staff",
     })
     .where(
       and(
@@ -1464,51 +1394,6 @@ export async function deleteSpecialtyCertification(
         eq(cards.id, input.certificationId),
         eq(cards.shopId, input.shopId),
         isNull(cards.deletedAt),
-      ),
-    )
-    .returning({ id: cards.id });
-  return Boolean(row);
-}
-
-/** Undo a specialty-card delete, mirroring `restoreCertification`. */
-export async function restoreSpecialtyCertification(
-  db: AppDb,
-  input: { shopId: string; certificationId: string },
-) {
-  const [deleted] = await db
-    .select()
-    .from(cards)
-    .where(
-      and(
-        eq(cards.kind, "specialty"),
-        eq(cards.id, input.certificationId),
-        eq(cards.shopId, input.shopId),
-      ),
-    )
-    .limit(1);
-  if (!deleted || deleted.deletedAt === null) return false;
-  const [conflict] = await db
-    .select({ id: cards.id })
-    .from(cards)
-    .where(
-      and(
-        eq(cards.kind, "specialty"),
-        eq(cards.shopId, input.shopId),
-        eq(cards.agency, deleted.agency),
-        sql`lower(${cards.identifier}) = lower(${deleted.identifier})`,
-        isNull(cards.deletedAt),
-      ),
-    )
-    .limit(1);
-  if (conflict) return false;
-  const [row] = await db
-    .update(cards)
-    .set({ deletedAt: null, deletedByPersonId: null })
-    .where(
-      and(
-        eq(cards.kind, "specialty"),
-        eq(cards.id, input.certificationId),
-        eq(cards.shopId, input.shopId),
       ),
     )
     .returning({ id: cards.id });

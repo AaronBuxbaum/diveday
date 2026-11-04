@@ -445,5 +445,6 @@ script again.
 | 20261103-one-card-ledger | Keep every diver card in… |
 | 20261103-one-roll-call-ledger | Seat and crew marks are… |
 | 20261103-waiver-signs-in-the-thread | The diver's own release signs… |
+| 20261104-arrival-is-a-trail | Read arrival from its trail;… |
 
 <!-- adr-index:end -->

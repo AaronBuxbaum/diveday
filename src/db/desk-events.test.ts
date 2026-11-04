@@ -1,7 +1,9 @@
 import { and, eq, isNotNull, isNull, ne, notExists } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
+import { seatCheckedIn } from "./arrival-provenance";
 import { listDeskEventsSince, markTripCaughtUp, recordDeskEvent } from "./desk-events";
 import {
   bookings,
@@ -306,11 +308,12 @@ describe("listDeskEventsSince", () => {
  * alone.
  */
 describe("listDeskEventsSince, against the roster it sits above", () => {
-  async function arrivalAfterMark(status: "booked" | "checked_in") {
+  async function arrivalAfterMark(checkedIn = true) {
     const fixture = await catchUpFixture();
     const { db, shop, reader, desk, trip, seat } = fixture;
     await markTripCaughtUp(db, { shopId: shop.id, tripId: trip.id, personId: reader.id });
-    await db.update(bookings).set({ status }).where(eq(bookings.id, seat.id));
+    // Checked in is the arrival trail, not a seat status (issue #2702).
+    if (checkedIn) await markArrived(db, seat.id, { recordedByPersonId: desk.id });
     await recordDeskEvent(db, {
       shopId: shop.id,
       tripId: trip.id,
@@ -323,7 +326,7 @@ describe("listDeskEventsSince, against the roster it sits above", () => {
   }
 
   it("says an arrival while the seat is checked in", async () => {
-    const { db, shop, reader, trip } = await arrivalAfterMark("checked_in");
+    const { db, shop, reader, trip } = await arrivalAfterMark();
     const seen = await listDeskEventsSince(db, shop.id, trip.id, reader.id);
     expect(seen.events.map((event) => event.kind)).toEqual(["arrival"]);
   });
@@ -331,15 +334,16 @@ describe("listDeskEventsSince, against the roster it sits above", () => {
   it("drops an arrival whose check-in was taken back", async () => {
     // `undoCheckInBooking` writes no event (an undo is not news), so the only
     // thing that can retract the line is the seat it names.
-    const { db, shop, reader, trip, seat } = await arrivalAfterMark("checked_in");
-    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, seat.id));
+    const { db, shop, reader, trip, seat, desk } = await arrivalAfterMark();
+    // The undo's `cleared` row on the trail, which is all an undo writes now.
+    await markArrived(db, seat.id, { recordedByPersonId: desk.id, status: "cleared" });
     expect((await listDeskEventsSince(db, shop.id, trip.id, reader.id)).events).toEqual([]);
   });
 
   it("drops an arrival once the checked-in seat moves to another departure", async () => {
     // Domain review 1: a seat move keeps the status, so the status alone would
     // leave the old strip saying the diver arrived for a boat they are not on.
-    const { db, shop, reader, trip, seat } = await arrivalAfterMark("checked_in");
+    const { db, shop, reader, trip, seat } = await arrivalAfterMark();
     const [other] = await db
       .select({ id: trips.id })
       .from(trips)
@@ -364,7 +368,7 @@ describe("listDeskEventsSince, against the roster it sits above", () => {
   });
 
   it("never says an arrival for a seat the counter has not checked in", async () => {
-    const { db, shop, reader, trip } = await arrivalAfterMark("booked");
+    const { db, shop, reader, trip } = await arrivalAfterMark(false);
     expect((await listDeskEventsSince(db, shop.id, trip.id, reader.id)).events).toEqual([]);
   });
 
@@ -450,7 +454,7 @@ describe("the seeded morning handoff", () => {
       .select({ name: people.fullName })
       .from(bookings)
       .innerJoin(people, eq(people.id, bookings.personId))
-      .where(and(eq(bookings.tripId, reefId), eq(bookings.status, "checked_in")));
+      .where(and(eq(bookings.tripId, reefId), seatCheckedIn));
     const arrivals = catchUp.events.filter((event) => event.kind === "arrival");
     expect(arrivals.map((event) => event.subjectName).sort()).toEqual(
       checkedIn.map((row) => row.name).sort(),

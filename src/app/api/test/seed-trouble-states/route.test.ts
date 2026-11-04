@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { standingArrivalStatus } from "@/db/arrival-provenance";
 import { inHorizonReadiness } from "@/db/blockers";
 import { getGearItemDetail } from "@/db/gear-register";
 import { listGearRentals } from "@/db/gear-rentals";
@@ -13,6 +14,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
 import { benchReturnConcerns } from "@/lib/gear";
+import { markArrived } from "@/test/arrivals";
 import { seededShopContext } from "@/test/db";
 
 /**
@@ -144,8 +146,11 @@ describe("POST /api/test/seed-trouble-states", () => {
     const row = (await listTripReadiness(db, shop.id, tripId)).find(
       (entry) => entry.person.fullName === personName,
     );
-    expect(row?.booking.status).toBe("checked_in");
-    expect(row?.readiness.status).toBe("blocked");
+    // Checked in is the arrival trail's word on a held seat (issue #2702).
+    expect(row?.booking.status).toBe("booked");
+    if (!row) throw new Error("the checked-in diver is not on the trip");
+    expect(await standingArrivalStatus(db, shop.id, tripId, row.booking.id)).toBe("arrived");
+    expect(row.readiness.status).toBe("blocked");
   }, 60_000);
 
   /**
@@ -232,11 +237,15 @@ describe("POST /api/test/seed-trouble-states", () => {
     expect([...states.values()]).toContain("boarded");
     expect([...states.values()]).toContain("not_boarded");
     const [seat] = await db
-      .select({ status: bookings.status })
+      .select({ id: bookings.id, status: bookings.status })
       .from(bookings)
       .innerJoin(people, eq(people.id, bookings.personId))
       .where(and(eq(bookings.tripId, tripId), eq(people.fullName, personName)));
-    expect(seat?.status).toBe("checked_in");
+    // Through the desk before the boat left: a held seat the arrival trail has
+    // seen, never a seat status (issue #2702).
+    expect(seat?.status).toBe("booked");
+    if (!seat) throw new Error("the uncounted seat is missing");
+    expect(await standingArrivalStatus(db, shop.id, tripId, seat.id)).toBe("arrived");
   }, 60_000);
 
   /**
@@ -265,7 +274,7 @@ describe("POST /api/test/seed-trouble-states", () => {
       .where(and(eq(bookings.tripId, (await nextOf()).tripId), eq(bookings.status, "booked")))
       .limit(1);
     if (!seat) throw new Error("the next boat has no booked seat");
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, seat.id));
+    await markArrived(db, seat.id);
 
     const response = await POST(seedRequest("?facts=crewUncounted"));
     expect(response.status).toBe(200);

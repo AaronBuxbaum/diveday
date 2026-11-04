@@ -20,6 +20,7 @@ import { recordTripStage } from "@/db/trip-stages";
 import { listStaff } from "@/db/trips";
 import { nowMs } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { assembleEveningClose } from "./closeout";
 import { getDayCloseout, listHeadCountCloses } from "./closeout-reader";
@@ -134,10 +135,11 @@ describe("day close-out (in-memory PGlite)", () => {
         shopId: shop.id,
         tripId: trip.id,
         personId: diver.id,
-        status: "checked_in" as const,
+        status: "booked" as const,
       })
       .returning();
     if (!booking) throw new Error("fixture booking insert returned no row");
+    await markArrived(db, booking.id, { recordedByPersonId: staff.person.id }); // the trail, #2702
     await db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: trip.id,
@@ -488,7 +490,7 @@ describe("day close-out (in-memory PGlite)", () => {
 
     const seat = async (
       db: Awaited<ReturnType<typeof boatThatSailedShort>>["db"],
-      values: { shopId: string; tripId: string; personId: string; status: "booked" | "checked_in" },
+      values: { shopId: string; tripId: string; personId: string; status: "booked" },
     ) => {
       const [booking] = await db
         .insert(bookingsTable)
@@ -561,11 +563,8 @@ describe("day close-out (in-memory PGlite)", () => {
       // a body on the boat at 06:50.
       //
       // The rail is the statement that *does* outrank it, and it needs no
-      // reader here: boarding a diver marked absent takes the booking back to
-      // what it was before the release, `checked_in` when the desk had seen
-      // them and `booked` otherwise (`reclaimReleasedSeat`,
-      // src/db/manifests.ts), so a diver the crew counted is never sitting at
-      // `no_show` when the evening reads it.
+      // reader here: boarding a diver marked absent takes the seat back to `booked`
+      // (`reclaimReleasedSeat`), so a diver the crew counted is never `no_show` at evening.
       const ctx = await boatThatSailedShort();
       const { db, shop, staff, now, trip, divers } = ctx;
       await seat(db, {
@@ -578,7 +577,7 @@ describe("day close-out (in-memory PGlite)", () => {
         shopId: shop.id,
         tripId: trip.id,
         personId: divers[1].id,
-        status: "checked_in",
+        status: "booked",
       });
       await db.insert(bookingArrivalEvents).values({
         shopId: shop.id,

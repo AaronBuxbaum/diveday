@@ -86,11 +86,11 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
             offlineArrivalEvents(envelope),
           );
           /**
-           * **The seat as the shared predicates read it**, and the one place
-           * this page decides what the booking's own `status` column said when
-           * the copy was taken. It answered `arrival ? "checked_in" :
-           * "booked"` and nothing else, so a seat the desk had released
-           * reached `isSettledAtCounter` as an ordinary booking (#1705).
+           * **The seat as the shared predicates read it**: the seat word from
+           * the copy, and arrival from the trail, the device's queue over the
+           * copy's `checkedIn` (`latestOfflineArrival`), never from the seat
+           * word (issue #2702). Once a seat the desk had released reached
+           * `isSettledAtCounter` as an ordinary booking (#1705).
            *
            * The desk's own answer wins over this device's: a released seat
            * with a queued arrival on it is a tap the server has already
@@ -98,7 +98,8 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
            * this page arguing with the only authority there is.
            */
           const seat = {
-            bookingStatus: diver.notHere ? "no_show" : arrival ? "checked_in" : "booked",
+            bookingStatus: diver.notHere ? "no_show" : "booked",
+            checkedIn: !diver.notHere && Boolean(arrival),
             readiness: offlineTrainingReadinessStale(envelope.snapshot, diver)
               ? { ...diver.readiness, status: "blocked" as const }
               : diver.readiness,

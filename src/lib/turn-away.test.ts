@@ -20,6 +20,7 @@ const blocked = (...codes: ReadinessBlocker["code"][]) => ({
 function gate(overrides: Partial<TurnAwayGateInput> = {}) {
   return turnAwayGate({
     bookingStatus: "booked",
+    checkedIn: false,
     onTheWater: null,
     tripStatus: "scheduled",
     startsAt: DEPARTURE,
@@ -33,6 +34,7 @@ function gate(overrides: Partial<TurnAwayGateInput> = {}) {
 
 const rowAt = (now: Date): Omit<TurnAwayGateInput, "reason"> => ({
   bookingStatus: "booked",
+  checkedIn: false,
   onTheWater: null,
   tripStatus: "scheduled",
   startsAt: DEPARTURE,
@@ -140,7 +142,7 @@ describe("turnAwayGate", () => {
   });
 
   it("takes a diver who checked in and then went blocked, while the boat is in", () => {
-    expect(gate({ bookingStatus: "checked_in" })).toBe("eligible");
+    expect(gate({ checkedIn: true })).toBe("eligible");
   });
 
   /**
@@ -150,10 +152,10 @@ describe("turnAwayGate", () => {
    */
   it("refuses an arrived diver once the boat has sailed", () => {
     const sailed = new Date(DEPARTURE.getTime() + 2 * HOUR_MS);
-    expect(gate({ bookingStatus: "checked_in", now: sailed })).toBe("sailed");
+    expect(gate({ checkedIn: true, now: sailed })).toBe("sailed");
     expect(
       gate({
-        bookingStatus: "checked_in",
+        checkedIn: true,
         now: sailed,
         readiness: blocked("payment_refunded"),
         reason: "payment",
@@ -167,11 +169,27 @@ describe("turnAwayGate", () => {
    */
   it("refuses an arrived diver from the scheduled start, not the sailing buffer", () => {
     const at = (minutes: number) => new Date(DEPARTURE.getTime() + minutes * MINUTE_MS);
-    expect(gate({ bookingStatus: "checked_in", now: at(-1) })).toBe("eligible");
-    expect(gate({ bookingStatus: "checked_in", now: at(0) })).toBe("sailed");
-    expect(gate({ bookingStatus: "checked_in", now: at(10) })).toBe("sailed");
-    expect(gate({ bookingStatus: "checked_in", now: at(59) })).toBe("sailed");
-    expect(turnAwayOffer({ ...rowAt(at(10)), bookingStatus: "checked_in" })).toEqual([]);
+    expect(gate({ checkedIn: true, now: at(-1) })).toBe("eligible");
+    expect(gate({ checkedIn: true, now: at(0) })).toBe("sailed");
+    expect(gate({ checkedIn: true, now: at(10) })).toBe("sailed");
+    expect(gate({ checkedIn: true, now: at(59) })).toBe("sailed");
+    expect(turnAwayOffer({ ...rowAt(at(10)), checkedIn: true })).toEqual([]);
+  });
+
+  /**
+   * Issue #2702: arrival is the trail's word. A held seat the trail has seen is
+   * the arrived diver `sailed` protects; a released seat whose `arrived` row
+   * still stands is already marked, before and after the start, and never
+   * reads as an arrived diver who sailed.
+   */
+  it("keys sailed on the trail, and keeps a released seat with a standing sighting already marked", () => {
+    const sailed = new Date(DEPARTURE.getTime() + 2 * HOUR_MS);
+    expect(gate({ bookingStatus: "booked", checkedIn: true, now: sailed })).toBe("sailed");
+    expect(gate({ bookingStatus: "no_show", checkedIn: true })).toBe("already_marked");
+    expect(gate({ bookingStatus: "no_show", checkedIn: true, now: sailed })).toBe("already_marked");
+    expect(turnAwayOffer({ ...rowAt(sailed), bookingStatus: "no_show", checkedIn: true })).toEqual(
+      [],
+    );
   });
 
   /** A booked row after sailing keeps today's behavior (product call, noted). */
@@ -191,6 +209,7 @@ describe("turnAwayOffer", () => {
   const offer = (overrides: Partial<Omit<TurnAwayGateInput, "reason">> = {}) =>
     turnAwayOffer({
       bookingStatus: "booked",
+      checkedIn: false,
       onTheWater: null,
       tripStatus: "scheduled",
       startsAt: DEPARTURE,
@@ -204,9 +223,9 @@ describe("turnAwayOffer", () => {
   });
 
   it("offers nothing to an arrived diver once the boat has sailed", () => {
-    expect(
-      offer({ bookingStatus: "checked_in", now: new Date(DEPARTURE.getTime() + 2 * HOUR_MS) }),
-    ).toEqual([]);
+    expect(offer({ checkedIn: true, now: new Date(DEPARTURE.getTime() + 2 * HOUR_MS) })).toEqual(
+      [],
+    );
   });
 
   it("offers nothing on the water, on a released seat, or on a ready row", () => {

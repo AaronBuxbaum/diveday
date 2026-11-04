@@ -1,10 +1,11 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { agencyCheckOffered } from "@/lib/agency-check";
 import { type ElearningQuery, elearningCheckQuery } from "@/lib/elearning-check";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { bookings, courses, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /**
  * One course seat the DiveDay browser extension may check against the
@@ -52,7 +53,7 @@ export async function seatForElearningCheck(
         eq(trips.shopId, input.shopId),
         eq(courses.shopId, input.shopId),
         eq(people.shopId, input.shopId),
-        inArray(bookings.status, ["booked", "checked_in"]),
+        seatHeld,
         liveTrip(),
         isNull(people.deletedAt),
         isNull(people.anonymizedAt),

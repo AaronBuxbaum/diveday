@@ -26,23 +26,21 @@ import { hasSailed } from "./trips";
  */
 
 /**
- * The booking statuses that hold a seat on a departure.
+ * **Whether this booking status still holds a seat against capacity**: only
+ * `booked` does.
  *
  * This is the ticket's boundary written as data. `cancelled` never held one,
- * and from this slice on `no_show` no longer does either: a staffer has said
- * the diver is not coming, so the seat is the shop's to sell. Every capacity
- * count reads this rather than spelling `ne(status, "cancelled")` again,
- * because a missed call site reads on a shop's screen as a boat saying
- * "Full" over a seat that is actually free — or, the other way round, as an
- * oversell.
+ * and since #1209 `no_show` no longer does either: a staffer has said the
+ * diver is not coming, so the seat is the shop's to sell. Arrival is not a
+ * seat word (issue #2702): a diver the desk has seen still holds the same
+ * `booked` seat, and the sighting is the arrival trail's. Every capacity count
+ * in SQL reads `seatHeld` (src/db/trips-queries.ts) rather than spelling the
+ * status again, because a missed call site reads on a shop's screen as a boat
+ * saying "Full" over a seat that is actually free — or, the other way round,
+ * as an oversell.
  */
-export const SEAT_HELD_STATUSES = ["booked", "checked_in"] as const;
-
-export type SeatHeldStatus = (typeof SEAT_HELD_STATUSES)[number];
-
-/** Whether this booking status still holds a seat against capacity. */
-export function seatIsHeld(status: string): status is SeatHeldStatus {
-  return (SEAT_HELD_STATUSES as readonly string[]).includes(status);
+export function seatIsHeld(status: string): status is "booked" {
+  return status === "booked";
 }
 
 /**
@@ -251,7 +249,7 @@ export function salvageOffer(input: {
  * Whether a seat the diver already has a row on can be taken again as a new
  * booking: a cancelled one always, and a `no_show` one only while the
  * departure is still ahead (#2484). A no-show has released its seat
- * (`SEAT_HELD_STATUSES`), so the diver coming back for a later day of the same
+ * (`seatIsHeld`), so the diver coming back for a later day of the same
  * run is a fresh booking; the "never turned up" line stays in the departure's
  * trail (`booking_no_show`), which reactivation does not touch. Once the
  * departure has started, the mark is the record of what happened and the row

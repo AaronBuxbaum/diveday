@@ -1,6 +1,5 @@
 import { and, asc, eq, gt, inArray, ne } from "drizzle-orm";
 import { DAY_MS, HOUR_MS } from "@/lib/clock";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { seatSailed } from "@/lib/seat-sailed";
 import { similarDepartures } from "@/lib/similar-departures";
 import type { AppDb } from "./client";
@@ -9,6 +8,7 @@ import { bookings, people, trips } from "./schema";
 import { tripPrimarySiteId } from "./trip-primary-site";
 import { pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /**
  * How long after the boat is home the Divers tab keeps saying what each diver
@@ -112,13 +112,7 @@ export async function sailedRebooking(
     .select({ bookingId: bookings.id, personId: bookings.personId, personName: people.fullName })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, tripId),
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
-      ),
-    );
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId), seatHeld));
   const seats = heldSeats.filter((seat) => cameBackAboard(seat.bookingId, rollCall));
   if (seats.length === 0) return result;
   const personIds = [...new Set(seats.map((seat) => seat.personId))];
@@ -136,7 +130,7 @@ export async function sailedRebooking(
         and(
           eq(bookings.shopId, shopId),
           inArray(bookings.personId, personIds),
-          inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+          seatHeld,
           ne(trips.id, tripId),
           ne(trips.status, "cancelled"),
           gt(trips.startsAt, now),

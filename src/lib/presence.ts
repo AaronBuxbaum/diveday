@@ -3,13 +3,13 @@
  * and never written (issues #2702, #2704).
  *
  * Dependency-free like `roll-call.ts`, so the offline service worker can share
- * it. A seat has two lifecycles that `bookings.status` still folds into one
- * column: what the shop decided about the seat (held, released, cancelled) and
- * where the person has got to (seen at the desk, aboard). The second is a
+ * it. A seat has two lifecycles, and since issue #2702 they are two records
+ * rather than one column: `bookings.status` says what the shop decided about
+ * the seat (held, released, cancelled), and where the person has got to is a
  * trail, `booking_arrival_events` for the desk and `roll_call_events` for the
- * rail, and the column only mirrors it. This module is where the mirror is
- * read from, so a writer that puts a released seat back asks one question in
- * one place instead of spelling the answer itself.
+ * rail. Nothing mirrors the trail onto the seat, so a no-show, a cancel, a
+ * reclaim or a restore touches the seat word and leaves the sighting standing
+ * (ADR 20261104-arrival-is-a-trail).
  *
  * **The trail is a record of who was seen, never of who dived.** A standing
  * `arrived` row says the desk saw the person; the boat carrying them is the
@@ -26,18 +26,18 @@ export function hasArrived(standing: StandingArrival | undefined): boolean {
 }
 
 /**
- * The slot a released (`no_show`) seat goes back to: `checked_in` while the
- * trail still says the desk saw the person, `booked` otherwise. A restore that
- * always wrote `booked` put a diver the counter had checked in back on the
- * "still to come" list (issue #1838). Both slots hold the seat.
+ * **Checked in**: the seat is still held and the desk's trail has the person
+ * seen. Both halves, always — a released (`no_show`) or cancelled seat keeps
+ * its `arrived` row standing, and reading the trail alone would put the diver
+ * the desk wrote off back on the counter as through it. The SQL spelling of
+ * the same rule is `seatCheckedIn` (src/db/arrival-provenance.ts); the two
+ * must agree.
  *
- * The one function behind `undoBookingNoShow` and `reclaimReleasedSeat`; they
- * must agree or the slot and the trail drift apart.
+ * Never "aboard": a diver checked in at 06:40 can be seasick on the ramp at
+ * 06:50 (ADR 20260907-the-counter-survives-offline, decision 4).
  */
-export function seatStatusAfterRelease(
-  standing: StandingArrival | undefined,
-): "checked_in" | "booked" {
-  return hasArrived(standing) ? "checked_in" : "booked";
+export function isCheckedIn(seatStatus: string, standing: StandingArrival | undefined): boolean {
+  return seatStatus === "booked" && hasArrived(standing);
 }
 
 /**

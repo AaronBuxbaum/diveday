@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, not } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { seatCheckedIn } from "@/db/arrival-provenance";
 import { createBooking } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
@@ -64,10 +65,9 @@ const { saveRequirementsAction } = await import("./terms-actions");
 const { certifyDiverFromRosterAction } = await import("./course-actions");
 
 /**
- * A seeded ordinary charter — not a course session, whose rules are frozen —
- * that already demands a certification and a waiver. Picking a trip with
- * requirements is what makes "the row did not change" mean anything: against a
- * trip with no requirements row, every such assertion would pass vacuously.
+ * A seeded ordinary charter (not a course session, whose rules are frozen) that
+ * already demands a certification and a waiver, so "the row did not change"
+ * means something: with no requirements row every such assertion would pass.
  */
 async function seededTripId(db: AppDb, shopId: string): Promise<string> {
   const [trip] = await db
@@ -78,6 +78,7 @@ async function seededTripId(db: AppDb, shopId: string): Promise<string> {
     .where(
       and(
         eq(trips.shopId, shopId),
+        not(seatCheckedIn), // a seat still to come at the desk (#2702)
         isNull(trips.courseId),
         isNotNull(tripRequirements.minimumCertificationLevel),
         eq(tripRequirements.requiresWaiver, true),
@@ -371,9 +372,8 @@ describe("setting what a trip admits", () => {
 
 /**
  * **An intro session certifies nobody, whatever is posted** (dive-domain
- * review). The roster draws no Certify control on a DSD, but a form post
- * reaches the action regardless, and a forged `award=open_water` must never
- * mint the verified card the booking gate trusts.
+ * review). The roster draws no Certify control on a DSD, but a forged post's
+ * `award=open_water` must never mint the verified card the booking gate trusts.
  */
 describe("certifying from an intro session's roster", () => {
   it("refuses a forged open-water award on a DSD session and writes no card", async () => {

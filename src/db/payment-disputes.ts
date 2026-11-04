@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { isUuid } from "@/lib/uuid";
-import type { AppDb } from "./client";
+import type { AppDb, AppTransaction } from "./client";
 import type { PaymentDispute } from "./schema";
 import {
   bookingCheckoutBookings,
@@ -13,6 +13,7 @@ import {
   trips,
 } from "./schema";
 import { findStripePaymentTarget } from "./stripe-payment-targets";
+import { lockedTipFor, recordTipLostDispute } from "./tip-reversals";
 
 /**
  * Stripe's dispute statuses that mean the bank has decided, or the inquiry is
@@ -93,7 +94,7 @@ export async function recordStripeDispute(
     stripeDisputeId: event.dispute.id,
     stripePaymentIntentId: event.dispute.paymentIntentId,
     orderId: target.kind === "order" ? target.order.id : null,
-    checkoutId: target.kind === "checkout" ? target.checkout.id : null,
+    checkoutId: target.kind === "order" ? null : target.checkout.id,
     amountCents: event.dispute.amountCents,
     currency: event.dispute.currency,
     reason: event.dispute.reason,
@@ -105,40 +106,67 @@ export async function recordStripeDispute(
     lastEventAt: event.occurredAt,
     updatedAt: event.occurredAt,
   };
-  const [written] = await db
-    .insert(paymentDisputes)
-    .values(row)
-    .onConflictDoUpdate({
-      target: paymentDisputes.stripeDisputeId,
-      set: {
-        amountCents: row.amountCents,
-        reason: row.reason,
-        status: row.status,
-        evidenceDueBy: row.evidenceDueBy,
-        // Cleared only by a strictly newer event (the guard below refuses an
-        // equal-time update to a closed row), so a close is never undone by
-        // an `updated` Stripe stamped in the same second.
-        closedAt: closed ? sql`coalesce(${paymentDisputes.closedAt}, ${row.closedAt})` : sql`null`,
-        // A reversal, once written, stays where it was written.
-        reversedAt: sql`coalesce(${paymentDisputes.reversedAt}, ${row.reversedAt})`,
-        lastEventAt: row.lastEventAt,
-        updatedAt: row.updatedAt,
-      },
-      // Never let an older event overwrite a newer one, and never let a row
-      // move to another shop's account: the dispute id is Stripe's, but the
-      // account is the event's own statement of whose it is.
-      //
-      // Same-second events are ambiguous — Stripe's `created` has one-second
-      // resolution — so an equal time may only *close* a dispute or touch one
-      // still open; it never reopens one already decided.
-      setWhere: and(
-        closed
-          ? sql`${paymentDisputes.lastEventAt} <= ${row.lastEventAt}`
-          : sql`(${paymentDisputes.lastEventAt} < ${row.lastEventAt} or (${paymentDisputes.lastEventAt} = ${row.lastEventAt} and ${paymentDisputes.closedAt} is null))`,
-        eq(paymentDisputes.stripeAccountId, row.stripeAccountId),
-      ),
-    })
-    .returning();
+  const write = async (executor: AppDb | AppTransaction) => {
+    const [written] = await executor
+      .insert(paymentDisputes)
+      .values(row)
+      .onConflictDoUpdate({
+        target: paymentDisputes.stripeDisputeId,
+        set: {
+          amountCents: row.amountCents,
+          reason: row.reason,
+          status: row.status,
+          evidenceDueBy: row.evidenceDueBy,
+          // Cleared only by a strictly newer event (the guard below refuses an
+          // equal-time update to a closed row), so a close is never undone by
+          // an `updated` Stripe stamped in the same second.
+          closedAt: closed
+            ? sql`coalesce(${paymentDisputes.closedAt}, ${row.closedAt})`
+            : sql`null`,
+          // A reversal, once written, stays where it was written.
+          reversedAt: sql`coalesce(${paymentDisputes.reversedAt}, ${row.reversedAt})`,
+          lastEventAt: row.lastEventAt,
+          updatedAt: row.updatedAt,
+        },
+        // Never let an older event overwrite a newer one, and never let a row
+        // move to another shop's account: the dispute id is Stripe's, but the
+        // account is the event's own statement of whose it is.
+        //
+        // Same-second events are ambiguous — Stripe's `created` has one-second
+        // resolution — so an equal time may only *close* a dispute or touch one
+        // still open; it never reopens one already decided.
+        setWhere: and(
+          closed
+            ? sql`${paymentDisputes.lastEventAt} <= ${row.lastEventAt}`
+            : sql`(${paymentDisputes.lastEventAt} < ${row.lastEventAt} or (${paymentDisputes.lastEventAt} = ${row.lastEventAt} and ${paymentDisputes.closedAt} is null))`,
+          eq(paymentDisputes.stripeAccountId, row.stripeAccountId),
+        ),
+      })
+      .returning();
+    return written;
+  };
+
+  if (target.kind === "tip") {
+    // A tip lost in a dispute stops counting toward the crew's split (issue
+    // #3736), once: the lock on the tip, then the dispute's own first reversal.
+    const written = await db.transaction(async (tx) => {
+      const tip = await lockedTipFor(tx, target.checkout.id);
+      if (!tip) return undefined;
+      const [before] = await tx
+        .select({ reversedAt: paymentDisputes.reversedAt })
+        .from(paymentDisputes)
+        .where(eq(paymentDisputes.stripeDisputeId, event.dispute.id))
+        .limit(1);
+      const saved = await write(tx);
+      if (saved && lost && !before?.reversedAt) {
+        await recordTipLostDispute(tx, tip, event.dispute.amountCents);
+      }
+      return saved;
+    });
+    return written ? { status: "recorded", dispute: written } : { status: "stale" };
+  }
+
+  const written = await write(db);
   return written ? { status: "recorded", dispute: written } : { status: "stale" };
 }
 
@@ -180,7 +208,7 @@ export async function listOpenPaymentDisputes(
     .leftJoin(people, and(eq(people.id, orders.personId), eq(people.shopId, shopId)))
     .leftJoin(
       bookingCheckouts,
-      // diveday:any-checkout-purpose: a dispute is only ever recorded against a fare (findStripePaymentTarget)
+      // diveday:any-checkout-purpose: a dispute is recorded against a fare or a tip, the checkout findStripePaymentTarget returned
       and(
         eq(bookingCheckouts.id, paymentDisputes.checkoutId),
         eq(bookingCheckouts.shopId, paymentDisputes.shopId),
@@ -211,7 +239,7 @@ export async function listOpenPaymentDisputes(
             fullName: people.fullName,
           })
           .from(bookingCheckoutBookings)
-          // diveday:any-checkout-purpose: a dispute is only ever recorded against a fare (findStripePaymentTarget)
+          // diveday:any-checkout-purpose: a dispute is recorded against a fare or a tip, the checkout findStripePaymentTarget returned
           .innerJoin(
             bookings,
             and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),

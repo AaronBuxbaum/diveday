@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { and, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
+import { seatIsHeld } from "@/lib/no-show";
 import {
   type Notification,
   type NotificationDelivery,
@@ -22,15 +23,13 @@ import { notificationProviderForDb, sendNotification } from "./notifications";
 import { isTransactionExecutor, queryAll } from "./query-helpers";
 import { bookings, notificationSendQueue, people, shops, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /**
  * Correct an interval that no longer matches the diver's current itinerary.
  * The provider's actual recipient is sealed with shop and seat identifiers;
  * legacy or unreadable snapshots are left for staff to follow up.
  */
-
-/** Seats still on the boat: the ones a correction speaks to. */
-const LIVE_SEAT_STATUSES = ["booked", "checked_in"] as const;
 
 /**
  * How long after the boat is due back a correction is still worth sending:
@@ -326,7 +325,7 @@ export async function retryOwedFlySafeCorrections(
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
     .where(
       and(
-        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        seatHeld,
         isNotNull(bookings.flySafeHoursTold),
         isNull(bookings.flySafeCorrectedAt),
         eq(trips.status, "scheduled"),
@@ -366,7 +365,7 @@ async function correctFlySafeForPeople(
       and(
         eq(bookings.shopId, input.shopId),
         inArray(bookings.personId, input.personIds),
-        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        seatHeld,
         isNotNull(bookings.flySafeHoursTold),
         isNull(bookings.flySafeCorrectedAt),
       ),
@@ -423,7 +422,7 @@ export async function queuedFlySafeCorrectionState(
       and(
         eq(bookings.id, notification.seatId),
         eq(bookings.shopId, notification.shopId),
-        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        seatHeld,
         livePerson(),
         isNull(people.anonymizedAt),
       ),
@@ -503,9 +502,7 @@ export function flySafeToldUncorrected(
 ): number {
   return seats.filter(
     (seat) =>
-      (LIVE_SEAT_STATUSES as readonly string[]).includes(seat.status) &&
-      seat.flySafeHoursTold !== null &&
-      seat.flySafeCorrectedAt === null,
+      seatIsHeld(seat.status) && seat.flySafeHoursTold !== null && seat.flySafeCorrectedAt === null,
   ).length;
 }
 
@@ -753,7 +750,7 @@ async function mutateFlySafeExposure(
       seat.flySafeCorrectionLeaseId !== input.leaseId ||
       seat.tripId !== input.tripId ||
       (input.expectedPersonId && seat.personId !== input.expectedPersonId) ||
-      (seat.status !== "booked" && seat.status !== "checked_in") ||
+      seat.status !== "booked" ||
       !seat.flySafeRecipientSealed
     )
       return false;
@@ -910,7 +907,7 @@ export async function sendFlySafeCorrections(
         eq(bookings.tripId, trip.id),
         input.bookingId ? eq(bookings.id, input.bookingId) : undefined,
         input.expectedPersonId ? eq(bookings.personId, input.expectedPersonId) : undefined,
-        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        seatHeld,
         isNotNull(bookings.flySafeHoursTold),
         isNull(bookings.flySafeCorrectedAt),
         // An active lease is a cheap nonlocking exclusion for workers that
@@ -973,7 +970,7 @@ export async function sendFlySafeCorrections(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, trip.id),
         input.expectedPersonId ? eq(bookings.personId, input.expectedPersonId) : undefined,
-        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        seatHeld,
         isNotNull(bookings.flySafeHoursTold),
         inArray(bookings.id, stale),
         isNull(bookings.flySafeCorrectedAt),

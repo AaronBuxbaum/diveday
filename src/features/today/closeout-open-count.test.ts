@@ -9,6 +9,7 @@ import {
 import { listStaff } from "@/db/trips";
 import { nowMs } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { getDayCloseout } from "./closeout-reader";
 
@@ -55,10 +56,12 @@ describe("an open after-dive count at sea (issue #2925)", () => {
           shopId: shop.id,
           tripId: trip.id,
           personId: diver.id,
-          status: "checked_in" as const,
+          status: "booked" as const,
         })),
       )
       .returning();
+    // Both seen at the desk: checked in is the arrival trail (issue #2702).
+    for (const seat of seats) await markArrived(db, seat.id);
     const mark = (bookingId: string, checkpoint: string, occurredAt: Date) => ({
       shopId: shop.id,
       tripId: trip.id,

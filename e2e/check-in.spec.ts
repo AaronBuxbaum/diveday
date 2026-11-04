@@ -199,7 +199,7 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
 /**
  * **The all-clear never paints over a diver who cannot board** (#2410). A
  * diver checked in at the counter whose release is then taken back is
- * `checked_in` and blocked at once: the counter keeps them under "Still to
+ * checked in (the arrival trail says so) and blocked at once: the counter keeps them under "Still to
  * clear", says somebody can't board yet, and draws no "Everyone's checked in".
  * The rule is unit-tested in `CounterInstrument.test.tsx`; this is the browser.
  */

@@ -1,9 +1,10 @@
-import { and, asc, countDistinct, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, countDistinct, eq, gte, lt, sql } from "drizzle-orm";
 import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { bookings, people, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /**
  * **The season's scale, as three facts** — ADR 20260904-reef-all-the-way-down,
@@ -44,9 +45,6 @@ export type SeasonScale = {
   firstBoatOfSeason: boolean;
 };
 
-/** Statuses a seat that is still standing can be in. */
-const LIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
-
 export async function seasonScale(
   db: DbExecutor,
   shopId: string,
@@ -58,12 +56,7 @@ export async function seasonScale(
   // A departure the shop deleted takes its seats out of the count with it, and
   // `liveTrip()` is what `pnpm check:repo`'s live-trips guard requires of every
   // read that joins through `trips`.
-  const seatIsLive = and(
-    eq(bookings.shopId, shopId),
-    inArray(bookings.status, [...LIVE_BOOKING_STATUSES]),
-    liveTrip(),
-    notRehearsal(),
-  );
+  const seatIsLive = and(eq(bookings.shopId, shopId), seatHeld, liveTrip(), notRehearsal());
 
   const [before, today, earliest] = await queryAll(db, [
     () =>
@@ -87,7 +80,7 @@ export async function seasonScale(
             join ${trips} as earlier_trip on earlier_trip.id = earlier.trip_id
             where earlier.person_id = ${bookings.personId}
               and earlier.shop_id = ${shopId}
-              and earlier.status in ('booked', 'checked_in')
+              and earlier.status = 'booked'
               and earlier_trip.deleted_at is null
               and not earlier_trip.is_rehearsal
               and earlier_trip.starts_at >= ${seasonStart}

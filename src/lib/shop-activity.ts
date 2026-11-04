@@ -134,6 +134,9 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   dashboard_refund_matched: "money",
   note_added: "records",
   note_deleted: "records",
+  note_restored: "records",
+  // A card back on file clears the gates it cleared before: the safety filter.
+  card_restored: "safety",
   record_exported: "records",
   drysuit_experience_recorded: "records",
   drysuit_experience_cleared: "records",

@@ -13,8 +13,8 @@ export type TripPageSearchParams = {
   /** Signed, and verified against this route's own `id` — src/lib/trip-admission-gate.ts. */
   gate?: string | string[];
   rf?: string;
-  noteBookingId?: string;
-  noteBody?: string;
+  /** The deleted booking note's id, for its Undo. */
+  noteId?: string;
   confirmName?: string;
   confirmEmail?: string;
   confirmPhone?: string;
@@ -71,8 +71,7 @@ export const TRIP_FLASH_PARAMS = [
   "diverq",
   "inviteq",
   "rf",
-  "noteBookingId",
-  "noteBody",
+  "noteId",
   "confirmName",
   "confirmEmail",
   "confirmPhone",

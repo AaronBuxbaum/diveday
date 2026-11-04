@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
+import { seatCheckedIn } from "./arrival-provenance";
 import { levelCardLevel } from "./card-columns";
 import type { DbExecutor } from "./client";
 import { paymentEntries } from "./payments";
@@ -31,6 +32,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { seedArrivals } from "./seed-arrivals";
 import { CAPTAIN_NAME, LEAD_INSTRUCTOR_NAME, OWNER_NAME } from "./seed-cast";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { HISTORY_DIVER_NAMES } from "./seed-history";
@@ -254,7 +256,8 @@ async function seedDiveCard(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        eq(bookings.status, "checked_in"),
+        // Seen at the desk on a boat that has sailed: the history plans that dived.
+        seatCheckedIn,
         lt(trips.startsAt, nowDate()),
         inArray(
           bookings.personId,
@@ -368,7 +371,7 @@ async function seedLostMask(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        eq(bookings.status, "checked_in"),
+        seatCheckedIn,
         liveTrip(),
         isNull(trips.courseId),
         lt(trips.endsAt, nowDate()),
@@ -775,12 +778,22 @@ async function seedShopCertified(
         shopId,
         tripId: trip.id,
         personId: student.id,
-        status: "checked_in",
+        status: "booked",
         createdAt: bookedAt,
       })
       .returning({ id: bookings.id });
     if (!booking) continue;
     seated.push(booking.id);
+    // Seen at the desk the first morning.
+    await seedArrivals(db, [
+      {
+        shopId,
+        tripId: trip.id,
+        bookingId: booking.id,
+        recordedByPersonId: ctx.instructorId,
+        occurredAt: new Date(window.startsAt.getTime() - 30 * 60_000),
+      },
+    ]);
     // Paid at the desk on the first morning, so the course's money falls in
     // the month it ran, where Reports' "By kind" counts it too.
     const paidAt = new Date(window.startsAt.getTime() - (lead + 20) * 60_000);

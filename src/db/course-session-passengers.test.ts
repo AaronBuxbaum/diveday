@@ -379,9 +379,9 @@ describe("the ratio beside priced passengers", () => {
 });
 
 /**
- * **One course decision, every door** (issue #2709): the sale and a staff move
- * ask `decideCourseAdmission` at the same strictness, after the boat's own
- * limits.
+ * **One course decision, every door** (issues #2709, #3769): the sale, a staff
+ * move and both undos ask `decideCourseAdmission` the same gates, after the
+ * boat's own limits.
  */
 describe("the course gates at each door", () => {
   it("refuses a priced rider onto an unstaffed session by a move, as the sale does", async () => {

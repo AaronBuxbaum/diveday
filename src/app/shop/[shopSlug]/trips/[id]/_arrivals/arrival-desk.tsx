@@ -216,7 +216,7 @@ export async function buildArrivalDesk({
       }
       continue;
     }
-    if (row.bookingStatus === "checked_in") {
+    if (row.checkedIn) {
       // **Undo on every arrived row, blocked or not** (dive-domain review
       // 2026-10-05): a diver who went blocked after arriving still has to be
       // walked back, and taking a state away can never add risk.
@@ -495,6 +495,7 @@ function turnAwayDoor({
 }): { door: ReactNode; panel: ReactNode } | null {
   const reasons = turnAwayOffer({
     bookingStatus: row.bookingStatus,
+    checkedIn: row.checkedIn,
     onTheWater: row.onTheWater,
     tripStatus: "scheduled",
     startsAt: row.startsAt,

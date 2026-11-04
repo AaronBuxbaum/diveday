@@ -4,6 +4,7 @@ import { getTripManifest, recordCrewRollCall, recordRollCall } from "@/db/manife
 import { markBookingNoShow } from "@/db/no-show";
 import { boats, bookings, cards, people, personRoles, trips } from "@/db/schema";
 import { liveTrip } from "@/db/trips-live";
+import { seatHeld } from "@/db/trips-queries";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -47,13 +48,7 @@ export async function seedManifestOverCapacityState(
       .select({ id: bookings.id, personId: bookings.personId, fullName: people.fullName })
       .from(bookings)
       .innerJoin(people, eq(people.id, bookings.personId))
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          eq(bookings.tripId, candidate.id),
-          inArray(bookings.status, ["booked", "checked_in"]),
-        ),
-      )
+      .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, candidate.id), seatHeld))
       .orderBy(people.fullName);
     if (roster.length < 2) continue;
 

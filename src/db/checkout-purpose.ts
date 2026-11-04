@@ -18,5 +18,14 @@ export const tipCheckout = () => eq(bookingCheckouts.purpose, "tip");
 /**
  * What a completed tip came to: Stripe's own settled figure, else the amount
  * the diver chose (the two agree for a tip, which no promotion discounts).
+ * What the diver paid, refunds not taken off: the data export's figure.
  */
 export const tipAmountCents = sql<number>`coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents})`;
+
+/**
+ * What the shop still holds of a completed tip: {@link tipAmountCents} less
+ * what Stripe has reversed off it, by a refund or a lost dispute
+ * (`booking_checkouts.refunded_cents`, issue #3736). The figure every split,
+ * sheet and total of tips adds up; never below zero.
+ */
+export const tipNetCents = sql<number>`greatest(coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents}) - ${bookingCheckouts.refundedCents}, 0)`;

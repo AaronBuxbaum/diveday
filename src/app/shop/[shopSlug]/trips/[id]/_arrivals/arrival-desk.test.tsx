@@ -11,6 +11,7 @@ import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { turnAwayReasons } from "@/lib/turn-away";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 
 const ctx = fileScopedShopContext();
@@ -34,7 +35,8 @@ async function firstTimerAtTheCounter() {
   const now = nowDate();
   const queue = await listCheckInQueue(db, shop.id, { now });
   for (const row of queue) {
-    if (row.bookingStatus !== "booked") continue;
+    // A held seat the desk has not seen yet: arrival is the trail's word (#2702).
+    if (row.bookingStatus !== "booked" || row.checkedIn) continue;
     const inputs = await welcomeCueInputsByBooking(db, shop.id, row.tripId, now);
     if (inputs.get(row.bookingId)?.lastDivedAt === null) {
       const [trip] = await db.select().from(trips).where(eq(trips.id, row.tripId));
@@ -211,10 +213,8 @@ describe("the counter's turned-away door (H-20261015-who-may-turn-someone)", () 
     if (!row) throw new Error("the seat left the queue");
     expect(row.readiness.status).toBe("blocked");
     expect(reasonsOffered(await belowFor(sailed)).length).toBeGreaterThan(0);
-    await seat.db
-      .update(bookings)
-      .set({ status: "checked_in" })
-      .where(eq(bookings.id, seat.bookingId));
+    // Arrival is the trail's word on the held seat (issue #2702).
+    await markArrived(seat.db, seat.bookingId);
     expect(reasonsOffered(await belowFor(sailed))).toEqual([]);
   });
 
@@ -324,9 +324,11 @@ describe("the paper pass on an arrived row (fourth review, item 48)", () => {
     const { db, shop } = ctx;
     const now = nowDate();
     const queue = await listCheckInQueue(db, shop.id, { now });
-    const row = queue.find((r) => r.bookingStatus === "booked" && r.readiness.status === "ready");
+    const row = queue.find(
+      (r) => r.bookingStatus === "booked" && !r.checkedIn && r.readiness.status === "ready",
+    );
     if (!row) throw new Error("no cleared diver is booked inside the arrivals window");
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, row.bookingId));
+    await markArrived(db, row.bookingId);
     const [trip] = await db.select().from(trips).where(eq(trips.id, row.tripId));
     if (!trip) throw new Error("the trip is gone");
     const desk = await buildArrivalDesk({

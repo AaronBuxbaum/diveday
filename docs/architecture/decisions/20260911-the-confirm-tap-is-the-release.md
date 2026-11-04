@@ -1,6 +1,7 @@
 # 20260911-the-confirm-tap-is-the-release — A no-show frees the seat on the confirm tap, with no second act
 
-- **Status:** Accepted
+- **Status:** Accepted; decision 1 (the held set) amended by
+  [20261104-arrival-is-a-trail](20261104-arrival-is-a-trail.md): only `booked` holds a seat
 - **Date:** 2026-09-11
 
 ## Context

@@ -5,6 +5,7 @@ import { moneyByBoat, moneyByKind } from "@/lib/departure-money";
 import { summarizeShopYear } from "@/lib/shop-year";
 import { sameMomentYearBefore, shopDayBounds, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
+import { seatCheckedIn } from "./arrival-provenance";
 import { weatherCallsInWindow } from "./blowouts";
 import { diverPackageBalance } from "./dive-packages";
 import { openLostItemsByPerson } from "./lost-items";
@@ -147,7 +148,8 @@ describe("the demo's booth stories", () => {
       .select({ id: bookings.id })
       .from(bookings)
       .where(
-        and(eq(bookings.tripId, fromSession[0]?.tripId ?? ""), eq(bookings.status, "checked_in")),
+        // Checked in reads the arrival trail, not a seat status (issue #2702).
+        and(eq(bookings.tripId, fromSession[0]?.tripId ?? ""), seatCheckedIn),
       );
     expect(seats).toHaveLength(2);
     const here = await certifiedHere(db, shop.id, {

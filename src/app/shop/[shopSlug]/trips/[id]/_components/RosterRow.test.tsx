@@ -35,6 +35,7 @@ const noop = () => {};
 const t = staffTranslator("en-US");
 
 const seat = {
+  checkedIn: false,
   booking: {
     id: "b-1",
     status: "booked",

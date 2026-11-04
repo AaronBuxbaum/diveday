@@ -843,10 +843,10 @@ describe("sendDueReminders and the reminder rhythm", () => {
     await pass(ctx.db, ctx.inWeekBucket, email);
     expect(emailsFor(email, ctx.bookingId)).toHaveLength(0);
 
-    // The card comes off the record an hour later, still inside the week-wide
-    // bucket. Nothing was written by the suppressed pass, so the cadence is
-    // still un-sent and the next hourly pass picks it up.
-    await deleteCertification(ctx.db, { shopId: ctx.shop.id, certificationId: card.id });
+    // The card comes off the record an hour later, inside the week-wide bucket. The
+    // suppressed pass wrote nothing, so the cadence is un-sent and the next pass sends it.
+    const off = { shopId: ctx.shop.id, certificationId: card.id, deletedByPersonId: card.personId };
+    await deleteCertification(ctx.db, off);
     await pass(ctx.db, new Date(ctx.inWeekBucket.getTime() + 60 * 60 * 1000), email);
 
     expect(emailsFor(email, ctx.bookingId)).toHaveLength(1);

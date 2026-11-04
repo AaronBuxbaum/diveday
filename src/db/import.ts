@@ -980,6 +980,7 @@ async function writeImportedNote(
         eq(internalNotes.shopId, ctx.shopId),
         eq(internalNotes.personId, ctx.personId),
         isNull(internalNotes.bookingId),
+        isNull(internalNotes.deletedAt),
         eq(internalNotes.body, body),
       ),
     )

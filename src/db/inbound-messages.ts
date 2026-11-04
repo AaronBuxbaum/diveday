@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, isNull, ne, notLike, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNull, ne, not, notLike, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type InboundChannel,
@@ -10,6 +10,7 @@ import {
   truncateInboundBody,
 } from "@/lib/inbox";
 import { hasSailed } from "@/lib/trips";
+import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { queryAll } from "./query-helpers";
@@ -317,6 +318,8 @@ export async function recordMoveAsk(
           eq(bookings.tripId, lockedTripId),
           input.expectedTripId ? eq(bookings.tripId, input.expectedTripId) : undefined,
           eq(bookings.status, "booked"),
+          // A diver the desk has checked in asks the counter, not the Inbox (#2702).
+          not(seatCheckedIn),
           isNull(bookings.identityUnconfirmedAt),
           input.calledOff ? eq(trips.status, "cancelled") : ne(trips.status, "cancelled"),
           liveTrip(),
@@ -328,6 +331,13 @@ export async function recordMoveAsk(
     if (!seat || (!input.calledOff && hasSailed(seat.startsAt, input.now))) {
       return { status: "not_found" };
     }
+    // Asked again now the seat's lock is held: the read above may have waited
+    // on a check-in, and its trail subquery kept the snapshot it started with.
+    const [seen] = await tx
+      .select({ checkedIn: seatCheckedIn })
+      .from(bookings)
+      .where(eq(bookings.id, input.bookingId));
+    if (seen?.checkedIn) return { status: "not_found" };
     const note = truncateInboundBody(input.note ?? "").slice(0, MOVE_ASK_NOTE_MAX_LENGTH);
     const fromAddress =
       normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "";
@@ -450,6 +460,7 @@ export async function getPendingMoveAsk(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
         eq(bookings.status, "booked"),
+        not(seatCheckedIn),
         isNull(bookings.identityUnconfirmedAt),
         eq(bookings.personId, inboundMessages.personId),
       ),

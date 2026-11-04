@@ -1,6 +1,6 @@
 import { and, asc, count, eq, gte, inArray, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
 import { splitTipsEqually } from "@/lib/crew-sheet";
-import { tipAmountCents, tipCheckout } from "./checkout-purpose";
+import { tipCheckout, tipNetCents } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import {
@@ -43,7 +43,7 @@ export async function crewTipShare(
   window: { from: Date; to: Date },
 ): Promise<number> {
   const mine = await db
-    .select({ tripId: trips.id, total: sum(tipAmountCents) })
+    .select({ tripId: trips.id, total: sum(tipNetCents) })
     .from(bookingCheckouts)
     .innerJoin(trips, and(eq(trips.id, bookingCheckouts.tripId), eq(trips.shopId, shopId)))
     .innerJoin(
@@ -110,7 +110,7 @@ export async function tipsByDeparture(
       startsAt: trips.startsAt,
       title: trips.title,
       boatName: boats.name,
-      total: sum(tipAmountCents),
+      total: sum(tipNetCents),
     })
     .from(bookingCheckouts)
     .innerJoin(trips, and(eq(trips.id, bookingCheckouts.tripId), eq(trips.shopId, shopId)))

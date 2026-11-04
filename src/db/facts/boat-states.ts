@@ -8,6 +8,7 @@ import { DEMO_COMPLETED_TRIP_TITLE } from "@/db/seed-more-trips";
 import { livePerson, liveTrip } from "@/db/trips-live";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS } from "@/lib/clock";
+import { seedArrivals } from "../seed-arrivals";
 
 /**
  * The boat facts of the shop's test fixture (`src/db/facts/index.ts`). Each is opt-in for the route's own reason: it moves
@@ -131,18 +132,35 @@ export async function leaveASeatUncounted(
     tripId: trip.id,
     personId,
     bookedAs: "diver" as const,
-    status: "checked_in" as const,
+    status: "booked" as const,
     createdAt: new Date(trip.startsAt.getTime() - 24 * HOUR_MS),
   });
-  await db.insert(bookings).values(seat(person.id));
   const [counted] = await db
     .select({ recorderId: rollCallEvents.recordedByPersonId })
     .from(rollCallEvents)
     .where(and(eq(rollCallEvents.shopId, shopId), seatMarks(), eq(rollCallEvents.tripId, trip.id)))
     .limit(1);
+  // Through the desk before the boat left: the arrival trail, never a seat
+  // status (issue #2702). Only when someone on this boat's record can have
+  // said so.
+  const seen = async (bookingId: string) => {
+    if (!counted) return;
+    await seedArrivals(db, [
+      {
+        shopId,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: counted.recorderId,
+        occurredAt: new Date(trip.startsAt.getTime() - HOUR_MS),
+      },
+    ]);
+  };
+  const [uncounted] = await db.insert(bookings).values(seat(person.id)).returning();
+  if (uncounted) await seen(uncounted.id);
   if (turnedAway && counted) {
     const [refused] = await db.insert(bookings).values(seat(turnedAway.id)).returning();
     if (refused) {
+      await seen(refused.id);
       await db.insert(rollCallEvents).values({
         shopId,
         tripId: trip.id,

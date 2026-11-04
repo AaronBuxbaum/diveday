@@ -1,4 +1,5 @@
-import { and, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, not } from "drizzle-orm";
+import { seatCheckedIn } from "@/db/arrival-provenance";
 import type { AppDb } from "@/db/client";
 import {
   bookings,
@@ -59,7 +60,8 @@ export async function flagFourUnitsOnTheReefBoat(
     .select({ id: bookings.id })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(and(eq(bookings.tripId, reef.id), eq(bookings.status, "booked")))
+    // Seats still to come at the desk, as before arrival left the seat word (#2702).
+    .where(and(eq(bookings.tripId, reef.id), eq(bookings.status, "booked"), not(seatCheckedIn)))
     .orderBy(people.fullName)
     .limit(4);
   const units = new Map(

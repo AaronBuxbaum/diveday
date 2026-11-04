@@ -1,6 +1,5 @@
 import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { inTrainingBefore } from "@/lib/in-training";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { decideTripAdmission } from "@/lib/trip-admission";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
@@ -9,6 +8,7 @@ import { queryAll } from "./query-helpers";
 import { tripRequirementSummaries } from "./readiness";
 import { bookings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /** A charter seat that was sold on a course seat, named for the confirm. */
 export type DependentCharter = {
@@ -58,7 +58,7 @@ export async function chartersRelyingOnCourseSeats(
           and(
             eq(bookings.shopId, shopId),
             inArray(bookings.personId, personIds),
-            inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+            seatHeld,
             eq(bookings.participantType, "diver"),
             isNull(bookings.identityUnconfirmedAt),
             isNull(trips.courseId),

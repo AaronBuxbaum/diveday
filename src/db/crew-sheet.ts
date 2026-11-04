@@ -2,7 +2,7 @@ import { and, eq, gte, inArray, lt, sum } from "drizzle-orm";
 import type { MonthRef } from "@/lib/calendar";
 import type { CrewSheetAssignment, CrewSheetTripTips } from "@/lib/crew-sheet";
 import { shopMonthBounds } from "@/lib/zoned";
-import { tipAmountCents, tipCheckout } from "./checkout-purpose";
+import { tipCheckout, tipNetCents } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { bookingCheckouts, people, tripAssignments, tripScheduleDays, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -94,7 +94,7 @@ export async function crewSheetForMonth(
   // crewed ones: a tip on a boat with nobody on its crew list is exactly the
   // money the sheet's unassigned row exists to keep visible.
   const tipRows = await db
-    .select({ tripId: trips.id, total: sum(tipAmountCents) })
+    .select({ tripId: trips.id, total: sum(tipNetCents) })
     .from(bookingCheckouts)
     .innerJoin(trips, eq(trips.id, bookingCheckouts.tripId))
     .where(

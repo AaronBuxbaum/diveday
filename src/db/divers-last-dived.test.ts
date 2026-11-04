@@ -33,7 +33,7 @@ async function dived(
   shopId: string,
   personId: string,
   startsAt: Date,
-  status: "booked" | "checked_in" | "cancelled" | "no_show" = "booked",
+  status: "booked" | "cancelled" | "no_show" = "booked",
 ) {
   const [trip] = await db
     .insert(trips)

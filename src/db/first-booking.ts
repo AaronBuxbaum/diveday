@@ -1,4 +1,5 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
+import { seatIsHeld } from "@/lib/no-show";
 import { hasSailed } from "@/lib/trips";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
@@ -36,9 +37,6 @@ export type FirstBooking = {
   paymentCurrency: string | null;
   waiverSigned: boolean;
 };
-
-/** Statuses a booking that is still standing can be in. */
-const LIVE_BOOKING_STATUSES: readonly string[] = ["booked", "checked_in"];
 
 /**
  * Has this shop taken exactly one booking, ever, and is that diver's departure
@@ -102,7 +100,7 @@ export async function shopFirstBooking(
 
   const [only] = rows;
   if (rows.length !== 1 || !only) return null;
-  if (!LIVE_BOOKING_STATUSES.includes(only.status)) return null;
+  if (!seatIsHeld(only.status)) return null;
   if (only.tripDeletedAt !== null) return null;
   if (hasSailed(only.startsAt, now)) return null;
 

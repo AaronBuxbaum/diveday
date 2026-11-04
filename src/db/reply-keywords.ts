@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, isNull, lte, ne } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNull, lte, ne, not } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { normalizeEmailAddress, normalizePhoneAddress } from "@/lib/inbox";
@@ -17,6 +17,7 @@ import {
 } from "@/lib/reply-keywords";
 import { hasSailed } from "@/lib/trips";
 import { heldAtTheDoor } from "./aboard-at-sea";
+import { seatCheckedIn } from "./arrival-provenance";
 import {
   type CancellationRefundSeen,
   sendBookingCancelledNotice,
@@ -162,6 +163,8 @@ async function cancellableBookings(
         eq(bookings.shopId, shopId),
         eq(bookings.personId, personId),
         eq(bookings.status, "booked"),
+        // Not a seat the desk has checked in (the trail, issue #2702).
+        not(seatCheckedIn),
         liveTrip(),
       ),
     )

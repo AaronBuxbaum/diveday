@@ -104,7 +104,7 @@ export function ArrivalLookup({
                     trip: row.tripTitle,
                   })}
                   trailing={
-                    row.bookingStatus === "checked_in" ? (
+                    row.checkedIn ? (
                       <Badge tone="success">{presenceText(t, "arrived")}</Badge>
                     ) : row.bookingStatus === "no_show" ? (
                       <Badge tone="neutral">

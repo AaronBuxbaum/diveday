@@ -15,7 +15,7 @@ import {
   orderLastMinuteRecipients,
   reviewLastMinuteRecipients,
 } from "@/lib/interests";
-import { rowCanBeReactivated, SEAT_HELD_STATUSES } from "@/lib/no-show";
+import { rowCanBeReactivated } from "@/lib/no-show";
 import { seatRefusal } from "@/lib/participant-types";
 import { unionRequirements } from "@/lib/requirement";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
@@ -41,7 +41,7 @@ import {
 } from "./schema";
 import { listCertificationSummaries, recordSelfDeclaredCards } from "./self-declared-cards";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
-import { heldSeatCounts, seatNotCancelled, sellableCapacity } from "./trips-queries";
+import { heldSeatCounts, seatHeld, seatNotCancelled, sellableCapacity } from "./trips-queries";
 
 /**
  * **Who wants in**, the writers and the departure reads (ADR
@@ -682,7 +682,7 @@ export async function associateDateRequestOfferBooking(
           eq(bookings.id, input.bookingId),
           eq(bookings.shopId, input.shopId),
           eq(bookings.tripId, input.tripId),
-          inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+          seatHeld,
         ),
       )
       .limit(1)

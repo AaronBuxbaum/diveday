@@ -147,14 +147,21 @@
 - **Arrival lookup** — Today's search for "which boat is this diver on?" (`?q=`): a name, phone,
   email or booking ID matched across every departure in the **arrivals window**, each match a row
   that opens that boat's Divers tab at the diver's own row. The tab itself has no search.
-- **Check-in** — a recorded arrival state for a booked diver. It confirms the live readiness
-  result and changes the booking to `checked_in`; it is not boarding, which remains a separate
+- **Check-in** — a recorded arrival for a booked diver. It confirms the live readiness
+  result and appends an `arrived` **arrival event**; the seat's own status stays `booked`, because
+  arrival is not a seat word (issue #2702). A diver is checked in while their seat is `booked` and the
+  newest arrival event is `arrived` (`seatCheckedIn`, `src/db/arrival-provenance.ts`; `isCheckedIn`,
+  `src/lib/presence.ts`). It is not boarding, which remains a separate
   departure-time manifest decision. A staffer's tap at the counter (the departure's Divers tab, inside the arrivals window) writes it. Readiness is confirmed **wherever the tap is applied**, which
   since the counter went offline-capable is at the desk for a live tap and at reconciliation —
   minutes or hours later, against readiness as it stands *then* — for a queued one.
 - **Arrival event** — one append-only row in `booking_arrival_events` recording a single tap at the
-  counter: `arrived`, or the `cleared` that takes it back. `bookings.status` stays the projection
-  every reader looks at; this is the history beneath it, and it is what lets a check-in be recorded
+  counter: `arrived`, or the `cleared` that takes it back. It is the only record of an arrival:
+  `bookings.status` says what the shop decided about the seat and has no arrival word, so a no-show
+  and its undo leave the newest event standing. A seat that comes back (a cancelled row booked again,
+  Remove undone, a move) reads only the events after `bookings.arrival_trail_after_seq`, so the desk
+  sees that diver afresh
+  ([ADR 20261104-arrival-is-a-trail](../../architecture/decisions/20261104-arrival-is-a-trail.md)). It is what lets a check-in be recorded
   with no signal and reconciled later on the rules roll call already uses — deduplicated on the
   device's own event id, refused when a newer statement stands, and, for an undo, applied only
   while the arrival it names is still the one standing. Its vocabulary has no `boarded` and no
@@ -513,8 +520,8 @@
   already checked in) stays, and the `/ready` confirm lists both before the tap. A cancelled seat
   with an address of its own gets its own cancellation notice (`cancelUnclaimedPartySeats`,
   `settleReleasedPartySeats`, batch 6 item 10).
-- **Seat held** — the booking statuses that count against a departure's capacity: `booked` and
-  `checked_in`, and nothing else (`SEAT_HELD_STATUSES` and `seatIsHeld`, `src/lib/no-show.ts`,
+- **Seat held** — the booking status that counts against a departure's capacity: `booked`, checked
+  in or not, and nothing else (`seatIsHeld`, `src/lib/no-show.ts`,
   spelled once as a `where` clause in `seatHeld`, `src/db/trips-queries.ts`). `cancelled` never held
   a seat, and `no_show` stopped holding one when the counter gained the power to release it (**seat
   release**). Every seat *count* reads that one predicate — the booking transaction, the restore,
@@ -1531,12 +1538,14 @@
   Checked again at every read: a mark whose enrollment is canceled, held or moved is the
   `training_mark_invalid` blocker until staff clear it. Clearing one with forms still owed takes a
   manager or the enrollment's own instructor, and the manifest names who did. **A training mark is
-  not In training**: it changes boarding only, and buying a seat never reads it. A mark that
+  not In training**: it changes boarding only: buying a seat reads whether a mark *could* lower a site's level, never a mark itself. A mark that
   stands may lower a site's level to the course's minimum, and only when the course
   certifies that level. A seat-level mark does not identify one of several planned dives, so
   multi-dive departures and one-dive departures with conflicting site records retain their site
   requirements; the roster and manifest explain why. An explicit
-  departure requirement always stands. A course with no minimum
+  departure requirement always stands, at the sale as at the dock: trip admission lets a
+  marked level through only where the site set it, never a trip-set level (issue #3776). A course
+  with no minimum
   (Open Water) asks no card for a site level it
   certifies; never past it, never for an intro session or a course that certifies none (issue
   #2731). It needs the course's own instructor aboard, rostered by somebody else and not counted
@@ -1878,7 +1887,7 @@
   departure into buckets, so a late booking gets only the accurate reminder, never a stale one. An
   external scheduler drives an idempotent cron endpoint; the app holds no timer. See
   [20260721-scheduled-reminder-cadence](../../architecture/decisions/20260721-scheduled-reminder-cadence.md).
-- **Reschedule notice** — the message sent to booked seats when a staffer moves a departure, on the board (Move) or by changing the start on the trip page. Notification kind `trip_rescheduled`: it gives the current date and time, the meeting point when it moved in the same save, and the diver's own trip-prep link. Delivery history is not tracked per seat, so it does not state a prior time or claim that the recipient already knows the current one. A save that moves only the meeting point says where to meet and gives the current schedule (#2443), by the diver's usual channel (email with a courtesy text, or the text alone for a phone-only diver). The move *holds* it as a **held send** (a held row of `notification_send_queue`, the eight seconds and Undo every staff send takes, ADR 20260906-before-you-ask); a second move inside the hold folds into the first, and a move back to the recorded time sends nothing unless the meeting point moved. A move also re-arms the seat's trip reminders for the new date (#2444). Addressed only to each seat's own person record (`booked` or `checked_in`, never a seat whose identity is still held), read off the trip when the hold drains. Rule in `src/lib/held-sends.ts`, the send in `src/db/trip-rescheduled.ts`.
+- **Reschedule notice** — the message sent to booked seats when a staffer moves a departure, on the board (Move) or by changing the start on the trip page. Notification kind `trip_rescheduled`: it gives the current date and time, the meeting point when it moved in the same save, and the diver's own trip-prep link. Delivery history is not tracked per seat, so it does not state a prior time or claim that the recipient already knows the current one. A save that moves only the meeting point says where to meet and gives the current schedule (#2443), by the diver's usual channel (email with a courtesy text, or the text alone for a phone-only diver). The move *holds* it as a **held send** (a held row of `notification_send_queue`, the eight seconds and Undo every staff send takes, ADR 20260906-before-you-ask); a second move inside the hold folds into the first, and a move back to the recorded time sends nothing unless the meeting point moved. A move also re-arms the seat's trip reminders for the new date (#2444). Addressed only to each seat's own person record (a `booked` seat, checked in or not, never a seat whose identity is still held), read off the trip when the hold drains. Rule in `src/lib/held-sends.ts`, the send in `src/db/trip-rescheduled.ts`.
 - **Seat move** — a staffer moving one booked seat to another departure from its roster row ("Move to another departure"). The same booking row changes trip, so its order, payment, waiver, `/ready` link and notes go with it; nothing is charged or refunded, and a paid seat that now lists higher is said back as owed. What was said about the old day (the conditions briefing, the "Anything changed?" answer, a pickup time, running late) is cleared, and a standing **Ask to move** is answered, so the new date's page may be asked about afresh. The new seat is measured as a new staff seat (capacity, divers-only limit, course ratio, a course's card and age on the new session's date, and the certification gate, which refuses), only between departures of the same kind, and never for a seat at roll call, on a buddy team or leading a party. The diver gets a **reschedule notice** worded for a seat ("we moved your seat to…"), sent at once rather than held. `moveBooking` in `src/db/bookings.ts`, consequences in `moveSeat` (`src/db/seat-diver.ts`); see [20261013-staff-move-a-seat](../../architecture/decisions/20261013-staff-move-a-seat.md).
 - **Inbox seat** (the seat an Inbox message is about) — the open seats a staff Inbox row names for a diver's message. Inside the **running late** window it is the one seat about to sail, and only there may the row offer "Mark running late". Outside it, every seat the sender held when they wrote (booked, on a scheduled departure that has not sailed), soonest first; with more than one, each is named and each gets its own "Move" naming its departure, because only the desk can tell which seat the words are about. A seat booked after the message, a canceled seat and a stranger's message name nothing. Naming a seat opens its roster row; nothing on the Inbox moves a seat (**seat move** does). `inboxSeats` in `src/db/inbox-seats.ts`.
 - **Night-before brief** — the 24-hour reminder's text: the crew's plain-language conditions, a

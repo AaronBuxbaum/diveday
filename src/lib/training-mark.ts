@@ -35,7 +35,7 @@ export type TrainingMarkSeat = {
  */
 export type TrainingMarkEnrollment = {
   personId: string;
-  status: "booked" | "checked_in" | "no_show" | "cancelled";
+  status: "booked" | "no_show" | "cancelled";
   identityHeld: boolean;
   participantType: ParticipantType;
   courseId: string | null;
@@ -389,6 +389,25 @@ export function trainingDiveRequiredLevel(
   return certificationRank(course.minimumLevel) < certificationRank(required)
     ? course.minimumLevel
     : required;
+}
+
+/**
+ * **The site requirement a marked training dive answers to**: the site's level
+ * lowered by `trainingDiveRequiredLevel`, everything else as the site states
+ * it. Only a site's level is ever lowered; a level the trip itself sets is the
+ * shop's statement about that departure and stands (issue #3776). Readiness
+ * (boarding) and trip admission (the sale) both fold the trip's requirement
+ * with this, so a mark lowers a level in both gates or in neither.
+ */
+export function trainingDiveSiteRequirement<
+  T extends { minimumCertificationLevel: CertificationLevel | null },
+>(site: T | null | undefined, course: TrainingDiveCourse | null | undefined): T | null {
+  if (!site) return null;
+  if (!course) return site;
+  return {
+    ...site,
+    minimumCertificationLevel: trainingDiveRequiredLevel(site.minimumCertificationLevel, course),
+  };
 }
 
 /**

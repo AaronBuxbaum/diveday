@@ -35,6 +35,7 @@ import {
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { findStripePaymentTarget } from "./stripe-payment-targets";
 import { checkoutProviderFromEnvironment } from "./stripe-providers";
+import { recordTipRefund } from "./tip-reversals";
 import { seatNotCancelled } from "./trips-queries";
 
 /**
@@ -805,6 +806,8 @@ export async function refundBookingsForShopCancelledTrip(
 export type ExternalRefundOutcome =
   | { status: "order_refunded"; order: Order }
   | { status: "checkout_refunded" | "checkout_unattributed" }
+  /** A tip's refund, counted on the tip alone (`tip-reversals.ts`, issue #3736). */
+  | { status: "tip_refunded" }
   | { status: "already_recorded" | "deferred" | "not_found" }
   /** Waited past {@link REVERSAL_PATIENCE_MS}; now on the stuck-operations queue. */
   | { status: "parked" };
@@ -922,7 +925,8 @@ export async function recordStripeChargeRefund(
     { stripeAccountId: input.stripeAccountId, paymentIntentId: input.paymentIntentId },
     lookup,
   );
-  if (target.kind === "none") return { status: "not_found" };
+  // A tip has no seat to match, so it is never parked for a human.
+  if (target.kind === "none" || target.kind === "tip") return { status: "not_found" };
   await parkStripeReversal(db, {
     shopId: target.kind === "order" ? target.order.shopId : target.checkout.shopId,
     target:
@@ -995,6 +999,9 @@ async function applyStripeChargeRefund(
     lookup,
   );
   if (target.kind === "none") return { status: "not_found" };
+  if (target.kind === "tip") {
+    return recordTipRefund(db, target.checkout, input.amountRefundedCents);
+  }
 
   if (target.kind === "order") {
     const { order } = target;

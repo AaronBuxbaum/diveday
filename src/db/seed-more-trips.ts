@@ -26,9 +26,11 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { seedArrivals } from "./seed-arrivals";
 import { seedDepartureBoatSafetySnapshot } from "./seed-boat-safety-snapshot";
 import { at, DEMO_DAWN_BOAT, nextCreatedAt } from "./seed-clock";
 import { paperRelease, signingNames } from "./seed-paper-release";
+import { seatHeld } from "./trips-queries";
 
 /** The returned demo departure that gives Close-Out a finished local-day dive. */
 export const DEMO_COMPLETED_TRIP_TITLE = "Dawn Two-Tank — Molasses Reef";
@@ -659,7 +661,7 @@ export async function seedMoreTrips(
             bookedAs: "diver" as const,
             tripId: trip.id,
             personId: person.id,
-            status: tripDefs[i].completedDemo ? ("checked_in" as const) : ("booked" as const),
+            status: "booked" as const,
             createdAt: nextCreatedAt(),
           })),
       ),
@@ -872,6 +874,7 @@ async function seedDawnBoatRecord(
 ): Promise<void> {
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
   const minute = 60 * 1000;
+  await seedDawnArrivals(db, shopId, trip, recorderId);
 
   // **It sailed on a hull** (fourth review, item 11): with none, its
   // emergency card fell back to the shop line and its packet named no boat.
@@ -997,4 +1000,27 @@ async function seedCompletedRollCall(
       : [mark(booking.id, "not_boarded", "departure", 0)],
   );
   if (rows.length > 0) await db.insert(rollCallEvents).values(rows);
+}
+
+/** The dawn boat's divers all came through the desk: the arrival trail (#2702). */
+async function seedDawnArrivals(
+  db: DbExecutor,
+  shopId: string,
+  trip: { id: string; startsAt: Date },
+  recordedByPersonId: string,
+): Promise<void> {
+  const seats = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, trip.id), seatHeld));
+  await seedArrivals(
+    db,
+    seats.map((seat) => ({
+      shopId,
+      tripId: trip.id,
+      bookingId: seat.id,
+      recordedByPersonId,
+      occurredAt: new Date(trip.startsAt.getTime() - 30 * 60_000),
+    })),
+  );
 }

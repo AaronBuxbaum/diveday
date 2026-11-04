@@ -1,7 +1,7 @@
-import { and, count, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
+import { and, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, dateRequestOfferBookings, interests } from "./schema";
+import { seatHeld } from "./trips-queries";
 
 export type DateRequestBookingRefusal =
   | "date_request_offer_unavailable"
@@ -54,7 +54,7 @@ async function activeLinkedSeats(
       and(
         eq(bookings.id, dateRequestOfferBookings.bookingId),
         eq(bookings.shopId, input.shopId),
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        seatHeld,
       ),
     )
     .where(
@@ -143,7 +143,7 @@ export async function lockDateRequestOffer(
         eq(dateRequestOfferBookings.shopId, input.shopId),
         eq(interests.parentInterestId, request.id),
         eq(interests.scope, "departure"),
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        seatHeld,
         ne(bookings.tripId, input.tripId),
         ...(input.excludeBookingId ? [ne(bookings.id, input.excludeBookingId)] : []),
       ),

@@ -292,9 +292,10 @@ export type ManifestDiverInput = {
    */
   buddyTeam?: ManifestBuddyTeam | null;
   /**
-   * The diver came through the counter (`bookings.status === "checked_in"`).
-   * Counter check-in and boat roll call are two different questions — arrived
-   * vs. aboard — and `checked_in` used to have exactly one reader in the app
+   * The diver came through the counter: the seat is held and the arrival
+   * trail has them seen (`seatCheckedIn`, issue #2702). Counter check-in and
+   * boat roll call are two different questions — arrived vs. aboard — and
+   * arrival used to have exactly one reader in the app
    * (the check-in page itself). Carrying it onto the manifest lets crew see
    * who already showed up even before boarding them (task 149, UX persona
    * lens 17).

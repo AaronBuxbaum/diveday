@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { cancelBooking, createBooking, restoreBooking } from "./bookings";
 import { associateDateRequestOfferBooking } from "./interests";
 import { bookings, dateRequestOfferBookings, interests, people, shops, trips } from "./schema";
+import { seatHeld } from "./trips-queries";
 
 describePostgres("date-request offer booking association under real concurrency", () => {
   it("does not deadlock when erasure updates the request parent before its offer child", async () => {
@@ -663,7 +663,7 @@ describePostgres("date-request offer booking association under real concurrency"
           and(
             eq(bookings.id, dateRequestOfferBookings.bookingId),
             eq(bookings.shopId, dateRequestOfferBookings.shopId),
-            inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+            seatHeld,
           ),
         )
         .where(eq(dateRequestOfferBookings.shopId, shop.id));

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { canPersonOverrideCertBlock, canPersonRefund } from "@/db/authz";
 import { sendBookingCancelledNotice } from "@/db/booking-cancelled-notice";
 import {
+  type RestoreBookingOutcome,
   restoreBooking,
   setBookingDietaryNote,
   setBookingParticipantType,
@@ -471,6 +472,22 @@ export async function carryWaitlistAction(shopSlug: string, tripId: string, form
   );
 }
 
+/** The roster's word for each way Undo of a removal can land. */
+const RESTORE_NOTICES = {
+  restored: "booking-restored",
+  already_active: "booking-restored",
+  trip_full: "booking-restore-full",
+  divers_full: "booking-restore-divers-full",
+  course_ratio_full: "booking-restore-ratio",
+  course_unstaffed: "booking-restore-unstaffed",
+  course_prerequisite: "booking-restore-prerequisite",
+  course_min_age: "booking-restore-min-age",
+  trip_cancelled: "booking-restore-cancelled",
+  date_request_departure_conflict: "booking-restore-date-request-conflict",
+  date_request_offer_unavailable: "booking-restore-date-request-unavailable",
+  date_request_party_full: "booking-restore-date-request-full",
+} as const satisfies Record<Exclude<RestoreBookingOutcome, "not_found">, string>;
+
 export async function undoRemoveBookingAction(
   shopSlug: string,
   tripId: string,
@@ -489,28 +506,11 @@ export async function undoRemoveBookingAction(
     actorPersonId: s.user.personId,
   });
   if (outcome === "not_found") redirect(back);
-  // The undo can be refused three ways, and they need different things done
-  // about them: the boat's capacity, a course session's instructor-to-student
-  // ratio (a walk-up may have taken the freed seat in between), or the trip
-  // having been cancelled out from under the roster. Nothing about a wait
-  // list helps with that last one — the fix is reinstating the trip — so it
-  // gets its own words.
-  const restoreNotice =
-    outcome === "trip_full"
-      ? "booking-restore-full"
-      : outcome === "divers_full"
-        ? "booking-restore-divers-full"
-        : outcome === "course_ratio_full"
-          ? "booking-restore-ratio"
-          : outcome === "trip_cancelled"
-            ? "booking-restore-cancelled"
-            : outcome === "date_request_departure_conflict"
-              ? "booking-restore-date-request-conflict"
-              : outcome === "date_request_offer_unavailable"
-                ? "booking-restore-date-request-unavailable"
-                : outcome === "date_request_party_full"
-                  ? "booking-restore-date-request-full"
-                  : "booking-restored";
+  // Each refusal needs a different thing done about it: the boat's capacity,
+  // a course session's own gates (its ratio, its instructor, the student's
+  // card or age; issues #3769, #3686), or the trip having been cancelled out
+  // from under the roster, where the fix is reinstating the trip.
+  const restoreNotice = RESTORE_NOTICES[outcome];
   revalidateAndRedirect(back, noticeUrl(back, restoreNotice));
 }
 

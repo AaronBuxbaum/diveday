@@ -208,15 +208,16 @@
   certified before {date}" line, and never called late: nothing is backfilled, so a card truly
   never sent is still there to tick. Gates nothing.
 - **Course admission** — whether a **course session** takes a seat, asked by every door that puts
-  one on it: a new booking and a staff move at **sale** strictness (staffing, then the course's
-  `minimum_certification_level` card, then its minimum age, then the crew's in-water ratio), an
-  undone removal and an undone no-show at **restore** strictness (the ratio alone). Staffing is
-  asked of everyone aboard; the card, age and ratio are the student's, and a priced snorkeler or
-  rider beside the class is asked none of them. The card gate fails *closed*, the age gate fails
-  open and is staff's alone. The boat's own limits are asked first, so a full boat is refused as
-  full. One pure function, `decideCourseAdmission` (`src/lib/course-admission.ts`), with the
-  strictness table beside it. Distinct from **Trip admission**, which stands down on a course
-  session.
+  one on it, and the same questions at each: a new booking, a staff move, an undone removal and an
+  undone no-show all ask staffing, then the course's `minimum_certification_level` card, then its
+  minimum age, then the crew's in-water ratio (issues #3769, #3686). An undo is a seat-granting
+  write, so a session that lost its instructor, a card deleted since the sale or a date of birth
+  recorded since refuses it with the sale's own code. Staffing is asked of everyone aboard; the
+  card, age and ratio are the student's, and a priced snorkeler or rider beside the class is asked
+  none of them. The card gate fails *closed*, the age gate fails open and is staff's alone. The
+  boat's own limits are asked first, so a full boat is refused as full. One pure function,
+  `decideCourseAdmission` (`src/lib/course-admission.ts`). Distinct from **Trip admission**, which
+  stands down on a course session.
 - **Course ladder** — the Courses page's "N did Discover Scuba in the last 12 months · M went on to Open Water",
   with the names of those who did not and an Invite to the next course's soonest session with a
   seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-20261014-one-to-one-invite's one-at-a-time invite under the
@@ -400,6 +401,14 @@
   card only when the agency's own page shows it, one card at a time, and a **Check all (agency)** is
   only that, card after card. Cards reviewed before that date keep the sentence
   the old attestation wrote into their `review_note`.
+- **Card undo window** — how long a C-card a staffer deleted can come back by Undo: 15 minutes,
+  the toast's lifetime give or take (`CARD_UNDO_WINDOW_MS`, `src/lib/card-undo.ts`, issue #3701).
+  Every card archive says who archived it (`cards.deletion_kind`): `staff` for a staffer's own
+  Delete, `system` for DiveDay archiving a card in favor of other evidence (an agency check, a
+  self-declared card superseded, an erasure). Only a staff archive inside the window comes back
+  (`restoreCard`, `src/db/card-restore.ts`), as the same row with the same review state, and the
+  restore is an activity line under the staffer who tapped it; anything else is entered again and
+  sighted. A row that does not say how it was archived is read as `system`, so it fails closed.
 - **Prior visit** — one line of a diver's history at the shop's *previous* system, brought across by
   the contact importer from a bookings or orders export (one row per booking). It is a **booking
   record, not a dive record**: an export holds cancellations and no-shows, so the source's own status

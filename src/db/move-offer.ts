@@ -2,6 +2,7 @@ import { and, asc, eq, gt, isNull, lte, ne, notExists, sql } from "drizzle-orm";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { seatListPriceCents } from "@/lib/deposits";
 import { isDiver, seatRefusal } from "@/lib/participant-types";
+import { seatCheckedIn } from "./arrival-provenance";
 import { tripAdmissionFor, tripCourseCrewCounts } from "./bookings";
 import type { AppDb } from "./client";
 import { hasMoveAsk } from "./inbound-messages";
@@ -51,6 +52,8 @@ export async function strandedMoveOffer(
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       tripId: trips.id,
       tripStatus: trips.status,
+      // Seen at the desk: `recordMoveAsk` refuses the seat, so no card offers it.
+      checkedIn: seatCheckedIn,
       courseId: trips.courseId,
       priceCents: trips.priceCents,
       snorkelerPriceCents: trips.snorkelerPriceCents,
@@ -60,7 +63,7 @@ export async function strandedMoveOffer(
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId), liveTrip()))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
-  if (seat?.status !== "booked" || seat.tripStatus !== "cancelled") return null;
+  if (seat?.status !== "booked" || seat.checkedIn || seat.tripStatus !== "cancelled") return null;
   // A held seat's link may be in someone else's hands (#2082); staff confirm
   // who it is before anything is offered on it.
   if (seat.identityUnconfirmedAt !== null) return null;

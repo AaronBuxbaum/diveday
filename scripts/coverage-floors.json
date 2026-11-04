@@ -33,17 +33,30 @@
         "src/lib/booking-gates.ts": "93.75 -> 86.66",
         "src/lib/trip-admission.ts": "98.64 -> 95.52"
       }
+    },
+    {
+      "why": "Issue #2702 (#3829): bookings.ts swapped its checked_in branches for SQL predicates on the arrival trail, so the branch count fell and the ratio moved by under one branch; every branch this change added is covered. Measured by CI on #3829 at 6753ea8d, copied from the job log",
+      "files": {
+        "src/db/bookings.ts": "89.17 -> 89.13"
+      }
+    },
+    {
+      "why": "Issue #3701 (#3837): card Undo is one shared restoreCard in card-restore.ts; the nitrox-only restoreNitroxCertification was deleted, and its fully covered branches left the ratio of nitrox.ts. Its replacement is tested in card-restore.test.ts.",
+      "files": {
+        "src/db/nitrox.ts": "84.05 -> 83.6"
+      }
     }
   ],
   "src/db/aboard-at-sea.ts": 94.82,
   "src/db/account-security.ts": 94.2,
   "src/db/anonymize.ts": 90.79,
   "src/db/boarding-certification-snapshot.ts": 83.33,
-  "src/db/bookings.ts": 89.17,
+  "src/db/bookings.ts": 89.13,
   "src/db/certification-evidence.ts": 50,
   "src/db/certification-junior.ts": 88.23,
   "src/db/certifications-in-training.ts": 50,
   "src/db/check-in.ts": 87.5,
+  "src/db/card-restore.ts": 75,
   "src/db/checkouts.ts": 87.5,
   "src/db/course-certified.ts": 70.21,
   "src/db/erasure-coordinated-send.ts": 88.23,
@@ -55,7 +68,7 @@
   "src/db/manifest-events.ts": 75.92,
   "src/db/manifests.ts": 89.1,
   "src/db/medical-alerts.ts": 91.8,
-  "src/db/nitrox.ts": 84.05,
+  "src/db/nitrox.ts": 83.6,
   "src/db/offline-manifest-snapshots.ts": 70,
   "src/db/party-waiver-queue.ts": 84.21,
   "src/db/pre-departure-check.ts": 84.88,
@@ -97,6 +110,7 @@
   "src/lib/assists/waiver-draft.ts": 100,
   "src/lib/authz.ts": 100,
   "src/lib/booking-gates.ts": 86.66,
+  "src/lib/card-undo.ts": 100,
   "src/lib/cert-check-extension.ts": 87.69,
   "src/lib/certification-cards.ts": 100,
   "src/lib/certification-levels.ts": 100,

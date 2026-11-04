@@ -31,6 +31,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { seedArrivals } from "./seed-arrivals";
 import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed-cast";
 import {
   DEMO_SHOP_TIMEZONE,
@@ -388,7 +389,7 @@ async function writeSeats(
         shopId,
         tripId: trip.id,
         personId: diver.personId,
-        status: "checked_in" as const,
+        status: "booked" as const,
         createdAt: bookedAt[seat] as Date,
       })),
     )
@@ -398,6 +399,17 @@ async function writeSeats(
     const bookingId = bookingOf.get(diver.personId);
     return bookingId ? [{ ...diver, bookingId, seat, at: bookedAt[seat] as Date }] : [];
   });
+  // Every one of them came through the desk before the boat left.
+  await seedArrivals(
+    db,
+    seated.map((row) => ({
+      shopId,
+      tripId: trip.id,
+      bookingId: row.bookingId,
+      recordedByPersonId: recorderId,
+      occurredAt: new Date(plan.startsAt.getTime() - (45 - row.seat) * 60_000),
+    })),
+  );
   await db.insert(bookingPaymentEvents).values(
     paymentEntries(
       seated.map((row) => ({

@@ -4,6 +4,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import {
   addPartySeat,
@@ -335,7 +336,8 @@ describe("getReadyPageData", () => {
 
   it("withdraws the cancel once the seat is checked in", async () => {
     const { db, bookingId } = await unpaidBooking();
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    // Checked in is a `booked` seat with the trail's arrival (issue #2702).
+    await markArrived(db, bookingId);
     expect((await getReadyPageData(db, bookingId))?.canCancelBooking).toBe(false);
   });
 

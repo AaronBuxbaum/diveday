@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ae84db30-ad09-487a-b203-128e00f0fceb",
+  "prevIds": [
+    "2d55a4fb-8148-48c2-a406-2d11761f35ad"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "arrival_trail_after_seq"
+      ],
+      "writes": [
+        "s|col|public.bookings.arrival_trail_after_seq",
+        "n|col|public.bookings.arrival_trail_after_seq",
+        "e|col|public.bookings.arrival_trail_after_seq"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "arrival_trail_after_seq",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

@@ -65,7 +65,7 @@ describe("move refusal attribution", () => {
     expect(
       moveSeatRefusalFor({
         ...input,
-        roster: [{ ...seat, booking: { ...seat.booking, status: "checked_in" } }],
+        roster: [{ ...seat, checkedIn: true }],
       }),
     ).toBeUndefined();
     expect(

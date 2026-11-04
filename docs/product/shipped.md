@@ -145,7 +145,7 @@ and `/about`'s export check is done in the demo.
 Item 11 of the 2026-08-27 sweep (issue #1209). `bookings.status = 'no_show'` had existed since the
 first schema with a dozen readers branching on it and no writer anywhere; the counter's "Not here?"
 disclosure is that writer. **The staffer's confirm tap is the release** — no second tap, no timer,
-no close-of-day sweep and no `seat_released_at` column: `no_show` leaves `SEAT_HELD_STATUSES`, so
+no close-of-day sweep and no `seat_released_at` column: `no_show` stops holding the seat (`seatIsHeld`), so
 the boat reads one seat lighter the moment the mark commits and the next diver claims it through
 `bookSpot`'s ordinary capacity transaction. The door opens when the boat leaves without the diver
 rather than at the shop's **dock call time**, and closes at the end of the arrivals window; once the
@@ -3573,8 +3573,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
 - **Post-trip recap extras** — a crew shout-out (`trips.recap_shoutout`) renders on every diver's
   recap, and divers attach their own photos (`recap_photos` + `storeRecapImage`), which staff
   moderate from the roster ([post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md)).
-- **Generic undo** — the reversible card deletes land immediately and offer a 5-second undo toast
-  instead of a confirm dialog (`restoreCertification`/specialty/nitrox; reusable `UndoToast`).
+- **Generic undo** — the reversible card deletes land immediately and offer an undo toast that stays until dismissed, instead of a confirm dialog; a card's Undo works for 15 minutes (`restoreCard`, inside the **card undo window**; reusable `UndoToast`).
 - **Optimistic interaction** — a true `useOptimistic` payment-status control flips instantly and
   reconciles on the server; boarding stays server-authoritative (never optimistic on safety state).
 - **One keyboard idiom** — ⌘K opens the command palette, which searches records and reaches every

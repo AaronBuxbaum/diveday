@@ -92,8 +92,8 @@ export default async function DiverDetailPage({
     /** Which card a box-level refusal is about — see `DiverNotice.cardId`. */
     card?: string;
     edit?: string;
-    /** The deleted diver note's text, carried by its Undo offer. */
-    noteBody?: string;
+    /** The deleted diver note's id, carried by its Undo offer (never its text, #3701). */
+    undoNote?: string;
     /** Which page of the Activity group is being read, independent of the booking picker. */
     activity?: string;
     /** Which page of eligible departures is open inside Add a booking. */

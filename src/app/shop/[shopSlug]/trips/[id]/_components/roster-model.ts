@@ -330,13 +330,15 @@ export type SeatMove = {
  */
 export function seatMoveForRow(
   booking: { status: string; turnedAwayAt: Date | null },
+  /** The desk has them seen on this departure: `moveBooking` refuses (#2702). */
+  checkedIn: boolean,
   moveSeat: SeatMove | undefined,
 ): SeatMove | undefined {
   if (!moveSeat) return undefined;
   if (booking.status === "no_show" && booking.turnedAwayAt !== null) {
     return moveSeat.started ? undefined : moveSeat;
   }
-  return booking.status === "booked" && !moveSeat.departed ? moveSeat : undefined;
+  return booking.status === "booked" && !checkedIn && !moveSeat.departed ? moveSeat : undefined;
 }
 
 /**
@@ -704,7 +706,7 @@ export function groupRoster({
   const notHere = released.filter(({ booking }) => !booking.turnedAwayAt);
   const turnedAway = released.filter(({ booking }) => Boolean(booking.turnedAwayAt));
   const working = arrival ? roster.filter(({ booking }) => booking.status !== "no_show") : roster;
-  const arrived = (entry: RosterEntry) => Boolean(arrival) && entry.booking.status === "checked_in";
+  const arrived = (entry: RosterEntry) => Boolean(arrival) && entry.checkedIn;
   const here = working.filter((entry) => arrived(entry) && deskTasksClear(entry));
   const stillToClear = working.filter((entry) =>
     arrived(entry) ? !deskTasksClear(entry) : !isSettled(entry),

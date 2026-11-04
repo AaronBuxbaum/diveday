@@ -7,6 +7,7 @@ import {
   rollCallEvents as rollCallEventsTable,
   trips as tripsTable,
 } from "./schema";
+import { seedArrivals } from "./seed-arrivals";
 import { listStaff } from "./trips";
 import { livePerson } from "./trips-live";
 
@@ -62,12 +63,23 @@ export async function returnedTrip(
         shopId,
         tripId: trip.id,
         personId: diver.id,
-        status: "checked_in" as const,
+        status: "booked" as const,
       })),
     )
     .returning();
   const [staff] = await listStaff(db, shopId);
   if (!staff) throw new Error("seed staff missing");
+  // Through the desk before the boat left: the trail, not a status (#2702).
+  await seedArrivals(
+    db,
+    rows.map((row) => ({
+      shopId,
+      tripId: trip.id,
+      bookingId: row.id,
+      recordedByPersonId: staff.person.id,
+      occurredAt: trip.startsAt,
+    })),
+  );
   return { trip, bookingIds: rows.map((row) => row.id), staffId: staff.person.id };
 }
 

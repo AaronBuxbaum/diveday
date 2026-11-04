@@ -4,7 +4,9 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { standingArrivalStatus } from "./arrival-provenance";
 import { checkInBooking, listCheckInQueue, undoCheckInBooking } from "./check-in";
 import { listDepartureBoardedBookingIds, recordRollCall } from "./manifests";
 import { listTripsReadiness } from "./readiness";
@@ -54,7 +56,7 @@ describe("counter check-in", () => {
     const { db, shop } = await context();
     const queue = await listCheckInQueue(db, shop.id);
     expect(queue.length).toBeGreaterThan(0);
-    expect(queue.every((row) => ["booked", "checked_in"].includes(row.bookingStatus))).toBe(true);
+    expect(queue.every((row) => row.bookingStatus === "booked")).toBe(true);
 
     const searched = await listCheckInQueue(db, shop.id, { query: "Priya Sharma" });
     expect(searched).toHaveLength(1);
@@ -65,7 +67,7 @@ describe("counter check-in", () => {
    * **A check-in does not freeze readiness**, and the queue says so.
    *
    * `listTripsReadiness` excludes cancelled bookings and nothing else, so a
-   * `checked_in` seat carries whatever readiness answers right now — and
+   * checked-in seat carries whatever readiness answers right now — and
    * between the counter and the dock it really does change: a refund lands, a
    * card is corrected, the captain moves the second tank to a deeper site. The
    * counter's own composition is built on this pair being possible
@@ -78,13 +80,11 @@ describe("counter check-in", () => {
     if (!blocked) throw new Error("seeded blocked diver missing");
     expect(blocked.readiness.status).toBe("blocked");
 
-    await db
-      .update(bookings)
-      .set({ status: "checked_in" })
-      .where(eq(bookings.id, blocked.bookingId));
+    await markArrived(db, blocked.bookingId);
 
     const [afterCheckIn] = await listCheckInQueue(db, shop.id, { query: "Priya Sharma" });
-    expect(afterCheckIn?.bookingStatus).toBe("checked_in");
+    expect(afterCheckIn?.bookingStatus).toBe("booked");
+    expect(afterCheckIn?.checkedIn).toBe(true);
     expect(afterCheckIn?.readiness.status).toBe("blocked");
   });
 
@@ -236,8 +236,7 @@ describe("counter check-in", () => {
     });
     expect(outcome).toMatchObject({ ok: true, bookingId: booking.id });
 
-    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
-    expect(saved?.status).toBe("checked_in");
+    expect(await standingArrivalStatus(db, shop.id, booking.tripId, booking.id)).toBe("arrived");
 
     await expect(
       checkInBooking(db, {
@@ -537,7 +536,7 @@ describe("searching the counter by phone", () => {
  *   leaves `person_roles` entirely intact — a suspended employee keeps every
  *   role row they had.
  *
- * Both moved a real booking to `checked_in` and signed the `activity_events`
+ * Both checked a real booking in and signed the `activity_events`
  * trail with their name. Each test below therefore asserts the refusal *and*
  * that the booking never moved and the trail stayed empty: a refusal that still
  * wrote the row would be no fix at all, because the trail is what a shop reads
@@ -655,7 +654,7 @@ describe("the counter check-in recorder must be live staff (defense in depth)", 
         recordedByPersonId: staff.id,
       }),
     ).resolves.toMatchObject({ ok: true, bookingId: booking.id });
-    expect(await statusOf(db, booking.id)).toBe("checked_in");
+    expect(await standingArrivalStatus(db, shop.id, booking.tripId, booking.id)).toBe("arrived");
     expect(await trailFor(db, booking.id, before)).toMatchObject([{ actorPersonId: staff.id }]);
 
     // Demotion is the case the hand-rolled join did catch, and the rewrite must
@@ -737,8 +736,7 @@ describe("a counter arrival queued with no signal", () => {
       }),
     ).resolves.toMatchObject({ ok: true, bookingId: booking.id });
 
-    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
-    expect(saved?.status).toBe("checked_in");
+    expect(await standingArrivalStatus(db, shop.id, booking.tripId, booking.id)).toBe("arrived");
 
     // The sync response never reached the boat and the batch was sent again.
     await expect(
@@ -784,7 +782,7 @@ describe("a counter arrival queued with no signal", () => {
       .where(eq(rollCallEvents.bookingId, booking.id));
     expect(rollCall).toHaveLength(0);
     const [queue] = await listCheckInQueue(db, shop.id, { query: booking.id });
-    expect(queue).toMatchObject({ bookingStatus: "checked_in", boarded: false });
+    expect(queue).toMatchObject({ bookingStatus: "booked", checkedIn: true, boarded: false });
   });
 
   /**
@@ -929,8 +927,7 @@ describe("a counter arrival queued with no signal", () => {
     expect(outcome).toEqual({ ok: false, reason: "retraction_superseded" });
 
     // The desk's sighting stands. The diver is still checked in.
-    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
-    expect(saved?.status).toBe("checked_in");
+    expect(await standingArrivalStatus(db, shop.id, booking.tripId, booking.id)).toBe("arrived");
   });
 
   it("applies an undo that still names the statement standing", async () => {
@@ -1075,14 +1072,13 @@ describe("a counter arrival queued with no signal", () => {
       }),
     ).resolves.toMatchObject({ ok: true, bookingId: booking.id });
 
-    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
-    expect(saved?.status).toBe("checked_in");
+    expect(await standingArrivalStatus(db, shop.id, booking.tripId, booking.id)).toBe("arrived");
   });
 
   /**
    * **Two devices greeting the same diver.** Distinct idempotency keys, so the
-   * `client_event_id` dedup cannot see the second one; the `checked_in` guard
-   * catches it instead and answers success without writing.
+   * `client_event_id` dedup cannot see the second one; the standing `arrived`
+   * row (issue #2702) catches it instead and answers success without writing.
    *
    * That is the sentence the ADR now carries rather than the one it used to:
    * every tap that *changes the seat* writes a row, and a tap that changes
@@ -1168,8 +1164,7 @@ describe("a counter arrival queued with no signal", () => {
       }),
     ).resolves.toEqual({ ok: false, reason: "boarded" });
 
-    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
-    expect(saved?.status).toBe("checked_in");
+    expect(await standingArrivalStatus(db, shop.id, booking.tripId, booking.id)).toBe("arrived");
     const arrivals = await db
       .select()
       .from(bookingArrivalEvents)

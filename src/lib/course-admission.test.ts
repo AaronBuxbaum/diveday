@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Certification } from "@/db/schema";
 import {
-  COURSE_GATES,
   type CourseAdmissionInput,
   type CourseAdmissionRule,
-  type CourseAdmissionStrictness,
   type CourseDiver,
   courseEnrollmentRefusal,
   courseRatioRefusal,
@@ -41,10 +39,8 @@ const qualified: CourseDiver = {
 const oneInstructor = { instructorCount: 1, assistantCount: 0 };
 const noCrew = { instructorCount: 0, assistantCount: 0 };
 
-const sale = (
-  over: Partial<Extract<CourseAdmissionInput, { strictness: "sale" }>> = {},
-): CourseAdmissionInput => ({
-  strictness: "sale",
+/** Every door asks the same gates (issues #3769, #3686), a sale and an undo alike. */
+const seat = (over: Partial<CourseAdmissionInput> = {}): CourseAdmissionInput => ({
   actor: "staff",
   course: openWater,
   student: true,
@@ -54,45 +50,35 @@ const sale = (
   courseDate: "2031-06-14",
   ...over,
 });
-const restore = (
-  over: Partial<Extract<CourseAdmissionInput, { strictness: "restore" }>> = {},
-): CourseAdmissionInput => ({
-  strictness: "restore",
-  course: openWater,
-  student: true,
-  crew: oneInstructor,
-  studentsHeld: 0,
-  ...over,
-});
 
 describe("decideCourseAdmission", () => {
   it("asks nothing of a departure that is no course session", () => {
-    expect(decideCourseAdmission(sale({ course: null, crew: noCrew, diver: null }))).toBeNull();
-    expect(decideCourseAdmission(restore({ course: null, crew: noCrew, studentsHeld: 99 }))).toBe(
+    expect(decideCourseAdmission(seat({ course: null, crew: noCrew, diver: null }))).toBeNull();
+    expect(decideCourseAdmission(seat({ course: null, crew: noCrew, studentsHeld: 99 }))).toBe(
       null,
     );
   });
 
-  it("refuses every seat on an unstaffed session at the sale, student or passenger", () => {
-    expect(decideCourseAdmission(sale({ crew: noCrew }))).toBe("course_unstaffed");
-    expect(decideCourseAdmission(sale({ crew: noCrew, student: false }))).toBe("course_unstaffed");
+  it("refuses every seat on an unstaffed session, student or passenger", () => {
+    expect(decideCourseAdmission(seat({ crew: noCrew }))).toBe("course_unstaffed");
+    expect(decideCourseAdmission(seat({ crew: noCrew, student: false }))).toBe("course_unstaffed");
     // Assistants alone do not staff a course.
-    expect(decideCourseAdmission(sale({ crew: { instructorCount: 0, assistantCount: 4 } }))).toBe(
+    expect(decideCourseAdmission(seat({ crew: { instructorCount: 0, assistantCount: 4 } }))).toBe(
       "course_unstaffed",
     );
     // A course with no ratio still needs its instructor.
-    expect(decideCourseAdmission(sale({ course: ssiOpenWater, crew: noCrew }))).toBe(
+    expect(decideCourseAdmission(seat({ course: ssiOpenWater, crew: noCrew }))).toBe(
       "course_unstaffed",
     );
   });
 
   it("names staffing before the card, and the card before the ratio", () => {
-    expect(decideCourseAdmission(sale({ course: advanced, crew: noCrew, diver: null }))).toBe(
+    expect(decideCourseAdmission(seat({ course: advanced, crew: noCrew, diver: null }))).toBe(
       "course_unstaffed",
     );
     expect(
       decideCourseAdmission(
-        sale({
+        seat({
           course: { ...dsd, minimumAge: 10 },
           studentsHeld: 2,
           diver: { cards: [], dateOfBirth: "2025-01-01" },
@@ -102,12 +88,12 @@ describe("decideCourseAdmission", () => {
   });
 
   it("fails the card gate closed for a walk-in with no record", () => {
-    expect(decideCourseAdmission(sale({ course: advanced, diver: null }))).toBe(
+    expect(decideCourseAdmission(seat({ course: advanced, diver: null }))).toBe(
       "course_prerequisite",
     );
     expect(
       decideCourseAdmission(
-        sale({
+        seat({
           course: advanced,
           actor: "public",
           diver: { cards: [card("advanced_open_water", "pending")], dateOfBirth: null },
@@ -118,65 +104,78 @@ describe("decideCourseAdmission", () => {
 
   it("asks a passenger beside the class none of the student gates", () => {
     expect(
-      decideCourseAdmission(sale({ course: advanced, student: false, diver: null })),
+      decideCourseAdmission(seat({ course: advanced, student: false, diver: null })),
     ).toBeNull();
-    expect(decideCourseAdmission(sale({ course: dsd, student: false, studentsHeld: 50 }))).toBe(
-      null,
-    );
-    expect(decideCourseAdmission(restore({ course: dsd, student: false, studentsHeld: 50 }))).toBe(
+    expect(decideCourseAdmission(seat({ course: dsd, student: false, studentsHeld: 50 }))).toBe(
       null,
     );
   });
 
   it("caps a DSD at two per instructor, whatever assistants are rostered", () => {
     const crew = { instructorCount: 1, assistantCount: 3 };
-    expect(decideCourseAdmission(sale({ course: dsd, crew, studentsHeld: 1 }))).toBeNull();
-    expect(decideCourseAdmission(sale({ course: dsd, crew, studentsHeld: 2 }))).toBe(
-      "course_ratio_full",
-    );
-    expect(decideCourseAdmission(restore({ course: dsd, crew, studentsHeld: 2 }))).toBe(
+    expect(decideCourseAdmission(seat({ course: dsd, crew, studentsHeld: 1 }))).toBeNull();
+    expect(decideCourseAdmission(seat({ course: dsd, crew, studentsHeld: 2 }))).toBe(
       "course_ratio_full",
     );
   });
 
   it("caps PADI Open Water at the entry-level ratio, and an assistant raises it", () => {
-    expect(decideCourseAdmission(sale({ studentsHeld: 7 }))).toBeNull();
-    expect(decideCourseAdmission(sale({ studentsHeld: 8 }))).toBe("course_ratio_full");
+    expect(decideCourseAdmission(seat({ studentsHeld: 7 }))).toBeNull();
+    expect(decideCourseAdmission(seat({ studentsHeld: 8 }))).toBe("course_ratio_full");
     const withDm = { instructorCount: 1, assistantCount: 1 };
-    expect(decideCourseAdmission(sale({ crew: withDm, studentsHeld: 9 }))).toBeNull();
-    expect(decideCourseAdmission(sale({ crew: withDm, studentsHeld: 10 }))).toBe(
+    expect(decideCourseAdmission(seat({ crew: withDm, studentsHeld: 9 }))).toBeNull();
+    expect(decideCourseAdmission(seat({ crew: withDm, studentsHeld: 10 }))).toBe(
       "course_ratio_full",
     );
   });
 
   it("refuses a student over the ratio even when the session is already over it", () => {
     // Day-of crew changes can leave a session above its ratio; no door adds to it.
-    expect(decideCourseAdmission(sale({ course: dsd, studentsHeld: 6 }))).toBe("course_ratio_full");
-    expect(decideCourseAdmission(restore({ course: dsd, studentsHeld: 6 }))).toBe(
-      "course_ratio_full",
+    expect(decideCourseAdmission(seat({ course: dsd, studentsHeld: 6 }))).toBe("course_ratio_full");
+  });
+
+  /**
+   * Issue #3769: an undo once asked the ratio alone, so a course with no ratio
+   * (any non-PADI course, or PADI continuing education) took a student back
+   * onto a session nobody was teaching. A ratio-gated session refused, but as
+   * "ratio full", which sent the desk looking for a second instructor.
+   */
+  it("refuses a seat back on a session that has lost its last instructor, ratio or not", () => {
+    expect(decideCourseAdmission(seat({ course: ssiOpenWater, crew: noCrew }))).toBe(
+      "course_unstaffed",
     );
-  });
-
-  it("hands back a seat on an undo without re-asking staffing or enrollment", () => {
-    // The diver passed the card gate when the seat was sold.
-    expect(decideCourseAdmission(restore({ course: advanced }))).toBeNull();
-    // An ungated session that lost its instructor still takes its seat back.
-    expect(decideCourseAdmission(restore({ course: ssiOpenWater, crew: noCrew }))).toBeNull();
-  });
-
-  it("refuses an undo onto a ratio-gated session that has lost its last instructor", () => {
-    // A seat cannot be handed back to a session that could not sell it.
-    expect(decideCourseAdmission(restore({ course: dsd, crew: noCrew }))).toBe("course_ratio_full");
+    expect(decideCourseAdmission(seat({ course: advanced, crew: noCrew }))).toBe(
+      "course_unstaffed",
+    );
+    expect(decideCourseAdmission(seat({ course: dsd, crew: noCrew }))).toBe("course_unstaffed");
     expect(
       decideCourseAdmission(
-        restore({ course: openWater, crew: { instructorCount: 0, assistantCount: 2 } }),
+        seat({ course: openWater, crew: { instructorCount: 0, assistantCount: 2 } }),
       ),
-    ).toBe("course_ratio_full");
+    ).toBe("course_unstaffed");
+  });
+
+  /**
+   * Issue #3686: a card revoked since the sale, or a date of birth recorded
+   * since, refuses the seat coming back as it refuses a new one.
+   */
+  it("asks a seat coming back the student's card and age again", () => {
+    expect(
+      decideCourseAdmission(seat({ course: advanced, diver: { cards: [], dateOfBirth: null } })),
+    ).toBe("course_prerequisite");
+    expect(
+      decideCourseAdmission(
+        seat({
+          course: advanced,
+          diver: { cards: [card("advanced_open_water", "verified")], dateOfBirth: "2025-01-01" },
+        }),
+      ),
+    ).toBe("course_min_age");
   });
 
   /**
    * Adversarial sweep over a small grid of every input that moves the answer.
-   * Three properties hold everywhere, so no ordering or table edit can quietly
+   * Three properties hold everywhere, so no reordering can quietly
    * break them.
    */
   describe("over every course, crew, head count and diver", () => {
@@ -190,7 +189,7 @@ describe("decideCourseAdmission", () => {
       { cards: [card("open_water", "pending")], dateOfBirth: "2025-01-01" },
       qualified,
     ];
-    const cases: Extract<CourseAdmissionInput, { strictness: "sale" }>[] = [];
+    const cases: CourseAdmissionInput[] = [];
     for (const course of courses)
       for (const crew of crews)
         for (const studentsHeld of [0, 1, 2, 4, 8, 10, 12, 30])
@@ -198,7 +197,6 @@ describe("decideCourseAdmission", () => {
             for (const student of [true, false])
               for (const actor of ["staff", "public"] as const)
                 cases.push({
-                  strictness: "sale",
                   actor,
                   course,
                   crew,
@@ -208,28 +206,16 @@ describe("decideCourseAdmission", () => {
                   courseDate: "2031-06-14",
                 });
 
-    it("an undo is never stricter than the sale", () => {
-      for (const c of cases) {
-        if (decideCourseAdmission(c) !== null) continue;
-        expect(decideCourseAdmission({ ...c, strictness: "restore" }), JSON.stringify(c)).toBe(
-          null,
-        );
-      }
-    });
-
-    it("never seats a student at or past the crew's cap, at any strictness", () => {
+    it("never seats a student at or past the crew's cap", () => {
       for (const c of cases) {
         if (!c.student || !c.course) continue;
         const cap = courseSeatCapacity(c.course, c.crew.instructorCount, c.crew.assistantCount);
         if (cap === null || c.studentsHeld < cap) continue;
         expect(decideCourseAdmission(c), JSON.stringify(c)).not.toBeNull();
-        expect(decideCourseAdmission({ ...c, strictness: "restore" }), JSON.stringify(c)).not.toBe(
-          null,
-        );
       }
     });
 
-    it("never sells a seat on a course session with no instructor", () => {
+    it("never seats anyone on a course session with no instructor", () => {
       for (const c of cases) {
         if (!c.course || c.crew.instructorCount > 0) continue;
         expect(decideCourseAdmission(c), JSON.stringify(c)).toBe("course_unstaffed");
@@ -254,16 +240,6 @@ describe("decideCourseAdmission", () => {
         }
       }
     });
-  });
-});
-
-describe("COURSE_GATES", () => {
-  it("asks no gate at the undo that the sale does not ask", () => {
-    for (const strictness of Object.keys(COURSE_GATES) as CourseAdmissionStrictness[]) {
-      for (const [gate, asked] of Object.entries(COURSE_GATES[strictness])) {
-        if (asked) expect(COURSE_GATES.sale[gate as keyof typeof COURSE_GATES.sale]).toBe(true);
-      }
-    }
   });
 });
 

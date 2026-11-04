@@ -191,6 +191,8 @@ export const CARDS_CSV = sharedFile<ShopRow<"cardRows">>({
     },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
+    // Whether a staffer deleted it or DiveDay set it aside (#3701).
+    { header: "deletion_kind", in: "shop", value: (row) => row.deletionKind },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],
   shop: {

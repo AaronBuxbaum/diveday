@@ -2,6 +2,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seasonStartInstant } from "@/lib/season";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { bookings, people, shops, trips } from "./schema";
@@ -50,7 +51,7 @@ async function aSeat(
   shopId: string,
   tripId: string,
   fullName: string,
-  status: "booked" | "checked_in" | "cancelled" | "no_show" = "booked",
+  status: "booked" | "cancelled" | "no_show" = "booked",
 ) {
   const [person] = await db.insert(people).values({ shopId, fullName }).returning();
   if (!person) throw new Error("test person insert failed");
@@ -78,7 +79,9 @@ describe("seasonScale", () => {
     const { db, shopId } = await freshShop("season-before");
     const earlier = await aDeparture(db, shopId, new Date("2026-06-10T14:00:00.000Z"));
     await aSeat(db, shopId, earlier.id, "Ada Lindqvist");
-    await aSeat(db, shopId, earlier.id, "Hugo Marsh", "checked_in");
+    // Checked in: a held seat with the trail's arrival (issue #2702).
+    const hugo = await aSeat(db, shopId, earlier.id, "Hugo Marsh");
+    await markArrived(db, hugo.id);
     const today = await aDeparture(db, shopId, new Date("2026-07-21T15:00:00.000Z"));
     await aSeat(db, shopId, today.id, "Ben Okafor");
 

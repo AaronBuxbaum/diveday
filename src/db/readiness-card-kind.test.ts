@@ -2,12 +2,11 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { restoreCard } from "./card-restore";
 import type { AppDb } from "./client";
 import {
   deleteCertification,
   deleteSpecialtyCertification,
-  restoreCertification,
-  restoreSpecialtyCertification,
   reverseCertificationReview,
   reverseSpecialtyReview,
   reviewCertification,
@@ -116,10 +115,9 @@ describe("card actions keyed on an id refuse a card of another kind", () => {
     const { db, shopId, personId } = await person();
     const nitrox = await insertCard(db, { shopId, personId, kind: "nitrox", status: "verified" });
 
-    expect(await deleteCertification(db, { shopId, certificationId: nitrox.id })).toBe(false);
-    expect(await deleteSpecialtyCertification(db, { shopId, certificationId: nitrox.id })).toBe(
-      false,
-    );
+    const by = { shopId, certificationId: nitrox.id, deletedByPersonId: personId };
+    expect(await deleteCertification(db, by)).toBe(false);
+    expect(await deleteSpecialtyCertification(db, by)).toBe(false);
     expect((await reread(db, nitrox)).deletedAt).toBeNull();
   });
 
@@ -136,18 +134,18 @@ describe("card actions keyed on an id refuse a card of another kind", () => {
     for (const card of [level, specialty]) {
       await db
         .update(cards)
-        .set({ deletedAt: at })
+        .set({ deletedAt: at, deletedByPersonId: personId, deletionKind: "staff" })
         .where(and(eq(cards.kind, card.kind), eq(cards.id, card.id), eq(cards.shopId, shopId)));
     }
 
-    expect(await restoreSpecialtyCertification(db, { shopId, certificationId: level.id })).toBe(
-      false,
-    );
-    expect(await restoreCertification(db, { shopId, certificationId: specialty.id })).toBe(false);
+    const restore = (kind: "level" | "specialty", certificationId: string) =>
+      restoreCard(db, { shopId, kind, certificationId, restoredByPersonId: personId });
+    expect(await restore("specialty", level.id)).toBe("not_found");
+    expect(await restore("level", specialty.id)).toBe("not_found");
     expect((await reread(db, level)).deletedAt).not.toBeNull();
     expect((await reread(db, specialty)).deletedAt).not.toBeNull();
 
     // The right kind still restores: the refusal above is the kind, not the row.
-    expect(await restoreCertification(db, { shopId, certificationId: level.id })).toBe(true);
+    expect(await restore("level", level.id)).toBe("restored");
   });
 });

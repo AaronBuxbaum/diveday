@@ -1,3 +1,4 @@
+import type { CourseAdmissionRefusal } from "./course-admission";
 import type { TurnAwayReason } from "./turn-away";
 
 /**
@@ -58,6 +59,14 @@ type ActivityParamShapes = {
   note_added: { actor: string; diver: string };
   /** That note was deleted. Soft, like every delete; the line stays. */
   note_deleted: { actor: string; diver: string };
+  /** A deleted note was put back by its Undo, the same row (issue #3701). */
+  note_restored: { actor: string; diver: string };
+  /**
+   * A card a staffer deleted was put back by its Undo (issue #3701): the same
+   * row, in the review state it had, so it clears the gates it cleared before.
+   * Written so the shop can see who put a card back.
+   */
+  card_restored: { actor: string; diver: string; cardType: "level" | "specialty" | "nitrox" };
   /**
    * A staffer attested that a booking flagged `identity_unconfirmed` really is
    * the diver it was attached to, **on the trip roster**. The trail is what
@@ -113,14 +122,16 @@ type ActivityParamShapes = {
    * the attempt to take it back was not, and the shop reconciling the departure
    * afterwards could only see that somebody was written off.
    *
-   * `reason` is which limit refused, because the two ask for different next
-   * acts: a sold seat means find the diver another boat, a full ratio means
-   * find the session another instructor.
+   * `reason` is which limit refused, because each asks for a different next
+   * act: a sold seat means find the diver another boat, a full ratio or an
+   * unstaffed session means find the session an instructor, and a missing
+   * card or an age under the course's means the student cannot take this
+   * session (issues #3769, #3686).
    */
   booking_no_show_undo_refused: {
     actor: string;
     diver: string;
-    reason: "trip_full" | "divers_full" | "course_ratio_full";
+    reason: "trip_full" | "divers_full" | CourseAdmissionRefusal;
   };
   /**
    * A staffer changed what a seated person is doing aboard (ADR
@@ -513,6 +524,8 @@ export const ACTIVITY_CODES = [
   "counter_check_in_undone",
   "note_added",
   "note_deleted",
+  "note_restored",
+  "card_restored",
   "booking_removed",
   "booking_restored",
   "booking_no_show",

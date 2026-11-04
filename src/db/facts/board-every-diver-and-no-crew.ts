@@ -2,6 +2,7 @@ import { and, eq, gte, inArray } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { recordRollCall } from "@/db/manifests";
 import { bookings, cards, people, personRoles, trips } from "@/db/schema";
+import { seatHeld } from "@/db/trips-queries";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS } from "@/lib/clock";
@@ -68,7 +69,7 @@ export async function boardEveryDiverAndNoCrew(
         // Checked in as well as booked: the demo's morning hand-off checks
         // two divers in at the counter, and the station counts their seats
         // too, so leaving them ashore would never fill the boat.
-        inArray(bookings.status, ["booked", "checked_in"]),
+        seatHeld,
       ),
     )
     .orderBy(people.fullName);

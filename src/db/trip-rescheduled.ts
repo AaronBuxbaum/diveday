@@ -8,6 +8,7 @@ import {
   type TripRescheduledPayload,
 } from "@/lib/held-sends";
 import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
+import { seatIsHeld } from "@/lib/no-show";
 import {
   type NotificationDelivery,
   type NotificationProvider,
@@ -37,6 +38,7 @@ import { bookings, notificationSendQueue, people, shops, trips } from "./schema"
 import { isSmsOptedOut, stopListedSmsProvider } from "./sms-opt-outs";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /**
@@ -52,16 +54,13 @@ import { whatsAppProvidersForShops } from "./whatsapp-accounts";
  * channel.
  *
  * **Who is addressed, and who is not.** One message per seat that is still on
- * the boat (`booked` or `checked_in`), to the email or phone on *that seat's
+ * the boat (`booked`, checked in or not), to the email or phone on *that seat's
  * own person record* — never the booker's, never a party lead's, never an
  * address the hold carried (it carries ids only). A seat whose identity is
  * still held (#2082) is skipped: the address on that record may be somebody
  * else's, the same rule the reminders keep. A cancelled seat, a no-show, and
  * a deleted person are not on the list at all.
  */
-
-/** Seats a reschedule notice would address: on the boat, identity settled. */
-const TOLD_STATUSES = ["booked", "checked_in"] as const;
 
 export type RescheduleNoticeOutcome = {
   /** Seats the notice reached on its tracked channel. */
@@ -86,7 +85,7 @@ export async function rescheduleAudienceCount(
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
-        inArray(bookings.status, [...TOLD_STATUSES]),
+        seatHeld,
         isNull(bookings.identityUnconfirmedAt),
         isNull(people.deletedAt),
       ),
@@ -272,7 +271,7 @@ export async function holdRescheduleNotice(
           and(
             eq(bookings.shopId, input.shopId),
             eq(bookings.tripId, input.tripId),
-            inArray(bookings.status, [...TOLD_STATUSES]),
+            seatHeld,
             isNotNull(bookings.identityUnconfirmedAt),
             isNull(people.deletedAt),
           ),
@@ -295,7 +294,7 @@ export async function holdRescheduleNotice(
                 bookings.id,
                 heldSeats.map((seat) => seat.id),
               ),
-              inArray(bookings.status, [...TOLD_STATUSES]),
+              seatHeld,
               isNotNull(bookings.identityUnconfirmedAt),
             ),
           );
@@ -385,7 +384,7 @@ export async function sendRescheduleNotices(
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, trip.id),
-        inArray(bookings.status, [...TOLD_STATUSES]),
+        seatHeld,
         isNull(people.deletedAt),
       ),
     );
@@ -524,8 +523,7 @@ async function tellSeat(
         .from(bookings)
         .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shop.id)))
         .limit(1);
-      if (!current || !TOLD_STATUSES.includes(current.status as (typeof TOLD_STATUSES)[number]))
-        return "skipped" as const;
+      if (!current || !seatIsHeld(current.status)) return "skipped" as const;
       if (current.identityUnconfirmedAt) {
         await tx
           .update(bookings)
@@ -579,7 +577,7 @@ async function activeSeatContactChanged(
     current &&
       current.personId === input.person.id &&
       current.tripId === input.trip.id &&
-      TOLD_STATUSES.includes(current.status as (typeof TOLD_STATUSES)[number]) &&
+      seatIsHeld(current.status) &&
       !current.anonymizedAt &&
       !current.mergedIntoPersonId &&
       (current.email !== input.person.email || current.phone !== input.person.phone),
@@ -846,7 +844,7 @@ export async function sendMissedRescheduleNotice(
       and(
         eq(bookings.id, input.bookingId),
         eq(bookings.shopId, input.shopId),
-        inArray(bookings.status, [...TOLD_STATUSES]),
+        seatHeld,
         isNull(people.deletedAt),
         liveTrip(),
         notRehearsal(),

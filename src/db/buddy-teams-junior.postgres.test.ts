@@ -12,7 +12,8 @@ import {
   partyConfirmKey,
   planPartyTeams,
 } from "./buddy-teams";
-import { createCertification, restoreCertification } from "./readiness";
+import { restoreCard } from "./card-restore";
+import { createCertification } from "./readiness";
 import { bookings, cards, people, personRoles, shops, trips, userAccounts } from "./schema";
 
 describePostgres("one-tap party decisions against junior evidence changes", () => {
@@ -300,7 +301,7 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
   }
 
   it("makes actual card insertion and restoration writers participate in the person lock", async () => {
-    const { pg, shop, first } = await fixture();
+    const { pg, shop, first, staff } = await fixture();
     const [deleted] = await pg.db
       .insert(cards)
       .values({
@@ -312,6 +313,8 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
         identifier: "RESTORE",
         status: "verified",
         deletedAt: nowDate(),
+        deletedByPersonId: staff.id,
+        deletionKind: "staff",
       })
       .returning();
     if (!deleted) throw new Error("deleted card missing");
@@ -326,9 +329,11 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
       level: "open_water",
       identifier: "INSERT",
     });
-    const restore = restoreCertification(pg.connect(), {
+    const restore = restoreCard(pg.connect(), {
       shopId: shop.id,
+      kind: "level",
       certificationId: deleted.id,
+      restoredByPersonId: staff.id,
     });
     try {
       await waitForLockWaiters(pg.db, 2);
@@ -336,7 +341,7 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
       await gate.release();
     }
     expect(await insert).not.toBeNull();
-    expect(await restore).toBe(true);
+    expect(await restore).toBe("restored");
   });
 
   it("makes a contact import wait on the same person lock before adding a card", async () => {

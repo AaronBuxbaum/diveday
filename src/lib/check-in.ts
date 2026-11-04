@@ -17,6 +17,8 @@
  */
 export type CounterSeat = {
   bookingStatus: string;
+  /** The desk has them seen: the arrival trail's word (`seatCheckedIn`, issue #2702). */
+  checkedIn: boolean;
   readiness: { status: string };
   /** Set on a released seat the desk turned away (H-20261015-who-may-turn-someone); absent or null otherwise. */
   turnedAwayReason?: string | null;
@@ -40,7 +42,7 @@ export type CounterSeat = {
  * than at the rail where the manifest's gate is the only thing left.
  */
 export function isSettledAtCounter(seat: CounterSeat): boolean {
-  return seat.bookingStatus === "checked_in" && seat.readiness.status === "ready";
+  return seat.bookingStatus === "booked" && seat.checkedIn && seat.readiness.status === "ready";
 }
 
 /** Readiness will not clear this seat right now — whether or not it checked in. */

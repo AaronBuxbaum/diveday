@@ -19,9 +19,15 @@ type WaiverRow = WaiverByBooking extends Map<string, infer V> ? V : never;
 
 function seat(
   id: string,
-  over: { status?: string; emergencyContactPhone?: string | null; turnedAwayAt?: Date | null } = {},
+  over: {
+    status?: string;
+    emergencyContactPhone?: string | null;
+    turnedAwayAt?: Date | null;
+    checkedIn?: boolean;
+  } = {},
 ): RosterEntry {
   return {
+    checkedIn: over.checkedIn ?? false,
     booking: {
       id,
       status: over.status ?? "booked",
@@ -152,8 +158,8 @@ describe("groupRoster", () => {
   it("with the desk open, sinks a cleared arrival into Checked in and a released seat into Not here", () => {
     const rows = rowsFor(
       [
-        seat("here", { status: "checked_in" }),
-        seat("owes", { status: "checked_in", emergencyContactPhone: null }),
+        seat("here", { checkedIn: true }),
+        seat("owes", { checkedIn: true, emergencyContactPhone: null }),
         seat("gone", { status: "no_show" }),
       ],
       { here: readiness("ready"), owes: readiness("ready"), gone: readiness("ready") },
@@ -494,21 +500,36 @@ describe("seatMoveForRow", () => {
   const booking = (status: string, turnedAwayAt: Date | null = null) => ({ status, turnedAwayAt });
 
   it("moves a booked seat only while the boat is in", () => {
-    expect(seatMoveForRow(booking("booked"), move(false))).toBeDefined();
-    expect(seatMoveForRow(booking("booked"), move(true))).toBeUndefined();
+    expect(seatMoveForRow(booking("booked"), false, move(false))).toBeDefined();
+    expect(seatMoveForRow(booking("booked"), false, move(true))).toBeUndefined();
   });
 
   /** dde-3 #4+#5: until the scheduled start, not the sailing buffer. */
   it("moves a turned-away seat only before the boat's scheduled start", () => {
     const turnedAway = booking("no_show", new Date("2026-10-16T07:00:00Z"));
-    expect(seatMoveForRow(turnedAway, move(false))).toBeDefined();
-    expect(seatMoveForRow(turnedAway, move(false, true))).toBeUndefined();
-    expect(seatMoveForRow(turnedAway, move(true))).toBeUndefined();
+    expect(seatMoveForRow(turnedAway, false, move(false))).toBeDefined();
+    expect(seatMoveForRow(turnedAway, false, move(false, true))).toBeUndefined();
+    expect(seatMoveForRow(turnedAway, false, move(true))).toBeUndefined();
   });
 
   it("never moves a plain no-show or an arrived seat", () => {
-    expect(seatMoveForRow(booking("no_show"), move(false))).toBeUndefined();
-    expect(seatMoveForRow(booking("checked_in"), move(false))).toBeUndefined();
-    expect(seatMoveForRow(booking("booked"), undefined)).toBeUndefined();
+    expect(seatMoveForRow(booking("no_show"), false, move(false))).toBeUndefined();
+    expect(seatMoveForRow(booking("booked"), true, move(false))).toBeUndefined();
+    expect(seatMoveForRow(booking("booked"), false, undefined)).toBeUndefined();
+  });
+
+  /**
+   * Issue #2702: arrival is the trail's word, so a `booked` seat the desk has
+   * seen is an arrived seat and offers no move (`moveBooking` refuses it). A
+   * released seat whose `arrived` row still stands is not an arrived seat: a
+   * plain no-show still offers nothing, and a turned-away one keeps exactly the
+   * door it had before the start, whatever the trail says.
+   */
+  it("reads arrival from the trail, never from the seat word", () => {
+    expect(seatMoveForRow(booking("booked"), true, move(false))).toBeUndefined();
+    expect(seatMoveForRow(booking("no_show"), true, move(false))).toBeUndefined();
+    const turnedAway = booking("no_show", new Date("2026-10-16T07:00:00Z"));
+    expect(seatMoveForRow(turnedAway, true, move(false))).toBeDefined();
+    expect(seatMoveForRow(turnedAway, true, move(false, true))).toBeUndefined();
   });
 });

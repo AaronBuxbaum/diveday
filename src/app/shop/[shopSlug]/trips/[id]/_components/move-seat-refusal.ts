@@ -23,7 +23,7 @@ export function moveSeatRefusalFor(input: {
   const entry = input.roster.find(({ booking }) => booking.id === input.origin);
   if (!entry || entry.booking.identityUnconfirmedAt || input.aboardAtSea?.has(entry.booking.id))
     return undefined;
-  const move = seatMoveForRow(entry.booking, input.moveSeat);
+  const move = seatMoveForRow(entry.booking, entry.checkedIn, input.moveSeat);
   if (!move || move.targets.length === 0) return undefined;
   return { bookingId: entry.booking.id, text: input.notice.text };
 }

@@ -14,6 +14,8 @@ import {
 } from "@/lib/manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
+import { markArrived } from "@/test/arrivals";
+import { standingArrivalStatus } from "./arrival-provenance";
 import { checkInBooking, undoCheckInBooking } from "./check-in";
 import { listAvailableGearUnits, reserveGearUnit } from "./gear";
 import { subscribeManifestEvents } from "./manifest-events";
@@ -131,7 +133,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    * comes back with them** (security and dive-domain review 20260911).
    *
    * `markBookingNoShow` releases the seat on the confirm tap — `no_show` leaves
-   * `SEAT_HELD_STATUSES`, so a walk-in can buy it. Nothing on the boarding path
+   * the held seats (`seatIsHeld`), so a walk-in can buy it. Nothing on the boarding path
    * read booking status: readiness does not, and `getTripRoster` drops only
    * cancelled rows, so the released seat stayed on the manifest as a tappable
    * name and boarding it put capacity plus one on the water with the seat count
@@ -181,10 +183,8 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
 
   /**
    * **The seat comes back as what it was, at the rail as at the desk** (issue
-   * #1838). `undoBookingNoShow` restores `checked_in` when the arrival trail
-   * still says the desk saw the diver; the crew's tap that takes the release
-   * back read nothing and restored `booked`, which put a diver the counter had
-   * already checked in back on its "still to come" list.
+   * #1838). Since #2702 the restore writes `booked` and the `arrived` row the
+   * release never touched still stands, so the counter's diver stays checked in.
    */
   it("puts a diver the desk had checked in back as checked in when the crew board them", async () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
@@ -220,7 +220,8 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       }),
     ).resolves.toMatchObject({ ok: true });
 
-    expect(await statusOf(db, booking.booking.id)).toBe("checked_in");
+    expect(await statusOf(db, booking.booking.id)).toBe("booked");
+    expect(await standingArrivalStatus(db, shop.id, reef.id, booking.booking.id)).toBe("arrived");
   });
 
   it("puts a diver the desk had cleared back as booked when the crew board them", async () => {
@@ -266,6 +267,9 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     ).resolves.toMatchObject({ ok: true });
 
     expect(await statusOf(db, booking.booking.id)).toBe("booked");
+    expect(await standingArrivalStatus(db, shop.id, reef.id, booking.booking.id)).not.toBe(
+      "arrived",
+    );
   });
 
   /**
@@ -275,7 +279,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    * `noShowGate` refuses the desk when the crew have already recorded a diver
    * as not back aboard. For one slice the mirror act covered only `boarded`, so
    * the desk-first ordering left a `no_show` standing over a diver in the
-   * water: the seat had left `SEAT_HELD_STATUSES` at the desk's tap, the
+   * water: the seat had left the held seats (`seatIsHeld`) at the desk's tap, the
    * counter had already offered it to the wait list, and the glossary's promise
    * that the mark "cannot co-exist with a boarding at any checkpoint" was
    * false.
@@ -805,7 +809,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    * a release read only the diver half. So a staffer who holds a seat on the
    * trip they crew had the one ordering nothing closed: marked absent at the
    * desk, then boarded at the rail, and the release stood. The seat had left
-   * `SEAT_HELD_STATUSES` and was sellable to a walk-in while its holder was on
+   * the held seats (`seatIsHeld`) and was sellable to a walk-in while its holder was on
    * the boat, and every reader that counts a dive day struck the day — which
    * is a divemaster diving five days running being handed the single-day
    * flying wait.
@@ -1127,8 +1131,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
 
   it("carries the counter check-in status onto the manifest, independent of roll call (task 149)", async () => {
     // Counter check-in and boat roll call are two different questions —
-    // arrived vs. aboard. `checked_in` used to have exactly one reader in
-    // the app (the check-in page itself); the manifest never showed it.
+    // arrived vs. aboard; the manifest reads arrival from the trail (#2702).
     const { db, shop, reef, booking } = await manifestContext();
 
     const beforeCheckIn = await getTripManifest(db, shop.id, reef.id);
@@ -1136,10 +1139,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       beforeCheckIn?.divers.find((entry) => entry.bookingId === booking.booking.id)?.checkedIn,
     ).toBe(false);
 
-    await db
-      .update(bookings)
-      .set({ status: "checked_in" })
-      .where(eq(bookings.id, booking.booking.id));
+    await markArrived(db, booking.booking.id);
 
     const afterCheckIn = await getTripManifest(db, shop.id, reef.id);
     const diver = afterCheckIn?.divers.find((entry) => entry.bookingId === booking.booking.id);

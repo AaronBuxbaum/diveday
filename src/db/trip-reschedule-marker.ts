@@ -1,7 +1,8 @@
-import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, people, tripScheduleDays, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /**
  * Preserve the first start divers have not yet been told about. Call only
@@ -56,7 +57,7 @@ export async function rememberUnnotifiedTripStart(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
-        inArray(bookings.status, ["booked", "checked_in"]),
+        seatHeld,
         isNull(people.deletedAt),
       ),
     );

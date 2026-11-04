@@ -18,8 +18,9 @@ import {
   listTripActivity,
   pagedDiverActivity,
   recordDiverSelfCancel,
+  restoreInternalNote,
 } from "./operations";
-import { activityEvents, bookings, people, trips } from "./schema";
+import { activityEvents, bookings, people, shops, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -255,7 +256,7 @@ describe("staff-only operational context", () => {
         noteId: note.id,
         actorPersonId: actor.person.id,
       }),
-    ).resolves.toEqual({ deleted: true, body: "Remove after the trip." });
+    ).resolves.toBe(true);
     expect(await personScopedNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(0);
     expect(
       (await listTripActivity(db, shop.id, trip.id)).some((row) =>
@@ -290,8 +291,7 @@ describe("staff-only operational context", () => {
       }),
     ).resolves.toEqual({
       deleted: true,
-      bookingId: rosterEntry.booking.id,
-      body: "Needs a size-large wetsuit.",
+      noteId: note.id,
     });
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
     expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
@@ -300,11 +300,11 @@ describe("staff-only operational context", () => {
     });
   });
 
-  it("returns the deleted note's booking and text so a land-then-undo toast can recreate it", async () => {
+  it("restores the deleted note by its id, as the same row with the same words", async () => {
     // Regression for the roster's delete-then-undo flow (docs/design/principles.md
     // §7): `deleteInternalNoteAction` reads this return value straight into the
-    // redirect that drives the toast, and `restoreInternalNoteAction` reuses
-    // `addInternalNote` with exactly these fields to recreate the note.
+    // redirect that drives the toast, and `restoreInternalNoteAction` names the
+    // note by that id; a URL never carries the words (#3701).
     const { db, shop } = ctx;
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
@@ -330,20 +330,68 @@ describe("staff-only operational context", () => {
     if (!result.deleted) throw new Error("expected the note to be deleted");
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
 
-    // The restore recreates a *new* note with the deleted one's content — the
-    // old row's id is gone and isn't needed for that.
-    const restored = await addInternalNote(db, {
+    // The delete is soft and its Undo names the note (#3701): the same row
+    // comes back, never a new one written from text a URL carried.
+    expect(result.noteId).toBe(note.id);
+    const restored = await restoreInternalNote(db, {
       shopId: shop.id,
       tripId: trip.id,
-      bookingId: result.bookingId,
+      noteId: result.noteId,
       actorPersonId: actor.person.id,
-      body: result.body,
     });
-    expect(restored).toMatchObject({ body: "Bring a spare mask for their kid." });
-    expect(restored?.id).not.toBe(note.id);
+    expect(restored).toEqual({ bookingId: note.bookingId });
     const notesAfterRestore = await listBookingNotes(db, shop.id, trip.id);
     expect(notesAfterRestore).toHaveLength(1);
     expect(notesAfterRestore[0]?.note.body).toBe("Bring a spare mask for their kid.");
+  });
+
+  it("never restores a note through another shop's id or another trip's page", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips.find((row) => row.booked > 0);
+    const otherTrip = trips.find((row) => row.id !== trip?.id);
+    if (!trip || !otherTrip) throw new Error("expected two trips");
+    const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
+    const [actor] = await listStaff(db, shop.id);
+    if (!rosterEntry || !actor) throw new Error("expected seeded people");
+    const note = await addInternalNote(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: rosterEntry.booking.id,
+      actorPersonId: actor.person.id,
+      body: "Allergic to latex.",
+    });
+    if (!note) throw new Error("expected note to be created");
+    await deleteInternalNote(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      noteId: note.id,
+      actorPersonId: actor.person.id,
+    });
+    const [other] = await db
+      .insert(shops)
+      .values({
+        name: "Elsewhere",
+        slug: `elsewhere-${crypto.randomUUID().slice(0, 8)}`,
+        timezone: "UTC",
+      })
+      .returning();
+    if (!other) throw new Error("expected a second shop");
+
+    const attempts = [
+      { shopId: other.id, tripId: trip.id },
+      { shopId: shop.id, tripId: otherTrip.id },
+    ];
+    for (const attempt of attempts) {
+      expect(
+        await restoreInternalNote(db, {
+          ...attempt,
+          noteId: note.id,
+          actorPersonId: actor.person.id,
+        }),
+      ).toBeNull();
+    }
+    expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
   });
 
   it("refuses to delete a note that doesn't exist or belongs to another shop", async () => {
@@ -557,7 +605,7 @@ describe("a diver's own activity trail", () => {
         noteId: note.id,
         actorPersonId: actor.person.id,
       }),
-    ).resolves.toMatchObject({ deleted: true });
+    ).resolves.toBe(true);
     const afterDelete = await pagedDiverActivity(db, shop.id, priya, { pageSize: 100 });
     expect(afterDelete.rows[0]).toMatchObject({
       code: "note_deleted",

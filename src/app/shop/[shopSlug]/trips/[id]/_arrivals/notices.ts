@@ -74,6 +74,12 @@ export const DESK_NOTICES: DeskNoticeMap = {
   // The seat was resold before the undo.
   "no-show-trip-full": { tone: "danger", key: "checkIn.notice.noShowTripFull" },
   "no-show-course-ratio-full": { tone: "danger", key: "checkIn.notice.noShowCourseRatioFull" },
+  "no-show-course-unstaffed": { tone: "danger", key: "checkIn.notice.noShowCourseUnstaffed" },
+  "no-show-course-prerequisite": {
+    tone: "danger",
+    key: "checkIn.notice.noShowCoursePrerequisite",
+  },
+  "no-show-course-min-age": { tone: "danger", key: "checkIn.notice.noShowCourseMinAge" },
   "no-show-not-found": { tone: "danger", key: "checkIn.notice.notFound" },
   "no-show-staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
   // The departure started after the diver was turned away.

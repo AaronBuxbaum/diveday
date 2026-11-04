@@ -6,6 +6,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowMs } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDaysBounds } from "@/lib/zoned";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { getDayCloseout, listNotBackAfterDive } from "./closeout-reader";
 
@@ -45,10 +46,12 @@ async function countedAtTheDock(db: AppDb, shopId: string, daysAgo: number) {
       shopId,
       tripId: trip.id,
       personId: diver.id,
-      status: "checked_in",
+      status: "booked",
     })
     .returning();
   if (!booking) throw new Error("fixture booking insert returned no row");
+  // Seen at the desk before the boat: checked in is the arrival trail (issue #2702).
+  await markArrived(db, booking.id, { occurredAt: new Date(startsAt.getTime() - HOUR) });
   await db.insert(rollCallEvents).values({
     shopId,
     tripId: trip.id,
@@ -205,10 +208,12 @@ describe("a past day's dock count", () => {
           shopId: input.shopId,
           tripId: trip.id,
           personId: diver.id,
-          status: "checked_in",
+          status: "booked",
         })
         .returning();
       if (!seat) throw new Error("fixture booking insert returned no row");
+      // Checked in is the arrival trail, not a seat status (issue #2702).
+      await markArrived(db, seat.id, { occurredAt: new Date(trip.startsAt.getTime() - HOUR) });
       seats.push(seat.id);
     }
     if (input.marks?.length) {

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking, createBookingParty } from "./bookings";
 import { listCheckInQueue } from "./check-in";
@@ -137,11 +138,12 @@ describe("markBookingRunningLate", () => {
 
   it("refuses a seat that has already checked in, and a called-off departure", async () => {
     const { db, shop, trip, bookingId, now } = await context();
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    // Checked in is the trail's `arrived` row on a `booked` seat (issue #2702).
+    await markArrived(db, bookingId);
     expect(await markBookingRunningLate(db, { shopId: shop.id, bookingId, now })).toEqual({
       status: "closed",
     });
-    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, bookingId));
+    await markArrived(db, bookingId, { status: "cleared" });
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
     expect(await markBookingRunningLate(db, { shopId: shop.id, bookingId, now })).toEqual({
       status: "closed",
@@ -165,12 +167,15 @@ describe("the arrivals list", () => {
     const [row] = await listCheckInQueue(db, shop.id, { now, tripId: trip.id, query: DIVER.email });
     expect(row?.runningLateAt).toEqual(now);
 
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    // The arrival alone, without the writer clearing the stamp: the queue
+    // reads the trail and stops showing it (issue #2702).
+    await markArrived(db, bookingId);
     const [arrived] = await listCheckInQueue(db, shop.id, {
       now,
       tripId: trip.id,
       query: DIVER.email,
     });
+    expect(arrived?.checkedIn).toBe(true);
     expect(arrived?.runningLateAt).toBeNull();
   });
 });
@@ -271,7 +276,7 @@ describe("a message in the diver's own words (the Inbox)", () => {
       now,
     );
     expect(stranger.size).toBe(0);
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    await markArrived(db, bookingId);
     expect(
       await markMessageRunningLate(db, {
         shopId: shop.id,
@@ -709,7 +714,7 @@ describe("clearBookingRunningLate", () => {
     expect(await clearBookingRunningLate(db, { shopId: shop.id, bookingId, now: sailed })).toEqual({
       status: "closed",
     });
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    await markArrived(db, bookingId);
     expect(await clearBookingRunningLate(db, { shopId: shop.id, bookingId, now })).toEqual({
       status: "closed",
     });

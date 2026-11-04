@@ -51,6 +51,23 @@ describe("the blank release", () => {
     expect(container.textContent).toContain("I accept the risks.\nSecond paragraph.");
   });
 
+  it("repeats the version on every printed page, so a separated signature page still names its release", () => {
+    const { container } = renderBlank();
+    // A page-repeating header is the one thing a browser draws at the top of
+    // every printed page (a `thead` repeats; fixed boxes and margin boxes do
+    // not, in Chromium). The version is written once, and it lives there.
+    const header = container.querySelector("table > thead");
+    expect(header?.textContent).toBe("Release version 7");
+    expect(screen.getAllByText("Release version 7")).toHaveLength(1);
+    // Everything else the diver signs is in the body that header sits above.
+    const body = container.querySelector("table > tbody");
+    expect(body?.textContent).toContain("I accept the risks.");
+    expect(body?.textContent).toContain("Signatures");
+    expect(body?.textContent).not.toContain("Release version 7");
+    // It is layout, not data: a screen reader reads the release, not a grid.
+    expect(container.querySelector("table")?.getAttribute("role")).toBe("presentation");
+  });
+
   it("gives every standard question empty yes and no boxes, never ticked", () => {
     const { container } = renderBlank();
     const primaries = RSTC_QUESTIONNAIRE.questions.filter((q) => q.section === "primary");

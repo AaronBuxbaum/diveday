@@ -1,10 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { createNitroxCertification } from "@/db/nitrox";
 import { addDiverNote, listDiverRecordNotes } from "@/db/operations";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
-import { cards, internalNotes, people } from "@/db/schema";
+import { activityEvents, cards, internalNotes, people } from "@/db/schema";
+import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { readUndoOffer } from "@/lib/undo";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -169,25 +170,33 @@ describe("an Undo puts back exactly what was removed", () => {
     }
   });
 
-  it("a note: its exact text back on the same record, once", async () => {
+  /**
+   * Issue #3701: the offer names the note, never its words. The delete is
+   * soft, so the same row comes back, written by whoever wrote it.
+   */
+  it("a note: the same row back on the same record, by its id", async () => {
     const { db, shop, owner, personId } = await context();
     const body = "Prefers the starboard bench; seasick on the 7am.";
     const note = await addDiverNote(db, { shopId: shop.id, personId, actorPersonId: owner, body });
     if (!note) throw new Error("note insert failed");
+    const [before] = await db.select().from(internalNotes).where(eq(internalNotes.id, note.id));
 
     const removed = await redirectedTo(() =>
       deleteDiverNoteAction(shop.slug, personId, form({ noteId: note.id })),
     );
     expect(await listDiverRecordNotes(db, shop.id, personId)).toEqual([]);
+    const [kept] = await db.select().from(internalNotes).where(eq(internalNotes.id, note.id));
+    expect(kept?.deletedAt).not.toBeNull();
     const offer = offerFrom(removed);
-    expect(offer).toEqual({ undo: "diver-note", undoPerson: personId, noteBody: body });
+    expect(offer).toEqual({ undo: "diver-note", undoPerson: personId, undoNote: note.id });
+    expect(removed).not.toContain("starboard");
 
-    expect(await undo(shop.slug, offer)).toContain("notice=note-added");
-    const notes = await listDiverRecordNotes(db, shop.id, personId);
-    expect(notes.map((row) => row.note.body)).toEqual([body]);
+    expect(await undo(shop.slug, offer)).toContain("notice=note-restored");
+    const [after] = await db.select().from(internalNotes).where(eq(internalNotes.id, note.id));
+    expect(after).toEqual(before);
   });
 
-  it("a note too long to offer back still deletes and lands, with no Undo rather than an error", async () => {
+  it("a note longer than a typed one still offers its Undo, by id", async () => {
     const { db, shop, personId } = await context();
     // Imported notes carry no length bound; a typed one stops at 1,000.
     const [note] = await db
@@ -201,9 +210,8 @@ describe("an Undo puts back exactly what was removed", () => {
     );
 
     expect(landed).toContain("notice=note-deleted");
-    expect(
-      readUndoOffer(Object.fromEntries(new URL(landed, "https://dive.test").searchParams)),
-    ).toBeNull();
+    expect(await undo(shop.slug, offerFrom(landed))).toContain("notice=note-restored");
+    expect(await listDiverRecordNotes(db, shop.id, personId)).toHaveLength(1);
   });
 
   it("a removed diver: back on the roster, the toast's Undo landing on the roster", async () => {
@@ -277,8 +285,12 @@ describe("an Undo is an endpoint, so every field of it is refused when it is wro
       },
     ],
     [
-      "an empty note",
-      { undo: "diver-note", undoPerson: "11111111-1111-4111-8111-111111111111", noteBody: "  " },
+      "a note's text instead of its id",
+      {
+        undo: "diver-note",
+        undoPerson: "11111111-1111-4111-8111-111111111111",
+        noteBody: "Words the URL's author chose.",
+      },
     ],
   ])("refuses an offer with %s as no such page", async (_label, fields) => {
     const { shop } = await context();
@@ -339,8 +351,17 @@ describe("an Undo is an endpoint, so every field of it is refused when it is wro
     expect((await rowOf(db, card.id))?.deletedAt).not.toBeNull();
   });
 
-  it("never brings an erased diver's card or note text back", async () => {
-    const { db, shop, personId } = await context();
+  it("never brings an erased diver's card or note back", async () => {
+    const { db, shop, owner, personId } = await context();
+    const written = await addDiverNote(db, {
+      shopId: shop.id,
+      personId,
+      actorPersonId: owner,
+      body: "Kept until the erasure.",
+    });
+    if (!written) throw new Error("note insert failed");
+    const noteId = written.id;
+    await redirectedTo(() => deleteDiverNoteAction(shop.slug, personId, form({ noteId })));
     const card = await createCertification(db, {
       shopId: shop.id,
       personId,
@@ -367,12 +388,209 @@ describe("an Undo is an endpoint, so every field of it is refused when it is wro
     const note = await undo(shop.slug, {
       undo: "diver-note",
       undoPerson: personId,
-      noteBody: "Text a URL carried after the erasure.",
+      undoNote: noteId,
     });
 
     expect(card_).toContain("notice=card-restore-conflict");
     expect(note).toContain("notice=invalid");
     expect((await rowOf(db, card.id))?.deletedAt).not.toBeNull();
     expect(await listDiverRecordNotes(db, shop.id, personId)).toEqual([]);
+  });
+});
+
+/**
+ * Issue #3701 (Aaron, 2026-11-03): a card's Undo puts back only a card a
+ * staffer deleted by hand in the last 15 minutes. Anything older, and any card
+ * the system archived (an agency check taken back, a self-declared claim a
+ * sighted card replaced), is re-entered and sighted instead, because a typed
+ * URL could otherwise put a wrong card back `verified`. Every restore is
+ * written to the activity log under the staffer who tapped it.
+ */
+describe("a card's Undo is bounded to a recent staff delete", () => {
+  async function deletedLevelCard(identifier: string) {
+    const base = await context();
+    const { db, shop, personId } = base;
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      level: "advanced_open_water",
+      identifier,
+    });
+    if (!card) throw new Error("card insert failed");
+    const removed = await redirectedTo(() =>
+      deleteCertificationAction(shop.slug, personId, form({ certificationId: card.id })),
+    );
+    return { ...base, cardId: card.id, offer: offerFrom(removed) };
+  }
+
+  async function deletedMinutesAgo(db: AppDb, cardId: string, minutes: number) {
+    await db
+      .update(cards)
+      .set({ deletedAt: new Date(nowMs() - minutes * MINUTE_MS) })
+      .where(eq(cards.id, cardId));
+  }
+
+  it("restores a card deleted 14 minutes ago", async () => {
+    const { db, shop, cardId, offer } = await deletedLevelCard("UNDO-W-1");
+    await deletedMinutesAgo(db, cardId, 14);
+
+    expect(await undo(shop.slug, offer)).toContain("notice=card-restored");
+    expect((await rowOf(db, cardId))?.deletedAt).toBeNull();
+  });
+
+  it("answers a double-tapped Undo with its own notice, never the number conflict", async () => {
+    const { db, shop, cardId, offer } = await deletedLevelCard("UNDO-W-3");
+
+    expect(await undo(shop.slug, offer)).toContain("notice=card-restored");
+    const second = await undo(shop.slug, offer);
+    expect(second).toContain("notice=card-restore-gone");
+    expect(second).not.toContain("card-restore-conflict");
+    expect((await rowOf(db, cardId))?.deletedAt).toBeNull();
+  });
+
+  it("refuses a card deleted 16 minutes ago, with its own notice", async () => {
+    const { db, shop, cardId, offer } = await deletedLevelCard("UNDO-W-2");
+    await deletedMinutesAgo(db, cardId, 16);
+
+    expect(await undo(shop.slug, offer)).toContain("notice=card-restore-expired");
+    expect((await rowOf(db, cardId))?.deletedAt).not.toBeNull();
+  });
+
+  it("refuses a card the system archived, even a moment ago and stamped with a staffer", async () => {
+    const { db, shop, owner, personId } = await context();
+    for (const [cardType, create] of [
+      [
+        "level",
+        () =>
+          createCertification(db, {
+            shopId: shop.id,
+            personId,
+            agency: "padi",
+            level: "rescue",
+            identifier: "UNDO-SYS-L",
+          }),
+      ],
+      [
+        "specialty",
+        () =>
+          createSpecialtyCertification(db, {
+            shopId: shop.id,
+            personId,
+            agency: "padi",
+            specialty: "wreck",
+            identifier: "UNDO-SYS-S",
+          }),
+      ],
+      [
+        "nitrox",
+        () =>
+          createNitroxCertification(db, {
+            shopId: shop.id,
+            personId,
+            agency: "padi",
+            identifier: "UNDO-SYS-N",
+          }),
+      ],
+    ] as const) {
+      const card = await create();
+      if (!card) throw new Error("card insert failed");
+      // How an agency check taken back archives a card: now, under the
+      // staffer who took it back, and never by the record's Delete.
+      await db
+        .update(cards)
+        .set({ deletedAt: new Date(nowMs()), deletedByPersonId: owner })
+        .where(eq(cards.id, card.id));
+
+      const landed = await undo(shop.slug, {
+        undo: "diver-card",
+        undoPerson: personId,
+        undoCard: card.id,
+        cardType,
+      });
+
+      expect(landed).toContain("notice=card-restore-system");
+      expect((await rowOf(db, card.id))?.deletedAt).not.toBeNull();
+    }
+  });
+
+  it("writes the restore to the activity log, under the staffer who tapped Undo", async () => {
+    const { db, shop, captain, personId, cardId, offer } = await deletedLevelCard("UNDO-W-3");
+    signIn(shop, captain);
+
+    expect(await undo(shop.slug, offer)).toContain("notice=card-restored");
+    const lines = await db
+      .select({
+        actor: activityEvents.actorPersonId,
+        subject: activityEvents.subjectPersonId,
+        params: activityEvents.params,
+      })
+      .from(activityEvents)
+      .where(and(eq(activityEvents.shopId, shop.id), eq(activityEvents.code, "card_restored")));
+    expect(lines).toEqual([
+      {
+        actor: captain,
+        subject: personId,
+        params: { actor: expect.any(String), diver: "Undo Ula", cardType: "level" },
+      },
+    ]);
+    expect((await rowOf(db, cardId))?.deletedAt).toBeNull();
+  });
+
+  it("writes nothing to the log for a refused restore", async () => {
+    const { db, shop, cardId, offer } = await deletedLevelCard("UNDO-W-4");
+    await deletedMinutesAgo(db, cardId, 60);
+
+    await undo(shop.slug, offer);
+    const lines = await db
+      .select({ id: activityEvents.id })
+      .from(activityEvents)
+      .where(and(eq(activityEvents.shopId, shop.id), eq(activityEvents.code, "card_restored")));
+    expect(lines).toEqual([]);
+  });
+});
+
+describe("a note's Undo names a note of this record, by id", () => {
+  it("refuses a note id from another diver's record, and leaves it deleted", async () => {
+    const { db, shop, owner, personId } = await context();
+    const [other] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Other Olga", email: "olga@example.com" })
+      .returning();
+    if (!other) throw new Error("failed to insert a diver");
+    const note = await addDiverNote(db, {
+      shopId: shop.id,
+      personId: other.id,
+      actorPersonId: owner,
+      body: "Olga's own note.",
+    });
+    if (!note) throw new Error("note insert failed");
+    await redirectedTo(() => deleteDiverNoteAction(shop.slug, other.id, form({ noteId: note.id })));
+
+    const landed = await undo(shop.slug, {
+      undo: "diver-note",
+      undoPerson: personId,
+      undoNote: note.id,
+    });
+
+    expect(landed).toContain("notice=invalid");
+    expect(await listDiverRecordNotes(db, shop.id, other.id)).toEqual([]);
+    expect(await listDiverRecordNotes(db, shop.id, personId)).toEqual([]);
+  });
+
+  it("refuses a note that was never deleted, and writes nothing", async () => {
+    const { db, shop, owner, personId } = await context();
+    const note = await addDiverNote(db, {
+      shopId: shop.id,
+      personId,
+      actorPersonId: owner,
+      body: "Still here.",
+    });
+    if (!note) throw new Error("note insert failed");
+
+    expect(
+      await undo(shop.slug, { undo: "diver-note", undoPerson: personId, undoNote: note.id }),
+    ).toContain("notice=invalid");
+    expect(await listDiverRecordNotes(db, shop.id, personId)).toHaveLength(1);
   });
 });

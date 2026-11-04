@@ -46,8 +46,10 @@ describe("trainingMarkProblem — whether a training mark stands", () => {
     expect(trainingMarkProblem(seat, { ...enrollment, sessionEndsAt: departs })).toBeNull();
   });
 
+  // A checked-in course seat is a `booked` one (arrival is a trail, issue #2702),
+  // which the first case already stands on.
   it("still stands for a checked-in or no-show course seat: neither unenrolls the diver", () => {
-    expect(trainingMarkProblem(seat, { ...enrollment, status: "checked_in" })).toBeNull();
+    expect(trainingMarkProblem(seat, { ...enrollment, status: "booked" })).toBeNull();
     expect(trainingMarkProblem(seat, { ...enrollment, status: "no_show" })).toBeNull();
   });
 

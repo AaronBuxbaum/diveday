@@ -54,6 +54,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - C-card
 - Card ledger
 - Card sighting
+- Card undo window
 - Certification summary
 - Certifications issued here
 - Check all (agency)

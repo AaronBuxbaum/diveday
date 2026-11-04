@@ -5,7 +5,6 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import { readLearningMaterials } from "@/lib/courses";
 import { log } from "@/lib/log";
 import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import {
   type Notification,
   type NotificationDelivery,
@@ -58,6 +57,7 @@ import { type ReminderLink, ReminderLinks } from "./reminder-links";
 import { bookings, courses, notificationDeliveries, people, shops, trips } from "./schema";
 import { optedOutPhones, stopListedSmsProvider } from "./sms-opt-outs";
 import { notRehearsal } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 const REMINDER_KINDS: ReminderKind[] = TRIP_REMINDER_CADENCES.map((c) => c.kind);
@@ -602,7 +602,7 @@ export async function sendDueReminders(
       and(
         // Only a seat the diver still holds: a released one (turned away at
         // the desk) is not a "see you tomorrow" (layer 3 review, dde-1 F2).
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        seatHeld,
         isNull(people.anonymizedAt),
         and(eq(trips.status, "scheduled"), notRehearsal()),
         gt(trips.startsAt, now),

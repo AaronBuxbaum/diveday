@@ -1,6 +1,6 @@
 # 20260724-course-admission-standards — PADI-sourced entry-level ratio gate
 
-- **Status:** Accepted, **amended 2026-08-02** (see [Amendment](#amendment-2026-08-02--intro-session-ratio-scope-undo-and-crew-changes))
+- **Status:** Accepted, **amended 2026-08-02** (see [Amendment](#amendment-2026-08-02--intro-session-ratio-scope-undo-and-crew-changes)), 2026-10-27 and **2026-11-04** (see [Amendment](#amendment-2026-11-04--an-undo-asks-every-gate-a-sale-asks))
 - **Date:** 2026-07-24
 
 ## Context
@@ -300,3 +300,19 @@ equipment or all agency conditions. An unmodeled marked seat also prevents ratio
 coverage for other marked seats on the departure: separate session rosters do not establish the
 underwater groups or instructor loads. The earlier provisional aggregate figures do not establish
 compliance, and no continuing-education ratio has been enabled here.
+
+## Amendment 2026-11-04 — an undo asks every gate a sale asks
+
+The 2026-08-02 amendment made `restoreBooking` re-ask the ratio, and the undo answered to the cap
+alone. Undoing a removal or a "Not here" is a seat-granting write all the same: a session that has
+lost its instructor since, a prerequisite card deleted since the sale, or a date of birth recorded
+since that puts the student under the course's minimum age all let the seat back (issues #3769,
+#3686). The owner chose to ask the undo the sale's own questions. There is one door rule now, not a
+sale row and a restore row: `decideCourseAdmission` asks staffing, the card, the age and the ratio
+of every door, and `restoreBooking` and `undoBookingNoShow` refuse with the sale's codes
+(`course_unstaffed`, `course_prerequisite`, `course_min_age`), leaving the seat released. A
+refused no-show undo writes its reason to the trail. Trip admission's level, specialty and nitrox
+checks are not re-run on an ordinary departure's undo; boarding readiness still asks them.
+
+In the same change, a **training mark** lowers only a site's certification requirement at the sale,
+as boarding already did: a level the departure itself sets always stands (issue #3776).

@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
+import { seatIsHeld } from "@/lib/no-show";
 import type { ReadinessResult } from "@/lib/readiness";
 import { type RollCallCheckpoint, rollCallCheckpointOrdinal } from "@/lib/roll-call";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
@@ -209,7 +209,7 @@ export async function departureCounts(
     let missing = 0;
     let blocked = 0;
     for (const seat of seats) {
-      const held = (SEAT_HELD_STATUSES as readonly string[]).includes(seat.status);
+      const held = seatIsHeld(seat.status);
       const said = words.get(seatKey(tripId, seat.id));
       const seatHasSailed = seatSailed({
         noShow: seat.status === "no_show",
