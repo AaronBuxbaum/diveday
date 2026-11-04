@@ -1480,12 +1480,6 @@
         }
       },
       {
-        "why": "closeout-reader.test.ts is src/db/closeout.test.ts renamed; main allows that file 903 lines, and the merge of the lower layers carried main's 903 over",
-        "files": {
-          "src/features/today/closeout-reader.test.ts": "902 -> 903"
-        }
-      },
-      {
         "why": "Merge of main and the lower stack layers; no branch added by hand",
         "files": {
           "src/db/divers.test.ts": "3060 -> 3064",
@@ -1545,8 +1539,8 @@
     "src/db/waivers-medical.test.ts": 1001,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
-    "src/features/today/closeout-reader.test.ts": 903,
-    "src/features/today/today.test.ts": 1452,
+    "src/features/today/closeout-reader.test.ts": 902,
+    "src/features/today/today.test.ts": 1274,
     "src/i18n/label-maps.test.ts": 1259,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1935,
