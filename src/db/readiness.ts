@@ -50,6 +50,7 @@ import {
   waiverClockInstant,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
+import { softDeleteCard } from "./card-delete";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
@@ -940,24 +941,7 @@ export async function deleteCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string; deletedByPersonId: string },
 ) {
-  const [row] = await db
-    .update(cards)
-    .set({
-      deletedAt: nowDate(),
-      deletedByPersonId: input.deletedByPersonId,
-      // A staffer's own Delete, the one archive a card's Undo may take back (#3701).
-      deletionKind: "staff",
-    })
-    .where(
-      and(
-        eq(cards.kind, "level"),
-        eq(cards.id, input.certificationId),
-        eq(cards.shopId, input.shopId),
-        isNull(cards.deletedAt),
-      ),
-    )
-    .returning({ id: cards.id });
-  return Boolean(row);
+  return softDeleteCard(db, { ...input, kind: "level" });
 }
 
 export type NewSpecialtyCertification = {
@@ -1383,24 +1367,7 @@ export async function deleteSpecialtyCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string; deletedByPersonId: string },
 ) {
-  const [row] = await db
-    .update(cards)
-    .set({
-      deletedAt: nowDate(),
-      deletedByPersonId: input.deletedByPersonId,
-      // A staffer's own Delete, the one archive a card's Undo may take back (#3701).
-      deletionKind: "staff",
-    })
-    .where(
-      and(
-        eq(cards.kind, "specialty"),
-        eq(cards.id, input.certificationId),
-        eq(cards.shopId, input.shopId),
-        isNull(cards.deletedAt),
-      ),
-    )
-    .returning({ id: cards.id });
-  return Boolean(row);
+  return softDeleteCard(db, { ...input, kind: "specialty" });
 }
 
 /**

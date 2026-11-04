@@ -9,6 +9,7 @@ import {
   unreviewedCardState,
 } from "@/lib/readiness";
 import { shopOffersNitrox } from "@/lib/rentals";
+import { softDeleteCard } from "./card-delete";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import { isUniqueConstraintViolation } from "./query-helpers";
@@ -289,24 +290,7 @@ export async function deleteNitroxCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string; deletedByPersonId: string },
 ) {
-  const [row] = await db
-    .update(cards)
-    .set({
-      deletedAt: nowDate(),
-      deletedByPersonId: input.deletedByPersonId,
-      // A staffer's own Delete, the one archive a card's Undo may take back (#3701).
-      deletionKind: "staff",
-    })
-    .where(
-      and(
-        eq(cards.id, input.certificationId),
-        eq(cards.shopId, input.shopId),
-        eq(cards.kind, "nitrox"),
-        isNull(cards.deletedAt),
-      ),
-    )
-    .returning({ id: cards.id });
-  return Boolean(row);
+  return softDeleteCard(db, { ...input, kind: "nitrox" });
 }
 
 /**
