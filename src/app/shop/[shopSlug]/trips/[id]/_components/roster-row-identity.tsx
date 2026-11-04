@@ -254,7 +254,7 @@ export function rowIdentity(seat: RowIdentityInput) {
             evidence={heldSeatEvidence}
             confirmLabel={t("trips.roster.identityConfirmButton")}
             cancelLabel={t("words.dismiss.neverMind")}
-            pendingLabel={t("trips.roster.confirming")}
+            pendingLabel={t("words.busy.confirming")}
             triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
           />
         </form>

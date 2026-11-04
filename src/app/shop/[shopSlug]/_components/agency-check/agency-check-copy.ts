@@ -197,7 +197,7 @@ export function agencyCheckCopy(
     signedOut: t("divers.certifications.agencyCheck.signedOut", { agency: name }),
     invalid: t("divers.notices.invalid"),
     undo: t("shared.undoToast.undo"),
-    undoPending: t("shared.undoToast.pendingLabel"),
+    undoPending: t("words.busy.undoing"),
     dismiss: t("shared.undoToast.dismiss"),
     undoFailed: t("divers.notices.cardUndoFailed"),
     listedLead: t("divers.certifications.agencyCheck.listed.lead", { agency: name }),

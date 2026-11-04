@@ -72,7 +72,6 @@
     "refreshing": "Syncing…"
   },
   "undoAriaLabel": "Undo check-in for {name}",
-  "undoing": "Undoing…",
   "notice": {
     "offerUnavailable": "Nothing was sent: that departure is gone or full, or they can’t book it.",
     "offerOptedOut": "Nothing was sent: they turned off emails from the shop. Call them with the date.",

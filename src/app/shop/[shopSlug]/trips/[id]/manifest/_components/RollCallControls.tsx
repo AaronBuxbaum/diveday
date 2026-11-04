@@ -333,7 +333,7 @@ export function RollCallMarkButton({
             : t("manifest.markBoarded")
       }
       pendingLabel={
-        isCrew ? t("words.busy.saving") : boarded ? t("manifest.undoing") : t("manifest.boarding")
+        isCrew ? t("words.busy.saving") : boarded ? t("words.busy.undoing") : t("manifest.boarding")
       }
       mark={<RollCallMark state={markState} />}
       className={MARK_BUTTON_CLASS}

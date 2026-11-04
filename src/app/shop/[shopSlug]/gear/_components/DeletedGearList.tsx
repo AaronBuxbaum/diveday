@@ -43,7 +43,7 @@ export function DeletedList({
               <input type="hidden" name="gearItemId" value={row.id} />
               <SubmitButton
                 ariaLabel={t("gear.deleted.restoreUnit", { label: row.label })}
-                pendingLabel={t("gear.deleted.restoring")}
+                pendingLabel={t("words.busy.restoring")}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("gear.deleted.restore")}

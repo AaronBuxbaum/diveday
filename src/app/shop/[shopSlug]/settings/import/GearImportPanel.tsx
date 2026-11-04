@@ -73,7 +73,7 @@ export function GearImportPanel({ t, notice }: { t: StaffTranslator; notice?: st
             }}
           />
           <SubmitButton
-            pendingLabel={t("gear.import.pending")}
+            pendingLabel={t("words.busy.importing")}
             className={buttonClass({ variant: "secondary" })}
           >
             {t("gear.import.submit")}

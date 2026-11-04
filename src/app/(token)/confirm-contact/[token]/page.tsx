@@ -88,7 +88,7 @@ export default async function ConfirmContactPage({
       })}
     >
       <form action={confirmContactEmail.bind(null, token)}>
-        <SubmitButton pendingLabel={t("contactConfirm.confirming")} className={buttonClass()}>
+        <SubmitButton pendingLabel={t("words.busy.confirming")} className={buttonClass()}>
           {t("contactConfirm.submit")}
         </SubmitButton>
       </form>
@@ -132,7 +132,7 @@ async function ShoreConfirmation({
       })}
     >
       <form action={confirmContactEmail.bind(null, token)}>
-        <SubmitButton pendingLabel={t("shoreConfirm.confirming")} className={buttonClass()}>
+        <SubmitButton pendingLabel={t("words.busy.confirming")} className={buttonClass()}>
           {t("shoreConfirm.submit")}
         </SubmitButton>
       </form>
@@ -183,7 +183,7 @@ async function BookkeeperConfirmation({
       })}
     >
       <form action={confirmContactEmail.bind(null, token)}>
-        <SubmitButton pendingLabel={t("bookkeeperConfirm.confirming")} className={buttonClass()}>
+        <SubmitButton pendingLabel={t("words.busy.confirming")} className={buttonClass()}>
           {t("bookkeeperConfirm.submit")}
         </SubmitButton>
       </form>

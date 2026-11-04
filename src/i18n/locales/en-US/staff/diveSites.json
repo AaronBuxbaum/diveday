@@ -30,7 +30,6 @@
     "title": "DiveDay common dive sites",
     "description": "Published, versioned starting points. Importing makes an independent site in your own library; later template updates never overwrite your edits.",
     "templateVersion": "Template v{version}",
-    "importing": "Importing…",
     "importToLibrary": "Import to my library",
     "backToCatalog": "All templates",
     "preview_location": "Where it is",
@@ -300,8 +299,7 @@
     "notRestored": "Without dive_site_creatures.csv, each site keeps the field guide it has. With it, every site in the file gets the guide the export carried, and a species DiveDay no longer lists is left out. A tide-station acknowledgment lands only on a site this shop already holds that station for; anywhere else the distance prompt asks again, which is what it is for.",
     "chooseFile": "Choose CSV files",
     "chooseDifferentFile": "Choose different files",
-    "submit": "Import dive sites",
-    "pending": "Importing…"
+    "submit": "Import dive sites"
   },
   "notice": {
     "importEmpty": "Choose a dive_sites.csv to import.",
