@@ -141,6 +141,7 @@ export default async function DiverDetailPage({
     notes,
     activityPage,
     thread,
+    sent,
     gear,
     packages,
     mergeCandidates,
@@ -294,6 +295,7 @@ export default async function DiverDetailPage({
           gates={{ canOpenClearance, canOverrideFit }}
           gear={gear}
           thread={thread}
+          sent={sent}
           notes={notes}
           activityPage={activityPage}
           lastDive={lastDive}

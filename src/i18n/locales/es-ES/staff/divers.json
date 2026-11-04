@@ -642,7 +642,32 @@
     "neededFor": "Hace falta para el {when}.",
     "cantBoard": "No puede embarcar el {when}.",
     "notCertified": "Sin la certificación para esta salida.",
-    "rentalNotes": "Notas del alquiler"
+    "rentalNotes": "Notas del alquiler",
+    "sentHeading": "Lo que envió el centro",
+    "sentSummary": "{count, plural, one {# mensaje} other {# mensajes}}",
+    "sentLine": "{kind} · {status} · {date}",
+    "sentStatus": {
+      "sent": "Enviado",
+      "delivered": "Entregado",
+      "delivery_delayed": "Con retraso",
+      "bounced": "Rebotado",
+      "complained": "Marcado como spam",
+      "failed": "No se envió",
+      "suppressed": "Retenido"
+    },
+    "sentKind": {
+      "booking_confirmation": "Confirmación de reserva",
+      "waiver_request": "Enlace de la exención",
+      "booking_handoff": "Enlace de reserva",
+      "readiness_link": "Enlace de preparación del viaje",
+      "trip_reminder_7d": "Recordatorio de 7 días",
+      "trip_reminder_24h": "Recordatorio de 24 horas",
+      "trip_recap": "Resumen del viaje",
+      "trip_blowout": "Salida cancelada",
+      "trip_minimum_not_met": "La salida no se llenó",
+      "booking_cancelled": "Reserva cancelada",
+      "trip_rescheduled": "Salida cambiada de fecha"
+    }
   },
   "waiver": {
     "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",

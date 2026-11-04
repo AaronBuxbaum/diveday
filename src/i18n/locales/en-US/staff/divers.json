@@ -642,7 +642,32 @@
     "neededFor": "Needed for {when}",
     "cantBoard": "Can’t board {when}.",
     "notCertified": "Not certified for this trip.",
-    "rentalNotes": "Rental notes"
+    "rentalNotes": "Rental notes",
+    "sentHeading": "What the shop sent",
+    "sentSummary": "{count, plural, one {# message} other {# messages}}",
+    "sentLine": "{kind} · {status} · {date}",
+    "sentStatus": {
+      "sent": "Sent",
+      "delivered": "Delivered",
+      "delivery_delayed": "Delayed",
+      "bounced": "Bounced",
+      "complained": "Marked as spam",
+      "failed": "Did not send",
+      "suppressed": "Held back"
+    },
+    "sentKind": {
+      "booking_confirmation": "Booking confirmation",
+      "waiver_request": "Waiver link",
+      "booking_handoff": "Booking link",
+      "readiness_link": "Trip prep link",
+      "trip_reminder_7d": "7-day reminder",
+      "trip_reminder_24h": "24-hour reminder",
+      "trip_recap": "Trip recap",
+      "trip_blowout": "Trip called off",
+      "trip_minimum_not_met": "Trip did not fill",
+      "booking_cancelled": "Booking cancelled",
+      "trip_rescheduled": "Trip moved"
+    }
   },
   "waiver": {
     "earlierRefusal": "A physician did not clear this person on {date} (earlier waiver).",
