@@ -27,6 +27,7 @@ import {
 } from "./bookings";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
+import { recordLostItem } from "./lost-items";
 import { listTripActivity, pagedDiverActivity } from "./operations";
 import * as readinessModule from "./readiness";
 import { recordRentalFit } from "./rental-fit";
@@ -37,6 +38,7 @@ import {
   courses,
   diveSites,
   internalNotes,
+  lostItems,
   people,
   personRoles,
   shops,
@@ -1405,6 +1407,34 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
       expect(trail.map((e) => e.code)).toContain("identity_split");
       const noraTrail = await pagedDiverActivity(db, shop.id, nora, { page: 1 });
       expect(noraTrail.rows.map((e) => e.code)).toContain("identity_split_off");
+    });
+
+    it("moves a found item recorded on the held seat onto the new diver", async () => {
+      const { db, shop, open } = await seededContext();
+      const { night, nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const staffer = await counterStaffer(db, shop.id);
+      const recorded = await recordLostItem(db, {
+        shopId: shop.id,
+        tripId: night.id,
+        bookingId: shared.bookingId,
+        description: "Blue mask in a red case",
+        actorPersonId: staffer.id,
+      });
+      if (!recorded.ok) throw new Error(`lost item refused: ${recorded.reason}`);
+      expect(recorded.item.personId).toBe(nora);
+
+      const result = await splitBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: shared.bookingId,
+        actorPersonId: staffer.id,
+        fullName: "Ben Quinn",
+        adultAttested: true,
+      });
+      if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+
+      const [item] = await db.select().from(lostItems).where(eq(lostItems.id, recorded.item.id));
+      expect(item?.personId).toBe(result.personId);
+      expect(item?.bookingId).toBe(shared.bookingId);
     });
 
     it("refuses a seat that is not held, a blank name, and another shop's booking", async () => {

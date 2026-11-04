@@ -10,6 +10,7 @@ import { violatesUniqueIndex } from "./query-helpers";
 import {
   bookings,
   gearReservations,
+  lostItems,
   notificationSendQueue,
   people,
   trips,
@@ -455,6 +456,11 @@ async function repointInTransaction(
     .where(
       and(eq(gearReservations.shopId, input.shopId), inArray(gearReservations.bookingId, seatIds)),
     );
+  // A found item copies its owner from the seat; it follows the seat.
+  await tx
+    .update(lostItems)
+    .set({ personId: input.toPersonId })
+    .where(and(eq(lostItems.shopId, input.shopId), inArray(lostItems.bookingId, seatIds)));
   return {
     refused: null,
     fromPersonId: booking.personId,

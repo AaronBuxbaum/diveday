@@ -93,6 +93,7 @@ import {
   gearItemKind,
   gearReservations,
   inboundMessages,
+  lostItems,
   notificationSendQueue,
   people,
   personRoles,
@@ -4004,6 +4005,11 @@ export async function splitBookingIdentity(
             inArray(gearReservations.bookingId, seatIds),
           ),
         );
+      // A found item copies its owner from the seat; it follows the seat.
+      await tx
+        .update(lostItems)
+        .set({ personId: person.id })
+        .where(and(eq(lostItems.shopId, input.shopId), inArray(lostItems.bookingId, seatIds)));
       // Staff notes stay filed under the matched person (security review,
       // 2026-10-06): a note was written while the seat read as theirs, and may
       // be about them, so it is theirs to keep, export and erase.
