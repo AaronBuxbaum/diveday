@@ -2,9 +2,9 @@ import { and, count, desc, eq, inArray, notInArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { fileScopedShopContext } from "@/test/db";
 import { departureInterest } from "@/test/interests";
+import { standingArrivalStatus } from "./arrival-provenance";
 import { createBooking } from "./bookings";
 import { checkInBooking, undoCheckInBooking } from "./check-in";
 import { recordRollCall } from "./manifests";
@@ -39,6 +39,7 @@ import {
   setTripStatus,
   upcomingTripsWithCounts,
 } from "./trips";
+import { seatHeld } from "./trips-queries";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -113,7 +114,7 @@ async function heldSeats(db: Awaited<ReturnType<typeof context>>["db"], tripId: 
   const [row] = await db
     .select({ seats: count(bookings.id) })
     .from(bookings)
-    .where(and(eq(bookings.tripId, tripId), inArray(bookings.status, [...SEAT_HELD_STATUSES])));
+    .where(and(eq(bookings.tripId, tripId), seatHeld));
   return row?.seats ?? 0;
 }
 
@@ -642,10 +643,9 @@ describe("undoBookingNoShow", () => {
         now: ctx.now,
       }),
     ).toMatchObject({ ok: true });
-    expect(await statusOf(ctx.db, ctx.bookingId)).toBe("checked_in");
-    // `checked_in` holds a seat exactly as `booked` does, so the boat is back
-    // to the count it had before the release — the caps this undo checks are
-    // counting the same thing either way.
+    expect(await statusOf(ctx.db, ctx.bookingId)).toBe("booked");
+    const { db, shop, trip, bookingId } = ctx;
+    expect(await standingArrivalStatus(db, shop.id, trip.id, bookingId)).toBe("arrived");
     expect(await heldSeats(ctx.db, ctx.trip.id)).toBe(seatsBefore);
   });
 
@@ -705,7 +705,7 @@ describe("undoBookingNoShow", () => {
     const [held] = await db
       .select({ seats: count(bookings.id) })
       .from(bookings)
-      .where(and(eq(bookings.tripId, trip.id), inArray(bookings.status, [...SEAT_HELD_STATUSES])));
+      .where(and(eq(bookings.tripId, trip.id), seatHeld));
     await db
       .update(trips)
       .set({ capacity: held?.seats ?? 0 })

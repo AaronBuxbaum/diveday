@@ -2,6 +2,7 @@ import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { tripRescheduledEmail } from "@/lib/notifications/email";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
@@ -331,7 +332,9 @@ describe("moveBooking", () => {
         now: new Date(from.startsAt.getTime() + 2 * 60 * 60 * 1000),
       }),
     ).toEqual({ ok: false, reason: "departed" });
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, seat.bookingId));
+    // A checked-in seat is `booked` with a standing arrival (issue #2702); the
+    // move reads the trail to refuse it.
+    await markArrived(db, seat.bookingId);
     expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toEqual({
       ok: false,
       reason: "not_movable",

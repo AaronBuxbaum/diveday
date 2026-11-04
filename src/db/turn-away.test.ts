@@ -2,9 +2,10 @@ import { and, count, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { turnAwayReasons } from "@/lib/turn-away";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
+import { standingArrivalStatus } from "./arrival-provenance";
 import { moveBooking, splitBookingIdentity } from "./bookings";
 import { listCheckInQueue } from "./check-in";
 import { getTripManifest, recordRollCall } from "./manifests";
@@ -21,6 +22,7 @@ import {
   trips,
 } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { seatHeld } from "./trips-queries";
 import { turnBookingAway } from "./turn-away";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -92,7 +94,7 @@ async function heldSeats(db: Ctx["db"], tripId: string) {
   const [row] = await db
     .select({ seats: count(bookings.id) })
     .from(bookings)
-    .where(and(eq(bookings.tripId, tripId), inArray(bookings.status, [...SEAT_HELD_STATUSES])));
+    .where(and(eq(bookings.tripId, tripId), seatHeld));
   return row?.seats ?? 0;
 }
 
@@ -427,7 +429,8 @@ describe("turnBookingAway, after review", () => {
   /** dde-1 F1: once the boat has left with an arrived diver, the desk has no door. */
   it("refuses an arrived diver once the boat has sailed, and frees nothing", async () => {
     const { db, shop, trip, staffId, bookingId } = await context();
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    // Arrived: the trail's `arrived` row on a `booked` seat (issue #2702).
+    await markArrived(db, bookingId);
     const before = await heldSeats(db, trip.id);
     expect(
       await turnBookingAway(db, {
@@ -438,7 +441,8 @@ describe("turnBookingAway, after review", () => {
         now: new Date(trip.startsAt.getTime() + 2 * HOUR_MS),
       }),
     ).toEqual({ ok: false, reason: "sailed" });
-    expect(await seatRow(db, bookingId)).toEqual({ status: "checked_in", reason: null });
+    expect(await seatRow(db, bookingId)).toEqual({ status: "booked", reason: null });
+    expect(await standingArrivalStatus(db, shop.id, trip.id, bookingId)).toBe("arrived");
     expect(await heldSeats(db, trip.id)).toBe(before);
   });
 
@@ -646,7 +650,8 @@ describe("turnBookingAway, second review", () => {
   it("refuses an arrived diver from the scheduled start", async () => {
     const ctx = await context();
     const { db, shop, staffId, bookingId } = ctx;
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    // Arrived: the trail's `arrived` row on a `booked` seat (issue #2702).
+    await markArrived(db, bookingId);
     for (const minutes of [0, 10, 59]) {
       expect(
         await turnBookingAway(db, {
@@ -658,7 +663,8 @@ describe("turnBookingAway, second review", () => {
         }),
       ).toEqual({ ok: false, reason: "sailed" });
     }
-    expect(await seatRow(db, bookingId)).toEqual({ status: "checked_in", reason: null });
+    expect(await seatRow(db, bookingId)).toEqual({ status: "booked", reason: null });
+    expect(await standingArrivalStatus(db, shop.id, ctx.trip.id, bookingId)).toBe("arrived");
     // The control: a minute before the boat, the desk can still refuse them.
     expect(
       await turnBookingAway(db, {
@@ -672,13 +678,16 @@ describe("turnBookingAway, second review", () => {
   });
 
   /**
-   * #2: turned away at 07:40, Undo at 09:30 used to restore `checked_in` from
-   * the arrival trail: a diver ashore shown aboard, and missing at the rail.
+   * #2: turned away at 07:40, Undo at 09:30 used to put the diver back as
+   * checked in from the arrival trail (since issue #2702: `booked` with the
+   * `arrived` row still standing): a diver ashore shown aboard, and missing at
+   * the rail.
    */
   it("refuses to put a turned-away diver back once the boat's start has passed", async () => {
     const ctx = await context();
     const { db, shop, trip, staffId, bookingId } = ctx;
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    // Arrived: the trail's `arrived` row on a `booked` seat (issue #2702).
+    await markArrived(db, bookingId);
     await turnBookingAway(db, {
       shopId: shop.id,
       bookingId,

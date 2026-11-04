@@ -9,15 +9,40 @@ import {
   isTurnedAwayAtCounter,
 } from "./check-in";
 
-const seat = (bookingStatus: string, status: "ready" | "blocked" = "ready") => ({
+const seat = (bookingStatus: string, status: "ready" | "blocked" = "ready", checkedIn = false) => ({
   bookingStatus,
+  checkedIn,
   readiness: { status },
 });
 
+/** A held seat the desk's arrival trail has seen (issue #2702: arrival is a trail, not a status). */
+const here = (status: "ready" | "blocked" = "ready") => seat("booked", status, true);
+
 describe("isSettledAtCounter", () => {
   it("is true only for a diver who is through the counter and still cleared", () => {
-    expect(isSettledAtCounter(seat("checked_in"))).toBe(true);
+    expect(isSettledAtCounter(here())).toBe(true);
     expect(isSettledAtCounter(seat("booked"))).toBe(false);
+  });
+
+  /**
+   * Issue #2702: arrival is the trail's word, so the seat word alone says
+   * nothing. A `booked` seat the trail has seen is through the counter; a
+   * released seat whose `arrived` row still stands (the desk wrote them off
+   * after a sighting) must never count as here or let the counter go clear.
+   */
+  it("reads arrival from the trail, and never counts a released seat with a standing sighting", () => {
+    expect(isSettledAtCounter(seat("booked", "ready", true))).toBe(true);
+    const releasedButSeen = seat("no_show", "ready", true);
+    expect(counterTally([releasedButSeen, seat("booked")])).toEqual({
+      expected: 1,
+      here: 0,
+      cantBoard: 0,
+      toCome: 1,
+      notHere: 1,
+      turnedAway: 0,
+    });
+    expect(counterIsClear([releasedButSeen, seat("booked")])).toBe(false);
+    expect(counterIsClear([releasedButSeen])).toBe(false);
   });
 
   /**
@@ -27,15 +52,15 @@ describe("isSettledAtCounter", () => {
    * work, not a receipt.
    */
   it("is false for a checked-in diver readiness has since blocked", () => {
-    expect(isSettledAtCounter(seat("checked_in", "blocked"))).toBe(false);
+    expect(isSettledAtCounter(here("blocked"))).toBe(false);
   });
 });
 
 describe("isBlockedAtCounter", () => {
   it("counts a blocked seat whether or not it has checked in", () => {
     expect(isBlockedAtCounter(seat("booked", "blocked"))).toBe(true);
-    expect(isBlockedAtCounter(seat("checked_in", "blocked"))).toBe(true);
-    expect(isBlockedAtCounter(seat("checked_in"))).toBe(false);
+    expect(isBlockedAtCounter(here("blocked"))).toBe(true);
+    expect(isBlockedAtCounter(here())).toBe(false);
   });
 });
 
@@ -45,12 +70,12 @@ describe("counterIsClear", () => {
   });
 
   it("is false while at least one diver is still to come", () => {
-    expect(counterIsClear([seat("checked_in"), seat("booked"), seat("checked_in")])).toBe(false);
+    expect(counterIsClear([here(), seat("booked"), here()])).toBe(false);
   });
 
   it("is true once every diver is through the counter and cleared", () => {
-    expect(counterIsClear([seat("checked_in"), seat("checked_in")])).toBe(true);
-    expect(counterIsClear([seat("checked_in")])).toBe(true);
+    expect(counterIsClear([here(), here()])).toBe(true);
+    expect(counterIsClear([here()])).toBe(true);
   });
 
   /**
@@ -60,7 +85,7 @@ describe("counterIsClear", () => {
    * person who just told it (issue #1209).
    */
   it("is true when the only diver left was marked not here", () => {
-    expect(counterIsClear([seat("checked_in"), seat("no_show")])).toBe(true);
+    expect(counterIsClear([here(), seat("no_show")])).toBe(true);
   });
 
   it("is still false when a released seat is the only row at all", () => {
@@ -74,7 +99,7 @@ describe("counterIsClear", () => {
    * checked-in diver who went blocked left the instrument green.
    */
   it("is false when everyone is here but one of them cannot board", () => {
-    expect(counterIsClear([seat("checked_in"), seat("checked_in", "blocked")])).toBe(false);
+    expect(counterIsClear([here(), here("blocked")])).toBe(false);
   });
 });
 
@@ -89,9 +114,9 @@ describe("counterTally", () => {
    */
   it("cuts a boat into three groups that sum to everyone expected", () => {
     const tally = counterTally([
-      seat("checked_in"),
-      seat("checked_in"),
-      seat("checked_in", "blocked"),
+      here(),
+      here(),
+      here("blocked"),
       seat("booked", "blocked"),
       seat("booked"),
     ]);
@@ -107,7 +132,7 @@ describe("counterTally", () => {
   });
 
   it("counts nobody as here while readiness refuses them, checked in or not", () => {
-    expect(counterTally([seat("checked_in", "blocked")])).toEqual({
+    expect(counterTally([here("blocked")])).toEqual({
       expected: 1,
       here: 0,
       cantBoard: 1,
@@ -136,7 +161,7 @@ describe("counterTally", () => {
    * drops a person is the other way to lie about a boat.
    */
   it("takes a released seat out of everyone expected and reports it separately", () => {
-    const tally = counterTally([seat("checked_in"), seat("booked"), seat("no_show")]);
+    const tally = counterTally([here(), seat("booked"), seat("no_show")]);
     expect(tally).toEqual({
       expected: 2,
       here: 1,
@@ -168,6 +193,7 @@ describe("counterTally", () => {
 describe("turned away at the desk", () => {
   const turnedAway = {
     bookingStatus: "no_show",
+    checkedIn: false,
     readiness: { status: "blocked" },
     turnedAwayReason: "card",
     turnedAwayAt: new Date("2026-10-16T07:00:00.000Z"),
@@ -178,7 +204,7 @@ describe("turned away at the desk", () => {
    * this diver, so the count that says "not here" must not include them.
    */
   it("counts a turned-away seat apart from a diver who never came", () => {
-    const tally = counterTally([seat("checked_in"), seat("no_show"), turnedAway]);
+    const tally = counterTally([here(), seat("no_show"), turnedAway]);
     expect(tally).toEqual({
       expected: 1,
       here: 1,
@@ -208,7 +234,7 @@ describe("turned away at the desk", () => {
 describe("isNoShowAtCounter and counterIsDone", () => {
   it("marks only a released seat, and never a checked-in one", () => {
     expect(isNoShowAtCounter(seat("no_show"))).toBe(true);
-    expect(isNoShowAtCounter(seat("checked_in"))).toBe(false);
+    expect(isNoShowAtCounter(here())).toBe(false);
     expect(isNoShowAtCounter(seat("booked"))).toBe(false);
   });
 
@@ -218,9 +244,9 @@ describe("isNoShowAtCounter and counterIsDone", () => {
    * and the two groups are drawn from two predicates for that reason.
    */
   it("is the counter's finished set: settled or released, never merely booked", () => {
-    expect(counterIsDone(seat("checked_in"))).toBe(true);
+    expect(counterIsDone(here())).toBe(true);
     expect(counterIsDone(seat("no_show"))).toBe(true);
     expect(counterIsDone(seat("booked"))).toBe(false);
-    expect(counterIsDone(seat("checked_in", "blocked"))).toBe(false);
+    expect(counterIsDone(here("blocked"))).toBe(false);
   });
 });

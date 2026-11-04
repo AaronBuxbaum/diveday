@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   bigserial,
   boolean,
   check,
@@ -277,6 +278,20 @@ export const bookings = pgTable(
     /** Optional staff-set pickup time for this booking (e.g., "07:15"). */
     pickupTime: text("pickup_time"),
     status: bookingStatus("status").notNull().default("booked"),
+    /**
+     * **Where this seat's current life starts on the arrival trail**, if it had
+     * an earlier one: the highest `booking_arrival_events.seq` the seat held
+     * when a cancelled or released row was booked again, a Remove was undone,
+     * or the seat was moved (issue #2702). Rows at or below it belong to that
+     * earlier life and say nothing about this one, so `seatCheckedIn`
+     * (src/db/arrival-provenance.ts) reads only the rows after it. A sequence
+     * rather than a time, so a frozen clock that stamps the reopening and the
+     * next check-in with one instant cannot put either on the wrong side. Null
+     * on a row that has only ever been one seat. The desk taking its own
+     * release back (`undoBookingNoShow`) and the rail boarding a released diver
+     * (`reclaimReleasedSeat`) continue the same life and leave it alone.
+     */
+    arrivalTrailAfterSeq: bigint("arrival_trail_after_seq", { mode: "number" }),
     /**
      * **The desk saw this diver and turned them away**, and why: one category
      * from the seat's own blockers (`turnAwayReasons`, src/lib/turn-away.ts).

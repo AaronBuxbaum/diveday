@@ -37,7 +37,7 @@ import { getCurrentWaiverTemplate } from "./waivers";
 // (src/test/db.ts, `fileScopedShopContext`).
 const ctx = fileScopedShopContext();
 
-type BookingStatus = "booked" | "checked_in" | "cancelled" | "no_show";
+type BookingStatus = "booked" | "cancelled" | "no_show";
 type TripStatus = "scheduled" | "cancelled";
 
 let seq = 0;
@@ -365,9 +365,9 @@ describe("getMonthlyReport", () => {
    * earned, so a seat the shop released is a seat it can sell again and no
    * longer one of them, while the manifest keeps the name because the crew have
    * to account for it at roll call. This module holds its own
-   * `ACTIVE_BOOKING_STATUSES` rather than importing `SEAT_HELD_STATUSES` — a
-   * revenue metric should not silently follow a change to what holds a seat —
-   * and two identical lists in two files is exactly the drift worth pinning.
+   * `ACTIVE_BOOKING_STATUSES` rather than importing `seatIsHeld` — a revenue
+   * metric should not silently follow a change to what holds a seat — and two
+   * identical rules in two files is exactly the drift worth pinning.
    */
   it("drops a released seat from fill rate and keeps it on the roster", async () => {
     const { db, shop } = ctx;

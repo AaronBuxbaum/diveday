@@ -23,22 +23,23 @@ The invariant it must keep is decision 4 of the counter ADR: an arrival is never
    shop, departure and id; `isCheckedIn` (`src/lib/presence.ts`) is the same rule over values read.
    A released or cancelled seat is never checked in, whatever its trail says.
 3. **Only `checkInBooking` and `undoCheckInBooking` write arrival**, and they write only the trail
-   (and clear `running_late_at`). Releases, cancels, reclaims and restores touch the seat word and
-   leave the sighting standing, so a restored seat reads as checked in again with nothing copied.
+   (and clear `running_late_at`). A release and its undo touch only the seat word, so a seat the
+   desk takes back reads as checked in again with nothing copied.
 4. **Where "booked" used to mean "not yet at the desk", the reader now asks the trail too**: a
    diver's self-cancel, a party cancel, a seat claim, a move, running late, the cancellation notice
    and the reply and Inbox seat pickers each refuse or skip a checked-in seat, as they did before.
+5. **A seat that comes back starts a fresh trail.** Rebooking a cancelled row, undoing Remove and a
+   move store the seat's newest trail `seq` in `bookings.arrival_trail_after_seq`; readers skip rows
+   at or below it, so the desk sees that diver afresh.
 
 ## Alternatives considered
 
 - **Keep the column and derive it by trigger** — two places again, now hidden.
-- **A `presence` view** — every reader would join it; the correlated predicate is the same query
-  without a schema object.
+- **A `presence` view** — the same correlated query, plus a schema object.
 
 ## Consequences
 
-A no-show, cancel, reclaim or restore cannot desynchronise arrival, because there is nothing to
-synchronise. Decisions 2 to 7 of the counter ADR stand: the offline queue still reaches only the
+A release, cancel, reclaim or restore cannot desynchronise arrival: nothing is synchronised. Decisions 2 to 7 of the counter ADR stand: the offline queue still reaches only the
 two arrival writers, and nothing on that path can write `roll_call_events`. The trail is still
 evidence of who was seen, never of who dived.
 

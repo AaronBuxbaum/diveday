@@ -13,7 +13,8 @@ describe("seatSailed", () => {
     // keeps everywhere else: a crew member tapping Boarded is the strongest
     // evidence held about where a person is, and `reclaimReleasedSeat` makes
     // the booking agree by taking it back to what it was before the release
-    // (`checked_in` or `booked`). A row that somehow
+    // (`booked`; the arrival trail it never touched still says whether the desk
+    // saw them, issue #2702). A row that somehow
     // still read `no_show` under a boarding must not drop a counted body.
     expect(seatSailed({ noShow: true, dockResult: "boarded", afterDiveResultStands: false })).toBe(
       true,

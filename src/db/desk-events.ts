@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNull, max, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, max, ne, not, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DeskEvent, DeskEventKind } from "@/lib/desk-events";
 import { seatCheckedIn } from "./arrival-provenance";
@@ -199,6 +199,8 @@ export function rosterStillSaysIt() {
         eq(bookings.tripId, tripDeskEvents.tripId),
         eq(bookings.status, "booked"),
         sql`${bookings.runningLateAt} is not null`,
+        // Seen at the desk is not late, whatever the stamp says.
+        not(seatCheckedIn),
       ),
     ),
     or(

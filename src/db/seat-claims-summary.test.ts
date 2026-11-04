@@ -2,6 +2,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
@@ -56,10 +57,9 @@ describe("claim-panel history versus the current group summary", () => {
     const { lead, memberOne, memberTwo } = await bookParty(db, shop.id, open.id);
     const now = new Date(open.startsAt.getTime() + 60_000);
     await releaseAt(db, shop.id, memberOne.bookingId, now);
-    await db
-      .update(bookings)
-      .set({ status: "checked_in", claimedAt: now })
-      .where(eq(bookings.id, memberTwo.bookingId));
+    await db.update(bookings).set({ claimedAt: now }).where(eq(bookings.id, memberTwo.bookingId));
+    // Checked in: the seat stays `booked` and the trail says arrived (issue #2702).
+    await markArrived(db, memberTwo.bookingId);
     const seats = await issuePartySeatClaims(db, {
       shopId: shop.id,
       leadBookingId: lead.bookingId,

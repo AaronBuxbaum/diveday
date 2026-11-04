@@ -26,7 +26,7 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
  * review 20260911).
  *
  * `markBookingNoShow` releases a seat on the staffer's confirm tap: `no_show`
- * leaves `SEAT_HELD_STATUSES`, so a walk-in can buy it. It guards that with the
+ * leaves the held seats (`seatIsHeld`), so a walk-in can buy it. It guards that with the
  * booking row read `FOR UPDATE` and re-runs its gate against what it read, and
  * its docblock says the second run is the one that counts — "between a staffer
  * looking at the row and tapping it, the crew can record that diver aboard".

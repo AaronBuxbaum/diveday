@@ -2,11 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { notificationIdempotencyKey } from "@/lib/notifications/kinds";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { cancellationMoney, sendBookingCancelledNotice } from "./booking-cancelled-notice";
 import { cancelBooking, createBooking } from "./bookings";
 import { setBookingPayment } from "./payments";
-import { bookings, notificationDeliveries, people } from "./schema";
+import { notificationDeliveries, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -198,12 +199,11 @@ describe("sendBookingCancelledNotice", () => {
       email: "aboard@example.com",
     });
     if (!booking.ok) throw new Error(booking.reason);
-    await db
-      .update(bookings)
-      .set({ status: "checked_in" })
-      .where(eq(bookings.id, booking.bookingId));
+    // Checked in is the arrival trail, not a seat status (issue #2702): the
+    // seat stays `booked`, so the notice has to read the standing arrival.
+    await markArrived(db, booking.bookingId);
     const cancelled = await cancelBooking(db, shop.id, booking.bookingId);
-    expect(cancelled.ok && cancelled.booking.previousStatus).toBe("checked_in");
+    expect(cancelled.ok && cancelled.booking.previousStatus).toBe("booked");
     const seen: Notification[] = [];
 
     const outcome = await sendBookingCancelledNotice(
@@ -212,7 +212,7 @@ describe("sendBookingCancelledNotice", () => {
         shopId: shop.id,
         bookingId: booking.bookingId,
         cancelledBy: "shop",
-        from: "checked_in",
+        from: "booked",
         refund: { status: "unpaid" },
       },
       { provider: capturingProvider(seen), origin: ORIGIN },

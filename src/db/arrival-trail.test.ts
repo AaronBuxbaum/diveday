@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
-import { moveBooking, selfCancelBooking } from "./bookings";
+import { moveBooking, restoreBooking, selfCancelBooking } from "./bookings";
 import { checkInBooking, listCheckInQueue, undoCheckInBooking } from "./check-in";
 import { undoBookingNoShow } from "./no-show";
 import { bookingArrivalEvents, bookings, rollCallEvents } from "./schema";
@@ -138,14 +139,14 @@ describe("arrival is read from the trail", () => {
       recordedByPersonId: staff.id,
       status: "arrived",
       source: "live",
-      occurredAt: new Date(),
+      occurredAt: nowDate(),
     });
     expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
   });
 
   it("reads the newest word, not any arrived row", async () => {
     const { db, staff, seat } = await context();
-    const at = new Date();
+    const at = nowDate();
     await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id, occurredAt: at });
     // Same instant, appended later: the tiebreak is the append order.
     await markArrived(db, seat.booking.id, {
@@ -190,5 +191,69 @@ describe("arrival is read from the trail", () => {
     expect(before?.booked).toBeGreaterThan(0);
     const after = (await upcomingTripsWithCounts(db, shop.id)).find((t) => t.id === reef.id);
     expect(after?.booked).toBe(before?.booked);
+  });
+});
+
+describe("a seat that comes back starts a fresh trail", () => {
+  it("does not read a Remove undone as checked in, and the next tap re-runs readiness", async () => {
+    const { db, shop, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, seat.booking.id));
+
+    expect(await restoreBooking(db, shop.id, seat.booking.id)).toBe("restored");
+    // The `arrived` row still stands, from the seat's last life.
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
+    const again = await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      recordedByPersonId: staff.id,
+    });
+    // A real check-in, not a duplicate that skipped the readiness gate.
+    expect(again).toMatchObject({ ok: true });
+    expect(again).not.toMatchObject({ duplicate: true });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: true });
+  });
+
+  it("refuses a check-in on a restored seat readiness would not board", async () => {
+    const { db, shop, staff, seat } = await context();
+    // Seen once (a fixture row, no waiver), then removed and put back.
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, seat.booking.id));
+    expect(await restoreBooking(db, shop.id, seat.booking.id)).toBe("restored");
+
+    const tap = await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      recordedByPersonId: staff.id,
+    });
+    expect(tap).toMatchObject({ ok: false });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
+  });
+
+  it("does not hand a released seat moved away and back the arrival from its first stay", async () => {
+    const { db, shop, other, staff, seat } = await context();
+    const home = seat.booking.tripId;
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
+    // Turned away: the one released seat a move takes.
+    await db
+      .update(bookings)
+      .set({ status: "no_show", turnedAwayReason: "waiver", turnedAwayAt: nowDate() })
+      .where(eq(bookings.id, seat.booking.id));
+    const away = await moveBooking(db, {
+      shopId: shop.id,
+      fromTripId: home,
+      toTripId: other.id,
+      bookingId: seat.booking.id,
+    });
+    expect(away).toMatchObject({ ok: true });
+    const back = await moveBooking(db, {
+      shopId: shop.id,
+      fromTripId: other.id,
+      toTripId: home,
+      bookingId: seat.booking.id,
+    });
+    expect(back).toMatchObject({ ok: true });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
   });
 });

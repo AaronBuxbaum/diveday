@@ -9,7 +9,9 @@ import {
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
 import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
+import { standingArrivalStatus } from "./arrival-provenance";
 import * as bookingCapabilitiesModule from "./booking-capabilities";
 import {
   cancelBooking,
@@ -821,14 +823,12 @@ describe("restoreBooking (undo of a roster removal)", () => {
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);
     if (!booked.ok) throw new Error("setup booking failed");
-    await db
-      .update(bookings)
-      .set({ status: "checked_in" })
-      .where(eq(bookings.id, booked.bookingId));
+    await markArrived(db, booked.bookingId);
 
     expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("already_active");
     const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
-    expect(row?.status).toBe("checked_in");
+    expect(row?.status).toBe("booked");
+    expect(await standingArrivalStatus(db, shop.id, open.id, booked.bookingId)).toBe("arrived");
   });
 
   it("scopes to the shop and reports unknown bookings", async () => {
@@ -2399,17 +2399,15 @@ describe("selfCancelBooking (diver self-service, docs ADR 20260727-diver-self-se
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);
     if (!booked.ok) throw new Error("setup booking failed");
-    await db
-      .update(bookings)
-      .set({ status: "checked_in" })
-      .where(eq(bookings.id, booked.bookingId));
+    await markArrived(db, booked.bookingId);
 
     expect(await selfCancelBooking(db, { shopId: shop.id, bookingId: booked.bookingId })).toEqual({
       ok: false,
       reason: "not_cancellable",
     });
     const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
-    expect(row?.status).toBe("checked_in");
+    expect(row?.status).toBe("booked");
+    expect(await standingArrivalStatus(db, shop.id, open.id, booked.bookingId)).toBe("arrived");
   });
 
   it("refuses to cancel a seat on a trip that's already departed", async () => {
@@ -2466,9 +2464,9 @@ describe("selfCancelBooking with the party (batch 6 item 10)", () => {
   }
 
   it("cancels the lead's unclaimed seats with the lead, and keeps a claimed or checked-in one", async () => {
-    const { db, shop, lead, milo, pia, tom } = await bookParty();
+    const { db, shop, open, lead, milo, pia, tom } = await bookParty();
     await db.update(bookings).set({ claimedAt: nowDate() }).where(eq(bookings.id, pia));
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, tom));
+    await markArrived(db, tom);
 
     const result = await selfCancelBooking(db, {
       shopId: shop.id,
@@ -2489,7 +2487,8 @@ describe("selfCancelBooking with the party (batch 6 item 10)", () => {
     expect(await statusOf(db, lead)).toBe("cancelled");
     expect(await statusOf(db, milo)).toBe("cancelled");
     expect(await statusOf(db, pia)).toBe("booked");
-    expect(await statusOf(db, tom)).toBe("checked_in");
+    expect(await statusOf(db, tom)).toBe("booked");
+    expect(await standingArrivalStatus(db, shop.id, open.id, tom)).toBe("arrived");
   });
 
   it("marks a released seat with its own address apart from one on the lead's (batch 6 layer 2 review)", async () => {

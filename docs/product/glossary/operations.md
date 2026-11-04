@@ -157,8 +157,10 @@
   minutes or hours later, against readiness as it stands *then* — for a queued one.
 - **Arrival event** — one append-only row in `booking_arrival_events` recording a single tap at the
   counter: `arrived`, or the `cleared` that takes it back. It is the only record of an arrival:
-  `bookings.status` says what the shop decided about the seat and has no arrival word, so a no-show,
-  a cancel, a reclaim or a restore leaves the newest event standing
+  `bookings.status` says what the shop decided about the seat and has no arrival word, so a no-show
+  and its undo leave the newest event standing. A seat that comes back (a cancelled row booked again,
+  Remove undone, a move) reads only the events after `bookings.arrival_trail_after_seq`, so the desk
+  sees that diver afresh
   ([ADR 20261104-arrival-is-a-trail](../../architecture/decisions/20261104-arrival-is-a-trail.md)). It is what lets a check-in be recorded
   with no signal and reconciled later on the rules roll call already uses — deduplicated on the
   device's own event id, refused when a newer statement stands, and, for an undo, applied only

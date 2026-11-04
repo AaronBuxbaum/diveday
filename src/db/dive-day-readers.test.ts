@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -64,11 +65,14 @@ async function lena(db: AppDb, shopId: string) {
         tripId: await departure(db, shopId, title, offsetDays),
         personId: own.personId,
         bookedAs: "diver",
-        status: "checked_in",
+        status: "booked",
         ...extra,
       })
       .returning({ id: bookings.id });
     if (!seat) throw new Error("seat not created");
+    // Seen at the desk that day: a held seat plus the trail's arrival, since
+    // checked in is no longer a seat status (issue #2702).
+    await markArrived(db, seat.id);
     return seat.id;
   };
   return { ahead: outcome.bookingId, past };

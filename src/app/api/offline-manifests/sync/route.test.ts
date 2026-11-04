@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { standingArrivalStatus } from "@/db/arrival-provenance";
 import type { AppDb } from "@/db/client";
 import { getTripManifest } from "@/db/manifests";
 import {
@@ -803,8 +804,7 @@ describe("POST /api/offline-manifests/sync — queued arrivals", () => {
     };
     expect(body.results).toEqual([{ clientEventId: event.clientEventId, status: "applied" }]);
 
-    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
-    expect(saved?.status).toBe("checked_in");
+    expect(await standingArrivalStatus(db, shop.id, trip.id, booking.id)).toBe("arrived");
   });
 
   /**
@@ -869,6 +869,7 @@ describe("POST /api/offline-manifests/sync — queued arrivals", () => {
 
     const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
     expect(saved?.status).toBe("booked");
+    expect(await standingArrivalStatus(db, shop.id, trip.id, booking.id)).toBe("cleared");
   });
 
   it("refuses an unauthenticated caller's arrival batch without touching the database", async () => {
@@ -945,8 +946,7 @@ describe("POST /api/offline-manifests/sync — queued arrivals", () => {
       }),
     );
     expect(smuggled.status).toBe(200);
-    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
-    expect(saved?.status).toBe("checked_in");
+    expect(await standingArrivalStatus(db, shop.id, trip.id, booking.id)).toBe("arrived");
     expect(await rollCallEventIds(db, shop.id)).toEqual(before);
   });
 });

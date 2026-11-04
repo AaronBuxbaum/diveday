@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, not, sql } from "drizzle-orm";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
@@ -57,7 +57,7 @@ import {
 } from "@/lib/trip-admission";
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
-import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
+import { arrivalTrailHighWater, seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
@@ -1263,6 +1263,9 @@ async function writeSeat(
       .update(bookings)
       .set({
         status: "booked",
+        // A new life for the seat: the desk's trail is read from here on
+        // (ADR 20261104-arrival-is-a-trail, decision 5).
+        arrivalTrailAfterSeq: arrivalTrailHighWater,
         // A new booking, so no turn-away from the row's last life.
         turnedAwayReason: null,
         turnedAwayAt: null,
@@ -1928,8 +1931,14 @@ export async function restoreBooking(
     await tx
       .update(bookings)
       // A seat back on the boat carries no turned-away reason from its last
-      // life (`bookings_turned_away_is_released`).
-      .set({ status: "booked", turnedAwayReason: null, turnedAwayAt: null })
+      // life (`bookings_turned_away_is_released`), and none of its arrivals:
+      // the desk sees them again (ADR 20261104-arrival-is-a-trail, decision 5).
+      .set({
+        status: "booked",
+        arrivalTrailAfterSeq: arrivalTrailHighWater,
+        turnedAwayReason: null,
+        turnedAwayAt: null,
+      })
       .where(and(eq(bookings.id, bookingId), eq(bookings.status, "cancelled")));
     await settlePackageCoverage(tx, {
       shopId,
@@ -2247,8 +2256,11 @@ export async function moveBooking(
         conditionsBriefedAt: null,
         carriedFactsConfirmedAt: null,
         pickupTime: null,
-        // A turned-away seat is a booked seat on the new departure.
+        // A turned-away seat is a booked seat on the new departure, and an
+        // arrival from an earlier stay on this one does not come back with a
+        // seat moved away and back (ADR 20261104-arrival-is-a-trail, decision 5).
         status: "booked",
+        arrivalTrailAfterSeq: arrivalTrailHighWater,
         turnedAwayReason: null,
         turnedAwayAt: null,
       })
@@ -3268,6 +3280,10 @@ export async function cancelUnclaimedPartySeats(
           eq(bookings.shopId, input.shopId),
           eq(bookings.status, "booked"),
           isNull(bookings.claimedAt),
+          // Asked again by a statement that starts after the seat's lock was
+          // won: the read above waited on a check-in holding it, and its
+          // trail subquery kept the snapshot it started with (issue #2702).
+          not(seatCheckedIn),
         ),
       )
       .returning({ id: bookings.id });

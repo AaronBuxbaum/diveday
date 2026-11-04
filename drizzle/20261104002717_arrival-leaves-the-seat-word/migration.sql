@@ -1,8 +1,10 @@
 -- Issue #2702 (ADR 20261104-arrival-is-a-trail): `bookings.status` stops mirroring the arrival trail.
 -- A `checked_in` seat is a held seat, so it becomes `booked`; the desk's sighting already stands in
 -- `booking_arrival_events`, which every live and offline check-in has written since ADR
--- 20260907-the-counter-survives-offline. The next migration drops the enum value, and its type
--- change refuses any row still carrying it.
+-- 20260907-the-counter-survives-offline. A check-in older than that trail has no row there and
+-- reads as plain `booked` from now on; those seats are on departures that sailed in September, and
+-- no row can be written for them because the trail needs the staffer who saw the diver. The next
+-- migration drops the enum value, and its type change refuses any row still carrying it.
 UPDATE "bookings" SET "status" = 'booked' WHERE "status" = 'checked_in';
 --> statement-breakpoint
 -- The one check that names a `booking_status` value; it cannot survive the type being recreated, so

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
 import { nowDate } from "@/lib/clock";
 import type { IdentityMatchKind } from "@/lib/identity-match";
@@ -403,7 +403,8 @@ export type CheckInOutcome =
     };
 
 /**
- * The newest arrival statement standing for one seat, or nothing.
+ * The newest arrival statement standing for one seat's current life, or
+ * nothing.
  *
  * `desc(occurredAt), desc(createdAt), desc(seq)` — the same three keys
  * `recordRollCall` and `recordPreDepartureCheck` read their own trails back
@@ -419,9 +420,8 @@ type NewestArrival = {
 
 async function newestArrivalEvent(
   tx: DbExecutor,
+  booking: { id: string; tripId: string; arrivalTrailAfterSeq: number | null },
   shopId: string,
-  tripId: string,
-  bookingId: string,
 ): Promise<NewestArrival | undefined> {
   const [newest] = await tx
     .select({
@@ -433,8 +433,12 @@ async function newestArrivalEvent(
     .where(
       and(
         eq(bookingArrivalEvents.shopId, shopId),
-        eq(bookingArrivalEvents.tripId, tripId),
-        eq(bookingArrivalEvents.bookingId, bookingId),
+        eq(bookingArrivalEvents.tripId, booking.tripId),
+        eq(bookingArrivalEvents.bookingId, booking.id),
+        // The seat's current life only (`sinceSeatReopened`, arrival-provenance.ts).
+        booking.arrivalTrailAfterSeq === null
+          ? undefined
+          : gt(bookingArrivalEvents.seq, booking.arrivalTrailAfterSeq),
       ),
     )
     .orderBy(
@@ -541,6 +545,7 @@ export async function checkInBooking(
       .select({
         id: bookings.id,
         status: bookings.status,
+        arrivalTrailAfterSeq: bookings.arrivalTrailAfterSeq,
         tripId: trips.id,
         tripStatus: trips.status,
         personId: people.id,
@@ -572,7 +577,7 @@ export async function checkInBooking(
     // one asked whether this tap changes anything. Read under the seat's lock:
     // a second device greeting the same diver waits here and then finds them
     // already seen.
-    const newest = await newestArrivalEvent(tx, input.shopId, booking.tripId, booking.id);
+    const newest = await newestArrivalEvent(tx, booking, input.shopId);
     if (booking.status === "booked" && hasArrived(newest?.status)) {
       return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
     }
@@ -722,6 +727,7 @@ export async function undoCheckInBooking(
       .select({
         id: bookings.id,
         status: bookings.status,
+        arrivalTrailAfterSeq: bookings.arrivalTrailAfterSeq,
         tripId: trips.id,
         personName: people.fullName,
       })
@@ -749,7 +755,7 @@ export async function undoCheckInBooking(
     // it released, and an undo here would write a `cleared` row the restore
     // of that seat would then read.
     if (booking.status !== "booked") return { ok: false, reason: "not_checked_in" };
-    const newest = await newestArrivalEvent(tx, input.shopId, booking.tripId, booking.id);
+    const newest = await newestArrivalEvent(tx, booking, input.shopId);
     // A double-tap of the undo (two devices, a stale tab) finds the work
     // already done — same idempotence contract as checkInBooking. It sits
     // ahead of the compare-and-set deliberately: the device asked for this

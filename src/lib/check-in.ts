@@ -42,7 +42,7 @@ export type CounterSeat = {
  * than at the rail where the manifest's gate is the only thing left.
  */
 export function isSettledAtCounter(seat: CounterSeat): boolean {
-  return seat.checkedIn && seat.readiness.status === "ready";
+  return seat.bookingStatus === "booked" && seat.checkedIn && seat.readiness.status === "ready";
 }
 
 /** Readiness will not clear this seat right now — whether or not it checked in. */

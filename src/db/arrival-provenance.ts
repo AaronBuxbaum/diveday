@@ -24,7 +24,28 @@ import { bookingArrivalEvents, bookings } from "./schema";
  */
 
 /**
- * The newest word the desk's trail holds for one seat, or nothing — the raw
+ * Only the sightings of the seat's current life. A seat that came back from
+ * cancelled, from Remove, or from another departure
+ * (`bookings.arrival_trail_after_seq`) is a new seat at the desk: an `arrived`
+ * row from before it reopened says nothing about today, and reading it would
+ * let the desk's next tap skip readiness as a duplicate. Needs `bookings` in
+ * the query.
+ */
+const sinceSeatReopened = sql<boolean>`(${bookings.arrivalTrailAfterSeq} is null or ${bookingArrivalEvents.seq} > ${bookings.arrivalTrailAfterSeq})`;
+
+/**
+ * The value a writer reopening a seat stores in
+ * `bookings.arrival_trail_after_seq`: the newest trail row the seat holds
+ * now, or 0 when it holds none. Only usable in an update of `bookings`.
+ */
+export const arrivalTrailHighWater = sql<number>`(
+  select coalesce(max(${bookingArrivalEvents.seq}), 0)
+  from ${bookingArrivalEvents}
+  where ${bookingArrivalEvents.bookingId} = ${bookings.id}
+)`;
+
+/**
+ * The newest word the desk's trail holds for one seat's current life, or nothing — the raw
  * word, not a verdict. A writer asks it under the seat's lock: the check-in and
  * its undo, to know whether the tap changes anything.
  */
@@ -37,11 +58,13 @@ export async function standingArrivalStatus(
   const [standing] = await tx
     .select({ status: bookingArrivalEvents.status })
     .from(bookingArrivalEvents)
+    .innerJoin(bookings, eq(bookings.id, bookingArrivalEvents.bookingId))
     .where(
       and(
         eq(bookingArrivalEvents.shopId, shopId),
         eq(bookingArrivalEvents.tripId, tripId),
         eq(bookingArrivalEvents.bookingId, bookingId),
+        sinceSeatReopened,
       ),
     )
     .orderBy(
@@ -67,6 +90,7 @@ const trailSaysArrived = sql<boolean>`coalesce((
   where ${bookingArrivalEvents.shopId} = ${bookings.shopId}
     and ${bookingArrivalEvents.tripId} = ${bookings.tripId}
     and ${bookingArrivalEvents.bookingId} = ${bookings.id}
+    and ${sinceSeatReopened}
   order by ${bookingArrivalEvents.occurredAt} desc, ${bookingArrivalEvents.createdAt} desc, ${bookingArrivalEvents.seq} desc
   limit 1
 ), false)`;

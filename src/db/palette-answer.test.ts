@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
 import { shopDaysBounds } from "@/lib/zoned";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "./boats";
 import { paletteAnswerFacts } from "./palette-answer";
@@ -135,7 +136,7 @@ describe("paletteAnswerFacts", () => {
         personId: snorkeler.id,
         bookedAs: "snorkeler",
         participantType: "snorkeler",
-        status: "checked_in",
+        status: "booked",
       },
       {
         shopId: shop.id,
@@ -162,6 +163,14 @@ describe("paletteAnswerFacts", () => {
         status: "no_show",
       },
     ]);
+    // The snorkeler is checked in: a held seat plus the trail's arrival, since
+    // checked in is no longer a seat status (issue #2702).
+    const [snorkelerSeat] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.personId, snorkeler.id));
+    if (!snorkelerSeat) throw new Error("snorkeler seat not created");
+    await markArrived(db, snorkelerSeat.id);
 
     const otherShops = await db
       .insert(shops)

@@ -11,6 +11,7 @@ import {
 import { createTrip, listStaff, moveTrip, setTripCrew, setTripStatus } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { shopClock } from "@/lib/shop-clock";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { assembleDaySpine, sortStationRows } from "./today";
 import { getTodayWork } from "./today-reader";
@@ -301,10 +302,15 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
         shopId: shop.id,
         tripId: later.id,
         personId: diver.id,
-        status: "checked_in",
+        status: "booked",
       })
       .returning();
     if (!booking) throw new Error("fixture booking not created");
+    // Seen at the desk: checked in is the arrival trail (issue #2702).
+    await markArrived(db, booking.id, {
+      recordedByPersonId: staff.person.id,
+      occurredAt: new Date(now.getTime() - 3 * HOUR),
+    });
     await db.insert(rollCallEventsTable).values({
       shopId: shop.id,
       tripId: later.id,

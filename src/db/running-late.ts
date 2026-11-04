@@ -66,7 +66,12 @@ async function stamp(
           liveTrip(),
         ),
       )
-      .limit(1);
+      .limit(1)
+      // The seat's lock first, so the stamp below is a statement that starts
+      // after any check-in holding it has committed: a subquery re-checked
+      // after waiting on a row lock still reads the snapshot it started with,
+      // and would miss an arrival that landed meanwhile (issue #2702).
+      .for("update", { of: bookings });
     if (!row) return { status: "closed" };
     if (
       !canSayRunningLate({

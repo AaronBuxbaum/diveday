@@ -1,0 +1,1 @@
+ALTER TABLE "bookings" ADD COLUMN "arrival_trail_after_seq" bigint;

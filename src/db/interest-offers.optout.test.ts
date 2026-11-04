@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications/kinds";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBooking, moveBooking } from "./bookings";
@@ -566,9 +567,10 @@ describe("invitableSeats and the deal", () => {
       .where(eq(bookings.id, foreignBooking.id));
     await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
     // A no-show releases the boat seat, but the linked anonymous offer regains
-    // that one seat of advisory hold. Rebooking or checking the diver in puts
-    // the booking back in SEAT_HELD_STATUSES and consumes that hold again, so
-    // combined offerable capacity stays level across each transition.
+    // that one seat of advisory hold. Rebooking puts the seat back to `booked`
+    // and consumes that hold again; checking the diver in is only an arrival
+    // row on a `booked` seat (issue #2702) and changes nothing, so combined
+    // offerable capacity stays level across each transition.
     await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, booking.id));
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
     expect(
@@ -582,9 +584,9 @@ describe("invitableSeats and the deal", () => {
 
     await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
-    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, booking.id));
+    await markArrived(db, booking.id);
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
-    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
+    await markArrived(db, booking.id, { status: "cleared" });
 
     expect(
       await associateDateRequestOfferBooking(db, {

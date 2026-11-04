@@ -13,6 +13,7 @@ const startsAt = new Date("2026-10-09T12:00:00Z");
 const at = (msBefore: number) => new Date(startsAt.getTime() - msBefore);
 const seat = (overrides: Partial<Parameters<typeof canSayRunningLate>[0]> = {}) => ({
   bookingStatus: "booked",
+  checkedIn: false,
   tripStatus: "scheduled",
   startsAt,
   now: at(30 * MINUTE_MS),
@@ -45,9 +46,21 @@ describe("canSayRunningLate", () => {
   });
 
   it("is closed for a seat that has arrived, been released or cancelled", () => {
-    for (const bookingStatus of ["checked_in", "no_show", "cancelled", "pending_payment"]) {
+    expect(canSayRunningLate(seat({ checkedIn: true }))).toBe(false);
+    for (const bookingStatus of ["no_show", "cancelled", "pending_payment"]) {
       expect(canSayRunningLate(seat({ bookingStatus }))).toBe(false);
     }
+  });
+
+  /**
+   * Issue #2702: arrival is the trail's word, so both axes close the door on
+   * their own. A released seat whose `arrived` row still stands is closed too,
+   * and so is a released seat the trail never saw.
+   */
+  it("is closed on either axis: a seen booked seat, a released seat seen or not", () => {
+    expect(canSayRunningLate(seat({ bookingStatus: "booked", checkedIn: true }))).toBe(false);
+    expect(canSayRunningLate(seat({ bookingStatus: "no_show", checkedIn: true }))).toBe(false);
+    expect(canSayRunningLate(seat({ bookingStatus: "no_show", checkedIn: false }))).toBe(false);
   });
 
   it("is closed on a departure the shop called off", () => {
@@ -59,16 +72,34 @@ describe("runningLateShown", () => {
   const said = new Date("2026-10-09T11:42:00Z");
 
   it("shows the statement on a seat still to arrive", () => {
-    expect(runningLateShown({ bookingStatus: "booked", runningLateAt: said })).toBe(said);
+    expect(
+      runningLateShown({ bookingStatus: "booked", checkedIn: false, runningLateAt: said }),
+    ).toBe(said);
   });
 
   it("clears from view once the diver is checked in or released", () => {
-    expect(runningLateShown({ bookingStatus: "checked_in", runningLateAt: said })).toBeNull();
-    expect(runningLateShown({ bookingStatus: "no_show", runningLateAt: said })).toBeNull();
+    expect(
+      runningLateShown({ bookingStatus: "booked", checkedIn: true, runningLateAt: said }),
+    ).toBeNull();
+    expect(
+      runningLateShown({ bookingStatus: "no_show", checkedIn: false, runningLateAt: said }),
+    ).toBeNull();
+  });
+
+  /**
+   * Issue #2702: a released seat keeps its `arrived` row standing. It is not a
+   * seat still to arrive, so the flag stays off it whatever the trail says.
+   */
+  it("stays cleared on a released seat whose sighting still stands", () => {
+    expect(
+      runningLateShown({ bookingStatus: "no_show", checkedIn: true, runningLateAt: said }),
+    ).toBeNull();
   });
 
   it("is nothing when the diver said nothing", () => {
-    expect(runningLateShown({ bookingStatus: "booked", runningLateAt: null })).toBeNull();
+    expect(
+      runningLateShown({ bookingStatus: "booked", checkedIn: false, runningLateAt: null }),
+    ).toBeNull();
   });
 });
 

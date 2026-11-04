@@ -53,8 +53,11 @@ describe("noShowGate", () => {
     );
   });
 
+  // Arrival is the trail's word, not a seat status (issue #2702): a diver the
+  // desk checked in still holds a plain `booked` seat, which is what this gate
+  // reads, so the door stays open for them exactly as for one never seen.
   it("stays open for a diver who checked in at the desk and then never boarded", () => {
-    expect(gate({ bookingStatus: "checked_in" })).toBe("eligible");
+    expect(gate({ bookingStatus: "booked" })).toBe("eligible");
   });
 
   /**
@@ -126,9 +129,10 @@ describe("noShowClaim", () => {
 });
 
 describe("seatIsHeld", () => {
-  it("counts the two statuses that hold a seat, and no others", () => {
+  // Arrival is not a seat status (issue #2702): a checked-in diver's seat is
+  // `booked`, so `booked` is the one status that holds a seat.
+  it("counts the one status that holds a seat, and no others", () => {
     expect(seatIsHeld("booked")).toBe(true);
-    expect(seatIsHeld("checked_in")).toBe(true);
     // The boundary this ticket settles: a recorded no-show is the shop's seat
     // to sell, which is what makes the wait-list invite beside it honest.
     expect(seatIsHeld("no_show")).toBe(false);
@@ -179,6 +183,6 @@ describe("rowCanBeReactivated (#2484)", () => {
   it("refuses a no-show once the departure has started, and every live seat", () => {
     expect(rowCanBeReactivated("no_show", behind)).toBe(false);
     expect(rowCanBeReactivated("booked", ahead)).toBe(false);
-    expect(rowCanBeReactivated("checked_in", ahead)).toBe(false);
+    expect(rowCanBeReactivated("booked", behind)).toBe(false);
   });
 });

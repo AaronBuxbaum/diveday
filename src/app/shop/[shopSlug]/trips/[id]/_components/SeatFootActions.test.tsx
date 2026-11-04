@@ -118,7 +118,8 @@ describe("the move to another departure", () => {
   });
 
   it("is absent on a checked-in seat", () => {
-    const checkedIn = { ...ready, booking: { ...ready.booking, status: "checked_in" as const } };
+    // Arrival is the trail's word on a `booked` seat (issue #2702).
+    const checkedIn = { ...ready, checkedIn: true };
     renderRoster({ ...fixtures, roster: [checkedIn], moveSeat });
 
     expect(screen.queryByText("Move to another departure")).toBeNull();
