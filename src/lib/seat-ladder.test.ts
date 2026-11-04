@@ -229,6 +229,36 @@ describe("isAfterTheDive", () => {
     expect(isAfterTheDive({ endsAt, now: new Date("2026-08-30T09:00:00Z") })).toBe(true);
   });
 
+  it("stays shut on the clock for a diver nobody counted on a departure whose roll call was taken (issue #3822)", () => {
+    // Checked in, held at the desk on a medical hold, never tapped by a crew
+    // that counted everyone else: the four-hour floor asserted a dive nobody
+    // recorded.
+    for (const now of [bufferGone, recapFloor, new Date("2026-09-05T09:00:00Z")]) {
+      expect(isAfterTheDive({ endsAt, uncountedAtRollCall: true, now })).toBe(false);
+      expect(isAfterTheDive({ endsAt, boarded: null, uncountedAtRollCall: true, now })).toBe(false);
+    }
+  });
+
+  it("keeps the recap floor for a departure with no roll call at all", () => {
+    expect(isAfterTheDive({ endsAt, uncountedAtRollCall: false, now: recapFloor })).toBe(true);
+    expect(isAfterTheDive({ endsAt, uncountedAtRollCall: false, now: bufferGone })).toBe(false);
+  });
+
+  it("lets the dock's own word outrank the uncounted flag", () => {
+    // `boarded` is a word; the flag only describes silence.
+    expect(
+      isAfterTheDive({ endsAt, boarded: "boarded", uncountedAtRollCall: true, now: bufferGone }),
+    ).toBe(true);
+    expect(
+      isAfterTheDive({
+        endsAt,
+        boarded: "not_boarded",
+        uncountedAtRollCall: true,
+        now: recapFloor,
+      }),
+    ).toBe(false);
+  });
+
   it("is never the after-state while the boat could still be out", () => {
     // Whatever the evidence says, the day itself has to be over: a roll call
     // is recorded at the dock *before* the boat leaves, so `boarded` is true

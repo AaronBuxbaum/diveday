@@ -15,6 +15,7 @@ import {
   addCrewRecapPhoto,
   addRecapPhoto,
   bookingsLeftAtTheDock,
+  bookingsNeverCountedAtRollCall,
   canAddCrewRecapPhoto,
   canAddRecapPhoto,
   deleteCrewRecapPhoto,
@@ -643,8 +644,8 @@ describe("a diver who never left the dock", () => {
       },
     ]);
     if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
-    const [boarded, noRollCall] = party.bookings.map((b) => b.bookingId);
-    if (!boarded || !noRollCall) throw new Error("party bookings missing");
+    const [boarded, uncounted] = party.bookings.map((b) => b.bookingId);
+    if (!boarded || !uncounted) throw new Error("party bookings missing");
     let minute = 0;
     const record = (
       bookingId: string,
@@ -663,7 +664,7 @@ describe("a diver who never left the dock", () => {
     // Rae (the context's own booking) is left at the dock.
     await record(boarded, "boarded");
     await record(ctx.bookingId, "not_boarded");
-    return { ...ctx, ashore: ctx.bookingId, boarded, noRollCall, record };
+    return { ...ctx, ashore: ctx.bookingId, boarded, uncounted, record };
   }
 
   const sendOptions = (afterTrip: Date, email: ReturnType<typeof fakeEmail>) => ({
@@ -675,15 +676,40 @@ describe("a diver who never left the dock", () => {
   const recapsTo = (email: ReturnType<typeof fakeEmail>, bookingId: string) =>
     email.sent.filter((n) => n.kind === "trip_recap" && n.bookingId === bookingId);
 
-  it("sends no recap to them, and still sends to a boarded diver and one with no roll call", async () => {
-    const { db, ashore, boarded, noRollCall, afterTrip } = await dockContext();
+  it("sends no recap to them or to a diver nobody counted, and still sends to a boarded diver", async () => {
+    const { db, ashore, boarded, uncounted, afterTrip } = await dockContext();
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
 
     expect(recapsTo(email, boarded)).toHaveLength(1);
-    expect(recapsTo(email, noRollCall)).toHaveLength(1);
+    // The crew counted everyone else (issue #3822): their silence about this
+    // diver is not a dive, however long ago the boat came home.
+    expect(recapsTo(email, uncounted)).toHaveLength(0);
     expect(recapsTo(email, ashore)).toHaveLength(0);
     expect(await rowsFor(db, ashore)).toHaveLength(0);
+    expect(await rowsFor(db, uncounted)).toHaveLength(0);
+  });
+
+  it("gives the recap to a diver nobody counted at the dock once a later checkpoint names them aboard", async () => {
+    const { db, uncounted, record, afterTrip } = await dockContext();
+    expect(await getRecapPageData(db, uncounted)).toBeNull();
+    await record(uncounted, "boarded", "after_dive_1");
+    expect(await getRecapPageData(db, uncounted)).not.toBeNull();
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(afterTrip, email));
+    expect(recapsTo(email, uncounted)).toHaveLength(1);
+  });
+
+  it("answers the same question the afterglow asks, for the uncounted seat only", async () => {
+    const { db, shop, reef, ashore, boarded, uncounted } = await dockContext();
+    const candidate = (id: string) => ({
+      booking: { id },
+      shop: { id: shop.id },
+      trip: { id: reef.id },
+    });
+    const all = [ashore, boarded, uncounted].map(candidate);
+    expect(await bookingsNeverCountedAtRollCall(db, all)).toEqual(new Set([uncounted]));
+    expect(await bookingsLeftAtTheDock(db, all)).toEqual(new Set([ashore, uncounted]));
   });
 
   it("leaves them out of a staff send for the one departure too", async () => {
@@ -711,17 +737,19 @@ describe("a diver who never left the dock", () => {
   });
 
   it("refuses them the recap page, so the link agrees with the email", async () => {
-    const { db, ashore, boarded, noRollCall } = await dockContext();
+    const { db, ashore, boarded, uncounted } = await dockContext();
     expect(await getRecapPageData(db, ashore)).toBeNull();
     expect(await getRecapPageState(db, ashore)).toMatchObject({ kind: "dead" });
     expect(await getRecapPageData(db, boarded)).not.toBeNull();
-    expect(await getRecapPageData(db, noRollCall)).not.toBeNull();
+    expect(await getRecapPageData(db, uncounted)).toBeNull();
   });
 
   it("gives the recap back when a newer departure result says otherwise", async () => {
     const { db, ashore, record, afterTrip } = await dockContext();
+    // An undone "not boarded" leaves the seat unsaid on a counted departure
+    // (issue #3822): nobody has said they dived, so nothing opens on the clock.
     await record(ashore, "cleared");
-    expect(await getRecapPageData(db, ashore)).not.toBeNull();
+    expect(await getRecapPageData(db, ashore)).toBeNull();
 
     await record(ashore, "not_boarded");
     expect(await getRecapPageData(db, ashore)).toBeNull();
