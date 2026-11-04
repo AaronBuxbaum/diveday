@@ -529,6 +529,14 @@ describe("a moved departure's reminders", () => {
       "trip_reminder_24h",
       "trip_reminder_24h",
     ]);
+    // Both sends are on record: the old date's reminder superseded, the new live.
+    const rows = (await rowsFor(db, bookingId)).sort(
+      (a, b) => a.attemptedAt.getTime() - b.attemptedAt.getTime(),
+    );
+    expect(rows.map((row) => [row.status, row.supersededAt !== null])).toEqual([
+      ["sent", true],
+      ["sent", false],
+    ]);
   });
 
   it("re-arms on a retime saved from the trip page too", async () => {
@@ -553,7 +561,12 @@ describe("a moved departure's reminders", () => {
       endsAt: new Date(trip.endsAt.getTime() + 2 * DAY),
     });
     expect(outcome.ok).toBe(true);
-    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+    // The old date's row stays as the record the diver was told (issue #3705),
+    // stamped superseded so it no longer counts as the cadence's sent reminder.
+    const rows = await rowsFor(db, bookingId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.supersededAt).toBeInstanceOf(Date);
+    expect(rows[0]).toMatchObject({ status: "sent", kind: "trip_reminder_24h" });
   });
 
   it("keeps the reminder already sent when an edit leaves the time alone", async () => {

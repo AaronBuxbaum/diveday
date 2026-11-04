@@ -1,4 +1,5 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { TRIP_REMINDER_CADENCES } from "@/lib/reminders";
 import type { DbExecutor } from "./client";
 import { bookings, notificationDeliveries } from "./schema";
@@ -14,13 +15,12 @@ import { bookings, notificationDeliveries } from "./schema";
  * told about the move, so an Undo on the reschedule notice cannot leave a
  * diver without the reminder for the date they now sail.
  *
- * The rows go rather than being marked: a reminder is a once-only kind
- * (`ONCE_ONLY_DELIVERY_KINDS`), held to one row per booking by a partial unique
- * index, and its row is machinery a staffer never pointed at (ADR
- * 20260820-every-delete-is-soft, "machinery nobody pointed at"). Since issue
- * #2728 dropped the separate attempt trail, the old date's reminder leaves no
- * row behind. The failure this allows is one extra reminder after a small
- * move, never a missing one.
+ * The old row is **marked superseded, never deleted** (issue #3705): once
+ * `notification_deliveries` is the only record that a message reached a diver,
+ * the reminder that was `sent` for the old date is the proof they were told
+ * it. `superseded_at` takes the row out of the once-only unique index, so the
+ * new date's reminder can take its place, and out of every "already sent" and
+ * "latest" read.
  */
 export async function rearmTripReminders(
   tx: DbExecutor,
@@ -30,14 +30,18 @@ export async function rearmTripReminders(
     .select({ id: bookings.id })
     .from(bookings)
     .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
-  await tx.delete(notificationDeliveries).where(
-    and(
-      eq(notificationDeliveries.shopId, input.shopId),
-      inArray(notificationDeliveries.bookingId, seats),
-      inArray(
-        notificationDeliveries.kind,
-        TRIP_REMINDER_CADENCES.map((cadence) => cadence.kind),
+  await tx
+    .update(notificationDeliveries)
+    .set({ supersededAt: nowDate() })
+    .where(
+      and(
+        isNull(notificationDeliveries.supersededAt),
+        eq(notificationDeliveries.shopId, input.shopId),
+        inArray(notificationDeliveries.bookingId, seats),
+        inArray(
+          notificationDeliveries.kind,
+          TRIP_REMINDER_CADENCES.map((cadence) => cadence.kind),
+        ),
       ),
-    ),
-  );
+    );
 }

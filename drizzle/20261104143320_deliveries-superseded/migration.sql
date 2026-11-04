@@ -1,0 +1,3 @@
+ALTER TABLE "notification_deliveries" ADD COLUMN "superseded_at" timestamp with time zone;--> statement-breakpoint
+DROP INDEX "notification_deliveries_once_only_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "notification_deliveries_once_only_unique" ON "notification_deliveries" ("booking_id","kind") WHERE "kind" in ('booking_confirmation', 'trip_reminder_7d', 'trip_reminder_24h', 'trip_recap') and "superseded_at" is null;

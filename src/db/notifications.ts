@@ -48,10 +48,7 @@ import { notificationTripTitle } from "@/lib/notifications/kinds";
 import { reviveDates } from "@/lib/notifications/revive-dates";
 import { currentSendActor, type SendActor, sentByFor } from "@/lib/notifications/send-actor";
 import { shopVoiceOf } from "@/lib/notifications/shop-voice";
-import {
-  isOnceOnlyDeliveryKind,
-  ONCE_ONLY_DELIVERY_KINDS_PREDICATE,
-} from "@/lib/once-only-delivery-kinds";
+import { isOnceOnlyDeliveryKind, ONCE_ONLY_LIVE_PREDICATE } from "@/lib/once-only-delivery-kinds";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { hasSailed } from "@/lib/trips";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
@@ -1963,11 +1960,30 @@ export async function recordNotificationDelivery(
     .values(row)
     .onConflictDoUpdate({
       target: [notificationDeliveries.bookingId, notificationDeliveries.kind],
-      targetWhere: sql.raw(ONCE_ONLY_DELIVERY_KINDS_PREDICATE),
+      targetWhere: sql.raw(ONCE_ONLY_LIVE_PREDICATE),
       set: row,
+      // **A delivery that was sent is never downgraded** (issue #3705): the row
+      // is the only proof the message reached the diver, and its provider
+      // message id is what a later bounce or delivered webhook matches. A failed
+      // or suppressed resend of a sent confirmation leaves it alone.
+      setWhere: sql`excluded.status = 'sent' or ${notificationDeliveries.status} <> 'sent'`,
     })
     .returning();
-  return record ?? null;
+  if (record) return record;
+  // The guard skipped the update: the sent row stands. `null` still means "no
+  // such booking", so hand back the row that kept the proof.
+  const [kept] = await db
+    .select()
+    .from(notificationDeliveries)
+    .where(
+      and(
+        eq(notificationDeliveries.bookingId, booking.id),
+        eq(notificationDeliveries.kind, input.kind),
+        isNull(notificationDeliveries.supersededAt),
+      ),
+    )
+    .limit(1);
+  return kept ?? null;
 }
 
 /**

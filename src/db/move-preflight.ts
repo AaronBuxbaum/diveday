@@ -333,6 +333,8 @@ async function countToldSeats(db: AppDb, shopId: string, tripId: string): Promis
         seatNotCancelled,
         inArray(notificationDeliveries.kind, TOLD_THE_DATE_KINDS),
         eq(notificationDeliveries.status, "sent"),
+        // A reminder an earlier move superseded told the diver an older date.
+        isNull(notificationDeliveries.supersededAt),
       ),
     );
   return counted?.total ?? 0;
