@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   pgEnum,
@@ -14,7 +15,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { bookings, retiredTripLastMinutePromos } from "./bookings";
+import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
@@ -36,18 +37,6 @@ export const shopPromoScope = pgEnum("shop_promo_scope", ["all", "trips", "cours
 export const divePackageScope = pgEnum("dive_package_scope", ["all", "fun_dives"]);
 
 export type DivePackageScope = (typeof divePackageScope.enumValues)[number];
-
-/**
- * **Retired: nothing reads or writes this enum's table.** Only
- * `shop_promo_codes.status` used it; a deal's status is `deal_status`
- * (issue #2720). Dropped with the table next release.
- */
-export const retiredShopPromoStatus = pgEnum("shop_promo_status", [
-  "pending",
-  "active",
-  "disabled",
-  "failed",
-]);
 
 /**
  * Where a deal is in its life. `pending` is inserted before either Stripe call,
@@ -82,8 +71,11 @@ export const deals = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
-    /** The departure a last-minute deal was sent for; null for a shop-wide code. */
-    tripId: uuid("trip_id").references(() => trips.id),
+    /**
+     * The departure a last-minute deal was sent for; null for a shop-wide code. Tied to the
+     * deal's own shop by `deals_shop_trip_fk`, so a deal cannot name another shop's departure.
+     */
+    tripId: uuid("trip_id"),
     /**
      * Normalized upper-case: what a diver types. Staff choose a shop-wide code
      * (`normalizePromoCode`, src/lib/promo-codes.ts); a last-minute deal's is
@@ -130,6 +122,11 @@ export const deals = pgTable(
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
+    foreignKey({
+      name: "deals_shop_trip_fk",
+      columns: [table.shopId, table.tripId],
+      foreignColumns: [trips.shopId, trips.id],
+    }),
     index("deals_shop_created_idx").on(table.shopId, table.createdAt),
     index("deals_trip_created_idx")
       .on(table.tripId, table.createdAt)
@@ -162,60 +159,6 @@ export const deals = pgTable(
     check(
       "deals_trip_shape",
       sql`${table.tripId} is null or (${table.expiresAt} is not null and ${table.startsAt} is null and ${table.status} <> 'disabled' and ${table.scope} = 'all' and ${table.description} is null)`,
-    ),
-  ],
-);
-
-/**
- * **Retired: nothing reads or writes this table.** A shop-wide code is a
- * `deals` row with `trip_id` null (issue #2720). The declaration stays one
- * release so the release still serving while that migration runs keeps its
- * table; the next release drops it (expand/contract,
- * `.agents/skills/schema-change/removing.md`). Do not add a reader.
- */
-export const retiredShopPromoCodes = pgTable(
-  "shop_promo_codes",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    code: text("code").notNull(),
-    description: text("description"),
-    discountPercent: integer("discount_percent"),
-    discountAmountCents: integer("discount_amount_cents"),
-    scope: shopPromoScope("scope").notNull().default("all"),
-    status: retiredShopPromoStatus("status").notNull().default("pending"),
-    startsAt: timestamp("starts_at", { withTimezone: true }),
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
-    maxRedemptions: integer("max_redemptions"),
-    stripeCouponId: text("stripe_coupon_id"),
-    stripePromotionCodeId: text("stripe_promotion_code_id"),
-    createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [
-    index("shop_promo_codes_shop_created_idx").on(table.shopId, table.createdAt),
-    uniqueIndex("shop_promo_codes_shop_code_unique").on(table.shopId, table.code),
-    check(
-      "shop_promo_codes_discount_range",
-      sql`${table.discountPercent} is null or ${table.discountPercent} between 1 and 100`,
-    ),
-    check(
-      "shop_promo_codes_discount_amount_positive",
-      sql`${table.discountAmountCents} is null or ${table.discountAmountCents} > 0`,
-    ),
-    check(
-      "shop_promo_codes_one_discount",
-      sql`(${table.discountPercent} is null) <> (${table.discountAmountCents} is null)`,
-    ),
-    check(
-      "shop_promo_codes_max_redemptions_positive",
-      sql`${table.maxRedemptions} is null or ${table.maxRedemptions} > 0`,
-    ),
-    check(
-      "shop_promo_codes_window",
-      sql`${table.startsAt} is null or ${table.expiresAt} is null or ${table.startsAt} < ${table.expiresAt}`,
     ),
   ],
 );
@@ -962,12 +905,13 @@ export const bookingCheckouts = pgTable(
      */
     dealId: uuid("deal_id").references(() => deals.id),
     /**
-     * **Retired: nothing reads or writes these two.** `deal_id` replaced them
-     * (issue #2720); they stay declared one release, so the release serving
-     * during the deploy keeps them, and are dropped in the next.
+     * **Retired: nothing reads or writes these two, and they name no table any more** (the tables
+     * went with #3778). `deal_id` replaced them (issue #2720). They stay declared one release,
+     * because the destructive-migration guard refuses a column drop while the previous release
+     * declares it; the next release drops them (issue #3871).
      */
-    retiredPromoCodeId: uuid("promo_code_id").references(() => retiredShopPromoCodes.id),
-    retiredTripPromoId: uuid("trip_promo_id").references(() => retiredTripLastMinutePromos.id),
+    retiredPromoCodeId: uuid("promo_code_id"),
+    retiredTripPromoId: uuid("trip_promo_id"),
     /**
      * The code text the diver actually typed, as the deal above resolved it. A snapshot, so a later edit or delete of the
      * code can't rewrite what this diver was quoted.
@@ -1122,11 +1066,6 @@ export const bookingCheckouts = pgTable(
     check(
       "booking_checkouts_single_discount_snapshot",
       sql`${table.appliedDiscountPercent} is null or ${table.appliedDiscountCents} is null`,
-    ),
-    // Retired with its two columns (issue #2720): one `deal_id` cannot name two.
-    check(
-      "booking_checkouts_single_promo_source",
-      sql`${table.retiredPromoCodeId} is null or ${table.retiredTripPromoId} is null`,
     ),
     // A tip is a whole amount the diver chose: no deposit, no promotion, no
     // discount snapshot and no tax (ADR 20260726-post-trip-tipping), so a fare
@@ -1458,9 +1397,9 @@ export const paymentOperationIntents = pgTable(
      * reach Stripe.
      */
     dealId: uuid("deal_id").references(() => deals.id),
-    /** **Retired** with `booking_checkouts`' pair (issue #2720); dropped next release. */
-    retiredPromoCodeId: uuid("promo_code_id").references(() => retiredShopPromoCodes.id),
-    retiredTripPromoId: uuid("trip_promo_id").references(() => retiredTripLastMinutePromos.id),
+    /** **Retired**, as on `booking_checkouts`: dropped next release (issue #3871). */
+    retiredPromoCodeId: uuid("promo_code_id"),
+    retiredTripPromoId: uuid("trip_promo_id"),
     /** The Stripe object id once known, even if the local finalize write then failed. */
     stripeObjectId: text("stripe_object_id"),
     /**
@@ -1500,10 +1439,6 @@ export const paymentOperationIntents = pgTable(
     index("payment_operation_intents_stale_scan_idx")
       .on(table.kind, table.startedAt)
       .where(sql`${table.status} = 'started'`),
-    check(
-      "payment_operation_intents_single_promo",
-      sql`${table.retiredPromoCodeId} is null or ${table.retiredTripPromoId} is null`,
-    ),
     check(
       "payment_operation_intents_amount_nonnegative",
       sql`${table.amountCents} is null or ${table.amountCents} >= 0`,

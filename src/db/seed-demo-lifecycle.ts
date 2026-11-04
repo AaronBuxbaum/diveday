@@ -72,8 +72,6 @@ import {
   recapPhotos,
   recapPulses,
   rentalFitProfiles,
-  retiredShopPromoCodes,
-  retiredTripLastMinutePromos,
   reviewModerationEvents,
   reviewReplies,
   rollCallEvents,
@@ -198,7 +196,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(divePackages).where(eq(divePackages.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   await db.delete(deals).where(and(eq(deals.shopId, shopId), isNull(deals.tripId)));
-  await db.delete(retiredShopPromoCodes).where(eq(retiredShopPromoCodes.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
   // lever W) — two of them, and neither is deleted first — so it goes before them.
@@ -250,9 +247,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(capabilities).where(eq(capabilities.shopId, shopId));
   await db.delete(interests).where(eq(interests.shopId, shopId));
   await db.delete(deals).where(and(eq(deals.shopId, shopId), isNotNull(deals.tripId)));
-  await db
-    .delete(retiredTripLastMinutePromos)
-    .where(eq(retiredTripLastMinutePromos.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(executedDives).where(inArray(executedDives.tripId, tripIds));
