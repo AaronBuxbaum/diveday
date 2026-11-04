@@ -73,7 +73,7 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
   });
   it("keeps cards and reviewer from one statement snapshot across a concurrent change", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const reef = (await upcomingTripsWithCounts(pg.db, shop.id, new Date(0))).find((trip) =>
@@ -153,7 +153,7 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
   });
   it("records a later capture time when a card is reviewed while boarding waits", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const reef = (await upcomingTripsWithCounts(pg.db, shop.id, new Date(0))).find((trip) =>
@@ -219,7 +219,7 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
   });
   it("erases reviewer names after concurrent merge and boarding", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const reef = (await upcomingTripsWithCounts(pg.db, shop.id, new Date(0))).find((trip) =>
@@ -304,7 +304,7 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
   });
   it("does not retain evidence if self-review boarding races with erasure", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const reef = (await upcomingTripsWithCounts(pg.db, shop.id, new Date(0))).find((trip) =>

@@ -234,7 +234,7 @@ export async function resetDemoAction() {
     shop?.isDemo &&
     (await db.transaction(async (tx) => {
       if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(tx, shop.id))) return false;
-      await resetDemoSchedule(tx, shop.id, { history: true });
+      await resetDemoSchedule(tx, shop.id, "history");
       return true;
     }));
   redirect(`/shop/${session.user.shopSlug}?reset=${reset ? "1" : "refused"}`);

@@ -28,7 +28,7 @@ function barrier() {
 
 async function fixture() {
   const pg = await postgresTestDb();
-  await seedDemo(pg.db);
+  await seedDemo(pg.db, "history");
   const shop = await getShopBySlug(pg.db, "blue-mantis");
   if (!shop) throw new Error("shop missing");
   const startsAt = new Date("2035-03-12T12:00:00Z");

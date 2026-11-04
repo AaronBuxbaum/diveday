@@ -14,8 +14,9 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 AGENTS.md and [the route map](../../docs/agents/route-map.md) say where (schema, queries and
 barrels, bookings, seating, retention, integrations). What they do not say:
 
-- **Demo data** is a new `src/db/seed-<scenario>.ts` plus one line in `src/db/seed.ts`, never rows
-  wedged into an existing scenario (ADR 20260803-seed-scenario-modules), and never a failure state
+- **Demo data** is a new `src/db/seed-<scenario>.ts` plus one entry in `THE_DAY`
+  (`src/db/seed-schedule.ts`) in the `demo` or `history` set, never rows wedged into an existing
+  scenario (ADR 20261104-seed-is-one-context-and-named-sets), and never a failure state
   in blue-mantis. Seed crew goes into `trip_assignments` with direct inserts, not through
   `setTripCrew`: that writer accepted every seeded crew unchanged, but it also queues crew notices
   and manifest pushes that a fixture should not hold. Instead, `seed-trips.test.ts` replays every

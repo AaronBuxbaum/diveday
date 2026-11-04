@@ -396,7 +396,7 @@ describe("shop-scoped delete-path coverage", () => {
       expiresAt: new Date("2099-01-01T00:00:00.000Z"),
     });
     const deleted = await recordDeletedTables(db, (recorder) =>
-      resetDemoSchedule(recorder, shop.id),
+      resetDemoSchedule(recorder, shop.id, "lean"),
     );
     const undecided = shopScopedTableNames().filter(
       (name) => !deleted.has(name) && !(name in RESET_KEEPS),
@@ -533,7 +533,7 @@ describe("the reset and the trouble states", () => {
         .where(eq(mediaDeletionAttempts.shopId, shop.id)),
     ).toHaveLength(1);
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     expect(
       await db

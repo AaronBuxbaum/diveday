@@ -109,8 +109,7 @@ export type DemoScheduleRefresh = {
  * button and the e2e fixture already run — inside one transaction, so a failure
  * part-way through leaves the demo as it was rather than half-wiped.
  *
- * `{ history: true }`, matching the production seed's own default
- * (`seedDemoSchedule` seeds history unless told not to): the trailing quarter of
+ * the `history` shape, the shape a visitor's mint takes too: the trailing quarter of
  * sailed trips is what gives the demo's reporting something to report, and a
  * restore that dropped it would quietly hollow out the demo it is protecting.
  *
@@ -184,7 +183,7 @@ async function refreshCanonicalDemoScheduleInTransaction(
     // the course templates into most of the app's route graphs.
     const { resetDemoSchedule } = await import("./seed");
     await db.transaction(async (tx) => {
-      await resetDemoSchedule(tx, shop.id, { history: true });
+      await resetDemoSchedule(tx, shop.id, "history");
     });
     // A restore reseeds from `demoTodayDepartureStart`, so today has a boat by
     // construction — the narrow pass below would find one and do nothing.

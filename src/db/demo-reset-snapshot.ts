@@ -99,7 +99,7 @@ const captures = new WeakMap<object, Capture>();
 /**
  * Reset the canonical demo shop to its seeded schedule, from the shadow when
  * there is a usable one. Always leaves the shop exactly as `resetDemoSchedule`
- * with `{ history: true }` would, modulo the ids of the rows it writes.
+ * in the `history` shape would, modulo the ids of the rows it writes.
  */
 export async function resetDemoFromSnapshot(db: AppDb, shopId: string): Promise<DemoReset> {
   const capture = captures.get(db);
@@ -117,7 +117,7 @@ export async function resetDemoFromSnapshot(db: AppDb, shopId: string): Promise<
       captures.delete(db);
     }
   }
-  await resetDemoSchedule(db, shopId, { history: true });
+  await resetDemoSchedule(db, shopId, "history");
   if (capture && "refused" in capture) return { mode: "reseeded", wrote: null };
   try {
     const plan = await capturePlan(db, shopId);

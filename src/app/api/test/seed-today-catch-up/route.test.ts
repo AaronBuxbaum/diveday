@@ -50,7 +50,7 @@ describe("POST /api/test/seed-today-catch-up", () => {
     expect((await POST(seedRequest("?shop=blue-mantis"))).status).toBe(404);
     expect((await POST(seedRequest("?shop=missing-shop"))).status).toBe(404);
 
-    const minted = await createDemoShop(db, { history: false, slug: "today-catch-up-not-demo" });
+    const minted = await createDemoShop(db, { shape: "lean", slug: "today-catch-up-not-demo" });
     const nonDemo = await getShopBySlug(db, minted.slug);
     if (!nonDemo) throw new Error("created private demo fixture was not found");
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, nonDemo.id));
@@ -60,7 +60,7 @@ describe("POST /api/test/seed-today-catch-up", () => {
   it("writes a same-shop event after the reader baseline and leaves the shared demo untouched", async () => {
     const { db, shop: canonical } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
-    const minted = await createDemoShop(db, { history: false, slug: "today-catch-up-private" });
+    const minted = await createDemoShop(db, { shape: "lean", slug: "today-catch-up-private" });
     const privateShop = await getShopBySlug(db, minted.slug);
     if (!privateShop) throw new Error("created private demo fixture was not found");
 

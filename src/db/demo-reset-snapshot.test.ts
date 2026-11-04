@@ -239,7 +239,7 @@ describe("the e2e demo reset's snapshot", () => {
     const again = normalize(await exportDatabase(db));
     const reference = await seededShopContext({ history: true });
     const { resetDemoSchedule } = (await freshModules()).seed;
-    await resetDemoSchedule(reference.db, reference.shop.id, { history: true });
+    await resetDemoSchedule(reference.db, reference.shop.id, "history");
     const fresh = normalize(await exportDatabase(reference.db));
     expect(differingTables(fresh, again)).toEqual([]);
   }, 120_000);

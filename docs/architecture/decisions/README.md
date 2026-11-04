@@ -198,7 +198,7 @@ script again.
 | 20260803-per-trip-crew-role | Carry the job a crew… |
 | 20260803-processor-erasure-obligations | Delete the diver's Stripe customer… |
 | 20260803-public-shop-namespace | Give the diver-facing shop surfaces… |
-| 20260803-seed-scenario-modules | Split the demo seed into… |
+| 20260803-seed-scenario-modules | ~~Split the demo seed into…~~ → 20261104-seed-is-one-context-and-named-sets |
 | 20260803-ses-sole-email-provider | Remove Resend; AWS SES is… |
 | 20260803-trip-admission-at-booking | A trip's own cert gate… |
 | 20260803-webhook-subscriptions-in-cdk | Subscribe the app's webhooks to… |
@@ -448,5 +448,6 @@ script again.
 | 20261104-arrival-is-a-trail | Read arrival from its trail;… |
 | 20261104-loading-face-is-the-primitives-pending-face | Draw every loading face from… |
 | 20261104-move-a-party-as-one | A party moves between departures… |
+| 20261104-seed-is-one-context-and-named-sets | Seed the demo from one… |
 
 <!-- adr-index:end -->

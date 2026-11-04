@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   const demo = params.get("demo") !== "0";
   const { slug, ownerEmail } = await db.transaction(async (tx) =>
     createDemoShop(tx, {
-      history: false,
+      shape: "lean",
       slug: requested ?? undefined,
       brand,
       demo,

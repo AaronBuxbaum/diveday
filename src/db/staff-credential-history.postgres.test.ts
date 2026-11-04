@@ -14,7 +14,7 @@ import { listStaff } from "./trips";
 describePostgres("staff credential history under contention", () => {
   it("serializes two stale renewals so only one current version and one event win", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const [staff] = await listStaff(pg.db, shop.id);
@@ -68,7 +68,7 @@ describePostgres("staff credential history under contention", () => {
 
   it("a stale delete cannot erase a concurrently corrected credential", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const [staff] = await listStaff(pg.db, shop.id);

@@ -45,7 +45,7 @@ const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
  * roll call has ever named them on this boat.
  */
 async function readySeat(db: AppDb) {
-  await seedDemo(db);
+  await seedDemo(db, "history");
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
@@ -101,7 +101,7 @@ async function readySeat(db: AppDb) {
  * crew path has no readiness gate.
  */
 async function crewMemberWithASeat(db: AppDb) {
-  await seedDemo(db);
+  await seedDemo(db, "history");
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));

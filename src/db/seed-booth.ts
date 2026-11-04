@@ -61,7 +61,7 @@ import { seatNotCancelled } from "./trips-queries";
  *
  * Everyone here is from the history cohort (`HISTORY_DIVER_NAMES`), who carry
  * verified cards and signed releases already, so no seat added here changes
- * a readiness count the other scenarios assert. Rides the history flag.
+ * a readiness count the other scenarios assert. In the `history` set.
  */
 
 /** The package the regular holds, as `seedPackages` names it. */

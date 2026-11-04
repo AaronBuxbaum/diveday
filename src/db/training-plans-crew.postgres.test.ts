@@ -45,7 +45,7 @@ describePostgres("crew changes serialize with training plan writes", () => {
   });
   it("serializes an accepted absence with planning writes", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const [staff] = await listStaff(pg.db, shop.id);
