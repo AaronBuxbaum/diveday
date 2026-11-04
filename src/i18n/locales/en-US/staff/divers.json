@@ -590,6 +590,7 @@
     "cardsWaiting": "{count, plural, one {A certification record is waiting for verification.} other {# certification records are waiting for verification.}}",
     "waiverMissing": "No signed release on file",
     "waiverExpired": "The signed release has lapsed.",
+    "waiverGuardianMissing": "A minor signed alone. A parent or guardian has to sign too.",
     "waiverHeld": "A medical answer is with a doctor for sign-off.",
     "waiverNotCleared": "A physician did not clear this diver to dive.",
     "waiverEarlierRefusal": "A physician did not clear this person on an earlier waiver.",

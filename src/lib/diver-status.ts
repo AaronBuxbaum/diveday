@@ -375,10 +375,14 @@ export function buildDiverStatus(
       kind: "waiver",
       tone: "warning",
       sentence: {
+        // Its own word for a minor's solo signature (issue #3775): it stands,
+        // and it is not enough, so "No signed release on file" would be untrue.
         key:
           diver.waiver.state === "lapsed"
             ? "divers.status.waiverExpired"
-            : "divers.status.waiverMissing",
+            : diver.waiver.state === "guardian_missing"
+              ? "divers.status.waiverGuardianMissing"
+              : "divers.status.waiverMissing",
       },
       action: { labelKey: "divers.status.acts.sendWaiver", target: "send_waiver" },
     });

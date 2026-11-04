@@ -590,6 +590,7 @@
     "cardsWaiting": "{count, plural, one {Un registro de certificación espera verificación.} other {# registros de certificación esperan verificación.}}",
     "waiverMissing": "No hay ninguna exención firmada archivada.",
     "waiverExpired": "La exención firmada ya caducó.",
+    "waiverGuardianMissing": "Un menor firmó sin acompañante. Falta la firma de su madre, padre o tutor legal.",
     "waiverHeld": "Una respuesta médica espera la firma de un médico.",
     "waiverNotCleared": "Un médico no autorizó a esta persona a bucear.",
     "waiverEarlierRefusal": "Un médico no autorizó a esta persona en una exención anterior.",
