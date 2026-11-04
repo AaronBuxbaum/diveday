@@ -10,7 +10,7 @@ import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";
 import { activeStaffRecorderId } from "./no-show";
 import { getBookingReadiness } from "./readiness";
-import { activityEvents, bookingArrivalEvents, bookings, people, trips } from "./schema";
+import { activityEvents, bookings, people, trips } from "./schema";
 import { lockSeatDeparture } from "./seat-locks";
 import { liveTrip } from "./trips-live";
 import { seatHeld, seatNotCancelled } from "./trips-queries";
@@ -31,13 +31,8 @@ import { seatHeld, seatNotCancelled } from "./trips-queries";
  * the fare is moved, refunded or kept is a person's decision on the order. The
  * counter links to it.
  *
- * **It clears a standing check-in on the arrival trail** (issue #3686): the
- * desk sending someone home is a statement that they are not checked in for
- * this boat. Left standing, the `arrived` row outlived the turn-away, and
- * "Put back on the list" or a crew Boarded tap (both read the trail back,
- * `standingArrivalStatus`) put the diver back `checked_in`, a check-in the
- * desk had just withdrawn, with nobody saying it again. A diver never checked
- * in gets no row: there is nothing to clear.
+ * **It writes nothing to the arrival trail.** A turned-away diver was not
+ * checked in, and the trail records check-ins.
  */
 export type TurnAwayOutcome =
   | { ok: true; bookingId: string; tripId: string; personName: string; reason: TurnAwayReason }
@@ -143,16 +138,6 @@ export async function turnBookingAway(
       .where(and(eq(bookings.id, seat.id), seatHeld))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "already_marked" };
-    if ((await standingArrivalStatus(tx, input.shopId, seat.tripId, seat.id)) === "arrived") {
-      await tx.insert(bookingArrivalEvents).values({
-        shopId: input.shopId,
-        tripId: seat.tripId,
-        bookingId: seat.id,
-        recordedByPersonId: recorder.id,
-        status: "cleared",
-        occurredAt: now,
-      });
-    }
     // A checkout opened before the release would charge for a seat the shop
     // may now sell (dde-3 #3).
     await expirePendingCheckoutsForBooking(tx, input.shopId, seat.id);

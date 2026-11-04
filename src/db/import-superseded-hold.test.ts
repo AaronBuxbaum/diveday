@@ -4,9 +4,9 @@ import { nowDate } from "@/lib/clock";
 import { effectiveWaiverForBooking, waiverStanding } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
-import { commitContactImport } from "@/test/words-wiring";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
+import { commitContactImport } from "./import";
 import { bookings, people, trips, userAccounts, waiverRecords, waiverTemplates } from "./schema";
 import { listSignedWaiversByPerson } from "./waivers";
 
