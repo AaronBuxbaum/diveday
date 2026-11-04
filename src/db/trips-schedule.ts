@@ -11,6 +11,7 @@ import {
   wallTimeDeltaMs,
   wallTimeToUtc,
 } from "@/lib/zoned";
+import { arrivalTrailHighWater } from "./arrival-provenance";
 import { rebindDepartureBoatSafetyTime } from "./boat-safety";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
@@ -234,6 +235,18 @@ export async function moveTrip(
     if (!trip) return { ok: false, reason: "not_found" };
 
     await rebindDepartureBoatSafetyTime(tx, shopId, tripId, existing.startsAt, trip.startsAt, now);
+
+    // A boat moved to another day is a new morning at the desk: nobody it saw
+    // for the old date is checked in for the new one (issue #2702). A delay
+    // within the day keeps the people already standing on the dock.
+    const before = utcToWallTime(existing.startsAt, shop.timezone);
+    const after = utcToWallTime(trip.startsAt, shop.timezone);
+    if (before.year !== after.year || before.month !== after.month || before.day !== after.day) {
+      await tx
+        .update(bookings)
+        .set({ arrivalTrailAfterSeq: arrivalTrailHighWater })
+        .where(and(eq(bookings.tripId, tripId), eq(bookings.shopId, shopId)));
+    }
 
     const days = await tx
       .select()

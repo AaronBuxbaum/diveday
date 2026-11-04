@@ -361,7 +361,7 @@ export type ArrivalOfflineInput = {
   occurredAt?: Date;
   /** When the copy the device was reading was saved — the staleness bound's other half. */
   offlineSnapshotSavedAt?: Date;
-  /** The departure the device saw the seat on; a seat moved since refuses the tap. */
+  /** The departure the desk or device saw the seat on; a seat moved since refuses the tap. */
   expectedTripId?: string;
 };
 
@@ -564,7 +564,7 @@ export async function checkInBooking(
     // A queued tap was about the departure the device was reading; on a seat
     // since moved it says nothing about the new one.
     if (input.expectedTripId && input.expectedTripId !== tripId) {
-      return { ok: false, reason: "snapshot_invalid" };
+      return { ok: false, reason: input.source === "offline" ? "snapshot_invalid" : "not_found" };
     }
     const [booking] = await tx
       .select({
@@ -757,7 +757,7 @@ export async function undoCheckInBooking(
     // A queued tap was about the departure the device was reading; on a seat
     // since moved it says nothing about the new one.
     if (input.expectedTripId && input.expectedTripId !== tripId) {
-      return { ok: false, reason: "snapshot_invalid" };
+      return { ok: false, reason: input.source === "offline" ? "snapshot_invalid" : "not_found" };
     }
     const [booking] = await tx
       .select({

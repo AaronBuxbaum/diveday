@@ -11,6 +11,7 @@ import { strandedMoveOffer } from "./move-offer";
 import { undoBookingNoShow } from "./no-show";
 import { bookingArrivalEvents, bookings, rollCallEvents, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { moveTrip } from "./trips-schedule";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 /**
@@ -337,5 +338,34 @@ describe("a queued tap cannot outrank what the desk said since", () => {
     expect(
       await strandedMoveOffer(db, { shopId: shop.id, bookingId: seat.booking.id, now: nowDate() }),
     ).toBeNull();
+  });
+});
+
+describe("a departure moved to another day is a new morning at the desk", () => {
+  const HOUR = 3_600_000;
+  it("drops the old day's check-ins on a move to another day, and keeps them on a delay", async () => {
+    const { db, shop, reef, staff, seat } = await context();
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
+
+    const delayed = await moveTrip(db, shop.id, reef.id, new Date(reef.startsAt.getTime() + HOUR));
+    expect(delayed).toMatchObject({ ok: true });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: true });
+
+    const nextDay = new Date(reef.startsAt.getTime() + 25 * HOUR);
+    expect(await moveTrip(db, shop.id, reef.id, nextDay)).toMatchObject({ ok: true });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
+  });
+
+  it("refuses a live tap on a seat that left the departure the desk is looking at", async () => {
+    const { db, shop, other, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    expect(
+      await checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.id,
+        expectedTripId: other.id,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
   });
 });

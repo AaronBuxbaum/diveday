@@ -69,6 +69,9 @@ export async function checkInAction(
     shopId: session.user.shopId,
     bookingId,
     recordedByPersonId: session.user.personId,
+    // The departure the desk is looking at: a seat moved since the roster
+    // check above is not checked in on its new boat.
+    expectedTripId: tripId,
   });
   if (outcome.ok) {
     // No success banner: the diver's row sinking into the settled group,
@@ -129,6 +132,9 @@ export async function undoCheckInAction(
     shopId: session.user.shopId,
     bookingId,
     recordedByPersonId: session.user.personId,
+    // The departure the desk is looking at: a seat moved since the roster
+    // check above is not checked in on its new boat.
+    expectedTripId: tripId,
   });
   if (outcome.ok) {
     // Same rule as checking in: the row reverting to its tappable "Check in ○"
