@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, not } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { seatCheckedIn } from "@/db/arrival-provenance";
 import { createBooking } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
@@ -74,7 +75,11 @@ async function seededTripId(db: AppDb, shopId: string): Promise<string> {
     .select({ id: trips.id })
     .from(trips)
     .innerJoin(tripRequirements, eq(tripRequirements.tripId, trips.id))
-    .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked")))
+    .innerJoin(
+      bookings,
+      // A seat still to come at the desk (arrival is a trail, #2702).
+      and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked"), not(seatCheckedIn)),
+    )
     .where(
       and(
         eq(trips.shopId, shopId),
@@ -386,7 +391,11 @@ describe("certifying from an intro session's roster", () => {
         personId: bookings.personId,
       })
       .from(trips)
-      .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked")))
+      .innerJoin(
+        bookings,
+        // A seat still to come at the desk (arrival is a trail, #2702).
+        and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked"), not(seatCheckedIn)),
+      )
       .where(and(eq(trips.shopId, shop.id), isNotNull(trips.courseId)))
       .limit(1);
     if (!seat?.courseId) throw new Error("seeded shop has no booked course session");

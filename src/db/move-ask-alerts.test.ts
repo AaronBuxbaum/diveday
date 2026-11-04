@@ -1,8 +1,9 @@
-import { and, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, not } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
+import { seatCheckedIn } from "./arrival-provenance";
 import { markInboundAnswered, recordMoveAsk } from "./inbound-messages";
 import { alertStaffToMoveAsk } from "./move-ask-alerts";
 import {
@@ -68,6 +69,8 @@ async function anAsk(index: number) {
       and(
         eq(bookings.shopId, shop.id),
         eq(bookings.status, "booked"),
+        // `recordMoveAsk` refuses a seat the desk has seen (#2702).
+        not(seatCheckedIn),
         isNull(bookings.identityUnconfirmedAt),
         ne(trips.status, "cancelled"),
         liveTrip(),
