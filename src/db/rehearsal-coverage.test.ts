@@ -196,9 +196,14 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
   },
   {
     file: "src/db/notifications.ts",
-    holds: "notificationHeldForRehearsal(",
+    holds: "notificationHeldBeforeSend(",
     times: 3,
-    why: "every email — the single send, the batch, the retry drain — is held",
+    why: "every email — the single send, the batch, the retry drain — passes the send holds",
+  },
+  {
+    file: "src/db/send-holds.ts",
+    holds: "notificationHeldForRehearsal(",
+    why: "the send holds include the rehearsal hold",
   },
   {
     file: "src/db/waiver-issue.ts",
