@@ -70,6 +70,11 @@ const FRAMED = new Set<EmbedKind>(["calendar", "grid", "departure", "courses", "
  *
  * Words arrive as props: this is a staff Client Component.
  */
+function sameOriginPath(url: string): string {
+  const parsed = new URL(url);
+  return `${parsed.pathname}${parsed.search}`;
+}
+
 export function EmbedGenerator({
   origin,
   shopSlug,
@@ -139,13 +144,18 @@ export function EmbedGenerator({
       ? null
       : embedSnippet(origin, shopSlug, kind, options, { button: copy.buttonText });
   const partnerUrl = partnerLinkUrl(origin, shopSlug, partner || "partner");
+  // The preview frames this app on the host the staffer is on (`www.`), while
+  // `origin` is the canonical apex the snippet must carry; an absolute apex URL
+  // is a frame-src violation. A path resolves against the page itself.
   const frameUrl = FRAMED.has(kind)
-    ? embedFrameUrl(
-        origin,
-        shopSlug,
-        kind as "calendar" | "grid" | "departure" | "courses" | "reviews",
-        { ...DEFAULT_EMBED_OPTIONS, lang, show: show || null, look },
-        look === "site" ? previewHost : {},
+    ? sameOriginPath(
+        embedFrameUrl(
+          origin,
+          shopSlug,
+          kind as "calendar" | "grid" | "departure" | "courses" | "reviews",
+          { ...DEFAULT_EMBED_OPTIONS, lang, show: show || null, look },
+          look === "site" ? previewHost : {},
+        ),
       )
     : null;
   const frameKey = `${kind}-${show}-${lang}-${look}`;

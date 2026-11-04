@@ -102,7 +102,13 @@ export function snsSmsProvider(config: SnsConfig, options: SnsProviderOptions = 
     new SNSClient({
       region: config.region,
       credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
-      ...(options.maxAttempts === undefined ? {} : { maxAttempts: options.maxAttempts }),
+      // The cron texts a batch in a row and SNS answers a burst with
+      // `Throttling` (shop-tick, 2026-11-04). Adaptive mode paces the client
+      // itself once SNS throttles, instead of retrying at full speed into the
+      // same limit; a send still throttled after the attempts is retryable and
+      // the next tick sends it (only a `sent` row settles a reminder).
+      retryMode: "adaptive",
+      maxAttempts: options.maxAttempts ?? 5,
     });
   return {
     async send(message, providerOptions) {
