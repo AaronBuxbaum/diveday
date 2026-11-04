@@ -39,6 +39,15 @@ export type TripAdmissionGateBinding = {
   bookingId: string | null;
 };
 
+/** The binding of a gate on a trip page: the departure, the notice and the seat it names, if any. */
+export function tripGateBinding(
+  tripId: string,
+  notice: string,
+  bookingId: string | null = null,
+): TripAdmissionGateBinding {
+  return { scope: { kind: "trip", id: tripId }, notice, bookingId: bookingId ?? null };
+}
+
 /** A refusal is a fact about now; after a day the banner falls back to its generic sentence. */
 export const GATE_LIFETIME_MS = 24 * 60 * 60 * 1000;
 

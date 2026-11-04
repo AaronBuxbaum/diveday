@@ -37,7 +37,7 @@ import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { signTripAdmissionGate, tripGateBinding } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
 import { refundNotice } from "./refund-notice";
 import { removeSeat, requireRosterBooking, tripPath } from "./roster-booking";
@@ -352,11 +352,10 @@ export async function setParticipantTypeAction(
         back,
         noticeUrl(back, "participant-type-cert", {
           bid: bookingId,
-          gate: signTripAdmissionGate(outcome.refusal, {
-            scope: { kind: "trip", id: tripId },
-            notice: "participant-type-cert",
-            bookingId,
-          }),
+          gate: signTripAdmissionGate(
+            outcome.refusal,
+            tripGateBinding(tripId, "participant-type-cert", bookingId),
+          ),
         }),
       );
     }
