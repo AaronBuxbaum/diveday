@@ -40,7 +40,7 @@ below.
 
 ## One composition, three surfaces
 
-Every guide page renders the same guided path from `src/app/switching/_components/guide.tsx`:
+Every guide page renders the same guided path from `src/app/(marketing)/switching/_components/guide.tsx`:
 
 `GuideHero` (eyebrow, headline, lede, the demo/trial pair, and the four shared answers a switcher
 arrives with) → the guide's own "what changes" prose, with `DividedList` where it has items →

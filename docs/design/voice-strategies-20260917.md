@@ -358,7 +358,7 @@ Done 2026-09-24, in the change that recorded H-20260903-voice-public-pages-speak
 annotated invoice, the switching hub's preview as an annotated screen, `/about` as speech); the
 four shape refusals in `pnpm check:voice` (the mirrored pair, the anaphoric triplet, the tag
 sentence, the house phrase), scoped to the public pages' strings; the voice in [brand.md](brand.md)
-as current; `e2e/marketing.spec.ts`'s pinned headlines and `src/app/about/copy.test.ts` moved
+as current; `e2e/marketing.spec.ts`'s pinned headlines and `src/app/(marketing)/about/copy.test.ts` moved
 with the copy. The questions above stay open, and nothing was written on the owner's behalf: no
 town, no date, no name on the homepage, and support still reads "a real person reads it". The
 artifact that presented these six side by side was the same content as this document, rendered as

@@ -54,10 +54,10 @@ describe("containerWidth", () => {
 describe("SKELETON_EXEMPT", () => {
   it("covers exactly the routes with no ancestor boundary to fall back to", () => {
     expect(Object.keys(SKELETON_EXEMPT).sort()).toEqual([
-      ".",
+      "(marketing)",
+      "(marketing)/switching",
+      "(marketing)/switching/[competitor]",
       "sign-in",
-      "switching",
-      "switching/[competitor]",
     ]);
   });
 

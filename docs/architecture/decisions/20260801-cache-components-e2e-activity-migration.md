@@ -223,7 +223,7 @@ actually found, against the plan above:
      below rather than restructured blind. (`shop/[shopSlug]/trips/new` was on this list too; CI
      caught it live — `e2e/schedule-trip.spec.ts`'s end-before-start test — and it got the same fix
      as sign-in/dive-sites-new in the same pass that landed this ADR's Outcome section.)
-  4. `src/app/switching/[competitor]/page.tsx` — `notFound()` for an unregistered competitor slug
+  4. `src/app/(marketing)/switching/[competitor]/page.tsx` — `notFound()` for an unregistered competitor slug
      was called from inside a Suspense-wrapped child, so the shell had already streamed a 200 by
      the time the child resolved. Moved the params resolution and `notFound()` check to the top of
      the page component, before any Suspense boundary. This fixes the *content* — Next's own
