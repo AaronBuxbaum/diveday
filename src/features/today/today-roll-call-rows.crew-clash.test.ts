@@ -262,10 +262,10 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
 
     // Day one is out; the clash is on day two, still to sail and still fixable.
     expect(await onCourse(at(1.5))).toEqual([["crew_clash", at(24).getTime()]]);
-    // The course started more than an hour ago, so it is no station: the row
-    // files at the desk, where Needs you reads it, never into the week's count.
+    // The course started more than an hour ago, but its second morning is still
+    // to sail (#2557), so it stays a station and Needs you reads the row too.
     const dayOne = await spineAt(at(1.5));
-    expect(dayOne.stations.map((station) => station.tripId)).not.toContain(course.id);
+    expect(dayOne.stations.map((station) => station.tripId)).toContain(course.id);
     expect(needsYou(dayOne).map((row) => row.id)).toContain(`crew-clash:${course.id}`);
     // Day two is out with it.
     expect(await onCourse(at(26))).toEqual([["crew_clash_sailed", at(28).getTime()]]);

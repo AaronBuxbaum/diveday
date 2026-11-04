@@ -25,7 +25,7 @@ async function runOf(title: string, nights: number) {
 }
 
 describe("meetingWindowsByTrip", () => {
-  it("reads the windows of a multi-day run and none for a single sailing", async () => {
+  it("reads the windows of a multi-day run and the one window of a single sailing", async () => {
     const { db } = ctx;
     const run = await runOf("Three-night run", 3);
     const single = await runOf("One sailing", 1);
@@ -42,7 +42,7 @@ describe("meetingWindowsByTrip", () => {
     const windows = await meetingWindowsByTrip(db, [run, single]);
 
     expect(windows.get(run.id)).toHaveLength(3);
-    expect(windows.has(single.id)).toBe(false);
+    expect(windows.get(single.id)).toHaveLength(1);
   });
 
   it("is absent for a multi-day run with no windows on file, and asks nothing for no trips", async () => {

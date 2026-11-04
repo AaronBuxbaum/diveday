@@ -1,5 +1,4 @@
 import { inArray } from "drizzle-orm";
-import { DAY_MS } from "@/lib/clock";
 import type { MeetingWindow } from "@/lib/trip-phase";
 import type { DbExecutor } from "./client";
 import { tripScheduleDays } from "./schema";
@@ -10,19 +9,18 @@ import { tripScheduleDays } from "./schema";
  * window that crosses midnight is not dropped at midnight (issue #2406,
  * `readTap`).
  *
- * A departure shorter than a day is one sailing and never has its windows
- * read: the common case costs no query at all. A run with no windows on file is
- * absent from the map, and the rule keeps its shop-day reading.
+ * No departure is skipped for being short: a course on two consecutive days
+ * (Saturday 14:00-18:00, Sunday 08:00-10:00) is under 24 hours end to end and
+ * still meets on two days. One query covers every departure asked about. A run
+ * with no windows on file is absent from the map, and the rule keeps its
+ * shop-day reading.
  */
 export async function meetingWindowsByTrip(
   db: DbExecutor,
   trips: readonly { id: string; startsAt: Date; endsAt: Date }[],
 ): Promise<Map<string, MeetingWindow[]>> {
   const byTrip = new Map<string, MeetingWindow[]>();
-  const multiDay = trips.filter(
-    (trip) => trip.endsAt.getTime() - trip.startsAt.getTime() >= DAY_MS,
-  );
-  if (multiDay.length === 0) return byTrip;
+  if (trips.length === 0) return byTrip;
   const rows = await db
     .select({
       tripId: tripScheduleDays.tripId,
@@ -33,7 +31,7 @@ export async function meetingWindowsByTrip(
     .where(
       inArray(
         tripScheduleDays.tripId,
-        multiDay.map((trip) => trip.id),
+        trips.map((trip) => trip.id),
       ),
     );
   for (const row of rows) {

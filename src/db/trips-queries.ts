@@ -324,8 +324,9 @@ function upcomingTripScope(
     lensId?: string;
     /**
      * Upcoming by **meeting day** (#2557): a departure whose first day has
-     * begun is still upcoming while one of its later days is ahead, so day two
-     * of a course is on the page on day two, and a course on two Saturdays is
+     * begun is still upcoming while one of its later days is ahead or still
+     * running (a day after the first that has not ended), so day two of a course
+     * is on the page all through day two, and a course on two Saturdays is
      * not on the water for the fortnight between. Off for the diver pages and
      * the board, which list a departure by when it leaves.
      */
@@ -339,7 +340,7 @@ function upcomingTripScope(
     bounds.byMeetingDay
       ? or(
           gte(trips.startsAt, bounds.from),
-          sql`exists (select 1 from ${tripScheduleDays} where ${tripScheduleDays.tripId} = ${trips.id} and ${tripScheduleDays.startsAt} >= ${bounds.from})`,
+          sql`exists (select 1 from ${tripScheduleDays} where ${tripScheduleDays.tripId} = ${trips.id} and (${tripScheduleDays.startsAt} >= ${bounds.from} or (${tripScheduleDays.dayNumber} > 1 and ${tripScheduleDays.endsAt} >= ${bounds.from})))`,
         )
       : gte(trips.startsAt, bounds.from),
     bounds.monthEnd ? lt(trips.startsAt, bounds.monthEnd) : undefined,

@@ -759,7 +759,13 @@ type DepartureTrip = HorizonReadinessEvidence["trips"][number];
  * stations (`getTodayWork`) and tomorrow's (`getShopDayDepartures`), so the two
  * disclosures can never draw a card from different readers.
  */
-async function departureCardFacts(db: AppDb, shopId: string, trips: readonly DepartureTrip[]) {
+async function departureCardFacts(
+  db: AppDb,
+  shopId: string,
+  trips: readonly DepartureTrip[],
+  /** The horizon pass's meeting windows: every trip here is one of its trips, so none is read again. */
+  meetingWindows: Awaited<ReturnType<typeof meetingWindowsByTrip>>,
+) {
   const tripIds = trips.map((t) => t.id);
   // What the divers on these boats came for, as counts (issue #1386).
   // **One query for the whole day**, keyed on the trip ids already in hand —
@@ -837,8 +843,6 @@ async function departureCardFacts(db: AppDb, shopId: string, trips: readonly Dep
     );
   }
 
-  // Only a multi-day run reads its windows (no query for a single sailing).
-  const meetingWindows = await meetingWindowsByTrip(db, trips);
   return { diveIntents, boatNames, crewByTrip, meetingWindows, plannedSites };
 }
 
@@ -988,7 +992,7 @@ export async function getShopDayDepartures(
     listDepartureRollCallByTrip(db, shopId, tripIds),
     listDepartureCrewRollCallByTrip(db, shopId, tripIds),
     latestTripStagesByTrip(db, shopId, tripIds),
-    departureCardFacts(db, shopId, trips),
+    departureCardFacts(db, shopId, trips, evidence.meetingDays),
   ]);
   return summarizeDepartures(
     trips,
@@ -1181,6 +1185,7 @@ async function readTodayWave(
     timeZone: string;
     inWindow: HorizonReadinessEvidence["trips"];
     todayTrips: HorizonReadinessEvidence["trips"];
+    meetingDays: HorizonReadinessEvidence["meetingDays"];
     todayTripIds: string[];
     todayLocal: string;
     bookingIdsByTrip: Map<string, string[]>;
@@ -1198,6 +1203,7 @@ async function readTodayWave(
     timeZone,
     inWindow,
     todayTrips,
+    meetingDays,
     todayTripIds,
     todayLocal,
     bookingIdsByTrip,
@@ -1323,7 +1329,7 @@ async function readTodayWave(
     listStaffCredentials(db, shopId),
     // What each card shows beyond readiness and the roll call - intents, hull,
     // crew - read the one way tomorrow's cards read it too.
-    departureCardFacts(db, shopId, todayTrips),
+    departureCardFacts(db, shopId, todayTrips, meetingDays),
     // Blocked divers aboard a boat that has left the horizon but is not back
     // (issue #2064).
     blockedAboardOnBoatsOut(db, shopId, timeZone, now, new Set(inWindow.map((trip) => trip.id))),
@@ -1544,8 +1550,7 @@ export async function getTodayWork(
   } = evidence ?? (await inHorizonReadiness(db, shopId, now));
   // Today is the clock's own day, the same exact pair `todaysDepartures` reads.
   // By meeting day (#2557): day two of a course is today's departure on day
-  // two. Only a run of a day or more reads its day rows, so an ordinary
-  // departure costs no query (`meetingWindowsByTrip`).
+  // two (`meetingWindowsByTrip`, read once for the whole horizon).
   const todayTrips = inWindow.filter((trip) =>
     meetsOnShopDay(trip, horizonMeetingDays.get(trip.id) ?? [], clock.day),
   );
@@ -1591,6 +1596,7 @@ export async function getTodayWork(
       timeZone,
       inWindow,
       todayTrips,
+      meetingDays: horizonMeetingDays,
       todayTripIds,
       todayLocal,
       bookingIdsByTrip,
