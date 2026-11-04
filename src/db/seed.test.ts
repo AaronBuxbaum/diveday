@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { reservedTestRecipientDelivery } from "@/lib/notifications/provider";
-import { DEMO_MAIL_DOMAIN, deliveryAddressFor, SES_SIMULATOR_DOMAIN } from "@/lib/simulator-email";
+import { DEMO_MAIL_DOMAIN } from "@/lib/simulator-email";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { insertTip, tipsOf } from "@/test/tips";
@@ -735,14 +735,11 @@ describe("seeded addresses", () => {
       .filter((email): email is string => Boolean(email));
 
     for (const email of [...divers.map((person) => person.email as string), ...shopDesks]) {
-      // What staff read (UX audit 2026-10-07, item 4)...
+      // What staff read (UX audit 2026-10-07, item 4); never deliverable.
       expect(email.endsWith(`@${DEMO_MAIL_DOMAIN}`), email).toBe(true);
-      // ...and where SES actually sends it.
-      // The demo shop's sends say so (`NotificationSender.demoShop`, asserted below).
-      const delivered = deliveryAddressFor(email, { demoShop: true });
-      expect(delivered.toLowerCase().endsWith(`@${SES_SIMULATOR_DOMAIN}`), email).toBe(true);
-      expect(reservedTestRecipientDelivery(delivered), email).toBeNull();
+      expect(reservedTestRecipientDelivery(email), email).not.toBeNull();
     }
+    // The demo shop's sends say so, and the provider holds them (`NotificationSender.demoShop`).
     expect((await shopSenderFor(db, shop.id))?.demoShop).toBe(true);
     // Unique per diver, which the simulator's `+label` then carries.
     const addresses = divers.map((person) => person.email);
