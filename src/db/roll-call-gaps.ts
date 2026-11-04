@@ -9,7 +9,7 @@
  * It sits below Today (`src/features/today`) because those substrate callers
  * need it, and nothing in `src/db` may import a feature.
  */
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { isTurnedAwayOffBoat, isTurnedAwaySeat, rollCallCheckpoints } from "@/lib/manifests";
@@ -20,8 +20,14 @@ import { hasReturned } from "@/lib/trips";
 import type { AppDb } from "./client";
 import { oldestMarkFirst } from "./roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
-import { bookings, courses, rollCallEvents, tripAssignments, trips } from "./schema";
-import { meetingWindowsByTrip } from "./trip-meeting-windows";
+import {
+  bookings,
+  courses,
+  rollCallEvents,
+  tripAssignments,
+  tripScheduleDays,
+  trips,
+} from "./schema";
 import { seatNotCancelled } from "./trips";
 import { liveTrip } from "./trips-live";
 
@@ -272,6 +278,13 @@ export async function listRollCallGaps(
       plannedDives: trips.plannedDives,
       alertedAt: trips.rollCallAlertedAt,
       shoreAlertedAt: trips.rollCallShoreAlertedAt,
+      // The run's meeting days in the same statement (#2557): the shop home
+      // asks this reader twice and pays nothing extra for the days.
+      meetingDays: sql<{ startsAt: string; endsAt: string }[] | null>`(
+        select json_agg(json_build_object('startsAt', d.starts_at, 'endsAt', d.ends_at))
+        from ${tripScheduleDays} d
+        where d.trip_id = ${trips.id}
+      )`,
     })
     .from(trips)
     .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
@@ -371,9 +384,20 @@ export async function listRollCallGaps(
   // Which meeting day each result belongs to (#2557): checkpoints are keyed
   // per booking, not per day, so a course's day one would otherwise answer for
   // its day two. A trip with one day reads exactly as before.
-  const windowsByTrip = await meetingWindowsByTrip(db, sailed);
   const daysByTrip = new Map(
-    sailed.map((trip) => [trip.id, meetingDayWindows(trip, windowsByTrip.get(trip.id))] as const),
+    sailed.map(
+      (trip) =>
+        [
+          trip.id,
+          meetingDayWindows(
+            trip,
+            (trip.meetingDays ?? []).map((day) => ({
+              startsAt: new Date(day.startsAt),
+              endsAt: new Date(day.endsAt),
+            })),
+          ),
+        ] as const,
+    ),
   );
   const dayStartsByTrip = new Map(
     [...daysByTrip].map(([tripId, days]) => [tripId, rollCallDayStarts(days)] as const),
