@@ -75,7 +75,7 @@ export function SignStepActions({
       <div className="flex flex-wrap items-center gap-3 print:hidden">
         {waiverCode ? (
           <form action={openWaiverFromReady.bind(null, token)}>
-            <SubmitButton pendingLabel={t("ready.opening")} className={actionButton}>
+            <SubmitButton pendingLabel={t("words.busy.opening")} className={actionButton}>
               {t(
                 waiverCode === "waiver_pending"
                   ? "ready.signWaiver"

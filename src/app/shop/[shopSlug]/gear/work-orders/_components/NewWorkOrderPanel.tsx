@@ -268,7 +268,7 @@ export async function NewWorkOrderPanel({
             </Field>
 
             <FieldActions>
-              <SubmitButton pendingLabel={t("workOrders.new.pending")} className={buttonClass()}>
+              <SubmitButton pendingLabel={t("words.busy.opening")} className={buttonClass()}>
                 {t("workOrders.new.submit")}
               </SubmitButton>
               {refused && !notice?.field ? (

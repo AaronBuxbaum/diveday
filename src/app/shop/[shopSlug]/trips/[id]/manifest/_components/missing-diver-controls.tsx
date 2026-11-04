@@ -85,7 +85,7 @@ export function MissingDiverControls({
           subject={subject}
           checkpoint={checkpoint}
           label={t("incidents.missingDiver.start")}
-          pendingLabel={t("incidents.trip.starting")}
+          pendingLabel={t("words.busy.opening")}
           ariaLabel={`${t("incidents.missingDiver.start")} — ${name}`}
         />
       ) : null}

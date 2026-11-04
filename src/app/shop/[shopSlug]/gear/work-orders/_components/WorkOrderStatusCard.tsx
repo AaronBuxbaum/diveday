@@ -46,7 +46,7 @@ export function WorkOrderStatusCard({
       >
         <form action={restoreWorkOrderAction}>
           <input type="hidden" name="workOrderId" value={workOrder.id} />
-          <SubmitButton pendingLabel={t("workOrders.detail.restoring")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.restoring")} className={buttonClass()}>
             {t("workOrders.detail.restore")}
           </SubmitButton>
         </form>

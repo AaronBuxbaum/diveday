@@ -30,7 +30,6 @@
     "title": "Sitios de buceo comunes de DiveDay",
     "description": "Puntos de partida publicados y versionados. Importar crea un sitio independiente en tu propia biblioteca; las actualizaciones de la plantilla nunca sobrescriben tus cambios.",
     "templateVersion": "Plantilla v{version}",
-    "importing": "Importando…",
     "importToLibrary": "Importar a mi biblioteca",
     "backToCatalog": "Todas las plantillas",
     "preview_location": "Dónde está",
@@ -300,8 +299,7 @@
     "notRestored": "Sin dive_site_creatures.csv, cada sitio conserva la guía de campo que tiene. Con él, cada sitio del archivo recupera la guía que llevaba la exportación, y una especie que DiveDay ya no incluye se queda fuera. La confirmación de una estación de mareas solo se aplica a un sitio para el que este centro ya tiene esa estación; en cualquier otro caso el aviso de distancia vuelve a preguntar, que es para lo que está.",
     "chooseFile": "Elegir archivos CSV",
     "chooseDifferentFile": "Elegir otros archivos",
-    "submit": "Importar sitios de buceo",
-    "pending": "Importando…"
+    "submit": "Importar sitios de buceo"
   },
   "notice": {
     "importEmpty": "Elige un dive_sites.csv para importar.",

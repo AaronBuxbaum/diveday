@@ -74,7 +74,6 @@
     "empty": "Todavía no hay registros de certificación.",
     "importedLabel": "importado",
     "importedWithSource": "importado · {source}",
-    "confirming": "Confirmando…",
     "markingCertified": "Marcando certificado…",
     "confirmCard": "Confirmar certificación",
     "verifiedBy": "Certificado por {name} el {date}.",
@@ -280,7 +279,6 @@
     "heading": "Este buceador está eliminado",
     "body": "Fuera de la lista, los selectores de reserva, los manifiestos y la preparación. Sus registros se conservan.",
     "restore": "Restaurar buceador",
-    "restoring": "Restaurando…",
     "restoreRestricted": "Solo propietarios y gerentes pueden restaurar a un buceador."
   },
   "merge": {

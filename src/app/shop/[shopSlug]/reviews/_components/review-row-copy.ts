@@ -20,7 +20,7 @@ export function reviewRowCopy(t: StaffTranslator): ReviewRowCopy {
     removeStandout: t("reviews.removeStandout"),
     hiddenToast: t("reviews.notice.hiddenToast"),
     undo: t("shared.undoToast.undo"),
-    undoPending: t("shared.undoToast.pendingLabel"),
+    undoPending: t("words.busy.undoing"),
     dismiss: t("shared.undoToast.dismiss"),
     published: t("reviews.notice.published"),
     standout: t("reviews.notice.standout"),

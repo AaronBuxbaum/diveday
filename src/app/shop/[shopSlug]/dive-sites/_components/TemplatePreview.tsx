@@ -79,10 +79,7 @@ export function TemplatePreview({
           actions={
             <form action={importAction}>
               <input type="hidden" name="templateId" value={template.template.id} />
-              <SubmitButton
-                pendingLabel={t("diveSites.catalog.importing")}
-                className={buttonClass()}
-              >
+              <SubmitButton pendingLabel={t("words.busy.importing")} className={buttonClass()}>
                 {t("diveSites.catalog.importToLibrary")}
               </SubmitButton>
             </form>

@@ -55,7 +55,7 @@ export function IncidentPeople({
               {editing ? (
                 <form action={editing.removeAction(person.id)} className="ms-auto">
                   <SubmitButton
-                    pendingLabel={t("incidents.people.removing")}
+                    pendingLabel={t("words.busy.removing")}
                     ariaLabel={t("incidents.people.removeLabel", { name: person.name })}
                     className={buttonClass({ variant: "ghost", size: "sm" })}
                   >
