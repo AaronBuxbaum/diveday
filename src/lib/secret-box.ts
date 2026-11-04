@@ -1,4 +1,9 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from "node:crypto";
 
 /**
  * Authenticated encryption for third-party credentials DiveDay stores on a
@@ -57,7 +62,9 @@ export type SecretKeyResult =
   /** Returns a code, never a sentence — the UI picks the words (ADR 20260731-domain-layer-copy-leaks). */
   | {
       status: "invalid";
-      variable: typeof SECRET_KEY_VARIABLE | typeof PREVIOUS_SECRET_KEY_VARIABLE;
+      variable:
+        | typeof SECRET_KEY_VARIABLE
+        | typeof PREVIOUS_SECRET_KEY_VARIABLE;
       reason: "not_base64" | "wrong_length";
     };
 
@@ -81,33 +88,50 @@ export function secretKeyFromEnvironment(
   const current = parseKey(env.SECRET_ENCRYPTION_KEY);
   if (current.status === "unset") return { status: "unset" };
   if (current.status === "invalid") {
-    return { status: "invalid", variable: SECRET_KEY_VARIABLE, reason: current.reason };
+    return {
+      status: "invalid",
+      variable: SECRET_KEY_VARIABLE,
+      reason: current.reason,
+    };
   }
   const previous = parseKey(env.SECRET_ENCRYPTION_KEY_PREVIOUS);
   if (previous.status === "invalid") {
-    return { status: "invalid", variable: PREVIOUS_SECRET_KEY_VARIABLE, reason: previous.reason };
+    return {
+      status: "invalid",
+      variable: PREVIOUS_SECRET_KEY_VARIABLE,
+      reason: previous.reason,
+    };
   }
   return {
     status: "ok",
     key: {
       current: current.key,
       // The same value in both places is a rotation that has not started.
-      previous: previous.status === "ok" && !previous.key.equals(current.key) ? previous.key : null,
+      previous:
+        previous.status === "ok" && !previous.key.equals(current.key)
+          ? previous.key
+          : null,
     },
   };
 }
 
-export type SecretKeyRefusal = "encryption_key_unset" | "encryption_key_invalid";
+export type SecretKeyRefusal =
+  | "encryption_key_unset"
+  | "encryption_key_invalid";
 
 /** A supplied key, or the existing refusal codes used by credential stores. */
 export type SecretKeyResolution = SecretKey | SecretKeyRefusal;
 
 /** Resolve at the point of use so omitted keys observe environment changes. */
-export function resolveSecretKey(key: SecretKey | null | undefined): SecretKeyResolution {
+export function resolveSecretKey(
+  key: SecretKey | null | undefined,
+): SecretKeyResolution {
   if (key !== undefined) return key ?? "encryption_key_unset";
   const result = secretKeyFromEnvironment();
   if (result.status === "ok") return result.key;
-  return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
+  return result.status === "unset"
+    ? "encryption_key_unset"
+    : "encryption_key_invalid";
 }
 
 type ParsedKey =
@@ -130,7 +154,10 @@ function parseKey(value: string | undefined): ParsedKey {
   // to nothing at all was not base64 in any useful sense; anything else decoded
   // fine and is simply the wrong size.
   if (decoded.length !== KEY_BYTES) {
-    return { status: "invalid", reason: decoded.length === 0 ? "not_base64" : "wrong_length" };
+    return {
+      status: "invalid",
+      reason: decoded.length === 0 ? "not_base64" : "wrong_length",
+    };
   }
   return { status: "ok", key: decoded };
 }
@@ -195,8 +222,10 @@ export function keyringOpensStored(
   const known = new Set(openingKeys(key).map(secretKeyFingerprint));
   let lockedOut = 0;
   for (const account of stored) {
-    const secretOpens = account.sealed === null || openSecret(account.sealed, key) !== null;
-    const codesMatch = account.codesKeyId === null || known.has(account.codesKeyId);
+    const secretOpens =
+      account.sealed === null || openSecret(account.sealed, key) !== null;
+    const codesMatch =
+      account.codesKeyId === null || known.has(account.codesKeyId);
     if (!secretOpens || !codesMatch) lockedOut += 1;
   }
   if (lockedOut === 0) return { status: "ok", checked: stored.length };
@@ -205,6 +234,56 @@ export function keyringOpensStored(
     reason: key.previous ? "keys_do_not_open" : "previous_missing",
     checked: stored.length,
     lockedOut,
+  };
+}
+
+/**
+ * The other kinds of sealed secret the deploy samples (issue #3022): a WhatsApp
+ * access token, a connector's credential envelope and a backup destination's
+ * access key. A wrong key here breaks that integration, not sign-in, but it
+ * breaks it silently until a shop notices, so the deploy says so first.
+ */
+export const SEALED_SECRET_KINDS = ["whatsapp", "connector", "backup"] as const;
+export type SealedSecretKind = (typeof SEALED_SECRET_KINDS)[number];
+
+/** One stored value of a kind, trial-opened by `keyringOpensSamples`. */
+export interface SealedSecretSample {
+  readonly kind: SealedSecretKind;
+  readonly sealed: string;
+}
+
+/** Counts and kind names only: the result is printed into a build log. */
+export type SampleCheck =
+  | { status: "ok"; checked: number }
+  | {
+      status: "cannot_open";
+      reason: "previous_missing" | "keys_do_not_open";
+      checked: number;
+      /** Each kind whose sampled value no key in the keyring opens, in a fixed order. */
+      unopened: SealedSecretKind[];
+    };
+
+/**
+ * **Whether this keyring opens one stored value of each other sealed-secret
+ * kind** (issue #3022), the sibling of `keyringOpensStored`. A kind with no
+ * rows has nothing to open and is not counted.
+ */
+export function keyringOpensSamples(
+  key: SecretKeyring,
+  samples: readonly SealedSecretSample[],
+): SampleCheck {
+  const unopened = SEALED_SECRET_KINDS.filter((kind) =>
+    samples.some(
+      (sample) =>
+        sample.kind === kind && openSecret(sample.sealed, key) === null,
+    ),
+  );
+  if (unopened.length === 0) return { status: "ok", checked: samples.length };
+  return {
+    status: "cannot_open",
+    reason: key.previous ? "keys_do_not_open" : "previous_missing",
+    checked: samples.length,
+    unopened,
   };
 }
 
@@ -226,9 +305,14 @@ export function sealingKey(key: SecretKey): Buffer {
 export function sealSecret(plaintext: string, key: SecretKey): string {
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv("aes-256-gcm", sealingKey(key), iv);
-  const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const ciphertext = Buffer.concat([
+    cipher.update(plaintext, "utf8"),
+    cipher.final(),
+  ]);
   const tag = cipher.getAuthTag();
-  return [SCHEME, base64url(iv), base64url(tag), base64url(ciphertext)].join(".");
+  return [SCHEME, base64url(iv), base64url(tag), base64url(ciphertext)].join(
+    ".",
+  );
 }
 
 /**
@@ -274,7 +358,10 @@ function openWith(sealed: string, key: Buffer): string | null {
     decipher.setAuthTag(tag);
     // `final()` is what verifies the GCM tag — it throws on any tampering,
     // which is exactly the check this function exists to perform.
-    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+    return Buffer.concat([
+      decipher.update(ciphertext),
+      decipher.final(),
+    ]).toString("utf8");
   } catch {
     return null;
   }
