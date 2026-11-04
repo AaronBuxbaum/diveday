@@ -2023,10 +2023,9 @@ export const notificationSenderSchema = z.object({
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
   postalAddress: z.string().trim().min(1).max(300).optional(),
   /**
-   * The send comes from a demo shop (`shops.is_demo`), so a seeded person's
-   * `mail.example` address goes to the SES mailbox simulator instead of being
-   * refused (`deliveryAddressFor` in `src/lib/simulator-email.ts`). Absent on
-   * every real shop's send.
+   * The send comes from a demo shop (`shops.is_demo`), so the SES provider holds
+   * it (`DEMO_SHOP_HELD_DELIVERY`) instead of mailing anyone. Absent on every
+   * real shop's send.
    */
   demoShop: z.literal(true).optional(),
   /**

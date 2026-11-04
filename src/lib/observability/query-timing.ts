@@ -85,19 +85,36 @@ export function timeStatement<T>(send: () => Promise<T>): Promise<T> {
  * The proxy keeps the driver's prototype, so Drizzle's own "is this a pool?"
  * check still answers the same.
  */
-export function withStatementTiming<Client extends object>(client: Client): Client {
+export function withStatementTiming<Client extends object>(
+  client: Client,
+  options: { serialize?: boolean } = {},
+): Client {
+  // One connection runs one statement at a time. `pg` queues a second `query()`
+  // behind the first but warns (DeprecationWarning, removed in pg@9) every time,
+  // and a `Promise.all` of readers inside a transaction trips it on every
+  // render. Queuing here is the same order with no warning.
+  let tail: Promise<unknown> = Promise.resolve();
+  const queued = (send: () => Promise<unknown>): Promise<unknown> => {
+    const run = tail.then(send, send);
+    tail = run.catch(() => undefined);
+    return run;
+  };
   return new Proxy(client, {
     get(target, property) {
       const value = Reflect.get(target, property, target);
       if (typeof value !== "function") return value;
       if (property === "query") {
-        return (...args: unknown[]) =>
-          timeStatement(() => Reflect.apply(value, target, args) as Promise<unknown>);
+        return (...args: unknown[]) => {
+          const send = () => Reflect.apply(value, target, args) as Promise<unknown>;
+          // A callback or a cursor is not a promise to chain on; pass it through.
+          const chainable = options.serialize && typeof args[args.length - 1] !== "function";
+          return timeStatement(chainable ? () => queued(send) : send);
+        };
       }
       if (property === "transaction") {
         return (callback: (tx: object) => unknown, ...rest: unknown[]) =>
           Reflect.apply(value, target, [
-            (tx: object) => callback(withStatementTiming(tx)),
+            (tx: object) => callback(withStatementTiming(tx, options)),
             ...rest,
           ]);
       }
@@ -106,7 +123,10 @@ export function withStatementTiming<Client extends object>(client: Client): Clie
           const connected = Reflect.apply(value, target, args);
           // The callback form (no promise) is never used by Drizzle; pass it through.
           return connected instanceof Promise
-            ? connected.then((connection: object) => withStatementTiming(connection))
+            ? connected.then((connection: object) =>
+                // A checked-out connection is one wire: its statements go one at a time.
+                withStatementTiming(connection, { serialize: true }),
+              )
             : connected;
         };
       }
