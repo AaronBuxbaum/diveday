@@ -1588,7 +1588,7 @@
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
     "src/features/today/closeout-reader.test.ts": 903,
-    "src/features/today/today.test.ts": 1452,
+    "src/features/today/today.test.ts": 1274,
     "src/i18n/label-maps.test.ts": 1259,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1935,

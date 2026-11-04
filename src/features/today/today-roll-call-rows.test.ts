@@ -21,6 +21,8 @@ import { pushRollCallRows } from "./today-roll-call-rows";
 import { rollCallRow, rollCallRows } from "./today-roll-call-test-fixtures";
 import { rowsContext } from "./today-rows-test-fixtures";
 
+const EN = staffTranslator("en-US");
+
 describe("pushRollCallRows", () => {
   it("adds nothing when every boat is home, counted and crewed once", () => {
     const actions: TodayAction[] = [];
@@ -172,14 +174,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         expect(outcome.ok).toBe(true);
       }
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const row = rollCallRow(work, trip.id, "missing_diver");
 
       expect(row).toBeDefined();
@@ -230,14 +225,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         });
       }
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const row = rollCallRow(work, trip.id, "missing_diver");
       expect(row?.detail).toContain("dive 1");
       expect(rollCallRow(work, trip.id, "after_dive_uncounted")).toBeUndefined();
@@ -284,19 +272,12 @@ describe("unclosed roll call (DOM-H3)", () => {
         shop.slug,
         shopClock(shop),
         undefined,
-        staffTranslator("en-US"),
+        EN,
       );
       expect(rollCallRow(stillMissing, trip.id, "missing_diver")).toBeDefined();
 
       await tap(wasMissing, "after_dive_2", "boarded");
-      const back = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const back = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       expect(rollCallRow(back, trip.id, "missing_diver")).toBeUndefined();
       expect(rollCallRow(back, trip.id, "after_dive_uncounted")).toBeUndefined();
     });
@@ -328,14 +309,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         occurredAt: new Date(nowMs() - 24 * 5 * HOUR),
       });
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const row = rollCallRow(work, trip.id, "missing_diver");
       expect(row).toBeDefined();
       expect(row?.urgency).toBe("soon");
@@ -429,14 +403,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         "not_boarded",
       );
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       expect(rollCallRow(work, trip.id, "missing_diver")).toBeDefined();
     });
   });
@@ -533,14 +500,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         checkpoint: "after_dive_2",
       });
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const row = rollCallRow(work, trip.id, "missing_crew");
       expect(row).toBeDefined();
       expect(row?.kind).toBe("roll_call_missing_crew");
@@ -587,14 +547,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         occurredAt: new Date(nowMs() - 24 * 5 * HOUR),
       });
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const row = rollCallRow(work, trip.id, "missing_crew");
       expect(row).toBeDefined();
       expect(row?.urgency).toBe("soon");
@@ -625,14 +578,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       // dive. That is the crew twin of `after_dive_uncounted`.
       await crewAboard(db, { shopId: shop.id, tripId: trip.id, count: 2 });
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const row = rollCallRow(work, trip.id, "crew_uncounted");
       expect(row?.kind).toBe("roll_call_crew_unfinished");
       expect(row?.urgency).toBe("imminent");
@@ -663,14 +609,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         });
       }
       await db.insert(tripAssignments).values({ tripId: quiet.trip.id, personId: staffId });
-      const quietWork = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const quietWork = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       expect(rollCallRows(quietWork, quiet.trip.id)).toHaveLength(0);
     });
   });
@@ -695,14 +634,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         expect(outcome.ok).toBe(true);
       }
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const row = rollCallRow(work, trip.id, "after_dive_uncounted");
       expect(row?.kind).toBe("roll_call_unfinished");
       expect(row?.urgency).toBe("imminent");
@@ -736,14 +668,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         });
       }
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       expect(rollCallRows(work, trip.id)).toEqual([]);
     });
 
@@ -766,14 +691,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       }
       expect(
         rollCallRows(
-          await getTodayWork(
-            db,
-            shop.id,
-            shop.slug,
-            shopClock(shop),
-            undefined,
-            staffTranslator("en-US"),
-          ),
+          await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN),
           trip.id,
         ),
       ).toEqual([]);
@@ -793,14 +711,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         occurredAt: new Date(nowMs() + 1000),
       });
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       expect(rollCallRow(work, trip.id, "after_dive_uncounted")?.detail).toContain("1 of 2 people");
     });
 
@@ -823,14 +734,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         });
       }
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const row = rollCallRow(work, trip.id, "after_dive_uncounted");
       // Reported at the earliest dive still open, and pointed straight at it.
       expect(row?.href).toBe(
@@ -875,14 +779,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         });
       }
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       expect(rollCallRows(work, trip.id)).toEqual([]);
     });
 
@@ -913,14 +810,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         checkpoint: "after_dive_1",
       });
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       expect(rollCallRows(work, trip.id)).toEqual([]);
     });
 
@@ -939,14 +829,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         new Date(nowMs() - 33 * HOUR),
       );
 
-      const work = await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop),
-        undefined,
-        staffTranslator("en-US"),
-      );
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const row = rollCallRow(work, trip.id, "after_dive_uncounted");
       expect(row?.detail).toContain("4 of 4 people");
       expect(row?.urgency).toBe("imminent");
