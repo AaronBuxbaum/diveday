@@ -545,24 +545,27 @@ function offlineArrivalRefusal(input: {
  *   (`arrivalsWindow` at the tap's own instant): it was moved to another day,
  *   and the tap says nothing about that morning.
  *
- * Known limits (issue #3830 stays partly open): a seat re-pointed by an
- * identity split or repoint, or removed and restored after the tap, carries no
- * instant to compare, and a snapshot carries no person id by design (the
- * 14-day dock allow-list). A sound check needs a stored seat-changed instant.
+ * - The seat began a new life after the tablet saved its copy
+ *   (`bookings.seat_reopened_at`): it was removed and restored, rebooked,
+ *   moved away and back, its departure moved to another day, or a held seat
+ *   was re-pointed at another person by an identity repoint or split. The tap
+ *   was about the seat's earlier life, or about somebody else.
+ *
+ * A snapshot carries no person id by design (the 14-day dock allow-list), so
+ * the seat's own stamps stand in for "the person the tablet saw".
  *
  * Both refuse as `snapshot_invalid`, the word the departure check beside it
  * already uses for "this copy was about something that has changed". Offline
  * only; the live path re-reads the roster.
  */
 function offlineTapAboutAnotherSeatOrDay(
-  booking: { claimedAt: Date | null; tripStartsAt: Date },
+  booking: { claimedAt: Date | null; seatReopenedAt: Date | null; tripStartsAt: Date },
   input: { occurredAt?: Date; offlineSnapshotSavedAt?: Date },
 ): boolean {
-  if (
-    booking.claimedAt &&
-    (!input.offlineSnapshotSavedAt || booking.claimedAt > input.offlineSnapshotSavedAt)
-  ) {
-    return true;
+  for (const changedAt of [booking.claimedAt, booking.seatReopenedAt]) {
+    if (changedAt && (!input.offlineSnapshotSavedAt || changedAt > input.offlineSnapshotSavedAt)) {
+      return true;
+    }
   }
   // The sync schema requires the instant; a direct caller that omits it skips the window.
   if (!input.occurredAt) return false;
@@ -610,6 +613,7 @@ export async function checkInBooking(
         status: bookings.status,
         arrivalTrailAfterSeq: bookings.arrivalTrailAfterSeq,
         claimedAt: bookings.claimedAt,
+        seatReopenedAt: bookings.seatReopenedAt,
         tripStartsAt: trips.startsAt,
         tripId: trips.id,
         tripStatus: trips.status,
@@ -808,6 +812,7 @@ export async function undoCheckInBooking(
         status: bookings.status,
         arrivalTrailAfterSeq: bookings.arrivalTrailAfterSeq,
         claimedAt: bookings.claimedAt,
+        seatReopenedAt: bookings.seatReopenedAt,
         tripStartsAt: trips.startsAt,
         tripId: trips.id,
         personName: people.fullName,
