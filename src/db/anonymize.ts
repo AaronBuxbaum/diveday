@@ -67,7 +67,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { type AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
-import { ACTIVITY_REDACTED } from "@/lib/activity";
+import { ACTIVITY_REDACTED, DESK_ONLY_CODES } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -1507,6 +1507,25 @@ async function scrubActivityEvents(
   // name, so "who refunded this order?" survives. It runs first so the
   // whole-line statement below no longer finds it by subject. A line the erased
   // person wrote, or one hanging off a seat, is left to that statement.
+  // A desk-only line (issue #2701) is the crew's same-day handoff, not the
+  // shop's history: it is deleted rather than redacted, so an erasure never
+  // turns one into a `[redacted]` line on a trail it was never part of. By the
+  // same three handles as the redaction below; it carries no names, so the
+  // name match has nothing to find in one.
+  await tx
+    .delete(activityEvents)
+    .where(
+      and(
+        eq(activityEvents.shopId, shopId),
+        inArray(activityEvents.code, [...DESK_ONLY_CODES]),
+        or(
+          owned ? inArray(activityEvents.bookingId, bookingIds) : undefined,
+          eq(activityEvents.actorPersonId, personId),
+          eq(activityEvents.subjectPersonId, personId),
+        ),
+      ),
+    );
+
   await tx
     .update(activityEvents)
     .set({

@@ -13,7 +13,7 @@ import {
   markPhoneRunningLate,
   messageSeats,
 } from "./running-late";
-import { activityEvents, bookings, people, shops, tripDeskEvents, trips } from "./schema";
+import { activityEvents, bookings, people, shops, trips } from "./schema";
 import { initializeTodayCatchUp, readTodayCatchUp } from "./today-catch-up";
 import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -102,15 +102,15 @@ describe("markBookingRunningLate", () => {
     expect(await lateAt(bookingId)).toEqual(now);
   });
 
-  it("records exactly one desk event when the diver first says they are late", async () => {
+  it("records exactly one desk line when the diver first says they are late", async () => {
     const { db, shop, trip, bookingId, personId, now } = await context();
     await markBookingRunningLate(db, { shopId: shop.id, bookingId, now });
     await markBookingRunningLate(db, { shopId: shop.id, bookingId, now });
     const events = await db
       .select()
-      .from(tripDeskEvents)
-      .where(eq(tripDeskEvents.bookingId, bookingId));
-    expect(events.filter((event) => event.kind === "running_late")).toMatchObject([
+      .from(activityEvents)
+      .where(eq(activityEvents.bookingId, bookingId));
+    expect(events.filter((event) => event.code === "desk_running_late")).toMatchObject([
       { shopId: shop.id, tripId: trip.id, subjectPersonId: personId, actorPersonId: null },
     ]);
   });
@@ -478,8 +478,8 @@ describe("one statement for the people travelling together", () => {
     expect(await lateAt(member.bookingId)).toEqual(now);
     const events = await db
       .select()
-      .from(tripDeskEvents)
-      .where(eq(tripDeskEvents.kind, "running_late"));
+      .from(activityEvents)
+      .where(eq(activityEvents.code, "desk_running_late"));
     expect(
       events.filter((event) => [lead.bookingId, member.bookingId].includes(event.bookingId ?? "")),
     ).toMatchObject([{ actorPersonId: null }, { actorPersonId: null }]);
@@ -561,8 +561,8 @@ describe("one statement for the people travelling together", () => {
     expect(await lateAt(member.bookingId)).toEqual(receivedAt);
     const events = await db
       .select()
-      .from(tripDeskEvents)
-      .where(eq(tripDeskEvents.kind, "running_late"));
+      .from(activityEvents)
+      .where(eq(activityEvents.code, "desk_running_late"));
     expect(
       events.filter((event) => [lead.bookingId, member.bookingId].includes(event.bookingId ?? "")),
     ).toMatchObject([{ actorPersonId }, { actorPersonId }]);

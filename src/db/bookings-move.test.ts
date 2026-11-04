@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { catchUpKind } from "@/lib/activity";
 import { nowDate, nowMs } from "@/lib/clock";
 import { tripRescheduledEmail } from "@/lib/notifications/email";
 import { markArrived } from "@/test/arrivals";
@@ -8,7 +9,6 @@ import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
 import { formBuddyTeam } from "./buddy-teams";
 import type { AppDb } from "./client";
-import { listDeskEventsSince, markTripCaughtUp } from "./desk-events";
 import { recordFlySafeTold } from "./fly-safe-correction";
 import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
 import { addInterest } from "./interest-dates-fixtures";
@@ -23,13 +23,13 @@ import {
   inboundMessages,
   interests,
   people,
-  tripDeskEvents,
   tripHelpRequests,
   tripRequirements,
   trips,
 } from "./schema";
 import { moveSeat } from "./seat-diver";
 import { initializeTodayCatchUp, readTodayCatchUp } from "./today-catch-up";
+import { listCatchUpSince, markTripCaughtUp } from "./trip-read-marks";
 import {
   createTrip,
   getTripRoster,
@@ -79,8 +79,16 @@ async function seatOn(db: AppDb, shopId: string, tripId: string, fullName: strin
   return booked;
 }
 
-function move(db: AppDb, shopId: string, fromTripId: string, toTripId: string, bookingId: string) {
-  return moveBooking(db, { shopId, fromTripId, toTripId, bookingId });
+/** A move as the roster makes it: a staffer moves the seat, and both trails say so. */
+async function move(
+  db: AppDb,
+  shopId: string,
+  fromTripId: string,
+  toTripId: string,
+  bookingId: string,
+) {
+  const actorPersonId = (await listStaff(db, shopId))[0]?.person.id;
+  return moveBooking(db, { shopId, fromTripId, toTripId, bookingId, actorPersonId });
 }
 
 async function tripOf(db: AppDb, bookingId: string) {
@@ -152,11 +160,19 @@ describe("moveBooking", () => {
     expect(fromRoster.map((r) => r.booking.id)).not.toContain(seat.bookingId);
     expect(toRoster.map((r) => r.booking.id)).toContain(seat.bookingId);
 
-    const desk = await db
-      .select({ tripId: tripDeskEvents.tripId, kind: tripDeskEvents.kind })
-      .from(tripDeskEvents)
-      .where(eq(tripDeskEvents.bookingId, seat.bookingId));
-    expect(desk).toEqual(
+    // One line per departure, which both the trail and the crew's catch-up
+    // strip read (issue #2701): one fewer here, one more there.
+    const lines = await db
+      .select({
+        tripId: activityEvents.tripId,
+        code: activityEvents.code,
+        params: activityEvents.params,
+      })
+      .from(activityEvents)
+      .where(eq(activityEvents.bookingId, seat.bookingId));
+    expect(
+      lines.map((line) => ({ tripId: line.tripId, kind: catchUpKind(line.code, line.params) })),
+    ).toEqual(
       expect.arrayContaining([
         { tripId: from.id, kind: "seat_released" },
         { tripId: to.id, kind: "seat_taken" },
@@ -232,11 +248,9 @@ describe("moveBooking", () => {
       [from.id, "seat_released"],
       [to.id, "seat_taken"],
     ] as const) {
-      expect((await listDeskEventsSince(db, shop.id, tripId, actor)).events).toEqual([]);
+      expect((await listCatchUpSince(db, shop.id, tripId, actor)).events).toEqual([]);
       expect(
-        (await listDeskEventsSince(db, shop.id, tripId, observer)).events.map(
-          (event) => event.kind,
-        ),
+        (await listCatchUpSince(db, shop.id, tripId, observer)).events.map((event) => event.kind),
       ).toEqual([kind]);
     }
   });

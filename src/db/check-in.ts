@@ -13,13 +13,13 @@ import { isUuid } from "@/lib/uuid";
 import { seatCheckedIn } from "./arrival-provenance";
 import { requireActiveStaffId } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { recordDeskEvent } from "./desk-events";
 import {
   departureRollCallForBooking,
   listAfterDiveRollCallByTrip,
   listDepartureBoardedBookingIds,
   type OnTheWater,
 } from "./manifests";
+import { recordActivityRow } from "./operations";
 import { personSearchMatch } from "./person-search";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import {
@@ -713,28 +713,21 @@ export async function checkInBooking(
       offlineSnapshotSavedAt: source === "offline" ? (input.offlineSnapshotSavedAt ?? null) : null,
       occurredAt,
     });
-    await tx.insert(activityEvents).values({
+    // One line, read twice (issues #1202, #1187, #2701): the trail's "checked
+    // in", and the crew walking to the boat reading "Ada Lindqvist has checked
+    // in." on the manifest's catch-up strip ("did anyone tell them?"). Inside
+    // this transaction, so a check-in whose handoff line silently failed to
+    // write — the failure D27 exists about — cannot commit. The subject is
+    // what the strip names, live. `undoCheckInBooking` writes nothing — an undo
+    // is not news, and the strip drops the line once the seat is not checked in.
+    await recordActivityRow(tx, {
       shopId: input.shopId,
       tripId: booking.tripId,
-      bookingId: booking.id,
-      actorPersonId: recordedBy,
-      code: "counter_check_in",
-      params: { diver: booking.personName },
-      occurredAt,
-    });
-    // The crew walking to the boat read this as "Ada Lindqvist has checked in."
-    // on the manifest's catch-up strip (issues #1202, #1187 — "did anyone tell
-    // them?"). Inside this transaction, beside the activity line it mirrors:
-    // the two say the same fact to two different readers, and a check-in whose
-    // handoff line silently failed to write is the failure D27 exists about.
-    // `undoCheckInBooking` writes nothing — an undo is not news.
-    await recordDeskEvent(tx, {
-      shopId: input.shopId,
-      tripId: booking.tripId,
-      kind: "arrival",
       bookingId: booking.id,
       subjectPersonId: booking.personId,
       actorPersonId: recordedBy,
+      code: "counter_check_in",
+      params: { diver: booking.personName },
       occurredAt,
     });
     return { ok: true, bookingId: booking.id, personName: booking.personName };

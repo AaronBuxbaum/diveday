@@ -38,10 +38,10 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
-import { recordDeskEvent } from "./desk-events";
 import { correctFlySafeForTripChange, type FlySafeCorrectionOutcome } from "./fly-safe-correction";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
+import { recordDeskLine } from "./operations";
 import { rearmTripReminders } from "./reminder-rearm";
 import { recordedRollCallRows } from "./roll-call-history";
 import type { Trip } from "./schema";
@@ -999,12 +999,12 @@ async function updateTripRecord(
       // The crew-facing twin of the line above, written in the same
       // transaction so the diver's ledger and the manifest's catch-up strip
       // cannot disagree about whether the dock moved (#1202: "the dock point
-      // moved"). The two tables are separate on purpose — one is publicly safe,
-      // one is internal — and this is the only fact written to both.
-      await recordDeskEvent(tx, {
+      // moved"). The diver's ledger is publicly safe and the desk line is
+      // staff-only, and this is the only fact written to both.
+      await recordDeskLine(tx, {
         shopId,
         tripId,
-        kind: "meeting_point",
+        code: "desk_meeting_point",
         actorPersonId: patch.changeActorPersonId,
         occurredAt: changedAt,
       });

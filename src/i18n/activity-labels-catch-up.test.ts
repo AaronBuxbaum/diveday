@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { catchUpSentences } from "./desk-event-labels";
+import { catchUpSentences } from "./activity-labels";
 import { staffTranslator } from "./staff-messages";
 
 describe("Today catch-up copy", () => {

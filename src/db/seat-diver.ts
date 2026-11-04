@@ -16,7 +16,6 @@ import {
   moveParty as moveWholeParty,
 } from "./bookings";
 import type { AppDb } from "./client";
-import { recordDeskEvent } from "./desk-events";
 import { correctFlySafeForPerson, type FlySafeCorrectionOutcome } from "./fly-safe-correction";
 import { publishManifestEvent } from "./manifest-events";
 import { sendCourseSeatConfirmation, sendStaffSeatingConfirmation } from "./notifications";
@@ -394,8 +393,8 @@ type SeatedBooking = {
 
 /**
  * **Every consequence a staff seating owes, after the seat commits**: the
- * confirmation or the waiver, the course materials, the trail, the desk event
- * and the manifest refresh. One path for one diver (`seatDiver`) and for each
+ * confirmation or the waiver, the course materials, the trail line (which the
+ * catch-up strip reads too) and the manifest refresh. One path for one diver (`seatDiver`) and for each
  * member of a party (`seatParty`), so a family seated together is owed exactly
  * what four walk-ins were.
  */
@@ -487,26 +486,17 @@ async function seatConsequences(
   // submits no name at all, and a held seat reads as it was booked (issue
   // #2128). After the seat commits, not inside it: `createBooking` is every
   // door's insert, and this is the one consequence path for staff seating.
+  //
+  // The same line is "Lina Costa took a seat." on the manifest's catch-up
+  // strip (issues #1202, #2701): written here rather than at any of the four
+  // seating surfaces, so a call site cannot forget it and leave a captain
+  // reading a roster with a name on it nobody told them about.
   await recordSeatChange(db, {
     shopId: input.shopId,
     tripId: input.tripId,
     actorPersonId: input.actorPersonId,
     bookingId: outcome.bookingId,
     code: activityCode(input.entry),
-  });
-
-  // "Lina Costa took a seat." on the manifest's catch-up strip (issue #1202).
-  // Written here rather than at any of the four seating surfaces, for the same
-  // reason the waiver and the trail are: this is the one consequence path for
-  // seating, and a call site that forgot it would leave a captain reading a
-  // roster with a name on it nobody told them about.
-  await recordDeskEvent(db, {
-    shopId: input.shopId,
-    tripId: input.tripId,
-    kind: "seat_taken",
-    bookingId: outcome.bookingId,
-    subjectPersonId: outcome.personId,
-    actorPersonId: input.actorPersonId,
   });
 
   // A diver just appeared on the roster. This is the archetypal change that

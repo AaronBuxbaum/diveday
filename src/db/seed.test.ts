@@ -13,6 +13,7 @@ import { askForDeparture } from "./interests";
 import { shopSenderFor } from "./notifications";
 import {
   accountSessions,
+  activityEvents,
   boats,
   bookingCapabilities,
   bookingCheckoutBookings,
@@ -29,7 +30,6 @@ import {
   shops,
   todayReadMarkEvents,
   todayReadMarks,
-  tripDeskEvents,
   userAccounts,
 } from "./schema";
 import { resetDemoSchedule, seedIfEmpty } from "./seed";
@@ -93,11 +93,11 @@ describe("resetDemoSchedule", () => {
       })
       .returning();
     const [event] = await db
-      .insert(tripDeskEvents)
+      .insert(activityEvents)
       .values({
         shopId: shop.id,
         tripId: trip.id,
-        kind: "plan_changed",
+        code: "desk_plan_changed",
       })
       .returning();
     if (!mark || !event) throw new Error("expected Today history");

@@ -20,7 +20,6 @@ import {
 } from "@/lib/course-admission";
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
 import { seatListPriceCents } from "@/lib/deposits";
-import { typeChangedDeskEventKind } from "@/lib/desk-events";
 import type { DiveIntent } from "@/lib/dive-intent";
 import {
   type HeldContactChoice,
@@ -69,12 +68,16 @@ import {
   moveDateRequestOfferBooking,
   recordDateRequestOfferBooking,
 } from "./date-request-offer-bookings";
-import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
 import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
-import { recordDiverActivity, recordSeatChange, recordTripActivity } from "./operations";
+import {
+  recordDeskLine,
+  recordDiverActivity,
+  recordSeatChange,
+  recordTripActivity,
+} from "./operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { type CreatePersonInput, createPerson, findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
@@ -2045,7 +2048,7 @@ export type MoveBookingOutcome =
  * on a buddy team, or leading a party carries the old departure's evidence
  * and relationships; each is undone on its own surface first, with its own
  * trail, and then the seat moves. What stays behind on purpose: the old
- * departure's activity, desk events, arrival marks and sealed course forms,
+ * departure's activity, desk lines, arrival marks and sealed course forms,
  * which are a record of what happened there.
  */
 async function moveAdmissionRefusal(
@@ -2392,29 +2395,12 @@ async function moveBookingIn(
     // diveday:allow-deleted-people: the seat's own diver, named on both trails.
     .where(and(eq(people.id, booking.personId), eq(people.shopId, shopId)))
     .limit(1);
-  // The crew of each boat reads it on the catch-up strip: one fewer here,
-  // one more there. A turned-away seat left the old boat when the desk
-  // turned them away, so only the new one hears of it.
-  if (!turnedAway) {
-    await recordDeskEvent(tx, {
-      shopId,
-      tripId: source.id,
-      kind: "seat_released",
-      bookingId: booking.id,
-      subjectPersonId: booking.personId,
-      actorPersonId: input.actorPersonId,
-    });
-  }
-  await recordDeskEvent(tx, {
-    shopId,
-    tripId: target.id,
-    kind: "seat_taken",
-    bookingId: booking.id,
-    subjectPersonId: booking.personId,
-    actorPersonId: input.actorPersonId,
-  });
   // Each departure's trail says what happened to its own roster, committed
-  // with the move so neither line can be missing from the log.
+  // with the move so neither line can be missing from the log. The same two
+  // lines are what the crew of each boat reads on the catch-up strip (issue
+  // #2701): one fewer here, one more there. A turned-away seat left the old
+  // boat when the desk turned them away, so its line there says so and the
+  // strip does not repeat it.
   if (input.actorPersonId) {
     for (const [tripId, code] of [
       [source.id, "seat_moved_away"],
@@ -2426,6 +2412,7 @@ async function moveBookingIn(
         actorPersonId: input.actorPersonId,
         bookingId: booking.id,
         code,
+        turnedAway,
       });
     }
   }
@@ -2744,7 +2731,7 @@ export type SetParticipantTypeInput = {
  * **Leaving the water is the one door that clears a card block without a
  * card**, so it is never silent. Inside this same transaction it writes the
  * departure's trail (who, from what, to what, and which certification blockers
- * the seat stopped facing) and a desk event for the manifest's catch-up strip,
+ * the seat stopped facing), which the manifest's catch-up strip also reads,
  * and the seat's `booked_as` stays what it was sold as, so every crew surface
  * says "booked as diver" beside it. A physician's "no" is not a card block and
  * is not cleared: the medical form is the same for every type.
@@ -2997,10 +2984,15 @@ async function changeParticipantType(
       // diveday:allow-deleted-people: the seat's own diver, named on its trail line.
       .where(and(eq(people.id, booking.personId), eq(people.shopId, shopId)))
       .limit(1);
+    // One line, read twice (issue #2701): the trail's sentence, and the crew's
+    // "Ana Ruiz is snorkeling now" on the catch-up strip, named live through
+    // the subject.
     await recordTripActivity(tx, {
       shopId,
       tripId: trip.id,
       actorPersonId,
+      bookingId: booking.id,
+      subjectPersonId: booking.personId,
       entry: {
         code: "participant_type_changed",
         diver: subject?.fullName ?? "",
@@ -3011,19 +3003,13 @@ async function changeParticipantType(
         atSea: atSea ? "yes" : "no",
       },
     });
-    await recordDeskEvent(tx, {
-      shopId,
-      tripId: trip.id,
-      kind: typeChangedDeskEventKind(to),
-      bookingId: booking.id,
-      subjectPersonId: booking.personId,
-      actorPersonId,
-    });
+    // The money a raised price leaves owed is a second fact, which the trail
+    // does not hold: a desk-only line.
     if (owedCents > 0) {
-      await recordDeskEvent(tx, {
+      await recordDeskLine(tx, {
         shopId,
         tripId: trip.id,
-        kind: "balance_owed",
+        code: "desk_balance_owed",
         bookingId: booking.id,
         subjectPersonId: booking.personId,
         actorPersonId,
@@ -3142,10 +3128,10 @@ async function cancelBookingRow(
     // sweep, and none of them hands one down. A seat the desk turned away
     // (H-20261015-who-may-turn-someone) was refused, not given up, and the strip says so; the cancel
     // keeps `turned_away_at`, so the row still knows.
-    await recordDeskEvent(tx, {
+    await recordDeskLine(tx, {
       shopId,
       tripId: booking.tripId,
-      kind: booking.turnedAwayAt === null ? "seat_released" : "seat_turned_away",
+      code: booking.turnedAwayAt === null ? "desk_seat_released" : "desk_seat_turned_away",
       bookingId: booking.id,
       subjectPersonId: booking.personId,
     });
@@ -3312,10 +3298,10 @@ async function releaseSelfCancelledSeat(
   await releasePackageCoverageForBooking(tx, seat.shopId, seat.bookingId);
   // And the same handoff line the staff cancel writes: a seat the diver gave
   // back from their own link is exactly as much news to the crew (#1202).
-  await recordDeskEvent(tx, {
+  await recordDeskLine(tx, {
     shopId: seat.shopId,
     tripId: seat.tripId,
-    kind: "seat_released",
+    code: "desk_seat_released",
     bookingId: seat.bookingId,
     subjectPersonId: seat.personId,
   });

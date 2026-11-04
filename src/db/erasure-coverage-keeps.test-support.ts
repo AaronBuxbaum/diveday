@@ -41,9 +41,9 @@ export const ERASURE_KEEPS: Record<string, string> = {
     "who was offered a re-book when a departure blew out, by id, plus whether the message left. The address it went to lives on the notification rows, which are redacted",
   trip_invitations:
     "that an invitation was sent for a seat, by id. Its risk is not disclosure but #1616, where the foreign key aborts the erasure transaction outright",
-  trip_read_marks: "how far a staff member has read a trip’s desk feed",
+  trip_read_marks: "how far a staff member has read a trip’s desk lines",
   today_read_marks: "a staff member’s Today catch-up state",
-  today_read_mark_events: "IDs cascading with marks or desk events",
+  today_read_mark_events: "IDs cascading with marks or desk lines",
   stripe_refund_failures:
     "a refund Stripe reported failed or canceled: an amount, Stripe's status and reason codes (the reason narrowed at the webhook to Stripe's documented words by `refundFailureReasonOf`, anything else `unknown`), and the order, checkout or seat it reverses, by id, with no name, address or free text; the diver is reached through that order or checkout, which the erasure redacts (issue #2291)",
   payment_disputes:
@@ -53,9 +53,7 @@ export const ERASURE_KEEPS: Record<string, string> = {
   date_request_offer_bookings:
     "which date-request offer answered which booking, by two ids only. The linked booking is scrubbed by erasure, and the request's identifying fields are blanked; keeping the link prevents the same offer from holding capacity twice",
   trip_sightings:
-    "what a crew tapped at a site: a species slug from DiveDay’s own catalog, a count, and the site’s name as it stood. Its two person columns are the crew member who tapped and the one who undid it, pointers joined at read the way `trip_desk_events` is",
-  trip_desk_events:
-    "`subject_person_id` is a pointer by design and the name is joined at read, which resolves to the anonymized one after this runs",
+    "what a crew tapped at a site: a species slug from DiveDay’s own catalog, a count, and the site’s name as it stood. Its two person columns are the crew member who tapped and the one who undid it, pointers joined at read the way the catch-up strip's desk lines are",
   trip_help_requests:
     "that someone at a seat asked for help and when it was handled; a kind and a status, no words. The helper and recorder are staff pointers joined at read, so an erased person resolves to the anonymized name",
   work_order_items:

@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { RETENTION_DAYS, type RetainedTable, UNBOUNDED_BY_DECISION } from "@/lib/retention";
+import {
+  activityRetentionDays,
+  RETENTION_DAYS,
+  type RetainedTable,
+  UNBOUNDED_BY_DECISION,
+} from "@/lib/retention";
 import { fileScopedShopContext } from "@/test/db";
 import {
   accountTokenForRetention,
@@ -21,7 +26,6 @@ import {
   bookingPaymentEvents,
   notificationDeliveries,
   stripeWebhookEvents,
-  tripDeskEvents,
   tripReadMarks,
   userAccounts,
 } from "./schema";
@@ -368,44 +372,45 @@ describe("pruneExpiredRecords", () => {
   });
 
   it("prunes a stale shift handoff and leaves this morning's alone", async () => {
-    // The catch-up strip's own window (issues #1202, #1187). Thirty days is the
-    // difference between a same-day handoff and the replayable surveillance
-    // feed the boundary refuses, so the prune is what enforces the boundary.
+    // The catch-up strip's window (issues #1202, #1187), a per-code rule inside
+    // `activity_events` (#2701): the prune is what enforces the boundary. A
+    // check-in is the shop's trail first, desk-flagged or not, and keeps its years.
     const { db, shop, reef, entry } = await retentionContext();
-    const window = RETENTION_DAYS.trip_desk_events;
-    await db.insert(tripDeskEvents).values([
-      {
-        shopId: shop.id,
-        tripId: reef.id,
-        kind: "arrival",
-        bookingId: entry.booking.id,
-        subjectPersonId: entry.person.id,
-        occurredAt: daysAgo(window + 1),
-      },
-      {
-        shopId: shop.id,
-        tripId: reef.id,
-        kind: "gear_changed",
-        bookingId: entry.booking.id,
-        subjectPersonId: entry.person.id,
-        occurredAt: daysAgo(1),
-      },
-    ]);
+    expect(activityRetentionDays("counter_check_in")).toBe(RETENTION_DAYS.activity_events);
+    const stale = daysAgo(activityRetentionDays("desk_gear_changed") + 1);
+    const line = { shopId: shop.id, tripId: reef.id, bookingId: entry.booking.id };
+    const kept = { ...line, actorPersonId: entry.person.id, params: { diver: "Kept" } };
+    const written = await db
+      .insert(activityEvents)
+      .values([
+        { ...line, code: "desk_pickup_set", occurredAt: stale },
+        { ...line, code: "desk_gear_changed", occurredAt: daysAgo(1) },
+        { ...kept, code: "counter_check_in", occurredAt: stale },
+      ])
+      .returning({ id: activityEvents.id });
     await db.insert(tripReadMarks).values({
       shopId: shop.id,
       tripId: reef.id,
       personId: entry.person.id,
-      lastSeenSeq: 0,
       lastSeenAt: daysAgo(RETENTION_DAYS.trip_read_marks + 1),
     });
 
     const summary = await pruneExpiredRecords(db, { now: NOW });
-    expect(outcomeFor(summary, "trip_desk_events").deleted).toBe(1);
+    expect(outcomeFor(summary, "activity_events").deleted).toBe(1);
     expect(outcomeFor(summary, "trip_read_marks").deleted).toBe(1);
-    const left = await db.select({ kind: tripDeskEvents.kind }).from(tripDeskEvents);
-    expect(left).toEqual([{ kind: "gear_changed" }]);
+    const left = await db
+      .select({ code: activityEvents.code })
+      .from(activityEvents)
+      .where(
+        inArray(
+          activityEvents.id,
+          written.map((row) => row.id),
+        ),
+      );
+    expect(left.map((row) => row.code).sort()).toEqual(["counter_check_in", "desk_gear_changed"]);
     expect(await db.select().from(tripReadMarks)).toHaveLength(0);
   });
+
   it("prunes demo entries past their window and keeps the recent ones", async () => {
     const { db } = await retentionContext();
     await db.insert(schema.demoEntries).values([
@@ -698,13 +703,6 @@ const STALE_AND_FRESH = {
           createdAt: at,
         })
         .returning({ id: schema.pushSubscriptions.id }),
-    ),
-  trip_desk_events: async ({ db, shop, reef }, at) =>
-    idOf(
-      await db
-        .insert(schema.tripDeskEvents)
-        .values({ shopId: shop.id, tripId: reef.id, kind: "arrival", occurredAt: at })
-        .returning({ id: schema.tripDeskEvents.id }),
     ),
   trip_read_marks: async ({ db, shop, reef, people }, at, n) =>
     idOf(

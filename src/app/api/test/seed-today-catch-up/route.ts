@@ -2,7 +2,7 @@ import { and, desc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
-import { recordDeskEvent } from "@/db/desk-events";
+import { recordSeatChange } from "@/db/operations";
 import { bookings, people, personRoles, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { initializeTodayCatchUp } from "@/db/today-catch-up";
@@ -84,14 +84,13 @@ export async function POST(request: Request) {
     now,
     eventIds: [],
   });
-  await recordDeskEvent(db, {
+  // The line seating writes, which the catch-up reads as "took a seat".
+  await recordSeatChange(db, {
     shopId: shop.id,
     tripId: seat.tripId,
-    kind: "seat_taken",
-    bookingId: seat.bookingId,
-    subjectPersonId: seat.personId,
     actorPersonId: actor.personId,
-    occurredAt: now,
+    bookingId: seat.bookingId,
+    code: "seat_added",
   });
 
   return NextResponse.json({ personName: seat.personName, tripTitle: seat.tripTitle });

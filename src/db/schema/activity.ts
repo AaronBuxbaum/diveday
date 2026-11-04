@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { DESK_ONLY_CODES } from "@/lib/activity";
 import type { DraftFields } from "@/lib/form-drafts";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
@@ -22,8 +23,9 @@ import { orders } from "./payments";
 import { trips } from "./trips";
 
 /**
- * What happened on a trip and to a diver: notes, the activity feed, trip change
- * and stage events, form drafts, held sends, the trip desk and read marks.
+ * What happened on a trip and to a diver: notes, the activity feed (desk
+ * lines included), trip change and stage events, form drafts, held sends and
+ * read marks.
  */
 
 /** The public fact that changed in a departure's plan ledger. */
@@ -71,7 +73,26 @@ export const internalNotes = pgTable(
   ],
 );
 
-/** Append-only, staff-facing account of operational work, as codes and names. */
+/**
+ * **Who may read a line** (issue #2701, the #1202 disclosure boundary): `staff`
+ * is every staff-facing trail line and every desk line the crew's catch-up
+ * strip reads; `diver` is a line a diver-facing surface may print. Set by the
+ * recorder from the code (`activityAudience` in `src/lib/activity.ts`), and
+ * `staff` by default, so a writer that forgets it fails closed.
+ */
+export const activityAudience = pgEnum("activity_audience", ["staff", "diver"]);
+
+/**
+ * The desk-only codes as a SQL list, for the two checks below. Built from the
+ * TypeScript list so the database and the recorder hold one set; a code added
+ * there regenerates the checks with it.
+ */
+const deskOnlyCodeList = sql.raw(DESK_ONLY_CODES.map((code) => `'${code}'`).join(", "));
+
+/**
+ * Append-only account of operational work, as codes and names: the staff
+ * trail, and the desk lines the crew's catch-up strip reads (issue #2701).
+ */
 export const activityEvents = pgTable(
   "activity_events",
   {
@@ -101,9 +122,9 @@ export const activityEvents = pgTable(
      * record rather than on one of their seats (`addDiverNote`).
      *
      * It is also set on the one departure line about a diver with no seat on
-     * it: a staffer emailing them that date (`departure_offered`, #2480).
-     * Every other line in this table is about a departure or a seat, and stays
-     * that way: this column is null for all of them. It exists because the
+     * it: a staffer emailing them that date (`departure_offered`, #2480); on a
+     * roster line, whose seat it was (`recordSeatChange`); and on a desk line,
+     * the diver the catch-up strip names, joined live (issue #2701). It exists because the
      * diver record's Activity panel claims a line when the booking is one of
      * theirs or they are the actor, and a record-scoped note is neither — the
      * subject lived only inside the free-text `message`, so the line landed on
@@ -169,6 +190,13 @@ export const activityEvents = pgTable(
      * sequence is the only thing here that records what actually came first.
      */
     seq: bigserial("seq", { mode: "number" }).notNull(),
+    /**
+     * **Who may read this line** (issue #2701). Every line written today is
+     * `staff`; a diver-facing reader filters on `diver` and on nothing else.
+     * A desk line is always `staff` (the check below), because what the desk
+     * did about one diver is exactly what #1202 keeps from every other.
+     */
+    audience: activityAudience("audience").notNull().default("staff"),
   },
   (table) => [
     // Leads on the person column so deleting a person (a demo shop's cascade,
@@ -177,12 +205,23 @@ export const activityEvents = pgTable(
     // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
     index("activity_events_subject_person_id_idx").on(table.subjectPersonId),
     index("activity_events_actor_person_id_idx").on(table.actorPersonId),
-    // Every line has a person who did it or a reason the system did, never
-    // neither and never both.
+    // Every trail line has a person who did it or a reason the system did,
+    // never neither and never both. A desk-only line may have neither: a
+    // diver asking for a hand on their own link, or a seat given back by a
+    // path that hands down no actor, is news to every staffer all the same.
     check(
       "activity_events_actor_or_system_reason",
-      sql`(${table.actorPersonId} is null) = (${table.systemReason} is not null)`,
+      sql`(${table.actorPersonId} is null) = (${table.systemReason} is not null) or (${table.systemReason} is null and ${table.code} in (${deskOnlyCodeList}))`,
     ),
+    // A desk line never reaches a diver (#1202).
+    check(
+      "activity_events_desk_is_staff",
+      sql`${table.code} not in (${deskOnlyCodeList}) or ${table.audience} = 'staff'`,
+    ),
+    // The catch-up strip's read: one departure's lines after a mark.
+    index("activity_events_shop_trip_seq_idx").on(table.shopId, table.tripId, table.seq),
+    // Today's catch-up marks name lines by (shop, id).
+    uniqueIndex("activity_events_shop_id_id_unique").on(table.shopId, table.id),
     index("activity_events_shop_trip_idx").on(table.shopId, table.tripId, table.occurredAt),
     index("activity_events_shop_subject_idx").on(
       table.shopId,
@@ -326,104 +365,6 @@ export const formDrafts = pgTable(
 );
 
 /**
- * **A desk act a crew member coming back to this departure needs to know
- * about** (issues #1202 and #1187, delight report D42 with D27 folded in).
- *
- * Deliberately **not** `trip_change_events`, which is the publicly safe plan
- * ledger a diver's own link reads. That table's docblock states what may live
- * in it — meeting point and conditions, no contact data, no readiness state —
- * and the whole value of this one is the internal half: who arrived, whose
- * seat moved, who asked the crew for a hand. Two tables so that one query can
- * never accidentally serve a diver a staff fact (#1202's triage names exactly
- * that disclosure risk and recommends the split).
- *
- * **Codes only. This table holds no prose**, and it holds no name: the diver a
- * line is about is `subject_person_id`, joined live at read, so an erasure
- * through `anonymizeDiver` redacts the strip without a second sweep.
- *
- * Append-only and **not soft-deletable** — nobody points at a desk event and
- * asks for it gone, so it is the soft-delete rule's "machinery nobody pointed
- * at" rather than an omission. It is bounded instead by a 30-day retention
- * window: a same-day handoff nobody can replay a season later is the
- * difference between a catch-up and the surveillance feed #1202's boundary
- * refuses.
- */
-export const tripDeskEventKind = pgEnum("trip_desk_event_kind", [
-  "arrival",
-  "running_late",
-  "seat_taken",
-  "seat_released",
-  "gear_changed",
-  "pickup_set",
-  "help_request",
-  "meeting_point",
-  "plan_changed",
-  // A seat changed what it is doing aboard, one kind per new type so the
-  // strip can say it: "Ana Ruiz is snorkeling now" (ADR
-  // 20261007-participant-types).
-  "now_diving",
-  "now_snorkeling",
-  "now_riding",
-  // A type change raised a paid seat's price: the difference is owed, and
-  // nothing collects it on its own.
-  "balance_owed",
-  // A seat the desk turned away (H-20261015-who-may-turn-someone) taken off the roster: the strip says
-  // so, rather than that the diver gave it up.
-  "seat_turned_away",
-]);
-
-export const tripDeskEvents = pgTable(
-  "trip_desk_events",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    tripId: uuid("trip_id")
-      .notNull()
-      .references(() => trips.id, { onDelete: "cascade" }),
-    kind: tripDeskEventKind("kind").notNull(),
-    /** Null for the trip-wide kinds (`meeting_point`, `plan_changed`). */
-    bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "cascade" }),
-    /**
-     * The diver the line is about. **Never a stored name** — see the table's
-     * note: the name is joined at read so erasure needs no second sweep here.
-     */
-    subjectPersonId: uuid("subject_person_id").references(() => people.id, {
-      onDelete: "cascade",
-    }),
-    /**
-     * Who did it, when a person did. Null for an act a diver performed on their
-     * own link (a help request), and for a scheduled or system-driven write.
-     * The reader never sees their own acts, so this is also what advances the
-     * actor's own read mark.
-     */
-    actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
-    occurredAt: appNowTimestamp("occurred_at").notNull(),
-    /**
-     * The tiebreak, for the same reason `activity_events.seq` carries one:
-     * `occurred_at` alone cannot order this table. Two desk acts in one request
-     * share an instant, and the e2e clock is frozen outright so *every* row in
-     * a test carries the identical timestamp. The read mark stores this
-     * sequence rather than a timestamp for exactly that reason — "since I last
-     * looked" has to be a position, not a moment two rows can share.
-     */
-    seq: bigserial("seq", { mode: "number" }).notNull(),
-  },
-  (table) => [
-    // Leads on the person column so deleting a person (a demo shop's cascade,
-    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
-    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
-    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
-    index("trip_desk_events_subject_person_id_idx").on(table.subjectPersonId),
-    index("trip_desk_events_actor_person_id_idx").on(table.actorPersonId),
-    index("trip_desk_events_shop_trip_idx").on(table.shopId, table.tripId, table.seq),
-    index("trip_desk_events_occurred_idx").on(table.occurredAt),
-    uniqueIndex("trip_desk_events_shop_id_id_unique").on(table.shopId, table.id),
-  ],
-);
-
-/**
  * **Where one person had read up to on one departure.** The other half of the
  * catch-up strip: the strip is the events after this mark, and nothing else.
  *
@@ -431,9 +372,12 @@ export const tripDeskEvents = pgTable(
  * first visit is reading rather than catching up. That is why the strip renders
  * nothing at all to them instead of replaying the morning.
  *
+ * `last_seen_seq` is a position in `activity_events.seq` (issue #2701): the
+ * strip is the desk-flagged lines after it (`src/db/trip-read-marks.ts`).
+ *
  * Mutable latest state, not a trail, so it has no `seq` and no history. It is
- * pruned on `last_seen_at` for the same 30 days its events are: a mark that
- * outlives every event it points past says nothing.
+ * pruned on `last_seen_at` after the same 30 days the desk lines are: a mark
+ * that outlives every line it points past says nothing.
  */
 export const tripReadMarks = pgTable(
   "trip_read_marks",
@@ -483,7 +427,7 @@ export const todayReadMarks = pgTable(
   ],
 );
 
-/** Exact events seen; cascades when either the mark or an event is pruned. */
+/** Exact desk lines seen; cascades when either the mark or the line is pruned. */
 export const todayReadMarkEvents = pgTable(
   "today_read_mark_events",
   {
@@ -495,7 +439,7 @@ export const todayReadMarkEvents = pgTable(
       .references(() => todayReadMarks.id, { onDelete: "cascade" }),
     eventId: uuid("event_id")
       .notNull()
-      .references(() => tripDeskEvents.id, { onDelete: "cascade" }),
+      .references(() => activityEvents.id, { onDelete: "cascade" }),
   },
   (table) => [
     foreignKey({
@@ -506,7 +450,7 @@ export const todayReadMarkEvents = pgTable(
     foreignKey({
       name: "today_read_mark_events_shop_event_fk",
       columns: [table.shopId, table.eventId],
-      foreignColumns: [tripDeskEvents.shopId, tripDeskEvents.id],
+      foreignColumns: [activityEvents.shopId, activityEvents.id],
     }).onDelete("cascade"),
     uniqueIndex("today_read_mark_events_unique").on(table.markId, table.eventId),
     index("today_read_mark_events_shop_idx").on(table.shopId),

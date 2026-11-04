@@ -1,5 +1,16 @@
-import { and, asc, count, eq, getColumnTable, getTableName, inArray, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  getColumnTable,
+  getTableName,
+  inArray,
+  notInArray,
+  type SQL,
+} from "drizzle-orm";
 import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
+import { DESK_ONLY_CODES } from "@/lib/activity";
 import type { CsvValue, ExportTable } from "@/lib/export";
 import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
@@ -98,6 +109,12 @@ export type ExportTableRead = {
   table: PgTable;
   /** The total order rows are written in. Empty only where the loader reorders. */
   order: SQL[];
+  /**
+   * Which of the table's rows are a shop record at all, when not every row
+   * is: `activity_events` holds the crew's desk-only handoff lines beside the
+   * trail, and #1202 rules out exporting those (issue #2701).
+   */
+  records?: SQL;
   scope: {
     shopColumn: AnyPgColumn;
     /** The diver bundle reads this table by `personColumn = personId`. */
@@ -327,6 +344,7 @@ export const EXPORT_TABLES = {
     table: activityEvents,
     order: [asc(activityEvents.occurredAt), asc(activityEvents.seq)],
     scope: { shopColumn: activityEvents.shopId },
+    records: notInArray(activityEvents.code, [...DESK_ONLY_CODES]),
   },
   // One row per (booking, kind) by unique index — a resend overwrites in
   // place — so this is the standing outcome per message, not a send log.
@@ -588,8 +606,9 @@ async function readWhere<K extends ExportTableKey>(
   key: K,
   where: (scope: ExportTableRead["scope"]) => SQL | undefined,
 ): Promise<ExportTableRows<K>> {
-  const { table, order, scope } = EXPORT_TABLES[key] as ExportTableRead;
-  const filter = where(scope);
+  const { table, order, scope, records } = EXPORT_TABLES[key] as ExportTableRead;
+  const scoped = where(scope);
+  const filter = scoped === undefined ? undefined : and(scoped, records);
   if (filter === undefined) {
     // Drizzle drops an undefined WHERE and reads every tenant's rows.
     throw new Error(`export: ${key} read without a tenant filter`);
@@ -738,11 +757,11 @@ export async function countShopScoped(
   key: ExportTableKey,
   shopId: string,
 ): Promise<number> {
-  const { table, scope } = EXPORT_TABLES[key] as ExportTableRead;
+  const { table, scope, records } = EXPORT_TABLES[key] as ExportTableRead;
   const [row] = await db
     .select({ n: count() })
     .from(table as never)
-    .where(eq(scope.shopColumn, shopId));
+    .where(and(eq(scope.shopColumn, shopId), records));
   return row?.n ?? 0;
 }
 

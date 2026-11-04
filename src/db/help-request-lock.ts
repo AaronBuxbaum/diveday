@@ -3,7 +3,7 @@ import type { AppTransaction } from "./client";
 import { tripHelpRequests, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
-/** All writers take departure -> request -> crew locks; FK desk events need the departure too. */
+/** All writers take departure -> request -> crew locks; FK desk lines need the departure too. */
 export async function lockHelpRequestDeparture(
   tx: AppTransaction,
   shopId: string,

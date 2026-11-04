@@ -59,6 +59,7 @@
  * a clock does not govern. `waiver_records` and course-form records remain
  * unresolved under H-20260730-evidence-retention-period-deletion.
  */
+import { isDeskOnlyCode } from "@/lib/activity";
 import { DAY_MS } from "@/lib/clock";
 
 /**
@@ -90,7 +91,6 @@ export type RetainedTable =
   | "booking_capabilities"
   | "booking_payment_events"
   | "push_subscriptions"
-  | "trip_desk_events"
   | "trip_read_marks"
   | "today_read_marks"
   | "form_drafts"
@@ -189,6 +189,9 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * not ids resolved live. Erasure redacts them on request, by id and by name
    * (`src/db/anonymize.ts`); this window bounds only what nobody asked to
    * erase. ADR 20260803-append-only-retention says the same.
+   *
+   * **Not every code keeps it**: a desk-only line keeps
+   * {@link DESK_LINE_RETENTION_DAYS} (see {@link activityRetentionDays}).
    */
   activity_events: 1095,
   /**
@@ -270,20 +273,11 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    */
   push_subscriptions: 30,
   /**
-   * 30 days, and the shortness *is* the feature (issues #1202, #1187). A desk
-   * event is a same-day handoff: who arrived, whose seat moved, who asked the
-   * crew for a hand. Nothing reads one after the boat is home, and a per-person
-   * catch-up that could still be replayed a season later is precisely the
-   * surveillance feed #1202's boundary refuses. The row carries no prose and no
-   * name — only a code and a `people` reference resolved live — so what a month
-   * of these can tell anyone is already bounded; this bounds how long.
-   */
-  trip_desk_events: 30,
-  /**
-   * The same 30 days, measured on `last_seen_at`, for the marks that point into
-   * those events. A mark that outlives every event it points past says nothing,
-   * and there is nothing else to keep it alive: the trip cascade never fires
-   * because `deleteTrip` is soft.
+   * The same 30 days as a desk line ({@link DESK_LINE_RETENTION_DAYS}),
+   * measured on `last_seen_at`, for the marks that point into those lines. A
+   * mark that outlives every line it points past says nothing, and there is
+   * nothing else to keep it alive: the trip cascade never fires because
+   * `deleteTrip` is soft.
    */
   trip_read_marks: 30,
   today_read_marks: 30,
@@ -470,6 +464,37 @@ export const DIETARY_RETENTION_CRONTAB = "9 3 * * *";
  */
 export function dietaryNoteCutoff(now: Date): Date {
   return new Date(now.getTime() - DIETARY_NOTE_RETENTION_DAYS * DAY_MS);
+}
+
+/**
+ * **30 days for a desk-only line**, and the shortness *is* the feature
+ * (issues #1202, #1187, #2701). A desk-only line (`DESK_ONLY_CODES` in
+ * `src/lib/activity.ts`) is a same-day handoff: a unit swapped, a pickup set,
+ * a diver asking the crew for a hand. Nothing reads one after the boat is
+ * home, and a per-person catch-up that could still be replayed a season later
+ * is precisely the surveillance feed #1202's boundary refuses. The row carries
+ * no prose and no name — only a code and a `people` reference resolved live —
+ * so what a month of these can tell anyone is already bounded; this bounds how
+ * long.
+ *
+ * A desk-flagged *trail* code (a check-in, a seat added) is the shop's trail
+ * first and keeps the trail's window: the strip reads it only after a mark,
+ * and marks are themselves gone after 30 days.
+ */
+export const DESK_LINE_RETENTION_DAYS = 30;
+
+/**
+ * **The per-code rule inside `activity_events`**, written once: a desk-only
+ * line keeps {@link DESK_LINE_RETENTION_DAYS}, every other line the table's
+ * window. `src/db/retention.ts` prunes by it.
+ */
+export function activityRetentionDays(code: string): number {
+  return isDeskOnlyCode(code) ? DESK_LINE_RETENTION_DAYS : RETENTION_DAYS.activity_events;
+}
+
+/** The instant before which a desk-only line is eligible for deletion. */
+export function deskLineRetentionCutoff(now: Date): Date {
+  return new Date(now.getTime() - DESK_LINE_RETENTION_DAYS * DAY_MS);
 }
 
 /** The instant before which rows of `table` are eligible for deletion. */
