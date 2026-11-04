@@ -649,7 +649,7 @@ export async function planPartyTeams(
     const key = seat.partyLeadBookingId ?? seat.bookingId;
     plan.parties.set(seat.bookingId, key);
     const eligible =
-      (seat.status === "booked" || seat.status === "checked_in") &&
+      seat.status === "booked" &&
       seat.heldAt === null &&
       isDiver(seat.participantType);
     if (!eligible) continue;

@@ -8,8 +8,10 @@ import { priorVisitStanding } from "@/lib/prior-visits";
 import type { ReadinessResult } from "@/lib/readiness";
 import { runningLateShown } from "@/lib/running-late";
 import type { TurnAwayReason } from "@/lib/turn-away";
+import { hasArrived, type StandingArrival } from "@/lib/presence";
 import { isUuid } from "@/lib/uuid";
 import { requireActiveStaffId } from "./authz";
+import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import {
@@ -61,7 +63,14 @@ export type CheckInQueueRow = {
    * who is waiting for the seat. It leaves the queue when the arrivals window
    * does, like every other row.
    */
-  bookingStatus: "booked" | "checked_in" | "no_show";
+  bookingStatus: "booked" | "no_show";
+  /**
+   * The desk has this diver seen: the seat is held and the arrival trail's
+   * newest word is `arrived` (`seatCheckedIn`, src/db/arrival-provenance.ts).
+   * Not a seat status (issue #2702): a released seat keeps its sighting
+   * standing, and this reads false on it.
+   */
+  checkedIn: boolean;
   /**
    * On a released seat, why the desk turned the diver away (H-20261015-who-may-turn-someone); null on a
    * plain "Not here" and on every seat still held. The two are different
@@ -84,7 +93,7 @@ export type CheckInQueueRow = {
   /**
    * The diver's latest departure roll-call record on the manifest is
    * "boarded". Check-in and boarding are two different questions — arrived
-   * vs. aboard — and `checked_in` used to have exactly one reader in the app
+   * vs. aboard — and arrival used to have exactly one reader in the app
    * (this queue itself never showed boarding). See `checkedIn` on
    * `ManifestDiverInput` for the manifest's half of the same fix (task 149,
    * UX persona lens 17).
@@ -150,7 +159,7 @@ export async function hasArrivals(db: AppDb, shopId: string, now: Date = nowDate
         eq(trips.shopId, shopId),
         liveTrip(),
         eq(trips.status, "scheduled"),
-        inArray(bookings.status, ["booked", "checked_in", "no_show"]),
+        seatNotCancelled,
         gte(trips.startsAt, arrivals.from),
         lte(trips.startsAt, arrivals.to),
       ),
@@ -198,6 +207,7 @@ export async function listCheckInQueue(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       bookingStatus: bookings.status,
+      checkedIn: seatCheckedIn,
       turnedAwayReason: bookings.turnedAwayReason,
       turnedAwayAt: bookings.turnedAwayAt,
       runningLateAt: bookings.runningLateAt,
@@ -212,7 +222,7 @@ export async function listCheckInQueue(
         eq(bookings.shopId, shopId),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        inArray(bookings.status, ["booked", "checked_in", "no_show"]),
+        seatNotCancelled,
         gte(trips.startsAt, arrivals.from),
         lte(trips.startsAt, arrivals.to),
         options.tripId ? eq(trips.id, options.tripId) : undefined,
@@ -236,7 +246,7 @@ export async function listCheckInQueue(
 
   return rows.map(({ emergencyContactName, emergencyContactPhone, ...row }) => ({
     ...row,
-    bookingStatus: row.bookingStatus as "booked" | "checked_in" | "no_show",
+    bookingStatus: row.bookingStatus as "booked" | "no_show",
     runningLateAt: runningLateShown(row),
     boarded: boardedBookingIds.has(row.bookingId),
     onTheWater: boardedBookingIds.has(row.bookingId)
@@ -401,14 +411,21 @@ export type CheckInOutcome =
  * clock or a batched offline sync, so the last-appended row has to be the one
  * that wins or the device and the server order two taps differently.
  */
+type NewestArrival = {
+  status: StandingArrival;
+  occurredAt: Date;
+  clientEventId: string | null;
+};
+
 async function newestArrivalEvent(
   tx: DbExecutor,
   shopId: string,
   tripId: string,
   bookingId: string,
-): Promise<{ occurredAt: Date; clientEventId: string | null } | undefined> {
+): Promise<NewestArrival | undefined> {
   const [newest] = await tx
     .select({
+      status: bookingArrivalEvents.status,
       occurredAt: bookingArrivalEvents.occurredAt,
       clientEventId: bookingArrivalEvents.clientEventId,
     })
@@ -479,7 +496,7 @@ async function appliedArrivalEventId(
  * discard a correction a staffer really made.
  */
 function offlineArrivalRefusal(input: {
-  newest: { occurredAt: Date; clientEventId: string | null } | undefined;
+  newest: NewestArrival | undefined;
   occurredAt: Date;
   retractsClientEventId?: string;
 }): "newer_event_exists" | typeof ARRIVAL_RETRACTION_SUPERSEDED | null {
@@ -551,7 +568,12 @@ export async function checkInBooking(
         return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
       }
     }
-    if (booking.status === "checked_in") {
+    // The trail is the only record of an arrival (issue #2702), so it is the
+    // one asked whether this tap changes anything. Read under the seat's lock:
+    // a second device greeting the same diver waits here and then finds them
+    // already seen.
+    const newest = await newestArrivalEvent(tx, input.shopId, booking.tripId, booking.id);
+    if (booking.status === "booked" && hasArrived(newest?.status)) {
       return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
     }
     if (booking.status !== "booked" || booking.tripStatus !== "scheduled") {
@@ -568,10 +590,7 @@ export async function checkInBooking(
       ) {
         return { ok: false, reason: "snapshot_invalid" };
       }
-      const refusal = offlineArrivalRefusal({
-        newest: await newestArrivalEvent(tx, input.shopId, booking.tripId, booking.id),
-        occurredAt,
-      });
+      const refusal = offlineArrivalRefusal({ newest, occurredAt });
       // An arrival states something rather than taking something back, so the
       // only ordering it can fail is newest-wins; the compare-and-set belongs
       // to the undo.
@@ -592,19 +611,21 @@ export async function checkInBooking(
       };
     }
 
+    // The seat word is not touched: arrival is not a seat status (issue
+    // #2702). An arrived diver is no longer late (J3), so that statement
+    // clears with the tap and an undo does not bring back a "running late"
+    // from this morning.
     const [updated] = await tx
       .update(bookings)
-      // An arrived diver is no longer late (J3): the statement clears with the
-      // tap, so an undo does not bring back a "running late" from this morning.
-      .set({ status: "checked_in", runningLateAt: null })
+      .set({ runningLateAt: null })
       .where(and(eq(bookings.id, booking.id), eq(bookings.status, "booked")))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "not_bookable" };
 
-    // The trail underneath the `bookings.status` projection just written, and
-    // the thing that makes an offline queue possible at all: the two orderings
-    // above have nothing to compare against unless every tap — live ones
-    // included — leaves a row here.
+    // **The arrival itself**, and the only record of it: every reader of
+    // "checked in" reads this trail (`seatCheckedIn`). It is also what makes an
+    // offline queue possible at all: the two orderings above have nothing to
+    // compare against unless every tap — live ones included — leaves a row here.
     await tx.insert(bookingArrivalEvents).values({
       shopId: input.shopId,
       tripId: booking.tripId,
@@ -723,16 +744,21 @@ export async function undoCheckInBooking(
         return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
       }
     }
+    // A released or cancelled seat is not checked in, whatever its trail
+    // still says: the desk's later word about the seat outranks the sighting
+    // it released, and an undo here would write a `cleared` row the restore
+    // of that seat would then read.
+    if (booking.status !== "booked") return { ok: false, reason: "not_checked_in" };
+    const newest = await newestArrivalEvent(tx, input.shopId, booking.tripId, booking.id);
     // A double-tap of the undo (two devices, a stale tab) finds the work
     // already done — same idempotence contract as checkInBooking. It sits
     // ahead of the compare-and-set deliberately: the device asked for this
     // seat to be off the arrival queue and it already is, so there is nothing
     // for a refusal to protect. The case the compare-and-set exists for lands
     // below it, on a seat that is checked in again.
-    if (booking.status === "booked") {
+    if (!hasArrived(newest?.status)) {
       return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
     }
-    if (booking.status !== "checked_in") return { ok: false, reason: "not_checked_in" };
     if (source === "offline") {
       if (
         offlineEventOutOfBounds({
@@ -745,7 +771,7 @@ export async function undoCheckInBooking(
         return { ok: false, reason: "snapshot_invalid" };
       }
       const refusal = offlineArrivalRefusal({
-        newest: await newestArrivalEvent(tx, input.shopId, booking.tripId, booking.id),
+        newest,
         occurredAt,
         retractsClientEventId: input.retractsClientEventId,
       });
@@ -774,13 +800,8 @@ export async function undoCheckInBooking(
       }
     }
 
-    const [updated] = await tx
-      .update(bookings)
-      .set({ status: "booked" })
-      .where(and(eq(bookings.id, booking.id), eq(bookings.status, "checked_in")))
-      .returning({ id: bookings.id });
-    if (!updated) return { ok: false, reason: "not_checked_in" };
-
+    // The retraction is the `cleared` row alone; the seat word never said
+    // "arrived", so there is nothing on `bookings` to put back (issue #2702).
     await tx.insert(bookingArrivalEvents).values({
       shopId: input.shopId,
       tripId: booking.tripId,

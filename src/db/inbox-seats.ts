@@ -1,5 +1,6 @@
-import { and, asc, count, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, not } from "drizzle-orm";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb } from "./client";
 import { type MessageSeat, messageSeats } from "./running-late";
 import { bookings, buddyTeamMembers, trips } from "./schema";
@@ -92,6 +93,7 @@ export async function inboxSeats(
         eq(trips.shopId, shopId),
         inArray(bookings.personId, [...new Set(rest.map((message) => message.personId))]),
         eq(bookings.status, "booked"),
+        not(seatCheckedIn),
         eq(trips.status, "scheduled"),
         liveTrip(),
         // Not yet sailed: the scheduled time plus the one departure buffer.

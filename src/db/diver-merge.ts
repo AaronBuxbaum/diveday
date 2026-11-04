@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { canPersonMergeDiver } from "@/db/authz";
+import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "@/db/client";
 import {
   movedPersonTables,
@@ -589,7 +590,7 @@ async function assessMerge(
         seatNotCancelled,
         eq(trips.status, "scheduled"),
         liveTrip(),
-        or(lte(trips.startsAt, now), eq(bookings.status, "checked_in")),
+        or(lte(trips.startsAt, now), seatCheckedIn),
       ),
     );
   if (live.some((trip) => !hasReturned(trip.endsAt, now))) return refuse("departure_underway");

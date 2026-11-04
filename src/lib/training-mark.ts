@@ -35,7 +35,7 @@ export type TrainingMarkSeat = {
  */
 export type TrainingMarkEnrollment = {
   personId: string;
-  status: "booked" | "checked_in" | "no_show" | "cancelled";
+  status: "booked" | "no_show" | "cancelled";
   identityHeld: boolean;
   participantType: ParticipantType;
   courseId: string | null;

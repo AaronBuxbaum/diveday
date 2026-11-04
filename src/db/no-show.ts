@@ -7,13 +7,10 @@ import {
   type NoShowGate,
   noShowGate,
   type SalvageOffer,
-  SEAT_HELD_STATUSES,
   salvageOffer,
 } from "@/lib/no-show";
 import { isDiver, seatRefusal } from "@/lib/participant-types";
-import { seatStatusAfterRelease } from "@/lib/presence";
 import { type SimilarDeparture, similarDepartures } from "@/lib/similar-departures";
-import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { readCourseSession } from "./bookings";
 import { expirePendingCheckoutsForBooking } from "./checkouts";
@@ -28,7 +25,7 @@ import { shopHasFeatureOn } from "./shops";
 import { tripPrimarySiteId } from "./trip-primary-site";
 import { pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
-import { heldSeatCounts, sellableCapacity } from "./trips-queries";
+import { heldSeatCounts, seatHeld, sellableCapacity } from "./trips-queries";
 
 /**
  * **The first writer of `bookings.status = "no_show"`** (issue #1209).
@@ -206,7 +203,7 @@ export async function markBookingNoShow(
     const [updated] = await tx
       .update(bookings)
       .set({ status: "no_show" })
-      .where(and(eq(bookings.id, seat.id), inArray(bookings.status, [...SEAT_HELD_STATUSES])))
+      .where(and(eq(bookings.id, seat.id), seatHeld))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "already_marked" };
     // The released seat is not the diver's to pay for any more (dde-3 #3).
@@ -390,19 +387,18 @@ export async function undoBookingNoShow(
     });
     if (courseRefusal) return await refuse(courseRefusal);
 
-    // The status the standing arrival supports, never an assumed one. Not a new
-    // check-in and so no readiness re-read: this restores a statement the desk
-    // already made, and boarding re-gates readiness of its own at the rail
-    // (`recordRollCall`, src/db/manifests.ts). Both restored statuses hold a
-    // seat (`SEAT_HELD_STATUSES`), so the two caps counted above bind either
-    // way.
-    const standing = await standingArrivalStatus(tx, input.shopId, seat.tripId, seat.id);
+    // The seat is held again, and that is all this writes. Whether the desk
+    // saw the diver is the arrival trail's, which the release left standing,
+    // so a diver checked in before the mark reads as checked in again with no
+    // second statement (issues #1838, #2702). Not a new check-in and so no
+    // readiness re-read: boarding re-gates readiness of its own at the rail
+    // (`recordRollCall`, src/db/manifests.ts).
     const [updated] = await tx
       .update(bookings)
       // Back on the list, so no longer turned away either: the reason only
       // ever sits on a released seat (`bookings_turned_away_is_released`).
       .set({
-        status: seatStatusAfterRelease(standing),
+        status: "booked",
         turnedAwayReason: null,
         turnedAwayAt: null,
       })

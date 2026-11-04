@@ -71,17 +71,18 @@ export async function canPersonViewShopReports(
 }
 
 /**
- * Bookings whose seat earned: the two statuses that hold a seat, and no others.
+ * Bookings whose seat earned: the status that holds a seat, and no other. A
+ * checked-in diver's seat is still `booked`; arrival is the trail's (issue #2702).
  *
  * **Not the roster set**, which is every non-cancelled booking and has included
  * a released `no_show` since the counter gained a writer for it (issue #1209) —
  * a name the crew still account for over a seat the shop may already have sold
- * again. Kept as its own list rather than `SEAT_HELD_STATUSES` on purpose: a
+ * again. Kept as its own list rather than `seatHeld` on purpose: a
  * later change to what holds a seat against capacity should reach a revenue
  * metric as a decision, not as a side effect. `reporting.test.ts` pins the two
  * apart.
  */
-const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
+const ACTIVE_BOOKING_STATUSES = ["booked"] as const;
 /**
  * Payment states that represent money actually collected (a deposit is partial,
  * but real).

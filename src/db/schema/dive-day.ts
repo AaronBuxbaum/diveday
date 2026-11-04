@@ -511,13 +511,14 @@ export const arrivalStatus = pgEnum("arrival_status", ["arrived", "cleared"]);
  * Append-only, one row per tap, and the newest row per booking is the current
  * answer, exactly like `rollCallEvents` and `preDepartureCheckEvents`.
  *
- * `bookings.status` stays the projection every existing reader looks at
- * (`checked_in` / `booked`); this table is the *history* underneath it, and
- * both are written in one transaction by `checkInBooking` /
- * `undoCheckInBooking` (`src/db/check-in.ts`). The projection alone could not
- * answer the three questions an offline queue asks — has this exact tap
- * already been applied, is the device's copy older than what stands now, and
- * is the arrival this undo names still the one standing — which is why the
+ * **This table is the only record of an arrival** (issue #2702, ADR
+ * 20261104-arrival-is-a-trail): `bookings.status` says what the shop decided
+ * about the seat and has no arrival word to mirror it with. A reader asks
+ * `seatCheckedIn` (`src/db/arrival-provenance.ts`); the only writers are
+ * `checkInBooking` / `undoCheckInBooking` (`src/db/check-in.ts`). A projection
+ * could not answer the three questions an offline queue asks — has this exact
+ * tap already been applied, is the device's copy older than what stands now,
+ * and is the arrival this undo names still the one standing — which is why the
  * counter needed a trail before it could survive a lost signal.
  *
  * **Every tap is written, including the ones made with a signal.** A live

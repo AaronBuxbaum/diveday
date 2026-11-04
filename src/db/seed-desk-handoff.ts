@@ -232,7 +232,7 @@ async function checkIn(
   if (!diver) return;
   await db
     .update(bookingsTable)
-    .set({ status: "checked_in", runningLateAt: null })
+    .set({ runningLateAt: null })
     .where(and(eq(bookingsTable.id, booking.id), eq(bookingsTable.shopId, shopId)));
   await db.insert(bookingArrivalEvents).values({
     shopId,

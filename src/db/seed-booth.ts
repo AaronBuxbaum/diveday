@@ -38,6 +38,7 @@ import { freeHull } from "./seed-hulls";
 import { DEMO_WEEKLY_RUN_TITLE } from "./seed-weekly-run";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
+import { seedArrivals } from "./seed-arrivals";
 
 /**
  * **What a booth visitor is shown in five minutes** (market sheet 2026-10-22,
@@ -254,7 +255,7 @@ async function seedDiveCard(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        eq(bookings.status, "checked_in"),
+        eq(bookings.status, "booked"),
         lt(trips.startsAt, nowDate()),
         inArray(
           bookings.personId,
@@ -368,7 +369,7 @@ async function seedLostMask(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        eq(bookings.status, "checked_in"),
+        eq(bookings.status, "booked"),
         liveTrip(),
         isNull(trips.courseId),
         lt(trips.endsAt, nowDate()),
@@ -775,12 +776,22 @@ async function seedShopCertified(
         shopId,
         tripId: trip.id,
         personId: student.id,
-        status: "checked_in",
+        status: "booked",
         createdAt: bookedAt,
       })
       .returning({ id: bookings.id });
     if (!booking) continue;
     seated.push(booking.id);
+    // Seen at the desk the first morning.
+    await seedArrivals(db, [
+      {
+        shopId,
+        tripId: trip.id,
+        bookingId: booking.id,
+        recordedByPersonId: ctx.instructorId,
+        occurredAt: new Date(window.startsAt.getTime() - 30 * 60_000),
+      },
+    ]);
     // Paid at the desk on the first morning, so the course's money falls in
     // the month it ran, where Reports' "By kind" counts it too.
     const paidAt = new Date(window.startsAt.getTime() - (lead + 20) * 60_000);

@@ -29,6 +29,7 @@ import {
 import { seedDepartureBoatSafetySnapshot } from "./seed-boat-safety-snapshot";
 import { at, DEMO_DAWN_BOAT, nextCreatedAt } from "./seed-clock";
 import { paperRelease, signingNames } from "./seed-paper-release";
+import { seedArrivals } from "./seed-arrivals";
 
 /** The returned demo departure that gives Close-Out a finished local-day dive. */
 export const DEMO_COMPLETED_TRIP_TITLE = "Dawn Two-Tank — Molasses Reef";
@@ -659,7 +660,7 @@ export async function seedMoreTrips(
             bookedAs: "diver" as const,
             tripId: trip.id,
             personId: person.id,
-            status: tripDefs[i].completedDemo ? ("checked_in" as const) : ("booked" as const),
+            status: "booked" as const,
             createdAt: nextCreatedAt(),
           })),
       ),
@@ -675,6 +676,17 @@ export async function seedMoreTrips(
   if (completedTrip) {
     const completedBookings = insertedBookings.filter(
       (booking) => booking.tripId === completedTrip.id,
+    );
+    // The dawn boat's divers all came through the desk (the trail, #2702).
+    await seedArrivals(
+      db,
+      completedBookings.map((booking) => ({
+        shopId,
+        tripId: completedTrip.id,
+        bookingId: booking.id,
+        recordedByPersonId: captainId ?? instructorId,
+        occurredAt: new Date(completedTrip.startsAt.getTime() - 30 * 60_000),
+      })),
     );
     await seedDawnBoatRecord(db, shopId, completedTrip, captainId ?? instructorId);
 

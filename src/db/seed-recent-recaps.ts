@@ -13,6 +13,7 @@ import {
   trips,
 } from "./schema";
 import { recordSeedTips, type SeedTip } from "./tips";
+import { seatHeld } from "./trips-queries";
 
 /**
  * The recaps the month you are *reading about* should carry.
@@ -53,9 +54,6 @@ import { recordSeedTips, type SeedTip } from "./tips";
  * handed — so two runs against the same board produce the same rows, and the
  * per-booking skips make a second run a no-op rather than a duplicate.
  */
-
-/** Bookings that count as "on the boat" — the same active set the report sums. */
-const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
 
 export type RecentRecapSeed = {
   /** Settled tips written. */
@@ -120,7 +118,7 @@ export async function seedRecentRecaps(
       and(
         eq(bookings.tripId, trips.id),
         eq(bookings.shopId, shopId),
-        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+        seatHeld,
       ),
     )
     .innerJoin(people, eq(people.id, bookings.personId))

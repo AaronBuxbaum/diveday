@@ -156,6 +156,11 @@ export type TurnAwayGate =
 
 export type TurnAwayGateInput = {
   bookingStatus: string;
+  /**
+   * The desk has this diver seen: the arrival trail's word, never a seat
+   * status (issue #2702). Read with the seat under its lock by the writer.
+   */
+  checkedIn: boolean;
   /** As `NoShowGateInput.onTheWater`: `onTheWaterByRollCall` (src/db/manifests.ts). */
   onTheWater: "boarded" | "missing_after_dive" | null;
   tripStatus: "scheduled" | "cancelled";
@@ -186,13 +191,11 @@ function turnAwayDoor(
   if (input.onTheWater === "boarded") return "already_boarded";
   if (input.onTheWater === "missing_after_dive") return "already_missing_after_dive";
   if (input.bookingStatus === "no_show") return "already_marked";
-  if (input.bookingStatus !== "booked" && input.bookingStatus !== "checked_in") {
-    return "not_booked";
-  }
+  if (input.bookingStatus !== "booked") return "not_booked";
   // The scheduled start, the boundary "Not here" opens on (`noShowGate`), not
   // `hasSailed`'s buffered hour: a diver checked in at 07:30 for an 08:00 boat
   // is presumed aboard from 08:00.
-  if (input.bookingStatus === "checked_in" && input.now.getTime() >= input.startsAt.getTime()) {
+  if (input.checkedIn && input.now.getTime() >= input.startsAt.getTime()) {
     return "sailed";
   }
   if (input.tripStatus === "cancelled") return "trip_cancelled";

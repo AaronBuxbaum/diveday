@@ -1,9 +1,10 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { isCheckedIn } from "@/lib/presence";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { type TurnAwayGate, type TurnAwayReason, turnAwayGate } from "@/lib/turn-away";
 import { expirePendingCheckoutsForBooking } from "./checkouts";
+import { standingArrivalStatus } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";
@@ -12,7 +13,7 @@ import { getBookingReadiness } from "./readiness";
 import { activityEvents, bookings, people, trips } from "./schema";
 import { lockSeatDeparture } from "./seat-locks";
 import { liveTrip } from "./trips-live";
-import { seatNotCancelled } from "./trips-queries";
+import { seatHeld, seatNotCancelled } from "./trips-queries";
 
 /**
  * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-20261015-who-may-turn-someone): the
@@ -112,6 +113,11 @@ export async function turnBookingAway(
     const readiness = await getBookingReadiness(tx as DbExecutor, input.shopId, seat.id);
     const gate = turnAwayGate({
       bookingStatus: seat.status,
+      // The arrival trail, read under the seat's lock (issue #2702).
+      checkedIn: isCheckedIn(
+        seat.status,
+        await standingArrivalStatus(tx, input.shopId, seat.tripId, seat.id),
+      ),
       // Correct under the booking's `FOR UPDATE` for the reason
       // `markBookingNoShow` gives: the rail takes the same lock.
       onTheWater: await onTheWaterByRollCall(tx, input.shopId, seat.tripId, seat.id),
@@ -129,7 +135,7 @@ export async function turnBookingAway(
     const [updated] = await tx
       .update(bookings)
       .set({ status: "no_show", turnedAwayReason: input.reason, turnedAwayAt: now })
-      .where(and(eq(bookings.id, seat.id), inArray(bookings.status, [...SEAT_HELD_STATUSES])))
+      .where(and(eq(bookings.id, seat.id), seatHeld))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "already_marked" };
     // A checkout opened before the release would charge for a seat the shop

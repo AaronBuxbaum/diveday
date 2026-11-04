@@ -1,6 +1,7 @@
-import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte, ne, not, or } from "drizzle-orm";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { recordDiverActivity } from "./operations";
@@ -50,6 +51,7 @@ async function stamp(
     const [row] = await tx
       .select({
         status: bookings.status,
+        checkedIn: seatCheckedIn,
         runningLateAt: bookings.runningLateAt,
         tripStatus: trips.status,
         startsAt: trips.startsAt,
@@ -69,6 +71,7 @@ async function stamp(
     if (
       !canSayRunningLate({
         bookingStatus: row.status,
+        checkedIn: row.checkedIn,
         tripStatus: row.tripStatus,
         startsAt: row.startsAt,
         now,
@@ -85,6 +88,7 @@ async function stamp(
           eq(bookings.shopId, shopId),
           eq(bookings.id, bookingId),
           eq(bookings.status, "booked"),
+          not(seatCheckedIn),
           isNull(bookings.runningLateAt),
         ),
       )
@@ -107,11 +111,11 @@ async function stamp(
     }
     // Lost a race: either a check-in (closed) or a concurrent tap (already).
     const [after] = await tx
-      .select({ status: bookings.status, at: bookings.runningLateAt })
+      .select({ status: bookings.status, checkedIn: seatCheckedIn, at: bookings.runningLateAt })
       .from(bookings)
       .where(and(eq(bookings.shopId, shopId), eq(bookings.id, bookingId)))
       .limit(1);
-    return after?.status === "booked" && after.at
+    return after?.status === "booked" && !after.checkedIn && after.at
       ? { status: "already", bookingId, at: after.at }
       : { status: "closed" };
   });
@@ -147,6 +151,7 @@ export async function clearBookingRunningLate(
   const [row] = await db
     .select({
       status: bookings.status,
+      checkedIn: seatCheckedIn,
       runningLateAt: bookings.runningLateAt,
       tripStatus: trips.status,
       startsAt: trips.startsAt,
@@ -166,6 +171,7 @@ export async function clearBookingRunningLate(
     !row?.runningLateAt ||
     !canSayRunningLate({
       bookingStatus: row.status,
+      checkedIn: row.checkedIn,
       tripStatus: row.tripStatus,
       startsAt: row.startsAt,
       now: input.now,
@@ -229,6 +235,8 @@ async function stampWithParty(
 function openSeatsWhere(now: Date) {
   return and(
     eq(bookings.status, "booked"),
+    // A diver the desk has seen is not late (the trail, issue #2702).
+    not(seatCheckedIn),
     eq(trips.status, "scheduled"),
     liveTrip(),
     // Not yet sailed: `hasSailed` is the scheduled time plus the buffer.
@@ -338,7 +346,12 @@ export type MessageSeat = {
   runningLateAt: Date | null;
 };
 
-type SeatRow = MessageSeat & { personId: string; tripStatus: string; bookingStatus: string };
+type SeatRow = MessageSeat & {
+  personId: string;
+  tripStatus: string;
+  bookingStatus: string;
+  checkedIn: boolean;
+};
 
 /** Every seat these people could still be late for, soonest first. */
 async function openSeatsOf(
@@ -353,6 +366,7 @@ async function openSeatsOf(
       personId: bookings.personId,
       bookingId: bookings.id,
       bookingStatus: bookings.status,
+      checkedIn: seatCheckedIn,
       runningLateAt: bookings.runningLateAt,
       tripId: trips.id,
       tripStatus: trips.status,
@@ -387,6 +401,7 @@ function seatsForMessage(seats: readonly SeatRow[], personId: string, receivedAt
       seat.personId === personId &&
       canSayRunningLate({
         bookingStatus: seat.bookingStatus,
+        checkedIn: seat.checkedIn,
         tripStatus: seat.tripStatus,
         startsAt: seat.startsAt,
         now: receivedAt,

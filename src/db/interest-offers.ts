@@ -20,7 +20,6 @@ import { courseSeatCapacity } from "@/lib/course-ratios";
 import { offerMailClass } from "@/lib/interests";
 import { generateLastMinutePromoCode, lastMinuteDealDiscount } from "@/lib/last-minute-list";
 import { minorToMajor } from "@/lib/money";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import {
   type NotificationDelivery,
   type NotificationProvider,
@@ -61,7 +60,7 @@ import { getShopById } from "./shops";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 import { promotionProviderFromEnvironment } from "./stripe-providers";
 import { livePerson, liveTrip } from "./trips-live";
-import { heldSeatCounts, seatNotCancelled, sellableCapacity } from "./trips-queries";
+import { heldSeatCounts, seatHeld, seatNotCancelled, sellableCapacity } from "./trips-queries";
 import { getTripWithBooked } from "./trips-record";
 
 /**
@@ -875,7 +874,7 @@ export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect)
         eq(bookings.id, dateRequestOfferBookings.bookingId),
         eq(bookings.shopId, dateRequestOfferBookings.shopId),
         eq(bookings.tripId, interests.tripId),
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        seatHeld,
       ),
     )
     .where(
@@ -928,7 +927,7 @@ export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect)
                 and(
                   eq(bookings.tripId, trip.id),
                   eq(bookings.personId, interests.personId),
-                  inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+                  seatHeld,
                 ),
               ),
           ),

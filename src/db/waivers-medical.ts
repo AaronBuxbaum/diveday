@@ -15,7 +15,6 @@ import {
   type PublishedMedicalForm,
   referralItems,
 } from "@/lib/medical";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { isUuid } from "@/lib/uuid";
 import {
   awaitsPhysician,
@@ -37,7 +36,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
-import { seatNotCancelled } from "./trips-queries";
+import { seatHeld, seatNotCancelled } from "./trips-queries";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -979,7 +978,7 @@ async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date
       and(
         eq(bookings.id, record.bookingId),
         eq(bookings.shopId, record.shopId),
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        seatHeld,
         eq(trips.status, "scheduled"),
         liveTrip(),
       ),

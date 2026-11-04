@@ -12,6 +12,7 @@ import {
   type PartyShare,
   splitPartyPayment,
 } from "@/lib/payment-marks";
+import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookingPayments, bookings, courses, people, shops, trips } from "./schema";
@@ -128,7 +129,7 @@ export async function paymentMarkFactsForTrip(
  */
 export async function getTripRosterWithPaymentMarks(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
-    .select({ booking: bookings, person: people, ...markColumns })
+    .select({ booking: bookings, person: people, checkedIn: seatCheckedIn, ...markColumns })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
@@ -146,7 +147,7 @@ export async function getTripRosterWithPaymentMarks(db: AppDb, shopId: string, t
     .where(tripRosterWhere(shopId, tripId))
     .orderBy(...tripRosterOrder);
   return {
-    roster: rows.map(({ booking, person }) => ({ booking, person })),
+    roster: rows.map(({ booking, person, checkedIn }) => ({ booking, person, checkedIn })),
     paymentMarksByBooking: new Map(rows.map((row) => [row.booking.id, markFacts(row)])),
   };
 }

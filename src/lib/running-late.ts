@@ -38,11 +38,15 @@ export const RUNNING_LATE_LEAD_MS = 24 * HOUR_MS;
  */
 export function canSayRunningLate(input: {
   bookingStatus: string;
+  /** The desk has them seen (`seatCheckedIn`); arrival is not a seat status (#2702). */
+  checkedIn: boolean;
   tripStatus: string;
   startsAt: Date;
   now: Date;
 }): boolean {
-  if (input.bookingStatus !== "booked" || input.tripStatus !== "scheduled") return false;
+  if (input.bookingStatus !== "booked" || input.checkedIn || input.tripStatus !== "scheduled") {
+    return false;
+  }
   const untilDeparture = input.startsAt.getTime() - input.now.getTime();
   return untilDeparture <= RUNNING_LATE_LEAD_MS && !hasSailed(input.startsAt, input.now);
 }
@@ -54,9 +58,11 @@ export function canSayRunningLate(input: {
  */
 export function runningLateShown(input: {
   bookingStatus: string;
+  /** The desk has them seen (`seatCheckedIn`); arrival is not a seat status (#2702). */
+  checkedIn: boolean;
   runningLateAt: Date | null;
 }): Date | null {
-  return input.bookingStatus === "booked" ? input.runningLateAt : null;
+  return input.bookingStatus === "booked" && !input.checkedIn ? input.runningLateAt : null;
 }
 
 /**

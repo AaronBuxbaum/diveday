@@ -7,6 +7,7 @@ import { liveTrip } from "@/db/trips-live";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { seatHeld } from "@/db/trips-queries";
 
 /**
  * A manifest whose trip and boat capacity warnings can be read together.
@@ -51,7 +52,7 @@ export async function seedManifestOverCapacityState(
         and(
           eq(bookings.shopId, shopId),
           eq(bookings.tripId, candidate.id),
-          inArray(bookings.status, ["booked", "checked_in"]),
+          seatHeld,
         ),
       )
       .orderBy(people.fullName);

@@ -36,6 +36,7 @@ import {
 } from "./schema";
 import { seatBalanceOwedCentsFromJoinedRow } from "./seat-balance";
 import { notRehearsal } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /** What this seat was asked, the weight its share of the charge is split by. */
 export const seatAskedCents = sql<number>`(coalesce(${bookingCheckoutBookings.tripCents}, ${bookingCheckouts.amountPerDiverCents}) + ${bookingCheckoutBookings.gearCents} + ${bookingCheckoutBookings.passThroughCents})`;
@@ -321,7 +322,7 @@ export async function owedSeatsAfterSailing(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        inArray(bookings.status, ["booked", "checked_in"]),
+        seatHeld,
         ne(trips.status, "cancelled"),
         lt(trips.startsAt, now),
         isNull(orders.id),

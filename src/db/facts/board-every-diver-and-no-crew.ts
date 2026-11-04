@@ -6,6 +6,7 @@ import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { seatHeld } from "@/db/trips-queries";
 
 /**
  * **A full boat whose crew nobody has counted** — the state where somebody may
@@ -68,7 +69,7 @@ export async function boardEveryDiverAndNoCrew(
         // Checked in as well as booked: the demo's morning hand-off checks
         // two divers in at the counter, and the station counts their seats
         // too, so leaving them ashore would never fill the boat.
-        inArray(bookings.status, ["booked", "checked_in"]),
+        seatHeld,
       ),
     )
     .orderBy(people.fullName);

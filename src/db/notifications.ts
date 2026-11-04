@@ -90,7 +90,7 @@ import {
 } from "./schema";
 import { shopHasFeatureOn } from "./shops";
 import { livePerson, liveTrip } from "./trips-live";
-import { seatNotCancelled } from "./trips-queries";
+import { seatHeld, seatNotCancelled } from "./trips-queries";
 
 const RETRY_QUEUE_LIMIT = 100;
 
@@ -837,7 +837,7 @@ async function refreshQueuedFlySafe(db: AppDb, notification: Notification): Prom
         eq(people.id, notification.personId),
         eq(people.email, notification.to),
         livePerson(),
-        inArray(bookings.status, ["booked", "checked_in"]),
+        seatHeld,
         eq(trips.status, "scheduled"),
         liveTrip(),
       ),

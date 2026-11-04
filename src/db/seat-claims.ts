@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { hasArrived } from "@/lib/presence";
 import { trackEvent } from "@/lib/analytics";
 import { asLevelCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
@@ -23,6 +24,7 @@ import {
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { partySeatGoesWithLead, tripAdmissionFor } from "./bookings";
+import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
@@ -115,6 +117,7 @@ export async function getClaimPageData(
     .limit(1);
   if (!row) return null;
   if (!claimableNow(row.booking, row.trip, now)) return null;
+  if (await seatSeenAtDesk(db, row.booking)) return null;
   const leadBookingId = row.booking.partyLeadBookingId;
   const lead =
     row.booking.minorDeclaredAt !== null && leadBookingId
@@ -238,6 +241,19 @@ export async function getClaimPageState(
  * (glossary), and a claim moves paperwork onto an existing seat rather than
  * selling one, the same reasoning `restoreBooking` records for undo.
  */
+/**
+ * A party seat the desk has already checked in is not claimed out from under
+ * the person standing at the counter: a claim re-points the seat at the
+ * claimant, and the sighting would move with it (issue #2702). Read from the
+ * arrival trail, because the seat's own status says nothing about arrival.
+ */
+async function seatSeenAtDesk(
+  db: DbExecutor,
+  booking: Pick<typeof bookings.$inferSelect, "id" | "shopId" | "tripId">,
+): Promise<boolean> {
+  return hasArrived(await standingArrivalStatus(db, booking.shopId, booking.tripId, booking.id));
+}
+
 function claimableNow(
   booking: Pick<typeof bookings.$inferSelect, "status" | "partyLeadBookingId" | "claimedAt">,
   trip: Pick<typeof trips.$inferSelect, "status" | "startsAt">,
@@ -331,7 +347,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     .from(trips)
     .where(and(eq(trips.id, booking.tripId), eq(trips.shopId, capability.shopId), liveTrip()))
     .limit(1);
-  if (!trip || !claimableNow(booking, trip, now)) {
+  if (!trip || !claimableNow(booking, trip, now) || (await seatSeenAtDesk(tx, booking))) {
     return { ok: false, reason: "invalid" };
   }
 
@@ -784,6 +800,7 @@ export async function issuePartySeatClaims(
         identityUnconfirmedAt: bookings.identityUnconfirmedAt,
         identityBookedAs: bookings.identityBookedAs,
         participantType: bookings.participantType,
+        checkedIn: seatCheckedIn,
       },
       person: {
         fullName: people.fullName,

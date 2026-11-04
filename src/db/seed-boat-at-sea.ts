@@ -45,6 +45,7 @@ import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed-identifiers";
 import { paperRelease } from "./seed-paper-release";
 import { liveTrip } from "./trips-live";
 import { getCurrentWaiverTemplate } from "./waivers";
+import { seedArrivals } from "./seed-arrivals";
 
 /**
  * Who crews the boat at sea, by name, and the job each does aboard: the owner
@@ -388,7 +389,7 @@ async function writeSeats(
         shopId,
         tripId: trip.id,
         personId: diver.personId,
-        status: "checked_in" as const,
+        status: "booked" as const,
         createdAt: bookedAt[seat] as Date,
       })),
     )
@@ -398,6 +399,17 @@ async function writeSeats(
     const bookingId = bookingOf.get(diver.personId);
     return bookingId ? [{ ...diver, bookingId, seat, at: bookedAt[seat] as Date }] : [];
   });
+  // Every one of them came through the desk before the boat left.
+  await seedArrivals(
+    db,
+    seated.map((row) => ({
+      shopId,
+      tripId: trip.id,
+      bookingId: row.bookingId,
+      recordedByPersonId: recorderId,
+      occurredAt: new Date(plan.startsAt.getTime() - (45 - row.seat) * 60_000),
+    })),
+  );
   await db.insert(bookingPaymentEvents).values(
     paymentEntries(
       seated.map((row) => ({

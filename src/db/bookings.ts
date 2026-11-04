@@ -1,4 +1,5 @@
 import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { hasArrived } from "@/lib/presence";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
@@ -60,6 +61,7 @@ import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import { fareCheckout } from "./checkout-purpose";
+import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import {
   completeDateRequestOfferParty,
@@ -2142,6 +2144,15 @@ export async function moveBooking(
     // trail. A plain no-show does not move: that is the day's own record.
     const turnedAway = booking.status === "no_show" && booking.turnedAwayAt !== null;
     if (booking.status !== "booked" && !turnedAway) return { ok: false, reason: "not_movable" };
+    // A diver the desk has checked in on this departure does not move off it:
+    // the sighting belongs to this boat, and a move would leave them on the
+    // new one as still to come (issue #2702).
+    if (
+      booking.status === "booked" &&
+      hasArrived(await standingArrivalStatus(tx, shopId, fromTripId, booking.id))
+    ) {
+      return { ok: false, reason: "not_movable" };
+    }
     // A turned-away seat moves only before the source's scheduled start
     // (layer 3 re-review, dde-3 #4 and #5): after it, the boat may be out with
     // an offline after-dive mark still to sync, and the move would wipe the
@@ -2998,9 +3009,10 @@ export type SelfCancelResult =
  * straight to cancelled, but a diver acting through a bearer token gets its
  * own pre-checks `cancelBooking` itself doesn't enforce:
  *
- * - Only a plain `booked` seat is self-cancellable — not one already
- *   `cancelled`, and not `checked_in`/`no_show`, which are day-of states a
- *   diver clicking a pre-trip link should never be able to flip back.
+ * - Only a plain `booked` seat the desk has not checked in is
+ *   self-cancellable — not one already `cancelled`, not a `no_show`, and not
+ *   one with a standing arrival, which are day-of states a diver clicking a
+ *   pre-trip link should never be able to flip back.
  * - The trip must not have already started; cancelling a seat on a boat
  *   that's already left has no honest meaning (mirrors the same
  *   already-departed check the checkout-recovery scan makes, docs ADR
@@ -3026,7 +3038,7 @@ export async function selfCancelBooking(
   return db.transaction(async (tx) => {
     // Locks the row for the rest of this transaction — closes the gap a bare
     // read-then-write would leave open for a concurrent roll-call action to
-    // flip this same seat to checked_in/no_show between the check below and
+    // check this seat in or flip it to no_show between the check below and
     // the write, which the unconditional update this replaced could then
     // blindly stomp back to cancelled (security review finding on this ADR).
     const [row] = await tx
@@ -3043,6 +3055,12 @@ export async function selfCancelBooking(
     if (!row) return { ok: false, reason: "not_found" };
     if (row.status === "cancelled") return { ok: false, reason: "already_cancelled" };
     if (row.status !== "booked") return { ok: false, reason: "not_cancellable" };
+    // A diver the desk has checked in is a day-of state too, read from the
+    // arrival trail under this lock (issue #2702): a pre-trip link must not
+    // cancel somebody the counter is looking at.
+    if (hasArrived(await standingArrivalStatus(tx, input.shopId, row.tripId, input.bookingId))) {
+      return { ok: false, reason: "not_cancellable" };
+    }
 
     const [trip] = await tx
       .select({ startsAt: trips.startsAt })
@@ -3128,8 +3146,10 @@ async function releaseSelfCancelledSeat(
 export function partySeatGoesWithLead(seat: {
   status: (typeof bookings.$inferSelect)["status"];
   claimedAt: Date | null;
+  /** The desk has them seen (`seatCheckedIn`): a seat already checked in stays. */
+  checkedIn: boolean;
 }): boolean {
-  return seat.status === "booked" && seat.claimedAt === null;
+  return seat.status === "booked" && seat.claimedAt === null && !seat.checkedIn;
 }
 
 /**
@@ -3151,7 +3171,12 @@ export async function previewPartyCancel(
     .limit(1);
   if (!lead || lead.partyLeadBookingId !== null) return { goes: 0, stays: 0 };
   const seats = await db
-    .select({ id: bookings.id, status: bookings.status, claimedAt: bookings.claimedAt })
+    .select({
+      id: bookings.id,
+      status: bookings.status,
+      claimedAt: bookings.claimedAt,
+      checkedIn: seatCheckedIn,
+    })
     .from(bookings)
     .where(
       and(
@@ -3200,6 +3225,7 @@ export async function cancelUnclaimedPartySeats(
       bookingId: bookings.id,
       status: bookings.status,
       claimedAt: bookings.claimedAt,
+      checkedIn: seatCheckedIn,
       personId: bookings.personId,
       fullName: people.fullName,
       email: people.email,

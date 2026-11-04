@@ -1,9 +1,9 @@
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import type { CourseSeatInTraining } from "@/lib/in-training";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import type { DbExecutor } from "./client";
 import { bookings, courses, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /**
  * **Which levels each diver is booked to be certified at, and when.**
@@ -41,7 +41,7 @@ export async function listCourseSeatsInTraining(
         inArray(bookings.personId, [...personIds]),
         // A diver marked absent did not sit the course, and a cancelled
         // session runs for nobody.
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        seatHeld,
         // A snorkeler or a rider on the session is aboard, not enrolled
         // (issue #2226): only a diver's seat is a student's.
         eq(bookings.participantType, "diver"),

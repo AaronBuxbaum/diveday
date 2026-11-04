@@ -17,6 +17,7 @@ import type { RosterSeat } from "./roster-seat";
 export type RowHeaderInput = Pick<
   RosterSeat,
   | "booking"
+  | "checkedIn"
   | "person"
   | "t"
   | "shopSlug"
@@ -35,6 +36,7 @@ export type RowHeaderInput = Pick<
 export function rowHeader(seat: RowHeaderInput) {
   const {
     booking,
+    checkedIn,
     person,
     t,
     shopSlug,
@@ -153,7 +155,7 @@ export function rowHeader(seat: RowHeaderInput) {
     // shows. It reads existing booking state and gates nothing.
     // Not where the row's own tap already says it: with the desk open, an
     // arrived diver's row ends in "Checked in", the control that undoes it.
-    booking.status === "checked_in" && !arrivalControl && !record ? (
+    checkedIn && !arrivalControl && !record ? (
       <Badge key="checked-in" tone="neutral">
         {presenceText(t, "arrived")}
       </Badge>

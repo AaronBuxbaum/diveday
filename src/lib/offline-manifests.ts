@@ -370,7 +370,7 @@ export type OfflineManifestPayload = {
           /**
            * **The counter's own answer, and the reason the dock copy can take
            * one at all** (ADR 20260907-the-counter-survives-offline). One
-           * boolean — the same fact `bookings.status === "checked_in"` states
+           * boolean — the same fact the arrival trail states (`seatCheckedIn`)
            * and the live manifest already shows — with no name and no
            * timestamp beside it, because a desk row needs neither and this
            * allow-list exists to keep what a phone holds for a fortnight down

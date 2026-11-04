@@ -33,12 +33,16 @@ import { trips } from "./trips";
  */
 export const identityMatchKind = pgEnum("identity_match_kind", ["shared_email", "picked_name"]);
 
-export const bookingStatus = pgEnum("booking_status", [
-  "booked",
-  "checked_in",
-  "cancelled",
-  "no_show",
-]);
+/**
+ * **What the shop decided about the seat**, and nothing else: held, released
+ * by a staffer who said the diver did not come, or given up. Where the person
+ * has got to is not a seat word. The desk's sighting is the arrival trail
+ * (`booking_arrival_events`) and the boat's is roll call (`roll_call_events`),
+ * both read and never mirrored here (issue #2702, ADR
+ * 20261104-arrival-is-a-trail). A no-show, a cancel, a reclaim or a restore
+ * touches this word and leaves the sighting standing.
+ */
+export const bookingStatus = pgEnum("booking_status", ["booked", "cancelled", "no_show"]);
 
 /**
  * **Why the desk turned a diver away** (safety sheet 2026-10-15, item 6;

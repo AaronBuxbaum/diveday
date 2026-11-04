@@ -30,7 +30,6 @@ import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
-import { seatStatusAfterRelease } from "@/lib/presence";
 import type { RollCallEventStatus, RollCallSubjectKind } from "@/lib/roll-call";
 import {
   type CountedAboardBlocked,
@@ -41,7 +40,6 @@ import { runningLateShown } from "@/lib/running-late";
 import type { TrainingMarkState } from "@/lib/training-mark";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
-import { standingArrivalStatus } from "./arrival-provenance";
 import { requireActiveStaffId } from "./authz";
 import {
   boardingCertificationSnapshot,
@@ -960,7 +958,7 @@ export async function departureRollCallTakenTripIds(
  * The flat view of {@link listDepartureBoardedByTrip}: every booking aboard
  * across the given trips. This is the manifest's half of the coupling task 149
  * closes from the other side (`checkedIn` on `ManifestDiverInput`) —
- * `checked_in` used to have exactly one reader in the app, the check-in page,
+ * arrival used to have exactly one reader in the app, the check-in page,
  * and boarding was invisible there.
  */
 export async function listDepartureBoardedBookingIds(
@@ -1213,7 +1211,7 @@ export async function getTripManifests(
     // The dock-rider form stays shut on a cancelled departure (#2394).
     cancelled: trip.status === "cancelled",
   };
-  const diverInputs = roster.map(({ booking, person }) => {
+  const diverInputs = roster.map(({ booking, person, checkedIn }) => {
     return {
       bookingId: booking.id,
       // A held seat is named as booked here, once, so the alarm, the buddy
@@ -1302,9 +1300,12 @@ export async function getTripManifests(
       // released seat the way the arrivals list clears it.
       runningLateAt: runningLateShown({
         bookingStatus: booking.status,
+        checkedIn,
         runningLateAt: booking.runningLateAt,
       }),
-      checkedIn: booking.status === "checked_in",
+      // The desk's sighting, from the arrival trail (`seatCheckedIn`): never a
+      // boarding, and never a seat status (issue #2702).
+      checkedIn,
       // The other half of the same column, and the one the roster read could
       // not say before there was a writer for it (#1209): this seat was
       // released at the desk. The row stays — `getTripRoster` keeps every
@@ -1650,7 +1651,7 @@ async function gateOfflineRollCallNote(
  * theirs again.**
  *
  * `markBookingNoShow` (src/db/no-show.ts) releases a seat the instant a staffer
- * confirms the diver did not come: `no_show` leaves `SEAT_HELD_STATUSES`, the
+ * confirms the diver did not come: `no_show` stops holding the seat, the
  * boat reads one seat lighter, and a walk-in can buy it. Readiness never reads
  * booking status and `getTripRoster` drops only cancelled rows, so that released
  * seat stayed boardable and the crew were looking straight at a tappable name
@@ -1706,17 +1707,15 @@ async function reclaimReleasedSeat(
     missingAfterDive: boolean;
   },
 ): Promise<void> {
-  // The seat comes back as what it was, exactly as `undoBookingNoShow` puts it
-  // back (src/db/no-show.ts): `checked_in` when the arrival trail still says
-  // the desk saw the diver, `booked` otherwise. Restoring `booked` every time
-  // put a diver the counter had already checked in back on its "still to
-  // come" list (issue #1838). Both hold a seat (`SEAT_HELD_STATUSES`).
-  const standing = await standingArrivalStatus(tx, input.shopId, input.tripId, input.bookingId);
+  // The seat comes back held, exactly as `undoBookingNoShow` puts it back
+  // (src/db/no-show.ts). Whether the desk saw the diver is the arrival trail's,
+  // which the release never touched, so a diver the counter had checked in
+  // reads as checked in again with nothing written here (issues #1838, #2702).
   const [updated] = await tx
     .update(bookings)
     // A seat back on the boat is not turned away (`bookings_turned_away_is_released`).
     .set({
-      status: seatStatusAfterRelease(standing),
+      status: "booked",
       turnedAwayReason: null,
       turnedAwayAt: null,
     })
@@ -2189,7 +2188,7 @@ async function writeRollCall(
   // same ordering when they get there second, and for one slice it covered
   // only half of it. A crew member tapping "not back aboard" after a dive on
   // a seat the desk had already released left a `no_show` standing over a
-  // diver in the water: the seat had left `SEAT_HELD_STATUSES` at the desk's
+  // diver in the water: the seat had stopped being held at the desk's
   // tap, the counter had already offered it to the wait list, and the
   // glossary's promise that the mark "cannot co-exist with a boarding at any
   // checkpoint" was false in exactly the ordering the offline manifest makes

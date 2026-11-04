@@ -22,7 +22,6 @@ import { sellableSeats } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
-import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import type { SeatCounts } from "@/lib/participant-types";
 import {
   summarizeTripDiveSites,
@@ -399,9 +398,10 @@ function withSellableCapacity<T extends { capacity: number }>(
 /**
  * **A booking that still holds a seat**, as a SQL predicate.
  *
- * The statuses themselves are `SEAT_HELD_STATUSES` in `src/lib/no-show.ts`,
- * where the boundary is argued and why it moved is written down; this is the
- * one place they are spelled as a `where` clause, so no capacity count has to
+ * The boundary is `seatIsHeld` in `src/lib/no-show.ts`, where it is argued
+ * and why it moved is written down: only `booked` holds a seat, and a diver
+ * the desk has seen holds the same `booked` seat (issue #2702). This is the
+ * one place it is spelled as a `where` clause, so no capacity count has to
  * write `ne(bookings.status, "cancelled")` again.
  *
  * **Only the seat *counts* take it** — the booking transaction, the restore,
@@ -432,7 +432,7 @@ function withSellableCapacity<T extends { capacity: number }>(
  *   offer; offering one that does not exist costs the diver a second refusal
  *   on the day their trip was already cancelled.
  */
-export const seatHeld = inArray(bookings.status, [...SEAT_HELD_STATUSES]);
+export const seatHeld = eq(bookings.status, "booked");
 
 /**
  * **A booking that is not cancelled** (issue #2758), as a SQL predicate: the

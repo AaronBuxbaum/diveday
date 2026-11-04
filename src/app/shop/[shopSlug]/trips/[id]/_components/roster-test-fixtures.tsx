@@ -47,9 +47,11 @@ export function entry(
     identityBookedAs?: string;
     identityMatchedBy?: "shared_email" | "picked_name";
     participantType?: "diver" | "snorkeler" | "rider";
+    checkedIn?: boolean;
   } = {},
 ): RosterEntry {
   return {
+    checkedIn: over.checkedIn ?? false,
     booking: {
       id,
       status: "booked",

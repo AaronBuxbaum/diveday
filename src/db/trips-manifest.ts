@@ -1,4 +1,5 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
+import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb } from "./client";
 import { bookings, people } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
@@ -108,10 +109,13 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * `waivers.ts` still break this tie on `bookings.id`; #1720 left them where
  * they were rather than reordering a CSV and five surfaces in a change about
  * the manifest.
+ *
+ * `checkedIn` is the desk's sighting read from the arrival trail
+ * (`seatCheckedIn`); the seat's own status has no arrival word (issue #2702).
  */
 export async function getTripRoster(db: AppDb, shopId: string, tripId: string) {
   return db
-    .select({ booking: bookings, person: people })
+    .select({ booking: bookings, person: people, checkedIn: seatCheckedIn })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(tripRosterWhere(shopId, tripId))
