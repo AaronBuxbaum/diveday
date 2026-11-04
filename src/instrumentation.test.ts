@@ -105,14 +105,19 @@ describe("Sentry on the server", () => {
 
   afterEach(() => {
     vi.doUnmock("@sentry/nextjs");
+    vi.doUnmock("@opentelemetry/api");
     vi.doUnmock("@/lib/sentry-dsn");
+    propagationDisable.mockClear();
     vi.resetModules();
   });
+
+  const propagationDisable = vi.fn();
 
   async function instrumentationWith(dsn: string | null) {
     vi.resetModules();
     const fake = sdk();
     vi.doMock("@sentry/nextjs", () => fake);
+    vi.doMock("@opentelemetry/api", () => ({ propagation: { disable: propagationDisable } }));
     vi.doMock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: dsn }));
     return { fake, module: await import("./instrumentation") };
   }
@@ -137,6 +142,11 @@ describe("Sentry on the server", () => {
       expect.arrayContaining(["RequestData", "OnUncaughtException", "OnUnhandledRejection"]),
     );
     expect(names).not.toContain("Http");
+    // Errors only: Sentry's trace propagator is switched off after init.
+    expect(propagationDisable).toHaveBeenCalledTimes(1);
+    expect(propagationDisable.mock.invocationCallOrder[0]).toBeGreaterThan(
+      fake.init.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it("starts nothing without a DSN", async () => {

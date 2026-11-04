@@ -237,12 +237,28 @@ async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string
   return latest;
 }
 
-async function listLatestRollCallByBooking(
+/**
+ * The latest per-booking roll-call result at each of a departure's checkpoints,
+ * one Map per checkpoint in the order asked — one statement for all of them, not
+ * one per checkpoint (a three-dive day was three round trips).
+ */
+async function listLatestRollCallsByCheckpoint(
   db: AppDb,
   shopId: string,
   tripId: string,
-  checkpoint: RollCallCheckpoint,
+  checkpoints: readonly RollCallCheckpoint[],
 ) {
+  type Latest = {
+    state: "boarded" | "not_boarded";
+    occurredAt: Date;
+    recordedByName: string;
+    note: string | null;
+    eventId: string;
+  };
+  const byCheckpoint = new Map<RollCallCheckpoint, Map<string, Latest>>(
+    checkpoints.map((checkpoint) => [checkpoint, new Map<string, Latest>()]),
+  );
+  if (checkpoints.length === 0) return [];
   const rows = await db
     .select({ event: rollCallEvents, recorder: people })
     .from(rollCallEvents)
@@ -252,30 +268,22 @@ async function listLatestRollCallByBooking(
         eq(rollCallEvents.shopId, shopId),
         seatMarks(),
         eq(rollCallEvents.tripId, tripId),
-        eq(rollCallEvents.checkpoint, checkpoint),
+        inArray(rollCallEvents.checkpoint, [...checkpoints]),
       ),
     )
     .orderBy(...newestMarkFirst());
-  const latest = new Map<
-    string,
-    {
-      state: "boarded" | "not_boarded";
-      occurredAt: Date;
-      recordedByName: string;
-      note: string | null;
-      eventId: string;
-    }
-  >();
-  // Rows are newest-first, so the first row per booking wins. A latest `cleared`
-  // event is staff undoing a mistake: record the booking as seen so no older
-  // event resurfaces, but leave it out of the map so the diver reads as awaiting.
+  // Rows are newest-first, so the first row per booking at a checkpoint wins. A
+  // latest `cleared` event is staff undoing a mistake: record the booking as
+  // seen so no older event resurfaces, but leave it out of the map so the diver
+  // reads as awaiting.
   const seen = new Set<string>();
   for (const { event: row, recorder } of rows) {
     const event = asSeatMark(row);
-    if (seen.has(event.bookingId)) continue;
-    seen.add(event.bookingId);
+    const key = `${event.checkpoint}\u0000${event.bookingId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     if (event.status === "cleared") continue;
-    latest.set(event.bookingId, {
+    byCheckpoint.get(event.checkpoint as RollCallCheckpoint)?.set(event.bookingId, {
       state: event.status,
       occurredAt: event.occurredAt,
       recordedByName: recorder.fullName,
@@ -283,7 +291,7 @@ async function listLatestRollCallByBooking(
       eventId: event.id,
     });
   }
-  return latest;
+  return checkpoints.map((checkpoint) => byCheckpoint.get(checkpoint) ?? new Map<string, Latest>());
 }
 
 /**
@@ -1016,7 +1024,7 @@ export async function getTripManifests(
     buddyTeams,
     standingClashes,
     welcomeInputs,
-    ...rollCalls
+    rollCalls,
   ] = await Promise.all([
     getShopById(db, shopId),
     getTripRoster(db, shopId, tripId),
@@ -1041,7 +1049,7 @@ export async function getTripManifests(
     // so the offline serializer and every other consumer of a manifest see the
     // same derived cue.
     welcomeCueInputsByBooking(db, shopId, tripId),
-    ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
+    listLatestRollCallsByCheckpoint(db, shopId, tripId, checkpoints),
   ]);
   if (!shop) return null;
   // The fact of a medical alert for the crew on each seat's standing release
