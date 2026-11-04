@@ -3,20 +3,12 @@
 // This script is checked out from the immutable reusable-workflow revision. The
 // downloaded bundle is data only; no file in it is imported or executed.
 import { createHash } from "node:crypto";
-import {
-  createReadStream,
-  lstatSync,
-  readFileSync,
-  realpathSync,
-} from "node:fs";
+import { createReadStream, lstatSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { gunzipSync } from "node:zlib";
 
-import {
-  comparePublicationIds,
-  publicationIdFromEnv,
-} from "./visual-publication-id.mjs";
+import { comparePublicationIds, publicationIdFromEnv } from "./visual-publication-id.mjs";
 
 const PARALLELISM = 32;
 const MAX_FILES = 10_000;
@@ -33,9 +25,7 @@ const MAX_BLOB_BYTES = 20_000_000;
 // so each main publish rewrites the ones it references once they are this old.
 const BLOB_REFRESH_MS = 14 * 24 * 60 * 60 * 1000;
 const BLOB_KEY = /^blobs\/([0-9a-f]{64})\.png$/u;
-const PNG_SIGNATURE = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-]);
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}$/u;
 const TYPES = new Set([
   "application/json",
@@ -126,21 +116,17 @@ function objectKey(actualKey, key) {
 
 function classifyKey(key, contentType, snapshotVersion) {
   if (BLOB_KEY.test(key)) {
-    if (contentType !== "image/png")
-      throw new Error(`blob must be image/png: ${key}`);
+    if (contentType !== "image/png") throw new Error(`blob must be image/png: ${key}`);
     return "blob";
   }
   if (key === "out.json") {
-    if (contentType !== "application/json")
-      throw new Error("out.json must be application/json");
+    if (contentType !== "application/json") throw new Error("out.json must be application/json");
     return "marker";
   }
 
   const prefix = `snapshots/${snapshotVersion}/`;
   if (!key.startsWith(prefix)) {
-    throw new Error(
-      `publisher object is outside snapshot ${snapshotVersion}: ${key}`,
-    );
+    throw new Error(`publisher object is outside snapshot ${snapshotVersion}: ${key}`);
   }
   const relative = key.slice(prefix.length);
   if (relative === "out.json") {
@@ -150,8 +136,7 @@ function classifyKey(key, contentType, snapshotVersion) {
     return "snapshot-asset";
   }
   if (relative === "index.html") {
-    if (contentType !== "text/html")
-      throw new Error("snapshot index.html must be text/html");
+    if (contentType !== "text/html") throw new Error("snapshot index.html must be text/html");
     return "snapshot-asset";
   }
   if (relative === "worker.js") {
@@ -167,29 +152,18 @@ function classifyKey(key, contentType, snapshotVersion) {
     return "snapshot-asset";
   }
   const slash = relative.indexOf("/");
-  if (
-    slash < 1 ||
-    !["actual", "expected", "diff"].includes(relative.slice(0, slash))
-  ) {
-    throw new Error(
-      `publisher object is outside the versioned image directories: ${key}`,
-    );
+  if (slash < 1 || !["actual", "expected", "diff"].includes(relative.slice(0, slash))) {
+    throw new Error(`publisher object is outside the versioned image directories: ${key}`);
   }
   if (contentType === "application/wasm" || !TYPES.has(contentType)) {
     throw new Error(`unsupported publisher content type for ${key}`);
   }
-  const expectedType = TYPES_BY_EXTENSION.get(
-    path.extname(relative).toLowerCase(),
-  );
+  const expectedType = TYPES_BY_EXTENSION.get(path.extname(relative).toLowerCase());
   if (!expectedType || expectedType !== contentType) {
-    throw new Error(
-      `publisher content type does not match its extension: ${key}`,
-    );
+    throw new Error(`publisher content type does not match its extension: ${key}`);
   }
   if (relative.toLowerCase().endsWith(".wasm")) {
-    throw new Error(
-      `WebAssembly is allowed only at the root detector.wasm key`,
-    );
+    throw new Error(`WebAssembly is allowed only at the root detector.wasm key`);
   }
   return "snapshot-asset";
 }
@@ -197,8 +171,7 @@ function classifyKey(key, contentType, snapshotVersion) {
 async function sha256File(file, signal, onChunk) {
   const hash = createHash("sha256");
   const stream = createReadStream(file);
-  const stop = () =>
-    stream.destroy(signal.reason ?? new Error("publisher aborted"));
+  const stop = () => stream.destroy(signal.reason ?? new Error("publisher aborted"));
   signal.addEventListener("abort", stop, { once: true });
   try {
     for await (const chunk of stream) {
@@ -244,9 +217,7 @@ function readVersionedReport(marker) {
     !Array.isArray(report.actualItems) ||
     report.actualItems.length > MAX_REPORT_ITEMS
   ) {
-    throw new Error(
-      "out.json does not describe the requested snapshot version",
-    );
+    throw new Error("out.json does not describe the requested snapshot version");
   }
   const names = new Set();
   for (const name of report.actualItems) {
@@ -266,14 +237,9 @@ function readBlobMap(value, names) {
     throw new Error("out.json actualBlobs must be an object");
   }
   const entries = Object.entries(value);
-  if (entries.length > MAX_REPORT_ITEMS)
-    throw new Error("out.json actualBlobs is too large");
+  if (entries.length > MAX_REPORT_ITEMS) throw new Error("out.json actualBlobs is too large");
   for (const [name, hash] of entries) {
-    if (
-      !names.has(name) ||
-      typeof hash !== "string" ||
-      !/^[0-9a-f]{64}$/u.test(hash)
-    ) {
+    if (!names.has(name) || typeof hash !== "string" || !/^[0-9a-f]{64}$/u.test(hash)) {
       throw new Error(`out.json actualBlobs has an unsafe entry: ${name}`);
     }
   }
@@ -291,17 +257,14 @@ async function validateBundle({
   onEvent,
 }) {
   aborted(signal);
-  if (!/^[0-9a-f]{40}$/u.test(actualKey ?? ""))
-    throw new Error("invalid immutable snapshot key");
-  if (!/^[0-9a-f]{64}$/u.test(snapshotVersion ?? ""))
-    throw new Error("invalid snapshot version");
+  if (!/^[0-9a-f]{40}$/u.test(actualKey ?? "")) throw new Error("invalid immutable snapshot key");
+  if (!/^[0-9a-f]{64}$/u.test(snapshotVersion ?? "")) throw new Error("invalid snapshot version");
   if (!/^([1-9][0-9]{0,19})-([1-9][0-9]{0,5})$/u.test(publicationId ?? "")) {
     throw new Error("invalid publication identity");
   }
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/u.test(bucket ?? ""))
     throw new Error("invalid S3 bucket");
-  if (prNumber && !/^[1-9][0-9]*$/u.test(prNumber))
-    throw new Error("invalid PR number");
+  if (prNumber && !/^[1-9][0-9]*$/u.test(prNumber)) throw new Error("invalid PR number");
 
   const bundleStat = lstatSync(bundle);
   if (!bundleStat.isDirectory() || bundleStat.isSymbolicLink()) {
@@ -340,14 +303,12 @@ async function validateBundle({
   for (const line of manifestText.split(/\r?\n/u)) {
     aborted(signal);
     if (!line) continue;
-    if (entries.length >= MAX_FILES)
-      throw new Error("publisher manifest exceeds file-count limit");
+    if (entries.length >= MAX_FILES) throw new Error("publisher manifest exceeds file-count limit");
     const fields = line.split("\t");
     if (fields.length !== 2) throw new Error("malformed publisher manifest");
     const [key, contentType] = fields;
     requireSafePath(key);
-    if (keys.has(key))
-      throw new Error(`publisher manifest contains a duplicate key: ${key}`);
+    if (keys.has(key)) throw new Error(`publisher manifest contains a duplicate key: ${key}`);
     keys.add(key);
     const kind = classifyKey(key, contentType, snapshotVersion);
     const file = path.join(payloadDir, `${key}.gz`);
@@ -358,22 +319,18 @@ async function validateBundle({
     if (kind === "marker" && fileStat.size > MAX_REPORT_COMPRESSED_BYTES) {
       throw new Error("compressed out.json exceeds publisher report limit");
     }
-    if (fileStat.size > MAX_FILE_BYTES)
-      throw new Error(`publisher payload is too large: ${key}`);
+    if (fileStat.size > MAX_FILE_BYTES) throw new Error(`publisher payload is too large: ${key}`);
     const resolvedFile = realpathSync(file);
     if (!inside(payloadRoot, resolvedFile))
       throw new Error(`publisher payload escapes its root: ${key}`);
     totalBytes += fileStat.size;
-    if (totalBytes > MAX_TOTAL_BYTES)
-      throw new Error("publisher payload exceeds size limit");
+    if (totalBytes > MAX_TOTAL_BYTES) throw new Error("publisher payload exceeds size limit");
     const entry = { key, contentType, kind, file, size: fileStat.size };
     if (kind === "marker") marker = entry;
     entries.push(entry);
   }
   if (!entries.length || !marker)
-    throw new Error(
-      "publisher manifest must contain exactly one out.json marker",
-    );
+    throw new Error("publisher manifest must contain exactly one out.json marker");
 
   for (const entry of entries) {
     entry.sha256 = await sha256File(entry.file, signal, (size) =>
@@ -393,9 +350,7 @@ async function validateBundle({
         !png.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE) ||
         `blobs/${entry.blobSha256}.png` !== entry.key
       ) {
-        throw new Error(
-          `blob content does not match its content address: ${entry.key}`,
-        );
+        throw new Error(`blob content does not match its content address: ${entry.key}`);
       }
     }
   }
@@ -408,8 +363,7 @@ async function validateBundle({
   const localReportEntry = entries.find(
     (entry) => entry.key === `snapshots/${snapshotVersion}/out.json`,
   );
-  if (!localReportEntry)
-    throw new Error("snapshot bundle is missing its local out.json report");
+  if (!localReportEntry) throw new Error("snapshot bundle is missing its local out.json report");
   let localReport;
   try {
     localReport = JSON.parse(
@@ -432,39 +386,27 @@ async function validateBundle({
     JSON.stringify(localReport.actualItems) !== JSON.stringify(actualItems) ||
     JSON.stringify(localReport.actualBlobs ?? {}) !== JSON.stringify(blobs)
   ) {
-    throw new Error(
-      "snapshot out.json does not match the root publication marker",
-    );
+    throw new Error("snapshot out.json does not match the root publication marker");
   }
   const actualKeys = new Set(
-    entries
-      .filter((entry) => entry.kind === "snapshot-asset")
-      .map((entry) => entry.key),
+    entries.filter((entry) => entry.kind === "snapshot-asset").map((entry) => entry.key),
   );
-  const blobKeys = new Set(
-    entries.filter((entry) => entry.kind === "blob").map((e) => e.key),
-  );
+  const blobKeys = new Set(entries.filter((entry) => entry.kind === "blob").map((e) => e.key));
   for (const hash of new Set(Object.values(blobs))) {
     if (!blobKeys.has(`blobs/${hash}.png`)) {
-      throw new Error(
-        `out.json names a blob that is missing from the publisher manifest: ${hash}`,
-      );
+      throw new Error(`out.json names a blob that is missing from the publisher manifest: ${hash}`);
     }
   }
   for (const entry of entries) {
     if (entry.kind !== "blob") continue;
     if (!Object.values(blobs).includes(BLOB_KEY.exec(entry.key)[1])) {
-      throw new Error(
-        `publisher manifest has a blob no report entry names: ${entry.key}`,
-      );
+      throw new Error(`publisher manifest has a blob no report entry names: ${entry.key}`);
     }
   }
   for (const name of actualItems) {
     if (Object.hasOwn(blobs, name)) continue;
     if (!actualKeys.has(`snapshots/${snapshotVersion}/actual/${name}`)) {
-      throw new Error(
-        `out.json actual item is missing from the publisher manifest: ${name}`,
-      );
+      throw new Error(`out.json actual item is missing from the publisher manifest: ${name}`);
     }
   }
   return {
@@ -481,15 +423,7 @@ async function send(client, command, signal, timeoutMs) {
   });
 }
 
-async function headObject({
-  client,
-  commands,
-  bucket,
-  actualKey,
-  key,
-  signal,
-  timeoutMs,
-}) {
+async function headObject({ client, commands, bucket, actualKey, key, signal, timeoutMs }) {
   return send(
     client,
     new commands.HeadObjectCommand({
@@ -521,8 +455,7 @@ function metadataMatches(head, entry, prNumber) {
   const actual = head?.Metadata ?? {};
   const ownerMatches = prNumber
     ? actual["diveday-pr-number"] === prNumber
-    : actual["diveday-pr-number"] === undefined ||
-      actual["diveday-pr-number"] === "None";
+    : actual["diveday-pr-number"] === undefined || actual["diveday-pr-number"] === "None";
   return (
     head?.ContentLength === entry.size &&
     head?.ContentType === entry.contentType &&
@@ -560,8 +493,7 @@ async function hashExistingBody({
   }
   const requestSignal = AbortSignal.timeout(timeoutMs);
   const signalBoth = AbortSignal.any([signal, requestSignal]);
-  const stopBody = () =>
-    body.destroy?.(signalBoth.reason ?? new Error("publisher aborted"));
+  const stopBody = () => body.destroy?.(signalBoth.reason ?? new Error("publisher aborted"));
   signalBoth.addEventListener("abort", stopBody, { once: true });
   const hash = createHash("sha256");
   try {
@@ -630,21 +562,18 @@ async function pool(items, task, signal) {
   let failure;
   const stop = new AbortController();
   const poolSignal = AbortSignal.any([signal, stop.signal]);
-  const workers = Array.from(
-    { length: Math.min(PARALLELISM, items.length) },
-    async () => {
-      while (!failure && cursor < items.length) {
-        try {
-          aborted(poolSignal);
-          const item = items[cursor++];
-          await task(item, poolSignal);
-        } catch (error) {
-          failure ??= error;
-          stop.abort(error);
-        }
+  const workers = Array.from({ length: Math.min(PARALLELISM, items.length) }, async () => {
+    while (!failure && cursor < items.length) {
+      try {
+        aborted(poolSignal);
+        const item = items[cursor++];
+        await task(item, poolSignal);
+      } catch (error) {
+        failure ??= error;
+        stop.abort(error);
       }
-    },
-  );
+    }
+  });
   await Promise.all(workers);
   if (failure) throw failure;
   aborted(signal);
@@ -659,9 +588,7 @@ function markerPublicationId(head) {
 }
 
 function markerOwnerMatches(head, prNumber) {
-  return (
-    (head?.Metadata?.["diveday-pr-number"] ?? "None") === (prNumber || "None")
-  );
+  return (head?.Metadata?.["diveday-pr-number"] ?? "None") === (prNumber || "None");
 }
 
 async function readMarker({
@@ -697,8 +624,7 @@ async function readMarker({
     ) {
       return { state: "same-version", head };
     }
-    if (!head.ETag)
-      throw new Error(`snapshot marker has no ETag at ${actualKey}/out.json`);
+    if (!head.ETag) throw new Error(`snapshot marker has no ETag at ${actualKey}/out.json`);
     return { state: "replace", head };
   } catch (error) {
     if (isMissing(error)) return { state: "absent", head: null };
@@ -733,22 +659,14 @@ async function putObject({
     ...condition,
   };
   try {
-    const result = await send(
-      client,
-      new commands.PutObjectCommand(input),
-      signal,
-      timeoutMs,
-    );
+    const result = await send(client, new commands.PutObjectCommand(input), signal, timeoutMs);
     if (result.ChecksumSHA256 !== checksum) {
-      throw new Error(
-        `S3 checksum response mismatch at ${actualKey}/${entry.key}`,
-      );
+      throw new Error(`S3 checksum response mismatch at ${actualKey}/${entry.key}`);
     }
     return result;
   } catch (error) {
     body.destroy();
-    if (!body.closed)
-      await new Promise((resolve) => body.once("close", resolve));
+    if (!body.closed) await new Promise((resolve) => body.once("close", resolve));
     throw error;
   }
 }
@@ -801,9 +719,7 @@ async function publishBlob(args, onEvent) {
     const intact =
       head.ContentType === "image/png" &&
       head.Metadata?.["diveday-blob-sha256"] === entry.blobSha256;
-    const written = head.LastModified
-      ? new Date(head.LastModified).getTime()
-      : 0;
+    const written = head.LastModified ? new Date(head.LastModified).getTime() : 0;
     if (intact && Date.now() - written < BLOB_REFRESH_MS) {
       onEvent("reused", entry.key);
       return;
@@ -865,9 +781,7 @@ async function verifyBundle({
         timeoutMs,
       });
       if (!prior.matches)
-        throw new Error(
-          `snapshot provenance mismatch at ${actualKey}/${entry.key}`,
-        );
+        throw new Error(`snapshot provenance mismatch at ${actualKey}/${entry.key}`);
       onEvent("verified", entry.key);
     },
     signal,
@@ -916,9 +830,7 @@ async function publishMarker({
     }
 
     const condition =
-      markerState.state === "absent"
-        ? { IfNoneMatch: "*" }
-        : { IfMatch: markerState.head.ETag };
+      markerState.state === "absent" ? { IfNoneMatch: "*" } : { IfMatch: markerState.head.ETag };
     const args = {
       client,
       commands,
@@ -936,13 +848,10 @@ async function publishMarker({
       onEvent("marker-published", marker.key);
       return markerState.state === "absent" ? "published" : "replaced";
     } catch (error) {
-      if (!isPreconditionFailed(error) && !isConditionalConflict(error))
-        throw error;
+      if (!isPreconditionFailed(error) && !isConditionalConflict(error)) throw error;
     }
   }
-  throw new Error(
-    `snapshot marker kept changing during publication at ${actualKey}/out.json`,
-  );
+  throw new Error(`snapshot marker kept changing during publication at ${actualKey}/out.json`);
 }
 
 export async function publishBundle({
@@ -1033,9 +942,7 @@ export async function publishBundle({
 }
 
 async function main() {
-  const bundle = path.resolve(
-    process.env.VISUAL_PUBLISH_BUNDLE ?? "reg-suit-publish-bundle",
-  );
+  const bundle = path.resolve(process.env.VISUAL_PUBLISH_BUNDLE ?? "reg-suit-publish-bundle");
   const actualKey = process.env.REG_ACTUAL_KEY;
   const snapshotVersion = process.env.SNAPSHOT_VERSION;
   const publicationId = publicationIdFromEnv();
@@ -1043,12 +950,12 @@ async function main() {
   const region = process.env.REG_SUIT_AWS_REGION;
   const prNumber = process.env.PR_NUMBER ?? "";
   if (!region) throw new Error("missing AWS region");
-  const { S3Client, HeadObjectCommand, GetObjectCommand, PutObjectCommand } =
-    await import("@aws-sdk/client-s3");
+  const { S3Client, HeadObjectCommand, GetObjectCommand, PutObjectCommand } = await import(
+    "@aws-sdk/client-s3"
+  );
   const client = new S3Client({ region, maxAttempts: 3 });
   const controller = new AbortController();
-  const abort = (signal) =>
-    controller.abort(new Error(`publisher interrupted by ${signal}`));
+  const abort = (signal) => controller.abort(new Error(`publisher interrupted by ${signal}`));
   process.once("SIGINT", abort);
   process.once("SIGTERM", abort);
   try {
@@ -1063,8 +970,7 @@ async function main() {
       prNumber,
       signal: controller.signal,
       onEvent: (event, key) => {
-        if (event === "uploaded" || event === "marker-published")
-          console.log(`Published ${key}`);
+        if (event === "uploaded" || event === "marker-published") console.log(`Published ${key}`);
       },
     });
     console.log(

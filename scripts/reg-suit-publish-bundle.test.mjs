@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -77,10 +71,7 @@ function fixture({
   mkdirSync(payload, { recursive: true });
   const entries = [];
   for (let index = 0; index < count; index++) {
-    const name =
-      count === 1
-        ? "capture.png"
-        : `capture-${String(index).padStart(3, "0")}.png`;
+    const name = count === 1 ? "capture.png" : `capture-${String(index).padStart(3, "0")}.png`;
     for (const [directory, type, content] of [
       ["actual", "image/png", `${capture} actual ${index}`],
       ["expected", "image/png", `expected ${index}`],
@@ -121,9 +112,7 @@ function fixture({
         snapshotVersion: version,
         publicationId,
         actualItems: Array.from({ length: count }, (_, i) =>
-          count === 1
-            ? "capture.png"
-            : `capture-${String(i).padStart(3, "0")}.png`,
+          count === 1 ? "capture.png" : `capture-${String(i).padStart(3, "0")}.png`,
         ),
       }),
     ),
@@ -139,9 +128,7 @@ function fixture({
         snapshotVersion: version,
         publicationId,
         actualItems: Array.from({ length: count }, (_, i) =>
-          count === 1
-            ? "capture.png"
-            : `capture-${String(i).padStart(3, "0")}.png`,
+          count === 1 ? "capture.png" : `capture-${String(i).padStart(3, "0")}.png`,
         ),
       }),
     ),
@@ -199,10 +186,7 @@ function storedObject({
   return { bytes: Buffer.from(bytes), head };
 }
 
-function mapFromFixture(
-  f,
-  { version = VERSION_1, prNumber = PR, checksumPresent = true } = {},
-) {
+function mapFromFixture(f, { version = VERSION_1, prNumber = PR, checksumPresent = true } = {}) {
   const result = new Map();
   for (const entry of f.entries) {
     const key = `${BUCKET}/${COMMIT}/${entry.key}`;
@@ -253,13 +237,9 @@ function fakeS3({
           events.push(["HEAD", key, input.ChecksumMode]);
           if (hangHeadKey === key) {
             await new Promise((_resolve, reject) => {
-              abortSignal?.addEventListener(
-                "abort",
-                () => reject(abortSignal.reason),
-                {
-                  once: true,
-                },
-              );
+              abortSignal?.addEventListener("abort", () => reject(abortSignal.reason), {
+                once: true,
+              });
             });
           }
           const stored = objects.get(key);
@@ -270,8 +250,7 @@ function fakeS3({
           events.push(["GET", key, input.IfMatch]);
           const stored = objects.get(key);
           if (!stored) throw s3Error("NoSuchKey", 404);
-          if (input.IfMatch !== stored.head.ETag)
-            throw s3Error("PreconditionFailed", 412);
+          if (input.IfMatch !== stored.head.ETag) throw s3Error("PreconditionFailed", 412);
           if (hangGetKey === key) {
             return {
               ContentLength: stored.head.ContentLength,
@@ -290,8 +269,7 @@ function fakeS3({
         if (kind === "PutObjectCommand") {
           events.push(["PUT_START", key, input.IfNoneMatch ?? input.IfMatch]);
           await onPut?.({ key, input, objects });
-          if (failPutKey === key)
-            throw new Error(`injected upload failure at ${key}`);
+          if (failPutKey === key) throw new Error(`injected upload failure at ${key}`);
           if (conflictOnceKey === key && !conflictUsed) {
             conflictUsed = true;
             const competingChunks = [];
@@ -315,12 +293,8 @@ function fakeS3({
             throw s3Error("ConditionalRequestConflict", 409);
           }
           const current = objects.get(key);
-          if (input.IfNoneMatch === "*" && current)
-            throw s3Error("PreconditionFailed", 412);
-          if (
-            input.IfMatch &&
-            (!current || current.head.ETag !== input.IfMatch)
-          )
+          if (input.IfNoneMatch === "*" && current) throw s3Error("PreconditionFailed", 412);
+          if (input.IfMatch && (!current || current.head.ETag !== input.IfMatch))
             throw s3Error("PreconditionFailed", 412);
           const chunks = [];
           for await (const chunk of input.Body) {
@@ -328,10 +302,7 @@ function fakeS3({
             chunks.push(chunk);
           }
           const bytes = Buffer.concat(chunks);
-          if (
-            bytes.length !== input.ContentLength ||
-            checksum(bytes) !== input.ChecksumSHA256
-          ) {
+          if (bytes.length !== input.ContentLength || checksum(bytes) !== input.ChecksumSHA256) {
             throw new Error(`bad request checksum at ${key}`);
           }
           const next = storedObject({
@@ -385,12 +356,9 @@ test("publishes versioned objects with bounded workers and the root marker last"
     const result = await publishBundle(args(f, s3));
     assert.deepEqual(result, { status: "published", count: f.entries.length });
     assert.ok(s3.maxActive <= 32 && s3.maxActive > 1);
-    assert.ok(
-      s3.objects.has(`${BUCKET}/${COMMIT}/snapshots/${VERSION_1}/worker.js`),
-    );
+    assert.ok(s3.objects.has(`${BUCKET}/${COMMIT}/snapshots/${VERSION_1}/worker.js`));
     const markerStart = s3.events.findIndex(
-      ([event, key]) =>
-        event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
+      ([event, key]) => event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
     );
     assert.ok(markerStart > 0);
     const completedBeforeMarker = new Set(
@@ -406,8 +374,7 @@ test("publishes versioned objects with bounded workers and the root marker last"
       );
     }
     const markerDone = s3.events.findIndex(
-      ([event, key]) =>
-        event === "PUT_DONE" && key === `${BUCKET}/${COMMIT}/out.json`,
+      ([event, key]) => event === "PUT_DONE" && key === `${BUCKET}/${COMMIT}/out.json`,
     );
     assert.equal(markerDone, s3.events.length - 1);
     assert.ok(
@@ -422,9 +389,7 @@ test("publishes versioned objects with bounded workers and the root marker last"
         ),
     );
     assert.equal(
-      s3.objects.get(`${BUCKET}/${COMMIT}/out.json`).head.Metadata[
-        "diveday-snapshot-version"
-      ],
+      s3.objects.get(`${BUCKET}/${COMMIT}/out.json`).head.Metadata["diveday-snapshot-version"],
       VERSION_1,
     );
   } finally {
@@ -447,10 +412,7 @@ test("publishes a 3,482-object inventory through at most 32 active SDK requests"
     const result = await publishBundle(args(f, s3));
     assert.equal(result.count, 3482);
     assert.ok(s3.maxActive <= 32 && s3.maxActive > 1);
-    assert.equal(
-      s3.events.filter(([event]) => event === "PUT_DONE").length,
-      3482,
-    );
+    assert.equal(s3.events.filter(([event]) => event === "PUT_DONE").length, 3482);
     assert.equal(s3.events.at(-1)[1], `${BUCKET}/${COMMIT}/out.json`);
   } finally {
     f.cleanup();
@@ -469,19 +431,9 @@ test("same-version retries cryptographically verify CRC-only legacy object check
     first.events.length = 0;
     const result = await publishBundle(args(f, first));
     assert.equal(result.status, "provenance-verified");
-    assert.equal(
-      first.events.filter(([event]) => event === "PUT_START").length,
-      0,
-    );
-    assert.equal(
-      first.events.filter(([event]) => event === "GET").length,
-      f.entries.length,
-    );
-    assert.ok(
-      first.events
-        .filter(([event]) => event === "GET")
-        .every(([, , etag]) => etag),
-    );
+    assert.equal(first.events.filter(([event]) => event === "PUT_START").length, 0);
+    assert.equal(first.events.filter(([event]) => event === "GET").length, f.entries.length);
+    assert.ok(first.events.filter(([event]) => event === "GET").every(([, , etag]) => etag));
   } finally {
     f.cleanup();
   }
@@ -494,8 +446,7 @@ test.each(["absent", "none"])(
     try {
       const initial = mapFromFixture(f, { prNumber: "" });
       for (const object of initial.values()) {
-        if (representation === "absent")
-          delete object.head.Metadata["diveday-pr-number"];
+        if (representation === "absent") delete object.head.Metadata["diveday-pr-number"];
         else object.head.Metadata["diveday-pr-number"] = "None";
       }
       const s3 = fakeS3({ initial });
@@ -535,9 +486,7 @@ test("a changed same-owner version replaces only the root marker after all new a
       ]),
     );
     s3.events.length = 0;
-    const result = await publishBundle(
-      args(current, s3, { snapshotVersion: VERSION_2 }),
-    );
+    const result = await publishBundle(args(current, s3, { snapshotVersion: VERSION_2 }));
     assert.equal(result.status, "replaced");
     assert.ok(
       s3.events.some(
@@ -548,29 +497,20 @@ test("a changed same-owner version replaces only the root marker after all new a
       ),
     );
     for (const [key, value] of prior) {
-      if (
-        key.includes(`/snapshots/${VERSION_1}/`) ||
-        key.endsWith("/index.html")
-      ) {
+      if (key.includes(`/snapshots/${VERSION_1}/`) || key.endsWith("/index.html")) {
         assert.deepEqual(s3.objects.get(key), value);
       }
     }
     const marker = s3.events.findIndex(
-      ([event, key]) =>
-        event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
+      ([event, key]) => event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
     );
     assert.ok(
       s3.events
         .slice(0, marker)
-        .some(
-          ([event, key]) =>
-            event === "PUT_DONE" && key.includes(`/snapshots/${VERSION_2}/`),
-        ),
+        .some(([event, key]) => event === "PUT_DONE" && key.includes(`/snapshots/${VERSION_2}/`)),
     );
     assert.equal(
-      s3.objects.get(`${BUCKET}/${COMMIT}/out.json`).head.Metadata[
-        "diveday-snapshot-version"
-      ],
+      s3.objects.get(`${BUCKET}/${COMMIT}/out.json`).head.Metadata["diveday-snapshot-version"],
       VERSION_2,
     );
   } finally {
@@ -612,8 +552,7 @@ test("a same-owner legacy marker is replaced without touching legacy flat assets
         `${BUCKET}/${COMMIT}/index.html`,
         storedObject({
           key: `${COMMIT}/index.html`,
-          bytes: f.entries.find((entry) => entry.key.endsWith("/index.html"))
-            .gz,
+          bytes: f.entries.find((entry) => entry.key.endsWith("/index.html")).gz,
           contentType: "text/html",
         }),
       ],
@@ -621,14 +560,9 @@ test("a same-owner legacy marker is replaced without touching legacy flat assets
     const s3 = fakeS3({ initial });
     const result = await publishBundle(args(f, s3));
     assert.equal(result.status, "replaced");
+    assert.equal(s3.objects.get(flatKey).bytes.toString(), gzipSync("legacy image").toString());
     assert.equal(
-      s3.objects.get(flatKey).bytes.toString(),
-      gzipSync("legacy image").toString(),
-    );
-    assert.equal(
-      s3.objects.get(`${BUCKET}/${COMMIT}/out.json`).head.Metadata[
-        "diveday-snapshot-version"
-      ],
+      s3.objects.get(`${BUCKET}/${COMMIT}/out.json`).head.Metadata["diveday-snapshot-version"],
       VERSION_1,
     );
   } finally {
@@ -666,11 +600,7 @@ test("same-version mismatch fails closed after byte verification", async () => {
       s3.events.some(([event]) => event === "PUT_START"),
       false,
     );
-    assert.ok(
-      s3.events.some(
-        ([event, requestedKey]) => event === "GET" && requestedKey === key,
-      ),
-    );
+    assert.ok(s3.events.some(([event, requestedKey]) => event === "GET" && requestedKey === key));
   } finally {
     f.cleanup();
   }
@@ -687,21 +617,13 @@ test("markerless partial version with a mismatched existing object is not overwr
     const { ChecksumSHA256: _checksum, ...rest } = stored.head;
     stored.head = { ...rest, ChecksumCRC64NVME: "crc64-only" };
     const s3 = fakeS3({ initial });
-    await assert.rejects(
-      publishBundle(args(f, s3)),
-      /immutable snapshot provenance mismatch/u,
-    );
+    await assert.rejects(publishBundle(args(f, s3)), /immutable snapshot provenance mismatch/u);
     assert.equal(
-      s3.events.some(
-        ([event, requestedKey]) =>
-          event === "PUT_START" && requestedKey === key,
-      ),
+      s3.events.some(([event, requestedKey]) => event === "PUT_START" && requestedKey === key),
       true,
     );
     assert.equal(
-      s3.events.some(
-        ([event, requestedKey]) => event === "PUT_DONE" && requestedKey === key,
-      ),
+      s3.events.some(([event, requestedKey]) => event === "PUT_DONE" && requestedKey === key),
       false,
     );
     assert.equal(s3.objects.has(`${BUCKET}/${COMMIT}/out.json`), false);
@@ -718,23 +640,14 @@ test("409 conditional conflict retries once and exact 412 content is verified", 
     const result = await publishBundle(args(f, s3));
     assert.equal(result.status, "published");
     assert.equal(
-      s3.events.filter(
-        ([event, requestedKey]) =>
-          event === "PUT_START" && requestedKey === key,
-      ).length,
+      s3.events.filter(([event, requestedKey]) => event === "PUT_START" && requestedKey === key)
+        .length,
       2,
     );
     assert.ok(
-      s3.events.some(
-        ([event, requestedKey]) =>
-          event === "REMOTE_PUT" && requestedKey === key,
-      ),
+      s3.events.some(([event, requestedKey]) => event === "REMOTE_PUT" && requestedKey === key),
     );
-    assert.ok(
-      s3.events.some(
-        ([event, requestedKey]) => event === "HEAD" && requestedKey === key,
-      ),
-    );
+    assert.ok(s3.events.some(([event, requestedKey]) => event === "HEAD" && requestedKey === key));
     assert.equal(s3.events.at(-1)[1], `${BUCKET}/${COMMIT}/out.json`);
   } finally {
     f.cleanup();
@@ -775,27 +688,21 @@ test("marker compare-and-swap loss fails closed and preserves the concurrent mar
         }
       },
     });
-    const result = await publishBundle(
-      args(current, s3Race, { snapshotVersion: VERSION_2 }),
-    );
+    const result = await publishBundle(args(current, s3Race, { snapshotVersion: VERSION_2 }));
     assert.equal(result.status, "superseded");
     assert.equal(
-      s3Race.objects.get(`${BUCKET}/${COMMIT}/out.json`).head.Metadata[
-        "diveday-snapshot-version"
-      ],
+      s3Race.objects.get(`${BUCKET}/${COMMIT}/out.json`).head.Metadata["diveday-snapshot-version"],
       VERSION_3,
     );
     assert.equal(
       s3Race.events.filter(
-        ([event, key]) =>
-          event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
+        ([event, key]) => event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
       ).length,
       1,
     );
     assert.equal(
       s3Race.events.find(
-        ([event, key]) =>
-          event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
+        ([event, key]) => event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
       )[2],
       oldMarker.head.ETag,
     );
@@ -819,8 +726,7 @@ test("absent-marker 412 is accepted only when the winning marker selects this ex
     assert.equal(result.status, "provenance-verified");
     assert.equal(
       s3.events.filter(
-        ([event, key]) =>
-          event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
+        ([event, key]) => event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
       ).length,
       1,
     );
@@ -832,11 +738,7 @@ test("absent-marker 412 is accepted only when the winning marker selects this ex
 const invalidBundleCases = [
   {
     name: "foreign snapshot prefix",
-    edit: (text) =>
-      text.replace(
-        `snapshots/${VERSION_1}/actual`,
-        `snapshots/${VERSION_2}/actual`,
-      ),
+    edit: (text) => text.replace(`snapshots/${VERSION_1}/actual`, `snapshots/${VERSION_2}/actual`),
   },
   {
     name: "path traversal",
@@ -858,10 +760,7 @@ test.each(invalidBundleCases)(
   async (item) => {
     const f = fixture();
     try {
-      const manifest = readFileSync(
-        path.join(f.bundle, "manifest.tsv"),
-        "utf8",
-      );
+      const manifest = readFileSync(path.join(f.bundle, "manifest.tsv"), "utf8");
       writeFileSync(path.join(f.bundle, "manifest.tsv"), item.edit(manifest));
       const s3 = fakeS3();
       await assert.rejects(publishBundle(args(f, s3)));
@@ -923,15 +822,8 @@ test("a hanging checksum fallback body is destroyed when its request deadline ex
     const initial = mapFromFixture(f, { checksumPresent: false });
     const key = `${BUCKET}/${COMMIT}/snapshots/${VERSION_1}/actual/capture.png`;
     const s3 = fakeS3({ initial, hangGetKey: key });
-    await assert.rejects(
-      publishBundle(args(f, s3, { requestTimeoutMs: 10 })),
-      /timed out|abort/i,
-    );
-    assert.ok(
-      s3.events.some(
-        ([event, requestedKey]) => event === "GET" && requestedKey === key,
-      ),
-    );
+    await assert.rejects(publishBundle(args(f, s3, { requestTimeoutMs: 10 })), /timed out|abort/i);
+    assert.ok(s3.events.some(([event, requestedKey]) => event === "GET" && requestedKey === key));
   } finally {
     f.cleanup();
   }
@@ -945,10 +837,7 @@ test("versioned report directory metadata must agree with the supplied version",
     report.actualDir = "actual";
     reportEntry.bytes = Buffer.from(JSON.stringify(report));
     reportEntry.gz = gzipSync(reportEntry.bytes, { level: 9, mtime: 0 });
-    writeFileSync(
-      path.join(f.bundle, "payload", "out.json.gz"),
-      reportEntry.gz,
-    );
+    writeFileSync(path.join(f.bundle, "payload", "out.json.gz"), reportEntry.gz);
     const s3 = fakeS3();
     await assert.rejects(
       publishBundle(args(f, s3)),
@@ -987,10 +876,7 @@ function sdkTransport() {
       const bucket = pathParts.shift();
       const key = decodeURIComponent(pathParts.join("/"));
       const headers = Object.fromEntries(
-        Object.entries(request.headers).map(([name, value]) => [
-          name.toLowerCase(),
-          value,
-        ]),
+        Object.entries(request.headers).map(([name, value]) => [name.toLowerCase(), value]),
       );
       requests.push({ method: request.method, bucket, key, headers });
       const current = objects.get(`${bucket}/${key}`);
@@ -1005,28 +891,17 @@ function sdkTransport() {
         if (headers["if-match"] !== current.httpHeaders.etag)
           return { response: httpError(412, "PreconditionFailed") };
         return {
-          response: httpResponse(
-            200,
-            current.httpHeaders,
-            Readable.from([current.bytes]),
-          ),
+          response: httpResponse(200, current.httpHeaders, Readable.from([current.bytes])),
         };
       }
-      if (request.method !== "PUT")
-        throw new Error(`unexpected SDK wire method ${request.method}`);
+      if (request.method !== "PUT") throw new Error(`unexpected SDK wire method ${request.method}`);
       if (headers["if-none-match"] === "*" && current)
         return { response: httpError(412, "PreconditionFailed") };
-      if (
-        headers["if-match"] &&
-        (!current || headers["if-match"] !== current.httpHeaders.etag)
-      ) {
+      if (headers["if-match"] && (!current || headers["if-match"] !== current.httpHeaders.etag)) {
         return { response: httpError(412, "PreconditionFailed") };
       }
       const chunks = [];
-      if (
-        request.body &&
-        typeof request.body[Symbol.asyncIterator] === "function"
-      ) {
+      if (request.body && typeof request.body[Symbol.asyncIterator] === "function") {
         for await (const chunk of request.body) chunks.push(Buffer.from(chunk));
       } else if (request.body) chunks.push(Buffer.from(request.body));
       const bytes = Buffer.concat(chunks);
@@ -1049,22 +924,16 @@ function sdkTransport() {
         "x-amz-meta-diveday-pr-number": meta["diveday-pr-number"],
         ...(meta["diveday-publication-id"]
           ? {
-              "x-amz-meta-diveday-publication-id":
-                meta["diveday-publication-id"],
+              "x-amz-meta-diveday-publication-id": meta["diveday-publication-id"],
             }
           : {}),
       };
       if (meta["diveday-snapshot-version"]) {
-        httpHeaders["x-amz-meta-diveday-snapshot-version"] =
-          meta["diveday-snapshot-version"];
+        httpHeaders["x-amz-meta-diveday-snapshot-version"] = meta["diveday-snapshot-version"];
       }
       objects.set(`${bucket}/${key}`, { bytes, httpHeaders });
       return {
-        response: httpResponse(
-          200,
-          { etag, "x-amz-checksum-sha256": sha },
-          Readable.from([]),
-        ),
+        response: httpResponse(200, { etag, "x-amz-checksum-sha256": sha }, Readable.from([])),
       };
     },
     destroy() {},
@@ -1087,15 +956,11 @@ test("locked AWS SDK signs conditional writes and If-Match checksum reads on the
   const commands = { HeadObjectCommand, GetObjectCommand, PutObjectCommand };
   try {
     await publishBundle(args(old, client, { commands }));
-    const originalMarkerEtag = transport.objects.get(
-      `${BUCKET}/${COMMIT}/out.json`,
-    ).httpHeaders.etag;
-    await publishBundle(
-      args(current, client, { commands, snapshotVersion: VERSION_2 }),
-    );
+    const originalMarkerEtag = transport.objects.get(`${BUCKET}/${COMMIT}/out.json`).httpHeaders
+      .etag;
+    await publishBundle(args(current, client, { commands, snapshotVersion: VERSION_2 }));
     const markerRequests = transport.requests.filter(
-      (request) =>
-        request.method === "PUT" && request.key === `${COMMIT}/out.json`,
+      (request) => request.method === "PUT" && request.key === `${COMMIT}/out.json`,
     );
     assert.equal(markerRequests[0].headers["if-none-match"], "*");
     assert.equal(markerRequests[1].headers["if-match"], originalMarkerEtag);
@@ -1125,9 +990,7 @@ test("locked AWS SDK signs conditional writes and If-Match checksum reads on the
     assert.ok(
       transport.requests
         .filter((request) => request.method === "HEAD")
-        .every(
-          (request) => request.headers["x-amz-checksum-mode"] === "ENABLED",
-        ),
+        .every((request) => request.headers["x-amz-checksum-mode"] === "ENABLED"),
     );
   } finally {
     client.destroy();
@@ -1139,12 +1002,7 @@ test("locked AWS SDK signs conditional writes and If-Match checksum reads on the
 const PNG_HEAD = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 /** A main-style bundle: each actual PNG is a content-addressed blob, none sits under the commit. */
-function blobFixture({
-  version,
-  publicationId,
-  images,
-  forgeBlobName = false,
-}) {
+function blobFixture({ version, publicationId, images, forgeBlobName = false }) {
   const root = mkdtempSync(path.join(os.tmpdir(), "diveday-blob-publisher-"));
   const bundle = path.join(root, "bundle");
   const payload = path.join(bundle, "payload");
@@ -1156,9 +1014,7 @@ function blobFixture({
     const bytes = Buffer.concat([PNG_HEAD, Buffer.from(images[name])]);
     const hash = digest(bytes);
     blobs[name] = hash;
-    const key = forgeBlobName
-      ? `blobs/${"f".repeat(64)}.png`
-      : `blobs/${hash}.png`;
+    const key = forgeBlobName ? `blobs/${"f".repeat(64)}.png` : `blobs/${hash}.png`;
     if (!entries.some((entry) => entry.key === key)) {
       entries.push({ key, contentType: "image/png", bytes });
     }
@@ -1227,9 +1083,7 @@ test("a content-addressed image lands once at the bucket root and never under th
     const s3 = fakeS3();
     const result = await publishBundle(args(f, s3, { prNumber: "" }));
     assert.equal(result.status, "published");
-    const blobKeys = [...s3.objects.keys()].filter((key) =>
-      key.startsWith(`${BUCKET}/blobs/`),
-    );
+    const blobKeys = [...s3.objects.keys()].filter((key) => key.startsWith(`${BUCKET}/blobs/`));
     assert.equal(blobKeys.length, 2, "two names share one image, so two blobs");
     assert.ok(![...s3.objects.keys()].some((key) => key.includes("/actual/")));
     assert.equal(
@@ -1256,11 +1110,8 @@ test("a later publish skips blobs that exist and rewrites ones near the bucket's
   try {
     const s3 = fakeS3();
     await publishBundle(args(first, s3, { prNumber: "" }));
-    const blobKeys = [...s3.objects.keys()].filter((key) =>
-      key.startsWith(`${BUCKET}/blobs/`),
-    );
-    for (const key of blobKeys)
-      s3.objects.get(key).head.LastModified = new Date();
+    const blobKeys = [...s3.objects.keys()].filter((key) => key.startsWith(`${BUCKET}/blobs/`));
+    for (const key of blobKeys) s3.objects.get(key).head.LastModified = new Date();
     s3.events.length = 0;
     await publishBundle(
       args(next, s3, {
@@ -1270,18 +1121,10 @@ test("a later publish skips blobs that exist and rewrites ones near the bucket's
       }),
     );
     const blobPuts = () =>
-      s3.events.filter(
-        ([event, key]) => event === "PUT_START" && key.includes("/blobs/"),
-      );
-    assert.equal(
-      blobPuts().length,
-      0,
-      "recent, intact blobs are not uploaded again",
-    );
+      s3.events.filter(([event, key]) => event === "PUT_START" && key.includes("/blobs/"));
+    assert.equal(blobPuts().length, 0, "recent, intact blobs are not uploaded again");
 
-    s3.objects.get(blobKeys[0]).head.LastModified = new Date(
-      Date.now() - 15 * 86_400_000,
-    );
+    s3.objects.get(blobKeys[0]).head.LastModified = new Date(Date.now() - 15 * 86_400_000);
     const third = blobFixture({
       version: VERSION_3,
       publicationId: "4103-1",
@@ -1319,14 +1162,8 @@ test("a blob whose bytes do not match its content address is refused before any 
   });
   try {
     const s3 = fakeS3();
-    await assert.rejects(
-      publishBundle(args(f, s3, { prNumber: "" })),
-      /content address/u,
-    );
-    assert.equal(
-      s3.events.filter(([event]) => event === "PUT_START").length,
-      0,
-    );
+    await assert.rejects(publishBundle(args(f, s3, { prNumber: "" })), /content address/u);
+    assert.equal(s3.events.filter(([event]) => event === "PUT_START").length, 0);
   } finally {
     f.cleanup();
   }

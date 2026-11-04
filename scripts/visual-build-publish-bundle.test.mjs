@@ -1,11 +1,4 @@
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
@@ -25,15 +18,13 @@ function fixture() {
 }
 
 afterEach(() => {
-  for (const temp of temps.splice(0))
-    rmSync(temp, { recursive: true, force: true });
+  for (const temp of temps.splice(0)) rmSync(temp, { recursive: true, force: true });
 });
 
 describe("buildVisualPublishBundle", () => {
   it("skips unchanged actual images for pull requests and lists only what it uploads", () => {
     const { sourceDir, bundleDir } = fixture();
-    for (const dir of ["actual", "expected", "diff"])
-      mkdirSync(path.join(sourceDir, dir));
+    for (const dir of ["actual", "expected", "diff"]) mkdirSync(path.join(sourceDir, dir));
     for (const name of ["passed.png", "changed.png"]) {
       writeFileSync(path.join(sourceDir, "actual", name), "actual");
     }
@@ -58,9 +49,7 @@ describe("buildVisualPublishBundle", () => {
     expect(manifest).toContain("/actual/changed.png\t");
     expect(manifest).not.toContain("/actual/passed.png");
     const published = JSON.parse(
-      gunzipSync(
-        readFileSync(path.join(bundleDir, "payload", "out.json.gz")),
-      ).toString("utf8"),
+      gunzipSync(readFileSync(path.join(bundleDir, "payload", "out.json.gz"))).toString("utf8"),
     );
     expect(published.actualItems).toEqual(["changed.png"]);
     expect(published.passedItems).toEqual(["passed.png"]);
@@ -71,16 +60,15 @@ describe("buildVisualPublishBundle", () => {
       bundleDir,
       publicationId: "4103-1",
     });
-    expect(
-      readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8"),
-    ).toContain("/actual/passed.png\t");
+    expect(readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")).toContain(
+      "/actual/passed.png\t",
+    );
     expect(full.snapshotVersion).toBe(result.snapshotVersion);
   });
 
   it("uploads expected images only for changed and deleted items", () => {
     const { sourceDir, bundleDir } = fixture();
-    for (const dir of ["actual", "expected", "diff"])
-      mkdirSync(path.join(sourceDir, dir));
+    for (const dir of ["actual", "expected", "diff"]) mkdirSync(path.join(sourceDir, dir));
     for (const name of ["passed.png", "changed.png", "deleted.png"]) {
       writeFileSync(path.join(sourceDir, "expected", name), "expected");
     }
@@ -121,10 +109,7 @@ describe("buildVisualPublishBundle", () => {
       path.join(sourceDir, "actual", "capture.png"),
       Buffer.from("png bytes are opaque to this helper"),
     );
-    writeFileSync(
-      path.join(sourceDir, "expected", "capture.png"),
-      "expected bytes",
-    );
+    writeFileSync(path.join(sourceDir, "expected", "capture.png"), "expected bytes");
     writeFileSync(path.join(sourceDir, "diff", "capture.png"), "diff bytes");
     writeFileSync(path.join(sourceDir, "index.html"), "<main>report</main>");
     writeFileSync(
@@ -169,9 +154,7 @@ describe("buildVisualPublishBundle", () => {
       ).toString(),
     ).toBe("png bytes are opaque to this helper");
     const publishedReport = JSON.parse(
-      gunzipSync(
-        readFileSync(path.join(bundleDir, "payload", "out.json.gz")),
-      ).toString("utf8"),
+      gunzipSync(readFileSync(path.join(bundleDir, "payload", "out.json.gz"))).toString("utf8"),
     );
     expect(publishedReport).toMatchObject({
       actualDir: `snapshots/${result.snapshotVersion}/actual`,
@@ -183,13 +166,7 @@ describe("buildVisualPublishBundle", () => {
     const localReport = JSON.parse(
       gunzipSync(
         readFileSync(
-          path.join(
-            bundleDir,
-            "payload",
-            "snapshots",
-            result.snapshotVersion,
-            "out.json.gz",
-          ),
+          path.join(bundleDir, "payload", "snapshots", result.snapshotVersion, "out.json.gz"),
         ),
       ).toString("utf8"),
     );
@@ -214,18 +191,15 @@ describe("buildVisualPublishBundle", () => {
     const outside = path.join(linked.root, "outside.png");
     writeFileSync(outside, "opaque");
     symlinkSync(outside, path.join(linked.sourceDir, "linked.png"));
-    expect(() =>
-      buildVisualPublishBundle({ ...linked, publicationId: "4101-1" }),
-    ).toThrow(/symlink/u);
+    expect(() => buildVisualPublishBundle({ ...linked, publicationId: "4101-1" })).toThrow(
+      /symlink/u,
+    );
 
     const unsupported = fixture();
-    writeFileSync(
-      path.join(unsupported.sourceDir, "run.sh"),
-      "echo not executable here",
+    writeFileSync(path.join(unsupported.sourceDir, "run.sh"), "echo not executable here");
+    expect(() => buildVisualPublishBundle({ ...unsupported, publicationId: "4101-1" })).toThrow(
+      /unsupported file type/u,
     );
-    expect(() =>
-      buildVisualPublishBundle({ ...unsupported, publicationId: "4101-1" }),
-    ).toThrow(/unsupported file type/u);
   });
 
   it("includes only reg-suit's root browser detector WebAssembly asset", () => {
@@ -256,34 +230,22 @@ describe("buildVisualPublishBundle", () => {
     expect(
       gunzipSync(
         readFileSync(
-          path.join(
-            bundleDir,
-            "payload",
-            "snapshots",
-            result.snapshotVersion,
-            "detector.wasm.gz",
-          ),
+          path.join(bundleDir, "payload", "snapshots", result.snapshotVersion, "detector.wasm.gz"),
         ),
       ),
     ).toEqual(detector);
 
     const nested = fixture();
     mkdirSync(path.join(nested.sourceDir, "assets"));
-    writeFileSync(
-      path.join(nested.sourceDir, "assets", "detector.wasm"),
-      detector,
+    writeFileSync(path.join(nested.sourceDir, "assets", "detector.wasm"), detector);
+    expect(() => buildVisualPublishBundle({ ...nested, publicationId: "4101-1" })).toThrow(
+      /unsupported file type/u,
     );
-    expect(() =>
-      buildVisualPublishBundle({ ...nested, publicationId: "4101-1" }),
-    ).toThrow(/unsupported file type/u);
   });
 
   it("includes reg-suit's root worker JavaScript asset", () => {
     const { sourceDir, bundleDir } = fixture();
-    writeFileSync(
-      path.join(sourceDir, "worker.js"),
-      "self.onmessage = () => {};",
-    );
+    writeFileSync(path.join(sourceDir, "worker.js"), "self.onmessage = () => {};");
     writeFileSync(
       path.join(sourceDir, "out.json"),
       JSON.stringify({
@@ -299,21 +261,13 @@ describe("buildVisualPublishBundle", () => {
       bundleDir,
       publicationId: "4101-1",
     });
-    expect(
-      readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8"),
-    ).toContain(
+    expect(readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")).toContain(
       `snapshots/${result.snapshotVersion}/worker.js\tapplication/javascript\n`,
     );
     expect(
       gunzipSync(
         readFileSync(
-          path.join(
-            bundleDir,
-            "payload",
-            "snapshots",
-            result.snapshotVersion,
-            "worker.js.gz",
-          ),
+          path.join(bundleDir, "payload", "snapshots", result.snapshotVersion, "worker.js.gz"),
         ),
       ).toString(),
     ).toBe("self.onmessage = () => {};");
@@ -322,10 +276,7 @@ describe("buildVisualPublishBundle", () => {
   it("changes the version when any published capture changes", () => {
     const first = fixture();
     mkdirSync(path.join(first.sourceDir, "actual"));
-    writeFileSync(
-      path.join(first.sourceDir, "actual", "capture.png"),
-      "first capture",
-    );
+    writeFileSync(path.join(first.sourceDir, "actual", "capture.png"), "first capture");
     writeFileSync(
       path.join(first.sourceDir, "out.json"),
       JSON.stringify({
@@ -340,10 +291,7 @@ describe("buildVisualPublishBundle", () => {
       publicationId: "4101-1",
     }).snapshotVersion;
 
-    writeFileSync(
-      path.join(first.sourceDir, "actual", "capture.png"),
-      "changed capture",
-    );
+    writeFileSync(path.join(first.sourceDir, "actual", "capture.png"), "changed capture");
     const changedVersion = buildVisualPublishBundle({
       ...first,
       publicationId: "4101-1",
@@ -354,10 +302,7 @@ describe("buildVisualPublishBundle", () => {
   it("gives every same-SHA workflow attempt a fresh snapshot namespace", () => {
     const { sourceDir, bundleDir } = fixture();
     mkdirSync(path.join(sourceDir, "actual"));
-    writeFileSync(
-      path.join(sourceDir, "actual", "capture.png"),
-      "same capture",
-    );
+    writeFileSync(path.join(sourceDir, "actual", "capture.png"), "same capture");
     writeFileSync(
       path.join(sourceDir, "out.json"),
       JSON.stringify({
@@ -392,8 +337,7 @@ describe("buildVisualPublishBundle", () => {
 describe("content-addressed actual images", () => {
   it("stores each actual PNG once under its hash and names it in both reports", () => {
     const { sourceDir, bundleDir } = fixture();
-    for (const dir of ["actual", "expected", "diff"])
-      mkdirSync(path.join(sourceDir, dir));
+    for (const dir of ["actual", "expected", "diff"]) mkdirSync(path.join(sourceDir, dir));
     writeFileSync(path.join(sourceDir, "actual", "a.png"), "same");
     writeFileSync(path.join(sourceDir, "actual", "b.png"), "same");
     writeFileSync(path.join(sourceDir, "actual", "c.png"), "different");
@@ -417,20 +361,11 @@ describe("content-addressed actual images", () => {
     const manifest = readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8");
     expect(manifest).not.toContain("/actual/");
     expect(manifest.match(/^blobs\//gmu)).toHaveLength(2);
-    for (const file of [
-      "out.json.gz",
-      `snapshots/${snapshotVersion}/out.json.gz`,
-    ]) {
+    for (const file of ["out.json.gz", `snapshots/${snapshotVersion}/out.json.gz`]) {
       const report = JSON.parse(
-        gunzipSync(
-          readFileSync(path.join(bundleDir, "payload", file)),
-        ).toString("utf8"),
+        gunzipSync(readFileSync(path.join(bundleDir, "payload", file))).toString("utf8"),
       );
-      expect(Object.keys(report.actualBlobs)).toEqual([
-        "a.png",
-        "b.png",
-        "c.png",
-      ]);
+      expect(Object.keys(report.actualBlobs)).toEqual(["a.png", "b.png", "c.png"]);
       expect(report.actualBlobs["a.png"]).toBe(report.actualBlobs["b.png"]);
       expect(report.actualItems).toEqual(["a.png", "b.png", "c.png"]);
     }
