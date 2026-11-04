@@ -1,4 +1,4 @@
-import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
+import { EntryShell } from "@/components/account/EntryShell";
 
 /**
  * Entry-shell-shaped skeleton for "set a new password" (design principle 1).
@@ -7,5 +7,5 @@ import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
  * both of them land in.
  */
 export default function ResetPasswordLoading() {
-  return <EntryShellSkeleton wordmark fields={["password", "confirm"]} />;
+  return <EntryShell pending wordmark fields={["password", "confirm"]} />;
 }

@@ -1,6 +1,7 @@
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
 import { SkeletonLineBars } from "@/components/ShopPageHeader";
 import { groupLabelClass } from "@/components/ui/group-label";
+import { Bone, Pending } from "@/components/ui/pending";
 import {
   DISPLAY_TITLE_CLASS,
   ITEM_TITLE_CLASS,
@@ -44,7 +45,7 @@ import { hubOnlyCapabilityGroups } from "@/lib/marketing";
 export default function ProductLoading() {
   return (
     <div className="flex flex-1 flex-col">
-      <main className="flex-1 animate-pulse">
+      <Pending as="main" className="flex-1">
         {/* Hero: eyebrow, the title, the lede, the CTA pair, the demo note and
             the price line, left-aligned on the list's own column. */}
         <section>
@@ -65,8 +66,8 @@ export default function ProductLoading() {
               />
             </div>
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
-              <div className="h-12 w-44 rounded-lg bg-surface-sunken" />
-              <div className="h-11 w-24 rounded-lg bg-surface-sunken" />
+              <Bone shape="control" className="h-12 w-44" />
+              <Bone shape="control" className="h-11 w-24" />
             </div>
             <div className="mt-3">
               <SkeletonLineBars
@@ -113,7 +114,7 @@ export default function ProductLoading() {
                         />
                       </div>
                       <div className="flex min-h-11 items-center">
-                        <div className="h-5 w-20 rounded bg-surface-sunken" />
+                        <Bone className="h-5 w-20" />
                       </div>
                     </li>
                   ))}
@@ -130,8 +131,8 @@ export default function ProductLoading() {
                 {hubOnlyCapabilityGroups.map((id) => (
                   <li key={id} className="border-b border-border lg:border-t">
                     <div className="flex min-h-14 items-center justify-between gap-4 py-4">
-                      <div className={`h-lh w-40 rounded bg-surface-sunken ${ITEM_TITLE_CLASS}`} />
-                      <div className="h-5 w-20 shrink-0 rounded bg-surface-sunken" />
+                      <Bone className={`h-lh w-40 ${ITEM_TITLE_CLASS}`} />
+                      <Bone className="h-5 w-20 shrink-0" />
                     </div>
                   </li>
                 ))}
@@ -146,7 +147,7 @@ export default function ProductLoading() {
             />
           </div>
         </section>
-      </main>
+      </Pending>
       <MarketingFooterFallback />
     </div>
   );

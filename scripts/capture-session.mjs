@@ -49,7 +49,7 @@ export async function launch() {
  * A skeleton still standing where the page's body belongs.
  *
  * `animate-pulse` is the skeleton idiom across all 61 `loading.tsx` files (55
- * inline, the six account-lifecycle ones through `EntryShellSkeleton`) and the
+ * inline, the six account-lifecycle ones through `<EntryShell pending>`) and the
  * four inline `<Suspense>` fallbacks in `page.tsx` files. It is *not* only a
  * skeleton, though, and that is the trap: `RecapMap`'s marker and
  * `RollCallNote`'s save-status dot pulse for as long as they are on screen, so
@@ -72,7 +72,7 @@ export async function launch() {
  *
  * One rule rather than a per-route selector table: all 61 `loading.tsx` files
  * resolve to `animate-pulse` — 55 spell it inline and the six account-lifecycle
- * ones reach it through `EntryShellSkeleton` — so waiting for the last one to
+ * ones reach it through `<EntryShell pending>` — so waiting for the last one to
  * leave `<main>` covers every route, including whichever is added next. A table
  * would be a second registry to keep in step with 69 routes, and the whole
  * failure is that a *new* route gets no warning.

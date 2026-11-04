@@ -1,5 +1,5 @@
 import { MarketingNavFallback } from "@/app/_components/MarketingNav";
-import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
+import { EntryShell } from "@/components/account/EntryShell";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
 
 /**
@@ -11,7 +11,8 @@ export default function GetSetUpLoading() {
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNavFallback compactMobile />
-      <EntryShellSkeleton
+      <EntryShell
+        pending
         fields={[
           "shopName",
           "region",

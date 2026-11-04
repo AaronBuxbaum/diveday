@@ -1,3 +1,4 @@
+import { Pending } from "@/components/ui/pending";
 import { TripPageHeaderSkeleton } from "../_components/TripPageHeader";
 import { PrepBodySkeleton } from "./_components/PrepBodySkeleton";
 
@@ -12,9 +13,9 @@ import { PrepBodySkeleton } from "./_components/PrepBodySkeleton";
  */
 export default function TripPrepLoading() {
   return (
-    <div className="animate-pulse">
+    <Pending>
       <TripPageHeaderSkeleton titleLines={{ base: 2, sm: 1 }} />
       <PrepBodySkeleton className="space-y-10" />
-    </div>
+    </Pending>
   );
 }

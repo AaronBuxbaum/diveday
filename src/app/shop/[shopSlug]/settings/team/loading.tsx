@@ -1,5 +1,6 @@
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Pending } from "@/components/ui/pending";
 import { settingsPaneClass } from "../_components/settings-pane";
 
 /**
@@ -9,7 +10,7 @@ import { settingsPaneClass } from "../_components/settings-pane";
 export default function TeamSettingsLoading() {
   return (
     <main className={settingsPaneClass()}>
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending titleWidth="w-40" description={false} />
         {/* The invite card, then the roster of person-cards — the order the
             page renders them in, at the page's own `space-y-10`. */}
@@ -21,7 +22,7 @@ export default function TeamSettingsLoading() {
             ))}
           </div>
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }

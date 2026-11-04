@@ -1,5 +1,5 @@
-import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
+import { EntryShell } from "@/components/account/EntryShell";
 
 export default function ForgotPasswordLoading() {
-  return <EntryShellSkeleton wordmark fields={["email"]} />;
+  return <EntryShell pending wordmark fields={["email"]} />;
 }

@@ -4,6 +4,7 @@ import { FoldedPageTitle } from "@/components/chrome/FoldedPageTitle";
 import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { tapTargetOverhangClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { Bone, boneClass } from "@/components/ui/pending";
 import { GREETING_TITLE_CLASS, PAGE_TITLE_CLASS } from "@/components/ui/typography";
 import { bindTitleDash } from "@/lib/format";
 
@@ -392,7 +393,7 @@ function PendingShopPageHeader({
           <SkeletonLineBars lines={brand} height="h-6" width="w-80 max-w-full" />
         </div>
       ) : null}
-      {eyebrow ? <div className="h-4 w-24 rounded bg-surface-sunken" /> : null}
+      {eyebrow ? <Bone className="h-4 w-24" /> : null}
       <div className={eyebrow ? "mt-2" : undefined}>
         <SkeletonLineBars lines={titleLines} height="h-11" width={titleWidth} />
       </div>
@@ -406,7 +407,7 @@ function PendingShopPageHeader({
         <div className="mt-5 flex flex-col gap-2 sm:hidden">
           {Array.from({ length: actionRows }, (_, row) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the row number is the only identity a placeholder row has
-            <div key={row} className="h-12 w-full rounded-lg bg-surface-sunken" />
+            <Bone key={row} shape="control" className="h-12 w-full" />
           ))}
         </div>
       ) : null}
@@ -458,7 +459,7 @@ export type SkeletonLines = number | { base: number; sm: number };
  *
  * Exported for any skeleton that draws lines of words: a header skeleton's own
  * `meta`, whose line can wrap the same way, and a whole document's lines, as
- * `LegalDocumentSkeleton` draws the legal pages. That one passes `h-lh` inside
+ * `<LegalDocument pending>` draws the legal pages. That one passes `h-lh` inside
  * a wrapper wearing the text's own type classes, so each bar is exactly the
  * line box of the words it stands for, whatever their size.
  */
@@ -477,7 +478,7 @@ export function SkeletonLineBars({
   width: string;
 }) {
   const { base, sm } = typeof lines === "number" ? { base: lines, sm: lines } : lines;
-  const bar = `${width} rounded bg-surface-sunken`;
+  const bar = boneClass("line", width);
   return Array.from({ length: Math.max(base, sm) }, (_, line) => {
     const onlyOneSide =
       line < base && line < sm ? "" : line < base ? " sm:hidden" : " max-sm:hidden";
@@ -522,7 +523,7 @@ function statTileClass(inset: boolean) {
     : sectionCardClass({ className: rows });
 }
 
-/** The label's and the figure's type sizes, raised and inset — read by `ShopStatSkeleton` too. */
+/** The label's and the figure's type sizes, raised and inset — read by its pending face too. */
 const STAT_LABEL_SIZE = { card: "text-sm", inset: "text-xs" } as const;
 const STAT_FIGURE_SIZE = { card: "text-3xl", inset: "text-2xl" } as const;
 
@@ -549,7 +550,7 @@ const STAT_FIGURE_SIZE = { card: "text-3xl", inset: "text-2xl" } as const;
  * an insurer's screen-reader user must be able to navigate as one, and the
  * import confirmation keeps the same shape.
  */
-export function ShopStat({
+function ResolvedShopStat({
   label,
   value,
   detail,
@@ -687,21 +688,29 @@ function statDetail({
 }
 
 /**
- * {@link ShopStat} drawn as bars — the raised tile's own box and rows, holding
- * one bar per row, each the line box of the text it stands in for (`h-lh` at
- * the label's and the figure's own sizes).
+ * The stat tile — or, with `pending`, the same tile drawn as bars for a
+ * `loading.tsx`: the raised tile's own box and rows, holding one bar per row,
+ * each the line box of the text it stands in for (`h-lh` at the label's and
+ * the figure's own sizes).
  *
  * The packing list stood its tank tiles in with `h-28` boxes: 112px against
  * the tile's 98 on a phone and 106 from `sm`, so the tiles shrank and the
  * list below them moved when it arrived (K-188). A fixed height is a guess at
  * the padding, the border and two line boxes; this reads all of them from the
  * tile. Like the tile, it subgrids onto the rows of the grid it stands in.
+ * It was a second component, `ShopStatSkeleton`, until #2769 folded it in.
  */
-export function ShopStatSkeleton() {
-  return (
-    <div className={statTileClass(false)}>
-      <div className={`h-lh ${STAT_LABEL_SIZE.card} w-16 rounded bg-surface-sunken`} />
-      <div className={`h-lh ${STAT_FIGURE_SIZE.card} w-12 rounded bg-surface-sunken`} />
-    </div>
-  );
+export function ShopStat(
+  props: ({ pending?: false } & ComponentProps<typeof ResolvedShopStat>) | { pending: true },
+) {
+  if (props.pending) {
+    return (
+      <div className={statTileClass(false)}>
+        <Bone className={`h-lh ${STAT_LABEL_SIZE.card} w-16`} />
+        <Bone className={`h-lh ${STAT_FIGURE_SIZE.card} w-12`} />
+      </div>
+    );
+  }
+  const { pending: _resolved, ...stat } = props;
+  return <ResolvedShopStat {...stat} />;
 }

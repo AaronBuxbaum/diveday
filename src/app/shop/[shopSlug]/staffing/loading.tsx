@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 import { ScheduleViewsSkeleton } from "../schedule/_components/ScheduleViews";
 import { WEEK_GRID, weekTailRowClass } from "./_components/StaffingWeek";
 
@@ -27,7 +28,7 @@ const DAYS = [0, 1, 2, 3, 4, 5, 6];
 export default function StaffingLoading() {
   return (
     <StaffPage width="full">
-      <div className="animate-pulse">
+      <Pending>
         {/* `description={false}`: the header is an eyebrow and a name now —
             the line under it explained where crew is assigned, and the gap
             cell's own Assign door says it better. */}
@@ -37,9 +38,9 @@ export default function StaffingLoading() {
         {/* Two step buttons, 48px squares (`WeekPager`'s `icon` size), and
             the range they step through. */}
         <div className="flex items-center gap-2">
-          <div className="size-12 rounded-lg bg-surface-sunken" />
-          <div className="size-12 rounded-lg bg-surface-sunken" />
-          <div className="ms-2 h-5 w-40 rounded bg-surface-sunken" />
+          <Bone shape="control" className="size-12" />
+          <Bone shape="control" className="size-12" />
+          <Bone className="ms-2 h-5 w-40" />
         </div>
 
         <div className="mt-4 hidden lg:block">
@@ -47,7 +48,7 @@ export default function StaffingLoading() {
             <div className={WEEK_GRID.personHead} />
             {DAYS.map((day) => (
               <div key={day} className={WEEK_GRID.dayHead}>
-                <div className="h-4 w-14 rounded bg-surface-sunken" />
+                <Bone className="h-4 w-14" />
               </div>
             ))}
           </div>
@@ -57,10 +58,10 @@ export default function StaffingLoading() {
               <div className={WEEK_GRID.person}>
                 {/* A name's line and a role's, each at its own height. */}
                 <div className="flex h-5 items-center">
-                  <div className="h-4 w-24 rounded bg-surface-sunken" />
+                  <Bone className="h-4 w-24" />
                 </div>
                 <div className="flex h-4 items-center">
-                  <div className="h-3 w-16 rounded bg-surface-sunken" />
+                  <Bone className="h-3 w-16" />
                 </div>
               </div>
               {DAYS.map((day) => (
@@ -73,10 +74,10 @@ export default function StaffingLoading() {
                     // has no fill, so its lines are the bars.
                     <div className={WEEK_GRID.shiftChip}>
                       <div className="flex h-4 items-center">
-                        <div className="h-3 w-20 rounded bg-surface-sunken" />
+                        <Bone className="h-3 w-20" />
                       </div>
                       <div className="flex h-4 items-center">
-                        <div className="h-3 w-14 rounded bg-surface-sunken" />
+                        <Bone className="h-3 w-14" />
                       </div>
                     </div>
                   ) : null}
@@ -92,15 +93,15 @@ export default function StaffingLoading() {
         <div className="mt-4 lg:hidden">
           {[0, 1, 2].map((day) => (
             <div key={day} className="mt-6 first:mt-0">
-              <div className="h-4 w-32 rounded bg-surface-sunken" />
+              <Bone className="h-4 w-32" />
               <div className="mt-2">
                 {[0, 1, 2].map((row) => (
                   <div key={row} className={`min-h-13 py-2 ${ledgerRowBoxClass}`}>
                     <div className="flex h-5 items-center">
-                      <div className="h-4 w-28 rounded bg-surface-sunken" />
+                      <Bone className="h-4 w-28" />
                     </div>
                     <div className="mt-1 flex h-11 items-center">
-                      <div className="h-4 w-40 rounded bg-surface-sunken" />
+                      <Bone className="h-4 w-40" />
                     </div>
                   </div>
                 ))}
@@ -115,16 +116,16 @@ export default function StaffingLoading() {
         {[0, 1].map((door) => (
           <div key={door} className={weekTailRowClass}>
             <div className="flex h-12 items-center">
-              <div className="h-4 w-36 rounded bg-surface-sunken" />
+              <Bone className="h-4 w-36" />
             </div>
           </div>
         ))}
 
         {/* The consent row, a 44px disclosure. */}
         <div className="mt-10 flex h-11 items-center">
-          <div className="h-4 w-44 rounded bg-surface-sunken" />
+          <Bone className="h-4 w-44" />
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

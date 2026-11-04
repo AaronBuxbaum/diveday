@@ -1,5 +1,6 @@
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * The incident report's skeleton, drawn as the trip layout's children like its
@@ -9,17 +10,17 @@ import { SectionCard } from "@/components/ui/card";
  */
 export default function IncidentReportLoading() {
   return (
-    <div className="animate-pulse space-y-10">
+    <Pending className="space-y-10">
       <ShopPageHeader
         pending
         titleWidth="w-56 max-w-full"
         description
         descriptionWidth="w-160 max-w-full"
         descriptionLines={{ base: 4, sm: 2 }}
-        meta={<div className="h-6 w-72 max-w-full rounded bg-surface-sunken" />}
+        meta={<Bone className="h-6 w-72 max-w-full" />}
       />
       <SectionCard as="div" pending className="h-136" />
       <SectionCard as="div" pending className="h-96" />
-    </div>
+    </Pending>
   );
 }

@@ -1,8 +1,10 @@
 import Link from "next/link";
+import type { ComponentProps } from "react";
 import { SkeletonLineBars } from "@/components/ShopPageHeader";
 import { StarRating } from "@/components/StarRating";
 import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import { LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { PublicReview } from "@/db/reviews";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -29,7 +31,7 @@ const SHELF_QUOTES = 2;
  * Diver-written comments render as plain React text children, never as markup,
  * and every string here comes from the caller's localized dictionary.
  */
-export function ShopReviews({
+function ResolvedShopReviews({
   aggregate,
   reviews,
   shopSlug,
@@ -97,26 +99,44 @@ export function ShopReviews({
  *   - `mt-1.5` and `h-5`: the meta's `text-sm` line;
  *   - `py-4`: `LedgerRow`'s `xl` inset, and the ledger row's box.
  */
-export function ShopReviewsSkeleton({ className = "" }: { className?: string }) {
+function PendingShopReviews({ className = "" }: { className?: string }) {
   return (
-    <section aria-hidden="true" className={`animate-pulse ${className}`.trim()}>
+    <Pending as="section" aria-hidden="true" className={className}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="h-7 w-40 rounded bg-surface-sunken" />
-        <div className="h-5 w-24 rounded bg-surface-sunken" />
+        <Bone className="h-7 w-40" />
+        <Bone className="h-5 w-24" />
       </div>
       <div className="mt-4 flex flex-col">
         {[0, 1].map((row) => (
           <div key={row} className={`py-4 ${ledgerRowBoxClass}`}>
-            <div className="h-6 w-24 rounded bg-surface-sunken" />
+            <Bone className="h-6 w-24" />
             <div className="mt-1.5">
               <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-6" width="w-80 max-w-full" />
             </div>
-            <div className="mt-1.5 h-5 w-56 max-w-full rounded bg-surface-sunken" />
+            <Bone className="mt-1.5 h-5 w-56 max-w-full" />
           </div>
         ))}
       </div>
-    </section>
+    </Pending>
   );
+}
+
+/**
+ * The shelf — or, with `pending`, the same shelf drawn as bars for the
+ * storefront's `<Suspense>` fallback (above). It was a second component,
+ * `ShopReviewsSkeleton`, until #2769 folded it in.
+ */
+export function ShopReviews(
+  props:
+    | ({ pending?: false } & ComponentProps<typeof ResolvedShopReviews>)
+    | ({ pending: true } & ComponentProps<typeof PendingShopReviews>),
+) {
+  if (props.pending) {
+    const { pending: _pending, ...bars } = props;
+    return <PendingShopReviews {...bars} />;
+  }
+  const { pending: _resolved, ...shelf } = props;
+  return <ResolvedShopReviews {...shelf} />;
 }
 
 /**

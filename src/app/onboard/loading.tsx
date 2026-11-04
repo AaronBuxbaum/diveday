@@ -1,5 +1,5 @@
 import { MarketingNavFallback } from "@/app/_components/MarketingNav";
-import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
+import { EntryShell } from "@/components/account/EntryShell";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
 
 /** An authorized setup link opens the form; closed entries redirect to Get set up. */
@@ -7,7 +7,8 @@ export default function OnboardLoading() {
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNavFallback compactMobile />
-      <EntryShellSkeleton
+      <EntryShell
+        pending
         eyebrow
         width="lg"
         description={false}

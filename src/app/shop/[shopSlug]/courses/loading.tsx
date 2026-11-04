@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * Roster-shaped skeleton for the staff course list (design principle 1).
@@ -15,14 +16,14 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
 export default function StaffCoursesLoading() {
   return (
     <StaffPage width="full">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending eyebrow={false} titleWidth="w-48" description={false} actions />
         <div className="mt-8 space-y-8">
           {[0, 1].map((group) => (
             <div key={group}>
               {/* The group's small-caps label: a 16px line, the bar inside it. */}
               <div className="flex h-4 items-center">
-                <div className="h-3 w-16 rounded bg-surface-sunken" />
+                <Bone className="h-3 w-16" />
               </div>
               <div className="mt-2">
                 {[0, 1, 2].map((row) => (
@@ -38,20 +39,20 @@ export default function StaffCoursesLoading() {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex h-6 items-center">
-                        <div className="h-4 w-52 max-w-full rounded bg-surface-sunken" />
+                        <Bone className="h-4 w-52 max-w-full" />
                       </div>
                       <div className="mt-0.5 flex h-5 items-center">
-                        <div className="h-3 w-64 max-w-full rounded bg-surface-sunken" />
+                        <Bone className="h-3 w-64 max-w-full" />
                       </div>
                     </div>
-                    <div className="-my-2 h-11 w-21 shrink-0 rounded-lg bg-surface-sunken" />
+                    <Bone shape="control" className="-my-2 h-11 w-21 shrink-0" />
                   </div>
                 ))}
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

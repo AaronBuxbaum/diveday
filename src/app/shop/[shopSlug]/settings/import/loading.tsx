@@ -1,25 +1,26 @@
-import { SectionTabsSkeleton } from "@/components/SectionTabs";
+import { SectionTabs } from "@/components/SectionTabs";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 import { settingsPaneClass } from "../_components/settings-pane";
 
 /** Header, tabs and honesty-table skeleton, so the route never blocks blank. */
 export default function Loading() {
   return (
     <main className={settingsPaneClass()}>
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending description={false} />
-        <SectionTabsSkeleton count={4} />
-        <SectionTabsSkeleton count={3} />
+        <SectionTabs pending count={4} />
+        <SectionTabs pending count={3} />
         <SectionCard as="div" pending padding="lg">
-          <div className="h-5 w-44 rounded bg-surface-sunken" />
+          <Bone className="h-5 w-44" />
           <div className="mt-4 space-y-2">
             {["a", "b", "c", "d", "e", "f"].map((slot) => (
-              <div key={slot} className="h-12 rounded-inset bg-surface-sunken" />
+              <Bone shape="inset" key={slot} className="h-12" />
             ))}
           </div>
         </SectionCard>
-      </div>
+      </Pending>
     </main>
   );
 }

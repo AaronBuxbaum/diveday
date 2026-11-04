@@ -1,5 +1,7 @@
+import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 import { segmentedTrackClass } from "@/components/ui/segmented";
 
 /**
@@ -25,7 +27,7 @@ const STAGE_TAPS = ["boarding", "underway", "surface", "heading_in", "home"] as 
 
 export default function ManifestLoading() {
   return (
-    <div className="animate-pulse">
+    <Pending>
       <ShopPageHeader
         pending
         eyebrow={false}
@@ -35,7 +37,7 @@ export default function ManifestLoading() {
         // header has a skeleton of its own.
         description
         descriptionWidth="w-72 max-w-full"
-        meta={<div className="h-6 w-56 max-w-full rounded bg-surface-sunken" />}
+        meta={<Bone className="h-6 w-56 max-w-full" />}
       />
       {/* The count panel at rest: the checkpoint over the figure. */}
       <SectionCard as="div" pending padding="md" className="mt-4 h-28" />
@@ -44,10 +46,10 @@ export default function ManifestLoading() {
           `mt-6` is the prose line's `pt-2` under the panel and the strip's own
           `mt-4`. */}
       <div className="mt-6">
-        <div className="h-4 w-32 rounded bg-surface-sunken" />
+        <Bone className="h-4 w-32" />
         <div className="mt-2 grid grid-cols-3 gap-2 sm:max-w-2xl sm:grid-cols-5">
           {STAGE_TAPS.map((stage) => (
-            <div key={stage} className="h-14 rounded-lg bg-surface-sunken" />
+            <Bone shape="control" key={stage} className="h-14" />
           ))}
         </div>
       </div>
@@ -69,7 +71,7 @@ export default function ManifestLoading() {
             it (dive-domain review of UX audit 2026-10-07, item 17). */}
         <SectionCard as="div" pending padding="none" className="h-14" />
         <div>
-          <div className="h-7 w-40 max-w-full rounded bg-surface-sunken" />
+          <Bone className="h-7 w-40 max-w-full" />
           {/* The roll call is one ruled list card, so its skeleton is the same
               single card — not a stack of floating bars that redraws into a
               different shape when the list streams in. */}
@@ -82,17 +84,17 @@ export default function ManifestLoading() {
             {[0, 1, 2, 3, 4, 5, 6].map((i) => (
               <li
                 key={i}
-                className="flex h-19 items-center gap-3 border-l-4 border-border-strong bg-surface-sunken/60 ps-4 pe-3"
+                className={`flex h-19 items-center gap-3 border-l-4 ${ROLL_CALL_ROW_TONE.awaiting} ps-4 pe-3`}
               >
-                <div className="size-8 shrink-0 rounded-lg bg-surface-sunken" />
-                <div className="h-4 w-40 max-w-full flex-1 rounded bg-surface-sunken" />
-                <div className="size-14 shrink-0 rounded-full bg-surface-sunken" />
+                <Bone shape="control" className="size-8 shrink-0" />
+                <Bone className="h-4 w-40 max-w-full flex-1" />
+                <Bone shape="pill" className="size-14 shrink-0" />
               </li>
             ))}
           </SectionCard>
         </div>
         <SectionCard as="div" pending padding="md" className="h-28" />
       </div>
-    </div>
+    </Pending>
   );
 }

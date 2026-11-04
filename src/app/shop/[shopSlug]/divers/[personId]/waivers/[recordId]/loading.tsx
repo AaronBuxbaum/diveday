@@ -1,11 +1,12 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { Pending } from "@/components/ui/pending";
 
 /** Shaped like the signed waiver: its header, the facts card, then two text cards. */
 export default function SignedWaiverLoading() {
   return (
     <StaffPage width="reading">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending description={false} />
         <div className="mt-8 space-y-10">
           {["h-44", "h-60", "h-80"].map((height) => (
@@ -15,7 +16,7 @@ export default function SignedWaiverLoading() {
             />
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

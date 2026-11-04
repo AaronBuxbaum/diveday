@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 import { EditorFormSkeleton } from "../_components/EditorFormSkeleton";
 import {
   SITE_FORM_OPEN_SECTIONS,
@@ -20,7 +21,7 @@ import {
 export default function DiveSiteLoading() {
   return (
     <StaffPage width="reading">
-      <div className="animate-pulse">
+      <Pending>
         {/* The header eyebrow is the back link; do not add a second stub (K-423). */}
         <ShopPageHeader
           pending
@@ -35,13 +36,13 @@ export default function DiveSiteLoading() {
 
         {/* Edit-only: reserve the UpcomingSiteTrips space for a site with departures (K-416). */}
         <SectionCard as="div" pending className="mt-8 overflow-hidden">
-          <div className="h-8 w-56 max-w-full rounded bg-surface-sunken" />
+          <Bone className="h-8 w-56 max-w-full" />
           <div className="-mx-4 mt-4 -mb-4 divide-y divide-border border-t border-border sm:-mx-5 sm:-mb-5">
             {[0, 1, 2].map((row) => (
               <div key={row}>
                 <div className="flex h-17 flex-col justify-center gap-1 px-4 sm:px-5">
-                  <div className="h-4 w-64 max-w-full rounded bg-surface-sunken" />
-                  <div className="h-4 w-80 max-w-full rounded bg-surface-sunken" />
+                  <Bone className="h-4 w-64 max-w-full" />
+                  <Bone className="h-4 w-80 max-w-full" />
                 </div>
               </div>
             ))}
@@ -54,7 +55,7 @@ export default function DiveSiteLoading() {
             closed={SITE_FORM_SECTION_ORDER.length - SITE_FORM_OPEN_SECTIONS.size}
           />
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /** The file's groups that every record renders a door for (`page.tsx`). */
 const FILE_DOORS = [
@@ -45,31 +46,31 @@ const FILE_DOORS = [
 export default function DiverProfileLoading() {
   return (
     <StaffPage width="reading">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader
           pending
           titleWidth="w-56"
           description={false}
           meta={
             <div className="flex h-11 items-center">
-              <div className="h-5 w-72 max-w-full rounded bg-surface-sunken" />
+              <Bone className="h-5 w-72 max-w-full" />
             </div>
           }
         />
         <div className="mt-1 flex flex-wrap gap-2">
-          <div className="h-12 w-44 rounded-lg bg-surface-sunken" />
+          <Bone shape="control" className="h-12 w-44" />
         </div>
         <div className="mt-10 space-y-10">
           <div>
-            <div className="h-4 w-24 rounded bg-surface-sunken" />
+            <Bone className="h-4 w-24" />
             <div className="mt-3">
               {[0, 1, 2, 3].map((row) => (
                 <div key={row} className={`${ledgerRowBoxClass} py-3`}>
                   <div className="flex h-16.5 flex-col justify-center gap-2 sm:h-11 sm:flex-row sm:items-center sm:justify-start sm:gap-4">
                     <div className="shrink-0 sm:w-28">
-                      <div className="h-4 w-20 rounded bg-surface-sunken" />
+                      <Bone className="h-4 w-20" />
                     </div>
-                    <div className="h-4 w-56 max-w-full rounded bg-surface-sunken" />
+                    <Bone className="h-4 w-56 max-w-full" />
                   </div>
                 </div>
               ))}
@@ -82,14 +83,14 @@ export default function DiverProfileLoading() {
                 className="-mx-2 flex min-h-13 items-center gap-3 border-b border-border px-2 py-3 first:border-t"
               >
                 <div className="flex h-6 flex-1 items-center">
-                  <div className="h-4 w-40 rounded bg-surface-sunken" />
+                  <Bone className="h-4 w-40" />
                 </div>
-                <div className="h-4 w-24 rounded bg-surface-sunken" />
+                <Bone className="h-4 w-24" />
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }
