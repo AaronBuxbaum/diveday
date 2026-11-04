@@ -20,7 +20,7 @@ Which role calls a departure off, and which releases the money.
 - **A refund holder releases the queue** from the departure's blow-out page, "Send the card refunds back". It refuses a departure that is not canceled and is safe to repeat. Counter payments were never automatic and stay staff's to return.
 - A system caller with no person behind it, the minimum-head-count sweep, still refunds by itself.
 
-`src/app/shop/[shopSlug]/schedule/blowout/blowout-refunds.authz.test.ts` pins each door and each role, and `src/db/blowouts.test.ts` pins the queue itself.
+`src/app/shop/[shopSlug]/trips/[id]/blowout-refunds.authz.test.ts` pins each door and each role, and `src/db/blowouts.test.ts` pins the queue itself.
 
 ## Unblocks / follow-up
 

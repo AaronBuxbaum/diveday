@@ -344,7 +344,7 @@ for (const scheme of ["light", "dark"] as const) {
         try {
           const staff = makeActivitySafe(await staffContext.newPage());
           const tripId = await seededTripId(staff, "blue-mantis", REEF_TRIP);
-          await staff.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+          await staff.goto(`/shop/blue-mantis/trips/${tripId}?blowout=1`);
           await staff.getByRole("button", { name: "Call the blow-out" }).click();
           await staff.getByRole("heading", { level: 1, name: "Cancellation record" }).waitFor();
         } finally {

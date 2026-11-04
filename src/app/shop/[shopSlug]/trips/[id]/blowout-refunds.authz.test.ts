@@ -61,8 +61,8 @@ const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnShopCancellation, refundBookingsForShopCancelledTrip } = await import(
   "@/db/refunds"
 );
-const { callBlowoutAction, releaseBlowoutRefundsAction } = await import("./[tripId]/actions");
-const { callDayBlowoutAction } = await import("./day/[date]/actions");
+const { callBlowoutAction, releaseBlowoutRefundsAction } = await import("./blowout-actions");
+const { callDayBlowoutAction } = await import("../../schedule/blowout/day/[date]/actions");
 const { cancelOffCadenceSeriesAction, cancelSeriesAction } = await import(
   "../../trips/[id]/series-actions"
 );

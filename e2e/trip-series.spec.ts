@@ -120,7 +120,7 @@ test("a repeating trip is scheduled on two weekdays, stopped, and canceled as on
   // Each date went through the cascade as a run that stopped, and its record
   // says so in the heading and in the browser tab, not in weather words (#2460).
   const tripId = new URL(tripUrl).pathname.split("/").pop();
-  await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+  await page.goto(`/shop/blue-mantis/trips/${tripId}?blowout=1`);
   const runEnded = staff("blowout.record.titleRunEnded");
   await expect(page.getByRole("heading", { level: 1, name: runEnded })).toBeVisible();
   await expect(page).toHaveTitle(`${runEnded} — DiveDay`);
