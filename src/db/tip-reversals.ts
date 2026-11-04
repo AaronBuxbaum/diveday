@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, max, sum } from "drizzle-orm";
+import { and, eq, gt, isNotNull, sum } from "drizzle-orm";
 import { tipCheckout } from "./checkout-purpose";
 import type { AppDb, AppTransaction } from "./client";
 import type { BookingCheckout } from "./schema";
@@ -26,11 +26,14 @@ import { bookingCheckouts, paymentDisputes, stripeRefundFailures } from "./schem
  *   recomputes it from its own total and the lost disputes on file, and a lost
  *   dispute adds to it, so a dispute recorded before a delayed refund event
  *   leaves both counted.
- * - A refund event no newer than the tip's newest refund failure is stale: its
- *   running total was taken before the failure took part of it back, so
- *   applying it would put the failed refund back. Every failure is written
- *   down, even one that arrives before the refund it undoes, so a refund event
- *   delivered after its own failure meets the failure here.
+ * - A refund event's running total, taken before a failure, still counts the
+ *   refund that failed, so each failure on file stamped after the event is
+ *   taken off that total (by the failed refund's own amount, per refund id)
+ *   instead of the event being dropped: an earlier refund that did succeed, or
+ *   one in the same second as the failure, is still counted. A failure takes
+ *   back only what the refund side of `refunded_cents` holds, never a lost
+ *   dispute's money; if its refund's event has not arrived the failure takes
+ *   back nothing, and that event, once it does, lands net of the failure.
  */
 
 export type TipRefundOutcome =
@@ -49,6 +52,15 @@ async function lockedTip(tx: AppTransaction, tipId: string): Promise<BookingChec
 
 function capturedOf(tip: BookingCheckout): number {
   return tip.settledTotalCents ?? tip.totalCents;
+}
+
+/** What the bank took back by lost disputes, capped at what the tip was. */
+async function lostDisputeCents(tx: AppTransaction, tip: BookingCheckout): Promise<number> {
+  const [disputes] = await tx
+    .select({ lost: sum(paymentDisputes.amountCents) })
+    .from(paymentDisputes)
+    .where(and(eq(paymentDisputes.checkoutId, tip.id), isNotNull(paymentDisputes.reversedAt)));
+  return Math.min(Number(disputes?.lost ?? 0), capturedOf(tip));
 }
 
 /**
@@ -70,22 +82,19 @@ export async function recordTipRefund(
     const current = await lockedTip(tx, tip.id);
     if (!current || current.status !== "completed") return { status: "not_found" };
     // A running total older than a failure the tip has since had still counts
-    // the refund that failed.
+    // the refund that failed: take that refund off it, by its own amount.
     const [failures] = await tx
-      .select({ newest: max(stripeRefundFailures.failedAt) })
+      .select({ failed: sum(stripeRefundFailures.amountCents) })
       .from(stripeRefundFailures)
-      .where(eq(stripeRefundFailures.checkoutId, current.id));
-    if (failures?.newest && occurredAt <= failures.newest) return { status: "already_recorded" };
-    const [disputes] = await tx
-      .select({ lost: sum(paymentDisputes.amountCents) })
-      .from(paymentDisputes)
       .where(
-        and(eq(paymentDisputes.checkoutId, current.id), isNotNull(paymentDisputes.reversedAt)),
+        and(
+          eq(stripeRefundFailures.checkoutId, current.id),
+          gt(stripeRefundFailures.failedAt, occurredAt),
+        ),
       );
-    const reversedTotal = Math.min(
-      amountRefundedCents + Number(disputes?.lost ?? 0),
-      capturedOf(current),
-    );
+    const refundSide = Math.max(0, amountRefundedCents - Number(failures?.failed ?? 0));
+    const lost = await lostDisputeCents(tx, current);
+    const reversedTotal = Math.min(refundSide + lost, capturedOf(current));
     if (reversedTotal <= current.refundedCents) return { status: "already_recorded" };
     await tx
       .update(bookingCheckouts)
@@ -151,7 +160,9 @@ export async function reverseTipRefundFailure(
       .where(eq(stripeRefundFailures.stripeRefundId, input.refund.id))
       .limit(1);
     if (seen) return { status: "already_recorded" as const };
-    const reversed = Math.min(input.refund.amountCents, current.refundedCents);
+    // Only the refund side can be taken back: a lost dispute's money stays gone.
+    const refundSide = Math.max(0, current.refundedCents - (await lostDisputeCents(tx, current)));
+    const reversed = Math.min(input.refund.amountCents, refundSide);
     if (reversed > 0) {
       await tx
         .update(bookingCheckouts)
@@ -166,7 +177,8 @@ export async function reverseTipRefundFailure(
       stripeRefundId: input.refund.id,
       checkoutId: current.id,
       bookingId: null,
-      amountCents: reversed,
+      // The failed refund's own amount, so a refund event delivered later nets it off.
+      amountCents: input.refund.amountCents,
       currency: input.refund.currency || current.currency,
       refundStatus: input.refund.status,
       failureReason: input.refund.failureReason,

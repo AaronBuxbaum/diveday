@@ -230,25 +230,32 @@ export async function recordMedicalAnswersExported(
     .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
     .limit(1);
   if (!actor) throw new Error("The export's reader is not a staffer of this shop.");
-  const divers = await db
-    .select({ id: people.id, name: people.fullName })
-    .from(people)
-    // diveday:allow-deleted-people: a removed diver's answers can still be in the file, and the read belongs on their record.
-    .where(and(eq(people.shopId, input.shopId), inArray(people.id, [...input.personIds])));
-  if (divers.length === 0) return;
+  // Chunked: one statement binds ids, then eight values per row, and a shop with
+  // thousands of answered divers must not fail the export for ever at 65,535.
+  const unique = [...new Set(input.personIds)];
   const occurredAt = nowDate();
-  await db.insert(activityEvents).values(
-    divers.map((diver) => ({
-      shopId: input.shopId,
-      tripId: null,
-      bookingId: null,
-      actorPersonId: input.actorPersonId,
-      subjectPersonId: diver.id,
-      code: "medical_answers_read" as const,
-      params: { actor: actor.name, diver: diver.name },
-      occurredAt,
-    })),
-  );
+  for (let from = 0; from < unique.length; from += 2000) {
+    const divers = await db
+      .select({ id: people.id, name: people.fullName })
+      .from(people)
+      // diveday:allow-deleted-people: a removed diver's answers can still be in the file, and the read belongs on their record.
+      .where(
+        and(eq(people.shopId, input.shopId), inArray(people.id, unique.slice(from, from + 2000))),
+      );
+    if (divers.length === 0) continue;
+    await db.insert(activityEvents).values(
+      divers.map((diver) => ({
+        shopId: input.shopId,
+        tripId: null,
+        bookingId: null,
+        actorPersonId: input.actorPersonId,
+        subjectPersonId: diver.id,
+        code: "medical_answers_read" as const,
+        params: { actor: actor.name, diver: diver.name },
+        occurredAt,
+      })),
+    );
+  }
 }
 
 /**

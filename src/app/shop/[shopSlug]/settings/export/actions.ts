@@ -140,6 +140,7 @@ export async function testBackupAction(): Promise<void> {
   const result = await runShopBackup(db, {
     shopId,
     trigger: "manual",
+    readerPersonId: personId,
     origin,
     icsLabels: {
       calendarName: t("feed.shopTripsName", { shop: shop?.slug ?? "" }),

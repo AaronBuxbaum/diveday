@@ -545,6 +545,11 @@ function offlineArrivalRefusal(input: {
  *   (`arrivalsWindow` at the tap's own instant): it was moved to another day,
  *   and the tap says nothing about that morning.
  *
+ * Known limits (issue #3830 stays partly open): a seat re-pointed by an
+ * identity split or repoint, or removed and restored after the tap, carries no
+ * instant to compare, and a snapshot carries no person id by design (the
+ * 14-day dock allow-list). A sound check needs a stored seat-changed instant.
+ *
  * Both refuse as `snapshot_invalid`, the word the departure check beside it
  * already uses for "this copy was about something that has changed". Offline
  * only; the live path re-reads the roster.
@@ -559,6 +564,7 @@ function offlineTapAboutAnotherSeatOrDay(
   ) {
     return true;
   }
+  // The sync schema requires the instant; a direct caller that omits it skips the window.
   if (!input.occurredAt) return false;
   const window = arrivalsWindow(input.occurredAt);
   return booking.tripStartsAt < window.from || booking.tripStartsAt > window.to;
