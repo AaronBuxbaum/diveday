@@ -362,7 +362,7 @@ export default async function StaffingPage({
                     <form action={deleteAway}>
                       <input type="hidden" name="blockId" value={block.id} />
                       <SubmitButton
-                        pendingLabel={t("staffing.away.removing")}
+                        pendingLabel={t("words.busy.removing")}
                         className={buttonClass({ variant: "ghost", size: "sm" })}
                       >
                         {t("staffing.away.remove")}

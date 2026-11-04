@@ -181,8 +181,7 @@
       "suggestionsLabel": "Address suggestions",
       "currentLabel": "Saved address",
       "noneSet": "No address saved yet",
-      "remove": "Remove address",
-      "removing": "Removing…"
+      "remove": "Remove address"
     },
     "reviewLink": {
       "heading": "Review link",
@@ -1090,7 +1089,6 @@
       "hiddenRowsNoticeOther": "Showing the first {limit} rows. All {total} are imported on confirm.",
       "submitOne": "Import 1 contact",
       "submitOther": "Import {count} contacts",
-      "submitting": "Importing…",
       "result": {
         "summary": "Imported. {addedPart}, {updatedPart}.",
         "summaryAddedOne": "{added} added",

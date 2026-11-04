@@ -74,7 +74,6 @@
     "empty": "No certification records yet",
     "importedLabel": "imported",
     "importedWithSource": "imported · {source}",
-    "confirming": "Confirming…",
     "markingCertified": "Marking certified…",
     "confirmCard": "Confirm certification",
     "verifiedBy": "Certified by {name} on {date}.",
@@ -280,7 +279,6 @@
     "heading": "This diver is deleted",
     "body": "Out of the diver list, booking pickers, manifests, and trip prep. Their records stay on file.",
     "restore": "Restore diver",
-    "restoring": "Restoring…",
     "restoreRestricted": "Only owners and managers can restore a diver."
   },
   "merge": {

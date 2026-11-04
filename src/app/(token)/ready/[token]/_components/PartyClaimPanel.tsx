@@ -141,7 +141,7 @@ export function PartyClaimPanel({
                 </p>
                 <input type="hidden" name="bookingId" value={seat.bookingId} />
                 <SubmitButton
-                  pendingLabel={t("seatClaim.minorSignPending")}
+                  pendingLabel={t("words.busy.opening")}
                   className={buttonClass({ variant: "secondary", size: "sm" })}
                 >
                   {t("seatClaim.minorSign", { name: seat.seatName })}

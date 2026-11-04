@@ -283,7 +283,7 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
     hiddenRowsNoticeOther: t.raw("settings.import.wizard.hiddenRowsNoticeOther"),
     submitOne: t.raw("settings.import.wizard.submitOne"),
     submitOther: t.raw("settings.import.wizard.submitOther"),
-    submitting: t("settings.import.wizard.submitting"),
+    submitting: t("words.busy.importing"),
     issues,
     errors,
     result: {

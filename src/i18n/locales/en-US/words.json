@@ -4,7 +4,13 @@
     "sending": "Sending…",
     "adding": "Adding…",
     "deleting": "Deleting…",
-    "recording": "Recording…"
+    "recording": "Recording…",
+    "confirming": "Confirming…",
+    "removing": "Removing…",
+    "restoring": "Restoring…",
+    "opening": "Opening…",
+    "undoing": "Undoing…",
+    "importing": "Importing…"
   },
   "dismiss": {
     "neverMind": "Never mind"
