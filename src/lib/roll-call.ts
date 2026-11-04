@@ -267,7 +267,7 @@ export function isNotBackAboard(
  * that person came back.
  *
  * A `cleared` undo has already been collapsed to "no result" upstream
- * (listLatestRollCallByBooking, and `latestOfflineRollCall` on the device), so
+ * (listLatestRollCallsByCheckpoint, and `latestOfflineRollCall` on the device), so
  * it is not seen here as a breaker. Clearing the originating departure
  * not-boarded removes the source and the whole chain reverts to awaiting;
  * clearing a later re-board reverts that checkpoint to the carried default.

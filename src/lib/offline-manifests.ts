@@ -1831,7 +1831,7 @@ export type OfflineRollCallResult = {
  * What one queued event states.
  *
  * A result, or **`null` for a retraction** — "nothing stands here", the same
- * collapse the server does (`listLatestRollCallByBooking` marks the subject
+ * collapse the server does (`listLatestRollCallsByCheckpoint` marks the subject
  * seen and leaves it out of the map). `null` rather than `undefined` because
  * the difference is load-bearing one layer up: "this device said to take the
  * mark off" must not fall through to the snapshot's own stale result, which

@@ -37,7 +37,7 @@ Both halves, and neither makes retracting a mark harder than making one.
 2. **`cleared` joins the offline vocabulary**, so a retraction is recorded as a retraction. Re-tapping
    an active "Not back aboard" (or a settled "Boarded ☑️") queues `cleared`, which is the grammar the
    live control has always had; the device reader collapses a latest `cleared` to "no result", the
-   same collapse `listLatestRollCallByBooking` does server-side, and deliberately does **not** fall
+   same collapse `listLatestRollCallsByCheckpoint` does server-side, and deliberately does **not** fall
    through to the snapshot underneath — a fallback there would hand back the mark just removed.
 3. **A retraction only ever undoes a statement *this device queued*** (`OfflineRollCallResult.local`,
    added after the 2026-08-15 security review). An offline event is a blind newest-wins write —
