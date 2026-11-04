@@ -1,4 +1,5 @@
 import type { ClaudeMessage, ClaudeProvider, ClaudeRequest } from "@/lib/claude/provider";
+import { runtimeMode } from "@/lib/runtime-mode";
 import { BENCH_NOTE_SYSTEM, benchNoteFixture } from "./bench-note";
 import { CERT_SCAN_SYSTEM, certScanFixture } from "./cert-scan";
 import { DESCRIPTION_DRAFT_SYSTEM, descriptionDraftFixture } from "./description-draft";
@@ -92,7 +93,7 @@ function armedShops(): Set<string> {
 export function e2eFixturesAllowed(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): boolean {
-  return env.DIVEDAY_E2E === "1" && !env.DATABASE_URL;
+  return runtimeMode(env).e2eHarness;
 }
 
 export function armClaudeFixtures(shopId: string, armed: boolean): void {
