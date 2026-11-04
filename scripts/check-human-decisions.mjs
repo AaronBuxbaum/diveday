@@ -37,12 +37,9 @@ const ID_ONLY = new RegExp(`^${ID_SOURCE}$`);
 const CITATION = new RegExp(ID_SOURCE, "g");
 const OLD_STYLE = /\bH-\d{1,3}\b/g;
 
-/** Files that must name made-up ids to test this guard and its renamer. */
+/** Files that must name made-up ids to test this guard. */
 const SELF = new Set([
   "scripts/check-human-decisions.test.mjs",
-  "scripts/rename-human-decision-ids.mjs",
-  "scripts/rename-human-decision-ids.test.mjs",
-  "scripts/human-decision-ids.json",
 ]);
 const SKIP_EXTENSIONS = /\.(png|jpe?g|gif|webp|avif|ico|woff2?|ttf|pdf|zip|gz|mp4|webm|mov|lock)$/i;
 
@@ -126,7 +123,7 @@ export function citationProblems(lines, known) {
   for (const row of lines) {
     for (const match of row.text.matchAll(OLD_STYLE)) {
       problems.push(
-        `${where(row)}: old-style id ${match[0]} — human decisions are H-YYYYMMDD-slug now (node scripts/rename-human-decision-ids.mjs)`,
+        `${where(row)}: old-style id ${match[0]} — human decisions are H-YYYYMMDD-slug now`,
       );
     }
     for (const match of row.text.matchAll(CITATION)) {
