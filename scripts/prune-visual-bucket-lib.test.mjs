@@ -48,7 +48,11 @@ function mainHistory({ tips, headsPerTip = 4, tipSpacingMs = 2 * HOUR, now = NOW
       rows.push({
         sha: headSha(i, n),
         parents: [{ sha: headSha(i, n + 1) }],
-        commit: { committer: { date: new Date(tipAtMs - (n + 1) * 60_000).toISOString() } },
+        commit: {
+          committer: {
+            date: new Date(tipAtMs - (n + 1) * 60_000).toISOString(),
+          },
+        },
       });
     }
   }
@@ -61,7 +65,10 @@ const mainTips = (rows) => rows.map((row) => row.sha).filter((sha) => sha.starts
 function githubPages(rows, pageSize = 100) {
   return vi.fn(async (url) => {
     const page = Number(new URL(url).searchParams.get("page") || "1");
-    return { ok: true, json: async () => rows.slice((page - 1) * pageSize, page * pageSize) };
+    return {
+      ok: true,
+      json: async () => rows.slice((page - 1) * pageSize, page * pageSize),
+    };
   });
 }
 
@@ -71,7 +78,9 @@ function probeClient(shasWithSnapshots) {
     send: vi.fn(async (cmd) => {
       const prefix = cmd.input?.Prefix ?? "";
       const sha = prefix.replace("/out.json", "");
-      return { Contents: shasWithSnapshots.includes(sha) ? [{ Key: prefix }] : [] };
+      return {
+        Contents: shasWithSnapshots.includes(sha) ? [{ Key: prefix }] : [],
+      };
     }),
   };
 }
@@ -84,7 +93,9 @@ function fakeBucket(objectsByPrefix, deleteErrors = [], afterList) {
       sent.push(cmd);
       if (cmd.input?.Delimiter === "/") {
         return {
-          CommonPrefixes: Object.keys(objectsByPrefix).map((Prefix) => ({ Prefix })),
+          CommonPrefixes: Object.keys(objectsByPrefix).map((Prefix) => ({
+            Prefix,
+          })),
           IsTruncated: false,
         };
       }
@@ -138,7 +149,10 @@ describe("prune-visual-bucket-lib", () => {
 
   describe("resolveActiveBaseline", () => {
     const githubFetch = (shas) =>
-      vi.fn(async () => ({ ok: true, json: async () => shas.map((sha) => ({ sha })) }));
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => shas.map((sha) => ({ sha })),
+      }));
 
     it("returns explicit commit when provided", async () => {
       const result = await resolveActiveBaseline({ explicitCommit: SHA_1 });
@@ -332,7 +346,10 @@ describe("prune-visual-bucket-lib", () => {
         }),
       };
 
-      const prefixes = await listBucketPrefixes({ s3Client, bucket: "test-bucket" });
+      const prefixes = await listBucketPrefixes({
+        s3Client,
+        bucket: "test-bucket",
+      });
       expect(prefixes).toEqual(["prefix-1/", "prefix-2/", "prefix-3/"]);
       expect(s3Client.send).toHaveBeenCalledTimes(2);
     });
@@ -384,6 +401,24 @@ describe("prune-visual-bucket-lib", () => {
       expect(result.deletedBytesTotal).toBe(30);
     });
 
+    it("leaves the content-addressed blobs prefix alone however old it looks", async () => {
+      const { s3Client, deletedKeys } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, Size: 10, LastModified: OLD }],
+        "blobs/": [{ Key: `blobs/${"c".repeat(64)}.png`, Size: 10, LastModified: OLD }],
+      });
+
+      const result = await pruneVisualBucket({
+        s3Client,
+        bucket: "test-bucket",
+        keepShas: [SHA_1],
+        now: NOW,
+        log: () => {},
+      });
+
+      expect(result.deletedPrefixes).toEqual([]);
+      expect(deletedKeys()).toEqual([]);
+    });
+
     /** A stacked layer's baseline is on no branch the main walk can enumerate. */
     it("never deletes a prefix younger than the prune floor", async () => {
       const { s3Client, deletedKeys } = fakeBucket({
@@ -407,7 +442,11 @@ describe("prune-visual-bucket-lib", () => {
       const { s3Client, deletedKeys } = fakeBucket({
         [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, Size: 10, LastModified: OLD }],
         [`${SHA_2}/`]: [
-          { Key: `${SHA_2}/out.json`, Size: 20, LastModified: new Date(NOW - 29 * 60 * 1000) },
+          {
+            Key: `${SHA_2}/out.json`,
+            Size: 20,
+            LastModified: new Date(NOW - 29 * 60 * 1000),
+          },
         ],
       });
       const result = await pruneVisualBucket({
@@ -423,7 +462,12 @@ describe("prune-visual-bucket-lib", () => {
     });
 
     it("does not delete a replacement object after listing, even with identical content", async () => {
-      const object = { Key: `${SHA_2}/out.json`, Size: 20, LastModified: OLD, ETag: '"listed"' };
+      const object = {
+        Key: `${SHA_2}/out.json`,
+        Size: 20,
+        LastModified: OLD,
+        ETag: '"listed"',
+      };
       const { s3Client, sent } = fakeBucket(
         {
           [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, Size: 10, LastModified: OLD }],
@@ -496,7 +540,12 @@ describe("prune-visual-bucket-lib", () => {
       });
 
       await expect(
-        pruneVisualBucket({ s3Client, bucket: "test-bucket", keepShas: [], now: NOW }),
+        pruneVisualBucket({
+          s3Client,
+          bucket: "test-bucket",
+          keepShas: [],
+          now: NOW,
+        }),
       ).rejects.toThrow(/no verified baseline/i);
       expect(deletedKeys()).toEqual([]);
     });

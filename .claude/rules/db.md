@@ -82,7 +82,7 @@ barrels, bookings, seating, retention, integrations). What they do not say:
 - **A column that references `people` gets one row in `src/db/person-columns.ts`**: its kind, what a
   merge does with it, and what an erasure does (`erase`; an `actor` defaults to `keep`). A plain
   `delete` needs no statement in `anonymize.ts`: the registry runs it. `person-columns.test.ts`
-  fails with the column's name until it has a row, and `erasure-coverage.test.ts` until its fate
+  fails with the column's name until it has a row, and `erasure-registry.test.ts` until its fate
   matches the sweep it names (issue #2724). **A person is minted only by `createPerson`** (`src/db/people.ts`), which writes
   `people.origin` and the roles: person-door guard (`scripts/check-person-door.mjs`, issue #2726).
   **A reader of `bookings.status` says `seatHeld` or `seatNotCancelled`**, never a hand-typed

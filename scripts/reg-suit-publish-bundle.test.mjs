@@ -542,7 +542,11 @@ test("a same-owner legacy marker is replaced without touching legacy flat assets
       [`${BUCKET}/${COMMIT}/out.json`, legacy],
       [
         flatKey,
-        storedObject({ key: flatKey, bytes: gzipSync("legacy image"), contentType: "image/png" }),
+        storedObject({
+          key: flatKey,
+          bytes: gzipSync("legacy image"),
+          contentType: "image/png",
+        }),
       ],
       [
         `${BUCKET}/${COMMIT}/index.html`,
@@ -919,7 +923,9 @@ function sdkTransport() {
         "x-amz-meta-diveday-size": meta["diveday-size"],
         "x-amz-meta-diveday-pr-number": meta["diveday-pr-number"],
         ...(meta["diveday-publication-id"]
-          ? { "x-amz-meta-diveday-publication-id": meta["diveday-publication-id"] }
+          ? {
+              "x-amz-meta-diveday-publication-id": meta["diveday-publication-id"],
+            }
           : {}),
       };
       if (meta["diveday-snapshot-version"]) {
@@ -990,5 +996,175 @@ test("locked AWS SDK signs conditional writes and If-Match checksum reads on the
     client.destroy();
     old.cleanup();
     current.cleanup();
+  }
+});
+
+const PNG_HEAD = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/** A main-style bundle: each actual PNG is a content-addressed blob, none sits under the commit. */
+function blobFixture({ version, publicationId, images, forgeBlobName = false }) {
+  const root = mkdtempSync(path.join(os.tmpdir(), "diveday-blob-publisher-"));
+  const bundle = path.join(root, "bundle");
+  const payload = path.join(bundle, "payload");
+  mkdirSync(payload, { recursive: true });
+  const names = Object.keys(images);
+  const blobs = {};
+  const entries = [];
+  for (const name of names) {
+    const bytes = Buffer.concat([PNG_HEAD, Buffer.from(images[name])]);
+    const hash = digest(bytes);
+    blobs[name] = hash;
+    const key = forgeBlobName ? `blobs/${"f".repeat(64)}.png` : `blobs/${hash}.png`;
+    if (!entries.some((entry) => entry.key === key)) {
+      entries.push({ key, contentType: "image/png", bytes });
+    }
+  }
+  const report = (directories) =>
+    Buffer.from(
+      JSON.stringify({
+        ...directories,
+        snapshotVersion: version,
+        publicationId,
+        actualItems: names,
+        actualBlobs: blobs,
+      }),
+    );
+  entries.push(
+    {
+      key: `snapshots/${version}/index.html`,
+      contentType: "text/html",
+      bytes: Buffer.from("x"),
+    },
+    {
+      key: `snapshots/${version}/out.json`,
+      contentType: "application/json",
+      bytes: report({
+        actualDir: "actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+      }),
+    },
+    {
+      key: "out.json",
+      contentType: "application/json",
+      bytes: report({
+        actualDir: `snapshots/${version}/actual`,
+        expectedDir: `snapshots/${version}/expected`,
+        diffDir: `snapshots/${version}/diff`,
+      }),
+    },
+  );
+  for (const entry of entries) {
+    entry.gz = gzipSync(entry.bytes, { level: 9, mtime: 0 });
+    const file = path.join(payload, `${entry.key}.gz`);
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, entry.gz);
+  }
+  writeFileSync(
+    path.join(bundle, "manifest.tsv"),
+    `${entries.map((entry) => `${entry.key}\t${entry.contentType}`).join("\n")}\n`,
+  );
+  return {
+    bundle,
+    entries,
+    blobs,
+    publicationId,
+    cleanup: () => rmSync(root, { recursive: true, force: true }),
+  };
+}
+
+test("a content-addressed image lands once at the bucket root and never under the commit", async () => {
+  const f = blobFixture({
+    version: VERSION_1,
+    publicationId: "4101-1",
+    images: { "one.png": "pixels", "two.png": "pixels", "three.png": "other" },
+  });
+  try {
+    const s3 = fakeS3();
+    const result = await publishBundle(args(f, s3, { prNumber: "" }));
+    assert.equal(result.status, "published");
+    const blobKeys = [...s3.objects.keys()].filter((key) => key.startsWith(`${BUCKET}/blobs/`));
+    assert.equal(blobKeys.length, 2, "two names share one image, so two blobs");
+    assert.ok(![...s3.objects.keys()].some((key) => key.includes("/actual/")));
+    assert.equal(
+      s3.objects.get(blobKeys[0]).head.Metadata["diveday-blob-sha256"],
+      blobKeys[0].match(/blobs\/([0-9a-f]{64})\.png/u)[1],
+    );
+  } finally {
+    f.cleanup();
+  }
+});
+
+test("a later publish skips blobs that exist and rewrites ones near the bucket's expiry", async () => {
+  const images = { "one.png": "pixels", "two.png": "second" };
+  const first = blobFixture({
+    version: VERSION_1,
+    publicationId: "4101-1",
+    images,
+  });
+  const next = blobFixture({
+    version: VERSION_2,
+    publicationId: "4102-1",
+    images,
+  });
+  try {
+    const s3 = fakeS3();
+    await publishBundle(args(first, s3, { prNumber: "" }));
+    const blobKeys = [...s3.objects.keys()].filter((key) => key.startsWith(`${BUCKET}/blobs/`));
+    for (const key of blobKeys) s3.objects.get(key).head.LastModified = new Date();
+    s3.events.length = 0;
+    await publishBundle(
+      args(next, s3, {
+        prNumber: "",
+        actualKey: "e".repeat(40),
+        snapshotVersion: VERSION_2,
+      }),
+    );
+    const blobPuts = () =>
+      s3.events.filter(([event, key]) => event === "PUT_START" && key.includes("/blobs/"));
+    assert.equal(blobPuts().length, 0, "recent, intact blobs are not uploaded again");
+
+    s3.objects.get(blobKeys[0]).head.LastModified = new Date(Date.now() - 15 * 86_400_000);
+    const third = blobFixture({
+      version: VERSION_3,
+      publicationId: "4103-1",
+      images,
+    });
+    try {
+      s3.events.length = 0;
+      await publishBundle(
+        args(third, s3, {
+          prNumber: "",
+          actualKey: "d".repeat(40),
+          snapshotVersion: VERSION_3,
+        }),
+      );
+      assert.deepEqual(
+        blobPuts().map(([, key]) => key),
+        [blobKeys[0]],
+        "only the stale blob is rewritten",
+      );
+    } finally {
+      third.cleanup();
+    }
+  } finally {
+    first.cleanup();
+    next.cleanup();
+  }
+});
+
+test("a blob whose bytes do not match its content address is refused before any upload", async () => {
+  const f = blobFixture({
+    version: VERSION_1,
+    publicationId: "4101-1",
+    images: { "one.png": "pixels" },
+    forgeBlobName: true,
+  });
+  try {
+    const s3 = fakeS3();
+    await assert.rejects(publishBundle(args(f, s3, { prNumber: "" })), /content address/u);
+    assert.equal(s3.events.filter(([event]) => event === "PUT_START").length, 0);
+  } finally {
+    f.cleanup();
   }
 });

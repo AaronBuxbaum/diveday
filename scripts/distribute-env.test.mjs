@@ -126,16 +126,14 @@ describe("distribute-env", () => {
   // the manual keys and nothing else. The refusal above is the rule that
   // remains, and it has its own case.
 
-  it("derives three independent app secrets from the seed", () => {
+  it("derives two independent app secrets from the seed", () => {
     const output = distribute("local", workspace(), source).output;
     const auth = output.match(/^AUTH_SECRET=(.+)$/m)?.[1];
     const encryption = output.match(/^SECRET_ENCRYPTION_KEY=(.+)$/m)?.[1];
-    const cron = output.match(/^CRON_SECRET=(.+)$/m)?.[1];
 
     expect(auth).toMatch(/^[A-Za-z0-9+/]{43}=$/);
     expect(encryption).toMatch(/^[A-Za-z0-9+/]{43}=$/);
-    expect(cron).toMatch(/^[A-Za-z0-9+/]{43}=$/);
-    expect(new Set([auth, encryption, cron])).toHaveLength(3);
+    expect(new Set([auth, encryption])).toHaveLength(2);
   });
 
   it("refuses to distribute a document from before the stack was deployed", () => {

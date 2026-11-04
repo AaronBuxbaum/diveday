@@ -401,7 +401,7 @@ export function enforcedPolicy(options: CspOptions): string {
     ],
     // `'self'` for the staff embed generator's live preview
     // (settings/embed/EmbedGenerator.tsx), which frames this app's own
-    // `?embed=1` page; `frame-src` does not fall back to `default-src`'s
+    // `embed/**` pages; `frame-src` does not fall back to `default-src`'s
     // `'self'` once it is set.
     [
       "frame-src",

@@ -19,7 +19,7 @@ describe("the public schedule's Our year panel", () => {
   it("is gated on the shop's switch and kept out of the embed", () => {
     expect(SOURCE).toContain("{shop.publicYearEnabled ? (");
     expect(SOURCE).not.toContain("isEmbed");
-    expect(routeSource(import.meta.dirname, "embed/schedule/page.tsx")).not.toContain(
+    expect(routeSource(import.meta.dirname, "embed/calendar/page.tsx")).not.toContain(
       "OurYearSection",
     );
     expect(positionOf("<OurYearSection")).toBeGreaterThan(positionOf("<ScheduleReviewsSection"));

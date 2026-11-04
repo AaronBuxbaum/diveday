@@ -25,6 +25,7 @@ import {
 } from "@/db/recap";
 import { confirmRentalFitSize } from "@/db/rental-fit";
 import { dismissOrientation } from "@/db/user-accounts";
+import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -297,7 +298,11 @@ export async function sendRecapAction(tripId: string) {
     RATE_LIMITS.staffSendByActor,
   );
   if (!sendAllowed.allowed) revalidateAndRedirect(home, noticeUrl(home, "recap-send-limit"));
-  const result = await sendTripRecaps(await getDb(), { shopId: staff.user.shopId, tripId });
+  const result = await sendTripRecaps(await getDb(), {
+    shopId: staff.user.shopId,
+    tripId,
+    options: { marineLifeNamesIn },
+  });
   // Somebody on the boat is still "not back aboard" (#2123): nothing went out,
   // and the staffer is told why rather than that it failed.
   if (!result.ok && result.reason === "held") {

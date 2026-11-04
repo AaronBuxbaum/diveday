@@ -15,7 +15,7 @@ import { MAX_REVIEW_RATING, MIN_REVIEW_RATING, ratingIsRepresentative } from "./
  * Framework-free and built only from data those pages already render to an
  * anonymous visitor. Nothing personal ever enters a graph: no diver names, no
  * emails, no roster counts beyond the open-seat figure the page itself shows.
- * The embed surface (`?embed=1`) deliberately emits none of this — the
+ * The embed surface (`/s/<slug>/embed/**`) deliberately emits none of this — the
  * standalone page is the canonical URL, and two URLs describing the same Event
  * is exactly the duplication structured data is supposed to prevent.
  */
