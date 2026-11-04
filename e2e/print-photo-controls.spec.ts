@@ -51,14 +51,14 @@ test.describe("embed settings on paper", () => {
   signedInAsOwner();
 
   test("keeps the embed code without the interactive preview frame", async ({ page }) => {
-    await page.route(
-      (url) => url.pathname === "/s/blue-mantis/embed/calendar",
-      (route) => route.fulfill({ contentType: "text/html", body: "<p>Preview</p>" }),
+    await page.route("**/s/blue-mantis/embed/calendar**", (route) =>
+      route.fulfill({ contentType: "text/html", body: "<p>Preview</p>" }),
     );
     await page.goto("/shop/blue-mantis/settings/embed");
     const preview = page.locator("iframe");
     // The same-origin frame uses the real load event; stub its page so the
     // visible-preview state is checked without an external service.
+    await expect(page.frameLocator("iframe").getByText("Preview")).toBeVisible();
     await expect(preview).toBeVisible();
     const language = page.getByLabel(staffTranslator("en-US")("settings.embed.language"));
     await expect(language).toBeVisible();
