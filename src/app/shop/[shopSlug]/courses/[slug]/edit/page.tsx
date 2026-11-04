@@ -77,7 +77,7 @@ export default async function EditCoursePage({
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const page = await getCourseEditPage(db, shop.id, slug, session.user.personId);
   if (!page) notFound();
-  const { course, templateUpdate, everOnBoard } = page;
+  const { course, templateUpdate } = page;
   const locale = await requestLocale(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
   const t = staffTranslator(locale);
@@ -166,12 +166,11 @@ export default async function EditCoursePage({
     ? [...sections, { id: formsSection.id, label: formsSection.label }]
     : sections;
 
-  // "Schedule a session" on a course the shop runs (third UX review, item 35):
-  // one that has been on the board, ahead or behind, or one the shop wrote
-  // itself. It moved here from the roster's every row (visual review
-  // 2026-10-24, A39); a template's other courses are scheduled from the
-  // board's own Add, which lists every course.
-  const offersSchedule = canSetVisibility && (course.sourceTemplateSlug === null || everOnBoard);
+  // "Schedule a session" on every published course, for whoever may schedule
+  // (#2561): the roster row shows "Schedule" only on a course the shop has run
+  // (third UX review, item 35), so this is the first session's door; after it
+  // the course has been on the board and the row shows "Schedule" by itself.
+  const offersSchedule = canSetVisibility && course.isActive;
 
   const templateFieldLabels = courseTemplateFieldLabels(t);
 
