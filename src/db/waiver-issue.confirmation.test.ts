@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { applyProviderEmailEvent, recordNotificationDelivery } from "./notifications";
-import { bookings, shops, tripRequirements, waiverDeliveries, waiverRecords } from "./schema";
+import { bookings, tripRequirements, waiverDeliveries, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import {
   issueJoinWaiverLink,
@@ -31,7 +31,8 @@ vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
   };
 });
 
-const ctx = fileScopedShopContext();
+// A demo shop sends no mail; these tests are about mail.
+const ctx = fileScopedShopContext({ realShop: true });
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -48,8 +49,6 @@ function configureMail() {
 
 async function bookingWithWaiverOwed() {
   const { db, shop } = ctx;
-  // The seeded shop is a demo, which sends no mail; these tests are about mail.
-  await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
   const outcome = await createBooking(db, {
