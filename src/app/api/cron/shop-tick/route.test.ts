@@ -159,16 +159,20 @@ describe("GET /api/cron/shop-tick", () => {
   });
 
   it("isolates a failing scan: the others still run, and the check-in is an error", async () => {
-    vi.mocked(sendDueRecaps).mockRejectedValue(new Error("provider down"));
+    const failure = new Error("provider down for diver@example.com");
+    vi.mocked(sendDueRecaps).mockRejectedValue(failure);
     const response = await GET(cronRequest());
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.recaps).toBeNull();
     expect(body["trip-reminders"]).toEqual({ scanned: 1, sent: 1 });
     expect(sendMissingDiverAlerts).toHaveBeenCalledTimes(1);
-    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
-      tags: { cron_scan: "recaps" },
-    });
+    // The stand-in, never the original: its message can quote a diver's email.
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "CronScanFailed", message: "cron scan failed" }),
+      { tags: { cron_scan: "recaps", error_class: "Error" } },
+    );
+    expect(vi.mocked(Sentry.captureException).mock.calls[0]?.[0]).not.toBe(failure);
     expect(lastCheckInStatus()).toBe("error");
   });
 
