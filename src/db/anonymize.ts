@@ -1250,7 +1250,6 @@ async function redactBoardingSnapshots(
   shopId: string,
   bookingIds: readonly string[],
 ): Promise<void> {
-  if (bookingIds.length === 0) return;
   await tx
     .update(rollCallEvents)
     .set({

@@ -99,4 +99,54 @@ describe("erasing a former staffer's activity lines", () => {
     for (const row of aboutThem) expect(row).toMatchObject(ACTIVITY_REDACTED);
     expect(JSON.stringify(rows.map((row) => row.params))).not.toContain("Marta Quill");
   });
+  it("tells the erased diver's own seat from another diver's seat when they also own bookings", async () => {
+    const { db, shop, owner } = await fixtures();
+    const seats = await db
+      .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.shopId, shop.id))
+      .orderBy(bookings.id);
+    const own = seats[0];
+    const other = seats.find((seat) => seat.personId !== own?.personId);
+    if (!own || !other) throw new Error("expected seats for two different people");
+    await db.insert(activityEvents).values([
+      {
+        shopId: shop.id,
+        tripId: other.tripId,
+        bookingId: other.id,
+        actorPersonId: own.personId,
+        code: "booking_no_show_boarded",
+        params: { actor: "Erased Diver", diver: "Someone Else" },
+      },
+      {
+        shopId: shop.id,
+        tripId: own.tripId,
+        bookingId: own.id,
+        actorPersonId: own.personId,
+        code: "booking_no_show_boarded",
+        params: { actor: "Erased Diver", diver: "Erased Diver" },
+      },
+    ]);
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: own.personId,
+      actorPersonId: owner,
+    });
+    expect(erased.ok).toBe(true);
+
+    const rows = await db
+      .select()
+      .from(activityEvents)
+      .where(
+        and(eq(activityEvents.shopId, shop.id), eq(activityEvents.actorPersonId, own.personId)),
+      );
+    const onOther = rows.find((row) => row.bookingId === other.id);
+    expect(onOther).toMatchObject({
+      code: "booking_no_show_boarded",
+      params: { actor: ANONYMIZED_PERSON_NAME, diver: "Someone Else" },
+    });
+    const onOwn = rows.find((row) => row.bookingId === own.id);
+    expect(onOwn).toMatchObject(ACTIVITY_REDACTED);
+  });
 });
