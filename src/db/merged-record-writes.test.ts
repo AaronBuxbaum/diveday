@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { mergeDiverRecords } from "./diver-merge";
 import { addDiverNote, listDiverRecordNotes } from "./operations";
@@ -55,6 +56,39 @@ describe("writeTargetPersonId", () => {
     expect(
       await writeTargetPersonId(db, "00000000-0000-4000-8000-000000000099", goneId),
     ).toBeNull();
+  });
+
+  it("is nothing when the record it ends on is erased or removed", async () => {
+    const { db, shop, goneId, keptId } = await mergedAway();
+    await db
+      .update(people)
+      .set({ anonymizedAt: nowDate(), deletedAt: nowDate() })
+      .where(eq(people.id, keptId));
+    expect(await writeTargetPersonId(db, shop.id, goneId)).toBeNull();
+    expect(await writeTargetPersonId(db, shop.id, keptId)).toBeNull();
+    await db
+      .update(people)
+      .set({ anonymizedAt: null, deletedAt: nowDate() })
+      .where(eq(people.id, keptId));
+    expect(await writeTargetPersonId(db, shop.id, goneId)).toBeNull();
+  });
+
+  it("refuses a note for a shell whose survivor was erased, and writes none", async () => {
+    const { db, shop, owner, goneId, keptId } = await mergedAway();
+    await db
+      .update(people)
+      .set({ anonymizedAt: nowDate(), deletedAt: nowDate() })
+      .where(eq(people.id, keptId));
+    const note = await addDiverNote(db, {
+      shopId: shop.id,
+      personId: goneId,
+      actorPersonId: owner,
+      body: "Titanium hip, runs heavy",
+    });
+    expect(note).toBeNull();
+    expect(
+      await db.select().from(internalNotes).where(eq(internalNotes.personId, keptId)),
+    ).toHaveLength(0);
   });
 });
 

@@ -4008,8 +4008,16 @@ export async function splitBookingIdentity(
       // A found item copies its owner from the seat; it follows the seat.
       await tx
         .update(lostItems)
-        .set({ personId: person.id })
-        .where(and(eq(lostItems.shopId, input.shopId), inArray(lostItems.bookingId, seatIds)));
+        // Told means told to the diver the item named: for the new diver it is not
+        // yet, so Tell must work again (review B1).
+        .set({ personId: person.id, toldAt: null, toldChannel: null, updatedAt: nowDate() })
+        .where(
+          and(
+            eq(lostItems.shopId, input.shopId),
+            inArray(lostItems.bookingId, seatIds),
+            sql`${lostItems.personId} is distinct from ${person.id}`,
+          ),
+        );
       // Staff notes stay filed under the matched person (security review,
       // 2026-10-06): a note was written while the seat read as theirs, and may
       // be about them, so it is theirs to keep, export and erase.

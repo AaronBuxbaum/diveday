@@ -36,6 +36,7 @@ import {
   bookings,
   cards,
   courses,
+  lostItems,
   people,
   type Shop,
   shops,
@@ -503,6 +504,19 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
       identityMatchedBy: unconfirmed ? "shared_email" : null,
     })
     .where(eq(bookings.id, booking.id));
+
+  // A found item copies its owner from the seat; it follows the seat, and a
+  // Tell sent to the placeholder is not a Tell to the claimant.
+  await tx
+    .update(lostItems)
+    .set({ personId: person.id, toldAt: null, toldChannel: null, updatedAt: now })
+    .where(
+      and(
+        eq(lostItems.shopId, capability.shopId),
+        eq(lostItems.bookingId, booking.id),
+        sql`${lostItems.personId} is distinct from ${person.id}`,
+      ),
+    );
 
   // Every purpose, not just `claim`: any capability minted over this booking
   // before the claim was authority over the placeholder's seat, and must not

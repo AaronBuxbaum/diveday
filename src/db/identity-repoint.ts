@@ -459,8 +459,16 @@ async function repointInTransaction(
   // A found item copies its owner from the seat; it follows the seat.
   await tx
     .update(lostItems)
-    .set({ personId: input.toPersonId })
-    .where(and(eq(lostItems.shopId, input.shopId), inArray(lostItems.bookingId, seatIds)));
+    // Told means told to the diver the item named: for the new diver it is not
+    // yet, so Tell must work again (review B1).
+    .set({ personId: input.toPersonId, toldAt: null, toldChannel: null, updatedAt: nowDate() })
+    .where(
+      and(
+        eq(lostItems.shopId, input.shopId),
+        inArray(lostItems.bookingId, seatIds),
+        sql`${lostItems.personId} is distinct from ${input.toPersonId}`,
+      ),
+    );
   return {
     refused: null,
     fromPersonId: booking.personId,

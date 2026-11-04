@@ -323,7 +323,9 @@ export async function getMergedIntoPersonId(
  * merges. Null when the id is not this shop's. A staffer with a merged record
  * still open in another tab writes through here, so the note or fit lands
  * where the shop will read it (issue #3808). Bounded, so a pointer loop (which
- * no writer makes) ends rather than spins.
+ * no writer makes) ends rather than spins. Null too when the record it ends
+ * on is erased or removed: a stale tab must not write a note onto it after the
+ * erasure sweep ran (security review F1).
  */
 export async function writeTargetPersonId(
   db: DbExecutor,
@@ -335,13 +337,18 @@ export async function writeTargetPersonId(
   for (let hop = 0; hop < 256; hop += 1) {
     seen.add(at);
     const [row] = await db
-      .select({ mergedInto: people.mergedIntoPersonId })
+      .select({
+        mergedInto: people.mergedIntoPersonId,
+        anonymizedAt: people.anonymizedAt,
+        deletedAt: people.deletedAt,
+      })
       .from(people)
       // diveday:allow-deleted-people: a merged-away record is soft-deleted by the merge, and following it is the point.
       .where(and(eq(people.id, at), eq(people.shopId, shopId)))
       .limit(1);
     if (!row) return null;
-    if (!row.mergedInto || seen.has(row.mergedInto)) return at;
+    if (!row.mergedInto || seen.has(row.mergedInto))
+      return row.anonymizedAt || row.deletedAt ? null : at;
     at = row.mergedInto;
   }
   return at;
