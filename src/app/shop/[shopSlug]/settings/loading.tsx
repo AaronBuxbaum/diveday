@@ -1,5 +1,6 @@
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 import { settingsPaneClass } from "./_components/settings-pane";
 
 /**
@@ -11,7 +12,7 @@ export default function SettingsLoading() {
     // The pane SettingsPage takes — a wider skeleton made every navigation
     // into Settings jump sideways when the real page landed.
     <main className={settingsPaneClass()}>
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
         {/* Three labelled groups, each a row list wearing the card shell — the
             shape and the `space-y-10` both come from where the page takes
@@ -19,12 +20,12 @@ export default function SettingsLoading() {
         <div className="mt-8 space-y-10">
           {[0, 1, 2].map((i) => (
             <div key={i}>
-              <div className="mb-3 h-4 w-28 rounded bg-surface-sunken" />
+              <Bone className="mb-3 h-4 w-28" />
               <SectionCard as="div" pending padding="none" className="h-56" />
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }

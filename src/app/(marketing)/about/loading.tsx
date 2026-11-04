@@ -1,4 +1,5 @@
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * The `/about` segment's `<Suspense>` boundary, and what a client navigation
@@ -25,23 +26,23 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
 export default function AboutLoading() {
   return (
     <div className="flex flex-1 flex-col">
-      <main className="flex-1 animate-pulse">
+      <Pending as="main" className="flex-1">
         {/* Hero: the story on the left, the artifact it built on the right. */}
         <section className="border-b border-border">
           <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:py-24">
             <div className="max-w-2xl">
-              <div className="h-4 w-32 rounded bg-surface-sunken" />
+              <Bone className="h-4 w-32" />
               {/* The story: `text-xl leading-8`, `sm:text-2xl sm:leading-9`,
                   so a 24px bar plus the 8px gap is one line below `sm` and a
                   28px bar plus the gap is one line from it. */}
-              <div className="mt-6 h-6 w-full rounded bg-surface-sunken sm:h-7" />
-              <div className="mt-2 h-6 w-full rounded bg-surface-sunken sm:h-7" />
-              <div className="mt-2 h-6 w-full rounded bg-surface-sunken sm:h-7" />
-              <div className="mt-2 h-6 w-3/4 rounded bg-surface-sunken sm:h-7" />
-              <div className="mt-5 h-6 w-full max-w-xl rounded bg-surface-sunken" />
-              <div className="mt-2 h-6 w-full max-w-xl rounded bg-surface-sunken" />
-              <div className="mt-2 h-6 w-full max-w-xl rounded bg-surface-sunken" />
-              <div className="mt-2 h-6 w-1/2 max-w-lg rounded bg-surface-sunken" />
+              <Bone className="mt-6 h-6 w-full sm:h-7" />
+              <Bone className="mt-2 h-6 w-full sm:h-7" />
+              <Bone className="mt-2 h-6 w-full sm:h-7" />
+              <Bone className="mt-2 h-6 w-3/4 sm:h-7" />
+              <Bone className="mt-5 h-6 w-full max-w-xl" />
+              <Bone className="mt-2 h-6 w-full max-w-xl" />
+              <Bone className="mt-2 h-6 w-full max-w-xl" />
+              <Bone className="mt-2 h-6 w-1/2 max-w-lg" />
             </div>
             {/* The phone at the height `CaptainPhoneFrame` renders it, which
                 is its mockup's, not a ratio: 468px in the 320px `max-w-xs`
@@ -63,23 +64,23 @@ export default function AboutLoading() {
           <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
             <div className="grid gap-5 lg:grid-cols-[0.9fr_1fr] lg:items-start lg:gap-10">
               <div>
-                <div className="h-4 w-28 rounded bg-surface-sunken" />
-                <div className="mt-4 h-9 w-full max-w-sm rounded bg-surface-sunken sm:h-10" />
+                <Bone className="h-4 w-28" />
+                <Bone className="mt-4 h-9 w-full max-w-sm sm:h-10" />
               </div>
               <div className="max-w-2xl space-y-5">
                 {[0, 1].map((paragraph) => (
                   <div key={paragraph}>
-                    <div className="h-6 w-full rounded bg-surface-sunken" />
-                    <div className="mt-2 h-6 w-full rounded bg-surface-sunken" />
-                    <div className="mt-2 h-6 w-full rounded bg-surface-sunken" />
-                    <div className="mt-2 h-6 w-2/3 rounded bg-surface-sunken" />
+                    <Bone className="h-6 w-full" />
+                    <Bone className="mt-2 h-6 w-full" />
+                    <Bone className="mt-2 h-6 w-full" />
+                    <Bone className="mt-2 h-6 w-2/3" />
                   </div>
                 ))}
               </div>
             </div>
           </div>
         </section>
-      </main>
+      </Pending>
       <MarketingFooterFallback />
     </div>
   );

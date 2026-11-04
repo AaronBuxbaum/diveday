@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
@@ -17,14 +18,14 @@ import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 export default function OrdersIndexLoading() {
   return (
     <StaffPage width="full">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} actions />
         <StaffSectionTabsSkeleton section="money" />
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-80" />
-          <div className="h-12 w-36 rounded-lg bg-surface-sunken" />
-          <div className="h-12 w-40 rounded-lg bg-surface-sunken" />
+          <Bone shape="control" className="h-12 w-full sm:w-80" />
+          <Bone shape="control" className="h-12 w-36" />
+          <Bone shape="control" className="h-12 w-40" />
         </div>
 
         <div className="mt-8 flex flex-col gap-9">
@@ -34,8 +35,8 @@ export default function OrdersIndexLoading() {
                   16px, and the rows start the list's `mt-2.5` under it: 26px,
                   where `h-3` bars in `pb-2` drew 20 (K-390). */}
               <div className="mb-2.5 flex h-4 items-center justify-between gap-3">
-                <div className="h-3 w-32 rounded bg-surface-sunken" />
-                <div className="h-3 w-28 rounded bg-surface-sunken" />
+                <Bone className="h-3 w-32" />
+                <Bone className="h-3 w-28" />
               </div>
               {/* `sm:h-13`: a `LedgerRow`'s 52px floor, which read 48 until
                   2026-09-02. Below `sm` the diver and what they bought stack
@@ -47,7 +48,7 @@ export default function OrdersIndexLoading() {
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

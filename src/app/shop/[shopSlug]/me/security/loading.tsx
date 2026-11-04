@@ -1,11 +1,12 @@
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Pending } from "@/components/ui/pending";
 import { staffPageClass } from "../../_components/staff-page";
 
 export default function SecurityLoading() {
   return (
     <main className={staffPageClass("reading")}>
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending eyebrow={false} titleWidth="w-56" description={false} />
         {/* The page's own rhythm: one `space-y-10` between its sections, and
             the header's `mb-8` above them (K-521). */}
@@ -13,7 +14,7 @@ export default function SecurityLoading() {
           <SectionCard as="div" pending padding="md" className="h-48" />
           <SectionCard as="div" pending padding="md" className="h-64" />
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }

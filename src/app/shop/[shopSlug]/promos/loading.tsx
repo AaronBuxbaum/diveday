@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
@@ -27,15 +28,15 @@ import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 export default function PromosLoading() {
   return (
     <StaffPage width="reading">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="money" />
-        <div className="mt-8 h-12 w-36 rounded-lg bg-surface-sunken" />
+        <Bone shape="control" className="mt-8 h-12 w-36" />
         <div className="mt-10 space-y-8">
           {[0, 1].map((shelf) => (
             <div key={shelf}>
               <div className="mb-2 flex h-4 items-center">
-                <div className="h-3 w-20 rounded bg-surface-sunken" />
+                <Bone className="h-3 w-20" />
               </div>
               {[0, 1].map((row) => (
                 <div
@@ -43,21 +44,21 @@ export default function PromosLoading() {
                   className={`flex min-h-13 items-center gap-3 py-3 ${ledgerRowBoxClass}`}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="h-6 w-40 max-w-full rounded bg-surface-sunken" />
+                    <Bone className="h-6 w-40 max-w-full" />
                     <div className="mt-0.5 flex h-5 items-center">
-                      <div className="h-3.5 w-56 max-w-full rounded bg-surface-sunken" />
+                      <Bone className="h-3.5 w-56 max-w-full" />
                     </div>
                     <div className="mt-0.5 flex h-5 items-center">
-                      <div className="h-3.5 w-72 max-w-full rounded bg-surface-sunken" />
+                      <Bone className="h-3.5 w-72 max-w-full" />
                     </div>
                   </div>
-                  <div className="h-11 w-24 shrink-0 rounded-lg bg-surface-sunken" />
+                  <Bone shape="control" className="h-11 w-24 shrink-0" />
                 </div>
               ))}
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

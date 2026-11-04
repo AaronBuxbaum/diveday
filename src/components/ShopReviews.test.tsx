@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import type { PublicReview } from "@/db/reviews";
 import { diverTranslator } from "@/i18n/messages";
-import { ReviewLedger, ShopReviews, ShopReviewsSkeleton } from "./ShopReviews";
+import { ReviewLedger, ShopReviews } from "./ShopReviews";
 
 /**
  * The storefront's reviews shelf (ADR 20260827-clearwater-surface-language,
@@ -42,7 +42,7 @@ const AGGREGATE = { count: 83, average: 4.3, suppressedCount: 0 };
  */
 describe("the shelf's skeleton", () => {
   it("draws the heading on the title's 28px line", () => {
-    const { container } = render(<ShopReviewsSkeleton />);
+    const { container } = render(<ShopReviews pending />);
     expect(container.querySelector("section > div > div")?.className).toMatch(/\bh-7\b/);
   });
 
@@ -61,7 +61,7 @@ describe("the shelf's skeleton", () => {
     const loadedPad = loaded.className.match(/\bpy-\d+\b/)?.[0];
     cleanup();
 
-    const { container } = render(<ShopReviewsSkeleton />);
+    const { container } = render(<ShopReviews pending />);
     const rows = Array.from(container.querySelectorAll("section > div:nth-child(2) > div"));
     expect(rows).toHaveLength(2);
     for (const row of rows) {

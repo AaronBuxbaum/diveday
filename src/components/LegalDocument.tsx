@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
+import { Pending } from "@/components/ui/pending";
 import {
   BANNER_TITLE_CLASS,
   MARKETING_EYEBROW_CLASS,
@@ -8,7 +9,7 @@ import {
 
 /*
  * The document's boxes, named once because two things draw them: the document
- * and `LegalDocumentSkeleton`, whose bars stand in each one's own box so the
+ * and its pending face, whose bars stand in each one's own box so the
  * streamed page lands where they stood (K-411, K-407).
  *
  * `text-pretty` is on the column, not per paragraph: `text-wrap` inherits, and
@@ -39,7 +40,7 @@ const TERM_LIST_CLASS = "flex flex-col gap-3";
  * scroll, and an index that duplicates every heading is the second copy of the
  * same list that `docs/design/principles.md` #9 asks us not to write.
  */
-export function LegalDocument({
+function ResolvedLegalDocument({
   eyebrow,
   title,
   updated,
@@ -157,7 +158,7 @@ export type LegalSkeletonBlock = SkeletonLines | { terms: ReadonlyArray<Skeleton
  * is a heading or a paragraph: a fallback holds shape, never content (ADR
  * 20260804-instant-navigation's 2026-08-14 amendment).
  */
-export function LegalDocumentSkeleton({
+function PendingLegalDocument({
   eyebrowWidth = "w-40",
   titleWidth = "w-4/5",
   titleLines,
@@ -181,7 +182,7 @@ export function LegalDocumentSkeleton({
   sections: ReadonlyArray<ReadonlyArray<LegalSkeletonBlock>>;
 }) {
   return (
-    <main className="flex-1 animate-pulse">
+    <Pending as="main" className="flex-1">
       <div className={COLUMN_CLASS}>
         <div className={MARKETING_EYEBROW_CLASS}>
           <SkeletonLineBars lines={1} height="h-lh" width={eyebrowWidth} />
@@ -226,6 +227,24 @@ export function LegalDocumentSkeleton({
           ))}
         </div>
       </div>
-    </main>
+    </Pending>
   );
+}
+
+/**
+ * A legal page — or, with `pending`, the same document drawn as bars for its
+ * `loading.tsx`, in the document's own boxes (above). It was a second
+ * component, `LegalDocumentSkeleton`, until #2769 folded it in.
+ */
+export function LegalDocument(
+  props:
+    | ({ pending?: false } & ComponentProps<typeof ResolvedLegalDocument>)
+    | ({ pending: true } & ComponentProps<typeof PendingLegalDocument>),
+) {
+  if (props.pending) {
+    const { pending: _pending, ...bars } = props;
+    return <PendingLegalDocument {...bars} />;
+  }
+  const { pending: _resolved, ...document } = props;
+  return <ResolvedLegalDocument {...document} />;
 }

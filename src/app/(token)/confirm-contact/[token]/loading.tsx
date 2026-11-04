@@ -1,4 +1,4 @@
-import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
+import { EntryShell } from "@/components/account/EntryShell";
 
 /**
  * Entry-shell-shaped skeleton for the contact-confirmation page (design
@@ -6,5 +6,5 @@ import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
  * centered block it lands in rather than a spinner.
  */
 export default function ConfirmContactLoading() {
-  return <EntryShellSkeleton wordmark panel={false} footnote={false} />;
+  return <EntryShell pending wordmark panel={false} footnote={false} />;
 }

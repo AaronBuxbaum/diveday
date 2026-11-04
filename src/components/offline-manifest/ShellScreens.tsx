@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { Bone, Pending } from "@/components/ui/pending";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import { StatusMessage } from "./StatusMessage";
 
@@ -16,18 +17,18 @@ import { StatusMessage } from "./StatusMessage";
 export function OfflineManifestSkeleton() {
   return (
     <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-      <div className="animate-pulse">
-        <div className="h-4 w-32 rounded bg-surface-sunken" />
-        <div className="mt-2 h-9 w-64 max-w-full rounded bg-surface-sunken" />
+      <Pending>
+        <Bone className="h-4 w-32" />
+        <Bone className="mt-2 h-9 w-64 max-w-full" />
         <div className="mt-8">
           {[0, 1, 2].map((i) => (
             <div key={i} className="border-t border-border py-4 last:border-b">
-              <div className="h-5 w-56 max-w-full rounded bg-surface-sunken" />
-              <div className="mt-2 h-4 w-40 max-w-full rounded bg-surface-sunken" />
+              <Bone className="h-5 w-56 max-w-full" />
+              <Bone className="mt-2 h-4 w-40 max-w-full" />
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }

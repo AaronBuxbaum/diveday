@@ -1,4 +1,5 @@
 import { ShopPageHeader, SkeletonLineBars } from "@/components/ShopPageHeader";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * One `Field` as bars, in the field's own boxes: the caption's 20px `text-sm`
@@ -9,10 +10,10 @@ function FieldBars({ label, description = false }: { label: string; description?
   return (
     <div>
       <div className="flex h-5 items-center">
-        <div className={`h-3.5 ${label} rounded bg-surface-sunken`} />
+        <Bone className={`h-3.5 ${label}`} />
       </div>
       <div data-control-bar className="mt-1 h-12 rounded-lg border border-border bg-surface" />
-      {description ? <div className="mt-1 h-4 w-64 max-w-full rounded bg-surface-sunken" /> : null}
+      {description ? <Bone className="mt-1 h-4 w-64 max-w-full" /> : null}
     </div>
   );
 }
@@ -33,7 +34,7 @@ function GroupBars({
 }) {
   return (
     <div>
-      <div data-legend-bar className={`h-8 ${legend} rounded bg-surface-sunken`} />
+      <Bone data-legend-bar className={`h-8 ${legend}`} />
       <div className="mt-1 mb-4">
         <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-full" />
       </div>
@@ -63,7 +64,7 @@ function GroupBars({
  */
 export default function Loading() {
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 animate-pulse px-4 py-8 sm:px-6 sm:py-10">
+    <Pending as="main" className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         pending
         eyebrow={false}
@@ -81,8 +82,8 @@ export default function Loading() {
         </div>
         <GroupBars legend="w-56" columns="sm:grid-cols-2" fields={["w-16", "w-12", "w-28"]} />
         <GroupBars legend="w-40" columns="sm:grid-cols-3" fields={["w-16", "w-12", "w-10"]} />
-        <div data-submit-bar className="h-12 w-44 rounded-lg bg-surface-sunken" />
+        <Bone shape="control" data-submit-bar className="h-12 w-44" />
       </div>
-    </main>
+    </Pending>
   );
 }

@@ -1,5 +1,6 @@
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 import { EmbedChromeCollapse } from "../../../_components/EmbedChromeCollapse";
 
 /**
@@ -22,7 +23,7 @@ export default function EmbeddedTripLoading() {
     <>
       <EmbedChromeCollapse />
       <main className="w-full flex-1 px-3 py-4">
-        <div className="animate-pulse lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
+        <Pending className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           {/* No wrapper: `TripHeader` returns its header bare (K-170). */}
           <ShopPageHeader
             pending
@@ -33,9 +34,9 @@ export default function EmbeddedTripLoading() {
             meta={
               <>
                 {/* The when-line, the departure's own sentence, the price. */}
-                <div className="h-7 w-56 max-w-full rounded bg-surface-sunken" />
-                <div className="mt-3 h-6 w-64 max-w-full rounded bg-surface-sunken" />
-                <div className="mt-4 h-9 w-36 rounded bg-surface-sunken" />
+                <Bone className="h-7 w-56 max-w-full" />
+                <Bone className="mt-3 h-6 w-64 max-w-full" />
+                <Bone className="mt-4 h-9 w-36" />
               </>
             }
           />
@@ -43,26 +44,26 @@ export default function EmbeddedTripLoading() {
               skeleton stands them. */}
           <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
             {/* "The day" — the run of dives, one row each. */}
-            <div className="h-28 rounded bg-surface-sunken" />
+            <Bone className="h-28" />
             {/* The pitch: the fact chip, three tiles each over its name, the
                 door, and the conditions line flush under it, one block. */}
             <div>
-              <div className="h-7 w-40 rounded-full bg-surface-sunken" />
+              <Bone shape="pill" className="h-7 w-40" />
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {[0, 1, 2].map((tile) => (
                   <div key={tile}>
-                    <div className="aspect-[4/3] rounded-inset bg-surface-sunken" />
-                    <div className="mt-1 h-4 w-3/4 rounded bg-surface-sunken" />
+                    <Bone shape="inset" className="aspect-[4/3]" />
+                    <Bone className="mt-1 h-4 w-3/4" />
                   </div>
                 ))}
               </div>
-              <div className="mt-4 h-14 rounded bg-surface-sunken" />
+              <Bone className="mt-4 h-14" />
               <div className="pt-4">
-                <div className="h-12 rounded bg-surface-sunken" />
+                <Bone className="h-12" />
               </div>
             </div>
             {/* The alternates. */}
-            <div className="h-26 rounded bg-surface-sunken" />
+            <Bone className="h-26" />
             {/* The booking card, last, from the same place `SectionCard` takes it. */}
             <SectionCard
               as="div"
@@ -71,7 +72,7 @@ export default function EmbeddedTripLoading() {
               className="h-96 lg:col-start-2 lg:row-span-6 lg:row-start-1"
             />
           </div>
-        </div>
+        </Pending>
       </main>
     </>
   );

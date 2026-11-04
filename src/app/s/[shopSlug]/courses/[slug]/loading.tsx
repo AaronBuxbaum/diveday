@@ -1,6 +1,7 @@
 import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * Body-shaped skeleton for a public course page (design principle 1): the
@@ -10,7 +11,7 @@ import { SectionCard } from "@/components/ui/card";
 export default function CoursePageLoading() {
   return (
     <main className={SHOP_MAIN_CLASS}>
-      <div className="animate-pulse">
+      <Pending>
         {/* The hero's own shell, from the same place `CourseHero` takes it. */}
         <SectionCard as="div" pending padding="none" className="overflow-hidden">
           <div className="md:grid md:grid-cols-2 md:items-start">
@@ -21,27 +22,27 @@ export default function CoursePageLoading() {
                 description
                 descriptionWidth="w-64 max-w-full"
               />
-              <div className="h-8 w-44 max-w-full rounded bg-surface-sunken" />
-              <div className="mt-5 h-9 w-32 rounded bg-surface-sunken" />
+              <Bone className="h-8 w-44 max-w-full" />
+              <Bone className="mt-5 h-9 w-32" />
             </div>
-            <div className="h-44 w-full bg-surface-sunken sm:h-56 md:h-80" />
+            <Bone shape="bleed" className="h-44 w-full sm:h-56 md:h-80" />
           </div>
           <div className="px-6 pb-6 sm:px-8 sm:pb-8">
-            <div className="mt-8 h-3 w-28 rounded bg-surface-sunken" />
-            <div className="mt-2 h-6 w-64 max-w-full rounded bg-surface-sunken" />
-            <div className="mt-6 h-11 w-36 rounded bg-surface-sunken" />
+            <Bone className="mt-8 h-3 w-28" />
+            <Bone className="mt-2 h-6 w-64 max-w-full" />
+            <Bone className="mt-6 h-11 w-36" />
           </div>
         </SectionCard>
         <div className="mt-10 border-b border-border pb-4">
-          <div className="h-5 w-80 max-w-full rounded bg-surface-sunken" />
+          <Bone className="h-5 w-80 max-w-full" />
         </div>
         <div className="mt-8 max-w-2xl space-y-3">
-          <div className="h-7 w-56 rounded bg-surface-sunken" />
-          <div className="h-4 w-full rounded bg-surface-sunken" />
-          <div className="h-4 w-full rounded bg-surface-sunken" />
-          <div className="h-4 w-2/3 rounded bg-surface-sunken" />
+          <Bone className="h-7 w-56" />
+          <Bone className="h-4 w-full" />
+          <Bone className="h-4 w-full" />
+          <Bone className="h-4 w-2/3" />
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }

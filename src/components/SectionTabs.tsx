@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Bone } from "@/components/ui/pending";
 
 /**
  * **A section's parts, as tabs under its title** — ADR 20261001-logbook, the
@@ -41,17 +42,25 @@ export function sectionTabClass(
   }`;
 }
 
-export function SectionTabs({
-  label,
-  tabs,
-  current,
-}: {
-  /** The tab strip's accessible name. */
-  label: string;
-  tabs: readonly SectionTab[];
-  /** The `id` of the tab this page is. */
-  current: string;
-}) {
+/**
+ * The tab strip — or, with `pending` and a `count`, the same strip drawn as
+ * bars for a `loading.tsx` (#2769): one bar per tab on the strip's own rule
+ * and grid, so the placeholder cannot sit anywhere the tabs will not.
+ */
+export function SectionTabs(
+  props:
+    | {
+        pending?: false;
+        /** The tab strip's accessible name. */
+        label: string;
+        tabs: readonly SectionTab[];
+        /** The `id` of the tab this page is. */
+        current: string;
+      }
+    | { pending: true; count: number },
+) {
+  if (props.pending) return <PendingSectionTabs count={props.count} />;
+  const { label, tabs, current } = props;
   if (tabs.length < 2) return null;
   return (
     <nav aria-label={label} data-section-tabs className="mb-6 border-b border-border print:hidden">
@@ -83,14 +92,14 @@ const SKELETON_TAB_CLASS = "flex min-h-11 items-center justify-center px-2 sm:mi
  * ("Discount codes", "Date requests"), so the placeholders sit where the
  * loaded tabs will rather than bunched at the left.
  */
-export function SectionTabsSkeleton({ count }: { count: number }) {
+function PendingSectionTabs({ count }: { count: number }) {
   return (
     <div data-section-tabs className="mb-6 border-b border-border">
       <div className={SECTION_TAB_LIST_CLASS}>
         {Array.from({ length: count }, (_, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: placeholders with no identity
           <div key={index} className={SKELETON_TAB_CLASS}>
-            <div className="h-4 w-16 rounded bg-surface-sunken" />
+            <Bone className="h-4 w-16" />
           </div>
         ))}
       </div>

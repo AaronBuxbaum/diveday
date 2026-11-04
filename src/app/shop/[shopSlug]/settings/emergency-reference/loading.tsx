@@ -1,12 +1,13 @@
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Pending } from "@/components/ui/pending";
 import { settingsPaneClass } from "../_components/settings-pane";
 
 /** Compact contact rows and response settings at the page's own width. */
 export default function Loading() {
   return (
     <main className={settingsPaneClass()}>
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader
           pending
           titleWidth="w-72 max-w-full"
@@ -17,7 +18,7 @@ export default function Loading() {
           <SectionCard as="div" pending padding="none" className="h-56" />
           <SectionCard as="div" pending padding="none" className="h-40" />
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }

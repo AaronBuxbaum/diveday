@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 import { SEGMENT_CORNER, SEGMENT_RAISED, segmentedTrackClass } from "@/components/ui/segmented";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 import {
@@ -25,7 +26,7 @@ import { figureCellClass } from "./_components/MonthFigures";
 export default function ReportsLoading() {
   return (
     <StaffPage width="full">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="money" />
         {/* Reserve the loaded segmented track and raised active option. */}
@@ -34,14 +35,14 @@ export default function ReportsLoading() {
         </div>
         {/* Keep the heading and month controls in the loaded row geometry. */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="h-7 w-40 rounded bg-surface-sunken" />
+          <Bone className="h-7 w-40" />
           <div className="flex flex-wrap items-center gap-2">
-            <div className="size-12 rounded-lg bg-surface-sunken" />
+            <Bone shape="control" className="size-12" />
             <div className="flex items-center gap-2">
-              <div className="h-12 w-44 rounded-lg bg-surface-sunken" />
-              <div className="h-12 w-14 rounded-lg bg-surface-sunken" />
+              <Bone shape="control" className="h-12 w-44" />
+              <Bone shape="control" className="h-12 w-14" />
             </div>
-            <div className="size-12 rounded-lg bg-surface-sunken" />
+            <Bone shape="control" className="size-12" />
           </div>
         </div>
         {/* Match the figures' band and grid; shared cell classes prevent the
@@ -52,16 +53,16 @@ export default function ReportsLoading() {
               key={index}
               className={`${figureCellClass(index)}${index === 4 ? " sm:col-span-2 lg:col-span-1" : ""}`}
             >
-              <div className="h-3 w-20 rounded bg-surface-sunken" />
-              <div className="mt-3 h-8 w-28 rounded bg-surface-sunken" />
-              <div className="mt-3 h-3 w-24 rounded bg-surface-sunken" />
+              <Bone className="h-3 w-20" />
+              <Bone className="mt-3 h-8 w-28" />
+              <Bone className="mt-3 h-3 w-24" />
             </div>
           ))}
         </div>
         <div className="mt-3 flex justify-end">
-          <div className="h-4 w-56 rounded bg-surface-sunken" />
+          <Bone className="h-4 w-56" />
         </div>
-        <div className="mt-10 h-3 w-32 rounded bg-surface-sunken" />
+        <Bone className="mt-10 h-3 w-32" />
         {/* Mirror the ledger's responsive row layout and shared column widths
             so fallback rows align with loaded departures. */}
         <div className="mt-2">
@@ -69,27 +70,27 @@ export default function ReportsLoading() {
             <div key={row} className={`flex min-h-13 items-center py-2 ${ledgerRowBoxClass}`}>
               <div className="flex min-w-0 flex-1 flex-col gap-2 sm:gap-1 lg:flex-row lg:items-center lg:gap-6">
                 <div className="flex h-6 items-center lg:flex-1">
-                  <div className="h-4 w-3/4 rounded bg-surface-sunken sm:w-80" />
+                  <Bone className="h-4 w-3/4 sm:w-80" />
                 </div>
                 <div className="flex h-5 items-center gap-4 lg:gap-6">
                   <div className={`h-3 w-20 shrink-0 ${SEATS_COLUMN}`}>
-                    <div className="h-3 w-20 rounded bg-surface-sunken" />
+                    <Bone className="h-3 w-20" />
                   </div>
                   <div className={`h-3 w-12 shrink-0 ${CREW_COLUMN}`}>
-                    <div className="h-3 w-12 rounded bg-surface-sunken" />
+                    <Bone className="h-3 w-12" />
                   </div>
                   <div className={`h-3 w-14 shrink-0 ${NET_COLUMN}`}>
-                    <div className="h-3 w-14 rounded bg-surface-sunken lg:ms-auto" />
+                    <Bone className="h-3 w-14 lg:ms-auto" />
                   </div>
                   <div className={`h-3 w-24 shrink-0 ${WAIVERS_COLUMN}`}>
-                    <div className="h-3 w-24 rounded bg-surface-sunken" />
+                    <Bone className="h-3 w-24" />
                   </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

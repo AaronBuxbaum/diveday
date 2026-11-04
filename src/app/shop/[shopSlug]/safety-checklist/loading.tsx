@@ -1,12 +1,13 @@
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 import { registerPaneClass } from "../_components/register-pane";
 
 export default function SafetyChecklistLoading() {
   return (
     <main className={registerPaneClass()}>
-      <div className="animate-pulse">
+      <Pending>
         {/* "Pre-departure checklist" wraps to two lines at 390px and its
             description to three; one and two at 1280 (K-97). */}
         <ShopPageHeader
@@ -22,13 +23,13 @@ export default function SafetyChecklistLoading() {
           <div>
             {[0, 1, 2].map((row) => (
               <div key={row} className={`${ledgerRowBoxClass} flex min-h-13 items-center py-2`}>
-                <div className="h-4 w-2/3 rounded bg-surface-sunken" />
+                <Bone className="h-4 w-2/3" />
               </div>
             ))}
           </div>
           <SectionCard as="div" pending padding="none" className="h-14" />
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }
