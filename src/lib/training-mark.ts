@@ -392,6 +392,24 @@ export function trainingDiveRequiredLevel(
 }
 
 /**
+ * **The site requirement a marked training dive answers to**: the site's level
+ * lowered by `trainingDiveRequiredLevel`, everything else as the site states
+ * it. Only a site's level is ever lowered; a level the trip itself sets is the
+ * shop's statement about that departure and stands (issue #3776). Readiness
+ * (boarding) and trip admission (the sale) both fold the trip's requirement
+ * with this, so a mark lowers a level in both gates or in neither.
+ */
+export function trainingDiveSiteRequirement<
+  T extends { minimumCertificationLevel: CertificationLevel | null },
+>(site: T | null, course: TrainingDiveCourse | null | undefined): T | null {
+  if (!site || !course) return site;
+  return {
+    ...site,
+    minimumCertificationLevel: trainingDiveRequiredLevel(site.minimumCertificationLevel, course),
+  };
+}
+
+/**
  * Whether a marked training dive asks the diver for no card at all where the
  * departure asks for `required`: the lowering reached nothing, so the card
  * line must not say a card is "on file" (review 2026-10-18).

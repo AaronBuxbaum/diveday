@@ -15,7 +15,7 @@ import {
   standing,
 } from "./readiness";
 import { type Requirement, requirementDemandsNothing, unionRequirements } from "./requirement";
-import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-mark";
+import { type TrainingDiveCourse, trainingDiveSiteRequirement } from "./training-mark";
 
 /**
  * **Can this diver be sold a seat on this trip at all?**
@@ -105,9 +105,10 @@ export type TripAdmissionEvidence = {
   /**
    * The courses of this diver's course seats that a staff training mark could
    * name on this departure, with an instructor of the course aboard it for one
-   * more seat (issue #2731). Readiness lowers the level to such a course's
-   * minimum once staff mark the seat (`trainingDiveRequiredLevel`), so the
-   * sale must not refuse a level that would then clear.
+   * more seat (issue #2731). Readiness lowers a site's level to such a
+   * course's minimum once staff mark the seat (`trainingDiveSiteRequirement`),
+   * never the trip's own (issue #3776), so the sale must not refuse a level
+   * that would then clear, and must not sell one that would not.
    */
   trainingDives?: readonly TrainingDiveCourse[];
 };
@@ -336,13 +337,18 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   const blockers = standing(effective, sale, "sale");
   // A course seat a staff mark could make this a training dive for, with the
   // course's instructor aboard, is a level readiness would clear on (#2731):
-  // the level blocker goes, and a specialty or nitrox one still stands.
-  const asked = effective.minimumCertificationLevel;
-  const markWouldClear = (evidence.trainingDives ?? []).some((course) => {
-    if (!asked) return false;
-    const lowered = trainingDiveRequiredLevel(asked, course);
-    return lowered === null || levelStanding(lowered, sale, "sale") === null;
-  });
+  // the level blocker goes, and a specialty or nitrox one still stands. Only a
+  // site's level is lowered, exactly as readiness lowers it: a level the trip
+  // itself sets stands at the sale as it stands at the rail (issue #3776).
+  const markWouldClear =
+    effective.minimumCertificationLevel !== null &&
+    (evidence.trainingDives ?? []).some((course) => {
+      const marked = unionRequirements(
+        input.requirement,
+        trainingDiveSiteRequirement(input.siteRequirement, course),
+      ).minimumCertificationLevel;
+      return marked === null || levelStanding(marked, sale, "sale") === null;
+    });
   const refusal = markWouldClear
     ? blockers.filter((blocker) => !blocker.code.startsWith("certification_"))
     : blockers;

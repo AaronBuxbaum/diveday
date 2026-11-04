@@ -25,7 +25,7 @@ import {
   requirementOrNull,
   unionRequirements,
 } from "./requirement";
-import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-mark";
+import { type TrainingDiveCourse, trainingDiveSiteRequirement } from "./training-mark";
 import { type ReleaseLapse, type WaiverStateFields, waiverStanding } from "./waivers";
 
 /**
@@ -1245,19 +1245,10 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // says: until staff fix the mark, nobody knows which forms this seat owes.
   if (input.trainingMarkInvalid) blockers.push({ code: "training_mark_invalid" });
 
-  // A site-level training exception cannot erase a requirement the trip set.
+  // A site-level training exception cannot erase a requirement the trip set
+  // (`trainingDiveSiteRequirement`, the same fold the sale makes, issue #3776).
   // A supplied training context must already have passed its own safety gates.
-  const site = input.siteRequirement;
-  const effectiveSite =
-    site && input.trainingDive
-      ? {
-          ...site,
-          minimumCertificationLevel: trainingDiveRequiredLevel(
-            site.minimumCertificationLevel,
-            input.trainingDive,
-          ),
-        }
-      : site;
+  const effectiveSite = trainingDiveSiteRequirement(input.siteRequirement, input.trainingDive);
   // Riders and snorkelers have no dive for a certification to qualify.
   const effective = isDiver(input.participantType)
     ? unionRequirements(input.requirement, effectiveSite)
