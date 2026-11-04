@@ -31,7 +31,8 @@ vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
   };
 });
 
-const ctx = fileScopedShopContext();
+// A demo shop sends no mail; these tests are about mail.
+const ctx = fileScopedShopContext({ realShop: true });
 
 afterEach(() => {
   vi.unstubAllEnvs();

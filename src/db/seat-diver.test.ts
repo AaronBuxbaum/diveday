@@ -112,7 +112,8 @@ function deliverableEmailEnv() {
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
-const ctx = fileScopedShopContext();
+// A demo shop sends no mail; these tests are about mail.
+const ctx = fileScopedShopContext({ realShop: true });
 
 afterEach(() => {
   vi.unstubAllEnvs();
