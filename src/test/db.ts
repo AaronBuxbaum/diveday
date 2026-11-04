@@ -208,7 +208,18 @@ const ROLLBACK = Symbol("diveday:rollback");
  * safe; if the file's subject is transactions, money, or concurrency, it is
  * not, and the file says so in a comment where it declines.
  */
-export function fileScopedShopContext(options: { history?: boolean } = {}) {
+export function fileScopedShopContext(
+  options: {
+    history?: boolean;
+    /**
+     * Treat the seeded shop as a real one for this file. A demo shop sends no
+     * mail (`DEMO_SHOP_HELD_DELIVERY`), so a file that fakes SES and expects a
+     * send says so here; the flag is flipped inside each test's rolled-back
+     * transaction.
+     */
+    realShop?: boolean;
+  } = {},
+) {
   let base: AppDb | undefined;
   let shop: Awaited<ReturnType<typeof getShopBySlug>>;
   /** The handle the tests read. Reassigned per test to the live transaction. */
@@ -252,6 +263,9 @@ export function fileScopedShopContext(options: { history?: boolean } = {}) {
         if (error !== ROLLBACK) throw error;
       });
     await opened;
+    if (options.realShop) {
+      await handle.db.execute(sql`update shops set is_demo = false where slug = 'blue-mantis'`);
+    }
   });
 
   afterEach(async () => {
