@@ -519,8 +519,6 @@ describe("the course recap's certification", () => {
     });
     const data = await getRecapPageData(db, bookingId);
     expect(data?.course?.nextStep?.words).toBe("Book your deep dive before the card arrives.");
-    // Unconsented: the words stand, signed with no name (see
-    // recap-next-step-author.test.ts for the consented name).
     expect(data?.course?.nextStep?.byName).toBeNull();
   });
 });

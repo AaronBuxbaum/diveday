@@ -165,18 +165,6 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.seatMoveUnstaffed",
   },
   "seat-move-min-age": { form: "roster", tone: "danger", key: "trips.notices.seatMoveMinAge" },
-  "party-moved": {
-    form: "roster",
-    tone: "success",
-    key: "trips.notices.partyMoved",
-    countKey: "trips.notices.partyMovedCount",
-  },
-  "party-moved-check": {
-    form: "roster",
-    tone: "warning",
-    key: "trips.notices.partyMovedCheck",
-    countKey: "trips.notices.partyMovedCheckCount",
-  },
   "waitlist-carried": {
     form: "roster",
     tone: "success",
