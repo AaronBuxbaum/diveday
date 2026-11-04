@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { SeatWaiverStanding } from "@/lib/waivers";
 import { entry, readinessRow, seatFacts, signedWaiver } from "./roster-test-fixtures";
 import type { ReadinessByBooking, WaiverByBooking } from "./types";
 
@@ -44,5 +45,53 @@ describe("rosterSeat", () => {
   it("carries whether the row is filed under a settled group", () => {
     expect(facts(undefined, true).settledRow).toBe(true);
     expect(facts().settledRow).toBe(false);
+  });
+});
+
+/**
+ * **The roster says what the diver record says** (issue #3775): the word and
+ * the desk's next step come from the readiness row's `seatWaiver`.
+ */
+describe("rosterSeat waiver standing", () => {
+  function withSeatWaiver(seatWaiver: SeatWaiverStanding, blockers: unknown[] = []) {
+    const row = { ...readinessRow("blocked", blockers), seatWaiver };
+    return seatFacts(entry("a", "Asha Osei"), {
+      readiness: new Map([["a", row]]) as ReadinessByBooking,
+      waivers: new Map([["a", signedWaiver]]) as WaiverByBooking,
+    });
+  }
+
+  it("offers a new link on a lapsed release, where it used to offer Send waiver as if none was ever signed", () => {
+    const seat = withSeatWaiver({ standing: "lapsed", control: "lapsed", refusalRetired: false });
+    expect(seat.waiverStatus).toBe("lapsed");
+    expect(seat.waiverControl).toMatchObject({ label: "Needs signing again", action: "send" });
+  });
+
+  it("does not call a minor's solo signature Waiver signed", () => {
+    const seat = withSeatWaiver({
+      standing: "guardian_missing",
+      control: "guardian_missing",
+      refusalRetired: false,
+    });
+    expect(seat.waiverControl).toMatchObject({
+      label: "Guardian signature missing",
+      action: "send",
+    });
+  });
+
+  it("keeps the refusal's word and gives the desk the fresh release's next step", () => {
+    const seat = withSeatWaiver({
+      standing: "medical_not_cleared",
+      control: "lapsed",
+      refusalRetired: true,
+    });
+    expect(seat.waiverStatus).toBe("medical_not_cleared");
+    expect(seat.refusalRetired).toBe(true);
+    expect(seat.waiverControl).toMatchObject({ action: "send" });
+  });
+
+  it("reads the seat's one record when the readiness read left no word", () => {
+    expect(facts().waiverStatus).toBe("signed");
+    expect(facts().waiverControl.action).toBeNull();
   });
 });

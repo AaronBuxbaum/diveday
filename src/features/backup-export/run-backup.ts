@@ -62,6 +62,8 @@ export type RunShopBackupInput = {
   /** Canonical app origin for the event links inside `trips.ics`. */
   origin: string;
   now?: Date;
+  /** The staffer behind a manual run; their name goes on each diver's medical-answers read line. */
+  readerPersonId?: string;
   /** Used for both the photo fetches and the upload, so tests own all I/O. */
   fetchImpl?: typeof fetch;
 } & BackupSecretOptions;
@@ -129,6 +131,7 @@ export async function runShopBackup(
       icsLabels: input.icsLabels,
       origin: input.origin,
       now,
+      readerPersonId: input.readerPersonId,
       fetchImpl: input.fetchImpl,
     });
     if (!bundle.ok) return fail("shop_missing");

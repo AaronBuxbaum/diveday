@@ -10,9 +10,8 @@ import { heldSeatBlockers } from "@/lib/identity-match";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
-import { waiverStanding } from "@/lib/waivers";
 import type { RosterRowContext } from "./RosterRow";
-import { seatMoveForRow } from "./roster-model";
+import { rosterSeatWaiver, seatMoveForRow } from "./roster-model";
 import type { RosterEntry } from "./types";
 
 /**
@@ -185,15 +184,17 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
             ? t("trips.roster.paymentSourceWaived")
             : null;
   const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
-  const waiverStatus = waiverStanding(currentWaiver);
-  // **A retired refusal still governs, and the seat's own new link is what
-  // there is to do** (`retireMedicalRefusal`). The physician's "no" keeps the
-  // seat blocked and keeps its reason line, while the waiver control speaks
-  // for the fresh release the seat now carries: sent, expired, or not yet.
-  const refusalRetired =
-    waiverStatus === "medical_not_cleared" && Boolean(currentWaiver?.supersededAt);
-  const ownWaiver = seatRow?.bookingWaiver ?? null;
-  const waiverControl = WAIVER_CONTROLS[refusalRetired ? waiverStanding(ownWaiver) : waiverStatus];
+  // **The seat's waiver word is the diver record's** (`seatWaiverStanding`,
+  // issue #3775): a release the diver outlived reads lapsed, a minor's solo
+  // signature reads guardian-missing, and a retired refusal still governs the
+  // seat (its reason line stays) while the control speaks for the fresh release
+  // the seat now carries: sent, expired, lapsed against changed terms, or not
+  // yet (`retireMedicalRefusal`). A row whose readiness read failed closed has
+  // only the record to go on.
+  const seatWaiver = rosterSeatWaiver(seatRow, currentWaiver);
+  const waiverStatus = seatWaiver.standing;
+  const { refusalRetired } = seatWaiver;
+  const waiverControl = WAIVER_CONTROLS[seatWaiver.control];
   const nitrox = nitroxByBooking.get(booking.id);
   // Either signal holds the seat, so a readiness read that failed closed
   // (and so raised no identity blocker) still withholds (security review

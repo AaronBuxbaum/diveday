@@ -113,6 +113,7 @@ describe("export bundle", () => {
       { file: "trips.csv", header: ["id"], rows: [], note: "Scheduled trips." },
     ],
     photoUrls: [],
+    medicalAnswerPersonIds: [],
   };
   const now = new Date("2026-07-22T14:30:00Z");
 

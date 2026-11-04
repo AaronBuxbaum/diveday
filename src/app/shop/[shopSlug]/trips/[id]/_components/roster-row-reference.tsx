@@ -124,7 +124,9 @@ export function rowReference(seat: RowReferenceInput) {
         {/* The signed waiver's own evidence — when, and by which route —
             and nothing else. Every state that is *not* signed already says
             so under the name (principle 9). */}
-        {showsPersonDetail && currentWaiver?.completedAt && waiverStatus === "signed" ? (
+        {showsPersonDetail &&
+        currentWaiver?.completedAt &&
+        (waiverStatus === "signed" || waiverStatus === "guardian_missing") ? (
           <div>
             <GroupLabel as="p">{t("trips.roster.waiverColumnHeading")}</GroupLabel>
             <p className="mt-1 text-sm text-muted">

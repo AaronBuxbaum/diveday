@@ -435,6 +435,22 @@ export function trainingDiveAsksNoCardForSite(
 }
 
 /**
+ * **Whether a marked seat's training dive can be tied to one site** (issue
+ * #3839). A seat-level mark does not say which of a departure's dives is the
+ * training dive, so readiness lowers a site's level only on one planned dive at
+ * one site (`siteAttributionUnknown`, `src/db/readiness.ts`). The sale's mark
+ * check (`markableTrainingDives`) asks this same function, so admission cannot
+ * sell a seat readiness would refuse at the rail on a two-dive or two-site
+ * charter. `siteCount` is distinct dive sites the departure visits.
+ */
+export function trainingSiteAttributionKnown(
+  plannedDives: number | null | undefined,
+  siteCount: number,
+): boolean {
+  return plannedDives === 1 && siteCount === 1;
+}
+
+/**
  * The course a marked training dive answers to (issue #2731, decided by
  * Aaron 2026-10-17): with the mark standing, the course readable and its
  * instructor aboard for this seat; otherwise null, and the departure's level

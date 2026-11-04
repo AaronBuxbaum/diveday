@@ -1,5 +1,6 @@
 import type { AppDb } from "@/db/client";
 import { loadShopExportBundleInput } from "@/db/export";
+import { recordMedicalAnswersExported } from "@/db/operations";
 import { type FeedLabels, feedDocument, listFeedTrips } from "@/features/calendar-sync";
 import {
   buildExportBundle,
@@ -32,6 +33,14 @@ export type BuildBackupBundleInput = {
   /** Canonical app origin for the event links inside `trips.ics`. */
   origin: string;
   now: Date;
+  /**
+   * The staffer who pressed "Test backup". The bundle hands out every release's
+   * medical answers, so each diver's trail gets the same line the download
+   * route writes (issue #2618), before anything is assembled. The scheduled and
+   * platform runs have no staffer and write none: they are system acts
+   * (follow-up filed), so an absent reader writes no line.
+   */
+  readerPersonId?: string;
   /** Used for the photo fetches, so tests own all I/O. */
   fetchImpl?: typeof fetch;
 };
@@ -52,6 +61,14 @@ export async function buildBackupBundle(
 ): Promise<BuildBackupBundleResult> {
   const bundleInput = await loadShopExportBundleInput(db, input.shopId, input.now);
   if (!bundleInput) return { ok: false, reason: "shop_missing" };
+  // Fail closed: a throw here is a recorded bundle_failed and nothing leaves.
+  if (input.readerPersonId) {
+    await recordMedicalAnswersExported(db, {
+      shopId: input.shopId,
+      actorPersonId: input.readerPersonId,
+      personIds: bundleInput.medicalAnswerPersonIds,
+    });
+  }
 
   // The .ics rides along: the shop-wide departures document, which by
   // calendar-sync's own invariant never contains a diver.

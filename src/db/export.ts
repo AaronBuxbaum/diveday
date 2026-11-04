@@ -131,6 +131,11 @@ export function loadExportBundleInput(
             buildExportTables(SHOP_EXPORT_FILES, context),
             await shopRehearsalIds(tx, scope.shopId),
           ),
+          medicalAnswerPersonIds: [
+            ...new Set(
+              context.waiverRows.flatMap((row) => (row.medicalAnswers ? [row.personId] : [])),
+            ),
+          ].sort(),
         };
       }
       const context = await loadDiverExportContext(tx, scope.shopId, scope.personId);

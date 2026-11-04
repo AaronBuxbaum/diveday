@@ -26,7 +26,7 @@ import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { readSeatLadder, sailingUnsaid } from "@/lib/seat-ladder";
-import { waiverStanding } from "@/lib/waivers";
+import { type SeatWaiverStanding, seatWaiverStanding, type WaiverStanding } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { SHARED_FACT_MIN } from "./shared-facts";
@@ -446,6 +446,27 @@ export const PAYMENT_STATUSES_RECORDING_ONLY: readonly PaymentStatus[] = [
   "paid",
 ];
 
+/**
+ * **The seat's waiver standing** (issue #3775): what readiness resolved for the
+ * seat (`ReadinessRow.seatWaiver`), or, for a row whose readiness read failed
+ * closed, what the seat's one record says alone.
+ */
+export function rosterSeatWaiver(
+  row: { seatWaiver?: SeatWaiverStanding } | undefined,
+  currentWaiver: Parameters<typeof seatWaiverStanding>[0]["effective"],
+): SeatWaiverStanding {
+  return (
+    row?.seatWaiver ??
+    seatWaiverStanding({
+      effective: currentWaiver,
+      own: currentWaiver,
+      releaseLapse: null,
+      guardianMissing: false,
+      ownLapsed: false,
+    })
+  );
+}
+
 // The whole waiver collapses to a single control per diver. Its face is the
 // status; its click is the only sensible next action. `action: null` means
 // there is nothing left to send — the waiver is signed, or a medical answer
@@ -469,7 +490,7 @@ type WaiverControlKeys = {
 
 export type WaiverControl = WaiverControlKeys & { label: string; hint?: string };
 
-const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverStanding>, WaiverControlKeys> = {
+const WAIVER_CONTROL_KEYS: Record<WaiverStanding, WaiverControlKeys> = {
   none: {
     labelKey: "trips.roster.waiverSend",
     variant: "secondary",
@@ -494,6 +515,21 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverStanding>, WaiverContr
     action: null,
     confirm: false,
   },
+  // Signed and outlived, or signed by a minor alone: the way out is a fresh
+  // link (a guardian's signature rides on the same one), the act the diver
+  // record draws (issue #3775).
+  lapsed: {
+    labelKey: "trips.roster.waiverLapsed",
+    variant: "secondary",
+    action: "send",
+    confirm: false,
+  },
+  guardian_missing: {
+    labelKey: "trips.roster.waiverGuardianMissing",
+    variant: "secondary",
+    action: "send",
+    confirm: false,
+  },
   medical_review: {
     labelKey: "trips.roster.waiverMedicalReview",
     action: null,
@@ -510,7 +546,7 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverStanding>, WaiverContr
   },
 };
 
-export type WaiverControls = Record<ReturnType<typeof waiverStanding>, WaiverControl>;
+export type WaiverControls = Record<WaiverStanding, WaiverControl>;
 
 /**
  * Every waiver state's control, worded. On a rehearsal an open link was never
@@ -642,8 +678,9 @@ export function groupRoster({
     const readiness = readinessByBooking.get(booking.id)?.readiness;
     const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
     const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
-    const status = waiverStanding(currentWaiver);
-    const control = WAIVER_CONTROLS[status];
+    const seatWaiver = rosterSeatWaiver(readinessByBooking.get(booking.id), currentWaiver);
+    const status = seatWaiver.standing;
+    const control = WAIVER_CONTROLS[seatWaiver.control];
     const identityUnconfirmed =
       Boolean(booking.identityUnconfirmedAt) ||
       Boolean(readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));

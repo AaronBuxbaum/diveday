@@ -1,5 +1,6 @@
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadShopExportBundleInput } from "@/db/export";
+import { recordMedicalAnswersExported } from "@/db/operations";
 import { hasRequiredStepUp } from "@/db/step-up";
 import { nowDate } from "@/lib/clock";
 import {
@@ -36,6 +37,14 @@ export async function GET(request: Request) {
   const now = nowDate();
   const input = await loadShopExportBundleInput(db, session.user.shopId, now);
   if (!input) return new Response("Shop not found", { status: 404 });
+
+  // The file hands out every release's medical answers at once, so each
+  // diver's trail says so first (issue #2618). Not swallowed: no line, no ZIP.
+  await recordMedicalAnswersExported(db, {
+    shopId: session.user.shopId,
+    actorPersonId: session.user.personId,
+    personIds: input.medicalAnswerPersonIds,
+  });
 
   const photos = await fetchExportPhotos(input.photoUrls);
   const files = [

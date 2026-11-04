@@ -1000,7 +1000,7 @@ async function applyStripeChargeRefund(
   );
   if (target.kind === "none") return { status: "not_found" };
   if (target.kind === "tip") {
-    return recordTipRefund(db, target.checkout, input.amountRefundedCents);
+    return recordTipRefund(db, target.checkout, input.amountRefundedCents, input.occurredAt);
   }
 
   if (target.kind === "order") {

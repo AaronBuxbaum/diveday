@@ -1575,7 +1575,7 @@
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 396,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 307,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 312,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 311,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 340,
     "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/reporting.ts#getMonthlyReport": 319,

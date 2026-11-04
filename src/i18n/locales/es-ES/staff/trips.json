@@ -670,6 +670,8 @@
     "referralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada.",
     "viewReferral": "Ver la derivación",
     "waiverColumnHeading": "Exención",
+    "waiverLapsed": "Hay que firmarla de nuevo",
+    "waiverGuardianMissing": "Falta la firma del tutor",
     "waiverLinkExpired": "Enlace caducado",
     "waiverMedicalReview": "Revisión médica",
     "waiverMedicalNotCleared": "No autorizado",

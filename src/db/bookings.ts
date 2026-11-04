@@ -80,6 +80,7 @@ import { type CreatePersonInput, createPerson, findOrCreatePerson } from "./peop
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "./readiness";
+import { rearmTripReminders } from "./reminder-rearm";
 import { newestMarkFirst } from "./roll-call-order";
 import { seatMarks } from "./roll-call-subject";
 import {
@@ -1934,6 +1935,16 @@ export async function restoreBooking(
     });
     if (courseRefusal) return courseRefusal;
 
+    // **No `tripAdmissionFor` here, on purpose** (issue #3839, attacker F2). A
+    // charter's own card gate is the weaker, booking-time half
+    // (`src/lib/trip-admission.ts`): it never refuses someone the boarding-time
+    // gate would clear, and it refuses nobody it cannot also stop at the rail.
+    // A seat taken back is a seat the shop already sold, so the gate is not
+    // re-asked here; `calculateReadiness` still holds the diver at the dock if
+    // the card that admitted them is gone (`moveBooking` asks it because a move
+    // sells a different departure). A course session is the exception above:
+    // its gates are the session's only admission rule.
+
     await tx
       .update(bookings)
       // A seat back on the boat carries no turned-away reason from its last
@@ -2241,6 +2252,11 @@ export async function moveBooking(
     // A package dive spent on the old departure is given back and the new one
     // settles it again, under the new trip's own rules.
     await releasePackageCoverageForBooking(tx, shopId, booking.id);
+    // A reminder already sent for the old departure is the record the diver was
+    // told it, not the new one's: stamp it superseded so the next reminder run
+    // sends the 7-day and 24-hour reminders for the departure they now sail
+    // (issue #2554). Nothing is resent for the old one, and no row is deleted.
+    await rearmTripReminders(tx, { shopId, bookingId: booking.id });
     await tx
       .update(bookings)
       .set({

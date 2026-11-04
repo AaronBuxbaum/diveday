@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, ne } from "drizzle-orm";
+import { and, asc, countDistinct, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { trainingCourseRatioRule } from "@/lib/course-ratios";
 import { groupCrewAssignments } from "@/lib/crew-roles";
@@ -11,12 +11,22 @@ import {
   type TrainingMarkState,
   trainingMarkProblem,
   trainingRoom,
+  trainingSiteAttributionKnown,
 } from "@/lib/training-mark";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { oldestMarkFirst } from "./roll-call-order";
 import { crewMarks, markCrewPersonId } from "./roll-call-subject";
-import { bookings, courses, personRoles, rollCallEvents, tripAssignments, trips } from "./schema";
+import {
+  bookings,
+  courses,
+  diveSites,
+  personRoles,
+  rollCallEvents,
+  tripAssignments,
+  tripDives,
+  trips,
+} from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 
@@ -440,6 +450,25 @@ export async function markableTrainingDives(
   personId: string,
   departure: { id: string; startsAt: Date },
 ): Promise<TrainingDiveCourse[]> {
+  // Readiness lowers a site's level only on one planned dive at one site
+  // (`trainingSiteAttributionKnown`), so the sale counts on a mark only there:
+  // a seat admission sold on a two-dive or two-site charter would be one
+  // readiness refuses at the rail (issue #3839).
+  const [[planned], [visited]] = await queryAll(db, [
+    () =>
+      db
+        .select({ plannedDives: trips.plannedDives })
+        .from(trips)
+        .where(and(eq(trips.id, departure.id), eq(trips.shopId, shopId), liveTrip()))
+        .limit(1),
+    () =>
+      db
+        .select({ sites: countDistinct(tripDives.diveSiteId) })
+        .from(tripDives)
+        .innerJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
+        .where(and(eq(tripDives.tripId, departure.id), eq(diveSites.shopId, shopId))),
+  ]);
+  if (!trainingSiteAttributionKnown(planned?.plannedDives, Number(visited?.sites ?? 0))) return [];
   const seats = await db
     .select({ id: bookings.id })
     .from(bookings)

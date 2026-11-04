@@ -3,6 +3,7 @@ import { type CardUndoRefusal, cardUndoCutoff, cardUndoRefusal } from "@/lib/car
 import { nowDate } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
 import type { AppDb } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import { activityEvents, cards, people } from "./schema";
 import { livePerson } from "./trips-live";
@@ -60,7 +61,7 @@ export async function restoreCard(
     .limit(1);
   if (!archived || archived.deletedAt === null) return "not_found";
   try {
-    return await db.transaction(async (tx): Promise<CardRestoreOutcome> => {
+    const outcome = await db.transaction(async (tx): Promise<CardRestoreOutcome> => {
       const [diver] = await tx
         .select({ id: people.id, fullName: people.fullName })
         .from(people)
@@ -126,6 +127,14 @@ export async function restoreCard(
       });
       return "restored";
     });
+    // A restored card changes readiness on every departure the diver is on, as
+    // its Delete did: open and primed manifests re-read, so a cached roll call
+    // does not keep blocking a card that is back (issue #3839). After the
+    // commit, never inside it.
+    if (outcome === "restored") {
+      await publishManifestEventsForPerson(db, input.shopId, archived.personId);
+    }
+    return outcome;
   } catch (error) {
     if (isUniqueConstraintViolation(error)) return "conflict";
     throw error;

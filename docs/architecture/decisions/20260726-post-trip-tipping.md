@@ -89,3 +89,18 @@ merchant-of-record model bookings use.
   DiveDay never holds the money, so an orphaned session means the shop's own Stripe dashboard is the
   reconciliation source of truth, never a lost or double charge. Revisit if this surface's volume ever
   makes that manual reconciliation actually painful.
+
+## Addendum (issue #3835): a tip's refunds and disputes do not depend on delivery order
+
+Stripe promises no webhook order, so a tip's `refunded_cents` (what came back by a refund, plus what a
+lost dispute took, capped at the tip) is written to give one answer in any order (`src/db/tip-reversals.ts`).
+
+- A refund event recomputes the figure from Stripe's running total plus the tip's lost disputes, so a
+  dispute recorded before a delayed refund event leaves both counted.
+- A refund event stamped no later than the tip's newest refund failure is ignored: its running total
+  was taken before the failure. Every failure is written down, including one delivered before the
+  refund it undoes.
+- **Not done, and unconfirmed:** whether Stripe lowers `amount_refunded` on a charge when a refund
+  fails. Nothing here relies on it either way (the failure reverses the stored figure by the failed
+  amount, and older totals are ignored), but a Stripe test-mode run should settle it. The same
+  event-time guard for fares (`refund-failures.ts`, `refunds.ts`) is still open.

@@ -6,6 +6,7 @@ import { nowDate } from "@/lib/clock";
 import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
 import { type BookingAdvisory, depthFinding } from "@/lib/findings";
+import { guardianSignatureMissing } from "@/lib/guardian";
 import { type CourseSeatInTraining, courseEndedBefore, inTrainingBefore } from "@/lib/in-training";
 import {
   isDiver,
@@ -35,18 +36,22 @@ import {
   type TrainingMarkState,
   trainingDiveAsksNoCardForSite,
   trainingDiveLevel,
+  trainingSiteAttributionKnown,
 } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
 import {
+  bookingRecordLapsed,
   effectiveReleaseForRiderSeat,
   effectiveWaiverForBooking,
   overriddenReferral,
   overriddenRefusal,
   releaseLapseForBooking,
   riderMedicalHold,
+  seatWaiverStanding,
   waiverClockInstant,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
+import { softDeleteCard } from "./card-delete";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
@@ -937,24 +942,7 @@ export async function deleteCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string; deletedByPersonId: string },
 ) {
-  const [row] = await db
-    .update(cards)
-    .set({
-      deletedAt: nowDate(),
-      deletedByPersonId: input.deletedByPersonId,
-      // A staffer's own Delete, the one archive a card's Undo may take back (#3701).
-      deletionKind: "staff",
-    })
-    .where(
-      and(
-        eq(cards.kind, "level"),
-        eq(cards.id, input.certificationId),
-        eq(cards.shopId, input.shopId),
-        isNull(cards.deletedAt),
-      ),
-    )
-    .returning({ id: cards.id });
-  return Boolean(row);
+  return softDeleteCard(db, { ...input, kind: "level" });
 }
 
 export type NewSpecialtyCertification = {
@@ -1380,24 +1368,7 @@ export async function deleteSpecialtyCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string; deletedByPersonId: string },
 ) {
-  const [row] = await db
-    .update(cards)
-    .set({
-      deletedAt: nowDate(),
-      deletedByPersonId: input.deletedByPersonId,
-      // A staffer's own Delete, the one archive a card's Undo may take back (#3701).
-      deletionKind: "staff",
-    })
-    .where(
-      and(
-        eq(cards.kind, "specialty"),
-        eq(cards.id, input.certificationId),
-        eq(cards.shopId, input.shopId),
-        isNull(cards.deletedAt),
-      ),
-    )
-    .returning({ id: cards.id });
-  return Boolean(row);
+  return softDeleteCard(db, { ...input, kind: "specialty" });
 }
 
 /**
@@ -1680,7 +1651,25 @@ function seatRelease(input: {
     heldToMedical ? effectiveWaiverForBooking : effectiveReleaseForRiderSeat
   )({ ...input, now: waiverNow });
   const releaseLapse = releaseLapseForBooking({ ...input, heldToMedical });
-  return { effectiveWaiver, releaseLapse };
+  // The seat's own record read at the same waiver clock, for the roster's word
+  // on a retired refusal's fresh release (`seatWaiverStanding`, issue #3775).
+  const ownLapsed = input.bookingWaiver
+    ? bookingRecordLapsed(
+        input.bookingWaiver,
+        input.currentTemplateVersion,
+        waiverNow,
+        heldToMedical,
+      )
+    : false;
+  return { effectiveWaiver, releaseLapse, ownLapsed };
+}
+
+/** Whether the release a seat stands on was signed by a minor alone (the guardian rule). */
+function seatGuardianMissing(
+  effectiveWaiver: Parameters<typeof guardianSignatureMissing>[0] | null,
+  signer: Parameters<typeof guardianSignatureMissing>[1],
+): boolean {
+  return effectiveWaiver !== null && guardianSignatureMissing(effectiveWaiver, signer);
 }
 
 /**
@@ -1904,8 +1893,10 @@ export async function listTripsReadiness(
     const siteRequirement = siteRequirementsByTrip.get(tripId) ?? null;
     const courseRow = courseByTrip.get(tripId);
     // A seat-level mark cannot identify which of several planned dives is training.
-    const siteAttributionUnknown =
-      courseRow?.plannedDives !== 1 || (siteRowsByTrip.get(tripId)?.length ?? 0) !== 1;
+    const siteAttributionUnknown = !trainingSiteAttributionKnown(
+      courseRow?.plannedDives,
+      siteRowsByTrip.get(tripId)?.length ?? 0,
+    );
     const trainingForSite = siteAttributionUnknown
       ? null
       : trainingDiveLevel(trainingMarks.get(row.booking.id));
@@ -1921,7 +1912,7 @@ export async function listTripsReadiness(
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
       : null;
 
-    const { effectiveWaiver, releaseLapse } = seatRelease({
+    const { effectiveWaiver, releaseLapse, ownLapsed } = seatRelease({
       booking: row.booking,
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
@@ -1970,6 +1961,24 @@ export async function listTripsReadiness(
         : [],
       bookingWaiver: row.waiver,
       waiver: effectiveWaiver,
+      /**
+       * Where the seat's waiver stands, in the one word list, for the roster
+       * (issue #3775): `lapsed` and `guardian_missing` as the diver record says
+       * them, and the desk's next step on a retired refusal. A word only; the
+       * blockers above are the gate.
+       */
+      seatWaiver: seatWaiverStanding({
+        effective: effectiveWaiver,
+        own: row.waiver,
+        releaseLapse,
+        guardianMissing: seatGuardianMissing(effectiveWaiver, {
+          dateOfBirth: row.person.dateOfBirth,
+          minorDeclared: minorDeclaredOf(row.booking, trainingMark),
+          timezone,
+        }),
+        ownLapsed,
+        now,
+      }),
       // Carried on the row because the manifest needs it and only this function
       // holds both halves — the governing record and the diver's whole signed
       // history. Deriving it a second time downstream from one of the two would
