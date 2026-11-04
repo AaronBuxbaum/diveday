@@ -39,6 +39,12 @@
       "files": {
         "src/db/bookings.ts": "89.17 -> 89.13"
       }
+    },
+    {
+      "why": "Issue #3701 (#3837): card Undo is one shared restoreCard in card-restore.ts; the nitrox-only restoreNitroxCertification was deleted, and its fully covered branches left the ratio of nitrox.ts. Its replacement is tested in card-restore.test.ts.",
+      "files": {
+        "src/db/nitrox.ts": "84.05 -> 83.6"
+      }
     }
   ],
   "src/db/aboard-at-sea.ts": 94.82,
@@ -62,7 +68,7 @@
   "src/db/manifest-events.ts": 75.92,
   "src/db/manifests.ts": 89.1,
   "src/db/medical-alerts.ts": 91.8,
-  "src/db/nitrox.ts": 84.05,
+  "src/db/nitrox.ts": 83.6,
   "src/db/offline-manifest-snapshots.ts": 70,
   "src/db/party-waiver-queue.ts": 84.21,
   "src/db/pre-departure-check.ts": 84.88,
