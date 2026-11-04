@@ -45,7 +45,7 @@ for one release, because the release serving during the deploy still read and wr
 Triggers forwarded that release's writes (a code minted, switched off or deleted, a deal sent, a
 checkout or reservation naming an old column) onto `deals` and `deal_id`. With no users to lose, the
 tables, enums, triggers and functions were dropped in the next change (#3778); the four columns
-follow once the previous release no longer declares them (#3871).
+follow once the previous release no longer declares them (#3866).
 
 Known gap, deploy window only: the bridge forwards the old release's writes into `deals`, not the
 reverse. A code switched off on the new release still applies on the old one, and a capped code can
