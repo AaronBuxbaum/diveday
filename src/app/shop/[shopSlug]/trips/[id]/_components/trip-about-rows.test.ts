@@ -10,7 +10,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import type { CoursePricing } from "@/lib/courses";
 import { fileScopedShopContext } from "@/test/db";
 import { tripAboutRows } from "./trip-about-rows";
-import { tripCrewNotes } from "./trip-crew-notes";
 
 const ctx = fileScopedShopContext();
 const t = staffTranslator("en-US");
@@ -40,7 +39,6 @@ async function rowsFor(
   }
   return tripAboutRows({
     overview: { ...overview, canConfigure: canConfigure ?? overview.canConfigure },
-    crewNotes: tripCrewNotes({ crew: overview.crew, diversPerDivemaster: 8, locale: "en-US", t }),
     liveBoatClashes: [],
     shop: shop as never,
     shopSlug: shop.slug,

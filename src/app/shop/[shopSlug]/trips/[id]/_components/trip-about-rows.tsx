@@ -45,7 +45,7 @@ import { repeatsRowText } from "./details-rows";
 import { participantTermsRows } from "./ParticipantTermsSection";
 import { RequirementsSection } from "./RequirementsSection";
 import { SeriesCadenceEditor } from "./SeriesSection";
-import { boatClashText, type tripCrewNotes } from "./trip-crew-notes";
+import { boatClashText, tripCrewNotesOf } from "./trip-crew-notes";
 
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
 type ShopSurface = Awaited<ReturnType<typeof requireShopSurface>>["shop"];
@@ -53,7 +53,6 @@ type ShopSurface = Awaited<ReturnType<typeof requireShopSurface>>["shop"];
 /** What the Details tab's About rows are composed from: the departure's overview and the page's reads. */
 export type TripAboutRowsContext = {
   overview: TripOverview;
-  crewNotes: ReturnType<typeof tripCrewNotes>;
   /** The hull's clashes with other departures; empty on a called-off one. */
   liveBoatClashes: TripOverview["boatClashes"];
   shop: ShopSurface;
@@ -180,7 +179,6 @@ function departureEditor(context: TripAboutRowsContext, section: DepartureDetail
 export function tripAboutRows(context: TripAboutRowsContext) {
   const {
     overview,
-    crewNotes,
     liveBoatClashes,
     shop,
     shopSlug,
@@ -207,6 +205,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
   } = overview;
   const bookingPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const { crewIds, tripRoleByPerson, crewGap, onShiftIds, clashes } = crew;
+  const crewNotes = tripCrewNotesOf(overview, shop, locale, t);
   const { ratingLapsedNote, languageGapNote, underTargetNote, overRatioWarning } = crewNotes;
   const detailsStatus = noticeForForm(tripNotice, "details");
   const conditionsStatus = noticeForForm(tripNotice, "conditions");

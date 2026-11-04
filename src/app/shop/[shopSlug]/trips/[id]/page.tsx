@@ -26,6 +26,7 @@ import { departureConditionReads } from "./_components/departure-conditions";
 import { detailsReadRows } from "./_components/details-rows";
 import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
+import { PaperPassSheet } from "./_components/PaperPassSheet";
 import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
 import { addBandFor } from "./_components/seat-request-band";
@@ -39,7 +40,6 @@ import { TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader"
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
-import { tripCrewNotes } from "./_components/trip-crew-notes";
 import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-price";
 import { showsDetailsTab } from "./_components/trip-notice-tabs";
 import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
@@ -103,6 +103,7 @@ export default async function ManageTripPage({
       confirmEmail,
       confirmPhone,
       view,
+      pass,
       held,
       tell,
       ...rest
@@ -110,6 +111,12 @@ export default async function ManageTripPage({
   ] = await Promise.all([params, searchParams]);
   // An unparseable UUID must not reach Postgres.
   if (!uuidParam(tripId)) notFound();
+  if (pass !== undefined) {
+    // The departure's paper pass for one booking: a sheet, not a tab.
+    const bookingId = uuidParam(pass);
+    if (!bookingId) notFound();
+    return <PaperPassSheet shopSlug={shopSlug} tripId={tripId} bookingId={bookingId} />;
+  }
   const { session, db, shop } = await requireShopSurface(shopSlug);
   reportRenderQueries("/shop/[shopSlug]/trips/[id]", after);
   const locale = await requestLocale(shop.defaultLocale);
@@ -147,12 +154,6 @@ export default async function ManageTripPage({
   } = overview;
   // One hull, one departure at a time (H-20260916-may-one-hull-carry, issue #1780). A called-off
   // departure holds no hull, and `boatClashes` answers nothing for one anyway.
-  const crewNotes = tripCrewNotes({
-    crew: overview.crew,
-    diversPerDivemaster: shop.diversPerDivemaster,
-    locale,
-    t,
-  });
 
   const { tripNotice, lifecycleStatus, rootPageNotice, rosterPageNotice } = tripPageNotices({
     notice,
@@ -340,7 +341,6 @@ export default async function ManageTripPage({
               rows={[
                 ...tripAboutRows({
                   overview,
-                  crewNotes,
                   liveBoatClashes: cancelled ? [] : boatClashes,
                   shop,
                   shopSlug,

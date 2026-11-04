@@ -47,7 +47,7 @@ test.describe("the shop on paper", () => {
     await expect(row).toHaveCount(1);
 
     await row.getByRole("link", { name: "Print a pass" }).click();
-    await page.waitForURL(new RegExp(`/shop/${privateShop.slug}/print/pass/`));
+    await page.waitForURL(new RegExp(`/shop/${privateShop.slug}/trips/[^/?]+\\?pass=`));
     // Scoped to the sheet, not the page: the staff chrome around it carries a
     // nav badge, and what this asserts is what comes out of the printer.
     const sheet = page.locator(".paper-sheet");

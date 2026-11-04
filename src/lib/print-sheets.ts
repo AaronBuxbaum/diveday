@@ -130,8 +130,8 @@ export function storefrontAddress(shopSlug: string, origin: string | null): stri
  * Built with `shopPath`, which escapes every segment, so a booking id can never
  * rewrite the route it names.
  */
-export function paperPassPath(shopSlug: string, bookingId: string): string {
-  return shopPath(shopSlug, "print", "pass", bookingId);
+export function paperPassPath(shopSlug: string, tripId: string, bookingId: string): string {
+  return `${shopPath(shopSlug, "trips", tripId)}?pass=${encodeURIComponent(bookingId)}`;
 }
 
 /**
