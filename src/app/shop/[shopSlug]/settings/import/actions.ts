@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { canPersonImportShopData, commitContactImport, type ImportSummary } from "@/db/import";
 import { getShopById } from "@/db/shops";
+import { declinedSizeNote } from "@/i18n/import-notes";
 import { parseImportAssist } from "@/lib/assists/import-mapping";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -74,6 +75,7 @@ export async function importContactsAction(
     session.user.shopId,
     prepared,
     session.user.personId,
+    declinedSizeNote,
   );
   // The roster and its counts change; refresh the divers surface.
   revalidatePath(`/shop/${session.user.shopSlug}/divers`);

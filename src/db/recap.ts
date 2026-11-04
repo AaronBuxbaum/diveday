@@ -59,7 +59,7 @@ import {
   sendNotificationBatch,
 } from "./notifications";
 import { queryAll } from "./query-helpers";
-import { autoFillRecapLine } from "./recap-assist";
+import { autoFillRecapLine, type MarineLifeNamesIn } from "./recap-assist";
 import { tripsWithSomebodyMissing } from "./roll-call-gaps";
 import {
   bookings,
@@ -1544,6 +1544,8 @@ export type RecapRunSummary = {
 };
 
 export type SendDueRecapsOptions = {
+  /** The species names for the highlight line, worded by the caller (`marineLifeNamesIn` in `src/i18n`). */
+  marineLifeNamesIn: MarineLifeNamesIn;
   now?: Date;
   emailProvider?: NotificationProvider;
   smsProvider?: SmsProvider;
@@ -1614,9 +1616,9 @@ export type SendTripRecapsResult =
 
 export async function sendTripRecaps(
   db: AppDb,
-  input: { shopId: string; tripId: string; options?: SendDueRecapsOptions },
+  input: { shopId: string; tripId: string; options: SendDueRecapsOptions },
 ): Promise<SendTripRecapsResult> {
-  const now = input.options?.now ?? nowDate();
+  const now = input.options.now ?? nowDate();
   const [trip] = await db
     .select({ id: trips.id, endsAt: trips.endsAt, status: trips.status })
     .from(trips)
@@ -1648,7 +1650,7 @@ export async function sendTripRecaps(
  */
 export async function sendDueRecaps(
   db: AppDb,
-  options: SendDueRecapsOptions = {},
+  options: SendDueRecapsOptions,
 ): Promise<RecapRunSummary> {
   return sendRecaps(db, options);
 }
@@ -1656,7 +1658,7 @@ export async function sendDueRecaps(
 /** Shared dispatcher for the all-shop cron and a single eligible departure. */
 async function sendRecaps(
   db: AppDb,
-  options: SendDueRecapsOptions = {},
+  options: SendDueRecapsOptions,
   scope: RecapScanScope = {},
 ): Promise<RecapRunSummary> {
   const now = options.now ?? nowDate();
@@ -1757,7 +1759,7 @@ async function sendRecaps(
       .filter((row) => !alreadySent.has(row.booking.id))
       .map((row) => [row.trip.id, row] as const),
   ).values()) {
-    await autoFillRecapLine(db, trip, shop);
+    await autoFillRecapLine(db, trip, shop, options.marineLifeNamesIn);
   }
 
   // When each diver may fly (`src/lib/fly-safe.ts`), from the same

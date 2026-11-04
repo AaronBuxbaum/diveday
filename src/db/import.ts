@@ -33,11 +33,11 @@
 
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { declinedSizeNote } from "@/i18n/import-notes";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { canImportShopData } from "@/lib/authz";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import type { RentalItemKind } from "@/lib/dive-prep";
 import { type PreparedImport, type PreparedRow, parseImportedMoney } from "@/lib/import";
 import { phoneForStorage } from "@/lib/phone";
 import { NOTHING_RENTED } from "@/lib/rentals";
@@ -233,6 +233,16 @@ function fillBlank(column: AnyPgColumn, value: string) {
 }
 
 /**
+ * The words for a size the import could not store, written by the caller (the page
+ * is where words are chosen; `src/db` returns codes and takes the wording in).
+ */
+export type DeclinedSizeNote = (
+  locale: string | null | undefined,
+  kind: RentalItemKind,
+  value: string,
+) => string;
+
+/**
  * Write the importable rows of a prepared plan. Returns a per-family tally the
  * UI reports verbatim — the honest record of what a click actually did.
  */
@@ -241,6 +251,7 @@ export async function commitContactImport(
   shopId: string,
   prepared: PreparedImport,
   importedByPersonId: string,
+  declinedSizeNote: DeclinedSizeNote,
 ): Promise<ImportSummary> {
   // `merge` rows are written too — they are the second and third cards of a
   // diver an earlier row brought in (ADR 20260725-import-specialty-cards).
@@ -282,7 +293,7 @@ export async function commitContactImport(
       currency: shops.currency,
       country: shops.addressCountry,
       // The shop's own language. `commitContactImport` takes no locale — it is
-      // not a request — and the one line it composes itself (a declined size,
+      // not a request — and the one line it words through the caller's function (a declined size,
       // issue #1801) lands in a note a staffer reads later, so the shop's
       // default is the only honest answer. Same reading `push-subscriptions.ts`
       // takes for a message with no reader in front of it.
@@ -446,6 +457,7 @@ export async function commitContactImport(
           importedByPersonId,
           shopCurrency: shop?.currency ?? "usd",
           locale,
+          declinedSizeNote,
         });
         continue;
       }
@@ -550,6 +562,7 @@ export async function commitContactImport(
         importedByPersonId,
         shopCurrency: shop?.currency ?? "usd",
         locale,
+        declinedSizeNote,
       });
     }
 
@@ -588,6 +601,7 @@ async function writeEvidence(
     shopCurrency: string;
     /** The shop's own language, for the one line this writer stores itself. */
     locale: string;
+    declinedSizeNote: DeclinedSizeNote;
   },
 ): Promise<void> {
   const {
@@ -600,6 +614,7 @@ async function writeEvidence(
     importedByPersonId,
     shopCurrency,
     locale,
+    declinedSizeNote,
   } = ctx;
 
   if (row.visit) {

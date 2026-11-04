@@ -3,6 +3,7 @@
 import { getDb } from "@/db/client";
 import { hasSentTripRecap } from "@/db/recap";
 import { draftRecapLine } from "@/db/recap-assist";
+import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { requireStaffSession } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
@@ -19,6 +20,6 @@ export async function draftRecapLineAction(
   const staff = await requireStaffSession();
   const db = await getDb();
   if (await hasSentTripRecap(db, staff.user.shopId, tripId)) return null;
-  const line = await draftRecapLine(db, staff.user.shopId, tripId);
+  const line = await draftRecapLine(db, staff.user.shopId, tripId, marineLifeNamesIn);
   return line ? { recapShoutout: line } : null;
 }
