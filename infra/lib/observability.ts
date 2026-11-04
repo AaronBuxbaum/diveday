@@ -201,6 +201,9 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // line names the scan, and a failure of the whole tick is its scan_failed too.
       "cron_shop_tick.scan_failed",
       "cron_weekly_digest.scan_failed",
+      // The percent plan's monthly close: a failed one leaves a shop's fee
+      // unreported to Stripe's meter.
+      "cron_pricing_volume.scan_failed",
     ],
     threshold: 1,
     periodMinutes: 1_440,

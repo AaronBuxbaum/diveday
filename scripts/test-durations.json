@@ -1998,7 +1998,7 @@
   "src/lib/dive-sites.test.ts": 189,
   "src/lib/divemaster-ratio.test.ts": 24,
   "src/lib/diver-duplicates.test.ts": 11,
-  "src/lib/diver-notices.test.ts": 203,
+  "src/i18n/diver-notice-text.test.ts": 203,
   "src/lib/diver-planning.test.ts": 52,
   "src/lib/diver-standing.test.ts": 15,
   "src/lib/diver-status.test.ts": 73,

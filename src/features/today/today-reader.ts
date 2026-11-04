@@ -70,7 +70,7 @@ import {
 import { listUnfinished } from "@/db/unfinished";
 import { sharedWelcomeSeatsByTrip } from "@/db/welcome-cues";
 import { listWorkOrdersNeedingAttention } from "@/db/work-order-follow-up";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   highWindAlertDetailText,
   openTripActionText,
@@ -1422,15 +1422,14 @@ export async function getTodayWork(
   shopSlug: string,
   clock: ShopClock,
   /** When set, the result carries which in-window trips this person crews. */
-  personId?: string,
+  personId: string | undefined,
   /**
    * Resolves the blocked-diver rows' `detail`/`actionLabel` text
-   * (`blockedDiverActions`, `src/features/today/today.ts`). Defaults to English so every
-   * pre-existing caller (tests included) keeps working unchanged; the page
-   * passes its own request-locale translator.
+   * (`blockedDiverActions`, `src/features/today/today.ts`). The caller passes
+   * its own request-locale translator.
    */
-  t: StaffTranslator = staffTranslator("en-US"),
-  /** Formats every departure time (`at()`); defaults alongside `t` for the same reason. */
+  t: StaffTranslator,
+  /** Formats every departure time (`at()`). */
   locale = "en-US",
   /**
    * Stuck Stripe operations and failed photo-deletion retries (task 157) are

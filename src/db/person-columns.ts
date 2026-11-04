@@ -44,7 +44,8 @@
  * names the person being erased.
  *
  * - `delete`: the row goes. With no `eraseIn` it is a plain one, `shop_id` and
- *   this column, and the erasure runs it from this registry
+ *   this column (for the person and every record merged into them), only ever
+ *   on a `subject` column, and the erasure runs it from this registry
  *   (`erasedPersonRowDeletes`): a new table of a person's own rows needs one
  *   line here and no hand-written statement.
  * - `scrub`: the row stays and its personal content is redacted by the sweep
@@ -54,11 +55,12 @@
  * - `keep`: left as it is. A pointer at an erased person discloses nothing: the
  *   name joined at read is the anonymized one. An `actor` column is `keep`
  *   unless it says otherwise; any other kind states it, and its reason is
- *   `eraseWhy` or the table's entry in `erasure-coverage-keeps.test-support.ts`.
+ *   `eraseWhy` (always, on a `subject`) or the table's entry in
+ *   `erasure-coverage-keeps.test-support.ts`.
  *
  * Scope (Aaron, 2026-11-01, #3437): the erasure removes the person's own data.
  * Their name in somebody else's free text is not this registry's to find.
- * `erasure-coverage.test.ts` holds every fate to the code: a named sweep must
+ * `erasure-registry.test.ts` holds every fate to the code: a named sweep must
  * exist and write the table, and a `keep` table the erasure writes must say why.
  *
  * Export- and reap-shaped fates stay in their own modules until their slices
@@ -84,6 +86,8 @@ export type PersonColumn = {
   erase?: PersonColumnErase;
   /** The `anonymize.ts` sweep that does it. Absent on a plain `delete`, which the registry runs. */
   eraseIn?: string;
+  /** The column the sweep reaches these rows by, when it is not this one (a login by its account). */
+  eraseBy?: string;
   /** `keep` only, when the table's entry in the erasure keep-list does not already say why. */
   eraseWhy?: string;
 };
@@ -100,6 +104,7 @@ const rows = [
     kind: "subject",
     merge: "move",
     erase: "keep",
+    eraseWhy: "a kind, a channel, a status and a date; never the address or the words",
   },
   {
     table: "bookings",
@@ -135,6 +140,7 @@ const rows = [
     kind: "subject",
     merge: "move",
     erase: "keep",
+    eraseWhy: "the shop's own balance of a package: ids, a consumption time and an expiry",
   },
   {
     table: "orders",
@@ -273,6 +279,8 @@ const rows = [
     kind: "subject",
     merge: "move",
     erase: "keep",
+    eraseWhy:
+      "that a re-book was offered, by id; the address it went to is on the notification rows, which are redacted",
   },
   // The diver's own messages and the shop's answers to them (ADR
   // 20260907-two-way-inbox). A merge is the shop saying two records are one
@@ -299,7 +307,14 @@ const rows = [
   // J2). It is the diver's, so it follows them: the survivor is who gets told.
   { table: "lost_items", column: "person_id", kind: "subject", merge: "move", erase: "delete" },
   // ---- Refused: a staff record on either side stops the merge.
-  { table: "staff_shifts", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
+  {
+    table: "staff_shifts",
+    column: "person_id",
+    kind: "crew",
+    merge: "refuse",
+    erase: "scrub",
+    eraseIn: "scrubPersonRecord",
+  },
   {
     table: "staff_credentials",
     column: "person_id",
@@ -315,6 +330,7 @@ const rows = [
     merge: "refuse",
     erase: "delete",
     eraseIn: "scrubDiverLogin",
+    eraseBy: "user_account_id",
   },
   {
     table: "calendar_feeds",
@@ -346,7 +362,8 @@ const rows = [
     column: "person_id",
     kind: "login",
     merge: "refuse",
-    erase: "keep",
+    erase: "delete",
+    eraseIn: "scrubPersonRecord",
   },
   // The staffing week's own two tables (issue #1235). Both are written by, and
   // about, somebody who crews boats — a days-away block or an ask for a
@@ -357,7 +374,8 @@ const rows = [
     column: "person_id",
     kind: "crew",
     merge: "refuse",
-    erase: "keep",
+    erase: "scrub",
+    eraseIn: "scrubPersonRecord",
   },
   {
     table: "crew_assignment_requests",
@@ -452,6 +470,8 @@ const rows = [
     kind: "subject",
     merge: "leave",
     erase: "keep",
+    eraseWhy:
+      "the ledger that keeps an unfinished erasure visible (ADR 20260803-processor-erasure-obligations)",
     why: "provenance for an erasure, and anonymized rows never merge",
   },
   {
@@ -1024,6 +1044,7 @@ const rows = [
     kind: "subject",
     merge: "leave",
     erase: "keep",
+    eraseWhy: "a pointer joined at read, which resolves to the anonymized name",
     why: "an event trail records who it happened to at the time",
   },
   {
@@ -1313,9 +1334,15 @@ export function eraseFate(row: PersonColumn): PersonColumnErase {
  * rows, found by `shop_id` and the column, with nothing bespoke about them.
  */
 export function erasedPersonRowDeletes(): { table: string; column: string }[] {
-  return PERSON_COLUMNS.filter((row) => eraseFate(row) === "delete" && !row.eraseIn).map(
-    ({ table, column }) => ({ table, column }),
-  );
+  return PERSON_COLUMNS.filter((row) => eraseFate(row) === "delete" && !row.eraseIn).map((row) => {
+    // A plain delete takes every row naming the person, so only a column
+    // naming the subject of their own rows may have one: on an actor or crew
+    // column it would take the rows a former staffer wrote about other people.
+    if (row.kind !== "subject") {
+      throw new Error(`person-columns: ${personColumnKey(row)} is a plain delete of a ${row.kind}`);
+    }
+    return { table: row.table, column: row.column };
+  });
 }
 
 /** `table.column` for every row, the key the guards and the docs use. */

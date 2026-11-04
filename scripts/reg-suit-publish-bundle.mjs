@@ -19,6 +19,13 @@ const MAX_REPORT_COMPRESSED_BYTES = 4_000_000;
 const MAX_REPORT_BYTES = 32_000_000;
 const MAX_REPORT_ITEMS = 10_000;
 const SAFE_PATH = /^[A-Za-z0-9._/-]+$/u;
+const MAX_BLOB_BYTES = 20_000_000;
+// S3 expires every object 60 days after it was last written (ADR
+// 20260826-prune-visual-bucket). A blob that never changes is never re-uploaded,
+// so each main publish rewrites the ones it references once they are this old.
+const BLOB_REFRESH_MS = 14 * 24 * 60 * 60 * 1000;
+const BLOB_KEY = /^blobs\/([0-9a-f]{64})\.png$/u;
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}$/u;
 const TYPES = new Set([
   "application/json",
@@ -102,7 +109,16 @@ function requireSafePath(key) {
   }
 }
 
+/** A content-addressed image lives at the bucket root, not under a commit prefix. */
+function objectKey(actualKey, key) {
+  return BLOB_KEY.test(key) ? key : `${actualKey}/${key}`;
+}
+
 function classifyKey(key, contentType, snapshotVersion) {
+  if (BLOB_KEY.test(key)) {
+    if (contentType !== "image/png") throw new Error(`blob must be image/png: ${key}`);
+    return "blob";
+  }
   if (key === "out.json") {
     if (contentType !== "application/json") throw new Error("out.json must be application/json");
     return "marker";
@@ -177,7 +193,9 @@ function readVersionedReport(marker) {
   let json;
   try {
     const compressed = marker.bytes;
-    json = gunzipSync(compressed, { maxOutputLength: MAX_REPORT_BYTES }).toString("utf8");
+    json = gunzipSync(compressed, {
+      maxOutputLength: MAX_REPORT_BYTES,
+    }).toString("utf8");
   } catch {
     throw new Error("out.json is not a bounded gzip report");
   }
@@ -208,7 +226,24 @@ function readVersionedReport(marker) {
     }
     names.add(name);
   }
-  return [...names];
+  const blobs = readBlobMap(report.actualBlobs, names);
+  return { actualItems: [...names], blobs };
+}
+
+/** `actualBlobs` maps a capture name to the sha-256 of its PNG; every name must be a real item. */
+function readBlobMap(value, names) {
+  if (value === undefined) return {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("out.json actualBlobs must be an object");
+  }
+  const entries = Object.entries(value);
+  if (entries.length > MAX_REPORT_ITEMS) throw new Error("out.json actualBlobs is too large");
+  for (const [name, hash] of entries) {
+    if (!names.has(name) || typeof hash !== "string" || !/^[0-9a-f]{64}$/u.test(hash)) {
+      throw new Error(`out.json actualBlobs has an unsafe entry: ${name}`);
+    }
+  }
+  return value;
 }
 
 async function validateBundle({
@@ -301,10 +336,30 @@ async function validateBundle({
     entry.sha256 = await sha256File(entry.file, signal, (size) =>
       onEvent("preflight-chunk", entry.key, size),
     );
+    if (entry.kind === "blob") {
+      let png;
+      try {
+        png = gunzipSync(readFileSync(entry.file), {
+          maxOutputLength: MAX_BLOB_BYTES,
+        });
+      } catch {
+        throw new Error(`blob is not a bounded gzip image: ${entry.key}`);
+      }
+      entry.blobSha256 = createHash("sha256").update(png).digest("hex");
+      if (
+        !png.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE) ||
+        `blobs/${entry.blobSha256}.png` !== entry.key
+      ) {
+        throw new Error(`blob content does not match its content address: ${entry.key}`);
+      }
+    }
   }
   marker.snapshotVersion = snapshotVersion;
   marker.publicationId = publicationId;
-  const actualItems = readVersionedReport({ ...marker, bytes: readFileSync(marker.file) });
+  const { actualItems, blobs } = readVersionedReport({
+    ...marker,
+    bytes: readFileSync(marker.file),
+  });
   const localReportEntry = entries.find(
     (entry) => entry.key === `snapshots/${snapshotVersion}/out.json`,
   );
@@ -328,24 +383,44 @@ async function validateBundle({
     localReport.diffDir !== "diff" ||
     localReport.snapshotVersion !== snapshotVersion ||
     localReport.publicationId !== publicationId ||
-    JSON.stringify(localReport.actualItems) !== JSON.stringify(actualItems)
+    JSON.stringify(localReport.actualItems) !== JSON.stringify(actualItems) ||
+    JSON.stringify(localReport.actualBlobs ?? {}) !== JSON.stringify(blobs)
   ) {
     throw new Error("snapshot out.json does not match the root publication marker");
   }
   const actualKeys = new Set(
     entries.filter((entry) => entry.kind === "snapshot-asset").map((entry) => entry.key),
   );
+  const blobKeys = new Set(entries.filter((entry) => entry.kind === "blob").map((e) => e.key));
+  for (const hash of new Set(Object.values(blobs))) {
+    if (!blobKeys.has(`blobs/${hash}.png`)) {
+      throw new Error(`out.json names a blob that is missing from the publisher manifest: ${hash}`);
+    }
+  }
+  for (const entry of entries) {
+    if (entry.kind !== "blob") continue;
+    if (!Object.values(blobs).includes(BLOB_KEY.exec(entry.key)[1])) {
+      throw new Error(`publisher manifest has a blob no report entry names: ${entry.key}`);
+    }
+  }
   for (const name of actualItems) {
+    if (Object.hasOwn(blobs, name)) continue;
     if (!actualKeys.has(`snapshots/${snapshotVersion}/actual/${name}`)) {
       throw new Error(`out.json actual item is missing from the publisher manifest: ${name}`);
     }
   }
-  return { entries, marker, assets: entries.filter((entry) => entry.kind !== "marker") };
+  return {
+    entries,
+    marker,
+    assets: entries.filter((entry) => entry.kind !== "marker"),
+  };
 }
 
 async function send(client, command, signal, timeoutMs) {
   const timeout = AbortSignal.timeout(timeoutMs);
-  return client.send(command, { abortSignal: AbortSignal.any([signal, timeout]) });
+  return client.send(command, {
+    abortSignal: AbortSignal.any([signal, timeout]),
+  });
 }
 
 async function headObject({ client, commands, bucket, actualKey, key, signal, timeoutMs }) {
@@ -353,7 +428,7 @@ async function headObject({ client, commands, bucket, actualKey, key, signal, ti
     client,
     new commands.HeadObjectCommand({
       Bucket: bucket,
-      Key: `${actualKey}/${key}`,
+      Key: objectKey(actualKey, key),
       ChecksumMode: "ENABLED",
     }),
     signal,
@@ -367,6 +442,7 @@ function expectedMetadata(entry, prNumber) {
     "diveday-size": String(entry.size),
   };
   if (prNumber) metadata["diveday-pr-number"] = prNumber;
+  if (entry.kind === "blob") metadata["diveday-blob-sha256"] = entry.blobSha256;
   if (entry.kind === "marker") {
     metadata["diveday-snapshot-version"] = entry.snapshotVersion;
     metadata["diveday-publication-id"] = entry.publicationId;
@@ -404,7 +480,7 @@ async function hashExistingBody({
     client,
     new commands.GetObjectCommand({
       Bucket: bucket,
-      Key: `${actualKey}/${entry.key}`,
+      Key: objectKey(actualKey, entry.key),
       IfMatch: head.ETag,
     }),
     signal,
@@ -573,7 +649,7 @@ async function putObject({
   body.on("error", () => {});
   const input = {
     Bucket: bucket,
-    Key: `${actualKey}/${entry.key}`,
+    Key: objectKey(actualKey, entry.key),
     Body: body,
     ContentLength: entry.size,
     ContentType: entry.contentType,
@@ -621,6 +697,49 @@ async function publishImmutableAsset(args, onEvent) {
   onEvent("reused", args.entry.key);
 }
 
+/**
+ * Content-addressed: the key is the hash of the bytes, so an existing object is
+ * the right object. HEAD (a Tier-2 request) decides; only a missing, foreign or
+ * about-to-expire blob costs a PUT.
+ */
+async function publishBlob(args, onEvent) {
+  const { client, commands, bucket, entry, signal, timeoutMs } = args;
+  let head = null;
+  try {
+    head = await send(
+      client,
+      new commands.HeadObjectCommand({ Bucket: bucket, Key: entry.key }),
+      signal,
+      timeoutMs,
+    );
+  } catch (error) {
+    if (!isMissing(error)) throw error;
+  }
+  if (head) {
+    const intact =
+      head.ContentType === "image/png" &&
+      head.Metadata?.["diveday-blob-sha256"] === entry.blobSha256;
+    const written = head.LastModified ? new Date(head.LastModified).getTime() : 0;
+    if (intact && Date.now() - written < BLOB_REFRESH_MS) {
+      onEvent("reused", entry.key);
+      return;
+    }
+    // Rewrite the same bytes: it restarts the bucket's expiry clock, or repairs
+    // an object that does not carry this publisher's metadata.
+    await putObject({ ...args, prNumber: "", condition: {} });
+    onEvent("uploaded", entry.key);
+    return;
+  }
+  try {
+    await putCreateOnly({ ...args, prNumber: "" });
+    onEvent("uploaded", entry.key);
+  } catch (error) {
+    // Another publisher wrote the same content address first; the bytes match.
+    if (!isPreconditionFailed(error)) throw error;
+    onEvent("reused", entry.key);
+  }
+}
+
 async function verifyBundle({
   client,
   commands,
@@ -635,6 +754,22 @@ async function verifyBundle({
   await pool(
     entries,
     async (entry, poolSignal) => {
+      if (entry.kind === "blob") {
+        const head = await headObject({
+          client,
+          commands,
+          bucket,
+          actualKey,
+          key: entry.key,
+          signal: poolSignal,
+          timeoutMs,
+        });
+        if (head.Metadata?.["diveday-blob-sha256"] !== entry.blobSha256) {
+          throw new Error(`blob provenance mismatch at ${entry.key}`);
+        }
+        onEvent("verified", entry.key);
+        return;
+      }
       const prior = await existingMatches({
         client,
         commands,
@@ -785,7 +920,8 @@ export async function publishBundle({
         signal: poolSignal,
         timeoutMs: requestTimeoutMs,
       };
-      await publishImmutableAsset(args, onEvent);
+      if (entry.kind === "blob") await publishBlob(args, onEvent);
+      else await publishImmutableAsset(args, onEvent);
     },
     signal,
   );

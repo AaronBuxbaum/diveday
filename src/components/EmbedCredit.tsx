@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { tapTargetLinkClass } from "@/components/ui/button";
 
 /**
- * **"Bookings by DiveDay" at the foot of a frame**, the shopfront footer's own credit (visual review 2026-10-24, B33) — under the storefront's
- * `?embed=1` board and under each of the three catalogue widgets
+ * **"Bookings by DiveDay" at the foot of a frame**, the shopfront footer's own credit (visual review 2026-10-24, B33) — under the
+ * framed calendar (`embed/calendar`) and under each of the catalogue widgets
  * (`/s/[shopSlug]/embed/[widget]`), wherever the loader has not drawn the
  * crawlable credit on the host page instead.
  *

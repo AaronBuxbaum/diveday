@@ -1,7 +1,7 @@
 import type { TripChangeEvent } from "@/db/trip-change-events";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { siteRunsLine } from "@/lib/site-runs";
 import { tripSiteNames } from "@/lib/trip-change-events";
+import { type DiverTranslator, diverTranslator } from "./messages";
 
 function valueText(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;

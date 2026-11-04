@@ -48,7 +48,11 @@ const GITHUB_API = process.env.GITHUB_API_URL || "https://api.github.com";
 export async function snapshotExists(bucket, commitSha, { s3Client } = {}) {
   if (!s3Client) throw new Error("snapshotExists needs the authenticated s3Client");
   const res = await s3Client.send(
-    new ListObjectsV2Command({ Bucket: bucket, Prefix: `${commitSha}/out.json`, MaxKeys: 1 }),
+    new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: `${commitSha}/out.json`,
+      MaxKeys: 1,
+    }),
   );
   return (res.Contents?.length ?? 0) > 0;
 }
@@ -201,7 +205,13 @@ export async function resolveActiveBaseline({
   };
 
   for (let page = 1; page <= MAX_CANDIDATE_PAGES; page += 1) {
-    const rows = await fetchGitHubBranchCommits({ repo, branch, token, fetchImpl, page });
+    const rows = await fetchGitHubBranchCommits({
+      repo,
+      branch,
+      token,
+      fetchImpl,
+      page,
+    });
     collect(rows);
     // The end of the branch's history, or a chain that already reaches past
     // both floors: either way there is nothing more worth asking for.
@@ -370,6 +380,10 @@ export async function pruneVisualBucket({
 
   for (const prefix of allPrefixes) {
     const cleanPrefix = prefix.replace(/\/$/, "").toLowerCase();
+    // Only a commit's own snapshot is pruned by prefix. `blobs/` holds the
+    // content-addressed images every main snapshot points at; the bucket's
+    // expiry rule reclaims the ones no publish still refreshes.
+    if (!COMMIT_SHA.test(cleanPrefix)) continue;
     if (keepSet.has(cleanPrefix)) {
       keptPrefixes.push(prefix);
       continue;

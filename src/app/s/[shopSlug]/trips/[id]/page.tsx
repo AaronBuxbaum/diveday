@@ -90,9 +90,11 @@ const TRIP_PAGE_NAMESPACES = [
   "trip",
 ] as const;
 
+/** Also the framed page, `embed/trip/[id]`, which sets `isEmbed`: never the query (ADR 20260726-schedule-embed). */
 export default async function TripDetailPage({
   params,
   searchParams,
+  isEmbed = false,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: Promise<{
@@ -101,13 +103,14 @@ export default async function TripDetailPage({
     error?: string;
     /** Stripe's cancel return, embed only — see `EmbedBookedNotice`. */
     pay?: string;
-    embed?: string;
     /** A diver's own handoff (ADR 20260906-before-you-ask, decision 3). */
     handoff?: string | string[];
     sent?: string;
   }>;
+  /** True only from `embed/trip/[id]`: the compact surface, with no chrome back to a schedule. */
+  isEmbed?: boolean;
 }) {
-  await connectionForRoute("/s/[shopSlug]/trips/[id]");
+  await connectionForRoute(isEmbed ? "/s/[shopSlug]/embed/trip/[id]" : "/s/[shopSlug]/trips/[id]");
   const { shopSlug, id: tripId } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
@@ -118,17 +121,12 @@ export default async function TripDetailPage({
     interest: interestId,
     error,
     pay,
-    embed,
     handoff: handoffParam,
     sent,
   } = await searchParams;
   // One string or nothing: a repeated `?handoff=` arrives as an array, and an
   // array must read as no handoff rather than reach the hasher.
   const handoffToken = typeof handoffParam === "string" ? handoffParam : null;
-  // Embed mode is the compact surface a shop frames on its own website
-  // (docs ADR 20260726-schedule-embed) — no "All trips" chrome pointing back
-  // to a schedule the embedding page may never have shown at all.
-  const isEmbed = embed === "1";
   const db = await getDb();
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();

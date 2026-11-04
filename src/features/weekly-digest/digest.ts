@@ -37,6 +37,7 @@ import {
   type WeeklyDigestShop,
 } from "@/db/weekly-digest";
 import { getTodayWork } from "@/features/today";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -341,7 +342,8 @@ export async function readWeeklyDigestFacts(
       shop.slug,
       shopClock(shop, now),
       undefined,
-      undefined,
+      // The email reads counts, never the rows' words.
+      staffTranslator(shop.defaultLocale),
       undefined,
       includeOpsAlerts,
       evidence,

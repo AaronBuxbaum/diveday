@@ -7,6 +7,13 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Embeds are paths (built 2026-11-03)
+
+- A shop's framed calendar is `/s/<slug>/embed/calendar` and a framed departure is
+  `/s/<slug>/embed/trip/<id>`; `?embed=1` is gone and the storefront is never framable. The loader
+  and generator write the new paths with no snippet change (issue #2744, amendment to
+  [20260726-schedule-embed](../architecture/decisions/20260726-schedule-embed.md)).
+
 ## A booking's money is its entries (built 2026-11-03)
 
 - `booking_payments` is now a view over `booking_payment_events`: a booking's payment state is its

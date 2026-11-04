@@ -95,13 +95,13 @@ describe("TripAlternatives", () => {
     // shop's own site mid-booking.
     render(
       <TripAlternatives
-        alternatives={[alternative({ href: "/s/blue-mantis/trips/trip-2?embed=1" })]}
+        alternatives={[alternative({ href: "/s/blue-mantis/embed/trip/trip-2" })]}
         locale={DEFAULT_DIVER_LOCALE}
       />,
     );
     expect(screen.getByRole("link", { name: "Benwood & French" })).toHaveAttribute(
       "href",
-      "/s/blue-mantis/trips/trip-2?embed=1",
+      "/s/blue-mantis/embed/trip/trip-2",
     );
   });
 });

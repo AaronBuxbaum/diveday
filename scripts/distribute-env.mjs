@@ -86,7 +86,6 @@ const values = {
   ),
   AUTH_SECRET: derivedValue("auth"),
   SECRET_ENCRYPTION_KEY: derivedValue("credential-sealing"),
-  CRON_SECRET: derivedValue("cron"),
 };
 
 const header = {

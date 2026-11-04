@@ -3,7 +3,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
 /**
  * The one gate every `/api/cron/*` route opens with.
  *
- * Vercel Cron calls each route with `Authorization: Bearer <CRON_SECRET>`.
+ * The cron dispatcher (infra/lib/cron-dispatcher-handler.ts) calls each route with
+ * `Authorization: Bearer <CRON_SECRET>`.
  * Eleven routes used to check that with a copy-pasted `!==`, which is two
  * problems: a string comparison returns as soon as one byte differs, so its
  * timing says how much of a guess was right, and eleven copies are eleven

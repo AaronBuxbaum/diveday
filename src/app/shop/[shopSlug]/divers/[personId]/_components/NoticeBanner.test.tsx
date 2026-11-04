@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { resolveDiverNotice } from "@/lib/diver-notices";
+import { resolveDiverNotice } from "@/i18n/diver-notice-text";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { noSpecialty } from "@/test/admission-refusals";

@@ -45,7 +45,7 @@
   "/ready/[token]/waiver/doctor": {
     "exempt": "The same DoctorReferralBody the waiver link's doctor page draws, which waivers.spec.ts walks and the waiver-doctor capture photographs; only the door differs, and that door (the readiness link, the seat's own record, the referral gate) is held against a real record by src/app/(token)/ready/[token]/waiver-actions.test.ts (issue #2743)."
   },
-  "/s/[shopSlug]/embed/schedule": {
+  "/s/[shopSlug]/embed/calendar": {
     "e2e": [
       "returning-diver.spec.ts",
       "reviews.spec.ts",
@@ -56,7 +56,7 @@
     ],
     "visual": ["schedule-embed"]
   },
-  "/s/[shopSlug]/trips/[id]/embed": {
+  "/s/[shopSlug]/embed/trip/[id]": {
     "e2e": ["returning-diver.spec.ts", "schedule-embed.spec.ts"],
     "visual": ["booking-confirmed-embed"]
   },

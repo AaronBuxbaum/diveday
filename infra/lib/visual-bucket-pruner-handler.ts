@@ -272,6 +272,10 @@ export async function pruneBucket(
 
   for (const prefix of allPrefixes) {
     const clean = prefix.replace(/\/$/, "").toLowerCase();
+    // Only a commit's own snapshot is pruned by prefix. `blobs/` holds the
+    // content-addressed images every main snapshot points at; the bucket's
+    // expiry rule reclaims the ones no publish still refreshes.
+    if (!COMMIT_SHA.test(clean)) continue;
     if (keepSet.has(clean)) {
       keptPrefixes.push(prefix);
       continue;

@@ -1,10 +1,7 @@
 import type { DiverMergeRefusal } from "@/db/diver-merge";
 import type { SendStaffReplyRefusal, SendWhatsAppReopenRefusal } from "@/db/staff-reply";
-import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
-import { sendLimitWords } from "@/i18n/shared-sentences";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
-import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
+import type { StaffMessageKey } from "@/i18n/staff-messages";
+import type { FormNotice, NoticeCodeOf } from "@/lib/staff-notices";
 
 /**
  * A notice that names something the staffer can go and fix carries the link to
@@ -58,7 +55,7 @@ type DiverNoticeMap = Record<string, DiverNoticeDefinition> &
  * field that changed here — the form it belongs to. See `DiverNoticeMap` above
  * for which halves of it are proved by the type and which are borrowed.
  */
-const NOTICE_KEYS: DiverNoticeMap = {
+export const NOTICE_KEYS: DiverNoticeMap = {
   // Cards — the two card sections emit the same codes, so their actions stamp
   // an explicit `?form=`; these defaults are what an old link still resolves to.
   captured: { form: "cards", tone: "success", silent: true },
@@ -380,7 +377,12 @@ const NOTICE_KEYS: DiverNoticeMap = {
   "reply-empty-body": { form: "reply", tone: "danger", key: "inbox.notices.emptyBody" },
   "reply-body-too-long": { form: "reply", tone: "danger", key: "inbox.notices.tooLong" },
   "reply-message-not-found": { form: "reply", tone: "danger", key: "inbox.notices.notFound" },
-  "reply-send-limit": { form: "reply", tone: "warning", ...sendLimitWords("replies") },
+  "reply-send-limit": {
+    form: "reply",
+    tone: "warning",
+    key: "shared.limits.sendLimit",
+    values: { thing: "replies" },
+  },
   "reply-channel-unsupported": {
     form: "reply",
     tone: "danger",
@@ -403,7 +405,12 @@ const NOTICE_KEYS: DiverNoticeMap = {
   // Successful requests appear in the thread and composer.
   "reopen-sent": { form: "reply", tone: "success", silent: true },
   "reopen-send-failed": { form: "reply", tone: "danger", key: "inbox.notices.reopenFailed" },
-  "reopen-send-limit": { form: "reply", tone: "warning", ...sendLimitWords("replies") },
+  "reopen-send-limit": {
+    form: "reply",
+    tone: "warning",
+    key: "shared.limits.sendLimit",
+    values: { thing: "replies" },
+  },
   "reopen-message-not-found": { form: "reply", tone: "danger", key: "inbox.notices.notFound" },
   "reopen-whatsapp-window-open": {
     form: "reply",
@@ -638,7 +645,7 @@ const DIVER_FORMS = new Set([
   "guardian-email",
 ]);
 
-function diverNoticeForm(param: string | undefined, fallback: string): string {
+export function diverNoticeForm(param: string | undefined, fallback: string): string {
   return param !== undefined && DIVER_FORMS.has(param) ? param : fallback;
 }
 
@@ -648,7 +655,7 @@ function diverNoticeForm(param: string | undefined, fallback: string): string {
  * the screen that fixes it, and the id of the control it belongs on.
  */
 /** The one code with somewhere to send someone. */
-const NOTICE_LINKS: Record<string, NoticeLink> = {
+export const NOTICE_LINKS: Record<string, NoticeLink> = {
   "payment-not-connected": {
     key: "shared.payments.connect",
     href: (shopSlug) => `/shop/${shopSlug}/settings#money`,
@@ -677,83 +684,3 @@ export type DiverNotice = FormNotice & {
   cardId?: string;
   silent?: true;
 };
-
-/**
- * Resolves a notice code to its message and owning form. Unclaimed notices
- * remain available to the page-level banner.
- */
-export function resolveDiverNotice({
-  notice,
-  form,
-  gate,
-  card,
-  personId,
-  locale,
-  canRaiseInvoice = false,
-  conflictDeparture,
-  personName,
-}: {
-  notice?: string;
-  /**
-   * Form override for codes emitted by more than one form.
-   */
-  form?: string;
-  /**
-   * Signed refusal detail for `trip-prerequisite`. It is verified against this
-   * record's person id before use; absent or invalid signatures use generic
-   * copy. Repeated query parameters arrive as an array.
-   */
-  gate?: string | string[];
-  /** The card the refusal is about, for a code that names a box (`?card=`). */
-  card?: string;
-  /**
-   * Person id from the path. The signed gate is bound to this id.
-   */
-  personId: string;
-  /** The stored name from this record, never a query parameter. */
-  personName?: string;
-  locale: string;
-  /**
-   * Whether this reader can raise an invoice. Defaults to false.
-   */
-  canRaiseInvoice?: boolean;
-  /**
-   * Formatted departure detail for `merge-booking-conflict`, resolved from the
-   * shop-scoped trip row rather than URL text.
-   */
-  conflictDeparture?: string;
-}): DiverNotice | undefined {
-  const banner = noticeFromParam(notice, NOTICE_KEYS);
-  if (!banner) return undefined;
-  const t = staffTranslator(locale);
-  const refusal =
-    notice === "trip-prerequisite"
-      ? verifyTripAdmissionGate(gate, { kind: "diver", id: personId })
-      : null;
-  return {
-    form: diverNoticeForm(form, banner.form),
-    tone: banner.tone,
-    text: banner.silent
-      ? ""
-      : notice === "diver-clear"
-        ? t("divers.notices.cleared", {
-            name: personName?.trim() || t("shared.waiverSend.unnamedDiver"),
-          })
-        : refusal
-          ? tripAdmissionRefusalText(t, refusal, locale)
-          : notice === "booked" && !canRaiseInvoice
-            ? t("divers.notices.bookedNoInvoice")
-            : notice === "booked-confirmed" && !canRaiseInvoice
-              ? t("divers.notices.bookedConfirmedNoInvoice")
-              : notice === "merge-booking-conflict" && conflictDeparture
-                ? t("divers.notices.mergeBookingConflictOn", { departure: conflictDeparture })
-                : t(banner.key as StaffMessageKey, banner.values),
-    code: notice,
-    link: notice === undefined ? undefined : NOTICE_LINKS[notice],
-    field: banner.field,
-    // Only ever paired with a `field`: an id on a notice that names no box has
-    // nothing to compare against and would read as one that does.
-    cardId: banner.field ? card : undefined,
-    silent: banner.silent,
-  };
-}

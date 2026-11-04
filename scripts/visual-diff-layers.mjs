@@ -27,7 +27,13 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-import { DEFAULT_BUCKET, fetchFromBucket, objectUrl, readPngSize } from "./visual-report-lib.mjs";
+import {
+  actualObjectKey,
+  DEFAULT_BUCKET,
+  fetchFromBucket,
+  objectUrl,
+  readPngSize,
+} from "./visual-report-lib.mjs";
 
 /**
  * Sorts every capture name into one bucket from two `name -> etag` maps. An
@@ -35,7 +41,13 @@ import { DEFAULT_BUCKET, fetchFromBucket, objectUrl, readPngSize } from "./visua
  * never "unchanged".
  */
 export function compareCaptures(fromEtags, toEtags) {
-  const result = { same: [], differs: [], onlyFrom: [], onlyTo: [], unknown: [] };
+  const result = {
+    same: [],
+    differs: [],
+    onlyFrom: [],
+    onlyTo: [],
+    unknown: [],
+  };
   const names = [...new Set([...fromEtags.keys(), ...toEtags.keys()])].sort();
   for (const name of names) {
     const inFrom = fromEtags.has(name);
@@ -130,7 +142,10 @@ async function captureNames(bucket, commit) {
   if (!fetched.ok) return null;
   const report = JSON.parse(fetched.body.toString("utf8"));
   const names = Array.isArray(report.actualItems) ? report.actualItems : [];
-  return { names, dir: report.actualDir || "actual" };
+  return {
+    names,
+    report: { ...report, actualDir: report.actualDir || "actual" },
+  };
 }
 
 async function headEtag(url) {
@@ -142,14 +157,14 @@ async function headEtag(url) {
   }
 }
 
-async function etagsFor(bucket, commit, { names, dir }, concurrency) {
+async function etagsFor(bucket, commit, { names, report }, concurrency) {
   const etags = new Map();
   let next = 0;
   const worker = async () => {
     while (next < names.length) {
       const name = names[next];
       next += 1;
-      etags.set(name, await headEtag(objectUrl(bucket, `${commit}/${dir}/${name}`)));
+      etags.set(name, await headEtag(objectUrl(bucket, actualObjectKey(commit, report, name))));
     }
   };
   await Promise.all(Array.from({ length: concurrency }, worker));
@@ -210,8 +225,8 @@ async function main() {
       continue;
     }
     const [a, b] = await Promise.all([
-      fetchFromBucket(args.bucket, `${args.from}/${from.dir}/${name}`),
-      fetchFromBucket(args.bucket, `${args.to}/${to.dir}/${name}`),
+      fetchFromBucket(args.bucket, actualObjectKey(args.from, from.report, name)),
+      fetchFromBucket(args.bucket, actualObjectKey(args.to, to.report, name)),
     ]);
     if (!a.ok || !b.ok) {
       lines.push(`- \`${name}\`: bytes differ (download failed)`);

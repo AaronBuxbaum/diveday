@@ -247,7 +247,7 @@ describe("the deployed schedule", () => {
     const { readFileSync } = await import("node:fs");
     const path = await import("node:path");
     const crons: Array<{ path: string; schedule: string }> = JSON.parse(
-      readFileSync(path.join(process.cwd(), "vercel.json"), "utf8"),
+      readFileSync(path.join(process.cwd(), "config", "crons.json"), "utf8"),
     ).crons;
     const entry = crons.find((cron) => cron.path === "/api/cron/trip-series");
     expect(entry?.schedule).toBe("7 3 * * *");

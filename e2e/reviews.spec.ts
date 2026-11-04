@@ -457,7 +457,7 @@ test("the public review count opens all reviews without trip names", async ({ pa
 test("the embed widget emits no structured data — the standalone page is canonical", async ({
   page,
 }) => {
-  await page.goto("/s/blue-mantis?embed=1");
+  await page.goto("/s/blue-mantis/embed/calendar");
   // No `.filter({ visible: true })`: a <script> tag is never "visible" per
   // Playwright's definition, so the filter would always report count 0 —
   // asserting the wrong thing for the right-looking reason.

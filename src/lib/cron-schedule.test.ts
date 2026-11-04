@@ -20,7 +20,7 @@ import { WEEKLY_DIGEST_CRON_CRONTAB } from "./weekly-digest";
  * is what catches a change made in one place only.
  */
 function vercelCrons(): Array<{ path: string; schedule: string }> {
-  const raw = readFileSync(path.join(process.cwd(), "vercel.json"), "utf8");
+  const raw = readFileSync(path.join(process.cwd(), "config", "crons.json"), "utf8");
   return JSON.parse(raw).crons;
 }
 

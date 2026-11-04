@@ -2,8 +2,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
+import { commitContactImport } from "@/test/words-wiring";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { commitContactImport } from "./import";
 import { cards, people, userAccounts, waiverRecords } from "./schema";
 
 const ctx = fileScopedShopContext();

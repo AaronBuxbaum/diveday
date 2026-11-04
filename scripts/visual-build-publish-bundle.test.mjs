@@ -55,7 +55,11 @@ describe("buildVisualPublishBundle", () => {
     expect(published.passedItems).toEqual(["passed.png"]);
     expect(published.partialActual).toBe(true);
 
-    const full = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4103-1" });
+    const full = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4103-1",
+    });
     expect(readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")).toContain(
       "/actual/passed.png\t",
     );
@@ -83,7 +87,11 @@ describe("buildVisualPublishBundle", () => {
         passedItems: ["passed.png"],
       }),
     );
-    const result = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4102-1" });
+    const result = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4102-1",
+    });
     const manifest = readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8");
     const prefix = `snapshots/${result.snapshotVersion}`;
     expect(manifest).toContain(`${prefix}/expected/changed.png\t`);
@@ -115,7 +123,11 @@ describe("buildVisualPublishBundle", () => {
     );
 
     const publicationId = "4101-1";
-    const result = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId });
+    const result = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId,
+    });
     expect(result).toMatchObject({ count: 6, publicationId });
     expect(result.snapshotVersion).toMatch(/^[0-9a-f]{64}$/u);
     const manifest = readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8");
@@ -166,7 +178,11 @@ describe("buildVisualPublishBundle", () => {
       publicationId,
     });
 
-    const repeated = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId });
+    const repeated = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId,
+    });
     expect(repeated.snapshotVersion).toBe(result.snapshotVersion);
   });
 
@@ -200,7 +216,11 @@ describe("buildVisualPublishBundle", () => {
       }),
     );
 
-    const result = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4101-1" });
+    const result = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4101-1",
+    });
     expect(result).toMatchObject({ count: 3 });
     expect(readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")).toBe(
       `snapshots/${result.snapshotVersion}/detector.wasm\tapplication/wasm\n` +
@@ -236,7 +256,11 @@ describe("buildVisualPublishBundle", () => {
       }),
     );
 
-    const result = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4101-1" });
+    const result = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4101-1",
+    });
     expect(readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")).toContain(
       `snapshots/${result.snapshotVersion}/worker.js\tapplication/javascript\n`,
     );
@@ -289,8 +313,16 @@ describe("buildVisualPublishBundle", () => {
       }),
     );
 
-    const first = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4101-1" });
-    const retry = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4101-2" });
+    const first = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4101-1",
+    });
+    const retry = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4101-2",
+    });
     expect(retry.snapshotVersion).not.toBe(first.snapshotVersion);
 
     const repeatedRetry = buildVisualPublishBundle({
@@ -299,5 +331,43 @@ describe("buildVisualPublishBundle", () => {
       publicationId: "4101-2",
     });
     expect(repeatedRetry.snapshotVersion).toBe(retry.snapshotVersion);
+  });
+});
+
+describe("content-addressed actual images", () => {
+  it("stores each actual PNG once under its hash and names it in both reports", () => {
+    const { sourceDir, bundleDir } = fixture();
+    for (const dir of ["actual", "expected", "diff"]) mkdirSync(path.join(sourceDir, dir));
+    writeFileSync(path.join(sourceDir, "actual", "a.png"), "same");
+    writeFileSync(path.join(sourceDir, "actual", "b.png"), "same");
+    writeFileSync(path.join(sourceDir, "actual", "c.png"), "different");
+    writeFileSync(
+      path.join(sourceDir, "out.json"),
+      JSON.stringify({
+        actualDir: "actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+        actualItems: ["a.png", "b.png", "c.png"],
+        failedItems: [],
+        deletedItems: [],
+      }),
+    );
+    const { snapshotVersion } = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4103-1",
+      contentAddressedActual: true,
+    });
+    const manifest = readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8");
+    expect(manifest).not.toContain("/actual/");
+    expect(manifest.match(/^blobs\//gmu)).toHaveLength(2);
+    for (const file of ["out.json.gz", `snapshots/${snapshotVersion}/out.json.gz`]) {
+      const report = JSON.parse(
+        gunzipSync(readFileSync(path.join(bundleDir, "payload", file))).toString("utf8"),
+      );
+      expect(Object.keys(report.actualBlobs)).toEqual(["a.png", "b.png", "c.png"]);
+      expect(report.actualBlobs["a.png"]).toBe(report.actualBlobs["b.png"]);
+      expect(report.actualItems).toEqual(["a.png", "b.png", "c.png"]);
+    }
   });
 });

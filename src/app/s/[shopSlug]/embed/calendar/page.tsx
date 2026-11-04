@@ -38,18 +38,16 @@ export function generateMetadata(props: {
 }
 
 /**
- * **The framed schedule** (K-371; ADR 20260726-schedule-embed, amendment
- * 2026-09-25; issue #2744). `src/proxy.ts` rewrites `/s/<slug>?embed=1` here
- * (`embedRenderPath` in `src/lib/embed-routes.ts`), because a segment's
- * `loading.tsx` cannot read a query string. It refuses this path in any shape
- * but the one its rewrite gives it (`isInternalEmbedRoute`).
+ * **The framed calendar** (K-371; ADR 20260726-schedule-embed, amendment
+ * 2026-11-03; issue #2744): `/s/<slug>/embed/calendar`, the path the loader
+ * and the generator frame. It is framable because of where it is
+ * (`isEmbedRoute` in `src/lib/embed-routes.ts`), and its `loading.tsx` is the
+ * frame's own list rather than the storefront's.
  *
  * It composes the same reads and the same ledger rows the storefront does, and
  * nothing else: what a frame omits (the identity band, the filters, the month
  * rail, the shelves, reviews, the boats block, structured data) is simply not
- * in this page, so the storefront no longer asks which frame it is in. The
- * proxy still decides *whether* a request is framed (`?embed=1`, the framing
- * exception and the embed header); this page only decides what a frame holds.
+ * in this page, so the storefront no longer asks which frame it is in.
  * `EmbedChromeCollapse` goes on keeping the layout's chrome bar hidden if this
  * lands before the chrome does.
  */

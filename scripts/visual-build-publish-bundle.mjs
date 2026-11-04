@@ -117,6 +117,7 @@ export function buildVisualPublishBundle({
   bundleDir,
   publicationId,
   skipPassedActual = false,
+  contentAddressedActual = false,
 }) {
   if (!sourceDir || !bundleDir) throw new Error("sourceDir and bundleDir are required");
   if (!isPublicationId(publicationId)) throw new Error("a valid publicationId is required");
@@ -149,6 +150,20 @@ export function buildVisualPublishBundle({
     sourceReport.actualItems = sourceReport.actualItems.filter((name) => !skippedActual.has(name));
     sourceReport.partialActual = true;
   }
+  // A main snapshot is the next baseline, and nearly every capture in it is
+  // byte-identical to the one before. Each actual PNG is stored once under its
+  // content hash and the report names it in `actualBlobs`; the publisher skips
+  // a blob that already exists, so a merge uploads only what changed.
+  const blobHashes = new Map();
+  if (contentAddressedActual) {
+    for (const file of files) {
+      if (!file.path.startsWith("actual/") || !file.path.endsWith(".png")) continue;
+      const name = file.path.slice("actual/".length);
+      if (skippedActual.has(name) || name.includes("/")) continue;
+      blobHashes.set(name, createHash("sha256").update(readFileSync(file.absolute)).digest("hex"));
+    }
+    if (blobHashes.size > 0) sourceReport.actualBlobs = Object.fromEntries(blobHashes);
+  }
   const markerReport = {
     ...sourceReport,
     actualDir: `snapshots/${snapshotVersion}/actual`,
@@ -178,7 +193,21 @@ export function buildVisualPublishBundle({
   rmSync(bundleDir, { recursive: true, force: true });
   const manifest = [];
   const outputFiles = [];
+  const blobsQueued = new Set();
   for (const file of files) {
+    const blobName = file.path.startsWith("actual/") ? file.path.slice("actual/".length) : "";
+    if (blobHashes.has(blobName)) {
+      const hash = blobHashes.get(blobName);
+      if (!blobsQueued.has(hash)) {
+        blobsQueued.add(hash);
+        outputFiles.push({
+          path: `blobs/${hash}.png`,
+          contentType: file.contentType,
+          bytes: readFileSync(file.absolute),
+        });
+      }
+      continue;
+    }
     if (skippedActual.has(file.path.replace(/^actual\//u, "")) && file.path.startsWith("actual/")) {
       continue;
     }
@@ -226,7 +255,12 @@ export function buildVisualPublishBundle({
     manifest.push(`${publishPath}\t${contentType}`);
   }
   writeFileSync(path.join(bundleDir, "manifest.tsv"), `${manifest.join("\n")}\n`, { flag: "wx" });
-  return { count: outputFiles.length, totalBytes, snapshotVersion, publicationId };
+  return {
+    count: outputFiles.length,
+    totalBytes,
+    snapshotVersion,
+    publicationId,
+  };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -236,6 +270,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       bundleDir: path.resolve(process.env.VISUAL_PUBLISH_BUNDLE ?? ".reg-publish-bundle"),
       publicationId: publicationIdFromEnv(),
       skipPassedActual: process.env.GITHUB_EVENT_NAME === "pull_request",
+      contentAddressedActual: process.env.GITHUB_EVENT_NAME !== "pull_request",
     });
     console.log(
       `visual-build-publish-bundle: prepared ${result.count} files (${result.totalBytes} bytes) for snapshot ${result.snapshotVersion}`,

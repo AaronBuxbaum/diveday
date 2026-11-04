@@ -14,6 +14,7 @@ import path from "node:path";
 import process from "node:process";
 import { mapConcurrent, reencodePng } from "./visual-publish-artifacts.mjs";
 import {
+  actualObjectKey,
   baselineCacheKey,
   DEFAULT_BUCKET,
   fetchFromBucket,
@@ -82,7 +83,7 @@ async function fetchBaseline({ bucket, key, version, fetchImpl }) {
   await mapConcurrent(
     names,
     async (name) => {
-      const result = await fetchFromBucket(bucket, `${key}/${report.actualDir}/${name}`, {
+      const result = await fetchFromBucket(bucket, actualObjectKey(key, report, name), {
         fetchImpl,
       });
       if (!result.ok) {

@@ -1,4 +1,9 @@
-import { EMBED_WIDGETS, type EmbedWidget } from "./embed-routes";
+import {
+  EMBED_WIDGETS,
+  type EmbedWidget,
+  embedCalendarPath,
+  embedWidgetPath,
+} from "./embed-routes";
 import { publicSchedulePath, publicTripPath } from "./public-routes";
 import { partnerReferralSlug } from "./referrals";
 
@@ -10,7 +15,7 @@ import { partnerReferralSlug } from "./referrals";
  *
  * - **button** — a link to the storefront, in the shop's colour;
  * - **lightbox** — the same link, opened in a sheet over the shop's site;
- * - **calendar** — the schedule in its compact mode (`?embed=1`);
+ * - **calendar** — the next few departures as a compact ledger (`embed/calendar`);
  * - **grid** — trips and courses as cards;
  * - **departure** — one departure as a card, for a blog post;
  * - **courses** — the course list;
@@ -86,12 +91,9 @@ export function embedFrameUrl(
   host: { brand?: string | null; font?: string | null; credit?: boolean } = {},
 ): string {
   const url = new URL(
-    kind === "calendar"
-      ? publicSchedulePath(shopSlug)
-      : `${publicSchedulePath(shopSlug)}/embed/${kind}`,
+    kind === "calendar" ? embedCalendarPath(shopSlug) : embedWidgetPath(shopSlug, kind),
     origin,
   );
-  if (kind === "calendar") url.searchParams.set("embed", "1");
   // `departure` and `courses` are the two widgets that can narrow to one
   // thing; `grid` and `calendar` are the whole board by definition.
   if (options.show && SHOWS_ONE.has(kind)) url.searchParams.set("show", options.show);

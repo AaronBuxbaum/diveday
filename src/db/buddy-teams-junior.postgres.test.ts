@@ -3,6 +3,7 @@ import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { prepareContactImport } from "@/test/import-fixture";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { commitContactImport } from "@/test/words-wiring";
 import { anonymizeDiver } from "./anonymize";
 import {
   formBuddyTeam,
@@ -12,7 +13,6 @@ import {
   planPartyTeams,
 } from "./buddy-teams";
 import { restoreCard } from "./card-restore";
-import { commitContactImport } from "./import";
 import { createCertification } from "./readiness";
 import { bookings, cards, people, personRoles, shops, trips, userAccounts } from "./schema";
 
