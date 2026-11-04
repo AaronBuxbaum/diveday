@@ -54,7 +54,7 @@ import { seatIsHeld } from "@/lib/no-show";
  * channel.
  *
  * **Who is addressed, and who is not.** One message per seat that is still on
- * the boat (`booked` or `checked_in`), to the email or phone on *that seat's
+ * the boat (`booked`, checked in or not), to the email or phone on *that seat's
  * own person record* — never the booker's, never a party lead's, never an
  * address the hold carried (it carries ids only). A seat whose identity is
  * still held (#2082) is skipped: the address on that record may be somebody

@@ -26,7 +26,7 @@ export type ReportTrip = {
   title: string;
   startsAt: Date;
   capacity: number;
-  /** Active bookings only — `booked` + `checked_in`; cancelled / no-show excluded. */
+  /** Active bookings only — `booked`; cancelled / no-show excluded. */
   activeBookings: number;
   /** Of those active bookings, how many carry a completed, non-superseded waiver. */
   waiverComplete: number;

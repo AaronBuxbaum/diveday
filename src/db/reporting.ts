@@ -1229,7 +1229,7 @@ export type WeekdayLeadTime = {
  *
  * Boat departures only, never a shore day, a pool session or a course
  * session (dive-domain review F6), and whole calendar days in the shop's zone
- * (N2). Seats that held only (`booked`, `checked_in`): a cancelled booking is
+ * (N2). Seats that held only (`booked`, checked in or not): a cancelled booking is
  * not a sale. The shop's own rehearsals and deleted departures stay out, as every
  * other Reports figure keeps them out. The caller decides how much history is
  * enough to say anything (`src/lib/lead-time.ts`).

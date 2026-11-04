@@ -4,6 +4,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { checkInBooking, listCheckInQueue, undoCheckInBooking } from "./check-in";
 import { listDepartureBoardedBookingIds, recordRollCall } from "./manifests";
@@ -78,13 +79,11 @@ describe("counter check-in", () => {
     if (!blocked) throw new Error("seeded blocked diver missing");
     expect(blocked.readiness.status).toBe("blocked");
 
-    await db
-      .update(bookings)
-      .set({ status: "checked_in" })
-      .where(eq(bookings.id, blocked.bookingId));
+    await markArrived(db, blocked.bookingId);
 
     const [afterCheckIn] = await listCheckInQueue(db, shop.id, { query: "Priya Sharma" });
-    expect(afterCheckIn?.bookingStatus).toBe("checked_in");
+    expect(afterCheckIn?.bookingStatus).toBe("booked");
+    expect(afterCheckIn?.checkedIn).toBe(true);
     expect(afterCheckIn?.readiness.status).toBe("blocked");
   });
 

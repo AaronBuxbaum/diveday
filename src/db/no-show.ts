@@ -123,8 +123,8 @@ export async function activeStaffRecorderId(
  * sightings, so the only rows it takes are a new statement about who was seen
  * — and the retraction it *does* take is `undoCheckInBooking`'s, where the desk
  * is saying it was wrong about that. The standing `arrived` row left here is
- * what `undoBookingNoShow` below reads to put the seat back as `checked_in`
- * rather than `booked` (`standingArrivalStatus`, src/db/arrival-provenance.ts).
+ * why the diver reads as checked in again once `undoBookingNoShow` below puts
+ * the seat back, with nothing written about arrival (issue #2702).
  *
  * It does **not** survive as a dive day. Until a `dive-domain-expert` review on
  * 2026-09-11 the two dive-day readers let that row outrank the status this
@@ -260,9 +260,10 @@ export async function markBookingNoShow(
  *
  * **And the seat comes back as what it was**, which the arrival trail is the
  * only record of: a diver a staffer checked in at 06:40 and released at 07:10
- * is `checked_in` underneath, and the mark leaves that `arrived` row standing
- * on purpose (`standingArrivalStatus`, src/db/arrival-provenance.ts, is what
- * reads it back). Restoring every seat to `booked` put a diver who is standing
+ * still has that `arrived` row standing, because the mark never touches it,
+ * and every reader of "checked in" reads the trail (`seatCheckedIn`,
+ * src/db/arrival-provenance.ts). Before issue #2702 the restore had to copy
+ * the trail back onto the seat word, and restoring every seat to `booked` put a diver who is standing
  * at the desk back on the counter's "still to come" list and asked a staffer to
  * check them in a second time with the diver in front of them
  * (`dive-domain-expert`, 2026-09-11).
@@ -321,8 +322,8 @@ export async function undoBookingNoShow(
     if (!trip) return { ok: false, reason: "not_found" };
     if (trip.status === "cancelled") return { ok: false, reason: "trip_cancelled" };
     // A diver the desk turned away was seen ashore. From the scheduled start
-    // (the boundary `turnAwayGate` closes on) putting them back would restore
-    // `checked_in` from the arrival trail and show them aboard a boat that
+    // (the boundary `turnAwayGate` closes on) putting them back would hold
+    // the seat under a standing arrival and show them checked in for a boat that
     // left without them (dde-3 #2). A plain "Not here" keeps its Undo: that
     // diver may be walking up as the lines come off.
     if (seat.turnedAwayAt !== null && now.getTime() >= trip.startsAt.getTime()) {
