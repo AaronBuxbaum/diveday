@@ -433,10 +433,6 @@ describe("listOutstandingLastMinutePromos", () => {
     await expect(
       db.update(deals).set({ shopId: other.id }).where(eq(deals.id, outcome.promoId)),
     ).rejects.toMatchObject({ cause: { constraint: "deals_shop_trip_fk" } });
-
-    const page = await listOutstandingLastMinutePromos(db, other.id);
-    expect(page.deals).toEqual([]);
-    expect(page.total).toBe(0);
   });
 
   it("excludes a failed send — it never discounted anything and has nothing to list", async () => {

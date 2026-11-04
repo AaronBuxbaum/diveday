@@ -38,9 +38,7 @@ const CITATION = new RegExp(ID_SOURCE, "g");
 const OLD_STYLE = /\bH-\d{1,3}\b/g;
 
 /** Files that must name made-up ids to test this guard. */
-const SELF = new Set([
-  "scripts/check-human-decisions.test.mjs",
-]);
+const SELF = new Set(["scripts/check-human-decisions.test.mjs"]);
 const SKIP_EXTENSIONS = /\.(png|jpe?g|gif|webp|avif|ico|woff2?|ttf|pdf|zip|gz|mp4|webm|mov|lock)$/i;
 
 /** Every decision file name in the directory, sorted: everything but the README. */
