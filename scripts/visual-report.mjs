@@ -11,6 +11,7 @@ import path from "node:path";
 
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import {
+  actualObjectKey,
   countsLine,
   DEFAULT_BUCKET,
   fetchFromBucket,
@@ -51,10 +52,13 @@ function currentCommit() {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const bucket = args.bucket || process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET;
+  const bucket =
+    args.bucket || process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET;
   const commit = args.commit || currentCommit();
 
-  console.log(`Fetching reg-suit report for ${commit} from bucket "${bucket}"...`);
+  console.log(
+    `Fetching reg-suit report for ${commit} from bucket "${bucket}"...`,
+  );
 
   const manifest = await fetchFromBucket(bucket, `${commit}/out.json`);
   if (!manifest.ok) {
@@ -69,7 +73,11 @@ async function main() {
 
   const report = JSON.parse(manifest.body.toString("utf8"));
   const summary = summarizeReport(report);
-  const dirs = { actual: report.actualDir, expected: report.expectedDir, diff: report.diffDir };
+  const dirs = {
+    actual: report.actualDir,
+    expected: report.expectedDir,
+    diff: report.diffDir,
+  };
   const outDir = path.resolve(args.out, commit);
 
   const items = [
@@ -79,9 +87,17 @@ async function main() {
       want: ["expected", "actual", "diff"],
     })),
     ...report.newItems.map((name) => ({ name, kind: "new", want: ["actual"] })),
-    ...report.deletedItems.map((name) => ({ name, kind: "deleted", want: ["expected"] })),
+    ...report.deletedItems.map((name) => ({
+      name,
+      kind: "deleted",
+      want: ["expected"],
+    })),
     ...(args.all
-      ? report.passedItems.map((name) => ({ name, kind: "passed", want: ["expected", "actual"] }))
+      ? report.passedItems.map((name) => ({
+          name,
+          kind: "passed",
+          want: ["expected", "actual"],
+        }))
       : []),
   ];
 
@@ -90,7 +106,10 @@ async function main() {
   for (const item of items) {
     item.files = {};
     for (const dirKind of item.want) {
-      const remote = `${commit}/${dirs[dirKind]}/${item.name}`;
+      const remote =
+        dirKind === "actual"
+          ? actualObjectKey(commit, report, item.name)
+          : `${commit}/${dirs[dirKind]}/${item.name}`;
       const local = path.join(outDir, dirKind, item.name);
       const result = await fetchFromBucket(bucket, remote);
       if (!result.ok) {
@@ -165,13 +184,18 @@ async function main() {
   writeFileSync(summaryPath, lines.join("\n"));
 
   console.log(lines.join("\n"));
-  console.log(`Wrote ${summaryPath} and ${downloadCount} image(s) under ${outDir}`);
+  console.log(
+    `Wrote ${summaryPath} and ${downloadCount} image(s) under ${outDir}`,
+  );
   if (skipped.length) {
     console.warn(
       `${skipped.length} object(s) failed to download — see "Skipped downloads" in REPORT.md`,
     );
   }
-  if (summary.verdict === "no-baseline" || summary.verdict === "nothing-captured") {
+  if (
+    summary.verdict === "no-baseline" ||
+    summary.verdict === "nothing-captured"
+  ) {
     console.warn(
       `\n${verdictHeadline(summary)}\nThis run compared nothing. Do not read its zero changed ` +
         "items as evidence that the pixels held still — see ADR " +

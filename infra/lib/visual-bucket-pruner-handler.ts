@@ -1,4 +1,8 @@
-import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import {
   CANDIDATE_PAGE_SIZE,
   KEEP_MAIN_BASELINES,
@@ -40,7 +44,10 @@ export interface PrunerSummary {
   deleteErrorCount: number;
 }
 
-export async function listPrefixes(client: S3Client, bucket: string): Promise<string[]> {
+export async function listPrefixes(
+  client: S3Client,
+  bucket: string,
+): Promise<string[]> {
   const prefixes: string[] = [];
   let continuationToken: string | undefined;
 
@@ -91,7 +98,9 @@ export async function listObjects(
         objects.push({
           key: item.Key,
           etag: item.ETag ?? null,
-          lastModifiedMs: item.LastModified ? item.LastModified.getTime() : null,
+          lastModifiedMs: item.LastModified
+            ? item.LastModified.getTime()
+            : null,
         });
       }
     }
@@ -102,7 +111,11 @@ export async function listObjects(
   return objects;
 }
 
-export async function hasSnapshot(client: S3Client, bucket: string, sha: string): Promise<boolean> {
+export async function hasSnapshot(
+  client: S3Client,
+  bucket: string,
+  sha: string,
+): Promise<boolean> {
   try {
     const res = await client.send(
       new ListObjectsV2Command({
@@ -164,8 +177,12 @@ export async function fetchCommits(
     return data
       .map((item) => ({
         sha: item?.sha ? item.sha.trim().toLowerCase() : "",
-        parentSha: item?.parents?.[0]?.sha ? String(item.parents[0].sha).trim().toLowerCase() : "",
-        committedAtMs: commitDateMs(item?.commit?.committer?.date ?? item?.commit?.author?.date),
+        parentSha: item?.parents?.[0]?.sha
+          ? String(item.parents[0].sha).trim().toLowerCase()
+          : "",
+        committedAtMs: commitDateMs(
+          item?.commit?.committer?.date ?? item?.commit?.author?.date,
+        ),
       }))
       .filter((commit) => COMMIT_SHA.test(commit.sha));
   } catch {
@@ -196,7 +213,8 @@ export async function fetchMainCandidates(
     }
     // The end of the branch's history, or a chain that already reaches past
     // both floors: either way there is nothing more worth asking for.
-    if (!shouldFetchAnotherCandidatePage(page, rows.length, candidates, now)) break;
+    if (!shouldFetchAnotherCandidatePage(page, rows.length, candidates, now))
+      break;
   }
 
   return candidates;
@@ -221,7 +239,8 @@ export async function resolveKeepShas(
   const probe = async (commit: PrunerCommit) => {
     if (checked.has(commit.sha)) return;
     checked.add(commit.sha);
-    if (await hasSnapshot(client, bucket, commit.sha)) keepShas.push(commit.sha);
+    if (await hasSnapshot(client, bucket, commit.sha))
+      keepShas.push(commit.sha);
   };
 
   const { chain, fallback } = mainBaselineProbeOrder(candidates);
@@ -257,7 +276,10 @@ export async function pruneBucket(
   deleteErrors: string[];
 }> {
   const now = options.now ?? Date.now();
-  const minAgeMs = Math.max(options.minAgeMs ?? MIN_PRUNE_AGE_MS, MIN_PUBLICATION_GRACE_MS);
+  const minAgeMs = Math.max(
+    options.minAgeMs ?? MIN_PRUNE_AGE_MS,
+    MIN_PUBLICATION_GRACE_MS,
+  );
   const keepSet = new Set(keepShas.map((sha) => sha.trim().toLowerCase()));
   // There is no state in which deleting every baseline is the right answer, so
   // it is not reachable from here. See the handler's unverified branch.
@@ -272,6 +294,10 @@ export async function pruneBucket(
 
   for (const prefix of allPrefixes) {
     const clean = prefix.replace(/\/$/, "").toLowerCase();
+    // Only a commit's own snapshot is pruned by prefix. `blobs/` holds the
+    // content-addressed images every main snapshot points at; the bucket's
+    // expiry rule reclaims the ones no publish still refreshes.
+    if (!COMMIT_SHA.test(clean)) continue;
     if (keepSet.has(clean)) {
       keptPrefixes.push(prefix);
       continue;
@@ -316,17 +342,21 @@ export async function pruneBucket(
       // DeleteObjects reports per-key failures in the body instead of throwing,
       // so an unread response turns a partial delete into a clean success line.
       for (const error of res.Errors ?? []) {
-        deleteErrors.push(`${error.Key ?? "(unknown key)"}: ${error.Code ?? "unknown"}`);
+        deleteErrors.push(
+          `${error.Key ?? "(unknown key)"}: ${error.Code ?? "unknown"}`,
+        );
       }
       const failed = new Set((res.Errors ?? []).map((error) => error.Key));
       const deleted =
-        res.Deleted?.length ?? chunk.filter((object) => !failed.has(object.Key)).length;
+        res.Deleted?.length ??
+        chunk.filter((object) => !failed.has(object.Key)).length;
       totalDeletedObjects += deleted;
       prefixDeleted += deleted;
     }
 
     if (prefixDeleted > 0) deletedPrefixesCount++;
-    if (prefixDeleted > 0) console.log(`Pruned prefix ${prefix} (${prefixDeleted} objects)`);
+    if (prefixDeleted > 0)
+      console.log(`Pruned prefix ${prefix} (${prefixDeleted} objects)`);
   }
 
   return {
@@ -357,11 +387,16 @@ export async function handler(event?: PrunerEvent): Promise<PrunerSummary> {
   if (keepShas.length === 0) {
     const candidates = await fetchMainCandidates(repo, branch);
     if (candidates.length === 0) {
-      throw new Error(`Could not fetch commit candidates from GitHub API for ${repo}:${branch}`);
+      throw new Error(
+        `Could not fetch commit candidates from GitHub API for ${repo}:${branch}`,
+      );
     }
 
     keepShas.push(...(await resolveKeepShas(s3, bucket, candidates)));
-    source = keepShas[0] === candidates[0].sha ? "head_commit" : "recent_main_ancestor";
+    source =
+      keepShas[0] === candidates[0].sha
+        ? "head_commit"
+        : "recent_main_ancestor";
 
     // Every earlier version nominated `candidates[0]` here and pruned against
     // it, so a bucket holding no snapshot for any recent main commit -- which

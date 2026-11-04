@@ -16,7 +16,10 @@ import path from "node:path";
 import process from "node:process";
 import { gzipSync } from "node:zlib";
 
-import { isPublicationId, publicationIdFromEnv } from "./visual-publication-id.mjs";
+import {
+  isPublicationId,
+  publicationIdFromEnv,
+} from "./visual-publication-id.mjs";
 
 const MAX_FILES = 10_000;
 const MAX_FILE_BYTES = 100_000_000;
@@ -52,7 +55,9 @@ function safeRelativePath(relativePath) {
   return (
     SAFE_PATH.test(relativePath) &&
     !relativePath.includes("\\") &&
-    relativePath.split("/").every((part) => part !== "" && part !== "." && part !== "..")
+    relativePath
+      .split("/")
+      .every((part) => part !== "" && part !== "." && part !== "..")
   );
 }
 
@@ -77,10 +82,14 @@ function collectFiles(root, directory = root, collected = []) {
       relative === "detector.wasm"
         ? "application/wasm"
         : CONTENT_TYPES.get(path.extname(relative).toLowerCase());
-    if (!contentType) throw new Error(`reg-suit output has an unsupported file type: ${relative}`);
+    if (!contentType)
+      throw new Error(
+        `reg-suit output has an unsupported file type: ${relative}`,
+      );
     if (stat.size > MAX_FILE_BYTES)
       throw new Error(`reg-suit output file is too large: ${relative}`);
-    if (collected.length >= MAX_FILES) throw new Error("reg-suit output contains too many files");
+    if (collected.length >= MAX_FILES)
+      throw new Error("reg-suit output contains too many files");
     collected.push({ absolute, path: relative, contentType, size: stat.size });
   }
   return collected;
@@ -117,11 +126,16 @@ export function buildVisualPublishBundle({
   bundleDir,
   publicationId,
   skipPassedActual = false,
+  contentAddressedActual = false,
 }) {
-  if (!sourceDir || !bundleDir) throw new Error("sourceDir and bundleDir are required");
-  if (!isPublicationId(publicationId)) throw new Error("a valid publicationId is required");
+  if (!sourceDir || !bundleDir)
+    throw new Error("sourceDir and bundleDir are required");
+  if (!isPublicationId(publicationId))
+    throw new Error("a valid publicationId is required");
   requireDirectory(sourceDir, "reg-suit output");
-  const files = collectFiles(sourceDir).sort((a, b) => a.path.localeCompare(b.path));
+  const files = collectFiles(sourceDir).sort((a, b) =>
+    a.path.localeCompare(b.path),
+  );
   if (files.length === 0) throw new Error("reg-suit output is empty");
   const reportFile = files.find((file) => file.path === "out.json");
   if (!reportFile) throw new Error("reg-suit output has no out.json report");
@@ -146,8 +160,29 @@ export function buildVisualPublishBundle({
       ? new Set(sourceReport.passedItems)
       : new Set();
   if (skippedActual.size > 0) {
-    sourceReport.actualItems = sourceReport.actualItems.filter((name) => !skippedActual.has(name));
+    sourceReport.actualItems = sourceReport.actualItems.filter(
+      (name) => !skippedActual.has(name),
+    );
     sourceReport.partialActual = true;
+  }
+  // A main snapshot is the next baseline, and nearly every capture in it is
+  // byte-identical to the one before. Each actual PNG is stored once under its
+  // content hash and the report names it in `actualBlobs`; the publisher skips
+  // a blob that already exists, so a merge uploads only what changed.
+  const blobHashes = new Map();
+  if (contentAddressedActual) {
+    for (const file of files) {
+      if (!file.path.startsWith("actual/") || !file.path.endsWith(".png"))
+        continue;
+      const name = file.path.slice("actual/".length);
+      if (skippedActual.has(name) || name.includes("/")) continue;
+      blobHashes.set(
+        name,
+        createHash("sha256").update(readFileSync(file.absolute)).digest("hex"),
+      );
+    }
+    if (blobHashes.size > 0)
+      sourceReport.actualBlobs = Object.fromEntries(blobHashes);
   }
   const markerReport = {
     ...sourceReport,
@@ -171,15 +206,35 @@ export function buildVisualPublishBundle({
   // images nothing ever loads. Next runs' baselines read `actual/` only. A
   // report without both lists keeps every expected image.
   const neededExpected =
-    Array.isArray(sourceReport.failedItems) && Array.isArray(sourceReport.deletedItems)
+    Array.isArray(sourceReport.failedItems) &&
+    Array.isArray(sourceReport.deletedItems)
       ? new Set([...sourceReport.failedItems, ...sourceReport.deletedItems])
       : null;
 
   rmSync(bundleDir, { recursive: true, force: true });
   const manifest = [];
   const outputFiles = [];
+  const blobsQueued = new Set();
   for (const file of files) {
-    if (skippedActual.has(file.path.replace(/^actual\//u, "")) && file.path.startsWith("actual/")) {
+    const blobName = file.path.startsWith("actual/")
+      ? file.path.slice("actual/".length)
+      : "";
+    if (blobHashes.has(blobName)) {
+      const hash = blobHashes.get(blobName);
+      if (!blobsQueued.has(hash)) {
+        blobsQueued.add(hash);
+        outputFiles.push({
+          path: `blobs/${hash}.png`,
+          contentType: file.contentType,
+          bytes: readFileSync(file.absolute),
+        });
+      }
+      continue;
+    }
+    if (
+      skippedActual.has(file.path.replace(/^actual\//u, "")) &&
+      file.path.startsWith("actual/")
+    ) {
       continue;
     }
     if (
@@ -225,24 +280,42 @@ export function buildVisualPublishBundle({
     });
     manifest.push(`${publishPath}\t${contentType}`);
   }
-  writeFileSync(path.join(bundleDir, "manifest.tsv"), `${manifest.join("\n")}\n`, { flag: "wx" });
-  return { count: outputFiles.length, totalBytes, snapshotVersion, publicationId };
+  writeFileSync(
+    path.join(bundleDir, "manifest.tsv"),
+    `${manifest.join("\n")}\n`,
+    { flag: "wx" },
+  );
+  return {
+    count: outputFiles.length,
+    totalBytes,
+    snapshotVersion,
+    publicationId,
+  };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     const result = buildVisualPublishBundle({
       sourceDir: path.resolve(process.env.VISUAL_PUBLISH_SOURCE ?? ".reg"),
-      bundleDir: path.resolve(process.env.VISUAL_PUBLISH_BUNDLE ?? ".reg-publish-bundle"),
+      bundleDir: path.resolve(
+        process.env.VISUAL_PUBLISH_BUNDLE ?? ".reg-publish-bundle",
+      ),
       publicationId: publicationIdFromEnv(),
       skipPassedActual: process.env.GITHUB_EVENT_NAME === "pull_request",
+      contentAddressedActual: process.env.GITHUB_EVENT_NAME !== "pull_request",
     });
     console.log(
       `visual-build-publish-bundle: prepared ${result.count} files (${result.totalBytes} bytes) for snapshot ${result.snapshotVersion}`,
     );
     if (process.env.GITHUB_OUTPUT) {
-      appendFileSync(process.env.GITHUB_OUTPUT, `snapshot_version=${result.snapshotVersion}\n`);
-      appendFileSync(process.env.GITHUB_OUTPUT, `publication_id=${result.publicationId}\n`);
+      appendFileSync(
+        process.env.GITHUB_OUTPUT,
+        `snapshot_version=${result.snapshotVersion}\n`,
+      );
+      appendFileSync(
+        process.env.GITHUB_OUTPUT,
+        `publication_id=${result.publicationId}\n`,
+      );
     }
   } catch (error) {
     console.error(`visual-build-publish-bundle: ${error.message}`);

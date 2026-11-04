@@ -46,9 +46,14 @@ const GITHUB_API = process.env.GITHUB_API_URL || "https://api.github.com";
  * destruction.
  */
 export async function snapshotExists(bucket, commitSha, { s3Client } = {}) {
-  if (!s3Client) throw new Error("snapshotExists needs the authenticated s3Client");
+  if (!s3Client)
+    throw new Error("snapshotExists needs the authenticated s3Client");
   const res = await s3Client.send(
-    new ListObjectsV2Command({ Bucket: bucket, Prefix: `${commitSha}/out.json`, MaxKeys: 1 }),
+    new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: `${commitSha}/out.json`,
+      MaxKeys: 1,
+    }),
   );
   return (res.Contents?.length ?? 0) > 0;
 }
@@ -88,7 +93,9 @@ export async function fetchGitHubBranchCommits({
           typeof item?.parents?.[0]?.sha === "string"
             ? item.parents[0].sha.trim().toLowerCase()
             : "",
-        committedAtMs: commitDateMs(item?.commit?.committer?.date ?? item?.commit?.author?.date),
+        committedAtMs: commitDateMs(
+          item?.commit?.committer?.date ?? item?.commit?.author?.date,
+        ),
       }))
       .filter((commit) => COMMIT_SHA.test(commit.sha));
   } catch {
@@ -118,14 +125,22 @@ export function fetchGitBranchCommits({
   const refsToTry = [`origin/${branch}`, branch, "HEAD"];
   for (const ref of refsToTry) {
     try {
-      const output = git(["log", ref, "--first-parent", "-n", String(limit), "--format=%H %P %ct"]);
+      const output = git([
+        "log",
+        ref,
+        "--first-parent",
+        "-n",
+        String(limit),
+        "--format=%H %P %ct",
+      ]);
       const commits = output
         .split("\n")
         .map((line) => {
           // `<sha> <parent...> <committed seconds>`, and a parent list that is
           // empty at the root commit.
           const parts = line.trim().split(/\s+/).filter(Boolean);
-          const seconds = parts.length > 1 ? Number(parts[parts.length - 1]) : Number.NaN;
+          const seconds =
+            parts.length > 1 ? Number(parts[parts.length - 1]) : Number.NaN;
           return {
             sha: (parts[0] ?? "").toLowerCase(),
             parentSha: parts.length > 2 ? parts[1].toLowerCase() : "",
@@ -201,11 +216,26 @@ export async function resolveActiveBaseline({
   };
 
   for (let page = 1; page <= MAX_CANDIDATE_PAGES; page += 1) {
-    const rows = await fetchGitHubBranchCommits({ repo, branch, token, fetchImpl, page });
+    const rows = await fetchGitHubBranchCommits({
+      repo,
+      branch,
+      token,
+      fetchImpl,
+      page,
+    });
     collect(rows);
     // The end of the branch's history, or a chain that already reaches past
     // both floors: either way there is nothing more worth asking for.
-    if (!shouldFetchAnotherCandidatePage(page, rows.length, candidates, now, policy)) break;
+    if (
+      !shouldFetchAnotherCandidatePage(
+        page,
+        rows.length,
+        candidates,
+        now,
+        policy,
+      )
+    )
+      break;
   }
 
   if (candidates.length === 0 && git) {
@@ -223,12 +253,14 @@ export async function resolveActiveBaseline({
   const probe = async (commit) => {
     if (candidatesChecked.includes(commit.sha)) return;
     candidatesChecked.push(commit.sha);
-    if (await snapshotExists(bucket, commit.sha, { s3Client })) keepShas.push(commit.sha);
+    if (await snapshotExists(bucket, commit.sha, { s3Client }))
+      keepShas.push(commit.sha);
   };
 
   const { chain, fallback } = mainBaselineProbeOrder(candidates);
   for (const commit of chain) {
-    if (shouldStopMainBaselineProbes(keepShas.length, commit, now, policy)) break;
+    if (shouldStopMainBaselineProbes(keepShas.length, commit, now, policy))
+      break;
     await probe(commit);
   }
 
@@ -249,7 +281,10 @@ export async function resolveActiveBaseline({
       keepShas,
       verified: true,
       headCommit: candidates[0].sha,
-      source: keepShas[0] === candidates[0].sha ? "head_commit" : "recent_main_ancestor",
+      source:
+        keepShas[0] === candidates[0].sha
+          ? "head_commit"
+          : "recent_main_ancestor",
       candidatesChecked,
     };
   }
@@ -354,7 +389,9 @@ export async function pruneVisualBucket({
   now = Date.now(),
   log = console.log,
 } = {}) {
-  const keepSet = new Set(keepShas.map((sha) => sha.trim().toLowerCase().replace(/\/$/, "")));
+  const keepSet = new Set(
+    keepShas.map((sha) => sha.trim().toLowerCase().replace(/\/$/, "")),
+  );
   if (keepSet.size === 0) {
     throw new Error(
       "prune-visual-bucket: refusing to prune with no verified baseline to keep. " +
@@ -370,18 +407,26 @@ export async function pruneVisualBucket({
 
   for (const prefix of allPrefixes) {
     const cleanPrefix = prefix.replace(/\/$/, "").toLowerCase();
+    // Only a commit's own snapshot is pruned by prefix. `blobs/` holds the
+    // content-addressed images every main snapshot points at; the bucket's
+    // expiry rule reclaims the ones no publish still refreshes.
+    if (!COMMIT_SHA.test(cleanPrefix)) continue;
     if (keepSet.has(cleanPrefix)) {
       keptPrefixes.push(prefix);
       continue;
     }
     const objects = await listPrefixObjects({ s3Client, bucket, prefix });
     const newestMs = objects.reduce(
-      (newest, object) => Math.max(newest, object.LastModified ? +object.LastModified : 0),
+      (newest, object) =>
+        Math.max(newest, object.LastModified ? +object.LastModified : 0),
       0,
     );
     // An unknown timestamp counts as new. Erring towards keeping a prefix costs
     // storage; erring the other way costs a branch its baseline silently.
-    if (newestMs === 0 || now - newestMs < Math.max(minAgeMs, MIN_PUBLICATION_GRACE_MS)) {
+    if (
+      newestMs === 0 ||
+      now - newestMs < Math.max(minAgeMs, MIN_PUBLICATION_GRACE_MS)
+    ) {
       keptRecentPrefixes.push(prefix);
       continue;
     }
@@ -419,12 +464,16 @@ export async function pruneVisualBucket({
         // throwing, so an unread response turns a partial delete into a clean
         // success line and a storage bill nobody can explain.
         for (const error of res?.Errors ?? []) {
-          deleteErrors.push(`${error.Key ?? "(unknown key)"}: ${error.Code ?? "unknown"}`);
+          deleteErrors.push(
+            `${error.Key ?? "(unknown key)"}: ${error.Code ?? "unknown"}`,
+          );
         }
         const failed = new Set((res?.Errors ?? []).map((error) => error.Key));
         const deletedKeys =
           res?.Deleted?.map((object) => object.Key) ??
-          chunk.filter((object) => !failed.has(object.Key)).map((object) => object.Key);
+          chunk
+            .filter((object) => !failed.has(object.Key))
+            .map((object) => object.Key);
         const deleted = deletedKeys.length;
         deletedObjectsCount += deleted;
         prefixDeleted += deleted;

@@ -13,11 +13,16 @@
 import { createHash } from "node:crypto";
 import https from "node:https";
 import { gunzipSync } from "node:zlib";
-import { comparePublicationIds, isPublicationId } from "./visual-publication-id.mjs";
+import {
+  comparePublicationIds,
+  isPublicationId,
+} from "./visual-publication-id.mjs";
 
 export const DEFAULT_BUCKET = "diveday-vrt";
 export const GZIP_MAGIC = Buffer.from([0x1f, 0x8b]);
-export const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+export const PNG_SIGNATURE = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
 
 const DEFAULT_BUCKET_TIMEOUT_MS = 30_000;
 // Keep aligned with the repository's roughly 100 MB publisher file limits.
@@ -75,8 +80,10 @@ export function geometryLine({ expected, actual }) {
     return `- geometry: expected ${size(expected)} -> actual ${size(actual)} (${delta > 0 ? "+" : ""}${delta})`;
   }
   // One side only: a new or deleted item by design, or a download that failed.
-  if (actual) return `- geometry: actual ${size(actual)} (no expected image on disk)`;
-  if (expected) return `- geometry: expected ${size(expected)} (no actual image on disk)`;
+  if (actual)
+    return `- geometry: actual ${size(actual)} (no expected image on disk)`;
+  if (expected)
+    return `- geometry: expected ${size(expected)} (no actual image on disk)`;
   return "- geometry: unavailable (no images on disk)";
 }
 
@@ -87,7 +94,8 @@ export function geometryLine({ expected, actual }) {
  */
 export function itemRows({ name, kind, files = {}, sizes = {} }) {
   const rows = [`## ${name} (${kind})`];
-  for (const [dirKind, file] of Object.entries(files)) rows.push(`- ${dirKind}: ${file}`);
+  for (const [dirKind, file] of Object.entries(files))
+    rows.push(`- ${dirKind}: ${file}`);
   const hasFile = Object.keys(files).length > 0;
   const unreadable = hasFile && !sizes.expected && !sizes.actual;
   rows.push(unreadable ? "- geometry: unreadable PNG" : geometryLine(sizes));
@@ -132,7 +140,8 @@ export const COMMENT_MARKER = "<!-- diveday:visual-summary -->";
 // prose carries the sha too, but parsing prose is how a delta quietly breaks.
 // A comment without this line (every one posted before it existed) reads as
 // "no previous head", exactly like a branch's first report.
-export const COMMIT_MARKER_PATTERN = /<!-- diveday:visual-commit: ([0-9a-f]{7,40}) -->/;
+export const COMMIT_MARKER_PATTERN =
+  /<!-- diveday:visual-commit: ([0-9a-f]{7,40}) -->/;
 
 export function commitMarker(commit) {
   return `<!-- diveday:visual-commit: ${commit} -->`;
@@ -152,7 +161,8 @@ export function previousCommitFromComment(body) {
 // and the report location, and deliberately not the commit: the commit is what
 // changes on every push. A comment posted before this marker existed has no
 // fingerprint, so it is rewritten once.
-export const FINGERPRINT_MARKER_PATTERN = /<!-- diveday:visual-state: ([0-9a-f]{64}) -->/;
+export const FINGERPRINT_MARKER_PATTERN =
+  /<!-- diveday:visual-state: ([0-9a-f]{64}) -->/;
 
 export function summaryFingerprint({
   bucket,
@@ -166,7 +176,8 @@ export function summaryFingerprint({
     summary,
     snapshotVersion,
     note,
-    freshBaselineBootstrap: freshBaselineBootstrap === true && summary.verdict === "no-baseline",
+    freshBaselineBootstrap:
+      freshBaselineBootstrap === true && summary.verdict === "no-baseline",
   };
   return createHash("sha256").update(JSON.stringify(state)).digest("hex");
 }
@@ -202,13 +213,37 @@ export function objectUrl(bucket, key) {
 }
 
 export function hostedReportUrl(bucket, commit, snapshotVersion = null) {
-  const reportPath = snapshotVersion ? `snapshots/${snapshotVersion}/index.html` : "index.html";
+  const reportPath = snapshotVersion
+    ? `snapshots/${snapshotVersion}/index.html`
+    : "index.html";
   return objectUrl(bucket, `${commit}/${reportPath}`);
+}
+
+const BLOB_HASH = /^[0-9a-f]{64}$/u;
+
+/**
+ * Where one `actual` image lives. A main snapshot stores each image once under
+ * its content hash (`blobs/<sha256>.png`) and names it in the report's
+ * `actualBlobs` map instead of copying it into `<commit>/actual/`; a pull
+ * request snapshot and every older one keep the image in its own directory.
+ */
+export function actualObjectKey(commit, report, name) {
+  const blobs = report?.actualBlobs;
+  if (blobs && typeof blobs === "object" && Object.hasOwn(blobs, name)) {
+    const hash = blobs[name];
+    if (typeof hash !== "string" || !BLOB_HASH.test(hash)) {
+      throw new Error(`report names an invalid image hash for ${name}`);
+    }
+    return `blobs/${hash}.png`;
+  }
+  return `${commit}/${report.actualDir}/${name}`;
 }
 
 /** Snapshot version encoded in a reg-suit report's image directories. */
 export function snapshotVersionFromReport(report) {
-  const match = /^snapshots\/([0-9a-f]{64})\/actual$/u.exec(report?.actualDir ?? "");
+  const match = /^snapshots\/([0-9a-f]{64})\/actual$/u.exec(
+    report?.actualDir ?? "",
+  );
   if (!match) return null;
   const [, version] = match;
   return report.expectedDir === `snapshots/${version}/expected` &&
@@ -219,12 +254,21 @@ export function snapshotVersionFromReport(report) {
 
 /** Whether a root report belongs to this workflow attempt or a newer one. */
 export function publicationReportStatus(report, expectedPublicationId) {
-  if (!report || !isPublicationId(expectedPublicationId) || !snapshotVersionFromReport(report)) {
+  if (
+    !report ||
+    !isPublicationId(expectedPublicationId) ||
+    !snapshotVersionFromReport(report)
+  ) {
     return "unpublished";
   }
-  const order = comparePublicationIds(report.publicationId, expectedPublicationId);
+  const order = comparePublicationIds(
+    report.publicationId,
+    expectedPublicationId,
+  );
   if (order > 0) return "superseded";
-  return report.publicationId === expectedPublicationId ? "current" : "unpublished";
+  return report.publicationId === expectedPublicationId
+    ? "current"
+    : "unpublished";
 }
 
 /** Baseline caches are isolated by their immutable snapshot version. */
@@ -239,7 +283,10 @@ export function baselineCacheKey(commit, version) {
 // S3 closed a response stream. Use node:https for the bounded CI read instead;
 // it returns stored gzip bytes, while injected fetch clients may already decode
 // them. Trust the magic number, not the Content-Encoding header.
-function requestHttpsObject(url, { requestImpl = https.get, timeoutMs, maxBytes }) {
+function requestHttpsObject(
+  url,
+  { requestImpl = https.get, timeoutMs, maxBytes },
+) {
   return new Promise((resolve, reject) => {
     let request;
     let settled = false;
@@ -251,17 +298,24 @@ function requestHttpsObject(url, { requestImpl = https.get, timeoutMs, maxBytes 
       else resolve(value);
     };
     const timer = setTimeout(
-      () => request?.destroy(new Error(`S3 object request timed out after ${timeoutMs}ms`)),
+      () =>
+        request?.destroy(
+          new Error(`S3 object request timed out after ${timeoutMs}ms`),
+        ),
       timeoutMs,
     );
 
     try {
       request = requestImpl(url, (response) => {
-        const status = Number.isInteger(response.statusCode) ? response.statusCode : 0;
+        const status = Number.isInteger(response.statusCode)
+          ? response.statusCode
+          : 0;
         const location = response.headers?.location;
         if (REDIRECT_STATUSES.has(status) && typeof location === "string") {
           response.on("error", (error) => finish(error));
-          response.on("end", () => finish(null, { ok: false, status, location }));
+          response.on("end", () =>
+            finish(null, { ok: false, status, location }),
+          );
           response.resume?.();
           return;
         }
@@ -278,7 +332,9 @@ function requestHttpsObject(url, { requestImpl = https.get, timeoutMs, maxBytes 
           const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
           totalBytes += bytes.length;
           if (totalBytes > maxBytes) {
-            const error = new Error(`S3 object exceeded the ${maxBytes}-byte limit`);
+            const error = new Error(
+              `S3 object exceeded the ${maxBytes}-byte limit`,
+            );
             finish(error);
             response.destroy?.();
             return;
@@ -297,7 +353,10 @@ function requestHttpsObject(url, { requestImpl = https.get, timeoutMs, maxBytes 
   });
 }
 
-async function requestS3Object(url, { bucket, requestImpl, timeoutMs, maxBytes, redirects = 0 }) {
+async function requestS3Object(
+  url,
+  { bucket, requestImpl, timeoutMs, maxBytes, redirects = 0 },
+) {
   const response = await requestHttpsObject(url, {
     requestImpl,
     timeoutMs,
@@ -311,7 +370,8 @@ async function requestS3Object(url, { bucket, requestImpl, timeoutMs, maxBytes, 
   const target = new URL(response.location, url);
   const bucketHost = `${bucket}.s3.amazonaws.com`;
   const regionalBucketHost =
-    target.hostname.startsWith(`${bucket}.s3.`) && target.hostname.endsWith(".amazonaws.com");
+    target.hostname.startsWith(`${bucket}.s3.`) &&
+    target.hostname.endsWith(".amazonaws.com");
   if (
     target.protocol !== "https:" ||
     target.username ||
@@ -355,9 +415,12 @@ export async function fetchFromBucket(
       body = gunzipSync(buf, { maxOutputLength: maxDecompressedBytes });
     } catch (error) {
       if (error?.code === "ERR_BUFFER_TOO_LARGE") {
-        throw new Error(`S3 object exceeded the ${maxDecompressedBytes}-byte decompressed limit`, {
-          cause: error,
-        });
+        throw new Error(
+          `S3 object exceeded the ${maxDecompressedBytes}-byte decompressed limit`,
+          {
+            cause: error,
+          },
+        );
       }
       throw error;
     }
@@ -366,7 +429,9 @@ export async function fetchFromBucket(
 }
 
 function names(value) {
-  return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
+  return Array.isArray(value)
+    ? value.filter((item) => typeof item === "string")
+    : [];
 }
 
 /**
@@ -416,7 +481,10 @@ export function summarizeReport(report) {
   const changedCount = changed.length + added.length + deleted.length;
   // A pull request report lists only the captures it uploaded (`partialActual`),
   // so count the compared outcome too.
-  const capturedCount = Math.max(actual.length, passed.length + changed.length + added.length);
+  const capturedCount = Math.max(
+    actual.length,
+    passed.length + changed.length + added.length,
+  );
 
   let verdict;
   if (capturedCount === 0 && comparedCount === 0) verdict = "nothing-captured";
@@ -595,10 +663,16 @@ function movedSet(summary) {
  * compared nothing, where "left the changed set" would read as surfaces that
  * stopped moving when nothing was looked at.
  */
-export function changedSetDelta({ commit, summary, previousCommit, previousSummary }) {
+export function changedSetDelta({
+  commit,
+  summary,
+  previousCommit,
+  previousSummary,
+}) {
   if (!previousCommit || !previousSummary) return null;
   if (previousCommit === commit) return null;
-  if (!comparedAnything(summary) || !comparedAnything(previousSummary)) return null;
+  if (!comparedAnything(summary) || !comparedAnything(previousSummary))
+    return null;
   const now = movedSet(summary);
   const before = movedSet(previousSummary);
   return {
@@ -612,7 +686,10 @@ function deltaSection(delta, limit) {
   if (!delta) return [];
   const since = `\`${delta.previousCommit.slice(0, 7)}\``;
   if (delta.entered.length === 0 && delta.left.length === 0) {
-    return [`**Since ${since}:** the same surfaces moved; none entered or left the set.`, ""];
+    return [
+      `**Since ${since}:** the same surfaces moved; none entered or left the set.`,
+      "",
+    ];
   }
   return [
     `**Since ${since}**, the last head this comment reported on: compare these names, not the counts.`,
@@ -622,7 +699,11 @@ function deltaSection(delta, limit) {
       delta.entered,
       limit,
     ),
-    ...itemSection("Left the changed set (moved then, not now)", delta.left, limit),
+    ...itemSection(
+      "Left the changed set (moved then, not now)",
+      delta.left,
+      limit,
+    ),
   ];
 }
 
@@ -679,7 +760,8 @@ export function formatPrComment({
     );
   }
 
-  for (const warning of summary.warnings) lines.push(`> [!WARNING]`, `> ${warning}`, "");
+  for (const warning of summary.warnings)
+    lines.push(`> [!WARNING]`, `> ${warning}`, "");
 
   // The baseline was not the commit the graph named. Said here, beside the
   // counts it qualifies, so a reviewer reading "3 changed" knows some of those
@@ -687,8 +769,16 @@ export function formatPrComment({
   if (note) lines.push("> [!NOTE]", `> ${note}`, "");
 
   lines.push(...itemSection("Changed", summary.changed, limit));
-  lines.push(...itemSection("Deleted (in the baseline, not captured)", summary.deleted, limit));
-  lines.push(...itemSection("New (captured, no baseline)", summary.added, limit));
+  lines.push(
+    ...itemSection(
+      "Deleted (in the baseline, not captured)",
+      summary.deleted,
+      limit,
+    ),
+  );
+  lines.push(
+    ...itemSection("New (captured, no baseline)", summary.added, limit),
+  );
 
   // Nothing was published for a `no-report` run, so both of these would 404 —
   // the job log is the only thing to read.

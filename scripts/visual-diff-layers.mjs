@@ -27,7 +27,13 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-import { DEFAULT_BUCKET, fetchFromBucket, objectUrl, readPngSize } from "./visual-report-lib.mjs";
+import {
+  actualObjectKey,
+  DEFAULT_BUCKET,
+  fetchFromBucket,
+  objectUrl,
+  readPngSize,
+} from "./visual-report-lib.mjs";
 
 /**
  * Sorts every capture name into one bucket from two `name -> etag` maps. An
@@ -35,7 +41,13 @@ import { DEFAULT_BUCKET, fetchFromBucket, objectUrl, readPngSize } from "./visua
  * never "unchanged".
  */
 export function compareCaptures(fromEtags, toEtags) {
-  const result = { same: [], differs: [], onlyFrom: [], onlyTo: [], unknown: [] };
+  const result = {
+    same: [],
+    differs: [],
+    onlyFrom: [],
+    onlyTo: [],
+    unknown: [],
+  };
   const names = [...new Set([...fromEtags.keys(), ...toEtags.keys()])].sort();
   for (const name of names) {
     const inFrom = fromEtags.has(name);
@@ -69,7 +81,10 @@ export function pixelDifference(a, b, { width, height }) {
   for (let index = 0; index < a.length; index += 4) {
     let delta = 0;
     for (let channel = 0; channel < 4; channel += 1) {
-      delta = Math.max(delta, Math.abs(a[index + channel] - b[index + channel]));
+      delta = Math.max(
+        delta,
+        Math.abs(a[index + channel] - b[index + channel]),
+      );
     }
     if (delta === 0) continue;
     pixels += 1;
@@ -97,7 +112,8 @@ export function describeDifference(name, { fromSize, toSize, diff }) {
     return `- \`${name}\`: geometry ${fromSize.width}×${fromSize.height} → ${toSize.width}×${toSize.height} (${delta >= 0 ? "+" : ""}${delta}px tall)`;
   }
   if (!diff) return `- \`${name}\`: bytes differ`;
-  if (diff.pixels === 0) return `- \`${name}\`: bytes differ, pixels identical (encoding only)`;
+  if (diff.pixels === 0)
+    return `- \`${name}\`: bytes differ, pixels identical (encoding only)`;
   const { top, left, bottom, right } = diff.box;
   return `- \`${name}\`: ${diff.pixels} pixels, max channel delta ${diff.maxDelta}/255, within x ${left}–${right}, y ${top}–${bottom}`;
 }
@@ -116,7 +132,8 @@ function parseArgs(argv) {
     else if (arg === "--bucket") args.bucket = argv[++i];
     else if (arg === "--out") args.out = argv[++i];
     else if (arg === "--download") args.download = true;
-    else if (arg === "--concurrency") args.concurrency = Number(argv[++i]) || args.concurrency;
+    else if (arg === "--concurrency")
+      args.concurrency = Number(argv[++i]) || args.concurrency;
     else {
       console.error(`visual-diff-layers: unknown argument ${arg}`);
       args.bad = true;
@@ -130,7 +147,10 @@ async function captureNames(bucket, commit) {
   if (!fetched.ok) return null;
   const report = JSON.parse(fetched.body.toString("utf8"));
   const names = Array.isArray(report.actualItems) ? report.actualItems : [];
-  return { names, dir: report.actualDir || "actual" };
+  return {
+    names,
+    report: { ...report, actualDir: report.actualDir || "actual" },
+  };
 }
 
 async function headEtag(url) {
@@ -142,14 +162,19 @@ async function headEtag(url) {
   }
 }
 
-async function etagsFor(bucket, commit, { names, dir }, concurrency) {
+async function etagsFor(bucket, commit, { names, report }, concurrency) {
   const etags = new Map();
   let next = 0;
   const worker = async () => {
     while (next < names.length) {
       const name = names[next];
       next += 1;
-      etags.set(name, await headEtag(objectUrl(bucket, `${commit}/${dir}/${name}`)));
+      etags.set(
+        name,
+        await headEtag(
+          objectUrl(bucket, actualObjectKey(commit, report, name)),
+        ),
+      );
     }
   };
   await Promise.all(Array.from({ length: concurrency }, worker));
@@ -210,8 +235,11 @@ async function main() {
       continue;
     }
     const [a, b] = await Promise.all([
-      fetchFromBucket(args.bucket, `${args.from}/${from.dir}/${name}`),
-      fetchFromBucket(args.bucket, `${args.to}/${to.dir}/${name}`),
+      fetchFromBucket(
+        args.bucket,
+        actualObjectKey(args.from, from.report, name),
+      ),
+      fetchFromBucket(args.bucket, actualObjectKey(args.to, to.report, name)),
     ]);
     if (!a.ok || !b.ok) {
       lines.push(`- \`${name}\`: bytes differ (download failed)`);
@@ -230,7 +258,10 @@ async function main() {
       fromSize.width === toSize.width &&
       fromSize.height === toSize.height
     ) {
-      const [pa, pb] = await Promise.all([rawPixels(a.body), rawPixels(b.body)]);
+      const [pa, pb] = await Promise.all([
+        rawPixels(a.body),
+        rawPixels(b.body),
+      ]);
       diff = pixelDifference(pa.data, pb.data, pa.size);
     }
     lines.push(describeDifference(name, { fromSize, toSize, diff }));
@@ -252,7 +283,10 @@ async function main() {
   console.log(lines.join("\n"));
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   main().catch((err) => {
     console.error(`visual-diff-layers: ${err.message}`);
     process.exit(1);

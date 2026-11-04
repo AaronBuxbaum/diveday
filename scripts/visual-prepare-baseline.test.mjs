@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
@@ -14,7 +21,12 @@ const temps = [];
 
 beforeAll(async () => {
   PNG = await sharp({
-    create: { width: 2, height: 2, channels: 4, background: { r: 30, g: 80, b: 120, alpha: 1 } },
+    create: {
+      width: 2,
+      height: 2,
+      channels: 4,
+      background: { r: 30, g: 80, b: 120, alpha: 1 },
+    },
   })
     .png()
     .toBuffer();
@@ -40,14 +52,21 @@ function report(actualItems, version = VERSION) {
 }
 
 afterEach(() => {
-  for (const temp of temps.splice(0)) rmSync(temp, { recursive: true, force: true });
+  for (const temp of temps.splice(0))
+    rmSync(temp, { recursive: true, force: true });
 });
 
 describe("prepareVisualBaseline", () => {
   it("re-encodes cached baseline screenshots into the expected directory", async () => {
     const { sourceDir, outputDir } = fixture();
-    const withTrailingData = Buffer.concat([PNG, Buffer.from("stale trailing bytes")]);
-    writeFileSync(path.join(sourceDir, "schedule-light-vw-390.png"), withTrailingData);
+    const withTrailingData = Buffer.concat([
+      PNG,
+      Buffer.from("stale trailing bytes"),
+    ]);
+    writeFileSync(
+      path.join(sourceDir, "schedule-light-vw-390.png"),
+      withTrailingData,
+    );
 
     await expect(
       prepareVisualBaseline({
@@ -59,7 +78,9 @@ describe("prepareVisualBaseline", () => {
         outputDir,
       }),
     ).resolves.toMatchObject({ count: 1 });
-    const canonical = readFileSync(path.join(outputDir, "schedule-light-vw-390.png"));
+    const canonical = readFileSync(
+      path.join(outputDir, "schedule-light-vw-390.png"),
+    );
     expect(canonical).not.toEqual(withTrailingData);
     await expect(sharp(canonical).metadata()).resolves.toMatchObject({
       format: "png",
@@ -71,7 +92,10 @@ describe("prepareVisualBaseline", () => {
   it("ignores legacy print PDFs in a cached baseline", async () => {
     const { sourceDir, outputDir } = fixture();
     writeFileSync(path.join(sourceDir, "baseline.png"), PNG);
-    writeFileSync(path.join(sourceDir, "trip-mixed-training-depth-manifest-print.pdf"), "%PDF");
+    writeFileSync(
+      path.join(sourceDir, "trip-mixed-training-depth-manifest-print.pdf"),
+      "%PDF",
+    );
 
     await expect(
       prepareVisualBaseline({
@@ -84,9 +108,11 @@ describe("prepareVisualBaseline", () => {
       }),
     ).resolves.toMatchObject({ count: 1 });
     expect(existsSync(path.join(outputDir, "baseline.png"))).toBe(true);
-    expect(existsSync(path.join(outputDir, "trip-mixed-training-depth-manifest-print.pdf"))).toBe(
-      false,
-    );
+    expect(
+      existsSync(
+        path.join(outputDir, "trip-mixed-training-depth-manifest-print.pdf"),
+      ),
+    ).toBe(false);
   });
 
   it("ignores non-PNG cache metadata with names outside the screenshot allowlist", async () => {
@@ -124,6 +150,64 @@ describe("prepareVisualBaseline", () => {
     ).rejects.toThrow(/unsafe filename/u);
   });
 
+  it("reads a main snapshot's images from the content-addressed blobs its report names", async () => {
+    const { outputDir } = fixture();
+    const hash = "c".repeat(64);
+    const calls = [];
+    const fetchImpl = async (url) => {
+      calls.push(String(url));
+      if (String(url).endsWith(`${KEY}/out.json`)) {
+        return new Response(
+          JSON.stringify({
+            ...report(["a.png", "b.png"]),
+            actualBlobs: { "a.png": hash, "b.png": hash },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (String(url).endsWith(`/blobs/${hash}.png`)) {
+        return new Response(PNG, {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        });
+      }
+      return new Response(null, { status: 404 });
+    };
+
+    await expect(
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        version: VERSION,
+        outputDir,
+        fetchImpl,
+      }),
+    ).resolves.toMatchObject({ count: 2 });
+    expect(calls.filter((url) => url.includes("/blobs/"))).toHaveLength(2);
+    expect(calls.some((url) => url.includes("/actual/"))).toBe(false);
+  });
+
+  it("refuses a report whose blob hash is not a sha-256", async () => {
+    const { outputDir } = fixture();
+    const fetchImpl = async () =>
+      new Response(
+        JSON.stringify({
+          ...report(["a.png"]),
+          actualBlobs: { "a.png": "../../etc/passwd" },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    await expect(
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        version: VERSION,
+        outputDir,
+        fetchImpl,
+      }),
+    ).rejects.toThrow(/invalid image hash/u);
+  });
+
   it("fetches and validates the public S3 manifest and its named images without AWS credentials", async () => {
     const { outputDir } = fixture();
     const calls = [];
@@ -135,14 +219,25 @@ describe("prepareVisualBaseline", () => {
           headers: { "content-type": "application/json" },
         });
       }
-      if (String(url).endsWith(`${KEY}/snapshots/${VERSION}/actual/baseline.png`)) {
-        return new Response(PNG, { status: 200, headers: { "content-type": "image/png" } });
+      if (
+        String(url).endsWith(`${KEY}/snapshots/${VERSION}/actual/baseline.png`)
+      ) {
+        return new Response(PNG, {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        });
       }
       return new Response(null, { status: 404 });
     };
 
     await expect(
-      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version: VERSION, outputDir, fetchImpl }),
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        version: VERSION,
+        outputDir,
+        fetchImpl,
+      }),
     ).resolves.toMatchObject({ count: 1 });
     expect(calls).toEqual([
       `https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`,
@@ -158,15 +253,25 @@ describe("prepareVisualBaseline", () => {
     const fetchImpl = async (url) => {
       calls.push(String(url));
       if (String(url).endsWith(`${KEY}/out.json`)) {
-        return new Response(JSON.stringify(report(["baseline.png"], version)), { status: 200 });
+        return new Response(JSON.stringify(report(["baseline.png"], version)), {
+          status: 200,
+        });
       }
-      return String(url).endsWith(`${KEY}/snapshots/${version}/actual/baseline.png`)
+      return String(url).endsWith(
+        `${KEY}/snapshots/${version}/actual/baseline.png`,
+      )
         ? new Response(PNG, { status: 200 })
         : new Response(null, { status: 404 });
     };
 
     await expect(
-      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version, outputDir, fetchImpl }),
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        version,
+        outputDir,
+        fetchImpl,
+      }),
     ).resolves.toMatchObject({ count: 1 });
     expect(calls).toEqual([
       `https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`,
@@ -191,9 +296,17 @@ describe("prepareVisualBaseline", () => {
     };
 
     await expect(
-      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version: VERSION, outputDir, fetchImpl }),
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        version: VERSION,
+        outputDir,
+        fetchImpl,
+      }),
     ).rejects.toThrow(/unsafe image directories/u);
-    expect(calls).toEqual([`https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`]);
+    expect(calls).toEqual([
+      `https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`,
+    ]);
   });
 
   it("rejects a versioned report that disagrees with the marker version", async () => {
@@ -201,11 +314,20 @@ describe("prepareVisualBaseline", () => {
     const version = "b".repeat(64);
     const fetchImpl = async (url) =>
       String(url).endsWith(`${KEY}/out.json`)
-        ? new Response(JSON.stringify(report(["baseline.png"], "c".repeat(64))), { status: 200 })
+        ? new Response(
+            JSON.stringify(report(["baseline.png"], "c".repeat(64))),
+            { status: 200 },
+          )
         : new Response(PNG, { status: 200 });
 
     await expect(
-      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version, outputDir, fetchImpl }),
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        version,
+        outputDir,
+        fetchImpl,
+      }),
     ).rejects.toThrow(/does not match the published marker/u);
   });
 
@@ -217,26 +339,39 @@ describe("prepareVisualBaseline", () => {
       if (String(url).endsWith(`${KEY}/out.json`)) {
         return new Response(
           JSON.stringify(
-            report(["baseline.png", "trip-mixed-training-depth-manifest-print-a4.pdf"]),
+            report([
+              "baseline.png",
+              "trip-mixed-training-depth-manifest-print-a4.pdf",
+            ]),
           ),
           { status: 200 },
         );
       }
-      if (String(url).endsWith(`${KEY}/snapshots/${VERSION}/actual/baseline.png`)) {
+      if (
+        String(url).endsWith(`${KEY}/snapshots/${VERSION}/actual/baseline.png`)
+      ) {
         return new Response(PNG, { status: 200 });
       }
       return new Response(null, { status: 404 });
     };
 
     await expect(
-      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version: VERSION, outputDir, fetchImpl }),
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        version: VERSION,
+        outputDir,
+        fetchImpl,
+      }),
     ).resolves.toMatchObject({ count: 1 });
     expect(calls).toEqual([
       `https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`,
       `https://${BUCKET}.s3.amazonaws.com/${KEY}/snapshots/${VERSION}/actual/baseline.png`,
     ]);
     expect(
-      existsSync(path.join(outputDir, "trip-mixed-training-depth-manifest-print-a4.pdf")),
+      existsSync(
+        path.join(outputDir, "trip-mixed-training-depth-manifest-print-a4.pdf"),
+      ),
     ).toBe(false);
   });
 
@@ -261,7 +396,9 @@ describe("prepareVisualBaseline", () => {
         fetchImpl,
       }),
     ).resolves.toMatchObject({ count: 1 });
-    expect(readFileSync(path.join(outputDir, "right-baseline.png"))).toBeInstanceOf(Buffer);
+    expect(
+      readFileSync(path.join(outputDir, "right-baseline.png")),
+    ).toBeInstanceOf(Buffer);
   });
 
   it("rejects unsafe names and malformed image payloads from the public manifest", async () => {
@@ -269,9 +406,12 @@ describe("prepareVisualBaseline", () => {
     const fetchWithReport = (report) => async (url) =>
       String(url).endsWith(`${KEY}/out.json`)
         ? new Response(JSON.stringify(report), { status: 200 })
-        : new Response(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]), {
-            status: 200,
-          });
+        : new Response(
+            Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]),
+            {
+              status: 200,
+            },
+          );
 
     await expect(
       prepareVisualBaseline({
@@ -306,7 +446,9 @@ describe("prepareVisualBaseline", () => {
 
   it("creates an empty baseline when there is no expected key", async () => {
     const { outputDir } = fixture();
-    await expect(prepareVisualBaseline({ bucket: BUCKET, outputDir })).resolves.toMatchObject({
+    await expect(
+      prepareVisualBaseline({ bucket: BUCKET, outputDir }),
+    ).resolves.toMatchObject({
       count: 0,
     });
   });
