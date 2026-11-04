@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
+import { seatCheckedIn } from "./arrival-provenance";
 import { levelCardLevel } from "./card-columns";
 import type { DbExecutor } from "./client";
 import { paymentEntries } from "./payments";
@@ -255,7 +256,8 @@ async function seedDiveCard(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        eq(bookings.status, "booked"),
+        // Seen at the desk on a boat that has sailed: the history plans that dived.
+        seatCheckedIn,
         lt(trips.startsAt, nowDate()),
         inArray(
           bookings.personId,
@@ -369,7 +371,7 @@ async function seedLostMask(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        eq(bookings.status, "booked"),
+        seatCheckedIn,
         liveTrip(),
         isNull(trips.courseId),
         lt(trips.endsAt, nowDate()),

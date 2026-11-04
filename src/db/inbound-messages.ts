@@ -331,6 +331,13 @@ export async function recordMoveAsk(
     if (!seat || (!input.calledOff && hasSailed(seat.startsAt, input.now))) {
       return { status: "not_found" };
     }
+    // Asked again now the seat's lock is held: the read above may have waited
+    // on a check-in, and its trail subquery kept the snapshot it started with.
+    const [seen] = await tx
+      .select({ checkedIn: seatCheckedIn })
+      .from(bookings)
+      .where(eq(bookings.id, input.bookingId));
+    if (seen?.checkedIn) return { status: "not_found" };
     const note = truncateInboundBody(input.note ?? "").slice(0, MOVE_ASK_NOTE_MAX_LENGTH);
     const fromAddress =
       normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "";

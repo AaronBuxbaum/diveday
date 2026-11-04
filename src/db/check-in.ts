@@ -361,6 +361,8 @@ export type ArrivalOfflineInput = {
   occurredAt?: Date;
   /** When the copy the device was reading was saved — the staleness bound's other half. */
   offlineSnapshotSavedAt?: Date;
+  /** The departure the device saw the seat on; a seat moved since refuses the tap. */
+  expectedTripId?: string;
 };
 
 /**
@@ -451,6 +453,21 @@ async function newestArrivalEvent(
 }
 
 /**
+ * The newest row on the seat's whole trail, earlier lives included: what a
+ * queued tap's ordering is judged against. A later correction made before the
+ * seat reopened still outranks a tap older than it.
+ */
+async function newestOnWholeTrail(
+  tx: DbExecutor,
+  booking: { id: string; tripId: string; arrivalTrailAfterSeq: number | null },
+  shopId: string,
+  newestThisLife: NewestArrival | undefined,
+): Promise<NewestArrival | undefined> {
+  if (booking.arrivalTrailAfterSeq === null) return newestThisLife;
+  return newestArrivalEvent(tx, { ...booking, arrivalTrailAfterSeq: null }, shopId);
+}
+
+/**
  * Has this exact queued tap already been applied? A sync that succeeded and
  * whose response never reached the boat is retried, and without this the diver
  * would be checked in twice and the trail would say two people arrived.
@@ -531,7 +548,10 @@ export async function checkInBooking(
 ): Promise<CheckInOutcome> {
   const now = input.now ?? nowDate();
   const source = input.source ?? "live";
-  const occurredAt = input.occurredAt ?? now;
+  // A device clock ahead of the server's (the bounds allow five minutes) must
+  // not outrank a live tap made after it: the trail is read newest first, so
+  // a stored instant is never later than the moment it reached us (#2702).
+  const occurredAt = input.occurredAt && input.occurredAt < now ? input.occurredAt : now;
   return db.transaction(async (tx) => {
     // The counter actor is durably recorded in the check-in activity trail.
     const recordedBy = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
@@ -541,6 +561,11 @@ export async function checkInBooking(
     // `for update` took both in the planner's order, booking first.
     const tripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
     if (!tripId) return { ok: false, reason: "not_found" };
+    // A queued tap was about the departure the device was reading; on a seat
+    // since moved it says nothing about the new one.
+    if (input.expectedTripId && input.expectedTripId !== tripId) {
+      return { ok: false, reason: "snapshot_invalid" };
+    }
     const [booking] = await tx
       .select({
         id: bookings.id,
@@ -589,13 +614,16 @@ export async function checkInBooking(
         offlineEventOutOfBounds({
           clientEventId: input.clientEventId,
           offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-          occurredAt,
+          occurredAt: input.occurredAt ?? now,
           now: nowDate(),
         })
       ) {
         return { ok: false, reason: "snapshot_invalid" };
       }
-      const refusal = offlineArrivalRefusal({ newest, occurredAt });
+      const refusal = offlineArrivalRefusal({
+        newest: await newestOnWholeTrail(tx, booking, input.shopId, newest),
+        occurredAt,
+      });
       // An arrival states something rather than taking something back, so the
       // only ordering it can fail is newest-wins; the compare-and-set belongs
       // to the undo.
@@ -713,7 +741,10 @@ export async function undoCheckInBooking(
 ): Promise<UndoCheckInOutcome> {
   const now = input.now ?? nowDate();
   const source = input.source ?? "live";
-  const occurredAt = input.occurredAt ?? now;
+  // A device clock ahead of the server's (the bounds allow five minutes) must
+  // not outrank a live tap made after it: the trail is read newest first, so
+  // a stored instant is never later than the moment it reached us (#2702).
+  const occurredAt = input.occurredAt && input.occurredAt < now ? input.occurredAt : now;
   return db.transaction(async (tx) => {
     // The undo actor is durably recorded alongside the check-in reversal.
     const recordedBy = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
@@ -723,6 +754,11 @@ export async function undoCheckInBooking(
     // `for update` took both in the planner's order, booking first.
     const tripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
     if (!tripId) return { ok: false, reason: "not_found" };
+    // A queued tap was about the departure the device was reading; on a seat
+    // since moved it says nothing about the new one.
+    if (input.expectedTripId && input.expectedTripId !== tripId) {
+      return { ok: false, reason: "snapshot_invalid" };
+    }
     const [booking] = await tx
       .select({
         id: bookings.id,
@@ -770,14 +806,14 @@ export async function undoCheckInBooking(
         offlineEventOutOfBounds({
           clientEventId: input.clientEventId,
           offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-          occurredAt,
+          occurredAt: input.occurredAt ?? now,
           now: nowDate(),
         })
       ) {
         return { ok: false, reason: "snapshot_invalid" };
       }
       const refusal = offlineArrivalRefusal({
-        newest,
+        newest: await newestOnWholeTrail(tx, booking, input.shopId, newest),
         occurredAt,
         retractsClientEventId: input.retractsClientEventId,
       });

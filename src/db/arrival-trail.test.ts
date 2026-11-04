@@ -7,8 +7,9 @@ import { fileScopedShopContext } from "@/test/db";
 import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import { moveBooking, restoreBooking, selfCancelBooking } from "./bookings";
 import { checkInBooking, listCheckInQueue, undoCheckInBooking } from "./check-in";
+import { strandedMoveOffer } from "./move-offer";
 import { undoBookingNoShow } from "./no-show";
-import { bookingArrivalEvents, bookings, rollCallEvents } from "./schema";
+import { bookingArrivalEvents, bookings, rollCallEvents, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -255,5 +256,86 @@ describe("a seat that comes back starts a fresh trail", () => {
     });
     expect(back).toMatchObject({ ok: true });
     expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
+  });
+});
+
+describe("a queued tap cannot outrank what the desk said since", () => {
+  const MINUTE = 60_000;
+  function queued(occurredAt: Date) {
+    return {
+      source: "offline" as const,
+      clientEventId: crypto.randomUUID(),
+      occurredAt,
+      offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 10 * MINUTE),
+    };
+  }
+
+  it("stores a device clock running ahead at the server's time, so a live undo after it wins", async () => {
+    const { db, shop, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    const ahead = new Date(nowDate().getTime() + 4 * MINUTE);
+    expect(
+      await checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(ahead),
+      }),
+    ).toMatchObject({ ok: true });
+    await undoCheckInBooking(db, {
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      recordedByPersonId: staff.id,
+    });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
+  });
+
+  it("refuses a tap queued on the departure a seat has since left", async () => {
+    const { db, shop, other, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    expect(
+      await checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.id,
+        expectedTripId: other.id,
+        ...queued(new Date(nowDate().getTime() - 5 * MINUTE)),
+      }),
+    ).toMatchObject({ ok: false, reason: "snapshot_invalid" });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
+  });
+
+  it("judges a queued tap against corrections made before the seat reopened", async () => {
+    const { db, shop, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    const tappedAt = new Date(nowDate().getTime() - 20 * MINUTE);
+    // The desk's later word, then a Remove undone.
+    await markArrived(db, seat.booking.id, {
+      recordedByPersonId: staff.id,
+      occurredAt: new Date(tappedAt.getTime() + 5 * MINUTE),
+      status: "cleared",
+    });
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, seat.booking.id));
+    expect(await restoreBooking(db, shop.id, seat.booking.id)).toBe("restored");
+    expect(
+      await checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(tappedAt),
+      }),
+    ).toMatchObject({ ok: false, reason: "newer_event_exists" });
+  });
+
+  it("offers no move to a diver the desk has seen on a called-off boat", async () => {
+    const { db, shop, staff, seat } = await context();
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
+    await db
+      .update(trips)
+      .set({ status: "cancelled", cancelledAt: nowDate() })
+      .where(eq(trips.id, seat.booking.tripId));
+    expect(
+      await strandedMoveOffer(db, { shopId: shop.id, bookingId: seat.booking.id, now: nowDate() }),
+    ).toBeNull();
   });
 });

@@ -43,6 +43,5 @@ A release, cancel, reclaim or restore cannot desynchronise arrival: nothing is s
 two arrival writers, and nothing on that path can write `roll_call_events`. The trail is still
 evidence of who was seen, never of who dived.
 
-The previous release, still serving while the migration runs, fails a check-in tapped during the
-deploy; the desk taps again. Revisit if a reader needs arrival per departure in bulk and the
-correlated subquery shows in the render-cost ratchet: the fix is a lateral join, not a column.
+The previous release, serving while the migration runs, fails a check-in, lets a seen diver
+self-cancel and reopens seats without the marker: deploy with the desk quiet. If the correlated subquery shows in the render-cost ratchet, the fix is a lateral join.

@@ -129,7 +129,7 @@ const checklistEventSchema = z.object({
  * point.** An arrival says a diver reached the desk; only a person at the rail
  * says one is on the boat. The two vocabularies never meet: this array is
  * dispatched below to `checkInBooking`/`undoCheckInBooking`, which write
- * `bookings.status` and `booking_arrival_events` and cannot reach
+ * the arrival trail (`booking_arrival_events`) alone and cannot reach
  * `roll_call_events` — so there is no value a device can put in this body,
  * well-formed or not, that promotes an arrival into a boarding.
  */
@@ -354,6 +354,7 @@ export async function POST(request: Request) {
       clientEventId: event.clientEventId,
       offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
       occurredAt: new Date(event.occurredAt),
+      expectedTripId: event.tripId,
     };
     const outcome =
       event.status === "arrived"
