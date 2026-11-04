@@ -6,6 +6,11 @@ import {
   MAX_TRIP_DAYS,
   MAX_TRIP_SPAN_DAYS,
   meetingDaysFor,
+  meetingDayWindows,
+  onTheWaterDay,
+  rollCallDayOf,
+  rollCallDayStarts,
+  rollCallRecordSince,
   tripMeetingDays,
 } from "./trip-days";
 import type { WallTime } from "./zoned";
@@ -190,5 +195,64 @@ describe("laterMeetingDates", () => {
       "2026-10-25",
       "2026-10-31",
     ]);
+  });
+});
+
+describe("roll-call days (#2557)", () => {
+  // Saturday Aug 1 and Saturday Aug 15 2026, 09:00 to 13:00 EDT.
+  const satOne = {
+    startsAt: new Date("2026-08-01T13:00:00.000Z"),
+    endsAt: new Date("2026-08-01T17:00:00.000Z"),
+  };
+  const satTwo = {
+    startsAt: new Date("2026-08-15T13:00:00.000Z"),
+    endsAt: new Date("2026-08-15T17:00:00.000Z"),
+  };
+  const run = { startsAt: satOne.startsAt, endsAt: satTwo.endsAt };
+  const days = meetingDayWindows(run, [satTwo, satOne]);
+
+  it("orders the days, and reads a trip with none as its one window", () => {
+    expect(days).toEqual([satOne, satTwo]);
+    expect(meetingDayWindows(run, [])).toEqual([run]);
+  });
+
+  it("gives Saturday's late count to Saturday and the second Saturday's boarding to it", () => {
+    const starts = rollCallDayStarts(days);
+    expect(rollCallDayOf(starts, new Date("2026-08-01T23:00:00.000Z"))).toBe(0);
+    expect(rollCallDayOf(starts, new Date("2026-08-15T12:30:00.000Z"))).toBe(1);
+    expect(rollCallDayOf(starts, new Date("2026-08-15T16:00:00.000Z"))).toBe(1);
+  });
+
+  it("never starts a day after its own window opens, even when windows touch", () => {
+    const touching = [
+      {
+        startsAt: new Date("2026-08-01T13:00:00.000Z"),
+        endsAt: new Date("2026-08-01T15:00:00.000Z"),
+      },
+      {
+        startsAt: new Date("2026-08-01T14:00:00.000Z"),
+        endsAt: new Date("2026-08-01T17:00:00.000Z"),
+      },
+    ];
+    expect(rollCallDayStarts(touching)[1]).toBeLessThanOrEqual(touching[1]!.startsAt.getTime());
+  });
+
+  it("keeps a one-day trip's whole record on its one day", () => {
+    expect(rollCallRecordSince([run], new Date("2027-01-01T00:00:00.000Z"))).toBeNull();
+    expect(rollCallDayStarts([run])).toEqual([Number.NEGATIVE_INFINITY]);
+  });
+
+  it("starts the second Saturday's record empty, halfway through the fortnight", () => {
+    expect(rollCallRecordSince(days, new Date("2026-08-02T14:00:00.000Z"))).toBeNull();
+    const since = rollCallRecordSince(days, new Date("2026-08-15T14:00:00.000Z"));
+    expect(since?.toISOString()).toBe("2026-08-08T15:00:00.000Z");
+  });
+
+  it("is on the water only inside a day and its return hour, never between", () => {
+    expect(onTheWaterDay(days, new Date("2026-08-01T14:00:00.000Z"))).toEqual(satOne);
+    expect(onTheWaterDay(days, new Date("2026-08-01T17:59:00.000Z"))).toEqual(satOne);
+    expect(onTheWaterDay(days, new Date("2026-08-01T18:00:00.000Z"))).toBeNull();
+    expect(onTheWaterDay(days, new Date("2026-08-08T14:00:00.000Z"))).toBeNull();
+    expect(onTheWaterDay(days, new Date("2026-08-15T14:00:00.000Z"))).toEqual(satTwo);
   });
 });

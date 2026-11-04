@@ -44,6 +44,7 @@
  */
 
 import { type CalendarDate, calendarDaysBetween, isValidCalendarDate } from "./calendar-date";
+import { hasReturned } from "./trips";
 import { addCalendarDays, type WallTime } from "./zoned";
 
 /** A departure meets on at least one day, by definition. */
@@ -184,4 +185,85 @@ export function meetsOnShopDay(
   return meetingDays.length > 0
     ? meetingDays.some((d) => within(d.startsAt))
     : within(trip.startsAt);
+}
+
+/** One meeting day's real window (`trip_schedule_days`), as instants. */
+export type DayWindow = { startsAt: Date; endsAt: Date };
+
+/**
+ * A departure's meeting days in order, or its one window when it has no day
+ * rows on file. Every reader of "which day is it" reads this list, so a plain
+ * one-day trip is one day whose window is the trip's own.
+ */
+export function meetingDayWindows(
+  trip: DayWindow,
+  meetingDays: readonly DayWindow[] | undefined,
+): DayWindow[] {
+  if (!meetingDays || meetingDays.length === 0) {
+    return [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
+  }
+  return [...meetingDays].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+}
+
+/**
+ * **Which meeting day a roll-call result belongs to** (#2557). Checkpoints are
+ * keyed per booking (`departure`, `after_dive_1`, ...), not per day, so day
+ * one's "back aboard after dive 1" and day two's are the same key. Read
+ * against the whole run, Saturday's count would answer for the Saturday two
+ * weeks on, and day two's dive could never open a count at all.
+ *
+ * So each result belongs to one meeting day by when it was taken: day one
+ * owns everything before day two's boundary, and each later day owns
+ * everything from its boundary to the next one. A boundary sits halfway
+ * between the end of the day before and the start of the day it opens, never
+ * after that start: a late dock count on Saturday evening stays Saturday's,
+ * and Sunday's boarding count before the boat leaves is Sunday's. A one-day
+ * trip has one day and no boundary, so it reads exactly as before.
+ *
+ * Returns each day's first instant in milliseconds; day one's is `-Infinity`.
+ */
+export function rollCallDayStarts(windows: readonly DayWindow[]): number[] {
+  return windows.map((day, index) => {
+    const before = windows[index - 1];
+    if (!before) return Number.NEGATIVE_INFINITY;
+    const start = day.startsAt.getTime();
+    const halfway = (before.endsAt.getTime() + start) / 2;
+    return Math.min(start, halfway);
+  });
+}
+
+/** The index of the meeting day an instant's roll-call result belongs to. */
+export function rollCallDayOf(dayStarts: readonly number[], instant: Date): number {
+  const at = instant.getTime();
+  let day = 0;
+  for (let index = 1; index < dayStarts.length; index++) {
+    if (at >= (dayStarts[index] ?? Number.POSITIVE_INFINITY)) day = index;
+  }
+  return day;
+}
+
+/**
+ * Where the roll call a manifest shows now begins: the boundary of the meeting
+ * day whose results are being taken, or `null` on day one (everything counts).
+ * Between two meeting days the earlier one's record stays on screen until the
+ * halfway point, then the later day's count starts empty.
+ */
+export function rollCallRecordSince(windows: readonly DayWindow[], now: Date): Date | null {
+  const starts = rollCallDayStarts(windows);
+  const day = rollCallDayOf(starts, now);
+  return day === 0 ? null : new Date(starts[day] as number);
+}
+
+/**
+ * **Whether the boat is out on a meeting day** (#2557): a day's window has
+ * started and its return buffer has not passed (`hasReturned`). Between two
+ * meeting days nobody is on the water, however long the run's own
+ * `starts_at`..`ends_at` window is.
+ */
+export function onTheWaterDay(windows: readonly DayWindow[], now: Date): DayWindow | null {
+  return (
+    windows.find(
+      (day) => day.startsAt.getTime() <= now.getTime() && !hasReturned(day.endsAt, now),
+    ) ?? null
+  );
 }
