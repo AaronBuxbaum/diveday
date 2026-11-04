@@ -39,20 +39,15 @@ This is the storage half only; the screens do not change.
 
 ## Rollout (expand/contract)
 
-Every row keeps its id, so the copy is a plain insert and a reference to an old row is a reference
-to its deal. The two old tables, their enums and the four old columns stayed declared as `retired*`
-for one release, because the release serving during the deploy still read and wrote them.
-Triggers forwarded that release's writes (a code minted, switched off or deleted, a deal sent, a
-checkout or reservation naming an old column) onto `deals` and `deal_id`. With no users to lose, the
-tables, enums, triggers and functions were dropped in the next change (#3778); the four columns
-follow once the previous release no longer declares them (#3866).
+Every row keeps its id, so the copy was a plain insert and a reference to an old row is a reference
+to its deal. Triggers forwarded the release still serving during the deploy onto `deals` and
+`deal_id`. The old tables, enums, triggers and functions were dropped in #3778; the four old columns
+follow in #3866.
 
-Known gap, deploy window only: the bridge forwards the old release's writes into `deals`, not the
-reverse. A code switched off on the new release still applies on the old one, and a capped code can
-overshoot its cap by the uses made meanwhile. Reverse triggers are not worth it before the pilot.
-The copy fails if a staff code equals one of its shop's generated last-minute codes; generated codes
-look like `SAVE25-A1B2C3`. A deal's departure must belong to the deal's own shop
-(`deals_shop_trip_fk`).
+Known gap, deploy window only: the bridge forwards the old release's writes, not the reverse, so a
+code switched off on the new release still applies on the old one and a capped code can overshoot.
+Reverse triggers are not worth it before the pilot. A deal's departure must belong to the deal's own
+shop (`deals_shop_trip_fk`).
 
 ## Consequences
 
