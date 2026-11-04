@@ -1,6 +1,7 @@
 import type { OpenSnag } from "@/db/boat-snags";
 import type { issueOfflineManifestSnapshot } from "@/db/offline-manifest-snapshots";
 import type { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
+import { depthWarningText } from "@/i18n/depth-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { BoatSafetySection } from "@/lib/boat-safety";
@@ -61,7 +62,10 @@ export function offlineManifestPayload({
           };
         }),
       },
-      () => t("shared.offlineManifest.juniorCheckRequired"),
+      (advisory) =>
+        advisory.params.verificationReasons?.length
+          ? t("shared.offlineManifest.juniorCheckRequired")
+          : depthWarningText(t, advisory),
     ),
     snapshotId: snapshot.snapshotId,
     erasureEpochToken: snapshot.erasureEpochToken,

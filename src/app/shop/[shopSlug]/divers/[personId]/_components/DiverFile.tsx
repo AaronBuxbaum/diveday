@@ -2,6 +2,7 @@ import type { loadDiverGear } from "@/db/diver-record";
 import type { personThread } from "@/db/inbound-messages";
 import type { LastKnownDive } from "@/db/last-dive";
 import type { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
+import type { personSentMessages } from "@/db/person-sent-messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { DiverNotice } from "@/lib/diver-notices";
@@ -15,6 +16,7 @@ import { DiverDetailsGroup } from "./DiverDetailsGroup";
 import { DiverNotesSection } from "./DiverNotesSection";
 import { GearAndSizes } from "./GearAndSizes";
 import { LastDiveGroup } from "./LastDiveGroup";
+import { SentMessagesSection } from "./SentMessagesSection";
 import type { DiverProfile, Shop } from "./shared";
 import { WaiverGroup } from "./WaiverGroup";
 import { WorkOrdersGroup } from "./WorkOrdersGroup";
@@ -42,6 +44,7 @@ export function DiverFile({
   gates,
   gear,
   thread,
+  sent,
   notes,
   activityPage,
   lastDive,
@@ -63,6 +66,7 @@ export function DiverFile({
   gates: { canOpenClearance: boolean; canOverrideFit: boolean };
   gear: Awaited<ReturnType<typeof loadDiverGear>>;
   thread: Awaited<ReturnType<typeof personThread>>;
+  sent: Awaited<ReturnType<typeof personSentMessages>>;
   notes: Awaited<ReturnType<typeof listDiverRecordNotes>>;
   activityPage: Awaited<ReturnType<typeof pagedDiverActivity>>;
   lastDive: LastKnownDive;
@@ -143,6 +147,8 @@ export function DiverFile({
         t={t}
         status={noticeForForm(notice, "reply")}
       />
+      {/* What the shop sent them, after what they said. Nothing sent, nothing drawn. */}
+      <SentMessagesSection messages={sent} locale={locale} timezone={shop.timezone} t={t} />
       <GearAndSizes
         diver={diver}
         shopSlug={shopSlug}

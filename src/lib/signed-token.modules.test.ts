@@ -9,8 +9,8 @@ const MINTED = {
   recap:
     "cmVjYXA6MGI5ZDZmM2UtMWMyYS00ZDRlLThhNWItNmM3ZDhlOWYwYTFiOjE3ODQ2NDA2MDA.GYaO7xgfnY3d64o12MpiigGlxJgZigjOSPqkVP56Hxo",
   buddy: "C51vPhwqTU6KW2x9jp8KGw.mrcKxb4Uzf_4yf8N",
-  // v2 (#2706): the gate carries ladder blocker codes, under a new purpose.
-  gate: "nitrox_missing.DY3zoB8GVO6wtNNlG4ZOVZMMxSLO-Wu46_9fUsuwP20",
+  // v3 (#3777): the gate also signs its notice, its seat and when it was minted.
+  gate: "nitrox_missing.tro8w0.OjobgHczkfTQubZaIQbjcl-Sn-BSqiYHCFUvtFA6gJE",
   epoch: "3.2.chedpM2MpU5HmuVTgGjG6kXVU4lcQgEtqH0Kljg6lhM",
   preview: "1800000600000.ESwgziOoL_4ex9mIyStw-Ca2tEV1fMIuCozTfXuImRg",
   catchUp:
@@ -22,7 +22,12 @@ const MINTED = {
 };
 const QUIET_ENV = { DEMO_QUIET_KEY: "quiet-key-quiet-key-quiet-key-1" };
 const GATE_REFUSAL = [NO_NITROX] as never;
-const GATE_SCOPE = { kind: "trip", id: BOOKING } as never;
+const GATE_SCOPE = {
+  scope: { kind: "trip" as const, id: BOOKING },
+  notice: "diver-trip-prerequisite",
+  bookingId: null,
+};
+const GATE_NOW = 1_800_000_000_000;
 const CATCH_UP_SCOPE = { shopId: "s", personId: "p", dayStart: "d", mode: "ack" as const };
 
 describe("modules still mint and verify the tokens they always did", () => {
@@ -53,10 +58,18 @@ describe("modules still mint and verify the tokens they always did", () => {
 
   it("trip-admission gate", async () => {
     const m = await import("./trip-admission-gate");
-    expect(m.signTripAdmissionGate(GATE_REFUSAL, GATE_SCOPE)).toBe(MINTED.gate);
-    expect(m.verifyTripAdmissionGate(MINTED.gate, GATE_SCOPE)).not.toBeNull();
-    expect(m.verifyTripAdmissionGate(`${MINTED.gate.slice(0, -1)}é`, GATE_SCOPE)).toBeNull();
-    expect(m.verifyTripAdmissionGate(MINTED.gate, { kind: "trip", id: "x" } as never)).toBeNull();
+    expect(m.signTripAdmissionGate(GATE_REFUSAL, GATE_SCOPE, GATE_NOW)).toBe(MINTED.gate);
+    expect(m.verifyTripAdmissionGate(MINTED.gate, GATE_SCOPE, GATE_NOW)).not.toBeNull();
+    expect(
+      m.verifyTripAdmissionGate(`${MINTED.gate.slice(0, -1)}é`, GATE_SCOPE, GATE_NOW),
+    ).toBeNull();
+    expect(
+      m.verifyTripAdmissionGate(
+        MINTED.gate,
+        { ...GATE_SCOPE, scope: { kind: "trip", id: "x" } },
+        GATE_NOW,
+      ),
+    ).toBeNull();
   });
 
   it("offline erasure epoch", async () => {

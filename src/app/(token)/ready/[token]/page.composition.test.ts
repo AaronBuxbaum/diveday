@@ -184,11 +184,17 @@ describe("after the dive", () => {
     expect(positionOf("await readAfterTheDive(db, {")).toBeLessThan(positionOf("<AfterState"));
     const rollCall = AFTER_DIVE_READS.indexOf("departureRollCallForBooking(db,");
     expect(rollCall).toBeGreaterThan(-1);
-    expect(rollCall).toBeLessThan(AFTER_DIVE_READS.indexOf("isAfterTheDive({ endsAt, boarded })"));
+    // And the crew's silence about this diver, on a departure they did count
+    // (issue #3822), is asked beside it and handed to the same question.
+    expect(AFTER_DIVE_READS).toContain("bookingsNeverCountedAtRollCall(db, [candidate])");
+    expect(AFTER_DIVE_READS).toContain("uncountedAtRollCall: neverCounted.has(bookingId)");
+    expect(rollCall).toBeLessThan(AFTER_DIVE_READS.indexOf("isAfterTheDive({\n      endsAt,"));
     // Only once the boat is scheduled home: an ordinary night-before page load
     // never pays for the query.
     expect(AFTER_DIVE_READS).toContain("const boatIsHome = theBoatIsHome({ endsAt });");
-    expect(AFTER_DIVE_READS).toMatch(/boatIsHome\s*\?\s*await departureRollCallForBooking\(/);
+    expect(AFTER_DIVE_READS).toMatch(
+      /boatIsHome\s*\?\s*await Promise\.all\(\[\s*departureRollCallForBooking\(/,
+    );
   });
 
   it("answers a canceled departure on the branch a canceled departure reaches", () => {

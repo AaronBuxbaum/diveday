@@ -144,6 +144,8 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   integration_backfill_sent: "records",
   running_late_from_message: "seats",
   diver_merged: "records",
+  // A hold kept governing over a release the merge brought in: the safety filter.
+  diver_merge_import_set_aside: "safety",
   redacted: "records",
   demo_charter_confirmed: "departures",
   demo_second_dive_moved: "departures",

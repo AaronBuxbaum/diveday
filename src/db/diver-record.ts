@@ -32,6 +32,7 @@ import { lastKnownDive } from "./last-dive";
 import { openLostItemsByPerson } from "./lost-items";
 import { listDiverRecordNotes, pagedDiverActivity } from "./operations";
 import { PAGE_SIZE } from "./paging";
+import { personSentMessages } from "./person-sent-messages";
 import { getBookingsReadiness } from "./readiness";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { offsetUpcomingTripsWithCounts } from "./trips";
@@ -267,19 +268,23 @@ export async function getDiverRecord(
     return { kind: "merged" as const, mergedInto: diver.person.mergedIntoPersonId };
   }
   const removed = Boolean(diver.person.deletedAt);
-  const [can, stripeAccount, notes, activityPage, thread, gear, packages] = await Promise.all([
-    loadDiverRecordGates(db, shop.id, input.viewerPersonId),
-    getShopStripeAccount(db, shop.id),
-    listDiverRecordNotes(db, shop.id, personId),
-    // Shop-scoped from the session, never the slug, like every read here. The
-    // query clamps anything past the end, so a stale bookmark lands on the
-    // last real page.
-    pagedDiverActivity(db, shop.id, personId, { page: input.activityPage }),
-    // What this diver wrote and what the shop wrote back, interleaved by time.
-    personThread(db, shop.id, personId),
-    loadDiverGear(db, shop, personId, { removed }),
-    diverPackageBalance(db, shop.id, personId, now),
-  ]);
+  const [can, stripeAccount, notes, activityPage, thread, sent, gear, packages] = await Promise.all(
+    [
+      loadDiverRecordGates(db, shop.id, input.viewerPersonId),
+      getShopStripeAccount(db, shop.id),
+      listDiverRecordNotes(db, shop.id, personId),
+      // Shop-scoped from the session, never the slug, like every read here. The
+      // query clamps anything past the end, so a stale bookmark lands on the
+      // last real page.
+      pagedDiverActivity(db, shop.id, personId, { page: input.activityPage }),
+      // What this diver wrote and what the shop wrote back, interleaved by time.
+      personThread(db, shop.id, personId),
+      // What the shop sent them: the other half of the conversation.
+      personSentMessages(db, shop.id, personId),
+      loadDiverGear(db, shop, personId, { removed }),
+      diverPackageBalance(db, shop.id, personId, now),
+    ],
+  );
   // `orders?add=1` refuses outright without a payable account, so the story's
   // foot simply omits "New invoice" rather than offering a link that bounces.
   const paymentsConnected = canAcceptPayments(stripeAccount);
@@ -329,6 +334,7 @@ export async function getDiverRecord(
     notes,
     activityPage,
     thread,
+    sent,
     gear,
     packages,
     mergeCandidates,

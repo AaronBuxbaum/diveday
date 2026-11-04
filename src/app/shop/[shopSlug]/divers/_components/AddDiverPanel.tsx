@@ -13,6 +13,7 @@ import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { buttonClass } from "@/components/ui/button";
 import { FieldActions } from "@/components/ui/form";
 import { ShopNotice } from "@/components/ui/outcome";
+import { isOpenDateRequestWithoutEmail } from "@/db/interest-dates";
 import { getNewDiverPage } from "@/db/new-diver-page";
 import { staffParticipantTypeLabel } from "@/i18n/participant-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -23,6 +24,7 @@ import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { diverSearchPrefill } from "@/lib/person-fields";
 import type { ShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
 import { WALK_IN_FIRST_ROW, WALK_IN_PARTY_FORM, WALK_IN_PARTY_MAX } from "@/lib/walk-in-party";
 import { createDiverFormAction } from "../add-diver-actions";
 import { NOTICES } from "./add-diver-notices";
@@ -188,8 +190,19 @@ export async function AddDiverPanel({
 
   // A wait-list entry is the one departure form that needs a way to reach the
   // diver when the seat opens.
+  // The departure door waives the email for a date request that has none itself
+  // (issue #3743); the action reads the same row, so this only spares the browser
+  // from refusing a form the server accepts.
+  const requestId = requestParam ? uuidParam(requestParam) : undefined;
+  const requestHasNoEmail =
+    surface === "departure" &&
+    !isWaitlist &&
+    !walkIn &&
+    requestId !== undefined &&
+    (await isOpenDateRequestWithoutEmail(db, shop.id, requestId));
   const emailRequired = Boolean(
-    isWaitlist || (surface && !walkIn && SEAT_SURFACES[surface].email === "required"),
+    isWaitlist ||
+      (surface && !walkIn && SEAT_SURFACES[surface].email === "required" && !requestHasNoEmail),
   );
 
   return (

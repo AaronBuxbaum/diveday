@@ -98,6 +98,12 @@ type ActivityParamShapes = {
    * (`mergeDiverRecords`). The merged record's own lines stay on it.
    */
   diver_merged: { actor: string; diver: string; merged: string };
+  /**
+   * A merge set aside an imported release that was newer than an uncleared
+   * medical referral on the kept record, so the hold still governs (issue
+   * #3815). `diver` is the kept record's name, `merged` the other's.
+   */
+  diver_merge_import_set_aside: { actor: string; diver: string; merged: string };
   /** A seat was taken off a departure. */
   booking_removed: { actor: string; diver: string };
   /** …and put back. */
@@ -579,6 +585,7 @@ export const ACTIVITY_CODES = [
   "medical_alert_read",
   "medical_alert_saved_offline",
   "medical_alert_printed",
+  "diver_merge_import_set_aside",
   "medical_alert_emergency_read",
   "date_of_birth_cleared_as_adult",
   "record_exported",

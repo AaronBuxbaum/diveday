@@ -236,6 +236,44 @@ function outranksOlderSignatures(record: WaiverRecord): boolean {
 }
 
 /**
+ * **The imported releases a merge must set aside because a hold stands over
+ * them** (issue #3815): clean `imported` signatures, still standing, dated
+ * after a referral no physician cleared ({@link isUnclearedReferral}, superseded
+ * or not), where at least one of the pair was moved by this merge.
+ *
+ * An import checks for a hold only as it writes. A contact row under another
+ * email matches nobody, so it made a person with no hold and a release dated
+ * the day of the import; merging that person into the diver who has the hold
+ * puts the release newer than the referral, and {@link effectiveWaiverForBooking}
+ * lets the newer clean signature stand. The merge keeps the hold governing by
+ * setting such a release aside, the way a retired refusal's record is: the
+ * record stays, only its standing goes. A signature the diver gave themselves
+ * is never in this set, and neither is an imported one the hold already
+ * outranks (a claimed date before the referral, a physician's clearance).
+ *
+ * `moved` names the records the merge moved onto this person; a pair that was
+ * already together before it is the import's business, not the merge's.
+ */
+export function importedSignaturesOverHold(
+  records: readonly WaiverRecord[],
+  moved: ReadonlySet<string>,
+): WaiverRecord[] {
+  const referrals = records.filter((record) => isUnclearedReferral(record) && !record.anonymizedAt);
+  return records.filter(
+    (record) =>
+      record.signatureMethod === "imported" &&
+      isCleanCompletion(record) &&
+      !record.supersededAt &&
+      !record.anonymizedAt &&
+      referrals.some(
+        (referral) =>
+          signatureTime(referral) < signatureTime(record) &&
+          (moved.has(record.id) || moved.has(referral.id)),
+      ),
+  );
+}
+
+/**
  * A release the diver actually completed, with nothing outstanding on it.
  *
  * Two shapes qualify and they are the same evidence: a questionnaire that

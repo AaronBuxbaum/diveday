@@ -8,7 +8,7 @@ import { rollAllSeriesForward } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
-import { flushLogs } from "@/lib/observability";
+import { flushLogs, reportScrubbedError } from "@/lib/observability";
 import { sentry } from "@/lib/observability/sentry";
 import { SERIES_HORIZON_DAYS } from "@/lib/recurrence";
 
@@ -90,7 +90,11 @@ export async function GET(request: Request) {
     // failure never fails the roll: tomorrow's pass tries again.
     const staleInvoices = await voidStalePublicPackageInvoices(db, { now: nowDate() }).catch(
       async (error: unknown) => {
-        await sentry.captureException(error, { tags: { cron_scan: "stale_package_invoices" } });
+        await reportScrubbedError(error, {
+          name: "CronScanFailed",
+          message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+          tags: { cron_scan: "stale_package_invoices" },
+        });
         return { considered: 0, voided: 0, refreshed: 0, failed: 0, unread: 0, stuck: 0 };
       },
     );
@@ -153,7 +157,11 @@ export async function GET(request: Request) {
     // Only reachable before any series is touched — `getDb()` failing to
     // connect or migrate. The check-in still has to be closed out or the
     // monitor would read this as a run that is somehow still in progress.
-    await sentry.captureException(error, { tags: { cron_scan: "trip_series_bootstrap" } });
+    await reportScrubbedError(error, {
+      name: "CronScanFailed",
+      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+      tags: { cron_scan: "trip_series_bootstrap" },
+    });
     log("cron_trip_series.roll_failed", "error", { scan: "bootstrap" });
     await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "roll_unavailable" }, { status: 503 });

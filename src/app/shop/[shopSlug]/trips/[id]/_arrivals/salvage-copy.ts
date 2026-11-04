@@ -74,7 +74,7 @@ export function noShowSalvageCopy(input: {
     return {
       line: t("checkIn.noShow.rebook", { name: diver.name }),
       links: offer.departures.map((departure) => ({
-        href: `/shop/${shopSlug}/trips/${departure.tripId}?add=1&diverq=${encodeURIComponent(diver.name)}`,
+        href: `/shop/${shopSlug}/trips/${departure.tripId}?add=1&person=${encodeURIComponent(diver.id)}`,
         label: t("checkIn.noShow.rebookDoor", {
           title: departure.title,
           when: input.formatWhen(departure.startsAt),
@@ -132,7 +132,7 @@ export function sailedRebookCopy(input: {
   return {
     line: t("checkIn.sailedRebook.open", { when, seats: next.seatsLeft }),
     add: {
-      href: `/shop/${shopSlug}/trips/${next.tripId}?add=1&diverq=${encodeURIComponent(diver.name)}`,
+      href: `/shop/${shopSlug}/trips/${next.tripId}?add=1&person=${encodeURIComponent(diver.id)}`,
       label: t("checkIn.sailedRebook.add"),
       ariaLabel: t("checkIn.sailedRebook.addAriaLabel", {
         name: diver.name,

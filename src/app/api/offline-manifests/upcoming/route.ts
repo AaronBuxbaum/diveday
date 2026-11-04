@@ -14,6 +14,7 @@ import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-de
 import { getShopOfflineErasureEpoch } from "@/db/shops";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
 import { boatSafetySection } from "@/i18n/boat-safety-labels";
+import { depthWarningText } from "@/i18n/depth-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -139,7 +140,10 @@ async function getUpcomingManifests() {
             })),
             boatSafety,
             undefined,
-            () => t("shared.offlineManifest.juniorCheckRequired"),
+            (advisory) =>
+              advisory.params.verificationReasons?.length
+                ? t("shared.offlineManifest.juniorCheckRequired")
+                : depthWarningText(t, advisory),
           );
           return {
             ...payload,

@@ -151,6 +151,10 @@ export function sailingUnsaid(ladder: SeatLadder): boolean {
  *   person did not get on the boat; no clock overrides that.
  * - **`boarded` opens it at the buffer**, because the shop has recorded that
  *   they were aboard — the clock is no longer asserting anything on its own.
+ * - **A diver the crew never counted, on a departure whose roll call was
+ *   taken, never sees it on the clock alone** (issue #3822): the crew spoke
+ *   for everyone else and left this seat unsaid, which is not the silence of a
+ *   shop that keeps no roll call.
  * - **No roll call at all waits for the recap floor**
  *   (`RECAP_AUTOMATIC_DELAY_HOURS`, four hours). It is the delay the recap
  *   *send* has always used before it asserts the same thing by email, and a
@@ -169,11 +173,21 @@ export function isAfterTheDive(input: {
   endsAt: Date;
   /** The dock's own record, where a shop kept one. */
   boarded?: DepartureRollCall;
+  /**
+   * The crew took a dock roll call for this departure and nobody said a word
+   * of this diver at any checkpoint (`sailingUnsaid`, over the departure's
+   * records; issue #3822). A crew that counted everyone else and never tapped
+   * this diver has said nothing about them, so the clock may not say it for
+   * them: the afterglow stays shut. Left false for a departure with no roll
+   * call at all, where the four-hour floor below is the only rule there is.
+   */
+  uncountedAtRollCall?: boolean;
   now?: Date;
 }): boolean {
   if (input.boarded === "not_boarded") return false;
   const now = input.now ?? nowDate();
   if (input.boarded === "boarded") return hasReturned(input.endsAt, now);
+  if (input.uncountedAtRollCall) return false;
   // diveday:allow-departure-offset: the recap's own delay, not the sailed/returned
   // question — a recap waits its scheduled hours after a boat this rule already
   // counts as home.

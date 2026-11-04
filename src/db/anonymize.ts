@@ -60,6 +60,8 @@ import {
   isNull,
   like,
   ne,
+  not,
+  notInArray,
   or,
   type SQL,
   sql,
@@ -1231,6 +1233,41 @@ async function scrubDiverLogin(
   return [];
 }
 
+/**
+ * **The card sighting at the rail stays; the number and the reviewer go**
+ * (issue #3806). A boarding mark's captured snapshot is the shop's proof that
+ * somebody looked at this diver's card before the boat left, and ADR
+ * 20260802-diver-data-erasure keeps that sighting: agency, level, status and
+ * when it was reviewed. Nulling the whole snapshot made an incident export
+ * read "card evidence unavailable", as if nobody had checked. So each card
+ * loses only `identifier` and the reviewer's name, the way
+ * `scrubCertificationEvidence` treats `cards`; the capture times, the reviewer
+ * pointer and everything else stand. The crew credential snapshot is a
+ * different question (the legal hold) and is not touched here.
+ */
+async function redactBoardingSnapshots(
+  tx: AppTransaction,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<void> {
+  await tx
+    .update(rollCallEvents)
+    .set({
+      certificationSnapshot: sql`(
+        select coalesce(jsonb_agg(card || '{"identifier": null, "reviewedByName": null}'::jsonb order by ordinal), '[]'::jsonb)
+        from jsonb_array_elements(${rollCallEvents.certificationSnapshot}) with ordinality as item(card, ordinal)
+      )`,
+    })
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
+        inArray(rollCallEvents.bookingId, [...bookingIds]),
+        isNotNull(rollCallEvents.certificationSnapshot),
+      ),
+    );
+}
+
 /** The erasure's "booking-scoped rows" sweep. */
 async function scrubBookingRows(
   tx: AppTransaction,
@@ -1283,24 +1320,11 @@ async function scrubBookingRows(
           ),
         ),
       );
-    await tx
-      .update(rollCallEvents)
-      .set({
-        certificationSnapshot: null,
-        certificationSnapshotStartedAt: null,
-        certificationSnapshotCapturedAt: null,
-      })
-      .where(
-        and(
-          eq(rollCallEvents.shopId, shopId),
-          seatMarks(),
-          inArray(
-            rollCallEvents.bookingId,
-            snapshotSeats.map((seat) => seat.id),
-          ),
-          isNotNull(rollCallEvents.certificationSnapshot),
-        ),
-      );
+    await redactBoardingSnapshots(
+      tx,
+      shopId,
+      snapshotSeats.map((seat) => seat.id),
+    );
   }
   if (owned) {
     // `welcomeSharedAt` is a consent stamp, not a fact about the seat: the
@@ -1394,23 +1418,16 @@ async function scrubBookingRows(
     // made while blocked. The shape check allows a `blocked` status with no list.
     await tx
       .update(rollCallEvents)
-      .set({
-        readinessBlockers: null,
-        certificationSnapshot: null,
-        certificationSnapshotStartedAt: null,
-        certificationSnapshotCapturedAt: null,
-      })
+      .set({ readinessBlockers: null })
       .where(
         and(
           eq(rollCallEvents.shopId, shopId),
           seatMarks(),
           inArray(rollCallEvents.bookingId, bookingIds),
-          or(
-            isNotNull(rollCallEvents.readinessBlockers),
-            isNotNull(rollCallEvents.certificationSnapshot),
-          ),
+          isNotNull(rollCallEvents.readinessBlockers),
         ),
       );
+    await redactBoardingSnapshots(tx, shopId, bookingIds);
 
     // A booking's payment state is its newest entry (`booking_payments` is a
     // view over this table, issue #2716), so scrubbing the entries scrubs the
@@ -1526,6 +1543,30 @@ async function scrubActivityEvents(
       ),
     );
 
+  // The same field-level treatment for a line the erased person wrote about
+  // somebody else (issue #3807): a former staffer's medical clearance, card
+  // verification or roll-call action on another diver's record. The line is
+  // the shop's trail of a safety act on a third party, so its code, subject,
+  // seat and trip stay, and only the actor's name goes, in the one key every
+  // such payload carries it. A line about the erased person themselves, on
+  // their own seat or record, is left to the whole-line statement below.
+  const wroteAboutSomeoneElse = and(
+    eq(activityEvents.actorPersonId, personId),
+    or(isNotNull(activityEvents.subjectPersonId), isNotNull(activityEvents.bookingId)),
+    or(isNull(activityEvents.subjectPersonId), ne(activityEvents.subjectPersonId, personId)),
+    owned
+      ? or(isNull(activityEvents.bookingId), notInArray(activityEvents.bookingId, bookingIds))
+      : undefined,
+    sql`${activityEvents.params} ? 'actor'`,
+    ne(activityEvents.code, ACTIVITY_REDACTED.code),
+  );
+  await tx
+    .update(activityEvents)
+    .set({
+      params: sql`jsonb_set(${activityEvents.params}, '{actor}', to_jsonb(${ANONYMIZED_PERSON_NAME}::text))`,
+    })
+    .where(and(eq(activityEvents.shopId, shopId), wroteAboutSomeoneElse));
+
   await tx
     .update(activityEvents)
     .set(ACTIVITY_REDACTED)
@@ -1534,7 +1575,7 @@ async function scrubActivityEvents(
         eq(activityEvents.shopId, shopId),
         or(
           owned ? inArray(activityEvents.bookingId, bookingIds) : undefined,
-          eq(activityEvents.actorPersonId, personId),
+          and(eq(activityEvents.actorPersonId, personId), not(wroteAboutSomeoneElse)),
           eq(activityEvents.subjectPersonId, personId),
         ),
       ),

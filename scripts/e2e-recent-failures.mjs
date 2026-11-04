@@ -118,19 +118,52 @@ function flag(name, fallback) {
   return at === -1 ? fallback : Number(process.argv[at + 1]);
 }
 
+/** Attempts per `gh api` page, and the pause before each retry. */
+const GH_ATTEMPTS = 3;
+const GH_BACKOFF_MS = 2000;
+
+/**
+ * Whether a failed `gh api` call is worth asking again: an HTTP 5xx or a network error. A 4xx
+ * (bad token, rate limit, wrong endpoint) is an answer, not a blip; retrying a 404 would only
+ * slow the red run that names it (#3641).
+ */
+export function isTransientGhError(error) {
+  const text = `${error?.stderr ?? ""} ${error?.message ?? ""}`;
+  if (/HTTP 5\d\d/.test(text)) return true;
+  return /ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ENETUNREACH|dial tcp|i\/o timeout|connection reset|TLS handshake/i.test(
+    text,
+  );
+}
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 /**
  * One `gh api` page, parsed. A page of 100 workflow runs passes execFileSync's default 1 MiB
  * buffer (1.27 MB on 2026-10-23, which killed gh with ENOBUFS and the flake hunt with it), so
  * the buffer is the one the tracker uses for its own 100-row pages.
+ *
+ * A transient 5xx or network error is retried up to three times with a short backoff, because
+ * one HTTP 502 from GitHub turned the nightly red on 2026-11-02 (#3641). A persistent failure
+ * is rethrown, so "could not read CI history" and the workflow's "flake hunt did not run" line
+ * still fire.
  */
-export function ghJson(endpoint, read = readBounded) {
-  return JSON.parse(
-    read("gh", ["api", endpoint], {
-      encoding: "utf8",
-      timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
-      maxBuffer: GH_MAX_BUFFER,
-    }),
-  );
+export function ghJson(endpoint, read = readBounded, sleep = sleepSync) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return JSON.parse(
+        read("gh", ["api", endpoint], {
+          encoding: "utf8",
+          timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
+          maxBuffer: GH_MAX_BUFFER,
+        }),
+      );
+    } catch (error) {
+      if (attempt >= GH_ATTEMPTS || !isTransientGhError(error)) throw error;
+      sleep(GH_BACKOFF_MS * attempt);
+    }
+  }
 }
 
 function main() {

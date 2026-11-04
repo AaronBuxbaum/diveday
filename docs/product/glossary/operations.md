@@ -931,7 +931,7 @@
   says everyone is home from this record without the crew roll call. The trip page's pulse is its
   first reader, and only of `boarded` and `blocked` before the boat leaves; the board, the counter
   and the evening station follow.
-- **Seat ladder** — one reading of where a seat stands on the day (`readSeatLadder`, `src/lib/seat-ladder.ts`, issue #2784): **booked**, **arrived** (the desk saw them), **released** (the desk's no-show), **ashore** (the crew's `not_boarded` at the dock, and no after-dive word since), **out** (the crew counted them on the boat: `boarded` at the dock, or any word standing at an after-dive checkpoint) and **missing** (recorded not back after a dive and not counted since), each with the record that put it there. **Out is not back**: a diver counted at the dock and not yet named at the next after-dive checkpoint is out, and is still the **Unfinished head count**; no rung says back. Writes stay where they are; the ladder only reads. **Arrival never reads as aboard**: only a crew count reaches out, and an arrival lifts a seat from booked to arrived and changes nothing else (ADR 20260907-the-counter-survives-offline). The rung is evidence; **Sailed** (below) is the count's rule (`countsAsSailed`), which presumes a seat nobody spoke for went and lets the dock win where it spoke, so a chase-boat diver (left at the dock, counted at a site) is out by the rung and not sailed by the count. The diver's own afterglow asks the ladder's `isAfterTheDive`, which reads the dock word only; the hold while someone is not back aboard is the recap's `waiting` state (`src/db/recap.ts`). First reader: the finished departure's **record**.
+- **Seat ladder** — one reading of where a seat stands on the day (`readSeatLadder`, `src/lib/seat-ladder.ts`, issue #2784): **booked**, **arrived** (the desk saw them), **released** (the desk's no-show), **ashore** (the crew's `not_boarded` at the dock, and no after-dive word since), **out** (the crew counted them on the boat: `boarded` at the dock, or any word standing at an after-dive checkpoint) and **missing** (recorded not back after a dive and not counted since), each with the record that put it there. **Out is not back**: a diver counted at the dock and not yet named at the next after-dive checkpoint is out, and is still the **Unfinished head count**; no rung says back. Writes stay where they are; the ladder only reads. **Arrival never reads as aboard**: only a crew count reaches out, and an arrival lifts a seat from booked to arrived and changes nothing else (ADR 20260907-the-counter-survives-offline). The rung is evidence; **Sailed** (below) is the count's rule (`countsAsSailed`), which presumes a seat nobody spoke for went and lets the dock win where it spoke, so a chase-boat diver (left at the dock, counted at a site) is out by the rung and not sailed by the count. The diver's own afterglow asks the ladder's `isAfterTheDive`, which reads the dock word only, and never opens on the clock for a seat nobody counted (**Not counted at the dock**, below) on a departure whose roll call was taken, nor does the recap send (`bookingsNeverCountedAtRollCall`, issue #3822); a departure with no roll call at all keeps the four-hour floor; the hold while someone is not back aboard is the recap's `waiting` state (`src/db/recap.ts`). First reader: the finished departure's **record**.
 - **Sailed** — how many of a departure's booked divers the boat actually **carried**, as distinct
   from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/seat-sailed.ts`),
   reading the shop's statements about that seat strongest first: the crew's own result at the
@@ -1614,7 +1614,11 @@
   it on every seat the diver has. `isUnresolvedMedicalHold` asks of a seat's own live record;
   `isUnclearedReferral` asks of the diver's evidence, superseded or not. The one record that does
   not count is one given on a seat that has since passed to somebody else (a split or a claim):
-  those answers were never the record's person's, and the seat's new holder signs their own. A
+  those answers were never the record's person's, and the seat's new holder signs their own.
+  **A merge keeps the hold governing**: an imported release newer than an uncleared referral, where
+  the merge moved either of the two, is set aside (`setAsideImportedOverHold`, issue #3815) and
+  the diver's trail says so (`diver_merge_import_set_aside`); a release the diver signed themselves
+  is never set aside. A
   cleared record keeps its status, so the signed records' **Medical holds** view lists every
   referral, and each row says where it stands: Waiting on physician, Cleared by physician, or Not
   cleared. A diver a captain boarded over the hold keeps it named on their manifest row after a
@@ -1939,7 +1943,7 @@
   doors for photos and a tip. **When it opens is a domain question, not a clock reading.** Where the
   crew kept a departure roll call it follows that: `not_boarded` never sees it unless an after-dive
   `boarded` shows they joined the boat later (the recap's own rule), and `boarded`
-  opens it once the boat is scheduled home plus the standing one-hour late-arrival buffer. Where a
+  opens it once the boat is scheduled home plus the standing one-hour late-arrival buffer. A seat the crew never counted, on a departure whose roll call was taken, never opens it on the clock (issue #3822). Where a
   shop recorded no roll call it waits four hours after the scheduled return — the floor the recap
   *send* already uses, because nothing else in the product knows whether this person dived
   (`isAfterTheDive`, `src/lib/seat-ladder.ts`). A cancelled booking, a **blow-out**, and a no-show

@@ -10,6 +10,7 @@ import { violatesUniqueIndex } from "./query-helpers";
 import {
   bookings,
   gearReservations,
+  lostItems,
   notificationSendQueue,
   people,
   trips,
@@ -454,6 +455,19 @@ async function repointInTransaction(
     .set({ personId: input.toPersonId })
     .where(
       and(eq(gearReservations.shopId, input.shopId), inArray(gearReservations.bookingId, seatIds)),
+    );
+  // A found item copies its owner from the seat; it follows the seat.
+  await tx
+    .update(lostItems)
+    // Told means told to the diver the item named: for the new diver it is not
+    // yet, so Tell must work again (review B1).
+    .set({ personId: input.toPersonId, toldAt: null, toldChannel: null, updatedAt: nowDate() })
+    .where(
+      and(
+        eq(lostItems.shopId, input.shopId),
+        inArray(lostItems.bookingId, seatIds),
+        sql`${lostItems.personId} is distinct from ${input.toPersonId}`,
+      ),
     );
   return {
     refused: null,

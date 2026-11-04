@@ -89,7 +89,11 @@ describe("TripNoticeBanner", () => {
     it("names the level and the diver's card when the gate is signed for this departure", () => {
       renderBanner(
         "diver-trip-prerequisite",
-        signTripAdmissionGate(levelRefusal, { kind: "trip", id: TRIP }),
+        signTripAdmissionGate(levelRefusal, {
+          scope: { kind: "trip", id: TRIP },
+          notice: "diver-trip-prerequisite",
+          bookingId: null,
+        }),
       );
       const banner = screen.getByRole("alert");
       expect(banner).toHaveTextContent("This charter requires Advanced Open Water.");
@@ -108,11 +112,46 @@ describe("TripNoticeBanner", () => {
     it("falls back to the generic sentence on another departure's genuine gate", () => {
       renderBanner(
         "diver-trip-prerequisite",
-        signTripAdmissionGate(levelRefusal, { kind: "trip", id: OTHER_TRIP }),
+        signTripAdmissionGate(levelRefusal, {
+          scope: { kind: "trip", id: OTHER_TRIP },
+          notice: "diver-trip-prerequisite",
+          bookingId: null,
+        }),
       );
       const banner = screen.getByRole("alert");
       expect(banner).not.toHaveTextContent("Advanced Open Water");
       expect(banner).toHaveTextContent("don’t reach what this trip");
+    });
+
+    // Issue #3777: the gate is about one seat and one notice.
+    describe("participant-type-cert's gate", () => {
+      const SEAT = "33333333-3333-4333-8333-333333333333";
+      const OTHER_SEAT = "44444444-4444-4444-8444-444444444444";
+      const gate = signTripAdmissionGate(levelRefusal, {
+        scope: { kind: "trip", id: TRIP },
+        notice: "participant-type-cert",
+        bookingId: SEAT,
+      });
+
+      it("names the card on the seat it was minted for", () => {
+        expect(resolve("participant-type-cert", { gate, bid: SEAT })?.text).toContain(
+          "Advanced Open Water",
+        );
+      });
+
+      it("falls back to the generic sentence on another seat, or with no seat", () => {
+        for (const bid of [OTHER_SEAT, undefined]) {
+          expect(resolve("participant-type-cert", { gate, bid })?.text).not.toContain(
+            "Advanced Open Water",
+          );
+        }
+      });
+
+      it("says nothing specific beside another notice", () => {
+        expect(resolve("diver-trip-prerequisite", { gate, bid: SEAT })?.text).not.toContain(
+          "Advanced Open Water",
+        );
+      });
     });
 
     it("renders rather than throwing on a repeated ?gate=", () => {

@@ -41,7 +41,7 @@ import {
 import { refileCourseFormRecords } from "./course-forms";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
-import { refileWaiverRecords } from "./waiver-refile";
+import { refileWaiverRecords, setAsideImportedOverHold } from "./waiver-refile";
 
 /**
  * Why a second active diver record was offered as a likely duplicate.
@@ -1129,12 +1129,16 @@ export async function mergeDiverRecords(input: {
       // being inside the seal. An erased release stays on the record it was
       // erased under, its version 2 seal covering that record, so the blanket
       // repoint below skips the table rather than undo that.
-      await refileWaiverRecords(tx, {
-        shopId: input.shopId,
-        fromPersonId: source.id,
-        toPersonId: survivor.id,
-        actorPersonId: input.actorPersonId,
-      });
+      // The ids come back from the refile itself, which holds the rows locked:
+      // a read beforehand would miss a record written between the two.
+      const movedWaiverIds = new Set(
+        await refileWaiverRecords(tx, {
+          shopId: input.shopId,
+          fromPersonId: source.id,
+          toPersonId: survivor.id,
+          actorPersonId: input.actorPersonId,
+        }),
+      );
       // Course forms the same way, for the same reason (issue #2266).
       await refileCourseFormRecords(tx, {
         shopId: input.shopId,
@@ -1195,12 +1199,35 @@ export async function mergeDiverRecords(input: {
         );
       }
 
+      // After the seats have moved, so the evidence reads each referral as the
+      // roster will: a hold is only as old as the seat it was given on.
+      const setAside = await setAsideImportedOverHold(tx, {
+        shopId: input.shopId,
+        personId: survivor.id,
+        movedRecordIds: movedWaiverIds,
+        now: mergedAt,
+      });
+
       const [actor] = await tx
         .select({ name: people.fullName })
         .from(people)
         // diveday:allow-deleted-people: the actor's name for the activity line.
         .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
         .limit(1);
+      if (setAside.length > 0) {
+        // The hold governs again, and the diver's trail says why an imported
+        // release no longer stands (issue #3815).
+        await tx.insert(activityEvents).values({
+          shopId: input.shopId,
+          tripId: null,
+          bookingId: null,
+          actorPersonId: input.actorPersonId,
+          subjectPersonId: survivor.id,
+          code: "diver_merge_import_set_aside",
+          params: { actor: actor?.name ?? "", diver: fullName, merged: source.fullName },
+          occurredAt: mergedAt,
+        });
+      }
       await tx.insert(activityEvents).values({
         shopId: input.shopId,
         tripId: null,

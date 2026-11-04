@@ -14,6 +14,7 @@ import {
 } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
+import { writeTargetPersonId } from "./people";
 import { bookings, people, type rentalFitItem, rentalFitProfiles, shops } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 
@@ -191,14 +192,11 @@ function sizeUpdates(input: RentalFitInput) {
  * as sizes change, so it upserts rather than versioning. The person lookup
  * keeps a copied URL from writing a fit into another shop's tenant.
  */
-export async function recordRentalFit(db: AppDb, input: RentalFitInput) {
-  const [person] = await db
-    .select({ id: people.id })
-    .from(people)
-    // diveday:allow-deleted-people: tenant proof for a fit write; a removed record keeps its fit and may be restored.
-    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
-    .limit(1);
-  if (!person) return null;
+export async function recordRentalFit(db: AppDb, requested: RentalFitInput) {
+  // A record merged away while a form was open takes the fit on the kept one.
+  const personId = await writeTargetPersonId(db, requested.shopId, requested.personId);
+  if (!personId) return null;
+  const input = { ...requested, personId };
 
   const context = await fitWritingContext(db, input.shopId);
   if (!context) return null;
@@ -267,15 +265,12 @@ export async function recordRentalFit(db: AppDb, input: RentalFitInput) {
  */
 export async function recordRentalFitNote(
   db: AppDb,
-  input: { shopId: string; personId: string; note: string },
+  requested: { shopId: string; personId: string; note: string },
 ) {
-  const [person] = await db
-    .select({ id: people.id })
-    .from(people)
-    // diveday:allow-deleted-people: tenant proof for a fit write; a removed record keeps its fit and may be restored.
-    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
-    .limit(1);
-  if (!person) return null;
+  // A record merged away while a form was open takes the note on the kept one.
+  const personId = await writeTargetPersonId(db, requested.shopId, requested.personId);
+  if (!personId) return null;
+  const input = { ...requested, personId };
 
   // `fitStatedAt` is conspicuously absent, and must stay absent: it is the one
   // thing separating "this diver stated a fit" from "this row exists because

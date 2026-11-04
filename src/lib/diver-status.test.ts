@@ -130,6 +130,19 @@ describe("what earns a row", () => {
     expect(rows[0]?.sentence).toEqual({ key: "divers.status.waiverExpired" });
   });
 
+  it("says a minor's solo signature needs a guardian, not that no release is on file (issue #3775)", () => {
+    const rows = buildDiverStatus(diver({ waiver: { state: "guardian_missing" } as never }), null, {
+      now: NOW,
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "waiver",
+      tone: "warning",
+      sentence: { key: "divers.status.waiverGuardianMissing" },
+      action: { target: "send_waiver" },
+    });
+  });
+
   /**
    * A medical hold has no act the shop can take from this page — the release
    * waits on a doctor. Offering "Send the waiver" beside it would point a

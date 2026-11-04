@@ -144,3 +144,43 @@ it("reads a full page of 100 failed CI runs, which overflowed execFileSync's 1 M
   };
   expect(ghJson("repos/o/r/actions/workflows/ci.yml/runs", read).workflow_runs).toHaveLength(100);
 });
+
+describe("ghJson retries (#3641)", () => {
+  const failure = (stderr) => Object.assign(new Error("Command failed: gh api"), { stderr });
+
+  it("asks again after one HTTP 502 and returns the normal result", async () => {
+    const { ghJson } = await import("./e2e-recent-failures.mjs");
+    const pauses = [];
+    let calls = 0;
+    const read = () => {
+      calls += 1;
+      if (calls === 1) throw failure("gh: Server Error (HTTP 502)");
+      return JSON.stringify({ workflow_runs: [{ id: 1 }] });
+    };
+    expect(ghJson("repos/o/r/x", read, (ms) => pauses.push(ms)).workflow_runs).toHaveLength(1);
+    expect(calls).toBe(2);
+    expect(pauses).toHaveLength(1);
+  });
+
+  it("gives up after three attempts and rethrows the persistent failure", async () => {
+    const { ghJson } = await import("./e2e-recent-failures.mjs");
+    let calls = 0;
+    const read = () => {
+      calls += 1;
+      throw failure("gh: Bad Gateway (HTTP 502)");
+    };
+    expect(() => ghJson("repos/o/r/x", read, () => {})).toThrow("Command failed");
+    expect(calls).toBe(3);
+  });
+
+  it("never retries a 4xx", async () => {
+    const { ghJson } = await import("./e2e-recent-failures.mjs");
+    let calls = 0;
+    const read = () => {
+      calls += 1;
+      throw failure("gh: Not Found (HTTP 404)");
+    };
+    expect(() => ghJson("repos/o/r/x", read, () => {})).toThrow();
+    expect(calls).toBe(1);
+  });
+});

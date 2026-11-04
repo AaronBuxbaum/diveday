@@ -17,7 +17,7 @@ export type NotificationDeliveryKind = (typeof notificationKind.enumValues)[numb
  *   reads the one row.
  * - `trip_reminder_7d`, `trip_reminder_24h`: the reminder pass sends a cadence
  *   only while no `sent` row exists for it (`src/db/reminders.ts`); a move
- *   re-arms them by deleting the rows (`src/db/reminder-rearm.ts`).
+ *   re-arms them by marking the rows superseded (`src/db/reminder-rearm.ts`).
  * - `trip_recap`: the recap pass sends only while no `sent` row exists
  *   (`src/db/recap.ts`).
  *
@@ -41,10 +41,21 @@ export function isOnceOnlyDeliveryKind(
 }
 
 /**
- * The partial unique index's predicate, as SQL text. The schema declares the
+ * The partial unique index's predicate, as SQL text, before the superseded
+ * clause below. The schema declares the
  * index with it and `recordNotificationDelivery` names it as its conflict
  * target, so the two can never describe different sets of kinds.
  */
 export const ONCE_ONLY_DELIVERY_KINDS_PREDICATE = `"kind" in (${ONCE_ONLY_DELIVERY_KINDS.map(
   (kind) => `'${kind}'`,
 ).join(", ")})`;
+
+/**
+ * What the partial unique index actually covers: a once-only row that is still
+ * the live one. A row a moved departure re-armed (`rearmTripReminders`) is
+ * stamped `superseded_at` and leaves the index, so the new date's reminder can
+ * take its place while the old row stays as the record that the diver was told
+ * (issue #3705). The schema declares the index with this and the upsert names it
+ * as its conflict target.
+ */
+export const ONCE_ONLY_LIVE_PREDICATE = `${ONCE_ONLY_DELIVERY_KINDS_PREDICATE} and "superseded_at" is null`;

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   computeWaiverIntegrityHash,
@@ -8,8 +8,10 @@ import {
   WAIVER_INTEGRITY_VERSION_MOVED,
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
+import { importedSignaturesOverHold } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { waiverRecords } from "./schema";
+import { listSignedWaiversByPerson } from "./waivers-audit";
 
 /**
  * Refiles a diver's releases under another diver record, keeping every seal
@@ -23,6 +25,8 @@ import { waiverRecords } from "./schema";
  * failing, so a move never launders an earlier edit. Erased releases are left
  * where they are: nothing personal is left on them, and their version 2 seal
  * covers the record they were erased under.
+ *
+ * Returns the ids it moved, read from the rows it locked.
  *
  * Called by `mergeDiverRecords` for every release of the record merged away,
  * which is also how a wrong split of a held seat is undone. A version 3
@@ -44,7 +48,7 @@ export async function refileWaiverRecords(
     actorPersonId: string;
     now?: Date;
   },
-): Promise<void> {
+): Promise<string[]> {
   const now = input.now ?? nowDate();
   const records = await tx
     .select()
@@ -89,4 +93,43 @@ export async function refileWaiverRecords(
       })
       .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, input.shopId)));
   }
+  return records.map((record) => record.id);
+}
+
+/**
+ * **Keeps a medical hold governing after a merge** (issue #3815): sets aside
+ * every imported release on the kept record that is newer than an uncleared
+ * referral, where the merge moved either of the two. Reads the evidence the
+ * seats read (`listSignedWaiversByPerson`), so "a referral on their own seat or
+ * on no seat, superseded or not" means here what it means on the roster.
+ *
+ * Only `superseded_at` changes, which is outside the integrity seal: the
+ * release stays on the record, no longer standing. Returns the records it set
+ * aside, so the caller can say so on the diver's trail.
+ */
+export async function setAsideImportedOverHold(
+  tx: DbExecutor,
+  input: { shopId: string; personId: string; movedRecordIds: ReadonlySet<string>; now: Date },
+): Promise<string[]> {
+  // Without the seat-ownership filter: a retired refusal given on a seat the
+  // merge left behind on the merged-away record is still this diver's hold.
+  const evidence = (
+    await listSignedWaiversByPerson(tx, input.shopId, [input.personId], { anySeat: true })
+  ).get(input.personId);
+  const setAside = importedSignaturesOverHold(evidence ?? [], input.movedRecordIds).map(
+    (record) => record.id,
+  );
+  if (setAside.length === 0) return [];
+  await tx
+    .update(waiverRecords)
+    .set({ supersededAt: input.now })
+    .where(
+      and(
+        eq(waiverRecords.shopId, input.shopId),
+        eq(waiverRecords.personId, input.personId),
+        inArray(waiverRecords.id, setAside),
+        isNull(waiverRecords.supersededAt),
+      ),
+    );
+  return setAside;
 }

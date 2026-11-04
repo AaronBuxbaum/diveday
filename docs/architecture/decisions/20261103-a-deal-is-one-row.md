@@ -46,6 +46,9 @@ Triggers forward that release's writes (a code minted, switched off or deleted, 
 checkout or reservation naming an old column) onto `deals` and `deal_id`. The next release drops
 the tables, enums, columns, triggers and functions.
 
+Known gap: a code switched off on the new release still applies on the old one, and a capped code
+can overshoot meanwhile. The copy fails if staff and generated codes collide.
+
 ## Consequences
 
 - Readers say which kind they mean with `trip_id` (`shopWide` in `src/db/shop-promos.ts`, and

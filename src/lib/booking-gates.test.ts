@@ -69,3 +69,27 @@ describe("bookingIdentityColumns", () => {
     });
   });
 });
+
+describe("bookingIdentityColumns without a claim (issue #3832)", () => {
+  const now = new Date("2031-06-14T09:00:00Z");
+
+  it("holds the seat but names nothing the staffer could be shown when no claim came with it", () => {
+    expect(bookingIdentityColumns(true, null, now)).toEqual({
+      identityUnconfirmedAt: now,
+      identityBookedAs: null,
+      identityMatchedBy: null,
+      heldEmergencyContactName: null,
+      heldEmergencyContactPhone: null,
+    });
+  });
+
+  it("clears the flag and the claim together on a seat that is no longer held", () => {
+    expect(
+      bookingIdentityColumns(false, { bookedAs: "Sam Reef", matchedBy: "picked_name" }, now),
+    ).toMatchObject({
+      identityUnconfirmedAt: null,
+      identityBookedAs: null,
+      identityMatchedBy: null,
+    });
+  });
+});

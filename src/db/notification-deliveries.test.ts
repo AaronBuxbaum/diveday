@@ -154,6 +154,128 @@ describe("the once-only kinds", () => {
     expect(rows[0]?.attemptedAt.getTime()).toBeGreaterThan(first?.attemptedAt.getTime() ?? 0);
   });
 
+  /**
+   * Issue #3705: the row is the only proof a message reached the diver, so a
+   * failed resend of a sent once-only kind never downgrades it.
+   */
+  it("keep a sent row, and its provider message id, when a resend fails", async () => {
+    const { db, shop, bookingId } = await seededBooking();
+    const sent = await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      kind: "booking_confirmation",
+      delivery: { status: "sent", providerMessageId: "first-message" },
+    });
+    advanceClock();
+    const failedResend = await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      kind: "booking_confirmation",
+      delivery: { status: "failed", errorCode: "throttled", detail: "slow down" },
+    });
+
+    const rows = await rowsFor(db, bookingId, "booking_confirmation");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      status: "sent",
+      providerMessageId: "first-message",
+      sendErrorCode: null,
+    });
+    // The caller still gets a row (null means "no such booking"), the kept one.
+    expect(failedResend?.id).toBe(sent?.id);
+    expect(failedResend?.status).toBe("sent");
+  });
+
+  it("still let a sent resend replace a sent row, and a failure replace a failure", async () => {
+    const { db, shop, bookingId } = await seededBooking();
+    for (const delivery of [
+      { status: "failed", errorCode: "a" },
+      { status: "failed", errorCode: "b" },
+    ] as const) {
+      await recordNotificationDelivery(db, {
+        shopId: shop.id,
+        bookingId,
+        kind: "booking_confirmation",
+        delivery,
+      });
+      advanceClock();
+    }
+    expect((await rowsFor(db, bookingId, "booking_confirmation"))[0]).toMatchObject({
+      status: "failed",
+      sendErrorCode: "b",
+    });
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      kind: "booking_confirmation",
+      delivery: { status: "sent", providerMessageId: "m1" },
+    });
+    advanceClock();
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      kind: "booking_confirmation",
+      delivery: { status: "sent", providerMessageId: "m2" },
+    });
+    expect((await rowsFor(db, bookingId, "booking_confirmation"))[0]).toMatchObject({
+      status: "sent",
+      providerMessageId: "m2",
+    });
+  });
+
+  it("let a superseded row sit beside the live one, and never read it as the latest", async () => {
+    const { db, shop, bookingId } = await seededBooking();
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      kind: "trip_reminder_24h",
+      delivery: { status: "sent", providerMessageId: "old-date" },
+    });
+    await db
+      .update(notificationDeliveries)
+      .set({ supersededAt: nowDate() })
+      .where(eq(notificationDeliveries.bookingId, bookingId));
+    advanceClock();
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      kind: "trip_reminder_24h",
+      delivery: { status: "sent", providerMessageId: "new-date" },
+    });
+
+    const rows = await rowsFor(db, bookingId, "trip_reminder_24h");
+    expect(rows.map((row) => row.providerMessageId)).toEqual(["old-date", "new-date"]);
+    const latest = await latestFor(db, bookingId, "trip_reminder_24h");
+    expect(latest.map((row) => row.providerMessageId)).toEqual(["new-date"]);
+    // A second live row is still refused.
+    await expect(
+      db.transaction((tx) =>
+        tx.insert(notificationDeliveries).values({
+          shopId: shop.id,
+          bookingId,
+          kind: "trip_reminder_24h",
+          status: "sent",
+          attemptedAt: nowDate(),
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("do not let a superseded failure read as an open delivery issue", async () => {
+    const { db, shop, bookingId } = await seededBooking();
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      kind: "trip_reminder_7d",
+      delivery: { status: "failed", errorCode: "bounced" },
+    });
+    await db
+      .update(notificationDeliveries)
+      .set({ supersededAt: nowDate() })
+      .where(eq(notificationDeliveries.bookingId, bookingId));
+    expect(await latestFor(db, bookingId, "trip_reminder_7d")).toEqual([]);
+  });
+
   it("are still one row each per booking: two bookings do not collide", async () => {
     const one = await seededBooking("one@example.com");
     const two = await seededBooking("two@example.com");

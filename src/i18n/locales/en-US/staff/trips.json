@@ -431,6 +431,7 @@
     "mixedTrainingTitle": "Possible training overlap",
     "mixedTrainingBody": "If students from these sessions train together on one departure, check instructor groups, the intro ratio and the intro program’s depth limit before the dive.",
     "fullDescription": "The boat is full.",
+    "fullRequestStaysOpen": "Wait-listing leaves this request open in Date requests.",
     "findLabel": "Find a returning diver",
     "findPlaceholder": "Name, email, or phone",
     "noEmailOnFile": "no email on file",
@@ -458,6 +459,7 @@
     "addPersonForRequestAria": "Add {name} for this request",
     "requestLeft": "{count, plural, one {# diver left to seat} other {# divers left to seat}}",
     "requestDone": "Done with this request",
+    "requestAskerAboard": "{name} is already on this boat.",
     "requestGone": "That request is closed or removed.",
     "requestNotOffered": "That request wasn’t offered this departure, so seats here won’t answer it."
   },

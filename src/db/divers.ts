@@ -767,18 +767,13 @@ export async function listBookableDivers(
   }));
 }
 
-/**
- * The same returning-diver shape for a request that already points at a person.
- * Looking up by id keeps "book this person" exact even when two divers share a
- * name, while the trip and active-booking checks keep a stale request from
- * creating a duplicate seat.
- */
-export async function getBookableDiver(
+/** Whether `personId` already holds a seat on the departure (a cancelled seat is not one). */
+export async function isSeatedOnTrip(
   db: AppDb,
   shopId: string,
   tripId: string,
   personId: string,
-): Promise<BookableDiver | null> {
+): Promise<boolean> {
   const [booked] = await db
     .select({ id: bookings.id })
     .from(bookings)
@@ -791,7 +786,22 @@ export async function getBookableDiver(
       ),
     )
     .limit(1);
-  if (booked) return null;
+  return Boolean(booked);
+}
+
+/**
+ * The same returning-diver shape for a request that already points at a person.
+ * Looking up by id keeps "book this person" exact even when two divers share a
+ * name, while the trip and active-booking checks keep a stale request from
+ * creating a duplicate seat.
+ */
+export async function getBookableDiver(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  personId: string,
+): Promise<BookableDiver | null> {
+  if (await isSeatedOnTrip(db, shopId, tripId, personId)) return null;
 
   const [row] = await db
     .select({ person: people })

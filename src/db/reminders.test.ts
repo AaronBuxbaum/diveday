@@ -553,7 +553,7 @@ describe("a moved departure's reminders", () => {
       endsAt: new Date(trip.endsAt.getTime() + 2 * DAY),
     });
     expect(outcome.ok).toBe(true);
-    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+    expect((await rowsFor(db, bookingId)).map((r) => !!r.supersededAt)).toEqual([true]); // #3705
   });
 
   it("keeps the reminder already sent when an edit leaves the time alone", async () => {

@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 
 vi.mock("@/db/manifests", () => ({ departureRollCallForBooking: vi.fn() }));
 vi.mock("@/db/recap", () => ({
+  bookingsNeverCountedAtRollCall: vi.fn(async () => new Set<string>()),
   departureAfterLateBoarding: vi.fn(),
   getRecapPageState: vi.fn(async () => ({ kind: "recap" })),
 }));
@@ -15,8 +16,11 @@ const { readAfterTheDive } = await import("./after-dive-reads");
 const db = {} as AppDb;
 const HOUR_MS = 60 * 60 * 1000;
 
-function read(endsAgoHours: number, rollCall: "boarded" | "not_boarded" | null) {
+function read(endsAgoHours: number, rollCall: "boarded" | "not_boarded" | null, uncounted = false) {
   vi.mocked(manifests.departureRollCallForBooking).mockResolvedValue(rollCall as never);
+  vi.mocked(recap.bookingsNeverCountedAtRollCall).mockResolvedValue(
+    new Set(uncounted ? ["booking"] : []),
+  );
   vi.mocked(recap.departureAfterLateBoarding).mockResolvedValue(rollCall);
   return readAfterTheDive(db, {
     shopId: "shop",
@@ -59,10 +63,23 @@ describe("readAfterTheDive's recap read", () => {
     expect((await read(30, "not_boarded")).afterTheDive).toBe(false);
   });
 
+  // Issue #3822: the crew counted everyone else and never tapped this diver.
+  it("keeps a diver nobody counted off the afterglow on a counted departure, past the floor too", async () => {
+    expect((await read(6, null, true)).afterTheDive).toBe(false);
+    expect((await read(30, null, true)).afterTheDive).toBe(false);
+    // And the speculative recap read is still only a read: the page never turns.
+    expect((await read(30, null, false)).afterTheDive).toBe(true);
+  });
+
+  it("lets the dock's word outrank the uncounted flag", async () => {
+    expect((await read(2, "boarded", true)).afterTheDive).toBe(true);
+  });
+
   it("never reads anything for a boat still out", async () => {
     const afterDive = await read(-2, null);
     expect(afterDive.afterTheDive).toBe(false);
     expect(manifests.departureRollCallForBooking).not.toHaveBeenCalled();
+    expect(recap.bookingsNeverCountedAtRollCall).not.toHaveBeenCalled();
     expect(recap.getRecapPageState).not.toHaveBeenCalled();
   });
 });

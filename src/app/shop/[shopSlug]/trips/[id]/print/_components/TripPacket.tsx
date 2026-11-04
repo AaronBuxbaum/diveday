@@ -283,8 +283,20 @@ async function composeTripPacket({
   );
 }
 
+/**
+ * What a departure's packet came to: its sheets when every reader agreed
+ * (`stable`), the one-sheet "this changed while we were printing" notice when
+ * the identity moved under the reads (`changed`), or nothing when the
+ * departure is gone (`missing`). Only a `stable` packet carries the departure's
+ * facts, which is what "Print with medical alerts" asks before it writes the
+ * trail (issue #3727).
+ */
+export type TripPacketResult =
+  | { status: "missing" }
+  | { status: "stable" | "changed"; sheets: PacketSheets };
+
 /** Identity rows must stay unchanged throughout all independently composed readers. */
-export async function TripPacket(props: TripPacketProps): Promise<PacketSheets | null> {
+export async function readTripPacket(props: TripPacketProps): Promise<TripPacketResult> {
   const db = await getDb();
   const result = await stablePacket(
     () => readTripPaperIdentity(db, props.shop.id, props.tripId),
@@ -296,27 +308,38 @@ export async function TripPacket(props: TripPacketProps): Promise<PacketSheets |
       return composeTripPacket(props);
     },
   );
-  if (result.status === "missing") return null;
-  if (result.status === "stable" && result.packet) return result.packet;
+  if (result.status === "missing") return { status: "missing" };
+  if (result.status === "stable" && result.packet) {
+    return { status: "stable", sheets: result.packet };
+  }
   const printed = `${formatPaperDateTime(nowDate(), props.locale, props.shop.timezone)} · ${props.shop.timezone}`;
-  return (lead) => (
-    <DeparturePaperIdentity
-      pageName={`departure-${props.tripId.toLowerCase()}-changed`}
-      identity={[props.shop.name, props.t("shared.printPacket.changedHeading"), props.tripId]}
-      printed={printed}
-    >
-      <PacketSheet
-        shop={{ name: props.shop.name, brandColor: props.shop.brandColor }}
-        shopSlug={props.shopSlug}
-        name={props.t("shared.printPacket.changedHeading")}
+  return {
+    status: "changed",
+    sheets: (lead) => (
+      <DeparturePaperIdentity
+        pageName={`departure-${props.tripId.toLowerCase()}-changed`}
+        identity={[props.shop.name, props.t("shared.printPacket.changedHeading"), props.tripId]}
         printed={printed}
       >
-        {lead}
-        <section role="alert">
-          <h2 className={SUB_TITLE_CLASS}>{props.t("shared.printPacket.changedHeading")}</h2>
-          <p className="mt-2">{props.t("shared.printPacket.changed", { id: props.tripId })}</p>
-        </section>
-      </PacketSheet>
-    </DeparturePaperIdentity>
-  );
+        <PacketSheet
+          shop={{ name: props.shop.name, brandColor: props.shop.brandColor }}
+          shopSlug={props.shopSlug}
+          name={props.t("shared.printPacket.changedHeading")}
+          printed={printed}
+        >
+          {lead}
+          <section role="alert">
+            <h2 className={SUB_TITLE_CLASS}>{props.t("shared.printPacket.changedHeading")}</h2>
+            <p className="mt-2">{props.t("shared.printPacket.changed", { id: props.tripId })}</p>
+          </section>
+        </PacketSheet>
+      </DeparturePaperIdentity>
+    ),
+  };
+}
+
+/** The packet's sheets, or `null` for a departure that is gone (a changed one answers its notice). */
+export async function TripPacket(props: TripPacketProps): Promise<PacketSheets | null> {
+  const result = await readTripPacket(props);
+  return result.status === "missing" ? null : result.sheets;
 }

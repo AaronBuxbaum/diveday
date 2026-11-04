@@ -675,13 +675,13 @@ describe("a diver who never left the dock", () => {
   const recapsTo = (email: ReturnType<typeof fakeEmail>, bookingId: string) =>
     email.sent.filter((n) => n.kind === "trip_recap" && n.bookingId === bookingId);
 
-  it("sends no recap to them, and still sends to a boarded diver and one with no roll call", async () => {
+  it("sends no recap to them or to a diver nobody counted, and still sends to a boarded diver", async () => {
     const { db, ashore, boarded, noRollCall, afterTrip } = await dockContext();
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
 
     expect(recapsTo(email, boarded)).toHaveLength(1);
-    expect(recapsTo(email, noRollCall)).toHaveLength(1);
+    expect(recapsTo(email, noRollCall)).toHaveLength(0); // issue #3822: never counted, so never owed
     expect(recapsTo(email, ashore)).toHaveLength(0);
     expect(await rowsFor(db, ashore)).toHaveLength(0);
   });
@@ -715,13 +715,13 @@ describe("a diver who never left the dock", () => {
     expect(await getRecapPageData(db, ashore)).toBeNull();
     expect(await getRecapPageState(db, ashore)).toMatchObject({ kind: "dead" });
     expect(await getRecapPageData(db, boarded)).not.toBeNull();
-    expect(await getRecapPageData(db, noRollCall)).not.toBeNull();
+    expect(await getRecapPageData(db, noRollCall)).toBeNull();
   });
 
   it("gives the recap back when a newer departure result says otherwise", async () => {
     const { db, ashore, record, afterTrip } = await dockContext();
-    await record(ashore, "cleared");
-    expect(await getRecapPageData(db, ashore)).not.toBeNull();
+    await record(ashore, "cleared"); // unsaid on a counted departure: still shut (issue #3822)
+    expect(await getRecapPageData(db, ashore)).toBeNull();
 
     await record(ashore, "not_boarded");
     expect(await getRecapPageData(db, ashore)).toBeNull();

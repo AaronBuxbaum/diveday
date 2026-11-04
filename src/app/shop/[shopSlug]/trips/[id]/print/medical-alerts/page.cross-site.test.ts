@@ -14,6 +14,7 @@ import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/st
  * the same 404 as every other refusal, before it reads the session, the words
  * or writes a `medical_alert_printed` line.
  */
+const ctx = fileScopedShopContext();
 const request = vi.hoisted(() => ({ headers: new Headers() }));
 vi.mock("next/headers", () => {
   const jar = cookieJar();
@@ -31,14 +32,29 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", async () =>
-  (await import("@/test/staff-session")).sessionMockOverStaffSession(),
-);
+// The packet compares the shop it was handed with the shop's identity rows, so
+// this surface needs the whole shop row, not the id and slug the shared mock hands back.
+vi.mock("@/lib/session", async () => {
+  const base = await (await import("@/test/staff-session")).sessionMockOverStaffSession();
+  const requireShopSurface = vi.fn(async (shopSlug: string) => ({
+    ...(await base.requireShopSurface(shopSlug)),
+    shop: ctx.shop,
+  }));
+  return { ...base, requireShopSurface };
+});
+vi.mock("@/db/trip-paper-identity", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/trip-paper-identity")>();
+  return { ...actual, readTripPaperIdentity: vi.fn(actual.readTripPaperIdentity) };
+});
+vi.mock("@/db/trip-overview", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/trip-overview")>();
+  return { ...actual, getTripOverview: vi.fn(actual.getTripOverview) };
+});
 const { getDb } = await import("@/db/client");
+const { readTripPaperIdentity } = await import("@/db/trip-paper-identity");
+const { getTripOverview } = await import("@/db/trip-overview");
 const { requireStaffSession } = await import("@/lib/session");
 const { default: TripPrintWithMedicalAlertsPage } = await import("./page");
-
-const ctx = fileScopedShopContext();
 
 async function ownerOnTheAlertDeparture() {
   const { db, shop } = ctx;
@@ -89,5 +105,32 @@ describe("the print with medical alerts, opened from another site", () => {
     request.headers = new Headers({ "sec-fetch-site": "same-origin", host });
     await expect(open()).resolves.toBeTruthy();
     expect((await printedLines()).length).toBeGreaterThan(before);
+  });
+});
+
+/**
+ * **The trail matches what printed** (issue #3727). The words are read first,
+ * but a line is written only for a packet that will come out: a departure that
+ * vanished mid-print is the 404, and one that changed under the readers
+ * answers its "changed" sheet, which carries no words. Neither leaves a
+ * "printed medical alerts" line for a copy that never existed.
+ */
+describe("the print with medical alerts, when the packet cannot print", () => {
+  it("is a 404 and records nothing when the departure vanishes after the words are read", async () => {
+    const { printedLines, open, host } = await ownerOnTheAlertDeparture();
+    const before = (await printedLines()).length;
+    request.headers = new Headers({ "sec-fetch-site": "same-origin", host });
+    vi.mocked(readTripPaperIdentity).mockResolvedValueOnce(null as never);
+    await expect(open()).rejects.toThrow("NOT_FOUND");
+    expect(await printedLines()).toHaveLength(before);
+  });
+
+  it("answers the changed sheet and records nothing when a reader finds the departure gone", async () => {
+    const { printedLines, open, host } = await ownerOnTheAlertDeparture();
+    const before = (await printedLines()).length;
+    request.headers = new Headers({ "sec-fetch-site": "same-origin", host });
+    vi.mocked(getTripOverview).mockResolvedValueOnce(null);
+    await expect(open()).resolves.toBeTruthy();
+    expect(await printedLines()).toHaveLength(before);
   });
 });

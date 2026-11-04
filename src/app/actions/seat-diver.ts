@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { findSimilarDivers } from "@/db/divers";
 import { discardFormDraft } from "@/db/form-drafts";
+import { isOpenDateRequestWithoutEmail } from "@/db/interest-dates";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import {
   type SeatDiverPerson,
@@ -167,8 +168,8 @@ function refuse(
    * holds, instead of the one static line that used to point every refusal at
    * the certifications form.
    *
-   * **Signed, and bound to the landing route's own id**
-   * (`signTripAdmissionGate`). Unsigned, the param was an instruction anyone
+   * **Signed, and bound to the landing route's own id, this notice and the
+   * hour it was raised** (`signTripAdmissionGate`). Unsigned, the param was an instruction anyone
    * could write: a hand-made link rendered a specific, fabricated refusal, and
    * the specific ones are exactly what send a staffer to the certifications
    * form (security review finding).
@@ -184,7 +185,8 @@ function refuse(
     // carry — `noticeUrl` omits an `undefined` extra rather than writing the
     // word, which is what the `? … : ""` concatenation here used to guard.
     noticeUrl(back, notice, {
-      gate: gate && scope ? signTripAdmissionGate(gate, scope) : undefined,
+      gate:
+        gate && scope ? signTripAdmissionGate(gate, { scope, notice, bookingId: null }) : undefined,
       ...bandKept(surface, landing, requestId ?? null),
     }),
   );
@@ -399,8 +401,18 @@ export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, f
     personId: "",
     walkIn,
   };
-  if (!parsed.ok || (surface.email === "required" && !landing.walkIn && !email)) {
-    refuse(surface, landing, surface.invalidNotice, undefined, answeredRequestId(formData));
+  const requestId = answeredRequestId(formData);
+  // The door asks for an email, except for the party a date request named when
+  // that request has none itself (issue #3743): the desk would otherwise type a
+  // placeholder into a real person's record. Read here under the shop scope,
+  // never trusted from the form, and only once the email is the one thing missing.
+  const emailMissing = parsed.ok && surface.email === "required" && !landing.walkIn && !email;
+  const emailWaived =
+    emailMissing &&
+    requestId !== null &&
+    (await isOpenDateRequestWithoutEmail(await getDb(), session.user.shopId, requestId));
+  if (!parsed.ok || (emailMissing && !emailWaived)) {
+    refuse(surface, landing, surface.invalidNotice, undefined, requestId);
   }
   if (!(await holdsWalkInOpen(landing, session.user.shopId))) {
     refuse(surface, landing, surface.refusalNotice.trip_unavailable);

@@ -590,6 +590,7 @@
     "cardsWaiting": "{count, plural, one {A certification record is waiting for verification.} other {# certification records are waiting for verification.}}",
     "waiverMissing": "No signed release on file",
     "waiverExpired": "The signed release has lapsed.",
+    "waiverGuardianMissing": "A minor signed alone. A parent or guardian has to sign too.",
     "waiverHeld": "A medical answer is with a doctor for sign-off.",
     "waiverNotCleared": "A physician did not clear this diver to dive.",
     "waiverEarlierRefusal": "A physician did not clear this person on an earlier waiver.",
@@ -641,7 +642,33 @@
     "neededFor": "Needed for {when}",
     "cantBoard": "Can’t board {when}.",
     "notCertified": "Not certified for this trip.",
-    "rentalNotes": "Rental notes"
+    "rentalNotes": "Rental notes",
+    "sentHeading": "What the shop sent",
+    "sentSummary": "{count, plural, one {# message} other {# messages}}",
+    "sentLine": "{kind} · {status} · {date}",
+    "sentStatus": {
+      "sent": "Sent",
+      "delivered": "Delivered",
+      "delivery_delayed": "Delayed",
+      "bounced": "Bounced",
+      "complained": "Marked as spam",
+      "failed": "Did not send",
+      "suppressed": "Held back",
+      "not_configured": "Not set up"
+    },
+    "sentKind": {
+      "booking_confirmation": "Booking confirmation",
+      "waiver_request": "Waiver link",
+      "booking_handoff": "Booking link",
+      "readiness_link": "Trip prep link",
+      "trip_reminder_7d": "7-day reminder",
+      "trip_reminder_24h": "24-hour reminder",
+      "trip_recap": "Trip recap",
+      "trip_blowout": "Trip called off",
+      "trip_minimum_not_met": "Trip did not fill",
+      "booking_cancelled": "Booking canceled",
+      "trip_rescheduled": "Trip moved"
+    }
   },
   "waiver": {
     "earlierRefusal": "A physician did not clear this person on {date} (earlier waiver).",

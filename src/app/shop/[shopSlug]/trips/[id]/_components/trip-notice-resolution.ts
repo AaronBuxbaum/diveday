@@ -2,7 +2,7 @@ import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, noticeFromParam } from "@/lib/staff-notices";
-import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { tripGateBinding, verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { MOVE_SEAT_NOTICES } from "./move-seat-notices";
 import { DETAILS_FORMS, ROSTER_FORMS } from "./trip-notice-tabs";
 
@@ -885,7 +885,11 @@ export function resolveTripNotice({
   const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
   const refusal =
     notice === "diver-trip-prerequisite" || notice === "participant-type-cert"
-      ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
+      ? verifyTripAdmissionGate(
+          gate,
+          // The seat is the `bid` the row is drawn from; the sale-time refusal names none.
+          tripGateBinding(tripId, notice, notice === "participant-type-cert" ? bid : null),
+        )
       : null;
   const text = refusal
     ? tripAdmissionRefusalText(t, refusal, locale)

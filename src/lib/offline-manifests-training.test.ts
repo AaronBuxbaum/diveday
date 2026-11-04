@@ -157,3 +157,36 @@ describe("junior safety advisories on a saved manifest", () => {
     expect(payload.manifests[0]?.divers[0]?.safetyAdvisoryText).toBeUndefined();
   });
 });
+
+describe("a plain depth-ceiling warning on a saved manifest (issue #3719)", () => {
+  const ceiling = {
+    code: "depth_exceeds_ceiling" as const,
+    params: {
+      siteDepth: 30,
+      limitDepth: 18,
+      unit: "meters" as const,
+      basis: "certification" as const,
+      level: "open_water" as const,
+    },
+  };
+  const word = (advisory: { code: string }) => `warned:${advisory.code}`;
+  const saved = (diver: Partial<TripManifest["divers"][number]>) =>
+    serializeManifests([manifestWith(diver)], shop, (b) => b.code, [], null, undefined, word)
+      .manifests[0]?.divers[0];
+
+  it("carries the one resolved sentence for an adult Open Water diver on a 30 m site", () => {
+    const row = saved({ advisories: [ceiling] });
+    expect(row?.safetyAdvisoryText).toBe("warned:depth_exceeds_ceiling");
+    expect(JSON.stringify(row)).not.toContain("30");
+  });
+
+  it("stays silent for a held seat", () => {
+    expect(saved({ identityWithheld: true, advisories: [ceiling] })?.safetyAdvisoryText).toBe(
+      undefined,
+    );
+  });
+
+  it("stays silent for a seat with no depth advisory", () => {
+    expect(saved({})).not.toHaveProperty("safetyAdvisoryText");
+  });
+});

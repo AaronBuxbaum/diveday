@@ -36,6 +36,12 @@ export type TripPageSearchParams = {
    */
   request?: string;
   /**
+   * A diver id the add band preselects (`addBandFor`): where the no-show and
+   * sailed rebook links land, so a namesake is never the one the desk picks.
+   * Read by id in this shop; an unknown or already-aboard id is ignored.
+   */
+  person?: string;
+  /**
    * `1`: the desk chose the counter on the add band, so its seats are
    * walk-ins (`addBandMode`). Kept, not flashed: the counter stays the
    * counter from one walk-in to the next.
@@ -69,6 +75,7 @@ export const TRIP_FLASH_PARAMS = [
   "form",
   "bid",
   "diverq",
+  "person",
   "inviteq",
   "rf",
   "noteId",

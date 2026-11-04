@@ -52,7 +52,11 @@ import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { numberedDiveDay } from "./dive-days";
 import { listSiteFieldGuides } from "./dive-sites";
 import { diveDaysBefore, listExecutedDives } from "./executed-dives";
-import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
+import {
+  departureRollCallTakenTripIds,
+  listAfterDiveRollCallByTrip,
+  listDepartureRollCallByTrip,
+} from "./manifests";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
@@ -581,9 +585,11 @@ export async function departureAfterLateBoarding<T extends string | null>(
  * there was no day to look back on and the recap would thank them for one
  * (issue #2105). It is read through the manifest's own readers rather than a
  * query of its own, so "the latest result" means here what it means on the
- * boat: newest event wins and a `cleared` undo drops out. A booking with no
- * roll call at all is never in the set — a shop that does not take one still
- * sends every recap.
+ * boat: newest event wins and a `cleared` undo drops out. A booking on a
+ * departure with no roll call at all is never in the set — a shop that does
+ * not take one still sends every recap. A booking the crew never counted, on a
+ * departure whose roll call was taken, is in it
+ * ({@link bookingsNeverCountedAtRollCall}, issue #3822).
  *
  * Grouped by shop because the cron's scan spans every shop, and the readers
  * are tenant-scoped.
@@ -596,19 +602,63 @@ export async function bookingsLeftAtTheDock(
     trip: { id: string };
   }[],
 ): Promise<Set<string>> {
-  const tripIdsByShop = new Map<string, Set<string>>();
-  for (const { shop, trip } of candidates) {
-    const tripIds = tripIdsByShop.get(shop.id) ?? new Set<string>();
-    tripIds.add(trip.id);
-    tripIdsByShop.set(shop.id, tripIds);
+  const evidence = await readDockEvidence(db, candidates);
+  return new Set([...evidence.notBoarded, ...evidence.neverCounted]);
+}
+
+/**
+ * **The bookings nobody counted on a departure whose roll call was taken**
+ * (issue #3822), out of a set of candidates: the crew stood at the dock and
+ * counted (`departureRollCallTakenTripIds`), and this booking has no word at
+ * any checkpoint, neither a standing dock result nor an after-dive one. A diver
+ * who checked in, was held at the desk and was never tapped is the shape. The
+ * crew spoke for everyone else and left this seat unsaid (`sailingUnsaid`), so
+ * no clock says they dived: the afterglow and the recap stay shut, as for a
+ * diver left at the dock ({@link bookingsLeftAtTheDock}, which includes them).
+ * A departure with no roll call at all has no such booking: a shop that does
+ * not take one still sends every recap.
+ */
+export async function bookingsNeverCountedAtRollCall(
+  db: DbExecutor,
+  candidates: readonly {
+    booking: { id: string };
+    shop: { id: string };
+    trip: { id: string };
+  }[],
+): Promise<Set<string>> {
+  return (await readDockEvidence(db, candidates)).neverCounted;
+}
+
+/**
+ * The dock's evidence for a set of candidates, in the two shapes the recap and
+ * the afterglow ask for: a standing dock `not_boarded` with no after-dive
+ * `boarded` after it, and no word at all on a counted departure.
+ */
+async function readDockEvidence(
+  db: DbExecutor,
+  candidates: readonly {
+    booking: { id: string };
+    shop: { id: string };
+    trip: { id: string };
+  }[],
+): Promise<{ notBoarded: Set<string>; neverCounted: Set<string> }> {
+  const bookingsByShop = new Map<string, Map<string, Set<string>>>();
+  for (const { shop, trip, booking } of candidates) {
+    const byTrip = bookingsByShop.get(shop.id) ?? new Map<string, Set<string>>();
+    const ids = byTrip.get(trip.id) ?? new Set<string>();
+    ids.add(booking.id);
+    byTrip.set(trip.id, ids);
+    bookingsByShop.set(shop.id, byTrip);
   }
-  const ashore = new Set<string>();
+  const notBoarded = new Set<string>();
+  const neverCounted = new Set<string>();
   // One shop at a time: the readers may share a transaction's single client.
-  for (const [shopId, tripIdSet] of tripIdsByShop) {
-    const tripIds = [...tripIdSet];
-    const [departure, afterDive] = await queryAll(db, [
+  for (const [shopId, byTrip] of bookingsByShop) {
+    const tripIds = [...byTrip.keys()];
+    const [departure, afterDive, taken] = await queryAll(db, [
       () => listDepartureRollCallByTrip(db, shopId, tripIds),
       () => listAfterDiveRollCallByTrip(db, shopId, tripIds),
+      () => departureRollCallTakenTripIds(db, shopId, tripIds),
     ]);
     for (const [tripId, states] of departure) {
       const sailed = afterDive.get(tripId);
@@ -617,12 +667,20 @@ export async function bookingsLeftAtTheDock(
         // after a dock `not_boarded` contradicts the dock, it does not
         // overrule it (dive-domain review of #2105).
         if (state === "not_boarded" && sailed?.get(bookingId) !== "boarded") {
-          ashore.add(bookingId);
+          notBoarded.add(bookingId);
+        }
+      }
+    }
+    for (const [tripId, ids] of byTrip) {
+      if (!taken.has(tripId)) continue;
+      for (const bookingId of ids) {
+        if (!departure.get(tripId)?.has(bookingId) && !afterDive.get(tripId)?.has(bookingId)) {
+          neverCounted.add(bookingId);
         }
       }
     }
   }
-  return ashore;
+  return { notBoarded, neverCounted };
 }
 
 /**

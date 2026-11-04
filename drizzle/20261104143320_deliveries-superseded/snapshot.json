@@ -1,0 +1,78 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "fd4e9945-32f0-429f-9325-f3b424930450",
+  "prevIds": [
+    "085c44ce-7e4f-475d-807b-1ea826d2bfc3",
+    "ae84db30-ad09-487a-b203-128e00f0fceb"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "notification_deliveries",
+        "superseded_at"
+      ],
+      "writes": [
+        "s|col|public.notification_deliveries.superseded_at",
+        "n|col|public.notification_deliveries.superseded_at",
+        "e|col|public.notification_deliveries.superseded_at"
+      ],
+      "reads": [
+        "n|tbl|public.notification_deliveries",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "notification_deliveries",
+        "notification_deliveries_once_only_unique"
+      ],
+      "writes": [
+        "s|idx|public.notification_deliveries_once_only_unique",
+        "n|idx|public.notification_deliveries_once_only_unique",
+        "e|idx|public.notification_deliveries_once_only_unique",
+        "n|rel|public.notification_deliveries_once_only_unique"
+      ],
+      "reads": [
+        "n|tbl|public.notification_deliveries",
+        "n|sch|public",
+        "n|col|public.notification_deliveries.booking_id",
+        "n|col|public.notification_deliveries.kind"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "14a66115d4575b77"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "notification_deliveries",
+        "name": "superseded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"public\",\"notification_deliveries_once_only_unique\"]",
+      "set": {
+        "where": "\"kind\" in ('booking_confirmation', 'trip_reminder_7d', 'trip_reminder_24h', 'trip_recap') and \"superseded_at\" is null"
+      }
+    }
+  ]
+}

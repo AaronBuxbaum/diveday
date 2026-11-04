@@ -13,6 +13,7 @@ import {
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { addBandFor } from "../_components/seat-request-band";
 import { readSeatRequest } from "./seat-request";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -99,6 +100,64 @@ describe("readSeatRequest", () => {
     expect(read.row.id).toBe(id);
     expect(read.row.partySize).toBe(2);
     expect(read.candidate?.person.id).toBe(diver.id);
+  });
+
+  /**
+   * Issue #3742: an asker already on this boat is filtered out of the search, so
+   * the card says so, rather than leaving a namesake as the only row to seat.
+   */
+  it("says the asker is already aboard when they hold a seat here", async () => {
+    const trip = await firstTrip();
+    const diver = await diverOffTheBoat(trip.id);
+    const { id } = await askForDate(ctx.db, {
+      shopId: ctx.shop.id,
+      interest: "Reef",
+      name: diver.fullName,
+      email: diver.email,
+      partySize: 2,
+    });
+    await offerTo(trip.id, id, 2);
+    await ctx.db
+      .insert(bookings)
+      .values({ shopId: ctx.shop.id, tripId: trip.id, personId: diver.id, bookedAs: "diver" });
+    const read = await readSeatRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      tripId: trip.id,
+      request: id,
+      typed: "",
+    });
+    if (read === null || typeof read === "string") throw new Error("request not read");
+    expect(read.candidate).toBeNull();
+    expect(read.askerAboard).toBe(true);
+  });
+
+  it("does not say aboard for an asker off the boat, or a request with no person", async () => {
+    const trip = await firstTrip();
+    const diver = await diverOffTheBoat(trip.id);
+    const known = await askForDate(ctx.db, {
+      shopId: ctx.shop.id,
+      interest: "Reef",
+      name: diver.fullName,
+      email: diver.email,
+    });
+    const stranger = await askForDate(ctx.db, {
+      shopId: ctx.shop.id,
+      interest: "Reef",
+      name: "Not On File",
+      email: "not.on.file@example.com",
+    });
+    await offerTo(trip.id, known.id);
+    await offerTo(trip.id, stranger.id);
+    for (const request of [known.id, stranger.id]) {
+      const read = await readSeatRequest(ctx.db, {
+        shopId: ctx.shop.id,
+        tripId: trip.id,
+        request,
+        typed: "",
+      });
+      if (read === null || typeof read === "string") throw new Error("request not read");
+      expect(read.askerAboard).toBe(false);
+    }
   });
 
   it("lets what the staffer typed win over the asker", async () => {
@@ -278,5 +337,58 @@ describe("readSeatRequest", () => {
         typed: "",
       }),
     ).toBe("gone");
+  });
+});
+
+/**
+ * **A rebook link preselects its diver by id** (issue #3742). `?person=` is
+ * read in this shop only, so another shop's id reads exactly like none, and a
+ * diver already on the boat is not offered a second seat.
+ */
+describe("addBandFor with ?person=", () => {
+  const where = async () => {
+    const trip = await firstTrip();
+    return {
+      trip,
+      at: {
+        shop: ctx.shop,
+        shopSlug: ctx.shop.slug,
+        tripId: trip.id,
+        t: ((key: string) => key) as never,
+      },
+    };
+  };
+
+  it("offers the named diver as the band's one match, the name kept as the search text", async () => {
+    const { trip, at } = await where();
+    const diver = await diverOffTheBoat(trip.id);
+    const band = await addBandFor(ctx.db, at, { add: "1", person: diver.id });
+    expect(band.person?.query).toBe(diver.fullName);
+    expect(band.person?.candidates.map((c) => c.person.id)).toEqual([diver.id]);
+  });
+
+  it("lets what the staffer typed win over the id", async () => {
+    const { trip, at } = await where();
+    const diver = await diverOffTheBoat(trip.id);
+    const band = await addBandFor(ctx.db, at, { add: "1", person: diver.id, diverq: "Someone" });
+    expect(band.person).toBeUndefined();
+  });
+
+  it("ignores a diver already aboard, junk, and another shop's person", async () => {
+    const { trip, at } = await where();
+    const diver = await diverOffTheBoat(trip.id);
+    await ctx.db
+      .insert(bookings)
+      .values({ shopId: ctx.shop.id, tripId: trip.id, personId: diver.id, bookedAs: "diver" });
+    const other = await otherShop();
+    const [stranger] = await ctx.db
+      .insert(people)
+      .values({ shopId: other.id, fullName: "Their Diver" })
+      .returning();
+    if (!stranger) throw new Error("setup: person missing");
+    await ctx.db.insert(personRoles).values({ personId: stranger.id, role: "diver" });
+    for (const person of [diver.id, "not-a-uuid", stranger.id]) {
+      expect((await addBandFor(ctx.db, at, { add: "1", person })).person).toBeUndefined();
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { and, eq, gt, notExists, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, notExists, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { DbExecutor } from "./client";
 import { notificationDeliveries } from "./schema";
@@ -15,31 +15,37 @@ const newer = alias(notificationDeliveries, "newer_delivery");
  * greater id (the shape `tripHasStandingSailedRollCall` uses), so two sends
  * stamped in the same instant still leave exactly one latest row. Use it in a
  * `where` or a join condition over the unaliased `notificationDeliveries`.
+ *
+ * A row a moved departure superseded (`superseded_at`, issue #3705) is the
+ * record of an old date's reminder, never the latest of anything.
  */
 export function latestDeliveryOnly(db: DbExecutor) {
-  return notExists(
-    db
-      .select({ one: sql`1` })
-      .from(newer)
-      .where(
-        and(
-          eq(newer.shopId, notificationDeliveries.shopId),
-          eq(newer.bookingId, notificationDeliveries.bookingId),
-          eq(newer.kind, notificationDeliveries.kind),
-          or(
-            gt(newer.attemptedAt, notificationDeliveries.attemptedAt),
-            and(
-              eq(newer.attemptedAt, notificationDeliveries.attemptedAt),
-              or(
-                gt(newer.createdAt, notificationDeliveries.createdAt),
-                and(
-                  eq(newer.createdAt, notificationDeliveries.createdAt),
-                  gt(newer.id, notificationDeliveries.id),
+  return and(
+    isNull(notificationDeliveries.supersededAt),
+    notExists(
+      db
+        .select({ one: sql`1` })
+        .from(newer)
+        .where(
+          and(
+            eq(newer.shopId, notificationDeliveries.shopId),
+            eq(newer.bookingId, notificationDeliveries.bookingId),
+            eq(newer.kind, notificationDeliveries.kind),
+            or(
+              gt(newer.attemptedAt, notificationDeliveries.attemptedAt),
+              and(
+                eq(newer.attemptedAt, notificationDeliveries.attemptedAt),
+                or(
+                  gt(newer.createdAt, notificationDeliveries.createdAt),
+                  and(
+                    eq(newer.createdAt, notificationDeliveries.createdAt),
+                    gt(newer.id, notificationDeliveries.id),
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
+    ),
   );
 }

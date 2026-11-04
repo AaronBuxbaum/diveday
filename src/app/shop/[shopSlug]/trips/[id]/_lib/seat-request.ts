@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
 import { dateRequestPartyOnDeparture } from "@/db/date-request-offer-bookings";
-import { type BookableDiver, getBookableDiver } from "@/db/divers";
+import { type BookableDiver, getBookableDiver, isSeatedOnTrip } from "@/db/divers";
 import { type DateInterestRow, listDateInterestsByIds } from "@/db/interest-dates";
 import { uuidParam } from "@/lib/uuid";
 
@@ -18,6 +18,12 @@ export type SeatRequest = {
    * the request has no person, or that person is already on this boat.
    */
   candidate: BookableDiver | null;
+  /**
+   * The asker on file already holds a seat on this departure. The card says so,
+   * so an empty search is not read as "not on file" and a namesake is not seated
+   * against the request (issue #3742).
+   */
+  askerAboard: boolean;
   /** Seats the party already holds on this departure, and how many it asked for. */
   seated: number;
   partySize: number;
@@ -52,5 +58,8 @@ export async function readSeatRequest(
   if (seated >= partySize) return "gone";
   const candidate =
     row.personId && typed === "" ? await getBookableDiver(db, shopId, tripId, row.personId) : null;
-  return { row, candidate, seated, partySize };
+  const askerAboard = Boolean(
+    row.personId && (await isSeatedOnTrip(db, shopId, tripId, row.personId)),
+  );
+  return { row, candidate, askerAboard, seated, partySize };
 }

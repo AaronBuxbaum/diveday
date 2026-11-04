@@ -934,7 +934,7 @@ export async function listDepartureCrewRollCallByTrip(
  * boarded seats were cancelled, never reads "No roll call taken".
  */
 export async function departureRollCallTakenTripIds(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   tripIds: readonly string[],
 ): Promise<Set<string>> {

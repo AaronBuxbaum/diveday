@@ -7,7 +7,7 @@ import { nowDate } from "@/lib/clock";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications/app-url";
-import { flushLogs } from "@/lib/observability";
+import { flushLogs, reportScrubbedError } from "@/lib/observability";
 import { sentry } from "@/lib/observability/sentry";
 
 /**
@@ -139,7 +139,11 @@ export async function GET(request: Request) {
   } catch (error) {
     // Only reachable before the loop or between shops — `getDb()` failing, or
     // the due-list query itself. The check-in still has to be closed out.
-    await sentry.captureException(error, { tags: { cron_scan: "backup_export_bootstrap" } });
+    await reportScrubbedError(error, {
+      name: "CronScanFailed",
+      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+      tags: { cron_scan: "backup_export_bootstrap" },
+    });
     log("cron_backup_export.pass_failed", "error", { scan: "bootstrap" });
     await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "backup_unavailable" }, { status: 503 });

@@ -7,6 +7,7 @@ import type { TurnAwayReason } from "@/lib/turn-away";
 import { isUuid } from "@/lib/uuid";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
+import { writeTargetPersonId } from "./people";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 
@@ -77,12 +78,16 @@ export async function addInternalNote(
  */
 export async function addDiverNote(
   db: AppDb,
-  input: { shopId: string; personId: string; actorPersonId: string; body: string },
+  requested: { shopId: string; personId: string; actorPersonId: string; body: string },
 ) {
-  if (![input.shopId, input.personId, input.actorPersonId].every(isUuid)) return null;
-  const body = input.body.trim();
+  if (![requested.shopId, requested.personId, requested.actorPersonId].every(isUuid)) return null;
+  const body = requested.body.trim();
   if (!body || body.length > 1_000) return null;
   return db.transaction(async (tx) => {
+    // A record merged away while a form was open takes the note on the kept one.
+    const personId = await writeTargetPersonId(tx, requested.shopId, requested.personId);
+    if (!personId) return null;
+    const input = { ...requested, personId };
     const [diver] = await tx
       .select({ name: people.fullName })
       .from(people)

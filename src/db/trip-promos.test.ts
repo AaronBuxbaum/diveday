@@ -7,7 +7,7 @@ import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { askAnytime, askForDeparture } from "./interests";
-import { cards, people } from "./schema";
+import { cards, deals, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   getActiveTripPromoByCode,
@@ -412,6 +412,29 @@ describe("listOutstandingLastMinutePromos", () => {
         tripTitle: openTrip.title,
       }),
     );
+  });
+
+  it("never joins a deal to a trip of another shop (the schema does not tie them, issue #3782)", async () => {
+    const { db, shop, openTrip } = await context();
+    await connectStripe(db, shop.id);
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    const outcome = await sendDeal(
+      db,
+      { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 30 },
+      fakePromotions(),
+    );
+    if (!outcome.ok) throw new Error("expected success");
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("setup: shop missing");
+    // A row no writer produces: one shop's deal pointing at another shop's trip.
+    await db.update(deals).set({ shopId: other.id }).where(eq(deals.id, outcome.promoId));
+
+    const page = await listOutstandingLastMinutePromos(db, other.id);
+    expect(page.deals).toEqual([]);
+    expect(page.total).toBe(0);
   });
 
   it("excludes a failed send — it never discounted anything and has nothing to list", async () => {

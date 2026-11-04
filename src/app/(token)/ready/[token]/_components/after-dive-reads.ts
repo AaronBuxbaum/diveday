@@ -1,6 +1,11 @@
 import type { AppDb } from "@/db/client";
 import { departureRollCallForBooking } from "@/db/manifests";
-import { departureAfterLateBoarding, getRecapPageState, type RecapPageState } from "@/db/recap";
+import {
+  bookingsNeverCountedAtRollCall,
+  departureAfterLateBoarding,
+  getRecapPageState,
+  type RecapPageState,
+} from "@/db/recap";
 import { isAfterTheDive } from "@/lib/seat-ladder";
 import { theBoatIsHome } from "@/lib/thread-steps";
 
@@ -9,7 +14,9 @@ import { theBoatIsHome } from "@/lib/thread-steps";
  * (ADR 20260827-the-divers-thread, decision 4).
  *
  * The crew's departure roll call decides whose day is over wherever a shop
- * kept one, and the four-hour recap floor where none exists
+ * kept one (a diver it never counted, on a departure it did count, does not
+ * get the afterglow from the clock alone: issue #3822), and the four-hour
+ * recap floor where none exists
  * (`isAfterTheDive`, the seat ladder's question for the diver's page,
  * src/lib/seat-ladder.ts). Neither is read until the boat is scheduled home, so a
  * night-before load never pays for them.
@@ -36,16 +43,20 @@ export async function readAfterTheDive(
   const recapRead = speculate ? getRecapPageState(db, bookingId) : null;
   // Settled here so a page that stays on the thread never leaves it unhandled.
   recapRead?.catch(() => null);
-  const departure = boatIsHome
-    ? await departureRollCallForBooking(db, shopId, tripId, bookingId)
-    : null;
-  const boarded = await departureAfterLateBoarding(db, departure, {
-    booking: { id: bookingId },
-    shop: { id: shopId },
-    trip: { id: tripId },
-  });
+  const candidate = { booking: { id: bookingId }, shop: { id: shopId }, trip: { id: tripId } };
+  const [departure, neverCounted] = boatIsHome
+    ? await Promise.all([
+        departureRollCallForBooking(db, shopId, tripId, bookingId),
+        bookingsNeverCountedAtRollCall(db, [candidate]),
+      ])
+    : [null, new Set<string>()];
+  const boarded = await departureAfterLateBoarding(db, departure, candidate);
   return {
-    afterTheDive: isAfterTheDive({ endsAt, boarded }),
+    afterTheDive: isAfterTheDive({
+      endsAt,
+      boarded,
+      uncountedAtRollCall: neverCounted.has(bookingId),
+    }),
     recap: () => recapRead ?? getRecapPageState(db, bookingId),
   };
 }

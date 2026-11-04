@@ -178,7 +178,7 @@ describe("departure-log certification captures", () => {
         ?.certificationsAtCapture?.find((row) => row.identifier === "BOARD-CARD"),
     ).toMatchObject({ status: "pending" });
   });
-  it("erases a reviewer from another seat's snapshot and removes the subject's snapshot", async () => {
+  it("erases a reviewer from another seat's snapshot and keeps the subject's sighting without its number", async () => {
     const { db, shop, reef, staff } = await exportContext();
     const [first] = await getTripRoster(db, shop.id, reef.id);
     if (!first) throw new Error("demo booking missing");
@@ -241,7 +241,27 @@ describe("departure-log certification captures", () => {
       .select()
       .from(rollCallEvents)
       .where(eq(rollCallEvents.id, event.id));
-    expect(scrubbedDiver?.certificationSnapshot).toBeNull();
+    // The sighting stands (ADR 20260802-diver-data-erasure); the number and the
+    // reviewer's name do not (issue #3806).
+    expect(scrubbedDiver?.certificationSnapshot).toEqual([
+      expect.objectContaining({
+        kind: "level",
+        agency: "padi",
+        level: "rescue",
+        status: "verified",
+        reviewedAt: expect.any(String),
+        identifier: null,
+        reviewedByName: null,
+      }),
+    ]);
+    expect(scrubbedDiver?.certificationSnapshotStartedAt).not.toBeNull();
+    expect(scrubbedDiver?.certificationSnapshotCapturedAt).not.toBeNull();
+    const exported = await getIncidentExport(db, shop.id, reef.id, staff.id);
+    const entry = exported?.roster.find((row) => row.bookingId === first.booking.id);
+    expect(entry?.certificationsAtCapture).toEqual([
+      expect.objectContaining({ agency: "padi", level: "rescue", status: "verified" }),
+    ]);
+    expect(JSON.stringify(exported)).not.toContain("PRIVATE-CARD");
   });
   it("erases a merged reviewer's name captured by a later boarding", async () => {
     const { db, shop, reef, staff } = await exportContext();
@@ -408,8 +428,14 @@ describe("departure-log certification captures", () => {
       .select()
       .from(rollCallEvents)
       .where(eq(rollCallEvents.id, boarded.eventId));
-    expect(after?.certificationSnapshot).toBeNull();
-    expect(after?.certificationSnapshotStartedAt).toBeNull();
-    expect(after?.certificationSnapshotCapturedAt).toBeNull();
+    // The seat on the merged-away shell is reached too: no number survives,
+    // the sighting does (issue #3806).
+    expect(JSON.stringify(after?.certificationSnapshot)).not.toContain("LEFT-BEHIND-CARD");
+    expect(after?.certificationSnapshot?.length).toBe(before?.certificationSnapshot?.length);
+    for (const card of after?.certificationSnapshot ?? []) {
+      expect(card).toMatchObject({ identifier: null, reviewedByName: null });
+    }
+    expect(after?.certificationSnapshotStartedAt).not.toBeNull();
+    expect(after?.certificationSnapshotCapturedAt).not.toBeNull();
   });
 });

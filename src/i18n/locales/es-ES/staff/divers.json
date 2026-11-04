@@ -590,6 +590,7 @@
     "cardsWaiting": "{count, plural, one {Un registro de certificación espera verificación.} other {# registros de certificación esperan verificación.}}",
     "waiverMissing": "No hay ninguna exención firmada archivada.",
     "waiverExpired": "La exención firmada ya caducó.",
+    "waiverGuardianMissing": "Un menor firmó sin acompañante. Falta la firma de su madre, padre o tutor legal.",
     "waiverHeld": "Una respuesta médica espera la firma de un médico.",
     "waiverNotCleared": "Un médico no autorizó a esta persona a bucear.",
     "waiverEarlierRefusal": "Un médico no autorizó a esta persona en una exención anterior.",
@@ -641,7 +642,33 @@
     "neededFor": "Hace falta para el {when}.",
     "cantBoard": "No puede embarcar el {when}.",
     "notCertified": "Sin la certificación para esta salida.",
-    "rentalNotes": "Notas del alquiler"
+    "rentalNotes": "Notas del alquiler",
+    "sentHeading": "Lo que envió el centro",
+    "sentSummary": "{count, plural, one {# mensaje} other {# mensajes}}",
+    "sentLine": "{kind} · {status} · {date}",
+    "sentStatus": {
+      "sent": "Enviado",
+      "delivered": "Entregado",
+      "delivery_delayed": "Con retraso",
+      "bounced": "Rebotado",
+      "complained": "Marcado como spam",
+      "failed": "No se envió",
+      "suppressed": "Retenido",
+      "not_configured": "Sin configurar"
+    },
+    "sentKind": {
+      "booking_confirmation": "Confirmación de reserva",
+      "waiver_request": "Enlace de la exención",
+      "booking_handoff": "Enlace de reserva",
+      "readiness_link": "Enlace de preparación de la salida",
+      "trip_reminder_7d": "Recordatorio de 7 días",
+      "trip_reminder_24h": "Recordatorio de 24 horas",
+      "trip_recap": "Resumen de la salida",
+      "trip_blowout": "Salida cancelada",
+      "trip_minimum_not_met": "La salida no se llenó",
+      "booking_cancelled": "Reserva cancelada",
+      "trip_rescheduled": "Salida cambiada de fecha"
+    }
   },
   "waiver": {
     "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",

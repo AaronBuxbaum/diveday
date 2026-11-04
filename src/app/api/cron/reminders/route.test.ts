@@ -206,14 +206,17 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
   });
 
   it("reports each failed scan to Sentry tagged with its name", async () => {
-    const failure = new Error("boom");
+    const failure = new Error("insert failed for diver@example.com");
     vi.mocked(drainNotificationRetries).mockRejectedValue(failure);
 
     await GET(cronRequest(`Bearer ${secret}`));
 
-    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
-      tags: { cron_scan: "notificationRetries" },
-    });
+    // The stand-in, never the original: its message can quote a diver's email.
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "CronScanFailed", message: "cron scan failed" }),
+      { tags: { cron_scan: "notificationRetries", error_class: "Error" } },
+    );
+    expect(vi.mocked(Sentry.captureException).mock.calls[0]?.[0]).not.toBe(failure);
   });
 
   it("uses one name for a scan across the Sentry tag, the error line and failedScans", async () => {
@@ -223,9 +226,10 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
     await GET(cronRequest(`Bearer ${secret}`));
 
     // An operator grepping "mediaDeletions" must find all three surfaces.
-    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
-      tags: { cron_scan: "mediaDeletions" },
-    });
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "CronScanFailed" }),
+      { tags: { cron_scan: "mediaDeletions", error_class: "Error" } },
+    );
     expect(JSON.parse(vi.mocked(console.error).mock.calls[0]?.[0] as string)).toEqual(
       expect.objectContaining({ event: "cron_reminders.scan_failed", scan: "mediaDeletions" }),
     );
@@ -329,9 +333,10 @@ describe("GET /api/cron/reminders — dead-man's switch", () => {
       monitorSlug: "diveday-daily-tick",
       status: "error",
     });
-    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
-      tags: { cron_scan: "bootstrap" },
-    });
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "CronScanFailed" }),
+      { tags: { cron_scan: "bootstrap", error_class: "Error" } },
+    );
     expect(drainNotificationRetries).not.toHaveBeenCalled();
   });
 });

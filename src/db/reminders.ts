@@ -633,6 +633,7 @@ export async function sendDueReminders(
         inArray(notificationDeliveries.bookingId, bookingIds),
         inArray(notificationDeliveries.kind, REMINDER_KINDS),
         eq(notificationDeliveries.status, "sent"),
+        isNull(notificationDeliveries.supersededAt),
       ),
     );
   const sentByBooking = new Map<string, Set<string>>();

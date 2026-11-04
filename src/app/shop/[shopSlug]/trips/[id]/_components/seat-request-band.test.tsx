@@ -34,7 +34,10 @@ const WHERE = { shopSlug: "blue-mantis", tripId: TRIP, t };
 
 describe("seatRequestBand", () => {
   it("prefills someone not on file and names who asked, for how many", () => {
-    const band = seatRequestBand({ row: ROW, candidate: null, seated: 0, partySize: 3 }, WHERE);
+    const band = seatRequestBand(
+      { row: ROW, candidate: null, askerAboard: false, seated: 0, partySize: 3 },
+      WHERE,
+    );
     expect(band.context).toEqual({
       id: ROW.id,
       prefill: { fullName: "Imani Okafor", email: "imani@example.com", phone: "+13055550101" },
@@ -60,6 +63,7 @@ describe("seatRequestBand", () => {
       {
         row: { ...ROW, personId: "person-1", name: "Avery Diver" },
         candidate,
+        askerAboard: false,
         seated: 0,
         partySize: 3,
       },
@@ -75,7 +79,10 @@ describe("seatRequestBand", () => {
   });
 
   it("says how many are left to seat, not how many asked", () => {
-    const band = seatRequestBand({ row: ROW, candidate: null, seated: 1, partySize: 3 }, WHERE);
+    const band = seatRequestBand(
+      { row: ROW, candidate: null, askerAboard: false, seated: 1, partySize: 3 },
+      WHERE,
+    );
     render(<div>{band.card}</div>);
     expect(
       screen.getByText(`(${t("trips.addDiver.requestLeft", { count: 2 })})`),
@@ -83,12 +90,43 @@ describe("seatRequestBand", () => {
   });
 
   it("prefills the asker for the party's first seat only", () => {
-    const band = seatRequestBand({ row: ROW, candidate: null, seated: 1, partySize: 3 }, WHERE);
+    const band = seatRequestBand(
+      { row: ROW, candidate: null, askerAboard: false, seated: 1, partySize: 3 },
+      WHERE,
+    );
     expect(band.context).toEqual({ id: ROW.id, prefill: undefined });
   });
 
+  it("says the asker is already on this boat, only when they are (issue #3742)", () => {
+    const aboard = seatRequestBand(
+      {
+        row: { ...ROW, personId: "person-1", name: "Avery Diver" },
+        candidate: null,
+        askerAboard: true,
+        seated: 0,
+        partySize: 3,
+      },
+      WHERE,
+    );
+    const { unmount } = render(<div>{aboard.card}</div>);
+    expect(
+      screen.getByText(t("trips.addDiver.requestAskerAboard", { name: "Avery Diver" })),
+    ).toBeInTheDocument();
+    unmount();
+
+    const off = seatRequestBand(
+      { row: ROW, candidate: null, askerAboard: false, seated: 0, partySize: 3 },
+      WHERE,
+    );
+    render(<div>{off.card}</div>);
+    expect(screen.queryByText(/already on this boat/)).toBeNull();
+  });
+
   it("lets the desk put the request down, keeping the band open", () => {
-    const band = seatRequestBand({ row: ROW, candidate: null, seated: 0, partySize: 3 }, WHERE);
+    const band = seatRequestBand(
+      { row: ROW, candidate: null, askerAboard: false, seated: 0, partySize: 3 },
+      WHERE,
+    );
     render(<div>{band.card}</div>);
     expect(screen.getByRole("link", { name: t("trips.addDiver.requestDone") })).toHaveAttribute(
       "href",

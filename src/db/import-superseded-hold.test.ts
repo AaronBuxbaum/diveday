@@ -7,7 +7,18 @@ import { prepareContactImport } from "@/test/import-fixture";
 import { commitContactImport } from "@/test/words-wiring";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { bookings, people, trips, userAccounts, waiverRecords, waiverTemplates } from "./schema";
+import { getDiverMergePreview, mergeDiverRecords } from "./diver-merge";
+import {
+  activityEvents,
+  bookings,
+  people,
+  personRoles,
+  trips,
+  userAccounts,
+  waiverRecords,
+  waiverTemplates,
+} from "./schema";
+import { refileWaiverRecords } from "./waiver-refile";
 import { listSignedWaiversByPerson } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -263,5 +274,291 @@ describe("a superseded hold (issue #3780)", () => {
       importer,
     );
     expect(summary).toMatchObject({ waiversAdded: 1, waiversSkippedExisting: 0 });
+  });
+});
+
+/**
+ * **A merge never puts an imported release over a medical hold** (issue
+ * #3815). The import checks for a hold only when it writes, and a contact row
+ * under another email matches nobody: it makes a new person, who has no hold,
+ * and a clean `imported` release dated now. Merging that person into the diver
+ * who has the hold moved the release across, newer than the referral, and
+ * every seat with no record of its own read Signed.
+ */
+describe("merging a duplicate over a medical hold (issue #3815)", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  async function twoRecords(email: string) {
+    const { db, shop } = ctx;
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const [template] = await db
+      .select()
+      .from(waiverTemplates)
+      .where(eq(waiverTemplates.shopId, shop.id));
+    if (!template) throw new Error("no template");
+    const [rhea] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Rhea Held", email: `rhea.${email}` })
+      .returning();
+    if (!rhea) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: rhea.id, role: "diver" });
+    return { db, shop, importer, template, rhea, duplicateEmail: `dup.${email}` };
+  }
+
+  const refusal = (f: Awaited<ReturnType<typeof twoRecords>>, ageDays = 1, retired = true) => ({
+    shopId: f.shop.id,
+    bookingId: null,
+    personId: f.rhea.id,
+    templateId: f.template.id,
+    templateTitle: f.template.title,
+    templateVersion: f.template.version,
+    templateGeneration: f.template.materialGeneration,
+    templateBody: f.template.body,
+    status: "medical_review" as const,
+    tokenHash: `refusal-${f.rhea.id}-${ageDays}`,
+    expiresAt: nowDate(),
+    signedName: "Rhea Held",
+    signatureMethod: "typed_consent" as const,
+    consentedAt: new Date(nowDate().getTime() - ageDays * DAY),
+    signedAt: new Date(nowDate().getTime() - ageDays * DAY),
+    completedAt: new Date(nowDate().getTime() - ageDays * DAY),
+    medicalReviewRequired: true,
+    supersededAt: retired ? nowDate() : null,
+    medicalClearanceDeclinedAt: new Date(nowDate().getTime() - ageDays * DAY),
+    medicalClearanceDeclinedByPersonId: f.importer,
+    medicalClearanceEvaluatedOn: "2026-06-01",
+    medicalClearancePhysicianName: "Dr. Ruiz",
+  });
+
+  /** A contact import under a different email: matches nobody, so it mints a person and a release. */
+  async function importDuplicate(f: Awaited<ReturnType<typeof twoRecords>>) {
+    await commitContactImport(
+      f.db,
+      f.shop.id,
+      prepareContactImport(`full_name,email,waiver_accepted\nRhea Held,${f.duplicateEmail},yes`),
+      f.importer,
+    );
+    const duplicate = await personByEmail(f.db, f.shop.id, f.duplicateEmail);
+    if (!duplicate) throw new Error("the import made no person");
+    return duplicate;
+  }
+
+  async function mergeInto(
+    f: Awaited<ReturnType<typeof twoRecords>>,
+    sourceId: string,
+    survivorId: string,
+  ) {
+    const preview = await getDiverMergePreview(f.db, f.shop.id, sourceId, survivorId);
+    return mergeDiverRecords({
+      db: f.db,
+      shopId: f.shop.id,
+      personId: sourceId,
+      survivorId,
+      actorPersonId: f.importer,
+      acknowledged: preview?.acknowledgement || undefined,
+    });
+  }
+
+  const standing = async (f: Awaited<ReturnType<typeof twoRecords>>, personId: string) => {
+    const evidence = (await listSignedWaiversByPerson(f.db, f.shop.id, [personId])).get(personId);
+    return waiverStanding(
+      effectiveWaiverForBooking({
+        bookingWaiver: null,
+        personSignedWaivers: evidence ?? [],
+        currentTemplateVersion: f.template.materialGeneration,
+        now: nowDate(),
+      }),
+      nowDate(),
+    );
+  };
+
+  const trail = (f: Awaited<ReturnType<typeof twoRecords>>, personId: string) =>
+    f.db
+      .select({ params: activityEvents.params, actor: activityEvents.actorPersonId })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.subjectPersonId, personId),
+          eq(activityEvents.code, "diver_merge_import_set_aside"),
+        ),
+      );
+
+  it.each([
+    ["a retired refusal", true],
+    ["a refusal nobody retired", false],
+  ])("keeps %s governing the diver's other seats", async (_label, retired) => {
+    const f = await twoRecords(`kept.${retired}@example.com`);
+    await f.db.insert(waiverRecords).values(refusal(f, 1, retired));
+    const duplicate = await importDuplicate(f);
+    // The duplicate alone reads Signed: nothing held it.
+    expect(await standing(f, duplicate.id)).toBe("signed");
+
+    expect(await mergeInto(f, duplicate.id, f.rhea.id)).toMatchObject({ ok: true });
+
+    expect(await standing(f, f.rhea.id)).toBe("medical_not_cleared");
+    const [imported] = await f.db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.personId, f.rhea.id), eq(waiverRecords.signatureMethod, "imported")),
+      );
+    expect(imported?.supersededAt).not.toBeNull();
+    // Set aside, not erased: the record and its seal stay on the diver.
+    expect(imported?.status).toBe("completed");
+    const lines = await trail(f, f.rhea.id);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ actor: f.importer, params: { merged: "Rhea Held" } });
+  });
+
+  it("keeps the hold governing when the hold is the record that moves", async () => {
+    // The mirror: the kept record already holds the imported release, and the
+    // referral arrives from the record merged away.
+    const f = await twoRecords("mirror@example.com");
+    const keeper = await importDuplicate(f);
+    await f.db.insert(waiverRecords).values({ ...refusal(f), personId: f.rhea.id });
+    expect(await standing(f, keeper.id)).toBe("signed");
+
+    expect(await mergeInto(f, f.rhea.id, keeper.id)).toMatchObject({ ok: true });
+
+    expect(await standing(f, keeper.id)).toBe("medical_not_cleared");
+    expect(await trail(f, keeper.id)).toHaveLength(1);
+  });
+
+  it("leaves an imported release alone when no hold stands over it", async () => {
+    const f = await twoRecords("clean@example.com");
+    const duplicate = await importDuplicate(f);
+    expect(await mergeInto(f, duplicate.id, f.rhea.id)).toMatchObject({ ok: true });
+    expect(await standing(f, f.rhea.id)).toBe("signed");
+    expect(await trail(f, f.rhea.id)).toHaveLength(0);
+  });
+
+  it("leaves an imported release alone over a referral a physician cleared", async () => {
+    const f = await twoRecords("cleared@example.com");
+    const cleared = {
+      ...refusal(f),
+      medicalClearanceDeclinedAt: null,
+      medicalClearanceDeclinedByPersonId: null,
+      medicalClearedAt: new Date(nowDate().getTime() - DAY),
+      medicalClearedByPersonId: f.importer,
+    };
+    await f.db.insert(waiverRecords).values(cleared);
+    const duplicate = await importDuplicate(f);
+    expect(await mergeInto(f, duplicate.id, f.rhea.id)).toMatchObject({ ok: true });
+    expect(await standing(f, f.rhea.id)).toBe("signed");
+    expect(await trail(f, f.rhea.id)).toHaveLength(0);
+  });
+
+  it("leaves an imported release older than the referral where the hold already governs", async () => {
+    const f = await twoRecords("older@example.com");
+    await f.db.insert(waiverRecords).values(refusal(f, 1));
+    const duplicate = await importDuplicate(f);
+    // The release claims a date before the referral: the hold already outranks it.
+    await f.db
+      .update(waiverRecords)
+      .set({ signedAt: new Date(nowDate().getTime() - 5 * DAY) })
+      .where(eq(waiverRecords.personId, duplicate.id));
+    expect(await mergeInto(f, duplicate.id, f.rhea.id)).toMatchObject({ ok: true });
+    const [imported] = await f.db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.personId, f.rhea.id), eq(waiverRecords.signatureMethod, "imported")),
+      );
+    expect(imported?.supersededAt).toBeNull();
+    expect(await standing(f, f.rhea.id)).toBe("medical_not_cleared");
+  });
+
+  it("never sets aside a release the diver signed themselves after the referral", async () => {
+    const f = await twoRecords("signed@example.com");
+    await f.db.insert(waiverRecords).values(refusal(f, 2));
+    const duplicate = await importDuplicate(f);
+    // A real signature on the duplicate, newer than the referral, and no import.
+    await f.db
+      .update(waiverRecords)
+      .set({ signatureMethod: "typed_consent" })
+      .where(eq(waiverRecords.personId, duplicate.id));
+    expect(await mergeInto(f, duplicate.id, f.rhea.id)).toMatchObject({ ok: true });
+    expect(await standing(f, f.rhea.id)).toBe("signed");
+    expect(await trail(f, f.rhea.id)).toHaveLength(0);
+  });
+
+  it("sets the release aside over a retired refusal given on a seat the merge leaves behind", async () => {
+    const f = await twoRecords("behind@example.com");
+    const duplicate = await importDuplicate(f);
+    const [trip] = await f.db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, f.shop.id))
+      .orderBy(trips.id)
+      .limit(1);
+    if (!trip) throw new Error("expected a seeded departure");
+    // Both divers sit on one departure and the duplicate's seat is over: it
+    // stays on the merged-away record, so the retired refusal given on it is
+    // not on a seat the survivor owns.
+    const [keptSeat] = await f.db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId: f.shop.id, tripId: trip.id, personId: f.rhea.id })
+      .returning({ id: bookings.id });
+    const [leftSeat] = await f.db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: f.shop.id,
+        tripId: trip.id,
+        personId: duplicate.id,
+        status: "cancelled",
+      })
+      .returning({ id: bookings.id });
+    if (!keptSeat || !leftSeat) throw new Error("fixture insert failed");
+    await f.db
+      .insert(waiverRecords)
+      .values({ ...refusal(f, 1), personId: duplicate.id, bookingId: leftSeat.id });
+
+    expect(await mergeInto(f, duplicate.id, f.rhea.id)).toMatchObject({ ok: true });
+
+    const [left] = await f.db.select().from(bookings).where(eq(bookings.id, leftSeat.id));
+    expect(left?.personId).toBe(duplicate.id);
+    const [imported] = await f.db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.personId, f.rhea.id), eq(waiverRecords.signatureMethod, "imported")),
+      );
+    expect(imported?.supersededAt).not.toBeNull();
+    expect(await trail(f, f.rhea.id)).toHaveLength(1);
+  });
+
+  it("names the records it moved from the rows it locked, never an erased one", async () => {
+    const f = await twoRecords("ids@example.com");
+    const duplicate = await importDuplicate(f);
+    await f.db
+      .insert(waiverRecords)
+      .values({ ...refusal(f, 1), personId: duplicate.id, tokenHash: "erased-one" });
+    const rows = await f.db
+      .select({ id: waiverRecords.id, tokenHash: waiverRecords.tokenHash })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.personId, duplicate.id));
+    const erased = rows.find((row) => row.tokenHash === "erased-one");
+    await f.db
+      .update(waiverRecords)
+      .set({ anonymizedAt: nowDate() })
+      .where(eq(waiverRecords.id, erased?.id ?? ""));
+
+    const moved = await f.db.transaction((tx) =>
+      refileWaiverRecords(tx, {
+        shopId: f.shop.id,
+        fromPersonId: duplicate.id,
+        toPersonId: f.rhea.id,
+        actorPersonId: f.importer,
+      }),
+    );
+
+    expect([...moved].sort()).toEqual(
+      rows
+        .filter((row) => row.id !== erased?.id)
+        .map((row) => row.id)
+        .sort(),
+    );
+    expect(moved.length).toBeGreaterThan(0);
   });
 });

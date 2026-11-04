@@ -93,6 +93,7 @@ import {
   gearItemKind,
   gearReservations,
   inboundMessages,
+  lostItems,
   notificationSendQueue,
   people,
   personRoles,
@@ -4002,6 +4003,19 @@ export async function splitBookingIdentity(
           and(
             eq(gearReservations.shopId, input.shopId),
             inArray(gearReservations.bookingId, seatIds),
+          ),
+        );
+      // A found item copies its owner from the seat; it follows the seat.
+      await tx
+        .update(lostItems)
+        // Told means told to the diver the item named: for the new diver it is not
+        // yet, so Tell must work again (review B1).
+        .set({ personId: person.id, toldAt: null, toldChannel: null, updatedAt: nowDate() })
+        .where(
+          and(
+            eq(lostItems.shopId, input.shopId),
+            inArray(lostItems.bookingId, seatIds),
+            sql`${lostItems.personId} is distinct from ${person.id}`,
           ),
         );
       // Staff notes stay filed under the matched person (security review,

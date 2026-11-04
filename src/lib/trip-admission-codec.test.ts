@@ -59,6 +59,26 @@ describe("the refusal survives a redirect", () => {
     expect(decodeTripAdmissionRefusal(encodeTripAdmissionRefusal(refusal))).toEqual(refusal);
   });
 
+  // Branch coverage on the sale's wire (issue #3832): what the encoder writes for
+  // a blocker the sale never raises or one short of its params, and what the
+  // decoder then refuses.
+  it("writes a code the sale never raises bare, and the decoder refuses it", () => {
+    const encoded = encodeTripAdmissionRefusal([{ code: "waiver_pending" }]);
+    expect(encoded).toBe("waiver_pending");
+    expect(decodeTripAdmissionRefusal(encoded)).toBeNull();
+  });
+
+  it("writes an empty slot for a param a blocker lacks, and the decoder refuses it", () => {
+    for (const refusal of [
+      [{ code: "specialty_missing" }],
+      [{ code: "specialty_missing", params: {} }],
+      [{ code: "certification_insufficient", params: { requiredLevel: "rescue" } }],
+    ] as TripAdmissionRefusal[]) {
+      expect(decodeTripAdmissionRefusal(encodeTripAdmissionRefusal(refusal))).toBeNull();
+    }
+    expect(encodeTripAdmissionRefusal([{ code: "specialty_missing" }])).toBe("specialty_missing-");
+  });
+
   it("stays URL-safe — nothing it writes needs escaping", () => {
     for (const refusal of cases) {
       const encoded = encodeTripAdmissionRefusal(refusal);

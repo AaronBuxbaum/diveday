@@ -8,9 +8,18 @@ import { createBooking, splitBookingIdentity } from "./bookings";
 import type { AppDb } from "./client";
 import { recordFlySafeTold, sendFlySafeCorrections } from "./fly-safe-correction";
 import { otherSameNamePeople, repointHeldBooking } from "./identity-repoint";
+import { recordLostItem, tellLostItemOwner } from "./lost-items";
 import { listTripActivity, pagedDiverActivity } from "./operations";
 import { getBookingReadiness } from "./readiness";
-import { bookings, notificationSendQueue, people, shops, trips, waiverRecords } from "./schema";
+import {
+  bookings,
+  lostItems,
+  notificationSendQueue,
+  people,
+  shops,
+  trips,
+  waiverRecords,
+} from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { issueWaiverRequest } from "./waivers";
 
@@ -195,6 +204,69 @@ describe("repointHeldBooking", () => {
     expect(left.rows.map((e) => e.code)).toContain("identity_repointed_off");
     const onto = await pagedDiverActivity(db, shop.id, second, { page: 1 });
     expect(onto.rows.map((e) => e.code)).toContain("identity_repointed_onto");
+  });
+
+  it("moves a found item recorded on the held seat onto the other diver", async () => {
+    const { db, shop, trip, first, second, bookingId, staff } = await namesakes();
+    const recorded = await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId,
+      description: "Blue mask in a red case",
+      actorPersonId: staff.id,
+    });
+    if (!recorded.ok) throw new Error(`lost item refused: ${recorded.reason}`);
+    expect(recorded.item.personId).toBe(first);
+
+    await repointHeldBooking(db, {
+      shopId: shop.id,
+      bookingId,
+      actorPersonId: staff.id,
+      toPersonId: second,
+    });
+    const [item] = await db.select().from(lostItems).where(eq(lostItems.id, recorded.item.id));
+    expect(item?.personId).toBe(second);
+    expect(item?.bookingId).toBe(bookingId);
+  });
+
+  it("lets the desk tell the new diver about an item the old guess was already told of", async () => {
+    const { db, shop, trip, first, second, bookingId, staff } = await namesakes();
+    const recorded = await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId,
+      description: "Blue mask in a red case",
+      actorPersonId: staff.id,
+    });
+    if (!recorded.ok) throw new Error(`lost item refused: ${recorded.reason}`);
+    const email = fakeEmail();
+    const [firstRow] = await db.select().from(people).where(eq(people.id, first));
+    const [secondRow] = await db.select().from(people).where(eq(people.id, second));
+    expect(
+      await tellLostItemOwner(
+        db,
+        { shopId: shop.id, itemId: recorded.item.id },
+        { emailProvider: email.provider },
+      ),
+    ).toEqual({ ok: true, channel: "email" });
+
+    await repointHeldBooking(db, {
+      shopId: shop.id,
+      bookingId,
+      actorPersonId: staff.id,
+      toPersonId: second,
+    });
+    const [moved] = await db.select().from(lostItems).where(eq(lostItems.id, recorded.item.id));
+    expect(moved).toMatchObject({ personId: second, toldAt: null, toldChannel: null });
+
+    expect(
+      await tellLostItemOwner(
+        db,
+        { shopId: shop.id, itemId: recorded.item.id },
+        { emailProvider: email.provider },
+      ),
+    ).toEqual({ ok: true, channel: "email" });
+    expect(email.sent.map((sent) => sent.to)).toEqual([firstRow?.email, secondRow?.email]);
   });
 
   it("supersedes the old match's release on the seat", async () => {

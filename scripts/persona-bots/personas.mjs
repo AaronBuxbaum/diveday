@@ -197,7 +197,10 @@ export const PERSONAS = Object.freeze([
       { path: "/pricing" },
       { path: "/switching" },
       { path: "/switching/eve" },
-      { path: "/onboard" },
+      // The form is shut without an open single-use setup link (ADR 20261009-single-use-setup-links),
+      // and a bare visit redirects to the set-up page's closed-door state. The walk mints no link,
+      // so this is a refusal surface: it has to render, not to hold a form (#3657).
+      { path: "/onboard", refusal: true },
     ],
   },
   {

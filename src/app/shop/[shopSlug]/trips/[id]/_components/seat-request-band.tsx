@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { BookingRequestContext } from "@/components/seat-diver/BookingRequestCards";
 import type { AppDb } from "@/db/client";
-import type { BookableDiver } from "@/db/divers";
+import { type BookableDiver, getBookableDiver } from "@/db/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
 import { readSeatRequest, type SeatRequest } from "../_lib/seat-request";
 import type { SeatRequestContext } from "./AddDiverSection";
 
@@ -15,7 +16,7 @@ import type { SeatRequestContext } from "./AddDiverSection";
  * the asker on file as the band's one match when nothing was typed.
  */
 export function seatRequestBand(
-  { row, candidate, seated, partySize }: SeatRequest,
+  { row, candidate, askerAboard, seated, partySize }: SeatRequest,
   { shopSlug, tripId, t }: { shopSlug: string; tripId: string; t: StaffTranslator },
 ): {
   context: SeatRequestContext;
@@ -36,24 +37,29 @@ export function seatRequestBand(
             },
     },
     card: (
-      <BookingRequestContext
-        title={t("bookings.new.fromRequest")}
-        name={name}
-        diversLabel={t("trips.addDiver.requestLeft", { count: partySize - seated })}
-        subject={
-          row.courseTitle
-            ? t("requests.aboutCourse", { course: row.courseTitle })
-            : t("requests.aboutDive", { interest: row.interest ?? "" })
-        }
-        sourceHref={shopPath(shopSlug, "requests")}
-        sourceLabel={t("bookings.new.viewRequests")}
-        personHref={row.personId ? shopPath(shopSlug, "divers", row.personId) : undefined}
-        personLabel={row.personId ? t("requests.viewDiver") : undefined}
-        // Putting the request down keeps the band open: the desk is still
-        // seating, just not for this party (dock review F1).
-        doneHref={`${shopPath(shopSlug, "trips", tripId)}?add=1`}
-        doneLabel={t("trips.addDiver.requestDone")}
-      />
+      <>
+        <BookingRequestContext
+          title={t("bookings.new.fromRequest")}
+          name={name}
+          diversLabel={t("trips.addDiver.requestLeft", { count: partySize - seated })}
+          subject={
+            row.courseTitle
+              ? t("requests.aboutCourse", { course: row.courseTitle })
+              : t("requests.aboutDive", { interest: row.interest ?? "" })
+          }
+          sourceHref={shopPath(shopSlug, "requests")}
+          sourceLabel={t("bookings.new.viewRequests")}
+          personHref={row.personId ? shopPath(shopSlug, "divers", row.personId) : undefined}
+          personLabel={row.personId ? t("requests.viewDiver") : undefined}
+          // Putting the request down keeps the band open: the desk is still
+          // seating, just not for this party (dock review F1).
+          doneHref={`${shopPath(shopSlug, "trips", tripId)}?add=1`}
+          doneLabel={t("trips.addDiver.requestDone")}
+        />
+        {askerAboard ? (
+          <p className="text-sm text-muted">{t("trips.addDiver.requestAskerAboard", { name })}</p>
+        ) : null}
+      </>
     ),
     search: candidate ? { query: name, candidates: [candidate] } : undefined,
   };
@@ -70,11 +76,13 @@ export function seatRequestBand(
 export async function addBandFor(
   db: AppDb,
   where: { shop: { id: string }; shopSlug: string; tripId: string; t: StaffTranslator },
-  search: { add?: string; request?: string; diverq?: string; counter?: string },
+  search: { add?: string; request?: string; diverq?: string; counter?: string; person?: string },
 ): Promise<{
   open: boolean;
   counter: boolean;
   request?: ReturnType<typeof seatRequestBand>;
+  /** The diver `?person=` named, when they can still be seated here. */
+  person?: { query: string; candidates: BookableDiver[] };
   requestGone?: ReactNode;
 }> {
   const open = Boolean(search.add);
@@ -98,5 +106,24 @@ export async function addBandFor(
       ),
     };
   }
-  return { open, counter: false, request: read ? seatRequestBand(read, where) : undefined };
+  if (read) return { open, counter: false, request: seatRequestBand(read, where) };
+  return { open, counter: false, person: await readSalvagePerson(db, where, search) };
+}
+
+/**
+ * **The person a rebook link names, picked by id** (issue #3742). The no-show
+ * and sailed rebook links carry `?person=<id>`, never a name to search, so two
+ * divers who share a name are never left for the desk to choose between. The
+ * name stays as the search text. What the staffer typed wins, and an id that
+ * is not a diver of this shop, or is already on this boat, reads as no id.
+ */
+async function readSalvagePerson(
+  db: AppDb,
+  where: { shop: { id: string }; tripId: string },
+  search: { person?: string; diverq?: string },
+): Promise<{ query: string; candidates: BookableDiver[] } | undefined> {
+  const id = search.person ? uuidParam(search.person) : null;
+  if (!id || (search.diverq?.trim() ?? "") !== "") return undefined;
+  const candidate = await getBookableDiver(db, where.shop.id, where.tripId, id);
+  return candidate ? { query: candidate.person.fullName, candidates: [candidate] } : undefined;
 }

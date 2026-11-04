@@ -13,7 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { HeldSendPayload } from "@/lib/held-sends";
-import { ONCE_ONLY_DELIVERY_KINDS_PREDICATE } from "@/lib/once-only-delivery-kinds";
+import { ONCE_ONLY_LIVE_PREDICATE } from "@/lib/once-only-delivery-kinds";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -201,12 +201,19 @@ export const notificationDeliveries = pgTable(
     sendErrorCode: text("send_error_code"),
     sendError: text("send_error"),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
+    /**
+     * Set when a moved departure re-armed this once-only reminder for its new
+     * date (`rearmTripReminders`). The row stays: it is the record that the diver
+     * was told about the old date. A superseded row is outside the once-only
+     * unique index and is never "the latest" or "already sent" for a reader.
+     */
+    supersededAt: timestamp("superseded_at", { withTimezone: true }),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("notification_deliveries_once_only_unique")
       .on(table.bookingId, table.kind)
-      .where(sql.raw(ONCE_ONLY_DELIVERY_KINDS_PREDICATE)),
+      .where(sql.raw(ONCE_ONLY_LIVE_PREDICATE)),
     // Every "latest row for this booking and kind" read walks this.
     index("notification_deliveries_booking_kind_attempted_idx").on(
       table.bookingId,

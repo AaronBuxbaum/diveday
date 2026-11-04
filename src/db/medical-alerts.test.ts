@@ -9,8 +9,9 @@ import {
   emergencyReadMedicalAlert,
   medicalAlertForSeat,
   medicalAlertPrefill,
-  medicalAlertsForPrint,
   medicalAlertTextsForTrip,
+  readMedicalAlertsForPrint,
+  recordMedicalAlertsPrint,
 } from "./medical-alerts";
 import {
   activityEvents,
@@ -287,12 +288,49 @@ async function trailLines(db: AppDb, personId: string, code: string) {
  * **"Print with medical alerts"** (issue #2990): owner and manager only; the
  * print is the read, one `medical_alert_printed` line per diver on the sheet.
  */
-describe("medicalAlertsForPrint", () => {
+/** Both halves, as the page runs them once the packet is known to be printable. */
+async function printMedicalAlerts(
+  db: AppDb,
+  input: { shopId: string; tripId: string; printerId: string },
+) {
+  const read = await readMedicalAlertsForPrint(db, input);
+  if (!read.ok) return read;
+  return { ok: true as const, printed: await recordMedicalAlertsPrint(db, { ...input, read }) };
+}
+
+describe("the medical alerts print", () => {
+  it("reads the words and writes nothing until the print is recorded (issue #3727)", async () => {
+    const { db, shop, trip, booking, person } = await signedWith(alert);
+    const owner = await staffer(db, shop.id, ["owner"]);
+    const input = { shopId: shop.id, tripId: trip.id, printerId: owner };
+    const read = await readMedicalAlertsForPrint(db, input);
+    if (!read.ok) throw new Error("expected a read");
+    expect([...read.printed.texts]).toEqual([[booking.id, alert]]);
+    // A packet that then cannot render stops here: no line for a copy that never existed.
+    expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
+    const printed = await recordMedicalAlertsPrint(db, { ...input, read });
+    expect([...printed.texts]).toEqual([[booking.id, alert]]);
+    expect(await trailLines(db, person.id, "medical_alert_printed")).toHaveLength(1);
+  });
+
+  it("hands a sheet only the words whose trail line was taken", async () => {
+    const { db, shop, trip, booking, person } = await signedWith(alert);
+    const owner = await staffer(db, shop.id, ["owner"]);
+    const input = { shopId: shop.id, tripId: trip.id, printerId: owner };
+    const read = await readMedicalAlertsForPrint(db, input);
+    if (!read.ok) throw new Error("expected a read");
+    // The printer is removed between the read and the write: the trail refuses the line.
+    await db.update(people).set({ deletedAt: now }).where(eq(people.id, owner));
+    const printed = await recordMedicalAlertsPrint(db, { ...input, read });
+    expect(printed.texts.has(booking.id)).toBe(false);
+    expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
+  });
+
   it("hands the owner and a manager every alert on the departure, one trail line per printed diver", async () => {
     const { db, shop, trip, booking, person } = await signedWith(alert);
     for (const [index, role] of (["owner", "manager"] as const).entries()) {
       const printer = await staffer(db, shop.id, [role]);
-      const printed = await medicalAlertsForPrint(db, {
+      const printed = await printMedicalAlerts(db, {
         shopId: shop.id,
         tripId: trip.id,
         printerId: printer,
@@ -311,7 +349,7 @@ describe("medicalAlertsForPrint", () => {
     const { db, shop, trip, person } = await signedWith(alert);
     const owner = await staffer(db, shop.id, ["owner"]);
     for (let print = 0; print < 2; print++) {
-      const printed = await medicalAlertsForPrint(db, {
+      const printed = await printMedicalAlerts(db, {
         shopId: shop.id,
         tripId: trip.id,
         printerId: owner,
@@ -334,7 +372,7 @@ describe("medicalAlertsForPrint", () => {
     ];
     for (const printerId of refused) {
       await expect(
-        medicalAlertsForPrint(db, { shopId: shop.id, tripId: trip.id, printerId }),
+        printMedicalAlerts(db, { shopId: shop.id, tripId: trip.id, printerId }),
       ).resolves.toEqual({ ok: false, reason: "forbidden" });
     }
     expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
@@ -350,12 +388,12 @@ describe("medicalAlertsForPrint", () => {
       .limit(1);
     if (otherShopTrip) {
       await expect(
-        medicalAlertsForPrint(db, { shopId: shop.id, tripId: otherShopTrip.id, printerId: owner }),
+        printMedicalAlerts(db, { shopId: shop.id, tripId: otherShopTrip.id, printerId: owner }),
       ).resolves.toEqual({ ok: false, reason: "not_found" });
     }
     await db.update(trips).set({ deletedAt: now }).where(eq(trips.id, trip.id));
     await expect(
-      medicalAlertsForPrint(db, { shopId: shop.id, tripId: trip.id, printerId: owner }),
+      printMedicalAlerts(db, { shopId: shop.id, tripId: trip.id, printerId: owner }),
     ).resolves.toEqual({ ok: false, reason: "not_found" });
     expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
   });
@@ -367,7 +405,7 @@ describe("medicalAlertsForPrint", () => {
       .set({ identityUnconfirmedAt: now, identityBookedAs: "Someone Else" })
       .where(eq(bookings.id, booking.id));
     const owner = await staffer(db, shop.id, ["owner"]);
-    const printed = await medicalAlertsForPrint(db, {
+    const printed = await printMedicalAlerts(db, {
       shopId: shop.id,
       tripId: trip.id,
       printerId: owner,
