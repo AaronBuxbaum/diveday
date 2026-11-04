@@ -54,14 +54,14 @@ describe("noShowSalvageCopy", () => {
 
   /**
    * And the link seats *them*: the shipped booking door for that departure with
-   * the diver already searched, the same `?diverq=` hand-off the counter's own
-   * walk-in link makes. A link to the departure's staff page would put a
+   * the diver preselected by id (`?person=`), never a name search that could
+   * list a namesake (issue #3742). A link to the departure's staff page would put a
    * staffer on a screen with nothing about this diver on it.
    */
   it("links to seating that diver on the day, not to the day's staff page", () => {
     expect(copyFor({ kind: "rebook", departures: [departure] }).links).toEqual([
       {
-        href: "/shop/blue-mantis/trips/trip-2?add=1&diverq=Nadia%20Petrov",
+        href: "/shop/blue-mantis/trips/trip-2?add=1&person=person-1",
         label: "Add them to Two-Tank Reef, Sat 8:00 AM",
         offer: {
           tripId: "trip-2",
@@ -181,7 +181,7 @@ describe("sailedRebookCopy", () => {
     });
     expect(copy.line).toBe("Nothing else booked · Thu 7:00 AM has 3 seats");
     expect(copy.add).toEqual({
-      href: "/shop/blue-mantis/trips/trip-2?add=1&diverq=Nadia%20Petrov",
+      href: "/shop/blue-mantis/trips/trip-2?add=1&person=person-1",
       label: "Add them",
       ariaLabel: "Add Nadia Petrov to Two-Tank Reef, Thu 7:00 AM",
     });

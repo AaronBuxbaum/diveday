@@ -154,6 +154,8 @@ export type TripRosterContentContext = {
       card: ReactNode;
       search?: { query: string; candidates: BookableDiver[] };
     };
+    /** A rebook link's diver (`?person=`), picked by id and kept as the search text. */
+    person?: { query: string; candidates: BookableDiver[] };
   };
   /**
    * `acceptsNewDivers`, read by the page against its clock: false on a
@@ -468,8 +470,9 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
   } = context;
   const seatRequest = context.addBand?.request;
   const { trip, confirmMatches } = guests;
-  const diverQuery = seatRequest?.search?.query ?? guests.diverQuery;
-  const diverCandidates = seatRequest?.search?.candidates ?? guests.diverCandidates;
+  const picked = seatRequest?.search ?? context.addBand?.person;
+  const diverQuery = picked?.query ?? guests.diverQuery;
+  const diverCandidates = picked?.candidates ?? guests.diverCandidates;
   const mode = addBandMode({
     walkInWindow: context.walkInOpen ?? false,
     counter: context.addBand?.counter ?? false,
