@@ -26,7 +26,7 @@ import { ShareReviewButton } from "./ShareReviewButton";
  * 20260827-the-divers-thread, decision 4 (slice 7d).
  *
  * Once the departure has ended and the standing one-hour buffer has run out
- * (`isAfterTheDive`, src/lib/thread-steps.ts), the diver's own link stops
+ * (`isAfterTheDive`, src/lib/seat-ladder.ts), the diver's own link stops
  * being a checklist and becomes the afterglow. `/recap/[token]` renders this
  * same component from its own signed token, which is what closes the
  * concept-model row's "folding recap into the same link" half: existing recap

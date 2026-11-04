@@ -924,6 +924,7 @@
   says everyone is home from this record without the crew roll call. The trip page's pulse is its
   first reader, and only of `boarded` and `blocked` before the boat leaves; the board, the counter
   and the evening station follow.
+- **Seat ladder** — one reading of where a seat stands on the day (`readSeatLadder`, `src/lib/seat-ladder.ts`, issue #2784): **booked**, **arrived** (the desk saw them), **released** (the desk's no-show), **ashore** (the crew's `not_boarded` at the dock), **aboard** (the crew's `boarded` at the dock, or any standing after-dive result) and **missing** (recorded not back after a dive and not counted since), each with the record that put it there. Writes stay where they are; the ladder only reads. **Arrival never reads as aboard**: only a crew count reaches `aboard`, and an arrival lifts a seat from booked to arrived and changes nothing else (ADR 20260907-the-counter-survives-offline). The rung is evidence; **Sailed** (below) is the count's presumption, and the two differ only for a seat nobody spoke for. The diver's own afterglow asks the ladder's `isAfterTheDive`. First reader: the finished departure's **record**.
 - **Sailed** — how many of a departure's booked divers the boat actually **carried**, as distinct
   from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/seat-sailed.ts`),
   reading the shop's statements about that seat strongest first: the crew's own result at the
@@ -1930,7 +1931,7 @@
   opens it once the boat is scheduled home plus the standing one-hour late-arrival buffer. Where a
   shop recorded no roll call it waits four hours after the scheduled return — the floor the recap
   *send* already uses, because nothing else in the product knows whether this person dived
-  (`isAfterTheDive`, `src/lib/thread-steps.ts`). A cancelled booking, a **blow-out**, and a no-show
+  (`isAfterTheDive`, `src/lib/seat-ladder.ts`). A cancelled booking, a **blow-out**, and a no-show
   are each answered by their own notice before it is ever asked. **Waiting**: while somebody on the
   departure is "not back aboard" after a dive, the after-state is held for everyone aboard and the
   page says only that the recap is not ready yet, on the same link (see **Post-trip recap**). A

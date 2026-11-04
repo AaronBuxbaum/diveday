@@ -3,7 +3,6 @@ import { hasReturned } from "@/lib/trips";
 import { calendarDateInTimezone } from "./calendar-date";
 import { nowDate } from "./clock";
 import type { ChecklistState, DiverChecklistItem } from "./readiness-summary";
-import { RECAP_AUTOMATIC_DELAY_MS } from "./recap-schedule";
 
 /**
  * **The diver's thread as a spine of steps** — ADR 20260827-the-divers-thread,
@@ -291,69 +290,10 @@ export function isDiveDay(input: {
  * start: a diver reading their page on the surface interval is still on their
  * day. This is the clock question and the whole of what a clock can answer —
  * "has the day finished", never "did this person dive it". {@link isDiveDay}
- * stops exactly here, and {@link isAfterTheDive} starts from here.
+ * stops exactly here, and `isAfterTheDive` (src/lib/seat-ladder.ts) starts from
+ * here.
  */
 export function theBoatIsHome(input: { endsAt: Date; now?: Date }): boolean {
   const now = input.now ?? nowDate();
   return hasReturned(input.endsAt, now);
-}
-
-/**
- * What the shop recorded at the dock for this booking — the newest
- * `roll_call_events` row at the `departure` checkpoint, or null where the crew
- * recorded nothing (`departureRollCallForBooking`, src/db/manifests.ts).
- */
-export type DepartureRollCall = "boarded" | "not_boarded" | null;
-
-/**
- * **The diver dived**, which is the condition that turns the thread page from
- * its prep state into its after-state (ADR 20260827-the-divers-thread,
- * decision 4, slice 7d).
- *
- * It opened on the clock alone until a review caught it (2026-08-28): the
- * one-hour late-arrival buffer above, and nothing else. That buffer is the
- * right rule for *has it sailed* and the wrong one for *did this person dive*,
- * because the only thing standing between a diver who never boarded and a page
- * saying "Welcome back" was `bookings.status = 'no_show'`, and that status is
- * not a record of the dock. It has a writer now (`markBookingNoShow`,
- * src/db/no-show.ts, issue #1209), tapped at the counter while the boat is
- * still in sight rather than at close-out, and it still may not carry this: the
- * mark is one staffer's discretionary act on a *seat*, a shop that never works
- * the counter queue writes none at all, its door shuts six hours after the
- * departure (`noShowGate`, src/lib/no-show.ts), and a diver the crew board
- * after it is written has the seat handed straight back (`reclaimReleasedSeat`,
- * src/db/manifests.ts). A page that opened on it would be reading a shop's desk
- * work as evidence about the water. So the diver who overslept, or who was held
- * at the desk on a medical hold and never left the dock, opened the durable link
- * already sitting in their inbox and got a printable dive record for a day they
- * spent on land, and an invitation to tip the crew who dived without them.
- *
- * Three answers, in the order the evidence deserves:
- *
- * - **`not_boarded` never sees the afterglow.** The crew wrote down that this
- *   person did not get on the boat; no clock overrides that.
- * - **`boarded` opens it at the buffer**, because the shop has recorded that
- *   they were aboard — the clock is no longer asserting anything on its own.
- * - **No roll call at all waits for the recap floor**
- *   (`RECAP_AUTOMATIC_DELAY_HOURS`, four hours). It is the delay the recap
- *   *send* has always used before it asserts the same thing by email, and a
- *   shop that does not run roll call should not have a second, looser rule
- *   invented for it here.
- *
- * Still deliberately blind to cancellation — of the booking or of the departure
- * — which are terminal notices the page decides before it ever asks this.
- */
-export function isAfterTheDive(input: {
-  endsAt: Date;
-  /** The dock's own record, where a shop kept one. */
-  boarded?: DepartureRollCall;
-  now?: Date;
-}): boolean {
-  if (input.boarded === "not_boarded") return false;
-  const now = input.now ?? nowDate();
-  if (input.boarded === "boarded") return theBoatIsHome({ endsAt: input.endsAt, now });
-  // diveday:allow-departure-offset: the recap's own delay, not the sailed/returned
-  // question — a recap waits its scheduled hours after a boat this rule already
-  // counts as home.
-  return now.getTime() > input.endsAt.getTime() + RECAP_AUTOMATIC_DELAY_MS;
 }

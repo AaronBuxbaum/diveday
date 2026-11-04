@@ -1,7 +1,8 @@
 import type { AppDb } from "@/db/client";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { departureAfterLateBoarding, getRecapPageState, type RecapPageState } from "@/db/recap";
-import { isAfterTheDive, theBoatIsHome } from "@/lib/thread-steps";
+import { isAfterTheDive } from "@/lib/seat-ladder";
+import { theBoatIsHome } from "@/lib/thread-steps";
 
 /**
  * **Whether `/ready` turns to the afterglow, and the recap it would show**
@@ -9,7 +10,8 @@ import { isAfterTheDive, theBoatIsHome } from "@/lib/thread-steps";
  *
  * The crew's departure roll call decides whose day is over wherever a shop
  * kept one, and the four-hour recap floor where none exists
- * (`isAfterTheDive`). Neither is read until the boat is scheduled home, so a
+ * (`isAfterTheDive`, the seat ladder's question for the diver's page,
+ * src/lib/seat-ladder.ts). Neither is read until the boat is scheduled home, so a
  * night-before load never pays for them.
  *
  * **The recap is read beside the roll call, not after it** (code review
