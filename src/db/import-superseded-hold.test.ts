@@ -6,7 +6,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { commitContactImport } from "./import";
+import { commitContactImport } from "@/test/words-wiring";
 import { bookings, people, trips, userAccounts, waiverRecords, waiverTemplates } from "./schema";
 import { listSignedWaiversByPerson } from "./waivers";
 
