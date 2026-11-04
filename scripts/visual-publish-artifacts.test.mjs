@@ -196,6 +196,36 @@ describe("verifyCompleteScreenshotInventory", () => {
     ).toThrow(/1 of 2 baseline screenshots are missing/u);
   });
 
+  it("lets a complete push to main retire baseline surfaces it no longer captures", () => {
+    const { root } = fixture();
+    const actualDir = path.join(root, "actual");
+    const expectedDir = path.join(root, "expected");
+    mkdirSync(actualDir);
+    mkdirSync(expectedDir);
+    writeFileSync(path.join(actualDir, "kept.png"), PNG);
+    writeFileSync(path.join(expectedDir, "kept.png"), PNG);
+    writeFileSync(path.join(expectedDir, "renamed.png"), PNG);
+
+    expect(
+      verifyCompleteScreenshotInventory({ actualDir, expectedDir, captureMode: "all" }),
+    ).toEqual({
+      actualCount: 1,
+      expectedCount: 2,
+      retired: ["renamed.png"],
+    });
+    expect(() => verifyCompleteScreenshotInventory({ actualDir, expectedDir })).toThrow(
+      /1 of 2 baseline screenshots are missing/u,
+    );
+    expect(() =>
+      verifyCompleteScreenshotInventory({
+        actualDir,
+        expectedDir,
+        requireExpected: true,
+        captureMode: "all",
+      }),
+    ).toThrow(/1 of 2 baseline screenshots are missing/u);
+  });
+
   it("requires an established baseline inventory for pull request publishing", () => {
     const { root } = fixture();
     const actualDir = path.join(root, "actual");

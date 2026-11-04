@@ -267,12 +267,22 @@ export function verifyCompleteScreenshotInventory({
     throw new Error("no trusted baseline screenshot inventory is available for this PR");
   }
   const missing = [...expected].filter((name) => !actual.has(name));
-  if (missing.length > 0) {
+  // A push to main captures every planned test, and sanitizeVisualArtifacts has already refused a
+  // run whose test IDs differ from the complete plan. A baseline surface main no longer captures
+  // is therefore a surface a change retired or renamed, not a lost capture. Refusing it would
+  // leave main unable to publish until someone hand-edited the baseline, so the run publishes and
+  // the report lists the surface as deleted. A pull request still refuses: it fills from the
+  // baseline, so a gap there is a lost capture.
+  if (missing.length > 0 && (requireExpected || captureMode !== "all")) {
     throw new Error(
       `visual capture is incomplete: ${missing.length} of ${expected.size} baseline screenshots are missing`,
     );
   }
-  return { actualCount: actual.size, expectedCount: expected.size };
+  return {
+    actualCount: actual.size,
+    expectedCount: expected.size,
+    ...(missing.length > 0 ? { retired: missing.sort() } : {}),
+  };
 }
 
 export async function sanitizeVisualArtifacts({ root, output, shards, expectedTests }) {
