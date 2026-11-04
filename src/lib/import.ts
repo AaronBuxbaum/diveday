@@ -1786,6 +1786,54 @@ function mapImportHeaders(headers: readonly string[], assist: ImportAssist | und
   return { mapping, unmappedColumns, ignoredMedicalColumns, assistedCards };
 }
 
+/**
+ * A row's claim of a prior waiver acceptance (ADR 20260724-import-waiver-acceptance):
+ * a truthy `waiver_accepted` says the diver already accepted a waiver, and its
+ * medical clearance, at the prior shop. A signed date is kept only when it is
+ * a real calendar date; an unparseable one is dropped with a note rather than
+ * silently misdating legal evidence. A date after the shop's today refuses the
+ * claim outright (issue #3781): a dd/mm system's `2026-12-03` for 12 March
+ * would otherwise stand until next December and outrank a referral the diver
+ * gives meanwhile, and dating it today instead would invent a signature nobody
+ * gave.
+ */
+function waiverClaim(
+  cell: (field: ImportField) => string | undefined,
+  {
+    today,
+    sourceLabel,
+    issues,
+  }: { today: CalendarDate; sourceLabel: string | null; issues: ImportIssue[] },
+): PreparedWaiver | null {
+  if (!isTrueish(cell("waiver_accepted"))) return null;
+  const signedAtRaw = clean(cell("waiver_signed_at"));
+  let signedAt: string | null = null;
+  if (signedAtRaw && isValidCalendarDate(signedAtRaw)) {
+    if (signedAtRaw > today) {
+      issues.push({
+        level: "error",
+        code: "waiver_date_future",
+        params: { value: echoedCell(signedAtRaw) },
+      });
+      return null;
+    }
+    signedAt = signedAtRaw;
+  } else if (signedAtRaw) {
+    issues.push({
+      level: "warning",
+      code: "waiver_date_invalid",
+      params: { value: echoedCell(signedAtRaw) },
+    });
+  }
+  issues.push({ level: "info", code: "waiver_imported" });
+  return {
+    signedAt,
+    sourceLabel,
+    documentUrl: clean(cell("waiver_document_url")),
+    medicalDocumentUrl: clean(cell("medical_document_url")),
+  };
+}
+
 export function prepareContactImport(
   text: string,
   /**
@@ -2128,50 +2176,7 @@ export function prepareContactImport(
       finSize: finCell,
     };
 
-    // Trusted per row (ADR 20260724-import-waiver-acceptance): a truthy
-    // waiver_accepted claims the diver already accepted a waiver — and its
-    // medical clearance — at the prior shop. A signed date is kept only when
-    // it is a real calendar date; an unparseable one is dropped with a note
-    // rather than silently misdating legal evidence. A date after the shop's
-    // today refuses the claim outright (issue #3781): a dd/mm system's
-    // `2026-12-03` for 12 March would otherwise stand until next December and
-    // outrank a referral the diver gives meanwhile, and dating it today
-    // instead would invent a signature nobody gave.
-    let waiver: PreparedWaiver | null = null;
-    const signedAtClaim = clean(at(cells, "waiver_signed_at"));
-    const signedInFuture =
-      signedAtClaim !== null && isValidCalendarDate(signedAtClaim) && signedAtClaim > today;
-    if (isTrueish(at(cells, "waiver_accepted")) && signedInFuture) {
-      issues.push({
-        level: "error",
-        code: "waiver_date_future",
-        params: { value: echoedCell(signedAtClaim) },
-      });
-    } else if (isTrueish(at(cells, "waiver_accepted"))) {
-      const signedAtRaw = signedAtClaim;
-      let signedAt: string | null = null;
-      if (signedAtRaw) {
-        if (isValidCalendarDate(signedAtRaw)) {
-          signedAt = signedAtRaw;
-        } else {
-          issues.push({
-            level: "warning",
-            code: "waiver_date_invalid",
-            params: { value: echoedCell(signedAtRaw) },
-          });
-        }
-      }
-      waiver = {
-        signedAt,
-        sourceLabel,
-        documentUrl: clean(at(cells, "waiver_document_url")),
-        medicalDocumentUrl: clean(at(cells, "medical_document_url")),
-      };
-      issues.push({
-        level: "info",
-        code: "waiver_imported",
-      });
-    }
+    const waiver = waiverClaim((field) => at(cells, field), { today, sourceLabel, issues });
 
     // Date of birth, if the file carries one. Dropped rather than guessed when
     // it isn't a real calendar date or isn't plausible: the column feeds a
