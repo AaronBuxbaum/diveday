@@ -85,6 +85,7 @@ import { lockSeatDeparture } from "./seat-locks";
 import { getShopById } from "./shops";
 import { resolveTrainingMarks } from "./training-mark-resolve";
 import { invalidateTrainingPlansForCrewChange } from "./training-plan-crew";
+import { currentMeetingDayMarks } from "./trip-meeting-windows";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { getTripRoster } from "./trips-manifest";
@@ -217,7 +218,14 @@ async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string
     .select({ event: rollCallEvents, recorder: people })
     .from(rollCallEvents)
     .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
-    .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        crewMarks(),
+        eq(rollCallEvents.tripId, tripId),
+        currentMeetingDayMarks(),
+      ),
+    )
     .orderBy(...newestMarkFirst());
   const latest = new Map<string, RollCallRecord>();
   const seen = new Set<string>();
@@ -268,6 +276,8 @@ async function listLatestRollCallsByCheckpoint(
         seatMarks(),
         eq(rollCallEvents.tripId, tripId),
         inArray(rollCallEvents.checkpoint, [...checkpoints]),
+        // A course's later meeting day starts its count empty (#2557).
+        currentMeetingDayMarks(),
       ),
     )
     .orderBy(...newestMarkFirst());
@@ -372,6 +382,7 @@ export async function listDepartureRollCallByTrip(
         eq(rollCallEvents.shopId, shopId),
         seatMarks(),
         inArray(rollCallEvents.tripId, tripIds),
+        currentMeetingDayMarks(),
         eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
@@ -432,6 +443,7 @@ export async function listBoardedAtAnyCheckpointByTrip(
         eq(rollCallEvents.shopId, shopId),
         seatMarks(),
         inArray(rollCallEvents.tripId, [...tripIds]),
+        currentMeetingDayMarks(),
       ),
     )
     .orderBy(...newestMarkFirst());
@@ -935,6 +947,7 @@ export async function listDepartureCrewRollCallByTrip(
         crewMarks(),
         inArray(rollCallEvents.tripId, tripIds),
         eq(rollCallEvents.checkpoint, "departure"),
+        currentMeetingDayMarks(),
       ),
     )
     .orderBy(...newestMarkFirst());
