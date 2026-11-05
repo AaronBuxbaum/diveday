@@ -220,6 +220,19 @@ describe("ThreadSections", () => {
     expect(plan.textContent).toContain(t("ready.nitroxPlan.notAFill"));
   });
 
+  // Dive-domain review, row 9, F1 and F2: the figure is the gas's oxygen
+  // limit, never the diver's depth, and a richer fill is shallower.
+  it("calls the figure the mix's oxygen limit, says training and the plan still apply, and that richer is shallower", () => {
+    const c = context();
+    Object.assign(c.data, { wantsNitrox: true, nitroxCardVerified: true });
+    render(<ThreadSections context={c} />);
+    const text = screen.getByTestId("ready-nitrox-plan").textContent ?? "";
+    expect(text).not.toMatch(/depth limit/i);
+    expect(text).toContain("oxygen limit (MOD)");
+    expect(text).toContain(t("ready.nitroxPlan.stillApply"));
+    expect(text).toContain(t("ready.nitroxPlan.richerIsShallower"));
+  });
+
   it("shows the party panel only to a party lead, with its all-set close", () => {
     render(<ThreadSections context={context()} />);
     expect(screen.queryByText("party")).toBeNull();

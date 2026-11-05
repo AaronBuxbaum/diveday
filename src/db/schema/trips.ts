@@ -250,9 +250,10 @@ export const boats = pgTable(
     /**
      * **The hull in the yard** (loop 5, row 5; glossary "Out of service"): a
      * shop-local calendar window, both ends inclusive, and the shop's one-line
-     * reason ("Hull repaint"). The builder and the trip's details refuse to put
-     * a departure on the hull for a day inside it (`tripDetailsPatch`), and the
-     * board warns about a departure already on it. One window per boat, typed
+     * reason ("Hull repaint"). The builder's add and the trip's details refuse
+     * to put a departure on the hull for a day inside it (`tripDetailsPatch`;
+     * move, duplicate and series weeks are #3915), and the board warns about a
+     * departure already on it. One window per boat, typed
      * over the last like the paper dates; null is in service.
      */
     outOfServiceFrom: date("out_of_service_from"),

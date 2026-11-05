@@ -51,6 +51,7 @@
     "failed": "That reply didn’t send. The request is still open, so try again or answer from your own email or phone.",
     "refused": "That reply can’t go from here. Answer from your own email or phone.",
     "badQuote": "That price can’t go. Type the whole-boat amount as a number, or leave it blank.",
+    "quoteNotAllowed": "Only an owner or manager can send a price for the whole boat. Send your reply without one, or ask them to.",
     "capped": "That request has had {count, plural, one {# reply} other {# replies}} in the last 24 hours. Answer the next from your own email or phone."
   },
   "done": {

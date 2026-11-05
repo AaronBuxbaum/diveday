@@ -51,6 +51,7 @@
     "failed": "La respuesta no se envió. La petición sigue abierta: inténtalo de nuevo o responde desde tu correo o tu teléfono.",
     "refused": "Esa respuesta no se puede enviar desde aquí. Responde desde tu correo o tu teléfono.",
     "badQuote": "Ese precio no puede salir. Escribe el importe del barco entero como número, o déjalo en blanco.",
+    "quoteNotAllowed": "Solo un propietario o gerente puede enviar un precio por el barco entero. Envía tu respuesta sin precio, o pídeselo.",
     "capped": "Esa petición ya ha tenido {count, plural, one {# respuesta} other {# respuestas}} en las últimas 24 horas. Responde a la siguiente desde tu correo o tu teléfono."
   },
   "done": {
