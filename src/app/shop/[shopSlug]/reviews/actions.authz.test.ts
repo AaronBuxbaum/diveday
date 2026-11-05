@@ -5,6 +5,7 @@ import { submitRecapPulse } from "@/db/recap-pulses";
 import { liveReviewReply } from "@/db/review-replies";
 import { setReviewPublished, submitTripReview } from "@/db/reviews";
 import { bookings, recapPulses, tripAssignments, tripReviews } from "@/db/schema";
+import { crewThanksChoice } from "@/lib/crew-thanks-choice";
 import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
@@ -272,7 +273,7 @@ describe("hiding a thanks to the crew", () => {
     const submitted = await submitTripReview(db, {
       bookingId: booking.id,
       rating: 5,
-      crewThanks: { crewPersonId: captain, text: "Great day" },
+      crewThanks: { choice: crewThanksChoice(booking.tripId, captain), text: "Great day" },
     });
     if (!submitted.ok) throw new Error("review refused");
     const [review] = await db

@@ -336,7 +336,7 @@ const rows = [
     why: "names a crew member of the departure, a staff record whose own merge is refused; the pointer stays on the id it had",
     erase: "keep",
     eraseWhy:
-      "a pointer at an erased person discloses nothing: the name is joined at read, and the diver's words are cleared by their own erasure",
+      "a pointer at an erased person discloses nothing: the name is joined at read; the words are the diver's, kept through the crew member's erasure (Aaron, 2026-11-05, #3913) and cleared by the diver's own",
   },
   // The staffer who hid a thanks from the crew member.
   {

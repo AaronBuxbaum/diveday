@@ -143,10 +143,10 @@ export type AfterStateProps = {
     rating: number;
     comment: string | null;
     crewThanks: string | null;
-    crewThanksPersonId: string | null;
+    crewThanksChoice: string | null;
   } | null;
   /** The crew a diver can thank under the review (loop 5, row 6); none, no thanks field. */
-  crewChoices: Array<{ id: string; name: string }>;
+  crewChoices: Array<{ choice: string; name: string }>;
   /**
    * The diver's own private pulse, when they have left one — never a review and
    * never public (D40, issue #1200). Its presence is also what puts the way back
@@ -422,7 +422,7 @@ export async function buildAfterStateProps(input: {
           rating: ownReview.rating,
           comment: ownReview.comment,
           crewThanks: ownReview.crewThanks,
-          crewThanksPersonId: ownReview.crewThanksPersonId,
+          crewThanksChoice: ownReview.crewThanksChoice,
         }
       : null,
     crewChoices: data.crewChoices,

@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
+import { crewThanksChoice, isCrewThanksChoice } from "@/lib/crew-thanks-choice";
 import {
   EMPTY_REVIEW_AGGREGATE,
   normalizeCrewThanks,
@@ -73,16 +74,18 @@ export async function submitTripReview(
     comment?: string | null;
     /**
      * The optional thanks line to one of the departure's crew (loop 5, row 6).
-     * Absent or blank takes an earlier thanks back; a person who is not on this
-     * departure's crew is dropped, whatever the form said.
+     * Absent or blank takes an earlier thanks back. `choice` is the menu's
+     * `crewThanksChoice` (src/lib/crew-thanks-choice.ts), never a person id
+     * (#3912); a choice that matches nobody on this departure's crew is
+     * dropped, whatever the form said.
      */
-    crewThanks?: { crewPersonId: string; text: string | null } | null;
+    crewThanks?: { choice: string; text: string | null } | null;
   },
 ): Promise<SubmitReviewResult> {
   if (!isUuid(input.bookingId)) return { ok: false, reason: "not_found" };
   const comment = normalizeReviewComment(input.comment);
   const thanksText = normalizeCrewThanks(input.crewThanks?.text);
-  const thanksPersonId = input.crewThanks?.crewPersonId ?? "";
+  const thanksChoice = input.crewThanks?.choice ?? "";
   const publish = publishesImmediately(comment);
   const submittedAt = nowDate();
 
@@ -124,21 +127,20 @@ export async function submitTripReview(
 
     // The thanks is for someone who worked this departure; anyone else is no thanks.
     let thanks: { personId: string; text: string } | null = null;
-    if (thanksText && isUuid(thanksPersonId)) {
-      const [crew] = await tx
+    if (thanksText && isCrewThanksChoice(thanksChoice)) {
+      const crew = await tx
         .select({ id: tripAssignments.personId })
         .from(tripAssignments)
         .innerJoin(people, eq(people.id, tripAssignments.personId))
         .where(
           and(
             eq(tripAssignments.tripId, booking.tripId),
-            eq(tripAssignments.personId, thanksPersonId),
             eq(people.shopId, booking.shopId),
             isNull(people.deletedAt),
           ),
-        )
-        .limit(1);
-      if (crew) thanks = { personId: crew.id, text: thanksText };
+        );
+      const chosen = crew.find((row) => crewThanksChoice(booking.tripId, row.id) === thanksChoice);
+      if (chosen) thanks = { personId: chosen.id, text: thanksText };
     }
     // A staff hide stays on the review whatever the diver writes next; only staff show it.
 
@@ -201,7 +203,8 @@ export type OwnReview = {
   isPublished: boolean;
   /** The thanks the diver left a crew member, so the form opens on it. */
   crewThanks: string | null;
-  crewThanksPersonId: string | null;
+  /** The menu value naming who it is for (`crewThanksChoice`), never their person id (#3912). */
+  crewThanksChoice: string | null;
 };
 
 /** The diver's own review of this booking, so the recap form opens on what they already said. */
@@ -216,11 +219,21 @@ export async function getReviewForBooking(
       isPublished: tripReviews.isPublished,
       crewThanks: tripReviews.crewThanks,
       crewThanksPersonId: tripReviews.crewThanksPersonId,
+      tripId: tripReviews.tripId,
     })
     .from(tripReviews)
     .where(eq(tripReviews.bookingId, bookingId))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  return {
+    rating: row.rating,
+    comment: row.comment,
+    isPublished: row.isPublished,
+    crewThanks: row.crewThanks,
+    crewThanksChoice: row.crewThanksPersonId
+      ? crewThanksChoice(row.tripId, row.crewThanksPersonId)
+      : null,
+  };
 }
 
 /**

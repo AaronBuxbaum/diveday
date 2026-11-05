@@ -18,6 +18,7 @@ import type { BrandDisplayFontCode } from "@/lib/brand";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { crewThanksChoice } from "@/lib/crew-thanks-choice";
 import type { DepthUnit } from "@/lib/depth-units";
 import { compareDiveRecord, type DiveRecordComparison } from "@/lib/dive-record";
 import { DEFAULT_FLY_SAFE_HOURS, type FlySafeResult, flySafeFrom } from "@/lib/fly-safe";
@@ -233,11 +234,12 @@ export type RecapPageData = {
   diverName: string;
   /**
    * The departure's crew as the review's "thank someone" menu offers them
-   * (loop 5, row 6): id and the name the recap already prints under Crew. The
-   * id only names who a thanks is for; the writer re-checks the person is on
-   * this departure's crew, so a crafted post names no one else.
+   * (loop 5, row 6): a `crewThanksChoice` and the name the recap already
+   * prints under Crew. The choice names who a thanks is for without handing a
+   * recap link holder a staff person id (#3912); the writer resolves it
+   * against this departure's crew, so a crafted post names no one else.
    */
-  crewChoices: Array<{ id: string; name: string }>;
+  crewChoices: Array<{ choice: string; name: string }>;
   sites: RecapSite[];
   /**
    * Where the day went against where it meant to go, or **null** when it went
@@ -1052,7 +1054,10 @@ async function loadRecapPageData(
       crew,
     },
     diverName: row.diverName,
-    crewChoices: crewMap.get(row.tripId) ?? [],
+    crewChoices: (crewMap.get(row.tripId) ?? []).map((member) => ({
+      choice: crewThanksChoice(row.tripId, member.id),
+      name: member.name,
+    })),
     sites,
     diveRecord,
     flySafe,

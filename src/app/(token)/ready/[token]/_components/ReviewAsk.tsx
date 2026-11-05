@@ -63,14 +63,14 @@ export function ReviewAsk({
               {t("reviews.thanksLegend")}
             </legend>
             <select
-              name="crewThanksPerson"
+              name="crewThanksChoice"
               aria-label={t("reviews.thanksWho")}
-              defaultValue={ownReview?.crewThanksPersonId ?? ""}
+              defaultValue={ownReview?.crewThanksChoice ?? ""}
               className={controlClass}
             >
               <option value="">{t("reviews.thanksNobody")}</option>
               {crewChoices.map((crew) => (
-                <option key={crew.id} value={crew.id}>
+                <option key={crew.choice} value={crew.choice}>
                   {crew.name}
                 </option>
               ))}
