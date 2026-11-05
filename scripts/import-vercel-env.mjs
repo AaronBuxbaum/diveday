@@ -189,7 +189,7 @@ const previous = resync ? new Map() : readCheckpoint();
 function readVercelState() {
   let output;
   try {
-    output = readBounded("pnpm", ["exec", "vercel", "env", "ls", environment, "--format", "json"], {
+    output = readBounded("pnpm", ["exec", "vercel", "env", "ls", "--environment", environment, "--format", "json"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       timeoutMs: SUBPROCESS_TIMEOUTS.vercelCli,
@@ -323,7 +323,7 @@ try {
     // value from stdin; --force makes rerunning a rotation deterministic.
     const result = runBounded(
       "pnpm",
-      ["exec", "vercel", "env", "add", key, environment, "--force", sensitivity],
+      ["exec", "vercel", "env", "add", key, "--environment", environment, "--force", sensitivity],
       {
         input: value,
         stdio: ["pipe", "inherit", "inherit"],

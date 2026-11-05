@@ -168,7 +168,7 @@ To turn it on, in this order:
    shows custom branch policies, and
    `gh api repos/AaronBuxbaum/diveday/environments/production-deploy/deployment-branch-policies --jq '[.branch_policies[].name]'`
    is `["main"]`.
-2. Set the Vercel variable: `vercel env add DEPLOY_REQUIRES_GREEN production`, value `true`, not
+2. Set the Vercel variable: `vercel env add DEPLOY_REQUIRES_GREEN --environment production`, value `true`, not
    sensitive (the workflow reads the value back, and a sensitive one cannot be read). From here,
    pushes to `main` stop deploying.
 3. Set the GitHub variable: `gh variable set DEPLOY_REQUIRES_GREEN --body true`.

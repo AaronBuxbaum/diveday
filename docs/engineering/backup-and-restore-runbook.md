@@ -496,7 +496,7 @@ or a row into the chat or the log.
    No secret value is read aloud or written down.
 3. **Confirm production carries `SECRET_ENCRYPTION_KEY`.** Since 2026-10-23 a production deploy
    without it fails at build (`pnpm check:env`, [deploy runbook](deploy-and-migrations-runbook.md)).
-   `pnpm exec vercel env ls production` lists it by name; if it is missing, `pnpm infra:deploy`
+   `pnpm exec vercel env ls --environment production` lists it by name; if it is missing, `pnpm infra:deploy`
    distributes it before the next merge to `main`.
 4. **The first full-dump restore is complete.** Run 40818998626 restored the newest dump on a
    scratch branch and deleted that branch. To repeat it by hand, use Aaron's machine with Docker

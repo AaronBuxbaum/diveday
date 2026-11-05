@@ -2493,7 +2493,7 @@ exports.handler = async (event) => {
           "Create the environment restricted to main: gh api -X PUT repos/AaronBuxbaum/diveday/environments/production-deploy -F 'deployment_branch_policy[protected_branches]=false' -F 'deployment_branch_policy[custom_branch_policies]=true'; then gh api -X POST repos/AaronBuxbaum/diveday/environments/production-deploy/deployment-branch-policies -f name=main -f type=branch",
           "gh secret set VERCEL_TOKEN --env production-deploy",
           "gh secret set VERCEL_ORG_ID --env production-deploy --body <orgId>; gh secret set VERCEL_PROJECT_ID --env production-deploy --body <projectId> -- the same two ids as ci-vercel-deploy-token, read from .vercel/project.json.",
-          "vercel env add DEPLOY_REQUIRES_GREEN production (value: true, not sensitive: the workflow reads the value back) -- from here, pushes to main stop deploying.",
+          "vercel env add DEPLOY_REQUIRES_GREEN --environment production (value: true, not sensitive: the workflow reads the value back) -- from here, pushes to main stop deploying.",
           "gh variable set DEPLOY_REQUIRES_GREEN --body true",
         ],
         produces:
