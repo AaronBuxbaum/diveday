@@ -23,7 +23,8 @@ export type DeckCountCopy = {
   refusal: string;
   /** Once a count stands at this checkpoint: the lines, composed server-side. */
   reading?: {
-    tone: "agrees" | "differs";
+    /** `stale`: a mark at this checkpoint is newer than the count; it asks for a recount. */
+    tone: "agrees" | "differs" | "stale";
     lines: string[];
     /** "Keiko Tanaka · 7:04 AM": who counted, and when. */
     recordedLine: string;

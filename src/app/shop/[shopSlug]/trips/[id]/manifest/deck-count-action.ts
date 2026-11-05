@@ -1,18 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { getDb } from "@/db/client";
 import { recordDeckCount } from "@/db/deck-counts";
-import { DECK_COUNT_MAX } from "@/lib/deck-count";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import type { DeckCountResult } from "./_components/DeckCount";
 import type { ManifestActionContext } from "./actions";
-
-const deckCountSchema = z.object({
-  counted: z.coerce.number().int().min(0).max(DECK_COUNT_MAX),
-});
+import { deckCountSchema } from "./deck-count-form";
 
 /**
  * **Record the heads counted on deck at this checkpoint** (loop 5, row 1),
