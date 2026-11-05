@@ -1398,6 +1398,12 @@ export const ENV_GROUPS = [
         absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
       },
       {
+        key: "SENTRY_WAIVER_SEALS_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
         key: "SENTRY_WEEKLY_DIGEST_CRON_MONITOR_SLUG",
         from: "override",
         targets: NOWHERE,

@@ -28,8 +28,10 @@ import { DEFAULT_SENDER, formatSender, sesConfigSchema, sesNotificationProvider 
  * | `./app-url.ts` | `APP_HOST` validation, the origin every bearer-token link is built from |
  * | `./email.ts` | the message bodies themselves |
  *
- * The other channels are their own modules and are not re-exported here:
- * `./sms.ts`, `./whatsapp.ts`, and `./courtesy.ts` (which picks between them).
+ * The other channels are their own modules: `./sms.ts`, `./whatsapp.ts`, and
+ * `./courtesy.ts` (which picks between them). What a new caller outside this
+ * directory needs of them is re-exported at the foot of this file, so it comes
+ * through the door (rule 5 of `scripts/check-architecture.mjs`).
  */
 
 /**
@@ -78,6 +80,7 @@ export {
   type PublicHostCheck,
   publicAppUrl,
 } from "./app-url";
+export { type CourtesyProvider, sendCourtesyMessage } from "./courtesy";
 export {
   type Notification,
   type NotificationSender,
@@ -110,11 +113,17 @@ export {
   shopSenderOf,
 } from "./sender";
 export { type SesEmailClient, type SesProviderOptions, sesNotificationProvider } from "./ses";
+export { type SmsProvider, smsProviderFromEnvironment } from "./sms";
 export {
   manifestChangedPush,
   missingDiverPush,
   type StaffPushWords,
   staleRollCallPush,
 } from "./staff-push";
-export { staffReplySubject, whatsAppReopenText } from "./staff-reply-text";
+export {
+  interestReplySubject,
+  interestReplyText,
+  staffReplySubject,
+  whatsAppReopenText,
+} from "./staff-reply-text";
 export { type WaiverLinkTextInput, waiverLinkText } from "./waiver-text";

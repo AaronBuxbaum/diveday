@@ -18,6 +18,7 @@ import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { courses } from "./courses";
+import { notificationDeliveryStatus } from "./notifications";
 import { deals } from "./payments";
 import { trips } from "./trips";
 
@@ -40,10 +41,16 @@ export const interestAskedBy = pgEnum("interest_asked_by", ["diver", "shop"]);
 /**
  * How an interest ended. `booked` is written only by staff seating someone *from* a
  * interest, after the seat commits (never by the booking transaction, ADR
- * 20261017-one-interest-with-a-scope, R1); `done` by a staffer's tick; `unsubscribed`
- * by the diver on an anytime interest.
+ * 20261017-one-interest-with-a-scope, R1); `done` by a staffer's tick; `replied` by a
+ * reply from the Requests page that went (`interest_replies`, issue #2555);
+ * `unsubscribed` by the diver on an anytime interest.
  */
-export const interestClosedAs = pgEnum("interest_closed_as", ["booked", "done", "unsubscribed"]);
+export const interestClosedAs = pgEnum("interest_closed_as", [
+  "booked",
+  "done",
+  "unsubscribed",
+  "replied",
+]);
 
 /**
  * The one question that changes what the shop replies with to a date request:
@@ -267,3 +274,63 @@ export const dateRequestOfferBookings = pgTable(
     index("date_request_offer_bookings_shop_interest_idx").on(table.shopId, table.interestId),
   ],
 );
+
+/** The way a reply to a date interest went: the diver's email, or a text (SMS or the shop's WhatsApp). */
+export const interestReplyChannel = pgEnum("interest_reply_channel", ["email", "sms", "whatsapp"]);
+
+/**
+ * **A reply the shop sent to a date request from DiveDay** (issue #2555): the
+ * words, where they went, who sent them and what the provider said. One row per
+ * attempt, so a reply that did not go is on record beside the one that did; the
+ * request closes as `replied` only on a send that went (`sendInterestReply`,
+ * src/db/interest-replies.ts).
+ *
+ * Its own table rather than a `staff_replies` row, because a date interest is
+ * deliberately person-less (H-20260724-one-person-per-email) and that table is
+ * keyed by a person and a message. The outcome vocabulary is the delivery
+ * trail's (`notification_delivery_status`). `to_address` and `body` are the
+ * stranger's contact and a sentence about them, so the erasure that blanks the
+ * interest blanks them too (`scrubInterests`); the row keeps that a reply went.
+ */
+export const interestReplies = pgTable(
+  "interest_replies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    interestId: uuid("interest_id").notNull(),
+    channel: interestReplyChannel("channel").notNull(),
+    /** The address or E.164 number it went to; null once the diver is erased. */
+    toAddress: text("to_address"),
+    /** The staffer's words, as sent; null once the diver is erased. */
+    body: text("body"),
+    /** The language DiveDay's own words around the reply were in. */
+    locale: text("locale").notNull(),
+    /** The staffer who sent it. */
+    sentByPersonId: uuid("sent_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    status: notificationDeliveryStatus("status").notNull(),
+    providerMessageId: text("provider_message_id"),
+    sendErrorCode: text("send_error_code"),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "interest_replies_shop_interest_fk",
+      columns: [table.shopId, table.interestId],
+      foreignColumns: [interests.shopId, interests.id],
+    }).onDelete("cascade"),
+    // `INTEREST_REPLY_MAX` (src/lib/interest-reply.ts), held here too.
+    check(
+      "interest_replies_body_bounded",
+      sql`${table.body} is null or (length(btrim(${table.body})) > 0 and length(${table.body}) <= 1000)`,
+    ),
+    index("interest_replies_shop_interest_idx").on(table.shopId, table.interestId, table.sentAt),
+    index("interest_replies_sent_by_person_idx").on(table.sentByPersonId),
+  ],
+);
+
+export type InterestReply = typeof interestReplies.$inferSelect;

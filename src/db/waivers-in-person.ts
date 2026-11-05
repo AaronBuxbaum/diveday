@@ -15,7 +15,11 @@ import {
 import { isHeldToMedical } from "@/lib/participant-types";
 import { personNamesMatch } from "@/lib/person-name";
 import { inPersonAttestationProvider, namesakeAttestationProvider } from "@/lib/signatures";
-import { computeWaiverIntegrityHash } from "@/lib/waiver-integrity";
+import {
+  computeWaiverIntegrityHash,
+  WAIVER_INTEGRITY_VERSION_SIGNED,
+  waiverIntegrityVerdict,
+} from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import {
   bookingRecordLapsed,
@@ -521,9 +525,18 @@ export async function recordInPersonWaiver(
       })
       .returning();
     if (!record) throw new Error("recordInPersonWaiver: insert returned no row");
+    const sealed = {
+      ...record,
+      integrityHash: computeWaiverIntegrityHash(record),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+    };
     await tx
       .update(waiverRecords)
-      .set({ integrityHash: computeWaiverIntegrityHash(record), integrityVersion: 1 })
+      .set({
+        integrityHash: sealed.integrityHash,
+        integrityVersion: sealed.integrityVersion,
+        ...waiverIntegrityVerdict(sealed, now),
+      })
       .where(eq(waiverRecords.id, record.id));
     signedPersonId = record.personId;
     return { ok: true, recordId: record.id, alreadySigned: false };

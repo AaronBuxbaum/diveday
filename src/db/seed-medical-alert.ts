@@ -4,6 +4,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import {
   computeWaiverIntegrityHash,
   WAIVER_INTEGRITY_VERSION_SIGNED,
+  waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
 import type { ShopAnswer } from "@/lib/waiver-questions";
 import type { DbExecutor } from "./client";
@@ -104,11 +105,17 @@ export async function seedMedicalAlert(db: DbExecutor, shopId: string): Promise<
     })
     .returning();
   if (!signed) return;
+  const sealed = {
+    ...signed,
+    integrityHash: computeWaiverIntegrityHash(signed, WAIVER_INTEGRITY_VERSION_SIGNED),
+    integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+  };
   await db
     .update(waiverRecords)
     .set({
-      integrityHash: computeWaiverIntegrityHash(signed, WAIVER_INTEGRITY_VERSION_SIGNED),
-      integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+      integrityHash: sealed.integrityHash,
+      integrityVersion: sealed.integrityVersion,
+      ...waiverIntegrityVerdict(sealed, signedAt),
     })
     .where(eq(waiverRecords.id, signed.id));
   const [owner] = await db

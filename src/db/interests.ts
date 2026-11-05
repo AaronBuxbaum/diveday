@@ -632,7 +632,13 @@ export async function askForDate(
  */
 export async function setDateInterestOutcome(
   db: DbExecutor,
-  input: { shopId: string; interestId: string; outcome: DateRequestOutcome | null; now: Date },
+  input: {
+    shopId: string;
+    interestId: string;
+    /** `replied` is written only by `sendInterestReply`, with the reply it records. */
+    outcome: Exclude<DateRequestOutcome, "replied"> | null;
+    now: Date;
+  },
 ): Promise<boolean> {
   const scope = and(
     eq(interests.id, input.interestId),

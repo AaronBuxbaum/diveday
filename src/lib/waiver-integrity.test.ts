@@ -8,6 +8,7 @@ import {
   WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
   WAIVER_INTEGRITY_VERSION_MOVED,
   WAIVER_INTEGRITY_VERSION_SIGNED,
+  waiverIntegrityVerdict,
 } from "./waiver-integrity";
 import type { ShopAnswer } from "./waiver-questions";
 
@@ -104,6 +105,33 @@ describe("waiver integrity", () => {
     };
     expect(verifyWaiverIntegrity(sealed)).toBe("valid");
     expect(verifyWaiverIntegrity({ ...sealed, templateBody: "changed" })).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("caches exactly what verification says, and nothing for a row with no seal (issue #2562)", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const at = new Date("2026-07-18T12:00:00.000Z");
+    const sealed = {
+      ...record,
+      integrityHash: computeWaiverIntegrityHash(record),
+      integrityVersion: 1,
+    };
+    expect(waiverIntegrityVerdict(sealed, at)).toEqual({
+      integrityValid: true,
+      integrityCheckedAt: at,
+    });
+    expect(waiverIntegrityVerdict({ ...sealed, templateBody: "changed" }, at)).toEqual({
+      integrityValid: false,
+      integrityCheckedAt: at,
+    });
+    expect(waiverIntegrityVerdict({ ...sealed, integrityVersion: 99 }, at)).toEqual({
+      integrityValid: false,
+      integrityCheckedAt: at,
+    });
+    expect(waiverIntegrityVerdict(record, at)).toEqual({
+      integrityValid: null,
+      integrityCheckedAt: null,
+    });
     vi.unstubAllEnvs();
   });
 

@@ -93,6 +93,9 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "interests",
   // Seat-level links are removed with either referenced record; they need no independent clock.
   "date_request_offer_bookings",
+  // The shop's replies to a date interest (issue #2555): read with the request,
+  // gone with it by cascade, and blanked by the erasure that blanks it.
+  "interest_replies",
   "trip_blowouts",
   "trip_blowout_divers",
   // One row per departure, read as part of its departure log (#2300).

@@ -39,3 +39,26 @@ export function staffReplySubject(
     ? trimmed
     : t("notifications.staffReply.reSubject", { subject: trimmed });
 }
+
+/**
+ * The subject of a reply to a date request (issue #2555): the reply to the
+ * acknowledgment the diver already has ("Re: Blue Mantis has your request"),
+ * so it lands as the answer to their own ask rather than a stranger's mail.
+ */
+export function interestReplySubject(locale: string, shopName: string): string {
+  const t = diverTranslator(locale);
+  return staffReplySubject(
+    locale,
+    shopName,
+    t("notifications.inquiryReceived.subject", { shopName }),
+  );
+}
+
+/**
+ * The same reply as a text: the shop's name first, because an SMS from
+ * DiveDay's number says nobody's name otherwise, then the staffer's words,
+ * already folded to one line. The STOP line is `sendCourtesyMessage`'s.
+ */
+export function interestReplyText(locale: string, shopName: string, body: string): string {
+  return diverTranslator(locale)("notifications.smsInterestReply.body", { shopName, body });
+}

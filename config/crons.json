@@ -21,6 +21,10 @@
       "schedule": "9 3 * * *"
     },
     {
+      "path": "/api/cron/waiver-seals",
+      "schedule": "10 3 * * *"
+    },
+    {
       "path": "/api/cron/backup-export",
       "schedule": "7 4 * * 1"
     },

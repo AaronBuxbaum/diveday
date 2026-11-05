@@ -82,6 +82,7 @@ import {
   computeWaiverIntegrityHash,
   verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_ERASED,
+  waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
@@ -130,6 +131,7 @@ import {
   importedPaymentHistory,
   inboundMessages,
   incidentReportPeople,
+  interestReplies,
   interests,
   notificationDeliveries,
   notificationSendQueue,
@@ -915,16 +917,24 @@ async function scrubWaiverRecords(
     // would manufacture assurance the original signing never had. A record whose
     // seal already fails keeps its hash and version, so it goes on reading as
     // tampered rather than having the edit laundered by a fresh seal — the same
-    // rule `refileWaiverRecords` follows.
-    if (verifyWaiverIntegrity(record) === "valid") {
-      await tx
-        .update(waiverRecords)
-        .set({
-          integrityHash: computeWaiverIntegrityHash(stripped, WAIVER_INTEGRITY_VERSION_ERASED),
-          integrityVersion: WAIVER_INTEGRITY_VERSION_ERASED,
-        })
-        .where(eq(waiverRecords.id, stripped.id));
-    }
+    // rule `refileWaiverRecords` follows. Either way the row's cached verdict
+    // is re-written from the row as it now stands (issue #2562).
+    const sealed =
+      verifyWaiverIntegrity(record) === "valid"
+        ? {
+            ...stripped,
+            integrityHash: computeWaiverIntegrityHash(stripped, WAIVER_INTEGRITY_VERSION_ERASED),
+            integrityVersion: WAIVER_INTEGRITY_VERSION_ERASED,
+          }
+        : stripped;
+    await tx
+      .update(waiverRecords)
+      .set({
+        integrityHash: sealed.integrityHash,
+        integrityVersion: sealed.integrityVersion,
+        ...waiverIntegrityVerdict(sealed, now),
+      })
+      .where(eq(waiverRecords.id, stripped.id));
   }
 
   // The per-channel mechanics behind the column above (ADR
@@ -2609,6 +2619,17 @@ async function scrubInterests(
       .returning({ id: interests.id });
     logFuzzyMatch(ctx, "date_interest_phone", byPhone.length);
     reached.push(...byPhone.map((row) => row.id));
+  }
+
+  // A reply the shop sent from the Requests page (issue #2555) holds the same
+  // stranger's address and a sentence written to them. The row keeps that a
+  // reply went, when and by whom; the address, the words and the provider's id
+  // (a WhatsApp one spells the number) go.
+  if (reached.length > 0) {
+    await tx
+      .update(interestReplies)
+      .set({ toAddress: null, body: null, providerMessageId: null })
+      .where(and(eq(interestReplies.shopId, shopId), inArray(interestReplies.interestId, reached)));
   }
 
   // A date interest attached to a departure left a person-less child that copied the
