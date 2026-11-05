@@ -115,14 +115,18 @@ export async function upsertTripRequirements(
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (!trip) return null;
+  // A person saved this level, so it is the shop's statement about the
+  // departure and no longer the default a training mark may lower, even
+  // when it is the same Open Water (issue #3872).
   const [requirement] = await db
     .insert(tripRequirements)
-    .values(input)
+    .values({ ...input, minimumCertificationIsDefault: false })
     .onConflictDoUpdate({
       target: tripRequirements.tripId,
       set: {
         requiresWaiver: input.requiresWaiver,
         minimumCertificationLevel: input.minimumCertificationLevel,
+        minimumCertificationIsDefault: false,
         requiredSpecialties: input.requiredSpecialties,
         requiresNitrox: input.requiresNitrox,
         requiresPayment: input.requiresPayment,

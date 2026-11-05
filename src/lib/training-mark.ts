@@ -3,7 +3,7 @@ import { type CourseRatioRule, courseRatioCapacity } from "./course-ratios";
 import { inWaterCrewRole, type TripCrewAssignment } from "./crew-roles";
 import type { ParticipantType } from "./participant-types";
 import { isDiver } from "./participant-types";
-import { type Requirement, requirementDemandsNothing } from "./requirement";
+import { type Requirement, requirementDemandsNothing, unionRequirements } from "./requirement";
 
 /**
  * **A training mark** (issue #2275, ADR
@@ -395,7 +395,9 @@ export function trainingDiveRequiredLevel(
  * **The site requirement a marked training dive answers to**: the site's level
  * lowered by `trainingDiveRequiredLevel`, everything else as the site states
  * it. Only a site's level is ever lowered; a level the trip itself sets is the
- * shop's statement about that departure and stands (issue #3776). Readiness
+ * shop's statement about that departure and stands (issue #3776), unless it is
+ * the default nobody chose, which `tripAndSiteSides` counts as the site's
+ * (issue #3872). Readiness
  * (boarding) and trip admission (the sale) both fold the trip's requirement
  * with this, so a mark lowers a level in both gates or in neither.
  */
@@ -425,13 +427,56 @@ export function trainingDiveAsksNoCard(
   return level !== null && course !== null && trainingDiveRequiredLevel(level, course) === null;
 }
 
+/**
+ * A departure's own requirement as the gates read it: the stored row, with the
+ * flag saying its level is the default nobody chose (issue #3872). A reader
+ * that does not carry the flag reads the level as chosen, which keeps it.
+ */
+export type TripLevelRequirement = Requirement & {
+  minimumCertificationIsDefault?: boolean | null;
+};
+
+/**
+ * **A default level counts as the site's, not the trip's** (issue #3872,
+ * Aaron on #3839 2026-11-04). `insertTripInstance` writes Open Water on every
+ * non-course departure and flags it default until a person saves the level.
+ * That level is not the shop's statement about the departure, so it moves to
+ * the site side of the requirement, where a training mark may lower it exactly
+ * as it lowers a site's level (`trainingDiveSiteRequirement`). Only the level
+ * moves: the trip's specialties and nitrox stay the trip's. The union of the
+ * two sides is unchanged, so an unmarked seat is held to the default as before.
+ * Readiness, the sale and the no-card wording all fold through this.
+ */
+export function tripAndSiteSides<T extends TripLevelRequirement>(
+  trip: T | null | undefined,
+  site: Requirement | null | undefined,
+): { trip: T | null; site: Requirement | null } {
+  const level = trip?.minimumCertificationLevel ?? null;
+  if (trip?.minimumCertificationIsDefault !== true || level === null) {
+    return { trip: trip ?? null, site: site ?? null };
+  }
+  return {
+    trip: { ...trip, minimumCertificationLevel: null },
+    site: unionRequirements(site, {
+      minimumCertificationLevel: level,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+    }),
+  };
+}
+
 /** The no-card wording is valid only when the trip itself asks for no card. */
 export function trainingDiveAsksNoCardForSite(
-  trip: Requirement | null | undefined,
+  trip: TripLevelRequirement | null | undefined,
   site: Requirement | null | undefined,
   course: TrainingDiveCourse | null,
 ): boolean {
-  return requirementDemandsNothing(trip) && !!site && trainingDiveAsksNoCard(site, course);
+  const sides = tripAndSiteSides(trip, site);
+  return (
+    requirementDemandsNothing(sides.trip) &&
+    !!sides.site &&
+    trainingDiveAsksNoCard(sides.site, course)
+  );
 }
 
 /**

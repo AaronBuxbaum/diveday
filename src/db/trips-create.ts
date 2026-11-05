@@ -358,6 +358,9 @@ export async function insertTripInstances(tx: AppTransaction, list: TripInstance
       minimumCertificationLevel: params.course
         ? params.course.minimumCertificationLevel
         : "open_water",
+      // Nobody chose that Open Water: a training mark may lower it as it
+      // lowers a site's level, until a person saves the level (issue #3872).
+      minimumCertificationIsDefault: !params.course,
     })),
   );
   return created;

@@ -17,7 +17,7 @@ trip_series_crew.csv 3 rows 451799f529efbb2b [series_id,series_title,person_id,p
 trip_series_skips.csv 1 rows 07cb44cb77d674e3 [series_id,series_title,occurrence_date,created_at]
 trip_schedule_days.csv 83 rows 30589d0e6e9b85e7 [trip_id,trip_title,day_number,starts_at,ends_at]
 trip_dives.csv 251 rows 1f1b56bec4bec1c5 [trip_id,trip_title,dive_number,title,dive_site_id,dive_site_name,description,travel_minutes]
-trip_requirements.csv 122 rows 33898caf760a8e3f [trip_id,trip_title,trip_starts_at,requires_waiver,minimum_certification_level,required_specialties,requires_nitrox,requires_payment,updated_at]
+trip_requirements.csv 122 rows a94e0fde2c1bc8bf [trip_id,trip_title,trip_starts_at,requires_waiver,minimum_certification_level,minimum_certification_is_default,required_specialties,requires_nitrox,requires_payment,updated_at]
 trip_assignments.csv 283 rows 6a112b586c1cd306 [trip_id,trip_title,trip_starts_at,person_id,person_name,roles,trip_role,assigned_by_person_id,assigned_by_name,training_plan_instructor_person_id,training_plan_by_person_id,training_plan_at]
 staff_shifts.csv 12 rows cde3982646e5b083 [id,person_id,person_name,starts_at,ends_at,note,created_by_person_id,created_by_name,created_at]
 crew_availability_blocks.csv 1 rows a2dd1b383de32d8a [id,person_id,person_name,starts_on,ends_on,note,created_by_person_id,created_by_name,created_at]

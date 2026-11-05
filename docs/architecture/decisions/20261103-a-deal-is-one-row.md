@@ -41,8 +41,9 @@ This is the storage half only; the screens do not change.
 
 Every row keeps its id, so the copy was a plain insert and a reference to an old row is a reference
 to its deal. Triggers forwarded the release still serving during the deploy onto `deals` and
-`deal_id`. The old tables, enums, triggers and functions were dropped in #3778; the four old columns
-follow in #3866, one release after their declarations leave the schema.
+`deal_id`. The old tables, enums, triggers and functions were dropped in #3778. The four old columns
+(`promo_code_id` and `trip_promo_id` on `booking_checkouts` and `payment_operation_intents`) left
+the schema in #3878 and were dropped one release later in #3866.
 
 Known gap, deploy window only: the bridge forwards the old release's writes, not the reverse, so a
 code switched off on the new release still applies on the old one and a capped code can overshoot.

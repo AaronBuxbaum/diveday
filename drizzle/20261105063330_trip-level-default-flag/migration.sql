@@ -1,0 +1,2 @@
+ALTER TABLE "trip_requirements" ADD COLUMN "minimum_certification_is_default" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "trip_requirements" ADD CONSTRAINT "trip_requirements_default_level_is_open_water" CHECK (not "minimum_certification_is_default" or "minimum_certification_level" = 'open_water');

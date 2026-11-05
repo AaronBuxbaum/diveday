@@ -65,7 +65,7 @@ export const EXPORT_FILE_NOTES = {
     "The meeting windows for each trip day; multi-day courses can have different times on each day.",
   "trip_dives.csv": "The ordered dives within each trip, with their sites.",
   "trip_requirements.csv":
-    "Each trip's own boarding gates: waiver, minimum level, specialties, nitrox, payment. Not the whole gate — the effective requirement also composes in each visited dive site's gate (stricter minimum level wins, specialties union, nitrox if either says so); apply that composition in any system enforcing boarding from this export.",
+    "Each trip's own boarding gates: waiver, minimum level, specialties, nitrox, payment. minimum_certification_is_default is true when the level is the Open Water every new departure starts with and nobody has saved it since; a marked training dive may then lower it as it lowers a site's level. Not the whole gate — the effective requirement also composes in each visited dive site's gate (stricter minimum level wins, specialties union, nitrox if either says so); apply that composition in any system enforcing boarding from this export.",
   "trip_assignments.csv": "Which staff crewed each trip.",
   "staff_shifts.csv":
     "Dated staff availability windows; trip assignments remain the authoritative crew list.",
