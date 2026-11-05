@@ -42,10 +42,8 @@ type BookingConfirmationEmailInput = {
   dockCallMinutes?: number;
   /** The diver's readiness page, so a closed tab never loses it. */
   readinessUrl?: string;
-  /** The waiver link this confirmation carries as its first step, when one is owed. */
+  /** The thread's Sign step this confirmation carries as its first step, when one is owed. */
   waiverUrl?: string;
-  /** When `waiverUrl` expires. */
-  waiverExpiresAt?: Date;
   /** The shop's configured packing suggestions (`shops.packingList`). */
   packingList?: string[];
   /** The shop also suggests a logbook (`shops.packing_logbook`), said in the diver's language. */
@@ -775,17 +773,15 @@ export type NotificationEmail = {
 
 /**
  * **The waiver, as the confirmation's first step** (UX review 2026-10-11, item
- * 7). One booking is one email: the link that used to arrive seconds later in
- * its own message sits right under the date, with its own button and its
- * expiry. Empty strings when no waiver is owed, so a diver whose signature
- * still covers the trip reads nothing about one.
+ * 7). One booking is one email: the Sign step sits right under the date, with
+ * its own button. It is the readiness link's own page (issue #2743), so it
+ * lasts as long as that link does and states no expiry of its own. Empty
+ * strings when no waiver is owed, so a diver whose signature still covers the
+ * trip reads nothing about one.
  */
 function waiverStep(
   t: DiverTranslator,
-  input: Pick<
-    BookingConfirmationEmailInput,
-    "waiverUrl" | "waiverExpiresAt" | "shopName" | "locale" | "timezone"
-  >,
+  input: Pick<BookingConfirmationEmailInput, "waiverUrl" | "shopName">,
 ) {
   if (!input.waiverUrl) return { text: "", html: "" };
   const lead = t("notifications.bookingConfirmation.waiverStep", { shopName: input.shopName });
@@ -793,14 +789,9 @@ function waiverStep(
     shopName: escapeHtml(input.shopName),
   });
   const label = t("notifications.bookingConfirmation.waiverLink");
-  const expiry = input.waiverExpiresAt
-    ? t("notifications.waiverRequest.expiry", {
-        expiresAt: formatDateTimeTz(input.waiverExpiresAt, input.locale, input.timezone),
-      })
-    : "";
   return {
-    text: `\n\n${lead}\n${label}:\n${input.waiverUrl}${expiry ? `\n${expiry}` : ""}`,
-    html: `<p><strong>${leadHtml}</strong></p>${emailButton(input.waiverUrl, label)}${expiry ? `<p style="font-size: 13px;">${escapeHtml(expiry)}</p>` : ""}`,
+    text: `\n\n${lead}\n${label}:\n${input.waiverUrl}`,
+    html: `<p><strong>${leadHtml}</strong></p>${emailButton(input.waiverUrl, label)}`,
   };
 }
 

@@ -25,8 +25,8 @@ import { type SendRescheduleNoticesOptions, sendSeatMoveNotice } from "./trip-re
 import { liveTrip } from "./trips-live";
 import {
   type IssueAndDeliverWaiverResult,
-  issueJoinWaiverLink,
   issueWaiverOnJoin,
+  openJoinSignStep,
   settleJoinWaiverDelivery,
 } from "./waiver-issue";
 
@@ -427,22 +427,22 @@ async function seatConsequences(
     (await departureOwesConfirmation(db, input.shopId, input.tripId, input.entry));
   if (confirms) {
     try {
-      const link = await issueJoinWaiverLink(db, input.shopId, outcome.bookingId);
+      const step = await openJoinSignStep(db, input.shopId, outcome.bookingId);
       const delivery = await sendStaffSeatingConfirmation(db, input.shopId, outcome.bookingId, {
-        waiver: link,
+        signStep: step,
       });
       confirmation = delivery?.status === "sent" ? "sent" : "not_sent";
-      if (link) {
+      if (step) {
         const fallback = await settleJoinWaiverDelivery(db, {
           shopId: input.shopId,
           bookingId: outcome.bookingId,
-          link,
+          step,
           confirmationSent: confirmation === "sent",
         });
         if (confirmation === "sent") waiver = "sent";
         else takeWaiver(fallback);
       } else {
-        // No link minted: nothing was owed, or issuing failed. The join-send
+        // No release opened: nothing was owed, or opening failed. The join-send
         // tells the two apart and reports which.
         takeWaiver(await issueWaiverOnJoin(db, input.shopId, outcome.bookingId));
       }

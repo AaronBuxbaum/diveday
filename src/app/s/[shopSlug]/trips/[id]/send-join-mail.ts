@@ -5,13 +5,9 @@ import { withErasureCoordinatedBookingSend } from "@/db/erasure-coordinated-send
 import { sendAndRecordNotification } from "@/db/notifications";
 import type { shopBySlugCached } from "@/db/shops-cached";
 import { getTripWithBooked } from "@/db/trips";
-import {
-  issueJoinWaiverLink,
-  issueWaiverOnJoin,
-  settleJoinWaiverDelivery,
-} from "@/db/waiver-issue";
+import { issueWaiverOnJoin, openJoinSignStep, settleJoinWaiverDelivery } from "@/db/waiver-issue";
 import type { DiverLocale } from "@/i18n/settings";
-import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { readinessLinkPath, readinessWaiverLinkPath } from "@/lib/booking-capabilities";
 import { readLearningMaterials } from "@/lib/courses";
 import { packsLogbook } from "@/lib/diver-planning";
 import { log } from "@/lib/log";
@@ -24,12 +20,17 @@ import {
 import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import type { ParticipantType } from "@/lib/participant-types";
 
-function readinessEmailUrl(token: string): string | undefined {
+function emailUrl(path: string): string | undefined {
   const origin = publicAppUrl();
-  return origin ? new URL(readinessLinkPath(token), `${origin}/`).toString() : undefined;
+  return origin ? new URL(path, `${origin}/`).toString() : undefined;
 }
 
-/** Send the just-booked party's confirmation and any waiver links safely. */
+/**
+ * Send the just-booked party's confirmation and any waiver links safely. The
+ * lead's own release rides in the confirmation as the thread's Sign step, on
+ * the readiness link it carries (issue #2743); every other seat's goes out as
+ * its own waiver link.
+ */
 export async function sendJoinMail(
   db: AppDb,
   input: {
@@ -49,7 +50,7 @@ export async function sendJoinMail(
   const { chargesOnline, partyTypes } = input.money;
   const leadPersonId =
     lead?.person.id ?? bookings.find((seat) => seat.bookingId === primaryBookingId)?.personId;
-  let leadWaiver: Awaited<ReturnType<typeof issueJoinWaiverLink>> = null;
+  let leadWaiver: Awaited<ReturnType<typeof openJoinSignStep>> = null;
   let confirmationSent = false;
   if (lead?.person.email && trip && leadPersonId) {
     try {
@@ -75,7 +76,8 @@ export async function sendJoinMail(
             delivered: true,
           });
           if (publicAppUrl() && !readiness) return null;
-          const waiver = await issueJoinWaiverLink(tx, shop.id, primaryBookingId);
+          // No readiness link, no Sign step: it is that link's own page.
+          const waiver = readiness ? await openJoinSignStep(tx, shop.id, primaryBookingId) : null;
           const delivery = await sendAndRecordNotification(
             tx,
             bookSpotConfirmation({
@@ -84,8 +86,11 @@ export async function sendJoinMail(
               confirmed: freshLead,
               to: freshLead.person.email,
               locale: recipientLocale(ownLocale ?? freshLead.person.locale, shop.defaultLocale),
-              readinessUrl: readiness ? readinessEmailUrl(readiness.token) : undefined,
-              waiver,
+              readinessUrl: readiness ? emailUrl(readinessLinkPath(readiness.token)) : undefined,
+              waiverUrl:
+                readiness && waiver
+                  ? emailUrl(readinessWaiverLinkPath(readiness.token))
+                  : undefined,
               chargesOnline,
               otherSeatTypes: partyTypes.slice(1),
             }),
@@ -95,7 +100,7 @@ export async function sendJoinMail(
             await settleJoinWaiverDelivery(tx, {
               shopId: shop.id,
               bookingId: primaryBookingId,
-              link: waiver,
+              step: waiver,
               confirmationSent: true,
               confirmationProviderMessageId: delivery.providerMessageId,
             });
@@ -131,7 +136,7 @@ export async function sendJoinMail(
             await settleJoinWaiverDelivery(db, {
               shopId: shop.id,
               bookingId,
-              link: leadWaiver,
+              step: leadWaiver,
               confirmationSent: false,
             });
           return;
@@ -157,7 +162,8 @@ function bookSpotConfirmation(input: {
   to: string;
   locale: DiverLocale;
   readinessUrl: string | undefined;
-  waiver: { url: string; expiresAt: Date; personId: string; tripId: string } | null;
+  /** The thread's Sign step on that same readiness link, when the lead owes a release. */
+  waiverUrl: string | undefined;
   chargesOnline: boolean;
   otherSeatTypes: readonly ParticipantType[];
 }): Notification {
@@ -176,8 +182,7 @@ function bookSpotConfirmation(input: {
     timezone: shop.timezone,
     dockCallMinutes: shop.dockCallMinutes,
     readinessUrl: input.readinessUrl,
-    waiverUrl: input.waiver?.url,
-    waiverExpiresAt: input.waiver?.expiresAt,
+    waiverUrl: input.waiverUrl,
     packingList: shop.packingList,
     packingLogbook: packsLogbook({
       shopSuggests: shop.packingLogbook,

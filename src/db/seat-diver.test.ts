@@ -432,9 +432,11 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
     });
 
     expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "sent" });
-    // One seating, one email: the confirmation carries the waiver link.
+    // One seating, one email, one link: the confirmation carries the waiver as
+    // its readiness link's Sign step, never a waiver link (issue #2743).
     expect(send).toHaveBeenCalledOnce();
-    expect(sentBodies(send)[0]).toContain("/waivers/");
+    expect(sentBodies(send)[0]).toMatch(/\/ready\/[A-Za-z0-9._-]+\/waiver/);
+    expect(sentBodies(send)[0]).not.toContain("/waivers/");
     expect(sentBodies(send)[0]).toContain(open.title);
   });
 
@@ -458,6 +460,7 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
     expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "not_needed" });
     expect(send).toHaveBeenCalledOnce();
     expect(sentBodies(send)[0]).not.toContain("/waivers/");
+    expect(sentBodies(send)[0]).not.toMatch(/\/ready\/[A-Za-z0-9._-]+\/waiver/);
   });
 
   it("keeps the counter's path for today's boat: the waiver alone, no confirmation", async () => {
@@ -539,7 +542,8 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
 
     expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "sent" });
     expect(send).toHaveBeenCalledOnce();
-    expect(sentBodies(send)[0]).toContain("/waivers/");
+    expect(sentBodies(send)[0]).toMatch(/\/ready\/[A-Za-z0-9._-]+\/waiver/);
+    expect(sentBodies(send)[0]).not.toContain("/waivers/");
   });
 
   it("confirms a counter seat on a later day's boat", async () => {

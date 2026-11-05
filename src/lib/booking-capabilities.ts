@@ -38,6 +38,16 @@ export function readinessLinkPath(token: string): string {
 }
 
 /**
+ * The thread's Sign step, on the same `readiness` capability (ADR
+ * 20261103-waiver-signs-in-the-thread): the seat's own release, which the
+ * booking confirmation carries as its first step (issue #2743), so a diver
+ * signing their own seat is never handed a second link.
+ */
+export function readinessWaiverLinkPath(token: string): string {
+  return `${readinessLinkPath(token)}/waiver`;
+}
+
+/**
  * The course forms a student still owes, on the same `readiness` capability
  * (ADR 20261008-course-forms): the forms belong to the enrollment the token
  * already proves.
