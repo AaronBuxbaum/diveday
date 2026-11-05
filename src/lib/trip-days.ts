@@ -115,6 +115,9 @@ const dateOf = (wall: WallTime): CalendarDate =>
   `${String(wall.year).padStart(4, "0")}-${String(wall.month).padStart(2, "0")}-${String(wall.day).padStart(2, "0")}`;
 
 const minuteOfDay = (wall: WallTime) => wall.hour * 60 + wall.minute;
+/** A wall time as one sortable number, for "does this day start after that one ends". */
+const wallOrder = (wall: WallTime) =>
+  ((wall.year * 13 + wall.month) * 32 + wall.day) * 1440 + minuteOfDay(wall);
 
 /**
  * The meeting days a submission asks for: `dayCount` consecutive days when
@@ -172,6 +175,12 @@ export function meetingDaysFor(
       const end = parseWallTime(date, hours.end || toTimeInputValue(day.end));
       if (!start || !end) return { ok: false, reason: "invalid" };
       if (minuteOfDay(end) <= minuteOfDay(start)) return { ok: false, reason: "end_before_start" };
+      // A day starts once the day before has ended: overlapping windows would
+      // blur whose roll call a tap belongs to (#2557).
+      const before = days.at(-1);
+      if (before && wallOrder(start) < wallOrder(before.end)) {
+        return { ok: false, reason: "days_out_of_order" };
+      }
       days.push({ start, end });
     } else {
       days.push({

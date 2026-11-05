@@ -299,6 +299,17 @@ describe("meetingDaysFor with a later day's own hours", () => {
     ).toEqual({ ok: false, reason: "end_before_start" });
   });
 
+  it("refuses a later day that starts before the night before has ended", () => {
+    const night = { start: wall(2026, 10, 21, 20, 0), end: wall(2026, 10, 22, 2, 0) };
+    expect(meetingDaysFor(night, 2, ["2026-10-22"], [{ start: "01:00", end: "05:00" }])).toEqual({
+      ok: false,
+      reason: "days_out_of_order",
+    });
+    expect(meetingDaysFor(night, 2, ["2026-10-22"], [{ start: "02:00", end: "05:00" }]).ok).toBe(
+      true,
+    );
+  });
+
   it("refuses a time that does not exist, or a list that disagrees with the count", () => {
     expect(
       meetingDaysFor(poolNight, 2, ["2026-10-24"], [{ start: "25:00", end: "26:00" }]),
