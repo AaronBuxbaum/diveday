@@ -1196,7 +1196,7 @@ export async function openMinorSeatWaiver(
 ): Promise<{ ok: true; recordId: string } | { ok: false }> {
   const now = input.now ?? nowDate();
   const seat = await minorSeatForLead(db, { ...input, now });
-  if (!seat || seat.door !== "sign") return { ok: false };
+  if (seat?.door !== "sign") return { ok: false };
   const opened = await openWaiverInThread(db, {
     shopId: input.shopId,
     bookingId: seat.row.booking.id,
