@@ -128,7 +128,7 @@ describe("the doctor's page", () => {
     expect(html).toContain('name="doctorForm"');
     if (shop.contactEmail) {
       expect(html).toContain(
-        `<span class="print:hidden">Can’t send it here?</span> Email a photo to <a href="mailto:${shop.contactEmail}"`,
+        `<span>Can’t send it here?</span> Email a photo to <a href="mailto:${shop.contactEmail}"`,
       );
       expect(html.indexOf('name="doctorForm"')).toBeLessThan(html.indexOf("mailto:"));
     }
@@ -155,6 +155,61 @@ describe("the doctor's page", () => {
     const { token } = await signedLink(medicalReferralAnswers);
     const html = await render(token);
     expect(html).toMatch(/<style data-capability-print="">@page\{margin:0;/);
+  });
+
+  /** The sheet's own markup: everything from its print-only frame to the end. */
+  const sheetOf = (html: string) => {
+    const start = html.indexOf('<div class="paper-sheet-frame" data-paper-print-only="">');
+    if (start < 0) throw new Error("expected the doctor's sheet");
+    return html.slice(start).replace(/ /g, " ");
+  };
+
+  it("draws its paper as one print-only sheet with nothing on it to tap (issue #2745)", async () => {
+    const { token, person, shop } = await signedLink(medicalReferralAnswers);
+    const html = await render(token);
+    const sheet = sheetOf(html);
+    expect(html.match(/class="paper-sheet"/g)).toHaveLength(1);
+    expect(sheet).toContain('data-testid="doctor-referral-sheet"');
+    expect(sheet).toContain(person.fullName);
+    expect(sheet).toContain("signs page 3");
+    // The official form's address written out, since paper cannot be tapped.
+    expect(sheet).toContain(`>${RSTC_QUESTIONNAIRE.published.url}<`);
+    expect(sheet).toContain(diverTranslator("en-US")("waiver.doctor.answersPrintOmitted"));
+    expect(sheet).not.toMatch(/<(form|input|button|select|textarea)\b/);
+    expect(sheet).not.toMatch(/\shref=/);
+    expect(sheet).not.toContain("Can’t send it here?");
+    if (shop.contactEmail) expect(sheet).toContain(shop.contactEmail);
+  });
+
+  it("never puts the link, the date of birth or an answer on the server-drawn sheet", async () => {
+    const { token } = await signedLink(medicalReferralAnswers);
+    // A correct unlock in another request changes nothing the server draws.
+    expect((await reveal(token, "1984-03-09")).status).toBe("open");
+    const sheet = sheetOf(await render(token));
+    expect(sheet).not.toContain(token);
+    expect(sheet).not.toContain(encodeURIComponent(token));
+    expect(sheet).not.toContain("/waivers/");
+    expect(sheet).not.toContain("1984");
+    expect(sheet).not.toContain("Question 3");
+    expect(sheet).not.toContain("moderate exercise");
+    expect(sheet).not.toContain('data-testid="doctor-sheet-answers"');
+  });
+
+  it("prints the whole questionnaire, and the form sent, as the screen says them", async () => {
+    const { db, token, person } = await signedLink(medicalReferralAnswers, { dateOfBirth: null });
+    expect(sheetOf(await render(token))).toContain(
+      "Go through the whole questionnaire with your doctor.",
+    );
+    const stored = "https://media.example.com/medical-clearances/sent.jpg";
+    await db
+      .update(waiverRecords)
+      .set({ diverMedicalFormUrl: stored, diverMedicalFormSentAt: now })
+      .where(
+        and(eq(waiverRecords.personId, person.id), eq(waiverRecords.status, "medical_review")),
+      );
+    const sheet = sheetOf(await render(token));
+    expect(sheet).toContain("You’re not cleared to dive until staff have read it and told you.");
+    expect(sheet).not.toContain("media.example.com");
   });
 
   it("asks for the whole questionnaire when no date of birth is on file", async () => {

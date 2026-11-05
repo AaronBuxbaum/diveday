@@ -1104,6 +1104,21 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 }
 
+/* **On paper, a page that holds a sheet is its sheets** (issue #2745). Every
+   element that is not a sheet's frame, inside one, or around one goes, so a
+   screen never reaches the printer beside its document: not the chrome, not
+   a page's own controls, and not a diver's screen when the browser prints
+   without firing `beforeprint` (a share-sheet print on some phones). One
+   rule, by structure, in place of a `print:hidden` on each control. A page
+   with no sheet is not a document and prints as the browser draws it.
+   Unlayered and `!important`, so no display utility can bring a screen back. */
+@media print {
+  body:has(.paper-sheet-frame)
+    :not(.paper-sheet-frame, .paper-sheet-frame *, :has(.paper-sheet-frame)) {
+    display: none !important;
+  }
+}
+
 /* Paper's own rows, which the live manifest keeps for its print-only
    fallback (`data-print-only`): inside a sheet they are the content. */
 .paper-sheet [data-print-only] {

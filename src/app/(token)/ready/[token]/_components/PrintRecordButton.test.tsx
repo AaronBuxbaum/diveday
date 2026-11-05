@@ -39,27 +39,35 @@ describe("the record's paper (issue #2745)", () => {
     await vi.waitFor(() => expect(print).toHaveBeenCalledTimes(1));
   });
 
-  it("prints the sheet, never the screen, when the browser's own Print is used", () => {
+  it("keeps the sheet under the screen for the printer alone, beforeprint or not", () => {
     const print = vi.spyOn(window, "print").mockImplementation(() => {});
-    render(<Page />);
+    const { container } = render(<Page />);
+    expect(screen.getByText("The screen")).toBeInTheDocument();
+    const frame = container.querySelector(".paper-sheet-frame");
+    expect(frame?.hasAttribute("data-paper-print-only")).toBe(true);
+    expect(frame?.textContent).toBe("Logbook sheet");
+    // The browser is already printing: nothing asks again, and nothing swaps.
     act(() => {
       window.dispatchEvent(new Event("beforeprint"));
     });
-    expect(screen.queryByText("The screen")).toBeNull();
-    expect(screen.getByText("Logbook sheet")).toBeInTheDocument();
-    // The browser is already printing: nothing asks again.
+    expect(screen.getByText("The screen")).toBeInTheDocument();
     expect(print).not.toHaveBeenCalled();
   });
 
-  it("goes back to the screen", () => {
+  it("goes back to the screen", async () => {
     vi.spyOn(window, "print").mockImplementation(() => {});
-    render(<Page />);
-    act(() => {
-      window.dispatchEvent(new Event("beforeprint"));
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((step) => {
+      step(0);
+      return 0;
     });
+    const { container } = render(<Page />);
+    fireEvent.click(screen.getByRole("button", { name: "Print log entry" }));
+    expect(container.querySelector("[data-paper-print-only]")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Back to your day" }));
     expect(screen.getByText("The screen")).toBeInTheDocument();
-    expect(screen.queryByText("Logbook sheet")).toBeNull();
+    expect(
+      container.querySelector(".paper-sheet-frame")?.hasAttribute("data-paper-print-only"),
+    ).toBe(true);
   });
 
   it("offers no Print outside a page that has paper", () => {

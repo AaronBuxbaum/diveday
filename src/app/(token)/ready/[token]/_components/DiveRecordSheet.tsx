@@ -3,7 +3,12 @@ import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
 import type { AfterStateProps } from "@/features/recap-after-state";
 import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { publicAppUrl } from "@/lib/notifications";
-import { PACKET_PAPER, printSheetPageRule, storefrontAddress } from "@/lib/print-sheets";
+import {
+  capabilityPagePrintRule,
+  PACKET_PAPER,
+  printSheetPageRule,
+  storefrontAddress,
+} from "@/lib/print-sheets";
 import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";
 import { RecordFacts } from "./DiveRecordFacts";
 
@@ -59,6 +64,9 @@ export function DiveRecordSheet({
     <>
       {/* A fixed rule built from the sheet's own paper, never a request value. */}
       <style data-print-sheet="">{printSheetPageRule(DIVE_RECORD_PAPER)}</style>
+      {/* Its page is opened by a bearer link, so it prints with no margin for
+          the browser to write that link in (`capabilityPagePrintRule`). */}
+      <style data-capability-print="">{capabilityPagePrintRule()}</style>
       <BrandStyle brandColor={null} brandDisplayFont={shop.brandDisplayFont} />
       <PaperSheet
         paper={DIVE_RECORD_PAPER}
