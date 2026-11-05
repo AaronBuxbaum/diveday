@@ -15,13 +15,14 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * a diver who signed here last season needs a fresh signature, and one who
  * never has needs a first one. They are different conversations at the desk.
  */
-const WAIVER_STATUS_KEYS: Record<ShopWaiverStanding["state"], StaffMessageKey> = {
+const WAIVER_STATUS_KEYS: Record<Exclude<WaiverRowState, "failed">, StaffMessageKey> = {
   none: "shared.waiverStatus.none",
   signed: "shared.waiverStatus.current",
   lapsed: "shared.waiverStatus.expired",
   guardian_missing: "shared.waiverStatus.guardianMissing",
   medical_review: "shared.waiverStatus.medicalReview",
   medical_not_cleared: "shared.waiverStatus.medicalNotCleared",
+  seal_failed: "waiversStaff.seatSealFailed",
 };
 
 /** The one word a shop-level waiver standing goes by, in the staff bundle's language. */
@@ -42,8 +43,12 @@ export function shopWaiverStatusTone(status: ShopWaiverStanding): "success" | "w
 
 /**
  * **The state a shared waiver row renders** (ADR 20260827-people-not-lists,
- * decision 6) — the four states `shopWaiverStanding` can be in, plus the one
- * that is not a waiver standing at all.
+ * decision 6) — the states `shopWaiverStanding` can be in, plus two that are
+ * not a standing it can see.
+ *
+ * `seal_failed` is the departure's verdict that a release was changed after
+ * signing (issue #3953): the standing still reads signed, and the row must
+ * not, so it takes the seat roster's word (`seatWaiverStanding`).
  *
  * `failed` is a **delivery** outcome (`diver.waiverRequest === "failed"`),
  * orthogonal to the release itself: the diver's standing is still "not
@@ -52,7 +57,7 @@ export function shopWaiverStatusTone(status: ShopWaiverStanding): "success" | "w
  * in the row's detail, which is why `WaiverStateRow` will not render that state
  * without one.
  */
-export type WaiverRowState = ShopWaiverStanding["state"] | "failed";
+export type WaiverRowState = ShopWaiverStanding["state"] | "failed" | "seal_failed";
 
 /** The one word a waiver row's state goes by, in the staff bundle's language. */
 export function waiverRowStateText(t: StaffTranslator, state: WaiverRowState): string {
@@ -71,6 +76,7 @@ export function waiverRowStateTone(state: WaiverRowState): "success" | "warning"
     case "medical_review":
     case "medical_not_cleared":
     case "failed":
+    case "seal_failed":
       return "danger";
     default:
       return "warning";
