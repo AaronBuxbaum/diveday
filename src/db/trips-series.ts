@@ -220,9 +220,10 @@ async function loadTemplate(
  *
  * Templates from the furthest-out instance, so a shop that improves next
  * month's charter sees the improvement on the dates that follow it. Returns the
- * created instances, or null when the series has nothing to template from or
- * its course has since been archived — guessing the cert gate on a safety
- * surface is never acceptable.
+ * created instances and the cadence dates left off because the hull is in the
+ * yard, or null when the series has nothing to template from or its course has
+ * since been archived — guessing the cert gate on a safety surface is never
+ * acceptable.
  */
 async function materializeWindow(
   tx: AppTransaction,
@@ -232,7 +233,7 @@ async function materializeWindow(
     from: CalendarDate;
     through: CalendarDate;
   },
-): Promise<Array<typeof trips.$inferSelect> | null> {
+): Promise<MaterializedWindow | null> {
   const { series, timeZone } = input;
   const proposed = seriesOccurrenceDates({
     anchorDate: series.anchorDate,
@@ -242,7 +243,7 @@ async function materializeWindow(
     endsOn: series.endsOn,
   });
   if (!proposed) return null;
-  if (proposed.length === 0) return [];
+  if (proposed.length === 0) return { created: [], inTheYard: [] };
 
   const template = await loadTemplate(tx, series.shopId, series.id);
   if (!template) return null;
@@ -296,7 +297,9 @@ async function materializeWindow(
   // **A hull in the yard sails nothing, the nightly roll included** (issue
   // #3915, attacker review S6). A week whose meeting days touch the boat's
   // window is left off, not closed: no skip row is written, so if the window
-  // moves the next roll puts the week back.
+  // moves the next roll puts the week back. Each date left off is returned
+  // (issue #3948), because the nightly roll writes with nobody watching.
+  const inTheYard: CalendarDate[] = [];
   const yard = await boatServiceWindowOf(tx, series.shopId, template.trip.boatId);
 
   // Built in memory, written as one batch (code review 2026-10-13b, item 40):
@@ -310,7 +313,10 @@ async function materializeWindow(
     const last = days.at(-1);
     if (!first || !last) continue;
     const meetingDates = days.map((day) => calendarDateInTimezone(day.startsAt, timeZone));
-    if (serviceWindowTouches(yard, meetingDates)) continue;
+    if (serviceWindowTouches(yard, meetingDates)) {
+      inTheYard.push(occurrenceDate);
+      continue;
+    }
     planned.push({
       days,
       params: {
@@ -381,8 +387,14 @@ async function materializeWindow(
       .set({ occurrenceCount: series.occurrenceCount + created.length })
       .where(eq(tripSeries.id, series.id));
   }
-  return created;
+  return { created, inTheYard };
 }
+
+/** What {@link materializeWindow} put on the board, and the dates the yard kept off it. */
+type MaterializedWindow = {
+  created: Array<typeof trips.$inferSelect>;
+  inTheYard: CalendarDate[];
+};
 
 export type NewTripSeries = Omit<NewTrip, "startsAt" | "endsAt" | "scheduleDays"> & {
   frequency: TripRecurrenceFrequency;
@@ -556,12 +568,21 @@ export async function createTripSeriesOrRefusal(db: AppDb, input: NewTripSeries)
       from: seedDate,
       through: shiftCalendarDate(seedDate, SERIES_HORIZON_DAYS),
     });
+    // `inTheYard` is always empty here: a yard week was refused above.
     if (!rest) return null;
-    return { series, trips: [seed, ...rest] };
+    return { series, trips: [seed, ...rest.created] };
   });
 }
 
-export type SeriesRollResult = { created: number };
+export type SeriesRollResult = {
+  created: number;
+  /**
+   * Shop-local cadence dates inside the horizon left off because the hull is
+   * in the yard on one of their meeting days (issue #3948). Not closed: the
+   * next roll after the window moves puts them on.
+   */
+  inTheYard: CalendarDate[];
+};
 
 /**
  * Roll one series' horizon forward: put every cadence date between today and
@@ -618,7 +639,7 @@ export async function rollSeriesForward(
       through: shiftCalendarDate(today, SERIES_HORIZON_DAYS),
     });
     if (!created) return null;
-    return { created: created.length };
+    return { created: created.created.length, inTheYard: created.inTheYard };
   });
 }
 
@@ -629,6 +650,8 @@ export type SeriesSweepResult = {
   failures: number;
   /** Runs that were due but did not fit in this pass — zero on a healthy night. */
   deferred: number;
+  /** Cadence dates in reach left off because the hull is in the yard (issue #3948). */
+  yardDatesLeftOff: number;
 };
 
 /**
@@ -707,6 +730,7 @@ export async function rollAllSeriesForward(
     // Not the true remainder, and it does not need to be: the number that
     // matters is "did anything wait?", and the next pass takes it first.
     deferred: candidates.length > SERIES_SWEEP_LIMIT ? candidates.length - SERIES_SWEEP_LIMIT : 0,
+    yardDatesLeftOff: 0,
   };
   for (const candidate of batch) {
     const result = await rollSeriesForward(db, candidate.shopId, candidate.id, now);
@@ -720,6 +744,7 @@ export async function rollAllSeriesForward(
       summary.failures += 1;
       continue;
     }
+    summary.yardDatesLeftOff += result.inTheYard.length;
     if (result.created > 0) {
       summary.seriesExtended += 1;
       summary.tripsCreated += result.created;
@@ -1224,8 +1249,8 @@ export async function setSeriesRepeat(
     .update(tripSeries)
     .set({ endsOn: keepRepeating ? null : calendarDateInTimezone(now, row.timeZone) })
     .where(and(eq(tripSeries.id, seriesId), eq(tripSeries.shopId, shopId)));
-  if (!keepRepeating) return { created: 0 };
-  return (await rollSeriesForward(db, shopId, seriesId, now)) ?? { created: 0 };
+  if (!keepRepeating) return { created: 0, inTheYard: [] };
+  return (await rollSeriesForward(db, shopId, seriesId, now)) ?? { created: 0, inTheYard: [] };
 }
 
 /**
