@@ -1,11 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
 import { bookingCapabilities, people, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
-import { diverTranslator } from "@/i18n/messages";
 import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 
