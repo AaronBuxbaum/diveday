@@ -827,7 +827,7 @@ export async function resendConfirmationWithWaiver(
     provider,
     step ?? undefined,
   );
-  if (step && delivery?.status === "sent") {
+  if (step && delivery?.status === "sent" && delivery.carriedSignStep) {
     await settleJoinWaiverDelivery(db, {
       shopId,
       bookingId,
@@ -835,6 +835,10 @@ export async function resendConfirmationWithWaiver(
       confirmationSent: true,
       confirmationProviderMessageId: delivery.providerMessageId,
     });
+  } else if (step && delivery?.status === "sent") {
+    // The mail went without the Sign step (the seat moved under it): the
+    // release goes on its own rather than being recorded as emailed.
+    await settleJoinWaiverDelivery(db, { shopId, bookingId, step, confirmationSent: false });
   }
   return delivery;
 }

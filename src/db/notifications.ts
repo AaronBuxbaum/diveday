@@ -2236,10 +2236,15 @@ async function sendStoredBookingConfirmation(
         // original booking confirmation's provider idempotency key.
         confirmedAt: nowDate(),
       };
-      return sendAndRecordNotification(tx, notification, {
+      const delivery = await sendAndRecordNotification(tx, notification, {
         provider: options.provider,
         signal: notificationProviderSignal(),
       });
+      // Whether the mail rendered the Sign step, read off the notification it
+      // built: a caller records "emailed" evidence only on this, never on "sent"
+      // alone (a seat moved between the caller's read and the fenced one gets a
+      // confirmation with no step).
+      return { ...delivery, carriedSignStep: notification.waiverUrl !== undefined };
     },
   );
 }

@@ -4,6 +4,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { capabilityExpiryFor } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { type GuardianSigner, guardianSignatureMissing } from "@/lib/guardian";
 import { isHeldToMedical } from "@/lib/participant-types";
@@ -128,8 +129,8 @@ export async function openWaiverInThread(
     shopId: string;
     bookingId: string;
     /** The seat's holder and departure the caller observed; a move between reads refuses. */
-    expectedPersonId?: string;
-    expectedTripId?: string;
+    expectedPersonId: string;
+    expectedTripId: string;
     now?: Date;
   },
 ): Promise<OpenThreadWaiverOutcome> {
@@ -311,7 +312,15 @@ async function issueWaiverRecord(
     // A row lock can wait past expiry or a concurrent signature. Re-read the
     // clock and terms only after every current record is locked.
     const now = input.now ?? nowDate();
-    const expiresAt = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
+    // A record opened for the thread is signed on the readiness link, which
+    // lives until the trip ends plus its grace, so the record lives as long: a
+    // week's expiry on a link nobody was handed would read "link expired" on
+    // day 8 and blame the diver for a deadline the mail never stated. A waiver
+    // link (`keepLiveRecord` false) keeps its own week.
+    const expiresAt =
+      keepLiveRecord && booking
+        ? capabilityExpiryFor(booking.tripEndsAt, now)
+        : new Date(now.getTime() + WAIVER_LINK_TTL_MS);
     const template = await getCurrentWaiverTemplate(tx, input.shopId);
     if (!template) return { ok: false, reason: "template_not_found" };
     // A signature that has lapsed (its year, its physician's year, or terms the
@@ -377,15 +386,11 @@ async function issueWaiverRecord(
     );
     const reusedToken = live ? liveWaiverLinkToken(live.id, live.tokenHash) : null;
     if (live && keepLiveRecord) {
-      const refreshedExpiry = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
-      await tx
-        .update(waiverRecords)
-        .set({ expiresAt: refreshedExpiry })
-        .where(eq(waiverRecords.id, live.id));
+      await tx.update(waiverRecords).set({ expiresAt }).where(eq(waiverRecords.id, live.id));
       return {
         ok: true,
         token: null,
-        expiresAt: refreshedExpiry,
+        expiresAt,
         recordId: live.id,
         reused: true,
       };

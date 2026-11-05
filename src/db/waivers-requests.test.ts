@@ -1,5 +1,6 @@
 import { and, eq, getTableColumns, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { capabilityExpiryFor } from "@/lib/booking-capabilities";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { createWaiverToken, hashWaiverToken, waiverLinkToken } from "@/lib/waiver-tokens";
 import { fileScopedShopContext } from "@/test/db";
@@ -334,12 +335,18 @@ describe("waiver records (in-memory PGlite)", () => {
    * into it, so the thread keeps the live record.
    */
   it("keeps the live release for the thread", async () => {
-    const { db, shop, booking } = await waiverContext();
+    const { db, shop, trip, booking, person } = await waiverContext();
     const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!sent.ok) throw new Error("expected the link to issue");
     const later = new Date(now.getTime() + 60_000);
     expect(
-      await openWaiverInThread(db, { shopId: shop.id, bookingId: booking.id, now: later }),
+      await openWaiverInThread(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        expectedPersonId: person.id,
+        expectedTripId: trip.id,
+        now: later,
+      }),
     ).toEqual({ ok: true, recordId: sent.recordId });
     expect(await getWaiverForToken(db, sent.token, later)).toMatchObject({ state: "available" });
     const key = await threadWaiverKey(db, { shopId: shop.id, bookingId: booking.id });
@@ -347,22 +354,85 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   it("opens nothing in the thread for a seat on a canceled trip", async () => {
-    const { db, shop, trip, booking } = await waiverContext();
+    const { db, shop, trip, booking, person } = await waiverContext();
     await setTripStatus(db, shop.id, trip.id, "cancelled");
-    expect(await openWaiverInThread(db, { shopId: shop.id, bookingId: booking.id, now })).toEqual({
+    expect(
+      await openWaiverInThread(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        expectedPersonId: person.id,
+        expectedTripId: trip.id,
+        now,
+      }),
+    ).toEqual({
       ok: false,
       reason: "booking_unavailable",
     });
   });
 
+  /**
+   * **A release opened for the thread outlives a week** (reviews of #2743, D1
+   * and A1): it is signed on the readiness link, which the mail never gave a
+   * deadline. On day 8 it still reads awaiting a signature, not "link expired";
+   * a waiver link issued the ordinary way keeps its week.
+   */
+  it("keeps a thread release signable as long as the readiness link lives", async () => {
+    const { db, shop, trip, booking, person } = await waiverContext();
+    const opened = await openWaiverInThread(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      expectedPersonId: person.id,
+      expectedTripId: trip.id,
+      now,
+    });
+    if (!opened.ok) throw new Error(`expected a release: ${opened.reason}`);
+    const [record] = await db
+      .select({ expiresAt: waiverRecords.expiresAt })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, opened.recordId));
+    const dayEight = new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000);
+    expect(record?.expiresAt.getTime()).toBe(capabilityExpiryFor(trip.endsAt, now).getTime());
+    expect(record?.expiresAt.getTime()).toBeGreaterThan(dayEight.getTime());
+    // Keeping it live refreshes it to the same bound, never down to a week.
+    const again = await openWaiverInThread(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      expectedPersonId: person.id,
+      expectedTripId: trip.id,
+      now: dayEight,
+    });
+    expect(again).toEqual({ ok: true, recordId: opened.recordId });
+  });
+
+  it("refuses to open a thread release for a holder or departure other than the one read", async () => {
+    const { db, shop, trip, booking, person } = await waiverContext();
+    const input = { shopId: shop.id, bookingId: booking.id, now };
+    expect(
+      await openWaiverInThread(db, {
+        ...input,
+        expectedPersonId: crypto.randomUUID(),
+        expectedTripId: trip.id,
+      }),
+    ).toEqual({ ok: false, reason: "booking_not_found" });
+    expect(
+      await openWaiverInThread(db, {
+        ...input,
+        expectedPersonId: person.id,
+        expectedTripId: crypto.randomUUID(),
+      }),
+    ).toEqual({ ok: false, reason: "booking_not_found" });
+  });
+
   it("starts a fresh release for the thread once the old one has run out", async () => {
-    const { db, shop, booking } = await waiverContext();
+    const { db, shop, trip, booking, person } = await waiverContext();
     const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!sent.ok) throw new Error("expected the link to issue");
     const muchLater = new Date(sent.expiresAt.getTime() + 1);
     const opened = await openWaiverInThread(db, {
       shopId: shop.id,
       bookingId: booking.id,
+      expectedPersonId: person.id,
+      expectedTripId: trip.id,
       now: muchLater,
     });
     if (!opened.ok) throw new Error(`expected a fresh release: ${opened.reason}`);

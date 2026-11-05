@@ -437,9 +437,10 @@ async function seatConsequences(
           shopId: input.shopId,
           bookingId: outcome.bookingId,
           step,
-          confirmationSent: confirmation === "sent",
+          // The step went out only if the mail carried it (`carriedSignStep`).
+          confirmationSent: confirmation === "sent" && delivery?.carriedSignStep === true,
         });
-        if (confirmation === "sent") waiver = "sent";
+        if (confirmation === "sent" && delivery?.carriedSignStep === true) waiver = "sent";
         else takeWaiver(fallback);
       } else {
         // No release opened: nothing was owed, or opening failed. The join-send
