@@ -486,7 +486,8 @@
   looked, when and a note, appended outside the release so the edited row cannot write it. It
   covers the release as it stood when the manager read it (a keyed digest of every sealed column,
   checked under a row lock, so an edit made while they read is refused), so a further edit rings
-  again. It writes a safety line on the diver's trail, is in the shop export as
+  again, and so does a diver merge or an erasure of the diver (both rewrite sealed columns), which a
+  test pins (issue #3956): the shop sees the broken seal once more and can acknowledge it again. It writes a safety line on the diver's trail, is in the shop export as
   `waiver_seal_acknowledgements.csv`, and its note is redacted when the diver is erased. The verdict
   stays `invalid` and readiness still holds the diver, because an acknowledgement is not a repair;
   the row's own badge always recomputes the seal (issue #2562). A release that asked **shop questions** seals the diver's answers too:
