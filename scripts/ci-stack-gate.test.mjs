@@ -13,6 +13,9 @@ describe("decide", () => {
     expect(result.run).toBe(false);
     expect(result.why).toContain("CI runs on #3");
   });
+  it("names the bottom layer so the diff base can be the stack's own", () => {
+    expect(decide({ number: 3, baseIsDefault: false, stacks: [stack(9, 1, 2, 3)] }).bottom).toBe(1);
+  });
   it("runs a lower layer that carries the ci-now label", () => {
     const stacks = [stack(9, 1, 2, 3)];
     expect(decide({ number: 2, baseIsDefault: false, stacks, labels: ["ci-now"] }).run).toBe(true);

@@ -74,6 +74,8 @@ jobs:
       pull-requests: read
     outputs:
       run: ${{ steps.gate.outputs.run }}
+      # Where a stacked pull request's stack left the default branch; empty otherwise.
+      diff_base: ${{ steps.gate.outputs.diff_base }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: gate
@@ -164,16 +166,20 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BODY: ${{ github.event.pull_request.body }}
           BASE_REF: ${{ github.base_ref }}
+          # A stacked top layer is checked against where its stack left the default branch,
+          # so the layers under it count (stack-gate); empty off a stack.
+          STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
         run: |
           gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
-          node scripts/check-pr-body.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "origin/$BASE_REF"
+          node scripts/check-pr-body.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "${STACK_BASE_SHA:-origin/$BASE_REF}"
       # A warning, never a failure: logic under src/lib, src/db or src/features changed and no
       # test file did (scripts/warn-untested-logic.mjs; docs/agents/repo-checks.md#untested-logic).
       - name: Logic changed with no test
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         env:
           BASE_REF: ${{ github.base_ref }}
-        run: node scripts/warn-untested-logic.mjs --base "origin/$BASE_REF"
+          STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
+        run: node scripts/warn-untested-logic.mjs --base "${STACK_BASE_SHA:-origin/$BASE_REF}"
 
   unit-tests:
     name: Unit tests shard ${{ matrix.shard }}/4
@@ -606,7 +612,7 @@ jobs:
   # two, the captures at the visual job's `E2E_WORKERS=1`.
   fast-lane:
     name: Fast lane
-    needs: [build, changes]
+    needs: [build, changes, stack-gate]
     if: github.event_name == 'pull_request'
     continue-on-error: true
     runs-on: ubuntu-24.04
@@ -631,11 +637,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
+          # Where the stack left the default branch (stack-gate); empty off a stack.
+          STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
           HEAD_REF: ${{ github.head_ref }}
           REPO: ${{ github.repository }}
         run: |
           git fetch --no-tags origin "${BASE_REF}" > /dev/null 2>&1 || true
-          node scripts/fast-lane.mjs --base "origin/${BASE_REF}" --branch "${HEAD_REF}" --repo "${REPO}" --out fast-lane --summary "$GITHUB_STEP_SUMMARY" --github-output
+          node scripts/fast-lane.mjs --base "${STACK_BASE_SHA:-origin/${BASE_REF}}" --branch "${HEAD_REF}" --repo "${REPO}" --out fast-lane --summary "$GITHUB_STEP_SUMMARY" --github-output
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: steps.plan.outputs.run == 'true'
         with:
@@ -1237,6 +1245,9 @@ jobs:
           # `origin/main` contain the PR head, the range came out empty, and a
           # Settings and E2E change classified as docs-only (issue #3259).
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          # In a stack, the bottom layer's base sha (stack-gate), so this layer's diff
+          # holds every layer under it: only the top layer runs CI.
+          STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
           IS_PR: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           # A push to main compares against the commit that was there before.
@@ -1253,7 +1264,7 @@ jobs:
           if [ -n "${IS_PR}" ]; then
             # `fetch-depth: 0` already holds both commits; an unresolvable one
             # falls through to the "run everything" branch below.
-            base="${BASE_SHA}"
+            base="${STACK_BASE_SHA:-${BASE_SHA}}"
             head="${HEAD_SHA}"
           else
             base="${BEFORE_SHA}"

@@ -7,6 +7,12 @@
 // stack, an API error, a registration that never arrives) answers `true`, because an untested
 // change is worse than a wasted run.
 //
+// It also names the stack's **diff base**: the base sha of the stack's bottom pull request, which
+// is where the stack left the default branch. Change detection and the pull-request body check
+// diff against it instead of against the layer below, because only the top layer runs CI and a
+// diff against the layer below would never see infra, migration or safety changes in the layers
+// under it. Empty for a pull request in no stack, which keeps its own event-pinned base.
+//
 // A stacked PR's base is another PR's head branch, so a PR with a non-default base that is in no
 // stack yet is waiting on registration (`gh stack submit` opens the PRs, then links them); it is
 // retried briefly rather than run as a stack of one.
@@ -28,10 +34,13 @@ export function decide({ number, baseIsDefault, stacks, labels = [] }) {
   }
   const layers = stack.pull_requests;
   const top = layers[layers.length - 1].number;
-  if (top === number) return { run: true, why: `top of stack #${stack.number}` };
-  if (labels.includes(FORCE_LABEL)) return { run: true, why: `labelled \`${FORCE_LABEL}\`` };
+  const bottom = layers[0].number;
+  if (top === number) return { run: true, bottom, why: `top of stack #${stack.number}` };
+  if (labels.includes(FORCE_LABEL))
+    return { run: true, bottom, why: `labelled \`${FORCE_LABEL}\`` };
   return {
     run: false,
+    bottom,
     why: `layer ${layers.findIndex((p) => p.number === number) + 1} of ${layers.length} in stack #${stack.number}; CI runs on #${top}`,
   };
 }
@@ -74,15 +83,25 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   };
+  const pull = async (number) => api(`pulls/${number}`);
   const result = await gate(
     process.env,
     () => api("stacks?per_page=100"),
     sleep,
     async () => (await api(`issues/${process.env.PR_NUMBER}/labels`)).map((l) => l.name),
   );
-  const line = `CI ${result.run ? "runs" : "is skipped"}: ${result.why}.`;
+  let diffBase = "";
+  if (result.run && result.bottom) {
+    try {
+      const sha = (await pull(result.bottom)).base?.sha ?? "";
+      if (/^[0-9a-f]{40}$/.test(sha)) diffBase = sha;
+    } catch {}
+  }
+  const line = `CI ${result.run ? "runs" : "is skipped"}: ${result.why}.${diffBase ? ` Diffs against the stack's base ${diffBase.slice(0, 9)}.` : ""}`;
   console.log(line);
-  if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `run=${result.run}\n`);
+  if (process.env.GITHUB_OUTPUT) {
+    await appendFile(process.env.GITHUB_OUTPUT, `run=${result.run}\ndiff_base=${diffBase}\n`);
+  }
   if (process.env.GITHUB_STEP_SUMMARY) {
     await appendFile(process.env.GITHUB_STEP_SUMMARY, `${line}\n`);
   }
