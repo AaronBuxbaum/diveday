@@ -735,7 +735,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/safety");
         await page.getByRole("link", { name: "Year view", exact: true }).click();
         await page.waitForURL(/\?year=\d{4}$/);
-        await page.getByRole("button", { name: "Print the year" }).waitFor();
+        await page.getByRole("link", { name: "Print the year" }).waitFor();
         await capture(page, "reports-safety-year", scheme);
       });
 
