@@ -251,9 +251,11 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
   shop_shore_alert_tokens: 365,
   /**
    * A year from `issued_at`, for the stop links mailed to a shop's own
-   * addresses only (the shore contact's, on the reasoning above; issue
-   * #3721): the rows hold the address. An unsubscribe link of an interest or
-   * a person is not pruned; it goes with its subject (erasure, demo reset).
+   * addresses (the shore contact's and the bookkeeper's, on the reasoning
+   * above; issue #3721): the rows hold the address. The Monday email's
+   * opt-out links keep `weekly_digest_sends`' window instead, as they did on
+   * the claim (security review D1). An interest's or a courtesy email's
+   * unsubscribe link is not pruned; it goes with its subject.
    */
   capabilities: 365,
   /**

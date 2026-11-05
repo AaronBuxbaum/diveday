@@ -684,19 +684,26 @@ export async function sendWeeklyDigestForShop(
     // Nothing this person may read happened: no email, and no claim, so a
     // later pass the same morning asks again rather than remembering a send.
     if (sections.length === 0) continue;
-    const [claim] = await db
-      .insert(weeklyDigestSends)
-      .values({ shopId: shop.id, personId: recipient.personId, weekOf: weeks.weekOf })
-      .onConflictDoNothing()
-      .returning({ id: weeklyDigestSends.id });
-    if (!claim) {
+    // The claim and its opt-out link land together or not at all, so a
+    // failed mint never leaves a week claimed with nothing sent (review D2).
+    const claimed = await db.transaction(async (tx) => {
+      const [claim] = await tx
+        .insert(weeklyDigestSends)
+        .values({ shopId: shop.id, personId: recipient.personId, weekOf: weeks.weekOf })
+        .onConflictDoNothing()
+        .returning({ id: weeklyDigestSends.id });
+      if (!claim) return null;
+      const token = await issueWeeklyDigestUnsubscribeToken(tx, {
+        shopId: shop.id,
+        personId: recipient.personId,
+      });
+      return { claim, token };
+    });
+    if (!claimed) {
       summary.alreadySent += 1;
       continue;
     }
-    const token = await issueWeeklyDigestUnsubscribeToken(db, {
-      shopId: shop.id,
-      personId: recipient.personId,
-    });
+    const { claim, token } = claimed;
     const delivery: NotificationDelivery = await sendNotification(
       db,
       digestNotification({

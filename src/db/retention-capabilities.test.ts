@@ -8,15 +8,16 @@ import { capabilities } from "./schema";
 
 /**
  * Issue #3721: a stop link mailed to a shop's own address (the shore
- * contact's) holds that address, so it keeps the shore table's year; a
- * person's unsubscribe link never ages out, it goes with its person.
+ * contact's) holds that address, so it keeps the shore table's year; the
+ * Monday email's link ages out with the send claims (`weekly_digest_sends`);
+ * a courtesy-email link never ages out, it goes with its person.
  */
 const ctx = fileScopedShopContext();
 const NOW = new Date("2026-08-03T00:00:00.000Z");
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe("the capabilities retention arm", () => {
-  it("prunes only old shop-address stop links, never a person's unsubscribe link", async () => {
+  it("prunes old stop links on the year and digest links on the claims' window, never a courtesy link", async () => {
     const { db, shop } = ctx;
     const { person } = await findOrCreatePerson(db, {
       shopId: shop.id,
@@ -45,6 +46,20 @@ describe("the capabilities retention arm", () => {
         },
         {
           shopId: shop.id,
+          purpose: "weekly_digest_unsubscribe",
+          personId: person.id,
+          tokenHash: "retention-capability-digest-past-claims",
+          issuedAt: new Date(NOW.getTime() - (RETENTION_DAYS.weekly_digest_sends + 1) * DAY_MS),
+        },
+        {
+          shopId: shop.id,
+          purpose: "weekly_digest_unsubscribe",
+          personId: person.id,
+          tokenHash: "retention-capability-digest-inside-claims",
+          issuedAt: old,
+        },
+        {
+          shopId: shop.id,
           purpose: "courtesy_email_unsubscribe",
           personId: person.id,
           tokenHash: "retention-capability-old-unsubscribe",
@@ -65,6 +80,8 @@ describe("the capabilities retention arm", () => {
         ),
       );
     expect(remaining.map((row) => row.tokenHash).sort()).toEqual([
+      // Older than a shop-address window, inside the send claims' (review D1).
+      "retention-capability-digest-inside-claims",
       "retention-capability-old-unsubscribe",
       "retention-capability-recent-stop",
     ]);

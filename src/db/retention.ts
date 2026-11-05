@@ -363,13 +363,19 @@ export const PRUNE_ARMS = {
     clock: shopShoreAlertTokens.createdAt,
   },
   // The stop links mailed to a shop's own addresses (issue #3721), from
-  // `issued_at`: they never expire, and they hold the address. Only those:
-  // an unsubscribe link of an interest or a person goes with its subject.
+  // `issued_at`: they never expire, and they hold the address. The Monday
+  // email's opt-out links age out with the send claims they used to live on
+  // (`weekly_digest_sends`' window, security review D1): their clock is moved
+  // forward by the difference, so one table window serves both. An unsubscribe
+  // link of an interest or a person's courtesy email goes with its subject.
   capabilities: {
     from: capabilities,
     id: capabilities.id,
-    clock: capabilities.issuedAt,
-    extraWhere: inArray(capabilities.purpose, purposesNaming("shop_address")),
+    clock: sql`case when ${capabilities.purpose} = 'weekly_digest_unsubscribe' then ${capabilities.issuedAt} + make_interval(days => ${sql.raw(String(RETENTION_DAYS.weekly_digest_sends - RETENTION_DAYS.capabilities))}) else ${capabilities.issuedAt} end`,
+    extraWhere: inArray(capabilities.purpose, [
+      ...purposesNaming("shop_address"),
+      "weekly_digest_unsubscribe",
+    ]),
   },
   // Booking links (H-20260916-far-deletion-promise-reach, issue #1726), on the same clock as the two token
   // arms above. `expires_at` only, never `revoked_at`: a revoked link can still
