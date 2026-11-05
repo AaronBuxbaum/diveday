@@ -49,7 +49,7 @@ export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
  */
 export type CapabilitySubject = "interest" | "person" | "shop_address";
 
-export type CapabilityPolicy = {
+type CapabilityPolicyFields = {
   subject: CapabilitySubject;
   /**
    * `never`: the row carries no expiry. An unsubscribe link must keep working
@@ -80,6 +80,15 @@ export type CapabilityPolicy = {
    */
   use: "idempotent" | "once";
 };
+
+/**
+ * An `idempotent` purpose acts through `verifyCapability`, which answers for a
+ * revoked or expired row too, so it must be one that never expires and is
+ * never superseded; the type refuses the other combinations.
+ */
+export type CapabilityPolicy =
+  | (CapabilityPolicyFields & { use: "once" })
+  | (CapabilityPolicyFields & { use: "idempotent"; lifetime: "never"; reissue: "adds" });
 
 export const CAPABILITY_POLICY = {
   // One anytime interest (the last-minute list). Opening it closes that

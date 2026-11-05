@@ -3,7 +3,7 @@ import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { CAPABILITY_POLICY, type CapabilityPurpose, capabilitySubject } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { capabilities } from "./schema";
+import { capabilities, shops } from "./schema";
 
 /**
  * The `capabilities` table's rows and the transitions on them (issue #2710):
@@ -84,8 +84,8 @@ function unrevokedAndUnexpired(now: Date) {
  * A purpose that expires (`lifetime: "expires"`) needs `expiresAt`, and no
  * other purpose takes one. A purpose that `supersedes` revokes every live link
  * of that purpose the shop holds before inserting, so only the newest works;
- * the caller locks the shop row first, so two mints in flight cannot both
- * leave a live link. A purpose that `adds` leaves earlier links working.
+ * the mint locks the shop row first (inside the caller's transaction, if
+ * it has one), so two mints in flight cannot both leave a live link. A purpose that `adds` leaves earlier links working.
  */
 export async function issueCapability(
   db: DbExecutor,
@@ -112,6 +112,14 @@ export async function mintCapability(
     throw new Error(`${input.purpose}: expiresAt is required exactly when the purpose expires`);
   }
   if (policy.reissue === "supersedes") {
+    // The invariant (one live link per shop per purpose) belongs to this module,
+    // not to its callers: lock the shop row so two mints in flight serialise
+    // and the second one's revoke sees the first one's insert.
+    await db
+      .select({ id: shops.id })
+      .from(shops)
+      .where(eq(shops.id, input.shopId))
+      .for("no key update");
     await db
       .update(capabilities)
       .set({ revokedAt: input.now ?? nowDate() })

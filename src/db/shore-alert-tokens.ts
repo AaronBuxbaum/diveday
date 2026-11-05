@@ -122,6 +122,8 @@ export async function isShoreAlertToken(
   );
 }
 
+const ADDRESS_CHANGED_UNDER_CLAIM = Symbol("diveday:shore-alert-address-changed");
+
 /**
  * Spends the link and stamps the shop confirmed in one transaction, with the
  * shop row locked first, exactly as `consumeShopContactEmailConfirmation`
@@ -133,29 +135,47 @@ export async function consumeShoreAlertConfirmation(
   input: { token: string; now?: Date },
 ): Promise<{ shopId: string } | null> {
   const now = input.now ?? nowDate();
-  return db.transaction(async (tx) => {
-    const live = await openCapability(tx, {
-      purpose: "shore_alert_confirm",
-      token: input.token,
-      now,
+  try {
+    return await db.transaction(async (tx) => {
+      const live = await openCapability(tx, {
+        purpose: "shore_alert_confirm",
+        token: input.token,
+        now,
+      });
+      if (!live) return null;
+      await tx
+        .select({ id: shops.id })
+        .from(shops)
+        .where(eq(shops.id, live.shopId))
+        .for("no key update");
+      // Checked under the lock, before the spend: a stale link stays unspent.
+      if (!(await shopNaming(tx, live.shopId, live.subjectId))) return null;
+      const claimed = await spendCapability(tx, {
+        purpose: "shore_alert_confirm",
+        token: input.token,
+        now,
+      });
+      if (!claimed) return null;
+      // The stamp keeps its own address predicate: if the lock above is ever
+      // removed or reordered, it still confirms only the address the link went to.
+      // A miss throws, which rolls the spend back.
+      const stamped = await tx
+        .update(shops)
+        .set({ shoreAlertConfirmedAt: now })
+        .where(
+          and(
+            eq(shops.id, claimed.shopId),
+            sql`lower(${shops.shoreAlertEmail}) = ${claimed.subjectId}`,
+          ),
+        )
+        .returning({ id: shops.id });
+      if (stamped.length === 0) throw ADDRESS_CHANGED_UNDER_CLAIM;
+      return { shopId: claimed.shopId };
     });
-    if (!live) return null;
-    await tx
-      .select({ id: shops.id })
-      .from(shops)
-      .where(eq(shops.id, live.shopId))
-      .for("no key update");
-    // Checked under the lock, before the spend: a stale link stays unspent.
-    if (!(await shopNaming(tx, live.shopId, live.subjectId))) return null;
-    const claimed = await spendCapability(tx, {
-      purpose: "shore_alert_confirm",
-      token: input.token,
-      now,
-    });
-    if (!claimed) return null;
-    await tx.update(shops).set({ shoreAlertConfirmedAt: now }).where(eq(shops.id, claimed.shopId));
-    return { shopId: claimed.shopId };
-  });
+  } catch (error) {
+    if (error === ADDRESS_CHANGED_UNDER_CLAIM) return null;
+    throw error;
+  }
 }
 
 /**
