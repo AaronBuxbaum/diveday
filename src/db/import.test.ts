@@ -590,7 +590,11 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
 
     // Re-importing the same file must not create a second record.
     const second = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
-    expect(second).toMatchObject({ waiversAdded: 0, waiversSkippedExisting: 1 });
+    expect(second).toMatchObject({
+      waiversAdded: 0,
+      waiversSkippedExisting: 1,
+      waiversSkippedMedicalHold: 0,
+    });
 
     const person = await personByEmail(db, shop.id, "tina.import@example.com");
     if (!person) throw new Error("person not created");
@@ -677,7 +681,11 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
       prepareContactImport(importCsv),
       importer,
     );
-    expect(summary).toMatchObject({ waiversAdded: 0, waiversSkippedExisting: 1 });
+    expect(summary).toMatchObject({
+      waiversAdded: 0,
+      waiversSkippedMedicalHold: 1,
+      waiversSkippedExisting: 0,
+    });
 
     const records = await db
       .select()

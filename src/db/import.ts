@@ -87,6 +87,12 @@ export type ImportSummary = {
   waiversAdded: number;
   /** The diver already had a current signed/medical-review record on file, untouched. */
   waiversSkippedExisting: number;
+  /**
+   * The diver is on a medical hold (a live referral or a retired physician refusal), so no waiver
+   * was imported. Never folded into `waiversSkippedExisting`: the dock will block this diver as
+   * Not cleared, which "a current waiver" would contradict.
+   */
+  waiversSkippedMedicalHold: number;
   /** The shop has no waiver template configured, so there was nothing to snapshot against. */
   waiversSkippedNoTemplate: number;
   /** A waiver_document_url / medical_document_url did not fetch/store and was left off the record. */
@@ -277,6 +283,7 @@ export async function commitContactImport(
     nitroxSkippedExisting: 0,
     waiversAdded: 0,
     waiversSkippedExisting: 0,
+    waiversSkippedMedicalHold: 0,
     waiversSkippedNoTemplate: 0,
     waiverDocumentsFailed: 0,
     receiptDocumentsFailed: 0,
@@ -915,7 +922,9 @@ async function writeEvidence(
         (r) =>
           r.status === "completed" && isCompletedWaiverCurrent(r, template.materialGeneration, now),
       );
-      if (hasActiveHold || hasCurrentCompleted) {
+      if (hasActiveHold) {
+        summary.waiversSkippedMedicalHold += 1;
+      } else if (hasCurrentCompleted) {
         summary.waiversSkippedExisting += 1;
       } else {
         const signedAt = row.waiver.signedAt ? calendarDateToUtcMidnight(row.waiver.signedAt) : now;

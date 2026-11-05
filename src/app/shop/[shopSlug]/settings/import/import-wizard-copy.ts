@@ -106,6 +106,7 @@ export type ImportWizardCopy = {
     waiversLineOne: string;
     waiversLineOther: string;
     waiversSkippedExistingNote: string;
+    waiversSkippedMedicalHoldNote: string;
     waiversSkippedNoTemplateNoteOne: string;
     waiversSkippedNoTemplateNoteOther: string;
     waiverDocumentsFailedNote: string;
@@ -308,6 +309,9 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
       waiversLineOne: t.raw("settings.import.wizard.result.waiversLineOne"),
       waiversLineOther: t.raw("settings.import.wizard.result.waiversLineOther"),
       waiversSkippedExistingNote: t.raw("settings.import.wizard.result.waiversSkippedExistingNote"),
+      waiversSkippedMedicalHoldNote: t.raw(
+        "settings.import.wizard.result.waiversSkippedMedicalHoldNote",
+      ),
       waiversSkippedNoTemplateNoteOne: t.raw(
         "settings.import.wizard.result.waiversSkippedNoTemplateNoteOne",
       ),

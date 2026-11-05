@@ -178,7 +178,11 @@ describe("a superseded hold (issue #3780)", () => {
       prepareContactImport(`full_name,email,waiver_accepted\nRetired Rhea,${person.email},yes`),
       importer,
     );
-    expect(summary).toMatchObject({ waiversAdded: 0, waiversSkippedExisting: 1 });
+    expect(summary).toMatchObject({
+      waiversAdded: 0,
+      waiversSkippedMedicalHold: 1,
+      waiversSkippedExisting: 0,
+    });
     expect(await readsOnAnotherSeat(db, shop.id, person.id)).toBe("medical_not_cleared");
     const records = await db
       .select()
@@ -210,7 +214,11 @@ describe("a superseded hold (issue #3780)", () => {
       ),
       importer,
     );
-    expect(summary).toMatchObject({ waiversAdded: 0, waiversSkippedExisting: 1 });
+    expect(summary).toMatchObject({
+      waiversAdded: 0,
+      waiversSkippedMedicalHold: 1,
+      waiversSkippedExisting: 0,
+    });
     expect(await readsOnAnotherSeat(db, shop.id, person.id)).toBe("medical_review");
   });
 
