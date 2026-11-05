@@ -51,6 +51,10 @@ export const EXPORT_FILE_NOTES = {
     "Where each departure was, in the crew's own word, with the time they said it and who said it. Five stages, appended and never edited; the newest row is what the shop's website and each diver's link showed. No position of any kind is recorded.",
   "deck_counts.csv":
     "The heads the captain counted on deck at each roll-call checkpoint, with who counted and when. A recount is a new row; the newest per checkpoint is the one the manifest held against its marks.",
+  "safety_drills.csv":
+    "The drill log: each safety drill the shop held (emergency oxygen, missing diver, person overboard, fire), the date, a note and who logged it. A deleted drill carries its deleted_at.",
+  "safety_drill_participants.csv":
+    "Who took part in each drill in safety_drills.csv, one row per person.",
   "trip_series.csv":
     "Recurring-trip cadences; every materialized instance is its own row in trips.csv carrying series_id. A blank ends_on means the trip simply keeps repeating.",
   "trip_series_crew.csv":

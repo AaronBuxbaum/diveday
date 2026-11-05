@@ -191,6 +191,30 @@
     "stillMissing": "En el manifiesto sigue sin regresar a bordo. Márcalo antes como de vuelta a bordo."
   },
   "safety": {
+    "drills": {
+      "title": "Simulacros",
+      "kinds": {
+        "oxygen": "Oxígeno",
+        "missing_diver": "Buzo desaparecido",
+        "overboard": "Persona al agua",
+        "fire": "Incendio"
+      },
+      "lastHeld": "{kind}: último simulacro {days, plural, =0 {hoy} one {hace # día} other {hace # días}}",
+      "neverHeld": "{kind}: ningún simulacro registrado",
+      "heldTitle": "Simulacros realizados",
+      "logTitle": "Registrar un simulacro",
+      "kindLabel": "Simulacro",
+      "dateLabel": "Fecha",
+      "peopleLabel": "Quién participó",
+      "noteLabel": "Nota",
+      "optional": "(opcional)",
+      "submit": "Registrar simulacro",
+      "delete": "Eliminar",
+      "deleteConfirm": "Eliminar simulacro",
+      "logged": "Simulacro registrado.",
+      "deleted": "Simulacro eliminado.",
+      "invalid": "El simulacro no se guardó. Revisa la fecha y quién participó."
+    },
     "figuresLabel": "Registro de seguridad del mes",
     "rollCalls": "Recuentos cerrados",
     "rollCallsValue": "{closed} de {back}",

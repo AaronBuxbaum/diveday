@@ -20,6 +20,7 @@ import type { IncidentCertificationEvidence } from "@/lib/incident-export";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { ROLL_CALL_EVENT_STATUSES, ROLL_CALL_SUBJECT_KINDS } from "@/lib/roll-call";
+import { DRILL_KINDS } from "@/lib/safety-drills";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -273,6 +274,66 @@ export const deckCounts = pgTable(
     ),
     index("deck_counts_recorded_by_person_id_idx").on(table.recordedByPersonId),
     check("deck_counts_counted_range", sql`${table.counted} >= 0 and ${table.counted} <= 999`),
+  ],
+);
+
+/** The four drills (`DRILL_KINDS`, src/lib/safety-drills.ts). */
+export const safetyDrillKind = pgEnum("safety_drill_kind", DRILL_KINDS);
+
+/**
+ * **The drill log** (loop 5, row 2; roadmap E3; `src/lib/safety-drills.ts`):
+ * one dated safety drill the shop held (emergency oxygen, missing diver,
+ * person overboard, fire) with a note. Read by the Safety tab ("Last oxygen
+ * drill: 94 days ago") and printed with it for an insurer. A record, never a
+ * gate. A wrong entry is deleted softly (`deleted_at`); every live read says
+ * `deleted_at is null`.
+ */
+export const safetyDrills = pgTable(
+  "safety_drills",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    kind: safetyDrillKind("kind").notNull(),
+    /** The shop's calendar date the drill was held on. */
+    heldOn: date("held_on", { mode: "string" }).notNull(),
+    note: text("note"),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("safety_drills_shop_held_live_idx")
+      .on(table.shopId, table.heldOn)
+      .where(sql`${table.deletedAt} is null`),
+    index("safety_drills_recorded_by_person_id_idx").on(table.recordedByPersonId),
+  ],
+);
+
+/**
+ * Who took part in one drill: staff of the shop, one row each. Goes with its
+ * drill (cascade); a deleted drill keeps its rows and is read by nobody.
+ */
+export const safetyDrillParticipants = pgTable(
+  "safety_drill_participants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    drillId: uuid("drill_id")
+      .notNull()
+      .references(() => safetyDrills.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+  },
+  (table) => [
+    uniqueIndex("safety_drill_participants_drill_person_unique").on(table.drillId, table.personId),
+    index("safety_drill_participants_person_id_idx").on(table.personId),
   ],
 );
 

@@ -76,6 +76,8 @@ import {
   reviewModerationEvents,
   reviewReplies,
   rollCallEvents,
+  safetyDrillParticipants,
+  safetyDrills,
   shopBackupDeliveries,
   shopBackupDeliveryClaims,
   shopBackupDestinations,
@@ -218,6 +220,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     .where(eq(departureBoatSafetySnapshots.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   await db.delete(deckCounts).where(eq(deckCounts.shopId, shopId));
+  await db.delete(safetyDrillParticipants).where(eq(safetyDrillParticipants.shopId, shopId));
+  await db.delete(safetyDrills).where(eq(safetyDrills.shopId, shopId));
   await db.delete(preDepartureChecklistItems).where(eq(preDepartureChecklistItems.shopId, shopId));
   // The close-out trail references people and the shop, so it must clear
   // before both parents below (ADR 20260804-day-closeout).

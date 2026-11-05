@@ -52,6 +52,8 @@ import {
   recapPhotos,
   rentalFitProfiles,
   rollCallEvents,
+  safetyDrillParticipants,
+  safetyDrills,
   shopTextTranslations,
   staffCredentialHistory,
   staffCredentials,
@@ -224,6 +226,16 @@ export const EXPORT_TABLES = {
     table: tripChangeEvents,
     order: [asc(tripChangeEvents.occurredAt), asc(tripChangeEvents.seq), asc(tripChangeEvents.id)],
     scope: { shopColumn: tripChangeEvents.shopId },
+  },
+  safetyDrills: {
+    table: safetyDrills,
+    order: [asc(safetyDrills.heldOn), asc(safetyDrills.id)],
+    scope: { shopColumn: safetyDrills.shopId },
+  },
+  safetyDrillParticipants: {
+    table: safetyDrillParticipants,
+    order: [asc(safetyDrillParticipants.drillId), asc(safetyDrillParticipants.id)],
+    scope: { shopColumn: safetyDrillParticipants.shopId },
   },
   deckCounts: {
     table: deckCounts,
