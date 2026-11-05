@@ -33,7 +33,10 @@
     "unmarked": "Sin marca: {names}.",
     "unmarkedMore": "{names} y {count, plural, one {# más} other {# más}}",
     "marksAhead": "{count, plural, one {# figura a bordo. Puede que una marca esté en la persona equivocada.} other {# figuran a bordo. Puede que una marca esté en la persona equivocada.}}",
-    "refusal": "El recuento no se guardó. Revisa tu conexión y vuelve a guardarlo."
+    "refusal": "El recuento no se guardó. Revisa tu conexión y vuelve a guardarlo.",
+    "printedBlank": "{checkpoint}: Recuento en cubierta ____ a las ____",
+    "printedRecorded": "{checkpoint}: Recuento en cubierta {counted} a las {time}, {name}",
+    "savedLine": "Recuento en cubierta {counted} a las {time}, {name}. Solo lectura en esta copia."
   },
   "cancelledRollCallClosed": "Esta salida está cancelada y no se ha contado a nadie a bordo, así que el pase de lista está cerrado. Si hay alguien a bordo, reactiva la salida para contarlo.",
   "cancelledRollCallStillCounting": "Esta salida está cancelada. El pase de lista sigue abierto porque el conteo ya había empezado.",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deckCountView } from "./deck-count-view";
+import { deckCountView, offlineDeckCounts, printedDeckCountLines } from "./deck-count-view";
 import { boardedAt, diver, notBackAt, t } from "./diver-roll-call-test-fixtures";
 import { deckCountFacts } from "./head-count-view";
 import { tripManifest } from "./manifest-page-test-fixtures";
@@ -154,5 +154,49 @@ describe("deckCountView", () => {
     expect(reading?.tone).toBe("stale");
     expect(reading?.lines).toHaveLength(1);
     expect(reading?.lines[0]).toMatch(/^You counted 12 at .*before the last mark\. Count again\.$/);
+  });
+});
+
+describe("printedDeckCountLines", () => {
+  const lines = (records: Map<string, ReturnType<typeof counted>>) =>
+    printedDeckCountLines({
+      t,
+      locale: "en-US",
+      timeZone: "America/New_York",
+      checkpoints: ["departure", "after_dive_1", "after_dive_2"],
+      records,
+    }).lines.map((line) => line.text);
+
+  it("gives every checkpoint a blank line to write on when nobody has counted", () => {
+    expect(lines(new Map())).toEqual([
+      "Before departure: Deck count ____ at ____",
+      "After dive 1: Deck count ____ at ____",
+      "After dive 2: Deck count ____ at ____",
+    ]);
+  });
+
+  it("fills only the checkpoint that was counted, never carrying a count to another", () => {
+    const text = lines(new Map([["after_dive_1", counted(11)]]));
+    expect(text[0]).toContain("____");
+    expect(text[1]).toBe("After dive 1: Deck count 11 at 8:30 AM, Keiko Tanaka");
+    expect(text[2]).toContain("____");
+  });
+
+  it("prints a count of zero as a count, not a blank", () => {
+    const text = lines(new Map([["departure", counted(0)]]));
+    expect(text[0]).toBe("Before departure: Deck count 0 at 8:30 AM, Keiko Tanaka");
+  });
+});
+
+describe("offlineDeckCounts", () => {
+  it("carries the newest count per checkpoint with an ISO time and nothing else", () => {
+    expect(offlineDeckCounts(new Map([["departure", counted(12)]]))).toEqual([
+      {
+        checkpoint: "departure",
+        counted: 12,
+        recordedAt: "2026-09-11T12:30:00.000Z",
+        recordedByName: "Keiko Tanaka",
+      },
+    ]);
   });
 });

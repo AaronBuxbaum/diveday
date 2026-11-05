@@ -1422,7 +1422,9 @@
   the gap: "You count 11. The manifest says 12.", who has no mark, and when more people are marked
   aboard than counted, that a mark may be on the wrong person. **It informs and never gates**:
   nothing closes, opens or refuses anything on it, and a checkpoint stays complete or open by the
-  marks alone. Rule in `src/lib/deck-count.ts`, writer and reader in `src/db/deck-counts.ts`.
+  marks alone. The printed manifest carries a blank "Deck count: ___ at ___" line per checkpoint, or
+  the newest count where one exists, and the saved offline copy shows the newest count read-only;
+  neither records one. Rule in `src/lib/deck-count.ts`, writer and reader in `src/db/deck-counts.ts`.
 - **Roll-call checkpoint** — one independent roll call: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite

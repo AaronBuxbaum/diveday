@@ -220,6 +220,17 @@ export type OfflineManifestPayload = {
    */
   boatSafety?: BoatSafetySection;
   /**
+   * The newest deck count at each checkpoint, read-only: a crew with no signal
+   * sees what was counted, and records nothing here. Optional and additive, so
+   * a copy saved before this field reads as none.
+   */
+  deckCounts?: Array<{
+    checkpoint: string;
+    counted: number;
+    recordedAt: string;
+    recordedByName: string;
+  }>;
+  /**
    * **The boat's open snags** (fifth-loop ideas, item 1): what an earlier crew
    * handed on and what this one wrote, as the live check worded them at the
    * save, so the 5:15 crew on a marina connection reads them before they sail.
