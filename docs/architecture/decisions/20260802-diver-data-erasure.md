@@ -89,6 +89,12 @@ holding a staff role** (`staff_member`) — a staff member's name on an activity
 order, or attested waiver is the shop's accountability trail, not the diver's data, and staff
 offboarding is a different problem.
 
+A third refusal (issue #3805, Aaron's option A): **anyone an incident report under legal hold
+links** (`incident_hold`) — a booking on the held report's departure at any status, a row in its
+people, or a place on its crew (trip assignment or a roll call taken). Erasing them would clear
+that departure's evidence while a claim is open. The owner sees why and releases the hold first;
+nothing changes until then.
+
 ### Amendment, 2026-08-21 — erasure runs on a deleted record only
 
 The control shipped at the foot of **every** diver's record, which is also the record a staffer

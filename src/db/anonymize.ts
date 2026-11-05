@@ -131,6 +131,7 @@ import {
   importedPaymentHistory,
   inboundMessages,
   incidentReportPeople,
+  incidentReports,
   interestReplies,
   interests,
   notificationDeliveries,
@@ -153,6 +154,7 @@ import {
   staffCredentials,
   staffReplies,
   staffShifts,
+  tripAssignments,
   tripReviews,
   userAccounts,
   waiverDeliveries,
@@ -179,6 +181,14 @@ export type AnonymizeDiverRefusal =
    * different problem with a different answer.
    */
   | "staff_member"
+  /**
+   * An incident report under a legal hold links the person: a seat on its
+   * departure (any status), a name on the report, or a place on its crew
+   * (Aaron, option A on issue #3805). The erasure would clear that
+   * departure's evidence (the boarding certification snapshot, seat notes, a
+   * former staffer's crew credential), so it waits for the hold to lift.
+   */
+  | "incident_hold"
   | "requires_delete"
   | "name_mismatch";
 
@@ -201,6 +211,52 @@ export type AnonymizeDiverResult =
     }
   | { ok: false; reason: AnonymizeDiverRefusal }
   | { ok: false; reason: "merged"; survivorId: string };
+
+/**
+ * **Whether a held incident links this person** (issue #3805): a live report
+ * of this shop under a legal hold whose departure carries a seat of theirs
+ * (cancelled included, since the erasure scrubs every seat), whose own people
+ * name them or one of their seats, or whose departure had them on its crew
+ * roster or crew roll call. Read under the erasure's transaction, after the
+ * target's row lock, so a hold placed before the erasure commits is seen.
+ */
+async function linkedToHeldIncident(
+  tx: AppTransaction,
+  shopId: string,
+  personId: string,
+): Promise<boolean> {
+  const theirSeats = tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)));
+  const [held] = await tx
+    .select({ id: incidentReports.id })
+    .from(incidentReports)
+    .where(
+      and(
+        eq(incidentReports.shopId, shopId),
+        isNotNull(incidentReports.legalHoldAt),
+        isNull(incidentReports.deletedAt),
+        or(
+          sql`exists (select 1 from ${bookings} where ${bookings.tripId} = ${incidentReports.tripId}
+            and ${bookings.shopId} = ${shopId} and ${bookings.personId} = ${personId})`,
+          sql`exists (select 1 from ${incidentReportPeople}
+            where ${incidentReportPeople.reportId} = ${incidentReports.id}
+            and (${incidentReportPeople.personId} = ${personId}
+              or ${incidentReportPeople.bookingId} in (${theirSeats})))`,
+          sql`exists (select 1 from ${tripAssignments}
+            where ${tripAssignments.tripId} = ${incidentReports.tripId}
+            and ${tripAssignments.personId} = ${personId})`,
+          sql`exists (select 1 from ${rollCallEvents}
+            where ${rollCallEvents.tripId} = ${incidentReports.tripId}
+            and ${rollCallEvents.shopId} = ${shopId}
+            and ${rollCallEvents.crewPersonId} = ${personId})`,
+        ),
+      ),
+    )
+    .limit(1);
+  return held !== undefined;
+}
 
 /** Every column `listDiverSummaries` already refuses to ship to the browser, plus the rest. */
 const ERASED_PERSON_COLUMNS = {
@@ -511,6 +567,9 @@ export async function anonymizeDiver(
       .where(eq(personRoles.personId, input.personId));
     if (roleRows.some((row) => STAFF_ROLES.includes(row.role))) {
       return { ok: false, reason: "staff_member" } as const;
+    }
+    if (await linkedToHeldIncident(tx, input.shopId, input.personId)) {
+      return { ok: false, reason: "incident_hold" } as const;
     }
 
     const result = await scrub(tx, {

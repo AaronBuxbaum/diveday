@@ -1089,7 +1089,10 @@
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Legal hold** (on an **incident report**) — an owner-set flag that keeps a report past its
   seven-year window while a claim is open. The retention prune skips a held report until an owner
-  releases the hold, and a held report cannot be deleted. Only an owner sets or releases it
+  releases the hold, and a held report cannot be deleted. While it is held, nobody it links (a
+  booking on its departure at any status, a person named on it, its crew) can be erased: the
+  erasure is refused with `incident_hold` and the owner is told to release the hold first (issue
+  #3805). Only an owner sets or releases it
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Discarded draft** — an **incident report** draft an owner deleted because it should never have
   been started. Soft-deleted: gone from every working list, still listed on the departure log with
