@@ -76,11 +76,12 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
       now: later,
     });
     const quiet = await recheckWaiverSeals(db, { now: nightAfter });
-    return { ...ctx, quietInvalid: quiet.invalid };
+    return { ...ctx, quietInvalid: quiet.invalid, quietAcknowledged: quiet.acknowledged };
   }
 
   it("rings again when the diver is merged into another record (#3956)", async () => {
-    const { db, shop, recordId, owner, person, quietInvalid } = await acknowledged();
+    const { db, shop, recordId, owner, person, quietInvalid, quietAcknowledged } =
+      await acknowledged();
     const [survivor] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: person.fullName, email: "kept@example.com" })
@@ -99,6 +100,7 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
     expect(merged.ok).toBe(true);
     const pass = await recheckWaiverSeals(db, { now: new Date(nightAfter.getTime() + 86_400_000) });
     expect(pass.invalid).toBe(quietInvalid + 1);
+    expect(pass.acknowledged).toBe(quietAcknowledged - 1);
     // Acknowledging again, against the release as it now stands, quiets it once more.
     expect(
       await acknowledgeBrokenWaiverSeal(db, {
@@ -110,10 +112,16 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
         now: later,
       }),
     ).toEqual({ ok: true });
+    const quiet = await recheckWaiverSeals(db, {
+      now: new Date(nightAfter.getTime() + 2 * 86_400_000),
+    });
+    expect(quiet.invalid).toBe(quietInvalid);
+    expect(quiet.acknowledged).toBe(quietAcknowledged);
   });
 
   it("rings again when the diver is erased (#3956)", async () => {
-    const { db, shop, owner, person, quietInvalid } = await acknowledged();
+    const { db, shop, recordId, owner, person, quietInvalid, quietAcknowledged } =
+      await acknowledged();
     const erased = await anonymizeDiver(db, {
       shopId: shop.id,
       personId: person.id,
@@ -122,6 +130,21 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
     expect(erased.ok).toBe(true);
     const pass = await recheckWaiverSeals(db, { now: new Date(nightAfter.getTime() + 86_400_000) });
     expect(pass.invalid).toBe(quietInvalid + 1);
+    expect(pass.acknowledged).toBe(quietAcknowledged - 1);
+    expect(
+      await acknowledgeBrokenWaiverSeal(db, {
+        shopId: shop.id,
+        recordId,
+        actorPersonId: owner,
+        note: NOTE,
+        expectedStateDigest: await shownDigest(db, recordId),
+        now: later,
+      }),
+    ).toEqual({ ok: true });
+    const quiet = await recheckWaiverSeals(db, {
+      now: new Date(nightAfter.getTime() + 2 * 86_400_000),
+    });
+    expect(quiet.invalid).toBe(quietInvalid);
   });
 
   it("records who, when and why, outside the waiver row, and turns the check green", async () => {

@@ -45,5 +45,7 @@ make it nullable, move all three, delete the old tables and modules.
 - One verify path; a token of one purpose never resolves under another, across all twelve.
 - The migrations drop the old tables: links in flight die (H-20260815-no-legacy). For the deploy
   window the previous release fails on them instead of serving a link.
+- The migrations are not rolled back with the app: an Instant Rollback to an earlier release leaves
+  reset, verify, invite, onboarding and calendar links broken (H-20260814-production-database-disposable).
 - Platform rows match no `shop_id` filter: reaps and erasures reach them by account or request.
 - Revisit if a platform purpose needs a shop after all: add the column back to its subject.
