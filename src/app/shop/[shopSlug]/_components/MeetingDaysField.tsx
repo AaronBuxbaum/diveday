@@ -60,9 +60,12 @@ function shifted(date: string, days: number): string {
  * (`meetingDaysFor`); this only fills the boxes.
  *
  * **Hours per day** (#2558). Each later day carries its own departs and
- * returns boxes, following the form's own until one is changed: a pool night
- * at 18:00 and an open-water Saturday at 08:00 are one course. The server
- * re-checks each day's hours (`meetingDaysFor`).
+ * returns boxes, showing the form's own until one is changed: a pool night
+ * at 18:00 and an open-water Saturday at 08:00 are one course. A day that
+ * follows day one's posts empty hours, so the server takes day one's as
+ * submitted rather than a copy this field may have read before the staffer
+ * typed into a box that changes without an input event (the board's
+ * `ForgivingInput`). The server re-checks each day's hours (`meetingDaysFor`).
  *
  * The date boxes are offered while a day may follow the one before it by more
  * than a day (`MAX_MEETING_DAY_GAP_DAYS`, the whole span since Today and the
@@ -192,22 +195,32 @@ export function MeetingDaysField({
               </Field>
               <Field label={fill(copy.dayStartLabel, { number: index + 2 })}>
                 <DateField
-                  name="meetingStart"
                   type="time"
-                  required={!disabled}
+                  required={!disabled && ownHours[index] != null}
                   disabled={disabled}
                   value={ownHours[index]?.start ?? firstStart ?? ""}
                   onChange={(event) => setHour(index, "start", event.currentTarget.value)}
                 />
+                <input
+                  type="hidden"
+                  name="meetingStart"
+                  disabled={disabled}
+                  value={ownHours[index]?.start ?? ""}
+                />
               </Field>
               <Field label={fill(copy.dayEndLabel, { number: index + 2 })}>
                 <DateField
-                  name="meetingEnd"
                   type="time"
-                  required={!disabled}
+                  required={!disabled && ownHours[index] != null}
                   disabled={disabled}
                   value={ownHours[index]?.end ?? firstEnd ?? ""}
                   onChange={(event) => setHour(index, "end", event.currentTarget.value)}
+                />
+                <input
+                  type="hidden"
+                  name="meetingEnd"
+                  disabled={disabled}
+                  value={ownHours[index]?.end ?? ""}
                 />
               </Field>
             </div>
