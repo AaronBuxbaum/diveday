@@ -2334,4 +2334,95 @@ describe("an offline copy of a course that meets on two days", () => {
       "not_boarded",
     );
   });
+
+  describe("a copy refreshed on day two", () => {
+    const SUNDAY_SAVE = "2026-07-21T07:00:00.000Z";
+
+    it("does not read day one's queued taps as day two's count", () => {
+      const copy = courseCopy({});
+      copy.savedAt = SUNDAY_SAVE;
+      const events = [
+        event({
+          bookingId: "ready",
+          checkpoint: "after_dive_1",
+          status: "boarded",
+          occurredAt: "2026-07-20T13:00:00.000Z",
+          syncStatus: "applied",
+        }),
+        event({
+          clientEventId: "e2",
+          bookingId: "ready",
+          checkpoint: "departure",
+          status: "boarded",
+          occurredAt: "2026-07-20T11:00:00.000Z",
+          syncStatus: "applied",
+        }),
+      ];
+      expect(latestOfflineRollCall(copy, events, "ready", "after_dive_1", DAY_TWO)).toBeUndefined();
+      expect(latestOfflineRollCall(copy, events, "ready", "departure", DAY_TWO)).toBeUndefined();
+    });
+
+    it("does the same for the crew half", () => {
+      const copy = crewSnapshot();
+      copy.rollCallDayBoundaries = [BOUNDARY];
+      copy.savedAt = SUNDAY_SAVE;
+      const events = [
+        event({
+          bookingId: undefined,
+          crewPersonId: "crew-dana",
+          checkpoint: "after_dive_1",
+          status: "boarded",
+          occurredAt: "2026-07-20T13:00:00.000Z",
+          syncStatus: "applied",
+        }),
+      ];
+      expect(
+        latestOfflineCrewRollCall(copy, events, "crew-dana", "after_dive_1", DAY_TWO),
+      ).toBeUndefined();
+    });
+
+    it("does not let day one's retraction hide a missing diver the copy brought home", () => {
+      const copy = courseCopy({});
+      copy.savedAt = SUNDAY_SAVE;
+      for (const manifest of copy.manifests) {
+        const diver = manifest.divers.find((entry) => entry.bookingId === "ready");
+        if (diver && manifest.checkpoint === "after_dive_1") {
+          diver.rollCall = {
+            state: "not_boarded",
+            occurredAt: "2026-07-21T10:00:00.000Z",
+            recordedByName: "Sal",
+            implied: false,
+          };
+        }
+      }
+      const events = [
+        event({
+          bookingId: "ready",
+          checkpoint: "after_dive_1",
+          status: "cleared",
+          occurredAt: "2026-07-20T13:30:00.000Z",
+          syncStatus: "applied",
+        }),
+      ];
+      expect(latestOfflineRollCall(copy, events, "ready", "after_dive_1", DAY_TWO)?.state).toBe(
+        "not_boarded",
+      );
+    });
+  });
+
+  it("clears day one's missing diver on day three once day two counted them, as the server does", () => {
+    const copy = courseCopy(dockAndDive);
+    copy.rollCallDayBoundaries = [BOUNDARY, "2026-07-22T00:00:00.000Z"];
+    const DAY_THREE = new Date("2026-07-22T14:00:00.000Z");
+    const events = [
+      // Day two's dock count, tapped on this phone: ordinal 0, not "a later dive".
+      event({ bookingId: "blocked", checkpoint: "departure", status: "boarded" }),
+    ];
+    expect(latestOfflineRollCall(copy, [], "blocked", "after_dive_1", DAY_THREE)?.state).toBe(
+      "not_boarded",
+    );
+    expect(
+      latestOfflineRollCall(copy, events, "blocked", "after_dive_1", DAY_THREE),
+    ).toBeUndefined();
+  });
 });

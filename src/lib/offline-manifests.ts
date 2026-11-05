@@ -24,9 +24,9 @@ import {
   carryForwardNotBoarded,
   isNotBackAboard,
   RETRACTION_SUPERSEDED,
-  rollCallCheckpointOrdinal,
   rollCallCheckpoints,
 } from "./roll-call";
+import { carriedMissing, type DayMark, standingByDay } from "./roll-call-days";
 import { rollCallDayOf } from "./trip-days";
 import { hasSailed } from "./trips";
 import { medicalWarningDays } from "./waivers";
@@ -2127,40 +2127,66 @@ function offlineRollCallAt(
 ): OfflineRollCallResult | undefined {
   const starts = offlineDayStarts(snapshot);
   const today = rollCallDayOf(starts, now);
-  if (today <= rollCallDayOf(starts, new Date(snapshot.savedAt))) {
-    return offlineRollCallOnOneDay(snapshot, events, checkpoint, matches, savedAt);
-  }
-  const onToday = (event: OfflineRollCallEvent) =>
-    rollCallDayOf(starts, new Date(event.occurredAt)) >= today;
-  const todays = events.filter(onToday);
-  const nothingSaved = () => undefined;
-  const todayAt = (at: OfflineCheckpoint) =>
-    offlineRollCallOnOneDay(snapshot, todays, at, matches, nothingSaved);
-
-  const here = todayAt(checkpoint);
-  if (here) return here;
-  const retracted = latestQueuedAttempt(
+  const dayOfEvent = (event: OfflineRollCallEvent) =>
+    rollCallDayOf(starts, new Date(event.occurredAt));
+  // Every time, not only when the copy is older than today: a copy refreshed on
+  // the morning of day two still holds day one's queued events, and they are
+  // day one's. The saved results speak for today only if the copy was saved
+  // today (or later, on a clock that ran ahead).
+  const savedDay = rollCallDayOf(starts, new Date(snapshot.savedAt));
+  const todays = events.filter((event) => dayOfEvent(event) >= today);
+  const here = offlineRollCallOnOneDay(
+    snapshot,
     todays,
     checkpoint,
     matches,
-    (event) => event.syncStatus !== "rejected",
+    savedDay >= today ? savedAt : () => undefined,
   );
-  if (retracted?.status === "cleared") return undefined;
+  if (here || today === 0 || checkpoint === "departure") return here;
 
-  if (checkpoint === "departure") return undefined;
-  const earlier = events.filter((event) => !onToday(event));
-  const earlierAt = (at: OfflineCheckpoint) =>
-    offlineRollCallOnOneDay(snapshot, earlier, at, matches, savedAt);
-  const stated = earlierAt(checkpoint);
-  if (!stated || !isNotBackAboard(checkpoint, stated)) return undefined;
-  const order = offlineCheckpointOrder(snapshot);
-  const dive = rollCallCheckpointOrdinal(checkpoint);
-  const settledThatDay = order.some(
-    (later) => rollCallCheckpointOrdinal(later) > dive && earlierAt(later)?.state === "boarded",
+  // Nothing stands today at an after-dive checkpoint: an earlier day's stated
+  // missing person may still be open. The server's own fold decides
+  // (`carriedMissing`, `src/lib/roll-call-days.ts`), over this device's events
+  // and the copy's saved results, each filed under its own meeting day.
+  type Filed = DayMark & { at: string; result: OfflineRollCallResult | null };
+  const filed: Filed[] = [];
+  const subject = "subject";
+  for (const event of events) {
+    if (event.syncStatus === "rejected") continue;
+    const who = offlineRollCallSubject(event);
+    if (!who || !matches(who)) continue;
+    filed.push({
+      subject,
+      checkpoint: event.checkpoint,
+      status: event.status,
+      day: dayOfEvent(event),
+      at: event.occurredAt,
+      result: recordedResult(event),
+    });
+  }
+  if (savedDay < today) {
+    for (const at of offlineCheckpointOrder(snapshot)) {
+      const saved = savedAt(at);
+      if (saved && !saved.implied) {
+        filed.push({
+          subject,
+          checkpoint: at,
+          status: saved.state,
+          day: savedDay,
+          at: saved.occurredAt,
+          result: saved,
+        });
+      }
+    }
+  }
+  // Oldest first, as the fold requires; fixed-width ISO strings compare as time.
+  filed.sort((a, b) => a.at.localeCompare(b.at));
+  const carried = [...carriedMissing(standingByDay(filed), today).values()].find(
+    (mark) => mark.checkpoint === checkpoint,
   );
-  const countedSince = order.some((any) => todayAt(any)?.state === "boarded");
-  if (settledThatDay || countedSince) return undefined;
-  return { ...stated, local: false, clientEventId: undefined };
+  return carried?.result
+    ? { ...carried.result, local: false, clientEventId: undefined }
+    : undefined;
 }
 
 /** The saved result a snapshot holds for one subject at one checkpoint, or nothing. */
