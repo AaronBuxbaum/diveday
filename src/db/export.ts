@@ -1039,6 +1039,18 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
 
   const rentalFitRows = await readScoped(tx, "rentalFitProfiles", scope);
 
+  // The diver's own staff record, when they are also staff (issue #3881,
+  // Aaron 2026-11-05): their pro cards and their roles at this shop. Both name
+  // only the person, and both go through the registry like every other read.
+  const staffCredentialRows = await readScoped(tx, "staffCredentials", scope);
+  const roleRows = await tx
+    .select({ role: personRoles.role })
+    .from(personRoles)
+    .innerJoin(people, eq(people.id, personRoles.personId))
+    .where(and(eq(people.shopId, shopId), diverOwnRows(personRoles.personId, personId)))
+    .orderBy(asc(personRoles.role));
+  const rolesText = roleRows.map((row) => row.role).join("; ");
+
   const gearReservationRows = await tx
     .select()
     .from(gearReservations)
@@ -1157,6 +1169,8 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     entitlementRows,
     packageName,
     rentalFitRows,
+    staffCredentialRows,
+    rolesText,
     gearReservationRows,
     customerGearItemRows,
     workOrderRows,

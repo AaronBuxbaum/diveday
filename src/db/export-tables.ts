@@ -259,7 +259,7 @@ export const EXPORT_TABLES = {
   staffCredentials: {
     table: staffCredentials,
     order: [asc(staffCredentials.createdAt), asc(staffCredentials.id)],
-    scope: { shopColumn: staffCredentials.shopId },
+    scope: { shopColumn: staffCredentials.shopId, personColumn: staffCredentials.personId },
   },
   tripHelpRequests: {
     table: tripHelpRequests,

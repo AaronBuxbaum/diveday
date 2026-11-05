@@ -184,7 +184,8 @@ describe("the registry's export fates", () => {
     // The loader's own hand-written reads take the same check.
     expect(() => diverOwnRows(tripReviews.personId, "p")).not.toThrow();
     expect(() => diverOwnRows(internalNotes.personId, "p")).toThrow(/withheld/);
-    expect(() => diverOwnRows(staffCredentials.personId, "p")).toThrow(/withheld/);
+    expect(() => diverOwnRows(staffCredentials.personId, "p")).not.toThrow();
+    expect(() => diverOwnRows(personRoles.personId, "p")).not.toThrow();
   });
 
   /**
@@ -235,5 +236,35 @@ describe("the registry's export fates", () => {
         false,
       ]);
     }
+  });
+
+  /**
+   * Aaron, 2026-11-05 (#3881): a staffer who asks for their own data gets
+   * their pro cards and their roles, and the cards of a colleague stay out.
+   */
+  it("carries a staffer's own credentials and roles, and nobody else's", async () => {
+    const { db, shop } = ctx;
+    const [owner, other] = await db
+      .selectDistinct({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(eq(people.shopId, shop.id))
+      .orderBy(people.id)
+      .limit(2);
+    if (!owner || !other || owner.id === other.id) throw new Error("expected two staffers");
+    const mine = "Instructor Trainer card 4471";
+    const theirs = "Captain license 9902";
+    await db.insert(staffCredentials).values([
+      { shopId: shop.id, personId: owner.id, kind: "instructor_rating", name: mine },
+      { shopId: shop.id, personId: other.id, kind: "instructor_rating", name: theirs },
+    ]);
+    const input = await loadDiverExportBundleInput(db, shop.id, owner.id);
+    if (!input) throw new Error("export failed to load");
+    const files = Object.fromEntries(input.tables.map((table) => [table.file, table]));
+    const text = JSON.stringify(files["staff_credentials.csv"]?.rows);
+    expect([text.includes(mine), text.includes(theirs)]).toEqual([true, false]);
+    const profile = files["profile.csv"];
+    const roles = profile?.rows[0]?.[profile.header.indexOf("roles")];
+    expect(String(roles)).not.toBe("");
   });
 });
