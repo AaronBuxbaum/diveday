@@ -31,6 +31,7 @@ import {
 import { tripIdsNeverSentLastMinuteDeal, tripIdsSuitedToADeal } from "@/db/trip-promos";
 import { liveTrip, notRehearsal, seatNotCancelled } from "@/db/trips";
 import {
+  issueWeeklyDigestUnsubscribeToken,
   listWeeklyDigestRecipients,
   staffLogins,
   type WeeklyDigestRecipient,
@@ -38,7 +39,6 @@ import {
 } from "@/db/weekly-digest";
 import { getTodayWork } from "@/features/today";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import { errorClassToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
@@ -213,6 +213,7 @@ async function readEmergencyReads(
           departureStartsAt: trips.startsAt,
         })
         .from(activityEvents)
+        // diveday:allow-staff-events: the staff weekly digest, never a diver's; it reads one code, medical_alert_emergency_read, which owners and managers see.
         // diveday:allow-rehearsal: an emergency read on a rehearsal still opened a real diver's words, and the owner hears of every one.
         .innerJoin(trips, departure)
         .where(
@@ -234,6 +235,7 @@ async function readEmergencyReads(
       db
         .select({ reader: readerName, count: reads })
         .from(activityEvents)
+        // diveday:allow-staff-events: the staff weekly digest, never a diver's; it reads one code, medical_alert_emergency_read, which owners and managers see.
         // diveday:allow-rehearsal: an emergency read on a rehearsal still opened a real diver's words, and the owner hears of every one.
         .innerJoin(trips, departure)
         .where(
@@ -682,21 +684,26 @@ export async function sendWeeklyDigestForShop(
     // Nothing this person may read happened: no email, and no claim, so a
     // later pass the same morning asks again rather than remembering a send.
     if (sections.length === 0) continue;
-    const token = createBearerToken();
-    const [claim] = await db
-      .insert(weeklyDigestSends)
-      .values({
+    // The claim and its opt-out link land together or not at all, so a
+    // failed mint never leaves a week claimed with nothing sent (review D2).
+    const claimed = await db.transaction(async (tx) => {
+      const [claim] = await tx
+        .insert(weeklyDigestSends)
+        .values({ shopId: shop.id, personId: recipient.personId, weekOf: weeks.weekOf })
+        .onConflictDoNothing()
+        .returning({ id: weeklyDigestSends.id });
+      if (!claim) return null;
+      const token = await issueWeeklyDigestUnsubscribeToken(tx, {
         shopId: shop.id,
         personId: recipient.personId,
-        weekOf: weeks.weekOf,
-        unsubscribeTokenHash: hashBearerToken(token),
-      })
-      .onConflictDoNothing()
-      .returning({ id: weeklyDigestSends.id });
-    if (!claim) {
+      });
+      return { claim, token };
+    });
+    if (!claimed) {
       summary.alreadySent += 1;
       continue;
     }
+    const { claim, token } = claimed;
     const delivery: NotificationDelivery = await sendNotification(
       db,
       digestNotification({

@@ -31,10 +31,10 @@ may import a feature:
   so they cannot disagree. Its codes are `src/lib/roll-call-gaps.ts`.
 - **The blocker-to-fix rule**: `blockerDestination` in `src/lib/blockers.ts`, shared with the
   counter and the palette. The shared readiness pass is `src/db/blockers.ts`.
-- **Small primitives**: `src/lib/today-kinds.ts` (kinds, audience, severity), `today-urgency.ts`,
-  `today-job.ts`, `seat-sailed.ts`, `shop-day.ts`, `src/lib/closeout-kinds.ts`.
+- **Small primitives**: `src/lib/today-kinds.ts` (kinds, audience, severity), `src/lib/today-urgency.ts`,
+  `src/lib/today-job.ts`, `src/lib/seat-sailed.ts`, `src/lib/shop-day.ts`, `src/lib/closeout-kinds.ts`.
 - **What changed since you last looked**: `src/db/today-catch-up.ts`, a read-mark store.
-- **The words**: `src/i18n/today-labels.ts`, `closeout-labels.ts` and `load-out-labels.ts`.
+- **The words**: `src/i18n/today-labels.ts`, `src/i18n/closeout-labels.ts` and `src/i18n/load-out-labels.ts`.
 
 ## Public surface
 

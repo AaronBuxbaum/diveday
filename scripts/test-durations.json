@@ -632,7 +632,7 @@
   "src/app/shop/[shopSlug]/orders/page.demo.test.tsx": 4534,
   "src/app/shop/[shopSlug]/orders/page.test.tsx": 6724,
   "src/app/shop/[shopSlug]/page.notices.test.ts": 459,
-  "src/app/shop/[shopSlug]/print/_components/PaperSheet.test.tsx": 391,
+  "src/components/paper/PaperSheet.test.tsx": 391,
   "src/app/shop/[shopSlug]/print/_components/SheetCode.test.tsx": 4214,
   "src/app/shop/[shopSlug]/promos/_components/PromoLedger.test.tsx": 497,
   "src/app/shop/[shopSlug]/promos/actions.authz.test.ts": 4388,

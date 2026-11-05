@@ -178,35 +178,11 @@ export const waiverRecords = pgTable(
     deliveryProviderStatus: notificationProviderStatus("delivery_provider_status"),
     deliveryProviderStatusAt: timestamp("delivery_provider_status_at", { withTimezone: true }),
     deliveryError: text("delivery_error"),
-    /** SHA-256 hash — what every lookup matches against, and all that is kept once the link is spent. */
-    tokenHash: text("token_hash").notNull().unique(),
     /**
-     * The same bearer token, sealed (`src/lib/secret-box.ts`), for exactly as
-     * long as the link is live.
-     *
-     * It exists so a second "send this diver their waiver" hands back the link
-     * they already have instead of minting a new one and killing the old
-     * (ADR 20260820-waiver-links-are-reused-not-reissued). A hash alone cannot
-     * do that — nothing can read it back — so the choice was between reissuing
-     * (a copied URL dies the moment anyone taps Text, and a diver mid-draft
-     * loses it) and keeping an openable copy under the deployment's own key.
-     *
-     * Bounded on purpose: written only for a live pending link, and nulled the
-     * moment the record is superseded, completed, or the diver's data erased.
-     * A database reader cannot replay a spent credential, and a live one needs
-     * `SECRET_ENCRYPTION_KEY`, which is not in the database. Null wherever no
-     * link was ever handed out (paper, imported, anonymized) and wherever the
-     * deployment has no sealing key, in which case issuing falls back to
-     * minting a fresh link exactly as it did before.
-     *
-     * One case keeps its ciphertext: a link nobody ever reissued over, left to
-     * expire. Nothing opens it again — reuse refuses an expired record, and the
-     * next issue supersedes and clears it — and what it seals is a token that
-     * now resolves to `expired`, so it is not a live credential. Clearing it on
-     * the stroke of expiry would want a sweeper, which is more moving parts
-     * than the exposure justifies.
+     * SHA-256 hash — what every lookup matches against, and all that is kept:
+     * the link itself is derived from the record (`waiverLinkToken`, #3903).
      */
-    tokenSealed: text("token_sealed"),
+    tokenHash: text("token_hash").notNull().unique(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
@@ -635,6 +611,49 @@ export const waiverRecords = pgTable(
       sql`(${table.guardianSignedAt} is null) = (${table.guardianConsentedAt} is null)
         and (${table.guardianSignedAt} is null) = (${table.guardianSignatureMethod} is null)
         and (${table.guardianSignedAt} is null) = (${table.guardianRelationship} is null)`,
+    ),
+  ],
+);
+
+/** The longest note a staffer can leave when acknowledging a broken seal. */
+export const MAX_WAIVER_SEAL_ACKNOWLEDGEMENT_NOTE = 1000;
+
+/**
+ * **A broken seal someone looked into** (#3891): who, when and what they
+ * found, one row per acknowledgement, appended and never edited. It lives
+ * outside `waiver_records` on purpose: a row edited straight in the database
+ * must not be able to write its own all-clear.
+ *
+ * `state_digest` pins the release as it stood when it was acknowledged
+ * (`waiverSealStateDigest`, `src/db/waiver-seal-acknowledgements.ts`): the
+ * nightly check (`recheckWaiverSeals`) stops counting a broken release only
+ * while an acknowledgement matches its current state, so an edit made after
+ * the acknowledgement rings again. Nothing here repairs the seal or changes
+ * the cached verdict; the signature log still shows the release as changed.
+ */
+export const waiverSealAcknowledgements = pgTable(
+  "waiver_seal_acknowledgements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    waiverRecordId: uuid("waiver_record_id")
+      .notNull()
+      .references(() => waiverRecords.id),
+    stateDigest: text("state_digest").notNull(),
+    note: text("note").notNull(),
+    acknowledgedByPersonId: uuid("acknowledged_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    acknowledgedAt: appNowTimestamp("acknowledged_at").notNull(),
+  },
+  (table) => [
+    index("waiver_seal_acknowledgements_record_idx").on(table.shopId, table.waiverRecordId),
+    index("waiver_seal_acknowledgements_by_idx").on(table.acknowledgedByPersonId),
+    check(
+      "waiver_seal_acknowledgements_note_length",
+      sql`length(btrim(${table.note})) > 0 and length(${table.note}) <= ${sql.raw(String(MAX_WAIVER_SEAL_ACKNOWLEDGEMENT_NOTE))}`,
     ),
   ],
 );

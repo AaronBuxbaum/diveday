@@ -9,13 +9,14 @@ vi.mock("./bookkeeper", async (importOriginal) => {
 
 const { anonymizeDiver } = await import("./anonymize");
 const {
+  claimBookkeeperMonth,
   consumeBookkeeperConfirmation,
   issueBookkeeperConfirmation,
   readBookkeeper,
   setBookkeeper,
   tellOwnersAboutBookkeeper,
 } = await import("./bookkeeper");
-const { people, personRoles, shops } = await import("./schema");
+const { capabilities, people, personRoles, shops } = await import("./schema");
 
 beforeEach(() => {
   vi.mocked(tellOwnersAboutBookkeeper).mockClear();
@@ -60,12 +61,28 @@ describe("anonymizeDiver — the bookkeeper's address", () => {
     vi.mocked(tellOwnersAboutBookkeeper).mockClear();
     const erase = () =>
       anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: owner.id });
+    // The month-end email's stop link, a capability bound to the address (issue #3721).
+    const claimed = await claimBookkeeperMonth(db, {
+      shopId: shop.id,
+      email: bookkeeper,
+      setByPersonId: owner.id,
+      month: "2099-01",
+    });
+    if (!claimed) throw new Error("expected a month-end claim");
     const row = async () => (await db.select().from(shops).where(eq(shops.id, shop.id)))[0];
-    return { erase, read: () => readBookkeeper(db, shop.id), row };
+    const stopLinks = async () =>
+      (
+        await db
+          .select({ id: capabilities.id })
+          .from(capabilities)
+          .where(and(eq(capabilities.shopId, shop.id), eq(capabilities.purpose, "bookkeeper_stop")))
+      ).length;
+    return { erase, read: () => readBookkeeper(db, shop.id), row, stopLinks };
   }
 
-  it("clears the address, its confirmation and its link's hash when it is the erased diver's", async () => {
-    const { erase, read, row } = await setup("bea@example.com");
+  it("clears the address, its confirmation and its links when it is the erased diver's", async () => {
+    const { erase, read, row, stopLinks } = await setup("bea@example.com");
+    expect(await stopLinks()).toBe(1);
     expect((await row())?.bookkeeperConfirmTokenHash).not.toBeNull();
     expect((await erase()).ok).toBe(true);
     expect(await read()).toBeNull();
@@ -74,8 +91,8 @@ describe("anonymizeDiver — the bookkeeper's address", () => {
       bookkeeperConfirmedAt: null,
       bookkeeperConfirmTokenHash: null,
       bookkeeperConfirmExpiresAt: null,
-      bookkeeperStopTokenHash: null,
     });
+    expect(await stopLinks()).toBe(0);
     expect(tellOwnersAboutBookkeeper).toHaveBeenCalledTimes(1);
     expect(vi.mocked(tellOwnersAboutBookkeeper).mock.calls[0]?.[1]).toMatchObject({
       what: { event: "cleared", by: "erasure" },
@@ -83,9 +100,10 @@ describe("anonymizeDiver — the bookkeeper's address", () => {
   });
 
   it("leaves somebody else's address alone", async () => {
-    const { erase, read } = await setup("books@ledger.example");
+    const { erase, read, stopLinks } = await setup("books@ledger.example");
     expect((await erase()).ok).toBe(true);
     expect((await read())?.email).toBe("books@ledger.example");
+    expect(await stopLinks()).toBe(1);
     expect(tellOwnersAboutBookkeeper).not.toHaveBeenCalled();
   });
 });

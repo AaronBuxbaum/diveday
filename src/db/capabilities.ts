@@ -1,12 +1,14 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
-import { type CapabilityPurpose, capabilitySubject } from "@/lib/capabilities";
+import { CAPABILITY_POLICY, type CapabilityPurpose, capabilitySubject } from "@/lib/capabilities";
+import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import { capabilities } from "./schema";
 
 /**
  * The `capabilities` table's rows and the transitions on them (issue #2710):
- * mint one, and verify one for a named purpose. The policy each purpose follows
+ * mint one, verify one for a named purpose, and spend one whose purpose a use
+ * spends. The policy each purpose follows
  * is `CAPABILITY_POLICY` in `src/lib/capabilities.ts`; this module reads the
  * subject from it and nothing else, so a caller never chooses which column its
  * subject id lands in.
@@ -17,15 +19,49 @@ import { capabilities } from "./schema";
  */
 
 function subjectColumns(purpose: CapabilityPurpose, subjectId: string) {
-  return capabilitySubject(purpose) === "interest"
-    ? { interestId: subjectId, personId: null }
-    : { personId: subjectId, interestId: null };
+  switch (capabilitySubject(purpose)) {
+    case "interest":
+      return { interestId: subjectId, personId: null, sentTo: null };
+    case "person":
+      return { personId: subjectId, interestId: null, sentTo: null };
+    case "shop_address":
+      return { sentTo: subjectId.trim().toLowerCase(), personId: null, interestId: null };
+  }
+}
+
+type CapabilityRow = {
+  id: string;
+  shopId: string;
+  personId: string | null;
+  interestId: string | null;
+  sentTo: string | null;
+  usedAt: Date | null;
+};
+
+const ROW = {
+  id: capabilities.id,
+  shopId: capabilities.shopId,
+  personId: capabilities.personId,
+  interestId: capabilities.interestId,
+  sentTo: capabilities.sentTo,
+  usedAt: capabilities.usedAt,
+};
+
+function verified(purpose: CapabilityPurpose, row: CapabilityRow): VerifiedCapability | null {
+  const subject = capabilitySubject(purpose);
+  const subjectId =
+    subject === "interest" ? row.interestId : subject === "person" ? row.personId : row.sentTo;
+  // The table's check makes this unreachable; a null subject must still never
+  // be handed on as an id.
+  if (!subjectId) return null;
+  return { id: row.id, shopId: row.shopId, subjectId, usedAt: row.usedAt };
 }
 
 /**
  * Mints a fresh capability and returns the token, which is shown once and
  * never stored: the row keeps only its digest. Each call is a new link; an
- * earlier link for the same subject keeps working.
+ * earlier link for the same subject keeps working. For a `shop_address`
+ * purpose `subjectId` is the address the link is mailed to.
  */
 export async function issueCapability(
   db: DbExecutor,
@@ -44,8 +80,13 @@ export async function issueCapability(
 export type VerifiedCapability = {
   id: string;
   shopId: string;
-  /** The id in the purpose's subject column (`CAPABILITY_POLICY[purpose].subject`). */
+  /**
+   * The value in the purpose's subject column (`CAPABILITY_POLICY[purpose].subject`):
+   * an id, or for a `shop_address` purpose the lower-cased address.
+   */
   subjectId: string;
+  /** When a purpose a use spends was spent; always null for an idempotent one. */
+  usedAt: Date | null;
 };
 
 /**
@@ -63,12 +104,7 @@ export async function verifyCapability(
   input: { purpose: CapabilityPurpose; token: string },
 ): Promise<VerifiedCapability | null> {
   const [row] = await db
-    .select({
-      id: capabilities.id,
-      shopId: capabilities.shopId,
-      personId: capabilities.personId,
-      interestId: capabilities.interestId,
-    })
+    .select(ROW)
     .from(capabilities)
     .where(
       and(
@@ -77,10 +113,58 @@ export async function verifyCapability(
       ),
     )
     .limit(1);
-  if (!row) return null;
-  const subjectId = capabilitySubject(input.purpose) === "interest" ? row.interestId : row.personId;
-  // The table's check makes this unreachable; a null subject must still never
-  // be handed on as an id.
-  if (!subjectId) return null;
-  return { id: row.id, shopId: row.shopId, subjectId };
+  return row ? verified(input.purpose, row) : null;
+}
+
+/**
+ * Spends a capability whose purpose a use spends (`use: "once"`): marks it
+ * used in one conditional update and returns it, or null for an unknown
+ * token, a wrong purpose or a link already spent. Two opens at once spend it
+ * once. Call it inside the transaction that does what the link does, so a
+ * refusal there rolls the spend back.
+ */
+export async function spendCapability(
+  db: DbExecutor,
+  input: { purpose: CapabilityPurpose; token: string; now?: Date },
+): Promise<VerifiedCapability | null> {
+  if (CAPABILITY_POLICY[input.purpose].use !== "once") {
+    throw new Error(`${input.purpose} is not spent by a use`);
+  }
+  const [row] = await db
+    .update(capabilities)
+    .set({ usedAt: input.now ?? nowDate() })
+    .where(
+      and(
+        eq(capabilities.purpose, input.purpose),
+        eq(capabilities.tokenHash, hashBearerToken(input.token)),
+        isNull(capabilities.usedAt),
+      ),
+    )
+    .returning(ROW);
+  return row ? verified(input.purpose, row) : null;
+}
+
+/**
+ * Withdraws every unspent link of one purpose a shop holds: for a
+ * `shop_address` purpose whose address the shop just changed or cleared, so a
+ * link mailed to the old address opens nothing (it reads as unknown), or every
+ * link but the newest delivered one (`except`). A spent link stays, so it
+ * still reads as "already done". Returns how many went.
+ */
+export async function withdrawUnspentCapabilities(
+  db: DbExecutor,
+  input: { purpose: CapabilityPurpose; shopId: string; except?: string },
+): Promise<number> {
+  const withdrawn = await db
+    .delete(capabilities)
+    .where(
+      and(
+        eq(capabilities.purpose, input.purpose),
+        eq(capabilities.shopId, input.shopId),
+        isNull(capabilities.usedAt),
+        input.except ? ne(capabilities.tokenHash, hashBearerToken(input.except)) : undefined,
+      ),
+    )
+    .returning({ id: capabilities.id });
+  return withdrawn.length;
 }

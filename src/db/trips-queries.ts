@@ -22,14 +22,19 @@ import { sellableSeats } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import type { SeatCounts } from "@/lib/participant-types";
-import { type ServiceWindow, serviceWindowFrom } from "@/lib/service-window";
+import {
+  boatServiceWindow,
+  type ServiceWindow,
+  serviceWindowFrom,
+  serviceWindowTouches,
+} from "@/lib/service-window";
 import {
   summarizeTripDiveSites,
   type TripDiveSiteRef,
   type TripDiveSiteSummary,
 } from "@/lib/trip-dives";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { shiftWeek, weekDates } from "@/lib/week-board";
 import { shopDayBounds, shopDaysBounds, wallTimeToUtc } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
@@ -573,6 +578,45 @@ export async function sellableCapacity(
     boat?.capacity ?? null,
     crew?.total ?? 0,
   );
+}
+
+/**
+ * **Whether a hull is in the yard on any of these instants' shop-local days**
+ * (loop 5, row 5; issue #3915). The one question every door that puts a
+ * departure on a boat asks before it writes: a move, a copy, every week of a
+ * series. False for no boat, a boat with no window, or another shop's boat.
+ */
+export async function boatOutOfServiceOn(
+  tx: DbExecutor,
+  shopId: string,
+  boatId: string | null,
+  instants: readonly Date[],
+  timeZone: string,
+): Promise<boolean> {
+  if (!boatId) return false;
+  return serviceWindowTouches(
+    await boatServiceWindowOf(tx, shopId, boatId),
+    instants.map((instant) => calendarDateInTimezone(instant, timeZone)),
+  );
+}
+
+/** A boat's yard window, read once for a caller that asks about many days; null for none. */
+export async function boatServiceWindowOf(
+  tx: DbExecutor,
+  shopId: string,
+  boatId: string | null,
+): Promise<ServiceWindow | null> {
+  if (!boatId) return null;
+  const [boat] = await tx
+    .select({
+      outOfServiceFrom: boats.outOfServiceFrom,
+      outOfServiceUntil: boats.outOfServiceUntil,
+      outOfServiceReason: boats.outOfServiceReason,
+    })
+    .from(boats)
+    .where(and(eq(boats.id, boatId), eq(boats.shopId, shopId)))
+    .limit(1);
+  return boatServiceWindow(boat);
 }
 
 /** The boat's certificate passenger limit, or null when there is no boat or none recorded. */

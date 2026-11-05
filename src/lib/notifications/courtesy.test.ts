@@ -19,6 +19,29 @@ function provider(...results: CourtesyDelivery[]) {
 const sent = (id: string): CourtesyDelivery => ({ status: "sent", providerMessageId: id });
 
 describe("sendCourtesyMessage", () => {
+  it("sends nothing on WhatsApp to a number that sent STOP, and lets SMS refuse it", async () => {
+    const refused: CourtesyDelivery = {
+      status: "failed",
+      retryable: false,
+      errorCode: "opted_out",
+    };
+    const sms = { ...provider(refused), isStopListed: vi.fn().mockResolvedValue(true) };
+    const whatsapp = provider(sent("wamid.1"));
+    const result = await sendCourtesyMessage(message, { sms, whatsapp });
+
+    expect(whatsapp.send).not.toHaveBeenCalled();
+    expect(sms.isStopListed).toHaveBeenCalledWith(message.to);
+    expect(result).toEqual({ channel: "sms", delivery: refused });
+  });
+
+  it("still prefers WhatsApp for a number that is not on the STOP list", async () => {
+    const sms = { ...provider(sent("SM_1")), isStopListed: vi.fn().mockResolvedValue(false) };
+    const whatsapp = provider(sent("wamid.1"));
+    const result = await sendCourtesyMessage(message, { sms, whatsapp });
+
+    expect(result.channel).toBe("whatsapp");
+  });
+
   it("uses SMS when the shop has not connected WhatsApp", async () => {
     const sms = provider(sent("SM_1"));
     const result = await sendCourtesyMessage(message, { sms });

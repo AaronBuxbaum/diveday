@@ -13,7 +13,12 @@
     "shortHome": "Home",
     "recordedLine": "{name} · {time}",
     "errorRefusal": "That didn’t save. Check your connection and tap again.",
-    "openRollCall": "Open roll call"
+    "openRollCall": "Open roll call",
+    "homeConfirmQuestion": "Mark the boat home anyway?",
+    "homeConfirm": "Mark home anyway",
+    "homeConfirmBack": "Not yet",
+    "homeNotCounted": "Home was said with {count, plural, one {# person not counted} other {# people not counted}}",
+    "crewNotCountedAfterDive": "Crew not counted after dive {dive}: {names}"
   },
   "deckCount": {
     "heading": "Count on deck",
@@ -28,7 +33,12 @@
     "unmarked": "No mark: {names}.",
     "unmarkedMore": "{names} and {count, plural, one {# more} other {# more}}",
     "marksAhead": "{count, plural, one {# is marked aboard. A mark may be on the wrong person.} other {# are marked aboard. A mark may be on the wrong person.}}",
-    "refusal": "That count didn’t save. Check your connection and record it again."
+    "refusal": "That count didn’t save. Check your connection and record it again.",
+    "printedBlank": "{checkpoint}: Deck count ____ at ____",
+    "printedLast": "{checkpoint}: Deck count ____ at ____. Last counted {counted} at {time}, {name}.",
+    "printedStale": "{checkpoint}: Deck count ____ at ____. Counted {counted} at {time}, before the last mark. Count again.",
+    "savedLine": "Deck count {counted} at {time}, {name}. Read only on this copy.",
+    "savedStale": "Counted {counted} at {time}, before the last mark. Count again."
   },
   "cancelledRollCallClosed": "This departure is canceled and nobody has been counted aboard, so roll call is closed. If anyone is aboard, reinstate the trip to count them.",
   "cancelledRollCallStillCounting": "This departure is canceled. Roll call stays open because the count had started.",

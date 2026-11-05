@@ -1,0 +1,77 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "57644779-2376-4bc4-8f41-fad02755a3bf",
+  "prevIds": [
+    "cd38c08f-6c37-40f2-8fa8-b1f7d34fbd5c"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trip_stage_events",
+        "not_counted"
+      ],
+      "writes": [
+        "s|col|public.trip_stage_events.not_counted",
+        "n|col|public.trip_stage_events.not_counted",
+        "e|col|public.trip_stage_events.not_counted"
+      ],
+      "reads": [
+        "n|tbl|public.trip_stage_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_stage_events"
+      ],
+      "writes": [
+        "s|ck|public.trip_stage_events.trip_stage_events_not_counted_home_only",
+        "n|ck|public.trip_stage_events.trip_stage_events_not_counted_home_only",
+        "e|ck|public.trip_stage_events.trip_stage_events_not_counted_home_only",
+        "n|con|public.trip_stage_events.trip_stage_events_not_counted_home_only"
+      ],
+      "reads": [
+        "n|tbl|public.trip_stage_events",
+        "n|sch|public",
+        "n|col|public.trip_stage_events.not_counted",
+        "n|col|public.trip_stage_events.stage"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_stage_events",
+        "name": "not_counted",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_stage_events",
+        "name": "trip_stage_events_not_counted_home_only",
+        "value": "\"not_counted\" is null or (\"stage\" = 'home' and \"not_counted\" > 0)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

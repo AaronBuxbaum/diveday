@@ -25,10 +25,10 @@ import { isDiver } from "@/lib/participant-types";
 import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
-import { joinedAtADiveSite, readSeatLadder, sailingUnsaid } from "@/lib/seat-ladder";
 import { type SeatWaiverStanding, seatWaiverStanding, type WaiverStanding } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
+import { type NotCountedAfterDiveGroup, recordGroups } from "./record-groups";
 import { SHARED_FACT_MIN } from "./shared-facts";
 import type {
   NitroxByBooking,
@@ -402,6 +402,25 @@ export type RosterRecord = {
    */
   countedAboardBlocked: ReadonlyMap<string, CountedAboardBlocked>;
   /**
+   * Seats no started after-dive count included, mapped to the first such dive
+   * (`readDepartureStage`, issue #3895). Not missing: nobody said they were.
+   * Not Sailed either: the record says which count left them out.
+   */
+  notCountedAfterDive?: ReadonlyMap<string, number>;
+  /**
+   * Crew no started after-dive count included, by name and first such dive
+   * (`readDepartureStage`, dock review S1 of #3896): the Home count includes
+   * them, so the record names them too.
+   */
+  crewNotCountedAfterDive?: readonly { personId: string; name: string; dive: number }[];
+  /**
+   * How many the record named as not counted after a dive when the crew said
+   * Home, the largest any Home on this departure stored
+   * (`trip_stage_events.not_counted`, issue #3896). A fact about that moment:
+   * a count recorded since moves the names, never this.
+   */
+  homeNotCounted?: number;
+  /**
    * Under a seat, what that diver could do next ("Booked Sat 11:30 AM", or an
    * open day with Add them and Email them this date), keyed by booking id
    * (fifth-loop ideas, item 4). Absent says nothing.
@@ -536,6 +555,14 @@ const WAIVER_CONTROL_KEYS: Record<WaiverStanding, WaiverControlKeys> = {
   guardian_missing: {
     labelKey: "trips.roster.waiverGuardianMissing",
     variant: "secondary",
+    action: "send",
+    confirm: false,
+  },
+  // Changed after signing (issue #3885): held, and the way out is a fresh
+  // signature, the same send the diver record offers.
+  seal_failed: {
+    labelKey: "waiversStaff.seatSealFailed",
+    variant: "danger",
     action: "send",
     confirm: false,
   },
@@ -800,101 +827,9 @@ export function groupRoster({
     uncounted: [] as RosterEntry[],
     unrecorded: [] as RosterEntry[],
     unaccounted: [] as RosterEntry[],
+    notCountedAfterDive: [] as NotCountedAfterDiveGroup[],
     sailedMeta: undefined as string | undefined,
   };
-}
-
-/**
- * **The record's groups**, one seat at a time by its rung on the seat ladder
- * (`readSeatLadder`, src/lib/seat-ladder.ts) and `seatSailed`, the rule the
- * evening close-out counts by (dive-domain review of UX batch 1):
- *
- * - **Sailed**: boarded at the dock, or counted at an after-dive checkpoint
- *   (a diver picked up at the second site sailed, and that count outranks a
- *   desk's `no_show`).
- * - **Didn't sail**: only what somebody said: the crew's `not_boarded` at the
- *   dock, or a released seat (`no_show`) nobody counted aboard.
- * - **Joined at a dive site**: a dock `not_boarded`, then counted after a dive
- *   (a chase boat, #3823): not Sailed by the vessel, but dived (rung `out`).
- * - **Not counted at the dock**: a seat nobody said anything about on a
- *   departure whose roll call was taken. Silence is not "didn't sail".
- * - **No roll call taken**: the same silence on a departure with no dock roll
- *   call at all, under a band that says so rather than a guess.
- * - **Not back aboard**: said missing at an after-dive checkpoint and not
- *   counted since. Ahead of every other group, and the departure stays open
- *   while one is here (`departureStage`, issue #2404).
- *
- * Nothing is still to clear, nothing is blocked, and no shared advisory is
- * said: the dive is over (dive-domain rule: a record never asks for action).
- */
-function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterRecord) {
-  const sailed: RosterEntry[] = [];
-  const didNotSail: RosterEntry[] = [];
-  const joinedAtSite: RosterEntry[] = [];
-  const uncounted: RosterEntry[] = [];
-  const unrecorded: RosterEntry[] = [];
-  const turnedAway: RosterEntry[] = [];
-  const unaccounted: RosterEntry[] = [];
-  for (const entry of roster) {
-    const id = entry.booking.id;
-    const noShow = entry.booking.status === "no_show";
-    // No arrival: the record files what the crew and the desk said about
-    // sailing, and an arrival moves no seat between its groups (the ladder's
-    // "changes nothing but booked to arrived" test).
-    const ladder = readSeatLadder({
-      noShow,
-      arrived: false,
-      dockResult: record.dock.get(id) ?? null,
-      afterDiveResultStands: record.afterDive.has(id),
-      missingAfterDive: record.unaccounted.has(id),
-    });
-    // First: the one group that is still a question, whatever else is on file.
-    if (ladder.rung === "missing") {
-      unaccounted.push(entry);
-    } else if (sailingUnsaid(ladder)) {
-      (record.rollCallTaken ? uncounted : unrecorded).push(entry);
-    } else if (ladder.countsAsSailed) {
-      sailed.push(entry);
-    } else if (joinedAtADiveSite(ladder, record.dock.get(id) ?? null)) {
-      joinedAtSite.push(entry);
-    } else if (noShow && entry.booking.turnedAwayAt) {
-      // Did not sail because the desk refused them (H-20261015-who-may-turn-someone), said apart from
-      // the divers who never came.
-      turnedAway.push(entry);
-    } else {
-      didNotSail.push(entry);
-    }
-  }
-  return {
-    stillToClear: [] as RosterEntry[],
-    ready: [] as RosterEntry[],
-    here: [] as RosterEntry[],
-    notHere: [] as RosterEntry[],
-    turnedAway,
-    deskWorkOpen: false,
-    hereMeta: undefined as string | undefined,
-    blockedCount: 0,
-    sharedFacts: [] as { sentence: string; count: number }[],
-    sharedAdvisoryTexts: new Set<string>(),
-    sailed,
-    didNotSail,
-    joinedAtSite,
-    uncounted,
-    unrecorded,
-    unaccounted,
-    // The group's fact, said once (principle 9): how many of those who sailed
-    // were counted aboard while blocked. Nothing at all when none were.
-    sailedMeta: countedBlockedMeta(t, sailed, record),
-  };
-}
-
-function countedBlockedMeta(
-  t: StaffTranslator,
-  sailed: readonly RosterEntry[],
-  record: RosterRecord,
-): string | undefined {
-  const count = sailed.filter(({ booking }) => record.countedAboardBlocked.has(booking.id)).length;
-  return count === 0 ? undefined : t("trips.roster.sailedBlockedMeta", { count });
 }
 
 export type RosterGroups = ReturnType<typeof groupRoster>;

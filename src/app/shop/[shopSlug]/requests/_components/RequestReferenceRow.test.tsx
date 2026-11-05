@@ -32,6 +32,7 @@ const BASE: DateInterestRow = {
   charterQuoteCents: null,
   charterQuoteCurrency: null,
   charterQuotedAt: null,
+  replyUnsettled: false,
 };
 
 function row(

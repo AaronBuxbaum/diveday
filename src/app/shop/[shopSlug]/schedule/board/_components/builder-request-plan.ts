@@ -1,6 +1,7 @@
 import type { listBoats } from "@/db/boats";
 import type { listDateInterestsByIds } from "@/db/interest-dates";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { formatMoneyScanned } from "@/lib/format";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import type { BuilderRequestPlan } from "./ScheduleBuilder";
 
@@ -15,6 +16,7 @@ export function builderRequestPlan({
   shop,
   shopBoats,
   st,
+  locale,
 }: {
   requestRows: Awaited<ReturnType<typeof listDateInterestsByIds>>;
   shop: Parameters<typeof departureShapeFor>[0] & {
@@ -23,6 +25,7 @@ export function builderRequestPlan({
   };
   shopBoats: Awaited<ReturnType<typeof listBoats>>;
   st: StaffTranslator;
+  locale: string;
 }): BuilderRequestPlan | null {
   const requestAdvice = adviseRequests(
     requestRows.map((request) => ({
@@ -52,6 +55,18 @@ export function builderRequestPlan({
             ? st("requests.aboutCourse", { course: request.courseTitle })
             : charterAsk(st, request),
           divers: Math.max(1, request.partySize ?? 1),
+          // Shown beside the price box and nothing more: a whole-boat quote is
+          // not a per-seat price, so the staffer sets the price (#3917).
+          quote:
+            request.charterQuoteCents !== null && request.charterQuoteCurrency
+              ? st("requests.charterQuotedInBrief", {
+                  amount: formatMoneyScanned(
+                    request.charterQuoteCents,
+                    request.charterQuoteCurrency,
+                    locale,
+                  ),
+                })
+              : null,
         })),
       }
     : null;

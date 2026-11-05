@@ -9,6 +9,7 @@ import {
   meetingDaysFor,
   meetingDayWindows,
   onTheWaterDay,
+  rollCallDayBoundariesOf,
   rollCallDayOf,
   rollCallDayStarts,
   rollCallRecordSince,
@@ -220,6 +221,15 @@ describe("roll-call days (#2557)", () => {
     expect(rollCallDayOf(starts, new Date("2026-08-01T23:00:00.000Z"))).toBe(0);
     expect(rollCallDayOf(starts, new Date("2026-08-15T12:30:00.000Z"))).toBe(1);
     expect(rollCallDayOf(starts, new Date("2026-08-15T16:00:00.000Z"))).toBe(1);
+  });
+
+  it("names each later day's boundary for the offline copy, and none for a one-day run", () => {
+    // Halfway between 17:00 on the first Saturday and 13:00 on the second.
+    expect(rollCallDayBoundariesOf([satTwo, satOne])).toEqual([
+      new Date((satOne.endsAt.getTime() + satTwo.startsAt.getTime()) / 2).toISOString(),
+    ]);
+    expect(rollCallDayBoundariesOf([satOne])).toBeUndefined();
+    expect(rollCallDayBoundariesOf(undefined)).toBeUndefined();
   });
 
   it("never starts a day after its own window opens, even when windows touch", () => {

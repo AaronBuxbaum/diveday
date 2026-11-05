@@ -111,6 +111,7 @@ export function ImportResult({
         ) : null}
         {state.summary.waiversAdded +
           state.summary.waiversSkippedExisting +
+          state.summary.waiversSkippedMedicalHold +
           state.summary.waiversSkippedNoTemplate >
         0 ? (
           <p className="mt-1 text-sm">
@@ -124,6 +125,11 @@ export function ImportResult({
             {state.summary.waiversSkippedExisting > 0
               ? fill(copy.result.waiversSkippedExistingNote, {
                   count: state.summary.waiversSkippedExisting,
+                })
+              : ""}
+            {state.summary.waiversSkippedMedicalHold > 0
+              ? fill(copy.result.waiversSkippedMedicalHoldNote, {
+                  count: state.summary.waiversSkippedMedicalHold,
                 })
               : ""}
             {state.summary.waiversSkippedNoTemplate > 0

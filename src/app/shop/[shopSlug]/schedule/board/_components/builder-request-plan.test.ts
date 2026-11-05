@@ -27,7 +27,9 @@ function request(over: Record<string, unknown>) {
 
 describe("builderRequestPlan", () => {
   it("is null when the link carried no requests", () => {
-    expect(builderRequestPlan({ requestRows: [], shop, shopBoats: [], st })).toBeNull();
+    expect(
+      builderRequestPlan({ requestRows: [], shop, shopBoats: [], st, locale: "en-US" }),
+    ).toBeNull();
   });
 
   it("adds the requests up and names each one", () => {
@@ -39,6 +41,7 @@ describe("builderRequestPlan", () => {
       shop,
       shopBoats: [{ id: "b1", name: "Reef Runner", capacity: 12 }] as Input["shopBoats"],
       st,
+      locale: "en-US",
     });
     expect(plan?.estimatedDivers).toBe(5);
     expect(plan?.requests.map((row) => row.name)).toEqual(["Tomás", st("requests.anonymous")]);
@@ -53,6 +56,7 @@ describe("builderRequestPlan", () => {
       shop: { ...shop, crewScheduleEnabled: false } as Input["shop"],
       shopBoats: [],
       st,
+      locale: "en-US",
     });
     expect(plan?.suggestedDivemasters).toBe(0);
   });
@@ -63,9 +67,42 @@ describe("builderRequestPlan", () => {
       shop,
       shopBoats: [],
       st,
+      locale: "en-US",
     });
     expect(plan?.requests[0]?.subject).toBe(
       "Wants the whole boat: two-tank. This departure will be private.",
     );
+  });
+
+  it("shows the whole-boat quote beside the price, and sets nothing from it", () => {
+    const plan = builderRequestPlan({
+      requestRows: [
+        request({ charter: true, charterQuoteCents: 180000, charterQuoteCurrency: "usd" }),
+        request({ id: "r2", charter: true }),
+        request({ id: "r3" }),
+      ] as Input["requestRows"],
+      shop,
+      shopBoats: [],
+      st,
+      locale: "en-US",
+    });
+    expect(plan?.requests.map((row) => row.quote)).toEqual([
+      "Quoted $1,800 for the whole boat. The price is set separately.",
+      null,
+      null,
+    ]);
+  });
+
+  it("words the quote in the shop's language and currency", () => {
+    const plan = builderRequestPlan({
+      requestRows: [
+        request({ charter: true, charterQuoteCents: 180000, charterQuoteCurrency: "eur" }),
+      ] as Input["requestRows"],
+      shop,
+      shopBoats: [],
+      st: staffTranslator("es-ES"),
+      locale: "es-ES",
+    });
+    expect(plan?.requests[0]?.quote).toMatch(/^Presupuesto de 1.?800\s€ por el barco entero\./);
   });
 });

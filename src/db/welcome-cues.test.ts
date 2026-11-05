@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { bookings, people, priorVisits, trips } from "./schema";

@@ -1,9 +1,22 @@
-import { and, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  type SQLWrapper,
+  sql,
+} from "drizzle-orm";
 import { log } from "@/lib/log";
 import { waiverIntegrityVerdict } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
 import { shops, waiverRecords } from "./schema";
 import { WAIVER_SEALED_COLUMNS } from "./waiver-record-columns";
+import { acknowledgedWaiverSeals } from "./waiver-seal-acknowledgements";
 
 /** Rows read and re-checked per statement. */
 export const WAIVER_SEAL_CHECK_BATCH = 200;
@@ -25,8 +38,13 @@ export const WAIVER_SEALING_SHIPPED_AT = new Date("2026-07-21T13:13:59.000Z");
 export type WaiverSealCheckSummary = {
   /** Sealed releases whose verdict this pass re-wrote. */
   checked: number;
-  /** Of those, how many failed verification, or had their seal removed. */
+  /**
+   * Of those, how many failed verification, or had their seal removed, and
+   * carry no acknowledgement matching their current state (#3891).
+   */
   invalid: number;
+  /** Broken releases a manager acknowledged as they stand now: logged, not an alarm. */
+  acknowledged: number;
   /** Of those, how many passed (or had never been checked) the last time: a seal that broke since. */
   newlyInvalid: number;
   /** True when the pass stopped at its limit with sealed releases still unchecked tonight. */
@@ -34,10 +52,13 @@ export type WaiverSealCheckSummary = {
 };
 
 /**
- * Whether a pass checks in healthy: no release it checked is broken. Every
- * broken one counts, not only one that broke since the last check, because
- * "already failing" is read from a column the tamperer can write too. A
- * release stays an alarm every night until someone deals with it. A pass that
+ * Whether a pass checks in healthy: no release it checked is broken and
+ * unacknowledged. Every broken one counts, not only one that broke since the
+ * last check, because "already failing" is read from a column the tamperer
+ * can write too. A release stays an alarm every night until a manager records
+ * that they looked into it (`acknowledgeBrokenWaiverSeal`, #3891), an
+ * appended row outside `waiver_records` pinned to the release's state, so an
+ * edit after it rings again. A pass that
  * stopped at its limit is not one on its own; the next night starts with the
  * rows checked longest ago, so every row comes round.
  */
@@ -81,6 +102,7 @@ export async function recheckWaiverSeals(
   const summary: WaiverSealCheckSummary = {
     checked: 0,
     invalid: 0,
+    acknowledged: 0,
     newlyInvalid: 0,
     capped: false,
   };
@@ -135,7 +157,7 @@ export async function recheckWaiverSeals(
         .limit(take)
         .for("update");
 
-      for (const row of rows) {
+      const verdicts = rows.map((row) => {
         const { integrityHash, integrityVersion } = row.record;
         const sealed = Boolean(integrityHash && integrityVersion);
         const verdict = sealed
@@ -152,17 +174,29 @@ export async function recheckWaiverSeals(
         // otherwise stops the pass rather than being selected again forever.
         if (verdict.integrityValid === null)
           throw new Error("recheckWaiverSeals: a due row read as unsealed");
+        return { row, sealed, verdict };
+      });
+      // Read in the batch's transaction, after the rows are locked, so the
+      // state an acknowledgement is matched against is the state judged.
+      const covered = await acknowledgedWaiverSeals(
+        tx,
+        verdicts.filter(({ verdict }) => !verdict.integrityValid).map(({ row }) => row),
+      );
+      for (const { row, sealed, verdict } of verdicts) {
         await tx.update(waiverRecords).set(verdict).where(eq(waiverRecords.id, row.record.id));
         summary.checked += 1;
         if (!verdict.integrityValid) {
-          summary.invalid += 1;
           const newly = row.previousVerdict !== false;
+          const acknowledged = covered.has(row.record.id);
+          if (acknowledged) summary.acknowledged += 1;
+          else summary.invalid += 1;
           if (newly) summary.newlyInvalid += 1;
-          log("cron_waiver_seals.seal_invalid", "error", {
+          log("cron_waiver_seals.seal_invalid", acknowledged ? "warn" : "error", {
             shopId: row.shopId,
             recordId: row.record.id,
             sealRemoved: !sealed,
             newly,
+            acknowledged,
           });
         }
       }
@@ -174,4 +208,31 @@ export async function recheckWaiverSeals(
   const [more] = await db.select({ id: waiverRecords.id }).from(waiverRecords).where(due).limit(1);
   summary.capped = Boolean(more);
   return summary;
+}
+
+/**
+ * **The people whose signed evidence is compromised** (issue #3885, attacker
+ * review B1): anyone with a release at this shop whose seal failed its last
+ * check, whatever that release's status now and whether or not it is the one
+ * a seat would read. A tampered referral flipped back to pending, or
+ * backdated behind a clean signature, stops being the effective release but
+ * stays a changed record, so readiness holds the person on it.
+ *
+ * Only a clean release **signed after** the failed check clears it: the
+ * desk's way out is to send the waiver and have the diver sign again. An
+ * older clean signature never does, so backdating cannot reach it.
+ */
+export function personSealFailed(shopId: SQLWrapper, personId: SQLWrapper) {
+  // A column on the readiness row read rather than a read of its own: the
+  // render budgets count statements, and the hold rides the query that
+  // already joins each seat's person (`listTripsWaiverStatuses`).
+  return sql<boolean>`exists (select 1 from ${waiverRecords} as failed
+    where failed.shop_id = ${shopId}
+    and failed.person_id = ${personId}
+    and failed.integrity_valid = false
+    and not exists (select 1 from ${waiverRecords} as clean
+      where clean.shop_id = failed.shop_id
+      and clean.person_id = failed.person_id
+      and clean.integrity_valid = true
+      and clean.signed_at > failed.integrity_checked_at))`.mapWith(Boolean);
 }

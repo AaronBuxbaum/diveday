@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNotNull, isNull, lt, or, SQL, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { DESK_ONLY_CODES } from "@/lib/activity";
+import { purposesNaming } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -22,6 +23,7 @@ import {
   bookingCapabilities,
   bookingPaymentEvents,
   bookings,
+  capabilities,
   claudeCallContent,
   claudeUsage,
   crewNotices,
@@ -354,12 +356,26 @@ export const PRUNE_ARMS = {
     id: shopContactEmailConfirmationTokens.id,
     clock: shopContactEmailConfirmationTokens.expiresAt,
   },
-  // The shore contact's links (H-20261014-stale-roll-call-recipients): from `created_at`, since a stop link
-  // has no `expires_at` of its own.
+  // The shore contact's confirm links (H-20261014-stale-roll-call-recipients), from `created_at`.
   shop_shore_alert_tokens: {
     from: shopShoreAlertTokens,
     id: shopShoreAlertTokens.id,
     clock: shopShoreAlertTokens.createdAt,
+  },
+  // The stop links mailed to a shop's own addresses (issue #3721), from
+  // `issued_at`: they never expire, and they hold the address. The Monday
+  // email's opt-out links age out with the send claims they used to live on
+  // (`weekly_digest_sends`' window, security review D1): their clock is moved
+  // forward by the difference, so one table window serves both. An unsubscribe
+  // link of an interest or a person's courtesy email goes with its subject.
+  capabilities: {
+    from: capabilities,
+    id: capabilities.id,
+    clock: sql`case when ${capabilities.purpose} = 'weekly_digest_unsubscribe' then ${capabilities.issuedAt} + make_interval(days => ${sql.raw(String(RETENTION_DAYS.weekly_digest_sends - RETENTION_DAYS.capabilities))}) else ${capabilities.issuedAt} end`,
+    extraWhere: inArray(capabilities.purpose, [
+      ...purposesNaming("shop_address"),
+      "weekly_digest_unsubscribe",
+    ]),
   },
   // Booking links (H-20260916-far-deletion-promise-reach, issue #1726), on the same clock as the two token
   // arms above. `expires_at` only, never `revoked_at`: a revoked link can still
@@ -391,8 +407,9 @@ export const PRUNE_ARMS = {
     id: pushSubscriptions.id,
     clock: pushSubscriptions.createdAt,
   },
-  // The Monday email's per-week claims and their opt-out link hashes. Pruned
-  // on their own age: the claim is spent once its week is over.
+  // The Monday email's per-week claims. Pruned on their own age: the claim is
+  // spent once its week is over. The opt-out link the email carried is a
+  // capability, not on the claim, so it outlives the prune.
   weekly_digest_sends: {
     from: weeklyDigestSends,
     id: weeklyDigestSends.id,

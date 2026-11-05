@@ -170,6 +170,7 @@ const COPY = {
     waiversLineOne: "Waiver added: {count}",
     waiversLineOther: "Waivers added: {count}",
     waiversSkippedExistingNote: " ({count} already on file)",
+    waiversSkippedMedicalHoldNote: " ({count} on a medical hold)",
     waiversSkippedNoTemplateNoteOne: " ({count} no template)",
     waiversSkippedNoTemplateNoteOther: " ({count} no template)",
     waiverDocumentsFailedNote: " ({count} documents failed)",

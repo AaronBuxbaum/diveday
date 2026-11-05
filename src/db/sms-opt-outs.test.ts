@@ -45,6 +45,27 @@ describe("the SMS stop list", () => {
     expect(inner.send).not.toHaveBeenCalled();
   });
 
+  it("does not send a WhatsApp courtesy message to a number that replied STOP", async () => {
+    const db = await unseededTestDb();
+    await recordSmsKeyword(db, { phone: PHONE, optedOut: true, keywordAt: at(1) });
+    const inner = { send: vi.fn() };
+    const whatsapp = {
+      send: vi.fn().mockResolvedValue({ status: "sent", providerMessageId: "w" }),
+    };
+
+    const result = await sendCourtesyMessage(
+      { to: PHONE, body: "hi", shopName: "Shop", locale: "en-US" },
+      { sms: stopListedSmsProvider(db, inner), whatsapp },
+    );
+
+    expect(whatsapp.send).not.toHaveBeenCalled();
+    expect(inner.send).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      channel: "sms",
+      delivery: { status: "failed", retryable: false, errorCode: "opted_out" },
+    });
+  });
+
   it("texts every other number, and one that replied START, as before", async () => {
     const db = await unseededTestDb();
     await recordSmsKeyword(db, { phone: PHONE, optedOut: true, keywordAt: at(1) });

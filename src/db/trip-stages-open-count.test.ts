@@ -49,7 +49,26 @@ async function boat() {
       stage: await latestTripStage(db, shop.id, made.trip.id),
       cancelled: false,
     });
-  return { ...made, say, reading };
+  const crew = async (checkpoint: string, status: "boarded" | "not_boarded") => {
+    minute += 1;
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: made.trip.id,
+      subjectKind: "crew",
+      crewPersonId: made.staffId,
+      recordedByPersonId: made.staffId,
+      status,
+      checkpoint,
+      source: "live",
+      occurredAt: new Date(nowMs() - 5 * HOUR + minute * 60_000),
+    });
+  };
+  return { ...made, say, crew, reading };
+}
+
+/** Puts the boat's staff member on its crew list, so crew marks count. */
+async function crewOn(made: { trip: { id: string }; staffId: string }) {
+  await ctx.db.insert(tripAssignments).values({ tripId: made.trip.id, personId: made.staffId });
 }
 
 describe("readDepartureStage: an after-dive count still open", () => {
@@ -94,6 +113,194 @@ describe("readDepartureStage: an after-dive count still open", () => {
       recordedByPersonId: staffId,
     });
     expect((await reading()).finished).toBe(true);
+  });
+});
+
+/**
+ * **The record names a seat no started after-dive count included** (issue
+ * #3895). Once Home finishes the departure, a diver boarded at the dock with
+ * no mark at a started after-dive checkpoint is not filed under Sailed as if
+ * counted: the record says "Not counted after dive N". A seat recorded not
+ * back aboard stays in its own group.
+ */
+describe("readDepartureStage: who the record says was not counted after a dive", () => {
+  async function home(made: Awaited<ReturnType<typeof boat>>) {
+    const { db, shop } = ctx;
+    await recordTripStage(db, {
+      shopId: shop.id,
+      tripId: made.trip.id,
+      stage: "home",
+      recordedByPersonId: made.staffId,
+    });
+    return made.reading();
+  }
+
+  it("names a diver left out of the started count after dive 2", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(second, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "boarded");
+    const reading = await home(made);
+    expect(reading.finished).toBe(true);
+    expect([...reading.notCountedAfterDive]).toEqual([[second, 2]]);
+  });
+
+  it("names the first dive a diver was left out of", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "boarded");
+    expect([...(await home(made)).notCountedAfterDive]).toEqual([[second, 1]]);
+  });
+
+  it("does not name a diver counted back aboard after a later dive", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "boarded");
+    await made.say(second, "after_dive_2", "boarded");
+    expect((await home(made)).notCountedAfterDive.size).toBe(0);
+  });
+
+  it("keeps a diver recorded not back aboard in the missing group, not this one", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(second, "after_dive_1", "not_boarded");
+    const reading = await home(made);
+    expect(reading.unaccounted.has(second)).toBe(true);
+    expect(reading.notCountedAfterDive.has(second)).toBe(false);
+  });
+
+  it("names nobody where no after-dive count was started", async () => {
+    const made = await boat();
+    expect((await home(made)).notCountedAfterDive.size).toBe(0);
+  });
+
+  it("names nobody while the departure is still live", async () => {
+    const made = await boat();
+    const [first] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    const reading = await made.reading();
+    expect(reading.finished).toBe(false);
+    expect(reading.notCountedAfterDive.size).toBe(0);
+  });
+});
+
+/**
+ * **Home keeps how many the record names as not counted** (issues #3895,
+ * #3896, review fixes). Home is never refused; the event stores the count of
+ * seats and crew no started after-dive count included, read by the rule the
+ * record names them by, so the number and the names agree when Home is said.
+ */
+describe("recordTripStage: Home with the after-dive count open", () => {
+  async function sayHome(
+    made: Awaited<ReturnType<typeof boat>>,
+    stage: "home" | "heading_in" = "home",
+  ) {
+    const { db, shop } = ctx;
+    const outcome = await recordTripStage(db, {
+      shopId: shop.id,
+      tripId: made.trip.id,
+      stage,
+      recordedByPersonId: made.staffId,
+    });
+    return { outcome, latest: await latestTripStage(db, shop.id, made.trip.id) };
+  }
+
+  it("records Home with the people the last count has not accounted for", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(second, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "boarded");
+    const { outcome, latest } = await sayHome(made);
+    expect(outcome).toMatchObject({ ok: true });
+    expect(latest).toMatchObject({ stage: "home", notCounted: 1 });
+  });
+
+  // Dock review S1: "not counted" is paperwork, "not back aboard" is a
+  // search. A missing diver is never worded as a counting gap.
+  it("leaves a diver recorded not back aboard out of the count, which the record names apart", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(second, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "not_boarded");
+    expect((await sayHome(made)).latest).toMatchObject({ notCounted: 1 });
+    const reading = await made.reading();
+    expect([...reading.notCountedAfterDive]).toEqual([[second, 2]]);
+    expect(reading.unaccounted.has(first)).toBe(true);
+  });
+
+  it("counts nobody for a last dive nobody started counting, and names nobody", async () => {
+    const made = await boat();
+    // Dive 2 called off, the plan left at two dives.
+    for (const id of made.bookingIds) await made.say(id, "after_dive_1", "boarded");
+    const { outcome, latest } = await sayHome(made);
+    expect(latest).toMatchObject({ stage: "home", notCounted: null });
+    // Still warned at the tap: a skipped count is never silent.
+    expect(outcome.ok && outcome.rollCallOpen).toMatchObject({ kind: "not_counted" });
+    expect((await made.reading()).notCountedAfterDive.size).toBe(0);
+  });
+
+  it("counts and names a divemaster left out of the started count", async () => {
+    const made = await boat();
+    await crewOn(made);
+    await made.crew("departure", "boarded");
+    await made.crew("after_dive_1", "boarded");
+    for (const checkpoint of ["after_dive_1", "after_dive_2"]) {
+      for (const id of made.bookingIds) await made.say(id, checkpoint, "boarded");
+    }
+    expect((await sayHome(made)).latest).toMatchObject({ notCounted: 1 });
+    const reading = await made.reading();
+    expect(reading.notCountedAfterDive.size).toBe(0);
+    expect(reading.crewNotCountedAfterDive).toEqual([
+      expect.objectContaining({ personId: made.staffId, dive: 2 }),
+    ]);
+  });
+
+  it("leaves a divemaster recorded not back aboard out of the count and the names", async () => {
+    const made = await boat();
+    await crewOn(made);
+    await made.crew("departure", "boarded");
+    await made.crew("after_dive_1", "not_boarded");
+    for (const checkpoint of ["after_dive_1", "after_dive_2"]) {
+      for (const id of made.bookingIds) await made.say(id, checkpoint, "boarded");
+    }
+    expect((await sayHome(made)).latest).toMatchObject({ notCounted: null });
+  });
+
+  // Attacker review S3: the line is evidence, and the person whose miscount
+  // it records must not be able to remove it with one more tap.
+  it("keeps the count when Home is said again after the gap is backfilled", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    for (const id of made.bookingIds) await made.say(id, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "boarded");
+    expect((await sayHome(made)).latest).toMatchObject({ notCounted: 1 });
+    await made.say(second, "after_dive_2", "boarded");
+    expect((await sayHome(made)).latest).toMatchObject({ stage: "home", notCounted: 1 });
+    // The names follow the count recorded since; the stored line does not.
+    expect((await made.reading()).notCountedAfterDive.size).toBe(0);
+  });
+
+  it("records no count when everyone is counted back", async () => {
+    const made = await boat();
+    for (const checkpoint of ["after_dive_1", "after_dive_2"]) {
+      for (const id of made.bookingIds) await made.say(id, checkpoint, "boarded");
+    }
+    expect((await sayHome(made)).latest).toMatchObject({ stage: "home", notCounted: null });
+  });
+
+  it("records no count on Heading in, which still warns", async () => {
+    const made = await boat();
+    const [first] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_2", "boarded");
+    const { outcome, latest } = await sayHome(made, "heading_in");
+    expect(latest).toMatchObject({ stage: "heading_in", notCounted: null });
+    expect(outcome.ok && outcome.rollCallOpen).toBeTruthy();
   });
 });
 

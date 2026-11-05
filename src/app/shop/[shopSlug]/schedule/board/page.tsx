@@ -81,10 +81,11 @@ export default async function ScheduleBoardPage({
   const query = await searchParams;
   const { builder, count, created, held, tell, series, add, date, course, requests, site, week } =
     query;
+  const on = query.on;
   const carryFrom = uuidParam(query.carryFrom);
   const actionResultKey =
     query.result ??
-    (builder ? [builder, count, created, series].filter(Boolean).join(":") : undefined);
+    (builder ? [builder, count, created, series, on].filter(Boolean).join(":") : undefined);
   const requestIds = [
     ...new Set(
       (requests ?? "")
@@ -135,9 +136,9 @@ export default async function ScheduleBoardPage({
   const addDraft = draftForForm(draft, locale, shop.timezone);
   const boatMap = new Map(boatsEverOwned.map((boat) => [boat.id, boat.name]));
   const hasUpcoming = range.first !== null;
-  const requestPlan = builderRequestPlan({ requestRows, shop, shopBoats, st });
+  const requestPlan = builderRequestPlan({ requestRows, shop, shopBoats, st, locale });
 
-  const builderNotice = builderNoticeFor({ builder, count, created, series, st });
+  const builderNotice = builderNoticeFor({ builder, count, created, series, on, locale, st });
   const rescheduleNotice =
     builder === "moved" || (held !== undefined && tell !== undefined)
       ? await resolveRescheduleNoticeSnapshot({

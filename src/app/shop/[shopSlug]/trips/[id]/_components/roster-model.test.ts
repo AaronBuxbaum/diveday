@@ -266,6 +266,35 @@ describe("groupRoster", () => {
     expect(ids(groups.didNotSail)).toEqual(["ashore"]);
   });
 
+  // Issue #3895: Home finished the departure with a started after-dive count
+  // that never included this diver. Not Sailed, and not missing either.
+  it("in the record, names a seat a started after-dive count left out, by dive, above Sailed", () => {
+    const record = {
+      ...recordOf(
+        { aboard: "boarded", late: "boarded", early: "boarded", missing: "boarded" },
+        ["aboard", "missing"],
+        true,
+        ["missing"],
+      ),
+      notCountedAfterDive: new Map([
+        ["late", 2],
+        ["early", 1],
+        // A seat said missing stays missing, whatever this map says.
+        ["missing", 1],
+      ]),
+    };
+    const groups = recordGroupsFor(
+      [seat("aboard"), seat("late"), seat("early"), seat("missing")],
+      record,
+    );
+    expect(groups.notCountedAfterDive.map(({ dive, entries }) => [dive, ids(entries)])).toEqual([
+      [1, ["early"]],
+      [2, ["late"]],
+    ]);
+    expect(ids(groups.sailed)).toEqual(["aboard"]);
+    expect(ids(groups.unaccounted)).toEqual(["missing"]);
+  });
+
   it("in the record, says once how many who sailed were counted aboard while blocked", () => {
     const record = {
       ...recordOf({ a: "boarded", b: "boarded", c: "not_boarded" }, ["a"]),
@@ -539,5 +568,16 @@ describe("seatMoveForRow", () => {
     const turnedAway = booking("no_show", new Date("2026-10-16T07:00:00Z"));
     expect(seatMoveForRow(turnedAway, true, move(false))).toBeDefined();
     expect(seatMoveForRow(turnedAway, true, move(false, true))).toBeUndefined();
+  });
+});
+
+// Dock review of #3885: a changed release has its own word on the roster and
+// the same send the diver record offers, never "Signed" with nothing to do.
+describe("the roster's word for a release changed after signing", () => {
+  it("names it and offers a send", () => {
+    const t = staffTranslator("en-US");
+    const control = waiverControls(t).seal_failed;
+    expect(control).toMatchObject({ label: "Changed after signing", action: "send" });
+    expect(control.label).not.toBe(waiverControls(t).signed.label);
   });
 });

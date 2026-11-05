@@ -48,13 +48,13 @@ export const EXPORT_FILE_NOTES = {
   "trip_change_events.csv":
     "The public-safe change ledger for departures: what meeting point or conditions snapshot changed, the before and after values, broad source, and timestamp. No readiness, waiver, contact, or capability state is included.",
   "trip_stage_events.csv":
-    "Where each departure was, in the crew's own word, with the time they said it and who said it. Five stages, appended and never edited; the newest row is what the shop's website and each diver's link showed. No position of any kind is recorded.",
+    "Where each departure was, in the crew's own word, with the time they said it and who said it. Five stages, appended and never edited, oldest first; the newest row is what the shop's website and each diver's link showed. not_counted, on a home row only, is how many people the last after-dive count had not accounted for when the crew said Home anyway. No position of any kind is recorded.",
   "safety_drills.csv":
     "The drill log: each safety drill the shop held (emergency oxygen, missing diver, person overboard, fire), the date, a note and who logged it. A deleted drill carries its deleted_at and who deleted it (deleted_by_person_id).",
   "safety_drill_participants.csv":
     "Who took part in each drill in safety_drills.csv, one row per person.",
   "deck_counts.csv":
-    "The heads the captain counted on deck at each roll-call checkpoint, with who counted and when. A recount is a new row; the newest per checkpoint is the one the manifest held against its marks.",
+    "The heads the captain counted on deck at each roll-call checkpoint, with who counted and when. A recount is a new row, oldest first; the newest per checkpoint is the one the manifest held against its marks.",
   "trip_series.csv":
     "Recurring-trip cadences; every materialized instance is its own row in trips.csv carrying series_id. A blank ends_on means the trip simply keeps repeating.",
   "trip_series_crew.csv":
@@ -113,6 +113,8 @@ export const EXPORT_FILE_NOTES = {
     "The accountable staff assertion for each published waiver version: whether the edit changed the bargain, who chose, and when. This is audit history, not an inferred diff.",
   "waiver_records.csv":
     "Issued and signed waiver evidence; the signed text is the referenced template version and template_generation records the material terms generation the signer accepted. Only status 'completed' satisfies the waiver gate, and only while current (within a year of signing, against the shop's current release). 'medical_review' means a physician's sign-off is still outstanding — that diver is blocked from boarding, not merely flagged, even though the signature fields are filled in. signature_method 'imported' means the record was trusted from a prior shop's own acceptance during a contact import, never reviewed by this shop — imported_from_label and the import_source_*_url columns carry that record's provenance; only 'imported' rows ever populate them. integrity_hash and integrity_version carry the independent signed-metadata audit seal when present; unsealed legacy rows remain explicitly identifiable. Version 3 means the release was refiled under another diver record by a merge: moved_from_person_id, moved_at and moved_by_person_id say from where, when and by whom, and are inside the seal. Those three columns on an unsealed row mean an unsigned link followed a split seat to its new diver.",
+  "waiver_seal_acknowledgements.csv":
+    "A manager's record that they looked into a signed release whose seal reads broken: who, when and what they found. It does not repair the release; the diver stays held until they sign again.",
   "course_forms.csv":
     "The shop's own course forms — the extra forms a course asks each student to sign beside the release. One row per form, with its current title; a deleted form carries its deleted_at stamp and its signed records stay in course_form_records.csv.",
   "course_form_versions.csv":
@@ -139,7 +141,7 @@ export const EXPORT_FILE_NOTES = {
   "work_order_care.csv":
     "The Work done record: one row per check a technician performed on a ticket — which care (the same codes as gear_service_events.csv, with note meaning other work and no clock), on which customer piece (empty on a shop unit's ticket), whether it passed, the day it was performed, and the next due date and dive interval they confirmed. Only a passed check ever moved a clock; a failed one is kept as the record of the failure.",
   "work_order_events.csv":
-    "Each ticket's own history, oldest first (seq is the order things actually happened in): the row that opened it, every status move with where it came from and went to, and every hand-over to a technician, each with the staff member who did it. This is what 'who had it, and for how long' is read out of.",
+    "Each ticket's own history, oldest first, in the order things actually happened: the row that opened it, every status move with where it came from and went to, and every hand-over to a technician, each with the staff member who did it. This is what 'who had it, and for how long' is read out of.",
   "pre_departure_checklist_items.csv":
     "The shop's own pre-departure safety line, in the shop's own reading order (sort_order). DiveDay writes only the oxygen line a new shop starts with, and the shop may change it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
   "pre_departure_check_events.csv":
@@ -390,7 +392,6 @@ const DIVER_NOT_INCLUDED = [
   "Medical answers and the medical alert for the crew on any signed waiver — withheld pending a legal review of what a subject-access request should return; every other field of the signature is included.",
   "Messages this diver sent the shop and the shop's replies. Neither export has a file for a conversation yet.",
   "Lost-and-found items the shop is holding for this diver. They are cleared 90 days after they go home, and neither export carries them.",
-  "Recap pulses, this diver's quick private feedback after a trip. The shop-wide export carries them as recap_pulses.csv; this bundle has no file for them yet.",
   "Weather-cancellation rebooking offers. The canceled seat itself is in bookings.csv.",
   "Internal staff notes about this diver. They were never shown to a diver and never gated anything; the shop's own words about its own customer stay the shop's.",
   "The staff activity trail. Its rows carry the names of whoever the line is about, and one line routinely names a different diver — safely removing just that risk needs the same name-matching sweep the erasure path uses, and is a follow-up rather than reinvented here.",

@@ -1462,7 +1462,6 @@
       {
         "why": "the trip page readers left the trips barrel (issue #2757): two import lines, removed again when the page reads through one reader in the next layer",
         "files": {
-          "src/db/incident-reports.test.ts": "1011 -> 1013",
           "src/db/rental-fit.test.ts": "1227 -> 1237"
         }
       },
@@ -1498,7 +1497,7 @@
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
     "src/db/anonymize.test.ts": 1629,
-    "src/db/bookings.test.ts": 3528,
+    "src/db/bookings.test.ts": 3526,
     "src/db/buddy-teams.test.ts": 975,
     "src/db/check-in.test.ts": 1207,
     "src/db/checkouts.test.ts": 2964,
@@ -1508,9 +1507,9 @@
     "src/db/diver-merge.test.ts": 1162,
     "src/db/divers.test.ts": 3064,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1185,
+    "src/db/export.test.ts": 1181,
     "src/db/import.test.ts": 1076,
-    "src/db/incident-reports.test.ts": 1013,
+    "src/db/incident-reports.test.ts": 966,
     "src/db/manifests.test.ts": 3587,
     "src/db/no-show.test.ts": 1158,
     "src/db/notifications.test.ts": 1864,
@@ -1522,7 +1521,7 @@
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1237,
     "src/db/reporting.test.ts": 1384,
-    "src/db/retention.test.ts": 1077,
+    "src/db/retention.test.ts": 1073,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1529,
     "src/db/self-declared-cards.test.ts": 1869,
@@ -1544,7 +1543,7 @@
     "src/lib/manifests.test.ts": 1027,
     "src/lib/notifications/email.test.ts": 1096,
     "src/lib/offline-manifest-store.test.ts": 1018,
-    "src/lib/offline-manifests.test.ts": 2179,
+    "src/lib/offline-manifests.test.ts": 2089,
     "src/lib/readiness.test.ts": 1575,
     "src/lib/staffing-week.test.ts": 1125,
     "src/lib/waivers.test.ts": 1402,

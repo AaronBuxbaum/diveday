@@ -47,7 +47,19 @@ export async function diversTabState(
     // Keep the crew's Home timestamp for the rebooking offer, if recorded.
     const homeAt = reading.shown?.stage === "home" ? reading.shown.recordedAt : null;
     const below = await sailedRebookBelow({ ...input, rollCall, homeAt });
-    return { ...reading, desk: null, record: { ...record, below } };
+    return {
+      ...reading,
+      desk: null,
+      record: {
+        ...record,
+        notCountedAfterDive: reading.notCountedAfterDive,
+        crewNotCountedAfterDive: reading.crewNotCountedAfterDive,
+        ...(homeAt && reading.shown?.notCounted
+          ? { homeNotCounted: reading.shown.notCounted }
+          : {}),
+        below,
+      },
+    };
   }
   return { ...reading, desk: await buildArrivalDesk(deskInput), record: undefined };
 }

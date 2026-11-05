@@ -33,6 +33,7 @@ const BASE: DateInterestRow = {
   charterQuoteCents: null,
   charterQuoteCurrency: null,
   charterQuotedAt: null,
+  replyUnsettled: false,
 };
 
 function row(request: Partial<DateInterestRow> = {}) {
@@ -294,6 +295,16 @@ describe("the door", () => {
     row({});
     const book = screen.getByRole("link", { name: "Create a booking" });
     expect(book.getAttribute("href")).toBe(`/shop/blue-mantis?call=1&request=${BASE.id}`);
+  });
+});
+
+describe("a reply that was claimed and never settled", () => {
+  it("says it may not have been sent, and only then", () => {
+    row({});
+    expect(screen.queryByText("Reply may not have been sent")).toBeNull();
+    cleanup();
+    row({ replyUnsettled: true });
+    expect(screen.getByText("Reply may not have been sent")).toBeTruthy();
   });
 });
 

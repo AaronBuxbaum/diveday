@@ -125,9 +125,9 @@ export const EXCLUDED_TABLES = [
   "claude_call_content_erasures", // when the shop last erased anyone, for the content above; machinery, no shop record
   "claude_call_content", // what Claude calls said, kept 30 days for DiveDay's founder to debug; DiveDay's working log, not the shop's records, and never carried out of DiveDay
   "assist_results", // what an assist answered (review chips, themes, the Monday read): derived, and asked again on demand
-  "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported
+  "weekly_digest_sends", // the Monday email's send claims — delivery plumbing, never exported
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
-  "shop_shore_alert_tokens", // the shore contact's confirm and stop links (H-20261014-stale-roll-call-recipients): bearer credentials, same reasoning
+  "shop_shore_alert_tokens", // the shore contact's confirm links (H-20261014-stale-roll-call-recipients): bearer credentials, same reasoning
   // The shop's own Meta access token (sealed) plus the provider linkage around
   // it. Never exported, for both reasons already on this list: it is a live
   // credential like user_accounts, and a phone number id is provider linkage
@@ -171,3 +171,23 @@ export const EXCLUDED_TABLES = [
   "demo_entries",
   "shop_milestones",
 ];
+
+/**
+ * Tables whose `seq` is a database-wide identity, used only as a
+ * same-instant tiebreak: its gaps count every other shop's rows written in
+ * between, so no export carries it (#3898; layer-2 security review S3). Every
+ * file still orders its rows by it server-side.
+ */
+export const GLOBAL_SEQ_TABLES = [
+  "deck_counts",
+  "trip_stage_events",
+  "trip_change_events",
+  "staff_credential_history",
+  "waiver_materiality_decisions",
+  "work_order_events",
+  "activity_events",
+  "booking_arrival_events",
+  "booking_payment_events",
+  "pre_departure_check_events",
+  "work_order_bills",
+] as const;

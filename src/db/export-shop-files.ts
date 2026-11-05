@@ -23,6 +23,7 @@ import {
   ORDERS_CSV,
   PRIOR_VISITS_CSV,
   RECAP_PHOTOS_CSV,
+  RECAP_PULSES_CSV,
   RENTAL_FIT_CSV,
   REVIEW_MODERATION_EVENTS_CSV,
   ROLL_CALL_EVENTS_CSV,
@@ -766,7 +767,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "actor_person_id",
       "actor_name",
       "occurred_at",
-      "seq",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, tripChangeEventRows }) =>
       tripChangeEventRows.map((row) => [
@@ -781,7 +781,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.actorPersonId,
         row.actorPersonId ? personName.get(row.actorPersonId) : null,
         row.occurredAt,
-        row.seq,
       ]),
     note: EXPORT_FILE_NOTES["trip_change_events.csv"],
   },
@@ -797,7 +796,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "recorded_by_person_id",
       "recorder_name",
       "recorded_at",
-      "seq",
+      "not_counted",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, tripStageEventRows }) =>
       tripStageEventRows.map((row) => [
@@ -810,7 +809,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.recordedByPersonId,
         personName.get(row.recordedByPersonId),
         row.recordedAt,
-        row.seq,
+        row.notCounted,
       ]),
     note: EXPORT_FILE_NOTES["trip_stage_events.csv"],
   },
@@ -865,7 +864,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "recorded_by_person_id",
       "recorder_name",
       "recorded_at",
-      "seq",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, deckCountRows }) =>
       deckCountRows.map((row) => [
@@ -878,7 +876,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.recordedByPersonId,
         personName.get(row.recordedByPersonId),
         row.recordedAt,
-        row.seq,
       ]),
     note: EXPORT_FILE_NOTES["deck_counts.csv"],
   },
@@ -1172,19 +1169,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
   shopFile(STAFF_CREDENTIALS_CSV),
   {
     file: "staff_credential_history.csv",
-    header: [
-      "seq",
-      "credential_id",
-      "event",
-      "kind",
-      "issued_at",
-      "renews_at",
-      "active",
-      "recorded_at",
-    ],
+    header: ["credential_id", "event", "kind", "issued_at", "renews_at", "active", "recorded_at"],
     rows: ({ staffCredentialHistoryRows }) =>
       staffCredentialHistoryRows.map((row) => [
-        row.seq,
         row.credentialId,
         row.event,
         row.kind,
@@ -1487,7 +1474,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "actor_person_id",
       "actor_name",
       "decided_at",
-      "seq",
     ],
     rows: ({ personName, templateRows, waiverMaterialityRows }) =>
       waiverMaterialityRows.map((row) => [
@@ -1498,11 +1484,34 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.actorPersonId,
         row.actorPersonId ? personName.get(row.actorPersonId) : null,
         row.decidedAt,
-        row.seq,
       ]),
     note: EXPORT_FILE_NOTES["waiver_materiality_decisions.csv"],
   },
   shopFile(WAIVER_RECORDS_CSV),
+  {
+    // The shop's own record of who looked into a broken seal (#3891; layer-2
+    // review S4). The state digest is keyed with this installation's seal key
+    // and means nothing elsewhere, so it stays behind.
+    file: "waiver_seal_acknowledgements.csv",
+    header: [
+      "id",
+      "waiver_record_id",
+      "note",
+      "acknowledged_by_person_id",
+      "acknowledged_by_name",
+      "acknowledged_at",
+    ],
+    rows: ({ personName, waiverSealAcknowledgementRows }) =>
+      waiverSealAcknowledgementRows.map((row) => [
+        row.id,
+        row.waiverRecordId,
+        row.note,
+        row.acknowledgedByPersonId,
+        personName.get(row.acknowledgedByPersonId),
+        row.acknowledgedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["waiver_seal_acknowledgements.csv"],
+  },
   {
     file: "course_forms.csv",
     header: ["id", "title", "current_version", "medical_screening", "deleted_at", "created_at"],
@@ -1661,7 +1670,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     file: "work_order_events.csv",
     header: [
       "id",
-      "seq",
       "work_order_id",
       "kind",
       "from_status",
@@ -1675,7 +1683,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     rows: ({ personName, workOrderEventRows }) =>
       workOrderEventRows.map((row) => [
         row.id,
-        row.seq,
         row.workOrderId,
         row.kind,
         row.fromStatus,
@@ -1991,7 +1998,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     file: "activity_events.csv",
     header: [
       "id",
-      "seq",
       "trip_id",
       "trip_title",
       "booking_id",
@@ -2008,7 +2014,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     rows: ({ personName, tripTitle, activityRows }) =>
       activityRows.map((row) => [
         row.id,
-        row.seq,
         row.tripId,
         row.tripId ? tripTitle.get(row.tripId) : null,
         row.bookingId,
@@ -2253,43 +2258,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["trip_recap_photos.csv"],
   },
   shopFile(TRIP_REVIEWS_CSV),
-  {
-    file: "recap_pulses.csv",
-    header: [
-      "id",
-      "booking_id",
-      "trip_id",
-      "person_id",
-      "diver_name",
-      // Codes, not sentences — `recap_pulse_category`. The words are
-      // DiveDay's copy in the reader's language, and a CSV has no reader
-      // to resolve them for, so the slug is the durable fact. Same call
-      // `observed_species_slug` makes.
-      "categories",
-      "note",
-      "addressed_at",
-      "addressed_by_person_id",
-      "deleted_at",
-      "created_at",
-      "updated_at",
-    ],
-    rows: ({ recapPulseRows }) =>
-      recapPulseRows.map(({ pulse, diverName }) => [
-        pulse.id,
-        pulse.bookingId,
-        pulse.tripId,
-        pulse.personId,
-        diverName,
-        JSON.stringify(pulse.categories),
-        pulse.note,
-        pulse.addressedAt,
-        pulse.addressedByPersonId,
-        pulse.deletedAt,
-        pulse.createdAt,
-        pulse.updatedAt,
-      ]),
-    note: EXPORT_FILE_NOTES["recap_pulses.csv"],
-  },
+  shopFile(RECAP_PULSES_CSV),
   shopFile(REVIEW_MODERATION_EVENTS_CSV),
   {
     file: "dive_packages.csv",

@@ -56,6 +56,7 @@ export const GUARDS = [
   ["seat-status", "check-seat-status.mjs"],
   ["person-door", "check-person-door.mjs"],
   ["event-scope", "check-event-scope.mjs"],
+  ["staff-events", "check-staff-events.mjs"],
   ["roll-call-subject", "check-roll-call-subject.mjs"],
   ["slug-actions", "check-slug-actions.mjs"],
   ["env-reads", "check-env-reads.mjs"],

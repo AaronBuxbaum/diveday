@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, inArray, isNull, lte, ne, not, or } from "drizzle-orm";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskLine, recordDiverActivity } from "./operations";

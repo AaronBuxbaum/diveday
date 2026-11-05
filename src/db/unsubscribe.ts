@@ -11,22 +11,21 @@ import { resolveWeeklyDigestUnsubscribeToken, turnOffWeeklyDigestByToken } from 
 /**
  * The one resolver behind `/unsubscribe/[token]` (issue #3659).
  *
- * Five kinds of email carry an unsubscribe link, each with its own token table:
- * a last-minute-list interest, a person's courtesy email, a staffer's Monday
- * digest, a shop's shore-alert contact and a shop's bookkeeper. The page, the
- * confirm action and the RFC 8058 one-click route all asked the same question
- * ("whose is this token?") with their own copy of a five-step chain, and the
- * mutating copies could disagree with the reading one. They now ask here, and
+ * Five kinds of email carry an unsubscribe link: a last-minute-list
+ * interest, a person's courtesy email, a staffer's Monday digest, a shop's
+ * shore-alert contact and a shop's bookkeeper. Every one is a row of
+ * `capabilities` under its own purpose (issue #3721), and each kind's resolver
+ * reads it through `verifyCapability` with that purpose in the predicate. The
+ * page, the confirm action and the RFC 8058 one-click route all ask here, and
  * only here.
  *
  * Two promises, both pinned by `unsubscribe.test.ts`:
- *  - **A token names at most one kind.** The resolvers run in a fixed order and
- *    the first hit wins, so a token that is the hash of one table's row never
- *    reads another table. The kind is decided once, by `resolveUnsubscribeToken`.
+ *  - **A token names at most one kind.** A capability row has one purpose and
+ *    each resolver asks only for its own, so a token never reads as two kinds.
+ *    The kind is decided once, by `resolveUnsubscribeToken`.
  *  - **Resolving never writes; applying writes only the resolved kind.**
  *    `unsubscribeByToken` runs exactly one mutator, the resolved kind's. An
- *    unknown token runs none, so a guessed string cannot reach any table's
- *    update. The other token tables keep their own resolvers and lifetimes.
+ *    unknown token runs none, so a guessed string cannot reach any update.
  */
 export type UnsubscribeKind =
   | "interest"

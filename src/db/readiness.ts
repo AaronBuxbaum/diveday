@@ -36,6 +36,7 @@ import {
   type TrainingMarkState,
   trainingDiveAsksNoCardForSite,
   trainingDiveLevel,
+  trainingDiveReach,
   trainingSiteAttributionKnown,
 } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
@@ -107,8 +108,14 @@ export async function upsertTripRequirements(
     requiredSpecialties: DiveSpecialty[];
     requiresNitrox: boolean;
     requiresPayment: boolean;
+    /**
+     * Staff ticked "keep Open Water" on a level that is still the default: the
+     * level stands as chosen without being changed (issue #3911).
+     */
+    keepLevelAsChosen?: boolean;
   },
 ) {
+  const { keepLevelAsChosen = false, ...requirementInput } = input;
   const [trip] = await db
     .select({ id: trips.id })
     .from(trips)
@@ -121,13 +128,15 @@ export async function upsertTripRequirements(
   // Read against the stored row, inside the one statement.
   const [requirement] = await db
     .insert(tripRequirements)
-    .values({ ...input, minimumCertificationIsDefault: false })
+    .values({ ...requirementInput, minimumCertificationIsDefault: false })
     .onConflictDoUpdate({
       target: tripRequirements.tripId,
       set: {
         requiresWaiver: input.requiresWaiver,
         minimumCertificationLevel: input.minimumCertificationLevel,
-        minimumCertificationIsDefault: sql`${tripRequirements.minimumCertificationIsDefault} and ${tripRequirements.minimumCertificationLevel} is not distinct from ${input.minimumCertificationLevel}::certification_level`,
+        minimumCertificationIsDefault: keepLevelAsChosen
+          ? false
+          : sql`${tripRequirements.minimumCertificationIsDefault} and ${tripRequirements.minimumCertificationLevel} is not distinct from ${input.minimumCertificationLevel}::certification_level`,
         requiredSpecialties: input.requiredSpecialties,
         requiresNitrox: input.requiresNitrox,
         requiresPayment: input.requiresPayment,
@@ -1689,6 +1698,33 @@ export type ReadinessAsOf = {
 };
 
 /**
+ * **A marked seat's course, and how far it lowers on this departure**
+ * (`trainingDiveReach`, issues #3839 and #3910). A seat-level mark cannot
+ * name one of several planned dives: there it lowers only the default, and
+ * nothing where the departure is neither one dive at one site nor a charter
+ * of several.
+ */
+function seatTrainingDive(
+  plannedDives: number | null | undefined,
+  siteCount: number,
+  mark: TrainingMarkState | undefined,
+) {
+  const reach = trainingDiveReach(plannedDives, siteCount);
+  return {
+    siteAttributionUnknown: !trainingSiteAttributionKnown(plannedDives, siteCount),
+    trainingReach: reach ?? ("site" as const),
+    trainingForSite: reach ? trainingDiveLevel(mark) : null,
+  };
+}
+
+/** Rows grouped by the person they belong to, in the order they came. */
+function byPerson<T extends { personId: string }>(rows: readonly T[]): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
+  for (const row of rows) grouped.set(row.personId, [...(grouped.get(row.personId) ?? []), row]);
+  return grouped;
+}
+
+/**
  * The guardian rule's "Under 18" for a seat: its own booker's, or — on a seat
  * whose training mark stands — the course seat's too, so the charter and the
  * enrollment never disagree about whether a parent signs (fail closed).
@@ -1867,44 +1903,21 @@ export async function listTripsReadiness(
 
   const currentTemplateGeneration = currentTemplate?.materialGeneration ?? null;
 
-  const certificationsByPerson = new Map<string, typeof certificationRows>();
-  for (const certification of certificationRows) {
-    const current = certificationsByPerson.get(certification.personId) ?? [];
-    current.push(certification);
-    certificationsByPerson.set(certification.personId, current);
-  }
-  const specialtiesByPerson = new Map<string, typeof specialtyRows>();
-  for (const specialty of specialtyRows) {
-    const current = specialtiesByPerson.get(specialty.personId) ?? [];
-    current.push(specialty);
-    specialtiesByPerson.set(specialty.personId, current);
-  }
-  const courseSeatsByPerson = new Map<string, CourseSeatInTraining[]>();
-  for (const seat of courseSeatRows) {
-    const current = courseSeatsByPerson.get(seat.personId) ?? [];
-    current.push(seat);
-    courseSeatsByPerson.set(seat.personId, current);
-  }
-  const nitroxByPerson = new Map<string, typeof nitroxRows>();
-  for (const card of nitroxRows) {
-    const current = nitroxByPerson.get(card.personId) ?? [];
-    current.push(card);
-    nitroxByPerson.set(card.personId, current);
-  }
+  const certificationsByPerson = byPerson(certificationRows);
+  const specialtiesByPerson = byPerson(specialtyRows);
+  const courseSeatsByPerson = byPerson<CourseSeatInTraining>(courseSeatRows);
+  const nitroxByPerson = byPerson(nitroxRows);
 
   return waiverRows.map((row) => {
     const tripId = row.booking.tripId;
     const requirement = requirementsByTrip.get(tripId) ?? null;
     const siteRequirement = siteRequirementsByTrip.get(tripId) ?? null;
     const courseRow = courseByTrip.get(tripId);
-    // A seat-level mark cannot identify which of several planned dives is training.
-    const siteAttributionUnknown = !trainingSiteAttributionKnown(
+    const { siteAttributionUnknown, trainingReach, trainingForSite } = seatTrainingDive(
       courseRow?.plannedDives,
       siteRowsByTrip.get(tripId)?.length ?? 0,
+      trainingMarks.get(row.booking.id),
     );
-    const trainingForSite = siteAttributionUnknown
-      ? null
-      : trainingDiveLevel(trainingMarks.get(row.booking.id));
     // A kind of seat the shop states as free has no payment to clear. Read
     // off the departure's own price for that kind, never inferred from a
     // missing one (`paymentGateIsUnclearable`).
@@ -1982,6 +1995,7 @@ export async function listTripsReadiness(
           timezone,
         }),
         ownLapsed,
+        sealFailed: row.personSealFailed,
         now,
       }),
       // Carried on the row because the manifest needs it and only this function
@@ -2010,7 +2024,7 @@ export async function listTripsReadiness(
       trainingSiteAttributionUnknown: siteAttributionUnknown,
       trainingNoCardAsked:
         isDiver(row.booking.participantType) &&
-        trainingDiveAsksNoCardForSite(requirement, siteRequirement, trainingForSite),
+        trainingDiveAsksNoCardForSite(requirement, siteRequirement, trainingForSite, trainingReach),
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
       nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
@@ -2020,6 +2034,7 @@ export async function listTripsReadiness(
         requirement,
         siteRequirement,
         waiver: effectiveWaiver,
+        waiverSealFailed: row.personSealFailed,
         releaseLapse,
         certifications: certificationsByPerson.get(row.person.id) ?? [],
         // Measured against this departure: only a course that finishes before
@@ -2067,6 +2082,7 @@ export async function listTripsReadiness(
         // A standing mark with the course's instructor aboard takes the
         // course's own minimum level (issue #2731).
         trainingDive: trainingForSite,
+        trainingDiveReach: trainingReach,
         now,
       }),
     };

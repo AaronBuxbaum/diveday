@@ -72,6 +72,7 @@ const REASON_FOR_BLOCKER: Record<ReadinessBlockerCode, TurnAwayReason | null> = 
   training_mark_invalid: null,
   medical_review: "medical",
   medical_not_cleared: "medical",
+  waiver_seal_failed: "waiver",
   certification_missing: "card",
   certification_pending: "card",
   certification_self_declared: "card",

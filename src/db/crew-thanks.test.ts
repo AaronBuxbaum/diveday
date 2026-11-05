@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { crewThanksChoice } from "@/lib/crew-thanks-choice";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createBookingParty } from "./bookings";
@@ -11,7 +12,7 @@ import {
   listShopReviewsForStaff,
   submitTripReview,
 } from "./reviews";
-import { bookings, people, tripAssignments, tripReviews } from "./schema";
+import { bookings, people, personRoles, tripAssignments, tripReviews } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
@@ -70,13 +71,16 @@ describe("thanks to the crew (loop 5, row 6)", () => {
     const result = await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "  Dana made my first wreck easy  " },
+      crewThanks: {
+        choice: crewThanksChoice(tripId, crewId),
+        text: "  Dana made my first wreck easy  ",
+      },
     });
     // A thanks is not review words: the bare rating still publishes at once.
     expect(result).toEqual({ ok: true, published: true, updated: false });
     expect(await getReviewForBooking(db, bookingIds[0])).toMatchObject({
       crewThanks: "Dana made my first wreck easy",
-      crewThanksPersonId: crewId,
+      crewThanksChoice: crewThanksChoice(tripId, crewId),
     });
     expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([
       expect.objectContaining({ text: "Dana made my first wreck easy" }),
@@ -86,15 +90,53 @@ describe("thanks to the crew (loop 5, row 6)", () => {
   });
 
   it("drops a thanks for somebody who was not on the departure's crew", async () => {
-    const { db, shop, bookingIds, ownerId } = await reviewContext();
+    const { db, shop, tripId, bookingIds, ownerId } = await reviewContext();
     // The owner is not rostered on this trip.
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 4,
-      crewThanks: { crewPersonId: ownerId, text: "Thanks" },
+      crewThanks: { choice: crewThanksChoice(tripId, ownerId), text: "Thanks" },
     });
     expect((await getReviewForBooking(db, bookingIds[0]))?.crewThanks).toBeNull();
     expect(await readCrewThanks(db, shop.id, ownerId, since)).toEqual([]);
+  });
+
+  it("drops a crafted post that names a crew member by person id (#3912)", async () => {
+    const { db, shop, tripId, bookingIds } = await reviewContext();
+    const crewId = await crewMember(tripId);
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 4,
+      crewThanks: { choice: crewId, text: "Thanks" },
+    });
+    expect((await getReviewForBooking(db, bookingIds[0]))?.crewThanks).toBeNull();
+    expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
+  });
+
+  it("drops a choice copied from another departure (#3912)", async () => {
+    const { db, shop, tripId, bookingIds } = await reviewContext();
+    const crewId = await crewMember(tripId);
+    const otherTrip = (await upcomingTripsWithCounts(db, shop.id)).find((t) => t.id !== tripId);
+    if (!otherTrip) throw new Error("second trip missing");
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 4,
+      crewThanks: { choice: crewThanksChoice(otherTrip.id, crewId), text: "Thanks" },
+    });
+    expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
+  });
+
+  it("never hands the recap's form a person id (#3912)", async () => {
+    const { db, tripId, bookingIds } = await reviewContext();
+    const crewId = await crewMember(tripId);
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 5,
+      crewThanks: { choice: crewThanksChoice(tripId, crewId), text: "Great day" },
+    });
+    const own = await getReviewForBooking(db, bookingIds[0]);
+    expect(own).toMatchObject({ crewThanksChoice: crewThanksChoice(tripId, crewId) });
+    expect(JSON.stringify(own)).not.toContain(crewId);
   });
 
   it("takes the thanks back when the revised review leaves it blank", async () => {
@@ -103,12 +145,12 @@ describe("thanks to the crew (loop 5, row 6)", () => {
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "Great day" },
+      crewThanks: { choice: crewThanksChoice(tripId, crewId), text: "Great day" },
     });
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "   " },
+      crewThanks: { choice: crewThanksChoice(tripId, crewId), text: "   " },
     });
     expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
   });
@@ -119,7 +161,7 @@ describe("thanks to the crew (loop 5, row 6)", () => {
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "Great day" },
+      crewThanks: { choice: crewThanksChoice(tripId, crewId), text: "Great day" },
     });
     const [review] = (await listShopReviewsForStaff(db, shop.id, { withCrewThanks: true })).reviews;
     expect(review).toMatchObject({ crewThanks: "Great day", crewThanksHidden: false });
@@ -143,13 +185,13 @@ describe("thanks to the crew (loop 5, row 6)", () => {
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "Great day" },
+      crewThanks: { choice: crewThanksChoice(tripId, crewId), text: "Great day" },
     });
     expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "Great day!" },
+      crewThanks: { choice: crewThanksChoice(tripId, crewId), text: "Great day!" },
     });
     expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
     // Taking the line back and writing a new one does not get round it either.
@@ -157,7 +199,7 @@ describe("thanks to the crew (loop 5, row 6)", () => {
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "Something else" },
+      crewThanks: { choice: crewThanksChoice(tripId, crewId), text: "Something else" },
     });
     expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
     // Staff showing it again is the one way back.
@@ -173,7 +215,7 @@ describe("thanks to the crew (loop 5, row 6)", () => {
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "Great day" },
+      crewThanks: { choice: crewThanksChoice(tripId, crewId), text: "Great day" },
     });
     const crewView = (await listShopReviewsForStaff(db, shop.id)).reviews[0];
     expect(crewView).toMatchObject({ crewThanks: null, crewThanksFor: null });
@@ -188,7 +230,7 @@ describe("thanks to the crew (loop 5, row 6)", () => {
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "Great day" },
+      crewThanks: { choice: crewThanksChoice(tripId, crewId), text: "Great day" },
     });
     const [review] = (await listShopReviewsForStaff(db, shop.id, { withCrewThanks: true })).reviews;
     expect(
@@ -202,7 +244,7 @@ describe("thanks to the crew (loop 5, row 6)", () => {
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "Great day" },
+      crewThanks: { choice: crewThanksChoice(tripId, crewId), text: "Great day" },
     });
     const [booking] = await db
       .select({ personId: bookings.personId })
@@ -215,5 +257,38 @@ describe("thanks to the crew (loop 5, row 6)", () => {
     });
     expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
     expect((await getReviewForBooking(db, bookingIds[0]))?.crewThanks).toBeNull();
+  });
+
+  // Aaron, 2026-11-05 (#3913, option B): the words are the diver's. Erasing the
+  // crew member they name removes that person's own data and leaves the diver's
+  // line and its pointer where they are.
+  it("keeps the diver's words when the crew member they thank is erased (#3913)", async () => {
+    const { db, shop, tripId, bookingIds, ownerId } = await reviewContext();
+    const [crew] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Keiko Thanked" })
+      .returning({ id: people.id });
+    if (!crew) throw new Error("crew insert failed");
+    await db.insert(personRoles).values({ personId: crew.id, role: "divemaster" });
+    await db.insert(tripAssignments).values({ tripId, personId: crew.id });
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 5,
+      crewThanks: {
+        choice: crewThanksChoice(tripId, crew.id),
+        text: "Keiko made my first wreck easy",
+      },
+    });
+    // Offboarded first: a staff member is never erased while they hold a staff role.
+    await db.delete(personRoles).where(eq(personRoles.personId, crew.id));
+    await db.insert(personRoles).values({ personId: crew.id, role: "diver" });
+    expect(
+      await anonymizeDiver(db, { shopId: shop.id, personId: crew.id, actorPersonId: ownerId }),
+    ).toMatchObject({ ok: true });
+    const [review] = await db
+      .select({ text: tripReviews.crewThanks, personId: tripReviews.crewThanksPersonId })
+      .from(tripReviews)
+      .where(eq(tripReviews.bookingId, bookingIds[0] ?? ""));
+    expect(review).toEqual({ text: "Keiko made my first wreck easy", personId: crew.id });
   });
 });

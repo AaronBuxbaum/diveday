@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { BOAT_SEGMENT_TRACK_CLASS, boatSegmentClass } from "@/components/boat-segments";
 import { buttonClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/group-label";
@@ -54,6 +54,14 @@ export type StageStripCopy = {
     href: string;
     plan?: { label: string; href: string };
   };
+  /**
+   * The last after-dive count is still open (`homewardCheckpointGap`), so
+   * Home asks first and names the count (issue #3896). The crew's word stays
+   * final: the confirm records Home all the same.
+   */
+  homeConfirm?: { question: string; confirmLabel: string; backLabel: string };
+  /** The shown Home was said with people not counted: "Home with 2 not counted". */
+  homeNotCounted?: string;
 };
 
 export function StageStrip({
@@ -66,6 +74,8 @@ export function StageStrip({
   current: TripStage | null;
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
+  const [confirmingHome, setConfirmingHome] = useState(false);
+  const homeConfirm = current === "home" ? undefined : copy.homeConfirm;
   const currentLabel = copy.taps.find((tap) => tap.stage === current)?.label;
   // The server reports it with the tap and the page says it from its own read;
   // either is enough, so the warning does not wait on the re-render.
@@ -102,10 +112,14 @@ export function StageStrip({
           <form action={formAction} key={tap.stage} className="flex">
             <input type="hidden" name="stage" value={tap.stage} />
             <button
-              type="submit"
+              type={tap.stage === "home" && homeConfirm ? "button" : "submit"}
+              onClick={
+                tap.stage === "home" && homeConfirm ? () => setConfirmingHome(true) : undefined
+              }
               disabled={isPending}
               aria-busy={isPending}
               aria-pressed={current === tap.stage}
+              aria-expanded={tap.stage === "home" && homeConfirm ? confirmingHome : undefined}
               className={`w-full ${boatSegmentClass(current === tap.stage)}`}
             >
               <span aria-hidden="true" className="sm:hidden">
@@ -116,8 +130,35 @@ export function StageStrip({
           </form>
         ))}
       </div>
+      {homeConfirm && confirmingHome ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 print:hidden">
+          <p role="alert" className="text-base font-bold text-danger">
+            {homeConfirm.question}
+          </p>
+          <form action={formAction} onSubmit={() => setConfirmingHome(false)} className="flex">
+            <input type="hidden" name="stage" value="home" />
+            <button
+              type="submit"
+              disabled={isPending}
+              className={buttonClass({ variant: "danger", size: "boat" })}
+            >
+              {homeConfirm.confirmLabel}
+            </button>
+          </form>
+          <button
+            type="button"
+            onClick={() => setConfirmingHome(false)}
+            className={buttonClass({ variant: "secondary", size: "boat" })}
+          >
+            {homeConfirm.backLabel}
+          </button>
+        </div>
+      ) : null}
       {currentLabel ? (
         <p className="mt-2 hidden text-base font-semibold print:block">{currentLabel}</p>
+      ) : null}
+      {copy.homeNotCounted && current === "home" ? (
+        <p className="mt-2 text-sm font-semibold text-danger">{copy.homeNotCounted}</p>
       ) : null}
       {copy.recordedLine ? (
         <p className="mt-2 text-sm text-muted tabular-nums">{copy.recordedLine}</p>

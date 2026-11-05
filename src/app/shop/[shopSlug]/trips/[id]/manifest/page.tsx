@@ -38,6 +38,7 @@ import { readManifestView } from "./_components/manifest-view";
 import { offlineManifestPayload } from "./_components/offline-payload";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import { PrintedBoatPaper } from "./_components/PrintedBoatProcedure";
+import { PrintedDeckCount } from "./_components/PrintedDeckCount";
 import { PrintedSoulsOnBoard } from "./_components/PrintedSoulsOnBoard";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
@@ -126,6 +127,8 @@ export default async function TripManifestPage({
     stage,
     dockDesk,
     deckCount,
+    deckCounts,
+    printedDeckCount,
     paperIdentity,
   } = view;
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
@@ -226,6 +229,8 @@ export default async function TripManifestPage({
         {cancelled === "closed" ? null : <DeckCount {...deckCount} />}
 
         <StageStrip action={actions.setTripStage} {...stage} />
+        {/* The same count on the printed sheet: a line per checkpoint (issue #3897). */}
+        {cancelled === "closed" ? null : <PrintedDeckCount {...printedDeckCount} />}
 
         <CheckpointSwitch
           manifests={completeManifests}
@@ -335,6 +340,8 @@ export default async function TripManifestPage({
               shop: { ...shop, emergencyReference },
               ...boatCheck,
               boatSafety,
+              meetingWindows: view.stageStrip.meetingWindows,
+              deckCounts,
               locale,
               t,
             })}

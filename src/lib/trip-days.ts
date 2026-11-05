@@ -328,6 +328,22 @@ export function rollCallDayStarts(windows: readonly DayWindow[]): number[] {
   });
 }
 
+/**
+ * Where each later meeting day's roll call begins, as ISO instants, for the
+ * offline copy (issue #3904): `rollCallDayStarts` over the run's windows with
+ * day one's dropped. Undefined for a departure that meets once or has no
+ * windows, which is how an older copy reads too.
+ */
+export function rollCallDayBoundariesOf(
+  windows: readonly DayWindow[] | undefined,
+): string[] | undefined {
+  if (!windows || windows.length < 2) return undefined;
+  const ordered = [...windows].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  return rollCallDayStarts(ordered)
+    .slice(1)
+    .map((start) => new Date(start).toISOString());
+}
+
 /** The index of the meeting day an instant's roll-call result belongs to. */
 export function rollCallDayOf(dayStarts: readonly number[], instant: Date): number {
   const at = instant.getTime();

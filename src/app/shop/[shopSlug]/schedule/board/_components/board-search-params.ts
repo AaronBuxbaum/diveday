@@ -6,6 +6,8 @@ export type BoardSearchParams = {
   after?: string;
   builder?: string;
   count?: string; // the number a builder notice names (`builderNoticeMessage`)
+  /** The shop-local day a builder notice names: a series' first week in the yard. */
+  on?: string;
   /** The departure just created, named so the notice can say which. */
   created?: string;
   /** Short-lived signed marker for a real move result, removed after the notice is read. */
@@ -38,7 +40,14 @@ export type BoardSearchParams = {
 };
 
 /** Result-only parameters are consumed by the board notice and scrubbed afterward. */
-export const BOARD_RESULT_PARAMS = ["builder", "count", "created", "result", "series"] as const;
+export const BOARD_RESULT_PARAMS = [
+  "builder",
+  "count",
+  "created",
+  "on",
+  "result",
+  "series",
+] as const;
 
 export function clearBoardResultParams(url: URL): URL {
   for (const key of BOARD_RESULT_PARAMS) url.searchParams.delete(key);

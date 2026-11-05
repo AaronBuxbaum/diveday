@@ -112,6 +112,7 @@ import {
   waiverDeliveries,
   waiverMaterialityDecisions,
   waiverRecords,
+  waiverSealAcknowledgements,
   waiverTemplates,
   workOrderCare,
   workOrderEvents,
@@ -1000,6 +1001,8 @@ export async function clearDemoSchedule(
   await db.delete(courseForms).where(eq(courseForms.shopId, shopId));
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
+  // So does an acknowledgement of a broken seal (#3891).
+  await db.delete(waiverSealAcknowledgements).where(eq(waiverSealAcknowledgements.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
@@ -1060,8 +1063,8 @@ export async function clearDemoSchedule(
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
-  // The unsubscribe capabilities name an interest or a person by foreign key, so
-  // they go before the interests and the people. Added with Leo's self-serve unsubscribe (docs ADR
+  // The capabilities (unsubscribe and stop links) name an interest or a person
+  // by foreign key, so they go before the interests and the people. Added with Leo's self-serve unsubscribe (docs ADR
   // 20260731-self-serve-unsubscribe) but not to this ordering once, which made
   // every `/api/test/reset` throw 23503 mid-run and leave the demo shop
   // half-reset — the e2e fleet then failed in whichever spec happened to read

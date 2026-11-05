@@ -2,9 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { people, personRoles, shopShoreAlertTokens, shops } from "./schema";
+import { capabilities, people, personRoles, shopShoreAlertTokens, shops } from "./schema";
 import { setShopShoreAlertContact } from "./shops";
-import { issueShoreAlertStopToken } from "./shore-alert-tokens";
+import { issueShoreAlertConfirmation, issueShoreAlertStopToken } from "./shore-alert-tokens";
 
 /**
  * Erasure reaches the shore contact's address (H-20261014-stale-roll-call-recipients security review). A diver
@@ -34,6 +34,7 @@ describe("anonymizeDiver — the shore contact's address", () => {
       consentByPersonId: owner.id,
       confirmedAt: at,
     });
+    await issueShoreAlertConfirmation(db, { shopId: shop.id, email: shoreEmail, now: at });
     await issueShoreAlertStopToken(db, { shopId: shop.id, email: shoreEmail });
     const erase = () =>
       anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: owner.id });
@@ -51,7 +52,11 @@ describe("anonymizeDiver — the shore contact's address", () => {
         .select({ id: shopShoreAlertTokens.id })
         .from(shopShoreAlertTokens)
         .where(eq(shopShoreAlertTokens.shopId, shop.id));
-      return { ...row, tokens: tokens.length };
+      const stops = await db
+        .select({ id: capabilities.id })
+        .from(capabilities)
+        .where(and(eq(capabilities.shopId, shop.id), eq(capabilities.purpose, "shore_alert_stop")));
+      return { ...row, tokens: tokens.length + stops.length };
     };
     return { erase, shore };
   }
@@ -71,6 +76,6 @@ describe("anonymizeDiver — the shore contact's address", () => {
   it("leaves somebody else's shore address alone", async () => {
     const { erase, shore } = await setup("harbour@example.com");
     expect((await erase()).ok).toBe(true);
-    expect(await shore()).toMatchObject({ email: "harbour@example.com", tokens: 1 });
+    expect(await shore()).toMatchObject({ email: "harbour@example.com", tokens: 2 });
   });
 });

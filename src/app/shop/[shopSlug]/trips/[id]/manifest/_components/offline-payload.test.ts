@@ -24,7 +24,9 @@ describe("offlineManifestPayload", () => {
       checklistItems: [{ id: "radio", label: "Radio check" }] as never,
       checklistChecks: new Map() as never,
       boatSafety: null,
+      meetingWindows: undefined,
       snags: [],
+      deckCounts: new Map(),
       locale: "en-US",
       t,
     });
@@ -55,6 +57,7 @@ describe("offlineManifestPayload", () => {
       checklistItems: [{ id: "radio", label: "Radio check" }] as never,
       checklistChecks: new Map() as never,
       boatSafety: null,
+      meetingWindows: undefined,
       snags: [
         {
           id: "s-1",
@@ -77,6 +80,7 @@ describe("offlineManifestPayload", () => {
           stillThere: null,
         },
       ],
+      deckCounts: new Map(),
       locale: "en-US",
       t,
     });
@@ -90,6 +94,93 @@ describe("offlineManifestPayload", () => {
       {
         line: "Radio check: Handheld battery low",
         notedBy: expect.stringContaining("Noted by Ana Ruiz"),
+      },
+    ]);
+  });
+
+  it("carries a course's meeting-day boundaries, and nothing for a one-day departure", () => {
+    const base = {
+      shop: {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: null as never,
+      },
+      checklistItems: [] as never,
+      checklistChecks: new Map() as never,
+      boatSafety: null,
+      meetingWindows: undefined,
+      deckCounts: new Map(),
+      snags: [],
+      locale: "en-US",
+      t,
+    };
+    const snapshot = {
+      manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
+      snapshotId: "33333333-3333-4333-8333-333333333333" as const,
+      erasureEpochToken: "authenticated-epoch",
+      snapshotRevision: 1,
+    };
+    const day = (date: number) => ({
+      startsAt: new Date(Date.UTC(2026, 6, date, 10)),
+      endsAt: new Date(Date.UTC(2026, 6, date, 14)),
+    });
+    // Halfway between day one's end (14:00) and day two's start (10:00 the next day).
+    expect(
+      offlineManifestPayload({ ...base, snapshot, meetingWindows: [day(20), day(21)] })
+        .rollCallDayBoundaries,
+    ).toEqual(["2026-07-21T00:00:00.000Z"]);
+    expect(
+      "rollCallDayBoundaries" in
+        offlineManifestPayload({ ...base, snapshot, meetingWindows: [day(20)] }),
+    ).toBe(false);
+  });
+
+  it("carries the newest deck count per checkpoint, and no field at all when nobody counted", () => {
+    const build = (deckCounts: Parameters<typeof offlineManifestPayload>[0]["deckCounts"]) =>
+      offlineManifestPayload({
+        snapshot: {
+          manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
+          snapshotId: "33333333-3333-4333-8333-333333333333",
+          erasureEpochToken: "authenticated-epoch",
+          snapshotRevision: 1,
+        },
+        shop: {
+          slug: "blue-mantis",
+          name: "Blue Mantis",
+          timezone: "America/New_York",
+          emergencyReference: null as never,
+        },
+        checklistItems: [] as never,
+        checklistChecks: new Map() as never,
+        boatSafety: null,
+        meetingWindows: undefined,
+        snags: [],
+        deckCounts,
+        locale: "en-US",
+        t,
+      });
+    expect("deckCounts" in build(new Map())).toBe(false);
+    expect(
+      build(
+        new Map([
+          [
+            "departure",
+            {
+              counted: 0,
+              recordedAt: new Date("2026-09-11T12:30:00.000Z"),
+              recordedByName: "Keiko Tanaka",
+            },
+          ],
+        ]),
+      ).deckCounts,
+    ).toEqual([
+      {
+        checkpoint: "departure",
+        counted: 0,
+        recordedAt: "2026-09-11T12:30:00.000Z",
+        recordedByName: "Keiko Tanaka",
+        stale: false,
       },
     ]);
   });

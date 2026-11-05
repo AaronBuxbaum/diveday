@@ -30,6 +30,7 @@
     "rehearsalRepeats": "Un ensayo es una sola salida. Quita la repetición o no lo marques como ensayo.",
     "capacityAboveCertificate": "Esa capacidad supera el límite de pasajeros del certificado del barco.",
     "boatOutOfService": "Ese barco está fuera de servicio ese día. Elige otro barco u otro día.",
+    "seriesBoatOutOfService": "Ese barco está en el astillero el {date}, un día en que saldría esta serie. Termina la serie antes de esa fecha o elige otro barco.",
     "capacityAboveCertificateCount": "{count, plural, one {El certificado del barco permite # pasajero. Elige una capacidad que no lo supere.} other {El certificado del barco permite # pasajeros. Elige una capacidad que no lo supere.}}",
     "weekCopied": "{count, plural, one {Se copió # salida del año pasado. Agrega su tripulación desde su página.} other {Se copiaron # salidas del año pasado. Agrega la tripulación desde la página de cada una.}}",
     "weekNotEmpty": "Esta semana ya tiene salidas, así que no se copió nada.",

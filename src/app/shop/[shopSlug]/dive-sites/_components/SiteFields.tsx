@@ -130,6 +130,7 @@ export function SiteFields({
   briefAssist,
   spanish,
   fieldGuideOn = true,
+  admissionLocked,
 }: {
   t: StaffTranslator;
   /** How this shop reads depth; the stored figure is always metres. */
@@ -166,6 +167,12 @@ export function SiteFields({
   spanish?: ReactNode;
   /** The shop's field-guide switch (the Features page); off, its section is not drawn. */
   fieldGuideOn?: boolean;
+  /**
+   * Set, as the sentence saying why, when the reader may not change the level,
+   * specialties, nitrox or max depth (issue #3706): those controls show the
+   * stored values read-only and post them back unchanged.
+   */
+  admissionLocked?: string;
 }) {
   const labels = siteFormSectionLabels(t);
 
@@ -270,7 +277,7 @@ export function SiteFields({
     },
 
     dive: {
-      body: <SiteDiveFields t={t} depthUnit={depthUnit} values={values} />,
+      body: <SiteDiveFields {...{ t, depthUnit, values }} maxDepthLocked={admissionLocked} />,
     },
 
     // **What the shop wants to remember about running this site** (issue
@@ -393,6 +400,7 @@ export function SiteFields({
             nitrox: t("diveSites.form.nitroxCheckbox"),
           }}
           legend={requiredSpecialtiesLabel}
+          locked={admissionLocked}
         />
       ),
     },

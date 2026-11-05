@@ -1,0 +1,3 @@
+CREATE TYPE "interest_reply_status" AS ENUM('pending', 'sent', 'failed', 'not_configured');--> statement-breakpoint
+-- diveday:allow-destructive alter-column-type interest_replies.status: a small table of staff replies to date requests, the cast is a straight text round trip of values the new enum keeps, and the new code writes the column only as the enum (pre-pilot, no users)
+ALTER TABLE "interest_replies" ALTER COLUMN "status" SET DATA TYPE "interest_reply_status" USING "status"::text::"interest_reply_status";

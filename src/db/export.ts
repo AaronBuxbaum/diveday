@@ -31,7 +31,7 @@
 
 import { and, asc, count, eq, getTableColumns, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { fieldGuideCardsIn } from "@/i18n/marine-life-labels";
-import { canExportShopData } from "@/lib/authz";
+import { canExportShopData, STAFF_ROLES } from "@/lib/authz";
 import { splitCardsByKind } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import {
@@ -83,6 +83,7 @@ import {
   tripReviews,
   tripScheduleDays,
   trips,
+  userAccounts,
   workOrderCare,
   workOrderLines,
 } from "./schema";
@@ -705,6 +706,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     templateRows,
     waiverMaterialityRows,
     waiverRows,
+    waiverSealAcknowledgementRows: await readScoped(tx, "waiverSealAcknowledgements", scope),
     courseFormRows,
     courseFormVersionRows,
     courseFormRequirementRows,
@@ -907,13 +909,28 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   // staffer who recorded a roll call, moderated a review, or paired a
   // buddy team. Used only to resolve a name string onto the diver's own
   // rows below; no other person's row is ever written to a file (see the
-  // shared-row decisions above).
+  // shared-row decisions above). Only people who are or were staff here, and
+  // the diver themselves: an actor column that points at another diver (a
+  // malformed historical reference) resolves to no name, never theirs (#3880).
+  // "Were" matters (layer-2 dock review S1): removing a staffer deletes their
+  // role rows but keeps their account, disabled, and the divemaster who
+  // checked a diver aboard last season is exactly who a subject-access request
+  // asks about. Only staff are ever given an account, so an account names
+  // someone who held a staff role.
   const staffRows = await tx
-    .select({ id: people.id, fullName: people.fullName })
+    .selectDistinct({ id: people.id, fullName: people.fullName })
     .from(people)
     // diveday:allow-deleted-people: names for every row in the bundle, removed staff included.
-    .where(eq(people.shopId, shopId));
+    .leftJoin(personRoles, eq(personRoles.personId, people.id))
+    .leftJoin(userAccounts, eq(userAccounts.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        or(inArray(personRoles.role, [...STAFF_ROLES]), isNotNull(userAccounts.id)),
+      ),
+    );
   const personName = new Map(staffRows.map((row) => [row.id, row.fullName]));
+  personName.set(person.id, person.fullName);
   // Plan attribution may name only current staff, never another diver even if
   // a malformed historical reference points at one.
   const planPersonIds = [
@@ -928,12 +945,16 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         .select({ id: people.id, fullName: people.fullName })
         .from(people)
         // diveday:allow-deleted-people: a removed staff member still attributed this plan.
-        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .leftJoin(personRoles, eq(personRoles.personId, people.id))
+        .leftJoin(userAccounts, eq(userAccounts.personId, people.id))
         .where(
           and(
             eq(people.shopId, shopId),
             inArray(people.id, planPersonIds),
-            inArray(personRoles.role, ["owner", "manager", "instructor"]),
+            or(
+              inArray(personRoles.role, ["owner", "manager", "instructor"]),
+              isNotNull(userAccounts.id),
+            ),
           ),
         )
     : [];
@@ -1025,6 +1046,12 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     .where(and(eq(tripReviews.shopId, shopId), diverOwnRows(tripReviews.personId, personId)))
     .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
   const reviewIds = reviewRows.map((row) => row.id);
+  // The diver's private word about their day (#3862), taken back ones included.
+  const recapPulseRows = await tx
+    .select()
+    .from(recapPulses)
+    .where(and(eq(recapPulses.shopId, shopId), diverOwnRows(recapPulses.personId, personId)))
+    .orderBy(asc(recapPulses.createdAt), asc(recapPulses.id));
   const reviewModerationRows = reviewIds.length
     ? await tx
         .select()
@@ -1176,6 +1203,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     tipRows,
     recapPhotoRows,
     reviewRows,
+    recapPulseRows,
     reviewModerationRows,
     entitlementRows,
     packageName,
@@ -1335,6 +1363,11 @@ export async function loadShopExportCounts(
       shopId,
     ),
     "waiver_records.csv": await countShopScoped(db, "waiverRecords", shopId),
+    "waiver_seal_acknowledgements.csv": await countShopScoped(
+      db,
+      "waiverSealAcknowledgements",
+      shopId,
+    ),
     "course_forms.csv": await countShopScoped(db, "courseForms", shopId),
     "course_form_versions.csv": await countShopScoped(db, "courseFormVersions", shopId),
     "course_form_requirements.csv": await countShopScoped(db, "courseFormRequirements", shopId),

@@ -867,10 +867,6 @@ async function completeWaiverLocked(
       // Sealed with the signature only when there is one (`signedMetadata`).
       medicalAlert: medicalAlert.value,
       completedAt: now,
-      // Signed: the link has done its job, so the openable copy goes. The token
-      // still *resolves* (a diver revisiting sees their signed release) — it
-      // just can no longer be read back out of the database and re-sent.
-      tokenSealed: null,
       // The guardian's half, on a minor's release only. The draft goes with
       // the rest of the unsubmitted state: what was typed is now what was
       // signed, and a draft of a signed section is a second copy of personal

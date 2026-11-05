@@ -50,7 +50,7 @@ import { pathToFileURL } from "node:url";
  *    that added it). Comparing a derived date against anything *other* than
  *    the clock stays untouched, which is what keeps the seeds out of it.
  * 3. **A second name for the constant** — any `*_BUFFER_MS` declared outside
- *    `src/lib/trips.ts`. This is the half that actually rotted: all nine
+ *    `src/lib/departure-clock.ts`. This is the half that actually rotted: all nine
  *    private constants were correct on the day they were written and carried a
  *    docstring citing AGENTS.md, and all nine were still forks. A guard that
  *    only caught bare literals would have passed the tree as it stood.
@@ -69,10 +69,11 @@ const GUARDED_ROOTS = ["src/app", "src/components", "src/db", "src/features", "s
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 
 /**
- * The one file allowed to say what the buffer is. `hasSailed`/`hasReturned`
- * live beside it, so a reader who finds the constant finds the predicates.
+ * The one file allowed to say what the buffer is: the departure's ladder
+ * (issue #2714). `hasSailed`/`hasReturned` in `src/lib/trips.ts` are one-line
+ * questions over its `sailed` and `returned` rungs.
  */
-const HOME = path.normalize("src/lib/trips.ts");
+const HOME = path.normalize("src/lib/departure-clock.ts");
 
 /** An offset added to a departure column: `trip.startsAt.getTime() + <x>`. */
 const OFFSET = /\b(?:startsAt|endsAt|starts_at|ends_at)\b[^\n]{0,40}\.getTime\(\)\s*\+/;
@@ -242,7 +243,7 @@ async function main() {
         .join("\n")}`,
     );
     console.error(
-      "Use `hasSailed(startsAt, now)` or `hasReturned(endsAt, now)` from src/lib/trips.ts, and never a second `*_BUFFER_MS`. Trips run late: a check that forgets the hour of grace does not throw, it just tells a diver waiting on the dock that their boat is in the past.",
+      "Use `hasSailed(startsAt, now)` or `hasReturned(endsAt, now)` from src/lib/trips.ts (or the named question on the ladder in src/lib/departure-clock.ts), and never a second `*_BUFFER_MS`. Trips run late: a check that forgets the hour of grace does not throw, it just tells a diver waiting on the dock that their boat is in the past.",
     );
     console.error(
       "An offset that genuinely asks a different question (the recap delay, say) says `diveday:allow-departure-offset: <why>` on the line or just above it.",

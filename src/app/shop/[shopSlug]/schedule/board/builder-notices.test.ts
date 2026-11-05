@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import { signScheduleMoveResult } from "@/lib/schedule-move-result";
 import { builderNoticeFor, builderNoticeMessage, verifiedGearMoveNotice } from "./builder-notices";
 
@@ -36,7 +37,7 @@ describe("builderNoticeMessage", () => {
 });
 
 describe("builderNoticeFor", () => {
-  const none = { count: undefined, created: undefined, series: undefined, st };
+  const none = { count: undefined, created: undefined, series: undefined, locale: "en-US", st };
 
   it("says nothing for an unknown or missing outcome", () => {
     expect(builderNoticeFor({ ...none, builder: undefined })).toBeUndefined();
@@ -58,6 +59,32 @@ describe("builderNoticeFor", () => {
       tone: "success",
       message: st("schedule.notices.moved"),
     });
+  });
+});
+
+describe("the series hull-in-the-yard notice", () => {
+  const none = { count: undefined, created: undefined, series: undefined, locale: "en-US", st };
+
+  it("names the first day the run would sail with the hull in the yard", () => {
+    const notice = builderNoticeFor({
+      ...none,
+      builder: "series-boat-out-of-service",
+      on: "2031-02-12",
+    });
+    expect(notice?.tone).toBe("danger");
+    expect(notice?.message).toBe(
+      st("schedule.notices.seriesBoatOutOfService", {
+        date: formatCalendarDate("2031-02-12", "en-US"),
+      }),
+    );
+  });
+
+  it("falls back to the plain sentence when the URL carries no real day", () => {
+    for (const on of [undefined, "", "2031-02-30", "tomorrow"]) {
+      expect(
+        builderNoticeFor({ ...none, builder: "series-boat-out-of-service", on })?.message,
+      ).toBe(st("schedule.notices.boatOutOfService"));
+    }
   });
 });
 

@@ -369,7 +369,7 @@ describe("one primary at rest", () => {
             rating: 5,
             comment: "Vis was unreal.",
             crewThanks: null,
-            crewThanksPersonId: null,
+            crewThanksChoice: null,
           },
           params: { review: "published" },
         })}
@@ -398,7 +398,7 @@ describe("one primary at rest", () => {
             brandColor: null,
             brandDisplayFont: null,
           },
-          ownReview: { rating, comment: null, crewThanks: null, crewThanksPersonId: null },
+          ownReview: { rating, comment: null, crewThanks: null, crewThanksChoice: null },
           params: { review: rating < 3 ? "pending" : "published" },
         })}
       />,
@@ -425,7 +425,7 @@ describe("one primary at rest", () => {
             rating: 5,
             comment: "Vis was unreal.",
             crewThanks: null,
-            crewThanksPersonId: null,
+            crewThanksChoice: null,
           },
         })}
       />,
@@ -447,7 +447,7 @@ describe("the coral budget", () => {
     const { container } = render(
       <AfterState
         context={props({
-          ownReview: { rating: 4, comment: null, crewThanks: null, crewThanksPersonId: null },
+          ownReview: { rating: 4, comment: null, crewThanks: null, crewThanksChoice: null },
         })}
       />,
     );

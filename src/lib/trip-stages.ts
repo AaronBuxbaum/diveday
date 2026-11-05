@@ -36,6 +36,12 @@ export type TripStageReading = {
   siteName: string | null;
   recordedAt: Date;
   recordedByName: string | null;
+  /**
+   * On a Home tap: how many people the last after-dive count had not
+   * accounted for when it was said (issue #3896), or null. Optional so a
+   * reading assembled elsewhere says nothing.
+   */
+  notCounted?: number | null;
 };
 
 /**

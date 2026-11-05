@@ -1,9 +1,9 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { isStaff, type Role } from "@/lib/authz";
-import { hashBearerToken } from "@/lib/bearer-tokens";
 import { weeklyDigestWanted } from "@/lib/weekly-digest";
+import { issueCapability, verifyCapability } from "./capabilities";
 import type { DbExecutor } from "./client";
-import { people, personRoles, shops, userAccounts, weeklyDigestSends } from "./schema";
+import { people, personRoles, shops, userAccounts } from "./schema";
 
 /**
  * **The Monday email's recipients and each staffer's answer** (market audit
@@ -130,6 +130,23 @@ export type WeeklyDigestUnsubscribeContext = {
 };
 
 /**
+ * Mints the opt-out link one Monday email carries: a fresh, never-expiring
+ * `weekly_digest_unsubscribe` capability for the staffer it goes to (issue
+ * #3721). The sender calls it once the week's claim has landed, so a pass that
+ * lost the claim mints nothing.
+ */
+export async function issueWeeklyDigestUnsubscribeToken(
+  db: DbExecutor,
+  input: { shopId: string; personId: string },
+): Promise<string> {
+  return issueCapability(db, {
+    purpose: "weekly_digest_unsubscribe",
+    shopId: input.shopId,
+    subjectId: input.personId,
+  });
+}
+
+/**
  * Resolves an opt-out link from a Monday email to the person it was sent to,
  * or null for anything that must read as "this link isn't available". An
  * already-off person resolves, so a second click says so rather than failing.
@@ -138,28 +155,30 @@ export async function resolveWeeklyDigestUnsubscribeToken(
   db: DbExecutor,
   token: string,
 ): Promise<WeeklyDigestUnsubscribeContext | null> {
+  const capability = await verifyCapability(db, { purpose: "weekly_digest_unsubscribe", token });
+  if (!capability) return null;
   const [row] = await db
     .select({
-      claimShopId: weeklyDigestSends.shopId,
       personShopId: people.shopId,
       personId: people.id,
       shopName: shops.name,
       choice: userAccounts.weeklyDigest,
     })
-    .from(weeklyDigestSends)
-    .innerJoin(people, eq(people.id, weeklyDigestSends.personId))
+    .from(people)
     .innerJoin(shops, eq(shops.id, people.shopId))
     .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
     .where(
       and(
-        eq(weeklyDigestSends.unsubscribeTokenHash, hashBearerToken(token)),
+        eq(people.id, capability.subjectId),
         // A deleted person's link is not available: the account it would turn
         // off belongs to nobody the shop still has.
         isNull(people.deletedAt),
       ),
     )
     .limit(1);
-  if (!row || row.claimShopId !== row.personShopId) return null;
+  // The capability's own shop must be its person's: a resolved identity is
+  // never trusted past that check.
+  if (!row || capability.shopId !== row.personShopId) return null;
   return { shopName: row.shopName, personId: row.personId, alreadyOff: row.choice === false };
 }
 

@@ -7,6 +7,7 @@ import { SEEDED_CAPTAIN_EMAIL, seededStaffPersonId } from "@/test/staff-session"
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
+import { listDateInterestsByIds } from "./interest-dates";
 import { addInterest, interestRow, ownerId } from "./interest-dates-fixtures";
 import { sendInterestReply } from "./interest-replies";
 import { setDateInterestOutcome } from "./interests";
@@ -178,6 +179,124 @@ describe("sendInterestReply", () => {
     ).toMatchObject({ status: "sent" });
     expect(await interestRow(db, id)).toMatchObject({ closedAs: "replied", closedAt: later });
     expect((await repliesTo(db, id)).map((row) => row.status).sort()).toEqual(["failed", "sent"]);
+  });
+
+  it("has the reply on record, pending, before the provider is called: a crash then leaves no orphan close", async () => {
+    const { db, shop, id, staff } = await openRequest({ phone: "+13055550134" });
+    let seenAtSend: { closedAs: string | null; statuses: string[] } | null = null;
+    const watching = {
+      async send() {
+        seenAtSend = {
+          closedAs: (await interestRow(db, id)).closedAs,
+          statuses: (await repliesTo(db, id)).map((row) => row.status),
+        };
+        throw new Error("the process died here");
+      },
+    };
+    await expect(
+      sendInterestReply(
+        db,
+        { shopId: shop.id, interestId: id, body: "Hello", sentByPersonId: staff, now },
+        { smsProvider: watching, whatsAppProviders: new Map() },
+      ),
+    ).rejects.toThrow("the process died here");
+
+    // Closed as replied and the reply already on record, while the send ran.
+    expect(seenAtSend).toEqual({ closedAs: "replied", statuses: ["pending"] });
+    // A provider that threw may have delivered: the attempt stays, failed, and
+    // the request is back open.
+    expect(await interestRow(db, id)).toMatchObject({ closedAt: null, closedAs: null });
+    expect(await repliesTo(db, id)).toEqual([
+      expect.objectContaining({ status: "failed", sendErrorCode: "provider_error" }),
+    ]);
+  });
+
+  it("does not write the provider's message id back once an erasure blanked the reply while it was in flight", async () => {
+    const { db, shop, id, staff } = await openRequest({ phone: "+13055550134" });
+    const sms = fakeSms(
+      { status: "sent", providerMessageId: "wamid.13055550134" },
+      {
+        async send() {
+          // What `scrubInterests` does to the request and its replies, mid-send.
+          await db
+            .update(interests)
+            .set({ name: null, email: null, phone: null, timing: null, message: null })
+            .where(eq(interests.id, id));
+          await db
+            .update(interestReplies)
+            .set({ toAddress: null, body: null, providerMessageId: null })
+            .where(eq(interestReplies.interestId, id));
+          return { status: "sent", providerMessageId: "wamid.13055550134" };
+        },
+      },
+    );
+    await sendInterestReply(
+      db,
+      { shopId: shop.id, interestId: id, body: "Hello", sentByPersonId: staff, now },
+      { smsProvider: sms.provider, whatsAppProviders: new Map() },
+    );
+    expect(await repliesTo(db, id)).toEqual([
+      expect.objectContaining({
+        status: "sent",
+        toAddress: null,
+        body: null,
+        providerMessageId: null,
+      }),
+    ]);
+  });
+
+  it("refuses a request whose contact was erased before it was claimed, leaving it open", async () => {
+    const { db, shop, id, staff } = await openRequest({ phone: "+13055550134" });
+    await db.update(interests).set({ phone: null }).where(eq(interests.id, id));
+    const sms = fakeSms();
+    expect(
+      await sendInterestReply(
+        db,
+        { shopId: shop.id, interestId: id, body: "Hello", sentByPersonId: staff, now },
+        { smsProvider: sms.provider, whatsAppProviders: new Map() },
+      ),
+    ).toEqual({ status: "refused", reason: "no_route" });
+    expect(sms.sent).toEqual([]);
+    expect(await repliesTo(db, id)).toEqual([]);
+    expect(await interestRow(db, id)).toMatchObject({ closedAt: null });
+  });
+
+  it("flags a request whose reply is still pending to the Date requests reader", async () => {
+    const { db, shop, id, staff } = await openRequest({ phone: "+13055550134" });
+    const flagged = async () =>
+      (await listDateInterestsByIds(db, shop.id, [id])).map((row) => row.replyUnsettled);
+    const dying = {
+      async send() {
+        // Read while the send is in flight, as a crash would leave it.
+        seen = await flagged();
+        return { status: "sent" as const, providerMessageId: "SM_1" };
+      },
+    };
+    let seen: boolean[] = [];
+    await sendInterestReply(
+      db,
+      { shopId: shop.id, interestId: id, body: "Hello", sentByPersonId: staff, now },
+      { smsProvider: dying, whatsAppProviders: new Map() },
+    );
+    expect(seen).toEqual([true]);
+    expect(await flagged()).toEqual([false]);
+  });
+
+  it("settles the pending reply as sent, on the channel that took it", async () => {
+    const { db, shop, id, staff } = await openRequest({ phone: "+13055550134" });
+    const sms = fakeSms();
+    await sendInterestReply(
+      db,
+      { shopId: shop.id, interestId: id, body: "Hello", sentByPersonId: staff, now },
+      { smsProvider: sms.provider, whatsAppProviders: new Map() },
+    );
+    expect(await repliesTo(db, id)).toEqual([
+      expect.objectContaining({
+        status: "sent",
+        channel: "sms",
+        providerMessageId: expect.any(String),
+      }),
+    ]);
   });
 
   it("names a channel that is not switched on as not configured", async () => {

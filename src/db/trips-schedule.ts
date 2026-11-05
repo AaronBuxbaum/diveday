@@ -37,7 +37,7 @@ import { rememberUnnotifiedTripStart } from "./trip-reschedule-marker";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { copiedRequirement, insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
 import { liveTrip } from "./trips-live";
-import { boatCertifiedPassengers } from "./trips-queries";
+import { boatCertifiedPassengers, boatOutOfServiceOn } from "./trips-queries";
 import { recordSeriesSkip } from "./trips-series";
 
 /**
@@ -86,6 +86,9 @@ export function tripShiftPlan(existingStartsAt: Date, newStartsAt: Date, timeZon
   return (date: Date) => shiftInstantByWallTimeDelta(date, deltaMs, timeZone);
 }
 
+/** {@link duplicateTrip}'s refusal: the copy's hull is in the yard on a day it would meet. */
+export const DUPLICATE_BOAT_OUT_OF_SERVICE = "boat_out_of_service" as const;
+
 export type MoveTripOutcome =
   | {
       ok: true;
@@ -101,7 +104,11 @@ export type MoveTripOutcome =
        */
       gearReleased: number;
     }
-  | { ok: false; reason: "not_found" | "not_scheduled" | "already_sailed" | "invalid" };
+  | {
+      ok: false;
+      /** `boat_out_of_service`: the departure's hull is in the yard on a day it would land on (#3915). */
+      reason: "not_found" | "not_scheduled" | "already_sailed" | "invalid" | "boat_out_of_service";
+    };
 
 /**
  * Every kind of head-count evidence a trip can carry — the divers' roll call
@@ -218,6 +225,24 @@ export async function moveTrip(
       .limit(1);
     if (!shop) return { ok: false, reason: "not_found" };
     const shift = tripShiftPlan(existing.startsAt, startsAt, shop.timezone);
+    // **A hull in the yard sails nothing** (issue #3915): every day the moved
+    // departure would meet on, read in the shop's zone, against the window of
+    // the boat it keeps.
+    const meetingStarts = await tx
+      .select({ startsAt: tripScheduleDays.startsAt })
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, tripId));
+    if (
+      await boatOutOfServiceOn(
+        tx,
+        shopId,
+        existing.boatId,
+        [startsAt, ...meetingStarts.map((day) => shift(day.startsAt))],
+        shop.timezone,
+      )
+    ) {
+      return { ok: false, reason: "boat_out_of_service" };
+    }
     await options.beforeMove?.(tx);
 
     const [trip] = await tx
@@ -405,6 +430,10 @@ export async function deleteTrip(
  * the *day*: no roster, no wait list, no crew, no conditions, no series
  * membership. A duplicate is a fresh departure that looks like the old one,
  * never a second view of it.
+ *
+ * Refuses a copy whose hull is in the yard on any day it would meet (issue
+ * #3915): null here, and {@link DUPLICATE_BOAT_OUT_OF_SERVICE} from
+ * {@link duplicateTripOrRefusal}, which the builder calls to say why.
  */
 export async function duplicateTrip(
   db: DbExecutor,
@@ -412,6 +441,17 @@ export async function duplicateTrip(
   tripId: string,
   startsAt: Date,
 ): Promise<Trip | null> {
+  const copy = await duplicateTripOrRefusal(db, shopId, tripId, startsAt);
+  return copy === DUPLICATE_BOAT_OUT_OF_SERVICE ? null : copy;
+}
+
+/** {@link duplicateTrip}, naming the hull-in-the-yard refusal rather than folding it into null. */
+export async function duplicateTripOrRefusal(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  startsAt: Date,
+): Promise<Trip | null | typeof DUPLICATE_BOAT_OUT_OF_SERVICE> {
   if (Number.isNaN(startsAt.getTime())) return null;
   return db.transaction(async (tx) => {
     const [source] = await tx
@@ -449,6 +489,17 @@ export async function duplicateTrip(
     // existed would otherwise propagate on every copy, which is how one
     // cross-tenant row becomes a season of them.
     const boatId = (await validateBoat(tx, shopId, source.boatId)) ? source.boatId : null;
+    if (
+      await boatOutOfServiceOn(
+        tx,
+        shopId,
+        boatId,
+        [startsAt, ...days.map((day) => shift(day.startsAt))],
+        shop.timezone,
+      )
+    ) {
+      return DUPLICATE_BOAT_OUT_OF_SERVICE;
+    }
     // **A copy starts inside the certificate** (H-20261009-certificate-caps-seats). The source may predate
     // the refusal, or sit on a hull whose certificate was recorded since; the
     // copy takes the lower number rather than carrying the old one forward.
@@ -601,6 +652,8 @@ export async function copyWeekFromYearBefore(
       const startsAt = shiftInstantByCalendarDays(source.startsAt, YEAR_OF_WEEKS * 7, timeZone);
       if (!(startsAt.getTime() > now.getTime())) continue;
       const copy = await duplicateTrip(tx, shopId, source.id, startsAt);
+      // A copy whose hull is in the yard that week is left off (#3915, null),
+      // like one that would already have left.
       if (copy) tripIds.push(copy.id);
     }
     return tripIds.length > 0 ? { ok: true, tripIds } : { ok: false, reason: "nothing_to_copy" };

@@ -421,7 +421,9 @@ describe("ScheduleBuilder request plan: copy composed on the client", () => {
             diversPerDivemaster: 4,
             suggestedBoatName: "Reef Runner",
             exceedsKnownBoats: false,
-            requests: [{ id: "inq-1", name: "Marisol", subject: "Saturday reef", divers }],
+            requests: [
+              { id: "inq-1", name: "Marisol", subject: "Saturday reef", divers, quote: null },
+            ],
           },
         }}
       />,

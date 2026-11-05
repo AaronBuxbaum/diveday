@@ -1,0 +1,71 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2f210707-ae72-43d5-a4fb-74f76dc7930e",
+  "prevIds": [
+    "cd38c08f-6c37-40f2-8fa8-b1f7d34fbd5c"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "interest_reply_status"
+      ],
+      "writes": [
+        "s|enum|public.interest_reply_status",
+        "n|enum|public.interest_reply_status",
+        "e|enum|public.interest_reply_status",
+        "n|type|public.interest_reply_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "interest_replies",
+        "status"
+      ],
+      "writes": [
+        "s|colprop|public.interest_replies.status.type",
+        "s|colprop|public.interest_replies.status.default"
+      ],
+      "reads": [
+        "n|tbl|public.interest_replies",
+        "n|sch|public",
+        "n|col|public.interest_replies.status",
+        "n|enum|public.interest_reply_status"
+      ],
+      "sqlHash": "0ea726eded124cd9"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "interest_reply_status",
+        "values": [
+          "pending",
+          "sent",
+          "failed",
+          "not_configured"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"interest_replies\",\"status\"]",
+      "set": {
+        "type": "interest_reply_status"
+      }
+    }
+  ]
+}

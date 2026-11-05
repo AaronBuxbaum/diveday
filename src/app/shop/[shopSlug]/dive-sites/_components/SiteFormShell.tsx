@@ -12,7 +12,12 @@ import { SITE_FORM_REFUSAL_SECTION } from "./site-form-sections";
  * rules, and the two its Spanish boxes add now that the same Save writes them
  * (visual review 2026-10-24, A11).
  */
-export type SiteSaveRefusal = DiveSiteFormError | "spanishStale" | "spanishRefused";
+export type SiteSaveRefusal =
+  | DiveSiteFormError
+  | "spanishStale"
+  | "spanishRefused"
+  /** A level, specialty, nitrox or max-depth change by someone who is not an owner or manager (#3706). */
+  | "admissionManagersOnly";
 
 /**
  * What a refused site briefing hands back to the form: a code for the rule that

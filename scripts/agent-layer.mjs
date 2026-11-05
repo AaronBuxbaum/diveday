@@ -177,6 +177,32 @@ export function missingDocPaths(contents, exists) {
 }
 
 /**
+ * A backticked file name with no repo-root prefix, such as `registry.ts` or `_lib/queue.ts`: a
+ * feature README names its own files that way, relative to the module.
+ */
+const MODULE_FILE =
+  /`((?!(?:src|scripts|docs|e2e|config|infra|\.claude|\.agents|\.codex)\/)[\w.[\]-]+(?:\/[\w.[\]-]+)*\.(?:ts|tsx|mjs|js|md|json|css|sql))`/g;
+
+/**
+ * A feature module's README is its map (issue #2755), so a file it names must exist like any
+ * handoff doc's: repo paths through `missingDocPaths`, and bare file names against `moduleDir`.
+ */
+export function missingModulePaths(contents, moduleDir, exists) {
+  const missing = missingDocPaths(contents, exists);
+  const seen = new Set(missing);
+  for (const line of String(contents).split("\n")) {
+    if (NOT_AN_INSTRUCTION.test(line)) continue;
+    for (const match of line.matchAll(MODULE_FILE)) {
+      const token = match[1];
+      if (seen.has(token) || /example/.test(token)) continue;
+      seen.add(token);
+      if (!exists(`${moduleDir}/${token}`)) missing.push(token);
+    }
+  }
+  return missing;
+}
+
+/**
  * Which of `tokens` .gitignore covers, in one bounded `git check-ignore`. Asked by pattern
  * (`--no-index`), never by disk, so `e2e/screenshots/` counts in a fresh clone that has not made
  * it yet (CI) exactly as in a checkout that has. Exit 1 means none.

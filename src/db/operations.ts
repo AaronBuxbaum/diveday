@@ -15,7 +15,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { writeTargetPersonId } from "./people";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
-import { advanceReadMark } from "./trip-read-marks";
+import { startReadMark } from "./trip-read-marks";
 import { livePerson, liveTrip } from "./trips-live";
 
 /**
@@ -32,9 +32,10 @@ export function onTheTrail() {
 /**
  * **The one recorder for a line that may be a desk line** (issue #2701).
  * Inserts the row with the audience its code has (`activityAudience`) and,
- * when the strip reads the code (`catchUpKind`) and a person did it, moves
- * that person's read mark past it in the same executor, so nobody is told
- * about their own act. Takes a {@link DbExecutor} so a caller inside a
+ * when the strip reads the code (`catchUpKind`) and a person did it, gives
+ * that person a read mark at it if they had none (`startReadMark`). An
+ * existing mark never moves on an act: it would carry the actor past a
+ * teammate's line they have not read (issue #3886). Takes a {@link DbExecutor} so a caller inside a
  * transaction writes the line with the act that caused it.
  */
 export async function recordActivityRow(
@@ -48,7 +49,7 @@ export async function recordActivityRow(
     .returning();
   if (!row) return null;
   if (row.tripId && row.actorPersonId && catchUpKind(row.code, row.params)) {
-    await advanceReadMark(db, {
+    await startReadMark(db, {
       shopId: row.shopId,
       tripId: row.tripId,
       personId: row.actorPersonId,
@@ -230,7 +231,8 @@ export type DiverActivityCode =
   | "date_of_birth_cleared_as_adult"
   | "record_exported"
   | "dispute_sheet_printed"
-  | "running_late_from_message";
+  | "running_late_from_message"
+  | "waiver_seal_acknowledged";
 
 /**
  * One line on the diver-record trail, subject-only — the same shape
@@ -331,6 +333,65 @@ export async function recordMedicalAnswersExported(
         subjectPersonId: diver.id,
         code: "medical_answers_read" as const,
         params: { actor: actor.name, diver: diver.name },
+        occurredAt,
+      })),
+    );
+  }
+}
+
+/**
+ * **A scheduled backup carried divers' medical answers** (#3871, Aaron's
+ * option b), written once the upload has landed, once per delivery. No person read them, so no `medical_answers_read` line: the
+ * shop's trail gets one line for the run, with how many divers' answers it
+ * held, and each diver's trail gets one line the first time a scheduled backup
+ * holds their answers, never again. Both are system lines (`scheduled_backup`).
+ * The platform backup writes neither (option c): it is DiveDay's own
+ * disaster-recovery copy, not a disclosure to the shop's storage.
+ */
+export async function recordScheduledBackupMedicalAnswers(
+  db: DbExecutor,
+  input: { shopId: string; personIds: readonly string[]; deliveryId: string },
+): Promise<void> {
+  const unique = [...new Set(input.personIds)];
+  if (unique.length === 0) return;
+  const occurredAt = nowDate();
+  await db.insert(activityEvents).values({
+    shopId: input.shopId,
+    actorPersonId: null,
+    systemReason: "scheduled_backup",
+    code: "scheduled_backup_medical_answers",
+    params: { count: String(unique.length), delivery: input.deliveryId },
+    occurredAt,
+  });
+  // Chunked as `recordMedicalAnswersExported` is, for the same bind limit.
+  for (let from = 0; from < unique.length; from += 2000) {
+    const chunk = unique.slice(from, from + 2000);
+    const told = await db
+      .select({ id: activityEvents.subjectPersonId })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.shopId, input.shopId),
+          eq(activityEvents.code, "scheduled_backup_holds_medical_answers"),
+          inArray(activityEvents.subjectPersonId, chunk),
+        ),
+      );
+    const already = new Set(told.map((row) => row.id));
+    const divers = await db
+      .select({ id: people.id, name: people.fullName })
+      .from(people)
+      // diveday:allow-deleted-people: a removed diver's answers can still be in the file, and the line belongs on their record.
+      .where(and(eq(people.shopId, input.shopId), inArray(people.id, chunk)));
+    const first = divers.filter((diver) => !already.has(diver.id));
+    if (first.length === 0) continue;
+    await db.insert(activityEvents).values(
+      first.map((diver) => ({
+        shopId: input.shopId,
+        actorPersonId: null,
+        systemReason: "scheduled_backup" as const,
+        subjectPersonId: diver.id,
+        code: "scheduled_backup_holds_medical_answers" as const,
+        params: { diver: diver.name },
         occurredAt,
       })),
     );

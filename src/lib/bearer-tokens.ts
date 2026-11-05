@@ -36,21 +36,16 @@ import { createHash, randomBytes } from "node:crypto";
  * module promises is: enough entropy that the token cannot be guessed, and a
  * stored form that cannot be replayed by whoever reads the database.
  *
- * That last promise is about *this* module's output, and one caller keeps a
- * second copy beside it. `waiver_records.token_sealed` holds the same token
- * sealed under `SECRET_ENCRYPTION_KEY` for as long as the link is live, because
- * a shop that copies a link and then texts it must not be handing out two URLs
- * of which only the second works. The digest is still what every lookup
- * matches, the sealed copy is nulled the moment the link is spent, and opening
- * it needs a key that is not in the database — so a reader of a dump still
- * comes away with nothing replayable. If you add a bearer surface, start from
- * hash-only; when the surface genuinely has to hand the *same* credential over
- * twice, derive it from the row as booking links do rather than seal a copy,
- * and write down why.
+ * A waiver link has to be handed over the same twice (a shop that copies a
+ * link and then texts it must not be handing out two URLs of which only the
+ * second works), so it is derived from its record (`waiverLinkToken` in
+ * `src/lib/waiver-tokens.ts`, #3903) and the digest of that is what is
+ * stored and matched. If you add a bearer surface, start from hash-only; when
+ * the surface genuinely has to hand the *same* credential over twice, derive
+ * it from the row as booking and waiver links do, and write down why.
  *
  * 256 bits from a CSPRNG, base64url so it survives a URL path segment
- * untouched. The digest is all this module ever asks you to store (the one
- * exception, and its bounds, are above): a database reader — a backup, a
+ * untouched. The digest is all this module ever asks you to store: a database reader — a backup, a
  * support query, a leaked dump — must not come away holding usable
  * credentials.
  *

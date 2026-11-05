@@ -41,13 +41,16 @@ import type { TurnAwayReason } from "./turn-away";
  * departure short of its minimum head count; `shore_contact_stopped` is the shore
  * contact stopping roll-call alerts from the link in an email, with no account
  * behind it; `bookkeeper_stopped` is the bookkeeper stopping the month-end
- * files the same way (security review N1). (The nightly series roll only adds
- * dates and cancels none, so it has no reason here.)
+ * files the same way (security review N1); `scheduled_backup` is the weekly
+ * backup to the shop's own storage carrying divers' medical answers (#3871).
+ * (The nightly series roll only adds dates and cancels none, so it has no
+ * reason here.)
  */
 export const SYSTEM_REASONS = [
   "minimum_not_met",
   "shore_contact_stopped",
   "bookkeeper_stopped",
+  "scheduled_backup",
 ] as const;
 export type SystemReason = (typeof SYSTEM_REASONS)[number];
 
@@ -292,6 +295,24 @@ type ActivityParamShapes = {
   integration_backfill_sent: { actor: string; provider: string; count: string; since: string };
   /** An owner or manager read a diver's full medical questionnaire (issue #2157). */
   medical_answers_read: { actor: string; diver: string };
+  /**
+   * A scheduled backup to the shop's own storage carried divers' medical
+   * answers (#3871, Aaron's option b): one shop line per run, with how many
+   * divers' answers it held. No actor; the system reason is `scheduled_backup`.
+   */
+  scheduled_backup_medical_answers: { count: string; delivery: string };
+  /**
+   * The first scheduled backup that held this diver's medical answers, on
+   * their trail once (#3871): the standing fact, said once, rather than a
+   * weekly line burying the reads a person made.
+   */
+  scheduled_backup_holds_medical_answers: { diver: string };
+  /**
+   * An owner or manager recorded that they looked into a release whose seal
+   * reads broken, with a note (#3891). The nightly check stops counting that
+   * release while it stays as they saw it; co-owners see who quietened it.
+   */
+  waiver_seal_acknowledged: { actor: string; diver: string };
   /**
    * A staffer read a diver's medical alert for the crew, on a manifest they
    * crew or on the signed record (issue #2960). Never written offline.
@@ -588,6 +609,9 @@ export const ACTIVITY_CODES = [
   "medical_diver_form_not_used",
   "medical_answered_by_earlier_letter",
   "medical_answers_read",
+  "scheduled_backup_medical_answers",
+  "scheduled_backup_holds_medical_answers",
+  "waiver_seal_acknowledged",
   "medical_alert_read",
   "medical_alert_saved_offline",
   "medical_alert_printed",
@@ -786,6 +810,16 @@ export const DESK_FLAGGED_CODES: readonly string[] = [
   ...Object.keys(TRAIL_DESK_KINDS),
   ...Object.keys(TRAIL_DESK_KINDS_BY_PARAMS),
 ];
+
+/**
+ * The desk-only codes that name a seat: every one but the two trip-wide codes
+ * (a meeting point and a plan change write no booking). A booking hard-deleted
+ * after one is written leaves the line with no booking (`booking_id` is SET
+ * NULL), so the strip keeps these only while the seat still exists.
+ */
+export const DESK_SEAT_CODES: readonly DeskOnlyCode[] = DESK_ONLY_CODES.filter(
+  (code) => code !== "desk_meeting_point" && code !== "desk_plan_changed",
+);
 
 /**
  * The codes whose every line feeds `kind`, for the strip's roster checks

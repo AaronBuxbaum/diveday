@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { and, eq, getTableName } from "drizzle-orm";
+import { and, eq, getTableName, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { schemaTableNameOf } from "@/test/schema-tables";
@@ -8,7 +8,9 @@ import { loadDiverExportBundleInput } from "./export";
 import { diverOwnRows, EXPORT_TABLES, type ExportTableRead } from "./export-tables";
 import { addDiverNote } from "./operations";
 import {
+  assertDiverBookingRead,
   assertDiverExportColumn,
+  BOOKING_EXPORT_READS,
   exportFate,
   PERSON_COLUMNS,
   type PersonColumn,
@@ -17,11 +19,15 @@ import {
 import * as schema from "./schema";
 import {
   bookings,
+  cards,
+  customerGearItems,
   internalNotes,
   people,
   personRoles,
   staffCredentials,
   tripReviews,
+  userAccounts,
+  waiverRecords,
 } from "./schema";
 
 const ctx = fileScopedShopContext();
@@ -280,5 +286,123 @@ describe("the registry's export fates", () => {
     const profile = files["profile.csv"];
     const roles = profile?.rows[0]?.[profile.header.indexOf("roles")];
     expect(String(roles)).not.toBe("");
+  });
+});
+
+/**
+ * Issue #3880: the three ways a diver's bundle could still show another
+ * person's name, each held by a test.
+ */
+describe("what a diver's bundle names (#3880)", () => {
+  /** Gap 1: a read by the diver's bookings is outside the person registry, so it states its own fate. */
+  it("states a fate for every booking-keyed read, and reads nothing by booking that has none", () => {
+    const byBooking = Object.values(EXPORT_TABLES as Record<string, ExportTableRead>).flatMap(
+      ({ table, scope }) => (scope.bookingColumn ? [getTableName(table)] : []),
+    );
+    expect(byBooking.length).toBeGreaterThan(3);
+    expect(byBooking.filter((table) => !(table in BOOKING_EXPORT_READS))).toEqual([]);
+    expect(Object.keys(BOOKING_EXPORT_READS).filter((table) => !byBooking.includes(table))).toEqual(
+      [],
+    );
+    expect(() => assertDiverBookingRead("roll_call_events")).not.toThrow();
+    expect(() => assertDiverBookingRead("internal_notes")).toThrow(/no booking-read fate/);
+  });
+
+  async function seatedDiver() {
+    const { db, shop } = ctx;
+    // A seated diver with a card and a signed release on file.
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, shop.id),
+          inArray(
+            bookings.personId,
+            db.select({ id: cards.personId }).from(cards).where(eq(cards.shopId, shop.id)),
+          ),
+          inArray(
+            bookings.personId,
+            db
+              .select({ id: waiverRecords.personId })
+              .from(waiverRecords)
+              .where(eq(waiverRecords.shopId, shop.id)),
+          ),
+        ),
+      )
+      .orderBy(bookings.id)
+      .limit(1);
+    if (!seat) throw new Error("expected a seeded diver with a seat, a card and a waiver");
+    const [other] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Ana Leakcheck Ruiz" })
+      .returning({ id: people.id });
+    if (!other) throw new Error("other diver insert failed");
+    await db.insert(personRoles).values({ personId: other.id, role: "diver" });
+    return { db, shop, personId: seat.personId, otherId: other.id };
+  }
+
+  /** Gap 2: an actor id that points at a diver is never resolved to their name. */
+  it("names an actor only when they hold a staff role", async () => {
+    const { db, shop, personId, otherId } = await seatedDiver();
+    await db
+      .update(waiverRecords)
+      .set({ recordedByPersonId: otherId })
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.personId, personId)));
+    const input = await loadDiverExportBundleInput(db, shop.id, personId);
+    if (!input) throw new Error("export failed to load");
+    expect(JSON.stringify(input)).not.toContain("Leakcheck");
+  });
+
+  /**
+   * The other side of gap 2 (layer-2 dock review S1): a staffer who has since
+   * left keeps their name on what they recorded. Removal deletes their role
+   * rows but keeps their account, disabled.
+   */
+  it("still names a removed staffer on the diver's own release", async () => {
+    const { db, shop, personId } = await seatedDiver();
+    const [leaver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Sam Seasonal Leaver" })
+      .returning({ id: people.id });
+    if (!leaver) throw new Error("leaver insert failed");
+    await db.insert(userAccounts).values({
+      personId: leaver.id,
+      email: `leaver-${leaver.id}@example.com`,
+      status: "disabled",
+    });
+    await db
+      .update(waiverRecords)
+      .set({ recordedByPersonId: leaver.id })
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.personId, personId)));
+    const input = await loadDiverExportBundleInput(db, shop.id, personId);
+    if (!input) throw new Error("export failed to load");
+    expect(JSON.stringify(input)).toContain("Sam Seasonal Leaver");
+  });
+
+  /** Gap 3: staff-typed free text stays in the shop's own bundle. */
+  it("keeps staff free text naming a second diver out of the first diver's bundle", async () => {
+    const { db, shop, personId } = await seatedDiver();
+    const note = "same as Ana Leakcheck Ruiz's set";
+    await db
+      .update(cards)
+      .set({ reviewNote: note })
+      .where(and(eq(cards.shopId, shop.id), eq(cards.personId, personId)));
+    await db
+      .insert(customerGearItems)
+      .values({ shopId: shop.id, personId, kind: "regulator", note });
+    const input = await loadDiverExportBundleInput(db, shop.id, personId);
+    if (!input) throw new Error("export failed to load");
+    const files = Object.fromEntries(input.tables.map((table) => [table.file, table]));
+    expect(files["customer_gear_items.csv"]?.rows.length).toBeGreaterThan(0);
+    expect(JSON.stringify(input)).not.toContain("Leakcheck");
+    for (const [file, header] of [
+      ["cards.csv", "review_note"],
+      ["customer_gear_items.csv", "note"],
+      ["review_moderation_events.csv", "reason_note"],
+      ["work_order_lines.csv", "description"],
+    ] as const) {
+      expect(files[file]?.header ?? [], file).not.toContain(header);
+    }
   });
 });

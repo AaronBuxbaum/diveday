@@ -28,7 +28,6 @@ export type WaiverStateFields = Omit<
   | "draftMedicalAlert"
   | "medicalAlert"
   | "tokenHash"
-  | "tokenSealed"
   | "integrityHash"
 >;
 
@@ -683,7 +682,13 @@ export type WaiverStanding =
   | "lapsed"
   | "guardian_missing"
   | "medical_review"
-  | "medical_not_cleared";
+  | "medical_not_cleared"
+  /**
+   * A release this person signed was changed after signing (its seal failed,
+   * issue #3885): readiness holds the seat, and the desk's next step is a
+   * fresh signature. Only the seat's reading says this (`seatWaiverStanding`).
+   */
+  | "seal_failed";
 
 /**
  * Where a diver stands with **the shop**, independent of any one booking.
@@ -936,10 +941,20 @@ export function seatWaiverStanding(input: {
   guardianMissing: boolean;
   /** {@link bookingRecordLapsed} over `own`, at the seat's waiver clock. */
   ownLapsed: boolean;
+  /** Any release of this person failed its seal (`personSealFailed`, issue #3885). */
+  sealFailed?: boolean;
   now?: Date;
 }): SeatWaiverStanding {
   const now = input.now ?? nowDate();
   const word = waiverStanding(input.effective, now);
+  // A changed release reads as what it is, never "Signed" beside the hold
+  // (dock review of #3885). The next step is a fresh link, or the one already
+  // out if the desk has sent it.
+  if (input.sealFailed || input.effective?.integrityValid === false) {
+    const own = waiverStanding(input.own, now);
+    const sent = own === "awaiting_signature" || own === "link_expired";
+    return { standing: "seal_failed", control: sent ? own : "seal_failed", refusalRetired: false };
+  }
   const refusalRetired = word === "medical_not_cleared" && Boolean(input.effective?.supersededAt);
   if (refusalRetired) {
     const own = waiverStanding(input.own, now);

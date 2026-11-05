@@ -501,6 +501,7 @@
     "duplicateCard": "Otra certificación activa de este centro ya tiene ese número. Revisa el número o elimina la certificación que lo tiene.",
     "eraseNameMismatch": "El nombre que escribiste no coincide con el de este buceador, así que no se borró nada. Escríbelo exactamente como aparece arriba.",
     "eraseRefused": "Este registro no se puede borrar. Los registros del personal conservan el rastro de responsabilidad del centro, y no puedes borrar el tuyo propio.",
+    "eraseIncidentHold": "No se ha borrado. Un informe de incidente con retención legal nombra a este buceador o su salida, y borrarlo eliminaría sus pruebas. Levanta antes la retención del informe y después bórralo.",
     "eraseRequiresDelete": "No se ha borrado. Elimina antes a este buceador.",
     "fitCleared": "Marca de ajuste despejada. Este buceador vuelve a prepararse con sus tallas indicadas.",
     "fitFlagged": "Marcado para ajuste manual",

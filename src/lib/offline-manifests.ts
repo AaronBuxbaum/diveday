@@ -26,6 +26,8 @@ import {
   RETRACTION_SUPERSEDED,
   rollCallCheckpoints,
 } from "./roll-call";
+import { carriedMissing, type DayMark, standingByDay } from "./roll-call-days";
+import { rollCallDayOf } from "./trip-days";
 import { hasSailed } from "./trips";
 import { medicalWarningDays } from "./waivers";
 
@@ -153,6 +155,17 @@ export type OfflineManifestPayload = {
   /** Absent on copies made before site-only training readiness; queued events remain intact. */
   readinessPolicyVersion?: 1;
   /**
+   * **Where each later meeting day's roll call begins** (issue #3904, ADR
+   * 20261104-roll-call-by-meeting-day), as ISO instants, one per day after the
+   * first (`rollCallDayStarts`, `src/lib/trip-days.ts`). Absent or empty is a
+   * departure that meets once, which every older copy is: an additive field
+   * with no `OFFLINE_MANIFEST_RECORD_VERSION` bump, since a bump purges the
+   * roll call a captain has queued and not synced. The saved results are the
+   * day the copy was saved on; once the device clock passes a boundary they
+   * read as that earlier day's (`offlineRollCallAt`).
+   */
+  rollCallDayBoundaries?: string[];
+  /**
    * `emergencyReference` rides here, and that is the point of carrying it at
    * all: this snapshot is the document a crew has with no signal, and until
    * issue #688 it held who is aboard and who to phone *afterwards* and nothing
@@ -206,6 +219,19 @@ export type OfflineManifestPayload = {
    * renders no section.
    */
   boatSafety?: BoatSafetySection;
+  /**
+   * The newest deck count at each checkpoint, read-only: a crew with no signal
+   * sees what was counted, and records nothing here. Optional and additive, so
+   * a copy saved before this field reads as none.
+   */
+  deckCounts?: Array<{
+    checkpoint: string;
+    counted: number;
+    recordedAt: string;
+    recordedByName: string;
+    /** The marks moved after this count: it asks to be taken again. */
+    stale?: boolean;
+  }>;
   /**
    * **The boat's open snags** (fifth-loop ideas, item 1): what an earlier crew
    * handed on and what this one wrote, as the live check worded them at the
@@ -2027,7 +2053,7 @@ function offlineCheckpointOrder(
  * carried, reopening the later checkpoints rather than leaving them reading
  * "ashore, accounted for" about somebody who is now in the water.
  */
-function offlineRollCallAt(
+function offlineRollCallOnOneDay(
   snapshot: OfflineManifestSnapshot,
   events: readonly OfflineRollCallEvent[],
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
@@ -2071,6 +2097,111 @@ function offlineRollCallAt(
   return carried[0] === undefined ? savedAt(checkpoint) : undefined;
 }
 
+type OfflineCheckpoint = OfflineManifestSnapshot["manifests"][number]["checkpoint"];
+type OfflineSubjectMatch = (
+  subject: NonNullable<ReturnType<typeof offlineRollCallSubject>>,
+) => boolean;
+
+/**
+ * **The copy's meeting days** (issue #3904): the first instant of each day's
+ * roll call, day one's `-Infinity`, as `rollCallDayStarts` returns them. One
+ * entry, so one day, for a copy that carries no boundaries.
+ */
+function offlineDayStarts(snapshot: OfflineManifestSnapshot): number[] {
+  return [
+    Number.NEGATIVE_INFINITY,
+    ...(snapshot.rollCallDayBoundaries ?? []).map((boundary) => Date.parse(boundary)),
+  ];
+}
+
+/**
+ * One subject's effective result at one checkpoint **on the meeting day the
+ * device clock is in** — what the server's manifest shows (`manifestRollCallView`,
+ * `src/lib/roll-call-days.ts`).
+ *
+ * While the clock is on the day the copy was saved, that is the whole reading
+ * ({@link offlineRollCallOnOneDay}). Past a boundary, the saved results and
+ * every event queued before it belong to an earlier day: the new day starts
+ * empty and reads only what was queued since, except that an earlier day's
+ * stated missing person stays at their checkpoint until somebody counts them
+ * (a `boarded` on the new day, or at a later dive that day, settles them; a
+ * `cleared` here takes the mis-tap back). A person is never read as accounted
+ * for by a count that was about another day. The carried statement is not this
+ * device's to undo (`local: false`): the retraction names an event on the
+ * earlier day, and the live manifest is where that is taken back.
+ */
+function offlineRollCallAt(
+  snapshot: OfflineManifestSnapshot,
+  events: readonly OfflineRollCallEvent[],
+  checkpoint: OfflineCheckpoint,
+  matches: OfflineSubjectMatch,
+  savedAt: (checkpoint: OfflineCheckpoint) => OfflineRollCallResult | undefined,
+  now: Date,
+): OfflineRollCallResult | undefined {
+  const starts = offlineDayStarts(snapshot);
+  const today = rollCallDayOf(starts, now);
+  const dayOfEvent = (event: OfflineRollCallEvent) =>
+    rollCallDayOf(starts, new Date(event.occurredAt));
+  // Every time, not only when the copy is older than today: a copy refreshed on
+  // the morning of day two still holds day one's queued events, and they are
+  // day one's. The saved results speak for today only if the copy was saved
+  // today (or later, on a clock that ran ahead).
+  const savedDay = rollCallDayOf(starts, new Date(snapshot.savedAt));
+  const todays = events.filter((event) => dayOfEvent(event) >= today);
+  const here = offlineRollCallOnOneDay(
+    snapshot,
+    todays,
+    checkpoint,
+    matches,
+    savedDay >= today ? savedAt : () => undefined,
+  );
+  if (here || today === 0 || checkpoint === "departure") return here;
+
+  // Nothing stands today at an after-dive checkpoint: an earlier day's stated
+  // missing person may still be open. The server's own fold decides
+  // (`carriedMissing`, `src/lib/roll-call-days.ts`), over this device's events
+  // and the copy's saved results, each filed under its own meeting day.
+  type Filed = DayMark & { at: string; result: OfflineRollCallResult | null };
+  const filed: Filed[] = [];
+  const subject = "subject";
+  for (const event of events) {
+    if (event.syncStatus === "rejected") continue;
+    const who = offlineRollCallSubject(event);
+    if (!who || !matches(who)) continue;
+    filed.push({
+      subject,
+      checkpoint: event.checkpoint,
+      status: event.status,
+      day: dayOfEvent(event),
+      at: event.occurredAt,
+      result: recordedResult(event),
+    });
+  }
+  if (savedDay < today) {
+    for (const at of offlineCheckpointOrder(snapshot)) {
+      const saved = savedAt(at);
+      if (saved && !saved.implied) {
+        filed.push({
+          subject,
+          checkpoint: at,
+          status: saved.state,
+          day: savedDay,
+          at: saved.occurredAt,
+          result: saved,
+        });
+      }
+    }
+  }
+  // Oldest first, as the fold requires; fixed-width ISO strings compare as time.
+  filed.sort((a, b) => a.at.localeCompare(b.at));
+  const carried = [...carriedMissing(standingByDay(filed), today).values()].find(
+    (mark) => mark.checkpoint === checkpoint,
+  );
+  return carried?.result
+    ? { ...carried.result, local: false, clientEventId: undefined }
+    : undefined;
+}
+
 /** The saved result a snapshot holds for one subject at one checkpoint, or nothing. */
 function savedResult(
   saved:
@@ -2102,6 +2233,7 @@ export function latestOfflineRollCall(
   events: readonly OfflineRollCallEvent[],
   bookingId: string,
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
+  now: Date = nowDate(),
 ): OfflineRollCallResult | undefined {
   return offlineRollCallAt(
     snapshot,
@@ -2114,6 +2246,7 @@ export function latestOfflineRollCall(
           .find((manifest) => manifest.checkpoint === at)
           ?.divers.find((entry) => entry.bookingId === bookingId)?.rollCall,
       ),
+    now,
   );
 }
 
@@ -2133,6 +2266,7 @@ export function latestOfflineCrewRollCall(
   events: readonly OfflineRollCallEvent[],
   crewPersonId: string,
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
+  now: Date = nowDate(),
 ): OfflineRollCallResult | undefined {
   return offlineRollCallAt(
     snapshot,
@@ -2145,5 +2279,6 @@ export function latestOfflineCrewRollCall(
           .find((manifest) => manifest.checkpoint === at)
           ?.crew.find((member) => member.id === crewPersonId)?.rollCall,
       ),
+    now,
   );
 }

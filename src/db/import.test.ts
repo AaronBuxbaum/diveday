@@ -677,7 +677,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
       prepareContactImport(importCsv),
       importer,
     );
-    expect(summary).toMatchObject({ waiversAdded: 0, waiversSkippedExisting: 1 });
+    expect(summary).toMatchObject({ waiversAdded: 0, waiversSkippedMedicalHold: 1 });
 
     const records = await db
       .select()

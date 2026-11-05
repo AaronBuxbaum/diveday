@@ -130,7 +130,9 @@ import {
   gearReservations,
   importedPaymentHistory,
   inboundMessages,
+  incidentReportAddenda,
   incidentReportPeople,
+  incidentReports,
   interestReplies,
   interests,
   notificationDeliveries,
@@ -153,10 +155,12 @@ import {
   staffCredentials,
   staffReplies,
   staffShifts,
+  tripAssignments,
   tripReviews,
   userAccounts,
   waiverDeliveries,
   waiverRecords,
+  waiverSealAcknowledgements,
   workOrderLines,
   workOrders,
 } from "./schema";
@@ -179,6 +183,14 @@ export type AnonymizeDiverRefusal =
    * different problem with a different answer.
    */
   | "staff_member"
+  /**
+   * An incident report under a legal hold links the person: a seat on its
+   * departure (any status), a name on the report, or a place on its crew
+   * (Aaron, option A on issue #3805). The erasure would clear that
+   * departure's evidence (the boarding certification snapshot, seat notes, a
+   * former staffer's crew credential), so it waits for the hold to lift.
+   */
+  | "incident_hold"
   | "requires_delete"
   | "name_mismatch";
 
@@ -201,6 +213,76 @@ export type AnonymizeDiverResult =
     }
   | { ok: false; reason: AnonymizeDiverRefusal }
   | { ok: false; reason: "merged"; survivorId: string };
+
+/**
+ * **Whether a held incident links this person** (issue #3805): a live report
+ * of this shop under a legal hold that any of these tie to them:
+ *
+ * - a seat of theirs on its departure (cancelled included, since the erasure
+ *   scrubs every seat);
+ * - its own people: them, one of their seats, or an outsider row whose typed
+ *   name the erasure's own outsider sweep would redact (`buddyMemberNameMatch`,
+ *   the same predicate, so a held row is never rewritten);
+ * - its departure's crew roster or crew roll call;
+ * - the report's own staff columns: who started it, filed it, raised or
+ *   reached by the missing-diver alarm, found the diver or sent the all clear,
+ *   and who wrote an addendum.
+ *
+ * Every report that links them is locked `FOR SHARE` **before** its hold is
+ * read, held or not: `setIncidentLegalHold` locks the report `FOR UPDATE`, so
+ * a hold placed while this erasure runs waits for it to commit, and an erasure
+ * that starts after a hold commits sees it.
+ */
+async function linkedToHeldIncident(
+  tx: AppTransaction,
+  shopId: string,
+  personId: string,
+  fullName: string,
+): Promise<boolean> {
+  const theirSeats = tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)));
+  const outsiderPattern = buddyMemberNameMatch(fullName);
+  const asJson = JSON.stringify([personId]);
+  const linked = await tx
+    .select({ id: incidentReports.id, legalHoldAt: incidentReports.legalHoldAt })
+    .from(incidentReports)
+    .where(
+      and(
+        eq(incidentReports.shopId, shopId),
+        isNull(incidentReports.deletedAt),
+        or(
+          eq(incidentReports.createdByPersonId, personId),
+          eq(incidentReports.filedByPersonId, personId),
+          eq(incidentReports.missingAlertRaisedByPersonId, personId),
+          eq(incidentReports.missingFoundByPersonId, personId),
+          sql`${incidentReports.missingAlertReachedPersonIds} @> ${asJson}::jsonb`,
+          sql`${incidentReports.missingAllClearSentPersonIds} @> ${asJson}::jsonb`,
+          sql`exists (select 1 from ${incidentReportAddenda}
+            where ${incidentReportAddenda.reportId} = ${incidentReports.id}
+            and ${incidentReportAddenda.authorPersonId} = ${personId})`,
+          sql`exists (select 1 from ${bookings} where ${bookings.tripId} = ${incidentReports.tripId}
+            and ${bookings.shopId} = ${shopId} and ${bookings.personId} = ${personId})`,
+          sql`exists (select 1 from ${incidentReportPeople}
+            where ${incidentReportPeople.reportId} = ${incidentReports.id}
+            and (${incidentReportPeople.personId} = ${personId}
+              or ${incidentReportPeople.bookingId} in (${theirSeats})
+              ${outsiderPattern ? sql`or ${incidentReportPeople.outsiderName} ~* ${outsiderPattern}` : sql``}))`,
+          sql`exists (select 1 from ${tripAssignments}
+            where ${tripAssignments.tripId} = ${incidentReports.tripId}
+            and ${tripAssignments.personId} = ${personId})`,
+          sql`exists (select 1 from ${rollCallEvents}
+            where ${rollCallEvents.tripId} = ${incidentReports.tripId}
+            and ${rollCallEvents.shopId} = ${shopId}
+            and ${crewMarks()}
+            and ${rollCallEvents.crewPersonId} = ${personId})`,
+        ),
+      ),
+    )
+    .for("share");
+  return linked.some((report) => report.legalHoldAt !== null);
+}
 
 /** Every column `listDiverSummaries` already refuses to ship to the browser, plus the rest. */
 const ERASED_PERSON_COLUMNS = {
@@ -511,6 +593,9 @@ export async function anonymizeDiver(
       .where(eq(personRoles.personId, input.personId));
     if (roleRows.some((row) => STAFF_ROLES.includes(row.role))) {
       return { ok: false, reason: "staff_member" } as const;
+    }
+    if (await linkedToHeldIncident(tx, input.shopId, input.personId, person.fullName)) {
+      return { ok: false, reason: "incident_hold" } as const;
     }
 
     const result = await scrub(tx, {
@@ -899,9 +984,6 @@ async function scrubWaiverRecords(
         // the expiry is pulled back to now, and any still-live record is marked
         // superseded.
         tokenHash: hashWaiverToken(createWaiverToken()),
-        // ...and the openable copy goes with it, so the erased record cannot
-        // hand its link back out through the reuse path either.
-        tokenSealed: null,
         expiresAt: now,
         startedAt: null,
         supersededAt: record.supersededAt ?? (record.status === "pending" ? now : null),
@@ -935,6 +1017,25 @@ async function scrubWaiverRecords(
         ...waiverIntegrityVerdict(sealed, now),
       })
       .where(eq(waiverRecords.id, stripped.id));
+  }
+
+  // A manager's note on a broken seal (#3891) will often restate the answer
+  // that was tampered with ("Q4 asthma changed Yes to No"): medical words
+  // about this diver, kept beside their release. The fact of the
+  // acknowledgement, who and when, stays; the words go (layer-2 review S5).
+  if (waiverRows.length > 0) {
+    await tx
+      .update(waiverSealAcknowledgements)
+      .set({ note: REDACTED_TEXT })
+      .where(
+        and(
+          eq(waiverSealAcknowledgements.shopId, shopId),
+          inArray(
+            waiverSealAcknowledgements.waiverRecordId,
+            waiverRows.map((record) => record.id),
+          ),
+        ),
+      );
   }
 
   // The per-channel mechanics behind the column above (ADR
@@ -1375,7 +1476,7 @@ async function scrubBookingRows(
 
     await tx
       .update(bookingCapabilities)
-      .set({ revokedAt: now, expiresAt: now, tokenSealed: null })
+      .set({ revokedAt: now, expiresAt: now })
       .where(
         and(
           inArray(bookingCapabilities.bookingId, bookingIds),
@@ -2377,6 +2478,10 @@ async function scrubPiiBlob(
     await tx
       .delete(shopShoreAlertTokens)
       .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));
+    // The stop links mailed to that address (issue #3721): each names it.
+    await tx
+      .delete(capabilities)
+      .where(and(eq(capabilities.shopId, shopId), eq(capabilities.sentTo, address)));
   }
   // The number, for the interest that gave one and no address. Runs after the
   // address sweep so the count is the rows the number reached that the address
@@ -2862,6 +2967,12 @@ async function scrubIncidentReports(
       and(
         eq(incidentReportPeople.shopId, shopId),
         sql`${incidentReportPeople.outsiderName} ~* ${pattern}`,
+        // A held report is never rewritten (issue #3805). `linkedToHeldIncident`
+        // already refuses an erasure this would reach; this keeps the sweep
+        // safe on its own.
+        sql`not exists (select 1 from ${incidentReports}
+          where ${incidentReports.id} = ${incidentReportPeople.reportId}
+          and ${incidentReports.legalHoldAt} is not null)`,
       ),
     )
     .returning({ id: incidentReportPeople.id });

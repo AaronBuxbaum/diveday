@@ -97,6 +97,12 @@ export interface PlainTextProvider {
     message: { to: string; body: string },
     options?: { signal?: AbortSignal },
   ): Promise<CourtesyDelivery>;
+  /**
+   * Whether this number sent STOP to DiveDay's texting number. A STOP is the
+   * person's word that DiveDay stops texting them, so it holds on every channel
+   * to that number: WhatsApp is not tried either (issue #3883).
+   */
+  isStopListed?(phone: string): Promise<boolean>;
 }
 
 export type CourtesyResult = {
@@ -126,6 +132,9 @@ export type CourtesyProviders = {
  * The WhatsApp failure is logged rather than returned, because the SMS result is
  * the one that describes what the diver actually got.
  *
+ * **A number on the STOP list gets neither**: WhatsApp is skipped and SMS
+ * returns its `opted_out` refusal, which is what the delivery row records.
+ *
  * The exception is a shop with WhatsApp connected and no SMS credentials at all:
  * there, `not_configured` from SMS would report "nothing is set up" about a
  * channel the shop *did* set up, so the WhatsApp failure is returned instead.
@@ -137,12 +146,14 @@ export async function sendCourtesyMessage(
 ): Promise<CourtesyResult> {
   const { locale, ...courtesy } = message;
   const smsStopLine = diverTranslator(locale)("notifications.sms.stopLine");
-  const whatsAppDelivery = providers.whatsapp
-    ? await providers.whatsapp.send(
-        courtesy.whatsAppBody ? { ...courtesy, body: courtesy.whatsAppBody } : courtesy,
-        { signal: channelSignal(options?.signal) },
-      )
-    : { status: "not_configured" as const };
+  const stopListed = (await providers.sms.isStopListed?.(message.to)) ?? false;
+  const whatsAppDelivery =
+    providers.whatsapp && !stopListed
+      ? await providers.whatsapp.send(
+          courtesy.whatsAppBody ? { ...courtesy, body: courtesy.whatsAppBody } : courtesy,
+          { signal: channelSignal(options?.signal) },
+        )
+      : { status: "not_configured" as const };
   if (whatsAppDelivery.status === "sent") {
     return { channel: "whatsapp", delivery: whatsAppDelivery };
   }

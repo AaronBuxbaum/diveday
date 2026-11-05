@@ -147,3 +147,29 @@ describe("RequirementsSection — a default level (issue #3872)", () => {
     expect(screen.queryByText(/not a level anyone set/)).toBeNull();
   });
 });
+
+describe("RequirementsSection, keeping Open Water", () => {
+  const renderWith = (minimumCertificationIsDefault: boolean) =>
+    render(
+      <RequirementsSection
+        action={noop}
+        trip={tripRow()}
+        requirement={{ ...requirement, minimumCertificationIsDefault } as unknown as Requirement}
+        siteRequirement={null}
+        siteNames={[]}
+        locale="en-US"
+      />,
+    );
+
+  it("offers the box while the level is still the default", () => {
+    renderWith(true);
+    const box = screen.getByLabelText("Keep this level, even for marked training dives");
+    expect((box as HTMLInputElement).name).toBe("keepLevelAsChosen");
+    expect((box as HTMLInputElement).checked).toBe(false);
+  });
+
+  it("does not offer it once a level has been chosen", () => {
+    renderWith(false);
+    expect(screen.queryByLabelText(/Keep this level/)).toBeNull();
+  });
+});

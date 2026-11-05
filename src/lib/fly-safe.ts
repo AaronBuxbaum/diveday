@@ -1,5 +1,6 @@
 import { HOUR_MS } from "./clock";
-import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
+import { DEPARTURE_BUFFER_MS } from "./departure-clock";
+import { hasReturned } from "./trips";
 
 /**
  * **Earliest flight** after a dive day (issue #1425, N-04). This advisory

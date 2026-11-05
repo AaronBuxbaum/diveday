@@ -687,7 +687,7 @@ export async function retireMedicalRefusal(
       return { ok: false, reason: "not_authorized" };
     const [retired] = await tx
       .update(waiverRecords)
-      .set({ supersededAt: now, tokenSealed: null })
+      .set({ supersededAt: now })
       .where(
         and(
           eq(waiverRecords.shopId, input.shopId),

@@ -266,6 +266,18 @@ export function canManageSafetyChecklist(roles: readonly Role[] | undefined): bo
 }
 
 /**
+ * **Change a dive site's admission fields** (Aaron, 2026-11-03, issue #3706):
+ * the level it asks for, its required specialties, its nitrox requirement and
+ * its maximum depth. The first three decide who may buy a seat on a departure
+ * that dives the site (`src/lib/trip-admission.ts`) and the depth sets the
+ * depth advisory, so loosening any of them is owner/manager work. Every staff
+ * role still edits the rest of the briefing: names, notes, maps and photos.
+ */
+export function canEditDiveSiteAdmission(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * Add a diver from the staff search: create the person a walk-up, a phone call
  * or a name on a clipboard turns out to be. **Every staff role holds it**, a
  * captain included, because the person at the dock may be the one who meets a

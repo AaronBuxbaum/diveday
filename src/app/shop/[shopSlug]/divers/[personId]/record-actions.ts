@@ -202,6 +202,11 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
     revalidateAndRedirect(base, backTo(base, "erase-name-mismatch", "erase"));
     return;
   }
+  // Issue #3805: the erasure waits for a held incident's evidence.
+  if (!result.ok && result.reason === "incident_hold") {
+    revalidateAndRedirect(base, backTo(base, "erase-incident-hold", "erase"));
+    return;
+  }
   // "Erased" and "erased, but Stripe still owes something" are different facts,
   // and a compliance action must not report the weaker one as the stronger
   // (ADR 20260803-processor-erasure-obligations). The outstanding work is on the

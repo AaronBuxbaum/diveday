@@ -4,7 +4,7 @@ import { hashBearerToken } from "@/lib/bearer-tokens";
 import { CAPABILITY_POLICY, CAPABILITY_PURPOSES, type CapabilityPurpose } from "@/lib/capabilities";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { issueCapability, verifyCapability } from "./capabilities";
+import { issueCapability, spendCapability, verifyCapability } from "./capabilities";
 import { mergeDiverRecords } from "./diver-merge";
 import { askAnytime } from "./interests";
 import { findOrCreatePerson } from "./people";
@@ -34,11 +34,20 @@ async function subjects() {
   return { personId: person.id, interestId: joined.interestId };
 }
 
+const ADDRESS = "books@example.com";
+
 function subjectFor(
   purpose: CapabilityPurpose,
   ids: { personId: string; interestId: string },
 ): string {
-  return CAPABILITY_POLICY[purpose].subject === "interest" ? ids.interestId : ids.personId;
+  switch (CAPABILITY_POLICY[purpose].subject) {
+    case "interest":
+      return ids.interestId;
+    case "person":
+      return ids.personId;
+    case "shop_address":
+      return ADDRESS;
+  }
 }
 
 describe("issueCapability and verifyCapability", () => {
@@ -74,11 +83,12 @@ describe("issueCapability and verifyCapability", () => {
         .select()
         .from(capabilities)
         .where(eq(capabilities.tokenHash, hashBearerToken(token)));
-      if (CAPABILITY_POLICY[purpose].subject === "interest") {
-        expect(row).toMatchObject({ interestId: ids.interestId, personId: null });
-      } else {
-        expect(row).toMatchObject({ personId: ids.personId, interestId: null });
-      }
+      const expected = {
+        interest: { interestId: ids.interestId, personId: null, sentTo: null },
+        person: { personId: ids.personId, interestId: null, sentTo: null },
+        shop_address: { sentTo: ADDRESS, personId: null, interestId: null },
+      }[CAPABILITY_POLICY[purpose].subject];
+      expect(row).toMatchObject({ ...expected, usedAt: null });
     },
   );
 
@@ -129,21 +139,81 @@ describe("issueCapability and verifyCapability", () => {
   });
 });
 
+describe("spendCapability", () => {
+  it("spends a link once: the second use finds nothing", async () => {
+    const { db, shop } = ctx;
+    const token = await issueCapability(db, {
+      purpose: "shore_alert_stop",
+      shopId: shop.id,
+      subjectId: "Shore@Example.com",
+    });
+    const at = new Date("2026-10-15T12:00:00Z");
+    expect(
+      await spendCapability(db, { purpose: "shore_alert_stop", token, now: at }),
+    ).toMatchObject({ shopId: shop.id, subjectId: "shore@example.com", usedAt: at });
+    expect(await spendCapability(db, { purpose: "shore_alert_stop", token, now: at })).toBeNull();
+    // A spent link still verifies, and says when it was spent.
+    expect(await verifyCapability(db, { purpose: "shore_alert_stop", token })).toMatchObject({
+      usedAt: at,
+    });
+  });
+
+  it("refuses to spend a purpose that is not spent by a use", async () => {
+    const { db, shop } = ctx;
+    const ids = await subjects();
+    const token = await issueCapability(db, {
+      purpose: "courtesy_email_unsubscribe",
+      shopId: shop.id,
+      subjectId: ids.personId,
+    });
+    await expect(
+      spendCapability(db, { purpose: "courtesy_email_unsubscribe", token }),
+    ).rejects.toThrow(/not spent/);
+  });
+});
+
 describe("capabilities_subject_by_purpose", () => {
   it("refuses a row naming the other purpose's subject, both subjects, or none", async () => {
     const { db, shop } = ctx;
     const ids = await subjects();
+    const none = { personId: null, interestId: null, sentTo: null };
     const bad: {
       purpose: CapabilityPurpose;
       personId: string | null;
       interestId: string | null;
+      sentTo: string | null;
+      usedAt?: Date;
     }[] = [
-      { purpose: "interest_unsubscribe", personId: ids.personId, interestId: null },
-      { purpose: "interest_unsubscribe", personId: ids.personId, interestId: ids.interestId },
-      { purpose: "interest_unsubscribe", personId: null, interestId: null },
-      { purpose: "courtesy_email_unsubscribe", personId: null, interestId: ids.interestId },
-      { purpose: "courtesy_email_unsubscribe", personId: ids.personId, interestId: ids.interestId },
-      { purpose: "courtesy_email_unsubscribe", personId: null, interestId: null },
+      { purpose: "interest_unsubscribe", ...none, personId: ids.personId },
+      {
+        purpose: "interest_unsubscribe",
+        ...none,
+        personId: ids.personId,
+        interestId: ids.interestId,
+      },
+      { purpose: "interest_unsubscribe", ...none },
+      { purpose: "interest_unsubscribe", ...none, interestId: ids.interestId, sentTo: ADDRESS },
+      { purpose: "courtesy_email_unsubscribe", ...none, interestId: ids.interestId },
+      {
+        purpose: "courtesy_email_unsubscribe",
+        ...none,
+        personId: ids.personId,
+        interestId: ids.interestId,
+      },
+      { purpose: "courtesy_email_unsubscribe", ...none },
+      { purpose: "courtesy_email_unsubscribe", ...none, personId: ids.personId, sentTo: ADDRESS },
+      { purpose: "shore_alert_stop", ...none },
+      { purpose: "shore_alert_stop", ...none, personId: ids.personId },
+      { purpose: "shore_alert_stop", ...none, sentTo: ADDRESS, personId: ids.personId },
+      // The address is stored lower-cased, the handle an erasure sweeps by.
+      { purpose: "shore_alert_stop", ...none, sentTo: "Books@Example.com" },
+      // Only a purpose a use spends is ever marked used.
+      {
+        purpose: "courtesy_email_unsubscribe",
+        ...none,
+        personId: ids.personId,
+        usedAt: new Date("2026-10-15T12:00:00Z"),
+      },
     ];
     for (const [index, row] of bad.entries()) {
       await expect(
@@ -180,7 +250,9 @@ describe("a capability and the person it opens", () => {
     const personPurposes = CAPABILITY_PURPOSES.filter(
       (purpose) => CAPABILITY_POLICY[purpose].subject === "person",
     );
-    expect(personPurposes).toEqual(["courtesy_email_unsubscribe"]);
+    // Both only stop mail. The Monday email's link names a staffer, and a
+    // merge of a staff record is refused before anything moves (issue #3721).
+    expect(personPurposes).toEqual(["courtesy_email_unsubscribe", "weekly_digest_unsubscribe"]);
   });
 
   it("follows a merge: the link mailed to the merged-away record opts the kept one out", async () => {

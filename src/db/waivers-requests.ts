@@ -2,12 +2,12 @@
  * Waivers: issuing a signing request — minting the bearer link for a booking
  * or a person. Imported through the `./waivers` barrel.
  */
+import { randomUUID } from "node:crypto";
 import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type GuardianSigner, guardianSignatureMissing } from "@/lib/guardian";
 import { isHeldToMedical } from "@/lib/participant-types";
-import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
-import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
+import { hashWaiverToken, liveWaiverLinkToken, waiverLinkToken } from "@/lib/waiver-tokens";
 import {
   bookingRecordLapsed,
   isCompletedWaiverCurrent,
@@ -72,8 +72,10 @@ export type IssueWaiverOutcome =
  * - **Snapshotted from the template that is current now.** A shop that edited
  *   its release since has different terms, and letting the old link stand would
  *   collect a signature against wording the shop has withdrawn.
- * - **Openable.** Without `SECRET_ENCRYPTION_KEY` there is no readable copy of
- *   the token, so this falls back to minting — the behaviour it had before.
+ * - **Still its derived link.** The token is computed from the record
+ *   (`waiverLinkToken`, #3903), and reused only while the stored digest
+ *   matches it under the current signing key: a digest rotated by erasure or
+ *   an identity repoint, or a key rotated since, mints a fresh one.
  *
  * When none of that holds it does what it always did: mint, supersede whatever
  * was pending, and insert. So an old token still cannot complete later; it just
@@ -112,9 +114,9 @@ export type OpenThreadWaiverOutcome =
  *
  * The same rules as `issueWaiverRequest` decide whether there is anything to
  * sign and on which terms, with one difference: a live record on the current
- * terms is kept **whether or not its token can be read back**. A thread does
- * not need the token, so a deployment without a sealing key does not supersede
- * the link a staffer already sent, or the draft typed into it.
+ * terms is kept **whether or not its link can be handed back**. A thread does
+ * not need the token, so it does not supersede the link a staffer already
+ * sent, or the draft typed into it.
  */
 export async function openWaiverInThread(
   db: DbExecutor,
@@ -132,10 +134,9 @@ async function issueWaiverRecord(
   IssueWaiverOutcome | { ok: true; token: null; expiresAt: Date; recordId: string; reused: true }
 > {
   if (!input.bookingId && !input.personId) return { ok: false, reason: "person_not_found" };
-  const token = createWaiverToken();
-  const tokenHash = hashWaiverToken(token);
-  const keyResult = secretKeyFromEnvironment();
-  const sealingKey = keyResult.status === "ok" ? keyResult.key : null;
+  // The new record's id is chosen here so its link can be derived before the insert.
+  const recordId = randomUUID();
+  const token = waiverLinkToken(recordId);
 
   const issue = async (
     tx: DbExecutor,
@@ -323,7 +324,10 @@ async function issueWaiverRecord(
     const cleanPersonReleases = current.filter(
       (record) =>
         isCompletedWaiverCurrent(record, template.materialGeneration, clockAt) &&
-        !guardianSignatureMissing(record, signer),
+        !guardianSignatureMissing(record, signer) &&
+        // A release changed after signing stands for nothing (issue #3885):
+        // the fix is the fresh signature this link asks for.
+        record.integrityValid !== false,
     );
     // H-20261007-after-physician-says-no's amendment allows a newer person-scoped clean release to stand over
     // an open referral. An open referral may belong to this person or one of
@@ -341,7 +345,8 @@ async function issueWaiverRecord(
           (record) =>
             record.status !== "pending" &&
             !lapsed(record) &&
-            !guardianSignatureMissing(record, signer),
+            !guardianSignatureMissing(record, signer) &&
+            record.integrityValid !== false,
         )
       : cleanPersonReleaseStands;
     if (alreadyStanding) {
@@ -350,21 +355,16 @@ async function issueWaiverRecord(
 
     // The link this diver already holds, if it is still one they can sign.
     // A thread signs by record, not by token, so it keeps any live record.
-    const live =
-      sealingKey || keepLiveRecord
-        ? current.find(
-            (record) =>
-              record.status === "pending" &&
-              record.supersededAt === null &&
-              record.expiresAt > now &&
-              record.templateId === template.id &&
-              record.templateVersion === template.version &&
-              record.templateGeneration === template.materialGeneration &&
-              (keepLiveRecord || record.tokenSealed),
-          )
-        : undefined;
-    const reusedToken =
-      live?.tokenSealed && sealingKey ? openSecret(live.tokenSealed, sealingKey) : null;
+    const live = current.find(
+      (record) =>
+        record.status === "pending" &&
+        record.supersededAt === null &&
+        record.expiresAt > now &&
+        record.templateId === template.id &&
+        record.templateVersion === template.version &&
+        record.templateGeneration === template.materialGeneration,
+    );
+    const reusedToken = live ? liveWaiverLinkToken(live.id, live.tokenHash) : null;
     if (live && keepLiveRecord) {
       const refreshedExpiry = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
       await tx
@@ -401,8 +401,7 @@ async function issueWaiverRecord(
     if (current.length > 0) {
       await tx
         .update(waiverRecords)
-        // The old link is dead, so its openable copy has no reason to exist.
-        .set({ supersededAt: now, tokenSealed: null })
+        .set({ supersededAt: now })
         .where(
           and(
             eq(waiverRecords.shopId, input.shopId),
@@ -417,6 +416,7 @@ async function issueWaiverRecord(
     const [record] = await tx
       .insert(waiverRecords)
       .values({
+        id: recordId,
         shopId: input.shopId,
         bookingId: booking?.id ?? null,
         personId,
@@ -425,8 +425,7 @@ async function issueWaiverRecord(
         templateVersion: template.version,
         templateGeneration: template.materialGeneration,
         templateBody: template.body,
-        tokenHash,
-        tokenSealed: sealingKey ? sealSecret(token, sealingKey) : null,
+        tokenHash: hashWaiverToken(token),
         expiresAt,
       })
       .returning();

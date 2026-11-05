@@ -1,4 +1,5 @@
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { verifyScheduleMoveResult } from "@/lib/schedule-move-result";
 import { noticeFromParam } from "@/lib/staff-notices";
 
@@ -40,6 +41,11 @@ export const BUILDER_NOTICE_KEYS: Record<
   "rehearsal-repeats": { tone: "danger", key: "schedule.notices.rehearsalRepeats" },
   // Loop 5, row 5: the hull is in the yard on that day.
   "boat-out-of-service": { tone: "danger", key: "schedule.notices.boatOutOfService" },
+  // Issue #3915, dock review S4: a repeating run refused for a week months out.
+  "series-boat-out-of-service": {
+    tone: "danger",
+    key: "schedule.notices.seriesBoatOutOfService",
+  },
   // H-20261009-certificate-caps-seats: the certificate's limit is a ceiling too.
   "capacity-above-certificate": {
     tone: "danger",
@@ -57,7 +63,15 @@ export function builderNoticeMessage(
   st: StaffTranslator,
   key: StaffMessageKey,
   count: string | undefined,
+  on?: { day: string | undefined; locale: string },
 ): string {
+  if (key === "schedule.notices.seriesBoatOutOfService") {
+    // The day comes off the URL: only a real calendar date is named, and a
+    // URL without one gets the plain hull-in-the-yard sentence.
+    return on?.day && isValidCalendarDate(on.day)
+      ? st(key, { date: formatCalendarDate(on.day, on.locale) })
+      : st("schedule.notices.boatOutOfService");
+  }
   if (key === "schedule.notices.weekCopied") {
     return st(key, { count: count && /^\d{1,4}$/.test(count) ? Number.parseInt(count, 10) : 0 });
   }
@@ -80,12 +94,18 @@ export function builderNoticeFor({
   count,
   created,
   series,
+  on,
+  locale,
   st,
 }: {
   builder: string | undefined;
   count: string | undefined;
   created: string | undefined;
   series: string | undefined;
+  /** The shop-local day the notice names (`?on=`), when it names one. */
+  on?: string | undefined;
+  /** The page's own locale, for the day the notice names. */
+  locale: string;
   st: StaffTranslator;
 }): { tone: "success" | "danger" | "warning"; message: string } | undefined {
   const builderNoticeEntry = noticeFromParam(builder, BUILDER_NOTICE_KEYS);
@@ -100,7 +120,7 @@ export function builderNoticeFor({
             ? seriesCount > 1
               ? st("schedule.notices.addedSeries", { title: created, count: seriesCount })
               : st("schedule.notices.addedNamed", { title: created })
-            : builderNoticeMessage(st, builderNoticeEntry.key, count),
+            : builderNoticeMessage(st, builderNoticeEntry.key, count, { day: on, locale }),
       }
     : undefined;
 }

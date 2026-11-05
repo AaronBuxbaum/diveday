@@ -134,6 +134,9 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // never an argument for expiring one on a clock.
   "waiver_records",
   "waiver_materiality_decisions",
+  // A manager's note that a broken seal was looked into (#3891): it speaks for
+  // the release it names and goes the way that release goes.
+  "waiver_seal_acknowledgements",
   // Course forms (ADR 20261008-course-forms): the same signed evidence as the
   // release, on the same footing. The forms, their versions and a course's
   // list of them are the shop's own configuration; a signed record is erased
@@ -172,10 +175,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds",
-  // The two unsubscribe purposes never expire and are never spent; a row goes
-  // with its interest or person (erasure, demo teardown). A purpose with an
-  // expiry brings `capabilities` a window when it moves here (issue #2710).
-  "capabilities",
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.
   "notification_rate_limit_state",

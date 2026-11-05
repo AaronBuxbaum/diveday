@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AppDb } from "@/db/client";
+import { recordScheduledBackupMedicalAnswers } from "@/db/operations";
 import type { BackupDeliveryTrigger } from "@/db/schema";
 import {
   claimShopBackupDelivery,
@@ -123,6 +124,7 @@ export async function runShopBackup(
 
   let zip: Uint8Array;
   let shopSlug: string;
+  let medicalAnswerPersonIds: readonly string[];
   try {
     // The same assembly the platform backup uses (./bundle.ts), so both copies
     // of a shop's data are byte-for-byte the same artifact.
@@ -137,6 +139,7 @@ export async function runShopBackup(
     if (!bundle.ok) return fail("shop_missing");
     zip = bundle.zip;
     shopSlug = bundle.shopSlug;
+    medicalAnswerPersonIds = bundle.medicalAnswerPersonIds;
   } catch {
     // A bundle that cannot be assembled is a bug worth a code in the history,
     // not an exception that takes the rest of the cron pass down with it.
@@ -182,6 +185,17 @@ export async function runShopBackup(
     fetchImpl: input.fetchImpl,
   });
   if (!uploaded.ok) return fail(uploaded.errorCode);
+  // The answers are in the shop's storage now, and only now: a scheduled run
+  // says so on the shop's trail, once for this delivery, and on each diver's
+  // trail the first time (#3871; layer-2 dock review S2). A failed upload, or
+  // a retry before one lands, writes nothing.
+  if (input.trigger === "scheduled") {
+    await recordScheduledBackupMedicalAnswers(db, {
+      shopId: input.shopId,
+      personIds: medicalAnswerPersonIds,
+      deliveryId: delivery.id,
+    });
+  }
 
   const finishedAt = input.now ?? nowDate();
   if (claim) {

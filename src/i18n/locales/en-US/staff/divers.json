@@ -501,6 +501,7 @@
     "duplicateCard": "Another live certification at this shop already has that number. Check the number, or delete the certification that holds it.",
     "eraseNameMismatch": "The name you typed doesn’t match this diver’s, so nothing was erased. Type it exactly as it appears above.",
     "eraseRefused": "This record can’t be erased. Staff records keep the shop’s own accountability trail, and you can’t erase your own.",
+    "eraseIncidentHold": "Not erased. An incident report under a legal hold names this diver or their departure, and erasing them would clear its evidence. Release the hold on the report first, then erase.",
     "eraseRequiresDelete": "Not erased. Delete this diver first.",
     "fitCleared": "Fit flag cleared. This diver packs from their stated sizes again.",
     "fitFlagged": "Flagged for hands-on fitting",

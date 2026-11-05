@@ -19,11 +19,12 @@ const EXPLICIT = [
   "src/features/today/today-roll-call-rows.ts",
 ];
 
-/** Never a safety file: tests and fixtures, seed scenarios, copy resolvers, type declarations. */
+/** Never a safety file: tests and fixtures, seed scenarios, fixture modules, copy resolvers, type declarations. */
 const NOT_LOGIC = [
   /\.(test|spec)\.[cm]?[jt]sx?$/,
   /\.d\.ts$/,
   /test-fixtures/,
+  /-fixtures\.tsx?$/,
   /(^|\/)seed-[^/]*$/,
   /-copy\.tsx?$/,
   /\.test-support\.tsx?$/,

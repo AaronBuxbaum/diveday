@@ -1,4 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
+import { type BookingLinkKeyring, deploymentKeyring } from "./booking-link-token";
+import { signPayload } from "./signed-token";
 
 /**
  * Minting and hashing a waiver link's bearer token — the only two things in the
@@ -60,4 +62,55 @@ export function createWaiverToken(): string {
 /** What is stored, so a database read never yields a usable link. */
 export function hashWaiverToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+/**
+ * **A waiver link is derived from its record** (#3903), as a booking link is
+ * derived from its row (ADR 20261104-derived-booking-link-tokens): HMAC-SHA256
+ * under the booking-link signing key over `"waiver-link\0" || version || "\0"
+ * || record id`, 43 base64url characters, the same shape a random waiver token
+ * has. The record still stores only `hashWaiverToken(token)` and every lookup
+ * still matches that digest, so a database reader holds nothing replayable.
+ *
+ * Re-sending a live link (ADR 20260820-waiver-links-are-reused-not-reissued)
+ * recomputes it under every key the deployment still holds
+ * ({@link liveWaiverLinkToken}) and reuses the record only when one matches
+ * its digest: a record whose digest was rotated (erasure, an identity
+ * repoint), minted under a key no longer held, or minted at the counter or by
+ * an import gets a fresh link instead. Throws when the deployment holds no
+ * signing key, as issuing a booking link does.
+ */
+export function waiverLinkToken(
+  recordId: string,
+  keyring: BookingLinkKeyring = deploymentKeyring(),
+): string {
+  const version = keyring.signingVersion();
+  const key = keyring.keyFor(version);
+  if (!key) throw new Error(`No booking-link key for version ${version}`);
+  return signPayload(key, `waiver-link\0${version}\0${recordId}`);
+}
+
+/** Booking-link key versions run 1 to 9 (`v2:`…`v9:`, with v1 the AUTH_SECRET-derived default). */
+const KEY_VERSIONS = [9, 8, 7, 6, 5, 4, 3, 2, 1] as const;
+
+/**
+ * The link a live record was handed out under, if this deployment can still
+ * derive it: tried under every key the keyring holds, current and previous,
+ * and matched against the stored digest (layer-2 dock review S3). Rotating
+ * `BOOKING_LINK_SECRET` with the old one kept as `_PREVIOUS` therefore keeps
+ * every live waiver link reusable, so a re-send the morning after a rotation
+ * does not supersede the link a party already shared and lose its draft.
+ */
+export function liveWaiverLinkToken(
+  recordId: string,
+  tokenHash: string,
+  keyring: BookingLinkKeyring = deploymentKeyring(),
+): string | null {
+  for (const version of KEY_VERSIONS) {
+    const key = keyring.keyFor(version);
+    if (!key) continue;
+    const token = signPayload(key, `waiver-link\0${version}\0${recordId}`);
+    if (hashWaiverToken(token) === tokenHash) return token;
+  }
+  return null;
 }

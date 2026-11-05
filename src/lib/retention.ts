@@ -100,6 +100,7 @@ export type RetainedTable =
   | "account_sign_in_challenges"
   | "shop_contact_email_confirmation_tokens"
   | "shop_shore_alert_tokens"
+  | "capabilities"
   | "booking_capabilities"
   | "booking_payment_events"
   | "push_subscriptions"
@@ -241,13 +242,22 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
   shop_contact_email_confirmation_tokens: 90,
   /**
    * A year from `created_at` (H-20261014-stale-roll-call-recipients review): the shore contact's confirmation
-   * links and the stop link every roll-call alert carries. A stop link never
-   * expires on its own, because an opt-out that stops working leaves somebody
-   * unable to stop the mail; a year is longer than any shop goes between
-   * alerts, and each alert brings a fresh one. The rows hold the address, so
-   * they do not sit forever either.
+   * links. The stop link every roll-call alert carries (a capability now)
+   * keeps the same year: it never expires on its own, because an opt-out that
+   * stops working leaves somebody unable to stop the mail; a year is longer
+   * than any shop goes between alerts, and each alert brings a fresh one. The
+   * rows hold the address, so they do not sit forever either.
    */
   shop_shore_alert_tokens: 365,
+  /**
+   * A year from `issued_at`, for the stop links mailed to a shop's own
+   * addresses (the shore contact's and the bookkeeper's, on the reasoning
+   * above; issue #3721): the rows hold the address. The Monday email's
+   * opt-out links keep `weekly_digest_sends`' window instead, as they did on
+   * the claim (security review D1). An interest's or a courtesy email's
+   * unsubscribe link is not pruned; it goes with its subject.
+   */
+  capabilities: 365,
   /**
    * The same 90 days past `expires_at` again (H-20260916-far-deletion-promise-reach, issue #1726): a booking
    * link — readiness, confirm, claim, handoff, course forms — is a hashed
@@ -428,7 +438,8 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * report?" needs a stated answer (ADR 20261012-incident-reports). The people
    * in a report and its addenda go with it by cascade. Erasure does not wait
    * for this: `anonymizeDiver` unlinks a diver from a report at once and
-   * leaves the words staff wrote.
+   * leaves the words staff wrote, unless a report under a legal hold links
+   * them, when the erasure is refused until the hold is released (#3805).
    */
   incident_reports: 2555,
   /**

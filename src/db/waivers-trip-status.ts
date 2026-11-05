@@ -7,6 +7,7 @@ import type { DbExecutor } from "./client";
 import { bookings, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
+import { personSealFailed } from "./waiver-seal-checks";
 
 /**
  * Staff roster view: only the current record joins each active booking. The
@@ -50,7 +51,13 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
 export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tripIds: string[]) {
   if (tripIds.length === 0) return [];
   return db
-    .select({ booking: bookings, person: people, waiver: WAIVER_STATE_COLUMNS })
+    .select({
+      booking: bookings,
+      person: people,
+      waiver: WAIVER_STATE_COLUMNS,
+      // Any release of the person failed its seal (issue #3885, review B1).
+      personSealFailed: personSealFailed(bookings.shopId, people.id),
+    })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .leftJoin(

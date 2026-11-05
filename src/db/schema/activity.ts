@@ -5,6 +5,7 @@ import {
   check,
   foreignKey,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -324,10 +325,22 @@ export const tripStageEvents = pgTable(
       .notNull()
       .references(() => people.id),
     recordedAt: appNowTimestamp("recorded_at").notNull(),
+    /**
+     * On a `home` tap only: how many seats and crew the record named as not
+     * counted after a dive when the crew said Home (issue #3896), the largest
+     * any Home on the departure stored, so the record says "Home was said with
+     * 2 people not counted". Null on every other word, and on a Home with
+     * nobody left out of a started count.
+     */
+    notCounted: integer("not_counted"),
     /** The final tiebreak when two taps share an instant, as on the roll call. */
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
+    check(
+      "trip_stage_events_not_counted_home_only",
+      sql`${table.notCounted} is null or (${table.stage} = 'home' and ${table.notCounted} > 0)`,
+    ),
     index("trip_stage_events_shop_trip_idx").on(
       table.shopId,
       table.tripId,

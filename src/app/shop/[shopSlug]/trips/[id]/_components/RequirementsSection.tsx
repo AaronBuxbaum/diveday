@@ -162,6 +162,15 @@ export function RequirementsSection({
                 </>
               }
             />
+            {requirement?.minimumCertificationIsDefault ? (
+              <ChoiceRow
+                name="keepLevelAsChosen"
+                type="checkbox"
+                className="mt-3 text-sm font-medium"
+              >
+                {t("trips.requirements.keepLevel")}
+              </ChoiceRow>
+            ) : null}
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {/* One weight for a section's Save — the default primary the
                     other Overview forms share (DetailsSection's comment states

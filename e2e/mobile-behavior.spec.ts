@@ -69,8 +69,7 @@ test("touch booking and guardian signing stay complete after reload", async ({ p
   await page.getByLabel("Relationship to Mobile Minor").selectOption("parent");
   await page.getByLabel("I am this diver’s parent or legal guardian", { exact: false }).tap();
   await page.getByRole("button", { name: "Sign waiver", exact: true }).tap();
-  await expect(page).toHaveURL(/\/ready\//);
-  expect(new URL(page.url()).pathname === readyPath).toBe(true);
+  await expect.poll(() => new URL(page.url()).pathname).toBe(readyPath);
   await page.goto(readyPath, { waitUntil: "domcontentloaded" });
   await expect(
     page.locator("li[data-thread-step='sign']").filter({ visible: true }),
@@ -106,8 +105,7 @@ test("a referred signer sees the physician step before returning to their bookin
   await expect(page.getByText(diver("waiver.medicalReferralNext"))).toBeVisible();
   await expect(page.getByRole("link", { name: diver("waiver.doctor.open") })).toBeVisible();
   await page.getByRole("link", { name: diver("waiver.seeWhatsLeft") }).tap();
-  await expect(page).toHaveURL(/\/ready\//);
-  expect(new URL(page.url()).pathname === readyPath).toBe(true);
+  await expect.poll(() => new URL(page.url()).pathname).toBe(readyPath);
 });
 
 test.describe("touch manifest", () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "./clock";
+import { DEPARTURE_BUFFER_MS } from "./departure-clock";
 import {
   DEFAULT_FLY_SAFE_HOURS,
   type FlySafeInput,
@@ -9,7 +10,6 @@ import {
   plannedFlySafeMessageKey,
 } from "./fly-safe";
 import { formatWeekdayTime } from "./format";
-import { DEPARTURE_BUFFER_MS } from "./trips";
 
 const endsAt = new Date("2026-07-25T22:00:00.000Z");
 /**

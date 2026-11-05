@@ -18,7 +18,7 @@ import { tripScheduleDays } from "./schema";
  */
 export async function meetingWindowsByTrip(
   db: DbExecutor,
-  trips: readonly { id: string; startsAt: Date; endsAt: Date }[],
+  trips: readonly { id: string }[],
 ): Promise<Map<string, MeetingWindow[]>> {
   const byTrip = new Map<string, MeetingWindow[]>();
   if (trips.length === 0) return byTrip;
@@ -95,6 +95,18 @@ export function rollCallDayIndex(): SQL<number> {
     select count(*)::int from ${dayBoundaries()} b
     where b.boundary <= "roll_call_events"."occurred_at"
   )`;
+}
+
+/**
+ * **Marks on the same meeting day as `at`**, as a condition on
+ * `roll_call_events` (issue #3905): the newest-wins compare of an offline mark
+ * reads only these, because a checkpoint such as `after_dive_1` repeats on
+ * every day of a course and Sunday's count must not refuse Saturday's queued
+ * tap. A one-day departure has one day, so every mark qualifies, as before.
+ * Both sides are `rollCallDayOf`'s rule in SQL, over the row's own departure.
+ */
+export function onSameMeetingDayAs(at: Date): SQL {
+  return sql`${rollCallDayIndex()} = ${rollCallCurrentDayIndex(at)}`;
 }
 
 /** The meeting day being counted at `now` for the row's departure (0-based). */

@@ -188,11 +188,77 @@ describe("listCatchUpSince", () => {
       actorPersonId: desk.id,
     });
 
-    // Writing the event advanced the desk's own mark, so they have one — and it
-    // is already past the thing they just did.
+    // Writing the event gave the desk their first mark, at the thing they just
+    // did, and the reader leaves out their own lines.
     const own = await listCatchUpSince(db, shop.id, trip.id, desk.id);
     expect(own.mark).not.toBeNull();
     expect(own.events).toEqual([]);
+  });
+
+  it("keeps a teammate's earlier line unseen when the reader acts after it (issue #3886)", async () => {
+    // Ben (the reader) had read up to here; Ana (the desk) then changes a
+    // diver's gear and a diver asks for a hand; then Ben checks in Carlos.
+    // Ben's own act must not carry his mark past what he has not read.
+    const { db, shop, reader: ben, desk: ana, trip, seat } = await catchUpFixture();
+    await markTripCaughtUp(db, { shopId: shop.id, tripId: trip.id, personId: ben.id });
+    const before = await listCatchUpSince(db, shop.id, trip.id, ben.id);
+    await recordLine(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      kind: "gear_changed",
+      bookingId: seat.id,
+      subjectPersonId: seat.personId,
+      actorPersonId: ana.id,
+    });
+    await askForAHand(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: seat.id,
+      personId: seat.personId,
+    });
+    await recordLine(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      kind: "arrival",
+      bookingId: seat.id,
+      subjectPersonId: seat.personId,
+      actorPersonId: ben.id,
+    });
+
+    const after = await listCatchUpSince(db, shop.id, trip.id, ben.id);
+    expect(after.mark?.seq).toBe(before.mark?.seq);
+    expect(after.events.map((event) => event.kind)).toEqual(["gear_changed", "help_request"]);
+  });
+
+  it("starts a mark at the first act of someone who never had one", async () => {
+    const { db, shop, reader, desk, trip, seat } = await catchUpFixture();
+    // Lines before the reader's first act are never "since" anything.
+    await recordLine(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      kind: "gear_changed",
+      bookingId: seat.id,
+      subjectPersonId: seat.personId,
+      actorPersonId: desk.id,
+    });
+    const own = await recordLine(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      kind: "arrival",
+      bookingId: seat.id,
+      subjectPersonId: seat.personId,
+      actorPersonId: reader.id,
+    });
+    await recordLine(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      kind: "plan_changed",
+      actorPersonId: desk.id,
+    });
+
+    const seen = await listCatchUpSince(db, shop.id, trip.id, reader.id);
+    expect(seen.mark?.seq).toBe(own?.seq);
+    expect(seen.events.map((event) => event.kind)).toEqual(["plan_changed"]);
   });
 
   it("carries a diver's act to every staffer, including the desk", async () => {
@@ -258,7 +324,7 @@ describe("listCatchUpSince", () => {
   });
 
   it("does not disclose a subject name belonging to another shop", async () => {
-    const { db, shop, reader, desk, trip } = await catchUpFixture();
+    const { db, shop, reader, desk, trip, seat } = await catchUpFixture();
     const [otherShop] = await db
       .insert(shops)
       .values({
@@ -281,6 +347,7 @@ describe("listCatchUpSince", () => {
       shopId: shop.id,
       tripId: trip.id,
       kind: "gear_changed",
+      bookingId: seat.id,
       subjectPersonId: subject.id,
       actorPersonId: desk.id,
     });
@@ -421,6 +488,42 @@ describe("listCatchUpSince, over the shared trail", () => {
     }
     const seen = await listCatchUpSince(db, shop.id, trip.id, reader.id);
     expect(seen.events.map((event) => event.kind)).toEqual(["seat_released"]);
+  });
+
+  it("drops every desk line about a seat once that booking is hard-deleted", async () => {
+    const { db, shop, reader, desk, trip, seat } = await catchUpFixture();
+    await markTripCaughtUp(db, { shopId: shop.id, tripId: trip.id, personId: reader.id });
+    for (const kind of ["gear_changed", "seat_released"] as const) {
+      await recordLine(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        kind,
+        bookingId: seat.id,
+        subjectPersonId: seat.personId,
+        actorPersonId: desk.id,
+      });
+    }
+    expect((await listCatchUpSince(db, shop.id, trip.id, reader.id)).events).toHaveLength(2);
+    // What a hard delete leaves behind: `activity_events.booking_id` is SET
+    // NULL, and the seeded seat has dependents that would refuse the delete.
+    await db
+      .update(activityEvents)
+      .set({ bookingId: null })
+      .where(eq(activityEvents.bookingId, seat.id));
+    expect((await listCatchUpSince(db, shop.id, trip.id, reader.id)).events).toEqual([]);
+  });
+
+  it("keeps a trip-wide desk line, which names no booking", async () => {
+    const { db, shop, reader, desk, trip } = await catchUpFixture();
+    await markTripCaughtUp(db, { shopId: shop.id, tripId: trip.id, personId: reader.id });
+    await recordLine(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      kind: "plan_changed",
+      actorPersonId: desk.id,
+    });
+    const seen = await listCatchUpSince(db, shop.id, trip.id, reader.id);
+    expect(seen.events.map((event) => event.kind)).toEqual(["plan_changed"]);
   });
 
   it("refuses a desk-only line addressed to divers", async () => {

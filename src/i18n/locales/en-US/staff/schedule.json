@@ -30,6 +30,7 @@
     "rehearsalRepeats": "A rehearsal is a single departure. Untick Repeat, or leave Rehearsal off.",
     "capacityAboveCertificate": "That capacity is above the passenger limit on the boat’s certificate.",
     "boatOutOfService": "That boat is out of service on that day. Pick another boat or another day.",
+    "seriesBoatOutOfService": "That boat is in the yard on {date}, a day this run would sail. End the run before then, or pick another boat.",
     "capacityAboveCertificateCount": "{count, plural, one {The boat’s certificate allows # passenger. Pick a capacity no higher.} other {The boat’s certificate allows # passengers. Pick a capacity no higher.}}",
     "weekCopied": "{count, plural, one {Copied # departure from last year. Add its crew from its page.} other {Copied # departures from last year. Add their crew from each one’s page.}}",
     "weekNotEmpty": "This week already has departures, so nothing was copied.",

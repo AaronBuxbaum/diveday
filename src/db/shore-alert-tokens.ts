@@ -5,13 +5,21 @@ import { log } from "@/lib/log";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { SHORE_ALERT_CONFIRMATION_TTL_MS } from "@/lib/shore-alert-contact";
 import { shopPath } from "@/lib/staff-notices";
+import {
+  issueCapability,
+  spendCapability,
+  verifyCapability,
+  withdrawUnspentCapabilities,
+} from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { sendNotification } from "./notifications";
 import { ownerLogins } from "./owner-logins";
 import { activityEvents, shopShoreAlertTokens, shops } from "./schema";
 
 /**
- * **The shore contact's two links** (H-20261014-stale-roll-call-recipients review; `shop_shore_alert_tokens`).
+ * **The shore contact's two links** (H-20261014-stale-roll-call-recipients
+ * review): `confirm` in `shop_shore_alert_tokens`, and `stop`, a
+ * `shore_alert_stop` capability (issue #3721).
  *
  * `confirm` proves the inbox is the shore contact's and that they agreed: the
  * link goes to the address the shop saved and nowhere else, and consuming it
@@ -201,19 +209,20 @@ export async function consumeShoreAlertConfirmation(
   }
 }
 
-/** Mints the stop link one alert carries. Never expires; returns the raw token for the URL. */
+/**
+ * Mints the stop link one alert carries: a `shore_alert_stop` capability bound
+ * to the address the alert goes to (issue #3721). Never expires; returns the
+ * raw token for the URL.
+ */
 export async function issueShoreAlertStopToken(
   db: DbExecutor,
   input: { shopId: string; email: string },
 ): Promise<string> {
-  const token = createBearerToken();
-  await db.insert(shopShoreAlertTokens).values({
+  return issueCapability(db, {
+    purpose: "shore_alert_stop",
     shopId: input.shopId,
-    purpose: "stop",
-    email: lower(input.email),
-    tokenHash: hashBearerToken(token),
+    subjectId: lower(input.email),
   });
-  return token;
 }
 
 export type ShoreAlertStopContext = {
@@ -235,34 +244,24 @@ export async function resolveShoreAlertStopToken(
   db: DbExecutor,
   token: string,
 ): Promise<ShoreAlertStopContext | null> {
-  const [row] = await db
-    .select({
-      shopId: shopShoreAlertTokens.shopId,
-      shopName: shops.name,
-      email: shopShoreAlertTokens.email,
-      current: shops.shoreAlertEmail,
-      usedAt: shopShoreAlertTokens.usedAt,
-    })
-    .from(shopShoreAlertTokens)
-    .innerJoin(shops, eq(shops.id, shopShoreAlertTokens.shopId))
-    .where(
-      and(
-        eq(shopShoreAlertTokens.tokenHash, hashBearerToken(token)),
-        eq(shopShoreAlertTokens.purpose, "stop"),
-      ),
-    )
+  const capability = await verifyCapability(db, { purpose: "shore_alert_stop", token });
+  if (!capability) return null;
+  const [shop] = await db
+    .select({ name: shops.name, current: shops.shoreAlertEmail })
+    .from(shops)
+    .where(eq(shops.id, capability.shopId))
     .limit(1);
-  if (!row) return null;
-  const named = row.current !== null && lower(row.current) === row.email;
+  if (!shop) return null;
+  const named = shop.current !== null && lower(shop.current) === capability.subjectId;
   return {
-    shopId: row.shopId,
-    shopName: row.shopName,
-    alreadyStopped: row.usedAt !== null || !named,
+    shopId: capability.shopId,
+    shopName: shop.name,
+    alreadyStopped: capability.usedAt !== null || !named,
   };
 }
 
 /**
- * The stop: claims the link (it works once), clears the shop's shore contact
+ * The stop: spends the link (it works once), clears the shop's shore contact
  * (all four columns, which the table's checks require to move together) while
  * the shop still names the address the link went to, and writes the log's
  * line with no actor, all in one transaction. Then it tells each owner by
@@ -275,19 +274,23 @@ export async function stopShoreAlertsByToken(
   input: { token: string; now?: Date; origin?: string | null; provider?: NotificationProvider },
 ): Promise<ShoreAlertStopContext | null> {
   const now = input.now ?? nowDate();
-  const tokenHash = hashBearerToken(input.token);
   const stopped = await db.transaction(async (tx) => {
-    const [claimed] = await tx
-      .update(shopShoreAlertTokens)
-      .set({ usedAt: now })
-      .where(
-        and(
-          eq(shopShoreAlertTokens.tokenHash, tokenHash),
-          eq(shopShoreAlertTokens.purpose, "stop"),
-          isNull(shopShoreAlertTokens.usedAt),
-        ),
-      )
-      .returning({ shopId: shopShoreAlertTokens.shopId, email: shopShoreAlertTokens.email });
+    // The shop row first, then the link: the same order a contact save and an
+    // erasure take, so a stop racing either never deadlocks (review B2).
+    const known = await verifyCapability(tx, { purpose: "shore_alert_stop", token: input.token });
+    if (!known) return null;
+    await tx
+      .select({ id: shops.id })
+      .from(shops)
+      .where(eq(shops.id, known.shopId))
+      .for("no key update");
+    // Spent even when the address has since changed: it then stops nothing,
+    // and the page says the contact is already off (review S2).
+    const claimed = await spendCapability(tx, {
+      purpose: "shore_alert_stop",
+      token: input.token,
+      now,
+    });
     if (!claimed) return null;
     const [cleared] = await tx
       .update(shops)
@@ -298,7 +301,10 @@ export async function stopShoreAlertsByToken(
         shoreAlertConfirmedAt: null,
       })
       .where(
-        and(eq(shops.id, claimed.shopId), sql`lower(${shops.shoreAlertEmail}) = ${claimed.email}`),
+        and(
+          eq(shops.id, claimed.shopId),
+          sql`lower(${shops.shoreAlertEmail}) = ${claimed.subjectId}`,
+        ),
       )
       .returning({
         id: shops.id,
@@ -308,6 +314,8 @@ export async function stopShoreAlertsByToken(
         defaultLocale: shops.defaultLocale,
       });
     if (!cleared) return null;
+    // Every other alert's link to that address goes with it (review S1).
+    await withdrawUnspentCapabilities(tx, { purpose: "shore_alert_stop", shopId: cleared.id });
     await tx.insert(activityEvents).values({
       shopId: cleared.id,
       actorPersonId: null,

@@ -2,10 +2,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { BrandStyle } from "@/components/BrandStyle";
 import { PrintButton } from "@/components/PrintButton";
+import { AutoPrint } from "@/components/paper/AutoPrint";
 import { buttonClass } from "@/components/ui/button";
 import type { BrandDisplayFontCode } from "@/lib/brand";
 import { PRINT_SHEET_BOX_MM, type PrintSheetPaper, printSheetPageRule } from "@/lib/print-sheets";
-import { AutoPrint } from "../../trips/[id]/_components/AutoPrint";
 
 /**
  * **The page a sheet is printed from** — ADR 20260908-one-hand, decision 6,

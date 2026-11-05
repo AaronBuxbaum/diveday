@@ -216,7 +216,8 @@ describe("ThreadSections", () => {
     render(<ThreadSections context={with_({ wantsNitrox: true, nitroxCardVerified: true })} />);
     const plan = screen.getByTestId("ready-nitrox-plan");
     expect(plan.textContent).toContain("32%: stay above 33\u00a0m / 110\u00a0ft");
-    expect(plan.textContent).toContain("36%: stay above 28\u00a0m / 94\u00a0ft");
+    // #3916: a verified card may cover EAN32 only, so 36% is never named.
+    expect(plan.textContent).not.toContain("36%");
     expect(plan.textContent).toContain(t("ready.nitroxPlan.notAFill"));
   });
 

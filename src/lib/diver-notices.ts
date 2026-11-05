@@ -574,6 +574,12 @@ export const NOTICE_KEYS: DiverNoticeMap = {
     field: "erase-confirm-name",
   },
   "erase-refused": { form: "erase", tone: "danger", key: "divers.notices.eraseRefused" },
+  // Issue #3805: a held incident report links the diver; the owner releases the hold first.
+  "erase-incident-hold": {
+    form: "erase",
+    tone: "danger",
+    key: "divers.notices.eraseIncidentHold",
+  },
   // Removing the last address removes its section, so success is page-level.
   "guardian-email-erased": {
     form: "page",

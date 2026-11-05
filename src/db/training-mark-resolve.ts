@@ -6,12 +6,13 @@ import type { ParticipantType } from "@/lib/participant-types";
 import {
   type CrewMember,
   type TrainingDiveCourse,
+  type TrainingDiveReach,
   type TrainingMarkEnrollment,
   type TrainingMarkSeat,
   type TrainingMarkState,
+  trainingDiveReach,
   trainingMarkProblem,
   trainingRoom,
-  trainingSiteAttributionKnown,
 } from "@/lib/training-mark";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
@@ -434,6 +435,33 @@ export async function teachesSessionAsRostered(
 }
 
 /**
+ * **How far a training mark lowers on this departure** (`trainingDiveReach`,
+ * issues #3839 and #3910), from its planned dives and the distinct dive sites
+ * it visits, exactly as readiness counts them.
+ */
+export async function trainingDiveReachOn(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<TrainingDiveReach | null> {
+  const [[planned], [visited]] = await queryAll(db, [
+    () =>
+      db
+        .select({ plannedDives: trips.plannedDives })
+        .from(trips)
+        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+        .limit(1),
+    () =>
+      db
+        .select({ sites: countDistinct(tripDives.diveSiteId) })
+        .from(tripDives)
+        .innerJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
+        .where(and(eq(tripDives.tripId, tripId), eq(diveSites.shopId, shopId))),
+  ]);
+  return trainingDiveReach(planned?.plannedDives, Number(visited?.sites ?? 0));
+}
+
+/**
  * **The courses a staff mark could make this departure answer to**, for the
  * sale (issue #2731). Readiness lowers a standing mark's level to its
  * course's minimum (`trainingDiveRequiredLevel`) while an instructor of the
@@ -450,25 +478,10 @@ export async function markableTrainingDives(
   personId: string,
   departure: { id: string; startsAt: Date },
 ): Promise<TrainingDiveCourse[]> {
-  // Readiness lowers a site's level only on one planned dive at one site
-  // (`trainingSiteAttributionKnown`), so the sale counts on a mark only there:
-  // a seat admission sold on a two-dive or two-site charter would be one
-  // readiness refuses at the rail (issue #3839).
-  const [[planned], [visited]] = await queryAll(db, [
-    () =>
-      db
-        .select({ plannedDives: trips.plannedDives })
-        .from(trips)
-        .where(and(eq(trips.id, departure.id), eq(trips.shopId, shopId), liveTrip()))
-        .limit(1),
-    () =>
-      db
-        .select({ sites: countDistinct(tripDives.diveSiteId) })
-        .from(tripDives)
-        .innerJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
-        .where(and(eq(tripDives.tripId, departure.id), eq(diveSites.shopId, shopId))),
-  ]);
-  if (!trainingSiteAttributionKnown(planned?.plannedDives, Number(visited?.sites ?? 0))) return [];
+  // Readiness lowers nothing where a mark has no reach (`trainingDiveReach`),
+  // so the sale counts on a mark only where it has one (issues #3839, #3910).
+  // How far it lowers there, the sale reads from the same function.
+  if ((await trainingDiveReachOn(db, shopId, departure.id)) === null) return [];
   const seats = await db
     .select({ id: bookings.id })
     .from(bookings)

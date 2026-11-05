@@ -186,3 +186,43 @@ describe("a retired refusal", () => {
     });
   });
 });
+
+/**
+ * **A changed release never reads "Signed" on the roster** (dock review of
+ * #3885): its own word, and the desk's next step is a fresh signature, or the
+ * link already out.
+ */
+describe("seatWaiverStanding: a release whose seal failed", () => {
+  const base = {
+    releaseLapse: null,
+    guardianMissing: false,
+    ownLapsed: false,
+    now: NOW,
+  } as const;
+
+  it("reads the seat's own changed release as seal_failed, with a send", () => {
+    const changed = record({ integrityValid: false });
+    expect(seatWaiverStanding({ ...base, effective: changed, own: changed })).toEqual({
+      standing: "seal_failed",
+      control: "seal_failed",
+      refusalRetired: false,
+    });
+  });
+
+  it("reads seal_failed when another release of the person changed", () => {
+    const clean = record({ integrityValid: true });
+    expect(
+      seatWaiverStanding({ ...base, effective: clean, own: clean, sealFailed: true }).standing,
+    ).toBe("seal_failed");
+  });
+
+  it("points the next step at the fresh link once the desk sent it", () => {
+    const changed = record({ integrityValid: false });
+    const sent = record({ id: "record-2", status: "pending", signedAt: null, completedAt: null });
+    expect(seatWaiverStanding({ ...base, effective: changed, own: sent })).toEqual({
+      standing: "seal_failed",
+      control: "awaiting_signature",
+      refusalRetired: false,
+    });
+  });
+});

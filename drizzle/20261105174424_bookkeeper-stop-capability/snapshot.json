@@ -1,0 +1,147 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2794d730-493c-4210-88cd-7c56842afe11",
+  "prevIds": [
+    "171c9d08-dad8-4d1b-bd09-f9adbbb1fadb"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "capability_purpose"
+      ],
+      "writes": [
+        "s|enum|public.capability_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "shops",
+        "shops_bookkeeper_stop_token_hash_unique"
+      ],
+      "writes": [
+        "s|idx|public.shops_bookkeeper_stop_token_hash_unique",
+        "n|idx|public.shops_bookkeeper_stop_token_hash_unique",
+        "e|idx|public.shops_bookkeeper_stop_token_hash_unique",
+        "n|rel|public.shops_bookkeeper_stop_token_hash_unique"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "e|col|public.shops.bookkeeper_stop_token_hash"
+      ],
+      "sharedWrites": [
+        "e|uniqueness|public.shops.bookkeeper_stop_token_hash"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "bookkeeper_stop_token_hash"
+      ],
+      "writes": [
+        "s|col|public.shops.bookkeeper_stop_token_hash",
+        "n|col|public.shops.bookkeeper_stop_token_hash",
+        "e|col|public.shops.bookkeeper_stop_token_hash"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_subject_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.purpose",
+        "n|col|public.capabilities.interest_id",
+        "n|col|public.capabilities.person_id",
+        "n|col|public.capabilities.sent_to",
+        "e|col|public.capabilities.purpose",
+        "e|col|public.capabilities.interest_id",
+        "e|col|public.capabilities.person_id",
+        "e|col|public.capabilities.sent_to"
+      ],
+      "sqlHash": "b867675381d83b10"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_used_only_when_spent"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.used_at",
+        "n|col|public.capabilities.purpose",
+        "e|col|public.capabilities.used_at",
+        "e|col|public.capabilities.purpose"
+      ],
+      "sqlHash": "16096c5e1f754e3a"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shops\",\"bookkeeper_stop_token_hash\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"shops_bookkeeper_stop_token_hash_unique\"]"
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"capability_purpose\"]",
+      "set": {
+        "values": [
+          "interest_unsubscribe",
+          "courtesy_email_unsubscribe",
+          "weekly_digest_unsubscribe",
+          "shore_alert_stop",
+          "bookkeeper_stop"
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_subject_by_purpose\"]",
+      "set": {
+        "value": "(\"purpose\"::text in ('interest_unsubscribe') and \"interest_id\" is not null and \"person_id\" is null and \"sent_to\" is null)\n        or (\"purpose\"::text in ('courtesy_email_unsubscribe', 'weekly_digest_unsubscribe') and \"person_id\" is not null and \"interest_id\" is null and \"sent_to\" is null)\n        or (\"purpose\"::text in ('shore_alert_stop', 'bookkeeper_stop') and \"sent_to\" is not null and \"sent_to\" = lower(\"sent_to\") and \"person_id\" is null and \"interest_id\" is null)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_used_only_when_spent\"]",
+      "set": {
+        "value": "\"used_at\" is null or \"purpose\"::text in ('shore_alert_stop', 'bookkeeper_stop')"
+      }
+    }
+  ]
+}

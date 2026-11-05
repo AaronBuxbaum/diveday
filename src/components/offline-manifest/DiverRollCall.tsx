@@ -4,31 +4,12 @@ import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
-import {
-  medicalHoldChip,
-  medicalWarningChips,
-  ridingOnlyMedicalSentences,
-  rollCallLabelText,
-  trainingDiveLines,
-} from "@/i18n/manifest-labels";
+import { ridingOnlyMedicalSentences } from "@/i18n/manifest-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";
-import { formatTime } from "@/lib/format";
-import { isHeldSeat } from "@/lib/held-seat";
-import {
-  type RollCallRecordedTone,
-  rollCallLabel,
-  rollCallRecordedTone,
-  rollCallRowState,
-} from "@/lib/manifests";
-import {
-  latestOfflineArrival,
-  offlineArrivalEvents,
-  offlineTrainingReadinessStale,
-} from "@/lib/offline-manifests";
-import { joinedDiving, leftDiving } from "@/lib/participant-types";
-import { runningLateOnManifest } from "@/lib/running-late";
+import type { RollCallRecordedTone } from "@/lib/manifests";
 import type { OfflineTripControls } from "./controls";
+import { offlineDiverRowFacts } from "./diver-row-facts";
 import { OfflineRollCallException } from "./RollCallException";
 import {
   BUDDY_NAMES_WRAP,
@@ -37,7 +18,6 @@ import {
   offlineRollCallRowId,
   reTap,
 } from "./shared";
-import { offlineDiverStatusLine } from "./status-line";
 import type { OfflineTripView } from "./trip-view";
 
 /**
@@ -92,68 +72,19 @@ function OfflineDiverRow({
 }) {
   const { checkpoint, isDeparture, expired } = view;
   const { t, locale, busyBooking, record } = controls;
-  // The one answer the head count above this row was built from
-  // (`offlineTripView`); a second call here could drift from it.
-  const state = view.localStates[index];
-  const staleTrainingReadiness = offlineTrainingReadinessStale(view.envelope.snapshot, diver);
-  const ready = diver.readiness.status === "ready" && !staleTrainingReadiness;
-  // The live manifest's own derivation, not a second copy of it
-  // (`src/lib/manifests.ts`). The copy this replaces got two things
-  // wrong that only showed on the water: it keyed the *boarded* fill
-  // off "any result exists", so a diver recorded **not boarded** at
-  // the dock rendered in the aboard colour, and it painted a diver
-  // nobody had called yet amber with a ring — the two marks reserved
-  // for "left ashore" and "did not come back".
-  const rowState = rollCallRowState(checkpoint, state);
-  const missing = rowState.notBackAboard;
-  const recordedTone = rollCallRecordedTone(rowState);
-  // The live page's rule for the fill, from the one predicate both read
-  // (`blockedAtRail`, issue #2286): at the dock a diver readiness has not
-  // cleared is blocked, and so is one after a dive with no earlier boarding;
-  // aboard over that block keeps the blocked tone rather than the boarded green.
-  const blockedAtDock =
-    (isDeparture && staleTrainingReadiness) || (view.blockedAtRail[index] ?? !ready);
-  // Same condition the live page passes as `showBoardControl`: divers
-  // only board at departure once readiness clears them, so a blocked
-  // diver's circle is a drawn held ring with no tap.
-  const showBoardControl = ready || !isDeparture;
-  // The live roll call's four medical warnings, dates only: two riding-only
-  // (H-20261009-rider-snorkeler-medical), an earlier refusal (H-20261007-after-physician-says-no) and a referral still open (#2163). A
-  // held seat never carries them, and the facts block below says why instead.
-  const withheld = diver.identityWithheld || isHeldSeat(diver);
-  const medicalWarnings = withheld ? undefined : diver.medicalWarnings;
-  // The live roll call's capsule for the same facts, strongest first: riding
-  // only (H-20261009-rider-snorkeler-medical), then an earlier refusal (H-20261007-after-physician-says-no), then an open referral.
-  // Ahead of them, after a dive, the live row's medical-hold capsule (#2380):
-  // a diver boarded over a physician's "no" or an open review, read through
-  // the one predicate both surfaces share (`medicalHoldAfterDive`).
-  const medicalHold = withheld ? null : (view.medicalHold[index] ?? null);
-  const medicalChip = medicalHold
-    ? medicalHoldChip(t, medicalHold)
-    : medicalWarnings
-      ? medicalWarningChips(t, medicalWarnings)[0]
-      : undefined;
+  const {
+    state,
+    rowState,
+    missing,
+    recordedTone,
+    blockedAtDock,
+    showBoardControl,
+    withheld,
+    medicalWarnings,
+    training,
+    statusLine,
+  } = offlineDiverRowFacts(diver, index, view, controls);
   const warningDate = (day: string) => formatCalendarDate(day, locale);
-  const training = trainingDiveLines(t, diver);
-  // The diver's own "running late" (#2319), on the live page's terms: a dock
-  // row not boarded yet, with nothing from the counter on it — this device's
-  // queued arrival included, which is the counter's newest word here.
-  const arrived =
-    latestOfflineArrival(
-      view.envelope.snapshot,
-      diver.bookingId,
-      offlineArrivalEvents(view.envelope),
-    )?.state === "arrived";
-  const lateAt = runningLateOnManifest({
-    checkpoint,
-    runningLateAt: diver.runningLateAt ? new Date(diver.runningLateAt) : null,
-    rollCallState: state?.state,
-    checkedIn: arrived,
-    notHere: diver.notHere,
-  });
-  const stateWord = `${rollCallLabelText(t, rollCallLabel(checkpoint, state))}${
-    state?.pending ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}` : ""
-  }`;
   return (
     <li
       key={diver.bookingId}
@@ -220,32 +151,7 @@ function OfflineDiverRow({
               missing || blockedAtDock ? "text-danger" : "text-ink"
             }`}
           >
-            {offlineDiverStatusLine({
-              stateWord,
-              blockerTexts: staleTrainingReadiness
-                ? [
-                    t("manifest.trainingReadinessStale"),
-                    ...diver.readiness.blockers.map((blocker) => blocker.text),
-                  ]
-                : ready
-                  ? null
-                  : diver.readiness.blockers.map((blocker) => blocker.text),
-              blockedWord: t("shared.offlineManifest.single.blockedBadge"),
-              notHereWord: diver.notHere
-                ? diver.turnedAway
-                  ? t("shared.offlineManifest.single.turnedAwayBadge")
-                  : t("shared.offlineManifest.single.notHereBadge")
-                : null,
-              medicalWord: medicalChip ?? null,
-              medicalAlertWord:
-                diver.medicalAlert && !withheld ? t("manifest.medicalAlertChip") : null,
-              participantWord: participantWord(diver, t),
-              lateWord: lateAt
-                ? t("manifest.runningLate", {
-                    time: formatTime(lateAt, locale, view.envelope.snapshot.shop.timezone),
-                  })
-                : null,
-            })}
+            {statusLine}
           </p>
           {!withheld && diver.safetyAdvisoryText ? (
             <p className="mt-2 text-base text-warning-strong">{diver.safetyAdvisoryText}</p>
@@ -474,25 +380,6 @@ function OfflineDiverRow({
       )}
     </li>
   );
-}
-
-/**
- * Snorkeler or rider, as on the live roll call (ADR 20261007-participant-types):
- * every row is still called; this only says who the body is.
- */
-function participantWord(
-  diver: OfflineTripView["manifest"]["divers"][number],
-  t: OfflineTripControls["t"],
-): string | null {
-  const left = leftDiving(diver);
-  if (left === "snorkeler") return t("manifest.participantType.bookedAsDiver.snorkeler");
-  if (left === "rider") return t("manifest.participantType.bookedAsDiver.rider");
-  const joined = joinedDiving(diver);
-  if (joined === "snorkeler") return t("manifest.participantType.bookedAsNonDiver.snorkeler");
-  if (joined === "rider") return t("manifest.participantType.bookedAsNonDiver.rider");
-  if (diver.participantType === "snorkeler") return t("manifest.participantType.snorkeler");
-  if (diver.participantType === "rider") return t("manifest.participantType.rider");
-  return null;
 }
 
 /**

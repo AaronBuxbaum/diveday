@@ -26,9 +26,9 @@ import {
   unionRequirements,
 } from "./requirement";
 import {
+  markedTrainingRequirement,
   type TrainingDiveCourse,
-  trainingDiveSiteRequirement,
-  tripAndSiteSides,
+  type TrainingDiveReach,
 } from "./training-mark";
 import { type ReleaseLapse, type WaiverStateFields, waiverStanding } from "./waivers";
 
@@ -154,6 +154,14 @@ export type ReadinessBlockerCode =
   | "waiver_expired"
   | "medical_review"
   | "medical_not_cleared"
+  /**
+   * The release on file no longer matches the seal it was signed under: the
+   * nightly check wrote `integrity_valid = false` (issue #3885). A medical
+   * "yes" changed to "no" after signing still reads as a clean signature, so
+   * the verdict is what holds the diver. The fix is staff investigating, then
+   * the diver signing again; nobody aboard can clear it.
+   */
+  | "waiver_seal_failed"
   /** A minor signed alone; a parent or guardian has not (ADR 20260907-guardian-co-signature). */
   | "guardian_signature_missing"
   /**
@@ -254,6 +262,8 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   // usable, and folding it in keeps a diver from appearing under two headings
   // for one fact.
   medical_not_cleared: "waiver",
+  // The release itself is what cannot be relied on.
+  waiver_seal_failed: "waiver",
   // The release is what is not usable: a minor's signature with no guardian's
   // beside it is not a signed release, and the fix is the waiver's own (a
   // fresh link that asks for both).
@@ -343,6 +353,9 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   waiver_runs_out: "unknown",
   waiver_pending: "unknown",
   waiver_expired: "unknown",
+  // What the release says is not what the diver signed: no medical declaration
+  // the boat can rely on, and nobody aboard can restore it.
+  waiver_seal_failed: "unknown",
   // A minor's release with no guardian on it is not a release the shop can
   // rely on: as `unknown` as an unsigned one, and nobody aboard can supply
   // the missing signature.
@@ -554,7 +567,19 @@ export type ReadinessInput = {
    * to the course's minimum where the course certifies it. The departure's
    * own level, specialty, and nitrox requirements always stand.
    */
+  /**
+   * Any release this person signed at the shop failed its seal check and no
+   * clean signature since has replaced it (`personSealFailed`, issue
+   * #3885, attacker review B1), whichever release this seat reads.
+   */
+  waiverSealFailed?: boolean;
   trainingDive?: TrainingDiveCourse | null;
+  /**
+   * How far `trainingDive` lowers (`trainingDiveReach`, issue #3910): `site`
+   * on one dive at one site, `default` on a charter of two or more dives,
+   * where only a default level nobody chose is lowered. `site` when omitted.
+   */
+  trainingDiveReach?: TrainingDiveReach;
   now?: Date;
 };
 
@@ -1181,6 +1206,16 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     blockers.push({ code: "medical_not_cleared" });
   }
 
+  // A release whose seal failed its last check (issue #3885) was changed
+  // after the diver signed it, so neither its signature nor its medical
+  // answers can be relied on. Like the medical hold above it holds on every
+  // departure, the ones that ask no waiver and the ones nobody configured,
+  // because the seal covers the medical answers. A never-sealed release
+  // (`null`) is unchanged: the verdict, not its absence, is the signal.
+  if (input.waiver?.integrityValid === false || input.waiverSealFailed === true) {
+    blockers.push({ code: "waiver_seal_failed" });
+  }
+
   if (!input.requirement) {
     blockers.push({ code: "requirements_not_configured" });
     return { status: "blocked", blockers };
@@ -1254,11 +1289,16 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // a default level nobody chose counts as the site's (`tripAndSiteSides`,
   // issue #3872). A supplied training context must already have passed its own
   // safety gates.
-  const sides = tripAndSiteSides(input.requirement, input.siteRequirement);
-  const effectiveSite = trainingDiveSiteRequirement(sides.site, input.trainingDive);
+  // On a charter of two or more dives, only the default is lowered
+  // (`trainingDiveReach`, issue #3910).
   // Riders and snorkelers have no dive for a certification to qualify.
   const effective = isDiver(input.participantType)
-    ? unionRequirements(sides.trip, effectiveSite)
+    ? markedTrainingRequirement(
+        input.requirement,
+        input.siteRequirement,
+        input.trainingDive,
+        input.trainingDiveReach ?? "site",
+      )
     : NO_REQUIREMENT;
 
   blockers.push(

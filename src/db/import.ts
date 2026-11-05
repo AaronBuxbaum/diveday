@@ -48,6 +48,7 @@ import { isCompletedWaiverCurrent, isUnclearedReferral } from "@/lib/waivers";
 import { readActiveStaffRoles } from "./authz";
 import { specialtyCardSpecialty } from "./card-columns";
 import type { AppDb } from "./client";
+import { revokeLinksSentToOldContact } from "./contact-change";
 import { createPerson } from "./people";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
@@ -86,6 +87,12 @@ export type ImportSummary = {
   waiversAdded: number;
   /** The diver already had a current signed/medical-review record on file, untouched. */
   waiversSkippedExisting: number;
+  /**
+   * The diver is on a medical hold (a live referral or a retired physician refusal), so no waiver
+   * was imported. Never folded into `waiversSkippedExisting`: the dock holds this diver as
+   * Blocked until a physician clears them, which "a current waiver" would contradict.
+   */
+  waiversSkippedMedicalHold: number;
   /** The shop has no waiver template configured, so there was nothing to snapshot against. */
   waiversSkippedNoTemplate: number;
   /** A waiver_document_url / medical_document_url did not fetch/store and was left off the record. */
@@ -276,6 +283,7 @@ export async function commitContactImport(
     nitroxSkippedExisting: 0,
     waiversAdded: 0,
     waiversSkippedExisting: 0,
+    waiversSkippedMedicalHold: 0,
     waiversSkippedNoTemplate: 0,
     waiverDocumentsFailed: 0,
     receiptDocumentsFailed: 0,
@@ -473,8 +481,16 @@ export async function commitContactImport(
 
       // Non-destructive update: identity name refreshes, contact fields only
       // fill in where the import actually carries a value.
-      const applyUpdate = (id: string) =>
-        tx
+      const applyUpdate = async (id: string) => {
+        const [before] = phone
+          ? await tx
+              .select({ phone: people.phone })
+              .from(people)
+              // diveday:allow-deleted-people: the row this update is about to write, by id; its phone before the write, whatever its state.
+              .where(and(eq(people.id, id), eq(people.shopId, shopId)))
+              .limit(1)
+          : [];
+        await tx
           .update(people)
           .set({
             fullName: row.fullName,
@@ -497,6 +513,12 @@ export async function commitContactImport(
             ...(row.diveInsurance ? { diveInsurance: row.diveInsurance } : {}),
           })
           .where(and(eq(people.id, id), eq(people.shopId, shopId)));
+        // A file that changes a diver's phone takes the links texted to the
+        // old number with it, as a staff edit does (#3902).
+        if (before && before.phone !== phone) {
+          await revokeLinksSentToOldContact(tx, { shopId, personId: id, now });
+        }
+      };
 
       if (personId) {
         await applyUpdate(personId);
@@ -893,14 +915,15 @@ async function writeEvidence(
         )
         .then((rows) => rows.map((joined) => joined.record));
       const liveRecords = existingRecords.filter((r) => !r.supersededAt);
-      const hasActiveHold =
-        liveRecords.some((r) => r.status === "medical_review") ||
-        existingRecords.some(isUnclearedReferral);
+      // A cleared referral keeps its status but is not a hold (glossary "Medical hold").
+      const hasActiveHold = existingRecords.some(isUnclearedReferral);
       const hasCurrentCompleted = liveRecords.some(
         (r) =>
           r.status === "completed" && isCompletedWaiverCurrent(r, template.materialGeneration, now),
       );
-      if (hasActiveHold || hasCurrentCompleted) {
+      if (hasActiveHold) {
+        summary.waiversSkippedMedicalHold += 1;
+      } else if (hasCurrentCompleted) {
         summary.waiversSkippedExisting += 1;
       } else {
         const signedAt = row.waiver.signedAt ? calendarDateToUtcMidnight(row.waiver.signedAt) : now;

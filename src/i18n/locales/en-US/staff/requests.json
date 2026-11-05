@@ -12,6 +12,8 @@
   "flexible": "Flexible",
   "charter": "Whole boat",
   "charterQuoted": "Quoted {amount}",
+  "charterQuotedInBrief": "Quoted {amount} for the whole boat. The price is set separately.",
+  "replyUnsettled": "Reply may not have been sent",
   "charterAsk": "Wants the whole boat: {interest}. This departure will be private.",
   "flexibleAround": "Asked for {date}, and can move a few days",
   "alternateOf": "First choice {date}",

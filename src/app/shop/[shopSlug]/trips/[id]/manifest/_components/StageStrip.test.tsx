@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { StageStrip, type StageStripCopy } from "./StageStrip";
 
@@ -195,5 +195,81 @@ describe("StageStrip on the way home with a roll call open", () => {
   it("holds the line until the boat's word says the diving is over", () => {
     render(<StageStrip action={noop} copy={open} current="surface" />);
     expect(screen.queryByText(/not marked/)).toBeNull();
+  });
+});
+
+/**
+ * **Home with the count open asks first, and never refuses** (issue #3896,
+ * Aaron 2026-11-05). The question names the count; confirming records Home
+ * all the same, and "Not yet" leaves the boat's word where it was.
+ */
+describe("StageStrip: Home with the last count open", () => {
+  const confirming: StageStripCopy = {
+    ...copy,
+    homeConfirm: {
+      question: "2 people not marked after dive 1. Mark the boat home anyway?",
+      confirmLabel: "Mark home anyway",
+      backLabel: "Not yet",
+    },
+  };
+
+  function recording() {
+    const said: string[] = [];
+    const action = async (_prev: unknown, formData: FormData) => {
+      said.push(String(formData.get("stage")));
+      return { ok: true, rollCallOpen: true } as const;
+    };
+    return { said, action };
+  }
+
+  it("asks before Home, naming the count, and records nothing on the first tap", async () => {
+    const { said, action } = recording();
+    render(<StageStrip action={action} copy={confirming} current="heading_in" />);
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "2 people not marked after dive 1. Mark the boat home anyway?",
+    );
+    await act(async () => {});
+    expect(said).toEqual([]);
+  });
+
+  it("records Home when the crew confirms: the crew's word stays final", async () => {
+    const { said, action } = recording();
+    render(<StageStrip action={action} copy={confirming} current="heading_in" />);
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Mark home anyway" }));
+    });
+    await waitFor(() => expect(said).toEqual(["home"]));
+  });
+
+  it("records nothing when the crew says not yet", async () => {
+    const { said, action } = recording();
+    render(<StageStrip action={action} copy={confirming} current="heading_in" />);
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    fireEvent.click(screen.getByRole("button", { name: "Not yet" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    await act(async () => {});
+    expect(said).toEqual([]);
+  });
+
+  it("taps Home straight through when everyone is counted", async () => {
+    const { said, action } = recording();
+    render(<StageStrip action={action} copy={copy} current="heading_in" />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    });
+    await waitFor(() => expect(said).toEqual(["home"]));
+  });
+
+  it("says what the Home tap recorded beside the pressed word", () => {
+    render(
+      <StageStrip
+        action={noop}
+        copy={{ ...copy, homeNotCounted: "Home with 2 not counted" }}
+        current="home"
+      />,
+    );
+    expect(screen.getByText("Home with 2 not counted")).toBeInTheDocument();
   });
 });

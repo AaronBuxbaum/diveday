@@ -1,10 +1,10 @@
 import { and, asc, eq, gt, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { inTrainingBefore } from "@/lib/in-training";
 import type { NextDiveCandidate, NextDivePick } from "@/lib/next-dive";
 import { pickNextDive } from "@/lib/next-dive";
 import { decideTripAdmission } from "@/lib/trip-admission";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";

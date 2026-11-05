@@ -9,7 +9,7 @@ import { schemaTableNames } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
 import { canPersonExportShopData, loadShopExportBundleInput } from "./export";
-import { EXCLUDED_TABLES } from "./export-table-classification.test-support";
+import { EXCLUDED_TABLES, GLOBAL_SEQ_TABLES } from "./export-table-classification.test-support";
 import { EXPECTED_FILES, EXPORTED_TABLES, ROLL_CALL_SPLIT } from "./export-test-fixtures";
 import * as schema from "./schema";
 import {
@@ -44,7 +44,7 @@ const FOLDED_TABLES = [
  */
 const SHOP_SCOPED = "shop_id";
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
-  roll_call_events: ROLL_CALL_SPLIT,
+  roll_call_events: [...ROLL_CALL_SPLIT, "seq"], // seq: as GLOBAL_SEQ_TABLES
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: [
     "jurisdiction",
@@ -72,7 +72,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "bookkeeper_confirmed_at",
     "bookkeeper_confirm_token_hash",
     "bookkeeper_confirm_expires_at",
-    "bookkeeper_stop_token_hash",
     "bookkeeper_bounced_at",
     // #2450 name review flags and the offline erasure cutoff are DiveDay-only shop state.
     "name_flagged_at",
@@ -115,6 +114,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "is_rehearsal",
   ],
   trip_series_skips: ["id", "shop_id"],
+  ...Object.fromEntries(GLOBAL_SEQ_TABLES.map((table) => [table, ["seq"]])),
   trip_dives: [],
   trip_assignments: [],
   bookings: [
@@ -140,15 +140,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
   buddy_team_members: ["shop_id", "id"],
+  waiver_seal_acknowledgements: ["shop_id", "state_digest"], // keyed with this installation's seal key
   waiver_records: [
     "shop_id",
     "template_body", // the frozen copy; waiver_templates.csv carries the text
-    "token_hash", // bearer credential — never exported
-    // The openable copy of that same credential, kept only while the link is live
-    // (ADR 20260820-waiver-links-are-reused-not-reissued). Stronger than the hash: it
-    // *can* be opened, and an export bundle leaves DiveDay's custody entirely — to a
-    // shop's own S3, a laptop, an email attachment. A destination issues its own links.
-    "token_sealed",
+    "token_hash", // bearer credential — never exported; a destination issues its own links
     "draft_signer_name", // unsubmitted draft state, not a signed record
     "draft_acknowledged",
     "draft_medical_answers",
@@ -163,7 +159,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "delivery_error",
     // The physician's evaluation itself (issue #1252), and the diver's own copy before an answer
     // (`diver_medical_form_url`, issue #2797). The *facts* are exported; the documents are not, for
-    // the reason `token_sealed` is not.
+    // the reason `token_hash` is not: a bundle leaves DiveDay's custody entirely.
     //
     // **Revisited when the read path landed** (issue #1283), and unchanged. The app can now fetch
     // these bytes back — through one permission-gated route, signed as the uploader credential —
@@ -180,7 +176,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
   // money actually moved, and that is the one a reader replays.
-  booking_payment_events: ["shop_id", "created_at"],
+  booking_payment_events: ["shop_id", "created_at", "seq"], // seq: as GLOBAL_SEQ_TABLES
   booking_checkouts: [
     "shop_id",
     "deal_id", // written as promo_code_id or trip_promo_id by its deal's kind (#2720)

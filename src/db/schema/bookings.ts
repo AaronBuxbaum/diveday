@@ -830,13 +830,6 @@ export const bookingCapabilities = pgTable(
     /** Per-shop clear generation captured when the diver opted in. */
     returningDeviceGeneration: text("returning_device_generation"),
     /**
-     * **Retired (#2711); nothing reads or writes it.** Kept declared for one
-     * release because the previous one still names it in whole-row selects
-     * (the destructive-migration guard); the next release drops the
-     * declaration and the column together.
-     */
-    tokenHash: text("token_hash").unique(),
-    /**
      * Which key signs this row's link (`src/lib/booking-link-token.ts`): 1 is
      * derived from `AUTH_SECRET`, 2 and up from `BOOKING_LINK_SECRET`. A token
      * whose version differs from its row's is refused. Null only on a
@@ -846,8 +839,6 @@ export const bookingCapabilities = pgTable(
     issuedAt: appNowTimestamp("issued_at").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    /** **Retired (#2711)** with `token_hash`, for the same reason; nothing reads or writes it. */
-    tokenSealed: text("token_sealed"),
     /**
      * True when the token left only inside a message to the contact on file
      * (an email or a text), never handed to the browser that asked for it.

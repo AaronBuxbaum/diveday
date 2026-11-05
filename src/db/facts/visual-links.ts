@@ -11,7 +11,7 @@ import { ownerLogins } from "@/db/owner-logins";
 import { userAccounts, weeklyDigestSends } from "@/db/schema";
 import { setShopShoreAlertContact } from "@/db/shops";
 import { issueShoreAlertConfirmation, issueShoreAlertStopToken } from "@/db/shore-alert-tokens";
-import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
+import { issueWeeklyDigestUnsubscribeToken } from "@/db/weekly-digest";
 import { BOOKKEEPER_CONFIRMATION_TTL_MS, bookkeeperMonthOnSet } from "@/lib/bookkeeper";
 import { addMonths, monthKey, parseMonthKey } from "@/lib/calendar";
 import { SHORE_ALERT_CONFIRMATION_TTL_MS } from "@/lib/shore-alert-contact";
@@ -50,22 +50,24 @@ export async function mintAVisualLink(
   let token: string;
 
   if (family === "digest") {
-    // The sender has no separate token issuer: its unsubscribe capability
-    // belongs to this exact send claim. Seed that same persisted shape,
-    // without sending mail or depending on whether this week's facts are quiet.
-    token = createBearerToken();
+    // The sender's own shape: this week's claim, then the opt-out link the
+    // email carries, without sending mail or depending on whether this
+    // week's facts are quiet.
     const [claim] = await db
       .insert(weeklyDigestSends)
       .values({
         shopId: shop.id,
         personId: owner.personId,
         weekOf: digestWeeks(now, shop.timezone).weekOf,
-        unsubscribeTokenHash: hashBearerToken(token),
         status: "sent",
       })
       .onConflictDoNothing()
       .returning({ id: weeklyDigestSends.id });
     if (!claim) throw new FactRefused("digest_already_seeded");
+    token = await issueWeeklyDigestUnsubscribeToken(db, {
+      shopId: shop.id,
+      personId: owner.personId,
+    });
     await db
       .update(userAccounts)
       .set({ weeklyDigest: true })

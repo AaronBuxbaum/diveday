@@ -36,9 +36,7 @@ export type BuildBackupBundleInput = {
   /**
    * The staffer who pressed "Test backup". The bundle hands out every release's
    * medical answers, so each diver's trail gets the same line the download
-   * route writes (issue #2618), before anything is assembled. The scheduled and
-   * platform runs have no staffer and write none: they are system acts
-   * (follow-up filed), so an absent reader writes no line.
+   * route writes (issue #2618), before anything is assembled.
    */
   readerPersonId?: string;
   /** Used for the photo fetches, so tests own all I/O. */
@@ -46,7 +44,17 @@ export type BuildBackupBundleInput = {
 };
 
 export type BuildBackupBundleResult =
-  | { ok: true; zip: Uint8Array; shopSlug: string }
+  | {
+      ok: true;
+      zip: Uint8Array;
+      shopSlug: string;
+      /**
+       * Whose medical answers the bundle carries. A scheduled run writes its
+       * system lines from these once the upload has landed (#3871): the line
+       * says the answers were sent, so it is written only when they were.
+       */
+      medicalAnswerPersonIds: readonly string[];
+    }
   /** The shop row is gone — deleted between the caller's listing and here. */
   | { ok: false; reason: "shop_missing" };
 
@@ -93,5 +101,10 @@ export async function buildBackupBundle(
     ...photos.map((photo) => ({ name: photo.path, content: photo.bytes })),
   ];
 
-  return { ok: true, zip: zipExportBundle(files), shopSlug: bundleInput.shopSlug };
+  return {
+    ok: true,
+    zip: zipExportBundle(files),
+    shopSlug: bundleInput.shopSlug,
+    medicalAnswerPersonIds: bundleInput.medicalAnswerPersonIds,
+  };
 }

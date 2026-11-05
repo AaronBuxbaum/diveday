@@ -156,6 +156,9 @@ export function RequestLedgerRow({
           whole: true,
         }
       : null,
+    // A reply that was claimed and never settled: the request reads replied, and
+    // nothing says the diver may not have it (issue #3892).
+    request.replyUnsettled ? { text: t("requests.replyUnsettled"), whole: false } : null,
     request.partySize
       ? { text: t("requests.divers", { count: request.partySize }), whole: true }
       : null,

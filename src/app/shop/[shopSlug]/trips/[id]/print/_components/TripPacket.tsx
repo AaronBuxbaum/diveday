@@ -234,6 +234,7 @@ async function composeTripPacket({
               boatPaper={<PrintedBoatPaper {...manifest.boatPaper} />}
               stage={manifest.stage}
               dockDesk={manifest.dockDesk}
+              printedDeckCount={manifest.printedDeckCount}
               t={t}
             />
           </section>

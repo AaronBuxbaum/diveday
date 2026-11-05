@@ -24,6 +24,7 @@ import { shopWaiverStanding, waiverClockInstant } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { friendsBroughtBy } from "./buddy-referrals";
 import type { AppDb, DbExecutor } from "./client";
+import { contactChanged, revokeLinksSentToOldContact } from "./contact-change";
 import { diveDay, numberedDiveDay } from "./dive-days";
 import { releaseHelpRequestsOfPerson } from "./help-requests";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
@@ -221,7 +222,7 @@ export async function editDiver(
       );
       // Locked, so the date this reads is the one the write replaces.
       const [current] = await tx
-        .select({ dateOfBirth: people.dateOfBirth })
+        .select({ dateOfBirth: people.dateOfBirth, email: people.email, phone: people.phone })
         .from(people)
         .where(and(editable, livePerson()))
         .limit(1)
@@ -283,6 +284,10 @@ export async function editDiver(
         .where(and(editable, livePerson()))
         .returning();
       if (!person) return { ok: false, reason: "not_found" };
+      // A corrected address takes the links sent to the old one with it (#3902).
+      if (contactChanged(current, person)) {
+        await revokeLinksSentToOldContact(tx, { shopId: input.shopId, personId: input.personId });
+      }
       const adultAnswerUnused =
         Boolean(input.adultAttestedByPersonId) && !clearing && person.dateOfBirth !== null;
       return { ok: true, person, adultAnswerUnused };

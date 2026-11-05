@@ -478,12 +478,6 @@ async function otherShopId(db: Awaited<ReturnType<typeof waiverContext>>["db"]) 
 
 /** A copy of a release's columns for a second row, without its identity or seal. */
 function withoutIdentity(record: typeof waiverRecords.$inferSelect) {
-  const {
-    id: _id,
-    tokenSealed: _sealed,
-    integrityHash: _integrity,
-    integrityVersion: _version,
-    ...rest
-  } = record;
+  const { id: _id, integrityHash: _integrity, integrityVersion: _version, ...rest } = record;
   return { ...rest, tokenHash: `stranger-${record.id}` };
 }

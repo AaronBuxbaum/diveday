@@ -79,13 +79,14 @@ export default async function EditDiveSitePage({
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
   const { notice, error, undo } = await searchParams;
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   const rhythm = parseDockDayRhythm(shop);
   const page = await getDiveSitePage(db, shop.id, id, {
     tideDepartures: rhythm ? TIDE_LINE_DEPARTURES : 0,
+    personId: session.user.personId,
   });
   if (!page) notFound();
-  const { site, upcomingTrips, creatures, templateUpdate, tideDives } = page;
+  const { site, upcomingTrips, creatures, templateUpdate, tideDives, mayEditAdmission } = page;
   const assists = await loadSiteAssists(db, shop, site);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -207,11 +208,16 @@ export default async function EditDiveSitePage({
         notice === "template-updated" ||
         notice === "template-replaced" ||
         notice === "template-undone" ||
-        notice === "template-update-unavailable") ? (
+        notice === "template-update-unavailable" ||
+        notice === "admission-managers-only") ? (
         <p
-          role={notice === "template-update-unavailable" ? "alert" : "status"}
+          role={
+            notice === "template-update-unavailable" || notice === "admission-managers-only"
+              ? "alert"
+              : "status"
+          }
           className={`mt-6 rounded-lg px-3 py-2 text-sm font-medium ${
-            notice === "template-update-unavailable"
+            notice === "template-update-unavailable" || notice === "admission-managers-only"
               ? "bg-danger-tint text-danger"
               : "bg-success-tint text-success-strong"
           }`}
@@ -283,6 +289,9 @@ export default async function EditDiveSitePage({
             siteId={site.id}
             certificationDescription={t("diveSites.edit.certificationDescription")}
             requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
+            admissionLocked={
+              mayEditAdmission ? undefined : t("diveSites.form.admissionManagersOnlyNote")
+            }
             briefAssist={siteBriefAssist(shopSlug, assists.canAssist, t)}
             spanish={siteSpanishFields(shopSlug, assists, t)}
           />
@@ -291,7 +300,7 @@ export default async function EditDiveSitePage({
       {/* A newer DiveDay template for this site: closed behind its name under
           the briefing, because pulling one is rare and its own act (visual
           review 2026-10-24, A11). Outside the briefing form: forms cannot nest. */}
-      {templateUpdate ? (
+      {templateUpdate && mayEditAdmission ? (
         <DisclosureRowList className="mt-8">
           <DisclosureRow id="briefing-template" heading={t("diveSites.edit.templateUpdates.title")}>
             <p className="text-sm text-muted">

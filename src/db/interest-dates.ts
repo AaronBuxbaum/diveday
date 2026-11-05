@@ -13,7 +13,7 @@ import { normalizeEmailAddress } from "@/lib/inbox";
 import { wallTimeToUtc } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
-import { bookings, courses, interests, people, shops, trips } from "./schema";
+import { bookings, courses, interestReplies, interests, people, shops, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
 import {
   liveBookingJoin,
@@ -62,6 +62,8 @@ export type DateInterestRow = {
   charterQuoteCents: number | null;
   charterQuoteCurrency: string | null;
   charterQuotedAt: Date | null;
+  /** A reply was claimed but never settled (issue #3892): it may not have been sent. */
+  replyUnsettled: boolean;
 };
 
 const dateInterestColumns = {
@@ -87,6 +89,12 @@ const dateInterestColumns = {
   charterQuoteCents: interests.charterQuoteCents,
   charterQuoteCurrency: interests.charterQuoteCurrency,
   charterQuotedAt: interests.charterQuotedAt,
+  replyUnsettled: sql<boolean>`exists (
+    select 1 from ${interestReplies}
+    where ${interestReplies.shopId} = ${interests.shopId}
+      and ${interestReplies.interestId} = ${interests.id}
+      and ${interestReplies.status} = 'pending'
+  )`,
 };
 
 /** A date interest is only ever closed `booked`, `done` or `replied`; `unsubscribed` is an anytime interest's. */

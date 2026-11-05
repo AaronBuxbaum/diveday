@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { type CrewRollCallSubject, rollCallCompleteness } from "@/lib/manifests";
 import {
   liveStageOf,
@@ -9,7 +10,6 @@ import {
   type TripStage,
   type TripStageReading,
 } from "@/lib/trip-stages";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import {
   assembleDayCloseout,
   assembleEveningClose,

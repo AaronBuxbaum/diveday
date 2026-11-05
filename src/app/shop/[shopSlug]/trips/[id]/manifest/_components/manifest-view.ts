@@ -6,7 +6,7 @@ import type { requireShopSurface } from "@/lib/session";
 import type { ManifestActionContext } from "../actions";
 import { bindManifestActions } from "./bound-actions";
 import { buddyBuilderView } from "./buddy-builder-view";
-import { deckCountView } from "./deck-count-view";
+import { deckCountView, printedDeckCountLines, staleDeckCountCheckpoints } from "./deck-count-view";
 import { departureBoatSafetySection } from "./departure-boat-safety";
 import { deckCountFacts } from "./head-count-view";
 import { emergencyReferenceCopy } from "./manifest-copy";
@@ -152,6 +152,16 @@ export async function readManifestView({
       facts: deckCountFacts(manifest, checkpoint, completeManifests),
     }),
   };
+  // The same counts as lines on the printed sheet, one per checkpoint (issue #3897).
+  const printedDeckCount = printedDeckCountLines({
+    t,
+    locale,
+    timeZone: shop.timezone,
+    now: nowDate(),
+    checkpoints: completeManifests.map((entry) => entry.checkpoint),
+    records: read.deckCounts,
+    stale: staleDeckCountCheckpoints(read.deckCounts, completeManifests),
+  });
   const paperIdentity = manifestPaperIdentity(
     shop,
     departureManifest.trip,
@@ -181,6 +191,7 @@ export async function readManifestView({
     stage,
     dockDesk,
     deckCount,
+    printedDeckCount,
     paperIdentity,
   };
 }

@@ -439,6 +439,9 @@ export function RequestPlanBrief({
                 )}
               </span>
               <span className="block text-muted">{request.subject}</span>
+              {request.quote ? (
+                <span className="block font-medium text-muted">{request.quote}</span>
+              ) : null}
             </ChoiceRow>
           </li>
         ))}

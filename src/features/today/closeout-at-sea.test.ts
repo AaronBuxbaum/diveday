@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { closeoutDepartureDetailText } from "@/i18n/closeout-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import type { TripStage, TripStageReading } from "@/lib/trip-stages";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import {
   assembleDayCloseout,
   assembleEveningClose,

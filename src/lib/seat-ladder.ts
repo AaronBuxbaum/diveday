@@ -1,5 +1,5 @@
 import { nowDate } from "./clock";
-import { RECAP_AUTOMATIC_DELAY_MS } from "./recap-schedule";
+import { recapIsDue } from "./recap-schedule";
 import { seatSailed } from "./seat-sailed";
 import { hasReturned } from "./trips";
 
@@ -188,10 +188,7 @@ export function isAfterTheDive(input: {
   const now = input.now ?? nowDate();
   if (input.boarded === "boarded") return hasReturned(input.endsAt, now);
   if (input.uncountedAtRollCall) return false;
-  // diveday:allow-departure-offset: the recap's own delay, not the sailed/returned
-  // question — a recap waits its scheduled hours after a boat this rule already
-  // counts as home.
-  return now.getTime() > input.endsAt.getTime() + RECAP_AUTOMATIC_DELAY_MS;
+  return recapIsDue(input.endsAt, now);
 }
 
 /**

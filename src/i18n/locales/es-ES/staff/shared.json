@@ -231,6 +231,7 @@
       "waiverRunsOut": "La exención caduca antes de la salida; envía un enlace nuevo.",
       "medicalReview": "Una respuesta médica necesita el visto bueno de un médico antes de bucear.",
       "medicalNotCleared": "Un médico no autorizó a esta persona a bucear.",
+      "waiverSealFailed": "Exención modificada después de firmar. Revísala en Registros firmados antes de que esta persona bucee.",
       "guardianSignatureMissing": "Firmada por un menor sin acompañante. Falta la firma de su madre, padre o tutor legal; envía un enlace nuevo de la exención.",
       "certificationMissing": "No hay ninguna certificación registrada para esta salida.",
       "certificationPending": "La certificación espera verificación del personal.",
@@ -484,6 +485,18 @@
         "refusedGeneric": "DiveDay no aplicó este toque. Abre el mostrador en vivo."
       },
       "rollCallJump": "Pase de lista"
+    },
+    "sheet": {
+      "door": "Imprimir esta copia guardada",
+      "back": "Volver al pase de lista",
+      "print": "Imprimir",
+      "name": "Manifiesto guardado",
+      "printed": "Impresa el {date}",
+      "medicalAlertWords": "Una fila marcada con Alerta médica tiene un texto para la tripulación que esta hoja no incluye. Léelo en el manifiesto en vivo, o en este teléfono si su copia lo tiene.",
+      "expires": "Deja de servir para embarcar el {when}. Destruye esta hoja entonces.",
+      "nitroxRequested": "Pidió nitrox",
+      "screenOnPaper": "Esta pantalla no se imprime. Usa “Imprimir esta copia guardada” en el teléfono para el manifiesto en papel.",
+      "screenOnPaperExpired": "Esta pantalla no se imprime, y esta copia guardada caducó, así que no tiene manifiesto en papel. Registra el pase de lista en el manifiesto en vivo."
     },
     "shellVersion": {
       "staleBanner": "Esta copia guardada es de una versión anterior de DiveDay. Actualízala con conexión antes de embarcar buceadores.",

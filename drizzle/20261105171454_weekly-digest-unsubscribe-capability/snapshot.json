@@ -1,0 +1,117 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "1b8ce606-d19e-4f59-aa18-07b8d0397f6e",
+  "prevIds": [
+    "57644779-2376-4bc4-8f41-fad02755a3bf",
+    "d091a990-63c8-425b-9899-f038c3e3b022"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "capability_purpose"
+      ],
+      "writes": [
+        "s|enum|public.capability_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_unique",
+      "statementTarget": [
+        "table",
+        "public",
+        "weekly_digest_sends"
+      ],
+      "writes": [
+        "s|uq|public.weekly_digest_sends.weekly_digest_sends_unsubscribe_token_hash_key",
+        "n|uq|public.weekly_digest_sends.weekly_digest_sends_unsubscribe_token_hash_key",
+        "e|uq|public.weekly_digest_sends.weekly_digest_sends_unsubscribe_token_hash_key",
+        "n|con|public.weekly_digest_sends.weekly_digest_sends_unsubscribe_token_hash_key",
+        "n|rel|public.weekly_digest_sends_unsubscribe_token_hash_key"
+      ],
+      "reads": [
+        "n|tbl|public.weekly_digest_sends",
+        "n|sch|public",
+        "e|col|public.weekly_digest_sends.unsubscribe_token_hash"
+      ],
+      "sharedWrites": [
+        "e|uniqueness|public.weekly_digest_sends.unsubscribe_token_hash"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "weekly_digest_sends",
+        "unsubscribe_token_hash"
+      ],
+      "writes": [
+        "s|col|public.weekly_digest_sends.unsubscribe_token_hash",
+        "n|col|public.weekly_digest_sends.unsubscribe_token_hash",
+        "e|col|public.weekly_digest_sends.unsubscribe_token_hash"
+      ],
+      "reads": [
+        "n|tbl|public.weekly_digest_sends",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_subject_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.purpose",
+        "n|col|public.capabilities.interest_id",
+        "n|col|public.capabilities.person_id",
+        "e|col|public.capabilities.purpose",
+        "e|col|public.capabilities.interest_id",
+        "e|col|public.capabilities.person_id"
+      ],
+      "sqlHash": "03e5042976d1d192"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"weekly_digest_sends\",\"unsubscribe_token_hash\"]"
+    },
+    {
+      "op": "drop",
+      "key": "uniques\u0000[\"public\",\"weekly_digest_sends\",\"weekly_digest_sends_unsubscribe_token_hash_key\"]"
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"capability_purpose\"]",
+      "set": {
+        "values": [
+          "interest_unsubscribe",
+          "courtesy_email_unsubscribe",
+          "weekly_digest_unsubscribe"
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_subject_by_purpose\"]",
+      "set": {
+        "value": "(\"purpose\"::text in ('interest_unsubscribe') and \"interest_id\" is not null and \"person_id\" is null)\n        or (\"purpose\"::text in ('courtesy_email_unsubscribe', 'weekly_digest_unsubscribe') and \"person_id\" is not null and \"interest_id\" is null)"
+      }
+    }
+  ]
+}

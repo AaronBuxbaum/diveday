@@ -3,14 +3,18 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { recordInboundMessage } from "@/db/inbound-messages";
 import {
+  incidentReportPeople,
+  incidentReports,
   people,
   personRoles,
   staffReplies,
+  trips,
   userAccounts,
   waiverRecords,
   waiverTemplates,
 } from "@/db/schema";
 import { STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -273,6 +277,43 @@ describe("erasing a diver's personal and medical data", () => {
     const after = await personRow(db, diver);
     expect(after.anonymizedAt).not.toBeNull();
     expect(after.fullName).not.toBe(before.fullName);
+  });
+
+  it("tells an owner why a held incident report stops the erasure (issue 3805)", async () => {
+    const { db, shop, diver, owner } = await context();
+    const before = await personRow(db, diver);
+    signIn(shop, owner);
+    await redirectedTo(() => deletePersonAction(shop.slug, diver, new FormData()));
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .limit(1);
+    if (!trip) throw new Error("seeded shop has no departure");
+    const [report] = await db
+      .insert(incidentReports)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        createdByPersonId: owner,
+        legalHoldAt: nowDate(),
+      })
+      .returning({ id: incidentReports.id });
+    if (!report) throw new Error("report not written");
+    await db
+      .insert(incidentReportPeople)
+      .values({ shopId: shop.id, reportId: report.id, personId: diver, involvement: "witness" });
+    const formData = new FormData();
+    formData.set("confirmName", before.fullName);
+
+    const to = await redirectedTo(() => erasePersonAction(shop.slug, diver, formData));
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${diver}?notice=erase-incident-hold&form=erase#erase-heading`,
+    );
+    const after = await personRow(db, diver);
+    expect(after.fullName).toBe(before.fullName);
+    expect(after.anonymizedAt).toBeNull();
   });
 });
 

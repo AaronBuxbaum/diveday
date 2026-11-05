@@ -51,7 +51,8 @@ export async function optedOutPhones(db: AppDb, phones: readonly string[]): Prom
 }
 
 /**
- * Wrap the platform SMS sender so a number on the STOP list is never texted.
+ * Wrap the platform SMS sender so a number on the STOP list is never texted,
+ * and `sendCourtesyMessage` skips WhatsApp for it too (issue #3883).
  *
  * The refusal is a non-retryable `failed` with code `opted_out` rather than a
  * skip, so a phone-only diver's delivery row says why no text arrived instead
@@ -60,6 +61,7 @@ export async function optedOutPhones(db: AppDb, phones: readonly string[]): Prom
  */
 export function stopListedSmsProvider(db: DbExecutor, inner: PlainTextProvider): PlainTextProvider {
   return {
+    isStopListed: (phone) => isSmsOptedOut(db, phone),
     async send(message, options) {
       if (await isSmsOptedOut(db, message.to)) {
         return { status: "failed", retryable: false, errorCode: "opted_out" };
