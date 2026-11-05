@@ -43,7 +43,7 @@ export function bookkeeperMonthOnSet(now: Date, timeZone: string): string {
 
 /**
  * How long the bookkeeper's confirm link works (security review B1): the
- * shore contact's week (`SHORE_ALERT_CONFIRMATION_TTL_MS`).
+ * shore contact's week (`CAPABILITY_POLICY.shore_alert_confirm`).
  */
 export const BOOKKEEPER_CONFIRMATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 

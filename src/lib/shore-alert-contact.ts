@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { DAY_MS } from "./clock";
 import { DIVER_EMAIL_MAX } from "./person-fields";
 
 /**
@@ -47,13 +46,6 @@ export type ShoreAlertRefusal = "invalid_email" | "consent_missing";
 
 /** What a save did to the address, for the activity line and the notice. */
 export type ShoreAlertChange = "set" | "changed" | "cleared" | "unchanged";
-
-/**
- * How long a confirmation link lives. A week rather than the front desk's
- * three days: the reader is somebody outside the shop, who may not open the
- * mail the day the shop saves their address.
- */
-export const SHORE_ALERT_CONFIRMATION_TTL_MS = 7 * DAY_MS;
 
 const shoreEmail = z.email().max(DIVER_EMAIL_MAX);
 

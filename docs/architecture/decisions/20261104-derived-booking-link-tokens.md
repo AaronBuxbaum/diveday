@@ -46,3 +46,9 @@ audience, with the tag checked before any row is read.
 - In the deploy window an old instance's link inserts fail the new CHECK and index.
 - Dropping a version from both variables kills its links. Versions stop at 9.
 - Delivered links are not yet revoked on a contact change (#3902).
+
+## Amendment 2026-11-05 (#3954)
+
+Two mechanisms. A booking link keeps its trip-relative expiry and has no `CAPABILITY_POLICY` row.
+Every other link is a stored `capabilities` row; one that expires names `ttlMs` in the policy, the
+mint sets `expires_at` from it, and opening or spending checks it.
