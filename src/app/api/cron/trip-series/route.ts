@@ -130,6 +130,9 @@ export async function GET(request: Request) {
       // nightly pass is visible in the log rather than as boards that advance
       // more slowly than they should.
       seriesDeferred: summary.deferred,
+      // Dates a hull in the yard kept off the board (issue #3948): the roll
+      // leaves them off rather than closing them, so they read again nightly.
+      yardDatesLeftOff: summary.yardDatesLeftOff,
       rehearsalsCleared,
       reopensCleared,
       waitlistRolled: waitlist.rolled,

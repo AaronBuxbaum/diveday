@@ -884,7 +884,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     if (!result) throw new Error("series not created");
 
     const stopped = await setSeriesRepeat(db, shop.id, result.series.id, false, now);
-    expect(stopped).toEqual({ created: 0 });
+    expect(stopped).toEqual({ created: 0, inTheYard: [] });
     const afterStop = await occurrenceDatesOf(db, result.series.id);
     expect(afterStop.length).toBeGreaterThan(0);
     expect((await getTripSeriesById(db, shop.id, result.series.id))?.endsOn).toBe("2030-09-07");
