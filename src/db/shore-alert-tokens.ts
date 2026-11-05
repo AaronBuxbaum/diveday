@@ -5,7 +5,12 @@ import { log } from "@/lib/log";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { SHORE_ALERT_CONFIRMATION_TTL_MS } from "@/lib/shore-alert-contact";
 import { shopPath } from "@/lib/staff-notices";
-import { issueCapability, spendCapability, verifyCapability } from "./capabilities";
+import {
+  issueCapability,
+  spendCapability,
+  verifyCapability,
+  withdrawUnspentCapabilities,
+} from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { sendNotification } from "./notifications";
 import { ownerLogins } from "./owner-logins";
@@ -270,6 +275,17 @@ export async function stopShoreAlertsByToken(
 ): Promise<ShoreAlertStopContext | null> {
   const now = input.now ?? nowDate();
   const stopped = await db.transaction(async (tx) => {
+    // The shop row first, then the link: the same order a contact save and an
+    // erasure take, so a stop racing either never deadlocks (review B2).
+    const known = await verifyCapability(tx, { purpose: "shore_alert_stop", token: input.token });
+    if (!known) return null;
+    await tx
+      .select({ id: shops.id })
+      .from(shops)
+      .where(eq(shops.id, known.shopId))
+      .for("no key update");
+    // Spent even when the address has since changed: it then stops nothing,
+    // and the page says the contact is already off (review S2).
     const claimed = await spendCapability(tx, {
       purpose: "shore_alert_stop",
       token: input.token,
@@ -298,6 +314,8 @@ export async function stopShoreAlertsByToken(
         defaultLocale: shops.defaultLocale,
       });
     if (!cleared) return null;
+    // Every other alert's link to that address goes with it (review S1).
+    await withdrawUnspentCapabilities(tx, { purpose: "shore_alert_stop", shopId: cleared.id });
     await tx.insert(activityEvents).values({
       shopId: cleared.id,
       actorPersonId: null,

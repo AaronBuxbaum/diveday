@@ -164,6 +164,66 @@ describe("stopping shore alerts by the link in one", () => {
     });
   });
 
+  it("works once: after a stop and the same address confirmed again, no older alert's link stops it", async () => {
+    const { db, shop, staffId } = await shoreOnFile();
+    const first = await issueShoreAlertStopToken(db, {
+      shopId: shop.id,
+      email: "shore@example.com",
+    });
+    const second = await issueShoreAlertStopToken(db, {
+      shopId: shop.id,
+      email: "shore@example.com",
+    });
+    await stopShoreAlertsByToken(db, { token: second, now: at });
+    expect((await shoreColumns())?.email).toBeNull();
+    await setShopShoreAlertContact(db, shop.id, {
+      email: "Shore@Example.com",
+      consentAt: at,
+      consentByPersonId: staffId,
+      confirmedAt: at,
+    });
+
+    // The other alert's link went with the stop (security review S1).
+    expect(await resolveShoreAlertStopToken(db, first)).toBeNull();
+    expect(await stopShoreAlertsByToken(db, { token: first, now: at })).toBeNull();
+    expect(await stopShoreAlertsByToken(db, { token: second, now: at })).toMatchObject({
+      alreadyStopped: true,
+    });
+    expect((await shoreColumns())?.email).toBe("Shore@Example.com");
+  });
+
+  it("is withdrawn when the shop changes the address, so it cannot stop the address coming back", async () => {
+    const { db, shop, staffId } = await shoreOnFile();
+    const old = await issueShoreAlertStopToken(db, { shopId: shop.id, email: "shore@example.com" });
+    const contact = (email: string) => ({
+      email,
+      consentAt: at,
+      consentByPersonId: staffId,
+      confirmedAt: at,
+    });
+    await setShopShoreAlertContact(db, shop.id, contact("harbour@example.com"));
+    await setShopShoreAlertContact(db, shop.id, contact("shore@example.com"));
+
+    expect(await resolveShoreAlertStopToken(db, old)).toBeNull();
+    expect(await stopShoreAlertsByToken(db, { token: old, now: at })).toBeNull();
+    expect((await shoreColumns())?.email).toBe("shore@example.com");
+  });
+
+  it("survives saving the same address again, in any case", async () => {
+    const { db, shop, staffId } = await shoreOnFile();
+    const token = await issueShoreAlertStopToken(db, {
+      shopId: shop.id,
+      email: "shore@example.com",
+    });
+    await setShopShoreAlertContact(db, shop.id, {
+      email: "SHORE@example.com",
+      consentAt: at,
+      consentByPersonId: staffId,
+      confirmedAt: at,
+    });
+    expect(await resolveShoreAlertStopToken(db, token)).toMatchObject({ alreadyStopped: false });
+  });
+
   it("leaves a different address the shop has since saved alone", async () => {
     const { db, shop, staffId } = await shoreOnFile();
     const token = await issueShoreAlertStopToken(db, {
@@ -176,9 +236,8 @@ describe("stopping shore alerts by the link in one", () => {
       consentByPersonId: staffId,
       confirmedAt: at,
     });
-    expect(await stopShoreAlertsByToken(db, { token, now: at })).toMatchObject({
-      alreadyStopped: true,
-    });
+    // The change withdrew the old address's links (security review S1).
+    expect(await stopShoreAlertsByToken(db, { token, now: at })).toBeNull();
     expect((await shoreColumns())?.email).toBe("next@example.com");
   });
 

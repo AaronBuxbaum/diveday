@@ -19,6 +19,7 @@ import {
 import type { ShoreAlertContact } from "@/lib/shore-alert-contact";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { CustomerRegulatorServiceMonths } from "@/lib/work-orders";
+import { withdrawUnspentCapabilities } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { courses, divePackages, orders, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -305,17 +306,30 @@ export async function setShopShoreAlertContact(
   shopId: string,
   contact: ShoreAlertContact,
 ) {
-  const [shop] = await db
-    .update(shops)
-    .set({
-      shoreAlertEmail: contact.email,
-      shoreAlertConsentAt: contact.consentAt,
-      shoreAlertConsentByPersonId: contact.consentByPersonId,
-      shoreAlertConfirmedAt: contact.confirmedAt,
-    })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
+  return db.transaction(async (tx) => {
+    const [current] = await tx
+      .select({ email: shops.shoreAlertEmail })
+      .from(shops)
+      .where(eq(shops.id, shopId))
+      .for("no key update");
+    const [shop] = await tx
+      .update(shops)
+      .set({
+        shoreAlertEmail: contact.email,
+        shoreAlertConsentAt: contact.consentAt,
+        shoreAlertConsentByPersonId: contact.consentByPersonId,
+        shoreAlertConfirmedAt: contact.confirmedAt,
+      })
+      .where(eq(shops.id, shopId))
+      .returning();
+    // A changed or cleared address withdraws the stop links the old one was
+    // mailed, so after the same address comes back and confirms again no
+    // older alert's link takes it off (issue #3721, security review S1).
+    if (current?.email && current.email.toLowerCase() !== contact.email?.toLowerCase()) {
+      await withdrawUnspentCapabilities(tx, { purpose: "shore_alert_stop", shopId });
+    }
+    return shop ?? null;
+  });
 }
 
 /**
