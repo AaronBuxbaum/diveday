@@ -92,6 +92,21 @@ export async function saveDiveSiteAction(
     activeSession.user.shopId,
     activeSession.user.personId,
   );
+  // **Checked before a single byte is uploaded**, and before the admission
+  // comparison, so a tab someone else saved over reads as a conflict and not
+  // as a forbidden change (security review of #3706). `dive-site-photos.ts`
+  // says why in its own words: refusing after storing four photos leaves
+  // objects nothing references. The authoritative check is still the one in
+  // the `where` below, which is atomic with the write; this only stops the
+  // wasted upload. A post from someone who may not change admission must
+  // carry the version: without it the write below would put back admission
+  // values read before a manager's change (security review of #3706).
+  if (
+    (extras.expectedVersion !== null && stored.rowVersion !== extras.expectedVersion) ||
+    (extras.expectedVersion === null && !mayEditAdmission)
+  ) {
+    return refuse("conflict");
+  }
   const storedAdmission: DiveSiteAdmission = {
     minimumCertificationLevel: stored.minimumCertificationLevel,
     requiredSpecialties: stored.requiredSpecialties,
@@ -106,15 +121,6 @@ export async function saveDiveSiteAction(
     return refuse("admissionManagersOnly");
   }
   const admission = mayEditAdmission ? submittedAdmission : storedAdmission;
-  // **Checked before a single byte is uploaded.** `dive-site-photos.ts` says
-  // why in its own words — refusing after storing four photos leaves objects
-  // nothing references, and a refusal never gets far enough to persist their
-  // URLs, so they are invisible to the unfinished-deletions panel too. The
-  // authoritative check is still the one in the `where` below, which is
-  // atomic with the write; this only stops the wasted upload.
-  if (extras.expectedVersion !== null && stored.rowVersion !== extras.expectedVersion) {
-    return refuse("conflict");
-  }
   // **The briefing's Spanish rides the same Save** (visual review 2026-10-24,
   // A11), asked before anything is written: a box that would be refused has
   // to refuse the whole save while the briefing is still as it was.

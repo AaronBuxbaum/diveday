@@ -216,6 +216,30 @@ describe("a dive site's admission fields", () => {
     expect(await admissionOf(db, siteId)).toEqual(before);
   });
 
+  // Security review of #3706: without the version, the write would put back
+  // admission values read before a manager's tightening landed.
+  it("refuses a captain's save that carries no version, and writes nothing", async () => {
+    const { db, siteId, row, depthUnit } = await asRole(SEEDED_CAPTAIN_EMAIL);
+    const before = await admissionOf(db, siteId);
+    const form = briefing(row, depthUnit);
+    form.delete("expectedVersion");
+    form.set("description", "Posted without a version.");
+    const state = await saveDiveSiteAction(siteId, {}, form);
+    expect(state.errorCode).toBe("conflict");
+    expect(await admissionOf(db, siteId)).toEqual(before);
+  });
+
+  it("tells a captain whose tab is out of date that someone saved first", async () => {
+    const { db, siteId, row, depthUnit } = await asRole(SEEDED_CAPTAIN_EMAIL);
+    // A manager tightened the site after this tab rendered.
+    await db
+      .update(diveSites)
+      .set({ requiresNitrox: false, rowVersion: row.rowVersion + 1 })
+      .where(eq(diveSites.id, siteId));
+    const state = await saveDiveSiteAction(siteId, {}, briefing(row, depthUnit));
+    expect(state.errorCode).toBe("conflict");
+  });
+
   it("lets an owner change them", async () => {
     const { db, siteId, row, depthUnit } = await asRole(SEEDED_OWNER_EMAIL);
     const form = briefing(row, depthUnit, { level: "", specialties: [], nitrox: false });
