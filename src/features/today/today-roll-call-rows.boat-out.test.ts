@@ -12,6 +12,7 @@ import { boardAtDeparture, HOUR, returnedTrip } from "@/db/roll-call-test-fixtur
 import {
   bookings as bookingsTable,
   rollCallEvents as rollCallEventsTable,
+  tripScheduleDays,
   trips as tripsTable,
 } from "@/db/schema";
 import { recordTripStage } from "@/db/trip-stages";
@@ -268,6 +269,37 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         );
         expect(rowsFor(home, trip.id)).toEqual([]);
         expect(home.outTripIds).not.toContain(trip.id);
+      });
+
+      // #2557 review (dock S2): a course may meet a fortnight apart, past the
+      // boats-out read's fourteen-day look-back from the run's start. The
+      // horizon reads the course by its meeting days, so the row still comes.
+      it("raises a blocked diver aboard on a course's last day, fifteen days after day one", async () => {
+        const { db, shop } = ctx;
+        // Due back half an hour ago, inside the return buffer, nobody tapping Home.
+        const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+          endedHoursAgo: 0.5,
+          divers: 1,
+          title: "Blocked Aboard, a fortnight on — Molasses",
+        });
+        await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+        const dayOneStart = new Date(trip.startsAt.getTime() - 15 * 24 * HOUR);
+        await db
+          .update(tripsTable)
+          .set({ startsAt: dayOneStart })
+          .where(eq(tripsTable.id, trip.id));
+        await db.insert(tripScheduleDays).values([
+          {
+            tripId: trip.id,
+            dayNumber: 1,
+            startsAt: dayOneStart,
+            endsAt: new Date(dayOneStart.getTime() + 4 * HOUR),
+          },
+          { tripId: trip.id, dayNumber: 2, startsAt: trip.startsAt, endsAt: trip.endsAt },
+        ]);
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
+        expect(work.outTripIds).toContain(trip.id);
+        expect(rowsFor(work, trip.id).map((row) => row.kind)).toContain("blocked_aboard");
       });
 
       it("keeps a two-day course out on day two after its crew said home on day one", async () => {
