@@ -256,6 +256,26 @@ describe("roll call on a course that meets on two Saturdays", () => {
   });
 });
 
+describe("a weekend course that numbers its dives across the run", () => {
+  it("reads day two's dives 1 and 2 from day one when day two logs dives 3 and 4", async () => {
+    const c = await course();
+    const sat = at(SAT_ONE.start).getTime();
+    const sun = at(SAT_TWO.start).getTime();
+    const iso = (ms: number) => new Date(ms).toISOString();
+    for (const id of c.bookingIds) {
+      await c.say(id, "departure", "boarded", iso(sat - 15 * 60_000));
+      await c.say(id, "after_dive_1", "boarded", iso(sat + 60 * 60_000));
+      await c.say(id, "after_dive_2", "boarded", iso(sat + 180 * 60_000));
+    }
+    // The fixture plans two dives; a four-dive weekend is the same shape one
+    // checkpoint up, so day two here logs dive 2 again only.
+    for (const id of c.bookingIds) {
+      await c.say(id, "after_dive_2", "boarded", iso(sun + 180 * 60_000));
+    }
+    expect(await c.gaps("2026-08-15T19:00:00.000Z")).toEqual([]);
+  });
+});
+
 describe("oneRowPerHalf, for a reader drawn once per departure", () => {
   const row = (reason: string, dayNumber: number) =>
     ({ tripId: "t", reason, dayNumber }) as Parameters<typeof oneRowPerHalf>[0][number];

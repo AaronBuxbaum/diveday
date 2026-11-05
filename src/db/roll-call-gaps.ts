@@ -462,11 +462,35 @@ export async function listRollCallGaps(
       // state decides a head count; the recorder's name and note are the
       // manifest's display fields, so they are deliberately not queried.
       !event || event.status === "cleared" ? undefined : event.status;
+    // **Dives numbered on across the run.** A later day whose first result is
+    // at a later checkpoint (a weekend course logging dives 3 and 4 on day
+    // two) carries on the earlier days' numbering: the checkpoints below it
+    // read the earlier days' results, not an empty count. A day whose results
+    // start at the dock, or that has none yet, counts every checkpoint afresh.
+    const firstCheckpointOf = (day: number) => {
+      if (day === 0) return 0;
+      let first = Number.POSITIVE_INFINITY;
+      for (const standing of [diverStanding.get(day), crewStanding.get(day)]) {
+        for (const mark of standing?.values() ?? []) {
+          const index = checkpoints.indexOf(mark.checkpoint);
+          if (index >= 0 && index < first) first = index;
+        }
+      }
+      return Number.isFinite(first) ? first : 0;
+    };
     const statesOf =
-      (standing: typeof diverStanding | typeof crewStanding) => (day: number, subject: string) =>
-        checkpoints.map((checkpoint) =>
-          stateOf(standing.get(day)?.get(`${subject}\u0000${checkpoint}`)),
-        );
+      (standing: typeof diverStanding | typeof crewStanding) => (day: number, subject: string) => {
+        const first = firstCheckpointOf(day);
+        return checkpoints.map((checkpoint, index) => {
+          const key = `${subject}\u0000${checkpoint}`;
+          if (index >= first) return stateOf(standing.get(day)?.get(key));
+          for (let earlier = day - 1; earlier >= 0; earlier--) {
+            const mark = standing.get(earlier)?.get(key);
+            if (mark) return stateOf(mark);
+          }
+          return undefined;
+        });
+      };
     const diverStates = statesOf(diverStanding);
     const crewStates = statesOf(crewStanding);
 
@@ -647,6 +671,10 @@ function dayGaps(input: {
       crewPopulation[dive] = (crewPopulation[dive] ?? 0) + 1;
       if (state !== undefined) crewRecorded[dive] = (crewRecorded[dive] ?? 0) + 1;
       if (isAccountedForAfterDive(state) || seenLater) continue;
+      // The latest checkpoint speaks for crew as it does for divers above: a
+      // divemaster "not back" after dive 1 and counted aboard after dive 2
+      // is back (dock review S2 of #3884).
+      if (state === "not_boarded" && states.slice(dive + 1).includes("boarded")) continue;
       crewUnaccounted[dive] = (crewUnaccounted[dive] ?? 0) + 1;
       if (state === "not_boarded") crewNotBackAboard[dive] = (crewNotBackAboard[dive] ?? 0) + 1;
     }
