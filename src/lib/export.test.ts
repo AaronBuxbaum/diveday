@@ -162,11 +162,13 @@ describe("export bundle", () => {
       "medical alert",
       "messages",
       "lost-and-found",
-      "recap pulses",
       "rebooking offers",
     ]) {
       expect(notIncluded.toLowerCase()).toContain(family);
     }
+    // A diver's own recap pulses ride in their bundle since #3862, so the
+    // README must not tell them they were left out.
+    expect(notIncluded.toLowerCase()).not.toContain("recap pulses");
   });
 
   it("round-trips through the zip byte-for-byte", () => {
