@@ -18,6 +18,7 @@ import {
   createTripSeriesOrRefusal,
   deleteTrip,
   duplicateTripOrRefusal,
+  isSeriesBoatOutOfService,
   listStaff,
   moveTrip,
   setTripCrew,
@@ -560,10 +561,11 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       timeZone: shop.timezone,
       template: { startsAt, endsAt, scheduleDays },
     });
-    // Issue #3915: a later week on a hull in the yard refuses the whole run.
-    if (series === "boat_out_of_service") {
+    // Issue #3915: a later week on a hull in the yard refuses the whole run,
+    // and the notice names that week's first day (dock review S4).
+    if (isSeriesBoatOutOfService(series)) {
       await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
-      redirect(`${back}&builder=boat-out-of-service${returnWeek}`);
+      redirect(`${back}&builder=series-boat-out-of-service&on=${series.firstDay}${returnWeek}`);
     }
     if (!series) return await invalid();
     const firstTrip = series.trips[0];

@@ -162,7 +162,9 @@ describe("a hull in the yard, at every builder door", () => {
         ),
       ),
     );
-    expect(to).toContain("builder=boat-out-of-service");
+    // The notice names the week that refused, which may be months out.
+    expect(to).toContain("builder=series-boat-out-of-service");
+    expect(to).toContain(`on=${dayFromNow(shop.timezone, 18)}`);
     expect(await departuresOn(db, boat.id)).toHaveLength(1);
   });
 });

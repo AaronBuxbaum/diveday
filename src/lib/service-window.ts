@@ -92,3 +92,12 @@ export function serviceWindowCoversInstant(
 ): boolean {
   return serviceWindowCovers(window, calendarDateInTimezone(at, timeZone));
 }
+
+/** The earliest of these shop-local days the window holds, or null when it holds none. */
+export function firstDayInWindow(
+  window: ServiceWindow | null,
+  days: readonly CalendarDate[],
+): CalendarDate | null {
+  const inside = days.filter((day) => serviceWindowCovers(window, day)).sort();
+  return inside[0] ?? null;
+}

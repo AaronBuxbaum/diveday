@@ -10,8 +10,9 @@ import {
   createTripSeriesOrRefusal,
   DUPLICATE_BOAT_OUT_OF_SERVICE,
   duplicateTripOrRefusal,
+  isSeriesBoatOutOfService,
   moveTrip,
-  SERIES_BOAT_OUT_OF_SERVICE,
+  rollSeriesForward,
 } from "./trips";
 
 /**
@@ -159,11 +160,11 @@ describe("createTripSeries on a hull in the yard", () => {
     };
   }
 
-  it("refuses the whole series when a later week falls in the window", async () => {
+  it("refuses the whole series when a later week falls in the window, naming that day", async () => {
     const { db, shop, boat } = await hullInTheYard();
     // Wednesdays from 2030-12-04: the second week, the 11th, is in the yard.
     const result = await createTripSeriesOrRefusal(db, weekly(shop.id, boat.id, WED, "2030-12-04"));
-    expect(result).toBe(SERIES_BOAT_OUT_OF_SERVICE);
+    expect(result).toEqual({ refusal: "boat_out_of_service", firstDay: "2030-12-11" });
     const onHull = await db
       .select({ id: trips.id })
       .from(trips)
@@ -176,6 +177,48 @@ describe("createTripSeries on a hull in the yard", () => {
     // Saturdays: the 7th and the 14th straddle a Tuesday-to-Thursday window.
     const result = await createTripSeriesOrRefusal(db, weekly(shop.id, boat.id, SAT, "2030-12-07"));
     expect(result).not.toBeNull();
-    expect(result).not.toBe(SERIES_BOAT_OUT_OF_SERVICE);
+    expect(isSeriesBoatOutOfService(result)).toBe(false);
+  });
+
+  // Attacker review S6: the nightly roll is the one path that writes weeks
+  // with nobody watching, so it is the one a shop would not notice.
+  it("leaves a yard week off when the nightly roll reaches it, and puts it back once the window moves", async () => {
+    const { db, shop, boat } = await hullInTheYard();
+    // The series starts with no window in reach; the yard is booked later.
+    await db
+      .update(boats)
+      .set({ outOfServiceFrom: null, outOfServiceUntil: null, outOfServiceReason: null })
+      .where(eq(boats.id, boat.id));
+    // Wednesdays from 2030-08-07: the first 120 days stop short of December.
+    const series = await createTripSeriesOrRefusal(db, weekly(shop.id, boat.id, WED, "2030-08-07"));
+    if (!series || isSeriesBoatOutOfService(series)) throw new Error("series refused");
+    const wednesdays = async () =>
+      (
+        await db
+          .select({ startsAt: trips.startsAt })
+          .from(trips)
+          .where(and(eq(trips.boatId, boat.id), isNull(trips.deletedAt)))
+      ).map((row) => row.startsAt.toISOString());
+    const onTheEleventh = morning(12, 11).toISOString();
+    expect(await wednesdays()).not.toContain(onTheEleventh);
+    const september = wallTimeToUtc({ year: 2030, month: 9, day: 1, hour: 8, minute: 0 }, TZ);
+
+    await db
+      .update(boats)
+      .set({ outOfServiceFrom: "2030-12-10", outOfServiceUntil: "2030-12-12" })
+      .where(eq(boats.id, boat.id));
+    await rollSeriesForward(db, shop.id, series.series.id, september);
+    const rolled = await wednesdays();
+    expect(rolled).not.toContain(onTheEleventh);
+    // The weeks either side of the yard still roll on.
+    expect(rolled).toContain(morning(12, 4).toISOString());
+    expect(rolled).toContain(morning(12, 18).toISOString());
+
+    await db
+      .update(boats)
+      .set({ outOfServiceFrom: "2031-01-10", outOfServiceUntil: "2031-01-12" })
+      .where(eq(boats.id, boat.id));
+    await rollSeriesForward(db, shop.id, series.series.id, september);
+    expect(await wednesdays()).toContain(onTheEleventh);
   });
 });

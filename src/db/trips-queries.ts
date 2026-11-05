@@ -594,6 +594,19 @@ export async function boatOutOfServiceOn(
   timeZone: string,
 ): Promise<boolean> {
   if (!boatId) return false;
+  return serviceWindowTouches(
+    await boatServiceWindowOf(tx, shopId, boatId),
+    instants.map((instant) => calendarDateInTimezone(instant, timeZone)),
+  );
+}
+
+/** A boat's yard window, read once for a caller that asks about many days; null for none. */
+export async function boatServiceWindowOf(
+  tx: DbExecutor,
+  shopId: string,
+  boatId: string | null,
+): Promise<ServiceWindow | null> {
+  if (!boatId) return null;
   const [boat] = await tx
     .select({
       outOfServiceFrom: boats.outOfServiceFrom,
@@ -603,10 +616,7 @@ export async function boatOutOfServiceOn(
     .from(boats)
     .where(and(eq(boats.id, boatId), eq(boats.shopId, shopId)))
     .limit(1);
-  return serviceWindowTouches(
-    boatServiceWindow(boat),
-    instants.map((instant) => calendarDateInTimezone(instant, timeZone)),
-  );
+  return boatServiceWindow(boat);
 }
 
 /** The boat's certificate passenger limit, or null when there is no boat or none recorded. */

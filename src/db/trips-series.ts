@@ -21,6 +21,7 @@ import {
   type TripRecurrenceFrequency,
   type WeekdaySet,
 } from "@/lib/recurrence";
+import { firstDayInWindow, serviceWindowTouches } from "@/lib/service-window";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
 import { departureMayBeAtSea } from "./aboard-at-sea";
@@ -69,7 +70,7 @@ import {
 import { liveTrip } from "./trips-live";
 import {
   boatCertifiedPassengers,
-  boatOutOfServiceOn,
+  boatServiceWindowOf,
   liveBookingJoin,
   seatNotCancelled,
 } from "./trips-queries";
@@ -292,6 +293,11 @@ async function materializeWindow(
   const spokenFor = new Set<string>();
   for (const row of taken) if (row.date) spokenFor.add(row.date);
   for (const row of skipped) spokenFor.add(row.date);
+  // **A hull in the yard sails nothing, the nightly roll included** (issue
+  // #3915, attacker review S6). A week whose meeting days touch the boat's
+  // window is left off, not closed: no skip row is written, so if the window
+  // moves the next roll puts the week back.
+  const yard = await boatServiceWindowOf(tx, series.shopId, template.trip.boatId);
 
   // Built in memory, written as one batch (code review 2026-10-13b, item 40):
   // a daily run over the horizon is 121 departures, and one insert chain each
@@ -303,6 +309,8 @@ async function materializeWindow(
     const first = days[0];
     const last = days.at(-1);
     if (!first || !last) continue;
+    const meetingDates = days.map((day) => calendarDateInTimezone(day.startsAt, timeZone));
+    if (serviceWindowTouches(yard, meetingDates)) continue;
     planned.push({
       days,
       params: {
@@ -396,8 +404,22 @@ export type NewTripSeries = Omit<NewTrip, "startsAt" | "endsAt" | "scheduleDays"
   template: { startsAt: Date; endsAt: Date; scheduleDays?: TripScheduleDayInput[] };
 };
 
-/** {@link createTripSeries}'s refusal: its hull is in the yard on a week it would put on the board. */
-export const SERIES_BOAT_OUT_OF_SERVICE = "boat_out_of_service" as const;
+/**
+ * {@link createTripSeries}'s refusal: its hull is in the yard on a week it
+ * would put on the board. It names the first such shop-local day, so the
+ * desk can end the run before it (issue #3915, dock review S4): the week that
+ * refuses may be months past the one being added.
+ */
+export type SeriesBoatOutOfService = { refusal: "boat_out_of_service"; firstDay: CalendarDate };
+
+/** Whether a {@link createTripSeriesOrRefusal} result is the hull-in-the-yard refusal. */
+export function isSeriesBoatOutOfService(result: unknown): result is SeriesBoatOutOfService {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    (result as { refusal?: unknown }).refusal === "boat_out_of_service"
+  );
+}
 
 /**
  * Materialize a recurring series: one `trip_series` row plus one fully-formed,
@@ -410,14 +432,14 @@ export const SERIES_BOAT_OUT_OF_SERVICE = "boat_out_of_service" as const;
  * it (20260810-open-ended-recurring-trips). Returns null on the same validation
  * failures as `createTrip`, plus an unusable cadence or a window that yields no
  * dates at all. Refuses the whole series (null here, {@link
- * SERIES_BOAT_OUT_OF_SERVICE} from {@link createTripSeriesOrRefusal}) when its
+ * SeriesBoatOutOfService} from {@link createTripSeriesOrRefusal}) when its
  * hull is in the yard on any meeting day of any week it would put on the board
  * (issue #3915): skipping those weeks in silence would leave the shop believing
  * the run is whole.
  */
 export async function createTripSeries(db: AppDb, input: NewTripSeries) {
   const result = await createTripSeriesOrRefusal(db, input);
-  return result === SERIES_BOAT_OUT_OF_SERVICE ? null : result;
+  return isSeriesBoatOutOfService(result) ? null : result;
 }
 
 /** {@link createTripSeries}, naming the hull-in-the-yard refusal rather than folding it into null. */
@@ -478,13 +500,13 @@ export async function createTripSeriesOrRefusal(db: AppDb, input: NewTripSeries)
       })?.flatMap((date) =>
         daysOnOccurrence(templateDays, date, input.timeZone).map((day) => day.startsAt),
       );
-      // No dates at all is the refusal below, not a pass: the seed already had one.
-      if (
-        !everyMeeting ||
-        (await boatOutOfServiceOn(tx, input.shopId, input.boatId, everyMeeting, input.timeZone))
-      ) {
-        return SERIES_BOAT_OUT_OF_SERVICE;
-      }
+      // No dates at all is refused below as null: the seed already had one.
+      if (!everyMeeting) return null;
+      const firstDay = firstDayInWindow(
+        await boatServiceWindowOf(tx, input.shopId, input.boatId),
+        everyMeeting.map((instant) => calendarDateInTimezone(instant, input.timeZone)),
+      );
+      if (firstDay) return { refusal: "boat_out_of_service", firstDay } as const;
     }
 
     const seedDays = daysOnOccurrence(
