@@ -294,12 +294,10 @@ const nextConfig: NextConfig = {
   // compiler API Next used for its in-build type check. Next drives it through
   // the TS CLI instead (tsgo), which this flag enables.
   //
-  // Keep the refusal gate decided in #1377, but don't overlap the checker with
-  // Turbopack's retained compile memory on Vercel's 8 GB builder. The Vercel
-  // build script runs `next typegen` and `pnpm typecheck` in separate processes
-  // before migrations and the production build; only that build skips Next's
-  // duplicate pass.
-  // Local `pnpm build` and CI keep their existing checks.
+  // Vercel's 8 GB builder cannot hold TypeScript 7's checker (peak near 7.7 GB;
+  // exit 137, 2026-11-05), so Vercel runs no typecheck. CI typechecks every
+  // commit and the deploy gate builds only green ones. Local `pnpm build` and CI
+  // keep their checks.
   ...(process.env.VERCEL === "1" ? { typescript: { ignoreBuildErrors: true } } : {}),
   experimental: {
     useTypeScriptCli: true,
