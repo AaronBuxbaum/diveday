@@ -1,0 +1,74 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "c887bc40-74d6-4f78-a16c-e2b2d517816e",
+  "prevIds": [
+    "729b737c-d070-4f6a-88bf-b68c686c7f95",
+    "01a2c5d2-14ff-4817-b18d-c93d52bd29de",
+    "4290a842-0ae0-41e0-8fd5-8a44382668b4"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_capabilities"
+      ],
+      "writes": [
+        "s|ck|public.booking_capabilities.booking_capabilities_key_version_iff_link",
+        "n|ck|public.booking_capabilities.booking_capabilities_key_version_iff_link",
+        "e|ck|public.booking_capabilities.booking_capabilities_key_version_iff_link",
+        "n|con|public.booking_capabilities.booking_capabilities_key_version_iff_link"
+      ],
+      "reads": [
+        "n|tbl|public.booking_capabilities",
+        "n|sch|public",
+        "n|col|public.booking_capabilities.source_capability_id",
+        "n|col|public.booking_capabilities.key_version"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_capabilities"
+      ],
+      "writes": [
+        "s|ck|public.booking_capabilities.booking_capabilities_key_version_range",
+        "n|ck|public.booking_capabilities.booking_capabilities_key_version_range",
+        "e|ck|public.booking_capabilities.booking_capabilities_key_version_range",
+        "n|con|public.booking_capabilities.booking_capabilities_key_version_range"
+      ],
+      "reads": [
+        "n|tbl|public.booking_capabilities",
+        "n|sch|public",
+        "n|col|public.booking_capabilities.key_version"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_capabilities",
+        "name": "booking_capabilities_key_version_iff_link",
+        "value": "(\"source_capability_id\" is null) = (\"key_version\" is not null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_capabilities",
+        "name": "booking_capabilities_key_version_range",
+        "value": "\"key_version\" between 1 and 9",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

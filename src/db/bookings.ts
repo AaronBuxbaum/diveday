@@ -56,7 +56,7 @@ import {
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { arrivalTrailHighWater, seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
-import { revokeBookingCapabilities } from "./booking-capabilities";
+import { realignTripLinkExpiry, revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import { fareCheckout } from "./checkout-purpose";
@@ -2313,6 +2313,8 @@ async function moveBookingIn(
         eq(bookings.status, booking.status),
       ),
     );
+  // Its links live by the new departure's end now (issue #2711).
+  await realignTripLinkExpiry(tx, { shopId, bookingId: booking.id, endsAt: target.endsAt, now });
   if (dateRequestLink && dateRequestOffer) {
     const movedLink = await moveDateRequestOfferBooking(tx, {
       shopId,

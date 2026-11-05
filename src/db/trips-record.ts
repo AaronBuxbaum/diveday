@@ -35,6 +35,7 @@ import {
   departureBoatSafetySnapshot,
   rebindDepartureBoatSafetyTime,
 } from "./boat-safety";
+import { realignTripLinkExpiry } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
@@ -589,6 +590,30 @@ export type UpdateTripOutcome =
  * already recorded a roll call against (CR-006). Both invariants fail
  * closed with a typed reason instead of silently discarding data.
  */
+/**
+ * What a saved edit's new times move with it, under the same trip lock: the
+ * boat's safety record follows a new start, and the departure's live booking
+ * links follow a new end (issue #2711).
+ */
+async function followScheduleEdit(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    tripId: string;
+    before: Pick<Trip, "startsAt" | "endsAt">;
+    after: Pick<Trip, "startsAt" | "endsAt">;
+    now: Date;
+  },
+): Promise<void> {
+  const { shopId, tripId, before, after, now } = input;
+  if (after.startsAt.getTime() !== before.startsAt.getTime()) {
+    await rebindDepartureBoatSafetyTime(tx, shopId, tripId, before.startsAt, after.startsAt, now);
+  }
+  if (after.endsAt.getTime() !== before.endsAt.getTime()) {
+    await realignTripLinkExpiry(tx, { shopId, tripId, endsAt: after.endsAt, now });
+  }
+}
+
 /** An integer column's new value, or null on a rehearsal (ADR 20261012-rehearsal-departures). */
 function unlessRehearsal(value: number | null) {
   return sql<number | null>`case when ${trips.isRehearsal} then null else ${value}::integer end`;
@@ -901,16 +926,7 @@ async function updateTripRecord(
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
     if (!trip) return { ok: false, reason: "not_found" };
-    if (startMoved) {
-      await rebindDepartureBoatSafetyTime(
-        tx,
-        shopId,
-        tripId,
-        existing.startsAt,
-        trip.startsAt,
-        changedAt,
-      );
-    }
+    await followScheduleEdit(tx, { shopId, tripId, before: existing, after: trip, now: changedAt });
     // The existing snapshot is mutable until sailing. Keep the replacement
     // hull under the same trip lock as the swap, without deleting evidence.
     // Clearing the boat retains its named record; the log labels the mismatch.

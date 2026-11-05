@@ -862,6 +862,14 @@ export const bookingCapabilities = pgTable(
       // avoids using a newly-added enum value before PostgreSQL commits it.
       sql`(${table.purpose}::text = 'returning_diver_receipt') = (${table.sourceCapabilityId} is not null)`,
     ),
+    // A link row carries the key version its token is signed under; a receipt
+    // has no token and no version (issue #2711, code security review finding 3).
+    check(
+      "booking_capabilities_key_version_iff_link",
+      sql`(${table.sourceCapabilityId} is null) = (${table.keyVersion} is not null)`,
+    ),
+    // The token spells the version as one digit.
+    check("booking_capabilities_key_version_range", sql`${table.keyVersion} between 1 and 9`),
   ],
 );
 
