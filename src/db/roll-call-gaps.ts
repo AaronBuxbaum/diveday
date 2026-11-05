@@ -444,6 +444,10 @@ export async function listRollCallGaps(
         crewPopulation[dive] = (crewPopulation[dive] ?? 0) + 1;
         if (state !== undefined) crewRecorded[dive] = (crewRecorded[dive] ?? 0) + 1;
         if (isAccountedForAfterDive(state)) continue;
+        // The latest checkpoint speaks for crew as it does for divers above: a
+        // divemaster "not back" after dive 1 and counted aboard after dive 2
+        // is back (dock review S2 of #3884).
+        if (state === "not_boarded" && states.slice(dive + 1).includes("boarded")) continue;
         crewUnaccounted[dive] = (crewUnaccounted[dive] ?? 0) + 1;
         if (state === "not_boarded") crewNotBackAboard[dive] = (crewNotBackAboard[dive] ?? 0) + 1;
       }
