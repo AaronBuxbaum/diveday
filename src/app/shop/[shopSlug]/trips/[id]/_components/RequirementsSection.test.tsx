@@ -163,13 +163,13 @@ describe("RequirementsSection, keeping Open Water", () => {
 
   it("offers the box while the level is still the default", () => {
     renderWith(true);
-    const box = screen.getByLabelText("Keep Open Water even for marked training dives");
+    const box = screen.getByLabelText("Keep this level, even for marked training dives");
     expect((box as HTMLInputElement).name).toBe("keepLevelAsChosen");
     expect((box as HTMLInputElement).checked).toBe(false);
   });
 
   it("does not offer it once a level has been chosen", () => {
     renderWith(false);
-    expect(screen.queryByLabelText(/Keep Open Water/)).toBeNull();
+    expect(screen.queryByLabelText(/Keep this level/)).toBeNull();
   });
 });

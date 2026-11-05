@@ -47,7 +47,7 @@ const participantTermsForm = z.object({
 const requirementSwitchesForm = z.object({
   requiresNitrox: checkbox(),
   requiresPayment: checkbox(),
-  // "Keep Open Water even for marked training dives", shown only while the
+  // "Keep this level, even for marked training dives", shown only while the
   // level is still the default (issue #3911).
   keepLevelAsChosen: checkbox(),
 });
