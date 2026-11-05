@@ -191,6 +191,48 @@ describe("sendDueMonthEndEmails", () => {
     expect(retry.sent).toBe(1);
   });
 
+  /**
+   * **A failed send leaves no link of its own** (issue #3947). The claim mints
+   * a stop link; when nothing was sent the pass withdraws that one, and only
+   * that one: the earlier month's email is still in the bookkeeper's inbox.
+   */
+  describe.each([
+    ["a send that throws", "throw"],
+    ["a delivery the provider did not accept", "failed"],
+  ] as const)("%s", (_name, how) => {
+    it("withdraws the claim's own stop link and keeps the earlier month's", async () => {
+      const { db } = await shopWithBookkeeper();
+      const first = capturing();
+      await sendDueMonthEndEmails(db, { now: SECOND, provider: first.provider, origin: ORIGIN });
+      const linkOf = (email: Notification | undefined) =>
+        (email as Extract<Notification, { kind: "bookkeeper_month_end" }>).stopUrl.split(
+          "/unsubscribe/",
+        )[1] ?? "";
+      const october = linkOf(ofKind(first.sent, "bookkeeper_month_end")[0]);
+
+      const attempted: Notification[] = [];
+      const provider: NotificationProvider = {
+        async send(notification) {
+          attempted.push(notification);
+          if (how === "throw") throw new Error("provider down");
+          return { status: "failed", retryable: true, errorCode: "boom" };
+        },
+      };
+      const summary = await sendDueMonthEndEmails(db, {
+        now: new Date("2026-12-02T15:00:00Z"),
+        provider,
+        origin: ORIGIN,
+      });
+      expect(summary).toMatchObject({ sent: 0, failed: 1 });
+      const november = linkOf(ofKind(attempted, "bookkeeper_month_end")[0]);
+      expect(november).not.toBe("");
+      expect(await resolveBookkeeperStopToken(db, november)).toBeNull();
+      expect(await resolveBookkeeperStopToken(db, october)).toMatchObject({
+        alreadyStopped: false,
+      });
+    });
+  });
+
   it("sends nothing when the address is cleared between the claim and the send (issue #3952)", async () => {
     const { db, shopId, owner } = await shopWithBookkeeper();
     const { sent, provider } = capturing();
