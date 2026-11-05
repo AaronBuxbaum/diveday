@@ -124,7 +124,7 @@ describe("every refusal lands on the boat with its own words", () => {
     async (reason, notice) => {
       vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason } as never);
       expect(await landing(form(), "walk-in")).toBe(
-        `/shop/blue-mantis/trips/${TRIP_ID}?notice=${notice}&counter=1`,
+        `/shop/blue-mantis/trips/${TRIP_ID}?notice=${notice}`,
       );
     },
   );
@@ -234,7 +234,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
   it.each(closed)("%s", async (_name, trip) => {
     vi.mocked(getTripWithBooked).mockResolvedValue(trip as never);
     expect(await landing(form(), "walk-in")).toBe(
-      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable&counter=1`,
+      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable`,
     );
     expect(seatDiver).not.toHaveBeenCalled();
   });
@@ -245,7 +245,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     data.set("tripId", TRIP_ID);
     data.set("fullName", "Dana Walker");
     await expect(seatNewDiverAction("walk-in", "blue-mantis", data)).rejects.toThrow(
-      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable&counter=1`,
+      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable`,
     );
     expect(seatDiver).not.toHaveBeenCalled();
   });
@@ -327,7 +327,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
       confirmation: "skipped",
     } as never);
     await expect(landing(form({ request: requestId }), "walk-in")).resolves.toBe(
-      `/shop/blue-mantis/trips/${TRIP_ID}?notice=walkin-added&bid=${bookingId}&counter=1`,
+      `/shop/blue-mantis/trips/${TRIP_ID}?notice=walkin-added&bid=${bookingId}`,
     );
     expect(seatDiver).toHaveBeenCalledWith(
       expect.anything(),
@@ -343,7 +343,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     data.set("fullName", "Dana Walker");
     data.set("request", requestId);
     await expect(seatNewDiverAction("walk-in", "blue-mantis", data)).rejects.toThrow(
-      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?confirmName=Dana+Walker&counter=1#hand-entry`,
+      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?confirmName=Dana+Walker#hand-entry`,
     );
   });
 

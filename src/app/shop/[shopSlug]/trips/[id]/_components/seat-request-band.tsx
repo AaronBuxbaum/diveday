@@ -67,26 +67,21 @@ export function seatRequestBand(
 
 /**
  * What the departure page's URL asks of the add band: `?add=1` opens it with
- * the cursor in it, `?counter=1` is the desk's own choice to seat walk-ins
- * (never inferred from the clock: a phone booking for tomorrow is not a
- * walk-in), and `?request=` seats a date request's party. The counter answers
- * no request, so it is not read there. A request that is gone says so in its
+ * the cursor in it, and `?request=` seats a date request's party. A request that is gone says so in its
  * card's place, and the band seats nobody against it.
  */
 export async function addBandFor(
   db: AppDb,
   where: { shop: { id: string }; shopSlug: string; tripId: string; t: StaffTranslator },
-  search: { add?: string; request?: string; diverq?: string; counter?: string; person?: string },
+  search: { add?: string; request?: string; diverq?: string; person?: string },
 ): Promise<{
   open: boolean;
-  counter: boolean;
   request?: ReturnType<typeof seatRequestBand>;
   /** The diver `?person=` named, when they can still be seated here. */
   person?: { query: string; candidates: BookableDiver[] };
   requestGone?: ReactNode;
 }> {
   const open = Boolean(search.add);
-  if (search.counter === "1") return { open, counter: true };
   const read = await readSeatRequest(db, {
     shopId: where.shop.id,
     tripId: where.tripId,
@@ -96,7 +91,6 @@ export async function addBandFor(
   if (read === "gone" || read === "not_offered") {
     return {
       open,
-      counter: false,
       requestGone: (
         <p className="text-sm text-muted">
           {where.t(
@@ -106,8 +100,8 @@ export async function addBandFor(
       ),
     };
   }
-  if (read) return { open, counter: false, request: seatRequestBand(read, where) };
-  return { open, counter: false, person: await readSalvagePerson(db, where, search) };
+  if (read) return { open, request: seatRequestBand(read, where) };
+  return { open, person: await readSalvagePerson(db, where, search) };
 }
 
 /**

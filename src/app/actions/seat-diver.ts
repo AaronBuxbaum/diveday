@@ -194,10 +194,9 @@ function refuse(
 
 /**
  * What the departure's add band was doing, kept on the landing so the next
- * seat is made the same way: the counter (`counter=1`), which the desk chose
- * on the band and which a seat or a refusal must not quietly drop, or a date
- * request's party still being seated (`add=1&request=`). A walk-in is never a
- * request, so the counter carries none. Nothing on the diver's record.
+ * seat is made the same way: a date request's party still being seated
+ * (`add=1&request=`). The counter is the window's own band, so it keeps nothing
+ * and a walk-in is never a request. Nothing on the diver's record.
  */
 function bandKept(
   surface: SeatSurface,
@@ -205,7 +204,7 @@ function bandKept(
   requestId: string | null,
 ): Record<string, string> {
   if (surface !== SEAT_SURFACES.departure) return {};
-  if (landing.walkIn) return { counter: "1" };
+  if (landing.walkIn) return {};
   return requestId ? { add: "1", request: requestId } : {};
 }
 
