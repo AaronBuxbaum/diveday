@@ -36,7 +36,8 @@ export function decide({ number, baseIsDefault, stacks, labels = [] }) {
   const top = layers[layers.length - 1].number;
   const bottom = layers[0].number;
   if (top === number) return { run: true, bottom, why: `top of stack #${stack.number}` };
-  if (labels.includes(FORCE_LABEL)) return { run: true, bottom, why: `labelled \`${FORCE_LABEL}\`` };
+  if (labels.includes(FORCE_LABEL))
+    return { run: true, bottom, why: `labelled \`${FORCE_LABEL}\`` };
   return {
     run: false,
     bottom,
