@@ -1,11 +1,8 @@
 import type { ReactNode } from "react";
-import { standingArrivalStatus } from "@/db/arrival-provenance";
 import { issueBookingHandoff } from "@/db/booking-handoff";
 import type { AppDb } from "@/db/client";
-import { departureRollCallForBooking } from "@/db/manifests";
 import { type BookedDeparture, bookedDepartures, nextDiveForBooking } from "@/db/next-dive";
 import {
-  departureAfterLateBoarding,
   MAX_RECAP_PHOTOS_PER_BOOKING,
   type RecapPageData,
   type RecapPhotoView,
@@ -38,7 +35,6 @@ import {
 import type { ShopCurrency } from "@/lib/money";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
-import { hasArrived } from "@/lib/presence";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { type SiteMarkCode, siteMarkFor } from "@/lib/site-mark";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
@@ -347,9 +343,9 @@ export async function buildAfterStateProps(input: {
     getReviewForBooking(db, bookingId),
     nextPublicDeparture(db, shop.id, locale, shop.timezone),
     getRecapPulseForBooking(db, bookingId),
-    // **The four server-side-only fields on `RecapPageData` are read here and
-    // nowhere else** (`trip.id`, `trip.courseId`, `trip.lensId`, `personId` —
-    // see their own
+    // **The server-side-only fields on `RecapPageData` are read here and
+    // nowhere else** (`trip.id`, `trip.courseId`, `trip.lensId`, `personId`,
+    // and `seenThatDay` below — see their own
     // note in src/db/recap.ts). They never reach `AfterStateProps`: this props
     // object names every field explicitly rather than spreading `data`, which
     // is what keeps a person uuid off a client-visible bearer-token page.
@@ -368,12 +364,6 @@ export async function buildAfterStateProps(input: {
   ]);
   const [firstBooked] = booked;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
-  const candidate = { booking: { id: bookingId }, shop: { id: shop.id }, trip: { id: trip.id } };
-  const [rollCall, desk] = await Promise.all([
-    departureRollCallForBooking(db, shop.id, trip.id, bookingId),
-    standingArrivalStatus(db, shop.id, trip.id, bookingId),
-  ]);
-  const boarded = await departureAfterLateBoarding(db, rollCall, candidate);
   const asOf = nowDate();
 
   return {
@@ -413,7 +403,9 @@ export async function buildAfterStateProps(input: {
     sheet: {
       reference: bookingReference(bookingId),
       asOf: formatDateTimeTz(asOf, locale, shop.timezone),
-      signable: boarded === "boarded" || hasArrived(desk),
+      // Read with the recap's own row and dock read (`seenThatDay`), so the
+      // sheet costs this page no read of its own.
+      signable: data.seenThatDay.boardedAtRollCall || data.seenThatDay.arrivedAtDesk,
     },
     diverName: data.diverName,
     sites: data.sites,

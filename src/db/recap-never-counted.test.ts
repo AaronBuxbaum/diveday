@@ -5,7 +5,7 @@ import { fakeEmail, fakeSms } from "@/test/fakes";
 import { sendDueRecaps } from "@/test/words-wiring";
 import { createBookingParty } from "./bookings";
 import { bookingsLeftAtTheDock, bookingsNeverCountedAtRollCall, getRecapPageData } from "./recap";
-import { notificationDeliveries, rollCallEvents } from "./schema";
+import { bookingArrivalEvents, notificationDeliveries, rollCallEvents } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -57,7 +57,17 @@ async function counted() {
     trip: { id: reef.id },
   });
   const afterTrip = new Date(reef.endsAt.getTime() + 15 * 60 * 60 * 1000);
-  return { db, cy, una, record, candidate, afterTrip };
+  const arrive = (bookingId: string) =>
+    db.insert(bookingArrivalEvents).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId,
+      recordedByPersonId: staff.person.id,
+      status: "arrived",
+      source: "live",
+      occurredAt: reef.startsAt,
+    });
+  return { db, cy, una, record, candidate, afterTrip, arrive };
 }
 
 const options = (afterTrip: Date, email: ReturnType<typeof fakeEmail>) => ({
@@ -107,5 +117,23 @@ describe("a diver nobody counted on a counted departure", () => {
     await record(una, "boarded", "after_dive_1");
     expect(await bookingsNeverCountedAtRollCall(db, [candidate(una)])).toEqual(new Set());
     expect(await getRecapPageData(db, una)).not.toBeNull();
+  });
+
+  it("tells the logbook sheet what the shop saw, from the recap's own reads (reviews of #2745)", async () => {
+    const { db, cy, una, record, arrive } = await counted();
+    // Cy: boarded at the dock. Una: left at the dock, joined at the second
+    // site, and seen at the desk.
+    await record(cy, "boarded");
+    await record(una, "not_boarded");
+    await record(una, "boarded", "after_dive_1");
+    await arrive(una);
+    expect((await getRecapPageData(db, cy))?.seenThatDay).toEqual({
+      boardedAtRollCall: true,
+      arrivedAtDesk: false,
+    });
+    expect((await getRecapPageData(db, una))?.seenThatDay).toEqual({
+      boardedAtRollCall: true,
+      arrivedAtDesk: true,
+    });
   });
 });
