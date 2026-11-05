@@ -368,8 +368,8 @@ export async function claimBookkeeperMonth(
  * same address and the same confirmation it was claimed under. An address
  * changed mid-send clears the confirmation and may land on the same month, so
  * the month alone would match the new address's row (third-pass security
- * N1). The claim's stop link stays: a send the provider answered with an
- * error may still have arrived, and its link must work.
+ * N1). It leaves the claim's stop link to the caller
+ * ({@link withdrawBookkeeperClaimStop}).
  */
 export async function releaseBookkeeperMonth(
   db: DbExecutor,
@@ -423,11 +423,30 @@ export async function bookkeeperClaimStands(
 }
 
 /**
+ * **Takes back the stop link a claim minted when nothing was sent** (issue
+ * #3947): a send that threw, or one the provider did not accept, leaves an
+ * unspent link for an email that may not exist, and the retry mints another.
+ * Only this claim's own link goes; an earlier month's email may still be in
+ * the bookkeeper's inbox, and its link keeps working.
+ */
+export async function withdrawBookkeeperClaimStop(
+  db: DbExecutor,
+  input: { shopId: string; stopToken: string },
+): Promise<void> {
+  await withdrawUnspentCapabilities(db, {
+    purpose: "bookkeeper_stop",
+    shopId: input.shopId,
+    only: input.stopToken,
+  });
+}
+
+/**
  * **Only the newest email's stop link works** (ADR 20261016, security review
  * N1, kept by the l8 review B1): once a month's email is delivered, every
  * other unspent link the shop holds is withdrawn, so a forwarded older email
  * stops nothing. A send that failed keeps the earlier links, since its own
- * email may never have arrived.
+ * email may never have arrived, and withdraws its own
+ * ({@link withdrawBookkeeperClaimStop}).
  */
 export async function keepOnlyNewestBookkeeperStop(
   db: DbExecutor,

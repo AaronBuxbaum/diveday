@@ -5,6 +5,7 @@ import {
   listBookkeeperShops,
   releaseBookkeeperMonth,
   tellOwnersAboutBookkeeper,
+  withdrawBookkeeperClaimStop,
 } from "@/db/bookkeeper";
 import type { AppDb } from "@/db/client";
 import { canPersonExportShopData } from "@/db/export";
@@ -45,7 +46,9 @@ export type MonthEndPassSummary = {
  * fails, or files that could not be built, give the claim back so the next
  * day's pass tries again. A send the provider accepted but answered with an
  * error is given back too, so the bookkeeper may get that month twice (review
- * N1): a duplicate to the right inbox is the cheaper failure. Logs carry the
+ * N1): a duplicate to the right inbox is the cheaper failure. A claim that
+ * sent nothing takes back its own stop link and no other, so a retry does not
+ * pile up links and an earlier month's email keeps its own (issue #3947). Logs carry the
  * shop and the month, never the address or the files.
  *
  * Building the files takes seconds, and the bookkeeper or an owner can stop
@@ -102,6 +105,9 @@ export async function sendDueMonthEndEmails(
         confirmedAt: claim.confirmedAt,
         previous: shop.sentMonth,
       });
+    const withdrawStop = () =>
+      withdrawBookkeeperClaimStop(db, { shopId: shop.id, stopToken: claim.stopToken });
+    let mailed = false;
     try {
       const locale = recipientLocale(null, shop.defaultLocale);
       const files = await monthEndFiles(db, shop, due, options.now, locale);
@@ -114,6 +120,7 @@ export async function sendDueMonthEndEmails(
         }))
       ) {
         summary.skipped += 1;
+        await withdrawStop();
         log("bookkeeper.address_changed", "info", { shopId: shop.id, month });
         continue;
       }
@@ -132,6 +139,7 @@ export async function sendDueMonthEndEmails(
         options.provider,
       );
       if (delivery.status === "sent") {
+        mailed = true;
         summary.sent += 1;
         await keepOnlyNewestBookkeeperStop(db, { shopId: shop.id, stopToken: claim.stopToken });
         await tellOwnersAboutBookkeeper(db, {
@@ -143,11 +151,15 @@ export async function sendDueMonthEndEmails(
         });
       } else {
         summary.failed += 1;
+        await withdrawStop();
         await release();
         log("bookkeeper.send_failed", "warn", { shopId: shop.id, month, status: delivery.status });
       }
     } catch (error) {
       summary.failed += 1;
+      // Only a send that never went out gives its link back: after a delivery
+      // the email is in the inbox and its link must keep working.
+      if (!mailed) await withdrawStop();
       await release();
       log("bookkeeper.shop_failed", "error", {
         shopId: shop.id,
