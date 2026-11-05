@@ -10,7 +10,7 @@ import {
 import { DAY_MS, NOW, page, snapshotOf, stubSnapshotReply } from "./ready-test-support";
 
 const ORIGIN = "https://dive.day";
-const TOKEN = "A".repeat(43);
+const TOKEN = `c1.${"A".repeat(22)}.${"A".repeat(43)}`;
 
 afterEach(() => {
   vi.unstubAllGlobals();

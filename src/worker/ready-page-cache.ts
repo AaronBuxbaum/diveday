@@ -66,10 +66,11 @@ import {
 } from "@/lib/ready-offline";
 
 /**
- * A readiness link and nothing else: `/ready/` and one bearer token
- * (`createBearerToken`, 32 random bytes as base64url, 43 characters).
+ * A readiness link and nothing else: `/ready/` and one booking-link token
+ * (`src/lib/booking-link-token.ts`: `c<version>.<22-character id>.<43-character tag>`).
+ * Kept as its own literal: the worker cannot import the Node-only token module.
  */
-const READY_PAGE_PATTERN = /^\/ready\/[A-Za-z0-9_-]{43}$/;
+const READY_PAGE_PATTERN = /^\/ready\/c[1-9]\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}$/;
 
 /** Two weeks: the ceiling on any copy, whatever day the page names. */
 export const READY_COPY_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;

@@ -40,7 +40,7 @@ beforeEach(() => {
  * `/` (the staff worker, on a shared shop tablet) it never does.
  */
 describe("the /ready/ registration's fetch", () => {
-  const TOKEN = "Z".repeat(43);
+  const TOKEN = `c1.${"Z".repeat(22)}.${"Z".repeat(43)}`;
   const PATH = `/ready/${TOKEN}`;
   const kept = new Map<string, Response>();
   const cacheStub = {
@@ -298,7 +298,7 @@ describe("the /ready/ registration's fetch", () => {
   it.each([false, true])(
     "does not replace a newer valid copy after an old snapshot finishes, different path=%s",
     async (differentPath) => {
-      const newerPath = differentPath ? `/ready/${"Y".repeat(43)}` : PATH;
+      const newerPath = differentPath ? `/ready/c1.${"Y".repeat(22)}.${"Y".repeat(43)}` : PATH;
       fetchMock.mockResolvedValue(livePage("live"));
       const olderSnapshot = heldSnapshot();
       const older = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
@@ -331,7 +331,7 @@ describe("the /ready/ registration's fetch", () => {
           }),
       );
       const older = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
-      const newerPath = `/ready/${"Y".repeat(43)}`;
+      const newerPath = `/ready/c1.${"Y".repeat(22)}.${"Y".repeat(43)}`;
       fetchMock.mockResolvedValueOnce(html("new meeting point"));
       const newer = message("KEEP_READY_PAGE", `https://dive.day${newerPath}`);
       await newer.settle();
