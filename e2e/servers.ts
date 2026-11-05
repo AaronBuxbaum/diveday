@@ -135,7 +135,7 @@ export const E2E_FROZEN_CLOCK = process.env.DIVEDAY_CLOCK || "2026-07-21T13:30:0
  * It does not switch payments on by itself either: `payAtBooking` also needs a
  * priced trip and `canAcceptPayments`, and the demo seed provides neither —
  * a test opts in by creating a priced trip and POSTing
- * /api/test/seed-stripe-account.
+ * the `stripeAccount` fact.
  *
  * **Must match the `APP_HOST` in package.json's `e2e:build`.** Metadata for
  * prerendered routes (robots.txt, sitemap.xml, the marketing pages' canonical

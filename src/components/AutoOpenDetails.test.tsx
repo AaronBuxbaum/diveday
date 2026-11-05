@@ -97,6 +97,32 @@ describe("AutoOpenDetails' open prop", () => {
   });
 });
 
+describe("AutoOpenDetails says when React owns it", () => {
+  it("is unmarked as the server draws it and marked once hydrated, a native toggle kept", async () => {
+    const tree = (
+      <AutoOpenDetails openOnHash="unrelated">
+        <summary>Contact</summary>
+      </AutoOpenDetails>
+    );
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(tree);
+    document.body.append(container);
+    expect(details(container).hasAttribute("data-hydrated")).toBe(false);
+    details(container).open = true;
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    try {
+      await act(async () => {
+        root = hydrateRoot(container, tree);
+      });
+      expect(details(container).getAttribute("data-hydrated")).toBe("true");
+      expect(details(container).open).toBe(true);
+    } finally {
+      await act(async () => root?.unmount());
+      container.remove();
+    }
+  });
+});
+
 describe("AutoOpenDetails native state before hydration", () => {
   for (const startsOpen of [false, true]) {
     it(`adopts a native ${startsOpen ? "close" : "reveal"} before hydration without a mismatch`, async () => {

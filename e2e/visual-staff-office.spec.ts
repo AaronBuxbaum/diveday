@@ -8,6 +8,7 @@ import { monthLabel } from "../src/lib/calendar";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { e2eNow, openBookingActions, openRosterDetails, seededTripId } from "./helpers";
 import { PAYMENT_HISTORY_CSV } from "./payment-history-fixture";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   capturePrint,
@@ -59,8 +60,7 @@ for (const scheme of ["light", "dark"] as const) {
         // "certified before" it (`cardProcessingSince`, PR #2918 item 1d):
         // that disclosure is absent here, and its grammar is held by
         // CardsToProcess.test.tsx under a clock past the cut.
-        const seeded = await request.post("/api/test/seed-certified-recap");
-        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await seedFacts(request, ["certifiedRecap"]);
         await page.goto("/shop/blue-mantis/courses");
         // The first ladder row: the demo now seeds two shop-certified cards
         // of its own (H-20261022-demo-seeds-six-hidden), so "See who" is on more than one step.
@@ -374,7 +374,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **The panel that only exists when something has gone wrong** (D40,
        * issue #1200) — the class AGENTS.md says is photographed through a
        * test-only seed route rather than by seeding the failure into the demo
-       * shop. `POST /api/test/seed-recap-pulse` files one open pulse against
+       * shop. The `recapPulse` fact (`/api/test/shop`) files one open pulse against
        * the pinned recap booking, which is the only way this block renders at
        * all: with nothing to fix it draws nothing, and blue-mantis must not
        * ship a standing complaint about its own rental gear.
@@ -386,7 +386,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-recap-pulse");
+        await seedFacts(request, ["recapPulse"]);
         await page.goto("/shop/blue-mantis/reviews");
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByRole("heading", { name: "Asked us to fix" }).waitFor();
@@ -410,10 +410,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,reviewReply",
-        );
-        expect(seeded.ok()).toBe(true);
+        await seedFacts(request, ["troublePanels", "reviewReply"]);
         await page.goto("/s/blue-mantis/reviews");
         await page.locator("[data-review-reply]").first().waitFor();
         await capture(page, "public-reviews-reply", scheme);
@@ -444,7 +441,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels");
+        await seedFacts(request, ["troublePanels"]);
         await page.goto("/shop/blue-mantis/reviews");
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByText(/DiveDay has stopped publishing it/).waitFor();

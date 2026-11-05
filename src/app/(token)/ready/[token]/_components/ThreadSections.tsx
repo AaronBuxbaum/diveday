@@ -15,7 +15,10 @@ import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { type PlannedFlySafe, plannedFlySafeMessageKey } from "@/lib/fly-safe";
 import { formatPlannedDateTimeTz, formatShortDate } from "@/lib/format";
+import { type NitroxMod, nitroxPlanningLines } from "@/lib/nitrox-mod";
+import { seatRentalItems } from "@/lib/participant-types";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
+import { nitroxAvailableOn } from "@/lib/rentals";
 import {
   addSeatFromReady,
   askToMoveAction,
@@ -50,6 +53,23 @@ export type ReadyThreadSectionsContext = {
 };
 
 /**
+ * The nitrox depths to plan with (loop 5, row 9), read off the page's own data
+ * and never handed in: empty unless the diver asked for nitrox on this seat,
+ * this seat can be given it (`nitroxAvailableOn`, the same answer as the
+ * request box) and a verified card authorizes the fill (`nitroxPlanningLines`).
+ */
+export function readyNitroxPlan(data: ReadyPageData): NitroxMod[] {
+  return nitroxPlanningLines({
+    wantsNitrox: data.wantsNitrox,
+    cardVerified: data.nitroxCardVerified,
+    offered: nitroxAvailableOn(
+      seatRentalItems(data.participantType, data.shop.rentalItems),
+      data.trip.course,
+    ),
+  });
+}
+
+/**
  * The readiness thread under its spine: running late, where to go, the crew,
  * what changed, course materials, the party's section, the packing list, the
  * log entry it turns into, and last the diver's own cancel door. One `space-y-10` run, so no section
@@ -70,6 +90,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
     partyAllSet,
     flySafePlan,
   } = context;
+  const nitroxPlan = readyNitroxPlan(data);
   const { detail } = data;
   const partySeats = partyClaimSeats(partySeatClaims);
   // Dive 1 first, in the dive plan's own order: where a site names its own
@@ -188,6 +209,30 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
               count: flySafePlan.hours,
             })}
           </p>
+        ) : null}
+        {/* The nitrox depths to plan with (loop 5, row 9), once a verified
+                card backs the request. A planning aid for the briefing and the
+                diver's own computer, never a fill: the tank is analyzed at the
+                dock, and that mix is the one dived. */}
+        {nitroxPlan.length > 0 ? (
+          <section data-testid="ready-nitrox-plan" className="text-base">
+            <p>{t("ready.nitroxPlan.lead")}</p>
+            <ul className="mt-1">
+              {nitroxPlan.map((mod) => (
+                <li key={mod.o2Percent} className="tabular-nums">
+                  {t("ready.nitroxPlan.line", {
+                    o2: mod.o2Percent,
+                    meters: mod.meters,
+                    feet: mod.feet,
+                  })}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1">{t("ready.nitroxPlan.stillApply")}</p>
+            <p className="mt-1 text-muted">
+              {t("ready.nitroxPlan.notAFill")} {t("ready.nitroxPlan.richerIsShallower")}
+            </p>
+          </section>
         ) : null}
         {/* Where the day ends up (UX review 2026-10-10, item 35): the recap's
                 log entry is the keepsake this same link turns into once the

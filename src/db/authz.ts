@@ -24,6 +24,7 @@ import {
   canOverrideCertBlock,
   canOverrideGearRequest,
   canPrintMedicalAlerts,
+  canQuoteCharter,
   canReadDiverMedicalForm,
   canReadEveryIncidentReport,
   canReadMedicalAlert,
@@ -211,6 +212,10 @@ export const canPersonViewShopActivity = (db: DbExecutor, shopId: string, person
  */
 export const canPersonManageOrders = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageOrders);
+
+/** Live DB-checked companion of the charter-quote gate; `sendInterestReply` calls it itself. */
+export const canPersonQuoteCharter = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canQuoteCharter);
 
 /** Live DB-checked companion of the dispute-sheet gate (src/lib/authz.ts). */
 export const canPersonExportDisputeSheet = (db: DbExecutor, shopId: string, personId: string) =>

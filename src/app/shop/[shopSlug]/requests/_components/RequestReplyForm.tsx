@@ -1,7 +1,8 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import { Field, textareaClassFor } from "@/components/ui/form";
+import type { ForgivingCopy } from "@/components/ui/ForgivingInput";
+import { Field, PriceField, textareaClassFor } from "@/components/ui/form";
 import { INTEREST_REPLY_MAX } from "@/lib/interest-reply";
 
 export type RequestReplyCopy = {
@@ -11,6 +12,18 @@ export type RequestReplyCopy = {
   destination: string;
   send: string;
   sending: string;
+};
+
+/**
+ * The whole-boat price a reply to a private charter carries (loop 5, row 11),
+ * in the shop's major unit; the writer words it into the diver's language.
+ */
+export type RequestQuoteField = {
+  label: string;
+  hint: string;
+  currency: string;
+  locale: string;
+  copy: ForgivingCopy;
 };
 
 /**
@@ -28,12 +41,15 @@ export function RequestReplyForm({
   requestId,
   action,
   copy,
+  quote,
   error,
 }: {
   requestId: string;
   /** Posts `requestId` and `body` (`replyToRequestAction`). */
   action: (formData: FormData) => void;
   copy: RequestReplyCopy;
+  /** Present only on a charter request: a price box above the words. */
+  quote?: RequestQuoteField;
   /** Why the last reply on this row did not go, when it is this row the notice names. */
   error?: string;
 }) {
@@ -46,6 +62,18 @@ export function RequestReplyForm({
       </summary>
       <form action={action} className="mt-1 flex flex-col gap-2">
         <input type="hidden" name="requestId" value={requestId} />
+        {quote ? (
+          <PriceField
+            id={`${fieldId}-quote`}
+            name="quote"
+            label={quote.label}
+            hint={quote.hint}
+            cents={null}
+            currency={quote.currency}
+            locale={quote.locale}
+            copy={quote.copy}
+          />
+        ) : null}
         <Field label={copy.label} htmlFor={fieldId} description={copy.destination} error={error}>
           <textarea
             id={fieldId}

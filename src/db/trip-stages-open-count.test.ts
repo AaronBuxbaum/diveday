@@ -147,7 +147,7 @@ describe("readDepartureStage: crew counted back at a later dive", () => {
 describe("readDepartureStage over the demo's sailed history", () => {
   it("reads every recent history departure as finished: its counts were all closed", async () => {
     const { db, shop } = ctx;
-    await resetDemoSchedule(db, shop.id, { history: true });
+    await resetDemoSchedule(db, shop.id, "history");
     const sailed = await db
       .select()
       .from(trips)

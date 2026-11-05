@@ -49,7 +49,7 @@ not alert him (`/api/demo/quiet?setup=<key>`).
   replaced by whatever a bounce carries back.
 - **`ONBOARD_SETUP_KEY` is deleted**, with `src/lib/onboard-setup-key.ts`, its dev and e2e keys
   and its registry row. The e2e fleet mints a link per onboarding through
-  `/api/test/seed-setup-link` (`e2e/setup-link.ts`), gated like every test route.
+  the `setupLink` fact on `/api/test/shop` (`e2e/setup-link.ts`), gated like every test route.
 - **The demo-quiet proof becomes its own key**, `DEMO_QUIET_KEY`, at `/api/demo/quiet?key=<key>`.
   It is still a standing secret, because it marks a browser for 400 days, but it opens nothing but
   a quiet browser: a leaked copy costs the founder some alerts, never a shop. `key` joins `setup`

@@ -64,7 +64,7 @@ schedule builder, date requests, site briefings, bearer-token routes). What they
 - **Every sentence earns its place, or it is deleted**: the **copy-restraint** skill; an
   accessibility trade goes in [docs/design/accessibility-tradeoffs.md](../../docs/design/accessibility-tradeoffs.md).
 - **Delete says Delete**: the `softDelete` lint rule (ADR 20260820-every-delete-is-soft).
-- **A trouble state is photographed through `/api/test/seed-trouble-states`**, never seeded into
+- **A trouble state is photographed through a fact on `/api/test/shop`**, never seeded into
   the demo shop.
 - **A new feature a shop could run without gets a Features switch (default on), or a `core`
   entry saying why not**, in `src/lib/feature-coverage.ts`; off, its page redirects with no

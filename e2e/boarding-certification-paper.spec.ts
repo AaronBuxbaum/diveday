@@ -1,18 +1,18 @@
 import { execFileSync } from "node:child_process";
 import { expect, test } from "./fixtures";
 
-test.use({ privateShopSlug: "boarding-certification-paper" });
+test.use({
+  privateShopSlug: "boarding-certification-paper",
+  privateShopFacts: [{ name: "operationalTrust", state: "capacity", certificationInterval: true }],
+});
 
 test("boarding evidence stays with its heading and every sheet identifies the departure", async ({
   page,
-  request,
   privateShop,
 }, info) => {
-  const response = await request.post(
-    `/api/test/seed-trouble-states?operationalTrust=capacity&certificationInterval=1&shop=${privateShop.slug}`,
-  );
-  expect(response.ok()).toBe(true);
-  const { operationalTrust } = await response.json();
+  const { operationalTrust } = privateShop.values as {
+    operationalTrust: { tripId: string };
+  };
   await page.goto(`/shop/${privateShop.slug}/trips/${operationalTrust.tripId}/log`);
   await expect(
     page.getByText("Certification evidence read between", { exact: false }).first(),

@@ -19,7 +19,7 @@ import { createTrip } from "./trips";
 describePostgres("fly-safe correction leases across connections", () => {
   it("allows one live claim and records acceptance only when the provider returns", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const startsAt = new Date("2035-03-12T12:00:00.000Z");

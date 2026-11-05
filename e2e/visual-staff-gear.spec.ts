@@ -9,6 +9,7 @@ import { calendarDateInTimezone, formatCalendarDate } from "../src/lib/calendar-
 import { DAY_MS } from "../src/lib/clock";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { e2eNow } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   captureStickyFoot,
@@ -131,7 +132,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-stripe-account");
+        await seedFacts(request, ["stripeAccount"]);
         await page.goto("/shop/blue-mantis/gear/work-orders");
         await page
           .getByRole("link", { name: /Inflator sticks open/ })
@@ -145,7 +146,7 @@ for (const scheme of ["light", "dark"] as const) {
       // one ready for a week that nobody has collected, through the opt-in
       // `?bench=1` trouble state (never seeded into blue-mantis).
       test(`Today asks about the bench (${scheme})`, async ({ page, request }) => {
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels,bench");
+        await seedFacts(request, ["troublePanels", "bench"]);
         await page.goto("/shop/blue-mantis");
         const benchDate = (daysAgo: number) =>
           formatCalendarDate(
@@ -191,15 +192,11 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,gearConcern",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { gearConcern } = (await seeded.json()) as {
+        const seeded = await seedFacts(request, ["troublePanels", "gearConcern"]);
+        const { gearConcern } = seeded as {
           gearConcern?: { gearItemId: string; label: string };
         };
-        if (!gearConcern)
-          throw new Error("seed-trouble-states could not return Reg #4 with a concern");
+        if (!gearConcern) throw new Error("the fact could not return Reg #4 with a concern");
         await page.goto(`/shop/blue-mantis/gear/${gearConcern.gearItemId}`);
         await page.getByRole("heading", { level: 1, name: gearConcern.label }).waitFor();
         await page.getByText(/^Returned .+ with a concern: /).waitFor();
@@ -338,7 +335,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "gear-unit-deleted", scheme);
       });
 
-      // The register on a working morning, through /api/test/seed-trouble-states
+      // The register on a working morning, through a fact on /api/test/shop
       // (never seeded into blue-mantis, whose whole fleet is calm): all three
       // of the register's groups in one frame — a unit out with a diver and due
       // back today at a named time, a checked-out unit gone overdue carrying
@@ -350,10 +347,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,gearOut,gearUncollected",
-        );
-        expect(seeded.ok()).toBe(true);
+        await seedFacts(request, ["troublePanels", "gearOut", "gearUncollected"]);
         await page.goto("/shop/blue-mantis/gear");
         await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
         // Both group headings, so the capture can never land on a half-built
@@ -403,7 +397,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels,gearOut");
+        await seedFacts(request, ["troublePanels", "gearOut"]);
         await page.goto("/shop/blue-mantis/gear?view=rentals");
         await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
         const rentals = page.getByRole("region", { name: "Rentals" });
@@ -420,10 +414,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,gearOut,rentalWaiverWarning",
-        );
-        expect(seeded.ok()).toBe(true);
+        await seedFacts(request, ["troublePanels", "gearOut", "rentalWaiverWarning"]);
         await page.goto("/shop/blue-mantis/gear?view=rentals");
         await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
         const rentals = page.getByRole("region", { name: "Rentals" });
@@ -438,7 +429,7 @@ for (const scheme of ["light", "dark"] as const) {
       // The front desk's invoice builder. The Orders index answers a shop that
       // can't take money with a notice instead of the panel, so mark the demo
       // shop connected first:
-      // /api/test/seed-stripe-account is a pure DB write that never calls
+      // the `stripeAccount` fact is a pure DB write that never calls
       // Stripe (same use as the recap tip section above), and no order is
       // created here — this is the empty form, which is the whole surface.
       // Its own test also keeps that connected-shop write off every other
@@ -447,7 +438,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-stripe-account");
+        await seedFacts(request, ["stripeAccount"]);
         await page.goto("/shop/blue-mantis/orders?add=1");
         await page.getByRole("heading", { level: 2, name: "New order" }).waitFor();
         await capture(page, "orders-new", scheme);

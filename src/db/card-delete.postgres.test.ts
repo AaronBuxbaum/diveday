@@ -19,7 +19,7 @@ import { createTrip, listStaff, setTripCrew } from "./trips";
 describePostgres("a card delete and an undone removal", () => {
   it("serializes the delete behind a restore that already read the card", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const [course] = await pg.db

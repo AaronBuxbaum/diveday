@@ -47,6 +47,7 @@ export function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps
     tipPresets: [10, 20, 40],
     canReview: true,
     ownReview: null,
+    crewChoices: [],
     ownPulse: null,
     params: {},
     nextDeparture: null,

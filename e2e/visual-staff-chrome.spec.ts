@@ -8,6 +8,7 @@ import { staffPassengerCount } from "../src/i18n/participant-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { manifestRow, openManifestPerson, openOnThisPhone } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   FLOW_TIMEOUT_MS,
@@ -147,12 +148,9 @@ for (const scheme of ["light", "dark"] as const) {
           page,
           request,
         }) => {
-          const seeded = await request.post(
-            "/api/test/seed-trouble-states?facts=troublePanels,mixedBoat",
-          );
-          expect(seeded.ok()).toBe(true);
-          const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
-          if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
+          const seeded = await seedFacts(request, ["troublePanels", "mixedBoat"]);
+          const { mixedBoat } = seeded as { mixedBoat?: { tripId: string } };
+          if (!mixedBoat) throw new Error("the fact found no departure to mix");
 
           const copy = staffTranslator(SPANISH);
           await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}/log`);
@@ -306,7 +304,7 @@ for (const scheme of ["light", "dark"] as const) {
           page,
           request,
         }) => {
-          await request.post("/api/test/seed-trouble-states?facts=troublePanels,crewGap");
+          await seedFacts(request, ["troublePanels", "crewGap"]);
           await page.goto("/shop/blue-mantis/staffing");
           await page.getByText("Sin divemaster").first().waitFor();
           await capture(page, "staffing-week-gap", scheme, { locale: SPANISH });

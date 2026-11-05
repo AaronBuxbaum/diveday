@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  namedFacts,
+  namedTestRoutes,
   registeredHandlers,
+  registryNames,
   SHOP_READERS_BY_DESIGN,
   shopReadersWithoutDemoGate,
   unregisteredHandlers,
@@ -174,5 +177,47 @@ describe("test routes that reach a shop without the demo gate (issue #2751)", ()
 
   it("gives every exception a written reason", () => {
     for (const reason of SHOP_READERS_BY_DESIGN.values()) expect(reason.length).toBeGreaterThan(20);
+  });
+});
+
+describe("the one test door's callers (issue #2759)", () => {
+  it("reads the registry's fact and set names, and nothing past either object", () => {
+    const source = [
+      "const FACTS = {",
+      "  gearOut: ({ db }) => go(db),",
+      "  evening: withArgs(eveningArgs, ({ db }, args) =>",
+      "    bring(db, args),",
+      "  ),",
+      "} satisfies Record<string, Fact>;",
+      "export const FACT_SETS = {",
+      '  troublePanels: ["gearOut"],',
+      "} as const;",
+      "const other = {",
+      "  notAFact: 1,",
+      "};",
+    ].join("\n");
+    expect(registryNames(source)).toEqual(new Set(["gearOut", "evening", "troublePanels"]));
+  });
+
+  it("names each test route a caller reaches, without its query", () => {
+    expect(
+      namedTestRoutes(
+        'request.post("/api/test/shop", {}); api.delete(`/api/test/shop?slug=${s}`); "/api/test/seed-gone?x=1"',
+      ),
+    ).toEqual(["shop", "seed-gone"]);
+  });
+
+  it("takes a list's names and its objects' names, never an argument's own strings", () => {
+    expect(
+      namedFacts(
+        [
+          'await seedFacts(request, ["stripeAccount", { name: "bookingCheckout", email: "a@b.c" }], {',
+          '  slug: "x",',
+          "});",
+          'test.use({ privateShopFacts: [{ name: "operationalTrust", state: "capacity" }] });',
+          'seedFacts(page.request, [{ name: "evening", heads: "closed" }, "gearOut"]);',
+        ].join("\n"),
+      ),
+    ).toEqual(["stripeAccount", "bookingCheckout", "operationalTrust", "evening", "gearOut"]);
   });
 });

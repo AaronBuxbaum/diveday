@@ -23,6 +23,7 @@ import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import type { SeatCounts } from "@/lib/participant-types";
+import { type ServiceWindow, serviceWindowFrom } from "@/lib/service-window";
 import {
   summarizeTripDiveSites,
   type TripDiveSiteRef,
@@ -1223,6 +1224,11 @@ export type WeekBoardEntry = {
   boatId: string | null;
   /** A shore or pool session has no hull to be in two places at once. */
   diveMode: "boat" | "shore" | "pool";
+  /**
+   * The site's closure window (loop 5, row 5), or null when it is open: the
+   * board warns about a departure planned there inside it.
+   */
+  diveSiteClosure: ServiceWindow | null;
 };
 
 /**
@@ -1303,6 +1309,9 @@ export async function weekBoard(
     .select({
       trip: trips,
       diveSiteName: diveSites.name,
+      diveSiteClosedFrom: diveSites.closedFrom,
+      diveSiteClosedUntil: diveSites.closedUntil,
+      diveSiteClosureReason: diveSites.closureReason,
       certifiedPassengers: tripBoatCertifiedPassengers(),
       boatCapacity: tripBoatCapacity(),
       assignedCrewCount: tripAssignedCrewCount(),
@@ -1362,6 +1371,9 @@ export async function weekBoard(
   for (const {
     trip,
     diveSiteName,
+    diveSiteClosedFrom,
+    diveSiteClosedUntil,
+    diveSiteClosureReason,
     booked,
     course,
     certifiedPassengers,
@@ -1410,6 +1422,11 @@ export async function weekBoard(
       diveSiteName,
       boatId: trip.boatId,
       diveMode: trip.diveMode,
+      diveSiteClosure: serviceWindowFrom(
+        diveSiteClosedFrom,
+        diveSiteClosedUntil,
+        diveSiteClosureReason,
+      ),
     });
   }
   for (const iso of dayIsos) {

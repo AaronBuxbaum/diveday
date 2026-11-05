@@ -601,7 +601,7 @@ non-owner, and proves at most one coral element renders; `src/features/today/clo
 late-arrival buffer on both sides of the hour and the once-ever wording's condition;
 `staff-destinations.test.ts` pins four primary tabs and no `/close-out` suffix anywhere in the
 registry; `e2e/day-close.spec.ts` runs J4 end to end and checks the 308, the dock and the palette
-command. `/api/test/seed-evening` is what makes the evening reachable at all — it moves a demo
+command. The `evening` fact (`/api/test/shop`) is what makes the evening reachable at all — it moves a demo
 day's departures behind the frozen clock, because `DIVEDAY_CLOCK` is one process-wide instant the
 whole worker shares.
 

@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { e2eNow, seededTripId } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 /**
  * The gear register (ADR 20260815-minimal-gear-register): the fleet on the
@@ -128,7 +129,7 @@ test.describe("staff", () => {
    * rows of the groups they were always about, and closing the last one out
    * earns the register its one coral line.
    *
-   * The two states come from `/api/test/seed-trouble-states?gearOut=1`, never
+   * The two states come from `the `gearOut` fact (`/api/test/shop`)`, never
    * from the demo seed: blue-mantis reserves against a departure five days
    * out, so nothing on it is ever out or overdue.
    */
@@ -136,7 +137,7 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-trouble-states?facts=troublePanels,gearOut");
+    await seedFacts(request, ["troublePanels", "gearOut"]);
     await page.goto("/shop/blue-mantis/gear");
     await expect(page.getByRole("heading", { level: 2, name: /^Overdue/ })).toBeVisible();
 
@@ -331,10 +332,10 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    // The trip id first: `seed-trouble-states` reshapes the board, and paging
+    // The trip id first: the fact reshapes the board, and paging
     // it afterwards is a race this test has no reason to run.
     const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
-    await request.post("/api/test/seed-trouble-states?facts=troublePanels,gearOut");
+    await seedFacts(request, ["troublePanels", "gearOut"]);
     await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
     const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
 

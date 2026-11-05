@@ -58,7 +58,7 @@ async function requireShop(db: Db, slug: string) {
 describe("deleteDemoShopCascade", () => {
   it("still removes a demo after the retired saved answers table has been dropped", async () => {
     const { db } = ctx;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     await db.execute(sql`drop table if exists inbox_saved_answers`);
 
@@ -68,7 +68,7 @@ describe("deleteDemoShopCascade", () => {
 
   it("deletes invoiced counter rentals before their orders", async () => {
     const { db } = ctx;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -102,7 +102,7 @@ describe("deleteDemoShopCascade", () => {
 
   it("deletes crew requests before their departures", async () => {
     const { db } = ctx;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     const [trip] = await db.select().from(trips).where(eq(trips.shopId, shop.id)).limit(1);
@@ -122,7 +122,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes sold package dives instead of FK-violating on the order they came from", async () => {
     const { db } = ctx;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -162,7 +162,7 @@ describe("deleteDemoShopCascade", () => {
 
   it("deletes a booking's tip instead of FK-violating on the booking it references", async () => {
     const { db } = ctx;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
     if (!booking) throw new Error("test setup: demo shop has no bookings");
@@ -192,7 +192,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes a last-minute unsubscribe token instead of FK-violating on its interest", async () => {
     const { db } = ctx;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -229,7 +229,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes a blow-out cascade instead of FK-violating on its trip", async () => {
     const { db } = ctx;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -283,7 +283,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes the buddy-team trail instead of FK-violating on its trip", async () => {
     const { db } = ctx;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -319,7 +319,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes a courtesy-email unsubscribe token instead of FK-violating on its person", async () => {
     const { db } = ctx;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -354,7 +354,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes the activity trail instead of FK-violating on its shop", async () => {
     const { db } = ctx;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -376,7 +376,7 @@ describe("deleteDemoShopCascade", () => {
 
   it("deletes an owner's outstanding account token instead of FK-violating (security review finding)", async () => {
     const { db } = ctx;
-    const { slug, ownerEmail } = await createDemoShop(db, { history: false });
+    const { slug, ownerEmail } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [ownerAccount] = await db
       .select()
@@ -410,7 +410,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes an owner's provider login instead of FK-violating (issue #1594)", async () => {
     const { db } = ctx;
-    const { slug, ownerEmail } = await createDemoShop(db, { history: false });
+    const { slug, ownerEmail } = await createDemoShop(db, { shape: "lean" });
     const shop = await requireShop(db, slug);
     const [ownerAccount] = await db
       .select()

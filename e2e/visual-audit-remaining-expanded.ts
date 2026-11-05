@@ -14,6 +14,7 @@ import {
   tripPathByTitle,
 } from "./helpers";
 import { PAYMENT_HISTORY_CSV } from "./payment-history-fixture";
+import { seedFacts } from "./shop-facts";
 import type { AuditCapture } from "./visual-audit-capture";
 
 const diver = diverTranslator("en-US");
@@ -285,10 +286,7 @@ export function registerRemainingExpandedAuditCaptures(
     test("each returning-diver fact opens the form that owns it", async ({ page, request }) => {
       test.setTimeout(flowTimeout);
       await bookThread(page);
-      const seeded = await request.post("/api/test/seed-returning-diver", {
-        data: { shopSlug: "blue-mantis", email: "lena.review@example.com" },
-      });
-      expect(seeded.ok()).toBe(true);
+      await seedFacts(request, [{ name: "returningDiver", email: "lena.review@example.com" }]);
       await page.goto(new URL(page.url()).pathname);
       const changes = await openThreadStep(page, "changes");
       const sizes = changes.locator("details").first();

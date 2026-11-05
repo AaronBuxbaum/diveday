@@ -2,10 +2,10 @@ import { StarRatingInput } from "@/components/StarRatingInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { FormStatus, textareaClassFor } from "@/components/ui/form";
+import { controlClass, FormStatus, legendClass, textareaClassFor } from "@/components/ui/form";
 import type { AfterStateProps } from "@/features/recap-after-state";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
-import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
+import { MAX_CREW_THANKS_LENGTH, MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
 
 /**
  * **The one ask.** The review is the after-dive page's single primary in every
@@ -16,12 +16,14 @@ export function ReviewAsk({
   t,
   notice,
   ownReview,
+  crewChoices,
   stepsBack,
   action,
 }: {
   t: DiverTranslator;
   notice: { tone: "success" | "danger"; key: DiverMessageKey } | undefined;
   ownReview: AfterStateProps["ownReview"];
+  crewChoices: AfterStateProps["crewChoices"];
   stepsBack: boolean;
   action: (formData: FormData) => void | Promise<void>;
 }) {
@@ -53,6 +55,38 @@ export function ReviewAsk({
           placeholder={t("reviews.commentPlaceholder")}
           className={textareaClassFor(3)}
         />
+        {/* **Thank someone by name** (loop 5, row 6): one optional line for one
+            of the crew, seen only by them and the shop, never published. */}
+        {crewChoices.length > 0 ? (
+          <fieldset className="flex min-w-0 flex-col gap-2">
+            <legend className={`${legendClass} text-sm font-medium`}>
+              {t("reviews.thanksLegend")}
+            </legend>
+            <select
+              name="crewThanksPerson"
+              aria-label={t("reviews.thanksWho")}
+              defaultValue={ownReview?.crewThanksPersonId ?? ""}
+              className={controlClass}
+            >
+              <option value="">{t("reviews.thanksNobody")}</option>
+              {crewChoices.map((crew) => (
+                <option key={crew.id} value={crew.id}>
+                  {crew.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              name="crewThanks"
+              aria-label={t("reviews.thanksLine")}
+              maxLength={MAX_CREW_THANKS_LENGTH}
+              defaultValue={ownReview?.crewThanks ?? ""}
+              placeholder={t("reviews.thanksPlaceholder")}
+              className={controlClass}
+            />
+            <p className="text-xs text-muted">{t("reviews.thanksHint")}</p>
+          </fieldset>
+        ) : null}
         <div>
           <SubmitButton
             pendingLabel={t("words.busy.sending")}

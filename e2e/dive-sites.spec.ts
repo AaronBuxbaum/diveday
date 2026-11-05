@@ -10,6 +10,7 @@ import {
   openTripAboutRow,
   openTripMore,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 const staffCopy = staffTranslator("en-US");
 
@@ -961,7 +962,7 @@ test.describe("an owner's own library", () => {
  * Garden Banks point is about 1,400 km from Carysfort, which is the genuinely
  * remote case ADR 20260907-noaa-tide-predictions names when it argues the
  * advisory has to be answerable at all. Seeded through
- * `/api/test/seed-trouble-states` rather than into blue-mantis, because a demo
+ * a fact on `/api/test/shop` rather than into blue-mantis, because a demo
  * dive-site list with a standing warning on it is a worse demo
  * (`.claude/rules/surfaces.md`).
  *
@@ -980,14 +981,11 @@ test.describe("a site whose station is nowhere near it", () => {
     // Four saves, each its own navigation and status wait — the same
     // aggregate-cost reasoning as the long test at the top of this file.
     test.setTimeout(30_000);
-    const seeded = await request.post(
-      "/api/test/seed-trouble-states?facts=troublePanels,farStation",
-    );
-    expect(seeded.ok()).toBe(true);
-    const { farStation } = (await seeded.json()) as {
+    const seeded = await seedFacts(request, ["troublePanels", "farStation"]);
+    const { farStation } = seeded as {
       farStation?: { siteId: string; name: string; slug: string };
     };
-    if (!farStation) throw new Error("seed-trouble-states seeded no far-station site");
+    if (!farStation) throw new Error("the fact seeded no far-station site");
     const siteUrl = `/shop/blue-mantis/dive-sites/${farStation.siteId}`;
 
     // The advisory, on a real row rather than a handed-in echo object.

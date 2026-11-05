@@ -14,6 +14,7 @@ import {
   widestRow,
 } from "./import";
 import { normalizeImportKey } from "./import-key";
+import { parseServiceWindow, type ServiceWindow } from "./service-window";
 import { isManagedStorageUrl } from "./storage/blob-host";
 import { TIDE_PREFERENCES, type TidePreference } from "./tides";
 
@@ -89,6 +90,8 @@ export type PreparedDiveSiteImportRow = {
   routeZoom: number | null;
   imageUrls: string[] | null;
   planningNote: string | null;
+  /** The closure window the bundle carried (loop 5, row 5), or null for an open site. */
+  closure: ServiceWindow | null;
   deletedAt: string | null;
   /** Why this row will be skipped, or empty if it will not be. */
   issues: string[];
@@ -169,6 +172,9 @@ export const DIVE_SITE_IMPORT_COLUMNS = [
   "planning_note",
   "planning_note_at",
   "planning_note_by_person_id",
+  "closed_from",
+  "closed_until",
+  "closure_reason",
   "deleted_at",
   "created_at",
 ] as const;
@@ -473,6 +479,13 @@ export function prepareDiveSiteImport(
     if (deletedAt !== null && Number.isNaN(Date.parse(deletedAt)))
       issues.push("invalid_deleted_at");
 
+    const closure = parseServiceWindow({
+      from: read(cells, "closed_from") ?? "",
+      until: read(cells, "closed_until") ?? "",
+      reason: read(cells, "closure_reason") ?? "",
+    });
+    if (!closure.ok) issues.push("invalid_closure");
+
     return {
       rowNumber: index + 2,
       sourceId: read(cells, "id"),
@@ -511,6 +524,7 @@ export function prepareDiveSiteImport(
       routeZoom,
       imageUrls: imageUrls ?? null,
       planningNote: read(cells, "planning_note"),
+      closure: closure.ok ? closure.window : null,
       deletedAt,
       issues,
     };

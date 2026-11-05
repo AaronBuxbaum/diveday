@@ -2,11 +2,12 @@ import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAs, test } from "./fixtures";
 import { signInAsOwner, signOut } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 // Real invite links only ever exist inside a real email — there is no
 // staff-facing screen that displays them (same reasoning as
-// e2e/account-lifecycle.spec.ts's verify/reset links). /api/test/seed-account-token
-// mints a real one for an account the real invite action already created, so
+// e2e/account-lifecycle.spec.ts's verify/reset links). The `accountToken` fact
+// (`/api/test/shop`) mints a real one for an account the real invite action already created, so
 // these specs still drive the actual pages and server actions rather than
 // stopping at the token-storage layer.
 
@@ -43,11 +44,10 @@ test.describe("as owner", () => {
     const row = page.locator("li").filter({ hasText: "Priya Nair" }).filter({ visible: true });
     await expect(row.getByText("Invited")).toBeVisible();
 
-    const seeded = await request.post("/api/test/seed-account-token", {
-      data: { email, purpose: "invite" },
-    });
-    expect(seeded.ok()).toBe(true);
-    const { token } = await seeded.json();
+    const { accountToken } = await seedFacts(request, [
+      { name: "accountToken", email, purpose: "invite" },
+    ]);
+    const { token } = accountToken;
 
     await page.goto(`/invite/${token}`);
     await page.getByLabel("Password", { exact: true }).fill("a-brand-new-password-123");
@@ -88,11 +88,10 @@ test.describe("as owner", () => {
     await inviteSection.getByRole("button", { name: "Send invite" }).click();
     await expect(page.getByText("Invite sent")).toBeVisible();
 
-    const seeded = await request.post("/api/test/seed-account-token", {
-      data: { email, purpose: "invite" },
-    });
-    expect(seeded.ok()).toBe(true);
-    const { token } = await seeded.json();
+    const { accountToken } = await seedFacts(request, [
+      { name: "accountToken", email, purpose: "invite" },
+    ]);
+    const { token } = accountToken;
     await page.goto(`/invite/${token}`);
     await page.getByLabel("Password", { exact: true }).fill("a-brand-new-password-123");
     await page.getByLabel("Confirm password").fill("a-brand-new-password-123");

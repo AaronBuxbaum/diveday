@@ -18,6 +18,7 @@ vi.mock("@/db/crew-notices", () => ({ sendDueCrewNotices: vi.fn() }));
 vi.mock("@/db/roll-call-alerts", () => ({ sendStaleRollCallAlerts: vi.fn() }));
 vi.mock("@/db/missing-diver-alerts", () => ({ sendMissingDiverAlerts: vi.fn() }));
 vi.mock("@/db/desk-pings", () => ({ sendTrailingDeskPings: vi.fn() }));
+vi.mock("@/db/seat-sold-alerts", () => ({ sendSeatSoldAlerts: vi.fn() }));
 // The routes report only where a DSN is configured; the suite runs without one.
 vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
 vi.mock("@sentry/nextjs", () => ({
@@ -36,6 +37,7 @@ const { sendDueCrewNotices } = await import("@/db/crew-notices");
 const { sendStaleRollCallAlerts } = await import("@/db/roll-call-alerts");
 const { sendMissingDiverAlerts } = await import("@/db/missing-diver-alerts");
 const { sendTrailingDeskPings } = await import("@/db/desk-pings");
+const { sendSeatSoldAlerts } = await import("@/db/seat-sold-alerts");
 const Sentry = await import("@sentry/nextjs");
 const { SHOP_TICK_CRONTAB } = await import("@/lib/cron-schedule");
 const { nowDate } = await import("@/lib/clock");
@@ -61,6 +63,7 @@ const ALL_SCANS = [
   sendStaleRollCallAlerts,
   sendMissingDiverAlerts,
   sendTrailingDeskPings,
+  sendSeatSoldAlerts,
 ] as const;
 
 function lastCheckInStatus() {
@@ -106,6 +109,9 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ checked: 0, alerted: 0, overdue: 0 } as never);
   vi.mocked(sendTrailingDeskPings).mockReset().mockResolvedValue({ shops: 0, sent: 0, failed: 0 });
+  vi.mocked(sendSeatSoldAlerts)
+    .mockReset()
+    .mockResolvedValue({ shops: 0, sent: 0, failed: 0, seats: 0 });
   vi.mocked(Sentry.captureCheckIn).mockClear().mockReturnValue("check-in-id");
   vi.mocked(Sentry.captureException).mockClear();
 });

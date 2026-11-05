@@ -1,16 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type {
-  Certification,
   DiveSpecialty,
   NitroxCertification,
   SpecialtyCertification,
   TripRequirement,
   WaiverRecord,
 } from "@/db/schema";
+import { certification, evidence, requirement, site } from "@/test/admission-evidence";
 import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 import {
   type CertificationLevel,
-  type CertRequirementSource,
   calculateReadiness,
   type ReadinessBlocker,
   type SiteCertRequirement,
@@ -21,14 +20,6 @@ import {
   type TripAdmissionEvidence,
 } from "./trip-admission";
 import { effectiveWaiverForBooking, releaseLapseForBooking, waiverClockInstant } from "./waivers";
-
-function certification(overrides: Partial<Certification> = {}): Certification {
-  return {
-    status: "verified",
-    level: "open_water",
-    ...overrides,
-  } as Certification;
-}
 
 function specialtyCard(overrides: Partial<SpecialtyCertification> = {}): SpecialtyCertification {
   return {
@@ -42,28 +33,6 @@ function specialtyCard(overrides: Partial<SpecialtyCertification> = {}): Special
 
 function nitroxCard(overrides: Partial<NitroxCertification> = {}): NitroxCertification {
   return { status: "verified", ...overrides } as NitroxCertification;
-}
-
-function evidence(overrides: Partial<TripAdmissionEvidence> = {}): TripAdmissionEvidence {
-  return {
-    certifications: [],
-    specialtyCertifications: [],
-    nitroxCertifications: [],
-    ...overrides,
-  };
-}
-
-function requirement(overrides: Partial<CertRequirementSource> = {}): CertRequirementSource {
-  return {
-    minimumCertificationLevel: null,
-    requiredSpecialties: [],
-    requiresNitrox: false,
-    ...overrides,
-  };
-}
-
-function site(overrides: Partial<SiteCertRequirement> = {}): SiteCertRequirement {
-  return requirement(overrides);
 }
 
 /** The common shape: a trip that demands Advanced Open Water and nothing else. */
@@ -146,6 +115,7 @@ describe("decideTripAdmission — what the booker just typed", () => {
     expect(
       decideTripAdmission({
         requirement: {
+          minimumCertificationIsDefault: false,
           minimumCertificationLevel: null,
           requiredSpecialties: [],
           requiresNitrox: true,
@@ -702,7 +672,8 @@ describe("admission is monotone with respect to readiness", () => {
         for (const requiresNitrox of [false, true]) {
           for (const { name, evidence: held } of evidenceCases) {
             for (const { name: claim, declared } of declarationCases) {
-              const source: CertRequirementSource = {
+              const source = {
+                minimumCertificationIsDefault: false,
                 minimumCertificationLevel: level,
                 requiredSpecialties: specialties,
                 requiresNitrox,
@@ -765,8 +736,9 @@ describe("admission is monotone with respect to readiness", () => {
     // fail-open on absence of evidence. The line that stops the seat is
     // readiness, which fails closed on the same flag at the rail. If either
     // half ever moves, this fails rather than quietly opening the boat.
-    const source: CertRequirementSource = {
-      minimumCertificationLevel: "advanced_open_water",
+    const source = {
+      minimumCertificationIsDefault: false,
+      minimumCertificationLevel: "advanced_open_water" as const,
       requiredSpecialties: [],
       requiresNitrox: false,
     };
@@ -781,7 +753,11 @@ describe("admission is monotone with respect to readiness", () => {
 
     const readiness = calculateReadiness({
       timezone: "UTC",
-      requirement: { ...source, requiresWaiver: false, requiresPayment: false } as TripRequirement,
+      requirement: {
+        ...source,
+        requiresWaiver: false,
+        requiresPayment: false,
+      } as unknown as TripRequirement,
       siteRequirement: null,
       waiver: null,
       certifications: [certification({ level: "instructor" })],

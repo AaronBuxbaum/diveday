@@ -496,3 +496,60 @@ describe("the boat a departure sails on, for its emergency card (fourth review, 
     ).rejects.toThrow();
   });
 });
+
+// Loop 5, row 5: a hull in the yard is one window and a reason, saved with the
+// papers and refused by the table when it is half a window.
+describe("a boat's out-of-service window", () => {
+  it("saves the window and its reason with the papers, and clears them", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Yard Hull", 6, null, {
+      certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
+      inspectionDueOn: null,
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
+      outOfServiceFrom: "2026-11-10",
+      outOfServiceUntil: "2026-11-20",
+      outOfServiceReason: "Hull repaint",
+    });
+    expect(await getBoatById(db, shop.id, boat.id)).toMatchObject({
+      outOfServiceFrom: "2026-11-10",
+      outOfServiceUntil: "2026-11-20",
+      outOfServiceReason: "Hull repaint",
+    });
+    await editBoat(db, shop.id, boat.id, "Yard Hull", 6, null, {
+      certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
+      inspectionDueOn: null,
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
+      outOfServiceFrom: null,
+      outOfServiceUntil: null,
+      outOfServiceReason: null,
+    });
+    expect(await getBoatById(db, shop.id, boat.id)).toMatchObject({
+      outOfServiceFrom: null,
+      outOfServiceUntil: null,
+      outOfServiceReason: null,
+    });
+  });
+
+  it("is refused by the table for a window with one end", async () => {
+    const { db, shop } = ctx;
+    await expect(
+      createBoat(db, shop.id, "Half Hull", 6, null, {
+        certifiedPassengers: null,
+        certifiedTotalPersons: null,
+        coiExpiresOn: null,
+        inspectionDueOn: null,
+        registrationExpiresOn: null,
+        insuranceExpiresOn: null,
+        outOfServiceFrom: "2026-11-10",
+        outOfServiceUntil: null,
+        outOfServiceReason: null,
+      }),
+    ).rejects.toThrow();
+  });
+});

@@ -1,0 +1,77 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a3f33979-69c2-452a-8aa0-0b0dff76d0d9",
+  "prevIds": [
+    "ba0a7bdc-f582-4818-9347-c4e0c18984ee"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trip_requirements",
+        "minimum_certification_is_default"
+      ],
+      "writes": [
+        "s|col|public.trip_requirements.minimum_certification_is_default",
+        "n|col|public.trip_requirements.minimum_certification_is_default",
+        "e|col|public.trip_requirements.minimum_certification_is_default"
+      ],
+      "reads": [
+        "n|tbl|public.trip_requirements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_requirements"
+      ],
+      "writes": [
+        "s|ck|public.trip_requirements.trip_requirements_default_level_is_open_water",
+        "n|ck|public.trip_requirements.trip_requirements_default_level_is_open_water",
+        "e|ck|public.trip_requirements.trip_requirements_default_level_is_open_water",
+        "n|con|public.trip_requirements.trip_requirements_default_level_is_open_water"
+      ],
+      "reads": [
+        "n|tbl|public.trip_requirements",
+        "n|sch|public",
+        "n|col|public.trip_requirements.minimum_certification_is_default",
+        "n|col|public.trip_requirements.minimum_certification_level"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_requirements",
+        "name": "minimum_certification_is_default",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_requirements",
+        "name": "trip_requirements_default_level_is_open_water",
+        "value": "not \"minimum_certification_is_default\" or \"minimum_certification_level\" = 'open_water'",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

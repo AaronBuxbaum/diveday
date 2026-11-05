@@ -1,6 +1,6 @@
 # 20260803-seed-scenario-modules — Split the demo seed into scenario modules behind one orchestrator
 
-- **Status:** Accepted
+- **Status:** Superseded by 20261104-seed-is-one-context-and-named-sets
 - **Date:** 2026-08-03
 
 ## Context

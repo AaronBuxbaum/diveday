@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { e2eNow } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 signedInAsOwner();
 
@@ -12,11 +13,8 @@ for (const activation of ["pointer", "keyboard"] as const) {
     page,
     request,
   }) => {
-    const seeded = await request.post(
-      "/api/test/seed-trouble-states?facts=troublePanels,mergeCandidates",
-    );
-    expect(seeded.ok()).toBe(true);
-    const { mergeCandidates } = (await seeded.json()) as {
+    const seeded = await seedFacts(request, ["troublePanels", "mergeCandidates"]);
+    const { mergeCandidates } = seeded as {
       mergeCandidates: { sourceId: string; candidateIds: string[] };
     };
     expect(mergeCandidates.candidateIds).toHaveLength(8);

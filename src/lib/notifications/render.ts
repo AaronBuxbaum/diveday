@@ -11,6 +11,7 @@ import { crewScheduleChangeEmail } from "./crew-emails";
 import {
   deskAfterHoursEmail,
   moveAskSoonEmail,
+  seatSoldDigestEmail,
   stripePaymentsRestrictedEmail,
 } from "./desk-emails";
 import { departureNoteEmail, lostItemEmail } from "./desk-notes";
@@ -249,6 +250,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "gear_service_due") return gearServiceDueEmail(notification);
   if (notification.kind === "crew_schedule_change") return crewScheduleChangeEmail(notification);
   if (notification.kind === "desk_after_hours") return deskAfterHoursEmail(notification);
+  if (notification.kind === "seat_sold_digest") return seatSoldDigestEmail(notification);
   if (notification.kind === "stripe_payments_restricted") {
     return stripePaymentsRestrictedEmail(notification);
   }

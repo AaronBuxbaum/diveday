@@ -33,6 +33,12 @@ export const DETAILS_SAVE_NOTICES = {
     key: "trips.notices.capacityAboveCertificate",
     countKey: "trips.notices.capacityAboveCertificateCount",
   },
+  // Loop 5, row 5: the hull is in the yard on this departure's day.
+  "boat-out-of-service": {
+    form: "details",
+    tone: "danger",
+    key: "trips.notices.boatOutOfService",
+  },
   "planned-dives-below-history": {
     form: "details",
     tone: "danger",

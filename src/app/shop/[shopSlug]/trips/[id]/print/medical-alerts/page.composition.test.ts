@@ -56,7 +56,7 @@ describe("the print with medical alerts", () => {
     );
     // The two default packets show their sheets.
     for (const packet of [
-      "app/shop/[shopSlug]/trips/[id]/print/page.tsx",
+      "app/shop/[shopSlug]/trips/[id]/_components/TripPacketSheet.tsx",
       "app/shop/[shopSlug]/print/page.tsx",
     ]) {
       expect(readFileSync(path.join(SRC, packet), "utf8")).not.toContain("printOnly");
@@ -109,7 +109,7 @@ describe("the print with medical alerts", () => {
     ]);
     // The default packet and the day's paper never pass any.
     for (const other of [
-      "app/shop/[shopSlug]/trips/[id]/print/page.tsx",
+      "app/shop/[shopSlug]/trips/[id]/_components/TripPacketSheet.tsx",
       "app/shop/[shopSlug]/print/page.tsx",
     ]) {
       expect(readFileSync(path.join(SRC, other), "utf8")).not.toContain("printedMedicalAlerts");

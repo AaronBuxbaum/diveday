@@ -108,9 +108,6 @@
     "e2e": ["check-in.spec.ts", "party-waiver-qr.spec.ts"],
     "visual": ["party-waiver-held-medical", "party-waiver-queue"]
   },
-  "/shop/[shopSlug]/trips/[id]/print": {
-    "visual": ["trip-packet"]
-  },
   "/shop/[shopSlug]/trips/[id]/print/medical-alerts": {
     "e2e": ["manifest.spec.ts"],
     "visual": ["trip-packet-medical-alerts"]

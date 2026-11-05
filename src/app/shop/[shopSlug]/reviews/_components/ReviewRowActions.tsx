@@ -28,6 +28,8 @@ export type ReviewRowCopy = {
   hideReasonLabel: string;
   hideReasonPlaceholder: string;
   hideNoteLabel: string;
+  hideThanks: string;
+  showThanks: string;
   markStandout: string;
   removeStandout: string;
   hiddenToast: string;
@@ -38,6 +40,8 @@ export type ReviewRowCopy = {
   published: string;
   standout: string;
   standoutRemoved: string;
+  thanksHidden: string;
+  thanksShown: string;
   reasonRequired: string;
   noteRequired: string;
   noteTooLong: string;
@@ -76,7 +80,11 @@ function statusOf(
         ? copy.published
         : result.effect === "standout"
           ? copy.standout
-          : copy.standoutRemoved;
+          : result.effect === "thanks-hidden"
+            ? copy.thanksHidden
+            : result.effect === "thanks-shown"
+              ? copy.thanksShown
+              : copy.standoutRemoved;
     return { tone: "success", text };
   }
   const text =
@@ -180,6 +188,7 @@ export function ReviewRowActions({
   isHidden,
   isStandout,
   canStandout,
+  crewThanks,
   reasons,
   copy,
   moreLabel,
@@ -190,6 +199,8 @@ export function ReviewRowActions({
   isStandout: boolean;
   /** A published review with words of its own — a bare rating has nothing to feature. */
   canStandout: boolean;
+  /** The review carries a thanks to a crew member, and whether staff hid it (loop 5, row 6); null without one. */
+  crewThanks: { hidden: boolean } | null;
   reasons: readonly { value: string; label: string }[];
   copy: ReviewRowCopy;
   /**
@@ -204,7 +215,7 @@ export function ReviewRowActions({
   // Hiding a review, and featuring one, are both rare. Neither is offered at
   // all on a row the shop has already taken down, so such a row draws no
   // disclosure either.
-  const hasQuietActs = !isHidden || canStandout;
+  const hasQuietActs = !isHidden || canStandout || crewThanks !== null;
   // Whether the "⋯" panel shows the hide's reason picker instead of the list.
   // Reset whenever the panel closes, so it always reopens on the list.
   const [hiding, setHiding] = useState(false);
@@ -271,6 +282,20 @@ export function ReviewRowActions({
                       <input type="hidden" name="standout" value={isStandout ? "false" : "true"} />
                       <SubmitButton pendingLabel={copy.saving} className={MENU_ROW_CLASS}>
                         {isStandout ? copy.removeStandout : copy.markStandout}
+                      </SubmitButton>
+                    </form>
+                  ) : null}
+                  {crewThanks ? (
+                    <form action={formAction} onSubmit={close}>
+                      <input type="hidden" name="intent" value="crew-thanks" />
+                      <input type="hidden" name="reviewId" value={reviewId} />
+                      <input
+                        type="hidden"
+                        name="thanksHidden"
+                        value={crewThanks.hidden ? "false" : "true"}
+                      />
+                      <SubmitButton pendingLabel={copy.saving} className={MENU_ROW_CLASS}>
+                        {crewThanks.hidden ? copy.showThanks : copy.hideThanks}
                       </SubmitButton>
                     </form>
                   ) : null}

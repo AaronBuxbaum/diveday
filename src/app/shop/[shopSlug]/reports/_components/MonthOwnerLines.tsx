@@ -2,6 +2,7 @@ import { GroupLabel } from "@/components/ui/group-label";
 import { type WeatherCalls, weatherCallsInWindow } from "@/db/blowouts";
 import type { DbExecutor } from "@/db/client";
 import { bookingLeadTimes } from "@/db/reporting";
+import { type SeatsGivenUp, seatsGivenUpInWindow } from "@/db/seats-given-up";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { weekdayNames } from "@/lib/format";
 import { leadTimeLines, wholePercent } from "@/lib/lead-time";
@@ -19,9 +20,11 @@ export async function readMonthOwner(
   shop: { id: string; timezone: string },
   window: { startUtc: Date; endUtc: Date },
 ) {
-  return {
-    weather: await weatherCallsInWindow(db, shop.id, { ...window, timeZone: shop.timezone }),
-  };
+  const [weather, seatsGivenUp] = await Promise.all([
+    weatherCallsInWindow(db, shop.id, { ...window, timeZone: shop.timezone }),
+    seatsGivenUpInWindow(db, shop.id, window),
+  ]);
+  return { weather, seatsGivenUp };
 }
 
 /**
@@ -49,6 +52,44 @@ export function WeatherLine({
         moved: weather.moved,
       })}
     </p>
+  );
+}
+
+/**
+ * **The seats the month lost** (loop 5, row 12; glossary "Late cancel"): "3
+ * no-shows and 2 late cancels." One sentence, each half left out when it is
+ * zero, and nothing at all in a month with neither.
+ */
+export function SeatsGivenUpLine({ given, t }: { given: SeatsGivenUp; t: StaffTranslator }) {
+  if (given.noShows === 0 && given.lateCancels === 0) return null;
+  const key =
+    given.noShows > 0 && given.lateCancels > 0
+      ? "reports.seatsGivenUp.both"
+      : given.noShows > 0
+        ? "reports.seatsGivenUp.noShows"
+        : "reports.seatsGivenUp.lateCancels";
+  return (
+    <p data-seats-given-up="" className="mt-2 max-w-3xl text-sm text-muted">
+      {t(key, { noShows: given.noShows, lateCancels: given.lateCancels })}
+    </p>
+  );
+}
+
+/** The month's owner sentences under the figures: the weather, then the seats lost. */
+export function OwnerLines({
+  owner,
+  t,
+  money,
+}: {
+  owner: Awaited<ReturnType<typeof readMonthOwner>>;
+  t: StaffTranslator;
+  money: (cents: number) => string;
+}) {
+  return (
+    <>
+      <WeatherLine weather={owner.weather} t={t} money={money} />
+      <SeatsGivenUpLine given={owner.seatsGivenUp} t={t} />
+    </>
   );
 }
 

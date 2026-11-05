@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   installVisualBuildGuard,
@@ -23,11 +24,8 @@ for (const scheme of ["light", "dark"] as const) {
       request,
       privateShop,
     }) => {
-      const seeded = await request.post(
-        `/api/test/seed-trouble-states?settingsState=boat-photo&shop=${privateShop.slug}`,
-      );
-      expect(seeded.ok()).toBe(true);
-      const { boat, trip } = (await seeded.json()) as {
+      const { boatPhoto } = await seedFacts(request, ["boatPhoto"], { slug: privateShop.slug });
+      const { boat, trip } = boatPhoto as {
         boat: { id: string; name: string };
         trip: { id: string };
       };

@@ -15,7 +15,12 @@ import {
   standing,
 } from "./readiness";
 import { type Requirement, requirementDemandsNothing, unionRequirements } from "./requirement";
-import { type TrainingDiveCourse, trainingDiveSiteRequirement } from "./training-mark";
+import {
+  type TrainingDiveCourse,
+  type TripLevelRequirement,
+  trainingDiveSiteRequirement,
+  tripAndSiteSides,
+} from "./training-mark";
 
 /**
  * **Can this diver be sold a seat on this trip at all?**
@@ -107,7 +112,8 @@ export type TripAdmissionEvidence = {
    * name on this departure, with an instructor of the course aboard it for one
    * more seat (issue #2731). Readiness lowers a site's level to such a
    * course's minimum once staff mark the seat (`trainingDiveSiteRequirement`),
-   * never the trip's own (issue #3776), so the sale must not refuse a level
+   * never a level the trip itself set (issue #3776; a default nobody chose
+   * counts as the site's, issue #3872), so the sale must not refuse a level
    * that would then clear, and must not sell one that would not.
    */
   trainingDives?: readonly TrainingDiveCourse[];
@@ -197,8 +203,12 @@ export type SelfDeclaration = {
 };
 
 export type TripAdmissionInput = {
-  /** The trip's own requirement row, or null when the shop hasn't configured one. */
-  requirement: Requirement | null;
+  /**
+   * The trip's own requirement row, or null when the shop hasn't configured
+   * one. Its `minimumCertificationIsDefault` (issue #3872) lets a training
+   * mark lower a default level; a reader that drops it keeps the level.
+   */
+  requirement: TripLevelRequirement | null;
   /** Every dive site the trip visits, already folded into one gate (`combineSiteRequirements`). */
   siteRequirement: Requirement | null;
   evidence: TripAdmissionEvidence;
@@ -340,12 +350,15 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // the level blocker goes, and a specialty or nitrox one still stands. Only a
   // site's level is lowered, exactly as readiness lowers it: a level the trip
   // itself sets stands at the sale as it stands at the rail (issue #3776).
+  // A default level nobody chose counts as the site's here too
+  // (`tripAndSiteSides`, issue #3872).
+  const sides = tripAndSiteSides(input.requirement, input.siteRequirement);
   const markWouldClear =
     effective.minimumCertificationLevel !== null &&
     (evidence.trainingDives ?? []).some((course) => {
       const marked = unionRequirements(
-        input.requirement,
-        trainingDiveSiteRequirement(input.siteRequirement, course),
+        sides.trip,
+        trainingDiveSiteRequirement(sides.site, course),
       ).minimumCertificationLevel;
       return marked === null || levelStanding(marked, sale, "sale") === null;
     });

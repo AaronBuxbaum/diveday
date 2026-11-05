@@ -63,7 +63,7 @@ describe("the boat at sea", () => {
     const fiveAmOffset = -4.5 * 60 * 60 * 1000; // Fixture clock is 9:30 AM shop time.
     advanceClock(fiveAmOffset);
     const db = await unseededTestDb();
-    await seedDemo(db, { history: true });
+    await seedDemo(db, "history");
     const shop = await getShopBySlug(db, "blue-mantis");
     if (!shop) throw new Error('expected the seeded "blue-mantis" demo shop');
     const now = new Date(nowDate().getTime());

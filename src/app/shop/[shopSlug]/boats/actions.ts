@@ -23,6 +23,7 @@ import {
 } from "@/lib/emergency-reference";
 import { formValue, readForm, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { parseServiceWindow } from "@/lib/service-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { MAX_SHOP_HERO_BYTES, storeShopHeroImage } from "@/lib/storage";
@@ -45,6 +46,9 @@ const boatForm = z.object({
   callSign: trimmedText(),
   mmsi: trimmedText(),
   workingChannel: trimmedText(),
+  outOfServiceFrom: trimmedText(),
+  outOfServiceUntil: trimmedText(),
+  outOfServiceReason: trimmedText(),
 });
 type BoatForm = z.infer<typeof boatForm>;
 
@@ -95,6 +99,13 @@ function boatPapers(
   ) {
     return "invalid";
   }
+  // The hull in the yard (loop 5, row 5): both days or neither, in order.
+  const yard = parseServiceWindow({
+    from: form.outOfServiceFrom ?? "",
+    until: form.outOfServiceUntil ?? "",
+    reason: form.outOfServiceReason ?? "",
+  });
+  if (!yard.ok) return "invalid";
   const callSign = normalizeCallSign(form.callSign ?? "");
   const mmsi = normalizeMmsi(form.mmsi ?? "");
   const workingChannel = normalizeWorkingChannel(form.workingChannel ?? "");
@@ -116,6 +127,9 @@ function boatPapers(
     callSign,
     mmsi,
     workingChannel,
+    outOfServiceFrom: yard.window?.from ?? null,
+    outOfServiceUntil: yard.window?.until ?? null,
+    outOfServiceReason: yard.window?.reason ?? null,
   };
 }
 

@@ -25,6 +25,7 @@ export async function addInterest(
     phone?: string | null;
     name?: string | null;
     askedAt?: Date;
+    charter?: boolean;
   },
 ) {
   const [row] = await db
@@ -41,6 +42,7 @@ export async function addInterest(
       preferredDate: fields.preferredDate ?? null,
       alternateDate: fields.alternateDate ?? null,
       dateFlexible: fields.dateFlexible ?? false,
+      charter: fields.charter ?? false,
       ...(fields.askedAt ? { askedAt: fields.askedAt } : {}),
     })
     .returning({ id: interests.id });

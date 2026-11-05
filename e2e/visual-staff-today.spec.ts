@@ -25,6 +25,7 @@ import {
   seededTripId,
   writeCourseForm,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import { todayCatchUpScenario } from "./today-catch-up-helper";
 import {
   capture,
@@ -189,10 +190,8 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,runningLate",
-        );
-        expect((await seeded.json()) as { runningLate?: unknown }).toHaveProperty("runningLate");
+        const seeded = await seedFacts(request, ["troublePanels", "runningLate"]);
+        expect(seeded as { runningLate?: unknown }).toHaveProperty("runningLate");
         await page.goto("/shop/blue-mantis?q=Priya%20Sharma");
         await page
           .getByText(/^Running late, said /)
@@ -215,11 +214,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,runningLate",
-        );
-        const { runningLate } = (await seeded.json()) as { runningLate?: { tripId: string } };
-        if (!runningLate) throw new Error("seed-trouble-states found no seat to say it on");
+        const seeded = await seedFacts(request, ["troublePanels", "runningLate"]);
+        const { runningLate } = seeded as { runningLate?: { tripId: string } };
+        if (!runningLate) throw new Error("the fact found no seat to say it on");
         await page.goto(`/shop/blue-mantis/trips/${runningLate.tripId}/manifest`);
         await page.getByRole("heading", { name: "Roll call" }).waitFor();
         await page
@@ -328,7 +325,7 @@ for (const scheme of ["light", "dark"] as const) {
         // different checkpoint than the station reads. In production the state
         // arises the other way round: a diver boards while clear and *then*
         // becomes blocked, because readiness is evaluated live.
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels,blockedAboard");
+        await seedFacts(request, ["troublePanels", "blockedAboard"]);
         await page.goto("/shop/blue-mantis");
         // The destination's own words, not a timing guess: this row is what
         // the capture exists for.
@@ -349,7 +346,7 @@ for (const scheme of ["light", "dark"] as const) {
        * comes through the trouble-states route.
        */
       test(`failed emails batch into one row (${scheme})`, async ({ page, request }) => {
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels,failedEmails");
+        await seedFacts(request, ["troublePanels", "failedEmails"]);
         await page.goto("/shop/blue-mantis");
         // A chore on a long boat: the row sits behind "and N more" (foldBoatRows).
         await openTodayBoatFolds(page);
@@ -371,7 +368,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels,crewUncounted");
+        await seedFacts(request, ["troublePanels", "crewUncounted"]);
         await page.goto("/shop/blue-mantis");
         // The destination's own words, not a timing guess.
         await page.getByText(/crew roll call is still open/).waitFor();
@@ -389,10 +386,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,crewClash",
-        );
-        expect(seeded.ok()).toBe(true);
+        await seedFacts(request, ["troublePanels", "crewClash"]);
         await page.goto("/shop/blue-mantis");
         // The destination's own words, not a timing guess.
         await page.getByText("Crew on two departures").first().waitFor();
@@ -408,10 +402,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,boatClash",
-        );
-        expect(seeded.ok()).toBe(true);
+        await seedFacts(request, ["troublePanels", "boatClash"]);
         await page.goto("/shop/blue-mantis");
         await page.getByText("Boat on two departures").first().waitFor();
         await capture(page, "today-boat-clash", scheme);
@@ -426,13 +417,8 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,crewClashSailed",
-        );
-        expect(seeded.ok()).toBe(true);
-        expect(
-          ((await seeded.json()) as { crewClashSailed?: unknown }).crewClashSailed,
-        ).toBeTruthy();
+        const seeded = await seedFacts(request, ["troublePanels", "crewClashSailed"]);
+        expect((seeded as { crewClashSailed?: unknown }).crewClashSailed).toBeTruthy();
         await page.goto("/shop/blue-mantis");
         // The destination's own words, not a timing guess.
         await page.getByText("Left with a crew clash").first().waitFor();
@@ -502,14 +488,11 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a finished boat's record with an uncounted seat renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        const seeded = await page.request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,uncountedSeat",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { uncountedSeat } = (await seeded.json()) as {
+        const seeded = await seedFacts(page.request, ["troublePanels", "uncountedSeat"]);
+        const { uncountedSeat } = seeded as {
           uncountedSeat?: { tripId: string; personName: string };
         };
-        if (!uncountedSeat) throw new Error("seed-trouble-states left no seat uncounted");
+        if (!uncountedSeat) throw new Error("the fact left no seat uncounted");
         await page.goto(counterPath("blue-mantis", uncountedSeat.tripId));
         await page.getByRole("heading", { level: 1, name: SAILED_TRIP }).waitFor();
         await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
@@ -578,15 +561,11 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,blockedMinor",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { blockedMinor } = (await seeded.json()) as {
+        const seeded = await seedFacts(request, ["troublePanels", "blockedMinor"]);
+        const { blockedMinor } = seeded as {
           blockedMinor?: { bookingId: string; tripId: string };
         };
-        if (!blockedMinor)
-          throw new Error("seed-trouble-states found no seat for the demo's minor");
+        if (!blockedMinor) throw new Error("the fact found no seat for the demo's minor");
 
         await page.goto(counterPath("blue-mantis", blockedMinor.tripId));
         const row = page.locator(`#booking-${blockedMinor.bookingId}`);
@@ -623,7 +602,7 @@ for (const scheme of ["light", "dark"] as const) {
        * which `e2e/check-in.spec.ts` asserts. The unarmed half is `trip-guests-identity`, so the armed
        * state is the one worth a baseline here.
        *
-       * Seeded through `/api/test/seed-trouble-states?identityHeld=1` rather
+       * Seeded through `the `identityHeld` fact (`/api/test/shop`)` rather
        * than into blue-mantis: the flag moves readiness, which the nav badges,
        * the close-out and every blocked count read (`.claude/rules/e2e.md`).
        * The route seats the diver through `seatDiver` with `fromNameMatch`, so
@@ -634,14 +613,11 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,identityHeld",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { identityHeld } = (await seeded.json()) as {
+        const seeded = await seedFacts(request, ["troublePanels", "identityHeld"]);
+        const { identityHeld } = seeded as {
           identityHeld?: { diver: string; tripId: string };
         };
-        if (!identityHeld) throw new Error("seed-trouble-states could not hold a seat");
+        if (!identityHeld) throw new Error("the fact could not hold a seat");
 
         await page.goto(counterPath("blue-mantis", identityHeld.tripId));
         const row = page
@@ -668,7 +644,7 @@ for (const scheme of ["light", "dark"] as const) {
        * reason it went unphotographed when it shipped. So the flow sells the
        * seat on a boat that is still ahead, clears the release at the desk the
        * way a staffer does, and then sends the boat out without her
-       * (`/api/test/depart-trip`, which moves the departure because the fleet's
+       * (the `departTrip` fact, which moves the departure because the fleet's
        * clock cannot move).
        *
        * **Two frames, because the tap is two different claims**
@@ -714,10 +690,7 @@ for (const scheme of ["light", "dark"] as const) {
         // inside the hour a late boat is allowed, which is the seat half of
         // the door.
         const depart = async (minutesAgo: number) => {
-          const moved = await request.post("/api/test/depart-trip", {
-            data: { tripId, minutesAgo },
-          });
-          expect(moved.ok()).toBe(true);
+          await seedFacts(request, [{ name: "departTrip", tripId, minutesAgo }]);
         };
         await depart(10);
 
@@ -826,7 +799,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         // A seed write and a full-page shot.
         test.setTimeout(FLOW_TIMEOUT_MS);
-        await request.post("/api/test/seed-evening");
+        await seedFacts(request, ["evening"]);
         await page.goto("/shop/blue-mantis");
         await page.getByRole("region", { name: "What today made" }).waitFor();
         await capture(page, "today-evening", scheme);
@@ -854,7 +827,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         // A seed write that closes every count on the day, then a full-page shot.
         test.setTimeout(FLOW_TIMEOUT_MS);
-        await request.post("/api/test/seed-evening?heads=closed");
+        await seedFacts(request, [{ name: "evening", heads: "closed" }]);
         await page.goto("/shop/blue-mantis");
         // The moment itself, waited on by its own words: a shot taken before
         // it renders would be `today-evening` under a second name, and the
@@ -908,7 +881,7 @@ for (const scheme of ["light", "dark"] as const) {
        * Assign door beside it. It is not seeded into blue-mantis — a demo
        * permanently short-handed is a worse demo, the same call
        * `seed-front-desk.ts` makes about its `succeeded` payment — so it comes
-       * from `/api/test/seed-trouble-states?crewGap=1`, opt-in because pulling
+       * from `the `crewGap` fact (`/api/test/shop`)`, opt-in because pulling
        * a crew off a boat moves Today's queue and every crew count in the
        * fleet.
        */
@@ -916,7 +889,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels,crewGap");
+        await seedFacts(request, ["troublePanels", "crewGap"]);
         await page.goto("/shop/blue-mantis/staffing");
         // The destination's own words, not a timing guess.
         await page.getByText("No divemaster").first().waitFor();
@@ -943,14 +916,11 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,crewClash",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { crewClash } = (await seeded.json()) as {
+        const seeded = await seedFacts(request, ["troublePanels", "crewClash"]);
+        const { crewClash } = seeded as {
           crewClash?: { tripId: string; otherTitle: string; date: string };
         };
-        if (!crewClash) throw new Error("seed-trouble-states found no two departures to clash");
+        if (!crewClash) throw new Error("the fact found no two departures to clash");
 
         // `?week=` snaps any date to its own Monday (`resolveWeekStart`), so
         // the day the boat landed on is enough to ask for the week holding it.

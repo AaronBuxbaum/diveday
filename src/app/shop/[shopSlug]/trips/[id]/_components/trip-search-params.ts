@@ -22,6 +22,8 @@ export type TripPageSearchParams = {
   view?: string;
   /** A booking id: the page is that booking's paper pass, to print and hand over. */
   pass?: string;
+  /** `1`: the page is the departure's packet, the sheets a captain prints and carries (#2736). */
+  print?: string;
   /** `1`: the page is the departure's blow-out, the call-off confirmation or its record. */
   blowout?: string;
   /**

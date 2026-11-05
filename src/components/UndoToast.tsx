@@ -13,6 +13,8 @@ import { buttonClass } from "@/components/ui/button";
  * the redirect that carries the undo target; Undo submits a bound server action
  * and Dismiss clears the notice. Pass any inverse action and its hidden fields.
  *
+ * Swiping it sideways puts it away like the Dismiss button (loop 5, row 15).
+ *
  * The shared `ToastShell` stays until the inverse action is taken. A transient
  * acknowledgement must not carry the only control that can reverse a write.
  */
@@ -46,6 +48,9 @@ export function UndoToast({
     <ToastShell
       autoDismissMs={null}
       placement={placement}
+      // A swipe puts the toast away exactly as Dismiss does; the undo offer
+      // behind it is a server-side record with its own window, untouched.
+      onSwipeAway={() => setDismissedTarget({ fieldsIdentity, message })}
       className={
         placement === "inline"
           ? "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2"

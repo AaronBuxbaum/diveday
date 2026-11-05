@@ -13,6 +13,7 @@ import { assertCrewPdfPixels } from "./crew-pdf-pixels";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { bookASeatAndOpenThread, openTripFromBoard, seededTripId } from "./helpers";
 import { staticPrintPage } from "./print-pdf";
+import { seedFacts } from "./shop-facts";
 import {
   capturePrint,
   installVisualBuildGuard,
@@ -217,8 +218,7 @@ test.describe("print", () => {
     page,
     request,
   }, testInfo) => {
-    const seeded = await request.post("/api/test/seed-trouble-states?facts=troublePanels,crewGap");
-    expect(seeded.status()).toBe(200);
+    await seedFacts(request, ["troublePanels", "crewGap"]);
     await page.goto("/shop/blue-mantis/staffing/print");
     const sheet = page.locator(".paper-sheet");
     await sheet.locator("[data-crew-print-context]").waitFor();
@@ -304,7 +304,7 @@ test.describe("print", () => {
   test("the trip packet prints the dive plan, the manifest and the prep list", async ({ page }) => {
     await openReefTrip(page);
     const tripPath = new URL(page.url()).pathname;
-    await page.goto(`${tripPath}/print`);
+    await page.goto(`${tripPath}?print=1`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
     // **The packet's chrome stays off paper.** The packet is sheets (issue

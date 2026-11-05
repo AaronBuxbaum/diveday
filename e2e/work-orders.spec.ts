@@ -2,6 +2,7 @@ import type { BrowserContext, Locator, Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openDiverFileGroup } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 const staffCopy = staffTranslator("en-US");
 
@@ -386,8 +387,8 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-trouble-states?facts=troublePanels,bench");
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["troublePanels", "bench"]);
+    await seedFacts(request, ["stripeAccount"]);
     await page.goto("/shop/blue-mantis/gear/work-orders");
     await page
       .getByRole("link", { name: /Inflator sticks open/ })
@@ -416,7 +417,7 @@ test.describe("staff", () => {
     await expect(card.getByRole("button", { name: "Send the bill" })).toHaveCount(0);
 
     // The test double: connected and charges-enabled, without calling Stripe.
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await page.reload();
     await card.getByRole("button", { name: "Send the bill" }).click();
     await expect(

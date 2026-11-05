@@ -27,6 +27,7 @@ function RecordOf({ context }: { context: AfterStateProps }) {
       siteMark={context.siteMark}
       postcard={context.postcard}
       course={context.course}
+      logFilePath={context.logFilePath}
     />
   );
 }
@@ -263,5 +264,21 @@ describe("the certified line", () => {
       />,
     );
     expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.certified)).toBeNull();
+  });
+});
+
+describe("the log entry files (loop 5, row 13)", () => {
+  it("offers the CSV and UDDF downloads on the recap, and nothing off it", () => {
+    const { rerender } = render(
+      <RecordOf context={{ ...props(), logFilePath: "/recap/abc/log" }} />,
+    );
+    expect(screen.getByRole("link", { name: "recap.downloadCsv" }).getAttribute("href")).toBe(
+      "/recap/abc/log?format=csv",
+    );
+    expect(screen.getByRole("link", { name: "recap.downloadUddf" }).getAttribute("href")).toBe(
+      "/recap/abc/log?format=uddf",
+    );
+    rerender(<RecordOf context={{ ...props(), logFilePath: null }} />);
+    expect(screen.queryByRole("link", { name: "recap.downloadCsv" })).toBeNull();
   });
 });

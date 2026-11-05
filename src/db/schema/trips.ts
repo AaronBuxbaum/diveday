@@ -247,6 +247,18 @@ export const boats = pgTable(
      * `normalizeWorkingChannel`, and bounded here too.
      */
     workingChannel: text("working_channel"),
+    /**
+     * **The hull in the yard** (loop 5, row 5; glossary "Out of service"): a
+     * shop-local calendar window, both ends inclusive, and the shop's one-line
+     * reason ("Hull repaint"). The builder's add and the trip's details refuse
+     * to put a departure on the hull for a day inside it (`tripDetailsPatch`;
+     * move, duplicate and series weeks are #3915), and the board warns about a
+     * departure already on it. One window per boat, typed
+     * over the last like the paper dates; null is in service.
+     */
+    outOfServiceFrom: date("out_of_service_from"),
+    outOfServiceUntil: date("out_of_service_until"),
+    outOfServiceReason: text("out_of_service_reason"),
     createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR
@@ -280,6 +292,17 @@ export const boats = pgTable(
     check(
       "boats_certified_total_persons_positive",
       sql`${table.certifiedTotalPersons} is null or ${table.certifiedTotalPersons} between 1 and 999`,
+    ),
+    // Both ends or neither, in order: a yard window with one end is no window.
+    check(
+      "boats_out_of_service_window",
+      sql`(${table.outOfServiceFrom} is null) = (${table.outOfServiceUntil} is null)
+        and (${table.outOfServiceFrom} is null or ${table.outOfServiceFrom} <= ${table.outOfServiceUntil})`,
+    ),
+    check(
+      "boats_out_of_service_reason",
+      sql`${table.outOfServiceReason} is null
+        or (${table.outOfServiceFrom} is not null and char_length(${table.outOfServiceReason}) between 1 and 120)`,
     ),
     // Passengers are some of the persons aboard: more passengers than persons
     // is a typo, refused at save too (`boatSeatsRefusal`).
@@ -949,12 +972,32 @@ export const tripRequirements = pgTable(
       .references(() => shops.id),
     requiresWaiver: boolean("requires_waiver").notNull().default(true),
     ...requirementColumns(),
+    /**
+     * The level is the Open Water default `insertTripInstance` writes on a
+     * non-course departure, not one a person chose (issue #3872). The gates
+     * read such a level as the site's, so a training mark may lower it
+     * where a site states a level (`tripAndSiteSides`, src/lib/training-mark.ts).
+     * Changing the level on the requirements form clears it; a duplicate or a
+     * series roll carries its source's; every other writer leaves it false,
+     * which keeps the level.
+     */
+    minimumCertificationIsDefault: boolean("minimum_certification_is_default")
+      .notNull()
+      .default(false),
     /** Whether a diver must have paid (or a deposit/waiver) to board. */
     requiresPayment: boolean("requires_payment").notNull().default(false),
     createdAt: appNowTimestamp("created_at").notNull(),
     updatedAt: appNowTimestamp("updated_at").notNull(),
   },
-  (table) => [index("trip_requirements_shop_idx").on(table.shopId)],
+  (table) => [
+    index("trip_requirements_shop_idx").on(table.shopId),
+    // Only the Open Water default is ever a default: a flag on any other level,
+    // or on none, is a write nothing should make.
+    check(
+      "trip_requirements_default_level_is_open_water",
+      sql`not ${table.minimumCertificationIsDefault} or ${table.minimumCertificationLevel} = 'open_water'`,
+    ),
+  ],
 );
 
 export type Trip = typeof trips.$inferSelect;

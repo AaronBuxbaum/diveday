@@ -23,7 +23,7 @@ import {
  * freshly serviced, one pulled to the bench, one tank with a visual
  * inspection coming due — the ordinary texture of a fleet, not a shop on its
  * worst day (trouble states are seeded per test through
- * `/api/test/seed-trouble-states`, never here). A few units are reserved
+ * a fact through `/api/test/shop`, never here). A few units are reserved
  * against the upcoming wreck trip so the register and that departure's prep
  * page have a live assignment to show. Dates are relative to the (frozen in
  * e2e) clock so every render is pixel-stable.

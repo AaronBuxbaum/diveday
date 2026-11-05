@@ -1602,7 +1602,7 @@ test("an owner prints the packet with the medical alerts, and the print is on th
   const tripPath = new URL(page.url()).pathname;
 
   // The default packet: the flag, never the words.
-  await page.goto(`${tripPath}/print`);
+  await page.goto(`${tripPath}?print=1`);
   await page.emulateMedia({ media: "print" });
   await expect(page.getByText(staff("manifest.medicalAlertPrinted")).first()).toBeVisible();
   await expect(page.getByText(DEMO_MEDICAL_ALERT)).toHaveCount(0);

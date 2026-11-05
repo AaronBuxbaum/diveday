@@ -1,5 +1,6 @@
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 
 /**
  * **The off-season as a designed state** (N-45).
@@ -7,7 +8,7 @@ import { expect, test } from "./fixtures";
  * A shop with nothing on the board for the next thirty days is the one
  * storefront state the seeded fixture can never be — `blue-mantis` exists to
  * have a full board — so each test here empties it through
- * `/api/test/seed-off-season` and reads what a stranger is then handed.
+ * `offSeason` fact (`/api/test/shop`) and reads what a stranger is then handed.
  *
  * Mutating the shared fixture is safe: each Playwright worker owns its own
  * database and `/api/test/reset` restores the schedule before every test
@@ -18,8 +19,7 @@ test("an empty board says when the shop is next doing something, and opens the c
   page,
   request,
 }) => {
-  const seeded = await request.post("/api/test/seed-off-season");
-  expect(seeded.ok()).toBe(true);
+  await seedFacts(request, ["offSeason"]);
 
   await page.goto("/s/blue-mantis");
 
@@ -62,8 +62,7 @@ test("a departure beyond the quiet window is named as the day the shop is back",
   page,
   request,
 }) => {
-  const seeded = await request.post("/api/test/seed-off-season?opensInDays=45");
-  expect(seeded.ok()).toBe(true);
+  await seedFacts(request, [{ name: "offSeason", opensInDays: 45 }]);
 
   await page.goto("/s/blue-mantis");
 

@@ -396,7 +396,7 @@ describe("shop-scoped delete-path coverage", () => {
       expiresAt: new Date("2099-01-01T00:00:00.000Z"),
     });
     const deleted = await recordDeletedTables(db, (recorder) =>
-      resetDemoSchedule(recorder, shop.id),
+      resetDemoSchedule(recorder, shop.id, "lean"),
     );
     const undecided = shopScopedTableNames().filter(
       (name) => !deleted.has(name) && !(name in RESET_KEEPS),
@@ -507,7 +507,7 @@ async function rowCounts(db: DbExecutor, tables: string[]): Promise<Map<string, 
  * "internal reconciliation ledger, not schedule data", which is true and was
  * not the whole story. the media-deletion read (`src/db/unfinished.ts`) feeds Today an
  * `urgency: "now"` row, so a stale attempt written by one test (which is what
- * `/api/test/seed-trouble-states` exists to do) left a "Recap photo" cleanup
+ * a fact on `/api/test/shop` exists to do) left a "Recap photo" cleanup
  * card on Today for whichever spec Playwright's sharding ran next in that
  * worker. It surfaced as three visual captures — `close-out`,
  * `nav-more-menu`, `nav-more-sheet` — reporting as changed on a pull request
@@ -533,7 +533,7 @@ describe("the reset and the trouble states", () => {
         .where(eq(mediaDeletionAttempts.shopId, shop.id)),
     ).toHaveLength(1);
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     expect(
       await db

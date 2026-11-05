@@ -13,6 +13,7 @@ import {
   signOut,
   tripPathByTitle,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -74,7 +75,7 @@ test.describe("staff", () => {
    * would hide a fit nobody can fill, on the one surface where gear is
    * reasoned about.
    *
-   * Seeded through `/api/test/seed-trouble-states`, never into blue-mantis:
+   * Seeded through a fact on `/api/test/shop`, never into blue-mantis:
    * `rentalFitLine` feeds the roll call, the offline manifest and the diver
    * record from these same pieces, so a demo carrying this standing would
    * print an oddity nobody can clear on the boat manifest — and a marker a
@@ -89,12 +90,9 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    const seeded = await request.post(
-      "/api/test/seed-trouble-states?facts=troublePanels,droppedRental",
-    );
-    expect(seeded.ok()).toBe(true);
-    const { droppedRental } = (await seeded.json()) as { droppedRental?: { fullName: string } };
-    if (!droppedRental) throw new Error("seed-trouble-states found no fit to contradict");
+    const seeded = await seedFacts(request, ["troublePanels", "droppedRental"]);
+    const { droppedRental } = seeded as { droppedRental?: { fullName: string } };
+    if (!droppedRental) throw new Error("the fact found no fit to contradict");
 
     const tripPath = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");
     await page.goto(`${tripPath}/prep`);

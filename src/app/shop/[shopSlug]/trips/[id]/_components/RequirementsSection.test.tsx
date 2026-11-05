@@ -122,3 +122,28 @@ describe("RequirementsSection — which site the extra gate is attributed to", (
     expect(screen.queryByText(/also requires/)).toBeNull();
   });
 });
+
+/** Dock review of #3909: default and chosen Open Water board differently, so the form says which. */
+describe("RequirementsSection — a default level (issue #3872)", () => {
+  const render_ = (minimumCertificationIsDefault: boolean) =>
+    render(
+      <RequirementsSection
+        action={noop}
+        trip={tripRow()}
+        requirement={{ ...requirement, minimumCertificationIsDefault } as Requirement}
+        siteRequirement={null}
+        siteNames={[]}
+        locale="en-US"
+      />,
+    );
+
+  it("says the level is the starting one nobody set", () => {
+    render_(true);
+    expect(screen.getByText(/not a level anyone set/)).toBeTruthy();
+  });
+
+  it("says nothing of the kind once the level is chosen", () => {
+    render_(false);
+    expect(screen.queryByText(/not a level anyone set/)).toBeNull();
+  });
+});

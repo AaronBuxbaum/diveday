@@ -224,6 +224,18 @@
     "errorPlanningNote": "Mantén la nota de planificación por debajo de 280 caracteres.",
     "errorNameTaken": "Otro sitio de buceo de este centro ya se llama así, y un sitio eliminado también conserva su nombre. Dale a este briefing un nombre propio y vuelve a guardar. Todo lo demás que escribiste sigue aquí."
   },
+  "closure": {
+    "heading": "Cerrado por un tiempo",
+    "body": "Cierra el sitio unos días. Los buceadores no encontrarán su página hasta que vuelva a abrir, y el tablero avisa de cualquier salida planeada allí.",
+    "fromLabel": "Cerrado desde",
+    "untilLabel": "Cerrado hasta",
+    "reasonLabel": "Motivo",
+    "save": "Guardar cierre",
+    "saved": "Guardado. Borra los dos días para volver a abrir el sitio.",
+    "invalid": "Indica los dos días, el primero no después del último.",
+    "closedLine": "Cerrado {dates}: {reason}",
+    "closedLineNoReason": "Cerrado {dates}"
+  },
   "edit": {
     "description": "Los cambios llegan a cada próxima inmersión que visite este sitio.",
     "copying": "Copiando…",

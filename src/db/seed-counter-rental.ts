@@ -14,7 +14,7 @@ import { bookings, gearItems, gearReservations, type people } from "./schema";
  * up tomorrow, back two days later — reserved, not yet out, so the register's
  * wall shows the hold, the diver's record shows "Rented", and nothing on
  * Today or in the Out group moves (a unit out or overdue is a trouble state,
- * seeded per test through `/api/test/seed-trouble-states`, never here).
+ * seeded per test through a fact through `/api/test/shop`, never here).
  *
  * No invoice: an order dated in the seed would sit in the Orders index, whose
  * first row the `order-detail` capture clicks through to (see

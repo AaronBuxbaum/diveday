@@ -224,6 +224,18 @@
     "errorPlanningNote": "Keep the planning note under 280 characters.",
     "errorNameTaken": "Another dive site here already goes by that name, and a deleted one still holds its name too. Give this briefing a name of its own and save again. Everything else you typed is still here."
   },
+  "closure": {
+    "heading": "Closed for a while",
+    "body": "Close the site for a few days. Divers won’t find its page until it opens again, and the board warns about any departure planned there.",
+    "fromLabel": "Closed from",
+    "untilLabel": "Closed through",
+    "reasonLabel": "Reason",
+    "save": "Save closure",
+    "saved": "Saved. Clear both days to open the site again.",
+    "invalid": "Give both days, the first no later than the last.",
+    "closedLine": "Closed {dates}: {reason}",
+    "closedLineNoReason": "Closed {dates}"
+  },
   "edit": {
     "description": "Changes reach every upcoming dive that visits this site.",
     "copying": "Copying…",

@@ -44,6 +44,7 @@ import {
   weekdaySetFrom,
 } from "@/lib/recurrence";
 import { signScheduleMoveResult } from "@/lib/schedule-move-result";
+import { boatServiceWindow } from "@/lib/service-window";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { laterHoursFromForm, MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
@@ -55,8 +56,8 @@ import { type PatternDeparture, patternDives, patternSiteFields } from "@/lib/we
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { builderCourseOptions } from "./_components/builder-course-options";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
-import { landAfterAdd } from "./add-landing";
-import { attachRequestedInterests } from "./attach-interests";
+import { addRefusalLanding, landAfterAdd } from "./add-landing";
+import { attachRequestedInterests, requestsAskForCharter } from "./attach-interests";
 import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
 
 const removeDepartureForm = z.object({ tripId: z.uuid() });
@@ -425,7 +426,6 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     diveSiteId,
     repeatIntervalWeeks,
     repeatEndsOn,
-    isPrivate,
     isRehearsal,
     selfGuided,
     diveMode,
@@ -433,6 +433,8 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     lensId,
     alsoUsualStart,
   } = parsed.data;
+  // A charter request's departure is private, whatever the box said (loop 5, row 11).
+  const isPrivate = parsed.data.isPrivate || (await requestsAskForCharter(db, shop.id, formData));
   // **A rehearsal is one departure** (ADR 20261012-rehearsal-departures): a
   // series would re-mint practice days on the board every night. Refused
   // with its own sentence rather than quietly dropping the cadence.
@@ -483,31 +485,16 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       capacity,
       boatCapacity: assignedBoat?.capacity ?? null,
       boatCertifiedPassengers: assignedBoat?.certifiedPassengers ?? null,
+      // Loop 5, row 5: the builder refuses a hull in the yard.
+      boatOutOfService: boatServiceWindow(assignedBoat),
     },
     shop,
   );
   if (!details.ok) {
-    if (details.reason === "capacity_above_certificate") {
-      await trackEvent({
-        name: "schedule_builder_action",
-        action: "add",
-        outcome: "capacity_above_certificate",
-      });
-      redirect(`${back}&builder=capacity-above-certificate&count=${details.limit}${returnWeek}`);
-    }
-    if (details.reason === "end_before_start") {
-      await trackEvent({
-        name: "schedule_builder_action",
-        action: "add",
-        outcome: "end_before_start",
-      });
-      redirect(`${back}&builder=end-before-start${returnWeek}`);
-    }
-    if (details.reason === "days_out_of_order") {
-      await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
-      redirect(`${back}&builder=days-out-of-order${returnWeek}`);
-    }
-    return await invalid();
+    const refused = addRefusalLanding(details);
+    if (!refused) return await invalid();
+    await trackEvent({ name: "schedule_builder_action", action: "add", outcome: refused.outcome });
+    redirect(`${back}&builder=${refused.builder}${returnWeek}`);
   }
   const { startsAt, endsAt, scheduleDays } = details.patch;
   // **A repeating departure ends before its next one begins.** Named days can

@@ -30,7 +30,7 @@ import { listStaff, upcomingTripsWithCounts } from "./trips";
 const MINUTE_MS = 60_000;
 
 async function aChecklistLineOnTheReef(db: AppDb) {
-  await seedDemo(db);
+  await seedDemo(db, "history");
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));

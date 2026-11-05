@@ -2,6 +2,7 @@ import type { Page, Request as PlaywrightRequest } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { counterPath, openBookingActions, seededTripId } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 /**
  * Staff invoicing — `/shop/[shopSlug]/orders?add=1`, the front desk's "bill this
@@ -125,7 +126,7 @@ test.describe("as owner", () => {
   test("a shop that can't take money lands on Orders with the reason, not a dead order form", async ({
     page,
   }) => {
-    // No /api/test/seed-stripe-account here: the demo shop starts unconnected,
+    // No the `stripeAccount` fact here: the demo shop starts unconnected,
     // and `canAcceptPayments` is what the index checks before opening its add
     // panel. An invoice form for a shop with nowhere to send the money would be
     // a dead end, so the panel stays shut and the index says why (the
@@ -142,7 +143,7 @@ test.describe("as owner", () => {
     // Marks the demo shop connected + charges-enabled in the database without
     // ever calling Stripe (the route's own doc comment) — it unlocks the
     // surface, never a real charge.
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
 
     await page.goto(NEW_ORDER);
     await expect(page.getByRole("heading", { level: 2, name: "New order" })).toBeVisible();
@@ -189,7 +190,7 @@ test.describe("as owner", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
 
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
@@ -213,7 +214,7 @@ test.describe("as owner", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
 
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
@@ -233,7 +234,7 @@ test.describe("as owner", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
 
     // A customer but no line items at all: refused by the action itself, no
     // payment intent and no Stripe call.
@@ -272,7 +273,7 @@ test.describe("as owner", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await page.goto(NEW_ORDER);
     await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
     await page.getByLabel("Order note").fill("Twenty-line test invoice");
@@ -329,7 +330,7 @@ test.describe("as owner", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await openFirstSeat(page);
     const seats = page.locator('#roster li[id^="booking-"]').filter({ visible: true });
     const urls: string[] = [];
@@ -412,7 +413,7 @@ test.describe("as owner", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     const current = await submitRefusedDraft(page, "Pending first invoice");
     await page.evaluate(() =>
       sessionStorage.setItem("diveday.refused-form.other-shop.other-staffer.new-order", "keep"),
@@ -441,7 +442,7 @@ test.describe("as owner", () => {
   });
 
   test("a stale invoice completion preserves a newer draft", async ({ page, request }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     const current = await submitRefusedDraft(page, "Pending first invoice");
     const newer = await submitRefusedDraft(page, "Pending newer invoice");
     expect(newer.attempt !== current.attempt).toBe(true);
@@ -467,7 +468,7 @@ test.describe("as captain", () => {
    * index with the reason rather than Today: the door is closed, not the room.
    */
   test("a captain is turned away from the order form and told why", async ({ page, request }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
     await page.goto(NEW_ORDER);
 
     await expect(page.getByText(/limited to owners and managers/).first()).toBeVisible();
@@ -493,7 +494,7 @@ test.describe("as captain", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
 
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
@@ -518,7 +519,7 @@ test.describe("as captain", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-stripe-account");
+    await seedFacts(request, ["stripeAccount"]);
 
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();

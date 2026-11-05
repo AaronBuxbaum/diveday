@@ -8,6 +8,7 @@ import {
   passCodePayload,
   printSheetPageRule,
   storefrontAddress,
+  tripPacketPath,
 } from "./print-sheets";
 
 describe("the paper", () => {
@@ -57,6 +58,16 @@ describe("the fold line's address", () => {
     // A sheet saying `https://undefined/s/blue-mantis` is worse than one saying
     // where the page lives and nothing about the host.
     expect(storefrontAddress("blue-mantis", null)).toBe("/s/blue-mantis");
+  });
+});
+
+describe("where a packet is drawn", () => {
+  it("is the departure's own print state", () => {
+    expect(tripPacketPath("blue-mantis", "trip-1")).toBe("/shop/blue-mantis/trips/trip-1?print=1");
+  });
+
+  it("escapes a trip id that would otherwise rewrite the route", () => {
+    expect(tripPacketPath("blue-mantis", "../../orders")).not.toContain("/orders");
   });
 });
 

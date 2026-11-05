@@ -161,8 +161,9 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       // fixture does (ADR 20260815-per-test-private-shops).
       const reset = await api.post("/api/test/reset", { timeout: 120_000 });
       if (!reset.ok()) throw new Error(`reset failed: ${reset.status()} ${await reset.text()}`);
-      await api.delete(`/api/test/seed-private-shop?slug=${SIMULATION_SHOP_SLUG}`).catch(() => {});
-      const mint = await api.post(`/api/test/seed-private-shop?slug=${SIMULATION_SHOP_SLUG}`, {
+      await api.delete(`/api/test/shop?slug=${SIMULATION_SHOP_SLUG}`).catch(() => {});
+      const mint = await api.post("/api/test/shop", {
+        data: { mint: { slug: SIMULATION_SHOP_SLUG } },
         timeout: 60_000,
       });
       if (!mint.ok()) throw new Error(`mint failed: ${mint.status()} ${await mint.text()}`);

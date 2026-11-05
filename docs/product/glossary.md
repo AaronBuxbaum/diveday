@@ -162,6 +162,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Failed refund
 - First paid month
 - Free term
+- Late cancel
 - Month-end email
 - Owed
 - Paid after close
@@ -208,6 +209,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Cancellation window
 - Certificate passenger limit
 - Certificate total-persons limit
+- Charter inquiry
 - Check-in
 - Close-out
 - Coming as
@@ -229,6 +231,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Crew news
 - Crew roll-call event
 - Crew schedule
+- Crew thanks
 - Crew warning
 - DAN
 - Date-request party bookings
@@ -305,6 +308,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Operational horizon
 - Optional feature
 - Order
+- Out of service
 - Owner reporting / monthly report
 - Paper / in-person signature
 - Paper pass
@@ -321,6 +325,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Progression order
 - Radio identity
 - Reconciliation
+- Referral student
 - Rehearsal
 - Reminder cadence
 - Reply keyword
@@ -345,6 +350,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Seat ladder
 - Seat move
 - Seat release
+- Seat-sold alert
 - Self-guided departure
 - Set-up receipt
 - Set-up request
@@ -357,6 +363,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Shop tick
 - Shore alert contact
 - Sign once
+- Site closure
 - Skipped occurrence
 - SMS channel
 - Snorkel-suitable
@@ -417,6 +424,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Earliest flight
 - Executed dive
 - Field guide
+- Log entry file
 - Marine-life catalog
 - Material generation
 - Observed species
@@ -458,6 +466,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Needs staff fit
 - Nitrox / EANx
 - Nitrox fill method
+- Nitrox planning line
 - Nitrox request
 - Nitrox-compatible course
 - Nitrox-designated regulator

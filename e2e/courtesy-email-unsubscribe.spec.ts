@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 
 /**
  * Leo (persona 15) — self-serve email unsubscribe, the general counterpart to
@@ -9,7 +10,7 @@ import { expect, test } from "./fixtures";
  * list itself, just the cheapest public path to a person who can then be
  * opted out of courtesy email.
  *
- * `/api/test/seed-courtesy-email-unsubscribe-token` mints a real
+ * The `courtesyEmailUnsubscribe` fact (`/api/test/shop`) mints a real
  * `courtesy_email_unsubscribe` capability (test-only, gated
  * identically to `/api/test/reset`) so this drives the actual
  * `/unsubscribe/[token]` page and server action, since the real send flow
@@ -32,11 +33,10 @@ test("a diver can self-serve unsubscribe from courtesy email (wait-list openings
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
-  const seeded = await request.post("/api/test/seed-courtesy-email-unsubscribe-token", {
-    data: { shopSlug: "blue-mantis", email: "priya.courtesy.e2e@example.com" },
-  });
-  expect(seeded.ok()).toBe(true);
-  const { token } = await seeded.json();
+  const { courtesyEmailUnsubscribe } = await seedFacts(request, [
+    { name: "courtesyEmailUnsubscribe", email: "priya.courtesy.e2e@example.com" },
+  ]);
+  const { token } = courtesyEmailUnsubscribe;
 
   await page.goto(`/unsubscribe/${token}`);
   await expect(page.getByRole("heading", { name: "Stop these emails?" })).toBeVisible();

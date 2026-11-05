@@ -546,6 +546,25 @@ export const bookings = pgTable(
       () => people.id,
     ),
     /**
+     * **A referral student** (loop 5, row 10; glossary "Referral student"): staff
+     * said this course seat finished theory and confined water with another
+     * instructor and comes here for the open-water dives. Then the desk owes two
+     * papers, each stamped with who collected it and when: the referral form the
+     * first instructor signed, and the eLearning or knowledge-review record.
+     *
+     * Bookkeeping, never a gate, like the materials tick above: admission,
+     * readiness and the manifest never read it, and an instructor still checks
+     * the referral form before the first dive. Only on a course session's seat
+     * (`markReferralStudent`); each stamp moves with its author, and a paper is
+     * collected only on a referral seat.
+     */
+    referredInAt: timestamp("referred_in_at", { withTimezone: true }),
+    referredInByPersonId: uuid("referred_in_by_person_id").references(() => people.id),
+    referralFormAt: timestamp("referral_form_at", { withTimezone: true }),
+    referralFormByPersonId: uuid("referral_form_by_person_id").references(() => people.id),
+    referralRecordAt: timestamp("referral_record_at", { withTimezone: true }),
+    referralRecordByPersonId: uuid("referral_record_by_person_id").references(() => people.id),
+    /**
      * **A training mark** (issue #2275, ADR
      * 20261012-course-forms-on-charters-and-counter): staff said this seat on
      * an ordinary departure carries a training dive for the course seat named
@@ -664,6 +683,15 @@ export const bookings = pgTable(
     check(
       "bookings_course_materials_done_attributed",
       sql`(${table.courseMaterialsDoneAt} is null) = (${table.courseMaterialsDoneByPersonId} is null)`,
+    ),
+    // Every referral stamp has its author, and a paper is only collected for a
+    // seat that is a referral at all.
+    check(
+      "bookings_referral_attributed",
+      sql`(${table.referredInAt} is null) = (${table.referredInByPersonId} is null)
+        and (${table.referralFormAt} is null) = (${table.referralFormByPersonId} is null)
+        and (${table.referralRecordAt} is null) = (${table.referralRecordByPersonId} is null)
+        and (${table.referredInAt} is not null or (${table.referralFormAt} is null and ${table.referralRecordAt} is null))`,
     ),
     // A turn-away on a seat that is on the boat is a record contradicting itself:
     // only a released seat (or one given up since) can carry it.

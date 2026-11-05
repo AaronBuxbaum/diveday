@@ -42,7 +42,7 @@ describe("offline manifest snapshot ordering", () => {
 
   it("refuses a valid other-shop trip before writing a counter or returning a snapshot", async () => {
     const { db, shop } = context;
-    const { slug } = await createDemoShop(db, { history: false });
+    const { slug } = await createDemoShop(db, { shape: "lean" });
     const otherShop = await getShopBySlug(db, slug);
     if (!otherShop) throw new Error("second test shop missing");
     const otherTrip = await createTrip(db, {

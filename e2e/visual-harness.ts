@@ -1333,20 +1333,30 @@ export function registerExpectedVisualCapture(image: string) {
   const directory = path.join("e2e", "capture-manifest");
   mkdirSync(directory, { recursive: true });
   const manifestPath = path.join(directory, `${name}.json`);
+  const info = test.info();
   const manifest = {
     version: 1,
     screenshot: name,
-    testId: test.info().testId,
+    testId: info.testId,
+    // The test without its repeat: `--repeat-each` gives each run its own `testId`,
+    // and the nightly flake hunt repeats every spec that failed (#3641).
+    identity: [info.project.name, info.file, ...info.titlePath].join(" › "),
   };
   try {
     writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`, { flag: "wx" });
   } catch (error) {
     if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") throw error;
     const previous = JSON.parse(readFileSync(manifestPath, "utf8"));
+    // A repeat of the same test plans the same capture; two different tests do not.
+    // A manifest from before `identity` existed is compared by `testId`, as it was.
+    const sameTest =
+      typeof previous.identity === "string"
+        ? previous.identity === manifest.identity
+        : previous.testId === manifest.testId;
     if (
       previous.version !== manifest.version ||
       previous.screenshot !== manifest.screenshot ||
-      previous.testId !== manifest.testId
+      !sameTest
     ) {
       throw new Error(`visual capture filename was planned by more than one test: ${name}`);
     }

@@ -17,6 +17,7 @@ import {
   openTripTab,
   seededTripId,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   ADVANCED_CHARTER,
   AOW_COURSE,
@@ -406,15 +407,12 @@ for (const scheme of ["light", "dark"] as const) {
 
       if (scheme === "light") {
         test("the manifest keeps both capacity warnings distinct", async ({ page, request }) => {
-          const seeded = await request.post(
-            "/api/test/seed-trouble-states?facts=troublePanels,manifestOverCapacity",
-          );
-          expect(seeded.ok()).toBe(true);
-          const { manifestOverCapacity } = (await seeded.json()) as {
+          const seeded = await seedFacts(request, ["troublePanels", "manifestOverCapacity"]);
+          const { manifestOverCapacity } = seeded as {
             manifestOverCapacity?: { tripId: string };
           };
           if (!manifestOverCapacity) {
-            throw new Error("seed-trouble-states could not create both manifest capacity warnings");
+            throw new Error("the fact could not create both manifest capacity warnings");
           }
 
           await page.goto(`/shop/blue-mantis/trips/${manifestOverCapacity.tripId}/manifest`);

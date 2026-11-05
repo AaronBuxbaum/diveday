@@ -7,6 +7,7 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openSettingsRail, openSettingsRow, openTripTab } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   FLOW_TIMEOUT_MS,
@@ -51,7 +52,11 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the settings section picker overlays its pane (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
         await expect(
-          page.getByRole("heading", { level: 1, name: "Settings", exact: true }),
+          page.getByRole("heading", {
+            level: 1,
+            name: "Settings",
+            exact: true,
+          }),
         ).toBeVisible();
         await capture(page, "settings-sections-menu", scheme, {
           beforeShot: async () => {
@@ -193,7 +198,9 @@ for (const scheme of ["light", "dark"] as const) {
         // Extension handshake plus two distinct result/report captures.
         test.setTimeout(FLOW_TIMEOUT_MS);
         await page.addInitScript(() => {
-          Object.defineProperty(navigator, "userAgent", { get: () => "Chromium (visual capture)" });
+          Object.defineProperty(navigator, "userAgent", {
+            get: () => "Chromium (visual capture)",
+          });
           const announce = () => {
             document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
             window.dispatchEvent(new Event("diveday-cert-check-ready"));
@@ -245,7 +252,11 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Copy report" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "settings-cert-checks", scheme);
-        await page.getByText(staffCopy("settings.certChecks.viewReport"), { exact: true }).click();
+        await page
+          .getByText(staffCopy("settings.certChecks.viewReport"), {
+            exact: true,
+          })
+          .click();
         await page.getByText(/"report": "diveday-cert-check-try"/).waitFor();
         await capture(page, "settings-cert-checks-report", scheme);
       });
@@ -337,7 +348,7 @@ for (const scheme of ["light", "dark"] as const) {
        * Both panels render *only* when something has gone wrong, which is
        * exactly why they had never been photographed — and they are the shape
        * most likely to break, being warning-toned blocks of dense prose with
-       * inline links. /api/test/seed-trouble-states puts the demo shop into
+       * inline links. a fact on /api/test/shop puts the demo shop into
        * that state; it is a test-only route rather than seed data because a
        * demo permanently shouting that payments are broken is a worse demo
        * (src/db/seed-front-desk.ts says so at the row it seeds `succeeded`).
@@ -348,7 +359,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels,owedRefund");
+        await seedFacts(request, ["troublePanels", "owedRefund"]);
         await page.goto("/shop/blue-mantis/orders");
         await page.getByRole("region", { name: "Payments that need a check" }).waitFor();
         await page.getByRole("region", { name: "Refunds you still owe" }).waitFor();
@@ -547,7 +558,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?facts=troublePanels");
+        await seedFacts(request, ["troublePanels"]);
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("region", { name: "Photos that didn’t finish deleting" }).waitFor();
         await page.getByRole("region", { name: "Erasures not finished at Stripe" }).waitFor();
@@ -566,6 +577,12 @@ for (const scheme of ["light", "dark"] as const) {
         // The snippets are a Client Component; wait for a control it only
         // renders once mounted before shooting.
         await page.getByRole("button", { name: "Copy" }).first().waitFor();
+        // The preview box is drawn only once its frame has loaded, so a shot
+        // taken before that drops it (the baseline did, then a later run
+        // didn't). Wait for the drawn box.
+        await expect(page.getByTitle(staffCopy("settings.embed.preview"))).not.toHaveClass(
+          /\bh-0\b/,
+        );
         await capture(page, "settings-embed", scheme);
       });
 
@@ -662,7 +679,7 @@ for (const scheme of ["light", "dark"] as const) {
        * passed (issue #727).
        *
        * Driven through the real invite, because the token is hashed at rest and
-       * `/api/test/seed-account-token` will only re-mint for an account that
+       * the `accountToken` fact will only re-mint for an account that
        * already exists — `inviteStaffMember` is what creates it (ADR
        * 20260726-staff-invite-accounts). Deterministic email, not `Date.now()`:
        * a wall-clock value here is a permanent diff between CI runs, not a
@@ -684,11 +701,10 @@ for (const scheme of ["light", "dark"] as const) {
         await inviteSection.getByRole("button", { name: "Send invite" }).click();
         await expect(page.getByText("Invite sent")).toBeVisible();
 
-        const seeded = await request.post("/api/test/seed-account-token", {
-          data: { email, purpose: "invite" },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { token } = (await seeded.json()) as { token: string };
+        const { accountToken } = await seedFacts(request, [
+          { name: "accountToken", email, purpose: "invite" },
+        ]);
+        const { token } = accountToken as { token: string };
 
         await page.goto(`/invite/${token}`);
         // Streams behind a loading.tsx — wait for the page's own h1, the same

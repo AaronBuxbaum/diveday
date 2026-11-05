@@ -66,6 +66,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "interest_received":
     case "weekly_digest":
     case "desk_after_hours":
+    case "seat_sold_digest":
     case "stripe_payments_restricted":
     case "move_ask_soon":
     case "roll_call_stale":

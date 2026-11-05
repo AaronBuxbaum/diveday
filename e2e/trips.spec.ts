@@ -311,7 +311,7 @@ test.describe("trip print packet", () => {
     await page.getByRole("button", { name: "Print packet" }).click();
     const popup = await popupPromise;
     await popup.waitForLoadState("domcontentloaded");
-    await expect(popup).toHaveURL(new RegExp(`/shop/blue-mantis/trips/${tripId}/print$`));
+    await expect(popup).toHaveURL(new RegExp(`/shop/blue-mantis/trips/${tripId}\\?print=1$`));
     await expect(popup.getByRole("heading", { name: "Trip packet" })).toBeVisible();
     // **Three sections, not four.** The packet stopped composing the two tabs
     // that are working pages rather than documents (issue #814): Trip *is* the
@@ -630,7 +630,7 @@ test.describe("the printed trip packet", () => {
 
   test("carries no control a crew member could try to fill in", async ({ page }) => {
     const { path: tripPath, title } = await seededTrip(page);
-    await page.goto(`${tripPath}/print`);
+    await page.goto(`${tripPath}?print=1`);
     // The packet's own heading — the destination's render, not a timing guess.
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
 
@@ -705,7 +705,7 @@ test.describe("the printed trip packet", () => {
     page,
   }) => {
     const tripPath = await seededTripPath(page);
-    await page.goto(`${tripPath}/print`);
+    await page.goto(`${tripPath}?print=1`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
 

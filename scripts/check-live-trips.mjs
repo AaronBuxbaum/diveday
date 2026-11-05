@@ -89,17 +89,14 @@ const IS_TEST = /\.test\.tsx?$/;
  *   written at the two query sites as well, where a reader will meet it.
  */
 const SKIPPED_FILES = new Set(
-  [
-    "src/db/seed.ts",
-    "src/db/demo-refresh.ts",
-    "src/db/export.ts",
-    "src/app/api/test/seed-trouble-states/route.ts",
-  ].map((file) => path.normalize(file)),
+  ["src/db/seed.ts", "src/db/demo-refresh.ts", "src/db/export.ts"].map((file) =>
+    path.normalize(file),
+  ),
 );
 
 /**
- * The test fixture's facts (issue #2759): the trouble route's own functions, one
- * to a file, so the same exemption as `route.ts` above holds. Each one stages a
+ * The test fixture's facts (issue #2759), written only by the one test door
+ * (`src/app/api/test/shop/route.ts`), one to a file. Each one stages a
  * departure for a capture and is handed a demo shop's id.
  */
 const SKIPPED_DIRECTORY = path.normalize("src/db/facts/");

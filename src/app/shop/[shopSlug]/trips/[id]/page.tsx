@@ -58,10 +58,6 @@ import { reinstateTripAction } from "./details-actions";
 // 20260804-instant-navigation.
 export const instant = true;
 
-// Trip details and the roster share the same authorized shop context.
-// The flying-guidance follow-up panel is visible from every departure.
-// Staff dates follow the device's requested locale.
-// Departure warnings follow the current shop.
 export { departureMetadata as generateMetadata } from "./_components/departure-states";
 
 /**
@@ -100,8 +96,6 @@ export default async function ManageTripPage({
       confirmEmail,
       confirmPhone,
       view,
-      pass,
-      blowout,
       held,
       tell,
       ...rest
@@ -109,7 +103,7 @@ export default async function ManageTripPage({
   ] = await Promise.all([params, searchParams]);
   // An unparseable UUID must not reach Postgres.
   if (!uuidParam(tripId)) notFound();
-  const state = await departureStateOf(shopSlug, tripId, { pass, blowout, notice });
+  const state = await departureStateOf(shopSlug, tripId, { ...rest, notice });
   if (state) return state;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   reportRenderQueries("/shop/[shopSlug]/trips/[id]", after);

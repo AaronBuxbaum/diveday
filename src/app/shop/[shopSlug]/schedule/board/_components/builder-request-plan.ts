@@ -50,9 +50,24 @@ export function builderRequestPlan({
           name: request.name ?? st("requests.anonymous"),
           subject: request.courseTitle
             ? st("requests.aboutCourse", { course: request.courseTitle })
-            : st("requests.aboutDive", { interest: request.interest ?? "" }),
+            : charterAsk(st, request),
           divers: Math.max(1, request.partySize ?? 1),
         })),
       }
     : null;
+}
+
+/**
+ * A dive ask in the builder's brief, saying so when it asked for the whole
+ * boat (loop 5, row 11): the departure built from it is private whatever the
+ * box says, so the staffer reads that before they press Add.
+ */
+function charterAsk(
+  st: StaffTranslator,
+  request: { interest: string | null; charter: boolean },
+): string {
+  const interest = request.interest ?? "";
+  return request.charter
+    ? st("requests.charterAsk", { interest })
+    : st("requests.aboutDive", { interest });
 }

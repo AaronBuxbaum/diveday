@@ -37,6 +37,7 @@ import {
   people,
   shops,
   tripDives,
+  tripRequirements,
   tripScheduleDays,
   tripSeries,
   tripSeriesCrew,
@@ -46,6 +47,8 @@ import {
 import { recordSiteRunChange, tripSiteRunSnapshot } from "./trip-change-events";
 import { lockTripRevisionNotificationFences } from "./trip-revision-notification-fence";
 import {
+  type CopiedRequirement,
+  copiedRequirementColumns,
   insertTripInstance,
   insertTripInstances,
   type NewTrip,
@@ -91,6 +94,7 @@ import { boatCertifiedPassengers, liveBookingJoin, seatNotCancelled } from "./tr
 /** Where a materialization pass reads its per-occurrence shape from. */
 type InstanceTemplate = {
   trip: typeof trips.$inferSelect;
+  requirement: CopiedRequirement | null;
   days: Array<{ startsAt: Date; endsAt: Date }>;
   drafts: Array<{
     diveNumber: number;
@@ -157,13 +161,21 @@ async function loadTemplate(
   shopId: string,
   seriesId: string,
 ): Promise<InstanceTemplate | null> {
-  const [trip] = await tx
-    .select()
+  // The template's requirement row rides on the same read (issue #3872): a
+  // second statement would cost the batched roll one more round trip.
+  const [row] = await tx
+    .select({ trip: trips, requirement: copiedRequirementColumns })
     .from(trips)
+    .leftJoin(
+      tripRequirements,
+      and(eq(tripRequirements.tripId, trips.id), eq(tripRequirements.shopId, trips.shopId)),
+    )
     .where(and(eq(trips.seriesId, seriesId), eq(trips.shopId, shopId), liveTrip()))
     .orderBy(desc(trips.startsAt))
     .limit(1);
-  if (!trip) return null;
+  if (!row) return null;
+  const { trip } = row;
+  const { requirement } = row;
   const days = await tx
     .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
     .from(tripScheduleDays)
@@ -176,6 +188,7 @@ async function loadTemplate(
     .orderBy(asc(tripDives.diveNumber));
   return {
     trip,
+    requirement,
     days: days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }],
     drafts: dives.map((dive) => ({
       diveNumber: dive.diveNumber,
@@ -322,6 +335,8 @@ async function materializeWindow(
         // under-reported the shop's own board.
         lensId: template.trip.lensId,
         boatId: template.trip.boatId,
+        // Every Saturday asks what the template asks, chosen or default (issue #3872).
+        requirement: template.requirement,
         drafts: template.drafts,
         scheduleDays: days,
       },

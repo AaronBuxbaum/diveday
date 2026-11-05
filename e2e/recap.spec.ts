@@ -4,6 +4,7 @@ import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openBookingActions, openRecapDoor, openSettingsRow, signOut } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
 // same shape as the readiness page: it must fail closed on a bad or forged
@@ -334,8 +335,7 @@ test("the after-state names the earliest flight, once the crew has logged the da
   await expect(page.getByRole("heading", { name: "Dive log entry" })).toBeVisible();
   await expect(page.getByTestId(AFTER_STATE_TEST_IDS.flySafe)).toHaveCount(0);
 
-  const seeded = await request.post("/api/test/seed-dive-times");
-  expect(seeded.ok(), await seeded.text()).toBe(true);
+  await seedFacts(request, ["diveTimes"]);
   await page.reload();
   await expect(page.getByTestId(AFTER_STATE_TEST_IDS.flySafe)).toHaveText(
     "Blue Mantis Divers asks you to wait at least until Wednesday 6:10 PM before flying: 24 hours after your last dive with us, following DAN’s guidance.",

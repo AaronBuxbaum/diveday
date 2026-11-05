@@ -4,6 +4,7 @@ import { DEMO_BYPASS_PASSWORD } from "../src/lib/demo-bypass";
 import { enrollSignInChallenge, startSignInChallenge } from "./auth-challenge";
 import { expect, makeActivitySafe, READ_ONLY, test } from "./fixtures";
 import { STAFF_DAY_HEADING, signOut } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 /**
  * A session is a database row under Better Auth (`account_sessions`, the `session` model in
@@ -138,13 +139,7 @@ test.describe("pending second-factor sign-in", () => {
   }) => {
     const enrolled = await enrollSignInChallenge(page, privateShop.slug);
     await startSignInChallenge(page, privateShop.ownerEmail);
-    expect(
-      (
-        await page.request.post(
-          `/api/test/seed-trouble-states?authChallengeState=expired&shop=${privateShop.slug}`,
-        )
-      ).ok(),
-    ).toBe(true);
+    await seedFacts(page.request, ["authChallengeExpired"], { slug: privateShop.slug });
     await page.getByRole("textbox", { name: "Sign-in code" }).fill(enrolled.recoveryCodes[0]);
     await page.getByRole("button", { name: "Verify", exact: true }).click();
     await expect(page).toHaveURL(/\/sign-in\?error=restart$/);

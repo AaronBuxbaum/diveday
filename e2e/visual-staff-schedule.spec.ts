@@ -21,6 +21,7 @@ import {
   tripPathByTitle,
   walkInFormPath,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   FLOW_TIMEOUT_MS,
@@ -548,15 +549,12 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,moveBlocked",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { moveBlocked } = (await seeded.json()) as {
+        const seeded = await seedFacts(request, ["troublePanels", "moveBlocked"]);
+        const { moveBlocked } = seeded as {
           moveBlocked?: { tripId: string; title: string };
         };
         if (!moveBlocked) {
-          throw new Error("seed-trouble-states found no upcoming departure to count heads on");
+          throw new Error("the fact found no upcoming departure to count heads on");
         }
 
         // **Anchored, not a substring.** "Move <title>" *is* a substring of the
@@ -588,7 +586,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **A snorkeler and a rider aboard** (ADR 20261007-participant-types):
        * the roster's type badge, the Details row that sets their prices, the
        * manifest head count's split and the roll-call badge, on today's reef
-       * boat. `/api/test/seed-trouble-states?mixedBoat=1` seats Mara and Owen
+       * boat. `the `mixedBoat` fact (`/api/test/shop`)` seats Mara and Owen
        * Quint there through `seatDiver` unless the demo seed already has, so
        * the capture reads the same on every layer of the stack.
        */
@@ -597,14 +595,11 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const seeded = await request.post(
-          "/api/test/seed-trouble-states?facts=troublePanels,mixedBoat",
-        );
-        expect(seeded.ok()).toBe(true);
-        const { mixedBoat } = (await seeded.json()) as {
+        const seeded = await seedFacts(request, ["troublePanels", "mixedBoat"]);
+        const { mixedBoat } = seeded as {
           mixedBoat?: { tripId: string; snorkeler: string; rider: string };
         };
-        if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
+        if (!mixedBoat) throw new Error("the fact found no departure to mix");
 
         await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}`);
         await expect(

@@ -13,7 +13,7 @@ import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, sailsAfterDayBoats } from 
  * out of DiveDay's translations.
  *
  * What it must not do is name a shop. `seedBookings` runs for the canonical
- * demo *and* for every shop minted through `/api/test/seed-private-shop`
+ * demo *and* for every shop minted through `privateShop` (a `mint` through `/api/test/shop`)
  * (ADR 20260815-per-test-private-shops), so a shop name written into this prose
  * lands on a recap belonging to a shop of an entirely different name — which is
  * what a diver reads, verbatim, on `/recap/[token]` (issue #1513).

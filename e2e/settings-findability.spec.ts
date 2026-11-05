@@ -90,7 +90,9 @@ test.describe("as owner", () => {
   }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(`/shop/${SHOP}/settings/import`);
-    const rail = page.getByRole("navigation", { name: "Settings sections" });
+    // Change the viewport only once React owns the rail and it has moved its current
+    // row into view, so the resize is all the poll below measures (#3640).
+    const rail = await openSettingsRail(page);
     const selected = rail.locator('[aria-current="true"]');
     await expect(selected).toBeVisible();
 
@@ -216,7 +218,7 @@ test.describe("settings that change the shop", () => {
     test.setTimeout(60_000);
     // From inside a setting: on the hub itself the page is the map.
     await page.goto(`/shop/${privateShop.slug}/settings/features`);
-    const rail = page.getByRole("navigation", { name: "Settings sections" });
+    const rail = await openSettingsRail(page);
     await rail.getByRole("link", { name: "Shop profile & branding" }).click();
     await expect(page).toHaveURL(new RegExp(`/shop/${privateShop.slug}/settings/profile$`));
     // The rail belongs to desktop; the profile and saved-page keyboard path

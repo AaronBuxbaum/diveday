@@ -12,12 +12,14 @@ import type { SiteReview } from "@/db/reviews";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { courseDepthFormat, diveSiteDepthText } from "@/i18n/unit-labels";
+import { nowDate } from "@/lib/clock";
 import { type CourseScheduleDay, formatScheduleDayTime, resolveCourseDepths } from "@/lib/courses";
 import { dayProfileRows } from "@/lib/day-profile";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type DiveMode, type DockDayRhythm, dockDayTimeline } from "@/lib/diver-planning";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { publicDiveSitePath } from "@/lib/public-routes";
+import { serviceWindowCoversInstant, serviceWindowFrom } from "@/lib/service-window";
 import type { SiteSightings } from "@/lib/sightings";
 import type { DiveBriefing, Shop, Trip } from "./types";
 
@@ -438,9 +440,17 @@ export function TripDayPlan({
           // wrote about the place, and this run is the one beat that names every
           // site of the day. The whole row is the target, whichever line names
           // the site; a dive with no site yet has nowhere to go and stays plain.
-          const siteDoor = diveSite
-            ? { href: publicDiveSitePath(shop.slug, diveSite.slug), linkLabel: diveSite.name }
-            : {};
+          // A site the shop closed for today has no page to go to (loop 5,
+          // row 5): its name stays, its door goes.
+          const siteDoor =
+            diveSite &&
+            !serviceWindowCoversInstant(
+              serviceWindowFrom(diveSite.closedFrom, diveSite.closedUntil, null),
+              nowDate(),
+              shop.timezone,
+            )
+              ? { href: publicDiveSitePath(shop.slug, diveSite.slug), linkLabel: diveSite.name }
+              : {};
           const lead = dive.title ?? diveSite?.name ?? t("trip.siteToBeConfirmed");
           return (
             <Fragment key={dive.id}>

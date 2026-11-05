@@ -1,5 +1,7 @@
 import type { DiveSpecialty } from "@/db/schema";
 import type { CertificationLevel, ReadinessBlocker } from "@/lib/readiness";
+import type { Requirement } from "@/lib/requirement";
+import type { TripLevelRequirement } from "@/lib/training-mark";
 
 /**
  * The four ladder blockers a sale refusal is made of (`TripAdmissionRefusal`,
@@ -21,3 +23,8 @@ export function noSpecialty(specialty: DiveSpecialty): ReadinessBlocker {
 }
 
 export const NO_NITROX: ReadinessBlocker = { code: "nitrox_missing" };
+
+/** A trip requirement whose level a person chose (issue #3872): a mark never lowers it. */
+export function chosenLevel(requirement: Requirement): TripLevelRequirement {
+  return { ...requirement, minimumCertificationIsDefault: false };
+}
