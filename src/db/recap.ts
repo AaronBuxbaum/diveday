@@ -19,6 +19,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { crewThanksChoice } from "@/lib/crew-thanks-choice";
+import { rungOffsetMs } from "@/lib/departure-clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { compareDiveRecord, type DiveRecordComparison } from "@/lib/dive-record";
 import { DEFAULT_FLY_SAFE_HOURS, type FlySafeResult, flySafeFrom } from "@/lib/fly-safe";
@@ -41,7 +42,7 @@ import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { firstNameOf } from "@/lib/person-name";
 import { diveDayOrdinal } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
-import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
+import { unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
 import { leftAtTheDock } from "@/lib/seat-ladder";
 import { shopClock } from "@/lib/shop-clock";
 import type { TemperatureUnit } from "@/lib/temperature-units";
@@ -1748,7 +1749,7 @@ async function sendRecaps(
   );
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const since = new Date(now.getTime() - RECAP_LOOKBACK_HOURS * HOUR_MS);
-  const eligibleBefore = new Date(now.getTime() - RECAP_AUTOMATIC_DELAY_HOURS * HOUR_MS);
+  const eligibleBefore = new Date(now.getTime() - rungOffsetMs("recap_due"));
 
   const candidates = await db
     .select({ booking: bookings, person: people, trip: trips, shop: shops })

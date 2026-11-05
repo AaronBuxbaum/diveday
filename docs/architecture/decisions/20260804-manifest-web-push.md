@@ -42,7 +42,7 @@ subscribe.
      `last_pushed_at` rather than in process memory (which does not survive a serverless invocation).
      A burst of roll-call writes collapses into one notification.
    - **Only around departure.** A subscription is only pushed while its trip is within the departure
-     window, read from the live trip row at send time (`src/lib/push-window.ts`) so a trip that moves
+     window, read from the live trip row at send time (`pushIsLive`, `src/lib/departure-clock.ts`) so a trip that moves
      takes its window with it.
 3. **The service worker writes the device copy.** On `push` it refreshes any live client *and*, when
    no visible page will do it, saves the snapshot itself through the real store before showing the
@@ -232,7 +232,7 @@ is the ADR's own "silent refresh" row and stops the device doing roll call from 
    trip with no row. Enabling a second departure reuses the browser subscription and adds a row;
    disabling one only tears that subscription down once no other trip still needs it.
 2. **`trip_starts_at` is gone.** The window is computed from the live trip row at send time
-   (`src/lib/push-window.ts`), so a departure that moves takes its window with it. The column and its
+   (`pushIsLive`, `src/lib/departure-clock.ts`), so a departure that moves takes its window with it. The column and its
    index were dropped rather than kept as a stale-looking authority.
 3. **Multi-day trips are covered for their whole run.** The window closes on the later of the trip's
    own end and its last scheduled day, not on a fixed offset from the start.

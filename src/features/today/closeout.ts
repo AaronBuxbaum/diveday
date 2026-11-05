@@ -323,10 +323,10 @@ function departureStatus(
     // asymmetry is the rule and not a hole in it: no stage demotes, and a
     // stale or contrary stage is silence rather than a contradiction.
     // `liveStageOf` is what stops a tap outliving its shelf life
-    // (`STAGE_STALE_AFTER_MS` is two buffers).
+    // (`stage_stale` on the departure clock is two buffers).
     //
     // Which leaves the overdue hour — from `endsAt` plus one buffer, where the
-    // clock starts saying home, to `endsAt` plus `STAGE_STALE_AFTER_MS`, where
+    // clock starts saying home, to the clock's `stage_stale` rung, where
     // the word stops speaking — in which this branch no longer runs, a live
     // `underway` is outvoted, and the departure still reads `all_home`. What
     // keeps that from being a boat lost quietly is the gap branch above, which

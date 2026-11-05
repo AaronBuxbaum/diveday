@@ -217,7 +217,7 @@ describe("isAfterTheDive", () => {
   });
 
   it("waits for the recap floor when the shop recorded no roll call", () => {
-    // Four hours — `RECAP_AUTOMATIC_DELAY_HOURS`, the delay the recap *send*
+    // Four hours — the `recap_due` rung, the delay the recap *send*
     // has always taken before asserting the same thing by email. A shop that
     // does not run roll call gets that rule, not a looser one invented here.
     // The old buffer-only switch is the failing case: at `bufferGone` the

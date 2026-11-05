@@ -24,9 +24,9 @@ import {
   isNoShowAtCounter,
   isTurnedAwayAtCounter,
 } from "@/lib/check-in";
+import { arrivalsWindow, walkInDoorOpen } from "@/lib/departure-clock";
 import { formatTime, formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
-import { arrivalsWindow, walkInDoorOpen } from "@/lib/operational-window";
 import { paperPassPath } from "@/lib/print-sheets";
 import { turnAwayOffer } from "@/lib/turn-away";
 import { welcomeCueFor } from "@/lib/welcome-cue";

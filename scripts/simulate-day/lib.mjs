@@ -13,7 +13,7 @@ const HOUR_MS = 60 * MINUTE_MS;
 
 /**
  * How long after a departure ties up its recap becomes due — the automatic
- * floor in `src/lib/recap-schedule.ts` (`RECAP_AUTOMATIC_DELAY_HOURS`). Spelled
+ * floor, the `recap_due` rung in `src/lib/departure-clock.ts`. Spelled
  * here rather than imported so this module stays plain JavaScript a script can
  * load; `lib.test.mjs` pins it against the source of truth.
  */

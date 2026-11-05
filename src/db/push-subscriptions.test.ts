@@ -145,7 +145,7 @@ describe("claimDuePushTargets", () => {
 
   // The departure window is no longer decided here — it is checked against the
   // live trip row before this runs, and its cases (boundaries, a moved trip, a
-  // multi-day course) live in src/lib/push-window.test.ts. `claimDuePushTargets`
+  // multi-day course) live in src/lib/departure-clock.test.ts. `claimDuePushTargets`
   // now owns exactly one throttle: coalescing.
 
   it("never claims another shop's subscriptions", async () => {

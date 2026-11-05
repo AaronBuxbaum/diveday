@@ -1,9 +1,9 @@
 import { and, asc, desc, eq, gt, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
 import { nowDate } from "@/lib/clock";
+import { arrivalsWindow } from "@/lib/departure-clock";
 import type { IdentityMatchKind } from "@/lib/identity-match";
 import { OFFLINE_EVENT_SKEW_MS, offlineEventOutOfBounds } from "@/lib/offline-events";
-import { arrivalsWindow } from "@/lib/operational-window";
 import { hasArrived, type StandingArrival } from "@/lib/presence";
 import { priorVisitStanding } from "@/lib/prior-visits";
 import type { ReadinessResult } from "@/lib/readiness";

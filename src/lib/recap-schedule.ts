@@ -1,16 +1,18 @@
 import { HOUR_MS } from "./clock";
-import { hasPassed, rungOffsetMs, rungTime } from "./departure-clock";
+import { rungTime } from "./departure-clock";
 
 /**
- * Automatic recap delivery delay: 4 hours after the boat is scheduled to return.
- * Staff can manually send the recap at any time on an ended trip.
+ * When the automatic recap goes out. Its delay is the departure clock's
+ * `recap_due` rung (four hours past the scheduled return, `recapIsDue` in
+ * `src/lib/departure-clock.ts`); what lives here is the per-trip override a
+ * staffer's unpause writes. Staff can send the recap by hand at any time on an
+ * ended trip.
  */
-export const RECAP_AUTOMATIC_DELAY_MS = rungOffsetMs("recap_due");
-export const RECAP_AUTOMATIC_DELAY_HOURS = RECAP_AUTOMATIC_DELAY_MS / HOUR_MS;
 
 /**
  * When unpausing automatic sending, delay sending until at least 1 hour from unpause
- * (or the original 4-hour scheduled return time, whichever is later).
+ * (or the original scheduled time, whichever is later). Measured from the click,
+ * not from the departure, so it is not a rung.
  */
 export const RECAP_UNPAUSE_DELAY_HOURS = 1;
 export const RECAP_UNPAUSE_DELAY_MS = RECAP_UNPAUSE_DELAY_HOURS * HOUR_MS;
@@ -18,7 +20,7 @@ export const RECAP_UNPAUSE_DELAY_MS = RECAP_UNPAUSE_DELAY_HOURS * HOUR_MS;
 /**
  * Calculates the target automatic recap delivery timestamp:
  * - If a custom `autoSendAt` was set (e.g. via unpause), returns that.
- * - Otherwise, returns 4 hours after `endsAt` if a scheduled return time exists.
+ * - Otherwise, the `recap_due` rung if a scheduled return time exists.
  * - If there is no scheduled return time (`endsAt` is null), automatic sending is disabled (returns null).
  */
 export function recapAutoSendAt(
@@ -32,7 +34,7 @@ export function recapAutoSendAt(
 
 /**
  * Computes the new auto-send time when staff unpauses automatic recap sending:
- * later of (the original sending time `endsAt + 4h`, 1 hour after the click to unpause).
+ * later of (the `recap_due` rung, 1 hour after the click to unpause).
  * If `endsAt` is null, returns null.
  */
 export function unpauseRecapAutoSendAt(
@@ -43,13 +45,4 @@ export function unpauseRecapAutoSendAt(
   const originalSendAt = rungTime("recap_due", { endsAt }).getTime();
   const unpauseSendAt = unpausedAt.getTime() + RECAP_UNPAUSE_DELAY_MS;
   return new Date(Math.max(originalSendAt, unpauseSendAt));
-}
-
-/**
- * **Is the automatic recap due?** Strictly past the scheduled return plus the
- * recap's delay (the `settled` rung of the departure's clock). Staff may send
- * one by hand before this.
- */
-export function recapIsDue(endsAt: Date, now: Date): boolean {
-  return hasPassed("recap_due", { endsAt }, now);
 }

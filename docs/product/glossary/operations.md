@@ -106,7 +106,7 @@
   the departure door's own: readiness, admission, waiver and capacity. The old
   `/trips/[id]/walk-in` page is gone and redirects to the door.
 - **Counter window** — when the counter may still seat a walk-in on a departure
-  (`walkInDoorOpen`, `src/lib/operational-window.ts`): it starts inside the arrivals window and has
+  (`walkInDoorOpen`, `src/lib/departure-clock.ts`): it starts inside the arrivals window and has
   not sailed (the one departure buffer). The staffer's door and the seat action both ask it, so a
   typed URL or a stale page cannot seat someone on a boat that has gone.
 - **Counter payment hold** — Cash or Card machine tapped on an open order's Record payment row: a
@@ -142,8 +142,9 @@
 - **Arrivals window** — the counter's narrower lens on the operational horizon: departures from six
   hours ago through the next thirty-six. The backwards reach is the one deliberate asymmetry (a
   diver still walks up to the desk for a boat that already sailed); forwards it never outruns the
-  horizon. It decides when a departure's Divers tab carries the arrival desk and what the **arrival lookup**
-  searches.
+  horizon. It is two rungs on the **departure clock** (`desk_opens`, `desk_closes`; `arrivalsWindow`
+  in `src/lib/departure-clock.ts`). It decides when a departure's Divers tab carries the arrival desk
+  and what the **arrival lookup** searches.
 - **Arrival lookup** — Today's search for "which boat is this diver on?" (`?q=`): a name, phone,
   email or booking ID matched across every departure in the **arrivals window**, each match a row
   that opens that boat's Divers tab at the diver's own row. The tab itself has no search.
@@ -1415,13 +1416,19 @@
   booking gate, the trip page, the Today queue, and — through Today's own reader — the shift
   roster's crew-gap count.
 - **Departure clock** — the one ladder of offsets measured from a departure's scheduled start and
-  end (`src/lib/departure-clock.ts`, issue #2714): `push_opens` (six hours ahead),
+  end (`src/lib/departure-clock.ts`, issue #2714): `week_out` and `day_before` (when the two
+  reminders open), `desk_opens` and `desk_closes` (thirty-six hours ahead and six past the start:
+  the **arrivals window**), `push_opens` (six hours ahead), `scheduled_start`,
   `sailing_grace_over` and `back_grace_over` (an hour past the scheduled start and return, what
-  `hasSailed` and `hasReturned` ask), `recap_due` (four hours past the return) and `push_closes`
-  (twelve hours past the end). A rung is an instant on the schedule, never a claim about who is
-  aboard: it does not say a diver **sailed**, that everyone is back, or that a day has
-  **settled**; those are read off roll-call evidence. A new window measured from a departure is a
-  rung here, not an offset of its own.
+  `hasSailed` and `hasReturned` ask), `stage_stale` (two hours past the return, when a **trip
+  stage** stops speaking), `recap_due` (four hours past the return) and `push_closes` (twelve
+  hours past the end). Each rung says whether it is crossed on its instant or only after it, so no
+  caller picks an operator. `departurePhase` names where a departure is on the ordered rungs:
+  ahead, week out, day before, morning of, leaving, scheduled out, scheduled back, recap due,
+  past. A rung or phase is an instant on the schedule, never a claim about who is aboard: it does
+  not say a diver **sailed**, that everyone is back, or that a day has **settled**; those are read
+  off roll-call evidence. A new window measured from a departure is a rung here, not an offset of
+  its own.
 - **Deck count** — the heads the captain counted on deck at one **roll-call checkpoint**, typed as
   one number on the Boat tab (`deck_counts`, newest per checkpoint stands; loop 5, row 1). The roll
   call's own head count is the sum of per-person marks, so a mark made against the wrong name still
@@ -1516,8 +1523,8 @@
   `src/db/trip-stages.ts`), and records rather than edits: `trip_stage_events` is append-only, a
   crew that taps the wrong word taps the right one, and the newest row wins. **A stage goes stale
   rather than wrong** — on the anonymous surfaces (the storefront, the follow link, the diver link)
-  it stops speaking two late-arrival buffers past the departure's own end (`liveStageOf`,
-  `STAGE_STALE_AFTER_MS`), because a crew that tapped *Underway* and then got busy would otherwise
+  it stops speaking two late-arrival buffers past the departure's own end (`liveStageOf`, the
+  **departure clock**'s `stage_stale` rung), because a crew that tapped *Underway* and then got busy would otherwise
   leave a diver's family reading "out on the reef" at midnight. The staff surfaces (the departure
   header, the shop home's station chip) read `boatStageOf` instead, whose staleness is the end of
   the return shop day, as the **trip phase** entry says: a crew is told its own boat is still out

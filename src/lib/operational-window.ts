@@ -15,12 +15,14 @@
  *   {@link OPERATIONAL_HORIZON_DAYS} days out. The shop's working week. The
  *   home files the work inside it onto the boat each job holds up, and
  *   everything further out is Schedule's job rather than a triage list's.
- * - **The arrivals window** (`arrivalsWindow`) — the counter's narrower lens on
- *   the *same* horizon: departures from {@link ARRIVALS_LOOKBACK_HOURS} hours
- *   ago through the next {@link ARRIVALS_AHEAD_HOURS}. It reaches backwards,
- *   which the operational horizon deliberately does not: a diver can still walk
- *   up to a counter for a boat that has already sailed, and the front desk needs
- *   that row. Forwards it never outruns the horizon — see
+ * - **The arrivals window** (`arrivalsWindow`, `src/lib/departure-clock.ts`)
+ *   — the counter's narrower lens on the *same* horizon: departures from six
+ *   hours ago through the next thirty-six. It is measured from each departure
+ *   (the clock's `desk_opens` and `desk_closes` rungs), so it lives on the
+ *   departure's clock rather than here. It reaches backwards, which the
+ *   operational horizon deliberately does not: a diver can still walk up to a
+ *   counter for a boat that has already sailed, and the front desk needs that
+ *   row. Forwards it never outruns the horizon — see
  *   `arrivalsWindowIsInsideHorizon`, which is what guarantees the counter can
  *   never show a departure the home has already dropped.
  *
@@ -38,8 +40,8 @@
  * are unchanged, and so is everything in this module.
  */
 
-import { DAY_MS, HOUR_MS } from "@/lib/clock";
-import { hasSailed } from "@/lib/trips";
+import { DAY_MS } from "@/lib/clock";
+import { arrivalsWindow, type DepartureWindow } from "@/lib/departure-clock";
 
 /**
  * How far ahead every readiness surface looks. A working week: long enough that
@@ -51,16 +53,6 @@ export const OPERATIONAL_HORIZON_DAYS = 7;
 export const OPERATIONAL_HORIZON_MS = OPERATIONAL_HORIZON_DAYS * DAY_MS;
 
 /**
- * How far *back* the counter looks. A boat that left this morning still has
- * divers arriving at the desk with questions; dropping it the moment it sails
- * is what sends staff hunting through Schedule mid-rush.
- */
-export const ARRIVALS_LOOKBACK_HOURS = 6;
-
-/** How far ahead the counter looks: today's remaining boats plus tomorrow's. */
-export const ARRIVALS_AHEAD_HOURS = 36;
-
-/**
  * How many upcoming departures any readiness surface will inspect. Readiness is
  * a per-trip roll-up, so this bounds the work in the pathological case (a shop
  * with dozens of departures inside one week). The horizon, not this number, is
@@ -69,11 +61,8 @@ export const ARRIVALS_AHEAD_HOURS = 36;
  */
 export const OPERATIONAL_MAX_TRIPS = 60;
 
-/** A half-open-in-spirit interval of departure times. Both bounds inclusive. */
-export type OperationalWindow = {
-  from: Date;
-  to: Date;
-};
+/** An interval of departure times, both bounds inclusive: the clock's own shape. */
+export type OperationalWindow = DepartureWindow;
 
 /**
  * The horizon every readiness surface shares: departures from this moment
@@ -81,28 +70,6 @@ export type OperationalWindow = {
  */
 export function operationalWindow(now: Date): OperationalWindow {
   return { from: now, to: new Date(now.getTime() + OPERATIONAL_HORIZON_MS) };
-}
-
-/**
- * The counter's lens on the same horizon: recently-sailed and imminent
- * departures only. Never wider than {@link operationalWindow} going forward.
- */
-export function arrivalsWindow(now: Date): OperationalWindow {
-  return {
-    from: new Date(now.getTime() - ARRIVALS_LOOKBACK_HOURS * HOUR_MS),
-    to: new Date(now.getTime() + ARRIVALS_AHEAD_HOURS * HOUR_MS),
-  };
-}
-
-/**
- * Whether the counter may still seat a walk-in on a departure: it is inside
- * {@link arrivalsWindow} and has not sailed (`hasSailed`, the one departure
- * buffer). The staffer's door and the seat action both ask this, so a typed
- * URL or a stale page cannot seat someone on a boat that has gone.
- */
-export function walkInDoorOpen(startsAt: Date, now: Date): boolean {
-  const window = arrivalsWindow(now);
-  return startsAt >= window.from && startsAt <= window.to && !hasSailed(startsAt, now);
 }
 
 /**

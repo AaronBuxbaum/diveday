@@ -4,7 +4,7 @@
  * UI all agree on what "full" means — and on when the boat has gone.
  */
 
-import { hasReached } from "@/lib/departure-clock";
+import { hasCrossed } from "@/lib/departure-clock";
 
 /**
  * **Has the boat gone?** — true once the departure is a buffered hour past the
@@ -17,7 +17,7 @@ import { hasReached } from "@/lib/departure-clock";
  * answers that.
  */
 export function hasSailed(startsAt: Date, now: Date): boolean {
-  return hasReached("sailing_grace_over", { startsAt }, now);
+  return hasCrossed("sailing_grace_over", { startsAt }, now);
 }
 
 /**
@@ -48,7 +48,7 @@ export function acceptsNewDivers(
  * there is nothing left to watch.
  */
 export function hasReturned(endsAt: Date, now: Date): boolean {
-  return hasReached("back_grace_over", { endsAt }, now);
+  return hasCrossed("back_grace_over", { endsAt }, now);
 }
 
 /**

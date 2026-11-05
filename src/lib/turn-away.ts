@@ -1,5 +1,5 @@
+import { arrivalsWindow } from "./departure-clock";
 import { heldSeatBlockers } from "./identity-match";
-import { arrivalsWindow } from "./operational-window";
 import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessResult } from "./readiness";
 
 /**

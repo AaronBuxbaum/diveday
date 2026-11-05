@@ -750,7 +750,7 @@ export const smsOptOuts = pgTable("sms_opt_outs", {
  * Per-trip by design, not per-shop: the subscription expires with the trip it
  * names, which is why there is no separate expiry job for the common case.
  * The departure window is deliberately *not* denormalized here — it is read
- * from the live trip row at send time (src/lib/push-window.ts), because a copy
+ * from the live trip row at send time (`pushIsLive`, src/lib/departure-clock.ts), because a copy
  * taken at subscribe time could not follow a trip that moved.
  *
  * `endpoint`, `p256dh` and `auth` together are a device credential: anyone

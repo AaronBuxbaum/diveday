@@ -1,4 +1,4 @@
-import { HOUR_MS } from "./clock";
+import { stageIsStale } from "./departure-clock";
 
 /**
  * **The boat says where it is** — ADR 20260904-reef-all-the-way-down, decision
@@ -45,13 +45,6 @@ export type TripStageReading = {
 };
 
 /**
- * How long after a departure's scheduled end its last stage still speaks for
- * it. Two late-arrival buffers: one for the boat being late, one for the crew
- * being busy when it ties up.
- */
-export const STAGE_STALE_AFTER_MS = 2 * HOUR_MS;
-
-/**
  * The stage a surface may show for this departure, or null.
  *
  * Null on three counts, all of them "say nothing": nothing was ever recorded,
@@ -65,13 +58,11 @@ export function liveStageOf(
 ): TripStageReading | null {
   if (!reading) return null;
   if (!endsAt) return reading;
-  // diveday:allow-departure-offset: this is a word's shelf life, not a
-  // departure check. `hasReturned` answers "is the boat back?", which a stage
-  // must not depend on — the whole point of the line is a boat that is late.
-  // What expires here is DiveDay's licence to keep repeating a sentence the
-  // crew has stopped maintaining, and two late-arrival buffers is the window
-  // the ADR's own risk note argues for.
-  if (now.getTime() > endsAt.getTime() + STAGE_STALE_AFTER_MS) return null;
+  // A word's shelf life, not a departure check: the departure clock's
+  // `stage_stale` rung, two late-arrival buffers past the end, which is the
+  // window the ADR's own risk note argues for. Not `hasReturned`: the whole
+  // point of the line is a boat that is late.
+  if (stageIsStale(endsAt, now)) return null;
   return reading;
 }
 
