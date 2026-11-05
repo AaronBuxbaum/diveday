@@ -77,6 +77,7 @@ export const FEATURE_ROWS: readonly FeatureRow[] = [
   optional("waitlist", "bookings", "settings"),
   optional("pastDiverInvites", "bookings", "settings"),
   optional("partnerLinks", "bookings", "settings"),
+  optional("seatSoldAlerts", "bookings", "settings"),
   optional("reviews", "divers", "settings"),
   optional("publicYear", "divers", "settings"),
   optional("padiChecks", "divers", "settings"),

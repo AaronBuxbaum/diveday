@@ -123,11 +123,36 @@ export const tripReviews = pgTable(
     isPublished: boolean("is_published").notNull().default(false),
     /** Null until published; drives "newest published first" on the public list. */
     publishedAt: timestamp("published_at", { withTimezone: true }),
+    /**
+     * **Thanks to one of the crew** (loop 5, row 6; glossary "Crew thanks"):
+     * the optional line under the review ("Keiko made my first wreck easy"),
+     * and which crew member of that departure it is for. Both or neither (the
+     * check below). It is never published: only the crew member it names and
+     * staff read it. Revising the review replaces it, and a revision that
+     * leaves it blank takes it back.
+     */
+    crewThanksPersonId: uuid("crew_thanks_person_id").references(() => people.id),
+    crewThanks: text("crew_thanks"),
+    /**
+     * Staff hid the thanks from the crew member (loop 5, row 6). A hide, not a
+     * delete: the words stay for the shop's record, and a revised line comes
+     * back unhidden because nobody has read it yet.
+     */
+    crewThanksHiddenAt: timestamp("crew_thanks_hidden_at", { withTimezone: true }),
     createdAt: appNowTimestamp("created_at").notNull(),
     updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_reviews_booking_unique").on(table.bookingId),
+    check(
+      "trip_reviews_crew_thanks_pair",
+      sql`(${table.crewThanksPersonId} is null) = (${table.crewThanks} is null) and (${table.crewThanks} is null or (length(btrim(${table.crewThanks})) > 0 and length(${table.crewThanks}) <= 200))`,
+    ),
+    // The crew member's own read on Today: their thanks, newest first. Leads on
+    // the person column so a person's deletion probes it by index too.
+    index("trip_reviews_crew_thanks_idx")
+      .on(table.crewThanksPersonId, table.shopId, table.createdAt)
+      .where(sql`${table.crewThanks} is not null`),
     // The public aggregate and list query verbatim: this shop's published rows,
     // newest first, so a shop with years of reviews still renders from an index.
     index("trip_reviews_shop_published_idx")

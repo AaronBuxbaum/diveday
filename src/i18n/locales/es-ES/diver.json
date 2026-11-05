@@ -653,6 +653,12 @@
     "ratingOption": "{rating} sobre 5 estrellas",
     "anonymousReviewer": "Un buceador",
     "replyFrom": "Respuesta de {shop}",
+    "thanksLegend": "Agradece a alguien del equipo",
+    "thanksWho": "Integrante del equipo",
+    "thanksNobody": "A nadie en particular",
+    "thanksLine": "Tu agradecimiento",
+    "thanksPlaceholder": "Keiko hizo que mi primer naufragio fuera fácil",
+    "thanksHint": "Solo lo ven esa persona y el centro. No forma parte de tu reseña.",
     "commentLabel": "¿Algo que le contarías a otro buceador?",
     "commentPlaceholder": "La tripulación, los puntos, cómo fue la jornada",
     "submit": "Enviar mi opinión",
@@ -750,6 +756,8 @@
     "crewQuote": "“{words}”",
     "logbookHeading": "Registro del diario de inmersión",
     "printRecord": "Imprimir registro",
+    "downloadCsv": "Descargar CSV",
+    "downloadUddf": "Descargar UDDF",
     "diverLabel": "Buceador",
     "certifiedLabel": "Certificación",
     "dateLabel": "Fecha",
@@ -4177,6 +4185,14 @@
       "body": "{count, plural, one {# buceador escribió} other {# buceadores escribieron}} fuera de horario.",
       "open": "Abrir Mensajes",
       "turnOff": "Desactívalos en tus ajustes de correo"
+    },
+    "seatSold": {
+      "subject": "{shopName}: {seats, plural, one {# plaza vendida} other {# plazas vendidas}}",
+      "body": "{seats, plural, one {# plaza vendida} other {# plazas vendidas}} en la última hora.",
+      "line": "{title}, {when}: {seats, plural, one {# plaza} other {# plazas}}",
+      "more": "Y {seats, plural, one {# plaza} other {# plazas}} en otras salidas.",
+      "open": "Abrir el tablero",
+      "turnOff": "Desactívalos en la página de Funciones"
     },
     "moveAskSoon": {
       "subject": "{shopName}: un buceador pidió cambiar de {tripTitle}",

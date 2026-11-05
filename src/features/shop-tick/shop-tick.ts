@@ -6,6 +6,7 @@ import { drainNotificationRetries } from "@/db/notifications";
 import { sendDueRecaps } from "@/db/recap";
 import { sendDueReminders } from "@/db/reminders";
 import { sendStaleRollCallAlerts } from "@/db/roll-call-alerts";
+import { sendSeatSoldAlerts } from "@/db/seat-sold-alerts";
 import { bringDemoBoatsAtSeaHome } from "@/db/seed";
 import { sendDueServiceReminders } from "@/db/work-order-follow-up";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
@@ -44,6 +45,7 @@ export const SHOP_TICK_SCANS = [
   "roll-call-alerts",
   "missing-diver-alerts",
   "desk-pings",
+  "seat-sold-alerts",
 ] as const;
 
 export type ShopTickScan = (typeof SHOP_TICK_SCANS)[number];
@@ -80,6 +82,8 @@ const RUNS = {
   "missing-diver-alerts": (db, now) => sendMissingDiverAlerts(db, { now }),
   // The after-hours desk ping's trailing catch-up (#2311).
   "desk-pings": (db, now) => sendTrailingDeskPings(db, { now }),
+  // The hourly seat-sold email to the desk, for a shop that switched it on (loop 5, row 8).
+  "seat-sold-alerts": (db, now) => sendSeatSoldAlerts(db, { now }),
 } satisfies Record<ShopTickScan, (db: AppDb, now: Date) => Promise<unknown>>;
 
 export type ShopTickSummary = {

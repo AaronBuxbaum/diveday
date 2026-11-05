@@ -1585,6 +1585,19 @@ export const TRIP_REVIEWS_CSV = sharedFile<ShopRow<"reviewRows">>({
     { header: "is_standout", in: "shop", value: ({ review }) => review.isStandout },
     { header: "is_published", in: "both", value: ({ review }) => review.isPublished },
     { header: "published_at", in: "both", value: ({ review }) => review.publishedAt },
+    // The optional thanks line to one crew member (loop 5, row 6): the diver's
+    // own words, which they take with them; who it is for and whether staff hid it are the shop's.
+    { header: "crew_thanks", in: "both", value: ({ review }) => review.crewThanks },
+    {
+      header: "crew_thanks_person_id",
+      in: "shop",
+      value: ({ review }) => review.crewThanksPersonId,
+    },
+    {
+      header: "crew_thanks_hidden_at",
+      in: "shop",
+      value: ({ review }) => review.crewThanksHiddenAt,
+    },
     { header: "created_at", in: "both", value: ({ review }) => review.createdAt },
     { header: "updated_at", in: "shop", value: ({ review }) => review.updatedAt },
     // The shop's live public reply under the review (`review_replies`, folded).

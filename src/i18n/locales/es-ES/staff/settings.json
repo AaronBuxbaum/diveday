@@ -520,6 +520,11 @@
         "label": "Enviar un correo a los buceadores una semana antes",
         "description": "Un correo siete días antes de la salida."
       },
+      "seatSoldAlerts": {
+        "heading": "Correo de plazas vendidas",
+        "label": "Enviar un correo a propietarios y gerentes cuando se vendan plazas",
+        "description": "Un correo por hora mientras se venden plazas, con el conteo de cada salida. Desactivado hasta que lo actives."
+      },
       "helpRequests": {
         "heading": "Pedidos de ayuda",
         "label": "Dejar que los buceadores pidan ayuda el día de la salida",

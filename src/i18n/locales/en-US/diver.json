@@ -653,6 +653,12 @@
     "ratingOption": "{rating} out of 5 stars",
     "anonymousReviewer": "A diver",
     "replyFrom": "Reply from {shop}",
+    "thanksLegend": "Thank someone on the crew",
+    "thanksWho": "Crew member",
+    "thanksNobody": "No one in particular",
+    "thanksLine": "Your thank-you",
+    "thanksPlaceholder": "Keiko made my first wreck easy",
+    "thanksHint": "Only that person and the shop see this. It is not part of your review.",
     "commentLabel": "Anything you’d tell another diver?",
     "commentPlaceholder": "The crew, the sites, how the day ran",
     "submit": "Leave my review",
@@ -750,6 +756,8 @@
     "crewQuote": "“{words}”",
     "logbookHeading": "Dive log entry",
     "printRecord": "Print log entry",
+    "downloadCsv": "Download CSV",
+    "downloadUddf": "Download UDDF",
     "diverLabel": "Diver",
     "certifiedLabel": "Certified",
     "dateLabel": "Date",
@@ -4177,6 +4185,14 @@
       "body": "{count, plural, one {# diver wrote} other {# divers wrote}} in after hours.",
       "open": "Open the Inbox",
       "turnOff": "Turn these off in your email settings"
+    },
+    "seatSold": {
+      "subject": "{shopName}: {seats, plural, one {# seat sold} other {# seats sold}}",
+      "body": "{seats, plural, one {# seat sold} other {# seats sold}} in the last hour.",
+      "line": "{title}, {when}: {seats, plural, one {# seat} other {# seats}}",
+      "more": "And {seats, plural, one {# seat} other {# seats}} on other departures.",
+      "open": "Open the board",
+      "turnOff": "Turn these off on the Features page"
     },
     "moveAskSoon": {
       "subject": "{shopName}: a diver asked to move off {tripTitle}",

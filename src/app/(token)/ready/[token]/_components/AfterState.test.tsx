@@ -365,7 +365,12 @@ describe("one primary at rest", () => {
             brandColor: null,
             brandDisplayFont: null,
           },
-          ownReview: { rating: 5, comment: "Vis was unreal." },
+          ownReview: {
+            rating: 5,
+            comment: "Vis was unreal.",
+            crewThanks: null,
+            crewThanksPersonId: null,
+          },
           params: { review: "published" },
         })}
       />,
@@ -393,7 +398,7 @@ describe("one primary at rest", () => {
             brandColor: null,
             brandDisplayFont: null,
           },
-          ownReview: { rating, comment: null },
+          ownReview: { rating, comment: null, crewThanks: null, crewThanksPersonId: null },
           params: { review: rating < 3 ? "pending" : "published" },
         })}
       />,
@@ -416,7 +421,12 @@ describe("one primary at rest", () => {
             brandColor: null,
             brandDisplayFont: null,
           },
-          ownReview: { rating: 5, comment: "Vis was unreal." },
+          ownReview: {
+            rating: 5,
+            comment: "Vis was unreal.",
+            crewThanks: null,
+            crewThanksPersonId: null,
+          },
         })}
       />,
     );
@@ -435,7 +445,11 @@ describe("the coral budget", () => {
     // 20260827-clearwater-surface-language, decision 11). Once the one thing
     // the page asks has been answered, the same words are a page title.
     const { container } = render(
-      <AfterState context={props({ ownReview: { rating: 4, comment: null } })} />,
+      <AfterState
+        context={props({
+          ownReview: { rating: 4, comment: null, crewThanks: null, crewThanksPersonId: null },
+        })}
+      />,
     );
     expect(container.querySelectorAll("[class*='accent']")).toHaveLength(0);
     expect(container.querySelector(".rise-in")).toBeNull();

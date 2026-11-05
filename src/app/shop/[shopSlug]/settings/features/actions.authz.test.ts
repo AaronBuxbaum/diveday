@@ -108,6 +108,7 @@ describe("the Features page's save", () => {
       "waitlist",
       "pastDiverInvites",
       "partnerLinks",
+      "seatSoldAlerts",
       "reviews",
       "publicYear",
       "padiChecks",

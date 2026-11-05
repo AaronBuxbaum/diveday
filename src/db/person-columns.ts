@@ -321,6 +321,23 @@ const rows = [
     erase: "scrub",
     eraseIn: "scrubReviews",
   },
+  // The crew member a diver thanked on their review (loop 5, row 6). The words
+  // are the diver's (`trip_reviews.crew_thanks`: their export reads them, and
+  // their erasure clears them in `scrubReviews`); this column only names who
+  // they are for, so it is a staff record on the crew side.
+  {
+    table: "trip_reviews",
+    column: "crew_thanks_person_id",
+    export: "withheld",
+    exportWhy:
+      "words another diver wrote about this crew member; the writer's own export carries them, and a staffer's request does not hand over a diver's words",
+    kind: "crew",
+    merge: "leave",
+    why: "names a crew member of the departure, a staff record whose own merge is refused; the pointer stays on the id it had",
+    erase: "keep",
+    eraseWhy:
+      "a pointer at an erased person discloses nothing: the name is joined at read, and the diver's words are cleared by their own erasure",
+  },
   // The private half of the same act (ADR 20260904-reef-all-the-way-down,
   // D40): the diver's own word about how the day went, on the booking they
   // sat in. It moves for the reason the review above it does — it is the

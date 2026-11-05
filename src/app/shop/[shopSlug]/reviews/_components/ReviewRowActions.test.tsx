@@ -33,6 +33,10 @@ const copy: ReviewRowCopy = {
   hideReasonLabel: "Reason",
   hideReasonPlaceholder: "In your words",
   hideNoteLabel: "Note",
+  hideThanks: "Hide thanks",
+  showThanks: "Show thanks",
+  thanksHidden: "Thanks hidden.",
+  thanksShown: "Thanks shown.",
   markStandout: "Feature",
   removeStandout: "Unfeature",
   hiddenToast: "Hidden.",
@@ -55,6 +59,7 @@ function bar(reviewId: string, isPublished: boolean) {
       isPublished={isPublished}
       isHidden={false}
       isStandout={false}
+      crewThanks={null}
       canStandout={false}
       reasons={[{ value: "spam", label: "Spam or a test" }]}
       copy={copy}
@@ -71,6 +76,7 @@ function moderatedBar(isStandout = false) {
         isPublished
         isHidden={false}
         isStandout={isStandout}
+        crewThanks={null}
         canStandout
         reasons={[{ value: "spam", label: "Spam or a test" }]}
         copy={copy}
@@ -233,6 +239,7 @@ describe("the review row's responsive actions", () => {
           isPublished={false}
           isHidden
           isStandout={false}
+          crewThanks={null}
           canStandout={false}
           reasons={[{ value: "spam", label: "Spam or a test" }]}
           copy={copy}
@@ -266,5 +273,37 @@ describe("the hide's undo toast", () => {
     rerender(page({ waiting: [], published: [] }));
     expect(screen.getByText(copy.hiddenToast)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: copy.undo })).toBeInTheDocument();
+  });
+});
+
+describe("the thanks to the crew (loop 5, row 6)", () => {
+  function view(hidden: boolean) {
+    return (
+      <ReviewRowProvider>
+        <ReviewRowActions
+          reviewId={A}
+          isPublished
+          isHidden={false}
+          isStandout={false}
+          crewThanks={{ hidden }}
+          canStandout={false}
+          reasons={[]}
+          copy={copy}
+          moreLabel="More"
+        />
+      </ReviewRowProvider>
+    );
+  }
+
+  it("offers Hide thanks in the more menu on a review that carries one", async () => {
+    render(view(false));
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    expect(screen.getByRole("button", { name: "Hide thanks" })).toBeTruthy();
+  });
+
+  it("offers Show thanks once staff hid it", async () => {
+    render(view(true));
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    expect(screen.getByRole("button", { name: "Show thanks" })).toBeTruthy();
   });
 });

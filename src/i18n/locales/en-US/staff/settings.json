@@ -520,6 +520,11 @@
         "label": "Email divers a week before they dive",
         "description": "One email seven days before the departure."
       },
+      "seatSoldAlerts": {
+        "heading": "Seat-sold email",
+        "label": "Email the owners and managers when seats sell",
+        "description": "One email an hour while seats are selling, with the count for each departure. Off until you turn it on."
+      },
       "helpRequests": {
         "heading": "Help requests",
         "label": "Let divers ask for help on the day",

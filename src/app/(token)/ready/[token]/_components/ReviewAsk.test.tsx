@@ -10,12 +10,30 @@ const submit = () => screen.getByRole("button", { name: "reviews.submit" });
 
 describe("ReviewAsk", () => {
   it("is the page's primary at rest", () => {
-    render(<ReviewAsk t={t} notice={undefined} ownReview={null} stepsBack={false} action={noop} />);
+    render(
+      <ReviewAsk
+        t={t}
+        notice={undefined}
+        ownReview={null}
+        crewChoices={[]}
+        stepsBack={false}
+        action={noop}
+      />,
+    );
     expect(submit().className.split(/\s+/)).toContain("bg-primary");
   });
 
   it("steps back to secondary while the Google door is lit", () => {
-    render(<ReviewAsk t={t} notice={undefined} ownReview={null} stepsBack={true} action={noop} />);
+    render(
+      <ReviewAsk
+        t={t}
+        notice={undefined}
+        ownReview={null}
+        crewChoices={[]}
+        stepsBack={true}
+        action={noop}
+      />,
+    );
     expect(submit().className.split(/\s+/)).not.toContain("bg-primary");
   });
 
@@ -25,6 +43,7 @@ describe("ReviewAsk", () => {
         t={t}
         notice={{ tone: "success", key: "reviews.savedPublished" }}
         ownReview={{ rating: 4, comment: "Great crew" } as never}
+        crewChoices={[]}
         stepsBack={false}
         action={noop}
       />,

@@ -1676,7 +1676,17 @@ async function scrubReviews(
   // cost of erasure, not something to fudge by keeping the star.
   await tx
     .update(tripReviews)
-    .set({ comment: null, isPublished: false, publishedAt: null, isStandout: false })
+    .set({
+      comment: null,
+      isPublished: false,
+      publishedAt: null,
+      isStandout: false,
+      // The thanks line is the diver's words too (loop 5, row 6): both columns
+      // clear together, as the pair check holds them.
+      crewThanks: null,
+      crewThanksPersonId: null,
+      crewThanksHiddenAt: null,
+    })
     .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId)));
   // The shop's reply under those reviews (batch 4, K2) answered words that are
   // gone now, and is free text that may well greet the diver by name. Its

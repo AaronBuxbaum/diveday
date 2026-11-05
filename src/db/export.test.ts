@@ -57,10 +57,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // Proof the shop controls its contact address, so it may be Reply-To (issue
     // #1288): DiveDay's own, so a restored shop is asked to confirm again.
     "contact_email_confirmed_at",
-    // The inbound reply address's routing token (ADR 20260907-two-way-inbox):
-    // a credential in all but name, so a restored shop is minted a fresh one.
+    // The inbound reply address's routing token (ADR 20260907-two-way-inbox): a credential in all but name, so a restore mints a fresh one.
     "inbound_email_token",
-    // H-20261014-stale-roll-call-recipients and item 35: an address, its consent, confirmation and send state; a restore asks afresh.
+    // H-20261014-stale-roll-call-recipients and item 35: an address, its consent, confirmation and send state; a restore asks afresh. Also `seat_sold_alerted_through` (loop 5, row 8), the seat-sold alert's send cursor.
+    "seat_sold_alerted_through",
     "shore_alert_email",
     "shore_alert_consent_at",
     "shore_alert_consent_by_person_id",

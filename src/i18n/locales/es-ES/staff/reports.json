@@ -122,6 +122,11 @@
   "weather": {
     "month": "El clima canceló {departures, plural, one {# salida} other {# salidas}}: {divers, plural, one {# buceador} other {# buceadores}}, {refunded} reembolsados, {moved} con otra fecha."
   },
+  "seatsGivenUp": {
+    "both": "{noShows, plural, one {# buceador no se presentó} other {# buceadores no se presentaron}} y {lateCancels, plural, one {# canceló tarde} other {# cancelaron tarde}} este mes.",
+    "noShows": "{noShows, plural, one {# buceador no se presentó} other {# buceadores no se presentaron}} este mes.",
+    "lateCancels": "{lateCancels, plural, one {# buceador canceló tarde} other {# buceadores cancelaron tarde}} este mes."
+  },
   "byBoat": {
     "heading": "Por barco",
     "facts": "{days, plural, one {# día de salida} other {# días de salida}} · {percent} % lleno"

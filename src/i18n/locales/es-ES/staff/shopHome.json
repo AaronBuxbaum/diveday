@@ -173,6 +173,7 @@
     "boatFoldLabel": "{count, plural, one {y # más} other {y # más}}",
     "needsYouLabel": "Pendiente",
     "deskGroupLabel": "El mostrador",
+    "crewThanks": "Un buceador te dio las gracias después de {trip}: “{words}”",
     "crewTips": "Tu parte de las propinas esta semana: {amount}.",
     "crewMonth": "En {month}: {boats, plural, one {# salida} other {# salidas}} · {dives, plural, one {# inmersión realizada} other {# inmersiones realizadas}} · {hours, plural, one {# hora} other {# horas}} en el agua."
   },

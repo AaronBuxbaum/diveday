@@ -162,6 +162,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Failed refund
 - First paid month
 - Free term
+- Late cancel
 - Month-end email
 - Owed
 - Paid after close
@@ -229,6 +230,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Crew news
 - Crew roll-call event
 - Crew schedule
+- Crew thanks
 - Crew warning
 - DAN
 - Date-request party bookings
@@ -345,6 +347,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Seat ladder
 - Seat move
 - Seat release
+- Seat-sold alert
 - Self-guided departure
 - Set-up receipt
 - Set-up request
@@ -417,6 +420,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Earliest flight
 - Executed dive
 - Field guide
+- Log entry file
 - Marine-life catalog
 - Material generation
 - Observed species

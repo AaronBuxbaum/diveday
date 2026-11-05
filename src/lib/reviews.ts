@@ -17,6 +17,9 @@ export const MAX_REVIEW_RATING = 5;
  */
 export const MAX_REVIEW_COMMENT_LENGTH = 500;
 
+/** The longest thanks line a diver can leave a crew member (`trip_reviews_crew_thanks_pair`). */
+export const MAX_CREW_THANKS_LENGTH = 200;
+
 /** A rating a diver can actually pick, low to high. */
 export const REVIEW_RATINGS = [1, 2, 3, 4, 5] as const;
 
@@ -47,6 +50,16 @@ export function normalizeReviewComment(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const collapsed = value.replace(/\s+/g, " ").trim();
   return collapsed ? collapsed.slice(0, MAX_REVIEW_COMMENT_LENGTH) : null;
+}
+
+/**
+ * The thanks line under a review (loop 5, row 6), trimmed and held to one
+ * line of {@link MAX_CREW_THANKS_LENGTH}; blank is no thanks.
+ */
+export function normalizeCrewThanks(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const collapsed = value.replace(/\s+/g, " ").trim();
+  return collapsed ? collapsed.slice(0, MAX_CREW_THANKS_LENGTH) : null;
 }
 
 /**

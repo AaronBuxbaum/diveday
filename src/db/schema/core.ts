@@ -328,6 +328,20 @@ export const shops = pgTable(
      */
     weekOutReminderEnabled: boolean("week_out_reminder_enabled").notNull().default(true),
     /**
+     * **Seat-sold alerts** (loop 5, row 8; glossary "Seat-sold alert"): one
+     * email an hour to the owners and managers while seats are selling, with
+     * the count by departure. **Off by default** (owner, 2026-11-05): the
+     * single feature that starts off, because it adds mail to a personal
+     * inbox. Off, nothing is sent and nothing is read.
+     */
+    seatSoldAlertsEnabled: boolean("seat_sold_alerts_enabled").notNull().default(false),
+    /**
+     * The instant the last seat-sold alert pass covered, the cursor that makes
+     * an hour's batch exactly once: the next pass reports the seats sold after
+     * it. Null until the first pass, which starts from an hour ago.
+     */
+    seatSoldAlertedThrough: timestamp("seat_sold_alerted_through", { withTimezone: true }),
+    /**
      * **Public conditions**: the automated marine outlook on a public trip
      * page, shown when the crew has written no read of their own. Off, no
      * outlook is fetched or shown; the crew's own read, their conditions
