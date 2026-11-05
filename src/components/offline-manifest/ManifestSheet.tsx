@@ -1,0 +1,251 @@
+import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
+import { AutoPrint } from "@/components/paper/AutoPrint";
+import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
+import { buttonClass } from "@/components/ui/button";
+import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
+import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
+import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
+import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
+import { formatDateTimeTz } from "@/lib/format";
+import { rollCallLabel } from "@/lib/manifests";
+import { PACKET_PAPER, storefrontAddress } from "@/lib/print-sheets";
+import type { OfflineTripControls } from "./controls";
+import { offlineDiverRowFacts } from "./diver-row-facts";
+import { buddyNamesList } from "./shared";
+import type { OfflineTripView } from "./trip-view";
+
+/**
+ * The saved copy's band. The copy carries no brand colour, so the sheet
+ * wears DiveDay's own, as a shop that never chose one does.
+ */
+const THEME = deriveBrandTheme(DIVEDAY_BRAND_COLOR);
+const TONE = { band: THEME.primary, bandInk: THEME.primaryForeground };
+
+/**
+ * **The saved copy's paper face** (issue #2745): the offline manifest at the
+ * checkpoint on screen, as one sheet, the paper a crew boards from when the
+ * phone is the only copy (the fallback boarding source).
+ *
+ * A state of the offline page, never a second page: it draws from the same
+ * decrypted copy and the same view, with no network, and the screen is gone
+ * while it shows, so nothing that taps prints and nothing printed taps. Every
+ * row's words are the roll-call row's own (`offlineDiverRowFacts`), so the
+ * sheet cannot say something the phone does not.
+ *
+ * **What it never prints**: a medical alert's words, whatever this phone
+ * holds. Paper with them on it is the medical-alerts packet's job, which a
+ * permitted reader prints with signal and which records who printed it; a
+ * row says an alert exists, and the sheet says where to read it. A held
+ * seat prints as the row on the phone does: why it is withheld, and the
+ * desk's contact for it, never the matched person's particulars.
+ */
+export function OfflineManifestSheet({
+  view,
+  controls,
+  printedAt,
+  onBack,
+  autoPrint = true,
+}: {
+  view: OfflineTripView;
+  controls: Pick<OfflineTripControls, "t" | "locale" | "copyCaveat">;
+  /** When the door was pressed: the fold line's time. */
+  printedAt: Date;
+  onBack: () => void;
+  /** Opens the print dialog on arrival; the door that opened this said Print. */
+  autoPrint?: boolean;
+}) {
+  const { t, locale } = controls;
+  const { envelope, manifest, checkpoint } = view;
+  const { shop } = envelope.snapshot;
+  const anyMedicalAlert = manifest.divers.some(
+    (diver, index) =>
+      diver.medicalAlert && !offlineDiverRowFacts(diver, index, view, controls).withheld,
+  );
+  return (
+    <main className="w-full flex-1 bg-background">
+      {autoPrint ? <AutoPrint /> : null}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 print:hidden">
+        <button
+          type="button"
+          onClick={onBack}
+          className={buttonClass({ variant: "ghost", size: "sm" })}
+        >
+          {t("shared.offlineManifest.sheet.back")}
+        </button>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className={buttonClass({ variant: "secondary" })}
+        >
+          {t("shared.offlineManifest.sheet.print")}
+        </button>
+      </div>
+      <div className="paper-sheet-frame">
+        <div>
+          <PaperSheet
+            paper={PACKET_PAPER}
+            lang={locale}
+            tone={TONE}
+            band={
+              <>
+                <SheetMark name={shop.name} size="sm" />
+                <span className="font-brand-display text-sm font-bold">{shop.name}</span>
+                <span className="ms-auto text-sm font-semibold">
+                  {t("shared.offlineManifest.sheet.name")}
+                </span>
+              </>
+            }
+            foldLeft={t("shared.offlineManifest.sheet.printed", {
+              date: formatDateTimeTz(printedAt, locale, shop.timezone),
+            })}
+            foldRight={storefrontAddress(shop.slug, window.location.origin)}
+          >
+            <div data-offline-manifest-sheet="" className="grid gap-4 text-sm">
+              <header>
+                <h1 className={ITEM_TITLE_CLASS}>{manifest.trip.title}</h1>
+                <p className="font-semibold">
+                  {formatDateTimeTz(new Date(manifest.trip.startsAt), locale, shop.timezone)}
+                  {" · "}
+                  {t("shared.offlineManifest.single.checkpointRollCallHeading", {
+                    checkpoint: rollCallCheckpointText(t, checkpoint),
+                  })}
+                </p>
+                {/* How old this paper is, before anyone reads a name off it. */}
+                <p className="mt-1 font-semibold">
+                  {t(
+                    controls.copyCaveat === "offline"
+                      ? "shared.offlineManifest.single.copyCaveatOffline"
+                      : controls.copyCaveat === "unanswered"
+                        ? "shared.offlineManifest.single.copyCaveatUnanswered"
+                        : "shared.offlineManifest.single.copyCaveatOnline",
+                    { when: view.savedAtZoned },
+                  )}
+                </p>
+                {view.expired ? (
+                  <p className="mt-1 font-bold text-danger">
+                    {t("shared.offlineManifest.single.expiredBanner")}
+                  </p>
+                ) : null}
+                <p className="mt-1 tabular-nums">
+                  {[
+                    `${t("shared.offlineManifest.single.statsDivers")} ${view.totalDivers}`,
+                    `${t("shared.offlineManifest.single.statsBoarded")} ${view.boarded}`,
+                    `${t("shared.offlineManifest.single.statsAwaiting")} ${view.awaiting}`,
+                  ].join(" · ")}
+                </p>
+              </header>
+
+              <EmergencyReferenceCard
+                reference={shop.emergencyReference ?? EMPTY_EMERGENCY_REFERENCE}
+                copy={{
+                  heading: t("manifest.emergency.heading"),
+                  empty: t("manifest.emergency.empty"),
+                  vesselLabel: t("manifest.emergency.vesselLabel"),
+                  callSignLabel: t("manifest.emergency.callSignLabel"),
+                  mmsiLabel: t("manifest.emergency.mmsiLabel"),
+                  workingChannelLabel: t("manifest.emergency.workingChannelLabel"),
+                  distressChannel: t("manifest.emergency.distressChannel"),
+                  shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
+                  planLabel: t("manifest.emergency.planLabel"),
+                }}
+              />
+
+              {anyMedicalAlert ? (
+                <p className="font-semibold">
+                  {t("shared.offlineManifest.sheet.medicalAlertWords")}
+                </p>
+              ) : null}
+
+              <ol data-sheet-roster="" className="divide-y divide-border border-y border-border">
+                {manifest.divers.map((diver, index) => {
+                  const facts = offlineDiverRowFacts(diver, index, view, controls);
+                  return (
+                    <li
+                      key={diver.bookingId}
+                      data-sheet-row={diver.bookingId}
+                      className="break-inside-avoid py-2"
+                    >
+                      <p className="text-base font-bold">
+                        <span className="me-2 tabular-nums">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        {diver.fullName}
+                      </p>
+                      <p
+                        className={`font-semibold ${
+                          facts.missing || facts.blockedAtDock ? "text-danger" : ""
+                        }`}
+                      >
+                        {facts.statusLine}
+                      </p>
+                      {!facts.withheld && diver.safetyAdvisoryText ? (
+                        <p className="text-warning-strong">{diver.safetyAdvisoryText}</p>
+                      ) : null}
+                      {facts.state?.note ? <p className="break-words">{facts.state.note}</p> : null}
+                      {diver.buddyTeamNames && diver.buddyTeamNames.length > 0 ? (
+                        <p>
+                          {t("shared.buddyTeam.with", {
+                            names: buddyNamesList(locale, diver.buddyTeamNames),
+                          })}
+                        </p>
+                      ) : null}
+                      {facts.withheld ? (
+                        <>
+                          <p className="paper-sheet-muted">
+                            {t("manifest.identityWithheldDetails")}
+                          </p>
+                          {diver.identityWithheld && diver.heldEmergencyContact ? (
+                            <p>
+                              {`${t("manifest.heldEmergencyContactLabel")}: ${diver.heldEmergencyContact.name} · ${diver.heldEmergencyContact.phone}`}
+                            </p>
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          <p>
+                            {`${t("shared.offlineManifest.single.emergencyContact")}: ${
+                              diver.emergencyContactName && diver.emergencyContactPhone
+                                ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+                                : t("shared.offlineManifest.single.notOnFile")
+                            }`}
+                          </p>
+                          {facts.training.warnings.map((line) => (
+                            <p key={line} className="font-medium text-warning-strong">
+                              {line}
+                            </p>
+                          ))}
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+
+              <section>
+                <h2 className="text-base font-bold">
+                  {t("shared.offlineManifest.single.crewHeading")}
+                </h2>
+                {view.crewWithKeys.length > 0 ? (
+                  <ul data-sheet-crew="" className="mt-1 grid gap-1">
+                    {view.crewWithKeys.map((member) => (
+                      <li key={member.key}>
+                        <span className="font-bold">{member.fullName}</span>
+                        {" · "}
+                        {rollCallLabelText(t, rollCallLabel(checkpoint, member.state))}
+                        {member.state?.pending
+                          ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
+                          : ""}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>{t("shared.offlineManifest.single.crewNoneAssigned")}</p>
+                )}
+              </section>
+            </div>
+          </PaperSheet>
+        </div>
+      </div>
+    </main>
+  );
+}

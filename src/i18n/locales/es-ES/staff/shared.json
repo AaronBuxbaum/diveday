@@ -486,6 +486,14 @@
       },
       "rollCallJump": "Pase de lista"
     },
+    "sheet": {
+      "door": "Imprimir esta copia guardada",
+      "back": "Volver al pase de lista",
+      "print": "Imprimir",
+      "name": "Manifiesto guardado",
+      "printed": "Impresa el {date}",
+      "medicalAlertWords": "Una fila marcada con Alerta médica tiene un texto para la tripulación que esta hoja no incluye. Léelo en el manifiesto en vivo, o en este teléfono si su copia lo tiene."
+    },
     "shellVersion": {
       "staleBanner": "Esta copia guardada es de una versión anterior de DiveDay. Actualízala con conexión antes de embarcar buceadores.",
       "updateBanner": "Hay una nueva versión de DiveDay lista.",

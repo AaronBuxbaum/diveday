@@ -199,8 +199,9 @@ export type OfflineStatement = Pick<OfflineRollCallEvent, "status" | "retractsCl
  * **After a dive only**, matching the live manifest and the server rule: at the
  * dock `not_boarded` means "never left", which has never needed a sentence. It
  * sits beneath the row's controls rather than inside the cluster so it claims a
- * full line at every width, and it is `print:hidden` like every other control
- * on this surface — what prints is the departure log, not this viewer.
+ * full line at every width. Nothing on this surface prints: the saved copy's
+ * paper is its own sheet (`ManifestSheet.tsx`, issue #2745), which prints the
+ * note a row carries as words.
  */
 export function OfflineRollCallNote({
   subjectId,

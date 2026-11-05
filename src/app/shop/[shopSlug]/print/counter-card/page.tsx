@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
@@ -11,7 +12,6 @@ import { publicShopRegisterPath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { PaperSheet, SheetMark } from "../_components/PaperSheet";
 import { SheetCode } from "../_components/SheetCode";
 import { SheetDocument } from "../_components/SheetDocument";
 

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
 import { getPassBooking } from "@/db/print-pass";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -11,7 +12,6 @@ import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { PAPER_PASS_PAPER, passCodePayload, storefrontAddress } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
-import { PaperSheet, SheetMark } from "../../../print/_components/PaperSheet";
 import { SheetCode } from "../../../print/_components/SheetCode";
 import { SheetDocument } from "../../../print/_components/SheetDocument";
 

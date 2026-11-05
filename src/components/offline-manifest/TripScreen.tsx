@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, type ReactNode, useState } from "react";
 import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
@@ -7,12 +7,14 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { SkipLink } from "@/components/SkipLink";
 import { buttonClass } from "@/components/ui/button";
+import { nowDate } from "@/lib/clock";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { OfflineChecklist, OfflineSnags } from "./Checklist";
 import { OfflineCheckpointNav } from "./CheckpointNav";
 import { OfflineCounter } from "./Counter";
 import type { OfflineTripControls } from "./controls";
 import { OfflineDeckCount } from "./DeckCount";
+import { OfflineManifestSheet } from "./ManifestSheet";
 import { OfflineRollCallSection } from "./RollCallSection";
 import { StatusMessage } from "./StatusMessage";
 import { OfflineTripFoot } from "./TripFoot";
@@ -41,6 +43,23 @@ export function OfflineTripScreen({
 }) {
   const { envelope } = view;
   const { t } = controls;
+  // **The saved copy's paper is a state of this page** (issue #2745): the
+  // door swaps the screen for the sheet, so nothing that taps is ever on the
+  // page the printer sees. Held here, never in the URL, because this page
+  // works with no network to navigate on. **Never for an expired copy**: it
+  // is not a boarding source (the H-20260724-product-now-uses-explicit stop
+  // rule), and paper would outlive the banner that says so.
+  const [paperAt, setPaperAt] = useState<Date | null>(null);
+  if (paperAt && !view.expired) {
+    return (
+      <OfflineManifestSheet
+        view={view}
+        controls={controls}
+        printedAt={paperAt}
+        onBack={() => setPaperAt(null)}
+      />
+    );
+  }
 
   return (
     // **A paper page with a column on it** (visual review 2026-10-24, B51):
@@ -90,6 +109,17 @@ export function OfflineTripScreen({
           >
             {t("shared.offlineManifest.single.rollCallJump")}
           </a>
+          {view.expired ? null : (
+            <p className="mt-2">
+              <button
+                type="button"
+                onClick={() => setPaperAt(nowDate())}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("shared.offlineManifest.sheet.door")}
+              </button>
+            </p>
+          )}
 
           {/* **Above the roster, deliberately.** This is the one document a crew has
           with no signal, and the numbers on it are the ones you reach for while

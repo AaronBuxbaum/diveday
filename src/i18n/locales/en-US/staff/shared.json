@@ -486,6 +486,14 @@
       },
       "rollCallJump": "Roll call"
     },
+    "sheet": {
+      "door": "Print this saved copy",
+      "back": "Back to the roll call",
+      "print": "Print",
+      "name": "Saved manifest",
+      "printed": "Printed {date}",
+      "medicalAlertWords": "A row marked Medical alert has words for the crew that this sheet leaves off. Read them on the live manifest, or on this phone if its copy has them."
+    },
     "shellVersion": {
       "staleBanner": "This saved copy is from an older version of DiveDay. Refresh with signal to update it before boarding divers.",
       "updateBanner": "A newer version of DiveDay is ready.",
