@@ -409,6 +409,7 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "elsewhere",
     why: "the provider's handle on the shop's answer to that message, whose body and recipient are redacted here; a `wamid.` is rewritten as on notification_deliveries",
   },
+  "interest_replies.provider_message_id": { held: "elsewhere", why: "nulled with the reply" },
   "waiver_deliveries.provider_message_id": {
     held: "elsewhere",
     why: "the provider's handle on the message carrying a waiver link. `detail` beside it is nulled, a `wamid.` is rewritten as on notification_deliveries, and the sent message is not chased",

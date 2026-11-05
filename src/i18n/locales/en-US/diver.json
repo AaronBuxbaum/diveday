@@ -4262,6 +4262,9 @@
     "smsLostItem": {
       "body": "{shopName}: the crew found this aboard after {tripTitle}: {item}. We’re holding it for you."
     },
+    "smsInterestReply": {
+      "body": "{shopName}: {body}"
+    },
     "courseCertified": {
       "subject": "You’re {code, select, open_water {an Open Water Diver} advanced_open_water {an Advanced Open Water Diver} rescue {a Rescue Diver} divemaster {a Divemaster} other {an Instructor}}, {firstName}",
       "subjectJunior": "You’re {code, select, open_water {a Junior Open Water Diver} advanced_open_water {a Junior Advanced Open Water Diver} rescue {a Junior Rescue Diver} other {a Junior diver}}, {firstName}",

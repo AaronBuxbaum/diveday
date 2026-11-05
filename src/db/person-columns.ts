@@ -1090,6 +1090,13 @@ const rows = [
     why: "which staffer wrote the reply",
   },
   {
+    table: "interest_replies",
+    column: "sent_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer answered the date request (issue #2555)",
+  },
+  {
     table: "email_bounces",
     column: "sent_by_person_id",
     kind: "actor",

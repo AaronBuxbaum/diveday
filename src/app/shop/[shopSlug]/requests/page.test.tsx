@@ -25,7 +25,7 @@ vi.mock("@/db/interest-dates", () => ({
   listClosedDateInterests: vi.fn(async () => []),
   listDeparturesOnDates: vi.fn(async () => []),
 }));
-vi.mock("./actions", () => ({ setRequestOutcomeAction: vi.fn() }));
+vi.mock("./actions", () => ({ setRequestOutcomeAction: vi.fn(), replyToRequestAction: vi.fn() }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
@@ -59,11 +59,11 @@ const REQUEST = {
   closedAs: null,
 };
 
-async function renderPage() {
+async function renderPage(searchParams: Record<string, string> = {}) {
   render(
     await RequestsPage({
       params: Promise.resolve({ shopSlug: "blue-mantis" }),
-      searchParams: Promise.resolve({}),
+      searchParams: Promise.resolve(searchParams),
     }),
   );
 }
@@ -204,6 +204,53 @@ describe("closed requests", () => {
 
     expect(screen.queryByText("No requests yet")).toBeNull();
     expect(screen.getByText(/Marked done Wed, Oct\s14/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * **Answering from DiveDay** (issue #2555): a reply form under each open lead
+ * a reply can reach, naming where it goes; the mailto door stays in the menu.
+ */
+describe("the reply form", () => {
+  beforeEach(() => vi.mocked(canPersonConfigureTrips).mockResolvedValue(false));
+
+  it("offers a reply to the address the request left", async () => {
+    await renderPage();
+    expect(screen.getByText("Write a reply")).toBeInTheDocument();
+    const box = screen.getByLabelText(/Your reply/);
+    expect(box.getAttribute("maxlength")).toBe("1000");
+    expect(screen.getByText("Goes to priya@example.test by email.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send reply" })).toBeInTheDocument();
+  });
+
+  it("offers no form for a request with no address and no readable number", async () => {
+    vi.mocked(listOpenDateInterests).mockResolvedValue({
+      rows: [{ ...REQUEST, email: null, phone: "ask at the hotel" }],
+      total: 1,
+      page: 1,
+      pageCount: 1,
+    } as never);
+    await renderPage();
+    expect(screen.getAllByText("Priya Sharma").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Write a reply")).toBeNull();
+  });
+
+  it("says a reply went at the top, and one that did not under its own row", async () => {
+    await renderPage({ notice: "reply-sent" });
+    expect(screen.getByText("Reply sent.")).toBeInTheDocument();
+    cleanup();
+
+    await renderPage({ notice: "reply-failed", request: REQUEST.id });
+    const alert = screen.getByText(/That reply didn’t send/);
+    expect(alert.closest("details")?.hasAttribute("open")).toBe(true);
+  });
+
+  it("names a replied request under Done", async () => {
+    vi.mocked(listClosedDateInterests).mockResolvedValue([
+      { ...REQUEST, closedAt: new Date("2026-10-14T15:00:00Z"), closedAs: "replied" },
+    ] as never);
+    await renderPage();
+    expect(screen.getByText(/Replied Wed, Oct\s14/)).toBeInTheDocument();
   });
 });
 

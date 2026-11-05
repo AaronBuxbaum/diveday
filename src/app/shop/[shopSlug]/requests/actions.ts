@@ -1,12 +1,13 @@
 "use server";
 
 import { z } from "zod";
+import { sendInterestReply } from "@/db/interest-replies";
 import { setDateInterestOutcome } from "@/db/interests";
 import { nowDate } from "@/lib/clock";
 import { parseForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 const outcomeForm = z.object({
   requestId: single(z.uuid()),
@@ -32,4 +33,52 @@ export async function setRequestOutcomeAction(shopSlug: string, formData: FormDa
     });
   }
   revalidateAndRedirect(back);
+}
+
+const replyForm = z.object({
+  requestId: single(z.uuid()),
+  // The words are checked by `sendInterestReply` (empty, too long), which
+  // answers with a code; refusing here would say less.
+  body: single(z.string()),
+});
+
+/**
+ * The outcomes a reply lands back on the Requests page with. `sent` and
+ * `closed` are the page's (the row has moved under Done, or was there
+ * already); the rest name the row they belong to with `?request=`.
+ */
+export type RequestReplyNotice = "reply-sent" | "reply-closed" | "reply-failed" | "reply-refused";
+
+/**
+ * **Reply to a request from DiveDay** (issue #2555). Every live staff role
+ * reads the Requests page and may answer a lead on it, as with Mark done. The
+ * shop comes from the session's surface and the request id is scoped to it in
+ * `sendInterestReply`, so an id from another shop is "not found"; the address
+ * is the request's own and the form never names one.
+ */
+export async function replyToRequestAction(shopSlug: string, formData: FormData) {
+  const { session, shop, db } = await requireShopSurface(shopSlug);
+  const back = shopPath(shopSlug, "requests");
+  const parsed = parseForm(replyForm, formData);
+  if (!parsed.ok) revalidateAndRedirect(back, noticeUrl(back, "reply-refused"));
+  const result = await sendInterestReply(db, {
+    shopId: shop.id,
+    interestId: parsed.data.requestId,
+    body: parsed.data.body,
+    sentByPersonId: session.user.personId,
+    now: nowDate(),
+  });
+  const notice: RequestReplyNotice =
+    result.status === "sent"
+      ? "reply-sent"
+      : result.status === "failed"
+        ? "reply-failed"
+        : result.reason === "not_open"
+          ? "reply-closed"
+          : "reply-refused";
+  const row = notice === "reply-failed" || notice === "reply-refused";
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, notice, row ? { request: parsed.data.requestId } : undefined),
+  );
 }

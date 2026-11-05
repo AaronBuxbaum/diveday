@@ -10,7 +10,9 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { addDepartureHref } from "@/lib/date-requests";
+import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { formatShortDate } from "@/lib/format";
+import { interestReplyRoute } from "@/lib/interest-reply";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -19,7 +21,7 @@ import { RequestDayGroup, requestAdviceLines } from "./_components/RequestDayGro
 import { RequestDoneRow } from "./_components/RequestDoneRow";
 import { RequestLedgerRow } from "./_components/RequestLedgerRow";
 import { RequestReferenceRow } from "./_components/RequestReferenceRow";
-import { setRequestOutcomeAction } from "./actions";
+import { type RequestReplyNotice, replyToRequestAction, setRequestOutcomeAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — it is this segment's `loading.tsx` that stands in while the
@@ -73,10 +75,10 @@ export default async function RequestsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string; notice?: string }>;
+  searchParams: Promise<{ page?: string; notice?: string; request?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { page, notice } = await searchParams;
+  const { page, notice, request: noticeRequest } = await searchParams;
   // **No role gate, since 2026-09-16** (issue #1679, an H-20260724-staff-role-reach amendment). This
   // read `allow: canPersonViewShopReports` with a refusal notice, on the
   // written ground that the rows carry contact details for people who have not
@@ -128,6 +130,45 @@ export default async function RequestsPage({
   // and arrived here, where the interest now lives (`?notice=` via `noticeFromParam`,
   // never a bare index — the param is attacker-supplied).
   const logged = noticeFromParam(notice, { "call-logged": true as const });
+  // A reply's outcome (issue #2555). One that went, or found the request closed,
+  // is the page's: the row is under Done. One that did not go belongs to its
+  // row, which `?request=` names and which opens with the reason under its box.
+  const replyNotice = noticeFromParam<{ tone: "success" | "danger"; row: boolean }>(notice, {
+    "reply-sent": { tone: "success", row: false },
+    "reply-closed": { tone: "danger", row: false },
+    "reply-failed": { tone: "danger", row: true },
+    "reply-refused": { tone: "danger", row: true },
+  } satisfies Record<RequestReplyNotice, { tone: "success" | "danger"; row: boolean }>);
+  const replyWords: Record<RequestReplyNotice, string> = {
+    "reply-sent": t("requests.replyNotice.sent"),
+    "reply-closed": t("requests.replyNotice.closed"),
+    "reply-failed": t("requests.replyNotice.failed"),
+    "reply-refused": t("requests.replyNotice.refused"),
+  };
+  const replyAction = replyToRequestAction.bind(null, shopSlug);
+  // The form, for a request a reply can reach (`interestReplyRoute`); the
+  // address it names is the request's own.
+  const replyFor = (request: (typeof undated)[number]) => {
+    const route = interestReplyRoute(request, shop.addressCountry);
+    if (!route) return undefined;
+    return {
+      action: replyAction,
+      copy: {
+        open: t("requests.replyForm.open"),
+        label: t("requests.replyForm.label"),
+        destination:
+          route.channel === "email"
+            ? t("requests.replyForm.toEmail", { to: route.to })
+            : t("requests.replyForm.toText", { to: displayStoredPhone(route.to) }),
+        send: t("requests.replyForm.send"),
+        sending: t("words.busy.sending"),
+      },
+      error:
+        replyNotice?.row && noticeRequest === request.id && notice
+          ? replyWords[notice as RequestReplyNotice]
+          : undefined,
+    };
+  };
   // The advice the group above printed, so a day that would say the same thing
   // says nothing. Reassigned while mapping the groups, in their render order.
   let previousAdvice = "";
@@ -160,6 +201,11 @@ export default async function RequestsPage({
       {logged ? (
         <StaffNoticeBanner tone="success" className="mt-6">
           {t("calls.notice.logged")}
+        </StaffNoticeBanner>
+      ) : null}
+      {replyNotice && !replyNotice.row && notice ? (
+        <StaffNoticeBanner tone={replyNotice.tone} className="mt-6">
+          {replyWords[notice as RequestReplyNotice]}
         </StaffNoticeBanner>
       ) : null}
 
@@ -246,6 +292,7 @@ export default async function RequestsPage({
                       shopName={shop.name}
                       markDoneAction={outcomeAction}
                       openDeparture={openDeparture}
+                      reply={replyFor(entry.request)}
                       t={t}
                     />
                   ) : (
@@ -281,6 +328,7 @@ export default async function RequestsPage({
                   shopSlug={shopSlug}
                   shopName={shop.name}
                   markDoneAction={outcomeAction}
+                  reply={replyFor(request)}
                   t={t}
                 />
               ))}

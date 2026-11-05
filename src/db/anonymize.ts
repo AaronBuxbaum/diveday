@@ -131,6 +131,7 @@ import {
   importedPaymentHistory,
   inboundMessages,
   incidentReportPeople,
+  interestReplies,
   interests,
   notificationDeliveries,
   notificationSendQueue,
@@ -2599,6 +2600,17 @@ async function scrubInterests(
       .returning({ id: interests.id });
     logFuzzyMatch(ctx, "date_interest_phone", byPhone.length);
     reached.push(...byPhone.map((row) => row.id));
+  }
+
+  // A reply the shop sent from the Requests page (issue #2555) holds the same
+  // stranger's address and a sentence written to them. The row keeps that a
+  // reply went, when and by whom; the address, the words and the provider's id
+  // (a WhatsApp one spells the number) go.
+  if (reached.length > 0) {
+    await tx
+      .update(interestReplies)
+      .set({ toAddress: null, body: null, providerMessageId: null })
+      .where(and(eq(interestReplies.shopId, shopId), inArray(interestReplies.interestId, reached)));
   }
 
   // A date interest attached to a departure left a person-less child that copied the
