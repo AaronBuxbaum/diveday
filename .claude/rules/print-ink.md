@@ -41,7 +41,7 @@ logbook, the doctor referral, waivers, passes, cards, and any ordinary page a pe
 
 Only information a reader must not lose, and that a word alone could under-state on a wet dock:
 **a diver who did not come back, a medical alert or allergy, a blocked boarding**. Critical gets
-`data-print-critical` (a 1.5px black **outline** round the element, never a fill) plus its words and
+`data-print-critical` (a 2px black **outline** round the element, never a fill) plus its words and
 symbol. Nothing else on paper is heavier than a hairline. If you are unsure whether it is critical,
 it is not.
 

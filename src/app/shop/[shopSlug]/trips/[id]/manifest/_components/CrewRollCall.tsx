@@ -321,6 +321,7 @@ export function CrewRollCall({
                   // (`ROLL_CALL_ROW_CLASS`, with the card's corner on paper).
                   // On the packet's paper only the alarm keeps a fill
                   // (`paperRowTone`, B55); the state is in words on the row.
+                  data-print-critical={rowState.notBackAboard ? "" : undefined}
                   className={`${ROLL_CALL_ROW_CLASS} ${rollCallScrollMargin(isDeparture)} ${
                     paper
                       ? paperRowTone(recordedTone, false)

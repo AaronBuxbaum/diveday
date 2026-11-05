@@ -33,15 +33,20 @@ export type InkViolation = { path: string; problem: string };
 export async function printInkViolations(page: Page): Promise<InkViolation[]> {
   return page.evaluate(
     ({ hairline, outlineMax, tolerance, textMax }) => {
+      // The browser's own colour parser (a canvas), so oklch(), color-mix() and
+      // `/NN` opacity modifiers read as the pixels they print, not as a miss.
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const paint = canvas.getContext("2d", { willReadFrequently: true });
       const parse = (value: string): [number, number, number, number] | null => {
-        const match = value.match(/rgba?\(([^)]+)\)/);
-        if (!match) return null;
-        const parts = (match[1] ?? "")
-          .split(/[ ,/]+/)
-          .filter(Boolean)
-          .map(Number);
-        const [r = 0, g = 0, b = 0, a = 1] = parts;
-        return [r, g, b, a];
+        if (!paint || !value || value === "none") return null;
+        paint.clearRect(0, 0, 1, 1);
+        paint.fillStyle = "#000000";
+        paint.fillStyle = value;
+        paint.fillRect(0, 0, 1, 1);
+        const [r = 0, g = 0, b = 0, a = 0] = paint.getImageData(0, 0, 1, 1).data;
+        return [r, g, b, a / 255];
       };
       const grey = (c: [number, number, number, number]) =>
         Math.max(c[0], c[1], c[2]) - Math.min(c[0], c[1], c[2]) <= tolerance;
@@ -68,6 +73,24 @@ export async function printInkViolations(page: Page): Promise<InkViolation[]> {
         if (box.width === 0 && box.height === 0) continue;
         const critical = element.closest("[data-print-critical]") !== null;
         const own = element.matches("[data-print-critical]");
+
+        for (const pseudo of ["::before", "::after"] as const) {
+          const generated = getComputedStyle(element, pseudo);
+          if (generated.content === "none" || generated.content === "normal") continue;
+          const fill = parse(generated.backgroundColor);
+          if (fill && fill[3] > 0 && !(fill[0] > 250 && fill[1] > 250 && fill[2] > 250)) {
+            add(element, `${pseudo} filled background ${generated.backgroundColor}`);
+          }
+          if (generated.backgroundImage !== "none") add(element, `${pseudo} background image`);
+          if (generated.boxShadow !== "none") add(element, `${pseudo} shadow or ring`);
+        }
+        if (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0) {
+          const line = parse(style.outlineColor);
+          if (line && line[3] > 0 && !grey(line))
+            add(element, `coloured outline ${style.outlineColor}`);
+          if (Number.parseFloat(style.outlineWidth) > outlineMax)
+            add(element, `${style.outlineWidth} outline`);
+        }
 
         const background = parse(style.backgroundColor);
         if (

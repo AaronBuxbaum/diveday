@@ -143,7 +143,7 @@ export function DiverRollCallRow({
     return (
       <li
         id={diverRowId(diver.bookingId)}
-        data-print-critical={recordedTone === "notBackAboard" ? "" : undefined}
+        data-print-critical={recordedTone === "notBackAboard" || blockedAtDock ? "" : undefined}
         className={`${ROLL_CALL_ROW_CLASS} ${paperRowTone(recordedTone, blockedAtDock)}`}
       >
         <div className={ruleClass}>
@@ -156,7 +156,11 @@ export function DiverRollCallRow({
     );
   }
   return (
-    <li id={diverRowId(diver.bookingId)} className={rowClass}>
+    <li
+      id={diverRowId(diver.bookingId)}
+      data-print-critical={recordedTone === "notBackAboard" || blockedAtDock ? "" : undefined}
+      className={rowClass}
+    >
       <div className={ruleClass}>
         {/* The name column *is* the disclosure. One tap on the person
           opens everything the rail does not need this second — the

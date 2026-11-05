@@ -1113,7 +1113,14 @@ select:not([multiple]):not([size]):dir(rtl) {
    Unlayered and `!important`, so no display utility can bring a screen back. */
 @media print {
   body:has(.paper-sheet-frame)
-    :not(.paper-sheet-frame, .paper-sheet-frame *, :has(.paper-sheet-frame)) {
+    :not(
+      .paper-sheet-frame,
+      .paper-sheet-frame *,
+      :has(.paper-sheet-frame),
+      [data-staff-session-lock],
+      [data-staff-session-lock] *,
+      :has([data-staff-session-lock])
+    ) {
     display: none !important;
   }
 }
@@ -1384,8 +1391,10 @@ select:not([multiple]):not([size]):dir(rtl) {
    * hairline.
    */
   [data-print-critical] {
-    border: 1.5px solid #000000 !important;
+    border: 2px solid #000000 !important;
     border-radius: 0.25rem;
+    /* Weight carries it where a fill used to: it survives a photocopy. */
+    font-weight: 700;
   }
 
   /* Keep a diver's row, a summary card, or a kit line whole — a card split at

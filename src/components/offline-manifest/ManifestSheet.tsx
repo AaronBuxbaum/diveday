@@ -241,6 +241,7 @@ export function OfflineManifestSheet({
                   <li
                     key={diver.bookingId}
                     data-sheet-row={diver.bookingId}
+                    data-print-critical={facts.missing || facts.blockedAtDock ? "" : undefined}
                     className="break-inside-avoid py-2"
                   >
                     <p className="text-base font-bold">
