@@ -1,0 +1,1 @@
+ALTER TABLE "waiver_records" ADD COLUMN "medical_answer_seal" text;

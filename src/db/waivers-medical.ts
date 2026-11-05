@@ -16,6 +16,7 @@ import {
   referralItems,
 } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
+import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
 import {
   awaitsPhysician,
   DOCTOR_UNLOCK_FAILURE_LIMIT,
@@ -488,17 +489,23 @@ export async function recordMedicalEvaluation(
     }
 
     const cleared = input.outcome === "cleared";
+    const answer = {
+      medicalClearedAt: cleared ? now : null,
+      medicalClearedByPersonId: cleared ? recordedBy : null,
+      medicalClearanceDeclinedAt: cleared ? null : now,
+      medicalClearanceDeclinedByPersonId: cleared ? null : recordedBy,
+      medicalClearanceEvaluatedOn: input.evaluatedOn,
+      medicalClearancePhysicianName: physicianName,
+      medicalClearanceDocumentFromDiver: usedForm !== null,
+    };
     const [written] = await tx
       .update(waiverRecords)
       .set({
-        medicalClearedAt: cleared ? now : null,
-        medicalClearedByPersonId: cleared ? recordedBy : null,
-        medicalClearanceDeclinedAt: cleared ? null : now,
-        medicalClearanceDeclinedByPersonId: cleared ? null : recordedBy,
-        medicalClearanceEvaluatedOn: input.evaluatedOn,
-        medicalClearancePhysicianName: physicianName,
+        ...answer,
+        // Sealed in the same guarded write, never afterwards (issue #3949):
+        // the stamp lifts a hold, so a stamp without this seal reads as forged.
+        medicalAnswerSeal: medicalAnswerSealFor({ id: open.id, shopId: input.shopId, ...answer }),
         medicalClearanceDocumentUrl: evidenceUrl,
-        medicalClearanceDocumentFromDiver: usedForm !== null,
         diverMedicalFormUrl: null,
       })
       // Both stamps are in the guard, not just the one being written: two
