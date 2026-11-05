@@ -797,7 +797,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "recorded_by_person_id",
       "recorder_name",
       "recorded_at",
-      "seq",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, tripStageEventRows }) =>
       tripStageEventRows.map((row) => [
@@ -810,7 +809,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.recordedByPersonId,
         personName.get(row.recordedByPersonId),
         row.recordedAt,
-        row.seq,
       ]),
     note: EXPORT_FILE_NOTES["trip_stage_events.csv"],
   },
@@ -865,7 +863,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "recorded_by_person_id",
       "recorder_name",
       "recorded_at",
-      "seq",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, deckCountRows }) =>
       deckCountRows.map((row) => [
@@ -878,7 +875,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.recordedByPersonId,
         personName.get(row.recordedByPersonId),
         row.recordedAt,
-        row.seq,
       ]),
     note: EXPORT_FILE_NOTES["deck_counts.csv"],
   },

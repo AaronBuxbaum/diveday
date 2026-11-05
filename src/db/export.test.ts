@@ -115,6 +115,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "is_rehearsal",
   ],
   trip_series_skips: ["id", "shop_id"],
+  // A global identity used only as a same-millisecond tiebreak; its values
+  // reveal other shops' write volume (#3898). The files still order by it.
+  deck_counts: ["seq"],
+  trip_stage_events: ["seq"],
   trip_dives: [],
   trip_assignments: [],
   bookings: [
@@ -1119,6 +1123,18 @@ describe("full-shop export dataset", () => {
       "Aaron Lee",
       "Mia Cho",
     ]);
+  });
+
+  it("leaves the global seq tiebreak out of deck_counts.csv and trip_stage_events.csv (#3898)", async () => {
+    // `seq` is a database-wide identity: its gaps count every other shop's
+    // rows written in between. It still orders the rows server-side.
+    const { db, shop } = ctx;
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("seeded shop failed to load");
+    for (const file of ["deck_counts.csv", "trip_stage_events.csv"]) {
+      const table = input.tables.find((candidate) => candidate.file === file);
+      expect(table?.header, file).not.toContain("seq");
+    }
   });
 
   it("returns null for an unknown shop instead of an empty bundle", async () => {
