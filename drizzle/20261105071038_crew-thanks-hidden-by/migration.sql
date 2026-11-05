@@ -1,0 +1,2 @@
+ALTER TABLE "trip_reviews" ADD COLUMN "crew_thanks_hidden_by_person_id" uuid;--> statement-breakpoint
+ALTER TABLE "trip_reviews" ADD CONSTRAINT "trip_reviews_crew_thanks_hidden_by_person_id_people_id_fkey" FOREIGN KEY ("crew_thanks_hidden_by_person_id") REFERENCES "people"("id");

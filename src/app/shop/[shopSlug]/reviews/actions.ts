@@ -131,12 +131,19 @@ export async function reviewRowAction(
 
   if (form.intent === "crew-thanks") {
     // Hide or show the thanks a diver left a crew member (loop 5, row 6).
+    // Owner or manager only, matching who may reply to reviews and read the thanks.
+    if (
+      !(await canPersonReplyToReviews(await getDb(), session.user.shopId, session.user.personId))
+    ) {
+      return { ok: false, reviewId, reason: "error" };
+    }
     const hidden = form.thanksHidden === "true";
     const outcome = await setCrewThanksHidden(
       await getDb(),
       session.user.shopId,
       reviewId,
       hidden,
+      session.user.personId,
       nowDate(),
     );
     if (outcome !== true) return { ok: false, reviewId, reason: "error" };

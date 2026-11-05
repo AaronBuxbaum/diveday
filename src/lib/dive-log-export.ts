@@ -142,3 +142,25 @@ export function diveLogFileName(entry: DiveLogEntry, format: DiveLogFormat): str
     .slice(0, 40);
   return `${slug || "dive"}-${date}.${format}`;
 }
+
+/** The same name in plain ASCII, for the `filename=` fallback beside `filename*=`. */
+export function diveLogAsciiFileName(entry: DiveLogEntry, format: DiveLogFormat): string {
+  const { date } = wallClock(entry);
+  const slug = entry.tripTitle
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase()
+    .slice(0, 40)
+    .replace(/-+$/g, "");
+  return `${slug || "dive"}-${date}.${format}`;
+}
+
+/** `Content-Disposition` for the download: an ASCII fallback plus the real name (RFC 6266 / 8187). */
+export function diveLogDisposition(entry: DiveLogEntry, format: DiveLogFormat): string {
+  const encoded = encodeURIComponent(diveLogFileName(entry, format)).replace(
+    /['()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+  return `attachment; filename="${diveLogAsciiFileName(entry, format)}"; filename*=UTF-8''${encoded}`;
+}

@@ -3,7 +3,7 @@ import { nowDate } from "@/lib/clock";
 import {
   type DiveLogEntry,
   diveLogCsv,
-  diveLogFileName,
+  diveLogDisposition,
   diveLogFormat,
   diveLogUddf,
 } from "@/lib/dive-log-export";
@@ -61,7 +61,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
     headers: {
       "Content-Type":
         format === "csv" ? "text/csv; charset=utf-8" : "application/xml; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${diveLogFileName(entry, format)}"`,
+      "Content-Disposition": diveLogDisposition(entry, format),
       "Cache-Control": "no-store",
       "X-Robots-Tag": "noindex",
     },

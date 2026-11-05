@@ -11,7 +11,7 @@ import {
   listShopReviewsForStaff,
   submitTripReview,
 } from "./reviews";
-import { bookings, people, tripAssignments } from "./schema";
+import { bookings, people, tripAssignments, tripReviews } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
@@ -113,7 +113,61 @@ describe("thanks to the crew (loop 5, row 6)", () => {
     expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
   });
 
-  it("lets staff hide a thanks from the crew, and a changed line comes back unhidden", async () => {
+  it("lets staff hide a thanks from the crew, and a revision by the diver cannot undo it (M1)", async () => {
+    const { db, shop, tripId, bookingIds, ownerId } = await reviewContext();
+    const crewId = await crewMember(tripId);
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 5,
+      crewThanks: { crewPersonId: crewId, text: "Great day" },
+    });
+    const [review] = (await listShopReviewsForStaff(db, shop.id, { withCrewThanks: true })).reviews;
+    expect(review).toMatchObject({ crewThanks: "Great day", crewThanksHidden: false });
+    expect(await setCrewThanksHidden(db, shop.id, review?.id ?? "", true, ownerId, nowDate())).toBe(
+      true,
+    );
+    expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
+    expect(
+      (await listShopReviewsForStaff(db, shop.id, { withCrewThanks: true })).reviews[0]
+        ?.crewThanksHidden,
+    ).toBe(true);
+
+    // The hide records who made it.
+    const [hiddenRow] = await db
+      .select({ by: tripReviews.crewThanksHiddenByPersonId })
+      .from(tripReviews)
+      .where(eq(tripReviews.id, review?.id ?? ""));
+    expect(hiddenRow?.by).toBe(ownerId);
+
+    // The same words stay hidden, and so do changed words: only staff show a line again.
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 5,
+      crewThanks: { crewPersonId: crewId, text: "Great day" },
+    });
+    expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 5,
+      crewThanks: { crewPersonId: crewId, text: "Great day!" },
+    });
+    expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
+    // Taking the line back and writing a new one does not get round it either.
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 });
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 5,
+      crewThanks: { crewPersonId: crewId, text: "Something else" },
+    });
+    expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
+    // Staff showing it again is the one way back.
+    expect(
+      await setCrewThanksHidden(db, shop.id, review?.id ?? "", false, ownerId, nowDate()),
+    ).toBe(true);
+    expect(await readCrewThanks(db, shop.id, crewId, since)).toHaveLength(1);
+  });
+
+  it("shows the ledger's thanks only when the reader may see it (M3)", async () => {
     const { db, shop, tripId, bookingIds } = await reviewContext();
     const crewId = await crewMember(tripId);
     await submitTripReview(db, {
@@ -121,39 +175,25 @@ describe("thanks to the crew (loop 5, row 6)", () => {
       rating: 5,
       crewThanks: { crewPersonId: crewId, text: "Great day" },
     });
-    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
-    expect(review).toMatchObject({ crewThanks: "Great day", crewThanksHidden: false });
-    expect(await setCrewThanksHidden(db, shop.id, review?.id ?? "", true, nowDate())).toBe(true);
-    expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
-    expect((await listShopReviewsForStaff(db, shop.id)).reviews[0]?.crewThanksHidden).toBe(true);
-
-    // The same words stay hidden; new words are unread, so they show.
-    await submitTripReview(db, {
-      bookingId: bookingIds[0],
-      rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "Great day" },
-    });
-    expect(await readCrewThanks(db, shop.id, crewId, since)).toEqual([]);
-    await submitTripReview(db, {
-      bookingId: bookingIds[0],
-      rating: 5,
-      crewThanks: { crewPersonId: crewId, text: "Even better" },
-    });
-    expect(await readCrewThanks(db, shop.id, crewId, since)).toHaveLength(1);
+    const crewView = (await listShopReviewsForStaff(db, shop.id)).reviews[0];
+    expect(crewView).toMatchObject({ crewThanks: null, crewThanksFor: null });
+    const ownerView = (await listShopReviewsForStaff(db, shop.id, { withCrewThanks: true }))
+      .reviews[0];
+    expect(ownerView).toMatchObject({ crewThanks: "Great day" });
   });
 
   it("will not hide another shop's thanks", async () => {
-    const { db, tripId, bookingIds, shop } = await reviewContext();
+    const { db, tripId, bookingIds, shop, ownerId } = await reviewContext();
     const crewId = await crewMember(tripId);
     await submitTripReview(db, {
       bookingId: bookingIds[0],
       rating: 5,
       crewThanks: { crewPersonId: crewId, text: "Great day" },
     });
-    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
-    expect(await setCrewThanksHidden(db, OTHER_SHOP_ID, review?.id ?? "", true, nowDate())).toBe(
-      "not_found",
-    );
+    const [review] = (await listShopReviewsForStaff(db, shop.id, { withCrewThanks: true })).reviews;
+    expect(
+      await setCrewThanksHidden(db, OTHER_SHOP_ID, review?.id ?? "", true, ownerId, nowDate()),
+    ).toBe("not_found");
   });
 
   it("is gone with the diver's erasure", async () => {

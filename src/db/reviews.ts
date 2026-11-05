@@ -116,6 +116,7 @@ export async function submitTripReview(
         crewThanks: tripReviews.crewThanks,
         crewThanksPersonId: tripReviews.crewThanksPersonId,
         crewThanksHiddenAt: tripReviews.crewThanksHiddenAt,
+        crewThanksHiddenByPersonId: tripReviews.crewThanksHiddenByPersonId,
       })
       .from(tripReviews)
       .where(eq(tripReviews.bookingId, input.bookingId))
@@ -139,11 +140,7 @@ export async function submitTripReview(
         .limit(1);
       if (crew) thanks = { personId: crew.id, text: thanksText };
     }
-    // Staff hid the line that was there; a line that has changed is unread, so it returns unhidden.
-    const sameThanks =
-      thanks !== null &&
-      existing?.crewThanks === thanks.text &&
-      existing.crewThanksPersonId === thanks.personId;
+    // A staff hide stays on the review whatever the diver writes next; only staff show it.
 
     // `updated_at` is the revision boundary used to distinguish an old hide
     // from the diver's new unread version. Keep it strictly monotonic even
@@ -178,7 +175,8 @@ export async function submitTripReview(
       publishedAt: publish ? now : null,
       crewThanksPersonId: thanks?.personId ?? null,
       crewThanks: thanks?.text ?? null,
-      crewThanksHiddenAt: sameThanks ? (existing?.crewThanksHiddenAt ?? null) : null,
+      crewThanksHiddenAt: existing?.crewThanksHiddenAt ?? null,
+      crewThanksHiddenByPersonId: existing?.crewThanksHiddenByPersonId ?? null,
       updatedAt: now,
     };
 
@@ -682,6 +680,8 @@ export async function listShopReviewsForStaff(
     limit?: number;
     scope?: StaffReviewScope;
     narrow?: StaffReviewNarrow | null;
+    /** Owner or manager only: the thanks to the crew is read by the crew member and those who may reply to reviews. */
+    withCrewThanks?: boolean;
   } = {},
 ): Promise<StaffReviewPage> {
   const hidden = hiddenReviewExists(db);
@@ -727,9 +727,15 @@ export async function listShopReviewsForStaff(
           createdAt: tripReviews.createdAt,
           updatedAt: tripReviews.updatedAt,
           replyBody: reviewReplies.body,
-          crewThanks: tripReviews.crewThanks,
-          crewThanksFor: thankedCrew.fullName,
-          crewThanksHidden: sql<boolean>`${tripReviews.crewThanksHiddenAt} is not null`,
+          crewThanks: options.withCrewThanks
+            ? tripReviews.crewThanks
+            : sql<string | null>`null::text`,
+          crewThanksFor: options.withCrewThanks
+            ? thankedCrew.fullName
+            : sql<string | null>`null::text`,
+          crewThanksHidden: options.withCrewThanks
+            ? sql<boolean>`${tripReviews.crewThanksHiddenAt} is not null`
+            : sql<boolean>`false`,
         })
         .from(tripReviews)
         .innerJoin(people, eq(people.id, tripReviews.personId))

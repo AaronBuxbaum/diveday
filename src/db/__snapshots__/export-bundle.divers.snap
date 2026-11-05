@@ -26,7 +26,7 @@ orders.csv 11 rows 3ea9c00bca633ac2 [id,booking_id,created_by_name,source,status
 order_line_items.csv 11 rows 276290231e002c85 [order_id,kind,quantity,unit_amount_cents,created_at]
 tips.csv 10 rows e7158ea9210c0580 [id,booking_id,status,currency,amount_cents,completed_at,created_at]
 recap_photos.csv 0 rows 7182bf5dae65f90e [id,booking_id,image_url,caption,shared_with_boat_at,created_at]
-trip_reviews.csv 0 rows 2c3eb123f522ad4a [id,booking_id,rating,comment,is_published,published_at,created_at]
+trip_reviews.csv 0 rows 8ceb9e585e769b70 [id,booking_id,rating,comment,is_published,published_at,crew_thanks,created_at]
 review_moderation_events.csv 0 rows 84abde207d2b9b99 [id,review_id,action,reason,reason_note,recorded_by_name,occurred_at]
 dive_package_entitlements.csv 5 rows 8805194ddd6cb75b [id,package_name,booking_id,consumed_at,expires_at,created_at]
 photos: 0 e3b0c44298fc1c14
@@ -59,7 +59,7 @@ orders.csv 9 rows d6251c23d6d6d80c [id,booking_id,created_by_name,source,status,
 order_line_items.csv 9 rows 8f6d8955e944ba25 [order_id,kind,quantity,unit_amount_cents,created_at]
 tips.csv 9 rows 28a095c2824de3c1 [id,booking_id,status,currency,amount_cents,completed_at,created_at]
 recap_photos.csv 0 rows 7182bf5dae65f90e [id,booking_id,image_url,caption,shared_with_boat_at,created_at]
-trip_reviews.csv 2 rows 646713a07f72c1a3 [id,booking_id,rating,comment,is_published,published_at,created_at]
+trip_reviews.csv 2 rows 1f74f5794bd74b58 [id,booking_id,rating,comment,is_published,published_at,crew_thanks,created_at]
 review_moderation_events.csv 0 rows 84abde207d2b9b99 [id,review_id,action,reason,reason_note,recorded_by_name,occurred_at]
 dive_package_entitlements.csv 0 rows 02916f39b0f0e4bc [id,package_name,booking_id,consumed_at,expires_at,created_at]
 photos: 0 e3b0c44298fc1c14
@@ -92,7 +92,7 @@ orders.csv 9 rows 404828a857c25be1 [id,booking_id,created_by_name,source,status,
 order_line_items.csv 9 rows fe0d2238012cef6b [order_id,kind,quantity,unit_amount_cents,created_at]
 tips.csv 8 rows 2eae55a25cc6365d [id,booking_id,status,currency,amount_cents,completed_at,created_at]
 recap_photos.csv 0 rows 7182bf5dae65f90e [id,booking_id,image_url,caption,shared_with_boat_at,created_at]
-trip_reviews.csv 1 rows b41fcffe8e5a65de [id,booking_id,rating,comment,is_published,published_at,created_at]
+trip_reviews.csv 1 rows ace7996824e8dffb [id,booking_id,rating,comment,is_published,published_at,crew_thanks,created_at]
 review_moderation_events.csv 0 rows 84abde207d2b9b99 [id,review_id,action,reason,reason_note,recorded_by_name,occurred_at]
 dive_package_entitlements.csv 0 rows 02916f39b0f0e4bc [id,package_name,booking_id,consumed_at,expires_at,created_at]
 photos: 0 e3b0c44298fc1c14
