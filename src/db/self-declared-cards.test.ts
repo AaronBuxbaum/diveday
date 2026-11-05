@@ -4,7 +4,7 @@ import { asLevelCard, asNitroxCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { calculateReadiness, isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { decideTripAdmission } from "@/lib/trip-admission";
-import { levelShort } from "@/test/admission-refusals";
+import { chosenLevel, levelShort } from "@/test/admission-refusals";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
@@ -750,11 +750,11 @@ describe("recordSelfDeclaredCards", () => {
       });
 
       const decision = decideTripAdmission({
-        requirement: {
+        requirement: chosenLevel({
           minimumCertificationLevel: "open_water",
           requiredSpecialties: [],
           requiresNitrox: false,
-        },
+        }),
         siteRequirement: null,
         evidence: {
           certifications: (await liveCards(db, shop.id)).filter(
@@ -1125,11 +1125,11 @@ describe("self-declared cards and the booking gate", () => {
     };
 
     const decision = decideTripAdmission({
-      requirement: {
+      requirement: chosenLevel({
         minimumCertificationLevel: "advanced_open_water",
         requiredSpecialties: [],
         requiresNitrox: false,
-      },
+      }),
       siteRequirement: null,
       evidence,
     });
@@ -1158,11 +1158,11 @@ describe("self-declared cards and the booking gate", () => {
     await recordSelfDeclaredCards(db, { shopId: shop.id, personId: person.id, nitrox: true });
 
     const decision = decideTripAdmission({
-      requirement: {
+      requirement: chosenLevel({
         minimumCertificationLevel: null,
         requiredSpecialties: [],
         requiresNitrox: true,
-      },
+      }),
       siteRequirement: null,
       evidence: {
         certifications: (await liveCards(db, shop.id)).filter((row) => row.personId === person.id),
@@ -1190,11 +1190,11 @@ describe("self-declared cards and the booking gate", () => {
     });
 
     const decision = decideTripAdmission({
-      requirement: {
+      requirement: chosenLevel({
         minimumCertificationLevel: "advanced_open_water",
         requiredSpecialties: [],
         requiresNitrox: false,
-      },
+      }),
       siteRequirement: null,
       evidence: {
         certifications: (await liveCards(db, shop.id)).filter((row) => row.personId === person.id),
@@ -1217,11 +1217,11 @@ describe("self-declared cards and the booking gate", () => {
     const { db, shop, person } = await joiner();
 
     const decision = decideTripAdmission({
-      requirement: {
+      requirement: chosenLevel({
         minimumCertificationLevel: "advanced_open_water",
         requiredSpecialties: [],
         requiresNitrox: false,
-      },
+      }),
       siteRequirement: null,
       evidence: {
         certifications: (await liveCards(db, shop.id)).filter((row) => row.personId === person.id),

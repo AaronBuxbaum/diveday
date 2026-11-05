@@ -653,6 +653,12 @@
     "ratingOption": "{rating} out of 5 stars",
     "anonymousReviewer": "A diver",
     "replyFrom": "Reply from {shop}",
+    "thanksLegend": "Thank someone on the crew",
+    "thanksWho": "Crew member",
+    "thanksNobody": "No one in particular",
+    "thanksLine": "Your thank-you",
+    "thanksPlaceholder": "Keiko made my first wreck easy",
+    "thanksHint": "Only that person, the shop owner and the managers see this. It is not part of your review.",
     "commentLabel": "Anything you’d tell another diver?",
     "commentPlaceholder": "The crew, the sites, how the day ran",
     "submit": "Leave my review",
@@ -750,6 +756,8 @@
     "crewQuote": "“{words}”",
     "logbookHeading": "Dive log entry",
     "printRecord": "Print log entry",
+    "downloadCsv": "Download CSV",
+    "downloadUddf": "Download UDDF",
     "diverLabel": "Diver",
     "certifiedLabel": "Certified",
     "dateLabel": "Date",
@@ -973,6 +981,11 @@
     "flySafePlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
     "flySafePlannedDivesPlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: we plan more than one dive, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
     "flySafePlannedEarlierDay": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: you have another dive day with us in the two days before this one, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
+    "nitroxPlan": {
+      "lead": "Your nitrox card is verified. The depth limit on each mix, planned at a ppO₂ of 1.4:",
+      "line": "{o2}%: stay above {meters} m / {feet} ft",
+      "notAFill": "For planning only: analyze your tank at the dock and dive the mix you measured."
+    },
     "fitUnavailable": "We couldn’t save your gear and setup just now. Try again in a moment.",
     "fitSaved": "Saved. The crew will have your sizes.",
     "certHeading": "Add your certification",
@@ -3250,6 +3263,8 @@
     "yourEmail": "Your email",
     "yourPhone": "Your phone",
     "howManyDivers": "How many divers",
+    "charterLabel": "A boat just for our group",
+    "charterHint": "A private charter. The shop sends a price for the whole boat.",
     "contactHint": "Add an email or phone number so we can reach you.",
     "dateOptionsHeading": "When would you like to dive?",
     "whenSuits": "Flexible timing",
@@ -4178,6 +4193,14 @@
       "open": "Open the Inbox",
       "turnOff": "Turn these off in your email settings"
     },
+    "seatSold": {
+      "subject": "{shopName}: {seats, plural, one {# seat sold} other {# seats sold}}",
+      "body": "{seats, plural, one {# seat sold} other {# seats sold}} in the last hour.",
+      "line": "{title}, {when}: {seats, plural, one {# seat} other {# seats}}",
+      "more": "And {seats, plural, one {# seat} other {# seats}} on other departures.",
+      "open": "Open the board",
+      "turnOff": "Turn these off on the Features page"
+    },
     "moveAskSoon": {
       "subject": "{shopName}: a diver asked to move off {tripTitle}",
       "body": "A diver asked to move their seat on {tripTitle}, leaving {when}.",
@@ -4262,6 +4285,9 @@
     },
     "smsLostItem": {
       "body": "{shopName}: the crew found this aboard after {tripTitle}: {item}. We’re holding it for you."
+    },
+    "charterQuote": {
+      "line": "Our quote for the whole boat: {amount}"
     },
     "smsInterestReply": {
       "body": "{shopName}: {body}"

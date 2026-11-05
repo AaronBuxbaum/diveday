@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import { getRequestsPage } from "@/db/requests-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -139,6 +140,7 @@ export default async function RequestsPage({
     "reply-failed": { tone: "danger", row: true },
     "reply-refused": { tone: "danger", row: true },
     "reply-capped": { tone: "danger", row: true },
+    "reply-bad-quote": { tone: "danger", row: true },
     "reply-send-limit": { tone: "danger", row: true },
   } satisfies Record<RequestReplyNotice, { tone: "success" | "danger"; row: boolean }>);
   const replyWords: Record<RequestReplyNotice, string> = {
@@ -147,6 +149,7 @@ export default async function RequestsPage({
     "reply-failed": t("requests.replyNotice.failed"),
     "reply-refused": t("requests.replyNotice.refused"),
     "reply-capped": t("requests.replyNotice.capped", { count: INTEREST_REPLY_DAILY_CAP }),
+    "reply-bad-quote": t("requests.replyNotice.badQuote"),
     "reply-send-limit": t("shared.limits.sendLimit", { thing: "replies" }),
   };
   const replyAction = replyToRequestAction.bind(null, shopSlug);
@@ -167,6 +170,16 @@ export default async function RequestsPage({
         send: t("requests.replyForm.send"),
         sending: t("words.busy.sending"),
       },
+      // A private charter is answered with a price for the whole boat (loop 5, row 11).
+      quote: request.charter
+        ? {
+            label: t("requests.replyForm.quoteLabel"),
+            hint: t("requests.replyForm.quoteHint"),
+            currency: shop.currency,
+            locale,
+            copy: forgivingCopy(t),
+          }
+        : undefined,
       error:
         replyNotice?.row && noticeRequest === request.id && notice
           ? replyWords[notice as RequestReplyNotice]

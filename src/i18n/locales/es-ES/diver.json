@@ -653,6 +653,12 @@
     "ratingOption": "{rating} sobre 5 estrellas",
     "anonymousReviewer": "Un buceador",
     "replyFrom": "Respuesta de {shop}",
+    "thanksLegend": "Agradece a alguien del equipo",
+    "thanksWho": "Integrante del equipo",
+    "thanksNobody": "A nadie en particular",
+    "thanksLine": "Tu agradecimiento",
+    "thanksPlaceholder": "Keiko hizo que mi primer naufragio fuera fácil",
+    "thanksHint": "Solo lo ven esa persona y los propietarios y encargados del centro. No forma parte de tu reseña.",
     "commentLabel": "¿Algo que le contarías a otro buceador?",
     "commentPlaceholder": "La tripulación, los puntos, cómo fue la jornada",
     "submit": "Enviar mi opinión",
@@ -750,6 +756,8 @@
     "crewQuote": "“{words}”",
     "logbookHeading": "Registro del diario de inmersión",
     "printRecord": "Imprimir registro",
+    "downloadCsv": "Descargar CSV",
+    "downloadUddf": "Descargar UDDF",
     "diverLabel": "Buceador",
     "certifiedLabel": "Certificación",
     "dateLabel": "Fecha",
@@ -973,6 +981,11 @@
     "flySafePlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN, y más si haces paradas de descompresión.",
     "flySafePlannedDivesPlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN, y más si haces paradas de descompresión.",
     "flySafePlannedEarlierDay": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: tienes otro día de buceo con nosotros en los dos días anteriores, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN, y más si haces paradas de descompresión.",
+    "nitroxPlan": {
+      "lead": "Tu tarjeta de nitrox está verificada. El límite de profundidad de cada mezcla, planificado a una ppO₂ de 1,4:",
+      "line": "{o2} %: quédate por encima de {meters} m / {feet} ft",
+      "notAFill": "Solo para planificar: analiza tu tanque en el muelle y bucea con la mezcla que midas."
+    },
     "fitUnavailable": "No hemos podido guardar tu equipo y ajuste ahora mismo. Inténtalo de nuevo en un momento.",
     "fitSaved": "Guardado. La tripulación tendrá tus tallas.",
     "certHeading": "Agrega tu certificación",
@@ -3250,6 +3263,8 @@
     "yourEmail": "Tu correo",
     "yourPhone": "Tu teléfono",
     "howManyDivers": "Cuántos buceadores",
+    "charterLabel": "Un barco solo para nuestro grupo",
+    "charterHint": "Un chárter privado. El centro te envía un precio por el barco entero.",
     "contactHint": "Agrega un correo o un número de teléfono para poder responderte.",
     "dateOptionsHeading": "¿Cuándo te gustaría bucear?",
     "whenSuits": "Fechas flexibles",
@@ -4178,6 +4193,14 @@
       "open": "Abrir Mensajes",
       "turnOff": "Desactívalos en tus ajustes de correo"
     },
+    "seatSold": {
+      "subject": "{shopName}: {seats, plural, one {# plaza vendida} other {# plazas vendidas}}",
+      "body": "{seats, plural, one {# plaza vendida} other {# plazas vendidas}} en la última hora.",
+      "line": "{title}, {when}: {seats, plural, one {# plaza} other {# plazas}}",
+      "more": "Y {seats, plural, one {# plaza} other {# plazas}} en otras salidas.",
+      "open": "Abrir el tablero",
+      "turnOff": "Desactívalos en la página de Funciones"
+    },
     "moveAskSoon": {
       "subject": "{shopName}: un buceador pidió cambiar de {tripTitle}",
       "body": "Un buceador pidió cambiar su plaza en {tripTitle}, que sale el {when}.",
@@ -4262,6 +4285,9 @@
     },
     "smsLostItem": {
       "body": "{shopName}: la tripulación encontró esto a bordo después de {tripTitle}: {item}. Lo guardamos para ti."
+    },
+    "charterQuote": {
+      "line": "Nuestro presupuesto por el barco entero: {amount}"
     },
     "smsInterestReply": {
       "body": "{shopName}: {body}"

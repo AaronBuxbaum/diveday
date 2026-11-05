@@ -1,4 +1,5 @@
 import { SiteMark } from "@/components/illustration/SiteMark";
+import { buttonClass } from "@/components/ui/button";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 import type { AfterStateProps } from "@/features/recap-after-state";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
@@ -67,6 +68,7 @@ export function DiveRecord({
   siteMark,
   postcard,
   course,
+  logFilePath = null,
 }: Pick<
   AfterStateProps,
   | "t"
@@ -83,6 +85,8 @@ export function DiveRecord({
   | "course"
 > & {
   trip: AfterStateProps["trip"];
+  /** Where the log entry's CSV and UDDF files are served from; null off the recap page. */
+  logFilePath?: string | null;
 }) {
   // The plan, unless a record disagrees with it — see the Sites fact below.
   const recordedSiteNames = diveRecord
@@ -320,6 +324,27 @@ export function DiveRecord({
           }
         >
           <PrintRecordButton label={t("recap.printRecord")} />
+          {/* **The entry as a file** (loop 5, row 13): the same recorded facts,
+              for the logbook app a diver already keeps. Plain links to a route
+              that answers with an attachment, so they work with no script. */}
+          {logFilePath ? (
+            <>
+              <a
+                href={`${logFilePath}?format=csv`}
+                download
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("recap.downloadCsv")}
+              </a>
+              <a
+                href={`${logFilePath}?format=uddf`}
+                download
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("recap.downloadUddf")}
+              </a>
+            </>
+          ) : null}
         </SavePostcard>
       </div>
     </section>

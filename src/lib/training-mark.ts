@@ -429,19 +429,20 @@ export function trainingDiveAsksNoCard(
 
 /**
  * A departure's own requirement as the gates read it: the stored row, with the
- * flag saying its level is the default nobody chose (issue #3872). A reader
- * that does not carry the flag reads the level as chosen, which keeps it.
+ * flag saying its level is the default nobody chose (issue #3872). Required,
+ * not optional: a reader that dropped it would make the sale refuse a seat
+ * readiness clears (attacker review of #3909).
  */
 export type TripLevelRequirement = Requirement & {
-  minimumCertificationIsDefault?: boolean | null;
+  minimumCertificationIsDefault: boolean;
 };
 
 /**
  * **A default level counts as the site's, not the trip's** (issue #3872,
  * Aaron on #3839 2026-11-04). `insertTripInstance` writes Open Water on every
- * non-course departure and flags it default until a person saves the level.
- * That level is not the shop's statement about the departure, so it moves to
- * the site side of the requirement, where a training mark may lower it exactly
+ * non-course departure and flags it default until a person changes the level.
+ * That level is not the shop's statement about the departure, so where a site
+ * the departure visits states a level of its own, it moves to the site side, where a training mark may lower it exactly
  * as it lowers a site's level (`trainingDiveSiteRequirement`). Only the level
  * moves: the trip's specialties and nitrox stay the trip's. The union of the
  * two sides is unchanged, so an unmarked seat is held to the default as before.
@@ -452,7 +453,13 @@ export function tripAndSiteSides<T extends TripLevelRequirement>(
   site: Requirement | null | undefined,
 ): { trip: T | null; site: Requirement | null } {
   const level = trip?.minimumCertificationLevel ?? null;
-  if (trip?.minimumCertificationIsDefault !== true || level === null) {
+  // Only where a site states a level of its own: with none, the default is the
+  // only level anyone stated, and it stays the trip's (attacker review of #3909).
+  if (
+    trip?.minimumCertificationIsDefault !== true ||
+    level === null ||
+    !site?.minimumCertificationLevel
+  ) {
     return { trip: trip ?? null, site: site ?? null };
   }
   return {

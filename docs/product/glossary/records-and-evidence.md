@@ -246,3 +246,11 @@
   `src/lib/undo.ts`. Not a
   **held send**: a removal has already happened, and Undo puts it back; a held send has not left
   yet, and Undo stops it.
+
+- **Log entry file** — the recap's dive record as a download, a CSV row or a UDDF 3.2 `dive`, served by
+  `/recap/<token>/log?format=csv|uddf` for the signed recap link's own departure (loop 5, row 13). It carries
+  only what the shop wrote down, the same floor `DiveRecord` prints: the day and start time in the shop's
+  zone, the shop, the trip, the recorded sites, and the crew's water temperature, visibility and surface
+  line. No depth, bottom time or gas: those are the diver's own, added in the logbook app that opens it.
+  Throttled and `no-store` like every capability door; a dead link, an unopened recap and an unknown format
+  are one 404. `src/lib/dive-log-export.ts`.

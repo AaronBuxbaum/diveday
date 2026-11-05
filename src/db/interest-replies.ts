@@ -8,8 +8,10 @@ import {
   normalizeInterestReply,
 } from "@/lib/interest-reply";
 import { log } from "@/lib/log";
+import { MAX_PRICE_MINOR_UNITS } from "@/lib/money";
 import {
   type CourtesyProvider,
+  charterQuoteLine,
   interestReplySubject,
   interestReplyText,
   type NotificationProvider,
@@ -44,7 +46,11 @@ export type InterestReplyRefusal =
   /** The request has had its day's replies (`INTEREST_REPLY_DAILY_CAP`), sent or not. */
   | "capped"
   /** The email this reply would be refuses its own schema; a retry changes nothing. */
-  | "cannot_be_sent";
+  | "cannot_be_sent"
+  /** A quote on a request that did not ask for the whole boat. */
+  | "quote_not_a_charter"
+  /** A quote that is not a whole, positive amount the shop could charge. */
+  | "bad_quote";
 
 export type InterestReplyResult =
   | { status: "sent"; channel: "email" | "sms" | "whatsapp"; replyId: string }
@@ -91,23 +97,37 @@ export async function sendInterestReply(
     body: string;
     /** The staffer sending it; the caller has resolved them from the session. */
     sentByPersonId: string;
+    /**
+     * A private charter's quote for the whole boat, in the shop's minor unit
+     * (loop 5, row 11). The currency is the shop's, read here, never posted.
+     */
+    quoteCents?: number | null;
     now?: Date;
   },
   providers: InterestReplyProviders = {},
 ): Promise<InterestReplyResult> {
   const problem = interestReplyProblem(input.body);
   if (problem) return { status: "refused", reason: problem };
-  const body = normalizeInterestReply(input.body);
+  const quoteCents = input.quoteCents ?? null;
+  if (
+    quoteCents !== null &&
+    (!Number.isInteger(quoteCents) || quoteCents <= 0 || quoteCents > MAX_PRICE_MINOR_UNITS)
+  ) {
+    return { status: "refused", reason: "bad_quote" };
+  }
+  const typed = normalizeInterestReply(input.body);
 
   const [row] = await db
     .select({
       email: interests.email,
       phone: interests.phone,
       closedAt: interests.closedAt,
+      charter: interests.charter,
       personLocale: people.locale,
       shopName: shops.name,
       shopLocale: shops.defaultLocale,
       shopCountry: shops.addressCountry,
+      shopCurrency: shops.currency,
     })
     .from(interests)
     .innerJoin(shops, eq(shops.id, interests.shopId))
@@ -129,6 +149,8 @@ export async function sendInterestReply(
     .limit(1);
   if (!row) return { status: "refused", reason: "not_found" };
   if (row.closedAt) return { status: "refused", reason: "not_open" };
+  if (quoteCents !== null && !row.charter)
+    return { status: "refused", reason: "quote_not_a_charter" };
   const route = interestReplyRoute({ email: row.email, phone: row.phone }, row.shopCountry);
   if (!route) return { status: "refused", reason: "no_route" };
 
@@ -165,6 +187,10 @@ export async function sendInterestReply(
       .where(and(scope, eq(interests.closedAs, "replied"), eq(interests.closedAt, now)));
 
   const locale = recipientLocale(row.personLocale, row.shopLocale);
+  const body =
+    quoteCents === null
+      ? typed
+      : `${charterQuoteLine(locale, quoteCents, row.shopCurrency)}\n\n${typed}`;
   const replyId = crypto.randomUUID();
   let channel: "email" | "sms" | "whatsapp";
   let delivery: Delivery;
@@ -239,7 +265,21 @@ export async function sendInterestReply(
     sendErrorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,
     sentAt: now,
   });
-  if (delivery.status === "sent") return { status: "sent", channel, replyId };
+  if (delivery.status === "sent") {
+    // The quote is the shop's word only once the diver has it.
+    if (quoteCents !== null) {
+      await db
+        .update(interests)
+        .set({
+          charterQuoteCents: quoteCents,
+          charterQuoteCurrency: row.shopCurrency,
+          charterQuotedAt: now,
+          charterQuotedByPersonId: input.sentByPersonId,
+        })
+        .where(scope);
+    }
+    return { status: "sent", channel, replyId };
+  }
   // Ids and codes only: the address and the words stay on the row.
   log("requests.reply_send_failed", "warn", {
     shopId: input.shopId,

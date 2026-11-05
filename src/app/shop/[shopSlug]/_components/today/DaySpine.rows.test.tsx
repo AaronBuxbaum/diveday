@@ -698,12 +698,31 @@ describe("what today made", () => {
 /** What the divers left on the reader's boats this week (UX review 2026-10-11, item 18). */
 describe("the crew's tips line", () => {
   it("tells a crew member their share of the week's tips", () => {
-    renderSpine({ crew: { tipsCents: 14_000, month: null } });
+    renderSpine({ crew: { tipsCents: 14_000, month: null, thanks: [] } });
     expect(screen.getByText("Your share of tips this week: $140.")).toBeInTheDocument();
   });
 
+  it("shows a crew member the thanks a diver left them, without the diver's name", () => {
+    renderSpine({
+      crew: {
+        tipsCents: 0,
+        month: null,
+        thanks: [
+          {
+            text: "Keiko made my first wreck easy",
+            tripTitle: "Wreck dive",
+            startsAt: new Date("2026-10-03T13:00:00Z"),
+          },
+        ],
+      },
+    });
+    expect(
+      screen.getByText("A diver said thanks after Wreck dive: “Keiko made my first wreck easy”"),
+    ).toBeInTheDocument();
+  });
+
   it("says nothing on a week with no tips", () => {
-    renderSpine({ crew: { tipsCents: 0, month: null } });
+    renderSpine({ crew: { tipsCents: 0, month: null, thanks: [] } });
     expect(screen.queryByText(/share of tips this week/)).toBeNull();
   });
 });

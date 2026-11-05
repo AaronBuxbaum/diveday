@@ -1,4 +1,5 @@
 import type { DbExecutor } from "@/db/client";
+import { CREW_THANKS_DAYS, type CrewThanksLine, readCrewThanks } from "@/db/crew-thanks";
 import { type CrewMonth, crewMonth, crewTipShare, tipsByDeparture } from "@/db/crew-tips";
 import { queryAll } from "@/db/query-helpers";
 import { getMonthlyReport } from "@/db/reporting";
@@ -12,7 +13,12 @@ import { type DayTakings, dayTakings } from "./closeout";
  * the paid tips on the boats they crewed this week, and their month on the
  * boats so far (null before they have crewed one).
  */
-export type CrewReading = { tipsCents: number; month: (CrewMonth & { month: number }) | null };
+export type CrewReading = {
+  tipsCents: number;
+  month: (CrewMonth & { month: number }) | null;
+  /** The newest thank-yous divers left this reader, under their reviews (loop 5, row 6). */
+  thanks: CrewThanksLine[];
+};
 
 /**
  * **The Today page's money reads**, in one round trip of the second wave.
@@ -53,7 +59,7 @@ export async function readDayMoney(
   const week = { from: shiftInstantByCalendarDays(day.from, -6, shop.timezone), to: day.to };
   const wall = utcToWallTime(day.from, shop.timezone);
   const month = shopMonthBounds({ year: wall.year, month: wall.month }, shop.timezone);
-  const [report, boatTips, tipsCents, season] = await queryAll(db, [
+  const [report, boatTips, tipsCents, season, thanks] = await queryAll(db, [
     async () =>
       reader.withTakings
         ? getMonthlyReport(db, shop.id, day.from, day.to, {
@@ -64,9 +70,21 @@ export async function readDayMoney(
     async () => (reader.withTakings ? tipsByDeparture(db, shop.id, day) : []),
     () => crewTipShare(db, shop.id, reader.personId, week),
     () => crewMonth(db, shop.id, reader.personId, { from: month.from, now: nowDate() }),
+    // Their own thank-yous, hidden ones left out (`readCrewThanks`).
+    () =>
+      readCrewThanks(
+        db,
+        shop.id,
+        reader.personId,
+        shiftInstantByCalendarDays(day.to, -CREW_THANKS_DAYS, shop.timezone),
+      ),
   ]);
   return {
     takings: report ? dayTakings(summarizeMonth(report), boatTips) : null,
-    crew: { tipsCents, month: season.boats > 0 ? { ...season, month: wall.month } : null },
+    crew: {
+      tipsCents,
+      month: season.boats > 0 ? { ...season, month: wall.month } : null,
+      thanks,
+    },
   };
 }

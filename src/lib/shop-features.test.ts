@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { parseShopFeature, SHOP_FEATURE_COLUMNS, SHOP_FEATURES, shopOffers } from "./shop-features";
+import {
+  OFF_BY_DECISION,
+  parseShopFeature,
+  SHOP_FEATURE_COLUMNS,
+  SHOP_FEATURES,
+  shopOffers,
+} from "./shop-features";
 
 const allOn = {
   reviewsEnabled: true,
@@ -27,6 +33,8 @@ const allOn = {
   weekOutReminderEnabled: true,
   publicConditionsEnabled: true,
   fieldGuideEnabled: true,
+  seatSoldAlertsEnabled: true,
+  privateChartersEnabled: true,
 };
 
 describe("shopOffers", () => {
@@ -49,10 +57,12 @@ describe("parseShopFeature", () => {
 });
 
 describe("a new shop", () => {
-  it("starts with every feature on, and the crew schedule too (Aaron, 2026-10-23)", async () => {
+  it("starts with every feature on but the ones decided off, and the crew schedule too (Aaron, 2026-10-23)", async () => {
     const { shops } = await import("@/db/schema");
     for (const feature of SHOP_FEATURES) {
-      expect(shops[SHOP_FEATURE_COLUMNS[feature]].default, feature).toBe(true);
+      expect(shops[SHOP_FEATURE_COLUMNS[feature]].default, feature).toBe(
+        !OFF_BY_DECISION.includes(feature),
+      );
     }
     expect(shops.crewScheduleEnabled.default).toBe(true);
   });

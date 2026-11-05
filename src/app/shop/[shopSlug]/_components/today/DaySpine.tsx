@@ -712,7 +712,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     firstRun,
     firstBooking,
     factOfScale,
-    crew = { tipsCents: 0, month: null },
+    crew = { tipsCents: 0, month: null, thanks: [] },
     sessions,
     evening,
     highWind,

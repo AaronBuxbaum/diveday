@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DepartureMoney } from "./DepartureMoney";
-import { WeatherLine } from "./MonthOwnerLines";
+import { SeatsGivenUpLine, WeatherLine } from "./MonthOwnerLines";
 
 afterEach(cleanup);
 
@@ -77,6 +77,22 @@ describe("DepartureMoney (item 26)", () => {
         money={money}
       />,
     );
+    expect(container.textContent).toBe("");
+  });
+});
+
+describe("SeatsGivenUpLine (loop 5, row 12)", () => {
+  it("says no-shows and late cancels together, and each alone", () => {
+    const { rerender } = render(<SeatsGivenUpLine given={{ noShows: 3, lateCancels: 2 }} t={t} />);
+    expect(screen.getByText("3 no-shows and 2 late cancels this month.")).toBeTruthy();
+    rerender(<SeatsGivenUpLine given={{ noShows: 1, lateCancels: 0 }} t={t} />);
+    expect(screen.getByText("1 no-show this month.")).toBeTruthy();
+    rerender(<SeatsGivenUpLine given={{ noShows: 0, lateCancels: 1 }} t={t} />);
+    expect(screen.getByText("1 late cancel this month.")).toBeTruthy();
+  });
+
+  it("says nothing in a month with neither", () => {
+    const { container } = render(<SeatsGivenUpLine given={{ noShows: 0, lateCancels: 0 }} t={t} />);
     expect(container.textContent).toBe("");
   });
 });

@@ -2,6 +2,7 @@
 
 import { notFound } from "next/navigation";
 import { getDb } from "@/db/client";
+import { recordDiveSiteClosure } from "@/db/dive-site-closures";
 import { planDiveSitePhotoRelease } from "@/db/dive-site-photos";
 import {
   deleteDiveSite,
@@ -18,6 +19,7 @@ import { getShopById } from "@/db/shops";
 import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
 import { parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { parseServiceWindow } from "@/lib/service-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
@@ -195,6 +197,39 @@ export async function deleteDiveSiteAction(siteId: string) {
   const back = shopPath(activeSession.user.shopSlug, "dive-sites");
   const deleted = await deleteDiveSite(await getDb(), activeSession.user.shopId, id);
   revalidateAndRedirect(back, deleted ? noticeUrl(back, "deleted") : `${back}/${id}?error=invalid`);
+}
+
+/**
+ * **Close a site for a while, or open it again** (loop 5, row 5). Two days and
+ * a reason, both days blank to open it. Any staffer who may edit the site may
+ * close it: the write is scoped to the session's shop, and a tampered id names
+ * only another of its own sites.
+ */
+export async function closeDiveSiteAction(siteId: string, formData: FormData) {
+  const activeSession = await requireStaffSession();
+  const id = uuidParam(siteId);
+  if (!id) notFound();
+  const page = `${shopPath(activeSession.user.shopSlug, "dive-sites")}/${id}`;
+  const text = (name: string) => {
+    const value = formData.get(name);
+    return typeof value === "string" ? value : "";
+  };
+  const parsed = parseServiceWindow({
+    from: text("closedFrom"),
+    until: text("closedUntil"),
+    reason: text("closureReason"),
+  });
+  if (!parsed.ok) {
+    revalidateAndRedirect(page, `${noticeUrl(page, "closure-invalid")}#site-closure-heading`);
+    return;
+  }
+  const saved = await recordDiveSiteClosure(await getDb(), {
+    shopId: activeSession.user.shopId,
+    siteId: id,
+    window: parsed.window,
+  });
+  if (!saved) notFound();
+  revalidateAndRedirect(page, `${noticeUrl(page, "closure-saved")}#site-closure-heading`);
 }
 
 export async function pullDiveSiteTemplateAction(siteId: string, formData: FormData) {

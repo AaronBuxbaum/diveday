@@ -393,3 +393,58 @@ describe("a price against a payment gate", () => {
     expect(ok({ priceDollars: undefined }).priceCents).toBeNull();
   });
 });
+
+// Loop 5, row 5: the builder and the trip's details refuse a hull in the yard
+// for any day of the departure, and say until when.
+describe("a hull in the yard", () => {
+  const yard = { from: "2026-06-09", until: "2026-06-12", reason: "Hull repaint" };
+
+  it("refuses a boat departure on a day inside the window, naming its last day", () => {
+    const result = tripDetailsPatch(
+      { ...base, diveMode: "boat", boatId: "boat-1", boatOutOfService: yard },
+      shop,
+    );
+    expect(result).toEqual({ ok: false, reason: "boat_out_of_service", until: "2026-06-12" });
+  });
+
+  it("refuses a multi-day run whose later day lands in the window", () => {
+    expect(
+      tripDetailsPatch(
+        {
+          ...base,
+          date: "2026-06-07",
+          dayCount: 2,
+          laterDates: ["2026-06-10"],
+          diveMode: "boat",
+          boatId: "boat-1",
+          boatOutOfService: yard,
+        },
+        shop,
+      ),
+    ).toMatchObject({ ok: false, reason: "boat_out_of_service" });
+  });
+
+  it("reads the shop's own day, not UTC's, at the window's edge", () => {
+    // 21:00 in New York on the 8th is already the 9th in UTC: still the 8th.
+    const patch = ok({
+      date: "2026-06-08",
+      startTime: "21:00",
+      endTime: "23:00",
+      diveMode: "boat",
+      boatId: "boat-1",
+      boatOutOfService: yard,
+    });
+    expect(patch.boatId).toBe("boat-1");
+  });
+
+  it("takes the hull on the day after the window ends", () => {
+    expect(
+      ok({ date: "2026-06-13", diveMode: "boat", boatId: "boat-1", boatOutOfService: yard }).boatId,
+    ).toBe("boat-1");
+  });
+
+  it("asks nothing of a shore departure, or one with no boat", () => {
+    expect(ok({ diveMode: "shore", boatId: "boat-1", boatOutOfService: yard }).boatId).toBeNull();
+    expect(ok({ diveMode: "boat", boatId: null, boatOutOfService: yard }).boatId).toBeNull();
+  });
+});

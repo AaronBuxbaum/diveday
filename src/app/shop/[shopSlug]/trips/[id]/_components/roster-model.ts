@@ -275,6 +275,7 @@ export type RosterActions = {
    * whose course carries materials.
    */
   setCourseMaterialsDoneAction?: (formData: FormData) => void;
+  referralStudentAction?: (formData: FormData) => void; // loop 5, row 10: course rosters only
   /** Tick the materials from PADI's own eLearning page (H-20261008-padi-elearning-check); beside the tick above. */
   elearningCheckAction?: (
     previous: ElearningCheckResult,

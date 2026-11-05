@@ -32,6 +32,10 @@ const copy: ReviewRowCopy = {
   hide: "Hide",
   hideConfirm: "Hide this review",
   hideReasonLabel: "Why are you taking it down?",
+  hideThanks: "Hide thanks",
+  showThanks: "Show thanks",
+  thanksHidden: "Thanks hidden.",
+  thanksShown: "Thanks shown.",
   hideReasonPlaceholder: "Choose a reason…",
   hideNoteLabel: "What happened",
   markStandout: "Mark as standout",
@@ -67,6 +71,9 @@ const BASE: StaffReview = {
   divedAt: new Date("2026-08-29T11:00:00.000Z"),
   createdAt: new Date("2026-08-29T22:00:00.000Z"),
   replyBody: null,
+  crewThanks: null,
+  crewThanksFor: null,
+  crewThanksHidden: false,
 };
 
 function row(review: Partial<StaffReview>, group: "waiting" | "published" | "hidden" = "waiting") {

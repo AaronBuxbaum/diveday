@@ -1,0 +1,91 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "cdd32c10-2a6a-4acc-96a3-d962313ed085",
+  "prevIds": [
+    "ee0b4327-79ee-408c-93ae-eb0b5f3d699c",
+    "a3f33979-69c2-452a-8aa0-0b0dff76d0d9"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trip_reviews",
+        "crew_thanks_hidden_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.trip_reviews.crew_thanks_hidden_by_person_id",
+        "n|col|public.trip_reviews.crew_thanks_hidden_by_person_id",
+        "e|col|public.trip_reviews.crew_thanks_hidden_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.trip_reviews",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_reviews"
+      ],
+      "writes": [
+        "s|fk|public.trip_reviews.trip_reviews_crew_thanks_hidden_by_person_id_people_id_fkey",
+        "n|fk|public.trip_reviews.trip_reviews_crew_thanks_hidden_by_person_id_people_id_fkey",
+        "e|fk|public.trip_reviews.trip_reviews_crew_thanks_hidden_by_person_id_people_id_fkey",
+        "n|con|public.trip_reviews.trip_reviews_crew_thanks_hidden_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trip_reviews",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.trip_reviews.crew_thanks_hidden_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_reviews",
+        "name": "crew_thanks_hidden_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_reviews",
+        "name": "trip_reviews_crew_thanks_hidden_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "crew_thanks_hidden_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    }
+  ]
+}

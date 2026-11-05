@@ -45,5 +45,7 @@ export function dateRequestCopy(t: DiverTranslator, subject: "course" | "dive"):
     sending: t("words.busy.sending"),
     sentHeading: t("inquiry.sentHeading"),
     sentBody: t("inquiry.sentBody"),
+    charterLabel: t("inquiry.charterLabel"),
+    charterHint: t("inquiry.charterHint"),
   };
 }

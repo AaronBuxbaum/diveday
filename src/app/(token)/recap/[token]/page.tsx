@@ -232,7 +232,7 @@ export default async function DiveRecapPage({
       timeZone={data.shop.timezone}
       namespaces={["recap", "common", "booking", "reviews", "trip"]}
     >
-      <AfterState context={{ ...props, buddyLinkUrl }} />
+      <AfterState context={{ ...props, buddyLinkUrl, logFilePath: `/recap/${token}/log` }} />
     </DiverIntlProvider>
   );
 }

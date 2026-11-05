@@ -28,6 +28,10 @@ const BASE: DateInterestRow = {
   askedAt: new Date("2027-02-20T14:00:00.000Z"),
   closedAt: null,
   closedAs: null,
+  charter: false,
+  charterQuoteCents: null,
+  charterQuoteCurrency: null,
+  charterQuotedAt: null,
 };
 
 function row(

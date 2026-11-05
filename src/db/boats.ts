@@ -39,6 +39,14 @@ export type BoatPapersInput = {
   mmsi?: string | null;
   /** The boat's working channel (issue #2672), normalized by the caller. */
   workingChannel?: string | null;
+  /**
+   * The hull in the yard (loop 5, row 5): shop-local days, both ends
+   * inclusive, and the shop's reason. Absent leaves it as it was; the fleet
+   * row always sends all three (`parseServiceWindow`).
+   */
+  outOfServiceFrom?: string | null;
+  outOfServiceUntil?: string | null;
+  outOfServiceReason?: string | null;
 };
 
 /**

@@ -25,10 +25,12 @@ import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestReaderUnits, requestTranslator } from "@/i18n/request";
 import { diveSiteDepthText } from "@/i18n/unit-labels";
+import { nowDate } from "@/lib/clock";
 import { parseDiveSiteSlug } from "@/lib/dive-site-slug";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicDiveSitePath, publicSchedulePath, publicTripPath } from "@/lib/public-routes";
+import { serviceWindowCoversInstant, serviceWindowFrom } from "@/lib/service-window";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { diveSitePageJsonLd } from "@/lib/structured-data";
 import { capacityLabel } from "@/lib/trips";
@@ -54,7 +56,19 @@ const resolveSite = cache(async (shopSlug: string, siteSlug: string) => {
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) return null;
   const site = await getDiveSiteBySlug(db, shop.id, slug);
-  return site ? { db, shop, site } : null;
+  // A site the shop closed for today has no public page (loop 5, row 5),
+  // read on the shop's own day; the staff library keeps it.
+  if (
+    !site ||
+    serviceWindowCoversInstant(
+      serviceWindowFrom(site.closedFrom, site.closedUntil, site.closureReason),
+      nowDate(),
+      shop.timezone,
+    )
+  ) {
+    return null;
+  }
+  return { db, shop, site };
 });
 
 export async function generateMetadata({

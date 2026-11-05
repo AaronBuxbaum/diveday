@@ -19,7 +19,13 @@ export function MoreWaysRows({
   shopSlug,
   quiet,
   promotedAsk,
-  switches: { dateRequestsEnabled, lastMinuteListEnabled, waitlistEnabled },
+  switches: {
+    dateRequestsEnabled,
+    lastMinuteListEnabled,
+    waitlistEnabled,
+    privateChartersEnabled,
+    hasBoatDiving,
+  },
   everHadDeparture,
   t,
 }: {
@@ -33,6 +39,9 @@ export function MoreWaysRows({
     dateRequestsEnabled: boolean;
     lastMinuteListEnabled: boolean;
     waitlistEnabled: boolean;
+    /** Private charters (loop 5, row 11), offered only at a shop that runs boats. */
+    privateChartersEnabled: boolean;
+    hasBoatDiving: boolean;
   };
   /** The shop has run a departure at some point (`everHadDepartureRead`). */
   everHadDeparture: boolean;
@@ -71,6 +80,7 @@ export function MoreWaysRows({
           contactEmail={null}
           contactPhone={null}
           collapsible
+          offerCharter={privateChartersEnabled && hasBoatDiving}
           copy={dateRequestCopy(t, "dive")}
         />
       )}

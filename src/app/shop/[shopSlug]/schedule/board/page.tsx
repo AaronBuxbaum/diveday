@@ -10,6 +10,7 @@ import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { toShopCurrency } from "@/lib/money";
+import { serviceWindowFrom } from "@/lib/service-window";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { resolveWeekStart } from "@/lib/week-board";
@@ -200,6 +201,17 @@ export default async function ScheduleBoardPage({
     openRollCalls,
     ...weekAround,
     boatMap,
+    // Loop 5, row 5: the board warns about a departure on a hull in the yard.
+    yardWindows: new Map(
+      shopBoats.flatMap((boat) => {
+        const window = serviceWindowFrom(
+          boat.outOfServiceFrom,
+          boat.outOfServiceUntil,
+          boat.outOfServiceReason,
+        );
+        return window ? [[boat.id, window] as const] : [];
+      }),
+    ),
     shop,
     boatCount: shopBoats.length,
     hasUpcoming,

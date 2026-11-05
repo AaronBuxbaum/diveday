@@ -124,6 +124,11 @@ export function RequirementsSection({
             </p>
           ) : null}
           {hasSiteRequirement ? siteNote("trip") : null}
+          {/* Default and chosen Open Water board differently once a training
+              dive is marked (issue #3872), so the form says which this is. */}
+          {requirement?.minimumCertificationIsDefault ? (
+            <p className="text-sm text-muted">{t("trips.requirements.levelIsDefault")}</p>
+          ) : null}
           <form action={action}>
             <RequirementFields
               t={t}

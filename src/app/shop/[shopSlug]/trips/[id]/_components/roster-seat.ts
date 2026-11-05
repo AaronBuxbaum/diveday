@@ -15,6 +15,30 @@ import { rosterSeatWaiver, seatMoveForRow } from "./roster-model";
 import type { RosterEntry } from "./types";
 
 /**
+ * The course session's own acts on a seat, handed through as they came: the
+ * next step, the processed card, materials, the referral papers (loop 5, row
+ * 10), the eLearning check and the paper course form.
+ */
+function courseSeatActions(actions: RosterRowContext["actions"]) {
+  const {
+    saveCourseNextStepAction,
+    markCardProcessedAction,
+    setCourseMaterialsDoneAction,
+    referralStudentAction,
+    elearningCheckAction,
+    recordPaperCourseFormAction,
+  } = actions;
+  return {
+    saveCourseNextStepAction,
+    markCardProcessedAction,
+    setCourseMaterialsDoneAction,
+    referralStudentAction,
+    elearningCheckAction,
+    recordPaperCourseFormAction,
+  };
+}
+
+/**
  * **What one seat on the guests ledger knows about itself**, read once from
  * the row's context: its readiness, waiver, identity hold, the particulars a
  * held seat withholds, and the actions it can take. Every part of
@@ -92,11 +116,6 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     deleteNoteAction,
     saveEmergencyContactAction,
     certifyDiverAction,
-    saveCourseNextStepAction,
-    markCardProcessedAction,
-    setCourseMaterialsDoneAction,
-    elearningCheckAction,
-    recordPaperCourseFormAction,
     updatePickupAction,
     updateDietaryNoteAction,
     moveSeat,
@@ -354,12 +373,8 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     deleteNoteAction,
     saveEmergencyContactAction,
     certifyDiverAction,
-    saveCourseNextStepAction,
-    markCardProcessedAction,
     issuedCard: issuedCardByPerson?.get(person.id) ?? null,
-    setCourseMaterialsDoneAction,
-    elearningCheckAction,
-    recordPaperCourseFormAction,
+    ...courseSeatActions(actions),
     updatePickupAction,
     updateDietaryNoteAction,
     // A booked seat, or one turned away before the start (`seatMoveForRow`).

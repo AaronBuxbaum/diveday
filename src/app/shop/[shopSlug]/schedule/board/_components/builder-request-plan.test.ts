@@ -20,6 +20,7 @@ function request(over: Record<string, unknown>) {
     courseId: null,
     courseTitle: null,
     interest: "two-tank",
+    charter: false,
     ...over,
   };
 }
@@ -54,5 +55,17 @@ describe("builderRequestPlan", () => {
       st,
     });
     expect(plan?.suggestedDivemasters).toBe(0);
+  });
+
+  it("says before Add that a whole-boat request makes the departure private (loop 5, row 11)", () => {
+    const plan = builderRequestPlan({
+      requestRows: [request({ charter: true })] as Input["requestRows"],
+      shop,
+      shopBoats: [],
+      st,
+    });
+    expect(plan?.requests[0]?.subject).toBe(
+      "Wants the whole boat: two-tank. This departure will be private.",
+    );
   });
 });

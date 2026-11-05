@@ -16,7 +16,12 @@ import {
   listOpenDateInterestsForDates,
 } from "./interest-dates";
 import { addInterest, interestRow, ownerId } from "./interest-dates-fixtures";
-import { askForDate, attachDateInterestsToDeparture, setDateInterestOutcome } from "./interests";
+import {
+  askForDate,
+  attachDateInterestsToDeparture,
+  dateInterestsAskForCharter,
+  setDateInterestOutcome,
+} from "./interests";
 import { interests, people, shops, trips } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -824,5 +829,23 @@ describe("listDeparturesOnDates", () => {
       (await listDeparturesOnDates(db, shop.id, [day], shop.timezone)).map((r) => r.tripId),
     ).not.toContain(trip.id);
     expect(await listDeparturesOnDates(db, shop.id, [], shop.timezone)).toEqual([]);
+  });
+});
+
+/** Loop 5, row 11: a departure built from a charter request is the group's own. */
+describe("dateInterestsAskForCharter", () => {
+  it("is true when any one of the ids is this shop's charter request", async () => {
+    const { db, shop } = await emptyDateShop();
+    const plain = await addInterest(db, shop.id, { interest: "Reef" });
+    const charter = await addInterest(db, shop.id, { interest: "Our boat", charter: true });
+    expect(await dateInterestsAskForCharter(db, shop.id, [plain])).toBe(false);
+    expect(await dateInterestsAskForCharter(db, shop.id, [plain, charter])).toBe(true);
+    expect(await dateInterestsAskForCharter(db, shop.id, [])).toBe(false);
+  });
+
+  it("reads nothing outside the shop", async () => {
+    const { db, shop } = await emptyDateShop();
+    const charter = await addInterest(db, shop.id, { interest: "Our boat", charter: true });
+    expect(await dateInterestsAskForCharter(db, crypto.randomUUID(), [charter])).toBe(false);
   });
 });

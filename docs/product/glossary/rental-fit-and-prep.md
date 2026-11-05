@@ -468,3 +468,4 @@
 - **Service reminder** — the message a customer gets about a month before each of a piece's due
   dates, once per piece, clock and date, so a cylinder can get a visual-inspection reminder and a
   hydro-test reminder. It is on by default and switched off per piece on the diver record.
+- **Nitrox planning line** — on the diver's `/ready` page, "32%: stay above 33 m / 110 ft" and the same for 36% (loop 5, row 9): the maximum operating depth of the two common mixes at a ppO2 of 1.4, in seawater, each figure rounded toward the surface. Shown only when the diver asked for nitrox on this seat, the seat can be given it, and a verified card authorizes the fill. A planning aid for the briefing and the diver's own computer, **never a fill authorization**: the fill gate is `authorizesNitroxFill`, the mix breathed is the one the diver analyzes at the dock, and nothing reads the line. `src/lib/nitrox-mod.ts`.

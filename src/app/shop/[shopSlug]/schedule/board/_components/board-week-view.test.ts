@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { boardWeekView, boatWarningFor } from "./board-week-view";
+import { boardWeekView, boatWarningFor, closureWarningFor } from "./board-week-view";
 
 const st = staffTranslator("en-US");
 const TZ = "America/New_York";
@@ -78,6 +78,37 @@ describe("boatWarningFor", () => {
   it("asks nothing of a shop that runs no boats", () => {
     expect(
       boatWarningFor({ ...context, hasBoatDiving: false }, [departure({})] as never),
+    ).toBeNull();
+  });
+});
+
+// Loop 5, row 5: the board warns about a departure on a hull in the yard or at
+// a closed site, on the shop's own day; it never moves or cancels anything.
+describe("closureWarningFor", () => {
+  const yard = { from: "2026-07-20", until: "2026-07-22", reason: "Hull repaint" };
+  const context = {
+    yardWindows: new Map([["b1", yard]]),
+    boatMap: new Map([["b1", "Reef Runner"]]),
+    locale: "en-US",
+    st,
+  };
+
+  it("names the hull in the yard and the closed site on that day", () => {
+    const warning = closureWarningFor(context, "2026-07-21", [
+      departure({ diveSiteClosure: { from: "2026-07-21", until: "2026-07-21", reason: null } }),
+    ] as never);
+    expect(warning).toBe(
+      `${st("boats.outOfServiceWarning", { boats: "Reef Runner", count: 1 })} ${st(
+        "schedule.week.siteClosedWarning",
+        { sites: "Molasses", count: 1 },
+      )}`,
+    );
+  });
+
+  it("says nothing the day after the window, or for a shore dive", () => {
+    expect(closureWarningFor(context, "2026-07-23", [departure({})] as never)).toBeNull();
+    expect(
+      closureWarningFor(context, "2026-07-21", [departure({ diveMode: "shore" })] as never),
     ).toBeNull();
   });
 });

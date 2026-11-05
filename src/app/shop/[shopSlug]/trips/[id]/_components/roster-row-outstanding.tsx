@@ -14,6 +14,7 @@ import { COURSE_FORMS_BLOCK_BOARDING } from "@/lib/course-forms";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { isDiver } from "@/lib/participant-types";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
+import { REFERRAL_PAPERS } from "@/lib/referral-student";
 import { shopPath } from "@/lib/staff-notices";
 import { CourseFormsRowControl } from "./CourseFormsRowControl";
 import { ElearningCheck } from "./ElearningCheck";
@@ -28,7 +29,7 @@ import {
 import type { RowIdentity } from "./roster-row-identity";
 import type { RowReasonList } from "./roster-row-reason-list";
 import type { RosterSeat } from "./roster-seat";
-import { SeatCourseControls } from "./SeatCourseControls";
+import { type ReferralControls, SeatCourseControls } from "./SeatCourseControls";
 import { TrainingMarkControl } from "./TrainingMarkControl";
 
 /** **Outstanding**: what the seat still needs, the first band of its panel. */
@@ -69,6 +70,7 @@ export type RowOutstandingInput = Pick<
   | "markCardProcessedAction"
   | "issuedCard"
   | "setCourseMaterialsDoneAction"
+  | "referralStudentAction"
   | "elearningCheckAction"
   | "recordPaperCourseFormAction"
   | "actions"
@@ -91,6 +93,40 @@ export type RowOutstandingInput = Pick<
 /** The agency a card goes to, by name; "the agency" where the course named none. */
 function processingAgencyName(agency: IssuedCard["agency"], t: RosterSeat["t"]): string {
   return agency === "other" ? t("trips.roster.processedAgencyUnnamed") : t(AGENCY_KEYS[agency]);
+}
+
+/**
+ * A referral student's line and its two papers, already worded (loop 5, row
+ * 10); null for a seat nobody marked.
+ */
+function referralControls(
+  booking: {
+    referredInAt: Date | null;
+    referralFormAt: Date | null;
+    referralRecordAt: Date | null;
+  },
+  t: RosterSeat["t"],
+  locale: string,
+  timeZone: string,
+): ReferralControls | null {
+  if (!booking.referredInAt) return null;
+  const doneLine = (at: Date | null) =>
+    at
+      ? t("trips.roster.referralCollectedLine", { date: formatShortDate(at, locale, timeZone) })
+      : null;
+  return {
+    markedLine: t("trips.roster.referralLine", {
+      date: formatShortDate(booking.referredInAt, locale, timeZone),
+    }),
+    papers: REFERRAL_PAPERS.map((paper) => ({
+      paper,
+      label:
+        paper === "form"
+          ? t("trips.roster.referralPaperForm")
+          : t("trips.roster.referralPaperRecord"),
+      doneLine: doneLine(paper === "form" ? booking.referralFormAt : booking.referralRecordAt),
+    })),
+  };
 }
 
 export function rowOutstanding(seat: RowOutstandingInput) {
@@ -127,6 +163,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     markCardProcessedAction,
     issuedCard,
     setCourseMaterialsDoneAction,
+    referralStudentAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
     actions,
@@ -330,6 +367,8 @@ export function rowOutstanding(seat: RowOutstandingInput) {
           certifyMaterialsNote={
             courseHasMaterials && !materialsDone ? t("trips.roster.certifyMaterialsNote") : null
           }
+          referralStudentAction={referralStudentAction}
+          referral={referralControls(booking, t, locale, shopTimezone)}
         />
       ) : null}
       {/* The materials tick, read off PADI's own eLearning page when the

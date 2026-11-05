@@ -122,6 +122,11 @@
   "weather": {
     "month": "Weather called off {departures, plural, one {# departure} other {# departures}}: {divers, plural, one {# diver} other {# divers}}, {refunded} refunded, {moved} moved to another date."
   },
+  "seatsGivenUp": {
+    "both": "{noShows, plural, one {# no-show} other {# no-shows}} and {lateCancels, plural, one {# late cancel} other {# late cancels}} this month.",
+    "noShows": "{noShows, plural, one {# no-show} other {# no-shows}} this month.",
+    "lateCancels": "{lateCancels, plural, one {# late cancel} other {# late cancels}} this month."
+  },
   "byBoat": {
     "heading": "By boat",
     "facts": "{days, plural, one {# day out} other {# days out}} · {percent}% full"

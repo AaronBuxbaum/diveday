@@ -139,7 +139,14 @@ export type AfterStateProps = {
    */
   canReview: boolean;
   /** The diver's own review, when they have left one. */
-  ownReview: { rating: number; comment: string | null } | null;
+  ownReview: {
+    rating: number;
+    comment: string | null;
+    crewThanks: string | null;
+    crewThanksPersonId: string | null;
+  } | null;
+  /** The crew a diver can thank under the review (loop 5, row 6); none, no thanks field. */
+  crewChoices: Array<{ id: string; name: string }>;
   /**
    * The diver's own private pulse, when they have left one — never a review and
    * never public (D40, issue #1200). Its presence is also what puts the way back
@@ -201,6 +208,13 @@ export type AfterStateProps = {
    * rather than before one.
    */
   buddyLinkUrl?: string | null;
+  /**
+   * The path the log entry's files are served from (`/recap/<token>/log`), so
+   * the dive record can offer "Download CSV" and "Download UDDF" (loop 5, row
+   * 13). Null everywhere but the recap page: the files are signed by the
+   * recap token, which `/ready` neither holds nor can mint.
+   */
+  logFilePath?: string | null;
   /**
    * Whether the photo door offers "Share with everyone on this boat". True
    * only from `/ready/<token>`, whose upload verifies the readiness token; the
@@ -403,7 +417,15 @@ export async function buildAfterStateProps(input: {
     tip: data.tip,
     tipPresets: tipPresetsMajor(data.currency),
     canReview: shop.reviewsEnabled,
-    ownReview: ownReview ? { rating: ownReview.rating, comment: ownReview.comment } : null,
+    ownReview: ownReview
+      ? {
+          rating: ownReview.rating,
+          comment: ownReview.comment,
+          crewThanks: ownReview.crewThanks,
+          crewThanksPersonId: ownReview.crewThanksPersonId,
+        }
+      : null,
+    crewChoices: data.crewChoices,
     ownPulse,
     params,
     nextDeparture,

@@ -17,7 +17,7 @@ import { staffTideWindowText } from "@/i18n/tide-labels";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
-import { formatTime } from "@/lib/format";
+import { formatCalendarDateRange, formatTime } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam } from "@/lib/staff-notices";
@@ -25,6 +25,7 @@ import { fetchTideStation, tideStationEcho } from "@/lib/tide-stations";
 import { uuidParam } from "@/lib/uuid";
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { loadSiteAssists, siteBriefAssist, siteSpanishFields } from "../_components/SiteAssists";
+import { SiteClosureForm } from "../_components/SiteClosureForm";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell } from "../_components/SiteFormShell";
 import { ERROR_KEYS, NOTICE_KEYS } from "../_components/site-edit-notices";
@@ -44,6 +45,7 @@ import { UpcomingSiteTrips } from "../_components/UpcomingSiteTrips";
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
 import {
+  closeDiveSiteAction,
   deleteDiveSiteAction,
   pullDiveSiteTemplateAction,
   saveDiveSiteAction,
@@ -328,6 +330,26 @@ export default async function EditDiveSitePage({
           </DisclosureRow>
         </DisclosureRowList>
       ) : null}
+      <SiteClosureForm
+        action={closeDiveSiteAction.bind(null, id)}
+        site={site}
+        t={t}
+        state={
+          notice === "closure-saved" ? "saved" : notice === "closure-invalid" ? "invalid" : null
+        }
+        closedLine={
+          site.closedFrom && site.closedUntil
+            ? site.closureReason
+              ? t("diveSites.closure.closedLine", {
+                  dates: formatCalendarDateRange(site.closedFrom, site.closedUntil, locale),
+                  reason: site.closureReason,
+                })
+              : t("diveSites.closure.closedLineNoReason", {
+                  dates: formatCalendarDateRange(site.closedFrom, site.closedUntil, locale),
+                })
+            : null
+        }
+      />
       <DangerDisclosure
         open={Boolean(error)}
         className="mt-10 print:hidden"

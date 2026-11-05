@@ -450,7 +450,7 @@ export default async function SchedulePage({
         locale={locale}
         timeZone={tz}
         quiet={quiet.quiet}
-        dateRequestsEnabled={shop.dateRequestsEnabled}
+        switches={shop}
         runningLines={runningLines}
         className={SECTION_GAP}
       />

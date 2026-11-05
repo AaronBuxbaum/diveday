@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonReadPrivateRecapPulse, canPersonReplyToReviews } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { setCrewThanksHidden } from "@/db/crew-thanks";
 import { markRecapPulseAddressed } from "@/db/recap-pulses";
 import { deleteReviewReply, writeReviewReply } from "@/db/review-replies";
 import {
@@ -14,6 +15,7 @@ import {
   setReviewStandout,
   setReviewsPublished,
 } from "@/db/reviews";
+import { nowDate } from "@/lib/clock";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicReviewsPath, publicSchedulePath } from "@/lib/public-routes";
@@ -49,6 +51,7 @@ const reviewRowForm = z.object({
   intent: z.string().optional(),
   standout: z.string().optional(),
   publish: z.string().optional(),
+  thanksHidden: z.string().optional(),
   reason: z.string().optional(),
   reasonNote: z.string().default(""),
 });
@@ -65,7 +68,13 @@ export type ReviewActionResult =
        * own result rather than assume every result is hers.
        */
       reviewId: string;
-      effect: "published" | "hidden" | "standout" | "standout-removed";
+      effect:
+        | "published"
+        | "hidden"
+        | "standout"
+        | "standout-removed"
+        | "thanks-hidden"
+        | "thanks-shown";
       /** Set on a hide: the review the land-then-undo toast offers to put back. */
       undoReviewId?: string;
     }
@@ -118,6 +127,30 @@ export async function reviewRowAction(
     if (outcome !== true) return { ok: false, reviewId, reason: "error" };
     revalidatePath(reviews);
     return { ok: true, reviewId, effect: standout ? "standout" : "standout-removed" };
+  }
+
+  if (form.intent === "crew-thanks") {
+    // Hide or show the thanks a diver left a crew member (loop 5, row 6).
+    // Owner or manager only, matching who may reply to reviews and read the thanks.
+    if (
+      !(await canPersonReplyToReviews(await getDb(), session.user.shopId, session.user.personId))
+    ) {
+      return { ok: false, reviewId, reason: "error" };
+    }
+    const hidden = form.thanksHidden === "true";
+    const outcome = await setCrewThanksHidden(
+      await getDb(),
+      session.user.shopId,
+      reviewId,
+      hidden,
+      session.user.personId,
+      nowDate(),
+    );
+    if (outcome !== true) return { ok: false, reviewId, reason: "error" };
+    revalidatePath(reviews);
+    // The crew member's Today carries the line, so it is that page that changes.
+    revalidatePath(shopPath(session.user.shopSlug));
+    return { ok: true, reviewId, effect: hidden ? "thanks-hidden" : "thanks-shown" };
   }
 
   /*

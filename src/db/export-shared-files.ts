@@ -357,6 +357,22 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.courseMaterialsDoneByPersonId,
     },
+    // A referral student (loop 5, row 10): who marked the seat, and who
+    // collected the referral form and the eLearning record, and when.
+    { header: "referred_in_at", in: "shop", value: (row) => row.referredInAt },
+    { header: "referred_in_by_person_id", in: "shop", value: (row) => row.referredInByPersonId },
+    { header: "referral_form_at", in: "shop", value: (row) => row.referralFormAt },
+    {
+      header: "referral_form_by_person_id",
+      in: "shop",
+      value: (row) => row.referralFormByPersonId,
+    },
+    { header: "referral_record_at", in: "shop", value: (row) => row.referralRecordAt },
+    {
+      header: "referral_record_by_person_id",
+      in: "shop",
+      value: (row) => row.referralRecordByPersonId,
+    },
     // A training mark: the course seat this charter seat's dive counted
     // toward, who marked it, and a clear made with course forms owed
     // (issue #2275). The forms themselves stay on the enrollment.
@@ -515,6 +531,17 @@ export const INTERESTS_CSV = sharedFile<ShopRow<"interestRows">>({
     // (security review of #2656, minor 4).
     { header: "closed_at", in: "shop", value: (row) => row.closedAt },
     { header: "closed_as", in: "shop", value: (row) => row.closedAs },
+    // A private charter and the shop's quote for the boat (loop 5, row 11).
+    // The ask is the diver's; the price and who sent it are the shop's.
+    { header: "charter", in: "both", value: (row) => row.charter },
+    { header: "charter_quote_cents", in: "both", value: (row) => row.charterQuoteCents },
+    { header: "charter_quote_currency", in: "both", value: (row) => row.charterQuoteCurrency },
+    { header: "charter_quoted_at", in: "both", value: (row) => row.charterQuotedAt },
+    {
+      header: "charter_quoted_by_person_id",
+      in: "shop",
+      value: (row) => row.charterQuotedByPersonId,
+    },
   ],
   shop: {
     rows: ({ interestRows }) => interestRows,
@@ -1585,6 +1612,24 @@ export const TRIP_REVIEWS_CSV = sharedFile<ShopRow<"reviewRows">>({
     { header: "is_standout", in: "shop", value: ({ review }) => review.isStandout },
     { header: "is_published", in: "both", value: ({ review }) => review.isPublished },
     { header: "published_at", in: "both", value: ({ review }) => review.publishedAt },
+    // The optional thanks line to one crew member (loop 5, row 6): the diver's
+    // own words, which they take with them; who it is for and whether staff hid it are the shop's.
+    { header: "crew_thanks", in: "both", value: ({ review }) => review.crewThanks },
+    {
+      header: "crew_thanks_person_id",
+      in: "shop",
+      value: ({ review }) => review.crewThanksPersonId,
+    },
+    {
+      header: "crew_thanks_hidden_at",
+      in: "shop",
+      value: ({ review }) => review.crewThanksHiddenAt,
+    },
+    {
+      header: "crew_thanks_hidden_by_person_id",
+      in: "shop",
+      value: ({ review }) => review.crewThanksHiddenByPersonId,
+    },
     { header: "created_at", in: "both", value: ({ review }) => review.createdAt },
     { header: "updated_at", in: "shop", value: ({ review }) => review.updatedAt },
     // The shop's live public reply under the review (`review_replies`, folded).

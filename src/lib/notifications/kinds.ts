@@ -1755,6 +1755,46 @@ const deskAfterHoursSchema = z.object({
 });
 
 /**
+ * **Seats sold since the last pass** (loop 5, row 8; glossary "Seat-sold
+ * alert"): one email an hour, at most, to an owner or manager of a shop that
+ * switched it on, with the count for each departure. Staff operational mail
+ * on the desk-ping footing: no unsubscribe, and `settingsUrl` (the Features
+ * page) is the way out.
+ *
+ * **Counts and departures, never divers.** No name, no amount: the mail
+ * lands in a personal inbox that may sit on a shared phone. `throughAt` is
+ * the claim on `shops.seat_sold_alerted_through` that let this send, so one
+ * claim is one message per person. Not queued (`notificationIsQueueable`): an
+ * hour-old buzz is not worth a row, and the next pass says what is true then.
+ */
+const seatSoldDigestSchema = z.object({
+  kind: z.literal("seat_sold_digest"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  timezone: z.string().trim().min(1).max(64),
+  /** The departures that sold, soonest first, with the seats each sold. */
+  departures: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1).max(200),
+        startsAt: z.date(),
+        seats: z.number().int().min(1).max(10_000),
+      }),
+    )
+    .min(1)
+    .max(40),
+  /** Seats sold across departures the list above does not show, if the pass sold on more than forty. */
+  moreSeats: z.number().int().min(0).max(100_000),
+  boardUrl: z.url().max(2_000),
+  settingsUrl: z.url().max(2_000),
+  throughAt: z.date(),
+});
+
+/**
  * **Stripe has turned the shop's card payments off** (batch 6 item 8): one
  * email to each owner per change of state, claimed by
  * `shop_stripe_accounts.payments_restricted_at` (`applyStripeAccountStatus`),
@@ -2125,6 +2165,7 @@ export const notificationSchema = z
     gearServiceDueSchema,
     crewScheduleChangeSchema,
     deskAfterHoursSchema,
+    seatSoldDigestSchema,
     stripePaymentsRestrictedSchema,
     moveAskSoonSchema,
     rollCallStaleSchema,
@@ -2271,6 +2312,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "gear_service_due":
     case "crew_schedule_change":
     case "desk_after_hours":
+    case "seat_sold_digest":
     case "move_ask_soon":
     case "roll_call_stale":
     case "roll_call_stale_shore":
@@ -2481,6 +2523,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per claim of the person's batching clock.
     case "desk_after_hours":
       return `desk-after-hours/${notification.personId}/${notification.pingedAt.toISOString()}`;
+    // One send per person per claim of the shop's seat-sold cursor.
+    case "seat_sold_digest":
+      return `seat-sold/${notification.shopId}/${notification.personId}/${notification.throughAt.toISOString()}`;
     // One send per owner or manager per filing of the ask.
     case "move_ask_soon":
       return `move-ask-soon/${notification.messageId}/${notification.personId}/${notification.askedAt.toISOString()}`;

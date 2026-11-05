@@ -18,6 +18,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import {
   EMPTY_REVIEW_AGGREGATE,
+  normalizeCrewThanks,
   normalizeReviewComment,
   publishesImmediately,
   type ReviewAggregate,
@@ -35,6 +36,7 @@ import {
   reviewModerationReason,
   reviewReplies,
   shops,
+  tripAssignments,
   tripDives,
   tripReviews,
   trips,
@@ -65,10 +67,22 @@ export type SubmitReviewResult =
  */
 export async function submitTripReview(
   db: AppDb,
-  input: { bookingId: string; rating: number; comment?: string | null },
+  input: {
+    bookingId: string;
+    rating: number;
+    comment?: string | null;
+    /**
+     * The optional thanks line to one of the departure's crew (loop 5, row 6).
+     * Absent or blank takes an earlier thanks back; a person who is not on this
+     * departure's crew is dropped, whatever the form said.
+     */
+    crewThanks?: { crewPersonId: string; text: string | null } | null;
+  },
 ): Promise<SubmitReviewResult> {
   if (!isUuid(input.bookingId)) return { ok: false, reason: "not_found" };
   const comment = normalizeReviewComment(input.comment);
+  const thanksText = normalizeCrewThanks(input.crewThanks?.text);
+  const thanksPersonId = input.crewThanks?.crewPersonId ?? "";
   const publish = publishesImmediately(comment);
   const submittedAt = nowDate();
 
@@ -96,10 +110,37 @@ export async function submitTripReview(
     }
 
     const [existing] = await tx
-      .select({ id: tripReviews.id, updatedAt: tripReviews.updatedAt })
+      .select({
+        id: tripReviews.id,
+        updatedAt: tripReviews.updatedAt,
+        crewThanks: tripReviews.crewThanks,
+        crewThanksPersonId: tripReviews.crewThanksPersonId,
+        crewThanksHiddenAt: tripReviews.crewThanksHiddenAt,
+        crewThanksHiddenByPersonId: tripReviews.crewThanksHiddenByPersonId,
+      })
       .from(tripReviews)
       .where(eq(tripReviews.bookingId, input.bookingId))
       .limit(1);
+
+    // The thanks is for someone who worked this departure; anyone else is no thanks.
+    let thanks: { personId: string; text: string } | null = null;
+    if (thanksText && isUuid(thanksPersonId)) {
+      const [crew] = await tx
+        .select({ id: tripAssignments.personId })
+        .from(tripAssignments)
+        .innerJoin(people, eq(people.id, tripAssignments.personId))
+        .where(
+          and(
+            eq(tripAssignments.tripId, booking.tripId),
+            eq(tripAssignments.personId, thanksPersonId),
+            eq(people.shopId, booking.shopId),
+            isNull(people.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (crew) thanks = { personId: crew.id, text: thanksText };
+    }
+    // A staff hide stays on the review whatever the diver writes next; only staff show it.
 
     // `updated_at` is the revision boundary used to distinguish an old hide
     // from the diver's new unread version. Keep it strictly monotonic even
@@ -132,6 +173,10 @@ export async function submitTripReview(
       comment,
       isPublished: publish,
       publishedAt: publish ? now : null,
+      crewThanksPersonId: thanks?.personId ?? null,
+      crewThanks: thanks?.text ?? null,
+      crewThanksHiddenAt: existing?.crewThanksHiddenAt ?? null,
+      crewThanksHiddenByPersonId: existing?.crewThanksHiddenByPersonId ?? null,
       updatedAt: now,
     };
 
@@ -150,7 +195,14 @@ export async function submitTripReview(
   });
 }
 
-export type OwnReview = { rating: number; comment: string | null; isPublished: boolean };
+export type OwnReview = {
+  rating: number;
+  comment: string | null;
+  isPublished: boolean;
+  /** The thanks the diver left a crew member, so the form opens on it. */
+  crewThanks: string | null;
+  crewThanksPersonId: string | null;
+};
 
 /** The diver's own review of this booking, so the recap form opens on what they already said. */
 export async function getReviewForBooking(
@@ -162,6 +214,8 @@ export async function getReviewForBooking(
       rating: tripReviews.rating,
       comment: tripReviews.comment,
       isPublished: tripReviews.isPublished,
+      crewThanks: tripReviews.crewThanks,
+      crewThanksPersonId: tripReviews.crewThanksPersonId,
     })
     .from(tripReviews)
     .where(eq(tripReviews.bookingId, bookingId))
@@ -549,6 +603,10 @@ export type StaffReview = {
   createdAt: Date;
   /** The shop's live public reply under it, or null (batch 4, K2). */
   replyBody: string | null;
+  /** The thanks line the diver left a crew member, who it is for and whether staff hid it (loop 5, row 6). */
+  crewThanks: string | null;
+  crewThanksFor: string | null;
+  crewThanksHidden: boolean;
 };
 
 /** How many reviews the moderation queue shows per page. */
@@ -622,10 +680,13 @@ export async function listShopReviewsForStaff(
     limit?: number;
     scope?: StaffReviewScope;
     narrow?: StaffReviewNarrow | null;
+    /** Owner or manager only: the thanks to the crew is read by the crew member and those who may reply to reviews. */
+    withCrewThanks?: boolean;
   } = {},
 ): Promise<StaffReviewPage> {
   const hidden = hiddenReviewExists(db);
   const moderationActor = alias(people, "review_moderation_actor");
+  const thankedCrew = alias(people, "review_thanked_crew");
   const waiting = and(eq(tripReviews.isPublished, false), not(hidden));
   const scope = and(
     eq(tripReviews.shopId, shopId),
@@ -666,11 +727,24 @@ export async function listShopReviewsForStaff(
           createdAt: tripReviews.createdAt,
           updatedAt: tripReviews.updatedAt,
           replyBody: reviewReplies.body,
+          crewThanks: options.withCrewThanks
+            ? tripReviews.crewThanks
+            : sql<string | null>`null::text`,
+          crewThanksFor: options.withCrewThanks
+            ? thankedCrew.fullName
+            : sql<string | null>`null::text`,
+          crewThanksHidden: options.withCrewThanks
+            ? sql<boolean>`${tripReviews.crewThanksHiddenAt} is not null`
+            : sql<boolean>`false`,
         })
         .from(tripReviews)
         .innerJoin(people, eq(people.id, tripReviews.personId))
         .innerJoin(trips, eq(trips.id, tripReviews.tripId))
         .leftJoin(reviewReplies, liveReplyJoin())
+        .leftJoin(
+          thankedCrew,
+          and(eq(thankedCrew.id, tripReviews.crewThanksPersonId), eq(thankedCrew.shopId, shopId)),
+        )
         .where(scope)
         .orderBy(...order)
         .limit(limit)
