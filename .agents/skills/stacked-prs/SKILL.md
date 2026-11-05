@@ -1,6 +1,6 @@
 ---
 name: stacked-prs
-description: Open work as stacked pull requests with gh stack — chained bases, one-click merge of the whole stack, CI fixed from the top. Use when cutting a branch or opening a PR while any stack is open, or pushing, rebasing, or landing one.
+description: Stacked pull requests with gh stack: one-click merge of the whole stack, CI fixed from the top. Use when cutting a branch, opening a PR, or pushing or landing while a stack is open.
 ---
 
 # Stacked pull requests
