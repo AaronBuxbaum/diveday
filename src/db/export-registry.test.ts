@@ -255,7 +255,15 @@ describe("the registry's export fates", () => {
     const mine = "Instructor Trainer card 4471";
     const theirs = "Captain license 9902";
     await db.insert(staffCredentials).values([
-      { shopId: shop.id, personId: owner.id, kind: "instructor_rating", name: mine },
+      {
+        shopId: shop.id,
+        personId: owner.id,
+        kind: "instructor_rating",
+        name: mine,
+        reviewNote: "Sentinel note naming Dana",
+        reviewedByPersonId: other.id,
+        deletedByPersonId: other.id,
+      },
       { shopId: shop.id, personId: other.id, kind: "instructor_rating", name: theirs },
     ]);
     const input = await loadDiverExportBundleInput(db, shop.id, owner.id);
@@ -263,6 +271,12 @@ describe("the registry's export fates", () => {
     const files = Object.fromEntries(input.tables.map((table) => [table.file, table]));
     const text = JSON.stringify(files["staff_credentials.csv"]?.rows);
     expect([text.includes(mine), text.includes(theirs)]).toEqual([true, false]);
+    // Staff-typed text and the reviewer's or remover's id stay in the shop's file.
+    const everything = JSON.stringify(input);
+    expect([everything.includes("Sentinel note"), everything.includes(other.id)]).toEqual([
+      false,
+      false,
+    ]);
     const profile = files["profile.csv"];
     const roles = profile?.rows[0]?.[profile.header.indexOf("roles")];
     expect(String(roles)).not.toBe("");
