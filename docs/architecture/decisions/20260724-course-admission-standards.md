@@ -328,7 +328,10 @@ On a departure of two or more planned dives the mark cannot name the training di
 **only the default**, and every site keeps its own stated level unlowered (issue #3910, Aaron
 2026-11-05, option B): a trip-wide default with no level of its own never outranks the course
 instructor's judgment on any dive of the day. `trainingDiveReach` (`src/lib/training-mark.ts`)
-names the reach (`site`, `default`, or none for one dive with no site or two sites), and readiness
-and the sale both fold through `markedTrainingRequirement`. A one-dive departure at a site that
-states no level still keeps the default, as above; whether that should follow the same principle
-is open.
+names the reach, and readiness and the sale both fold through `markedTrainingRequirement`.
+Following option B and the dock review of #3910, a one-dive departure at a known site that states
+no level lowers only the default too, the same as two dives, and a departure with **no site
+entered** lowers nothing, whatever its dive count, because nobody knows where the boat is going.
+The rule a desk keeps is one sentence: a mark never lowers a level a person stated, and needs the
+sites entered. This replaces the earlier rule above that the default stands where no site states
+a level.

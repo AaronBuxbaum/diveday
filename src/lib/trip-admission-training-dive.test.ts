@@ -302,19 +302,19 @@ describe("a default trip level a training mark may lower (issue #3872)", () => {
     ).toEqual({ admitted: true });
   });
 
-  // Attacker review of #3909: where no site states a level, the default is the
-  // only level anyone stated, so it stays the trip's and no mark lowers it.
-  it("keeps the default where no site states a level", () => {
-    for (const siteRow of [null, site(), site({ requiresNitrox: true })]) {
+  // Dock review of #3910 (after Aaron's option B): where the one site states
+  // no level, the mark lowers only the default, as on a two-tank day.
+  it("lowers only the default where the one site states no level", () => {
+    for (const siteRow of [null, site()]) {
       expect(
         markedLevelBlockers({
           trip: defaultTrip,
           site: siteRow,
           certifications: [],
           course: openWaterCourse,
-        }).map((blocker) => blocker.code),
+        }),
         JSON.stringify(siteRow),
-      ).toEqual(["certification_missing"]);
+      ).toEqual([]);
       expect(
         decideTripAdmission({
           requirement: defaultTrip,
@@ -322,8 +322,18 @@ describe("a default trip level a training mark may lower (issue #3872)", () => {
           ...uncertified,
           evidence: evidence({ trainingDives: [openWaterCourse] }),
         }).admitted,
-      ).toBe(false);
+        JSON.stringify(siteRow),
+      ).toBe(true);
     }
+    // The site's own nitrox gate still stands.
+    expect(
+      decideTripAdmission({
+        requirement: defaultTrip,
+        siteRequirement: site({ requiresNitrox: true }),
+        evidence: evidence({ trainingDives: [openWaterCourse] }),
+        declared: { level: "open_water" },
+      }),
+    ).toMatchObject({ admitted: false, refusal: [{ code: "nitrox_missing" }] });
   });
 
   it("still refuses the same student when a person chose the level", () => {
@@ -446,7 +456,7 @@ describe("a default trip level a training mark may lower (issue #3872)", () => {
 
   it("says no card is asked only when the default is the only card asked", () => {
     expect(trainingDiveAsksNoCardForSite(defaultTrip, openWaterSite, openWaterCourse)).toBe(true);
-    expect(trainingDiveAsksNoCardForSite(defaultTrip, null, openWaterCourse)).toBe(false);
+    expect(trainingDiveAsksNoCardForSite(defaultTrip, null, openWaterCourse)).toBe(true);
     expect(trainingDiveAsksNoCardForSite(chosenTrip, openWaterSite, openWaterCourse)).toBe(false);
     expect(trainingDiveAsksNoCardForSite(defaultTrip, advancedSite, openWaterCourse)).toBe(false);
     expect(
@@ -517,11 +527,13 @@ describe("a training mark on a multi-dive charter lowers only the default (issue
     course = openWaterCourse,
   ) => markedLevelBlockers({ trip, site: siteRow, certifications: [], course, reach }).length === 0;
 
-  it("reaches the default on two or more planned dives, the site on one dive at one site, else nothing", () => {
+  it("reaches the default on two or more dives with sites entered, the site on one dive at one site, else nothing", () => {
     expect(trainingDiveReach(1, 1)).toBe("site");
     expect(trainingDiveReach(2, 1)).toBe("default");
     expect(trainingDiveReach(2, 2)).toBe("default");
-    expect(trainingDiveReach(3, 0)).toBe("default");
+    // No site entered: nobody knows where the boat goes (dock review of #3910).
+    expect(trainingDiveReach(3, 0)).toBeNull();
+    expect(trainingDiveReach(2, 0)).toBeNull();
     expect(trainingDiveReach(1, 0)).toBeNull();
     expect(trainingDiveReach(1, 2)).toBeNull();
     expect(trainingDiveReach(null, 1)).toBeNull();

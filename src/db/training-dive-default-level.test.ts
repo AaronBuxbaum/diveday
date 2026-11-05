@@ -156,12 +156,13 @@ describe("a default trip level a training mark may lower (issue #3872, in-memory
     expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
 
-  // Attacker review of #3909: at a site with no recorded level the default is
-  // the only level anyone stated, so it stays the trip's.
-  it("keeps the default where the site states no level", async () => {
+  // Dock review of #3910, after Aaron's option B: at a one-dive site with no
+  // recorded level the mark lowers only the default, as on a two-tank day.
+  it("lowers only the default where the one site states no level", async () => {
     const ctx = await defaultLevelCharter(true, null);
+    expect(await markable(ctx)).toHaveLength(1);
     expect(await markSeat(ctx)).toMatchObject({ ok: true });
-    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+    expect(await levelCodes(ctx)).toEqual([]);
   });
 
   it("keeps a chosen level on a charter built that way", async () => {
@@ -228,6 +229,17 @@ describe("a training mark on a two-tank charter (issue #3910, in-memory PGlite)"
 
   it("still holds an unmarked uncertified diver to the default", async () => {
     const ctx = await twoTank(null);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+  });
+
+  // Dock review of #3910: with no site entered nobody knows where the boat
+  // goes, so the mark lowers nothing, however many dives.
+  it("lowers nothing on a two-tank day with no site entered", async () => {
+    const ctx = await twoTank(null);
+    await ctx.db.delete(tripDives).where(eq(tripDives.tripId, ctx.charter.id));
+    expect(await trainingDiveReachOn(ctx.db, ctx.shop.id, ctx.charter.id)).toBeNull();
+    expect(await markable(ctx)).toEqual([]);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
     expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
 });

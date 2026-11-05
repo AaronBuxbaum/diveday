@@ -1597,16 +1597,18 @@
   stands may lower a site's level to the course's minimum, and only when the course
   certifies that level. A seat-level mark does not identify one of several planned dives, so
   multi-dive departures and one-dive departures with conflicting site records retain their site
-  requirements; the roster and manifest explain why. On a departure of two or more planned dives a
-  mark lowers only the Open Water default nobody chose (below) and every site keeps its own stated
-  level, so a student may ride a two-tank day at sites that state none (`trainingDiveReach`, issue
-  #3910, Aaron 2026-11-05). An explicit
+  requirements; the roster and manifest explain why. On a departure of two or more planned dives,
+  and on one dive at a site that states no level, a mark lowers only the Open Water default nobody
+  chose (below) and every site keeps its own stated level, so a student may ride a two-tank day at
+  sites that state none. With no site entered it lowers nothing, whatever the dive count
+  (`trainingDiveReach`, issue #3910, Aaron 2026-11-05, and the dock review). An explicit
   departure requirement always stands, at the sale as at the dock: trip admission lets a
   marked level through only where the site set it, never a trip-set level (issue #3776). The
   Open Water every new non-course departure starts with is not trip-set until a person changes the
   level (`trip_requirements.minimum_certification_is_default`; a duplicate or series roll carries
   its source's flag): where the one site states a level, both gates read that default as the
-  site's, so a mark may lower it too; where no site states one it stands (issue #3872). The
+  site's, so a mark may lower it too; where the site states none, the mark lowers the default
+  alone (issues #3872, #3910). The
   requirements form says when the level is the default. A course
   with no minimum
   (Open Water) asks no card for a site level it

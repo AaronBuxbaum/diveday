@@ -479,7 +479,7 @@ export function trainingDiveAsksNoCardForSite(
   course: TrainingDiveCourse | null,
   reach: TrainingDiveReach = "site",
 ): boolean {
-  if (reach === "default") {
+  if (reach === "default" || !site?.minimumCertificationLevel) {
     // Only the default is lowered: no card is asked when it was the only
     // card asked and the course lowers it to nothing.
     return (
@@ -518,14 +518,15 @@ export function trainingSiteAttributionKnown(
  *
  * - `site`: one planned dive at one site (`trainingSiteAttributionKnown`). The
  *   site's level is lowered, with a default level folded into it
- *   (`tripAndSiteSides`).
- * - `default`: a charter of two or more planned dives, where the mark cannot
- *   name the training dive. Only the trip-wide default nobody chose is lowered,
- *   because a default with no level of its own never outranks the course
- *   instructor's judgment on any dive of the day. Every site keeps its own
- *   stated level, unlowered.
- * - `null`: anything else (one dive with no site, or two sites for one dive).
- *   Nothing is lowered.
+ *   (`tripAndSiteSides`). Where that site states no level, only the default
+ *   is lowered, as on a charter of several dives (dock review of #3910).
+ * - `default`: a charter of two or more planned dives with its sites entered,
+ *   where the mark cannot name the training dive. Only the trip-wide default
+ *   nobody chose is lowered, because a default with no level of its own never
+ *   outranks the course instructor's judgment on any dive of the day. Every
+ *   site keeps its own stated level, unlowered.
+ * - `null`: no site entered, whatever the dive count, because nobody knows
+ *   where the boat is going; or two sites for one dive. Nothing is lowered.
  *
  * Readiness and the sale both read this function, so the two gates agree.
  */
@@ -535,6 +536,7 @@ export function trainingDiveReach(
   plannedDives: number | null | undefined,
   siteCount: number,
 ): TrainingDiveReach | null {
+  if (siteCount === 0) return null;
   if (trainingSiteAttributionKnown(plannedDives, siteCount)) return "site";
   return plannedDives != null && plannedDives >= 2 ? "default" : null;
 }
@@ -565,7 +567,11 @@ export function markedTrainingRequirement(
   course: TrainingDiveCourse | null | undefined,
   reach: TrainingDiveReach,
 ): Requirement {
-  if (course && reach === "default") return unionRequirements(defaultLowered(trip, course), site);
+  // A site that states no level leaves only the default to lower, at one
+  // dive as at several (dock review of #3910).
+  if (course && (reach === "default" || !site?.minimumCertificationLevel)) {
+    return unionRequirements(defaultLowered(trip, course), site);
+  }
   const sides = tripAndSiteSides(trip, site);
   return unionRequirements(sides.trip, trainingDiveSiteRequirement(sides.site, course));
 }
