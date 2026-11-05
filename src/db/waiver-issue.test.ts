@@ -599,7 +599,7 @@ describe("issueAndDeliverWaiver", () => {
       expect(live).toHaveLength(1);
     });
 
-    it("mints a fresh forms link once the live one is revoked, and keeps no copy of the dead one", async () => {
+    it("mints a fresh forms link once the live one is revoked", async () => {
       vi.stubEnv("APP_HOST", "https://diveday.test");
       vi.stubEnv("SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
       const { db, shop, bookingId } = await courseSeat();
@@ -611,7 +611,7 @@ describe("issueAndDeliverWaiver", () => {
       if (!first.ok || !second.ok) throw new Error("expected two forms links");
       expect(second.token).not.toBe(first.token);
       const dead = await db
-        .select({ tokenSealed: bookingCapabilities.tokenSealed })
+        .select({ revoked: isNotNull(bookingCapabilities.revokedAt) })
         .from(bookingCapabilities)
         .where(
           and(
@@ -620,7 +620,7 @@ describe("issueAndDeliverWaiver", () => {
             isNotNull(bookingCapabilities.revokedAt),
           ),
         );
-      expect(dead).toEqual([{ tokenSealed: null }]);
+      expect(dead).toEqual([{ revoked: true }]);
     });
 
     it("emails the forms link with its own words, never 'your link expired'", async () => {

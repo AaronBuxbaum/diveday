@@ -1459,7 +1459,7 @@ async function scrubBookingRows(
 
     await tx
       .update(bookingCapabilities)
-      .set({ revokedAt: now, expiresAt: now, tokenSealed: null })
+      .set({ revokedAt: now, expiresAt: now })
       .where(
         and(
           inArray(bookingCapabilities.bookingId, bookingIds),

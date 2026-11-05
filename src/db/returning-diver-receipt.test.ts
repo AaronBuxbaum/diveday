@@ -325,14 +325,12 @@ describe("returning-diver receipt slots", () => {
     ).toBeNull();
     const [row] = await booking.db
       .select({
-        tokenHash: bookingCapabilities.tokenHash,
         returningDeviceHash: bookingCapabilities.returningDeviceHash,
         returningOrder: bookingCapabilities.returningOrder,
       })
       .from(bookingCapabilities)
       .where(eq(bookingCapabilities.id, receipt.receiptId))
       .limit(1);
-    expect(row?.tokenHash).not.toBe(receipt.deviceToken);
     expect(row?.returningDeviceHash).not.toBe(receipt.deviceToken);
     expect(row).not.toHaveProperty("fullName");
     expect(row).not.toHaveProperty("email");

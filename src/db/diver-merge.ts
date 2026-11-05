@@ -1153,7 +1153,7 @@ export async function mergeDiverRecords(input: {
         const transferredAt = nowDate();
         await tx
           .update(bookingCapabilities)
-          .set({ revokedAt: transferredAt, expiresAt: transferredAt, tokenSealed: null })
+          .set({ revokedAt: transferredAt, expiresAt: transferredAt })
           .where(
             and(
               eq(bookingCapabilities.shopId, input.shopId),

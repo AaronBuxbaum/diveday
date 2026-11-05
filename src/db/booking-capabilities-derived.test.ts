@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { randomBytes, randomUUID } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, getTableColumns, isNull } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
 import { capabilityExpiryFor } from "@/lib/booking-capabilities";
 import { bookingLinkKeyring, bookingLinkToken, encodeCapabilityId } from "@/lib/booking-link-token";
@@ -77,6 +77,17 @@ afterEach(() => {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
+});
+
+describe("a link lives only in its row", () => {
+  // #2711 derived every booking link from its row; the stored hash and the
+  // sealed copy are retired, so the schema stops declaring them (#3901). The
+  // column drop follows one release later (the destructive-migration guard).
+  it("declares no stored token hash and no sealed token", () => {
+    const columns = Object.values(getTableColumns(bookingCapabilities)).map((c) => c.name);
+    expect(columns).not.toContain("token_hash");
+    expect(columns).not.toContain("token_sealed");
+  });
 });
 
 describe("issuing is get-or-create", () => {
