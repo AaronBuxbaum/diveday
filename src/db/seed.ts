@@ -325,9 +325,7 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
       // is meant to portray. Without this the queue asks it which currency it
       // works in on every screenshot ever taken of Today, which is the same
       // "a demo shouting about its own broken setup is a worse demo" the
-      // trouble-state seeds already avoid (issue #835). A shop that genuinely
-      // has not answered is photographed through
-      // `/api/test/seed-trouble-states?unitsUnconfirmed=1`.
+      // trouble-state facts already avoid (issue #835).
       unitsConfirmedAt: nowDate(),
       // Its desk hours are its own, saved (the default 08:00 to 18:00), so the
       // storefront footer prints them. Every switch on the Features page
@@ -1043,7 +1041,7 @@ export async function clearDemoSchedule(
   // The seed creates none, so clearing them restores exactly the seeded state —
   // and leaving them made the reset non-restoring in the one direction that
   // shows: the media-deletion read (`src/db/unfinished.ts`) feeds Today an `urgency: "now"` row, so
-  // a test that seeded a stale attempt (`/api/test/seed-trouble-states`) left a
+  // a test that seeded a stale attempt (a fact through `/api/test/shop`) left a
   // "Recap photo" cleanup card on Today for whichever spec Playwright's
   // sharding ran next in that worker. That surfaced as three visual captures —
   // `close-out`, `nav-more-menu`, `nav-more-sheet` — reporting as changed on a
@@ -1244,7 +1242,7 @@ export async function clearDemoSchedule(
 
   // Shop-level fixtures a test can mutate directly (not just schedule data)
   // (Codex finding): `shops.review_url` (Settings → Review link) and a
-  // connected `shop_stripe_accounts` row (`/api/test/seed-stripe-account`)
+  // connected `shop_stripe_accounts` row (the `stripeAccount` fact)
   // both persist across resets otherwise, since neither is schedule/booking
   // data — leaking into whichever spec runs next in the same worker and
   // making its assertions order-dependent (e2e/recap.spec.ts's own "review

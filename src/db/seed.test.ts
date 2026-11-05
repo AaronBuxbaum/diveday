@@ -252,7 +252,7 @@ describe("resetDemoSchedule", () => {
 
   it("restores shop-level fixtures a test can mutate directly, not just schedule/booking data (Codex finding)", async () => {
     // e2e/visual.spec.ts sets a review link via the Settings UI and connects
-    // a Stripe account via /api/test/seed-stripe-account, purely to render
+    // a Stripe account via the `stripeAccount` fact, purely to render
     // those surfaces for a screenshot — neither is schedule/booking data, so
     // without this both leaked across specs in the same worker, making
     // assertions like "the review link starts absent" order-dependent.
