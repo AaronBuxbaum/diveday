@@ -80,7 +80,7 @@ describe("the funnel's two doors", () => {
    */
   it("sits in a guide's closing column as wide as the band on a phone", () => {
     const guide = readFileSync(
-      path.join(import.meta.dirname, "..", "switching", "_components", "guide.tsx"),
+      path.join(import.meta.dirname, "..", "(marketing)", "switching", "_components", "guide.tsx"),
       "utf8",
     );
     const closing = guide.slice(guide.indexOf("export function ClosingCta"));
