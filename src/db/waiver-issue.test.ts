@@ -88,7 +88,7 @@ async function seededBooking(email: string | null = "delivered@dive.day") {
 }
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races. A demo shop sends no mail.
+// (`fileScopedShopContext` in src/test/db.ts); tests roll back; demo shops send no mail.
 const ctx = fileScopedShopContext({ realShop: true });
 
 afterEach(() => {
