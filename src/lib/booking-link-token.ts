@@ -1,3 +1,4 @@
+import { BOOKING_LINK_TOKEN_SHAPE } from "./booking-link-shape";
 import { deriveLabelKey, signPayload, tagMatches } from "./signed-token";
 import { isUuid } from "./uuid";
 
@@ -57,7 +58,6 @@ import { isUuid } from "./uuid";
 const DEV_AUTH_SECRET = "diveday-dev-secret-not-for-production";
 const MIN_SECRET_BYTES = 32;
 const TOKEN_LENGTH = 69;
-const TOKEN_SHAPE = /^c([1-9])\.([A-Za-z0-9_-]{22})\.([A-Za-z0-9_-]{43})$/;
 const VERSIONED_SECRET = /^v([2-9]):(.*)$/s;
 
 export type BookingLinkKeyring = {
@@ -225,7 +225,7 @@ export function parseVerifiedCapabilityToken(
   keyring: BookingLinkKeyring = deploymentKeyring(),
 ): { id: string; version: number } | null {
   if (typeof token !== "string" || token.length !== TOKEN_LENGTH) return null;
-  const match = TOKEN_SHAPE.exec(token);
+  const match = BOOKING_LINK_TOKEN_SHAPE.exec(token);
   if (!match) return null;
   const version = Number(match[1]);
   const idSegment = match[2] ?? "";

@@ -57,6 +57,7 @@
  * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
+import { looksLikeBookingLinkToken } from "@/lib/booking-link-shape";
 import {
   parseReadySnapshot,
   READY_CACHE_NAME,
@@ -65,12 +66,12 @@ import {
   readySnapshotPath,
 } from "@/lib/ready-offline";
 
-/**
- * A readiness link and nothing else: `/ready/` and one booking-link token
- * (`src/lib/booking-link-token.ts`: `c<version>.<22-character id>.<43-character tag>`).
- * Kept as its own literal: the worker cannot import the Node-only token module.
- */
-const READY_PAGE_PATTERN = /^\/ready\/c[1-9]\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}$/;
+/** A readiness link and nothing else: `/ready/` and one booking-link token. */
+function isReadyPagePath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/ready/") && looksLikeBookingLinkToken(pathname.slice("/ready/".length))
+  );
+}
 
 /** Two weeks: the ceiling on any copy, whatever day the page names. */
 export const READY_COPY_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
@@ -180,7 +181,7 @@ async function clearCopies(cache: Cache, keep?: string): Promise<void> {
 /** The cache key for a request this module may handle, or null for every other. */
 export function readyPagePath(url: URL, origin: string): string | null {
   if (url.origin !== origin) return null;
-  return READY_PAGE_PATTERN.test(url.pathname) ? url.pathname : null;
+  return isReadyPagePath(url.pathname) ? url.pathname : null;
 }
 
 /** Whether this registration is the diver's `/ready/` one rather than the staff worker. */
