@@ -17,8 +17,8 @@ The account has a fixed number of concurrent runners, and Aaron merges a whole s
 
 - **Run every layer** (the 2026-10-03 rule). Rejected: it is the slice this ADR removes.
 - **Cancel lower runs after they start.** Rejected: needs `actions: write`, the grant ADR 20261003 removed, and wastes the minutes anyway.
-- **A label or dispatch to force a lower layer.** Not built: a red top is fixed from the top, and Aaron can merge up to any layer anyway. Add one if a lower layer ever needs its own run.
+- **A `labeled` trigger to force a lower layer.** Rejected: every label change would start a run in the same concurrency lane and cancel the one in flight. The `ci-now` label is read live by the gate instead; add it and re-run the skipped run (or push).
 
 ## Consequences
 
-Cheaper and faster for the layer that matters. A lower layer shows skipped checks, so a merge "up to a lower layer" has no CI of its own behind it. A run already in flight on the old top continues until its next push or a newer commit supersedes it.
+Cheaper and faster for the layer that matters. A lower layer shows skipped checks, so a merge "up to a lower layer" has no CI of its own behind it unless it carries the `ci-now` label, read live by `stack-gate`: add it, then re-run the skipped run or push. A run already in flight on the old top continues until its next push or a newer commit supersedes it.

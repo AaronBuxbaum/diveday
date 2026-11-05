@@ -22,7 +22,7 @@ depth.
 **CI runs on the top layer only** (ADR [20261105-ci-runs-on-the-top-of-the-stack](../../../docs/architecture/decisions/20261105-ci-runs-on-the-top-of-the-stack.md)):
 the account has a fixed number of runners and Aaron merges the whole stack from the top, so
 `stack-gate` in `ci.yml` skips every lower layer, and a slice of CI across layers never happens.
-A lower layer shows skipped checks, which are not green. Fix a red top from the top; do not hold a
+A lower layer shows skipped checks, which are not green; label it `ci-now` and re-run (or push) to run CI there when the top is red and Aaron wants to merge up to it. Fix a red top from the top; do not hold a
 push for the layer below.
 
 ## Commands

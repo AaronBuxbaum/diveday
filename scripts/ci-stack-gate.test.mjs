@@ -13,6 +13,11 @@ describe("decide", () => {
     expect(result.run).toBe(false);
     expect(result.why).toContain("CI runs on #3");
   });
+  it("runs a lower layer that carries the ci-now label", () => {
+    const stacks = [stack(9, 1, 2, 3)];
+    expect(decide({ number: 2, baseIsDefault: false, stacks, labels: ["ci-now"] }).run).toBe(true);
+    expect(decide({ number: 2, baseIsDefault: false, stacks, labels: ["P2"] }).run).toBe(false);
+  });
   it("runs a pull request on the default branch that is in no stack", () => {
     expect(decide({ number: 5, baseIsDefault: true, stacks: [stack(9, 1, 2)] }).run).toBe(true);
   });
