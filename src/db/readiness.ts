@@ -81,7 +81,6 @@ import {
 import { type MarkedSeat, resolveTrainingMarks } from "./training-mark-resolve";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
-import { peopleWithFailedSeal } from "./waiver-seal-checks";
 import {
   getCurrentWaiverGeneration,
   listSignedWaiversByPerson,
@@ -1861,7 +1860,6 @@ export async function listTripsReadiness(
   const markedSeats = markedSeatsOf(waiverRows, courseByTrip);
   const [
     paymentByBooking,
-    sealFailedPeople,
     [courseFormsByTrip, courseFormSignatures, trainingMarks],
     [
       {
@@ -1874,8 +1872,6 @@ export async function listTripsReadiness(
     ],
   ] = await queryAll(db, [
     () => paymentsByBooking(db, shopId, bookingIds),
-    // Read on every departure, as the hold is (issue #3885, review B1).
-    () => peopleWithFailedSeal(db, shopId, personIds),
     async () => {
       const marks = await resolveTrainingMarks(db, shopId, markedSeats);
       const enrollments = [...marks.values()].filter((mark) => mark.valid);
@@ -1991,7 +1987,7 @@ export async function listTripsReadiness(
           timezone,
         }),
         ownLapsed,
-        sealFailed: sealFailedPeople.has(row.person.id),
+        sealFailed: row.personSealFailed,
         now,
       }),
       // Carried on the row because the manifest needs it and only this function
@@ -2030,7 +2026,7 @@ export async function listTripsReadiness(
         requirement,
         siteRequirement,
         waiver: effectiveWaiver,
-        waiverSealFailed: sealFailedPeople.has(row.person.id),
+        waiverSealFailed: row.personSealFailed,
         releaseLapse,
         certifications: certificationsByPerson.get(row.person.id) ?? [],
         // Measured against this departure: only a course that finishes before

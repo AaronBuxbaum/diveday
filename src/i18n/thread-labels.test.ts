@@ -139,6 +139,12 @@ describe("threadNextKey", () => {
     waiver_runs_out: ["Next: sign a fresh waiver", "Siguiente: firma una exención nueva"],
     waiver_pending: ["Next: sign your waiver", "Siguiente: firma tu exención"],
     waiver_expired: ["Next: sign a fresh waiver", "Siguiente: firma una exención nueva"],
+    // Changed after signing (#3885): a new release comes from the shop, and
+    // the sentence never says the record changed.
+    waiver_seal_failed: [
+      "Next: ask the shop for your waiver",
+      "Siguiente: pide tu exención al centro",
+    ],
     medical_review: [
       "Next: talk to the shop about your medical answers",
       "Siguiente: habla con el centro sobre tus respuestas médicas",

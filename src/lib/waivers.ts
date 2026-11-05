@@ -942,7 +942,7 @@ export function seatWaiverStanding(input: {
   guardianMissing: boolean;
   /** {@link bookingRecordLapsed} over `own`, at the seat's waiver clock. */
   ownLapsed: boolean;
-  /** Any release of this person failed its seal (`peopleWithFailedSeal`, issue #3885). */
+  /** Any release of this person failed its seal (`personSealFailed`, issue #3885). */
   sealFailed?: boolean;
   now?: Date;
 }): SeatWaiverStanding {

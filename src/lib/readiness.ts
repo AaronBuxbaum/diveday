@@ -569,7 +569,7 @@ export type ReadinessInput = {
    */
   /**
    * Any release this person signed at the shop failed its seal check and no
-   * clean signature since has replaced it (`peopleWithFailedSeal`, issue
+   * clean signature since has replaced it (`personSealFailed`, issue
    * #3885, attacker review B1), whichever release this seat reads.
    */
   waiverSealFailed?: boolean;

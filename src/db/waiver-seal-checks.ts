@@ -1,4 +1,16 @@
-import { and, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  type SQLWrapper,
+  sql,
+} from "drizzle-orm";
 import { log } from "@/lib/log";
 import { waiverIntegrityVerdict } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
@@ -188,26 +200,17 @@ export async function recheckWaiverSeals(
  * desk's way out is to send the waiver and have the diver sign again. An
  * older clean signature never does, so backdating cannot reach it.
  */
-export async function peopleWithFailedSeal(
-  db: DbExecutor,
-  shopId: string,
-  personIds: readonly string[],
-): Promise<Set<string>> {
-  if (personIds.length === 0) return new Set();
-  const rows = await db
-    .selectDistinct({ personId: waiverRecords.personId })
-    .from(waiverRecords)
-    .where(
-      and(
-        eq(waiverRecords.shopId, shopId),
-        inArray(waiverRecords.personId, [...personIds]),
-        eq(waiverRecords.integrityValid, false),
-        sql`not exists (select 1 from ${waiverRecords} as clean
-          where clean.shop_id = ${waiverRecords.shopId}
-          and clean.person_id = ${waiverRecords.personId}
-          and clean.integrity_valid = true
-          and clean.signed_at > ${waiverRecords.integrityCheckedAt})`,
-      ),
-    );
-  return new Set(rows.flatMap((row) => (row.personId ? [row.personId] : [])));
+export function personSealFailed(shopId: SQLWrapper, personId: SQLWrapper) {
+  // A column on the readiness row read rather than a read of its own: the
+  // render budgets count statements, and the hold rides the query that
+  // already joins each seat's person (`listTripsWaiverStatuses`).
+  return sql<boolean>`exists (select 1 from ${waiverRecords} as failed
+    where failed.shop_id = ${shopId}
+    and failed.person_id = ${personId}
+    and failed.integrity_valid = false
+    and not exists (select 1 from ${waiverRecords} as clean
+      where clean.shop_id = failed.shop_id
+      and clean.person_id = failed.person_id
+      and clean.integrity_valid = true
+      and clean.signed_at > failed.integrity_checked_at))`.mapWith(Boolean);
 }
