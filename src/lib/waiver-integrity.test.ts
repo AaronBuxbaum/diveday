@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   computeWaiverIntegrityHash,
   isWaiverIntegrityVersion,
+  medicalAnswerSealFor,
   signedIntegrityVersionFor,
   verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_ERASED,
@@ -42,13 +43,15 @@ const record = {
   signedAt: new Date("2026-07-29T01:00:00.000Z"),
   medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
   medicalReviewRequired: false,
-  medicalClearedAt: null,
-  medicalClearedByPersonId: null,
-  medicalClearanceDeclinedAt: null,
-  medicalClearanceDeclinedByPersonId: null,
-  medicalClearanceDocumentUrl: null,
-  medicalClearanceEvaluatedOn: null,
-  medicalClearancePhysicianName: null,
+  medicalClearedAt: null as Date | null,
+  medicalClearedByPersonId: null as string | null,
+  medicalClearanceDeclinedAt: null as Date | null,
+  medicalClearanceDeclinedByPersonId: null as string | null,
+  medicalClearanceDocumentUrl: null as string | null,
+  medicalClearanceEvaluatedOn: null as string | null,
+  medicalClearancePhysicianName: null as string | null,
+  medicalClearanceDocumentFromDiver: false,
+  medicalAnswerSeal: null as string | null,
   guardianName: null,
   guardianRelationship: null,
   guardianEmail: null,
@@ -670,6 +673,149 @@ describe("waiver integrity over the medical alert for the crew (issue #2960)", (
     expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: alert })).toBe("invalid");
     expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: "" })).toBe("invalid");
     expect(verifyWaiverIntegrity({ ...sealed, draftMedicalAlert: alert })).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+});
+
+/**
+ * **The physician's answer seal** (issue #3949): the clearance stamp lifts a
+ * hold, so it is sealed beside the signature rather than trusted beside it.
+ */
+describe("the physician's answer seal", () => {
+  const staff = "00000000-0000-4000-8000-000000000007";
+  const referral = { ...record, status: "medical_review" as const, medicalReviewRequired: true };
+  const cleared = {
+    ...referral,
+    medicalClearedAt: new Date("2026-07-30T09:00:00.000Z"),
+    medicalClearedByPersonId: staff,
+    medicalClearanceEvaluatedOn: "2026-07-30",
+    medicalClearancePhysicianName: "Dr. Imani Reyes",
+  };
+  function sealed(row: typeof referral) {
+    return {
+      ...row,
+      integrityHash: computeWaiverIntegrityHash(row),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+    };
+  }
+
+  it("verifies a sealed clearance without re-sealing the signature", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const signed = sealed(referral);
+    // The answer lands on the row; the signature's seal is the one it had.
+    const answered = {
+      ...cleared,
+      integrityHash: signed.integrityHash,
+      integrityVersion: signed.integrityVersion,
+      medicalAnswerSeal: medicalAnswerSealFor(cleared),
+    };
+    expect(verifyWaiverIntegrity(answered)).toBe("valid");
+    vi.unstubAllEnvs();
+  });
+
+  it("reads a clearance stamped with no seal as invalid, sealed signature or not", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    expect(verifyWaiverIntegrity(sealed(cleared))).toBe("invalid");
+    expect(verifyWaiverIntegrity(cleared)).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("reads any change to a sealed answer as invalid", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const answered = { ...sealed(cleared), medicalAnswerSeal: medicalAnswerSealFor(cleared) };
+    expect(verifyWaiverIntegrity({ ...answered, medicalClearanceEvaluatedOn: "2099-01-01" })).toBe(
+      "invalid",
+    );
+    expect(
+      verifyWaiverIntegrity({ ...answered, medicalClearedAt: new Date("2026-07-31T09:00:00Z") }),
+    ).toBe("invalid");
+    expect(verifyWaiverIntegrity({ ...answered, medicalClearedByPersonId: record.personId })).toBe(
+      "invalid",
+    );
+    expect(verifyWaiverIntegrity({ ...answered, medicalClearancePhysicianName: "Dr. X" })).toBe(
+      "invalid",
+    );
+    expect(verifyWaiverIntegrity({ ...answered, medicalClearanceDocumentFromDiver: true })).toBe(
+      "invalid",
+    );
+    // Taken off altogether: the record says no physician answered, and the
+    // seal left behind says one did.
+    expect(
+      verifyWaiverIntegrity({
+        ...answered,
+        medicalClearedAt: null,
+        medicalClearedByPersonId: null,
+        medicalClearanceEvaluatedOn: null,
+        medicalClearancePhysicianName: null,
+      }),
+    ).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("reads a refusal turned into a clearance as invalid", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const declined = {
+      ...referral,
+      medicalClearanceDeclinedAt: cleared.medicalClearedAt,
+      medicalClearanceDeclinedByPersonId: staff,
+      medicalClearanceEvaluatedOn: cleared.medicalClearanceEvaluatedOn,
+      medicalClearancePhysicianName: cleared.medicalClearancePhysicianName,
+    };
+    const answered = { ...sealed(declined), medicalAnswerSeal: medicalAnswerSealFor(declined) };
+    expect(verifyWaiverIntegrity(answered)).toBe("valid");
+    expect(
+      verifyWaiverIntegrity({
+        ...answered,
+        medicalClearedAt: declined.medicalClearanceDeclinedAt,
+        medicalClearedByPersonId: staff,
+        medicalClearanceDeclinedAt: null,
+        medicalClearanceDeclinedByPersonId: null,
+      }),
+    ).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("never verifies an answer copied from another record", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const elsewhere = { ...cleared, id: "00000000-0000-4000-8000-0000000000ff" };
+    expect(
+      verifyWaiverIntegrity({ ...sealed(cleared), medicalAnswerSeal: medicalAnswerSealFor(elsewhere) }),
+    ).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("reads a seal with no answer as invalid", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    expect(verifyWaiverIntegrity({ ...sealed(referral), medicalAnswerSeal: "0".repeat(64) })).toBe(
+      "invalid",
+    );
+    vi.unstubAllEnvs();
+  });
+
+  it("survives erasure: every field it covers is one erasure keeps", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const answer = {
+      status: cleared.status,
+      medicalReviewRequired: true,
+      medicalClearedAt: cleared.medicalClearedAt,
+      medicalClearedByPersonId: cleared.medicalClearedByPersonId,
+      medicalClearanceEvaluatedOn: cleared.medicalClearanceEvaluatedOn,
+      medicalClearancePhysicianName: cleared.medicalClearancePhysicianName,
+    };
+    const erasedCleared = { ...erased, ...answer };
+    const withLetter = {
+      ...erasedCleared,
+      medicalClearanceDocumentUrl: "https://media.example.com/letter.pdf",
+    };
+    const reSealed = {
+      ...erasedCleared,
+      integrityHash: computeWaiverIntegrityHash(erasedCleared, WAIVER_INTEGRITY_VERSION_ERASED),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_ERASED,
+      // Sealed while the letter was still attached: erasure destroyed the
+      // file, and the seal never covered it.
+      medicalAnswerSeal: medicalAnswerSealFor(withLetter),
+    };
+    expect(verifyWaiverIntegrity(reSealed)).toBe("valid");
     vi.unstubAllEnvs();
   });
 });

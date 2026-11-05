@@ -27,8 +27,8 @@ import { waiverRecords } from "./schema";
  *   that carried it would hand it to every staffer.
  * - `tokenHash` — the bearer link. A status read must never be
  *   able to hand it back out.
- * - `integrityHash` — only the integrity check reads the seal, through
- *   {@link WAIVER_SEALED_COLUMNS}.
+ * - `integrityHash`, `medicalAnswerSeal` — only the integrity check reads a
+ *   seal, through {@link WAIVER_SEALED_COLUMNS}.
  *
  * `medicalAnswers` stays: the roster's medical-hold summary
  * (`flaggedMedicalPrompts`) reads it on a `medical_review` record.
@@ -47,6 +47,7 @@ const {
   medicalAlert: _medicalAlert,
   tokenHash: _tokenHash,
   integrityHash: _integrityHash,
+  medicalAnswerSeal: _medicalAnswerSeal,
   ...stateColumns
 } = getTableColumns(waiverRecords);
 
