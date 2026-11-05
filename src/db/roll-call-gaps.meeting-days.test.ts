@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { listRollCallGaps } from "./roll-call-gaps";
+import { listRollCallGaps, oneRowPerHalf } from "./roll-call-gaps";
 import { bookings, people, rollCallEvents, tripScheduleDays, trips } from "./schema";
 import { listStaff } from "./trips";
 import { livePerson } from "./trips-live";
@@ -62,7 +62,7 @@ async function course(divers = 2) {
   const say = (
     bookingId: string,
     checkpoint: "departure" | "after_dive_1" | "after_dive_2",
-    status: "boarded" | "not_boarded",
+    status: "boarded" | "not_boarded" | "cleared",
     occurredAt: string,
   ) =>
     db.insert(rollCallEvents).values({
@@ -188,5 +188,95 @@ describe("roll call on a course that meets on two Saturdays", () => {
     expect(await c.gaps("2026-08-05T14:00:00.000Z")).toMatchObject([
       { reason: "missing_diver", dayNumber: 1, underway: false },
     ]);
+  });
+
+  it("keeps Saturday's missing diver and the second Saturday's open count both on the list", async () => {
+    const c = await course();
+    const [first, second] = c.bookingIds as [string, string];
+    for (const id of c.bookingIds)
+      await c.say(id, "departure", "boarded", "2026-08-01T12:45:00.000Z");
+    await c.say(first, "after_dive_1", "not_boarded", "2026-08-01T14:30:00.000Z");
+    await c.say(second, "after_dive_1", "boarded", "2026-08-01T14:31:00.000Z");
+    await c.say(second, "after_dive_2", "boarded", "2026-08-01T16:30:00.000Z");
+    // Second Saturday: the other diver boards and nobody counts them back.
+    await c.say(second, "departure", "boarded", "2026-08-15T12:45:00.000Z");
+    const found = await c.gaps("2026-08-15T19:00:00.000Z");
+    expect(found.map((gap) => [gap.reason, gap.dayNumber, gap.uncounted])).toEqual([
+      ["after_dive_uncounted", 2, 1],
+      // The missing diver was not on the second Saturday's dock either.
+      ["departure_uncounted", 2, 1],
+      ["missing_diver", 1, 1],
+    ]);
+  });
+
+  it("keeps Saturday's own gap when the second Saturday has a gap of its own", async () => {
+    const c = await course();
+    const [first, second] = c.bookingIds as [string, string];
+    for (const id of c.bookingIds)
+      await c.say(id, "departure", "boarded", "2026-08-01T12:45:00.000Z");
+    await c.say(first, "after_dive_1", "not_boarded", "2026-08-01T14:30:00.000Z");
+    await c.say(second, "after_dive_1", "boarded", "2026-08-01T14:31:00.000Z");
+    await c.say(second, "after_dive_2", "boarded", "2026-08-01T16:30:00.000Z");
+    // Second Saturday: the other diver is missing after dive 1 as well.
+    await c.say(second, "departure", "boarded", "2026-08-15T12:45:00.000Z");
+    await c.say(second, "after_dive_1", "not_boarded", "2026-08-15T14:30:00.000Z");
+    const found = await c.gaps("2026-08-15T19:00:00.000Z");
+    expect(found.filter((gap) => gap.reason === "missing_diver")).toEqual([
+      expect.objectContaining({ dayNumber: 2, uncounted: 1 }),
+      expect.objectContaining({ dayNumber: 1, uncounted: 1 }),
+    ]);
+  });
+
+  it("raises a diver marked not back before the second Saturday's stored start", async () => {
+    const c = await course();
+    await c.countDay(SAT_ONE);
+    const [first, second] = c.bookingIds as [string, string];
+    // The boat left early: taps at 08:00 EDT, before the 09:00 stored start.
+    await c.say(first, "departure", "boarded", "2026-08-15T11:30:00.000Z");
+    await c.say(second, "departure", "boarded", "2026-08-15T11:31:00.000Z");
+    await c.say(first, "after_dive_1", "not_boarded", "2026-08-15T12:30:00.000Z");
+    expect(await c.gaps("2026-08-15T12:40:00.000Z")).toMatchObject([
+      { reason: "missing_diver", dayNumber: 2, uncounted: 1 },
+    ]);
+  });
+
+  it("lets the second Saturday take back Saturday's mis-tapped 'not back aboard'", async () => {
+    const c = await course();
+    const [first] = c.bookingIds as [string, string];
+    await c.countDay(SAT_ONE);
+    await c.say(first, "after_dive_2", "not_boarded", "2026-08-01T16:40:00.000Z");
+    expect(await c.gaps("2026-08-10T14:00:00.000Z")).toMatchObject([
+      { reason: "missing_diver", dayNumber: 1 },
+    ]);
+    await c.say(first, "after_dive_2", "cleared", "2026-08-10T14:05:00.000Z");
+    // Taken back, the diver reads as not yet counted there, never as missing.
+    expect(await c.gaps("2026-08-10T14:10:00.000Z")).toMatchObject([
+      { reason: "after_dive_uncounted", dayNumber: 1, diveNumber: 2, uncounted: 1 },
+    ]);
+  });
+});
+
+describe("oneRowPerHalf, for a reader drawn once per departure", () => {
+  const row = (reason: string, dayNumber: number) =>
+    ({ tripId: "t", reason, dayNumber }) as Parameters<typeof oneRowPerHalf>[0][number];
+
+  it("keeps a stated missing person from any day over a newer day's open count", () => {
+    const kept = oneRowPerHalf([
+      row("after_dive_uncounted", 2),
+      row("departure_uncounted", 2),
+      row("missing_diver", 1),
+      row("crew_uncounted", 2),
+      row("crew_uncounted", 1),
+    ]);
+    expect(kept.map((gap) => [gap.reason, gap.dayNumber])).toEqual([
+      ["departure_uncounted", 2],
+      ["missing_diver", 1],
+      ["crew_uncounted", 2],
+    ]);
+  });
+
+  it("passes a one-day trip's rows through unchanged", () => {
+    const rows = [row("missing_diver", 1), row("crew_uncounted", 1), row("no_roll_call", 1)];
+    expect(oneRowPerHalf(rows)).toEqual(rows);
   });
 });
