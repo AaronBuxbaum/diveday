@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { catchUpKind } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import type { ParticipantType } from "@/lib/participant-types";
 import { fileScopedShopContext } from "@/test/db";
@@ -8,15 +9,7 @@ import { createBooking, setBookingParticipantType } from "./bookings";
 import type { AppDb } from "./client";
 import { recordRollCall } from "./manifests";
 import { listTripReadiness } from "./readiness";
-import {
-  activityEvents,
-  bookings,
-  cards,
-  tripDeskEvents,
-  tripRequirements,
-  trips,
-  waiverRecords,
-} from "./schema";
+import { activityEvents, bookings, cards, tripRequirements, trips, waiverRecords } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { issueWaiverRequest } from "./waivers";
 
@@ -222,8 +215,9 @@ describe("joining the dive after departure", () => {
     });
     const desk = await db
       .select()
-      .from(tripDeskEvents)
-      .where(and(eq(tripDeskEvents.tripId, trip.id), eq(tripDeskEvents.kind, "now_diving")));
+      .from(activityEvents)
+      .where(eq(activityEvents.tripId, trip.id))
+      .then((rows) => rows.filter((row) => catchUpKind(row.code, row.params) === "now_diving"));
     expect(desk.map((row) => [row.bookingId, row.actorPersonId])).toEqual([[bookingId, staff.id]]);
   });
 

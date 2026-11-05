@@ -2,6 +2,7 @@
  * Gear: holding a unit for a seat or a counter rental — reserve, check out,
  * return, release and re-window. Imported through the `./gear` barrel.
  */
+
 import { and, asc, count, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -14,11 +15,11 @@ import {
   type ReservationWindow,
 } from "@/lib/gear";
 import type { AppDb, DbExecutor } from "./client";
-import { recordDeskEvent } from "./desk-events";
 import { openServiceConcerns } from "./gear-availability";
 import { setGearItemStatus } from "./gear-items";
 import { latestServiceClocks } from "./gear-service";
 import { liveGearItem, openGearReservation, optional } from "./gear-shared";
+import { recordDeskLine } from "./operations";
 import { violatesExclusionConstraint } from "./query-helpers";
 import { bookings, type GearReservation, gearItems, gearReservations } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
@@ -181,13 +182,13 @@ export async function reserveGearUnit(
       if (!reservation) return { ok: false, reason: "unit_unavailable" } as const;
       // "Ben Okafor has different gear now." on the manifest's catch-up strip
       // — one of the four arrival facts #1187 names. **Which unit is
-      // deliberately not in the event**: the strip says the fact, the prep page
+      // deliberately not in the line**: the strip says the fact, the prep page
       // says the detail, and a size on a boarding list is a detail nobody at
       // the rail is acting on.
-      await recordDeskEvent(tx, {
+      await recordDeskLine(tx, {
         shopId: input.shopId,
         tripId: booking.tripId,
-        kind: "gear_changed",
+        code: "desk_gear_changed",
         bookingId: booking.id,
         subjectPersonId: booking.personId,
       });
@@ -537,10 +538,10 @@ export async function releaseGearReservation(
           .limit(1)
       : [];
     if (booking) {
-      await recordDeskEvent(db, {
+      await recordDeskLine(db, {
         shopId: input.shopId,
         tripId: booking.tripId,
-        kind: "gear_changed",
+        code: "desk_gear_changed",
         bookingId: booking.id,
         subjectPersonId: booking.personId,
       });

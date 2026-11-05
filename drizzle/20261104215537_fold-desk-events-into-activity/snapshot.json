@@ -1,0 +1,469 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "b5ee00cc-ddf1-4cb3-b241-b0eed40506c6",
+  "prevIds": [
+    "1117301c-2bd5-4416-832a-9e12b5ef0a61"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "activity_audience"
+      ],
+      "writes": [
+        "s|enum|public.activity_audience",
+        "n|enum|public.activity_audience",
+        "e|enum|public.activity_audience",
+        "n|type|public.activity_audience"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "today_read_mark_events"
+      ],
+      "writes": [
+        "s|fk|public.today_read_mark_events.today_read_mark_events_event_id_trip_desk_events_id_fkey",
+        "n|fk|public.today_read_mark_events.today_read_mark_events_event_id_trip_desk_events_id_fkey",
+        "e|fk|public.today_read_mark_events.today_read_mark_events_event_id_trip_desk_events_id_fkey",
+        "n|con|public.today_read_mark_events.today_read_mark_events_event_id_trip_desk_events_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.today_read_mark_events",
+        "n|sch|public",
+        "e|col|public.today_read_mark_events.event_id"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_desk_events"
+      ],
+      "writes": [
+        "s|tbl|public.trip_desk_events",
+        "n|tbl|public.trip_desk_events",
+        "e|tbl|public.trip_desk_events",
+        "n|rel|public.trip_desk_events",
+        "n|type|public.trip_desk_events"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "activity_events",
+        "audience"
+      ],
+      "writes": [
+        "s|col|public.activity_events.audience",
+        "n|col|public.activity_events.audience",
+        "e|col|public.activity_events.audience"
+      ],
+      "reads": [
+        "n|tbl|public.activity_events",
+        "n|sch|public",
+        "n|enum|public.activity_audience"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "activity_events",
+        "activity_events_shop_trip_seq_idx"
+      ],
+      "writes": [
+        "s|idx|public.activity_events_shop_trip_seq_idx",
+        "n|idx|public.activity_events_shop_trip_seq_idx",
+        "e|idx|public.activity_events_shop_trip_seq_idx",
+        "n|rel|public.activity_events_shop_trip_seq_idx"
+      ],
+      "reads": [
+        "n|tbl|public.activity_events",
+        "n|sch|public",
+        "n|col|public.activity_events.shop_id",
+        "n|col|public.activity_events.trip_id",
+        "n|col|public.activity_events.seq"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "activity_events",
+        "activity_events_shop_id_id_unique"
+      ],
+      "writes": [
+        "s|idx|public.activity_events_shop_id_id_unique",
+        "n|idx|public.activity_events_shop_id_id_unique",
+        "e|idx|public.activity_events_shop_id_id_unique",
+        "n|rel|public.activity_events_shop_id_id_unique"
+      ],
+      "reads": [
+        "n|tbl|public.activity_events",
+        "n|sch|public",
+        "n|col|public.activity_events.shop_id",
+        "n|col|public.activity_events.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "today_read_mark_events"
+      ],
+      "writes": [
+        "s|fk|public.today_read_mark_events.today_read_mark_events_event_id_activity_events_id_fkey",
+        "n|fk|public.today_read_mark_events.today_read_mark_events_event_id_activity_events_id_fkey",
+        "e|fk|public.today_read_mark_events.today_read_mark_events_event_id_activity_events_id_fkey",
+        "n|con|public.today_read_mark_events.today_read_mark_events_event_id_activity_events_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.today_read_mark_events",
+        "n|sch|public",
+        "n|tbl|public.activity_events",
+        "n|sch|public",
+        "n|col|public.today_read_mark_events.event_id",
+        "n|col|public.activity_events.id",
+        "e|uniqueness|public.activity_events.id"
+      ]
+    },
+    {
+      "statementType": "recreate_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "today_read_mark_events"
+      ],
+      "writes": [
+        "s|fk|public.today_read_mark_events.today_read_mark_events_shop_event_fk",
+        "n|fk|public.today_read_mark_events.today_read_mark_events_shop_event_fk",
+        "e|fk|public.today_read_mark_events.today_read_mark_events_shop_event_fk",
+        "n|con|public.today_read_mark_events.today_read_mark_events_shop_event_fk"
+      ],
+      "reads": [
+        "n|tbl|public.today_read_mark_events",
+        "n|sch|public",
+        "n|tbl|public.activity_events",
+        "n|sch|public",
+        "n|col|public.today_read_mark_events.shop_id",
+        "n|col|public.today_read_mark_events.event_id",
+        "n|col|public.activity_events.shop_id",
+        "n|col|public.activity_events.id",
+        "e|uniqueness|public.activity_events.id.shop_id"
+      ],
+      "sqlHash": "af16ea5fe5311d2a"
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "activity_events"
+      ],
+      "writes": [
+        "s|ck|public.activity_events.activity_events_desk_is_staff",
+        "n|ck|public.activity_events.activity_events_desk_is_staff",
+        "e|ck|public.activity_events.activity_events_desk_is_staff",
+        "n|con|public.activity_events.activity_events_desk_is_staff"
+      ],
+      "reads": [
+        "n|tbl|public.activity_events",
+        "n|sch|public",
+        "n|col|public.activity_events.code",
+        "n|col|public.activity_events.audience"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "activity_events"
+      ],
+      "writes": [
+        "s|ck|public.activity_events.activity_events_actor_or_system_reason"
+      ],
+      "reads": [
+        "n|tbl|public.activity_events",
+        "n|sch|public",
+        "n|col|public.activity_events.actor_person_id",
+        "n|col|public.activity_events.system_reason",
+        "n|col|public.activity_events.code",
+        "e|col|public.activity_events.actor_person_id",
+        "e|col|public.activity_events.system_reason"
+      ],
+      "sqlHash": "24c67044e1bb8067"
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "trip_desk_event_kind"
+      ],
+      "writes": [
+        "s|enum|public.trip_desk_event_kind",
+        "n|enum|public.trip_desk_event_kind",
+        "e|enum|public.trip_desk_event_kind",
+        "n|type|public.trip_desk_event_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "activity_audience",
+        "values": [
+          "staff",
+          "diver"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "activity_events",
+        "name": "audience",
+        "type": "activity_audience",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'staff'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "activity_events",
+        "name": "activity_events_shop_trip_seq_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "trip_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "seq",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "activity_events",
+        "name": "activity_events_shop_id_id_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "today_read_mark_events",
+        "name": "today_read_mark_events_event_id_activity_events_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "event_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "activity_events",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "activity_events",
+        "name": "activity_events_desk_is_staff",
+        "value": "\"code\" not in ('desk_running_late', 'desk_seat_released', 'desk_seat_turned_away', 'desk_balance_owed', 'desk_gear_changed', 'desk_pickup_set', 'desk_help_request', 'desk_meeting_point', 'desk_plan_changed') or \"audience\" = 'staff'",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"trip_desk_events\"]"
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"trip_desk_event_kind\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_desk_events\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_desk_events\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_desk_events\",\"trip_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_desk_events\",\"kind\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_desk_events\",\"booking_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_desk_events\",\"subject_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_desk_events\",\"actor_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_desk_events\",\"occurred_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_desk_events\",\"seq\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_desk_events_shop_trip_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_desk_events_occurred_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_desk_events_subject_person_id_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_desk_events_actor_person_id_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_desk_events_shop_id_id_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_desk_events\",\"trip_desk_events_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_desk_events\",\"trip_desk_events_trip_id_trips_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_desk_events\",\"trip_desk_events_booking_id_bookings_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_desk_events\",\"trip_desk_events_subject_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_desk_events\",\"trip_desk_events_actor_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"today_read_mark_events\",\"today_read_mark_events_event_id_trip_desk_events_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"trip_desk_events\",\"trip_desk_events_pkey\"]"
+    },
+    {
+      "op": "alter",
+      "key": "fks\u0000[\"public\",\"today_read_mark_events\",\"today_read_mark_events_shop_event_fk\"]",
+      "set": {
+        "tableTo": "activity_events"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"activity_events\",\"activity_events_actor_or_system_reason\"]",
+      "set": {
+        "value": "(\"actor_person_id\" is null) = (\"system_reason\" is not null) or (\"system_reason\" is null and \"code\" in ('desk_running_late', 'desk_seat_released', 'desk_seat_turned_away', 'desk_balance_owed', 'desk_gear_changed', 'desk_pickup_set', 'desk_help_request', 'desk_meeting_point', 'desk_plan_changed'))"
+      }
+    }
+  ]
+}

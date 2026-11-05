@@ -5,9 +5,9 @@ import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
 import { PLAN_CHANGE_NOTE_MAX, type PlanChangeReason } from "@/lib/plan-change";
 import { standingResultMeansSailed } from "@/lib/roll-call";
 import type { AppDb, DbExecutor } from "./client";
-import { recordDeskEvent } from "./desk-events";
 import { deskCountsDiveDay, seatCanBeDiveDay } from "./dive-days";
 import { isMarineLifeSlug } from "./marine-life-catalog";
+import { recordDeskLine } from "./operations";
 import { newestMarkFirst } from "./roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import {
@@ -548,10 +548,10 @@ export async function upsertExecutedDive(
     // groups into the same one sentence, and the person who saved it never sees
     // their own act.
     if (planChangeReasonCode) {
-      await recordDeskEvent(tx, {
+      await recordDeskLine(tx, {
         shopId: input.shopId,
         tripId: input.tripId,
-        kind: "plan_changed",
+        code: "desk_plan_changed",
         actorPersonId: recorder.id,
       });
     }

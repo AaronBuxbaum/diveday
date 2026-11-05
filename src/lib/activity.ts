@@ -1,3 +1,4 @@
+import type { CatchUpKind } from "./catch-up";
 import type { CourseAdmissionRefusal } from "./course-admission";
 import type { TurnAwayReason } from "./turn-away";
 
@@ -228,8 +229,13 @@ type ActivityParamShapes = {
    * added them from the manifest, so the line says where it happened.
    */
   rider_added_at_dock: { actor: string; diver: string };
-  /** A staffer moved a diver's seat from this departure to another (ADR 20261013-staff-move-a-seat). */
-  seat_moved_away: { actor: string; diver: string };
+  /**
+   * A staffer moved a diver's seat from this departure to another (ADR
+   * 20261013-staff-move-a-seat). `turnedAway` is `yes` when the seat had been
+   * turned away here first: it left this roster then, so the catch-up strip
+   * does not say it again.
+   */
+  seat_moved_away: { actor: string; diver: string; turnedAway?: "yes" };
   /** …and the departure it moved to says where it came from. */
   seat_moved_here: { actor: string; diver: string };
   /** A staffer sent one note to everyone booked on the departure (batch 4, J4). */
@@ -685,4 +691,127 @@ export function activityParams(raw: unknown): Record<string, string> {
     if (typeof value === "string") params[key] = value;
   }
   return params;
+}
+
+/**
+ * **Who may read a line** (issue #2701, the #1202 disclosure boundary), stored
+ * in `activity_events.audience`. `staff` lines are read by staff surfaces only;
+ * a diver-facing surface reads `diver` lines and nothing else.
+ */
+export type ActivityAudience = "staff" | "diver";
+
+/**
+ * The codes a diver may read. **Empty on purpose**: every line this table
+ * holds today is the shop's own account or the desk's handoff. A code joins
+ * this list only with the diver-facing reader that prints it and a security
+ * review, which is the boundary #1202 drew.
+ */
+export const DIVER_AUDIENCE_CODES: readonly ActivityCode[] = [];
+
+/** The audience a recorder stores for a code: `staff` unless the code is listed above. */
+export function activityAudience(code: string): ActivityAudience {
+  return (DIVER_AUDIENCE_CODES as readonly string[]).includes(code) ? "diver" : "staff";
+}
+
+/**
+ * **Desk-only lines** (issue #2701): what the desk did that a crew member
+ * coming back to a departure needs to know and the shop's trail does not
+ * record, each named for the catch-up sentence it feeds. They live in
+ * `activity_events` beside the trail and are **never trail lines**: no staff
+ * trail, log, export or diver surface reads them (`onTheTrail` in
+ * `src/db/operations.ts`), they carry no names (the subject is joined live),
+ * and they are kept 30 days rather than the trail's years
+ * (`DESK_LINE_RETENTION_DAYS`, `src/lib/retention.ts`).
+ *
+ * A desk-only line may have no actor and no system reason: a diver asking for
+ * a hand on their own link, or a seat given back by a path that hands down no
+ * actor. The table's check allows that for these codes only.
+ */
+const DESK_ONLY_KINDS = {
+  desk_running_late: "running_late",
+  desk_seat_released: "seat_released",
+  desk_seat_turned_away: "seat_turned_away",
+  desk_balance_owed: "balance_owed",
+  desk_gear_changed: "gear_changed",
+  desk_pickup_set: "pickup_set",
+  desk_help_request: "help_request",
+  desk_meeting_point: "meeting_point",
+  desk_plan_changed: "plan_changed",
+} as const satisfies Record<`desk_${string}`, CatchUpKind>;
+
+export type DeskOnlyCode = keyof typeof DESK_ONLY_KINDS;
+
+/** Every desk-only code, for the table's checks, the trail filter and retention. */
+export const DESK_ONLY_CODES = Object.keys(DESK_ONLY_KINDS) as readonly DeskOnlyCode[];
+
+export function isDeskOnlyCode(value: string): value is DeskOnlyCode {
+  return Object.hasOwn(DESK_ONLY_KINDS, value);
+}
+
+/**
+ * **Trail codes flagged for the desk** (issue #2701): one act, one row, read
+ * by the trail as a sentence and by the catch-up strip as the kind named here.
+ */
+const TRAIL_DESK_KINDS = {
+  counter_check_in: "arrival",
+  seat_added: "seat_taken",
+  seat_added_walk_in: "seat_taken",
+  rider_added_at_dock: "seat_taken",
+  seat_moved_here: "seat_taken",
+} as const satisfies Partial<Record<ActivityCode, CatchUpKind>>;
+
+/**
+ * The two flagged codes whose kind rides in the line's own names: a
+ * participant-type change feeds the sentence for the seat's new type, and a
+ * seat moved away after it was turned away feeds nothing (it left the roster
+ * when the desk turned it away, and the strip said so then).
+ */
+const TRAIL_DESK_KINDS_BY_PARAMS = {
+  seat_moved_away: (params) => (params.turnedAway === "yes" ? null : "seat_released"),
+  participant_type_changed: (params) => {
+    if (params.type === "diver") return "now_diving";
+    if (params.type === "snorkeler") return "now_snorkeling";
+    return params.type === "rider" ? "now_riding" : null;
+  },
+} as const satisfies Partial<
+  Record<ActivityCode, (params: Record<string, string>) => CatchUpKind | null>
+>;
+
+/**
+ * Every code the catch-up strip reads, desk-only and desk-flagged, for the
+ * readers' `code in (…)` filter. A row outside it is never a desk line.
+ */
+export const DESK_FLAGGED_CODES: readonly string[] = [
+  ...DESK_ONLY_CODES,
+  ...Object.keys(TRAIL_DESK_KINDS),
+  ...Object.keys(TRAIL_DESK_KINDS_BY_PARAMS),
+];
+
+/**
+ * The codes whose every line feeds `kind`, for the strip's roster checks
+ * (`rosterStillSaysIt`). The two read by their names feed none of the kinds
+ * those checks are about.
+ */
+export function deskCodesFeeding(kind: CatchUpKind): string[] {
+  return [
+    ...DESK_ONLY_CODES.filter((code) => DESK_ONLY_KINDS[code] === kind),
+    ...Object.entries(TRAIL_DESK_KINDS)
+      .filter(([, feeds]) => feeds === kind)
+      .map(([code]) => code),
+  ];
+}
+
+/**
+ * **Which catch-up sentence a stored line feeds**, or null for a line the
+ * strip does not read. The one place a code is read as a desk line.
+ */
+export function catchUpKind(code: string, rawParams: unknown): CatchUpKind | null {
+  if (isDeskOnlyCode(code)) return DESK_ONLY_KINDS[code];
+  if (Object.hasOwn(TRAIL_DESK_KINDS, code)) {
+    return TRAIL_DESK_KINDS[code as keyof typeof TRAIL_DESK_KINDS];
+  }
+  if (!Object.hasOwn(TRAIL_DESK_KINDS_BY_PARAMS, code)) return null;
+  const feeds: (params: Record<string, string>) => CatchUpKind | null =
+    TRAIL_DESK_KINDS_BY_PARAMS[code as keyof typeof TRAIL_DESK_KINDS_BY_PARAMS];
+  return feeds(activityParams(rawParams));
 }

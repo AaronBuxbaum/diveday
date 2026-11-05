@@ -1961,6 +1961,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "subject_person_id",
       "subject_name",
       "code",
+      "audience",
       "params",
       "occurred_at",
     ],
@@ -1977,6 +1978,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.subjectPersonId,
         row.subjectPersonId ? personName.get(row.subjectPersonId) : null,
         row.code,
+        // Who may read the line (issue #2701); `staff` on every line today.
+        row.audience,
         // The names the line's sentence needs, as JSON. Not a rendered
         // sentence: picking words is the reader's job and needs a locale
         // this layer deliberately does not have (`.claude/rules/domain.md`),

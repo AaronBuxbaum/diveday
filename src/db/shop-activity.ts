@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
-import type { ActivityEntry } from "@/lib/activity";
+import { type ActivityEntry, DESK_ONLY_CODES } from "@/lib/activity";
 import { STAFF_ROLES } from "@/lib/authz";
 import type { BoatPaperField } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
@@ -152,15 +152,19 @@ function linesUnion(shopId: string, filter: ShopActivityFilter): SQL | null {
             sql`, `,
           )})`
         : sql``;
+    // Desk-only lines are the crew's same-day handoff, never the log (#1202,
+    // issue #2701): the same rule as `onTheTrail` in `./operations`.
     arms.push(sql`
       select 'activity' as source, ae.id::text as id, ae.code as code, ae.params as params,
         ae.actor_person_id::text as actor_person_id, ae.trip_id::text as trip_id,
         ae.order_id::text as order_id, ae.subject_person_id::text as subject_person_id,
         ae.occurred_at as occurred_at, ae.seq as seq
       from ${activityEvents} ae
-      where ae.shop_id = ${shopId}${codeFilter}${actor(sql`ae.actor_person_id`)}${bounds(
-        sql`ae.occurred_at`,
-      )}`);
+      where ae.shop_id = ${shopId}
+        and ae.code not in (${sql.join(
+          DESK_ONLY_CODES.map((code) => sql`${code}`),
+          sql`, `,
+        )})${codeFilter}${actor(sql`ae.actor_person_id`)}${bounds(sql`ae.occurred_at`)}`);
   }
   if (!kind || kind === "reviews") {
     arms.push(sql`

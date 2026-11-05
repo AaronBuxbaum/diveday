@@ -5,7 +5,7 @@ import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { cleanDietaryNote } from "@/lib/lunch-aboard";
 import type { ReEntryAsk } from "@/lib/re-entry";
 import type { AppDb, DbExecutor } from "./client";
-import { recordDeskEvent } from "./desk-events";
+import { recordDeskLine } from "./operations";
 import { bookings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -182,10 +182,10 @@ export async function setBookingHotelPickup(
   // names, and the one a crew planning a run to the dock most needs. Only when
   // there is a pickup: clearing one is the desk tidying a field, not news.
   if (input.hotelPickupLocation) {
-    await recordDeskEvent(db, {
+    await recordDeskLine(db, {
       shopId: input.shopId,
       tripId: updated.tripId,
-      kind: "pickup_set",
+      code: "desk_pickup_set",
       bookingId: updated.id,
       subjectPersonId: updated.personId,
     });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { WELCOME_HELLOS } from "@/lib/welcome-cue";
-import { catchUpSentences } from "./desk-event-labels";
+import { catchUpSentences } from "./activity-labels";
 import { staffTranslator } from "./staff-messages";
 import {
   sayHelloSentences,

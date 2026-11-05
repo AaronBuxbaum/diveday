@@ -1,17 +1,18 @@
-import type { tripDeskEventKind } from "@/db/schema";
-
 /**
  * **The shift catch-up strip's domain** — what the desk did, grouped into the
  * sentences a crew member reads when they come back to a departure (issues
  * #1202 and #1187, delight report D42 with D27 folded in; ADR
  * 20260904-reef-all-the-way-down, slice 16d).
  *
+ * The strip reads desk lines: `activity_events` rows whose code is flagged
+ * for the desk in `src/lib/activity.ts` (`catchUpKind`, issue #2701). A kind
+ * here is the sentence a line feeds, not a stored value.
+ *
  * Framework-free, and **codes and names only — not one sentence**. The words
- * live in `src/i18n/desk-event-labels.ts`, which is what lets a crew read the
- * strip in their own language and what keeps `pnpm check:domain-strings` from
- * having anything to find here.
+ * live in `src/i18n/activity-labels.ts` (`catchUpSentences`), which is what
+ * lets a crew read the strip in their own language and what keeps
+ * `pnpm check:domain-strings` from having anything to find here.
  */
-export type DeskEventKind = (typeof tripDeskEventKind.enumValues)[number];
 
 /**
  * **The order the strip's sentences come in**, which is not the order the desk
@@ -23,11 +24,11 @@ export type DeskEventKind = (typeof tripDeskEventKind.enumValues)[number];
  * and make the reader sort them; grouping by kind means each fact is said once,
  * with every name it is about.
  *
- * Typed as a tuple `satisfies readonly DeskEventKind[]` and read back by
- * {@link groupCatchUp} so **a kind added to the enum without a place in this
- * order is a compile error**, not a silently invisible event.
+ * The kinds are this tuple, read back by {@link groupCatchUp}, so **a kind
+ * cannot exist without a place in this order**: it is never a silently
+ * invisible line.
  */
-export const DESK_EVENT_KINDS = [
+export const CATCH_UP_KINDS = [
   "arrival",
   "running_late",
   "seat_taken",
@@ -42,11 +43,14 @@ export const DESK_EVENT_KINDS = [
   "help_request",
   "meeting_point",
   "plan_changed",
-] as const satisfies readonly DeskEventKind[];
+] as const;
 
-/** One desk act, as the reader's own query hands it back. */
-export type DeskEvent = {
-  kind: DeskEventKind;
+/** The sentence a desk line feeds. */
+export type CatchUpKind = (typeof CATCH_UP_KINDS)[number];
+
+/** One desk line, as the reader's own query hands it back. */
+export type CatchUpEvent = {
+  kind: CatchUpKind;
   seq: number;
   occurredAt: Date;
   /**
@@ -58,12 +62,12 @@ export type DeskEvent = {
 
 /** One sentence's worth: a kind, and every name it is about, in order. */
 export type CatchUpGroup = {
-  kind: DeskEventKind;
+  kind: CatchUpKind;
   names: readonly string[];
 };
 
 /**
- * Group a person's unread desk events into at most one line per kind.
+ * Group a person's unread desk lines into at most one line per kind.
  *
  * Three rules, each of them a thing the strip must not do:
  *
@@ -73,26 +77,18 @@ export type CatchUpGroup = {
  * - **A name appears once inside a kind**, in the order it was first seen. A
  *   diver checked in twice is one arrival; a diver who arrived and then changed
  *   gear appears once in each of two groups and twice in neither.
- * - **Kinds come back in {@link DESK_EVENT_KINDS} order**, never in the order
+ * - **Kinds come back in {@link CATCH_UP_KINDS} order**, never in the order
  *   the desk happened to act.
  */
-export function groupCatchUp(events: readonly DeskEvent[]): CatchUpGroup[] {
-  const namesByKind = new Map<DeskEventKind, string[]>();
+export function groupCatchUp(events: readonly CatchUpEvent[]): CatchUpGroup[] {
+  const namesByKind = new Map<CatchUpKind, string[]>();
   for (const event of events) {
     const names = namesByKind.get(event.kind) ?? [];
     if (event.subjectName && !names.includes(event.subjectName)) names.push(event.subjectName);
     namesByKind.set(event.kind, names);
   }
-  return DESK_EVENT_KINDS.flatMap((kind) => {
+  return CATCH_UP_KINDS.flatMap((kind) => {
     const names = namesByKind.get(kind);
     return names ? [{ kind, names }] : [];
   });
-}
-
-/** The catch-up line a type change writes, named for the seat's new type. */
-export function typeChangedDeskEventKind(
-  to: "diver" | "snorkeler" | "rider",
-): "now_diving" | "now_snorkeling" | "now_riding" {
-  if (to === "diver") return "now_diving";
-  return to === "snorkeler" ? "now_snorkeling" : "now_riding";
 }
