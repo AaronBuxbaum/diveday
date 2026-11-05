@@ -110,6 +110,7 @@ describe("offlineManifestPayload", () => {
       checklistChecks: new Map() as never,
       boatSafety: null,
       meetingWindows: undefined,
+      deckCounts: new Map(),
       snags: [],
       locale: "en-US",
       t,
@@ -133,6 +134,8 @@ describe("offlineManifestPayload", () => {
       "rollCallDayBoundaries" in
         offlineManifestPayload({ ...base, snapshot, meetingWindows: [day(20)] }),
     ).toBe(false);
+  });
+
   it("carries the newest deck count per checkpoint, and no field at all when nobody counted", () => {
     const build = (deckCounts: Parameters<typeof offlineManifestPayload>[0]["deckCounts"]) =>
       offlineManifestPayload({
@@ -151,6 +154,7 @@ describe("offlineManifestPayload", () => {
         checklistItems: [] as never,
         checklistChecks: new Map() as never,
         boatSafety: null,
+        meetingWindows: undefined,
         snags: [],
         deckCounts,
         locale: "en-US",
