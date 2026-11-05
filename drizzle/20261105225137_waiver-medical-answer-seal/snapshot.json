@@ -1,0 +1,48 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "45cf39cc-396b-4808-a2b2-8af88d53405e",
+  "prevIds": [
+    "2794d730-493c-4210-88cd-7c56842afe11",
+    "2f210707-ae72-43d5-a4fb-74f76dc7930e"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "medical_answer_seal"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.medical_answer_seal",
+        "n|col|public.waiver_records.medical_answer_seal",
+        "e|col|public.waiver_records.medical_answer_seal"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_records",
+        "name": "medical_answer_seal",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

@@ -29,6 +29,7 @@ export type WaiverStateFields = Omit<
   | "medicalAlert"
   | "tokenHash"
   | "integrityHash"
+  | "medicalAnswerSeal"
 >;
 
 type WaiverRecord = WaiverStateFields;
