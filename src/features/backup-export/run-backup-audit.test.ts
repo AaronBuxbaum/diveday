@@ -126,13 +126,13 @@ describe("runShopBackup medical-answers audit", () => {
 });
 
 /**
- * #3871, Aaron's call (b) and (c): a scheduled run that carried medical
+ * Issue 3871, Aaron's call (b) and (c): a scheduled run that carried medical
  * answers writes one shop-level line per run, and one line on a diver's trail
  * the first time a scheduled backup holds their answers; never a weekly line
  * per diver, and nothing for the platform backup (`platform-backup.ts` builds
  * the same bundle and asks for no audit).
  */
-describe("runShopBackup scheduled medical-answers audit (#3871)", () => {
+describe("runShopBackup scheduled medical-answers audit (issue 3871)", () => {
   const scheduledLines = (shopId: string) =>
     ctx.db
       .select({

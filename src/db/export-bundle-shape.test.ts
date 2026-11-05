@@ -60,4 +60,16 @@ describe("export bundle shape", () => {
     // destination importing by header name keeps whichever copy it read last.
     expect(repeated).toEqual([]);
   });
+
+  it("leaves the global seq tiebreak out of deck_counts.csv and trip_stage_events.csv (#3898)", async () => {
+    // `seq` is a database-wide identity: its gaps count every other shop's
+    // rows written in between. It still orders the rows server-side.
+    const { db, shop } = ctx;
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("seeded shop failed to load");
+    for (const file of ["deck_counts.csv", "trip_stage_events.csv"]) {
+      const table = input.tables.find((candidate) => candidate.file === file);
+      expect(table?.header, file).not.toContain("seq");
+    }
+  });
 });
