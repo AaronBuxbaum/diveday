@@ -4,7 +4,6 @@ import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
 import type { getShopById } from "@/db/shops";
 import type { DoctorReferral } from "@/db/waivers";
 import type { DiverTranslator } from "@/i18n/messages";
-import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { publicAppUrl } from "@/lib/notifications";
 import { PACKET_PAPER, storefrontAddress } from "@/lib/print-sheets";
@@ -47,14 +46,12 @@ export function DoctorReferralSheet({
   shop: NonNullable<Awaited<ReturnType<typeof getShopById>>>;
   t: DiverTranslator;
 }) {
-  const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
   return (
     <div className="paper-sheet-frame" data-paper-print-only="">
       <div>
         <BrandStyle brandColor={null} brandDisplayFont={shop.brandDisplayFont} />
         <PaperSheet
           paper={PACKET_PAPER}
-          tone={{ band: theme.primary, bandInk: theme.primaryForeground }}
           band={
             <>
               <SheetMark name={shop.name} size="sm" />

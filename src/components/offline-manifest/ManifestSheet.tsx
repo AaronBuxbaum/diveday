@@ -7,7 +7,6 @@ import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
 import { buttonClass } from "@/components/ui/button";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
-import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { formatDateTimeTz } from "@/lib/format";
@@ -23,8 +22,6 @@ import type { OfflineTripView } from "./trip-view";
  * The saved copy's band. The copy carries no brand colour, so the sheet
  * wears DiveDay's own, as a shop that never chose one does.
  */
-const THEME = deriveBrandTheme(DIVEDAY_BRAND_COLOR);
-const TONE = { band: THEME.primary, bandInk: THEME.primaryForeground };
 
 /** How often an open sheet asks whether its copy has expired under it. */
 export const SHEET_EXPIRY_CHECK_MS = 15_000;
@@ -149,7 +146,6 @@ export function OfflineManifestSheet({
           <PaperSheet
             paper={PACKET_PAPER}
             lang={locale}
-            tone={TONE}
             band={
               <>
                 <SheetMark name={shop.name} size="sm" />

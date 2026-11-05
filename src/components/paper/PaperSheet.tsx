@@ -16,23 +16,15 @@ import { PRINT_SHEET_BOX_MM, type PrintSheetPaper } from "@/lib/print-sheets";
  * - **The paper face.** Inside a sheet the semantic tokens are the sheet's
  *   own (`--sheet-*`, `globals.css`), on screen and on paper alike, so what a
  *   staffer reviews before printing is the page that comes out and nothing
- *   is repainted for print. The band's colour arrives as a value — the shop's
- *   derived brand, resolved by the caller — as a custom property here.
+ *   is repainted for print. That face is ink on white and nothing else: no
+ *   fill, no colour, no brand band (`.claude/rules/print-ink.md`).
  *
  * The fold line is not decoration: paper outlives the morning it was printed,
  * and the date plus the storefront's address is how a diver holding it can
  * tell how old it is.
  */
-export type SheetTone = {
-  /** The band's fill. */
-  band: string;
-  /** The ink on it. */
-  bandInk: string;
-};
-
 export function PaperSheet({
   paper,
-  tone,
   band,
   foldLeft,
   foldRight,
@@ -42,8 +34,7 @@ export function PaperSheet({
   paper: PrintSheetPaper;
   /** The sheet's own language when it is not the page's: the paper pass prints in the diver's (item 49). */
   lang?: string;
-  tone: SheetTone;
-  /** What sits in the coloured band across the head of the sheet. */
+  /** What sits in the ruled band across the head of the sheet. */
   band: ReactNode;
   /** The print date, always. */
   foldLeft: ReactNode;
@@ -66,8 +57,6 @@ export function PaperSheet({
           // than losing a word. A packet's sheet has none; it runs as long as
           // its roster.
           minHeight: box.height === null ? undefined : `${box.height}mm`,
-          "--sheet-band": tone.band,
-          "--sheet-band-ink": tone.bandInk,
         } as CSSProperties
       }
     >
@@ -82,7 +71,7 @@ export function PaperSheet({
 }
 
 /**
- * The shop's mark in the band: its initials, reversed out of the band's ink.
+ * The shop's mark in the band: its initials, outlined in ink.
  *
  * Initials rather than a logo, for the reason `src/lib/brand.ts` states about
  * badges — DiveDay never draws a mark it has no right to show, and a shop that

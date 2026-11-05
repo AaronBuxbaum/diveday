@@ -39,7 +39,7 @@ Each step's commands and reasoning: [procedure.md](procedure.md). Read it before
 10. Grep the diff for implementation jargon in user-facing strings (principles §4).
 11. Significant surface: launch `design-critic` with the screenshots and the pixel-probe report.
 
-**Print/PDF changes:** follow [print review](../e2e-and-visual/print.md) and give the critic
+**Print/PDF changes:** paper is ink on white (`.claude/rules/print-ink.md`): any colour, fill even grey, bar over a hairline or white-on-dark is a finding. Follow [print review](../e2e-and-visual/print.md) and give the critic
 rendered, paginated sheets. A continuous print screenshot cannot show pagination defects.
 
 ## Output

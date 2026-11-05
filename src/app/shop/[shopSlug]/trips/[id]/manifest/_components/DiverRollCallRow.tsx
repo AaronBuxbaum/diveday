@@ -143,6 +143,7 @@ export function DiverRollCallRow({
     return (
       <li
         id={diverRowId(diver.bookingId)}
+        data-print-critical={recordedTone === "notBackAboard" ? "" : undefined}
         className={`${ROLL_CALL_ROW_CLASS} ${paperRowTone(recordedTone, blockedAtDock)}`}
       >
         <div className={ruleClass}>

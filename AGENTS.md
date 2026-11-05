@@ -8,7 +8,7 @@ and tests are the provider-neutral source of truth; each rule's full text:
 ## Read first
 
 1. The **path-scoped rule** in `.claude/rules/` for each area you touch (`db`, `domain`,
-   `surfaces`, `i18n`, `e2e`, `infra`, `docs`, `scripts`). Claude Code loads it when you read a
+   `surfaces`, `print-ink`, `i18n`, `e2e`, `infra`, `docs`, `scripts`). Claude Code loads it on reading a
    matching file; another provider reads it first. None is optional.
 2. [docs/README.md](docs/README.md): only the documents needed.
 3. The Next.js warning below, before framework work.

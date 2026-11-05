@@ -3,7 +3,6 @@ import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
 import { getPassBooking } from "@/db/print-pass";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { packsLogbook } from "@/lib/diver-planning";
 import { formatDateWithYear, formatTime } from "@/lib/format";
@@ -54,7 +53,6 @@ export async function PaperPassSheet({
   const readerT = staffTranslator(readerLocale);
   const locale = recipientLocale(booking.diverLocale, shop.defaultLocale);
   const t = staffTranslator(locale);
-  const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
   // The shop's own dock call, which is when a diver should *be there* — not
   // when a counter opens. The same figure the confirmation email states.
   const dockCallAt = new Date(booking.startsAt.getTime() - shop.dockCallMinutes * 60_000);
@@ -83,7 +81,6 @@ export async function PaperPassSheet({
       <PaperSheet
         paper={PAPER_PASS_PAPER}
         lang={locale === readerLocale ? undefined : locale}
-        tone={{ band: theme.primary, bandInk: theme.primaryForeground }}
         band={
           <>
             <SheetMark name={shop.name} size="sm" />

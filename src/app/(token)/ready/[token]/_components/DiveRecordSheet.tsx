@@ -1,7 +1,6 @@
 import { BrandStyle } from "@/components/BrandStyle";
 import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
 import type { AfterStateProps } from "@/features/recap-after-state";
-import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { publicAppUrl } from "@/lib/notifications";
 import {
   capabilityPagePrintRule,
@@ -59,7 +58,6 @@ export function DiveRecordSheet({
   | "observedSpecies"
   | "course"
 > & { trip: AfterStateProps["trip"] }) {
-  const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
   return (
     <>
       {/* A fixed rule built from the sheet's own paper, never a request value. */}
@@ -70,7 +68,6 @@ export function DiveRecordSheet({
       <BrandStyle brandColor={null} brandDisplayFont={shop.brandDisplayFont} />
       <PaperSheet
         paper={DIVE_RECORD_PAPER}
-        tone={{ band: theme.primary, bandInk: theme.primaryForeground }}
         band={
           <>
             <SheetMark name={shop.name} size="sm" />

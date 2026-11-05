@@ -7,10 +7,10 @@ import { afterEach, describe, expect, it } from "vitest";
  * **Paper is one face** (issue #2745).
  *
  * Every printed document is a run of `PaperSheet`s, and a sheet wears its own
- * tokens on screen and on paper alike. So the print stylesheet's fill strip,
- * which repaints a *screen* for a mono laser, must leave a sheet alone: no
- * `!important` restore under it, and no packet backstop hiding controls,
- * because a sheet renders none. This reads the rules and asks the DOM what
+ * tokens on screen and on paper alike, and those tokens are ink on white. The
+ * print stylesheet's fill strip covers a sheet as well as a screen (the net
+ * under the tokens), with no `!important` restore under it, and no packet
+ * backstop hiding controls, because a sheet renders none. This reads the rules and asks the DOM what
  * they match, because a selector read as a string cannot say what `:not()`
  * makes of it.
  */
@@ -47,16 +47,52 @@ describe("the paper face", () => {
     expect(CSS).not.toMatch(/trip-print-bundle|print-bundle-page|data-paper-screen/);
   });
 
-  it("strips a screen's fills for print, never a sheet's", () => {
+  it("strips every fill for print, a sheet's included", () => {
     expect(strip, "the print block's fill strip").toBeDefined();
     document.body.innerHTML = `<main><div class="card">screen</div>
       <section class="paper-sheet"><div class="paper-sheet-band">band</div>
       <p class="bg-danger-tint">row</p></section></main>`;
     const first = firstSelector(strip?.selector ?? "*");
-    expect(document.querySelector(".card")?.matches(first)).toBe(true);
-    for (const inside of document.querySelectorAll(".paper-sheet, .paper-sheet *")) {
-      expect(inside.matches(first), inside.outerHTML).toBe(false);
+    for (const element of document.querySelectorAll(".card, .paper-sheet, .paper-sheet *")) {
+      expect(element.matches(first), element.outerHTML).toBe(true);
     }
+    // Ink-light paper (`.claude/rules/print-ink.md`): the strip also drops
+    // shadows (a ring is one) and asks the browser for economy ink.
+    expect(strip?.body).toMatch(/box-shadow:\s*none\s*!important/);
+    expect(strip?.body).toMatch(/print-color-adjust:\s*economy/);
+  });
+
+  it("never asks a printer for exact colour, and a sheet's face is ink on white", () => {
+    expect(CSS).not.toMatch(/print-color-adjust:\s*exact/);
+    const face = rules.find(
+      (rule) => rule.selector === ".paper-sheet" && /--sheet-ink/.test(rule.body),
+    );
+    const tokens = [...(face?.body ?? "").matchAll(/--sheet-[a-z]+:\s*(#[0-9a-f]{6})/g)];
+    expect(tokens.length).toBeGreaterThan(0);
+    for (const [, hex = ""] of tokens) {
+      const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+      expect(r === g && g === b, `${hex} is grey, not a hue`).toBe(true);
+    }
+    // Every status token on the sheet is ink or white: no hue, no tint.
+    for (const [, name, value] of (face?.body ?? "").matchAll(
+      /--((?:success|warning|danger|info|primary|accent)[a-z-]*):\s*([^;]+);/g,
+    )) {
+      expect(value, `--${name}`).toMatch(/^var\(--sheet-(ink|ground)\)$/);
+    }
+    expect(CSS).not.toMatch(/--sheet-band/);
+  });
+
+  it("draws a thick edge bar as nothing, and critical information as an outline", () => {
+    document.body.innerHTML = `<li class="border-l-4 border-danger">row</li>
+      <li class="border-s-2">row</li>`;
+    const bar = rules.find((rule) => /border-l-4/.test(rule.selector));
+    expect(bar?.body).toMatch(/border-inline-start-width:\s*0/);
+    for (const element of document.querySelectorAll("li")) {
+      expect(element.matches(bar?.selector ?? "x"), element.outerHTML).toBe(true);
+    }
+    const critical = rules.find((rule) => rule.selector === "[data-print-critical]");
+    expect(critical?.body).toMatch(/border:\s*1\.5px solid/);
+    expect(critical?.body).not.toMatch(/background/);
   });
 
   it("prints a page that holds a sheet as its sheets, and nothing of its screen", () => {
@@ -79,9 +115,16 @@ describe("the paper face", () => {
     expect(document.getElementById("chrome")?.matches(selector)).toBe(false);
   });
 
-  it("restores nothing on a sheet with !important", () => {
-    for (const rule of rules.filter((r) => /\.paper-sheet(-band|-mark)?\s*$/.test(r.selector))) {
-      expect(rule.body, rule.selector).not.toMatch(/background[^;]*!important/);
+  it("gives a sheet no background of its own except the ground", () => {
+    for (const rule of rules.filter((r) =>
+      /\.paper-sheet(-band|-mark|-frame)?\s*$/.test(r.selector),
+    )) {
+      const fills = [...rule.body.matchAll(/(?:^|[;\s])background(?:-color)?:\s*([^;]+);/g)];
+      for (const [, value = ""] of fills) {
+        expect(value.trim(), rule.selector).toMatch(
+          /^(var\(--sheet-ground\)|var\(--surface-sunken\))$/,
+        );
+      }
     }
   });
 });
