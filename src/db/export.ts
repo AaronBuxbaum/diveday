@@ -545,7 +545,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const waiverMaterialityRows = await readScoped(tx, "waiverMaterialityDecisions", scope);
 
   const waiverRows = await readScoped(tx, "waiverRecords", scope);
-  const waiverSealAcknowledgementRows = await readScoped(tx, "waiverSealAcknowledgements", scope);
 
   const courseFormRows = await readScoped(tx, "courseForms", scope);
   const courseFormVersionRows = await readScoped(tx, "courseFormVersions", scope);
@@ -707,7 +706,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     templateRows,
     waiverMaterialityRows,
     waiverRows,
-    waiverSealAcknowledgementRows,
+    waiverSealAcknowledgementRows: await readScoped(tx, "waiverSealAcknowledgements", scope),
     courseFormRows,
     courseFormVersionRows,
     courseFormRequirementRows,

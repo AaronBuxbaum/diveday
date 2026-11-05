@@ -479,6 +479,7 @@ export async function commitContactImport(
           ? await tx
               .select({ phone: people.phone })
               .from(people)
+              // diveday:allow-deleted-people: the row this update is about to write, by id; its phone before the write, whatever its state.
               .where(and(eq(people.id, id), eq(people.shopId, shopId)))
               .limit(1)
           : [];
