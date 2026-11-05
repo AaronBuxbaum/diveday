@@ -22,7 +22,12 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
-import { markableTrainingDives, seatWithinRoom, trainingDiveRoom } from "./training-mark-resolve";
+import {
+  markableTrainingDives,
+  seatWithinRoom,
+  trainingDiveReachOn,
+  trainingDiveRoom,
+} from "./training-mark-resolve";
 import { trainingMarksForRoster } from "./training-marks";
 
 /**
@@ -234,9 +239,12 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
       .insert(tripDives)
       .values({ tripId: ctx.charter.id, diveNumber: 1, diveSiteId: siteA.id });
     expect(await markable()).toHaveLength(1);
-    // Two planned dives on that one site: which one is the training dive?
+    // Two planned dives on that one site: which one is the training dive? The
+    // mark reaches only the default there (issue #3910), so the sale is offered
+    // the course but reads the site's Open Water unlowered.
     await setPlanned(2);
-    expect(await markable()).toEqual([]);
+    expect(await markable()).toHaveLength(1);
+    expect(await trainingDiveReachOn(ctx.db, ctx.shop.id, ctx.charter.id)).toBe("default");
     // One planned dive again, but the itinerary names two sites.
     await setPlanned(1);
     await ctx.db

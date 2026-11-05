@@ -16,10 +16,10 @@ import {
 } from "./readiness";
 import { type Requirement, requirementDemandsNothing, unionRequirements } from "./requirement";
 import {
+  markedTrainingRequirement,
   type TrainingDiveCourse,
+  type TrainingDiveReach,
   type TripLevelRequirement,
-  trainingDiveSiteRequirement,
-  tripAndSiteSides,
 } from "./training-mark";
 
 /**
@@ -117,6 +117,11 @@ export type TripAdmissionEvidence = {
    * that would then clear, and must not sell one that would not.
    */
   trainingDives?: readonly TrainingDiveCourse[];
+  /**
+   * How far `trainingDives` lower on this departure (`trainingDiveReach`,
+   * issue #3910), as readiness reads it. `site` when omitted.
+   */
+  trainingDiveReach?: TrainingDiveReach;
 };
 
 /**
@@ -351,14 +356,16 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // site's level is lowered, exactly as readiness lowers it: a level the trip
   // itself sets stands at the sale as it stands at the rail (issue #3776).
   // A default level nobody chose counts as the site's here too
-  // (`tripAndSiteSides`, issue #3872).
-  const sides = tripAndSiteSides(input.requirement, input.siteRequirement);
+  // (`tripAndSiteSides`, issue #3872). On a charter of two or more dives only
+  // the default is lowered (`trainingDiveReach`, issue #3910).
   const markWouldClear =
     effective.minimumCertificationLevel !== null &&
     (evidence.trainingDives ?? []).some((course) => {
-      const marked = unionRequirements(
-        sides.trip,
-        trainingDiveSiteRequirement(sides.site, course),
+      const marked = markedTrainingRequirement(
+        input.requirement,
+        input.siteRequirement,
+        course,
+        evidence.trainingDiveReach ?? "site",
       ).minimumCertificationLevel;
       return marked === null || levelStanding(marked, sale, "sale") === null;
     });

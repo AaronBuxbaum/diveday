@@ -111,7 +111,7 @@ import {
 import { lockSeatDeparture } from "./seat-locks";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
-import { markableTrainingDives } from "./training-mark-resolve";
+import { markableTrainingDives, trainingDiveReachOn } from "./training-mark-resolve";
 import { dropTrainingMarkWithin } from "./training-marks";
 import { type SendRescheduleNoticesOptions, sendMissedRescheduleNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
@@ -781,6 +781,8 @@ export async function tripAdmissionFor(
           ...(await readCertificationEvidence(tx, shopId, person.id)),
           levelsInTraining: await levelsInTrainingBefore(tx, shopId, person.id, tripId),
           trainingDives: await trainingDivesOn(tx, shopId, person.id, tripId),
+          // How far a mark lowers here, as readiness reads it (issue #3910).
+          trainingDiveReach: (await trainingDiveReachOn(tx, shopId, tripId)) ?? "site",
         }
       : NO_EVIDENCE;
   // A declaration about a person whose identity did not match is not about

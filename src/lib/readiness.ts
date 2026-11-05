@@ -26,9 +26,9 @@ import {
   unionRequirements,
 } from "./requirement";
 import {
+  markedTrainingRequirement,
   type TrainingDiveCourse,
-  trainingDiveSiteRequirement,
-  tripAndSiteSides,
+  type TrainingDiveReach,
 } from "./training-mark";
 import { type ReleaseLapse, type WaiverStateFields, waiverStanding } from "./waivers";
 
@@ -568,6 +568,12 @@ export type ReadinessInput = {
    * own level, specialty, and nitrox requirements always stand.
    */
   trainingDive?: TrainingDiveCourse | null;
+  /**
+   * How far `trainingDive` lowers (`trainingDiveReach`, issue #3910): `site`
+   * on one dive at one site, `default` on a charter of two or more dives,
+   * where only a default level nobody chose is lowered. `site` when omitted.
+   */
+  trainingDiveReach?: TrainingDiveReach;
   now?: Date;
 };
 
@@ -1277,11 +1283,16 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // a default level nobody chose counts as the site's (`tripAndSiteSides`,
   // issue #3872). A supplied training context must already have passed its own
   // safety gates.
-  const sides = tripAndSiteSides(input.requirement, input.siteRequirement);
-  const effectiveSite = trainingDiveSiteRequirement(sides.site, input.trainingDive);
+  // On a charter of two or more dives, only the default is lowered
+  // (`trainingDiveReach`, issue #3910).
   // Riders and snorkelers have no dive for a certification to qualify.
   const effective = isDiver(input.participantType)
-    ? unionRequirements(sides.trip, effectiveSite)
+    ? markedTrainingRequirement(
+        input.requirement,
+        input.siteRequirement,
+        input.trainingDive,
+        input.trainingDiveReach ?? "site",
+      )
     : NO_REQUIREMENT;
 
   blockers.push(

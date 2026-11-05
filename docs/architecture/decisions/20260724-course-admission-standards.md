@@ -323,3 +323,12 @@ states a level, both gates read the default as the site's, so a mark may lower i
 states a level, the default is the only level anyone stated and it stands (issue #3872, Aaron on
 #3839 2026-11-04; domain reviews of #3909). Storing the default as no level was rejected: it would drop the Open Water gate for
 every unmarked uncertified diver.
+
+On a departure of two or more planned dives the mark cannot name the training dive, so it lowers
+**only the default**, and every site keeps its own stated level unlowered (issue #3910, Aaron
+2026-11-05, option B): a trip-wide default with no level of its own never outranks the course
+instructor's judgment on any dive of the day. `trainingDiveReach` (`src/lib/training-mark.ts`)
+names the reach (`site`, `default`, or none for one dive with no site or two sites), and readiness
+and the sale both fold through `markedTrainingRequirement`. A one-dive departure at a site that
+states no level still keeps the default, as above; whether that should follow the same principle
+is open.

@@ -18,7 +18,7 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
-import { markableTrainingDives } from "./training-mark-resolve";
+import { markableTrainingDives, trainingDiveReachOn } from "./training-mark-resolve";
 import { createTrip } from "./trips-create";
 import { duplicateTrip } from "./trips-schedule";
 import { createTripSeries, rollSeriesForward } from "./trips-series";
@@ -170,11 +170,64 @@ describe("a default trip level a training mark may lower (issue #3872, in-memory
     expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
 
-  it("lowers nothing on a two-dive charter: the mark cannot name the dive", async () => {
+  it("lowers nothing on one dive with no site: the mark has no reach", async () => {
     const ctx = await defaultLevelCharter();
-    await ctx.db.update(trips).set({ plannedDives: 2 }).where(eq(trips.id, ctx.charter.id));
+    await ctx.db.delete(tripDives).where(eq(tripDives.tripId, ctx.charter.id));
+    expect(await trainingDiveReachOn(ctx.db, ctx.shop.id, ctx.charter.id)).toBeNull();
     expect(await markable(ctx)).toEqual([]);
     expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+  });
+});
+
+/**
+ * **A two-tank charter** (issue #3910, Aaron 2026-11-05, option B). The mark
+ * cannot name the training dive, so it lowers only the trip-wide default; each
+ * site keeps its own stated level, unlowered. Readiness at the rail and the
+ * sale read the same reach.
+ */
+describe("a training mark on a two-tank charter (issue #3910, in-memory PGlite)", () => {
+  async function twoTank(siteLevel: "open_water" | null, isDefault = true) {
+    const ctx = await defaultLevelCharter(isDefault, siteLevel);
+    const [second] = await ctx.db
+      .insert(diveSites)
+      .values({
+        shopId: ctx.shop.id,
+        name: "Second tank reef",
+        slug: `second-tank-reef-${ctx.charter.id.slice(0, 8)}`,
+        minimumCertificationLevel: null,
+      })
+      .returning({ id: diveSites.id });
+    if (!second) throw new Error("site insert failed");
+    await ctx.db
+      .insert(tripDives)
+      .values({ tripId: ctx.charter.id, diveNumber: 2, diveSiteId: second.id });
+    await ctx.db.update(trips).set({ plannedDives: 2 }).where(eq(trips.id, ctx.charter.id));
+    return ctx;
+  }
+
+  it("boards a marked Open Water student when neither site states a level, and offers the sale the mark", async () => {
+    const ctx = await twoTank(null);
+    expect(await trainingDiveReachOn(ctx.db, ctx.shop.id, ctx.charter.id)).toBe("default");
+    expect(await markable(ctx)).toHaveLength(1);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual([]);
+  });
+
+  it("still holds the student to a level one site states for itself", async () => {
+    const ctx = await twoTank("open_water");
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+  });
+
+  it("keeps a level a person chose for the day", async () => {
+    const ctx = await twoTank(null, false);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+  });
+
+  it("still holds an unmarked uncertified diver to the default", async () => {
+    const ctx = await twoTank(null);
     expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
 });

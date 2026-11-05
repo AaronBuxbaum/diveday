@@ -477,7 +477,17 @@ export function trainingDiveAsksNoCardForSite(
   trip: TripLevelRequirement | null | undefined,
   site: Requirement | null | undefined,
   course: TrainingDiveCourse | null,
+  reach: TrainingDiveReach = "site",
 ): boolean {
+  if (reach === "default") {
+    // Only the default is lowered: no card is asked when it was the only
+    // card asked and the course lowers it to nothing.
+    return (
+      trip?.minimumCertificationIsDefault === true &&
+      requirementDemandsNothing(site) &&
+      trainingDiveAsksNoCard(trip, course)
+    );
+  }
   const sides = tripAndSiteSides(trip, site);
   return (
     requirementDemandsNothing(sides.trip) &&
@@ -500,6 +510,64 @@ export function trainingSiteAttributionKnown(
   siteCount: number,
 ): boolean {
   return plannedDives === 1 && siteCount === 1;
+}
+
+/**
+ * **How far a marked training dive's lowering reaches** (issue #3910, Aaron
+ * 2026-11-05, option B).
+ *
+ * - `site`: one planned dive at one site (`trainingSiteAttributionKnown`). The
+ *   site's level is lowered, with a default level folded into it
+ *   (`tripAndSiteSides`).
+ * - `default`: a charter of two or more planned dives, where the mark cannot
+ *   name the training dive. Only the trip-wide default nobody chose is lowered,
+ *   because a default with no level of its own never outranks the course
+ *   instructor's judgment on any dive of the day. Every site keeps its own
+ *   stated level, unlowered.
+ * - `null`: anything else (one dive with no site, or two sites for one dive).
+ *   Nothing is lowered.
+ *
+ * Readiness and the sale both read this function, so the two gates agree.
+ */
+export type TrainingDiveReach = "site" | "default";
+
+export function trainingDiveReach(
+  plannedDives: number | null | undefined,
+  siteCount: number,
+): TrainingDiveReach | null {
+  if (trainingSiteAttributionKnown(plannedDives, siteCount)) return "site";
+  return plannedDives != null && plannedDives >= 2 ? "default" : null;
+}
+
+/** The trip's requirement with only a default level lowered for `course`. */
+function defaultLowered<T extends TripLevelRequirement>(
+  trip: T | null | undefined,
+  course: TrainingDiveCourse,
+): T | null {
+  if (!trip) return null;
+  if (trip.minimumCertificationIsDefault !== true) return trip;
+  return {
+    ...trip,
+    minimumCertificationLevel: trainingDiveRequiredLevel(trip.minimumCertificationLevel, course),
+  };
+}
+
+/**
+ * **The requirement a marked training dive boards on**: the trip and its sites
+ * folded together, with the course lowering the level only as far as `reach`
+ * allows. With no course, it is the plain union. Readiness (boarding) and trip
+ * admission (the sale) both fold through this function, so a mark lowers a
+ * level in both gates or in neither.
+ */
+export function markedTrainingRequirement(
+  trip: TripLevelRequirement | null | undefined,
+  site: Requirement | null | undefined,
+  course: TrainingDiveCourse | null | undefined,
+  reach: TrainingDiveReach,
+): Requirement {
+  if (course && reach === "default") return unionRequirements(defaultLowered(trip, course), site);
+  const sides = tripAndSiteSides(trip, site);
+  return unionRequirements(sides.trip, trainingDiveSiteRequirement(sides.site, course));
 }
 
 /**

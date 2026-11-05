@@ -36,6 +36,7 @@ import {
   type TrainingMarkState,
   trainingDiveAsksNoCardForSite,
   trainingDiveLevel,
+  trainingDiveReach,
   trainingSiteAttributionKnown,
 } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
@@ -1897,14 +1898,18 @@ export async function listTripsReadiness(
     const requirement = requirementsByTrip.get(tripId) ?? null;
     const siteRequirement = siteRequirementsByTrip.get(tripId) ?? null;
     const courseRow = courseByTrip.get(tripId);
-    // A seat-level mark cannot identify which of several planned dives is training.
+    // A seat-level mark cannot identify which of several planned dives is
+    // training: there it lowers only the default (issue #3910), and nothing
+    // where it is neither one dive at one site nor a charter of several.
+    const siteCount = siteRowsByTrip.get(tripId)?.length ?? 0;
     const siteAttributionUnknown = !trainingSiteAttributionKnown(
       courseRow?.plannedDives,
-      siteRowsByTrip.get(tripId)?.length ?? 0,
+      siteCount,
     );
-    const trainingForSite = siteAttributionUnknown
-      ? null
-      : trainingDiveLevel(trainingMarks.get(row.booking.id));
+    const trainingReach = trainingDiveReach(courseRow?.plannedDives, siteCount);
+    const trainingForSite = trainingReach
+      ? trainingDiveLevel(trainingMarks.get(row.booking.id))
+      : null;
     // A kind of seat the shop states as free has no payment to clear. Read
     // off the departure's own price for that kind, never inferred from a
     // missing one (`paymentGateIsUnclearable`).
@@ -2010,7 +2015,12 @@ export async function listTripsReadiness(
       trainingSiteAttributionUnknown: siteAttributionUnknown,
       trainingNoCardAsked:
         isDiver(row.booking.participantType) &&
-        trainingDiveAsksNoCardForSite(requirement, siteRequirement, trainingForSite),
+        trainingDiveAsksNoCardForSite(
+          requirement,
+          siteRequirement,
+          trainingForSite,
+          trainingReach ?? "site",
+        ),
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
       nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
@@ -2067,6 +2077,7 @@ export async function listTripsReadiness(
         // A standing mark with the course's instructor aboard takes the
         // course's own minimum level (issue #2731).
         trainingDive: trainingForSite,
+        trainingDiveReach: trainingReach ?? "site",
         now,
       }),
     };
