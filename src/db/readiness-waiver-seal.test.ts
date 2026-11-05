@@ -1,8 +1,11 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { getBookingReadiness, listTripReadiness, upsertTripRequirements } from "./readiness";
 import { waiverRecords } from "./schema";
+import { WAIVER_SEALED_COLUMNS } from "./waiver-record-columns";
+import { acknowledgeBrokenWaiverSeal, waiverSealStateDigest } from "./waiver-seal-acknowledgements";
 import { recheckWaiverSeals } from "./waiver-seal-checks";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
@@ -130,5 +133,37 @@ describe("readiness over a release whose seal failed", () => {
     });
     if (!done.ok) throw new Error("completion failed");
     expect(await seatCodes(ctx)).toEqual({ status: "ready", codes: [] });
+  });
+
+  /**
+   * **An acknowledgement is not a repair** (#3891; layer-2 dock review S4).
+   * A manager recording that they looked into a broken release quietens the
+   * nightly alarm, never the rail: the diver stays held until they sign again.
+   */
+  it("still holds the diver after a manager acknowledges the broken seal", async () => {
+    const ctx = await signedOnAWaiverOnlyTrip(clearAnswers);
+    await ctx.db
+      .update(waiverRecords)
+      .set({ templateBody: "A release nobody agreed to." })
+      .where(eq(waiverRecords.id, ctx.recordId));
+    await recheckWaiverSeals(ctx.db, { now: nightly });
+    const [row] = await ctx.db
+      .select({ record: WAIVER_SEALED_COLUMNS })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, ctx.recordId));
+    if (!row) throw new Error("record missing");
+    const owner = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_OWNER_EMAIL);
+    expect(
+      await acknowledgeBrokenWaiverSeal(ctx.db, {
+        shopId: ctx.shop.id,
+        recordId: ctx.recordId,
+        actorPersonId: owner,
+        note: "Looked into it; the diver will sign again at the desk.",
+        expectedStateDigest: waiverSealStateDigest(row.record),
+        now: nightly,
+      }),
+    ).toEqual({ ok: true });
+    await recheckWaiverSeals(ctx.db, { now: new Date(nightly.getTime() + 86_400_000) });
+    expect(await seatCodes(ctx)).toEqual({ status: "blocked", codes: ["waiver_seal_failed"] });
   });
 });

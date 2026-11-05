@@ -81,6 +81,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   medical_answers_read: "safety",
   scheduled_backup_medical_answers: "safety",
   scheduled_backup_holds_medical_answers: "safety",
+  waiver_seal_acknowledged: "safety",
   medical_alert_read: "safety",
   medical_alert_saved_offline: "safety",
   medical_alert_printed: "safety",

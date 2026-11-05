@@ -483,8 +483,11 @@
   the nightly check unhealthy until someone deals with it. Dealing with it is a **seal
   acknowledgement** (`waiver_seal_acknowledgements`, issue #3891): an owner or manager records who
   looked, when and a note, appended outside the release so the edited row cannot write it. It
-  covers the release as it stood when it was made (a keyed digest of every sealed column), so a
-  further edit rings again; the verdict stays `invalid`, because an acknowledgement is not a repair;
+  covers the release as it stood when the manager read it (a keyed digest of every sealed column,
+  checked under a row lock, so an edit made while they read is refused), so a further edit rings
+  again. It writes a safety line on the diver's trail, is in the shop export as
+  `waiver_seal_acknowledgements.csv`, and its note is redacted when the diver is erased. The verdict
+  stays `invalid` and readiness still holds the diver, because an acknowledgement is not a repair;
   the row's own badge always recomputes the seal (issue #2562). A release that asked **shop questions** seals the diver's answers too:
   the snapshot joins the sealed set only when it is there, so a release signed before shops could
   ask anything keeps the digest it was sealed with, and an erasure's re-seal leaves the answers out

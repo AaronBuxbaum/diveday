@@ -79,6 +79,7 @@ import {
   tripStageEvents,
   waiverMaterialityDecisions,
   waiverRecords,
+  waiverSealAcknowledgements,
   waiverTemplates,
   workOrderBills,
   workOrderCare,
@@ -432,6 +433,11 @@ export const EXPORT_TABLES = {
     table: waiverMaterialityDecisions,
     order: [asc(waiverMaterialityDecisions.seq)],
     scope: { shopColumn: waiverMaterialityDecisions.shopId },
+  },
+  waiverSealAcknowledgements: {
+    table: waiverSealAcknowledgements,
+    order: [asc(waiverSealAcknowledgements.acknowledgedAt), asc(waiverSealAcknowledgements.id)],
+    scope: { shopColumn: waiverSealAcknowledgements.shopId },
   },
   waiverRecords: {
     table: waiverRecords,

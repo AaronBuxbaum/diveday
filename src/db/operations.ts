@@ -231,7 +231,8 @@ export type DiverActivityCode =
   | "date_of_birth_cleared_as_adult"
   | "record_exported"
   | "dispute_sheet_printed"
-  | "running_late_from_message";
+  | "running_late_from_message"
+  | "waiver_seal_acknowledged";
 
 /**
  * One line on the diver-record trail, subject-only — the same shape

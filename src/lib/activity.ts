@@ -308,6 +308,12 @@ type ActivityParamShapes = {
    */
   scheduled_backup_holds_medical_answers: { diver: string };
   /**
+   * An owner or manager recorded that they looked into a release whose seal
+   * reads broken, with a note (#3891). The nightly check stops counting that
+   * release while it stays as they saw it; co-owners see who quietened it.
+   */
+  waiver_seal_acknowledged: { actor: string; diver: string };
+  /**
    * A staffer read a diver's medical alert for the crew, on a manifest they
    * crew or on the signed record (issue #2960). Never written offline.
    */
@@ -605,6 +611,7 @@ export const ACTIVITY_CODES = [
   "medical_answers_read",
   "scheduled_backup_medical_answers",
   "scheduled_backup_holds_medical_answers",
+  "waiver_seal_acknowledged",
   "medical_alert_read",
   "medical_alert_saved_offline",
   "medical_alert_printed",

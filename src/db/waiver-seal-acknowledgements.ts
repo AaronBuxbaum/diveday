@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { integrityDigest, type WaiverSealedFields } from "@/lib/waiver-integrity";
 import { canPersonManageWaiverTemplates } from "./authz";
 import type { DbExecutor } from "./client";
+import { recordDiverActivity } from "./operations";
 import {
   MAX_WAIVER_SEAL_ACKNOWLEDGEMENT_NOTE,
   waiverRecords,
@@ -36,42 +37,75 @@ export function waiverSealStateDigest(record: WaiverSealedFields): string {
 
 export type AcknowledgeBrokenWaiverSealResult =
   | { ok: true }
-  | { ok: false; reason: "not_authorized" | "not_found" | "not_broken" | "note_required" };
+  | {
+      ok: false;
+      reason: "not_authorized" | "not_found" | "not_broken" | "note_required" | "changed";
+    };
 
 /**
  * Record that `actorPersonId` looked into a broken release. Only someone who
  * may manage the shop's waivers, only on a release whose last checked verdict
- * is broken, and only with a note saying what they found. The digest is of
- * the release as it stands at this write.
+ * is broken, and only with a note saying what they found.
+ *
+ * `expectedStateDigest` is the {@link waiverSealStateDigest} of the release as
+ * the page showed it to the manager (layer-2 review S3). The row is locked and
+ * re-digested here; if it changed between what they read and this write, the
+ * acknowledgement is refused, so a second edit slipped in while they looked
+ * is never covered by a review of the first.
+ *
+ * The same transaction writes a safety line on the diver's trail (review S4):
+ * one manager cannot quieten the alarm without the shop's trail saying who.
  */
 export async function acknowledgeBrokenWaiverSeal(
   db: DbExecutor,
-  input: { shopId: string; recordId: string; actorPersonId: string; note: string; now: Date },
+  input: {
+    shopId: string;
+    recordId: string;
+    actorPersonId: string;
+    note: string;
+    expectedStateDigest: string;
+    now: Date;
+  },
 ): Promise<AcknowledgeBrokenWaiverSealResult> {
   const note = input.note.trim();
   if (note.length === 0) return { ok: false, reason: "note_required" };
   if (note.length > MAX_WAIVER_SEAL_ACKNOWLEDGEMENT_NOTE) {
     return { ok: false, reason: "note_required" };
   }
-  if (!(await canPersonManageWaiverTemplates(db, input.shopId, input.actorPersonId))) {
-    return { ok: false, reason: "not_authorized" };
-  }
-  const [row] = await db
-    .select({ record: WAIVER_SEALED_COLUMNS, valid: waiverRecords.integrityValid })
-    .from(waiverRecords)
-    .where(and(eq(waiverRecords.id, input.recordId), eq(waiverRecords.shopId, input.shopId)))
-    .limit(1);
-  if (!row) return { ok: false, reason: "not_found" };
-  if (row.valid !== false) return { ok: false, reason: "not_broken" };
-  await db.insert(waiverSealAcknowledgements).values({
-    shopId: input.shopId,
-    waiverRecordId: input.recordId,
-    stateDigest: waiverSealStateDigest(row.record),
-    note,
-    acknowledgedByPersonId: input.actorPersonId,
-    acknowledgedAt: input.now,
+  return db.transaction(async (tx): Promise<AcknowledgeBrokenWaiverSealResult> => {
+    if (!(await canPersonManageWaiverTemplates(tx, input.shopId, input.actorPersonId))) {
+      return { ok: false, reason: "not_authorized" };
+    }
+    const [row] = await tx
+      .select({ record: WAIVER_SEALED_COLUMNS, valid: waiverRecords.integrityValid })
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.id, input.recordId), eq(waiverRecords.shopId, input.shopId)))
+      // diveday:allow-update-lock: the digest is read and pinned in one step; an edit between the manager's view and this write must refuse, not slip under the acknowledgement.
+      .for("update")
+      .limit(1);
+    if (!row) return { ok: false, reason: "not_found" };
+    if (row.valid !== false) return { ok: false, reason: "not_broken" };
+    const stateDigest = waiverSealStateDigest(row.record);
+    if (stateDigest !== input.expectedStateDigest) return { ok: false, reason: "changed" };
+    await tx.insert(waiverSealAcknowledgements).values({
+      shopId: input.shopId,
+      waiverRecordId: input.recordId,
+      stateDigest,
+      note,
+      acknowledgedByPersonId: input.actorPersonId,
+      acknowledgedAt: input.now,
+    });
+    const recorded = await recordDiverActivity(tx, {
+      shopId: input.shopId,
+      personId: row.record.personId,
+      actorPersonId: input.actorPersonId,
+      code: "waiver_seal_acknowledged",
+      waiverRecordId: input.recordId,
+    });
+    // No trail line, no acknowledgement: the quiet alarm must always say who.
+    if (!recorded) throw new Error("acknowledgeBrokenWaiverSeal: the trail line was not written");
+    return { ok: true };
   });
-  return { ok: true };
 }
 
 /**

@@ -46,6 +46,7 @@ export const EXPORT_PURPOSE_KEYS = {
   "waiver_templates.csv": "settings.export.filePurposes.waiver_templates",
   "waiver_materiality_decisions.csv": "settings.export.filePurposes.waiver_materiality_decisions",
   "waiver_records.csv": "settings.export.filePurposes.waiver_records",
+  "waiver_seal_acknowledgements.csv": "settings.export.filePurposes.waiver_seal_acknowledgements",
   "course_forms.csv": "settings.export.filePurposes.course_forms",
   "course_form_versions.csv": "settings.export.filePurposes.course_form_versions",
   "course_form_requirements.csv": "settings.export.filePurposes.course_form_requirements",

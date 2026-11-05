@@ -2,8 +2,17 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { people, personRoles, waiverRecords, waiverSealAcknowledgements } from "./schema";
-import { acknowledgeBrokenWaiverSeal } from "./waiver-seal-acknowledgements";
+import { anonymizeDiver } from "./anonymize";
+import type { DbExecutor } from "./client";
+import {
+  activityEvents,
+  people,
+  personRoles,
+  waiverRecords,
+  waiverSealAcknowledgements,
+} from "./schema";
+import { WAIVER_SEALED_COLUMNS } from "./waiver-record-columns";
+import { acknowledgeBrokenWaiverSeal, waiverSealStateDigest } from "./waiver-seal-acknowledgements";
 import { recheckWaiverSeals, waiverSealPassHealthy } from "./waiver-seal-checks";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
@@ -21,6 +30,16 @@ const waiverContext = waiverContextFor(fileCtx);
 const later = new Date("2099-01-01T00:00:00.000Z");
 const nightAfter = new Date(later.getTime() + 24 * 60 * 60 * 1000);
 const NOTE = "Spoke to the diver; a support script rewrote the template text by mistake.";
+
+/** The digest the page would render beside the release the manager reads. */
+async function shownDigest(db: DbExecutor, recordId: string): Promise<string> {
+  const [row] = await db
+    .select({ record: WAIVER_SEALED_COLUMNS })
+    .from(waiverRecords)
+    .where(eq(waiverRecords.id, recordId));
+  if (!row) throw new Error("record missing");
+  return waiverSealStateDigest(row.record);
+}
 
 async function brokenRelease() {
   const ctx = await waiverContext();
@@ -53,6 +72,7 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
         recordId,
         actorPersonId: owner,
         note: `  ${NOTE}  `,
+        expectedStateDigest: await shownDigest(db, recordId),
         now: later,
       }),
     ).toEqual({ ok: true });
@@ -87,6 +107,7 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
       recordId,
       actorPersonId: owner,
       note: NOTE,
+      expectedStateDigest: await shownDigest(db, recordId),
       now: later,
     });
     await db
@@ -116,6 +137,7 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
         recordId: issued.recordId,
         actorPersonId: owner,
         note: NOTE,
+        expectedStateDigest: await shownDigest(db, issued.recordId),
         now: later,
       }),
     ).toEqual({ ok: false, reason: "not_broken" });
@@ -130,7 +152,14 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
       .returning({ id: people.id });
     if (!crew) throw new Error("crew insert failed");
     await db.insert(personRoles).values({ personId: crew.id, role: "divemaster" });
-    const input = { shopId: shop.id, recordId, actorPersonId: owner, note: NOTE, now: later };
+    const input = {
+      shopId: shop.id,
+      recordId,
+      actorPersonId: owner,
+      note: NOTE,
+      expectedStateDigest: await shownDigest(db, recordId),
+      now: later,
+    };
     expect(await acknowledgeBrokenWaiverSeal(db, { ...input, actorPersonId: crew.id })).toEqual({
       ok: false,
       reason: "not_authorized",
@@ -156,5 +185,81 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
           ),
         ),
     ).toEqual([]);
+  });
+
+  it("refuses when the release changed between what the manager read and the write", async () => {
+    const { db, shop, recordId, owner } = await brokenRelease();
+    await recheckWaiverSeals(db, { now: later });
+    const read = await shownDigest(db, recordId);
+    // A second edit lands while the manager is reading the first.
+    await db
+      .update(waiverRecords)
+      .set({ signedName: "Somebody else" })
+      .where(eq(waiverRecords.id, recordId));
+    expect(
+      await acknowledgeBrokenWaiverSeal(db, {
+        shopId: shop.id,
+        recordId,
+        actorPersonId: owner,
+        note: NOTE,
+        expectedStateDigest: read,
+        now: later,
+      }),
+    ).toEqual({ ok: false, reason: "changed" });
+    expect(
+      await db
+        .select()
+        .from(waiverSealAcknowledgements)
+        .where(eq(waiverSealAcknowledgements.waiverRecordId, recordId)),
+    ).toEqual([]);
+  });
+
+  it("writes who quietened the alarm on the diver's trail, in the same write", async () => {
+    const { db, shop, recordId, owner, person } = await brokenRelease();
+    await recheckWaiverSeals(db, { now: later });
+    await acknowledgeBrokenWaiverSeal(db, {
+      shopId: shop.id,
+      recordId,
+      actorPersonId: owner,
+      note: NOTE,
+      expectedStateDigest: await shownDigest(db, recordId),
+      now: later,
+    });
+    const lines = await db
+      .select()
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.shopId, shop.id),
+          eq(activityEvents.code, "waiver_seal_acknowledged"),
+          eq(activityEvents.subjectPersonId, person.id),
+        ),
+      );
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ actorPersonId: owner, params: { record: recordId } });
+  });
+
+  it("keeps who and when but not the note's words when the diver is erased", async () => {
+    const { db, shop, recordId, owner, person } = await brokenRelease();
+    await recheckWaiverSeals(db, { now: later });
+    await acknowledgeBrokenWaiverSeal(db, {
+      shopId: shop.id,
+      recordId,
+      actorPersonId: owner,
+      note: "Q4 (asthma) changed Yes to No in the database; she does have asthma.",
+      expectedStateDigest: await shownDigest(db, recordId),
+      now: later,
+    });
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: person.id,
+      actorPersonId: owner,
+    });
+    expect(erased.ok).toBe(true);
+    const [ack] = await db
+      .select()
+      .from(waiverSealAcknowledgements)
+      .where(eq(waiverSealAcknowledgements.waiverRecordId, recordId));
+    expect(ack).toMatchObject({ note: "[redacted]", acknowledgedByPersonId: owner });
   });
 });

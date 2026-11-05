@@ -160,6 +160,7 @@ import {
   userAccounts,
   waiverDeliveries,
   waiverRecords,
+  waiverSealAcknowledgements,
   workOrderLines,
   workOrders,
 } from "./schema";
@@ -1016,6 +1017,25 @@ async function scrubWaiverRecords(
         ...waiverIntegrityVerdict(sealed, now),
       })
       .where(eq(waiverRecords.id, stripped.id));
+  }
+
+  // A manager's note on a broken seal (#3891) will often restate the answer
+  // that was tampered with ("Q4 asthma changed Yes to No"): medical words
+  // about this diver, kept beside their release. The fact of the
+  // acknowledgement, who and when, stays; the words go (layer-2 review S5).
+  if (waiverRows.length > 0) {
+    await tx
+      .update(waiverSealAcknowledgements)
+      .set({ note: REDACTED_TEXT })
+      .where(
+        and(
+          eq(waiverSealAcknowledgements.shopId, shopId),
+          inArray(
+            waiverSealAcknowledgements.waiverRecordId,
+            waiverRows.map((record) => record.id),
+          ),
+        ),
+      );
   }
 
   // The per-channel mechanics behind the column above (ADR

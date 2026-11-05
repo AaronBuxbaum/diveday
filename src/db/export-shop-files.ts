@@ -798,6 +798,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "recorded_by_person_id",
       "recorder_name",
       "recorded_at",
+      "not_counted",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, tripStageEventRows }) =>
       tripStageEventRows.map((row) => [
@@ -810,6 +811,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.recordedByPersonId,
         personName.get(row.recordedByPersonId),
         row.recordedAt,
+        row.notCounted,
       ]),
     note: EXPORT_FILE_NOTES["trip_stage_events.csv"],
   },
@@ -1500,6 +1502,30 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["waiver_materiality_decisions.csv"],
   },
   shopFile(WAIVER_RECORDS_CSV),
+  {
+    // The shop's own record of who looked into a broken seal (#3891; layer-2
+    // review S4). The state digest is keyed with this installation's seal key
+    // and means nothing elsewhere, so it stays behind.
+    file: "waiver_seal_acknowledgements.csv",
+    header: [
+      "id",
+      "waiver_record_id",
+      "note",
+      "acknowledged_by_person_id",
+      "acknowledged_by_name",
+      "acknowledged_at",
+    ],
+    rows: ({ personName, waiverSealAcknowledgementRows }) =>
+      waiverSealAcknowledgementRows.map((row) => [
+        row.id,
+        row.waiverRecordId,
+        row.note,
+        row.acknowledgedByPersonId,
+        personName.get(row.acknowledgedByPersonId),
+        row.acknowledgedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["waiver_seal_acknowledgements.csv"],
+  },
   {
     file: "course_forms.csv",
     header: ["id", "title", "current_version", "medical_screening", "deleted_at", "created_at"],

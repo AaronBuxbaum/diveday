@@ -142,6 +142,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
   buddy_team_members: ["shop_id", "id"],
+  waiver_seal_acknowledgements: ["shop_id", "state_digest"], // keyed with this installation's seal key
   waiver_records: [
     "shop_id",
     "template_body", // the frozen copy; waiver_templates.csv carries the text
