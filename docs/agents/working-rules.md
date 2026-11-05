@@ -34,9 +34,8 @@ in [route-map.md](route-map.md).
 | `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push`, `pnpm e2e <spec>`, `pnpm check` | the pre-commit and pre-push checklist, and which of them CI runs instead, is the **verify** skill; the reasoning is [verifying.md](verifying.md) |
 | `pnpm lint:fix` | Biome autofix |
 | `pnpm agent:doctor` | Node against `.nvmrc`, `gh`, `origin/main`'s age, `node_modules`, stray processes, remote branches with no open PR and the stack, each with its fix; a row only a human can change (the Node, the branches) is `info` and stays out of the two-line summary the session-start block carries |
-| `node scripts/stack-map.mjs` | the stack HEAD is in — layers bottom to top, the top, other tips, merged sub-branches, each layer's paths — derived from remote refs (`--json` for a machine); the per-prompt line carries the position; `--warnings` adds advice about stack work that may be getting lost (below) |
+| `node scripts/stack-map.mjs` | the stack HEAD is in — layers bottom to top, the top, other tips, merged sub-branches, each layer's paths — derived from remote refs (`--json` for a machine); the per-prompt line carries the position |
 | `node scripts/agent-evals.mjs` | the agent setup's golden tasks (`evals/agents/tasks.json`, ten): each runs headless twice in plan mode and the report names the tasks that flipped; `--validate` is offline and free; the first baseline is `evals/agents/baseline-2026-11-02.txt` (9 of 20 runs passed). Costs real tokens, so it is run by hand after changing `AGENTS.md`, a rule, a skill description or a reviewer agent, never in CI |
-| `pnpm stack:sync` | merges this layer's base (`origin/main` for the bottom) into it, read from the open pull requests; stops on a conflict, never pushes, prints what each layer above does (`--plan`, `--chain`; the **stacked-prs** skill) |
 | `pnpm check:env` / `pnpm env:manual` | the two structural facts about configuration, and the one file a human edits — see `.claude/rules/infra.md` |
 | `pnpm check:repo` | the static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md). `node scripts/check-repo.mjs --list` prints the rules index |
 | `pnpm check:follow-ups` | every open `needs-triage` issue is still actionable cold. The one guard that calls `gh`, so it is not in `check:repo`: it runs daily in `.github/workflows/follow-ups.yml`, and locally reports **SKIPPED** when `gh` cannot answer ([docs/agents/issue-tracker.md](issue-tracker.md)'s "Filing a follow-up") |
@@ -88,34 +87,19 @@ runs. Pass args directly. The shell guard refuses the bare form.
   allocate the next integer. No branch-local
   reservation ledgers. Split work by vertical slice or non-overlapping paths, and trial-merge the
   target branch before calling work complete.
-- **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
-  newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
-  the stack pushes one layer at a time, because overlapping runs queue on a 20-job cap.** That is
-  Aaron's rule; the CI half dates from 2026-10-12, when 15 to 19 layers pushed together cost 126
-  cancelled runs and 90 failed jobs. Push a layer, let its run finish, then push the next; a thread
-  whose layer sits on another thread's stack leaves the push order to the thread that owns it. A
-  batch goes up in rounds of about 150 changed files at most, each green before the next; a fix
-  push carries only the fix (#2934). A dependent chain (`src/db/schema/` + migration → the `src/db` reader → the surface) has no other
-  honest shape; unrelated work stacks because a second branch cut from `main` re-edits the same
-  shared files (a `check:repo` row, a baseline, a message bundle), and on a stack those merge once,
-  while the change is being written. Pixels are not an exception. Cut each branch from the one
-  below, open each PR as a **draft at its first commit** with `base` set to that branch, bottom one
-  first, every body naming its position; `.github/workflows/stack.yml` registers the chain as a
-  GitHub stack. Never open the parts as independent PRs off `main`. Every layer runs the whole CI
-  gate.
-  What still goes on its own branch off `main` (no stack open, or a fix that must merge now — never
-  depth: a stack has no cap, and a long one is the point) and the
-  mechanics are in the **stacked-prs** skill and ADRs 20260821-stacked-pull-requests,
-  20261003-every-stack-layer-runs-ci and 20260907-a-runner-registers-the-stack.
-- **Stack warnings are advice, never a gate** (#3646). `node scripts/stack-map.mjs --warnings`
-  (or `node scripts/stack-warnings.mjs`) prints a warning when a merged pull request's base was not
-  `main` and its merge commit is not in `origin/main` (#3579 to #3583 merged into a side branch
-  that was then moved and landed as #3587, and none reached main), when two open pull requests
-  share a base that is not `main`, and when an open layer does not contain its base branch's tip.
-  Nothing refuses a push or fails a check, so stacking stays fast. Run it before telling anyone a
-  stack has landed. `pnpm e2e:affected` is advice for a layer that changes shared chrome, never
-  required. The coordinator's own stack file under `/mnt/project-files/stack/` is outside this
-  repository; the warnings read git and the pull-request list, so they do not depend on it.
+- **Stack everything, across threads: cut every branch from the newest open one, any thread's,
+  related or not, with `gh stack`** (ADR 20261105-gh-stack-is-the-stack). `gh stack add -Am "<msg>"
+  <branch>` puts a layer on top (it refuses anywhere else, so a stack never forks) and
+  `gh stack submit --auto` pushes, opens the draft PRs with the right bases and registers the
+  stack; always pass `-m` and `--auto` and read stdin from `/dev/null`, because without them
+  `gh stack` opens an editor. Give each body its position line afterwards (`gh pr edit`). Aaron
+  clicks Merge on the top PR and the whole stack lands, all or nothing. **CI runs on the top layer
+  only** (`stack-gate` in `ci.yml` skips the layers below; never run a slice across layers), and a
+  red top is fixed from the top. Bring a layer forward with
+  `gh stack rebase`, then `gh stack push` (force-with-lease; plain `git push` is refused after a
+  rebase). Never `gh pr edit --base` on a stacked PR. Never close a layer with `--delete-branch`:
+  it closes the layer above. Only two cases go off `main`: no stack is open, or a fix that must
+  merge now. The mechanics are in the **stacked-prs** skill.
 - **Push less often.** A push cancels the PR's run in flight; cancelled runs were about half of PR
   CI compute (2026-11-01 profile). Batch fixes into one push, hold a stacked layer's push until
   the layer below is green, and push a stack cascade once.

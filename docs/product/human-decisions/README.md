@@ -224,6 +224,7 @@ and run the command again.
 | H-20261025-review-entire-engineering-backlog | Ready | — | This review's entire engineering backlog closed twice in five days (144 files, then 82,… |
 | H-20261025-shop-authored-pre-departure | Ready | — | A shop-authored pre-departure safety checklist (issue #686 — pre_departure_check_events, ADR 20260824-pre-departure-safety-check) ships informs-only: an… |
 | H-20261025-two-leftover-ratio-questions | Open | — | Two leftover ratio questions from H-20260724-certification-levels-agency-rules/HD-6's DSD correction: the Rescue Diver scenario-supervision figure, which… |
+| H-20261105-ci-on-the-stack-top | Implemented | 2026-11-05 | Which layers of a stack run CI? |
 | H-20261105-staff-roles-credentials-in-diver-export | Implemented | 2026-11-05 | Do a staffer's roles and pro cards belong in their own data export? |
 
 <!-- human-decision-index:end -->

@@ -278,11 +278,6 @@ The stamp records what it found (`baseCi`). The fix for a red base goes where th
 that layer is still open (its owner, through the coordinator), or rides in this layer when it
 cannot wait; either way, nothing is pushed red on purpose.
 
-**Loud, with the layer's name.** When the base is red on test files this branch does not edit,
-`verify:push` prints a `THE LAYER BELOW IS RED` banner naming that layer's branch and pull request
-before it runs them (`scripts/red-below.mjs`). Fix the bottom first, then
-`pnpm stack:sync` merges it up one layer at a time (the **stacked-prs** skill).
-
 The PR body rows are a separate gate: `scripts/guard-pr-body.mjs` runs `check-pr-body.mjs`
 before the GitHub MCP creates or edits a pull request.
 

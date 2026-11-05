@@ -1,6 +1,6 @@
 # 20260907-a-runner-registers-the-stack — A runner registers the stack, not the session
 
-- **Status:** Accepted
+- **Status:** Superseded by [20261105-gh-stack-is-the-stack](20261105-gh-stack-is-the-stack.md) (the runner, `stack.yml` and `stack-register.mjs` are deleted)
 - **Date:** 2026-09-07
 
 ## Context

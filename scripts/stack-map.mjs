@@ -10,9 +10,8 @@
 //   - a committed manifest (`.claude/stack.json`) that each PR updates: one more shared file
 //     every layer edits, stale the moment a layer merges or a sub-branch lands, and a merge
 //     conflict on every rebase — the problem it exists to remove;
-//   - a STACK block in each PR body, read live: a session cannot read PR bodies from a script
-//     (`gh` is absent and repo-scoped REST answers 403 in cloud containers — ADR
-//     20260907-a-runner-registers-the-stack), so the hooks could never print it.
+//   - a STACK block in each PR body, read live: a hook cannot rely on reading PR bodies from a script
+//     (cloud containers answer repo-scoped REST with 403), so it could never print it.
 //
 // Git already holds the whole shape. A layer below is a remote branch HEAD contains that main
 // does not; a layer above is one that contains HEAD. A layer sits on HEAD's first-parent chain;
@@ -22,8 +21,6 @@
 //
 //   node scripts/stack-map.mjs           the stack, one line per layer
 //   node scripts/stack-map.mjs --json    the same record, machine-readable
-//   node scripts/stack-map.mjs --warnings  the stack, then advice about work it may be losing
-//                                         (scripts/stack-warnings.mjs; never a gate)
 //
 // Every git call is a constant argument array or one built from git's own output (a ref name
 // or sha git printed); nothing from a payload reaches a subprocess.
@@ -211,9 +208,5 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     process.stdout.write(`${JSON.stringify(stack, null, 2)}\n`);
   } else {
     process.stdout.write(`${renderStack(stack)}\n`);
-  }
-  if (process.argv.includes("--warnings")) {
-    const { readWarnings, renderWarnings } = await import("./stack-warnings.mjs");
-    process.stdout.write(renderWarnings(readWarnings() ?? []));
   }
 }

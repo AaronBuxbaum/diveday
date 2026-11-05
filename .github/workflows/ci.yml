@@ -57,18 +57,37 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Every pull request runs the whole gate, stacked or not. A stack's middle
-  # layers used to skip CI and have their in-flight runs cancelled when a layer
-  # opened above them; that is gone (ADR 20261003-every-stack-layer-runs-ci,
-  # superseding 20260919-stack-ci-cancels-superseded-layers), so a green check
-  # on any layer means that layer was actually tested.
+  # Only the top layer of a stack runs the gate (ADR 20261105-ci-runs-on-the-top-of-the-stack,
+  # superseding 20261003-every-stack-layer-runs-ci). Aaron merges a whole stack from its top and the
+  # account has a fixed number of runners, so a slice of CI on every layer only delays the answer.
+  # A lower layer's run is skipped, not green: every job below is skipped with it, and the run
+  # summary names the layer that runs. The gate is fail-open: when it cannot tell, CI runs.
+  stack-gate:
+    name: Top of the stack?
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: gate
+        run: node scripts/ci-stack-gate.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
 
   # Lint, Typecheck and the repository safeguards, one job (2026-10-24). They
   # were three jobs of about a minute each, and each paid its own checkout,
   # `pnpm install` and runner slot against the concurrent-job cap for that
   # minute; one runner does the three in sequence for one setup. The job keeps
-  # the name `Repository safeguards`, which scripts/own-ci.mjs, base-ci.mjs and
-  # red-below.mjs read as answered by the local gate, and each check is still
+  # the name `Repository safeguards`, which scripts/own-ci.mjs and base-ci.mjs
+  # read as answered by the local gate, and each check is still
   # its own step under its old name, so a red one names itself.
   repo-safeguards:
     name: Repository safeguards
@@ -77,10 +96,10 @@ jobs:
     # what keeps that trigger scoped to `real-postgres`.
     # `needs: changes` only for its `runner` answer: the Mac when it is online,
     # GitHub otherwise (scripts/ci-runner-pick.mjs).
-    needs: changes
+    needs: [changes, stack-gate]
     # `!cancelled()`: a failed `changes` must not skip this job, which ran
     # unconditionally before it read the runner choice; it falls back to GitHub.
-    if: ${{ !cancelled() && github.event_name != 'schedule' }}
+    if: ${{ !cancelled() && github.event_name != 'schedule' && needs.stack-gate.outputs.run != 'false' }}
     runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     # Fifteen for the safeguards, plus the two-odd minutes Lint and Typecheck
     # took as jobs of their own.
@@ -1182,7 +1201,10 @@ jobs:
     # than a third-party filter action: the comparison is a few lines of shell,
     # and this repo would rather read those than take a new supply-chain
     # dependency into every CI run to save them.
-    if: github.event_name != 'schedule'
+    # `!cancelled()` because `stack-gate` is skipped off pull requests; a lower
+    # stack layer (`run == 'false'`) skips this job and, through `needs`, the rest.
+    needs: stack-gate
+    if: ${{ !cancelled() && github.event_name != 'schedule' && needs.stack-gate.outputs.run != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -1468,8 +1490,9 @@ jobs:
   # the live head/base/merge candidate before returning success.
   ci-result:
     name: CI result
-    if: always() && github.event_name != 'schedule'
+    if: always() && github.event_name != 'schedule' && needs.stack-gate.outputs.run != 'false'
     needs:
+      - stack-gate
       - repo-safeguards
       - unit-tests
       - unit-tests-docs

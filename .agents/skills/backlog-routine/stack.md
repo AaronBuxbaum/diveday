@@ -24,12 +24,9 @@ git push -u origin claude/<slug-2>
 the point; the body catches up at step 7. Every failure this routine has hit with stacks lived in the
 gap between cutting a branch and opening its pull request.
 
-**There is no registration step and nothing to wait for.** `.github/workflows/stack.yml` sees the
-pull request event and registers the chain as a stack on a runner — a session cannot reach that
-endpoint at all, which is what quietly stopped this working for nine days (ADR
-[20260907-a-runner-registers-the-stack](../../../docs/architecture/decisions/20260907-a-runner-registers-the-stack.md)).
-Anything telling you to run `gh stack link` or `gh api --method POST .../stacks` yourself is written
-for a workstation.
+**Registration is `gh stack submit --auto` (and `gh stack add -Am "<msg>" <branch>` for a layer),
+always non-interactive** — see the **stacked-prs** skill and ADR
+[20261105-gh-stack-is-the-stack](../../../docs/architecture/decisions/20261105-gh-stack-is-the-stack.md).
 
 **Why, concretely.** Thirteen branches cut from one `main` in a single session all edited
 `AGENTS.md`'s `check:repo` row, a `docs/design/*.md` section, and a section of `scripts/ratchets.json`. Every
@@ -91,10 +88,9 @@ the next ticket stacks on it, because anything else means resolving the same con
 
 **Nothing argues against depth.** A stack has no length limit, and a routine that runs for hours
 should expect a long one: ticket twelve stacks on ticket eleven exactly the way ticket two stacked
-on ticket one. Every layer runs the whole CI gate (ADR 20261003-every-stack-layer-runs-ci; the
-**stacked-prs** skill), so a deep stack costs runners, and that is the accepted price of every
-layer's green meaning it was tested. Push one layer, let its run finish, then the next: overlapping
-runs queue on the account's 20-concurrent-job cap. The stack restarts when the one below it **merges**, not at a layer count.
+on ticket one. Only the top layer runs the CI gate (ADR 20261105-ci-runs-on-the-top-of-the-stack;
+the **stacked-prs** skill), so a deep stack costs no more runners than a short one. Push when the layer is ready: lower layers run no CI, so
+pushes below the top cost nothing. The stack restarts when the one below it **merges**, not at a layer count.
 
 **A fix that is not the ticket goes on its own branch off `main`**, not into the stack — an
 unordered crew query found while triaging a diff, a race in a spec you did not touch. It should be
