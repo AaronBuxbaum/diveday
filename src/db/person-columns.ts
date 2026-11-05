@@ -81,10 +81,20 @@
  * column this registry does not call `own`, and `export-registry.test.ts`
  * holds both directions to the loader: every `own` column is read, and nothing
  * is read by the diver's id that is not `own`. **This governs reads by person
- * id only.** A read by the diver's own booking ids (roll call, deliveries,
- * payments, recap photos, tips) is scoped by those ids and is outside the
- * registry; what it ships is decided per file. The shop's whole bundle is a
- * per-table decision (`export.test.ts`), not a per-person one, and stays there.
+ * id.** A read-list entry the diver's bundle takes by the diver's own booking
+ * ids (roll call, deliveries, payments, recap photos) states its fate in
+ * {@link BOOKING_EXPORT_READS} instead, and `readScoped` refuses one that does
+ * not (#3880). The shop's whole bundle is a per-table decision
+ * (`export.test.ts`), not a per-person one, and stays there.
+ *
+ * **`own` is row-level.** It says the rows are the diver's, not that every
+ * column on them is theirs to read: a staff-typed free-text column on an own
+ * row (a card's review note, a gear note, a moderation reason, a bench line's
+ * description) can name another person, so it is withheld column by column in
+ * the `in:` field of `./export-shared-files` (`"shop"`), and an actor's name is
+ * resolved only for people holding a staff role (`loadDiverExportContext`,
+ * #3880). Erasure is a separate question and redacts no name inside anyone's
+ * free text (Aaron, 2026-11-01, #3437).
  *
  * `exportWhy` is required on every withheld `subject` and `crew` row: a
  * staffer asking for their own data reads the same reasons.
@@ -1580,6 +1590,29 @@ export function assertDiverExportColumn(table: string, column: string): void {
   const row = PERSON_COLUMNS.find((found) => found.table === table && found.column === column);
   if (!row) throw new Error(`export: ${table}.${column} has no registry row`);
   if (exportFate(row) !== "own") throw new Error(`export: ${table}.${column} is withheld`);
+}
+
+/**
+ * **The read-list entries a diver's own bundle takes by their bookings** (#3880),
+ * table by table, each with why its rows are the diver's: a row keyed by a seat
+ * the diver holds is about that seat. `export-registry.test.ts` fails until a
+ * new booking-scoped entry in `EXPORT_TABLES` states one here, and
+ * `readScoped` refuses one that has not.
+ */
+export const BOOKING_EXPORT_READS: Readonly<Record<string, string>> = {
+  recap_photos: "the photos the diver uploaded to their own recap",
+  booking_payment_events: "the payment state of the diver's own seats",
+  booking_checkout_bookings: "the checkouts that paid for the diver's own seats",
+  notification_deliveries: "the messages sent to the diver about their own seats",
+  booking_arrival_events: "when the diver's own seat was marked arrived at the dock",
+  roll_call_events: "the boarding and head-count marks on the diver's own seats",
+};
+
+/** Throws unless {@link BOOKING_EXPORT_READS} states a fate for reading `table` by a diver's bookings. */
+export function assertDiverBookingRead(table: string): void {
+  if (!Object.hasOwn(BOOKING_EXPORT_READS, table)) {
+    throw new Error(`export: ${table} has no booking-read fate`);
+  }
 }
 
 /** `table.column` for every row, the key the guards and the docs use. */

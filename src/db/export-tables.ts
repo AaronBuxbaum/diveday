@@ -14,7 +14,7 @@ import { DESK_ONLY_CODES } from "@/lib/activity";
 import type { CsvValue, ExportTable } from "@/lib/export";
 import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
-import { assertDiverExportColumn } from "./person-columns";
+import { assertDiverBookingRead, assertDiverExportColumn } from "./person-columns";
 import { oldestMarkFirst } from "./roll-call-order";
 import {
   activityEvents,
@@ -708,6 +708,7 @@ export async function readScoped<K extends ExportTableKey>(
     );
   }
   if (bookingColumn) {
+    assertDiverBookingRead(getTableName(getColumnTable(bookingColumn)));
     if (scope.bookingIds.length === 0) return [];
     return readWhere(db, key, (columns) =>
       and(eq(columns.shopColumn, scope.shopId), inArray(bookingColumn, [...scope.bookingIds])),

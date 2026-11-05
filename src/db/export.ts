@@ -31,7 +31,7 @@
 
 import { and, asc, count, eq, getTableColumns, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { fieldGuideCardsIn } from "@/i18n/marine-life-labels";
-import { canExportShopData } from "@/lib/authz";
+import { canExportShopData, STAFF_ROLES } from "@/lib/authz";
 import { splitCardsByKind } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import {
@@ -907,13 +907,17 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   // staffer who recorded a roll call, moderated a review, or paired a
   // buddy team. Used only to resolve a name string onto the diver's own
   // rows below; no other person's row is ever written to a file (see the
-  // shared-row decisions above).
+  // shared-row decisions above). Only people holding a staff role, and the
+  // diver themselves: an actor column that points at another diver (a
+  // malformed historical reference) resolves to no name, never theirs (#3880).
   const staffRows = await tx
-    .select({ id: people.id, fullName: people.fullName })
+    .selectDistinct({ id: people.id, fullName: people.fullName })
     .from(people)
     // diveday:allow-deleted-people: names for every row in the bundle, removed staff included.
-    .where(eq(people.shopId, shopId));
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])));
   const personName = new Map(staffRows.map((row) => [row.id, row.fullName]));
+  personName.set(person.id, person.fullName);
   // Plan attribution may name only current staff, never another diver even if
   // a malformed historical reference points at one.
   const planPersonIds = [

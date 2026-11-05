@@ -140,7 +140,9 @@ export const CARDS_CSV = sharedFile<ShopRow<"cardRows">>({
           ? personName.get(row.juniorStatusVerifiedByPersonId)
           : null,
     },
-    { header: "review_note", in: "both", value: (row) => row.reviewNote },
+    // Staff-typed (or the agency's words), and free text can name another
+    // diver: the shop's file only (#3880).
+    { header: "review_note", in: "shop", value: (row) => row.reviewNote },
     { header: "reviewed_at", in: "both", value: (row) => row.reviewedAt },
     {
       header: "reviewed_by_name",
@@ -1233,7 +1235,8 @@ export const CUSTOMER_GEAR_ITEMS_CSV = sharedFile<ShopRow<"customerGearItemRows"
     { header: "kind", in: "both", value: (row) => row.kind },
     { header: "brand_model", in: "both", value: (row) => row.brandModel },
     { header: "serial_number", in: "both", value: (row) => row.serialNumber },
-    { header: "note", in: "both", value: (row) => row.note },
+    // Staff-typed free text that can name another diver: the shop's file only (#3880).
+    { header: "note", in: "shop", value: (row) => row.note },
     { header: "service_due_on", in: "both", value: (row) => row.serviceDueOn },
     { header: "inspection_due_on", in: "both", value: (row) => row.inspectionDueOn },
     { header: "hydro_due_on", in: "both", value: (row) => row.hydroDueOn },
@@ -1330,7 +1333,8 @@ export const WORK_ORDER_LINES_CSV = sharedFile<ShopRow<"workOrderLineRows">>({
     { header: "id", in: "both", value: (row) => row.id },
     { header: "work_order_id", in: "both", value: (row) => row.workOrderId },
     { header: "kind", in: "both", value: (row) => row.kind },
-    { header: "description", in: "both", value: (row) => row.description },
+    // Staff-typed free text that can name another diver: the shop's file only (#3880).
+    { header: "description", in: "shop", value: (row) => row.description },
     { header: "quantity_hundredths", in: "both", value: (row) => row.quantityHundredths },
     { header: "unit_amount_cents", in: "both", value: (row) => row.unitAmountCents },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
@@ -1653,7 +1657,8 @@ export const REVIEW_MODERATION_EVENTS_CSV = sharedFile<{
     { header: "review_id", in: "both", value: ({ event }) => event.reviewId },
     { header: "action", in: "both", value: ({ event }) => event.action },
     { header: "reason", in: "both", value: ({ event }) => event.reason },
-    { header: "reason_note", in: "both", value: ({ event }) => event.reasonNote },
+    // Staff-typed free text that can name another diver: the shop's file only (#3880).
+    { header: "reason_note", in: "shop", value: ({ event }) => event.reasonNote },
     { header: "recorded_by_person_id", in: "shop", value: ({ event }) => event.recordedByPersonId },
     { header: "recorded_by_name", in: "both", value: ({ staffName }) => staffName },
     { header: "occurred_at", in: "both", value: ({ event }) => event.occurredAt },
