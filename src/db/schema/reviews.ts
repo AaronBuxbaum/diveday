@@ -135,10 +135,13 @@ export const tripReviews = pgTable(
     crewThanks: text("crew_thanks"),
     /**
      * Staff hid the thanks from the crew member (loop 5, row 6). A hide, not a
-     * delete: the words stay for the shop's record, and a revised line comes
-     * back unhidden because nobody has read it yet.
+     * delete: the words stay for the shop's record. The hide belongs to the
+     * review, so a diver's revision (a new line, or none and then one) does
+     * not lift it; only staff showing it again does.
      */
     crewThanksHiddenAt: timestamp("crew_thanks_hidden_at", { withTimezone: true }),
+    /** The staffer who hid it (null when shown). */
+    crewThanksHiddenByPersonId: uuid("crew_thanks_hidden_by_person_id").references(() => people.id),
     createdAt: appNowTimestamp("created_at").notNull(),
     updatedAt: appNowTimestamp("updated_at").notNull(),
   },

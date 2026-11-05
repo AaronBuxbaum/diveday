@@ -77,7 +77,7 @@ dive_sites.csv 8 rows 01d2a593dfc7401b [id,name,location_name,description,diffic
 dive_site_creatures.csv 29 rows ffbcca1df4b48b66 [id,dive_site_id,dive_site_name,position,name,kind,description,preparation_tip,image_url,catalog_slug]
 recap_photos.csv 3 rows 7b30f27fc9e891c6 [id,booking_id,trip_id,image_url,caption,shared_with_boat_at,created_at]
 trip_recap_photos.csv 0 rows 39e82d2fcab675ab [id,trip_id,trip_title,image_url,uploaded_by_person_id,uploaded_by_person_name,created_at]
-trip_reviews.csv 91 rows 2e1986917a1cc5d4 [id,booking_id,trip_id,person_id,diver_name,rating,comment,is_standout,is_published,published_at,crew_thanks,crew_thanks_person_id,crew_thanks_hidden_at,created_at,updated_at,shop_reply]
+trip_reviews.csv 91 rows bf489cf30f07270d [id,booking_id,trip_id,person_id,diver_name,rating,comment,is_standout,is_published,published_at,crew_thanks,crew_thanks_person_id,crew_thanks_hidden_at,crew_thanks_hidden_by_person_id,created_at,updated_at,shop_reply]
 recap_pulses.csv 0 rows 0fc571ac232bdb30 [id,booking_id,trip_id,person_id,diver_name,categories,note,addressed_at,addressed_by_person_id,deleted_at,created_at,updated_at]
 review_moderation_events.csv 0 rows 93aa3f5176d60cb0 [id,review_id,action,reason,reason_note,recorded_by_person_id,recorded_by_name,occurred_at]
 dive_packages.csv 2 rows 4a8a95634a03f268 [id,name,dive_count,price_cents,scope,valid_until,deleted_at,created_by_person_id,created_at]

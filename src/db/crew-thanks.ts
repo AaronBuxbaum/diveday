@@ -55,8 +55,8 @@ export async function readCrewThanks(
 export type SetCrewThanksHiddenResult = true | "not_found";
 
 /**
- * Hide or show one review's thanks to the crew. Staff only (the caller's
- * gate); the shop is the session's, so another shop's review id changes
+ * Hide or show one review's thanks to the crew. Owner or manager only
+ * (the caller's gate); the actor is recorded; the shop is the session's, so another shop's review id changes
  * nothing. A review with no thanks is `not_found`.
  */
 export async function setCrewThanksHidden(
@@ -64,11 +64,15 @@ export async function setCrewThanksHidden(
   shopId: string,
   reviewId: string,
   hidden: boolean,
+  actorPersonId: string,
   at: Date,
 ): Promise<SetCrewThanksHiddenResult> {
   const [row] = await db
     .update(tripReviews)
-    .set({ crewThanksHiddenAt: hidden ? at : null })
+    .set({
+      crewThanksHiddenAt: hidden ? at : null,
+      crewThanksHiddenByPersonId: hidden ? actorPersonId : null,
+    })
     .where(
       and(
         eq(tripReviews.id, reviewId),

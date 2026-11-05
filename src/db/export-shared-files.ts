@@ -1625,6 +1625,11 @@ export const TRIP_REVIEWS_CSV = sharedFile<ShopRow<"reviewRows">>({
       in: "shop",
       value: ({ review }) => review.crewThanksHiddenAt,
     },
+    {
+      header: "crew_thanks_hidden_by_person_id",
+      in: "shop",
+      value: ({ review }) => review.crewThanksHiddenByPersonId,
+    },
     { header: "created_at", in: "both", value: ({ review }) => review.createdAt },
     { header: "updated_at", in: "shop", value: ({ review }) => review.updatedAt },
     // The shop's live public reply under the review (`review_replies`, folded).

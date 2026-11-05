@@ -338,6 +338,17 @@ const rows = [
     eraseWhy:
       "a pointer at an erased person discloses nothing: the name is joined at read, and the diver's words are cleared by their own erasure",
   },
+  // The staffer who hid a thanks from the crew member.
+  {
+    table: "trip_reviews",
+    column: "crew_thanks_hidden_by_person_id",
+    export: "withheld",
+    exportWhy: "a staff moderation record, not the diver's own words",
+    kind: "actor",
+    merge: "leave",
+    why: "names the staffer who hid the line, a staff record whose own merge is refused; the pointer stays on the id it had",
+    erase: "keep",
+  },
   // The private half of the same act (ADR 20260904-reef-all-the-way-down,
   // D40): the diver's own word about how the day went, on the booking they
   // sat in. It moves for the reason the review above it does — it is the

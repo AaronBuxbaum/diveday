@@ -1686,6 +1686,7 @@ async function scrubReviews(
       crewThanks: null,
       crewThanksPersonId: null,
       crewThanksHiddenAt: null,
+      crewThanksHiddenByPersonId: null,
     })
     .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId)));
   // The shop's reply under those reviews (batch 4, K2) answered words that are
