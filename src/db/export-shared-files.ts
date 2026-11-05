@@ -1647,6 +1647,46 @@ export const TRIP_REVIEWS_CSV = sharedFile<ShopRow<"reviewRows">>({
   },
 });
 
+/**
+ * The private word a diver sent the shop about their day (#3862). The diver's
+ * own bundle carries their pulses, words and categories alike; which staffer
+ * picked one up, and when, is the shop's own handling and stays in its file.
+ */
+export const RECAP_PULSES_CSV = sharedFile<ShopRow<"recapPulseRows">>({
+  file: "recap_pulses.csv",
+  columns: [
+    { header: "id", in: "both", value: ({ pulse }) => pulse.id },
+    { header: "booking_id", in: "both", value: ({ pulse }) => pulse.bookingId },
+    { header: "trip_id", in: "shop", value: ({ pulse }) => pulse.tripId },
+    { header: "person_id", in: "shop", value: ({ pulse }) => pulse.personId },
+    { header: "diver_name", in: "shop", value: ({ diverName }) => diverName },
+    // Codes, not sentences — `recap_pulse_category`. The words are
+    // DiveDay's copy in the reader's language, and a CSV has no reader
+    // to resolve them for, so the slug is the durable fact. Same call
+    // `observed_species_slug` makes.
+    { header: "categories", in: "both", value: ({ pulse }) => JSON.stringify(pulse.categories) },
+    { header: "note", in: "both", value: ({ pulse }) => pulse.note },
+    { header: "addressed_at", in: "shop", value: ({ pulse }) => pulse.addressedAt },
+    {
+      header: "addressed_by_person_id",
+      in: "shop",
+      value: ({ pulse }) => pulse.addressedByPersonId,
+    },
+    { header: "deleted_at", in: "both", value: ({ pulse }) => pulse.deletedAt },
+    { header: "created_at", in: "both", value: ({ pulse }) => pulse.createdAt },
+    { header: "updated_at", in: "shop", value: ({ pulse }) => pulse.updatedAt },
+  ],
+  shop: {
+    rows: ({ recapPulseRows }) => recapPulseRows,
+    note: EXPORT_FILE_NOTES["recap_pulses.csv"],
+  },
+  diver: {
+    rows: ({ recapPulseRows, person }) =>
+      recapPulseRows.map((pulse) => ({ pulse, diverName: person.fullName })),
+    note: "The private feedback this diver sent the shop after a trip, from their recap link: the categories they picked and any words of their own. A row with deleted_at is one they took back.",
+  },
+});
+
 export const REVIEW_MODERATION_EVENTS_CSV = sharedFile<{
   event: typeof reviewModerationEvents.$inferSelect;
   staffName: string | undefined;

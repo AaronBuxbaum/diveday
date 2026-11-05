@@ -367,9 +367,7 @@ const rows = [
   {
     table: "recap_pulses",
     column: "person_id",
-    export: "withheld",
-    exportWhy:
-      "not yet: the shop's bundle carries it as recap_pulses.csv, and the diver's own bundle has no file for it (#3862)",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",

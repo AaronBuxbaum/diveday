@@ -390,7 +390,6 @@ const DIVER_NOT_INCLUDED = [
   "Medical answers and the medical alert for the crew on any signed waiver — withheld pending a legal review of what a subject-access request should return; every other field of the signature is included.",
   "Messages this diver sent the shop and the shop's replies. Neither export has a file for a conversation yet.",
   "Lost-and-found items the shop is holding for this diver. They are cleared 90 days after they go home, and neither export carries them.",
-  "Recap pulses, this diver's quick private feedback after a trip. The shop-wide export carries them as recap_pulses.csv; this bundle has no file for them yet.",
   "Weather-cancellation rebooking offers. The canceled seat itself is in bookings.csv.",
   "Internal staff notes about this diver. They were never shown to a diver and never gated anything; the shop's own words about its own customer stay the shop's.",
   "The staff activity trail. Its rows carry the names of whoever the line is about, and one line routinely names a different diver — safely removing just that risk needs the same name-matching sweep the erasure path uses, and is a follow-up rather than reinvented here.",

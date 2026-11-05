@@ -23,6 +23,7 @@ import {
   ORDERS_CSV,
   PRIOR_VISITS_CSV,
   RECAP_PHOTOS_CSV,
+  RECAP_PULSES_CSV,
   RENTAL_FIT_CSV,
   REVIEW_MODERATION_EVENTS_CSV,
   ROLL_CALL_EVENTS_CSV,
@@ -2249,43 +2250,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["trip_recap_photos.csv"],
   },
   shopFile(TRIP_REVIEWS_CSV),
-  {
-    file: "recap_pulses.csv",
-    header: [
-      "id",
-      "booking_id",
-      "trip_id",
-      "person_id",
-      "diver_name",
-      // Codes, not sentences — `recap_pulse_category`. The words are
-      // DiveDay's copy in the reader's language, and a CSV has no reader
-      // to resolve them for, so the slug is the durable fact. Same call
-      // `observed_species_slug` makes.
-      "categories",
-      "note",
-      "addressed_at",
-      "addressed_by_person_id",
-      "deleted_at",
-      "created_at",
-      "updated_at",
-    ],
-    rows: ({ recapPulseRows }) =>
-      recapPulseRows.map(({ pulse, diverName }) => [
-        pulse.id,
-        pulse.bookingId,
-        pulse.tripId,
-        pulse.personId,
-        diverName,
-        JSON.stringify(pulse.categories),
-        pulse.note,
-        pulse.addressedAt,
-        pulse.addressedByPersonId,
-        pulse.deletedAt,
-        pulse.createdAt,
-        pulse.updatedAt,
-      ]),
-    note: EXPORT_FILE_NOTES["recap_pulses.csv"],
-  },
+  shopFile(RECAP_PULSES_CSV),
   shopFile(REVIEW_MODERATION_EVENTS_CSV),
   {
     file: "dive_packages.csv",

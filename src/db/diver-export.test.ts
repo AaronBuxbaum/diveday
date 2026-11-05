@@ -13,6 +13,7 @@ import {
   orderLineItems,
   orders,
   people,
+  recapPulses,
   shops,
   userAccounts,
   waiverRecords,
@@ -220,6 +221,47 @@ describe("one diver's own record export (issue #726)", () => {
       (candidate) => candidate[templates.header.indexOf("id")] === template.id,
     );
     expect(templateRow?.[templates.header.indexOf("body")]).toBe(template.body);
+  });
+
+  /**
+   * #3862: the private word a diver sent the shop about their day is theirs,
+   * and their own bundle carries it; the other diver's word, and the shop's
+   * record of who picked it up, stay out.
+   */
+  it("carries the diver's own recap pulses, and nobody else's", async () => {
+    const { db, shop } = ctx;
+    const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
+    const { tripId, lead, follower } = await partyOfTwo(shop, db);
+    await db.insert(recapPulses).values([
+      {
+        shopId: shop.id,
+        bookingId: lead.bookingId,
+        tripId,
+        personId: lead.personId,
+        categories: ["briefing"],
+        note: "Lead's own word about the briefing",
+        addressedAt: nowDate(),
+        addressedByPersonId: owner,
+      },
+      {
+        shopId: shop.id,
+        bookingId: follower.bookingId,
+        tripId,
+        personId: follower.personId,
+        categories: ["boat"],
+        note: "Follower's own word about the boat",
+      },
+    ]);
+    const input = await loadDiverExportBundleInput(db, shop.id, lead.personId);
+    if (!input) throw new Error("export failed to load");
+    const file = input.tables.find((table) => table.file === "recap_pulses.csv");
+    if (!file) throw new Error("recap_pulses.csv missing from the diver bundle");
+    expect(file.rows).toHaveLength(1);
+    expect(file.rows[0]?.[file.header.indexOf("note")]).toBe("Lead's own word about the briefing");
+    expect(file.header).not.toContain("person_id");
+    expect(file.header).not.toContain("addressed_by_person_id");
+    expect(serialize(input)).not.toContain("Follower's own word");
+    expect(serialize(input)).not.toContain(owner);
   });
 
   it("drops staff free-text notes from a diver's own orders, keeping the money", async () => {

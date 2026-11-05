@@ -1029,6 +1029,12 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     .where(and(eq(tripReviews.shopId, shopId), diverOwnRows(tripReviews.personId, personId)))
     .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
   const reviewIds = reviewRows.map((row) => row.id);
+  // The diver's private word about their day (#3862), taken back ones included.
+  const recapPulseRows = await tx
+    .select()
+    .from(recapPulses)
+    .where(and(eq(recapPulses.shopId, shopId), diverOwnRows(recapPulses.personId, personId)))
+    .orderBy(asc(recapPulses.createdAt), asc(recapPulses.id));
   const reviewModerationRows = reviewIds.length
     ? await tx
         .select()
@@ -1180,6 +1186,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     tipRows,
     recapPhotoRows,
     reviewRows,
+    recapPulseRows,
     reviewModerationRows,
     entitlementRows,
     packageName,
