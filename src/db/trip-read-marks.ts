@@ -1,5 +1,5 @@
-import { and, eq, gt, inArray, isNull, max, ne, not, notInArray, or, sql } from "drizzle-orm";
-import { catchUpKind, DESK_FLAGGED_CODES, deskCodesFeeding } from "@/lib/activity";
+import { and, eq, gt, inArray, isNotNull, isNull, max, ne, not, notInArray, or, sql } from "drizzle-orm";
+import { catchUpKind, DESK_FLAGGED_CODES, DESK_SEAT_CODES, deskCodesFeeding } from "@/lib/activity";
 import type { CatchUpEvent } from "@/lib/catch-up";
 import { nowDate } from "@/lib/clock";
 import { seatCheckedIn } from "./arrival-provenance";
@@ -193,11 +193,14 @@ export function asCatchUpEvents<
 
 /**
  * The four kinds the strip may only say while the rows behind them still
- * bear them out (see {@link listCatchUpSince}). Every other kind is a
- * statement about something that happened, which stays true once it has.
+ * bear them out (see {@link listCatchUpSince}), and every desk-only line about
+ * a seat only while that booking exists: a hard-deleted booking leaves its
+ * lines behind with no booking (issue #3875). Every other kind is a statement
+ * about something that happened, which stays true once it has.
  */
 export function rosterStillSaysIt() {
   return and(
+    or(notInArray(activityEvents.code, [...DESK_SEAT_CODES]), isNotNull(bookings.id)),
     or(
       notInArray(activityEvents.code, deskCodesFeeding("running_late")),
       and(

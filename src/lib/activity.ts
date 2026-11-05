@@ -812,6 +812,16 @@ export const DESK_FLAGGED_CODES: readonly string[] = [
 ];
 
 /**
+ * The desk-only codes that name a seat: every one but the two trip-wide codes
+ * (a meeting point and a plan change write no booking). A booking hard-deleted
+ * after one is written leaves the line with no booking (`booking_id` is SET
+ * NULL), so the strip keeps these only while the seat still exists.
+ */
+export const DESK_SEAT_CODES: readonly DeskOnlyCode[] = DESK_ONLY_CODES.filter(
+  (code) => code !== "desk_meeting_point" && code !== "desk_plan_changed",
+);
+
+/**
  * The codes whose every line feeds `kind`, for the strip's roster checks
  * (`rosterStillSaysIt`). The two read by their names feed none of the kinds
  * those checks are about.
