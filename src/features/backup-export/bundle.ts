@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
 import { loadShopExportBundleInput } from "@/db/export";
-import { recordMedicalAnswersExported, recordScheduledBackupMedicalAnswers } from "@/db/operations";
+import { recordMedicalAnswersExported } from "@/db/operations";
 import { type FeedLabels, feedDocument, listFeedTrips } from "@/features/calendar-sync";
 import {
   buildExportBundle,
@@ -39,19 +39,22 @@ export type BuildBackupBundleInput = {
    * route writes (issue #2618), before anything is assembled.
    */
   readerPersonId?: string;
-  /**
-   * A scheduled run to the shop's own storage: no staffer read anything, so
-   * it writes the system lines instead (#3871), before anything is
-   * assembled and fail-closed like the reader's. The platform backup sets
-   * neither and writes nothing (Aaron's option c).
-   */
-  scheduled?: boolean;
   /** Used for the photo fetches, so tests own all I/O. */
   fetchImpl?: typeof fetch;
 };
 
 export type BuildBackupBundleResult =
-  | { ok: true; zip: Uint8Array; shopSlug: string }
+  | {
+      ok: true;
+      zip: Uint8Array;
+      shopSlug: string;
+      /**
+       * Whose medical answers the bundle carries. A scheduled run writes its
+       * system lines from these once the upload has landed (#3871): the line
+       * says the answers were sent, so it is written only when they were.
+       */
+      medicalAnswerPersonIds: readonly string[];
+    }
   /** The shop row is gone — deleted between the caller's listing and here. */
   | { ok: false; reason: "shop_missing" };
 
@@ -71,11 +74,6 @@ export async function buildBackupBundle(
     await recordMedicalAnswersExported(db, {
       shopId: input.shopId,
       actorPersonId: input.readerPersonId,
-      personIds: bundleInput.medicalAnswerPersonIds,
-    });
-  } else if (input.scheduled) {
-    await recordScheduledBackupMedicalAnswers(db, {
-      shopId: input.shopId,
       personIds: bundleInput.medicalAnswerPersonIds,
     });
   }
@@ -103,5 +101,10 @@ export async function buildBackupBundle(
     ...photos.map((photo) => ({ name: photo.path, content: photo.bytes })),
   ];
 
-  return { ok: true, zip: zipExportBundle(files), shopSlug: bundleInput.shopSlug };
+  return {
+    ok: true,
+    zip: zipExportBundle(files),
+    shopSlug: bundleInput.shopSlug,
+    medicalAnswerPersonIds: bundleInput.medicalAnswerPersonIds,
+  };
 }

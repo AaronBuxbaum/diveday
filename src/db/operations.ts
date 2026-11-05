@@ -341,7 +341,7 @@ export async function recordMedicalAnswersExported(
 
 /**
  * **A scheduled backup carried divers' medical answers** (#3871, Aaron's
- * option b). No person read them, so no `medical_answers_read` line: the
+ * option b), written once the upload has landed, once per delivery. No person read them, so no `medical_answers_read` line: the
  * shop's trail gets one line for the run, with how many divers' answers it
  * held, and each diver's trail gets one line the first time a scheduled backup
  * holds their answers, never again. Both are system lines (`scheduled_backup`).
@@ -350,7 +350,7 @@ export async function recordMedicalAnswersExported(
  */
 export async function recordScheduledBackupMedicalAnswers(
   db: DbExecutor,
-  input: { shopId: string; personIds: readonly string[] },
+  input: { shopId: string; personIds: readonly string[]; deliveryId: string },
 ): Promise<void> {
   const unique = [...new Set(input.personIds)];
   if (unique.length === 0) return;
@@ -360,7 +360,7 @@ export async function recordScheduledBackupMedicalAnswers(
     actorPersonId: null,
     systemReason: "scheduled_backup",
     code: "scheduled_backup_medical_answers",
-    params: { count: String(unique.length) },
+    params: { count: String(unique.length), delivery: input.deliveryId },
     occurredAt,
   });
   // Chunked as `recordMedicalAnswersExported` is, for the same bind limit.

@@ -300,7 +300,7 @@ type ActivityParamShapes = {
    * answers (#3871, Aaron's option b): one shop line per run, with how many
    * divers' answers it held. No actor; the system reason is `scheduled_backup`.
    */
-  scheduled_backup_medical_answers: { count: string };
+  scheduled_backup_medical_answers: { count: string; delivery: string };
   /**
    * The first scheduled backup that held this diver's medical answers, on
    * their trail once (#3871): the standing fact, said once, rather than a

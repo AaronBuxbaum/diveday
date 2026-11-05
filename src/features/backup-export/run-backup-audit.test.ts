@@ -203,6 +203,40 @@ describe("runShopBackup scheduled medical-answers audit (issue 3871)", () => {
     ).toHaveLength(1);
   });
 
+  it("writes nothing when the upload fails, and the line names the delivery that landed", async () => {
+    const { db, shop } = ctx;
+    await answeredDiver("audit.refused@example.com");
+    const refused = vi.fn(
+      async () => new Response(null, { status: 403 }),
+    ) as unknown as typeof fetch;
+    const failed = await runShopBackup(db, {
+      ...base(),
+      trigger: "scheduled",
+      now: new Date("2026-09-01T06:00:00Z"),
+      shopId: shop.id,
+      fetchImpl: refused,
+    });
+    expect(failed.status).not.toBe("delivered");
+    expect(await scheduledLines(shop.id)).toEqual([]);
+
+    const fetchImpl = vi.fn(
+      async () => new Response(null, { status: 200 }),
+    ) as unknown as typeof fetch;
+    const landed = await runShopBackup(db, {
+      ...base(),
+      trigger: "scheduled",
+      now: new Date("2026-09-01T07:00:00Z"),
+      shopId: shop.id,
+      fetchImpl,
+    });
+    if (landed.status !== "delivered") throw new Error(`retry did not deliver: ${landed.status}`);
+    const lines = (await scheduledLines(shop.id)).filter(
+      (l) => l.code === "scheduled_backup_medical_answers",
+    );
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.params).toMatchObject({ delivery: landed.deliveryId });
+  });
+
   it("writes no scheduled line on a manual run", async () => {
     const { db, shop } = ctx;
     const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
