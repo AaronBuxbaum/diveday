@@ -133,6 +133,29 @@ describe("booking link keys", () => {
     expect(parseVerifiedCapabilityToken(old.token, "readiness", cut)).toBeNull();
   });
 
+  it("retires v1 at the first rotation: with BOOKING_LINK_SECRET_PREVIOUS set, v1 no longer verifies", () => {
+    const v1 = tokenFor();
+    const rotated = bookingLinkKeyring({
+      ...local,
+      BOOKING_LINK_SECRET: V3,
+      BOOKING_LINK_SECRET_PREVIOUS: V2,
+    });
+    expect(rotated.keyFor(1)).toBeNull();
+    expect(parseVerifiedCapabilityToken(v1.token, "readiness", rotated)).toBeNull();
+    // A previous value with no current one changes nothing: v1 still signs.
+    const stray = bookingLinkKeyring({ ...local, BOOKING_LINK_SECRET_PREVIOUS: V2 });
+    expect(stray.signingVersion()).toBe(1);
+  });
+
+  it("refuses a BOOKING_LINK_SECRET whose secret is AUTH_SECRET itself", () => {
+    for (const env of [
+      { BOOKING_LINK_SECRET: `v2:${AUTH}` },
+      { BOOKING_LINK_SECRET: V3, BOOKING_LINK_SECRET_PREVIOUS: `v2:${AUTH}` },
+    ]) {
+      expect(() => bookingLinkKeyring({ ...local, ...env }).signingVersion()).toThrow();
+    }
+  });
+
   it("never verifies a key moved under a different version", () => {
     const signer = bookingLinkKeyring({ ...local, BOOKING_LINK_SECRET: V2 });
     const old = tokenFor("readiness", signer);

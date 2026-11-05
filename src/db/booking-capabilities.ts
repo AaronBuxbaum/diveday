@@ -53,27 +53,6 @@ export type IssuedReturningDiverReceipt = {
 };
 
 /**
- * **The two readiness links a new booking gets** (security review r5-4, F1):
- * one for the browser that booked, which proved only a typed name and an
- * address and so stays undelivered, and one for the confirmation email, which
- * is delivered and opens the diver's other days. Two rows, never one: the
- * browser's link must not gain the email's reach. Issued one after the other,
- * never side by side, so a transaction executor stays sequential.
- */
-export async function issueBookedReadinessLinks(
-  db: DbExecutor,
-  input: { shopId: string; bookingId: string },
-): Promise<{ redirect: IssuedCapability | null; mailed: IssuedCapability | null }> {
-  const redirect = await issueBookingCapability(db, { ...input, purpose: "readiness" });
-  const mailed = await issueBookingCapability(db, {
-    ...input,
-    purpose: "readiness",
-    delivered: true,
-  });
-  return { redirect, mailed };
-}
-
-/**
  * **The booking's live link for this purpose, or a new one.** Refuses a
  * booking that isn't this shop's, is cancelled, or whose person is erased: a
  * cancelled booking never gets a link, and its outstanding ones already fail
@@ -221,8 +200,9 @@ async function getOrCreateLiveLinks(
     const reusable =
       row &&
       purpose !== "handoff" &&
-      row.keyVersion !== null &&
-      keyring.keyFor(row.keyVersion) !== null &&
+      // Only a row under the signing key is handed out again: re-sending (and
+      // extending) an older version would keep it alive after rotation.
+      row.keyVersion === signingVersion &&
       row.expiresAt.getTime() - now.getTime() >= CAPABILITY_ROTATE_WITHIN_MS;
     if (row && reusable && row.keyVersion !== null) {
       if (row.expiresAt.getTime() !== seat.expiresAt.getTime()) {
@@ -1253,6 +1233,44 @@ function rowMatchingToken(token: string, purpose: CapabilityPurpose) {
     eq(bookingCapabilities.purpose, purpose),
     eq(bookingCapabilities.keyVersion, parsed.version),
   );
+}
+
+/**
+ * **A departure's live links follow its end** (issue #2711, code security
+ * review finding 4). Called in the transaction that saves a trip's new
+ * `endsAt`, or that moves one seat to another departure: every live link of
+ * those seats moves to the expiry issuing would give it now, so a boat moved earlier leaves no link outliving it and one
+ * moved later keeps its confirmation alive. A handoff keeps its ten minutes
+ * and a receipt its own window, so neither moves.
+ */
+export async function realignTripLinkExpiry(
+  tx: DbExecutor,
+  input: { shopId: string; endsAt: Date; now?: Date } & (
+    | { tripId: string; bookingId?: never }
+    | { bookingId: string; tripId?: never }
+  ),
+): Promise<void> {
+  const expiresAt = capabilityExpiryFor(input.endsAt, input.now ?? nowDate());
+  await tx
+    .update(bookingCapabilities)
+    .set({ expiresAt })
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, input.shopId),
+        isNull(bookingCapabilities.revokedAt),
+        isNull(bookingCapabilities.sourceCapabilityId),
+        ne(bookingCapabilities.purpose, "handoff"),
+        input.bookingId !== undefined
+          ? eq(bookingCapabilities.bookingId, input.bookingId)
+          : inArray(
+              bookingCapabilities.bookingId,
+              tx
+                .select({ id: bookings.id })
+                .from(bookings)
+                .where(and(eq(bookings.tripId, input.tripId), eq(bookings.shopId, input.shopId))),
+            ),
+      ),
+    );
 }
 
 /**

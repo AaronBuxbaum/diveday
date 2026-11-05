@@ -10,7 +10,6 @@ import { countingShopContext } from "@/test/query-count";
 import {
   consumeBookingCapability,
   hasLiveDeliveredReadinessLink,
-  issueBookedReadinessLinks,
   issueBookingCapability,
   liveBookingLink,
   lockBookingCapabilityForToken,
@@ -102,10 +101,17 @@ describe("issuing is get-or-create", () => {
   it("keeps the browser's link and the email's link apart: two rows, two tokens", async () => {
     const { db, shop } = fileCtx;
     const { bookingId } = await seatFor(db, shop.id);
-    const { redirect, mailed } = await issueBookedReadinessLinks(db, {
-      shopId: shop.id,
-      bookingId,
-    });
+    // One after the other, never side by side: the executor is one transaction.
+    const links = async () => [
+      await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" }),
+      await issueBookingCapability(db, {
+        shopId: shop.id,
+        bookingId,
+        purpose: "readiness",
+        delivered: true,
+      }),
+    ];
+    const [redirect, mailed] = await links();
     expect(redirect?.token).not.toBe(mailed?.token);
     expect(
       await verifyBookingCapability(db, { token: redirect?.token ?? "", purpose: "readiness" }),
@@ -113,8 +119,7 @@ describe("issuing is get-or-create", () => {
     expect(
       await verifyBookingCapability(db, { token: mailed?.token ?? "", purpose: "readiness" }),
     ).toMatchObject({ delivered: true });
-    const again = await issueBookedReadinessLinks(db, { shopId: shop.id, bookingId });
-    expect(again).toEqual({ redirect, mailed });
+    expect(await links()).toEqual([redirect, mailed]);
   });
 
   it("moves a reused row's expiry with a rescheduled trip, and keeps the link", async () => {
@@ -214,7 +219,11 @@ describe("the page reads the live link and never mints", () => {
       liveBookingLink(db, { shopId: shop.id, bookingId, purpose: "readiness", delivered: false });
     expect(await read()).toBeNull();
     expect(await liveRows(db, bookingId)).toHaveLength(0);
-    const { redirect } = await issueBookedReadinessLinks(db, { shopId: shop.id, bookingId });
+    const redirect = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+    });
     expect(await read()).toBe(redirect?.token);
     await db
       .update(bookingCapabilities)
@@ -223,7 +232,7 @@ describe("the page reads the live link and never mints", () => {
         and(eq(bookingCapabilities.bookingId, bookingId), eq(bookingCapabilities.delivered, false)),
       );
     expect(await read()).toBeNull();
-    expect(await liveRows(db, bookingId)).toHaveLength(1);
+    expect(await liveRows(db, bookingId)).toHaveLength(0);
   });
 
   it("answers the rescue's guard from the delivered row only", async () => {
@@ -242,7 +251,7 @@ describe("the page reads the live link and never mints", () => {
 });
 
 describe("key versions", () => {
-  it("keeps a v1 row's link after BOOKING_LINK_SECRET is set, and signs new rows under it", async () => {
+  it("replaces a v1 row on the next send once BOOKING_LINK_SECRET is set; the old link verifies until then", async () => {
     const { db, shop } = fileCtx;
     const { bookingId } = await seatFor(db, shop.id);
     const v1 = await issueBookingCapability(db, {
@@ -251,12 +260,20 @@ describe("key versions", () => {
       purpose: "readiness",
     });
     process.env.BOOKING_LINK_SECRET = `v2:${"s".repeat(40)}`;
+    expect(
+      await verifyBookingCapability(db, { token: v1?.token ?? "", purpose: "readiness" }),
+    ).not.toBeNull();
     const again = await issueBookingCapability(db, {
       shopId: shop.id,
       bookingId,
       purpose: "readiness",
     });
-    expect(again?.token).toBe(v1?.token);
+    // Never re-armed: the send in hand carries a v2 link and the v1 row is revoked.
+    expect(again?.token).toMatch(/^c2\./);
+    expect((await liveRows(db, bookingId)).map((row) => row.keyVersion)).toEqual([2]);
+    expect(
+      await verifyBookingCapability(db, { token: v1?.token ?? "", purpose: "readiness" }),
+    ).toBeNull();
     const fresh = await issueBookingCapability(db, {
       shopId: shop.id,
       bookingId,
@@ -441,5 +458,64 @@ describe("a row's identity never changes", () => {
       .update(bookingCapabilities)
       .set({ expiresAt: new Date(row.expiresAt.getTime() + DAY_MS), revokedAt: nowDate() })
       .where(eq(bookingCapabilities.id, row.id));
+  });
+
+  it("refuses to un-revoke a row: a dead link stays dead", async () => {
+    const { db, shop } = fileCtx;
+    const { bookingId } = await seatFor(db, shop.id);
+    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" });
+    const [row] = await liveRows(db, bookingId);
+    if (!row) throw new Error("expected a row");
+    await db
+      .update(bookingCapabilities)
+      .set({ revokedAt: nowDate() })
+      .where(eq(bookingCapabilities.bookingId, bookingId));
+    await expect(
+      db.transaction((tx) =>
+        tx
+          .update(bookingCapabilities)
+          .set({ revokedAt: null })
+          .where(eq(bookingCapabilities.bookingId, bookingId)),
+      ),
+    ).rejects.toMatchObject({ cause: { message: expect.stringMatching(/un-revoked/) } });
+  });
+});
+
+describe("what a row must carry", () => {
+  it.each([
+    ["a link row with no key version", { keyVersion: null }],
+    ["a key version past 9", { keyVersion: 10 }],
+    [
+      "a receipt with a key version",
+      { purpose: "returning_diver_receipt" as const, keyVersion: 1 },
+    ],
+  ])("refuses %s", async (_label, change) => {
+    const { db, shop } = fileCtx;
+    const { bookingId } = await seatFor(db, shop.id);
+    const [source] = await db
+      .insert(bookingCapabilities)
+      .values({
+        shopId: shop.id,
+        bookingId,
+        purpose: "readiness",
+        keyVersion: 1,
+        expiresAt: new Date(nowDate().getTime() + DAY_MS * 3),
+      })
+      .returning({ id: bookingCapabilities.id });
+    const receipt = "purpose" in change;
+    await expect(
+      db.transaction((tx) =>
+        tx.insert(bookingCapabilities).values({
+          shopId: shop.id,
+          bookingId,
+          purpose: "confirm",
+          expiresAt: new Date(nowDate().getTime() + DAY_MS * 3),
+          ...(receipt ? { sourceCapabilityId: source?.id } : {}),
+          ...change,
+        }),
+      ),
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/booking_capabilities_key_version/) },
+    });
   });
 });

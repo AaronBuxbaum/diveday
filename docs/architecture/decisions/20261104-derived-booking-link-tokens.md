@@ -19,35 +19,30 @@ audience, with the tag checked before any row is read.
   `id` is the row's uuid in 22 base64url characters (canonical only), and `tag` is
   HMAC-SHA256 over version, id and purpose under an HKDF key. Only `src/db/booking-capabilities.ts`
   turns a token into a row (a guard test enforces it), and a wrong tag costs no query.
-- **Keys.** Version 1 is derived from `AUTH_SECRET` and is used to sign only while
-  `BOOKING_LINK_SECRET` is unset. `BOOKING_LINK_SECRET=v<n>:<secret>` (n from 2 to 9, the secret
-  at least 32 bytes) signs new rows. `BOOKING_LINK_SECRET_PREVIOUS` (same format, lower n) only
-  verifies. To rotate, move the current value into `_PREVIOUS` and set `v<n+1>:…`. Production
-  refuses the development fallback and short secrets. A malformed value fails the send rather than
-  falling back to version 1.
+- **Keys.** Version 1 comes from `AUTH_SECRET`; it signs while `BOOKING_LINK_SECRET` is unset and
+  verifies while `BOOKING_LINK_SECRET_PREVIOUS` is unset. `BOOKING_LINK_SECRET=v<n>:<secret>` (n
+  2 to 9, 32+ bytes, not `AUTH_SECRET`) signs; `_PREVIOUS` (lower n) only verifies. To rotate,
+  move the current value into `_PREVIOUS` and set `v<n+1>:…`; the first rotation retires v1
+  without signing staff out. A malformed or development secret fails the send.
 - **One live row per booking, purpose and audience**: a partial unique index on
-  `(booking_id, purpose, delivered)` where unrevoked and not a receipt. Issuing locks, reuses the
-  live row and moves its expiry to the trip's, and inserts with `ON CONFLICT DO NOTHING` and a
-  re-read. A row with under a day left is revoked and replaced. Handoff links are never reused,
-  and `returning_diver_receipt` stays one-use.
-- **Identity is fixed.** A trigger refuses any change to id, shop, booking, purpose, audience, key
-  version or source, so an old URL never opens a different row.
-- The confirmation page reads the live browser link, never creates one on GET, and is
-  `private, no-store`. The exchange route, the cap, readiness take-back and the sealed copy go.
+  `(booking_id, purpose, delivered)` where unrevoked and not a receipt. Issuing locks, reuses a
+  live row only under the signing version with a day left (else revokes and mints), and inserts
+  with `ON CONFLICT DO NOTHING`. Moving a trip or seat moves its links' expiry. Handoff links are
+  never reused; receipts stay one-use.
+- **Identity is fixed.** A trigger refuses changing id, shop, booking, purpose, audience, version or
+  source, and un-revoking; CHECKs keep a version on link rows only.
+- The confirmation page reads the live browser link, never mints on GET, and is
+  `private, no-store`. The rescue re-sends the live mailed link, once per 15 minutes.
 
 ## Alternatives considered
 
 - **Keep hashes and the sealed copy**: keeps all four workarounds and a second secret store.
-- **One env var per purpose**: more rotation steps; the purpose is already in the tag.
 
 ## Consequences
 
 - The migration deletes every booking link; holders land on the dead-link page and its rescue mail.
-- `token_hash` and `token_sealed` stay declared but unused for one release, because the
-  expand/contract guard refuses a column drop while the previous release still declares it. The
-  next release drops them.
-- In the deploy window an old instance's insert can meet the new index and fail one send.
-- Rotating `AUTH_SECRET` kills every version-1 link; dropping a version from both variables kills
-  its links (the mass-revocation lever).
-- Delivered links are not yet revoked when a diver's contact address changes (review item 10,
-  follow-up).
+- `token_hash` and `token_sealed` stay declared, unused, for one release (the expand/contract
+  guard); #3901 drops them. Waiver links are #3903.
+- In the deploy window an old instance's link inserts fail the new CHECK and index.
+- Dropping a version from both variables kills its links. Versions stop at 9.
+- Delivered links are not yet revoked on a contact change (#3902).

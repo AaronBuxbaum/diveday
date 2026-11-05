@@ -665,7 +665,7 @@ const STALE_AND_FRESH = {
           shopId: shop.id,
           bookingId: entry.booking.id,
           purpose: n === 0 ? "readiness" : "confirm",
-          tokenHash: token(),
+          keyVersion: 1,
           expiresAt: at,
         })
         .returning({ id: schema.bookingCapabilities.id }),

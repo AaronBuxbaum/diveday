@@ -22,7 +22,11 @@ import { isUuid } from "./uuid";
  *
  * - **v1** is HKDF-SHA256 of `AUTH_SECRET` under the label
  *   `diveday-booking-capability-v1`. It signs only while `BOOKING_LINK_SECRET`
- *   is unset; rows already signed under it keep verifying until they expire.
+ *   is unset, and verifies only while `BOOKING_LINK_SECRET_PREVIOUS` is unset:
+ *   v1 holds the "previous" slot until the first real rotation fills it, so
+ *   v1 links can be retired without rotating `AUTH_SECRET` (which also signs
+ *   every staffer out). Issuing never re-sends a row signed under anything but
+ *   the signing version, so old rows drain as their bookings are mailed.
  * - **v2 and later** come from `BOOKING_LINK_SECRET`, whose value carries its
  *   own version: `v<n>:<secret>`, n from 2 to 9, the secret at least 32 bytes.
  *   The key is HKDF-SHA256 of the secret under `diveday-booking-capability-v<n>`.
@@ -35,10 +39,13 @@ import { isUuid } from "./uuid";
  *   rotation kills rows still on the version before last. Dropping
  *   `_PREVIOUS` (a leaked key) kills that version's links at once; the next send
  *   to each booking mints a fresh row.
+ * - **Versions stop at 9.** The ninth version is the last this format can
+ *   carry; the rotation after it needs a new token shape.
  *
  * ## What is refused
  *
- * A secret under 32 bytes, at every version, and the development fallback for
+ * A secret under 32 bytes, at every version; a `BOOKING_LINK_SECRET` (or
+ * `_PREVIOUS`) whose secret is `AUTH_SECRET` itself; and the development fallback for
  * `AUTH_SECRET` anywhere that could be production (`NODE_ENV=production`,
  * `VERCEL_ENV` set, or a `DATABASE_URL` that is not on this machine). A
  * `BOOKING_LINK_SECRET` that is set but malformed makes signing throw, loudly,
@@ -115,14 +122,20 @@ export function bookingLinkKeyring(env: Env): BookingLinkKeyring {
         deriveLabelKey(current.secret, `diveday-booking-capability-v${current.version}`),
       );
       signing = current.version;
+      if (current.secret === env.AUTH_SECRET)
+        signing = new Error("BOOKING_LINK_SECRET must not be AUTH_SECRET");
       const previousValue = env.BOOKING_LINK_SECRET_PREVIOUS;
       if (previousValue) {
+        // v1 holds the previous slot until the first real rotation fills it.
+        keys.delete(1);
         const previous = parseVersioned("BOOKING_LINK_SECRET_PREVIOUS", previousValue);
         // A previous key at or above the current version is a botched rotation:
         // refuse to sign until it is fixed rather than guess which is newer.
         if (previous instanceof Error) signing = previous;
         else if (previous.version >= current.version)
           signing = new Error("BOOKING_LINK_SECRET_PREVIOUS must carry a lower version");
+        else if (previous.secret === env.AUTH_SECRET)
+          signing = new Error("BOOKING_LINK_SECRET_PREVIOUS must not be AUTH_SECRET");
         else
           keys.set(
             previous.version,
