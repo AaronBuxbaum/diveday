@@ -31,6 +31,7 @@ import {
 import { tripIdsNeverSentLastMinuteDeal, tripIdsSuitedToADeal } from "@/db/trip-promos";
 import { liveTrip, notRehearsal, seatNotCancelled } from "@/db/trips";
 import {
+  issueWeeklyDigestUnsubscribeToken,
   listWeeklyDigestRecipients,
   staffLogins,
   type WeeklyDigestRecipient,
@@ -38,7 +39,6 @@ import {
 } from "@/db/weekly-digest";
 import { getTodayWork } from "@/features/today";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import { errorClassToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
@@ -684,21 +684,19 @@ export async function sendWeeklyDigestForShop(
     // Nothing this person may read happened: no email, and no claim, so a
     // later pass the same morning asks again rather than remembering a send.
     if (sections.length === 0) continue;
-    const token = createBearerToken();
     const [claim] = await db
       .insert(weeklyDigestSends)
-      .values({
-        shopId: shop.id,
-        personId: recipient.personId,
-        weekOf: weeks.weekOf,
-        unsubscribeTokenHash: hashBearerToken(token),
-      })
+      .values({ shopId: shop.id, personId: recipient.personId, weekOf: weeks.weekOf })
       .onConflictDoNothing()
       .returning({ id: weeklyDigestSends.id });
     if (!claim) {
       summary.alreadySent += 1;
       continue;
     }
+    const token = await issueWeeklyDigestUnsubscribeToken(db, {
+      shopId: shop.id,
+      personId: recipient.personId,
+    });
     const delivery: NotificationDelivery = await sendNotification(
       db,
       digestNotification({

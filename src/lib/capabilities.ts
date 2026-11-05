@@ -12,17 +12,22 @@
  * reads this record and nothing else to decide which subject column a row
  * names, so a purpose cannot be issued against the wrong kind of subject.
  *
- * The first two purposes are the two email-unsubscribe links behind
- * `/unsubscribe/[token]`. Purposes still on their own tables (booking
- * capabilities, account tokens, calendar feeds, waiver links, shore-alert and
- * weekly-digest links) are the rest of #2710.
+ * The purposes here are the email-unsubscribe links behind
+ * `/unsubscribe/[token]` (issue #3721 moved the rest of them in). Purposes
+ * still on their own tables (booking capabilities, account tokens, calendar
+ * feeds, waiver links, setup links, the shore contact's and the bookkeeper's
+ * confirm links) are the rest of #2710.
  *
  * This file is the source of the `capability_purpose` pg enum, so the union
  * and the database cannot drift. It is named for the table rather than for
  * `booking_capabilities`, whose own `CapabilityPurpose` union in
  * `src/db/booking-capabilities.ts` folds in here when that table moves.
  */
-export const CAPABILITY_PURPOSES = ["interest_unsubscribe", "courtesy_email_unsubscribe"] as const;
+export const CAPABILITY_PURPOSES = [
+  "interest_unsubscribe",
+  "courtesy_email_unsubscribe",
+  "weekly_digest_unsubscribe",
+] as const;
 
 export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
 
@@ -60,6 +65,10 @@ export const CAPABILITY_POLICY = {
   // reminders, cold staff invitations. Opening it sets
   // `people.courtesy_email_opt_out_at`. Minted once per courtesy send.
   courtesy_email_unsubscribe: { subject: "person", lifetime: "never", use: "idempotent" },
+  // One staffer's Monday email (`src/features/weekly-digest`). Opening it sets
+  // `user_accounts.weekly_digest` to false. Minted once per digest sent, after
+  // that week's send claim lands (issue #3721).
+  weekly_digest_unsubscribe: { subject: "person", lifetime: "never", use: "idempotent" },
 } as const satisfies Record<CapabilityPurpose, CapabilityPolicy>;
 
 /** The subject a purpose's rows name. */

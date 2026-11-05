@@ -81,7 +81,7 @@ export const ERASURE_KEEPS: Record<string, string> = {
   crew_notices:
     "that a crew member was put on, taken off, or answered about a departure — a change code, two ids and two dates. Only crew are its subject, and it holds ids and dates, no words",
   weekly_digest_sends:
-    "that a staff member's Monday email went out for a week — a date, a delivery status and a token hash. Only staff receive it, and it holds a date, a status and a hash, no words",
+    "that a staff member's Monday email went out for a week — a date and a delivery status. Only staff receive it, and it holds a date and a status, no words",
 
   // --- the shop's own objects, holding nobody ------------------------------
   trip_dives: "the dives inside a departure, by site and order",

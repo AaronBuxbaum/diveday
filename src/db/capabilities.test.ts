@@ -180,7 +180,9 @@ describe("a capability and the person it opens", () => {
     const personPurposes = CAPABILITY_PURPOSES.filter(
       (purpose) => CAPABILITY_POLICY[purpose].subject === "person",
     );
-    expect(personPurposes).toEqual(["courtesy_email_unsubscribe"]);
+    // Both only stop mail. The Monday email's link names a staffer, and a
+    // merge of a staff record is refused before anything moves (issue #3721).
+    expect(personPurposes).toEqual(["courtesy_email_unsubscribe", "weekly_digest_unsubscribe"]);
   });
 
   it("follows a merge: the link mailed to the merged-away record opts the kept one out", async () => {

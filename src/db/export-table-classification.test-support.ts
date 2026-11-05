@@ -125,7 +125,7 @@ export const EXCLUDED_TABLES = [
   "claude_call_content_erasures", // when the shop last erased anyone, for the content above; machinery, no shop record
   "claude_call_content", // what Claude calls said, kept 30 days for DiveDay's founder to debug; DiveDay's working log, not the shop's records, and never carried out of DiveDay
   "assist_results", // what an assist answered (review chips, themes, the Monday read): derived, and asked again on demand
-  "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported
+  "weekly_digest_sends", // the Monday email's send claims — delivery plumbing, never exported
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "shop_shore_alert_tokens", // the shore contact's confirm and stop links (H-20261014-stale-roll-call-recipients): bearer credentials, same reasoning
   // The shop's own Meta access token (sealed) plus the provider linkage around

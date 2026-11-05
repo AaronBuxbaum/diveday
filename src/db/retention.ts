@@ -391,8 +391,9 @@ export const PRUNE_ARMS = {
     id: pushSubscriptions.id,
     clock: pushSubscriptions.createdAt,
   },
-  // The Monday email's per-week claims and their opt-out link hashes. Pruned
-  // on their own age: the claim is spent once its week is over.
+  // The Monday email's per-week claims. Pruned on their own age: the claim is
+  // spent once its week is over. The opt-out link the email carried is a
+  // capability, not on the claim, so it outlives the prune.
   weekly_digest_sends: {
     from: weeklyDigestSends,
     id: weeklyDigestSends.id,

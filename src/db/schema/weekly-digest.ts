@@ -1,4 +1,4 @@
-import { date, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { date, index, pgTable, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { notificationDeliveryStatus } from "./notifications";
@@ -16,13 +16,12 @@ import { notificationDeliveryStatus } from "./notifications";
  * `notification_deliveries`; a retryable failure is carried on by the generic
  * send queue under the kind's own idempotency key, not by a second claim.
  *
- * `unsubscribe_token_hash` is the one-click "stop these" link the email
- * carries (`/unsubscribe/<token>`). It lives on the claim rather than in a
- * token table of its own because a send and its link are one thing: one row,
- * one token, never expiring (an expired opt-out would leave somebody unable to
- * stop the mail, the reasoning `CAPABILITY_POLICY` gives the
- * `courtesy_email_unsubscribe` capability), and consuming it is an idempotent write to
- * `user_accounts.weekly_digest`. Rows age out with H-20260730-evidence-retention-period-deletion's retention prune.
+ * The one-click "stop these" link the email carries (`/unsubscribe/<token>`)
+ * is a `weekly_digest_unsubscribe` capability (`src/db/capabilities.ts`,
+ * issue #3721), minted once the claim lands. It is not on the claim, so the
+ * link keeps working after the claim ages out with
+ * H-20260730-evidence-retention-period-deletion's retention prune: an expired
+ * opt-out would leave somebody unable to stop the mail.
  *
  * Both foreign keys cascade: a claim means nothing once its shop or person is
  * gone, so a demo shop's teardown never has to know this table exists.
@@ -39,7 +38,6 @@ export const weeklyDigestSends = pgTable(
       .references(() => people.id, { onDelete: "cascade" }),
     weekOf: date("week_of", { mode: "string" }).notNull(),
     status: notificationDeliveryStatus("status"),
-    unsubscribeTokenHash: text("unsubscribe_token_hash").notNull().unique(),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [

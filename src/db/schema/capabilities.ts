@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, index, pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
-import { CAPABILITY_PURPOSES } from "@/lib/capabilities";
+import { CAPABILITY_POLICY, CAPABILITY_PURPOSES, type CapabilitySubject } from "@/lib/capabilities";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { interests } from "./interests";
@@ -10,6 +10,18 @@ import { interests } from "./interests";
  * source: the values are read from there.
  */
 export const capabilityPurpose = pgEnum("capability_purpose", CAPABILITY_PURPOSES);
+
+/**
+ * The purposes whose rows name `subject`, as a SQL list, read from
+ * `CAPABILITY_POLICY` so the check below cannot disagree with it.
+ */
+function purposesNaming(subject: CapabilitySubject) {
+  return sql.raw(
+    CAPABILITY_PURPOSES.filter((purpose) => CAPABILITY_POLICY[purpose].subject === subject)
+      .map((purpose) => `'${purpose}'`)
+      .join(", "),
+  );
+}
 
 /**
  * **Every bearer capability that has moved off its own table** (issue #2710).
@@ -25,7 +37,7 @@ export const capabilityPurpose = pgEnum("capability_purpose", CAPABILITY_PURPOSE
  * purpose names. Facts about the thing a capability opens stay on that thing.
  *
  * `token_hash` is the SHA-256 of the token (`src/lib/bearer-tokens.ts`); the
- * token itself is never stored. The two purposes here never expire and are
+ * token itself is never stored. The purposes here never expire and are
  * never spent (`lifetime: "never"`, `use: "idempotent"`), so the table has no
  * `expires_at` or `revoked_at` yet: those arrive with the first purpose that
  * needs them.
@@ -56,8 +68,8 @@ export const capabilities = pgTable(
     }),
     check(
       "capabilities_subject_by_purpose",
-      sql`(${table.purpose} = 'interest_unsubscribe' and ${table.interestId} is not null and ${table.personId} is null)
-        or (${table.purpose} = 'courtesy_email_unsubscribe' and ${table.personId} is not null and ${table.interestId} is null)`,
+      sql`(${table.purpose}::text in (${purposesNaming("interest")}) and ${table.interestId} is not null and ${table.personId} is null)
+        or (${table.purpose}::text in (${purposesNaming("person")}) and ${table.personId} is not null and ${table.interestId} is null)`,
     ),
   ],
 );

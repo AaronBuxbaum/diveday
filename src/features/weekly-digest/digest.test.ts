@@ -19,9 +19,7 @@ import { createTrip, listStaff, setTripCrew } from "@/db/trips";
 import {
   listWeeklyDigestRecipients,
   readWeeklyDigestChoice,
-  resolveWeeklyDigestUnsubscribeToken,
   setWeeklyDigestChoice,
-  turnOffWeeklyDigestByToken,
   type WeeklyDigestShop,
 } from "@/db/weekly-digest";
 import { nowDate } from "@/lib/clock";
@@ -223,43 +221,6 @@ describe("sendWeeklyDigestForShop", () => {
     expect(rendered.text).not.toContain(" · ");
   });
 
-  it("is turned off by the link it carried, idempotently", async () => {
-    const { db, shop, owner, monday } = await context();
-    const { sent, provider } = capturingProvider();
-    await sendWeeklyDigestForShop(db, shop, { now: monday, origin: ORIGIN, provider });
-    const notification = sent[0];
-    if (notification?.kind !== "weekly_digest") throw new Error("no digest sent");
-    const token = notification.turnOffUrl.split("/unsubscribe/")[1] ?? "";
-
-    expect(await resolveWeeklyDigestUnsubscribeToken(db, token)).toMatchObject({
-      personId: owner.personId,
-      alreadyOff: false,
-    });
-    await turnOffWeeklyDigestByToken(db, { token });
-    expect((await turnOffWeeklyDigestByToken(db, { token }))?.alreadyOff).toBe(true);
-    expect((await listWeeklyDigestRecipients(db, shop.id)).map((r) => r.personId)).not.toContain(
-      owner.personId,
-    );
-  });
-
-  it("reads a link sent to someone since deleted as unavailable", async () => {
-    const { db, shop, owner, monday } = await context();
-    const { sent, provider } = capturingProvider();
-    await sendWeeklyDigestForShop(db, shop, { now: monday, origin: ORIGIN, provider });
-    const notification = sent[0];
-    if (notification?.kind !== "weekly_digest") throw new Error("no digest sent");
-    const token = notification.turnOffUrl.split("/unsubscribe/")[1] ?? "";
-    await db.update(people).set({ deletedAt: monday }).where(eq(people.id, owner.personId));
-
-    expect(await resolveWeeklyDigestUnsubscribeToken(db, token)).toBeNull();
-    expect(await turnOffWeeklyDigestByToken(db, { token })).toBeNull();
-    const [account] = await db
-      .select({ choice: userAccounts.weeklyDigest })
-      .from(userAccounts)
-      .where(eq(userAccounts.personId, owner.personId));
-    expect(account?.choice).toBeNull();
-  });
-
   it("gives a crew member who opted in the staff-grade week", async () => {
     const { db, shop, captain, monday } = await context();
     await setWeeklyDigestChoice(db, { shopId: shop.id, personId: captain.personId, wanted: true });
@@ -269,12 +230,6 @@ describe("sendWeeklyDigestForShop", () => {
     if (theirs?.kind !== "weekly_digest") throw new Error("no digest for the captain");
     expect(theirs.sections.map((section) => section.kind)).not.toContain("last_week");
     expect(messageFor(theirs).text).not.toContain("/reports");
-  });
-
-  it("reads an unknown or tampered link as unavailable", async () => {
-    const { db } = await context();
-    expect(await resolveWeeklyDigestUnsubscribeToken(db, "not-a-token")).toBeNull();
-    expect(await turnOffWeeklyDigestByToken(db, { token: "not-a-token" })).toBeNull();
   });
 
   it("records a provider that is not configured without sending twice", async () => {

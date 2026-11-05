@@ -814,7 +814,6 @@ const STALE_AND_FRESH = {
           shopId: shop.id,
           personId: people[n],
           weekOf: "2026-01-05",
-          unsubscribeTokenHash: token(),
           createdAt: at,
         })
         .returning({ id: schema.weeklyDigestSends.id }),

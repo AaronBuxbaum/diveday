@@ -177,9 +177,10 @@ const rows = [
     erase: "scrub",
     eraseIn: "scrubInterests",
   },
-  // A courtesy-email unsubscribe link (`purpose = 'courtesy_email_unsubscribe'`)
-  // follows the person, so a link the source was mailed still opts the kept
-  // record out. Rows of other purposes leave `person_id` null.
+  // A person's unsubscribe link (`courtesy_email_unsubscribe`,
+  // `weekly_digest_unsubscribe`) follows the person, so a link the source was
+  // mailed still opts the kept record out; stopping mail grants nothing.
+  // Rows of other purposes leave `person_id` null.
   {
     table: "capabilities",
     column: "person_id",

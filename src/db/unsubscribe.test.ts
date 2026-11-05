@@ -5,11 +5,12 @@ import { fileScopedShopContext } from "@/test/db";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { askAnytime, issueInterestUnsubscribeToken } from "./interests";
 import { findOrCreatePerson } from "./people";
-import { interests, people, shops, userAccounts, weeklyDigestSends } from "./schema";
+import { interests, people, shops, userAccounts } from "./schema";
 import { setShopShoreAlertContact } from "./shops";
 import { issueShoreAlertStopToken } from "./shore-alert-tokens";
 import { listStaff } from "./trips";
 import { resolveUnsubscribeToken, unsubscribeByToken } from "./unsubscribe";
+import { issueWeeklyDigestUnsubscribeToken } from "./weekly-digest";
 
 /**
  * Issue #3659, security-sensitive (bearer tokens): one resolver for the five
@@ -46,13 +47,9 @@ async function fixture() {
 
   const [staff] = await listStaff(db, shop.id);
   if (!staff) throw new Error("fixture staff missing");
-  const digestToken = createBearerToken();
-  await db.insert(weeklyDigestSends).values({
+  const digestToken = await issueWeeklyDigestUnsubscribeToken(db, {
     shopId: shop.id,
     personId: staff.person.id,
-    weekOf: "2026-10-12",
-    status: "sent",
-    unsubscribeTokenHash: hashBearerToken(digestToken),
   });
   await db
     .update(userAccounts)
