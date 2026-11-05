@@ -11,7 +11,7 @@ The account has a fixed number of concurrent runners, and Aaron merges a whole s
 
 ## Decision
 
-**Only the top layer of a stack runs CI.** A first job, `stack-gate` (`scripts/ci-stack-gate.mjs`), reads the repository's stacks and answers `run=false` for any layer below the top; `changes`, `repo-safeguards` and `ci-result` honour it, and every other job is skipped through its `needs`. A skipped layer is skipped, never green, and the run summary names the layer that runs. A pull request in no stack runs as before. The gate is fail-open: an API error, or a chained base that never registers (it waits up to a minute), runs CI. A new layer opened above makes the old top a lower layer, so its next run is skipped.
+**Only the top layer of a stack runs CI.** A first job, `stack-gate` (`scripts/ci-stack-gate.mjs`), reads the repository's stacks and answers `run=false` for any layer below the top; `changes`, `repo-safeguards` and `ci-result` honour it, and every other job is skipped through its `needs`. A skipped layer is skipped, never green, and the run summary names the layer that runs. A pull request in no stack runs as before. The gate also names the stack's **diff base**, the bottom layer's base sha, and change detection, the fast lane, the PR-body check and the untested-logic warning diff against it, so infra, migration and safety changes in a lower layer are seen by the top's run (the migration and closing-keyword guards and the visual keys already used the default branch). The gate is fail-open: an API error, or a chained base that never registers (it waits up to a minute), runs CI. A new layer opened above makes the old top a lower layer, so its next run is skipped.
 
 ## Alternatives considered
 
