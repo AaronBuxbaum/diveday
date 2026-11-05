@@ -1,5 +1,5 @@
 import { groupLabelClass } from "@/components/ui/group-label";
-import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import { nowDate } from "@/lib/clock";
 import { deckCountWhen } from "@/lib/deck-count";
 import type { OfflineManifestPayload } from "@/lib/offline-manifests";
@@ -22,7 +22,7 @@ export function OfflineDeckCount({
   checkpoint: string;
   timeZone: string;
   locale: string | undefined;
-  t: StaffTranslator;
+  t: OfflineManifestTranslator;
 }) {
   const record = counts?.find((entry) => entry.checkpoint === checkpoint);
   if (!record) return null;

@@ -1543,7 +1543,7 @@
     "src/lib/manifests.test.ts": 1027,
     "src/lib/notifications/email.test.ts": 1096,
     "src/lib/offline-manifest-store.test.ts": 1018,
-    "src/lib/offline-manifests.test.ts": 2179,
+    "src/lib/offline-manifests.test.ts": 2089,
     "src/lib/readiness.test.ts": 1575,
     "src/lib/staffing-week.test.ts": 1125,
     "src/lib/waivers.test.ts": 1402,

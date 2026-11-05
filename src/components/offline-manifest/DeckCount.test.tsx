@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { offlineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import { OfflineDeckCount } from "./DeckCount";
 
 afterEach(cleanup);
 
-const t = staffTranslator("en-US");
+const t = offlineManifestTranslator("en-US");
 const counts = [
   {
     checkpoint: "departure",
