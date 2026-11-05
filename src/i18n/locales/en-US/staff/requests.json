@@ -37,7 +37,7 @@
     "open": "Write a reply",
     "label": "Your reply",
     "toEmail": "Goes to {to} by email.",
-    "toText": "Goes to {to} as a text.",
+    "toText": "Goes to {to} as a message.",
     "send": "Send reply"
   },
   "replyNotice": {

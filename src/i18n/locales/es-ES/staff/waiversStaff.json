@@ -40,7 +40,7 @@
     "noSignatureDate": "Sin fecha de firma",
     "noTrip": "Registro importado",
     "openTrip": "Abrir la salida",
-    "integrityInvalid": "Integridad no coincide",
+    "integrityInvalid": "Modificada después de firmar",
     "integrityUnsealed": "No se puede verificar si cambió",
     "medicalWaiting": "Pendiente del médico",
     "medicalCleared": "Con autorización médica",
@@ -53,7 +53,7 @@
     "views": {
       "label": "Vistas de registros firmados",
       "all": "Todos",
-      "unchecked": "No se puede verificar",
+      "unchecked": "Sin sello o modificadas",
       "medical": "Bloqueos médicos"
     },
     "pagination": {

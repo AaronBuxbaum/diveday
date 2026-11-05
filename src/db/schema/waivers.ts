@@ -460,7 +460,7 @@ export const waiverRecords = pgTable(
      *
      * Written beside every seal (`waiverIntegrityVerdict`) and re-written by
      * the nightly `/api/cron/waiver-seals` pass, so the signature log's
-     * "Can’t be checked" view can filter a failed seal in SQL rather than
+     * "Unsealed or changed" view can filter a failed seal in SQL rather than
      * recomputing every hash to page one list. A cache, never the evidence:
      * every reader that shows a row's seal still recomputes it, and a row
      * edited since its last check reads `invalid` there while this column

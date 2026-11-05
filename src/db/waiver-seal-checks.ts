@@ -21,10 +21,19 @@ export type WaiverSealCheckSummary = {
 };
 
 /**
+ * Whether a pass checks in healthy: only a seal that broke since its last check
+ * is an alarm. A pass that stopped at its limit is not one on its own; the next
+ * night starts with the rows checked longest ago, so every row comes round.
+ */
+export function waiverSealPassHealthy(summary: WaiverSealCheckSummary): boolean {
+  return summary.newlyInvalid === 0;
+}
+
+/**
  * **The nightly re-check of every signed release's seal** (issue #2562),
  * across every shop: recomputes `verifyWaiverIntegrity` and re-writes the
  * cached verdict (`integrity_valid`, `integrity_checked_at`) that the signature
- * log's "Can’t be checked" view filters on. A seal is written with a verdict
+ * log's "Unsealed or changed" view filters on. A seal is written with a verdict
  * (`waiverIntegrityVerdict`), so this pass exists for the edit nobody made
  * through DiveDay: a row changed straight in the database reads `invalid` on
  * every page that shows it at once, and lands in the view by the next pass.

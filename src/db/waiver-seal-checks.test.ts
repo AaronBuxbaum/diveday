@@ -1,9 +1,9 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { people, shops, waiverRecords, waiverTemplates } from "./schema";
-import { recheckWaiverSeals } from "./waiver-seal-checks";
+import { recheckWaiverSeals, waiverSealPassHealthy } from "./waiver-seal-checks";
 import { listWaiverIntegrityAudit } from "./waivers-audit";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
@@ -12,7 +12,7 @@ import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 /**
  * **The seal's cached verdict** (issue #2562): written beside every seal,
  * re-written by the nightly re-check, and read by the signature log's
- * "Can’t be checked" view. Signed legal evidence, so each way the cache could
+ * "Unsealed or changed" view. Signed legal evidence, so each way the cache could
  * lie is a case: an edit after the seal, a forged "valid", a verdict gone
  * stale between passes, an erasure or merge that would launder a broken seal,
  * and a row that never had a seal.
@@ -89,6 +89,40 @@ describe("the seal's verdict, written when the release is sealed", () => {
 });
 
 describe("recheckWaiverSeals", () => {
+  it("lists a failed seal first in the view, ahead of newer releases that were never sealed", async () => {
+    const { db, shop, recordId } = await signedRelease();
+    await tamper(db, recordId);
+    await recheckWaiverSeals(db, { now: later });
+    // Another signed release, newer and with no seal: a legacy import.
+    const [legacy] = await db
+      .select({ id: waiverRecords.id })
+      .from(waiverRecords)
+      .where(
+        and(
+          eq(waiverRecords.shopId, shop.id),
+          eq(waiverRecords.status, "completed"),
+          ne(waiverRecords.id, recordId),
+        ),
+      )
+      .limit(1);
+    if (!legacy) throw new Error("seeded shop has no other signed release");
+    const legacyId = legacy.id;
+    const newer = new Date(now.getTime() + 60 * 60 * 1000);
+    await db
+      .update(waiverRecords)
+      .set({
+        integrityHash: null,
+        integrityVersion: null,
+        integrityValid: null,
+        integrityCheckedAt: null,
+        signedAt: newer,
+      })
+      .where(eq(waiverRecords.id, legacyId));
+    const view = await listWaiverIntegrityAudit(db, shop.id, { view: "unchecked", limit: 1000 });
+    expect(view.entries[0]?.id).toBe(recordId);
+    expect(view.entries.some((entry) => entry.id === legacyId)).toBe(true);
+  });
+
   it("finds a release edited after it was sealed and puts it in the view", async () => {
     const { db, shop, recordId } = await signedRelease();
     await tamper(db, recordId);
@@ -177,6 +211,42 @@ describe("recheckWaiverSeals", () => {
     await recheckWaiverSeals(db, { now: later });
     expect(await verdictOf(db, recordId)).toMatchObject({ valid: false });
     expect(await inUncheckedView(db, shop.id, recordId)).toBe(true);
+  });
+
+  /**
+   * **More sealed releases than one night's limit** (dock review F2): each pass
+   * stops at its limit, which is no alarm on its own, and the next night starts
+   * with the rows checked longest ago, so two nights cover every row.
+   */
+  it("covers every release over two capped nights, and calls neither unhealthy", async () => {
+    const { db } = await signedRelease();
+    const sealed = and(
+      isNotNull(waiverRecords.integrityHash),
+      isNotNull(waiverRecords.integrityVersion),
+    );
+    const total = (await db.select({ id: waiverRecords.id }).from(waiverRecords).where(sealed))
+      .length;
+    expect(total).toBeGreaterThanOrEqual(2);
+    const limit = Math.ceil(total / 2);
+    const nightTwo = new Date(later.getTime() + 24 * 60 * 60 * 1000);
+
+    const first = await recheckWaiverSeals(db, { now: later, limit, batchSize: 1 });
+    const second = await recheckWaiverSeals(db, { now: nightTwo, limit, batchSize: 1 });
+    for (const pass of [first, second]) {
+      expect(pass).toMatchObject({ checked: limit, capped: true, newlyInvalid: 0 });
+      expect(waiverSealPassHealthy(pass)).toBe(true);
+    }
+    const times = await db
+      .select({ at: waiverRecords.integrityCheckedAt })
+      .from(waiverRecords)
+      .where(sealed);
+    expect(times.every(({ at }) => at !== null && at.getTime() >= later.getTime())).toBe(true);
+  });
+
+  it("calls a pass unhealthy only when a seal broke since the last check", () => {
+    const quiet = { checked: 10, invalid: 1, newlyInvalid: 0, capped: true };
+    expect(waiverSealPassHealthy(quiet)).toBe(true);
+    expect(waiverSealPassHealthy({ ...quiet, newlyInvalid: 1, capped: false })).toBe(false);
   });
 
   it("re-checks each row once a pass, and stops at its limit saying so", async () => {

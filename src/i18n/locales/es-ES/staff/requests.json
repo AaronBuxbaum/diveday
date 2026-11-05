@@ -37,7 +37,7 @@
     "open": "Escribir una respuesta",
     "label": "Tu respuesta",
     "toEmail": "Se envía por correo a {to}.",
-    "toText": "Se envía como mensaje de texto a {to}.",
+    "toText": "Se envía como mensaje a {to}.",
     "send": "Enviar respuesta"
   },
   "replyNotice": {
