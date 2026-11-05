@@ -836,13 +836,14 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     { header: "medical_review_required", in: "both", value: (row) => row.medicalReviewRequired },
     {
       header: "medical_answers",
-      in: "shop",
+      in: "both",
       value: (row) => (row.medicalAnswers ? JSON.stringify(row.medicalAnswers) : null),
     },
     // The shop's own questions as asked, with the diver's answers
     // (glossary *Shop question*). Inside the v1 seal when present, so a
     // destination re-verifying the hash needs them. Shop-only, as
-    // `medical_answers` is (H-20261025-per-diver-record-export, security review L4): on a seat still held
+    // `medical_answers` was, before Aaron's 2026-11-05 call (it is no longer
+    // withheld, H-20261025-per-diver-record-export): on a seat still held
     // over who is in it the staff card withholds them because they may not be
     // this diver's, and the diver's bundle has no way to tell a held seat, so
     // free text somebody else typed must not travel in it.
@@ -853,12 +854,12 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     },
     // The medical alert for the crew (glossary *Medical alert for the crew*,
     // issue #2960): the diver's own health words, inside the v1 seal when
-    // present, so a destination re-verifying the hash needs it. Shop-only,
-    // exactly as `medical_answers` is: the diver's bundle holds no medical
-    // answers pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit, and this is medical-class text.
+    // present, so a destination re-verifying the hash needs it. In both
+    // bundles, as `medical_answers` is (Aaron, 2026-11-05: medical text is not
+    // treated specially in an export).
     {
       header: "medical_alert",
-      in: "shop",
+      in: "both",
       value: (row) => row.medicalAlert,
     },
     // The physician clearance that ends a medical hold (issue #1252).
@@ -868,8 +869,8 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     // would re-block every cleared diver with no record of who cleared
     // them or when the physician evaluated them.
     // The clearance is the diver's own fact — a physician evaluated
-    // them and the shop recorded it — so it belongs in their bundle
-    // even though the answers behind it do not. The staff member who
+    // them and the shop recorded it — so it belongs in their bundle,
+    // with the answers behind it. The staff member who
     // recorded it is named for the same reason `recorded_by_name` is.
     { header: "medical_cleared_at", in: "both", value: (row) => row.medicalClearedAt },
     {
@@ -966,7 +967,7 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     },
     {
       header: "import_source_medical_document_url",
-      in: "shop",
+      in: "both",
       value: (row) => row.importSourceMedicalDocumentUrl,
     },
     // Which seal the row's `integrity_hash` is over: version 2 means
@@ -1258,6 +1259,138 @@ export const CUSTOMER_GEAR_ITEMS_CSV = sharedFile<ShopRow<"customerGearItemRows"
   diver: {
     rows: ({ customerGearItemRows }) => customerGearItemRows,
     note: "This diver's own gear the shop has on file, and when each piece is next due: a service date, or a cylinder's visual inspection and hydro test dates.",
+  },
+});
+
+// The two-way inbox (ADR 20260907-two-way-inbox): what a diver sent the shop.
+// Diver: the machine-read columns (sender vouching, spam flag, the assists'
+// Diver: intent, language and translation) are DiveDay's reading of the
+// Diver: message, not the diver's words, so they stay in the shop's file.
+export const INBOUND_MESSAGES_CSV = sharedFile<ShopRow<"inboundMessageRows">>({
+  file: "inbound_messages.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "person_id", in: "shop", value: (row) => row.personId },
+    {
+      header: "person_name",
+      in: "shop",
+      value: (row, { personName }) => nameOf(personName, row.personId),
+    },
+    { header: "channel", in: "both", value: (row) => row.channel },
+    { header: "from_address", in: "both", value: (row) => row.fromAddress },
+    { header: "subject", in: "both", value: (row) => row.subject },
+    { header: "body", in: "both", value: (row) => row.body },
+    { header: "media_count", in: "both", value: (row) => row.mediaCount },
+    { header: "booking_id", in: "both", value: (row) => row.bookingId },
+    { header: "keyword_intent", in: "both", value: (row) => row.keywordIntent },
+    { header: "received_at", in: "both", value: (row) => row.receivedAt },
+    { header: "answered_at", in: "both", value: (row) => row.answeredAt },
+    { header: "provider_message_id", in: "shop", value: (row) => row.providerMessageId },
+    { header: "sender_authenticated", in: "shop", value: (row) => row.senderAuthenticated },
+    { header: "spam_flagged", in: "shop", value: (row) => row.spamFlagged },
+    { header: "assist_intent", in: "shop", value: (row) => row.assistIntent },
+    { header: "assist_urgent", in: "shop", value: (row) => row.assistUrgent },
+    { header: "assist_language", in: "shop", value: (row) => row.assistLanguage },
+    { header: "assist_translation", in: "shop", value: (row) => row.assistTranslation },
+    { header: "assist_translated_to", in: "shop", value: (row) => row.assistTranslatedTo },
+    { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
+    { header: "created_at", in: "shop", value: (row) => row.createdAt },
+  ],
+  shop: {
+    rows: ({ inboundMessageRows }) => inboundMessageRows,
+    note: EXPORT_FILE_NOTES["inbound_messages.csv"],
+  },
+  diver: {
+    rows: ({ inboundMessageRows }) => inboundMessageRows,
+    note: "Every message this diver sent the shop, by email, text or WhatsApp, in the words they wrote. A row with deleted_at is one the shop took off its inbox.",
+  },
+});
+
+// What the shop wrote back. `sent_by` is blank when DiveDay answered for the
+// shop (a keyword confirmation), never a made-up name.
+export const STAFF_REPLIES_CSV = sharedFile<ShopRow<"staffReplyRows">>({
+  file: "staff_replies.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "person_id", in: "shop", value: (row) => row.personId },
+    {
+      header: "person_name",
+      in: "shop",
+      value: (row, { personName }) => nameOf(personName, row.personId),
+    },
+    { header: "inbound_message_id", in: "both", value: (row) => row.inboundMessageId },
+    { header: "channel", in: "both", value: (row) => row.channel },
+    { header: "to_address", in: "both", value: (row) => row.toAddress },
+    { header: "body", in: "both", value: (row) => row.body },
+    { header: "locale", in: "both", value: (row) => row.locale },
+    { header: "sent_by_person_id", in: "shop", value: (row) => row.sentByPersonId },
+    {
+      header: "sent_by_name",
+      in: "both",
+      value: (row, { personName }) =>
+        row.sentByPersonId ? personName.get(row.sentByPersonId) : null,
+    },
+    { header: "status", in: "both", value: (row) => row.status },
+    { header: "provider_message_id", in: "shop", value: (row) => row.providerMessageId },
+    { header: "send_error_code", in: "shop", value: (row) => row.sendErrorCode },
+    { header: "send_error", in: "shop", value: (row) => row.sendError },
+    { header: "sent_at", in: "both", value: (row) => row.sentAt },
+    { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
+    { header: "created_at", in: "shop", value: (row) => row.createdAt },
+  ],
+  shop: {
+    rows: ({ staffReplyRows }) => staffReplyRows,
+    note: EXPORT_FILE_NOTES["staff_replies.csv"],
+  },
+  diver: {
+    rows: ({ staffReplyRows }) => staffReplyRows,
+    note: "Every reply the shop sent this diver, in the words that went out, and who sent it. A blank sent_by_name means DiveDay answered for the shop.",
+  },
+});
+
+// Found aboard (batch 4, J2). Diver: the crew's note is the item's description
+// Diver: ("blue mask, seat 4"), the diver's own belonging; who found and
+// Diver: returned it is staff handling and stays in the shop's file.
+export const LOST_ITEMS_CSV = sharedFile<ShopRow<"lostItemRows">>({
+  file: "lost_items.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "trip_id", in: "both", value: (row) => row.tripId },
+    {
+      header: "trip_title",
+      in: "both",
+      value: (row, { tripTitle }) => tripTitle.get(row.tripId),
+    },
+    { header: "booking_id", in: "both", value: (row) => row.bookingId },
+    { header: "person_id", in: "shop", value: (row) => row.personId },
+    {
+      header: "person_name",
+      in: "shop",
+      value: (row, { personName }) => nameOf(personName, row.personId),
+    },
+    { header: "description", in: "both", value: (row) => row.description },
+    { header: "status", in: "both", value: (row) => row.status },
+    { header: "recorded_by_person_id", in: "shop", value: (row) => row.recordedByPersonId },
+    {
+      header: "recorded_by_name",
+      in: "shop",
+      value: (row, { personName }) =>
+        row.recordedByPersonId ? personName.get(row.recordedByPersonId) : null,
+    },
+    { header: "resolved_at", in: "both", value: (row) => row.resolvedAt },
+    { header: "resolved_by_person_id", in: "shop", value: (row) => row.resolvedByPersonId },
+    { header: "told_at", in: "both", value: (row) => row.toldAt },
+    { header: "told_channel", in: "both", value: (row) => row.toldChannel },
+    { header: "created_at", in: "both", value: (row) => row.createdAt },
+    { header: "updated_at", in: "shop", value: (row) => row.updatedAt },
+  ],
+  shop: {
+    rows: ({ lostItemRows }) => lostItemRows,
+    note: EXPORT_FILE_NOTES["lost_items.csv"],
+  },
+  diver: {
+    rows: ({ lostItemRows }) => lostItemRows,
+    note: "Things the crew found aboard with this diver's name on them, whether each went back or was let go, and when the shop told them. The shop clears these 90 days after they go home.",
   },
 });
 

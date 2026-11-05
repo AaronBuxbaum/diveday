@@ -66,18 +66,23 @@ diver's name is the exact failure this feature exists to prevent:
   invoice form, the same shape as `internal_notes.body` and the names an activity row carries — found in
   security review, not in the first pass. Dropped from `orders.csv`/`order_line_items.csv` for the
   same reason; every other column, including the amounts, ships.
-- **An imported waiver's re-stored source documents** split the same way `medical_answers` does:
-  `importSourceDocumentUrl` (the general signed release) is bundled, `importSourceMedicalDocumentUrl`
-  (a scanned intake form) is not — found in security review, where the JSON column was correctly
-  withheld but the equivalent scanned document was not.
+- **An imported waiver's re-stored source documents** travel the way `medical_answers` does:
+  `importSourceDocumentUrl` (the general signed release) and `importSourceMedicalDocumentUrl` (a
+  scanned intake form) are both bundled (amended 2026-11-05; they were split while the medical
+  answers were withheld).
+- **The inbox and the found-items shelf** (amended 2026-11-05): `inbound_messages.csv` (what the
+  diver sent the shop), `staff_replies.csv` (what the shop sent back) and `lost_items.csv` ride in
+  the diver's bundle, read by their person id. The machine reading of a message (spam flag,
+  sender vouching, the assists' intent and translation) and the staff handling of a found item stay
+  in the shop's file. `interest_replies.csv` and `departure_notes.csv` name no diver record and
+  are in the shop-wide bundle only.
 
-**Medical answers on a signed waiver are withheld, deliberately unresolved rather than defaulted.**
-The incident export withholds them because its reader is an investigator (H-20260724-current-typed-name-explicit's boundary); a
-subject-access request's reader is the person who wrote them, so that argument reverses — but
-which way it should land is a legal question, not an engineering default, and it is recorded as
-H-20261025-per-diver-record-export in `docs/product/human-decisions/README.md` rather than decided here. Every other field of the
-diver's own signed evidence — status, signature, method, timestamps, the exact template text —
-ships now.
+**Medical answers on a signed waiver ship** (amended 2026-11-05). They were first withheld,
+deliberately unresolved, because a subject-access request's reader is the person who wrote them and
+that is a legal question. Aaron answered it as H-20261025-per-diver-record-export: medical answers
+and the medical alert for the crew are not treated specially in any export. `waiver_records.csv`
+carries `medical_answers` and `medical_alert`. A conversation with counsel as the product scales
+is `human-task` issue #3967.
 
 **One file, `waiver_templates.csv`, is new relative to the shop bundle's shape**: the exact wording
 of every release version this diver actually signed, resolved from their own `waiver_records`
@@ -114,9 +119,8 @@ of it.
   *different* diver, and can a free-text column carry one — the way this decision asked them for
   every table above `internal_notes.csv` and `activity_events.csv`, or accept its own security
   review.
-- H-20261025-per-diver-record-export stays open until legal review answers it. Until then, `waiver_records.csv`'s `medical_answers`
-  column is absent from both the header and the README's own accounting of what's included — a
-  diver reading their own export sees that the gap is stated, not silent.
+- H-20261025-per-diver-record-export is answered (2026-11-05); `waiver_records.csv` carries the
+  medical columns, and issue #3967 holds the legal conversation.
 - The `orders.description` gap and the medical-document leak through `photoUrls` were both found by
   a `security-reviewer` pass before merge, not by the first design pass — proof that the "same three
   questions" discipline above needs the second read as much as it needs the first. Both are fixed in

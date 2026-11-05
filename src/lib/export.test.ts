@@ -157,14 +157,13 @@ describe("export bundle", () => {
       now,
     );
     const notIncluded = String(readme?.content).split("Not included in this bundle:")[1] ?? "";
-    for (const family of [
-      "medical answers",
-      "medical alert",
-      "messages",
-      "lost-and-found",
-      "rebooking offers",
-    ]) {
+    for (const family of ["rebooking offers", "staff notes", "activity trail"]) {
       expect(notIncluded.toLowerCase()).toContain(family);
+    }
+    // Medical answers, messages and found items ride in the diver's bundle
+    // (Aaron, 2026-11-05), so the README must not say they were left out.
+    for (const shipped of ["medical", "messages", "lost-and-found"]) {
+      expect(notIncluded.toLowerCase()).not.toContain(shipped);
     }
     // A diver's own recap pulses ride in their bundle since #3862, so the
     // README must not tell them they were left out.

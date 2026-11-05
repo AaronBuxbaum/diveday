@@ -11,13 +11,11 @@ a pilot. Status of record: [human-decisions/](../human-decisions/README.md) rows
 A per-diver record export shipped, reached from the diver's own record page and gated
 owner/manager like the shop-wide export. `security-reviewer` reviewed the shared-row scoping
 (party bookings, buddy teams, staff attribution) before merge and found no leak of another
-diver's identifying data. **One field is deliberately withheld pending your call: signed
-medical answers.** The incident export withholds them because its reader is an investigator; a
-subject-access request's reader is the person who wrote them, which is the opposite case — see
-**H-20261025-per-diver-record-export** in [human-decisions/](../human-decisions/README.md) for the question as recorded. Until it is
-answered, the export ships every other field of a diver's own signed waiver evidence and states
-the gap in the bundle's own README rather than leaving it silent. `/privacy` now names this
- export alongside the shop-wide one and says medical answers are excluded for now.
+diver's identifying data. **Signed medical answers ship too (Aaron, 2026-11-05).** The
+call is recorded as **H-20261025-per-diver-record-export** in [human-decisions/](../human-decisions/README.md): medical answers and the crew
+medical alert are not treated specially in any export, and the diver's copy also carries their
+messages, the shop's replies and found items. The one open item is a conversation with counsel
+as the product scales (`human-task` issue #3967).
 
 ## Account security review — issue #701
 

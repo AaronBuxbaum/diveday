@@ -4,6 +4,7 @@ import {
   BOOKING_PAYMENT_EVENTS_CSV,
   BOOKINGS_CSV,
   diverFile,
+  INBOUND_MESSAGES_CSV,
   ORDER_LINE_ITEMS_CSV,
   ORDERS_CSV,
   RENTAL_FIT_CSV,
@@ -33,10 +34,12 @@ const WITHHELD = [
   pin(BOOKING_PAYMENT_EVENTS_CSV, "note"),
   pin(ROLL_CALL_EVENTS_CSV, "note"),
   pin(RENTAL_FIT_CSV, "note"),
-  // The raw questionnaire: a hold surfaces as a status, never the answers.
-  pin(WAIVER_RECORDS_CSV, "medical_answers"),
-  // The medical alert for the crew, medical-class text like the answers (issue #2960).
-  pin(WAIVER_RECORDS_CSV, "medical_alert"),
+  // The medical answers and the crew's medical alert ship in the diver's file
+  // too (Aaron, 2026-11-05); the shop's own handling columns do not.
+  pin(WAIVER_RECORDS_CSV, "medical_cleared_by_person_id"),
+  // The automated reading of a message, not the diver's words.
+  pin(INBOUND_MESSAGES_CSV, "spam_flagged"),
+  pin(INBOUND_MESSAGES_CSV, "assist_translation"),
   // The shop's internal talk about a repair.
   pin(WORK_ORDERS_CSV, "technician_notes"),
   pin(WORK_ORDERS_CSV, "outcome_note"),

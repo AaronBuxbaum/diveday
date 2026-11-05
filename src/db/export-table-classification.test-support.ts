@@ -34,18 +34,6 @@ export const EXCLUDED_TABLES = [
   // teams a shop would carry to another system are already exported as
   // buddy_teams.csv; this is the history of how they got that way.
   "buddy_team_events",
-  // The inbox (ADR 20260907-two-way-inbox). Correspondence *is* a shop record,
-  // and these two are out for a narrower reason than the rows around them: the
-  // bundle has no file for a conversation yet, and a message a diver sent is
-  // bounded by the same 400-day retention window as the delivery trail beside
-  // it, so nothing here outlives the evidence it answers. Carrying them out is
-  // a follow-up with its own file shape (issue filed with the inbox change),
-  // not a column on an existing one.
-  "inbound_messages",
-  "staff_replies",
-  // A reply to a date request (issue #2555): correspondence, out for the same
-  // reason. The request it answers is on interests.csv, closed as `replied`.
-  "interest_replies",
   // Which way each waiver link was handed over and what happened on that
   // channel. The outcome another system could act on is already on
   // waiver_records.csv (`delivery_status` and the provider columns beside it);
@@ -54,14 +42,6 @@ export const EXCLUDED_TABLES = [
   "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
   "email_bounces", // DiveDay's own record of mail SES bounced, for debugging delivery; not a shop record
-  // Batch 4's two desk records. A note sent to a whole departure is
-  // correspondence, out for the reason staff_replies is: the bundle has no file
-  // for a message yet, and the 400-day window bounds it like the delivery trail
-  // beside it. A found item is a shelf the shop is holding for somebody, pruned
-  // 90 days after it goes home; there is nothing in it another system would
-  // import. Both are follow-ups with their own file shape if a shop asks.
-  "departure_notes",
-  "lost_items",
   // What the bench told a customer and how it went (ADR
   // 20261008-work-order-follow-up): a kind, a channel and a delivery status,
   // the same plumbing the send queue is. The ticket and the
