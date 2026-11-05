@@ -15,13 +15,19 @@
 // baseline. Values already in the environment win, so that step and this script
 // can never disagree — and so a human triaging by hand can override either key
 // for one run.
-import { appendFileSync, cpSync, mkdirSync, rmSync } from "node:fs";
+import { appendFileSync, existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { regSuitConfigArgs } from "./reg-suit-config.mjs";
 import { gitReader, resolveRegSuitKeys } from "./reg-suit-keys.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import {
+  BASELINE_PLAN_FILE,
+  readPlan,
+  restoreUnchanged,
+  setAsideUnchanged,
+} from "./visual-baseline-plan.mjs";
 import { fillFromExpected, selectionNote } from "./visual-fill.mjs";
 import { verifyCompleteScreenshotInventory } from "./visual-publish-artifacts.mjs";
 import { DEFAULT_BUCKET } from "./visual-report-lib.mjs";
@@ -81,6 +87,8 @@ console.log(
 // the same when invoked as a bare `node scripts/visual-compare.mjs`.
 const binDir = path.join(repoRoot, "node_modules", ".bin");
 const configArgs = regSuitConfigArgs(process.env.REG_SUIT_CONFIG);
+const imageCount = (dir) =>
+  existsSync(dir) ? readdirSync(dir).filter((name) => name.endsWith(".png")).length : 0;
 const regSuit = (...args) =>
   runBounded(path.join(binDir, "dotenv"), ["-c", "--", "reg-suit", ...configArgs, ...args], {
     cwd: repoRoot,
@@ -104,39 +112,34 @@ const regSuit = (...args) =>
 // the expected images are on disk between the fetch and the compare. Every
 // other run is the one `reg-suit run` it always was.
 //
-// `VISUAL_EXPECTED_DIR` is the baseline's images already on disk (CI restores
-// them from the Actions cache by the expected key, which names an immutable
-// snapshot): they are put where reg-suit's fetch would have written them, and
-// the fetch is skipped (code re-review 2026-10-13, item 27).
+// CI's prepare step may also have left a baseline plan (`scripts/visual-baseline-plan.mjs`):
+// the captures whose hash equals main's own, and the surfaces a selective run did not take. Those
+// cannot differ, so reg-suit never sees them: they are set aside for the compare, and the report
+// it writes lists them as passed afterwards. Without a plan, the fill and compare are unchanged.
 const fill = process.env.VISUAL_FILL_FROM_EXPECTED === "true";
-const restored = process.env.VISUAL_EXPECTED_DIR;
 const expectedReady = process.env.VISUAL_EXPECTED_READY === "true";
 const compareOnly = process.env.REG_SUIT_COMPARE_ONLY === "true";
-if (fill || restored || expectedReady) {
+if (fill || expectedReady) {
   const expectedDir = path.join(repoRoot, ".reg", "expected");
+  const actualDir = path.join(repoRoot, "e2e", "screenshots");
+  const plan = expectedReady ? readPlan(path.join(repoRoot, BASELINE_PLAN_FILE)) : null;
   const stages = [
-    restored ? ["restore"] : expectedReady ? [] : ["sync-expected"],
+    ...(expectedReady ? [] : [["sync-expected"]]),
     ...(fill ? [["fill"]] : []),
     ["compare"],
     ...(!compareOnly
       ? [["publish", ...(process.env.REG_SUIT_SKIP_NOTIFICATION === "true" ? [] : ["-n"])]]
       : []),
-  ].filter((stage) => stage.length > 0);
+  ];
   for (const [stage, ...args] of stages) {
-    if (stage === "restore") {
-      rmSync(expectedDir, { recursive: true, force: true });
-      mkdirSync(path.dirname(expectedDir), { recursive: true });
-      cpSync(path.resolve(repoRoot, restored), expectedDir, { recursive: true });
-      console.log(`visual:compare: the expected images came from ${restored}, not from S3.`);
-      continue;
-    }
     if (stage === "fill") {
-      const filled = fillFromExpected({
-        expectedDir,
-        actualDir: path.join(repoRoot, "e2e", "screenshots"),
-      });
+      const filled = plan
+        ? { captured: imageCount(actualDir), copied: plan.filled.length }
+        : fillFromExpected({ expectedDir, actualDir });
       console.log(
-        `visual:compare: ${filled.captured} captured, ${filled.copied} copied from the baseline.`,
+        `visual:compare: ${filled.captured} captured, ${filled.copied} ${
+          plan ? "left to the baseline's hashes" : "copied from the baseline"
+        }.`,
       );
       if (process.env.GITHUB_ENV) {
         appendFileSync(process.env.GITHUB_ENV, `VISUAL_SELECTION_NOTE=${selectionNote(filled)}\n`);
@@ -154,6 +157,7 @@ if (fill || restored || expectedReady) {
         allowEmptyExpected: process.env.VISUAL_FRESH_START === "true",
         captureMode: process.env.VISUAL_CAPTURE_MODE ?? "",
         captureManifest: process.env.VISUAL_EXPECTED_CAPTURE_MANIFEST ?? "",
+        plan,
       });
       console.log(
         `visual:compare: verified ${inventory.actualCount} captures against ` +
@@ -167,7 +171,11 @@ if (fill || restored || expectedReady) {
         );
       }
     }
+    const setAside = stage === "compare" && plan !== null;
+    if (setAside) setAsideUnchanged({ plan, actualDir });
     const step = regSuit(stage, ...args);
+    // Back in place whether or not the compare passed: the capture directory is evidence.
+    if (setAside) restoreUnchanged({ plan, actualDir, workingDir: path.join(repoRoot, ".reg") });
     if (step.status !== 0) process.exit(step.status ?? 1);
   }
   process.exit(0);

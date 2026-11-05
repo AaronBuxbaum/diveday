@@ -65,11 +65,9 @@ describe("reg-suit consumer workflow", () => {
     expect(report).toContain(
       "ref: ${{ github.event_name == 'pull_request' && 'refs/heads/main' || github.sha }}",
     );
-    expect(report).toMatch(/pattern: visual-screenshots-\*\n[ \t]+path: e2e\n/u);
-    expect(report).toContain("cp -R e2e/screenshots .reg-baseline");
-    expect(report).toContain(
-      "key: reg-baseline-v2-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}",
-    );
+    // The baseline is main's own manifest and blobs in the bucket; nothing is cached for it.
+    expect(report).not.toContain("actions/cache");
+    expect(report).not.toContain("visual-screenshots-");
     expect(report).not.toContain("id-token: write");
   });
 

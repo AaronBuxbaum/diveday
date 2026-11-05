@@ -249,9 +249,14 @@ export function buildVisualPublishBundle({
     }
     const output = path.join(bundleDir, "payload", `${publishPath}.gz`);
     mkdirSync(path.dirname(output), { recursive: true });
-    writeFileSync(output, gzipSync(bytes, { level: 9, mtime: 0 }), {
-      flag: "wx",
-    });
+    // A PNG is already deflated: level 9 spent seconds on ~1,700 images to save almost nothing.
+    writeFileSync(
+      output,
+      gzipSync(bytes, { level: contentType === "image/png" ? 1 : 9, mtime: 0 }),
+      {
+        flag: "wx",
+      },
+    );
     manifest.push(`${publishPath}\t${contentType}`);
   }
   writeFileSync(path.join(bundleDir, "manifest.tsv"), `${manifest.join("\n")}\n`, { flag: "wx" });

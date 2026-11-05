@@ -12,17 +12,15 @@ const BUCKET = "diveday-vrt";
 const VERSION = "a".repeat(64);
 
 describe("baselineEnvironment", () => {
-  it("exports the versioned cache key and leaves unknown versions uncached", () => {
+  it("exports the baseline key and the snapshot version, empty when the version is unknown", () => {
     const version = "a".repeat(64);
     expect(baselineEnvironment({ key: KEY, version })).toEqual([
       `REG_EXPECTED_KEY=${KEY}`,
       `REG_EXPECTED_VERSION=${version}`,
-      `REG_EXPECTED_CACHE_KEY=reg-baseline-v2-${KEY}-${version}`,
     ]);
     expect(baselineEnvironment({ key: KEY, version: null })).toEqual([
       `REG_EXPECTED_KEY=${KEY}`,
       "REG_EXPECTED_VERSION=",
-      "REG_EXPECTED_CACHE_KEY=",
     ]);
   });
 });

@@ -7,6 +7,7 @@ import { availableParallelism } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import sharp from "sharp";
+import { readPlan } from "./visual-baseline-plan.mjs";
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const SAFE_SCREENSHOT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}\.png$/u;
@@ -243,9 +244,17 @@ export function verifyCompleteScreenshotInventory({
   allowEmptyExpected = false,
   captureMode = "",
   captureManifest = "",
+  plan = null,
 }) {
   const actual = screenshotInventory(actualDir, "actual screenshots");
   const expected = screenshotInventory(expectedDir, "expected screenshots");
+  // A hash-planned baseline (scripts/visual-baseline-plan.mjs) leaves the images that cannot
+  // differ out of the expected directory. They are still baseline surfaces; a filled one is also
+  // a surface this run did not capture, so it counts on both sides, as the copied image used to.
+  if (plan) {
+    for (const name of [...plan.unchanged, ...plan.filled]) expected.add(name);
+    for (const name of plan.filled) actual.add(name);
+  }
   if (allowEmptyExpected && captureMode !== "all") {
     throw new Error("fresh baseline requires a complete all-mode capture");
   }
@@ -408,6 +417,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         allowEmptyExpected: process.env.VISUAL_FRESH_START === "true",
         captureMode: process.env.VISUAL_CAPTURE_MODE ?? "",
         captureManifest: process.env.VISUAL_EXPECTED_CAPTURE_MANIFEST ?? "",
+        plan: readPlan(),
       });
       console.log(
         `visual-publish-artifacts: verified ${result.actualCount} captures against ` +

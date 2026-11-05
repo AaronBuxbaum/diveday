@@ -44,7 +44,7 @@ import { appendFileSync } from "node:fs";
 import process from "node:process";
 
 import { gitReader } from "./reg-suit-keys.mjs";
-import { baselineCacheKey, DEFAULT_BUCKET } from "./visual-report-lib.mjs";
+import { DEFAULT_BUCKET } from "./visual-report-lib.mjs";
 
 /** A reg-suit key is a full commit sha; anything else is a bug, not a baseline. */
 const COMMIT_SHA = /^[0-9a-f]{40}$/;
@@ -153,10 +153,8 @@ export function baselineEnvironment({ key, version, note }) {
   const lines = [`REG_EXPECTED_KEY=${key}`];
   if (version) {
     lines.push(`REG_EXPECTED_VERSION=${version}`);
-    lines.push(`REG_EXPECTED_CACHE_KEY=${baselineCacheKey(key, version)}`);
   } else {
     lines.push("REG_EXPECTED_VERSION=");
-    lines.push("REG_EXPECTED_CACHE_KEY=");
   }
   if (note) lines.push(`REG_BASELINE_NOTE=${note}`);
   return lines;

@@ -75,8 +75,11 @@ describe("reg-suit publisher workflow", () => {
     expect(prepare).not.toContain("id-token:");
     expect(prepare).toContain("run: pnpm visual:compare");
     expect(prepare).toContain("node scripts/visual-build-publish-bundle.mjs");
-    expect(CI_WORKFLOW).toContain(
-      "key: reg-baseline-v2-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}",
+    expect(CI_WORKFLOW).not.toContain("reg-baseline-v2");
+    expect(prepare).not.toContain("actions/cache");
+    // The fetch is gated by hash, so it must know whether the run captured everything.
+    expect(prepare).toContain(
+      "VISUAL_FILL_FROM_EXPECTED: ${{ inputs.capture-mode == 'affected' || inputs.capture-mode == 'light' }}",
     );
   });
 });

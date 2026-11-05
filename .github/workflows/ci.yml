@@ -1016,24 +1016,6 @@ jobs:
         with:
           ref: ${{ github.event_name == 'pull_request' && 'refs/heads/main' || github.sha }}
 
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        if: ${{ needs.visual.result == 'success' && needs.visual-publish.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-        with:
-          pattern: visual-screenshots-*
-          path: e2e
-          merge-multiple: true
-      - name: Keep this commit's images for the runs that compare against it
-        if: ${{ needs.visual.result == 'success' && needs.visual-publish.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-        run: |
-          rm -rf .reg-baseline
-          cp -R e2e/screenshots .reg-baseline
-      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ needs.visual.result == 'success' && needs.visual-publish.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-        continue-on-error: true
-        with:
-          path: .reg-baseline
-          key: reg-baseline-v2-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}
-
       - name: Summarize the visual result on the pull request
         id: summary
         # The sticky comment reads this commit's out.json. Only update it after
