@@ -397,6 +397,32 @@ export async function releaseBookkeeperMonth(
 }
 
 /**
+ * Whether the claim is still this one: the same month, address and
+ * confirmation {@link releaseBookkeeperMonth} requires. The month-end pass
+ * asks just before the send, so an address cleared or changed after the claim
+ * is never mailed the month's files (issue #3952). It does not lock the shop
+ * row: the claim's own guard stays as narrow as it was.
+ */
+export async function bookkeeperClaimStands(
+  db: DbExecutor,
+  input: { shopId: string; month: string; email: string; confirmedAt: Date },
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(
+      and(
+        eq(shops.id, input.shopId),
+        eq(shops.bookkeeperSentMonth, input.month),
+        eq(shops.bookkeeperEmail, input.email),
+        eq(shops.bookkeeperConfirmedAt, input.confirmedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
+/**
  * **Only the newest email's stop link works** (ADR 20261016, security review
  * N1, kept by the l8 review B1): once a month's email is delivered, every
  * other unspent link the shop holds is withdrawn, so a forwarded older email
