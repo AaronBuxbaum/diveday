@@ -905,14 +905,6 @@ export const bookingCheckouts = pgTable(
      */
     dealId: uuid("deal_id").references(() => deals.id),
     /**
-     * **Retired: nothing reads or writes these two, and they name no table any more** (the tables
-     * went with #3778). `deal_id` replaced them (issue #2720). They stay declared one release,
-     * because the destructive-migration guard refuses a column drop while the previous release
-     * declares it; the next release drops them (issue #3866).
-     */
-    retiredPromoCodeId: uuid("promo_code_id"),
-    retiredTripPromoId: uuid("trip_promo_id"),
-    /**
      * The code text the diver actually typed, as the deal above resolved it. A snapshot, so a later edit or delete of the
      * code can't rewrite what this diver was quoted.
      */
@@ -1397,9 +1389,6 @@ export const paymentOperationIntents = pgTable(
      * reach Stripe.
      */
     dealId: uuid("deal_id").references(() => deals.id),
-    /** **Retired**, as on `booking_checkouts`: dropped next release (issue #3866). */
-    retiredPromoCodeId: uuid("promo_code_id"),
-    retiredTripPromoId: uuid("trip_promo_id"),
     /** The Stripe object id once known, even if the local finalize write then failed. */
     stripeObjectId: text("stripe_object_id"),
     /**
