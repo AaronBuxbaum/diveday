@@ -61,7 +61,11 @@ export async function recordDeckCount(
     return { ok: true };
   });
   // Another phone on the same roll call hears the count, as it hears a mark.
-  if (outcome.ok) await publishManifestEvent(db, input.shopId, input.tripId);
+  // After the commit, and never an error: the count saved, and a failed push
+  // must not tell the captain it did not (attacker review N1).
+  if (outcome.ok) {
+    await publishManifestEvent(db, input.shopId, input.tripId).catch(() => undefined);
+  }
   return outcome;
 }
 

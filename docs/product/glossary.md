@@ -287,6 +287,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Medical alert for the crew
 - Medical hold
 - Medical questionnaire
+- Meeting day
 - Meeting point
 - Milestone
 - Milestone stamp
@@ -331,6 +332,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Review request
 - Rider
 - Roll-call checkpoint
+- Roll-call day boundary
 - Roll-call event
 - Roll-call order
 - Running late

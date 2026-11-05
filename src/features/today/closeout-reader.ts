@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "@/db/manifests";
 import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "@/db/recap";
-import { listRollCallGaps } from "@/db/roll-call-gaps";
+import { listRollCallGaps, oneRowPerHalf } from "@/db/roll-call-gaps";
 import { newestMarkFirst, oldestMarkFirst } from "@/db/roll-call-order";
 import { crewMarks, markCrewPersonId, seatMarks } from "@/db/roll-call-subject";
 import {
@@ -427,7 +427,12 @@ export async function getDayCloseout(
     listRollCallGaps(db, shopId, now),
     demoDuskCarryover(db, shopId, timeZone, now),
   ]);
-  const state = assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
+  const state = assembleDayCloseout({
+    trips: tripsToday,
+    gaps: oneRowPerHalf(gaps),
+    timeZone,
+    now,
+  });
   if (carryover && !tripsToday.some((trip) => trip.tripId === carryover.tripId)) {
     state.carryover = carryover;
   }
@@ -478,7 +483,7 @@ async function demoDuskCarryover(
   const gaps = await listRollCallGaps(db, shopId, now, [trip.id], { historical: true });
   const [departure] = assembleDayCloseout({
     trips: [candidate],
-    gaps,
+    gaps: oneRowPerHalf(gaps),
     timeZone,
     now,
     shopDay: tripDay,
@@ -523,7 +528,7 @@ async function pastDayCloseout(
   );
   return assembleDayCloseout({
     trips: departures,
-    gaps,
+    gaps: oneRowPerHalf(gaps),
     timeZone,
     now,
     shopDay: day,

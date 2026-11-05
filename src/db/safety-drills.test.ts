@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { calendarDateInTimezone, shiftCalendarDateMonths } from "@/lib/calendar-date";
 import { DAY_MS, nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -10,7 +10,7 @@ import {
   listSafetyDrills,
   recordSafetyDrill,
 } from "./safety-drills";
-import { people, safetyDrills, shops } from "./schema";
+import { people, personRoles, safetyDrills, shops, userAccounts } from "./schema";
 import { listStaff } from "./trips";
 
 const ctx = fileScopedShopContext();
@@ -92,6 +92,37 @@ describe("recordSafetyDrill", () => {
     ).resolves.toEqual({ ok: false, reason: "invalid_kind" });
   });
 
+  it("refuses a drill held more than a year back, and takes one a year back to the day", async () => {
+    const { db, shop } = ctx;
+    const { ownerId, today } = await cast();
+    const base = { shopId: shop.id, recordedByPersonId: ownerId, participantIds: [] };
+    const yearBack = shiftCalendarDateMonths(today, -12);
+    await expect(
+      recordSafetyDrill(db, { ...base, kind: "fire", heldOn: "0001-01-01" }),
+    ).resolves.toEqual({ ok: false, reason: "invalid_date" });
+    await expect(
+      recordSafetyDrill(db, { ...base, kind: "fire", heldOn: daysAgo(400, shop.timezone) }),
+    ).resolves.toEqual({ ok: false, reason: "invalid_date" });
+    await expect(
+      recordSafetyDrill(db, { ...base, kind: "fire", heldOn: yearBack }),
+    ).resolves.toEqual({ ok: true, id: expect.any(String) });
+  });
+
+  it("reads back who logged each drill and when", async () => {
+    const { db, shop } = ctx;
+    const { ownerId, today } = await cast();
+    await recordSafetyDrill(db, {
+      shopId: shop.id,
+      recordedByPersonId: ownerId,
+      kind: "fire",
+      heldOn: today,
+      participantIds: [],
+    });
+    const [owner] = await db.select().from(people).where(eq(people.id, ownerId));
+    const [drill] = await listSafetyDrills(db, shop.id, { from: today, to: today });
+    expect(drill).toMatchObject({ recordedBy: owner?.fullName, recordedAt: expect.any(Date) });
+  });
+
   it("refuses a participant who is not this shop's staff", async () => {
     const { db, shop } = ctx;
     const { ownerId, today } = await cast();
@@ -136,6 +167,49 @@ describe("lastSafetyDrills and deleteSafetyDrill", () => {
     // Soft: the row is still there, stamped.
     const [row] = await db.select().from(safetyDrills).where(eq(safetyDrills.id, newer.id));
     expect(row?.deletedAt).not.toBeNull();
+  });
+
+  it("names who deleted a drill, not who logged it", async () => {
+    const { db, shop } = ctx;
+    const { ownerId, today } = await cast();
+    const [manager] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Mia", email: "mia.drills@shop.example" })
+      .returning();
+    if (!manager) throw new Error("person insert failed");
+    await db.insert(personRoles).values({ personId: manager.id, role: "manager" });
+    await db
+      .insert(userAccounts)
+      .values({ personId: manager.id, email: "mia.drills@shop.example" });
+    const drill = await recordSafetyDrill(db, {
+      shopId: shop.id,
+      recordedByPersonId: ownerId,
+      kind: "fire",
+      heldOn: today,
+      participantIds: [],
+    });
+    if (!drill.ok) throw new Error("drill not recorded");
+    await expect(
+      deleteSafetyDrill(db, { shopId: shop.id, personId: manager.id, drillId: drill.id }),
+    ).resolves.toBe(true);
+    const [row] = await db.select().from(safetyDrills).where(eq(safetyDrills.id, drill.id));
+    expect(row).toMatchObject({ recordedByPersonId: ownerId, deletedByPersonId: manager.id });
+  });
+
+  it("never stamps a delete without naming who did it", async () => {
+    const { db, shop } = ctx;
+    const { ownerId, today } = await cast();
+    const drill = await recordSafetyDrill(db, {
+      shopId: shop.id,
+      recordedByPersonId: ownerId,
+      kind: "fire",
+      heldOn: today,
+      participantIds: [],
+    });
+    if (!drill.ok) throw new Error("drill not recorded");
+    await expect(
+      db.update(safetyDrills).set({ deletedAt: nowDate() }).where(eq(safetyDrills.id, drill.id)),
+    ).rejects.toThrow();
   });
 
   it("deletes nothing on another shop's books", async () => {

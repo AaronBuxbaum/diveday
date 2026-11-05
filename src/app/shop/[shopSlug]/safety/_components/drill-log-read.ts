@@ -7,11 +7,17 @@ import {
   calendarDateInTimezone,
   calendarDateToUtcMidnight,
   calendarDaysBetween,
+  shiftCalendarDateMonths,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { DRILL_KINDS, DRILL_NOTE_MAX, type DrillKind } from "@/lib/safety-drills";
+import {
+  DRILL_BACKDATE_MONTHS,
+  DRILL_KINDS,
+  DRILL_NOTE_MAX,
+  type DrillKind,
+} from "@/lib/safety-drills";
 
 /** The words for one drill kind, DiveDay's, from the incidents bundle. */
 export function drillKindLabel(t: StaffTranslator, kind: DrillKind): string {
@@ -78,10 +84,15 @@ export async function readDrillLog({
       line: `${formatShortDate(calendarDateToUtcMidnight(drill.heldOn), locale, "UTC")} · ${drillKindLabel(t, drill.kind)}`,
       people: drill.participants.length > 0 ? names.format(drill.participants) : null,
       note: drill.note,
+      logged: t("incidents.safety.drills.loggedBy", {
+        name: drill.recordedBy,
+        date: formatShortDate(drill.recordedAt, locale, timeZone),
+      }),
     })),
     form: {
       month: month ? monthKey(month) : null,
       today,
+      earliest: shiftCalendarDateMonths(today, -DRILL_BACKDATE_MONTHS),
       noteMax: DRILL_NOTE_MAX,
       kinds: DRILL_KINDS.map((kind) => ({ value: kind, label: drillKindLabel(t, kind) })),
       staff: staff.map((member) => ({ id: member.person.id, name: member.person.fullName })),

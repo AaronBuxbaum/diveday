@@ -153,6 +153,7 @@ const UPDATE_TRIP_NOTICE: Record<Extract<UpdateTripOutcome, { ok: false }>["reas
   boat_not_found: "boat-not-found",
   capacity_above_certificate: "capacity-above-certificate",
   planned_dives_below_history: "planned-dives-below-history",
+  meeting_day_has_roll_call: "meeting-day-has-roll-call",
 };
 
 export async function saveDetailsSection(
@@ -563,6 +564,14 @@ function redirectUpdateRefusal(
     redirect(
       noticeUrl(back, UPDATE_TRIP_NOTICE[outcome.reason], {
         count: outcome.detail.recordedDiveCount,
+        form: section ?? "details",
+      }),
+    );
+  }
+  if (outcome.reason === "meeting_day_has_roll_call") {
+    redirect(
+      noticeUrl(back, UPDATE_TRIP_NOTICE[outcome.reason], {
+        count: outcome.detail.dayNumber,
         form: section ?? "details",
       }),
     );

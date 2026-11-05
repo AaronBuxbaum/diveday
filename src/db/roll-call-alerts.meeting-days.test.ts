@@ -36,7 +36,7 @@ function recorder() {
   return { sent, provider };
 }
 
-async function course() {
+async function course(days = [DAY_ONE, DAY_TWO], divers = 1) {
   const { db, shop } = ctx;
   await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
   const [trip] = await db
@@ -44,39 +44,49 @@ async function course() {
     .values({
       shopId: shop.id,
       title: "Open Water, two Saturdays",
-      startsAt: DAY_ONE.startsAt,
-      endsAt: DAY_TWO.endsAt,
+      startsAt: days[0]?.startsAt ?? DAY_ONE.startsAt,
+      endsAt: days.at(-1)?.endsAt ?? DAY_TWO.endsAt,
       capacity: 6,
       plannedDives: 1,
     })
     .returning();
   if (!trip) throw new Error("trip insert failed");
-  await db.insert(tripScheduleDays).values([
-    { tripId: trip.id, dayNumber: 1, ...DAY_ONE },
-    { tripId: trip.id, dayNumber: 2, ...DAY_TWO },
-  ]);
+  await db
+    .insert(tripScheduleDays)
+    .values(days.map((day, index) => ({ tripId: trip.id, dayNumber: index + 1, ...day })));
   const [staff] = await listStaff(db, shop.id);
-  const [person] = await db
-    .insert(people)
-    .values({ shopId: shop.id, fullName: "Ana Ruiz" })
-    .returning();
-  if (!staff || !person) throw new Error("fixture people missing");
-  const [booking] = await db
-    .insert(bookings)
-    .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: person.id })
-    .returning();
-  if (!booking) throw new Error("booking insert failed");
-  const mark = (checkpoint: string, status: "boarded" | "not_boarded", occurredAt: Date) =>
-    db.insert(rollCallEvents).values({
-      shopId: shop.id,
-      tripId: trip.id,
-      bookingId: booking.id,
-      recordedByPersonId: staff.person.id,
-      status,
-      checkpoint,
-      occurredAt,
-    });
-  return { db, trip, mark };
+  if (!staff) throw new Error("fixture staff missing");
+  const marks: ((
+    checkpoint: string,
+    status: "boarded" | "not_boarded",
+    occurredAt: Date,
+  ) => Promise<unknown>)[] = [];
+  for (let index = 0; index < divers; index++) {
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: index === 0 ? "Ana Ruiz" : `Diver ${index + 1}` })
+      .returning();
+    if (!person) throw new Error("fixture person missing");
+    const [booking] = await db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: person.id })
+      .returning();
+    if (!booking) throw new Error("booking insert failed");
+    marks.push((checkpoint, status, occurredAt) =>
+      db.insert(rollCallEvents).values({
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.person.id,
+        status,
+        checkpoint,
+        occurredAt,
+      }),
+    );
+  }
+  const [mark] = marks;
+  if (!mark) throw new Error("no diver");
+  return { db, trip, mark, marks };
 }
 
 const pass = async (db: ReturnType<typeof fileScopedShopContext>["db"], now: Date) => {
@@ -112,5 +122,46 @@ describe("stale roll-call alerts on a course that meets on two Saturdays", () =>
     expect(sent[0]).toMatchObject({ endsAt: DAY_TWO.endsAt, awaiting: 1 });
     // And once per day: the next pass is quiet.
     expect(await pass(db, new Date(DAY_TWO.endsAt.getTime() + 3 * HOUR))).toEqual([]);
+  });
+
+  // A course with a morning and an afternoon session on one Saturday: both
+  // days sit inside the alert's look-back at once (#2557 review).
+  const MORNING = {
+    startsAt: new Date("2031-04-05T09:00:00Z"),
+    endsAt: new Date("2031-04-05T11:00:00Z"),
+  };
+  const AFTERNOON = {
+    startsAt: new Date("2031-04-05T13:00:00Z"),
+    endsAt: new Date("2031-04-05T15:00:00Z"),
+  };
+  const minutes = (base: Date, count: number) => new Date(base.getTime() + count * 60_000);
+
+  it("does not let the morning's missing diver silence the afternoon's open count", async () => {
+    const { db, marks } = await course([MORNING, AFTERNOON], 2);
+    const [missing, other] = marks as [(typeof marks)[number], (typeof marks)[number]];
+    await missing("departure", "boarded", minutes(MORNING.startsAt, -10));
+    await other("departure", "boarded", minutes(MORNING.startsAt, -10));
+    await missing("after_dive_1", "not_boarded", minutes(MORNING.startsAt, 60));
+    await other("after_dive_1", "boarded", minutes(MORNING.startsAt, 61));
+    const morning = await pass(db, minutes(MORNING.endsAt, 60));
+    expect(morning[0]).toMatchObject({ endsAt: MORNING.endsAt, notBackAboard: 1 });
+    // Afternoon: the other diver boards and is never counted back.
+    await other("departure", "boarded", minutes(AFTERNOON.startsAt, -10));
+    const afternoon = await pass(db, minutes(AFTERNOON.endsAt, 120));
+    expect(afternoon.length).toBeGreaterThan(0);
+    expect(afternoon[0]).toMatchObject({ endsAt: AFTERNOON.endsAt, awaiting: 1 });
+  });
+
+  it("does not let a morning alert sent after the afternoon began hold the afternoon", async () => {
+    const { db, mark } = await course([MORNING, AFTERNOON]);
+    await mark("departure", "boarded", minutes(MORNING.startsAt, -10));
+    // The morning's alert goes late, half an hour into the afternoon.
+    const morning = await pass(db, minutes(AFTERNOON.startsAt, 30));
+    expect(morning[0]).toMatchObject({ endsAt: MORNING.endsAt });
+    await mark("after_dive_1", "boarded", minutes(MORNING.startsAt, 60));
+    await mark("departure", "boarded", minutes(AFTERNOON.startsAt, -10));
+    const afternoon = await pass(db, minutes(AFTERNOON.endsAt, 120));
+    expect(afternoon.length).toBeGreaterThan(0);
+    expect(afternoon[0]).toMatchObject({ endsAt: AFTERNOON.endsAt, awaiting: 1 });
   });
 });

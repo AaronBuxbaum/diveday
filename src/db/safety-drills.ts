@@ -1,7 +1,16 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lte, max } from "drizzle-orm";
-import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
+import {
+  calendarDateInTimezone,
+  isValidCalendarDate,
+  shiftCalendarDateMonths,
+} from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { DRILL_NOTE_MAX, type DrillKind, isDrillKind } from "@/lib/safety-drills";
+import {
+  DRILL_BACKDATE_MONTHS,
+  DRILL_NOTE_MAX,
+  type DrillKind,
+  isDrillKind,
+} from "@/lib/safety-drills";
 import type { AppDb, DbExecutor } from "./client";
 import { canPersonViewShopReports } from "./reporting";
 import { people, safetyDrillParticipants, safetyDrills, shops } from "./schema";
@@ -43,9 +52,11 @@ export async function recordSafetyDrill(
     .where(eq(shops.id, input.shopId))
     .limit(1);
   if (!shop) return { ok: false, reason: "not_allowed" };
-  // A drill is something that happened: never a date the shop has not reached.
+  // A drill is something that happened: never a date the shop has not reached,
+  // and never more than a year back (the sheet shows who logged it, and when).
   const today = calendarDateInTimezone(nowDate(), shop.timezone);
-  if (!isValidCalendarDate(input.heldOn) || input.heldOn > today) {
+  const earliest = shiftCalendarDateMonths(today, -DRILL_BACKDATE_MONTHS);
+  if (!isValidCalendarDate(input.heldOn) || input.heldOn > today || input.heldOn < earliest) {
     return { ok: false, reason: "invalid_date" };
   }
   const participantIds = [...new Set(input.participantIds)];
@@ -87,7 +98,7 @@ export async function deleteSafetyDrill(
   if (!(await canPersonViewShopReports(db, input.shopId, input.personId))) return false;
   const stamped = await db
     .update(safetyDrills)
-    .set({ deletedAt: nowDate() })
+    .set({ deletedAt: nowDate(), deletedByPersonId: input.personId })
     .where(
       and(
         eq(safetyDrills.id, input.drillId),
@@ -105,6 +116,9 @@ export type SafetyDrillRow = {
   heldOn: string;
   note: string | null;
   participants: string[];
+  /** Who logged it, and when: the sheet shows both beside the date held. */
+  recordedBy: string;
+  recordedAt: Date;
 };
 
 /** The live drills held between two calendar dates, inclusive, newest first. */
@@ -119,8 +133,11 @@ export async function listSafetyDrills(
       kind: safetyDrills.kind,
       heldOn: safetyDrills.heldOn,
       note: safetyDrills.note,
+      recordedBy: people.fullName,
+      recordedAt: safetyDrills.recordedAt,
     })
     .from(safetyDrills)
+    .innerJoin(people, eq(people.id, safetyDrills.recordedByPersonId))
     .where(
       and(
         eq(safetyDrills.shopId, shopId),

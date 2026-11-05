@@ -304,8 +304,15 @@ export const safetyDrills = pgTable(
       .references(() => people.id),
     recordedAt: appNowTimestamp("recorded_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Who deleted the drill: an insurer's record says who took a line out. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
   },
   (table) => [
+    check(
+      "safety_drills_deleted_by_whom",
+      sql`(${table.deletedAt} is null) = (${table.deletedByPersonId} is null)`,
+    ),
+    index("safety_drills_deleted_by_person_id_idx").on(table.deletedByPersonId),
     index("safety_drills_shop_held_live_idx")
       .on(table.shopId, table.heldOn)
       .where(sql`${table.deletedAt} is null`),

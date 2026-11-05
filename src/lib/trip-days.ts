@@ -120,13 +120,35 @@ const wallOrder = (wall: WallTime) =>
   ((wall.year * 13 + wall.month) * 32 + wall.day) * 1440 + minuteOfDay(wall);
 
 /**
+ * The longest window that runs past midnight (#2557 review): an end before
+ * the start is the next morning only up to this many hours on, so a night
+ * dive from 20:00 to 01:00 saves, and 13:00 to 09:00 stays a mistake to fix.
+ */
+export const MAX_OVERNIGHT_WINDOW_HOURS = 12;
+
+/**
+ * Where a wall-clock window typed as two times on one date really ends: on
+ * that date when the end is after the start, on the next morning when it is
+ * before and the night is no longer than {@link MAX_OVERNIGHT_WINDOW_HOURS},
+ * and `null` (end before start) otherwise.
+ */
+export function wallWindowEnd(start: WallTime, end: WallTime): WallTime | null {
+  const length = minuteOfDay(end) - minuteOfDay(start);
+  if (length > 0) return end;
+  if (length < 0 && length + 24 * 60 <= MAX_OVERNIGHT_WINDOW_HOURS * 60) {
+    return addCalendarDays(end, 1);
+  }
+  return null;
+}
+
+/**
  * The meeting days a submission asks for: `dayCount` consecutive days when
  * `laterDates` is empty, otherwise day one plus one named date for each later
  * day. Each later day keeps day one's wall-clock window unless `laterHours`
  * names its own (#2558): a pool night at 18:00 and an open-water Saturday at
  * 08:00 are one course. A window that ends after midnight ends on the morning
- * after its own date, as day one's does; a later day's own hours must end
- * after they start on the same date.
+ * after its own date ({@link wallWindowEnd}), on day one and on every later
+ * day with its own hours.
  *
  * `invalid` is a count out of range, a date or time that does not exist, or a
  * list whose length disagrees with the count (a forged or stale form).
@@ -134,7 +156,7 @@ const wallOrder = (wall: WallTime) =>
  * than {@link MAX_MEETING_DAY_GAP_DAYS} after it, or more than
  * {@link MAX_TRIP_SPAN_DAYS} after day one: something the staffer can fix by
  * looking at the dates, so it gets its own sentence. `end_before_start` is a
- * later day whose own hours end before they start.
+ * later day whose own hours end before they start, past one night's length.
  */
 export function meetingDaysFor(
   day: MeetingDayWall,
@@ -172,9 +194,11 @@ export function meetingDaysFor(
     const hours = laterHours[index];
     if (hours && (hours.start !== "" || hours.end !== "")) {
       const start = parseWallTime(date, hours.start || toTimeInputValue(day.start));
-      const end = parseWallTime(date, hours.end || toTimeInputValue(day.end));
-      if (!start || !end) return { ok: false, reason: "invalid" };
-      if (minuteOfDay(end) <= minuteOfDay(start)) return { ok: false, reason: "end_before_start" };
+      const typedEnd = parseWallTime(date, hours.end || toTimeInputValue(day.end));
+      if (!start || !typedEnd) return { ok: false, reason: "invalid" };
+      // A night out ends the next morning, as day one's does (#2557 review).
+      const end = wallWindowEnd(start, typedEnd);
+      if (!end) return { ok: false, reason: "end_before_start" };
       // A day starts once the day before has ended: overlapping windows would
       // blur whose roll call a tap belongs to (#2557).
       const before = days.at(-1);
