@@ -124,7 +124,15 @@ export function rungTime<R extends DepartureRung>(rung: R, anchors: RungAnchors<
   return new Date(base.getTime() + ms);
 }
 
-/** Whether `now` is past the rung, by the rung's own {@link Crossing}. */
+/**
+ * Whether `now` is past the rung, by the rung's own {@link Crossing}.
+ *
+ * A raw rung is not a question: `scheduled_start` is crossed with no hour of
+ * grace and `desk_closes` is hours past a boat that sailed. Outside this file
+ * only the named questions' own homes call it, and
+ * `scripts/check-departure-buffer.mjs` refuses any other caller of it or of
+ * `onArrivalsDesk`.
+ */
 export function hasCrossed<R extends DepartureRung>(
   rung: R,
   anchors: RungAnchors<R>,
@@ -141,7 +149,8 @@ export function hasCrossed<R extends DepartureRung>(
  * - `ahead`: more than a week out.
  * - `week_out` (`week_out`), `day_before` (`day_before`), `morning_of`
  *   (`push_opens`): the run-up.
- * - `leaving` (`scheduled_start`): due out, inside the hour of grace.
+ * - `due_out` (`scheduled_start`): due out, inside the hour of grace. The schedule's word,
+ *   not the dock's: a boat tied up waiting for a late diver is still `due_out`.
  * - `scheduled_out` (`sailing_grace_over`): the schedule says the boat has
  *   gone and is not yet due back.
  * - `scheduled_back` (`back_grace_over`): the schedule says it is back; the
@@ -159,7 +168,7 @@ const PHASES = [
   ["week_out", "week_out"],
   ["day_before", "day_before"],
   ["morning_of", "push_opens"],
-  ["leaving", "scheduled_start"],
+  ["due_out", "scheduled_start"],
   ["scheduled_out", "sailing_grace_over"],
   ["scheduled_back", "back_grace_over"],
   ["recap_due", "recap_due"],
@@ -179,8 +188,10 @@ export type DepartureSchedule = { startsAt: Date; endsAt: Date };
 
 /**
  * The schedule the ladder reads. A row whose end is at or before its start
- * (the schema forbids it for schedule days, not for trips) is read as ending
- * when it starts, so it never closes before the departure it is about.
+ * (`trips_ends_after_starts` and the schedule-day check forbid it in the
+ * database, and the trip editor answers `end-before-start`) is still read as
+ * ending when it starts, for a caller holding a value that never was a row, so
+ * it never closes before the departure it is about.
  */
 function ladderSchedule(trip: DepartureSchedule): DepartureSchedule {
   return trip.endsAt.getTime() > trip.startsAt.getTime()
@@ -245,7 +256,11 @@ export function arrivalsWindow(now: Date): DepartureWindow {
   };
 }
 
-/** Whether this departure is on the arrivals desk at `now`: the window's own question. */
+/**
+ * Whether this departure is on the arrivals desk at `now`: the window's own
+ * question. Not "has it sailed": the desk keeps a boat for six hours after it
+ * left. A gate asks {@link walkInDoorOpen} or `hasSailed`.
+ */
 export function onArrivalsDesk(startsAt: Date, now: Date): boolean {
   return (
     hasCrossed("desk_opens", { startsAt }, now) && !hasCrossed("desk_closes", { startsAt }, now)

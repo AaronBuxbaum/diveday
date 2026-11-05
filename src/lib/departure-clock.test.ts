@@ -54,6 +54,40 @@ describe("the departure's ladder", () => {
   });
 });
 
+/**
+ * Each rung's instant and crossing, pinned by name: changing one is a reviewed
+ * diff here too. `at` crosses on its instant, `after` a millisecond later.
+ */
+describe("every rung", () => {
+  const rungs = [
+    ["week_out", "startsAt", -168 * HOUR_MS, "at"],
+    ["desk_opens", "startsAt", -36 * HOUR_MS, "at"],
+    ["day_before", "startsAt", -24 * HOUR_MS, "at"],
+    ["push_opens", "startsAt", -6 * HOUR_MS, "at"],
+    ["scheduled_start", "startsAt", 0, "at"],
+    ["sailing_grace_over", "startsAt", HOUR_MS, "at"],
+    ["desk_closes", "startsAt", 6 * HOUR_MS, "after"],
+    ["back_grace_over", "endsAt", HOUR_MS, "at"],
+    ["stage_stale", "endsAt", 2 * HOUR_MS, "after"],
+    ["recap_due", "endsAt", 4 * HOUR_MS, "after"],
+    ["push_closes", "endsAt", 12 * HOUR_MS, "after"],
+  ] as const;
+
+  it.each(rungs)("%s sits at %s %d ms and crosses %s", (rung, anchor, offset, crossing) => {
+    const base = anchor === "startsAt" ? startsAt : endsAt;
+    const anchors = { startsAt, endsAt };
+    expect(rungTime(rung, anchors).getTime()).toBe(base.getTime() + offset);
+    const instant = at(base, offset);
+    expect(hasCrossed(rung, anchors, at(instant, -1))).toBe(false);
+    expect(hasCrossed(rung, anchors, instant)).toBe(crossing === "at");
+    expect(hasCrossed(rung, anchors, at(instant, 1))).toBe(true);
+  });
+
+  it("is the whole ladder", () => {
+    expect(rungs).toHaveLength(11);
+  });
+});
+
 describe("departurePhase", () => {
   const cases: [number, Date, DeparturePhase][] = [
     [-168 * HOUR_MS - 1, startsAt, "ahead"],
@@ -62,8 +96,8 @@ describe("departurePhase", () => {
     [-24 * HOUR_MS, startsAt, "day_before"],
     [-6 * HOUR_MS, startsAt, "morning_of"],
     [-1, startsAt, "morning_of"],
-    [0, startsAt, "leaving"],
-    [HOUR_MS - 1, startsAt, "leaving"],
+    [0, startsAt, "due_out"],
+    [HOUR_MS - 1, startsAt, "due_out"],
     [HOUR_MS, startsAt, "scheduled_out"],
     [HOUR_MS - 1, endsAt, "scheduled_out"],
     [HOUR_MS, endsAt, "scheduled_back"],
@@ -93,7 +127,7 @@ describe("departurePhase", () => {
 
   it("reads a row that ends before it starts as ending when it starts", () => {
     const backwards = { startsAt, endsAt: new Date("2026-08-05T06:00:00.000Z") };
-    expect(departurePhase(backwards, startsAt)).toBe("leaving");
+    expect(departurePhase(backwards, startsAt)).toBe("due_out");
     expect(departurePhase(backwards, at(startsAt, HOUR_MS))).toBe("scheduled_back");
   });
 });

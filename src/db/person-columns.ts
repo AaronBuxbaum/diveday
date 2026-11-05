@@ -9,8 +9,11 @@
  * the column names, and `merge` says what `mergeDiverRecords` does with it. The
  * erasure follows in `erase` below and a diver's own export in `export`. The
  * reap's coverage guard (`delete-path-coverage.test.ts`) reads the tables here
- * as part of the shop, so a row naming a person can never be excused as
- * belonging to nobody.
+ * as part of the shop, so a row naming a person *by a column this registry
+ * names* can never be excused as belonging to nobody. The registry itself is
+ * complete only for foreign keys to `people` and columns named `%person_id`; a
+ * table that names a person some other way (a bare uuid, an email) is outside
+ * the guard until it is registered.
  *
  * ## `kind`
  *

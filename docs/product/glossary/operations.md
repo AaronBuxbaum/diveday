@@ -1424,8 +1424,9 @@
   stage** stops speaking), `recap_due` (four hours past the return) and `push_closes` (twelve
   hours past the end). Each rung says whether it is crossed on its instant or only after it, so no
   caller picks an operator. `departurePhase` names where a departure is on the ordered rungs:
-  ahead, week out, day before, morning of, leaving, scheduled out, scheduled back, recap due,
-  past. A rung or phase is an instant on the schedule, never a claim about who is aboard: it does
+  ahead, week out, day before, morning of, due out, scheduled out, scheduled back, recap due,
+  past; a phase names the schedule only and is never shown to a diver or staffer as a fact about
+  the boat (a boat tied up for a late diver is still *due out*). A rung or phase is an instant on the schedule, never a claim about who is aboard: it does
   not say a diver **sailed**, that everyone is back, or that a day has **settled**; those are read
   off roll-call evidence. A new window measured from a departure is a rung here, not an offset of
   its own.
