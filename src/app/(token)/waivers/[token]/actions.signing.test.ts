@@ -62,7 +62,6 @@ const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { issueWaiverRequest } = await import("@/db/waivers");
 const { completeWaiverAction, saveWaiverDraftAction } = await import("./actions");
-const { default: WaiverPage } = await import("./page");
 
 async function redirectedTo(run: () => Promise<unknown>): Promise<string> {
   try {
