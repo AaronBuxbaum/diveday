@@ -853,18 +853,11 @@ export async function duplicateDepartureAction(shopSlug: string, formData: FormD
     parsed.data.tripId,
     wallTimeToUtc(wall, shop.timezone),
   );
-  // Issue #3915: the copy's hull is in the yard that day.
-  if (copy === "boat_out_of_service") {
-    await trackEvent({
-      name: "schedule_builder_action",
-      action: "copy",
-      outcome: "boat_out_of_service",
-    });
-    redirect(`${back}?builder=boat-out-of-service`);
-  }
-  if (!copy) {
-    await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
-    redirect(`${back}?builder=invalid`);
+  // Issue #3915: a refused copy says why when its hull is in the yard that day.
+  if (!copy || copy === "boat_out_of_service") {
+    const outcome = copy ? "boat_out_of_service" : "invalid";
+    await trackEvent({ name: "schedule_builder_action", action: "copy", outcome });
+    redirect(`${back}?builder=${copy ? "boat-out-of-service" : "invalid"}`);
   }
   const crewCame = await copyCrewIfAsked(db, shop.id, parsed.data, copy.id, session.user.personId);
   await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "ok" });

@@ -279,7 +279,7 @@ describe("erasing a diver's personal and medical data", () => {
     expect(after.fullName).not.toBe(before.fullName);
   });
 
-  it("tells an owner why a held incident report stops the erasure (#3805)", async () => {
+  it("tells an owner why a held incident report stops the erasure (issue 3805)", async () => {
     const { db, shop, diver, owner } = await context();
     const before = await personRow(db, diver);
     signIn(shop, owner);

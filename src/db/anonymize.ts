@@ -250,6 +250,7 @@ async function linkedToHeldIncident(
           sql`exists (select 1 from ${rollCallEvents}
             where ${rollCallEvents.tripId} = ${incidentReports.tripId}
             and ${rollCallEvents.shopId} = ${shopId}
+            and ${crewMarks()}
             and ${rollCallEvents.crewPersonId} = ${personId})`,
         ),
       ),

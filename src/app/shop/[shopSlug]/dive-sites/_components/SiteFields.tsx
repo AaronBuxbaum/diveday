@@ -277,14 +277,7 @@ export function SiteFields({
     },
 
     dive: {
-      body: (
-        <SiteDiveFields
-          t={t}
-          depthUnit={depthUnit}
-          values={values}
-          maxDepthLocked={admissionLocked}
-        />
-      ),
+      body: <SiteDiveFields {...{ t, depthUnit, values }} maxDepthLocked={admissionLocked} />,
     },
 
     // **What the shop wants to remember about running this site** (issue

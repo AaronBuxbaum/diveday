@@ -1690,6 +1690,26 @@ export type ReadinessAsOf = {
 };
 
 /**
+ * **A marked seat's course, and how far it lowers on this departure**
+ * (`trainingDiveReach`, issues #3839 and #3910). A seat-level mark cannot
+ * name one of several planned dives: there it lowers only the default, and
+ * nothing where the departure is neither one dive at one site nor a charter
+ * of several.
+ */
+function seatTrainingDive(
+  plannedDives: number | null | undefined,
+  siteCount: number,
+  mark: TrainingMarkState | undefined,
+) {
+  const reach = trainingDiveReach(plannedDives, siteCount);
+  return {
+    siteAttributionUnknown: !trainingSiteAttributionKnown(plannedDives, siteCount),
+    trainingReach: reach ?? ("site" as const),
+    trainingForSite: reach ? trainingDiveLevel(mark) : null,
+  };
+}
+
+/**
  * The guardian rule's "Under 18" for a seat: its own booker's, or — on a seat
  * whose training mark stands — the course seat's too, so the charter and the
  * enrollment never disagree about whether a parent signs (fail closed).
@@ -1898,18 +1918,11 @@ export async function listTripsReadiness(
     const requirement = requirementsByTrip.get(tripId) ?? null;
     const siteRequirement = siteRequirementsByTrip.get(tripId) ?? null;
     const courseRow = courseByTrip.get(tripId);
-    // A seat-level mark cannot identify which of several planned dives is
-    // training: there it lowers only the default (issue #3910), and nothing
-    // where it is neither one dive at one site nor a charter of several.
-    const siteCount = siteRowsByTrip.get(tripId)?.length ?? 0;
-    const siteAttributionUnknown = !trainingSiteAttributionKnown(
+    const { siteAttributionUnknown, trainingReach, trainingForSite } = seatTrainingDive(
       courseRow?.plannedDives,
-      siteCount,
+      siteRowsByTrip.get(tripId)?.length ?? 0,
+      trainingMarks.get(row.booking.id),
     );
-    const trainingReach = trainingDiveReach(courseRow?.plannedDives, siteCount);
-    const trainingForSite = trainingReach
-      ? trainingDiveLevel(trainingMarks.get(row.booking.id))
-      : null;
     // A kind of seat the shop states as free has no payment to clear. Read
     // off the departure's own price for that kind, never inferred from a
     // missing one (`paymentGateIsUnclearable`).
@@ -2015,12 +2028,7 @@ export async function listTripsReadiness(
       trainingSiteAttributionUnknown: siteAttributionUnknown,
       trainingNoCardAsked:
         isDiver(row.booking.participantType) &&
-        trainingDiveAsksNoCardForSite(
-          requirement,
-          siteRequirement,
-          trainingForSite,
-          trainingReach ?? "site",
-        ),
+        trainingDiveAsksNoCardForSite(requirement, siteRequirement, trainingForSite, trainingReach),
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
       nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
@@ -2077,7 +2085,7 @@ export async function listTripsReadiness(
         // A standing mark with the course's instructor aboard takes the
         // course's own minimum level (issue #2731).
         trainingDive: trainingForSite,
-        trainingDiveReach: trainingReach ?? "site",
+        trainingDiveReach: trainingReach,
         now,
       }),
     };
