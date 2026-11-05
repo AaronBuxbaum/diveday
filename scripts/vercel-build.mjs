@@ -9,9 +9,7 @@ function run(command, args, timeoutMs, env) {
 
   if (result.error) throw result.error;
   if (result.status !== 0) {
-    throw new Error(
-      `${command} ${args.join(" ")} exited with status ${result.status}.`,
-    );
+    throw new Error(`${command} ${args.join(" ")} exited with status ${result.status}.`);
   }
 }
 
@@ -27,12 +25,7 @@ if (process.env.VERCEL === "1") {
   // SIGKILLed it (exit 137, 2026-11-05). One checker and a Go memory limit hold
   // the peak near 4 GB; `pnpm typecheck` in CI and locally stays uncapped.
   const lean = { GOMEMLIMIT: "1GiB" };
-  run(
-    "pnpm",
-    ["exec", "tsc", "--noEmit", "--checkers", "1"],
-    SUBPROCESS_TIMEOUTS.build,
-    lean,
-  );
+  run("pnpm", ["exec", "tsc", "--noEmit", "--checkers", "1"], SUBPROCESS_TIMEOUTS.build, lean);
   run(
     "pnpm",
     ["exec", "tsc", "--noEmit", "--checkers", "1", "-p", "src/worker"],
@@ -50,11 +43,7 @@ if (process.env.VERCEL_ENV === "production") {
   // cancels a push-triggered build; this catches the paths that skip that
   // step, such as a dashboard "Redeploy", before anything below migrates. Off
   // (the default), it passes every build, as before.
-  run(
-    "node",
-    ["scripts/deploy-gate.mjs", "check"],
-    SUBPROCESS_TIMEOUTS.nodeScript,
-  );
+  run("node", ["scripts/deploy-gate.mjs", "check"], SUBPROCESS_TIMEOUTS.nodeScript);
   // Then the cheapest refusal a human has to act on: every registry row
   // marked `requiredInProduction` (the Upstash pair, without which every rate
   // limit is per serverless instance, and SECRET_ENCRYPTION_KEY, without which
@@ -76,11 +65,7 @@ if (process.env.VERCEL_ENV === "production") {
   // refuse the tree two lines below on its own -- but it prints a diagram and
   // no remedy, which is how a build once died here naming two migrations and
   // no way forward. Running it first means the deploy log carries the fix.
-  run(
-    "node",
-    ["scripts/check-migration-graph.mjs"],
-    SUBPROCESS_TIMEOUTS.nodeScript,
-  );
+  run("node", ["scripts/check-migration-graph.mjs"], SUBPROCESS_TIMEOUTS.nodeScript);
   // Five minutes, and the tightest bound in this file on purpose: a migration
   // blocked on a lock held by the previous release is the one wedge here that
   // would otherwise spend the platform's whole build budget before saying so.
@@ -91,11 +76,7 @@ if (process.env.VERCEL_ENV === "production") {
   // so the deploy trial-opens their secrets and stops before serving, naming
   // the variables and never their values (issue #2999). After the migration,
   // so it reads the schema this release serves.
-  run(
-    "pnpm",
-    ["exec", "tsx", "scripts/check-sealing-keys.ts"],
-    SUBPROCESS_TIMEOUTS.nodeScript,
-  );
+  run("pnpm", ["exec", "tsx", "scripts/check-sealing-keys.ts"], SUBPROCESS_TIMEOUTS.nodeScript);
 }
 
 run("pnpm", ["build"], SUBPROCESS_TIMEOUTS.build);
