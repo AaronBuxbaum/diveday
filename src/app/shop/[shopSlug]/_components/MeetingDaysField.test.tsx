@@ -85,7 +85,21 @@ describe("MeetingDaysField with a gap and a day's own hours", () => {
       [...document.querySelectorAll<HTMLInputElement>('input[name="meetingStart"]')].map(
         (input) => input.value,
       ),
-    ).toEqual(["07:30", "18:00"]);
+    ).toEqual(["", "18:00"]);
+  });
+
+  // A day that follows day one's hours posts none of its own, so the server
+  // takes day one's as submitted: the board's Departs box is a hidden input a
+  // typed "9" rewrites without an input event, which this field cannot hear.
+  it("posts no hours for a later day that follows day one's", async () => {
+    renderField({ defaultCount: 2 });
+    await screen.findByLabelText("Day 2 departs");
+    const posted = (name: string) =>
+      [...document.querySelectorAll<HTMLInputElement>(`input[name="${name}"]`)].map(
+        (input) => input.value,
+      );
+    expect([posted("meetingStart"), posted("meetingEnd")]).toEqual([[""], [""]]);
+    expect(screen.getByLabelText("Day 2 departs")).not.toBeRequired();
   });
 
   it("seeds a stored day's own hours, and a day that kept day one's follows it", async () => {
