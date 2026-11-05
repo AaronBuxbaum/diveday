@@ -137,6 +137,29 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-reschedule-hold", scheme);
       });
 
+      /**
+       * **Day N's own date and hours** (#2557, #2558): a course that skips
+       * days and meets at other hours on a later day, as the Timing form
+       * shows it before Save. Nothing is saved.
+       */
+      test(`the trip page offers each later day its own date and hours (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripAbout(page);
+        await openTripAboutRow(page, "Timing");
+        await page.locator('input[name="dayCount"]').fill("3");
+        const dayThree = page.getByLabel("Day 3", { exact: true });
+        await dayThree.waitFor();
+        const later = new Date(`${await dayThree.inputValue()}T12:00:00Z`);
+        later.setUTCDate(later.getUTCDate() + 12);
+        await dayThree.fill(later.toISOString().slice(0, 10));
+        await page.getByLabel("Day 3 departs").fill("18:00");
+        await page.getByLabel("Day 3 returns").fill("21:00");
+        await capture(page, "trip-timing-meeting-days", scheme);
+      });
+
       /** The same hold on the schedule board, under the move's own notice. */
       test(`the board holds a reschedule notice after a move (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);

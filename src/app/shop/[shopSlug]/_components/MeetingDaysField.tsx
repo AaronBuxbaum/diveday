@@ -3,14 +3,36 @@
 import { useEffect, useRef, useState } from "react";
 import { controlClass, DateField, Field } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
-import { MAX_MEETING_DAY_GAP_DAYS } from "@/lib/trip-days";
+import { MAX_MEETING_DAY_GAP_DAYS, type MeetingDayHours } from "@/lib/trip-days";
 
 export type MeetingDaysCopy = {
   daysLabel: string;
   daysDescription?: string;
   /** "Day {number}", raw: filled here per later day. */
   dayLabel: string;
+  /** "Day {number} departs", raw: a later day's own start time (#2558). */
+  dayStartLabel: string;
+  /** "Day {number} returns", raw. */
+  dayEndLabel: string;
 };
+
+/** Follow one of the form's own inputs by name; `null` until it has a value. */
+function useFormValue(anchor: React.RefObject<HTMLInputElement | null>, name: string) {
+  const [value, setValue] = useState<string | null>(null);
+  useEffect(() => {
+    const input = anchor.current?.form?.elements.namedItem(name);
+    if (!(input instanceof HTMLInputElement)) return;
+    const read = () => setValue(input.value || null);
+    read();
+    input.addEventListener("input", read);
+    input.addEventListener("change", read);
+    return () => {
+      input.removeEventListener("input", read);
+      input.removeEventListener("change", read);
+    };
+  }, [anchor, name]);
+  return value;
+}
 
 /** Whole days from `from` to `to`, both `YYYY-MM-DD`; NaN when either is not a date. */
 function daysBetween(from: string, to: string): number {
@@ -37,11 +59,14 @@ function shifted(date: string, days: number): string {
  * the way a board move does. The server re-checks the order and the span
  * (`meetingDaysFor`); this only fills the boxes.
  *
- * **Held back for now.** The date boxes appear only once a day may follow the
- * one before it by more than a day (`MAX_MEETING_DAY_GAP_DAYS`): until Today
- * and the roll call read a departure's meeting days, a gap would read as days
- * on the water, so the form asks for the count alone and the days run back to
- * back. `namedDates` overrides it for the field's own tests.
+ * **Hours per day** (#2558). Each later day carries its own departs and
+ * returns boxes, following the form's own until one is changed: a pool night
+ * at 18:00 and an open-water Saturday at 08:00 are one course. The server
+ * re-checks each day's hours (`meetingDaysFor`).
+ *
+ * The date boxes are offered while a day may follow the one before it by more
+ * than a day (`MAX_MEETING_DAY_GAP_DAYS`, the whole span since Today and the
+ * roll call read a departure's meeting days, #2557).
  *
  * Shared by the board's add panel and the departure's edit form, and finds day
  * one through its own form's `date` input rather than a prop, so neither form
@@ -53,6 +78,7 @@ export function MeetingDaysField({
   maxDays,
   defaultCount,
   defaultLaterDates = [],
+  defaultLaterHours = [],
   disabled = false,
   namedDates = MAX_MEETING_DAY_GAP_DAYS > 1,
   className,
@@ -63,6 +89,8 @@ export function MeetingDaysField({
   defaultCount: number;
   /** The stored later days, when they are not consecutive; empty otherwise. */
   defaultLaterDates?: readonly string[];
+  /** The stored later days' own hours, one pair per later day; empty for day one's. */
+  defaultLaterHours?: readonly MeetingDayHours[];
   /** The add panel's collapsed state: nothing submitted, nothing required. */
   disabled?: boolean;
   /** Offer a date box per later day. Defaults to whether a gap is allowed at all. */
@@ -70,25 +98,26 @@ export function MeetingDaysField({
   className?: string;
 }) {
   const countRef = useRef<HTMLInputElement>(null);
-  const [firstDate, setFirstDate] = useState<string | null>(null);
+  const firstDate = useFormValue(countRef, "date");
+  const firstStart = useFormValue(countRef, "startTime");
+  const firstEnd = useFormValue(countRef, "endTime");
   const [count, setCount] = useState(defaultCount);
   // Offsets from day one, one per later day. Seeded from the stored dates once
   // day one is known; until then the consecutive run.
   const [offsets, setOffsets] = useState<number[] | null>(null);
   const seed = useRef(defaultLaterDates);
-
+  // A later day's own hours, or null where it follows day one's. Seeded from
+  // the stored days: one that keeps day one's hours goes on following them.
+  const [hours, setHours] = useState<(MeetingDayHours | null)[] | null>(null);
+  const hoursSeed = useRef(defaultLaterHours);
   useEffect(() => {
-    const input = countRef.current?.form?.elements.namedItem("date");
-    if (!(input instanceof HTMLInputElement)) return;
-    const read = () => setFirstDate(input.value || null);
-    read();
-    input.addEventListener("input", read);
-    input.addEventListener("change", read);
-    return () => {
-      input.removeEventListener("input", read);
-      input.removeEventListener("change", read);
-    };
-  }, []);
+    if (hours !== null || firstStart === null || firstEnd === null) return;
+    setHours(
+      hoursSeed.current.map((day) =>
+        day.start === firstStart && day.end === firstEnd ? null : day,
+      ),
+    );
+  }, [firstStart, firstEnd, hours]);
 
   useEffect(() => {
     if (offsets !== null || !firstDate) return;
@@ -105,6 +134,14 @@ export function MeetingDaysField({
   for (let index = 0; index < later; index += 1) {
     laterOffsets.push(current[index] ?? (laterOffsets[index - 1] ?? 0) + 1);
   }
+
+  const ownHours = hours ?? [];
+  const setHour = (index: number, edge: "start" | "end", value: string) => {
+    const next = laterOffsets.map((_, day) => ownHours[day] ?? null);
+    const current = next[index] ?? { start: firstStart ?? "", end: firstEnd ?? "" };
+    next[index] = { ...current, [edge]: value };
+    setHours(next);
+  };
 
   const setOffset = (index: number, date: string) => {
     if (!firstDate) return;
@@ -131,26 +168,49 @@ export function MeetingDaysField({
             const value = Number(event.currentTarget.value);
             setCount(Number.isFinite(value) ? value : minDays);
             setOffsets(laterOffsets.slice(0, Math.max(0, value - 1)));
+            setHours(ownHours.slice(0, Math.max(0, value - 1)));
           }}
           className={`${controlClass} tabular-nums max-w-40`}
         />
       </Field>
       {namedDates && later > 0 && firstDate ? (
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 space-y-4">
           {laterOffsets.map((offset, index) => (
-            <Field
+            <div
               // biome-ignore lint/suspicious/noArrayIndexKey: a day's position is its identity
               key={index}
-              label={fill(copy.dayLabel, { number: index + 2 })}
+              className="grid gap-4 sm:grid-cols-3"
             >
-              <DateField
-                name="meetingDate"
-                required={!disabled}
-                disabled={disabled}
-                value={shifted(firstDate, offset)}
-                onChange={(event) => setOffset(index, event.currentTarget.value)}
-              />
-            </Field>
+              <Field label={fill(copy.dayLabel, { number: index + 2 })}>
+                <DateField
+                  name="meetingDate"
+                  required={!disabled}
+                  disabled={disabled}
+                  value={shifted(firstDate, offset)}
+                  onChange={(event) => setOffset(index, event.currentTarget.value)}
+                />
+              </Field>
+              <Field label={fill(copy.dayStartLabel, { number: index + 2 })}>
+                <DateField
+                  name="meetingStart"
+                  type="time"
+                  required={!disabled}
+                  disabled={disabled}
+                  value={ownHours[index]?.start ?? firstStart ?? ""}
+                  onChange={(event) => setHour(index, "start", event.currentTarget.value)}
+                />
+              </Field>
+              <Field label={fill(copy.dayEndLabel, { number: index + 2 })}>
+                <DateField
+                  name="meetingEnd"
+                  type="time"
+                  required={!disabled}
+                  disabled={disabled}
+                  value={ownHours[index]?.end ?? firstEnd ?? ""}
+                  onChange={(event) => setHour(index, "end", event.currentTarget.value)}
+                />
+              </Field>
+            </div>
           ))}
         </div>
       ) : null}

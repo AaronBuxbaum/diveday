@@ -332,6 +332,11 @@ export type ReadyPageData = {
    * one-meeting session alone (`SessionDayPlan`).
    */
   meetingDayCount: number;
+  /**
+   * The departure's meeting days, each with its own window (#2558), on any
+   * departure; the masthead lists them when there are more than one.
+   */
+  meetingDays: { startsAt: Date; endsAt: Date }[];
   /** Projected: staff-only fit columns never reach the diver's browser. */
   rentalFit: DiverRentalFit | null;
   /** The one active, non-medical day-of request this booking has made. */
@@ -617,7 +622,8 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       : null,
     // How many days a course session meets on, for its own day plan
     // (`SessionDayPlan`, issue #2795); a charter says no plan day.
-    row.tripCourseId !== null ? listTripScheduleDays(db, row.shopId, row.tripId) : [],
+    // Every departure's, so a multi-day run lists its days and hours (#2558).
+    listTripScheduleDays(db, row.shopId, row.tripId),
   ]);
   if (!trip) return null;
   return {
@@ -638,7 +644,8 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     pendingMoveAsk,
     // Nothing is read off a held seat's matched person, so a held seat holds none.
     holdsCertification: row.identityUnconfirmedAt === null && row.holdsAnyCertification,
-    meetingDayCount: meetingDays.length,
+    meetingDayCount: row.tripCourseId !== null ? meetingDays.length : 0,
+    meetingDays: meetingDays.map((day) => ({ startsAt: day.startsAt, endsAt: day.endsAt })),
   };
 }
 
@@ -676,6 +683,7 @@ export async function getReadyPageData(
     pendingMoveAsk,
     holdsCertification,
     meetingDayCount,
+    meetingDays,
   } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -819,6 +827,7 @@ export async function getReadyPageData(
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
     holdsCertification,
     meetingDayCount,
+    meetingDays,
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),
     helpRequest,
     // Said even after the shop stops offering hotel pickups (the Features

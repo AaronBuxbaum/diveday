@@ -1,7 +1,7 @@
 import { isValidCalendarDate } from "./calendar-date";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "./money";
 import { paymentGateIsUnclearable } from "./readiness";
-import { meetingDaysFor } from "./trip-days";
+import { type MeetingDayHours, meetingDaysFor } from "./trip-days";
 import { parseWallTime, wallTimeToUtc } from "./zoned";
 
 /**
@@ -51,6 +51,8 @@ export type TripDetailsFields = {
    * (third UX review, item 10). Empty or absent is the consecutive run.
    */
   laterDates?: readonly string[];
+  /** Each later day's own hours (#2558), empty for day one's on every day. */
+  laterHours?: readonly MeetingDayHours[];
   priceDollars?: number;
   /**
    * The effective amount paid for this departure when it differs from the
@@ -185,6 +187,7 @@ export function tripDetailsPatch(
     { start: startWall, end: endWall },
     fields.dayCount,
     fields.laterDates,
+    fields.laterHours,
   );
   if (!meetingDays.ok) return { ok: false, reason: meetingDays.reason };
   const scheduleDays = meetingDays.days.map((meeting, index) => ({
