@@ -26,6 +26,7 @@ import {
   personRoles,
   staffCredentials,
   tripReviews,
+  userAccounts,
   waiverRecords,
 } from "./schema";
 
@@ -351,6 +352,32 @@ describe("what a diver's bundle names (#3880)", () => {
     const input = await loadDiverExportBundleInput(db, shop.id, personId);
     if (!input) throw new Error("export failed to load");
     expect(JSON.stringify(input)).not.toContain("Leakcheck");
+  });
+
+  /**
+   * The other side of gap 2 (layer-2 dock review S1): a staffer who has since
+   * left keeps their name on what they recorded. Removal deletes their role
+   * rows but keeps their account, disabled.
+   */
+  it("still names a removed staffer on the diver's own release", async () => {
+    const { db, shop, personId } = await seatedDiver();
+    const [leaver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Sam Seasonal Leaver" })
+      .returning({ id: people.id });
+    if (!leaver) throw new Error("leaver insert failed");
+    await db.insert(userAccounts).values({
+      personId: leaver.id,
+      email: `leaver-${leaver.id}@example.com`,
+      status: "disabled",
+    });
+    await db
+      .update(waiverRecords)
+      .set({ recordedByPersonId: leaver.id })
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.personId, personId)));
+    const input = await loadDiverExportBundleInput(db, shop.id, personId);
+    if (!input) throw new Error("export failed to load");
+    expect(JSON.stringify(input)).toContain("Sam Seasonal Leaver");
   });
 
   /** Gap 3: staff-typed free text stays in the shop's own bundle. */

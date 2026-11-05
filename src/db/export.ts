@@ -83,6 +83,7 @@ import {
   tripReviews,
   tripScheduleDays,
   trips,
+  userAccounts,
   workOrderCare,
   workOrderLines,
 } from "./schema";
@@ -909,15 +910,26 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   // staffer who recorded a roll call, moderated a review, or paired a
   // buddy team. Used only to resolve a name string onto the diver's own
   // rows below; no other person's row is ever written to a file (see the
-  // shared-row decisions above). Only people holding a staff role, and the
-  // diver themselves: an actor column that points at another diver (a
+  // shared-row decisions above). Only people who are or were staff here, and
+  // the diver themselves: an actor column that points at another diver (a
   // malformed historical reference) resolves to no name, never theirs (#3880).
+  // "Were" matters (layer-2 dock review S1): removing a staffer deletes their
+  // role rows but keeps their account, disabled, and the divemaster who
+  // checked a diver aboard last season is exactly who a subject-access request
+  // asks about. Only staff are ever given an account, so an account names
+  // someone who held a staff role.
   const staffRows = await tx
     .selectDistinct({ id: people.id, fullName: people.fullName })
     .from(people)
     // diveday:allow-deleted-people: names for every row in the bundle, removed staff included.
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])));
+    .leftJoin(personRoles, eq(personRoles.personId, people.id))
+    .leftJoin(userAccounts, eq(userAccounts.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        or(inArray(personRoles.role, [...STAFF_ROLES]), isNotNull(userAccounts.id)),
+      ),
+    );
   const personName = new Map(staffRows.map((row) => [row.id, row.fullName]));
   personName.set(person.id, person.fullName);
   // Plan attribution may name only current staff, never another diver even if
@@ -934,12 +946,16 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         .select({ id: people.id, fullName: people.fullName })
         .from(people)
         // diveday:allow-deleted-people: a removed staff member still attributed this plan.
-        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .leftJoin(personRoles, eq(personRoles.personId, people.id))
+        .leftJoin(userAccounts, eq(userAccounts.personId, people.id))
         .where(
           and(
             eq(people.shopId, shopId),
             inArray(people.id, planPersonIds),
-            inArray(personRoles.role, ["owner", "manager", "instructor"]),
+            or(
+              inArray(personRoles.role, ["owner", "manager", "instructor"]),
+              isNotNull(userAccounts.id),
+            ),
           ),
         )
     : [];
