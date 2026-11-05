@@ -207,9 +207,8 @@ import {
  * That script reads JSON with `readFile` and never imports TypeScript or runs
  * ICU, so a guard beside it would have to regex TS source for map literals and
  * still could not format a message — i.e. it could not make assertion 1 at all.
- * The half a guard *is* good at — noticing a map nobody thought to cover — is
- * kept as the textual scan at the bottom of this file, which is cheap enough to
- * live beside the thing it guards.
+ * The half a guard *is* good at — noticing a map nobody thought to cover — is kept as the textual
+ * scan at the bottom of this file, which is cheap enough to live beside the thing it guards.
  *
  * Plural output is `count-agreement.test.ts`'s job and is not restated here;
  * the counted sentences below are rendered at one representative count.
@@ -230,6 +229,7 @@ const WAIVER_ROW_STATES = everyCodeOf<WaiverRowState>({
   medical_review: true,
   medical_not_cleared: true,
   failed: true,
+  seal_failed: true,
 });
 
 const WORK_ORDER_LINE_KINDS = everyCodeOf<WorkOrderLineKindValue>({

@@ -198,6 +198,43 @@ describe("the waiver group", () => {
     expect(door).not.toHaveTextContent("Waiver not signed. Not sent yet.");
   });
 
+  /**
+   * **A release changed after signing never reads "Signed"** (issue #3953).
+   * The departure's blocker holds the seat while the record's own word said
+   * "Signed · Good until …" and offered no way on. The door takes the seal's
+   * word, and the routes to a fresh signature are open beneath it.
+   */
+  it("reads a failed seal as Changed after signing, with the routes to sign again", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "signed",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T15:00:00.000Z"),
+        } as DiverProfile["waiver"],
+      }),
+      undefined,
+      false,
+      {
+        kind: "waiver",
+        tone: "danger",
+        sentence: { blocker: { code: "waiver_seal_failed" } },
+        action: { labelKey: "divers.status.acts.sendWaiver", target: "send_waiver" },
+        tripContext: {
+          tripId: "trip-1",
+          bookingId: "b1",
+          startsAt: new Date("2026-10-09T11:30:00.000Z"),
+        },
+      },
+    );
+    const row = screen.getByTestId("diver-file-group-waiver");
+    expect(screen.getAllByText("Changed after signing").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Signed")).toBeNull();
+    expect(row).not.toHaveTextContent("Good until");
+    expect(screen.getByRole("button", { name: "Email waiver" })).toBeVisible();
+  });
+
   it("says only Not signed when nothing has been sent", () => {
     renderCard(diver({ email: "priya@dive.day" }));
     const door = screen.getByTestId("diver-file-group-waiver").querySelector("summary");
