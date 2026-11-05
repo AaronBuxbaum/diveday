@@ -7,8 +7,10 @@
  * (`person-columns.test.ts`: every foreign key to `people`, and every column
  * named `%person_id`, has a row; every row names a live column). `kind` says who
  * the column names, and `merge` says what `mergeDiverRecords` does with it. The
- * erasure follows in `erase` below and a diver's own export in `export`; the
- * reap keeps its own list for now and follows into this registry.
+ * erasure follows in `erase` below and a diver's own export in `export`. The
+ * reap's coverage guard (`delete-path-coverage.test.ts`) reads the tables here
+ * as part of the shop, so a row naming a person can never be excused as
+ * belonging to nobody.
  *
  * ## `kind`
  *
@@ -99,8 +101,13 @@
  * `exportWhy` is required on every withheld `subject` and `crew` row: a
  * staffer asking for their own data reads the same reasons.
  *
- * The reap's fates stay in its own module until its slice lands; adding one
- * here before then would be a second list nobody reads.
+ * ## The reap (the fourth slice)
+ *
+ * Every table named here is in the shop the demo reset and the demo cascade
+ * must account for (`delete-path-coverage.test.ts`), declared foreign key or
+ * not; that guard's `UNSCOPED_REASONS` may excuse no table this registry names.
+ * The reap's fates stay per table, not per column: a delete path removes rows,
+ * and the order it removes them in is `reap-demos.test.ts`'s to prove.
  */
 
 export type PersonColumnKind = "subject" | "actor" | "crew" | "login";
