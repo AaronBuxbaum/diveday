@@ -304,7 +304,7 @@ test.describe("print", () => {
   test("the trip packet prints the dive plan, the manifest and the prep list", async ({ page }) => {
     await openReefTrip(page);
     const tripPath = new URL(page.url()).pathname;
-    await page.goto(`${tripPath}/print`);
+    await page.goto(`${tripPath}?print=1`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
     // **The packet's chrome stays off paper.** The packet is sheets (issue

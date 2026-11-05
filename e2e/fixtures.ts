@@ -82,6 +82,15 @@ export const STAFF_HYDRATION_PROBE = '[aria-keyshortcuts="Meta+K Control+K"]';
  */
 export const STAFF_NAV_PROBE = "nav[data-staff-nav]";
 
+/** A disclosure (`AutoOpenDetails`), which draws `data-hydrated="true"` once React owns it. */
+export const DISCLOSURE_PROBE = "details[data-auto-open-details]";
+
+/** The settings hub's selection frame (`SettingsSelection`), which draws `data-hydrated` once it has chosen a setting. */
+export const SETTINGS_SELECTION_PROBE = "[data-settings-selection-root]";
+
+/** The settings rail's scroll box (`SettingsRail`), which draws `data-rail-settled` once the current row is in sight. */
+export const SETTINGS_RAIL_PROBE = "[data-settings-rail-scroller]";
+
 /**
  * **A click on a server-rendered staff page before React owns it is lost.** It
  * was the flake class of 2026-10-12/13 (code re-review 2026-10-13, item 15):
@@ -115,6 +124,26 @@ export async function settleStaffHydration(page: Page): Promise<void> {
   await expect(
     page.locator(`${STAFF_NAV_PROBE}:not([data-hydrated="true"])`),
     `${pathname} loaded, but React never took over its section nav`,
+  ).toHaveCount(0);
+  // A disclosure toggled while React is still adopting it is the one place a click
+  // and hydration interleave (`AutoOpenDetails`, the emergency reference's
+  // contact rows, #3750): wait until each on the page is React's.
+  await expect(
+    page.locator(`${DISCLOSURE_PROBE}:not([data-hydrated="true"])`),
+    `${pathname} loaded, but React never took over a disclosure on it`,
+  ).toHaveCount(0);
+  // The settings hub is server-rendered with every group and picks the selected
+  // one after hydration (`SettingsSelection`), and its rail moves the current row
+  // into view in an effect of its own (`data-rail-settled`). Until both have run, the
+  // page is the unselected directory and the rail's rows are still sliding: a
+  // capture photographs the wrong page and a click lands on its neighbour (#3640).
+  await expect(
+    page.locator(`${SETTINGS_SELECTION_PROBE}:not([data-hydrated="true"])`),
+    `${pathname} loaded, but the settings hub never picked its selected setting`,
+  ).toHaveCount(0);
+  await expect(
+    page.locator(`${SETTINGS_RAIL_PROBE}:not([data-rail-settled])`),
+    `${pathname} loaded, but the settings rail never settled on its current row`,
   ).toHaveCount(0);
 }
 

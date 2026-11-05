@@ -831,7 +831,7 @@
   booking's id and nothing else**. A booking id is not a capability — the counter resolves it inside
   its own shop — so a pass left on a boat seat hands a finder nothing. It carries the diver's name
   and no readiness, waiver or medical state.
-- **Trip packet** — the browser-print document for one departure (`/shop/<slug>/trips/<id>/print`,
+- **Trip packet** — the browser-print document for one departure (`/shop/<slug>/trips/<id>?print=1`,
   `TripPacket`): three sections, each on its own sheet — the **dive plan** in words, the **manifest**
   (the roster in roll-call order with each person's emergency contact, the shop's **emergency
   reference**, the missing-diver procedure and the ruled kit blanks), and the morning **packing

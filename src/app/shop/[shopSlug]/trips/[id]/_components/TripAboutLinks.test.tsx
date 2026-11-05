@@ -37,7 +37,7 @@ describe("TripAboutLinks", () => {
     const open = screen.getByRole("link", { name: t("trips.about.viewPublic") });
     expect(open.getAttribute("target")).toBe("_blank");
     expect(screen.getByText("print").getAttribute("href")).toBe(
-      "/shop/blue-mantis/trips/trip-1/print",
+      "/shop/blue-mantis/trips/trip-1?print=1",
     );
     expect(screen.getByText("log")).toBeTruthy();
     expect(screen.getByText("print with alerts")).toBeTruthy();

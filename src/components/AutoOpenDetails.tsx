@@ -68,6 +68,11 @@ export function AutoOpenDetails({
   // `name` accordion that tap closed this one to open its sibling, and opening
   // this one again on mount shut the sibling the reader chose (/ready streams
   // its thread in, so the tap can land first).
+  // Drawn once React owns this disclosure, so a test (or a reader's script) can tell a
+  // toggle made before hydration from one made after it (`settleStaffHydration`, #3750).
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+
   const wasOpen = useRef(open);
   useEffect(() => {
     if (open && !wasOpen.current && ref.current) ref.current.open = true;
@@ -115,6 +120,7 @@ export function AutoOpenDetails({
     <details
       ref={ref}
       data-auto-open-details={hydrationKey}
+      data-hydrated={hydrated ? "true" : undefined}
       id={id}
       name={name}
       open={initialOpen}

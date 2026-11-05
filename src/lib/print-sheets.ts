@@ -125,6 +125,15 @@ export function storefrontAddress(shopSlug: string, origin: string | null): stri
 }
 
 /**
+ * Where a departure's packet is drawn: the trip page in its print state
+ * (`?print=1`, #2736), the way the blow-out is `?blowout=1`. The medical-alerts
+ * variant keeps its own child route.
+ */
+export function tripPacketPath(shopSlug: string, tripId: string): string {
+  return `${shopPath(shopSlug, "trips", tripId)}?print=1`;
+}
+
+/**
  * Where a booking's paper pass is drawn.
  *
  * Built with `shopPath`, which escapes every segment, so a booking id can never

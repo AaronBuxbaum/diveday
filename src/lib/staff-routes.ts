@@ -117,8 +117,7 @@ export const STAFF_ROUTES = {
   "trips/[id]/manifest": { face: true },
   "trips/[id]/party/[leadId]/waivers": {},
   "trips/[id]/prep": { face: true },
-  "trips/[id]/print": { face: true },
-  // The medical alerts are the packet with other words: its way up is the packet's.
+  // The packet is the departure's own `?print=1`; the medical alerts are it with other words: its way up is the faces'.
   "trips/[id]/print/medical-alerts": { face: true },
   waivers: { parent: SETTINGS },
   "waivers/print": {},

@@ -9,8 +9,8 @@ import { buttonClass } from "@/components/ui/button";
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { tripPacketPath } from "@/lib/print-sheets";
 import { publicTripPath } from "@/lib/public-routes";
-import { shopPath } from "@/lib/staff-notices";
 import { recordTripPrintPdfAction } from "../print-actions";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { DepartureLogLink } from "./DepartureLogLink";
@@ -51,7 +51,7 @@ export function TripAboutLinks({
         {t("trips.about.viewPublic")}
       </Link>
       <PrintTripBundleButton
-        href={shopPath(shopSlug, "trips", tripId, "print")}
+        href={tripPacketPath(shopSlug, tripId)}
         label={t("trips.about.printPacket")}
         popupBlockedLabel={t("shared.printButton.popupBlocked")}
         recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
