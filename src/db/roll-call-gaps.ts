@@ -472,7 +472,7 @@ export async function listRollCallGaps(
       let first = Number.POSITIVE_INFINITY;
       for (const standing of [diverStanding.get(day), crewStanding.get(day)]) {
         for (const mark of standing?.values() ?? []) {
-          const index = checkpoints.indexOf(mark.checkpoint);
+          const index = (checkpoints as readonly string[]).indexOf(mark.checkpoint);
           if (index >= 0 && index < first) first = index;
         }
       }
