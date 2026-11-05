@@ -3,7 +3,7 @@
  * record for staff, a diver's own copy, and every signed release a person
  * holds. Imported through the `./waivers` barrel.
  */
-import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { guardianSignatureOf } from "@/lib/guardian";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -214,7 +214,16 @@ export async function listWaiverIntegrityAudit(
         )
         .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, waiverRecords.shopId)))
         .where(scope)
-        .orderBy(desc(waiverRecords.signedAt), asc(people.fullName), desc(waiverRecords.id))
+        .orderBy(
+          // In the "Unsealed or changed" view a failed seal leads: it is the
+          // one to stop for, and legacy unsealed records would bury it.
+          ...(options.view === "unchecked"
+            ? [sql`coalesce(${waiverRecords.integrityValid} = false, false) desc`]
+            : []),
+          desc(waiverRecords.signedAt),
+          asc(people.fullName),
+          desc(waiverRecords.id),
+        )
         .limit(limit)
         .offset(offset),
   });

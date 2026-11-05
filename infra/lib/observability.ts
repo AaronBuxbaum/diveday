@@ -205,7 +205,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // unreported to Stripe's meter.
       "cron_pricing_volume.scan_failed",
       // The nightly re-check of every signed release's seal (issue #2562): a
-      // failed one leaves the "Can't be checked" view a night behind.
+      // failed one leaves the "Unsealed or changed" view a night behind.
       "cron_waiver_seals.scan_failed",
     ],
     threshold: 1,

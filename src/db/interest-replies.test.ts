@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { INTEREST_REPLY_MAX } from "@/lib/interest-reply";
+import { INTEREST_REPLY_DAILY_CAP, INTEREST_REPLY_MAX } from "@/lib/interest-reply";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
 import { anonymizeDiver } from "./anonymize";
@@ -204,6 +204,35 @@ describe("sendInterestReply", () => {
     expect(await send()).toMatchObject({ status: "sent" });
     expect(await send()).toEqual({ status: "refused", reason: "not_open" });
     expect(email.sent).toHaveLength(1);
+  });
+
+  /**
+   * **Reopen does not re-arm a lead without end** (security review of #2555):
+   * reply, Reopen, reply again is refused past the cap in a day, whether the
+   * attempts went or not, before the request is claimed or a provider reached.
+   */
+  it("stops replying to one request after the day's cap, however often it is reopened", async () => {
+    const { db, shop, id, staff } = await openRequest({ phone: "+13055550134" });
+    const sms = fakeSms();
+    const reply = (at: Date) =>
+      sendInterestReply(
+        db,
+        { shopId: shop.id, interestId: id, body: "Hello", sentByPersonId: staff, now: at },
+        { smsProvider: sms.provider, whatsAppProviders: new Map() },
+      );
+    for (let n = 0; n < INTEREST_REPLY_DAILY_CAP; n += 1) {
+      const at = new Date(now.getTime() + n * 60_000);
+      expect(await reply(at)).toMatchObject({ status: "sent" });
+      await setDateInterestOutcome(db, { shopId: shop.id, interestId: id, outcome: null, now: at });
+    }
+    const past = new Date(now.getTime() + INTEREST_REPLY_DAILY_CAP * 60_000);
+    expect(await reply(past)).toEqual({ status: "refused", reason: "capped" });
+    expect(sms.sent).toHaveLength(INTEREST_REPLY_DAILY_CAP);
+    expect(await interestRow(db, id)).toMatchObject({ closedAt: null, closedAs: null });
+    expect(await repliesTo(db, id)).toHaveLength(INTEREST_REPLY_DAILY_CAP);
+    // A day after the first, the window has moved on.
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60_000 + 1);
+    expect(await reply(tomorrow)).toMatchObject({ status: "sent" });
   });
 
   it("refuses a request already closed by a tick, and leaves its close alone", async () => {

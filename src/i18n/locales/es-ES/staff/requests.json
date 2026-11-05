@@ -37,14 +37,15 @@
     "open": "Escribir una respuesta",
     "label": "Tu respuesta",
     "toEmail": "Se envía por correo a {to}.",
-    "toText": "Se envía como mensaje de texto a {to}.",
+    "toText": "Se envía como mensaje a {to}.",
     "send": "Enviar respuesta"
   },
   "replyNotice": {
     "sent": "Respuesta enviada.",
     "closed": "Esa petición ya estaba cerrada.",
     "failed": "La respuesta no se envió. La petición sigue abierta: inténtalo de nuevo o responde desde tu correo o tu teléfono.",
-    "refused": "Esa respuesta no se puede enviar desde aquí. Responde desde tu correo o tu teléfono."
+    "refused": "Esa respuesta no se puede enviar desde aquí. Responde desde tu correo o tu teléfono.",
+    "capped": "Esa petición ya ha tenido {count, plural, one {# respuesta} other {# respuestas}} en las últimas 24 horas. Responde a la siguiente desde tu correo o tu teléfono."
   },
   "done": {
     "heading": "Resueltas: {count, plural, one {# petición} other {# peticiones}}",

@@ -408,7 +408,7 @@ export function verifyWaiverIntegrity(
  * A row with no seal carries no verdict, so the pair is null. Every writer that
  * seals, re-seals or declines to re-seal a release spreads this into the same
  * update, and the nightly re-check writes it again; the signature log's
- * "Can’t be checked" view filters on it. It caches the check, never replaces
+ * "Unsealed or changed" view filters on it. It caches the check, never replaces
  * it: a reader that shows a seal still recomputes it.
  */
 export function waiverIntegrityVerdict(

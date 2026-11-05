@@ -466,10 +466,13 @@
   20260827-self-guided-departures).
 - **Integrity-sealed waiver** — a signed waiver whose immutable metadata and template snapshot have
   a matching server-sealed HMAC. `unsealed` means legacy or imported evidence has no seal yet;
-  `invalid` means staff must stop and investigate. The signed records' **Can’t be checked** view
-  lists the `unsealed` ones and every one whose **seal verdict** is `invalid`: the cached result
+  `invalid` means staff must stop and investigate. The signed records' **Unsealed or changed** view
+  lists the `unsealed` ones and every one whose **seal verdict** is `invalid`, the `invalid` ones first: the cached result
   (`integrity_valid`, `integrity_checked_at`) written beside each seal and re-checked nightly by
-  `/api/cron/waiver-seals`, so a release edited after signing reaches the view by the next night;
+  `/api/cron/waiver-seals`, so a release edited after signing reaches the view by the next night.
+  A seal removed rather than broken (a verdict with no hash, or a non-imported release signed
+  since sealing shipped with none) is written `invalid` too, and every `invalid` release keeps
+  the nightly check unhealthy until someone deals with it;
   the row's own badge always recomputes the seal (issue #2562). A release that asked **shop questions** seals the diver's answers too:
   the snapshot joins the sealed set only when it is there, so a release signed before shops could
   ask anything keeps the digest it was sealed with, and an erasure's re-seal leaves the answers out

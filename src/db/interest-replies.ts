@@ -1,7 +1,8 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, count, eq, gt, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   foldInterestReplyForText,
+  INTEREST_REPLY_DAILY_CAP,
   interestReplyProblem,
   interestReplyRoute,
   normalizeInterestReply,
@@ -40,6 +41,8 @@ export type InterestReplyRefusal =
   | "not_open"
   /** No address, and no number that reads as a phone: the row keeps its `tel:` link. */
   | "no_route"
+  /** The request has had its day's replies (`INTEREST_REPLY_DAILY_CAP`), sent or not. */
+  | "capped"
   /** The email this reply would be refuses its own schema; a retry changes nothing. */
   | "cannot_be_sent";
 
@@ -53,6 +56,8 @@ export type InterestReplyResult =
       replyId: string;
       reason: "not_configured" | "send_failed";
     };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type Delivery =
   | { status: "sent"; providerMessageId: string }
@@ -128,6 +133,20 @@ export async function sendInterestReply(
   if (!route) return { status: "refused", reason: "no_route" };
 
   const now = input.now ?? nowDate();
+  // Every attempt counts: a provider that timed out may still have delivered.
+  const [attempts] = await db
+    .select({ n: count() })
+    .from(interestReplies)
+    .where(
+      and(
+        eq(interestReplies.shopId, input.shopId),
+        eq(interestReplies.interestId, input.interestId),
+        gt(interestReplies.sentAt, new Date(now.getTime() - DAY_MS)),
+      ),
+    );
+  if ((attempts?.n ?? 0) >= INTEREST_REPLY_DAILY_CAP)
+    return { status: "refused", reason: "capped" };
+
   const scope = and(
     eq(interests.id, input.interestId),
     eq(interests.shopId, input.shopId),

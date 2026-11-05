@@ -69,7 +69,7 @@ function rowFor(container: HTMLElement, id: string) {
 describe("integrity", () => {
   it("says nothing at all when the seal verifies", () => {
     renderLog([entry({ id: "a" })]);
-    expect(screen.queryByText("Integrity mismatch")).toBeNull();
+    expect(screen.queryByText("Changed after signing")).toBeNull();
     expect(screen.queryByText("Can’t be checked for changes")).toBeNull();
     // …and the row is still there to say nothing about.
     expect(screen.getByText("Grace Mensah")).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("integrity", () => {
       entry({ id: "a", integrity: "invalid", personName: "Yara Halabi" }),
       entry({ id: "b", integrity: "unsealed", personName: "Priya Sharma" }),
     ]);
-    expect(screen.getByText("Integrity mismatch")).toBeInTheDocument();
+    expect(screen.getByText("Changed after signing")).toBeInTheDocument();
     expect(screen.getByText("Can’t be checked for changes")).toBeInTheDocument();
   });
 });
