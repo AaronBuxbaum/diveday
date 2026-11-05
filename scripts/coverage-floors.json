@@ -137,6 +137,7 @@
   "src/lib/readiness.ts": 100.0,
   "src/lib/requirement.ts": 91.66,
   "src/lib/roll-call-alerts.ts": 100,
+  "src/lib/roll-call-days.ts": 85,
   "src/lib/roll-call-gaps.ts": 100,
   "src/lib/roll-call-population.ts": 100,
   "src/lib/roll-call-readiness.ts": 100,
