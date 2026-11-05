@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
@@ -14,20 +13,13 @@ import { PACKET_PAPER } from "@/lib/print-sheets";
 import { isCrossSiteHeaders } from "@/lib/same-origin";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
-import { uuidParam } from "@/lib/uuid";
-import { SheetDocument } from "../../../../print/_components/SheetDocument";
-import { PACKET_READY_SELECTOR, PacketReady, readTripPacket } from "../_components/TripPacket";
-
-export const metadata: Metadata = {
-  title: "Trip packet with medical alerts — DiveDay",
-};
-
-// The same instant-navigation contract as the packet it extends.
-export const instant = true;
+import { SheetDocument } from "../../../print/_components/SheetDocument";
+import { PACKET_READY_SELECTOR, PacketReady, readTripPacket } from "./packet/TripPacket";
 
 /**
  * **The trip packet with the medical alerts' words on it** (issue #2990, H-20261023-medical-alert-for-the
- * amendment of 2026-10-24): the same document as `../page.tsx`, for a crew
+ * amendment of 2026-10-24): the departure's `?print=medical-alerts` state
+ * (#2736), the same document as its `?print=1` packet, for a crew
  * whose phone is dead at sea, with each diver's alert under their row on the
  * manifest.
  *
@@ -49,23 +41,22 @@ export const instant = true;
  *
  * Opened only by "Print with medical alerts" (a `window.open` from a form
  * submit, never a prefetching link). A navigation from another site is a 404
- * before anything is read (`isCrossSiteHeaders`).
+ * before anything is read (`isCrossSiteHeaders`). The page has refused a
+ * malformed trip id before it asks for this state (`departureStateOf`).
  */
-export default async function TripPrintWithMedicalAlertsPage({
-  params,
+export async function MedicalAlertsPacketSheet({
+  shopSlug,
+  tripId,
 }: {
-  params: Promise<{ shopSlug: string; id: string }>;
+  shopSlug: string;
+  tripId: string;
 }) {
-  const resolvedParams = await params;
-  const { id } = resolvedParams;
-  if (!uuidParam(id)) notFound();
   // A GET that writes the trail: another site's `window.open` carries the
   // session cookie (SameSite=Lax), so it is refused with the same 404 before
   // anything is read or recorded (security review of #2990, M1).
   if (isCrossSiteHeaders(await headers())) notFound();
-  const tripId = id;
 
-  const { shop, session, db } = await requireShopSurface(resolvedParams.shopSlug);
+  const { shop, session, db } = await requireShopSurface(shopSlug);
   const read = await readMedicalAlertsForPrint(db, {
     shopId: shop.id,
     tripId,
@@ -75,7 +66,7 @@ export default async function TripPrintWithMedicalAlertsPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const packetProps = {
-    shopSlug: resolvedParams.shopSlug,
+    shopSlug,
     shop,
     session,
     tripId,
@@ -118,7 +109,7 @@ export default async function TripPrintWithMedicalAlertsPage({
 
   return (
     <SheetDocument
-      backHref={shopPath(resolvedParams.shopSlug, "trips", tripId)}
+      backHref={shopPath(shopSlug, "trips", tripId)}
       paper={PACKET_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
       backLabel={t("trips.tabs.divers")}

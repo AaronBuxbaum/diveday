@@ -10,7 +10,8 @@ import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/st
 /**
  * **A cross-site navigation never prints the words or writes the trail**
  * (security review of #2990, M1). The session cookie is SameSite=Lax, so it
- * rides a top-level `window.open` from any site; this page refuses that with
+ * rides a top-level `window.open` from any site; this print state
+ * (`?print=medical-alerts`, #2736) refuses that with
  * the same 404 as every other refusal, before it reads the session, the words
  * or writes a `medical_alert_printed` line.
  */
@@ -54,7 +55,7 @@ const { getDb } = await import("@/db/client");
 const { readTripPaperIdentity } = await import("@/db/trip-paper-identity");
 const { getTripOverview } = await import("@/db/trip-overview");
 const { requireStaffSession } = await import("@/lib/session");
-const { default: TripPrintWithMedicalAlertsPage } = await import("./page");
+const { MedicalAlertsPacketSheet } = await import("./MedicalAlertsPacketSheet");
 
 async function ownerOnTheAlertDeparture() {
   const { db, shop } = ctx;
@@ -73,10 +74,7 @@ async function ownerOnTheAlertDeparture() {
       .where(
         and(eq(activityEvents.shopId, shop.id), eq(activityEvents.code, "medical_alert_printed")),
       );
-  const open = () =>
-    TripPrintWithMedicalAlertsPage({
-      params: Promise.resolve({ shopSlug: shop.slug, id: departure.id }),
-    });
+  const open = () => MedicalAlertsPacketSheet({ shopSlug: shop.slug, tripId: departure.id });
   return { printedLines, open, host: "app.diveday.test" };
 }
 

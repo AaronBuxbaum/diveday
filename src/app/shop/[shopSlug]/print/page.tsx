@@ -17,13 +17,13 @@ import { settleWithLimit } from "@/lib/settle-with-limit";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { formatPaperDateTime } from "../trips/[id]/_components/DeparturePaperIdentity";
-import { keptSheets } from "../trips/[id]/print/_components/kept-sheets";
+import { keptSheets } from "../trips/[id]/_components/packet/kept-sheets";
 import {
   PACKET_READY_SELECTOR,
   PacketReady,
   PacketSheet,
   TripPacket,
-} from "../trips/[id]/print/_components/TripPacket";
+} from "../trips/[id]/_components/packet/TripPacket";
 import { SheetDocument } from "./_components/SheetDocument";
 
 export const metadata: Metadata = {

@@ -8,7 +8,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { SheetDocument } from "../../print/_components/SheetDocument";
 import { sheetPrinted } from "../../print/_components/ShopSheet";
 import { MonthFigures } from "../../reports/_components/MonthFigures";
-import { PacketSheet } from "../../trips/[id]/print/_components/TripPacket";
+import { PacketSheet } from "../../trips/[id]/_components/packet/TripPacket";
 import { DrillLog } from "../_components/DrillLog";
 import { readDrillLog } from "../_components/drill-log-read";
 import { SafetyLists } from "../_components/SafetyLists";

@@ -89,9 +89,6 @@ describe("staffRouteAt", () => {
   it("sends a departure's faces to the board, and what is below a face to the face", () => {
     expect(up("/shop/blue-mantis/trips/t-1")).toBe("/shop/blue-mantis/schedule/board");
     expect(up("/shop/blue-mantis/trips/t-1/manifest")).toBe("/shop/blue-mantis/schedule/board");
-    expect(up("/shop/blue-mantis/trips/t-1/print/medical-alerts")).toBe(
-      "/shop/blue-mantis/schedule/board",
-    );
     expect(up("/shop/blue-mantis/trips/t-1/log")).toBe("/shop/blue-mantis/trips/t-1");
     expect(up("/shop/blue-mantis/trips/t-1/party/l-1/waivers")).toBe("/shop/blue-mantis/trips/t-1");
   });

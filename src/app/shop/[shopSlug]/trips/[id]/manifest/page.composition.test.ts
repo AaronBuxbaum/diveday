@@ -12,7 +12,7 @@ const SOURCE = routeSource(import.meta.dirname, "page.tsx");
 const READS = routeSource(import.meta.dirname, "_components/manifest-reads.ts");
 /** The view the Boat tab and the packet's manifest sheet both read. */
 const VIEW = routeSource(import.meta.dirname, "_components/manifest-view.ts");
-const PACKET = routeSource(import.meta.dirname, "../print/_components/TripPacket.tsx");
+const PACKET = routeSource(import.meta.dirname, "../_components/packet/TripPacket.tsx");
 
 /**
  * **A held seat's particulars stay withheld on every reader** (`held-seat.ts`,
