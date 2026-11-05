@@ -1306,3 +1306,34 @@ export async function revokeBookingCapabilities(
     .set({ revokedAt: now })
     .where(and(...conditions));
 }
+
+/**
+ * **Revoke every link this person's contact on file was sent** (#3902). A
+ * delivered link went to the email or phone the person row held at the time;
+ * when staff change either (a typo corrected), the old address must not keep
+ * a live link to the diver's bookings. Only delivered rows: a link the
+ * browser was handed is not about the address. The next send mints a fresh
+ * row to the new address (`issueBookingCapability` never reuses a revoked one).
+ */
+export async function revokeDeliveredBookingLinksForPerson(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; now?: Date },
+): Promise<void> {
+  await db
+    .update(bookingCapabilities)
+    .set({ revokedAt: input.now ?? nowDate() })
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, input.shopId),
+        eq(bookingCapabilities.delivered, true),
+        isNull(bookingCapabilities.revokedAt),
+        inArray(
+          bookingCapabilities.bookingId,
+          db
+            .select({ id: bookings.id })
+            .from(bookings)
+            .where(and(eq(bookings.shopId, input.shopId), eq(bookings.personId, input.personId))),
+        ),
+      ),
+    );
+}
