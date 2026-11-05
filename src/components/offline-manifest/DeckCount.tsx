@@ -1,6 +1,7 @@
 import { groupLabelClass } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatTime } from "@/lib/format";
+import { nowDate } from "@/lib/clock";
+import { deckCountWhen } from "@/lib/deck-count";
 import type { OfflineManifestPayload } from "@/lib/offline-manifests";
 
 /**
@@ -29,9 +30,9 @@ export function OfflineDeckCount({
     <section aria-label={t("manifest.deckCount.heading")} className="mt-4">
       <h2 className={groupLabelClass()}>{t("manifest.deckCount.heading")}</h2>
       <p className="mt-2 text-base tabular-nums">
-        {t("manifest.deckCount.savedLine", {
+        {t(record.stale ? "manifest.deckCount.savedStale" : "manifest.deckCount.savedLine", {
           counted: record.counted,
-          time: formatTime(new Date(record.recordedAt), locale, timeZone),
+          time: deckCountWhen(new Date(record.recordedAt), nowDate(), locale, timeZone),
           name: record.recordedByName,
         })}
       </p>

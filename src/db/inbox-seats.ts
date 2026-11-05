@@ -1,5 +1,5 @@
 import { and, asc, count, eq, gt, inArray, not } from "drizzle-orm";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb } from "./client";
 import { type MessageSeat, messageSeats } from "./running-late";

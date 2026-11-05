@@ -1414,6 +1414,14 @@
   and never as an instructor, whatever the roster says. One definition, `countInWaterCrew` in `src/lib/crew-roles.ts`, shared by the
   booking gate, the trip page, the Today queue, and — through Today's own reader — the shift
   roster's crew-gap count.
+- **Departure clock** — the one ladder of offsets measured from a departure's scheduled start and
+  end (`src/lib/departure-clock.ts`, issue #2714): `push_opens` (six hours ahead),
+  `sailing_grace_over` and `back_grace_over` (an hour past the scheduled start and return, what
+  `hasSailed` and `hasReturned` ask), `recap_due` (four hours past the return) and `push_closes`
+  (twelve hours past the end). A rung is an instant on the schedule, never a claim about who is
+  aboard: it does not say a diver **sailed**, that everyone is back, or that a day has
+  **settled**; those are read off roll-call evidence. A new window measured from a departure is a
+  rung here, not an offset of its own.
 - **Deck count** — the heads the captain counted on deck at one **roll-call checkpoint**, typed as
   one number on the Boat tab (`deck_counts`, newest per checkpoint stands; loop 5, row 1). The roll
   call's own head count is the sum of per-person marks, so a mark made against the wrong name still
@@ -1423,7 +1431,8 @@
   aboard than counted, that a mark may be on the wrong person. **It informs and never gates**:
   nothing closes, opens or refuses anything on it, and a checkpoint stays complete or open by the
   marks alone. The printed manifest carries a blank "Deck count: ___ at ___" line per checkpoint, or
-  the newest count where one exists, and the saved offline copy shows the newest count read-only;
+  the last count where one exists (a count older than the checkpoint's newest mark says to count
+  again, and an earlier day's names its date), and the saved offline copy shows the newest count read-only;
   neither records one. Rule in `src/lib/deck-count.ts`, writer and reader in `src/db/deck-counts.ts`.
 - **Roll-call checkpoint** — one independent roll call: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the

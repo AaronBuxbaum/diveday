@@ -35,8 +35,10 @@
     "marksAhead": "{count, plural, one {# figura a bordo. Puede que una marca esté en la persona equivocada.} other {# figuran a bordo. Puede que una marca esté en la persona equivocada.}}",
     "refusal": "El recuento no se guardó. Revisa tu conexión y vuelve a guardarlo.",
     "printedBlank": "{checkpoint}: Recuento en cubierta ____ a las ____",
-    "printedRecorded": "{checkpoint}: Recuento en cubierta {counted} a las {time}, {name}",
-    "savedLine": "Recuento en cubierta {counted} a las {time}, {name}. Solo lectura en esta copia."
+    "printedLast": "{checkpoint}: Recuento en cubierta ____ a las ____. Último recuento {counted} a las {time}, {name}.",
+    "printedStale": "{checkpoint}: Recuento en cubierta ____ a las ____. Contaste {counted} a las {time}, antes de la última marca. Vuelve a contar.",
+    "savedLine": "Recuento en cubierta {counted} a las {time}, {name}. Solo lectura en esta copia.",
+    "savedStale": "Contaste {counted} a las {time}, antes de la última marca. Vuelve a contar."
   },
   "cancelledRollCallClosed": "Esta salida está cancelada y no se ha contado a nadie a bordo, así que el pase de lista está cerrado. Si hay alguien a bordo, reactiva la salida para contarlo.",
   "cancelledRollCallStillCounting": "Esta salida está cancelada. El pase de lista sigue abierto porque el conteo ya había empezado.",

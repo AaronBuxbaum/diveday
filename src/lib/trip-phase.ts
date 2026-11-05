@@ -1,7 +1,8 @@
 import { DAY_MS } from "./clock";
+import { DEPARTURE_BUFFER_MS } from "./departure-clock";
 import { meetingDayWindows, onTheWaterDay } from "./trip-days";
 import type { TripStage } from "./trip-stages";
-import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "./trips";
+import { hasReturned, hasSailed } from "./trips";
 import { shopDayBounds } from "./zoned";
 
 /**

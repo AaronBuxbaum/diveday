@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { deckCountView, offlineDeckCounts, printedDeckCountLines } from "./deck-count-view";
+import {
+  deckCountView,
+  offlineDeckCounts,
+  printedDeckCountLines,
+  staleDeckCountCheckpoints,
+} from "./deck-count-view";
 import { boardedAt, diver, notBackAt, t } from "./diver-roll-call-test-fixtures";
 import { deckCountFacts } from "./head-count-view";
 import { tripManifest } from "./manifest-page-test-fixtures";
@@ -158,14 +163,21 @@ describe("deckCountView", () => {
 });
 
 describe("printedDeckCountLines", () => {
-  const lines = (records: Map<string, ReturnType<typeof counted>>) =>
+  const NOW = new Date("2026-09-11T14:00:00.000Z");
+  const lines = (
+    records: Map<string, ReturnType<typeof counted>>,
+    stale: string[] = [],
+    now = NOW,
+  ) =>
     printedDeckCountLines({
       t,
       locale: "en-US",
       timeZone: "America/New_York",
+      now,
       checkpoints: ["departure", "after_dive_1", "after_dive_2"],
       records,
-    }).lines.map((line) => line.text);
+      stale: new Set(stale),
+    }).lines.map((line) => line.text.replace(/\s/g, " "));
 
   it("gives every checkpoint a blank line to write on when nobody has counted", () => {
     expect(lines(new Map())).toEqual([
@@ -175,27 +187,68 @@ describe("printedDeckCountLines", () => {
     ]);
   });
 
-  it("fills only the checkpoint that was counted, never carrying a count to another", () => {
+  it("keeps the blank beside the last count, and never carries it to another checkpoint", () => {
     const text = lines(new Map([["after_dive_1", counted(11)]]));
-    expect(text[0]).toContain("____");
-    expect(text[1]).toBe("After dive 1: Deck count 11 at 8:30 AM, Keiko Tanaka");
-    expect(text[2]).toContain("____");
+    expect(text[0]).toBe("Before departure: Deck count ____ at ____");
+    expect(text[1]).toBe(
+      "After dive 1: Deck count ____ at ____. Last counted 11 at 8:30 AM, Keiko Tanaka.",
+    );
+    expect(text[2]).toBe("After dive 2: Deck count ____ at ____");
   });
 
   it("prints a count of zero as a count, not a blank", () => {
-    const text = lines(new Map([["departure", counted(0)]]));
-    expect(text[0]).toBe("Before departure: Deck count 0 at 8:30 AM, Keiko Tanaka");
+    expect(lines(new Map([["departure", counted(0)]]))[0]).toContain("Last counted 0 at");
+  });
+
+  it("says count again, never a current count, once a mark came after it", () => {
+    const text = lines(new Map([["after_dive_1", counted(12)]]), ["after_dive_1"]);
+    expect(text[1]).toBe(
+      "After dive 1: Deck count ____ at ____. Counted 12 at 8:30 AM, before the last mark. Count again.",
+    );
+    expect(text[1]).not.toContain("Last counted");
+  });
+
+  it("names the date of a count from an earlier day, so day one never reads as this morning", () => {
+    const dayTwo = new Date("2026-09-12T11:00:00.000Z");
+    const text = lines(new Map([["departure", counted(14)]]), [], dayTwo);
+    expect(text[0]).toMatch(/Sep(tember)? 11/);
+  });
+});
+
+describe("staleDeckCountCheckpoints", () => {
+  it("flags a checkpoint whose newest mark is after its count, and only that one", () => {
+    const marked = boardedAt();
+    const later = {
+      ...marked,
+      occurredAt: new Date("2026-09-11T13:00:00.000Z"),
+    };
+    const dive1 = tripManifest({
+      checkpoint: "after_dive_1",
+      divers: [diver({ bookingId: "b-1", fullName: "Ana Ruiz", rollCall: later })],
+    });
+    const departure = tripManifest({
+      checkpoint: "departure",
+      divers: [diver({ bookingId: "b-1", fullName: "Ana Ruiz" })],
+    });
+    const records = new Map([
+      ["after_dive_1", counted(1)],
+      ["departure", counted(1)],
+    ]);
+    expect([...staleDeckCountCheckpoints(records, [departure, dive1])]).toEqual(["after_dive_1"]);
   });
 });
 
 describe("offlineDeckCounts", () => {
-  it("carries the newest count per checkpoint with an ISO time and nothing else", () => {
-    expect(offlineDeckCounts(new Map([["departure", counted(12)]]))).toEqual([
+  it("carries the newest count per checkpoint with an ISO time, and whether it is stale", () => {
+    expect(
+      offlineDeckCounts(new Map([["departure", counted(12)]]), new Set(["departure"])),
+    ).toEqual([
       {
         checkpoint: "departure",
         counted: 12,
         recordedAt: "2026-09-11T12:30:00.000Z",
         recordedByName: "Keiko Tanaka",
+        stale: true,
       },
     ]);
   });

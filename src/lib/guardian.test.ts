@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { WaiverRecord } from "@/db/schema";
+import { DEPARTURE_BUFFER_MS } from "./departure-clock";
 import {
   guardianSignatureMissing,
   guardianSignatureOf,
@@ -8,7 +9,6 @@ import {
   minorDeclaredOnLiveUpcomingSeat,
   signingDate,
 } from "./guardian";
-import { DEPARTURE_BUFFER_MS } from "./trips";
 
 const TZ = "America/New_York";
 /** Signed 2026-07-18 at 23:30 New York — 2026-07-19 in UTC, which is the trap. */

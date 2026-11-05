@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { DEPARTURE_BUFFER_MS } from "./departure-clock";
 import {
   acceptsNewDivers,
   capacityLabel,
-  DEPARTURE_BUFFER_MS,
   hasReturned,
   hasSailed,
   isFull,

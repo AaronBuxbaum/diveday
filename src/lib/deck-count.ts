@@ -1,3 +1,5 @@
+import { formatDateTimeTz, formatTime, isSameCalendarDay } from "./format";
+
 /**
  * **The deck count** (loop 5, row 1; glossary "Deck count"): the heads the
  * captain counts on deck at a roll-call checkpoint, typed in as one number and
@@ -81,4 +83,20 @@ export function readDeckCount(input: DeckCountInput): DeckCountReading {
     unmarked: input.unmarked,
     notBackAboard: input.notBackAboard,
   };
+}
+
+/**
+ * When a count was taken, as one reader needs it: the time alone for a count
+ * from today, and the date with it for an earlier day's, so a multi-day run's
+ * day-one count never reads as this morning's.
+ */
+export function deckCountWhen(
+  at: Date,
+  now: Date,
+  locale: string | undefined,
+  timeZone: string,
+): string {
+  return isSameCalendarDay(at, now, timeZone)
+    ? formatTime(at, locale, timeZone)
+    : formatDateTimeTz(at, locale, timeZone);
 }

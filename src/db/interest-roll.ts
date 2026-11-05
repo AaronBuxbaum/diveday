@@ -1,7 +1,8 @@
 import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, notExists } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
-import { DEPARTURE_BUFFER_MS, hasSailed } from "@/lib/trips";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
+import { hasSailed } from "@/lib/trips";
 import type { AppDb } from "./client";
 import { deliverSeatOffer, invitableSeats } from "./interest-offers";
 import { bookings, interests, shops, trips } from "./schema";

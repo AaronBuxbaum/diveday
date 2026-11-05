@@ -229,6 +229,8 @@ export type OfflineManifestPayload = {
     counted: number;
     recordedAt: string;
     recordedByName: string;
+    /** The marks moved after this count: it asks to be taken again. */
+    stale?: boolean;
   }>;
   /**
    * **The boat's open snags** (fifth-loop ideas, item 1): what an earlier crew

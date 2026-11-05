@@ -1,6 +1,6 @@
 import type { welcomeHello } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { type DiveDayMilestone, diveDayMilestone } from "@/lib/visit-milestones";
 
 /**

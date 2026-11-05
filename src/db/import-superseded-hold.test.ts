@@ -283,6 +283,29 @@ describe("a superseded hold (issue #3780)", () => {
     );
     expect(summary).toMatchObject({ waiversAdded: 1, waiversSkippedExisting: 0 });
   });
+
+  it("does not call a live referral a physician cleared a medical hold", async () => {
+    const { db, shop, importer, person, template } = await heldDiver(
+      "cleared.live@example.com",
+      "Cleared Cleo",
+    );
+    const signedAt = new Date(nowDate().getTime() - 60 * 60 * 1000);
+    await db.insert(waiverRecords).values({
+      ...heldRecord({ shopId: shop.id, personId: person.id, bookingId: null, template, signedAt }),
+      supersededAt: null,
+      medicalClearedAt: signedAt,
+      medicalClearedByPersonId: importer,
+      medicalClearanceEvaluatedOn: "2026-06-01",
+      medicalClearancePhysicianName: "Dr. Ruiz",
+    });
+    const summary = await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport(`full_name,email,waiver_accepted\nCleared Cleo,${person.email},yes`),
+      importer,
+    );
+    expect(summary.waiversSkippedMedicalHold).toBe(0);
+  });
 });
 
 /**

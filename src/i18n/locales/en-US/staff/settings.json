@@ -1125,7 +1125,7 @@
         "waiversLineOne": "{count} waiver imported as accepted, marked “imported” on the diver’s profile.",
         "waiversLineOther": "{count} waivers imported as accepted, marked “imported” on the diver’s profile.",
         "waiversSkippedExistingNote": " {count} diver(s) already had a current waiver on file, left untouched.",
-        "waiversSkippedMedicalHoldNote": " {count} diver(s) on a medical hold, so no waiver was imported. The dock will show them as Not cleared until the hold is resolved.",
+        "waiversSkippedMedicalHoldNote": " {count} diver(s) on a medical hold, so no waiver was imported. They stay Blocked at the dock until a physician clears them; see Medical holds.",
         "waiversSkippedNoTemplateNoteOne": " {count} skipped. Set up a waiver template first.",
         "waiversSkippedNoTemplateNoteOther": " {count} skipped. Set up a waiver template first.",
         "waiverDocumentsFailedNote": " {count} document link(s) didn’t fetch and were left off the record.",

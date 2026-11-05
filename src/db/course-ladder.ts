@@ -15,7 +15,7 @@ import { sellableSeats } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { courseLadderSince, ladderExclusion, nextCourseFor } from "@/lib/course-ladder";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { levelCardLevel } from "./card-columns";
 import type { DbExecutor } from "./client";
 import { listCatalogInProgressionOrder } from "./courses";

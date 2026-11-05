@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { readPlannedFlySafe, readReminderFlySafeHours } from "./fly-safe-plan";

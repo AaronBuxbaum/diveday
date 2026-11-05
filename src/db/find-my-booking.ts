@@ -1,11 +1,11 @@
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { log } from "@/lib/log";
 import { notificationProviderSignal } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { hasLiveDeliveredReadinessLink, issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";

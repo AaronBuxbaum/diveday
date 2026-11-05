@@ -1125,7 +1125,7 @@
         "waiversLineOne": "{count} exención importada como aceptada, marcada “importado” en el perfil del buceador.",
         "waiversLineOther": "{count} exenciones importadas como aceptadas, marcadas “importado” en el perfil del buceador.",
         "waiversSkippedExistingNote": " {count} buceador(es) ya tenían una exención vigente en el archivo, se dejaron sin tocar.",
-        "waiversSkippedMedicalHoldNote": " {count} buceador(es) con una retención médica, así que no se importó ninguna exención. El muelle los mostrará como No autorizados hasta que se resuelva la retención.",
+        "waiversSkippedMedicalHoldNote": " {count} buceador(es) con un bloqueo médico, así que no se importó ninguna exención. Siguen Bloqueados en el muelle hasta que un médico los autorice; consulta Bloqueos médicos.",
         "waiversSkippedNoTemplateNoteOne": " {count} omitido. Configura primero una plantilla de exención.",
         "waiversSkippedNoTemplateNoteOther": " {count} omitidos. Configura primero una plantilla de exención.",
         "waiverDocumentsFailedNote": " {count} enlace(s) de documento no se pudieron descargar y se dejaron fuera del registro.",

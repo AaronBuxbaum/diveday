@@ -22,6 +22,7 @@ import { sellableSeats } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
+import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import type { SeatCounts } from "@/lib/participant-types";
 import {
   boatServiceWindow,
@@ -34,7 +35,6 @@ import {
   type TripDiveSiteRef,
   type TripDiveSiteSummary,
 } from "@/lib/trip-dives";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { shiftWeek, weekDates } from "@/lib/week-board";
 import { shopDayBounds, shopDaysBounds, wallTimeToUtc } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";

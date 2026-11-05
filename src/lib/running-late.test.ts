@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS } from "./clock";
+import { DEPARTURE_BUFFER_MS } from "./departure-clock";
 import { TRIP_REMINDER_CADENCES } from "./reminders";
 import {
   canSayRunningLate,
@@ -7,7 +8,6 @@ import {
   runningLateOnManifest,
   runningLateShown,
 } from "./running-late";
-import { DEPARTURE_BUFFER_MS } from "./trips";
 
 const startsAt = new Date("2026-10-09T12:00:00Z");
 const at = (msBefore: number) => new Date(startsAt.getTime() - msBefore);

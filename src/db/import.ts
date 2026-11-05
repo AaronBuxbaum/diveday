@@ -89,8 +89,8 @@ export type ImportSummary = {
   waiversSkippedExisting: number;
   /**
    * The diver is on a medical hold (a live referral or a retired physician refusal), so no waiver
-   * was imported. Never folded into `waiversSkippedExisting`: the dock will block this diver as
-   * Not cleared, which "a current waiver" would contradict.
+   * was imported. Never folded into `waiversSkippedExisting`: the dock holds this diver as
+   * Blocked until a physician clears them, which "a current waiver" would contradict.
    */
   waiversSkippedMedicalHold: number;
   /** The shop has no waiver template configured, so there was nothing to snapshot against. */
@@ -915,9 +915,8 @@ async function writeEvidence(
         )
         .then((rows) => rows.map((joined) => joined.record));
       const liveRecords = existingRecords.filter((r) => !r.supersededAt);
-      const hasActiveHold =
-        liveRecords.some((r) => r.status === "medical_review") ||
-        existingRecords.some(isUnclearedReferral);
+      // A cleared referral keeps its status but is not a hold (glossary "Medical hold").
+      const hasActiveHold = existingRecords.some(isUnclearedReferral);
       const hasCurrentCompleted = liveRecords.some(
         (r) =>
           r.status === "completed" && isCompletedWaiverCurrent(r, template.materialGeneration, now),

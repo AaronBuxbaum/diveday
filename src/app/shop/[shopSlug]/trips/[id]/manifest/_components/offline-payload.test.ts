@@ -180,6 +180,7 @@ describe("offlineManifestPayload", () => {
         counted: 0,
         recordedAt: "2026-09-11T12:30:00.000Z",
         recordedByName: "Keiko Tanaka",
+        stale: false,
       },
     ]);
   });

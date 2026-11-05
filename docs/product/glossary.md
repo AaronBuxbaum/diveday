@@ -243,6 +243,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Default course page
 - Delivery receipt
 - Demo mode
+- Departure clock
 - Departure count
 - Departure log
 - Deposit

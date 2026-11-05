@@ -19,9 +19,9 @@
 import { pushIsLive, rungOffsetMs } from "@/lib/departure-clock";
 
 /** Push from six hours ahead of departure — the morning of, not the week before. */
-export const WINDOW_BEFORE_MS = -rungOffsetMs("morning_of");
+export const WINDOW_BEFORE_MS = -rungOffsetMs("push_opens");
 /** …until twelve hours after the trip ends, so a late-running day still reaches the boat. */
-export const WINDOW_AFTER_MS = rungOffsetMs("past");
+export const WINDOW_AFTER_MS = rungOffsetMs("push_closes");
 
 export interface PushWindowTrip {
   startsAt: Date;

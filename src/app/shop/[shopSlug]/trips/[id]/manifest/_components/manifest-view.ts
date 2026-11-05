@@ -6,7 +6,7 @@ import type { requireShopSurface } from "@/lib/session";
 import type { ManifestActionContext } from "../actions";
 import { bindManifestActions } from "./bound-actions";
 import { buddyBuilderView } from "./buddy-builder-view";
-import { deckCountView, printedDeckCountLines } from "./deck-count-view";
+import { deckCountView, printedDeckCountLines, staleDeckCountCheckpoints } from "./deck-count-view";
 import { departureBoatSafetySection } from "./departure-boat-safety";
 import { deckCountFacts } from "./head-count-view";
 import { emergencyReferenceCopy } from "./manifest-copy";
@@ -157,8 +157,10 @@ export async function readManifestView({
     t,
     locale,
     timeZone: shop.timezone,
+    now: nowDate(),
     checkpoints: completeManifests.map((entry) => entry.checkpoint),
     records: read.deckCounts,
+    stale: staleDeckCountCheckpoints(read.deckCounts, completeManifests),
   });
   const paperIdentity = manifestPaperIdentity(
     shop,

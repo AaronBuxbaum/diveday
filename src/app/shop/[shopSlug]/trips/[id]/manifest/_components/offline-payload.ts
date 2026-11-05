@@ -8,7 +8,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { BoatSafetySection } from "@/lib/boat-safety";
 import { type OfflineManifestPayload, serializeManifests } from "@/lib/offline-manifests";
 import { type DayWindow, rollCallDayBoundariesOf } from "@/lib/trip-days";
-import { offlineDeckCounts } from "./deck-count-view";
+import { offlineDeckCounts, staleDeckCountCheckpoints } from "./deck-count-view";
 import { snagSentences } from "./pre-departure-check-view";
 
 /**
@@ -79,7 +79,14 @@ export function offlineManifestPayload({
     ),
     ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
     // Additive and optional, so no record-version bump: a copy saved before this reads as none.
-    ...(deckCounts.size > 0 ? { deckCounts: offlineDeckCounts(deckCounts) } : {}),
+    ...(deckCounts.size > 0
+      ? {
+          deckCounts: offlineDeckCounts(
+            deckCounts,
+            staleDeckCountCheckpoints(deckCounts, snapshot.manifests),
+          ),
+        }
+      : {}),
     snapshotId: snapshot.snapshotId,
     erasureEpochToken: snapshot.erasureEpochToken,
   };

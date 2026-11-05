@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DAY_MS, HOUR_MS } from "./clock";
+import { HOUR_MS } from "./clock";
 import {
   DEPARTURE_BUFFER_MS,
-  DEPARTURE_RUNGS,
-  departurePhase,
   hasPassed,
   hasReached,
   pushIsLive,
+  rungOffsetMs,
   rungTime,
 } from "./departure-clock";
 
@@ -16,62 +15,41 @@ const trip = { startsAt, endsAt };
 const at = (base: Date, ms: number) => new Date(base.getTime() + ms);
 
 describe("the departure's ladder", () => {
-  it("keeps the standing hour of grace the sailed and returned rungs sit on", () => {
+  it("keeps the standing hour of grace the sailing and back rungs sit on", () => {
     expect(DEPARTURE_BUFFER_MS).toBe(HOUR_MS);
-    expect(rungTime("sailed", { startsAt }).getTime()).toBe(startsAt.getTime() + HOUR_MS);
-    expect(rungTime("returned", { endsAt }).getTime()).toBe(endsAt.getTime() + HOUR_MS);
+    expect(rungTime("sailing_grace_over", { startsAt }).getTime()).toBe(
+      startsAt.getTime() + HOUR_MS,
+    );
+    expect(rungTime("back_grace_over", { endsAt }).getTime()).toBe(endsAt.getTime() + HOUR_MS);
   });
 
-  it("orders its rungs in time for an ordinary day boat, so a phase is the last rung reached", () => {
-    const times = DEPARTURE_RUNGS.map((rung) =>
-      rungTime(rung, trip as { startsAt: Date; endsAt: Date }).getTime(),
-    );
-    expect(times).toEqual([...times].sort((a, b) => a - b));
-    expect(new Set(times).size).toBe(times.length);
+  it("measures the recap and push offsets from the end, and the push opening from the start", () => {
+    expect(rungOffsetMs("recap_due")).toBe(4 * HOUR_MS);
+    expect(rungTime("recap_due", { endsAt }).getTime()).toBe(endsAt.getTime() + 4 * HOUR_MS);
+    expect(rungTime("push_opens", { startsAt }).getTime()).toBe(startsAt.getTime() - 6 * HOUR_MS);
+    expect(rungTime("push_closes", { endsAt }).getTime()).toBe(endsAt.getTime() + 12 * HOUR_MS);
   });
 
   it("reaches a rung at its instant and not a millisecond before; passes it a millisecond after", () => {
-    const sailed = rungTime("sailed", { startsAt });
-    expect(hasReached("sailed", { startsAt }, at(sailed, -1))).toBe(false);
-    expect(hasReached("sailed", { startsAt }, sailed)).toBe(true);
-    expect(hasPassed("sailed", { startsAt }, sailed)).toBe(false);
-    expect(hasPassed("sailed", { startsAt }, at(sailed, 1))).toBe(true);
-  });
-});
-
-describe("departurePhase", () => {
-  const phaseAt = (now: Date) => departurePhase(trip, now);
-
-  it("walks a day boat from a week out to long past", () => {
-    expect(phaseAt(at(startsAt, -7 * DAY_MS))).toBe("week_out");
-    expect(phaseAt(at(startsAt, -DAY_MS))).toBe("day_before");
-    expect(phaseAt(at(startsAt, -6 * HOUR_MS))).toBe("morning_of");
-    expect(phaseAt(startsAt)).toBe("boarding");
-    expect(phaseAt(at(startsAt, HOUR_MS - 1))).toBe("boarding");
-    expect(phaseAt(at(startsAt, HOUR_MS))).toBe("sailed");
-    expect(phaseAt(at(endsAt, HOUR_MS - 1))).toBe("sailed");
-    expect(phaseAt(at(endsAt, HOUR_MS))).toBe("returned");
-    expect(phaseAt(at(endsAt, 4 * HOUR_MS))).toBe("settled");
-    expect(phaseAt(at(endsAt, 12 * HOUR_MS))).toBe("settled");
-    expect(phaseAt(at(endsAt, 12 * HOUR_MS + 1))).toBe("past");
-  });
-
-  it("never reads a departure as sailed before its hour of grace, however late it runs", () => {
-    expect(phaseAt(at(startsAt, 59 * 60_000))).not.toBe("sailed");
-  });
-
-  it("holds a multi-day course on the water for its whole run, not 24 hours of it", () => {
-    const weekend = { startsAt, endsAt: new Date("2026-08-06T16:00:00.000Z") };
-    expect(departurePhase(weekend, new Date("2026-08-06T09:00:00.000Z"))).toBe("sailed");
+    const rung = rungTime("sailing_grace_over", { startsAt });
+    expect(hasReached("sailing_grace_over", { startsAt }, at(rung, -1))).toBe(false);
+    expect(hasReached("sailing_grace_over", { startsAt }, rung)).toBe(true);
+    expect(hasPassed("sailing_grace_over", { startsAt }, rung)).toBe(false);
+    expect(hasPassed("sailing_grace_over", { startsAt }, at(rung, 1))).toBe(true);
   });
 });
 
 describe("pushIsLive, a named question on the ladder", () => {
-  it("is live from the morning-of rung to the past rung, both ends inclusive of the last instant", () => {
+  it("is live from push_opens to push_closes, the last instant included", () => {
     expect(pushIsLive(trip, at(startsAt, -6 * HOUR_MS - 1))).toBe(false);
     expect(pushIsLive(trip, at(startsAt, -6 * HOUR_MS))).toBe(true);
     expect(pushIsLive(trip, at(endsAt, 12 * HOUR_MS))).toBe(true);
     expect(pushIsLive(trip, at(endsAt, 12 * HOUR_MS + 1))).toBe(false);
+  });
+
+  it("keeps day two of a multi-day course inside the window", () => {
+    const weekend = { startsAt, endsAt: new Date("2026-08-06T16:00:00.000Z") };
+    expect(pushIsLive(weekend, new Date("2026-08-06T09:00:00.000Z"))).toBe(true);
   });
 
   it("never closes before the departure on a row that ends before it starts", () => {
