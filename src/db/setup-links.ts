@@ -1,13 +1,21 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
-import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
+import { eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { isSetupLinkTokenShape, SETUP_LINK_TTL_MS } from "@/lib/setup-links";
+import { isSetupLinkTokenShape } from "@/lib/setup-links";
+import {
+  mintCapability,
+  openCapability,
+  recordSetupLinkSpentBy,
+  spendCapability,
+} from "./capabilities";
 import type { DbExecutor } from "./client";
-import { setupRequests, shopSetupLinks } from "./schema";
+import { setupRequests } from "./schema";
 
 /**
- * Single-use setup links (ADR 20261009-single-use-setup-links). The rules are
- * in `src/lib/setup-links.ts`; this is their storage.
+ * Single-use setup links (ADR 20261009-single-use-setup-links): `shop_setup`
+ * capabilities naming their set-up request and no shop (ADR
+ * 20261105-capabilities-shop-id-nullable). The rules are in
+ * `src/lib/setup-links.ts` and the purpose's record in `CAPABILITY_POLICY`;
+ * this is what a setup link means on top of them.
  */
 
 export type IssuedSetupLink = { token: string; expiresAt: Date };
@@ -17,16 +25,14 @@ export async function issueSetupLink(
   db: DbExecutor,
   input: { setupRequestId: string; now?: Date },
 ): Promise<IssuedSetupLink> {
-  const now = input.now ?? nowDate();
-  const token = createBearerToken();
-  const expiresAt = new Date(now.getTime() + SETUP_LINK_TTL_MS);
-  await db.insert(shopSetupLinks).values({
-    tokenHash: hashBearerToken(token),
-    setupRequestId: input.setupRequestId,
-    expiresAt,
-    createdAt: now,
+  const minted = await mintCapability(db, {
+    purpose: "shop_setup",
+    shopId: null,
+    subjectId: input.setupRequestId,
+    now: input.now ?? nowDate(),
   });
-  return { token, expiresAt };
+  if (!minted.expiresAt) throw new Error("A setup link must expire");
+  return { token: minted.token, expiresAt: minted.expiresAt };
 }
 
 /** What the form opens with: the answers the request already gave. */
@@ -35,14 +41,6 @@ export type OpenSetupLink = {
   contactName: string;
   email: string;
 };
-
-function openLinkCondition(token: string, now: Date) {
-  return and(
-    eq(shopSetupLinks.tokenHash, hashBearerToken(token)),
-    isNull(shopSetupLinks.spentAt),
-    gt(shopSetupLinks.expiresAt, now),
-  );
-}
 
 /**
  * The request behind a link that still opens the form, or null for anything
@@ -55,15 +53,16 @@ export async function openSetupLink(
   now: Date = nowDate(),
 ): Promise<OpenSetupLink | null> {
   if (!isSetupLinkTokenShape(token)) return null;
+  const live = await openCapability(db, { purpose: "shop_setup", token, now });
+  if (!live) return null;
   const [row] = await db
     .select({
       shopName: setupRequests.shopName,
       contactName: setupRequests.contactName,
       email: setupRequests.email,
     })
-    .from(shopSetupLinks)
-    .innerJoin(setupRequests, eq(setupRequests.id, shopSetupLinks.setupRequestId))
-    .where(openLinkCondition(token, now))
+    .from(setupRequests)
+    .where(eq(setupRequests.id, live.subjectId))
     .limit(1);
   return row ?? null;
 }
@@ -79,12 +78,7 @@ export async function spendSetupLink(
   now: Date = nowDate(),
 ): Promise<boolean> {
   if (!isSetupLinkTokenShape(token)) return false;
-  const spent = await db
-    .update(shopSetupLinks)
-    .set({ spentAt: now })
-    .where(openLinkCondition(token, now))
-    .returning({ id: shopSetupLinks.id });
-  return spent.length === 1;
+  return (await spendCapability(db, { purpose: "shop_setup", token, now })) !== null;
 }
 
 /**
@@ -96,10 +90,5 @@ export async function recordSetupLinkShop(
   token: string,
   shopId: string,
 ): Promise<{ setupRequestId: string } | null> {
-  const [row] = await db
-    .update(shopSetupLinks)
-    .set({ spentByShopId: shopId })
-    .where(eq(shopSetupLinks.tokenHash, hashBearerToken(token)))
-    .returning({ setupRequestId: shopSetupLinks.setupRequestId });
-  return row ?? null;
+  return recordSetupLinkSpentBy(db, { token, shopId });
 }

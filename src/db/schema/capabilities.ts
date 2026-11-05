@@ -21,6 +21,7 @@ import {
 } from "@/lib/capabilities";
 import { appNowTimestamp } from "./columns";
 import { people, shops, userAccounts } from "./core";
+import { setupRequests } from "./funnel";
 import { interests } from "./interests";
 
 /**
@@ -70,6 +71,16 @@ export const capabilities = pgTable(
     personId: uuid("person_id").references(() => people.id),
     /** A `user_account` purpose's subject: the sign-in account an account token proves. */
     userAccountId: uuid("user_account_id").references(() => userAccounts.id),
+    /** A `setup_request` purpose's subject; the link goes with its request. */
+    setupRequestId: uuid("setup_request_id").references(() => setupRequests.id, {
+      onDelete: "cascade",
+    }),
+    /**
+     * The shop a spent setup link opened, set in the transaction that created
+     * it: which request became which shop. Cleared if that shop is deleted;
+     * the spend stands. Only ever on `shop_setup`.
+     */
+    spentByShopId: uuid("spent_by_shop_id").references(() => shops.id, { onDelete: "set null" }),
     // Bound to the row's own shop by the composite key below, not a bare id.
     interestId: uuid("interest_id"),
     /** A `shop_address` purpose's subject: the lower-cased address the link was mailed to. */
@@ -86,6 +97,8 @@ export const capabilities = pgTable(
     index("capabilities_person_idx").on(table.personId),
     index("capabilities_interest_idx").on(table.interestId),
     index("capabilities_user_account_idx").on(table.userAccountId),
+    index("capabilities_setup_request_idx").on(table.setupRequestId),
+    index("capabilities_spent_by_shop_idx").on(table.spentByShopId),
     // One live account token per account and purpose: the mint's revoke under
     // the account-row lock is the rule, this is its backstop.
     uniqueIndex("capabilities_live_account_purpose_idx")
@@ -102,10 +115,11 @@ export const capabilities = pgTable(
     }),
     check(
       "capabilities_subject_by_purpose",
-      sql`(${table.purpose}::text in (${naming("interest")}) and ${table.interestId} is not null and ${table.personId} is null and ${table.sentTo} is null and ${table.userAccountId} is null)
-        or (${table.purpose}::text in (${naming("person")}) and ${table.personId} is not null and ${table.interestId} is null and ${table.sentTo} is null and ${table.userAccountId} is null)
-        or (${table.purpose}::text in (${naming("shop_address")}) and ${table.sentTo} is not null and ${table.sentTo} = lower(${table.sentTo}) and ${table.personId} is null and ${table.interestId} is null and ${table.userAccountId} is null)
-        or (${table.purpose}::text in (${naming("user_account")}) and ${table.userAccountId} is not null and ${table.personId} is null and ${table.interestId} is null and ${table.sentTo} is null)`,
+      sql`(${table.purpose}::text in (${naming("interest")}) and ${table.interestId} is not null and ${table.personId} is null and ${table.sentTo} is null and ${table.userAccountId} is null and ${table.setupRequestId} is null)
+        or (${table.purpose}::text in (${naming("person")}) and ${table.personId} is not null and ${table.interestId} is null and ${table.sentTo} is null and ${table.userAccountId} is null and ${table.setupRequestId} is null)
+        or (${table.purpose}::text in (${naming("shop_address")}) and ${table.sentTo} is not null and ${table.sentTo} = lower(${table.sentTo}) and ${table.personId} is null and ${table.interestId} is null and ${table.userAccountId} is null and ${table.setupRequestId} is null)
+        or (${table.purpose}::text in (${naming("user_account")}) and ${table.userAccountId} is not null and ${table.personId} is null and ${table.interestId} is null and ${table.sentTo} is null and ${table.setupRequestId} is null)
+        or (${table.purpose}::text in (${naming("setup_request")}) and ${table.setupRequestId} is not null and ${table.personId} is null and ${table.interestId} is null and ${table.sentTo} is null and ${table.userAccountId} is null)`,
     ),
     // A platform purpose names no shop, and every other purpose names one.
     check(
@@ -121,6 +135,11 @@ export const capabilities = pgTable(
     check(
       "capabilities_expiry_by_purpose",
       sql`(${table.expiresAt} is not null) = (${table.purpose}::text in (${sqlList(expiringPurposes())}))`,
+    ),
+    // Only a setup link records the shop it opened.
+    check(
+      "capabilities_spent_by_shop_only_setup",
+      sql`${table.spentByShopId} is null or ${table.purpose}::text in (${naming("setup_request")})`,
     ),
     // An erasure sweeps a shop's links by the address they went to.
     index("capabilities_sent_to_idx").on(table.shopId, table.sentTo),

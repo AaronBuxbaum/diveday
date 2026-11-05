@@ -1,5 +1,6 @@
 import { EMAIL_VERIFICATION_TTL_MS, INVITE_TTL_MS, PASSWORD_RESET_TTL_MS } from "./account-tokens";
 import { DAY_MS } from "./clock";
+import { SETUP_LINK_TTL_MS } from "./setup-links";
 
 /**
  * **One table of bearer capabilities, one policy row per purpose** (issue
@@ -18,7 +19,8 @@ import { DAY_MS } from "./clock";
  * The purposes here are the email-unsubscribe links behind
  * `/unsubscribe/[token]`, the stop and confirm links mailed to a shop's own
  * addresses, and the account tokens (verify, reset, invite), which name a
- * sign-in account and no shop (ADR 20261105-capabilities-shop-id-nullable).
+ * sign-in account and no shop, and the setup link, which names a set-up
+ * request and no shop (ADR 20261105-capabilities-shop-id-nullable).
  * Purposes still on their own tables (the front desk's confirm link) are the
  * rest of #2710.
  * Booking links stay on `booking_capabilities`: they are derived from their
@@ -40,6 +42,7 @@ export const CAPABILITY_PURPOSES = [
   "email_verification",
   "password_reset",
   "invite",
+  "shop_setup",
 ] as const;
 
 export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
@@ -51,11 +54,18 @@ export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
  * the bookkeeper), named by `capabilities.sent_to`, the lower-cased address
  * the link was mailed to: the shop has no inbox of its own, and a link must
  * never act on a later, different address. `user_account` is
- * `capabilities.user_account_id`, a sign-in account. The table's
+ * `capabilities.user_account_id`, a sign-in account; `setup_request` is
+ * `capabilities.setup_request_id`, a request to be set up that no shop exists
+ * for yet. The table's
  * `capabilities_subject_by_purpose` check holds every row to its purpose's
  * subject, and keeps the other subject columns null.
  */
-export type CapabilitySubject = "interest" | "person" | "shop_address" | "user_account";
+export type CapabilitySubject =
+  | "interest"
+  | "person"
+  | "shop_address"
+  | "user_account"
+  | "setup_request";
 
 /**
  * What a diver merge does with a `person` purpose's rows (`mergeDiverRecords`).
@@ -237,6 +247,19 @@ export const CAPABILITY_POLICY = {
     ttlMs: INVITE_TTL_MS,
     reissue: "supersedes",
     per: "subject",
+    use: "once",
+  },
+  // The link that opens `/onboard` for one shop, once (ADR
+  // 20261009-single-use-setup-links). Minted per set-up request, before any
+  // shop exists, so it names the request and no shop; spent in the
+  // transaction that creates the shop, which it then records
+  // (`spent_by_shop_id`, this purpose only). Goes with its request.
+  shop_setup: {
+    subject: "setup_request",
+    scope: "platform",
+    lifetime: "expires",
+    ttlMs: SETUP_LINK_TTL_MS,
+    reissue: "adds",
     use: "once",
   },
 } as const satisfies Record<CapabilityPurpose, CapabilityPolicy>;

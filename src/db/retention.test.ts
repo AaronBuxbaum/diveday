@@ -472,19 +472,18 @@ describe("pruneExpiredRecords", () => {
       ])
       .returning({ id: schema.setupRequests.id });
     if (!stale || !fresh) throw new Error("insert failed");
-    await db.insert(schema.shopSetupLinks).values({
-      tokenHash: "retention-stale-link",
-      setupRequestId: stale.id,
-      expiresAt: daysAgo(window - 7),
-    });
+    const link = { setupRequestId: stale.id, expiresAt: daysAgo(window - 7) };
+    await db
+      .insert(schema.capabilities)
+      .values({ ...link, purpose: "shop_setup", tokenHash: "retention-stale-link" });
 
     const summary = await pruneExpiredRecords(db, { now: NOW });
     expect(outcomeFor(summary, "setup_requests").deleted).toBe(1);
     expect(
       await db
-        .select({ id: schema.shopSetupLinks.id })
-        .from(schema.shopSetupLinks)
-        .where(eq(schema.shopSetupLinks.setupRequestId, stale.id)),
+        .select({ id: schema.capabilities.id })
+        .from(schema.capabilities)
+        .where(eq(schema.capabilities.setupRequestId, stale.id)),
     ).toEqual([]);
     const left = await db
       .select({ shopName: schema.setupRequests.shopName })

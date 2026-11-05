@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, ne, or, type SQL } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, ne, or, type SQL } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import {
   CAPABILITY_POLICY,
@@ -37,7 +37,13 @@ export type CapabilityShop<P extends CapabilityPurpose> = P extends CapabilityPu
   : never;
 
 function subjectColumns(purpose: CapabilityPurpose, subjectId: string) {
-  const none = { interestId: null, personId: null, sentTo: null, userAccountId: null };
+  const none = {
+    interestId: null,
+    personId: null,
+    sentTo: null,
+    userAccountId: null,
+    setupRequestId: null,
+  };
   switch (capabilitySubject(purpose)) {
     case "interest":
       return { ...none, interestId: subjectId };
@@ -47,6 +53,8 @@ function subjectColumns(purpose: CapabilityPurpose, subjectId: string) {
       return { ...none, sentTo: subjectId.trim().toLowerCase() };
     case "user_account":
       return { ...none, userAccountId: subjectId };
+    case "setup_request":
+      return { ...none, setupRequestId: subjectId };
   }
 }
 
@@ -61,6 +69,8 @@ function subjectColumn(purpose: CapabilityPurpose) {
       return capabilities.sentTo;
     case "user_account":
       return capabilities.userAccountId;
+    case "setup_request":
+      return capabilities.setupRequestId;
   }
 }
 
@@ -71,6 +81,7 @@ type CapabilityRow = {
   interestId: string | null;
   sentTo: string | null;
   userAccountId: string | null;
+  setupRequestId: string | null;
   usedAt: Date | null;
   expiresAt: Date | null;
   revokedAt: Date | null;
@@ -83,6 +94,7 @@ const ROW = {
   interestId: capabilities.interestId,
   sentTo: capabilities.sentTo,
   userAccountId: capabilities.userAccountId,
+  setupRequestId: capabilities.setupRequestId,
   usedAt: capabilities.usedAt,
   expiresAt: capabilities.expiresAt,
   revokedAt: capabilities.revokedAt,
@@ -92,15 +104,13 @@ function verified<P extends CapabilityPurpose>(
   purpose: P,
   row: CapabilityRow,
 ): VerifiedCapability<P> | null {
-  const subject = capabilitySubject(purpose);
-  const subjectId =
-    subject === "interest"
-      ? row.interestId
-      : subject === "person"
-        ? row.personId
-        : subject === "shop_address"
-          ? row.sentTo
-          : row.userAccountId;
+  const subjectId = {
+    interest: row.interestId,
+    person: row.personId,
+    shop_address: row.sentTo,
+    user_account: row.userAccountId,
+    setup_request: row.setupRequestId,
+  }[capabilitySubject(purpose)];
   // The table's checks make both unreachable; a null subject must still never
   // be handed on as an id, nor a shop purpose's row as one with no shop.
   if (!subjectId) return null;
@@ -347,6 +357,30 @@ export async function spendCapability<P extends CapabilityPurpose>(
     )
     .returning(ROW);
   return row ? verified(input.purpose, row) : null;
+}
+
+/**
+ * Records the shop a spent setup link opened (`spent_by_shop_id`, which the
+ * table allows on `shop_setup` only), in the transaction that spent it and
+ * created the shop. Returns the request the link was minted for, or null for a
+ * token that names no spent setup link.
+ */
+export async function recordSetupLinkSpentBy(
+  db: DbExecutor,
+  input: { token: string; shopId: string },
+): Promise<{ setupRequestId: string } | null> {
+  const [row] = await db
+    .update(capabilities)
+    .set({ spentByShopId: input.shopId })
+    .where(
+      and(
+        eq(capabilities.purpose, "shop_setup"),
+        eq(capabilities.tokenHash, hashBearerToken(input.token)),
+        isNotNull(capabilities.usedAt),
+      ),
+    )
+    .returning({ setupRequestId: capabilities.setupRequestId });
+  return row?.setupRequestId ? { setupRequestId: row.setupRequestId } : null;
 }
 
 /**
