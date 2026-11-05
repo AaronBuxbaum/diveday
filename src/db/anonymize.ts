@@ -1237,7 +1237,7 @@ async function scrubStandingCredentials(
   tx: AppTransaction,
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
-  const { shopId, personId, now } = ctx;
+  const { personId, now } = ctx;
   // A live feed URL (a staff credential capability, `merge: "refuse"`) is a
   // read credential; revoked rather than deleted so the fact that it was
   // revoked stays on record.
@@ -1246,7 +1246,6 @@ async function scrubStandingCredentials(
     .set({ revokedAt: now })
     .where(
       and(
-        eq(capabilities.shopId, shopId),
         eq(capabilities.personId, personId),
         inArray(capabilities.purpose, personPurposesThatMerge("refuse")),
         isNull(capabilities.revokedAt),
