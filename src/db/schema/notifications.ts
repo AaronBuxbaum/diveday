@@ -307,8 +307,8 @@ export const notificationSendQueue = pgTable(
     idempotencyKey: text("idempotency_key").notNull().unique(),
     /**
      * The queued notification, **sealed** (`src/lib/secret-box.ts`), never
-     * plaintext — the same promise `waiver_records.token_sealed` and
-     * `shop_whatsapp_accounts.access_token_sealed` make, and for the same
+     * plaintext — the same promise
+     * `shop_whatsapp_accounts.access_token_sealed` makes, and for the same
      * reason. Half the notification kinds carry a capability URL in a field
      * (`verifyUrl`, `resetUrl`, `inviteUrl`, `confirmUrl`, `completionUrl`,
      * `readinessUrl`, `recapUrl`, `unsubscribeUrl`), and that URL contains the

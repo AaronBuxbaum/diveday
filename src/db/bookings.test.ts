@@ -1487,14 +1487,12 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
       const releases = await db
         .select({
           supersededAt: waiverRecords.supersededAt,
-          tokenSealed: waiverRecords.tokenSealed,
         })
         .from(waiverRecords)
         .where(eq(waiverRecords.bookingId, shared.bookingId));
       expect(releases.length).toBeGreaterThan(0);
       for (const release of releases) {
         expect(release.supersededAt).not.toBeNull();
-        expect(release.tokenSealed).toBeNull();
       }
     });
 

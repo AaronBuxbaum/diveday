@@ -148,7 +148,7 @@ describe("party release QR handoff", () => {
     expect(await getWaiverForToken(f.db, first.token)).toEqual({ state: "unavailable" });
     await f.db
       .update(waiverRecords)
-      .set({ supersededAt: nowDate(), tokenSealed: null })
+      .set({ supersededAt: nowDate() })
       .where(eq(waiverRecords.bookingId, f.third.bookingId));
     expect(await getWaiverForToken(f.db, next.token)).toEqual({ state: "unavailable" });
   });

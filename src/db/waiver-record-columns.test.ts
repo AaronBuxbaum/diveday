@@ -15,7 +15,6 @@ import {
 describe("waiver record column sets", () => {
   const neverRead = [
     "tokenHash",
-    "tokenSealed",
     "draftSignerName",
     "draftMedicalAnswers",
     "draftGuardian",

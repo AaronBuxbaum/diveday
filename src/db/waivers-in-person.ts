@@ -482,7 +482,7 @@ export async function recordInPersonWaiver(
     if (signer.bookingId) {
       await tx
         .update(waiverRecords)
-        .set({ supersededAt: now, tokenSealed: null })
+        .set({ supersededAt: now })
         .where(
           and(eq(waiverRecords.bookingId, signer.bookingId), isNull(waiverRecords.supersededAt)),
         );

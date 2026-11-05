@@ -406,7 +406,7 @@ async function repointInTransaction(
     .where(and(inArray(bookings.id, seatIds), eq(bookings.shopId, input.shopId)));
   await tx
     .update(waiverRecords)
-    .set({ supersededAt: now, tokenSealed: null })
+    .set({ supersededAt: now })
     .where(
       and(
         eq(waiverRecords.shopId, input.shopId),

@@ -1,12 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, getTableColumns } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createWaiverToken, hashWaiverToken, waiverLinkToken } from "@/lib/waiver-tokens";
 import { fileScopedShopContext } from "@/test/db";
 import { waiverRecords } from "./schema";
 import { setTripStatus } from "./trips";
-import { completeWaiver, getWaiverForToken, threadWaiverKey } from "./waivers-completion";
+import { getWaiverForToken, threadWaiverKey } from "./waivers-completion";
 import { issueWaiverRequest, openWaiverInThread } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
-import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
+import { now, waiverContextFor } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -137,38 +138,27 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   /**
-   * The openable copy exists only while the link does. Once the release is
-   * signed or the link retired, a reader of the database is back to holding a
-   * digest and nothing else.
+   * **A waiver link is derived from its row** (#3903), as a booking link is
+   * (ADR 20261104-derived-booking-link-tokens): the row keeps a digest and no
+   * openable copy, and no `SECRET_ENCRYPTION_KEY` is needed to hand the same
+   * link over twice.
    */
-  it("keeps the openable copy only while the link is live", async () => {
-    const { db, shop, booking, person } = await waiverContext();
+  it("derives the link from its record and stores only the digest", async () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+    const { db, shop, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a link");
-
-    const [pending] = await db
+    const [stored] = await db
       .select()
       .from(waiverRecords)
       .where(eq(waiverRecords.id, issued.recordId));
-    expect(pending?.tokenSealed).toBeTruthy();
-    // Sealed, never the token itself.
-    expect(pending?.tokenSealed).not.toContain(issued.token);
-
-    await completeWaiver(db, issued.token, {
-      signerName: person.fullName,
-      agreed: true,
-      medicalAnswers: clearAnswers,
-    });
-
-    const [signed] = await db
-      .select()
-      .from(waiverRecords)
-      .where(eq(waiverRecords.id, issued.recordId));
-    expect(signed?.status).toBe("completed");
-    expect(signed?.tokenSealed).toBeNull();
+    expect(issued.token).toBe(waiverLinkToken(issued.recordId));
+    expect(stored?.tokenHash).toBe(hashWaiverToken(issued.token));
+    expect(Object.keys(getTableColumns(waiverRecords))).not.toContain("tokenSealed");
+    expect(JSON.stringify(stored)).not.toContain(issued.token);
   });
 
-  it("falls back to minting a fresh link when the deployment has no sealing key", async () => {
+  it("hands back the same live link without SECRET_ENCRYPTION_KEY", async () => {
     vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
     const { db, shop, booking } = await waiverContext();
     const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
@@ -178,17 +168,45 @@ describe("waiver records (in-memory PGlite)", () => {
       now: new Date(now.getTime() + 60_000),
     });
     if (!first.ok || !second.ok) throw new Error("expected both links to issue");
+    expect(second.token).toBe(first.token);
+    expect(second.reused).toBe(true);
+  });
 
-    // Exactly the behaviour this had before reuse existed: a second issue
-    // supersedes the first and the old bearer token fails closed.
-    expect(second.token).not.toBe(first.token);
-    expect(second.reused).toBe(false);
-    expect(await getWaiverForToken(db, first.token, now)).toEqual({ state: "unavailable" });
-    const [record] = await db
-      .select()
-      .from(waiverRecords)
+  it("mints a fresh link when the record's digest no longer matches its derived link", async () => {
+    // Erasure and the identity repoints retire a link by rotating its digest;
+    // the derived token must not be handed out again over a record like that.
+    const { db, shop, booking } = await waiverContext();
+    const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!first.ok) throw new Error("expected a link");
+    await db
+      .update(waiverRecords)
+      .set({ tokenHash: hashWaiverToken(createWaiverToken()) })
       .where(eq(waiverRecords.id, first.recordId));
-    expect(record?.tokenSealed).toBeNull();
+    const second = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: new Date(now.getTime() + 60_000),
+    });
+    if (!second.ok) throw new Error("expected a fresh link");
+    expect(second.reused).toBe(false);
+    expect(second.recordId).not.toBe(first.recordId);
+    expect(second.token).not.toBe(first.token);
+    expect(await getWaiverForToken(db, first.token, now)).toEqual({ state: "unavailable" });
+  });
+
+  it("never re-sends a link signed under a key this deployment no longer signs with", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!first.ok) throw new Error("expected a link");
+    vi.stubEnv("BOOKING_LINK_SECRET", `v2:${"r".repeat(40)}`);
+    const second = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: new Date(now.getTime() + 60_000),
+    });
+    if (!second.ok) throw new Error("expected a fresh link");
+    expect(second.reused).toBe(false);
+    expect(second.token).not.toBe(first.token);
   });
 
   it("does not supersede a booking waiver when issuing a person-scoped waiver", async () => {
@@ -280,13 +298,11 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   /**
-   * **The thread signs by record, not by token** (issue #2743). A deployment
-   * with no sealing key cannot read a sent link back, and minting over it would
-   * kill the link a staffer just sent and the draft typed into it. The thread
-   * never needs the token, so it keeps the live record whatever the key says.
+   * **The thread signs by record, not by token** (issue #2743): minting over a
+   * live record would kill the link a staffer just sent and the draft typed
+   * into it, so the thread keeps the live record.
    */
-  it("keeps the live release for the thread even without a sealing key", async () => {
-    vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+  it("keeps the live release for the thread", async () => {
     const { db, shop, booking } = await waiverContext();
     const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!sent.ok) throw new Error("expected the link to issue");

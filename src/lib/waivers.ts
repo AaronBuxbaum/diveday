@@ -28,7 +28,6 @@ export type WaiverStateFields = Omit<
   | "draftMedicalAlert"
   | "medicalAlert"
   | "tokenHash"
-  | "tokenSealed"
   | "integrityHash"
 >;
 

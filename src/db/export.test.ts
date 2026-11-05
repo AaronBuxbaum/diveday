@@ -147,12 +147,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   waiver_records: [
     "shop_id",
     "template_body", // the frozen copy; waiver_templates.csv carries the text
-    "token_hash", // bearer credential — never exported
-    // The openable copy of that same credential, kept only while the link is live
-    // (ADR 20260820-waiver-links-are-reused-not-reissued). Stronger than the hash: it
-    // *can* be opened, and an export bundle leaves DiveDay's custody entirely — to a
-    // shop's own S3, a laptop, an email attachment. A destination issues its own links.
-    "token_sealed",
+    "token_hash", // bearer credential — never exported; a destination issues its own links
     "draft_signer_name", // unsubmitted draft state, not a signed record
     "draft_acknowledged",
     "draft_medical_answers",
@@ -167,7 +162,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "delivery_error",
     // The physician's evaluation itself (issue #1252), and the diver's own copy before an answer
     // (`diver_medical_form_url`, issue #2797). The *facts* are exported; the documents are not, for
-    // the reason `token_sealed` is not.
+    // the reason `token_hash` is not: a bundle leaves DiveDay's custody entirely.
     //
     // **Revisited when the read path landed** (issue #1283), and unchanged. The app can now fetch
     // these bytes back — through one permission-gated route, signed as the uploader credential —

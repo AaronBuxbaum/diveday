@@ -1,4 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
+import { type BookingLinkKeyring, deploymentKeyring } from "./booking-link-token";
+import { signPayload } from "./signed-token";
 
 /**
  * Minting and hashing a waiver link's bearer token — the only two things in the
@@ -60,4 +62,29 @@ export function createWaiverToken(): string {
 /** What is stored, so a database read never yields a usable link. */
 export function hashWaiverToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+/**
+ * **A waiver link is derived from its record** (#3903), as a booking link is
+ * derived from its row (ADR 20261104-derived-booking-link-tokens): HMAC-SHA256
+ * under the booking-link signing key over `"waiver-link\0" || version || "\0"
+ * || record id`, 43 base64url characters, the same shape a random waiver token
+ * has. The record still stores only `hashWaiverToken(token)` and every lookup
+ * still matches that digest, so a database reader holds nothing replayable.
+ *
+ * Re-sending a live link (ADR 20260820-waiver-links-are-reused-not-reissued)
+ * recomputes this and reuses the record only when its digest still matches:
+ * a record whose digest was rotated (erasure, an identity repoint), minted
+ * under an older key, or minted at the counter or by an import gets a fresh
+ * link instead. Throws when the deployment holds no signing key, as issuing a
+ * booking link does.
+ */
+export function waiverLinkToken(
+  recordId: string,
+  keyring: BookingLinkKeyring = deploymentKeyring(),
+): string {
+  const version = keyring.signingVersion();
+  const key = keyring.keyFor(version);
+  if (!key) throw new Error(`No booking-link key for version ${version}`);
+  return signPayload(key, `waiver-link\0${version}\0${recordId}`);
 }

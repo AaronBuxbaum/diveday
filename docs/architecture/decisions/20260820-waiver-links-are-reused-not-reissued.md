@@ -1,7 +1,8 @@
 # 20260820-waiver-links-are-reused-not-reissued — A live waiver link is handed back, not replaced
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-11-05** (#3903)
 - **Date:** 2026-08-20
+- **Amended 2026-11-05 (#3903):** the sealed copy is gone. A waiver link is now derived from its record (`waiverLinkToken` in `src/lib/waiver-tokens.ts`): HMAC-SHA256 under the booking-link signing key ([20261104-derived-booking-link-tokens](20261104-derived-booking-link-tokens.md)) over the record id, and the record keeps only its digest. Re-sending recomputes the link and reuses the record while its digest still matches; a digest rotated by erasure or a repoint, or a signing key rotated since, mints a fresh link. `waiver_records.token_sealed` is no longer declared (the column drop follows one release later) and waiver issuing no longer reads `SECRET_ENCRYPTION_KEY`. The seven-day reuse rule below is unchanged; the sections on `token_sealed` describe the mechanism this replaced.
 
 ## Context
 

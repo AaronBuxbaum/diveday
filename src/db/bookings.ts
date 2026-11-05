@@ -4110,7 +4110,7 @@ export async function splitBookingIdentity(
       // dead.
       await tx
         .update(waiverRecords)
-        .set({ supersededAt: now, tokenSealed: null })
+        .set({ supersededAt: now })
         .where(
           and(
             eq(waiverRecords.shopId, input.shopId),
