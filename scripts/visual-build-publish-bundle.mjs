@@ -16,6 +16,7 @@ import path from "node:path";
 import process from "node:process";
 import { gzipSync } from "node:zlib";
 
+import { readPlan } from "./visual-baseline-plan.mjs";
 import { isPublicationId, publicationIdFromEnv } from "./visual-publication-id.mjs";
 
 const MAX_FILES = 10_000;
@@ -118,6 +119,7 @@ export function buildVisualPublishBundle({
   publicationId,
   skipPassedActual = false,
   contentAddressedActual = false,
+  referencedActual = [],
 }) {
   if (!sourceDir || !bundleDir) throw new Error("sourceDir and bundleDir are required");
   if (!isPublicationId(publicationId)) throw new Error("a valid publicationId is required");
@@ -164,6 +166,12 @@ export function buildVisualPublishBundle({
     }
     if (blobHashes.size > 0) sourceReport.actualBlobs = Object.fromEntries(blobHashes);
   }
+  // A capture that matched main's own hash (scripts/visual-baseline-plan.mjs) is a blob the
+  // bucket already holds: the bundle names it and the publisher checks it is there, instead of
+  // compressing, carrying and re-uploading the same bytes on every merge.
+  const referencedHashes = new Set(
+    referencedActual.filter((name) => blobHashes.has(name)).map((name) => blobHashes.get(name)),
+  );
   const markerReport = {
     ...sourceReport,
     actualDir: `snapshots/${snapshotVersion}/actual`,
@@ -203,7 +211,9 @@ export function buildVisualPublishBundle({
         outputFiles.push({
           path: `blobs/${hash}.png`,
           contentType: file.contentType,
-          bytes: readFileSync(file.absolute),
+          ...(referencedHashes.has(hash)
+            ? { reference: true }
+            : { bytes: readFileSync(file.absolute) }),
         });
       }
       continue;
@@ -240,6 +250,10 @@ export function buildVisualPublishBundle({
   }
   for (const outputFile of outputFiles) {
     const { path: publishPath, contentType, bytes } = outputFile;
+    if (outputFile.reference) {
+      manifest.push(`${publishPath}\t${contentType}\tref`);
+      continue;
+    }
     totalBytes += bytes.length;
     if (bytes.length > MAX_FILE_BYTES) {
       throw new Error(`reg-suit output file is too large: ${publishPath}`);
@@ -276,6 +290,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       publicationId: publicationIdFromEnv(),
       skipPassedActual: process.env.GITHUB_EVENT_NAME === "pull_request",
       contentAddressedActual: process.env.GITHUB_EVENT_NAME !== "pull_request",
+      referencedActual:
+        process.env.GITHUB_EVENT_NAME !== "pull_request" ? (readPlan()?.unchanged ?? []) : [],
     });
     console.log(
       `visual-build-publish-bundle: prepared ${result.count} files (${result.totalBytes} bytes) for snapshot ${result.snapshotVersion}`,

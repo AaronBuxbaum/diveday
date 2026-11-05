@@ -370,4 +370,46 @@ describe("content-addressed actual images", () => {
       expect(report.actualItems).toEqual(["a.png", "b.png", "c.png"]);
     }
   });
+
+  it("names an image main already holds instead of carrying it, and still carries a changed one", () => {
+    const { sourceDir, bundleDir } = fixture();
+    for (const dir of ["actual", "expected", "diff"]) mkdirSync(path.join(sourceDir, dir));
+    writeFileSync(path.join(sourceDir, "actual", "held.png"), "held");
+    writeFileSync(path.join(sourceDir, "actual", "moved.png"), "moved");
+    writeFileSync(
+      path.join(sourceDir, "out.json"),
+      JSON.stringify({
+        actualDir: "actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+        actualItems: ["held.png", "moved.png"],
+        failedItems: [],
+        deletedItems: [],
+      }),
+    );
+    const { snapshotVersion } = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4103-1",
+      contentAddressedActual: true,
+      referencedActual: ["held.png"],
+    });
+    const lines = readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")
+      .split("\n")
+      .filter(Boolean);
+    const blobLines = lines.filter((line) => line.startsWith("blobs/"));
+    expect(blobLines.filter((line) => line.endsWith("\tref"))).toHaveLength(1);
+    expect(blobLines.filter((line) => !line.endsWith("\tref"))).toHaveLength(1);
+    const report = JSON.parse(
+      gunzipSync(
+        readFileSync(path.join(bundleDir, "payload", `snapshots/${snapshotVersion}/out.json.gz`)),
+      ).toString("utf8"),
+    );
+    // The report is the same whether or not the bytes travel: both names keep their hash.
+    expect(Object.keys(report.actualBlobs)).toEqual(["held.png", "moved.png"]);
+    const [referenced] = blobLines.filter((line) => line.endsWith("\tref"));
+    const key = referenced.split("\t")[0];
+    expect(key).toBe(`blobs/${report.actualBlobs["held.png"]}.png`);
+    expect(() => readFileSync(path.join(bundleDir, "payload", `${key}.gz`))).toThrow();
+  });
 });

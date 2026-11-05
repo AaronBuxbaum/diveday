@@ -38,6 +38,11 @@ const COMMANDS = {
       this.input = input;
     }
   },
+  CopyObjectCommand: class CopyObjectCommand {
+    constructor(input) {
+      this.input = input;
+    }
+  },
 };
 
 function digest(bytes) {
@@ -323,6 +328,17 @@ function fakeS3({
           events.push(["PUT_DONE", key, input.IfNoneMatch ?? input.IfMatch]);
           await delay(1);
           return { ChecksumSHA256: checksum(bytes) };
+        }
+        if (kind === "CopyObjectCommand") {
+          events.push(["COPY", key, input.CopySource]);
+          const stored = objects.get(key);
+          if (!stored) throw s3Error("NoSuchKey", 404);
+          if (input.CopySource !== key) throw new Error("only a copy onto itself is expected");
+          if (input.CopySourceIfMatch !== stored.head.ETag)
+            throw s3Error("PreconditionFailed", 412);
+          stored.head.LastModified = new Date();
+          stored.head.Metadata = { ...input.Metadata };
+          return {};
         }
         throw new Error(`unexpected fake S3 command ${kind}`);
       } finally {
@@ -1164,6 +1180,128 @@ test("a blob whose bytes do not match its content address is refused before any 
     const s3 = fakeS3();
     await assert.rejects(publishBundle(args(f, s3, { prNumber: "" })), /content address/u);
     assert.equal(s3.events.filter(([event]) => event === "PUT_START").length, 0);
+  } finally {
+    f.cleanup();
+  }
+});
+
+/** The same bundle, with the named images turned into payload-less references. */
+function withReferences(f, names) {
+  const manifest = path.join(f.bundle, "manifest.tsv");
+  const lines = readFileSync(manifest, "utf8").split("\n").filter(Boolean);
+  const hashes = new Set(names.map((name) => f.blobs[name]));
+  const next = lines.map((line) => {
+    const [key] = line.split("\t");
+    const hash = /^blobs\/([0-9a-f]{64})\.png$/u.exec(key)?.[1];
+    if (!hash || !hashes.has(hash)) return line;
+    rmSync(path.join(f.bundle, "payload", `${key}.gz`));
+    return `${line}\tref`;
+  });
+  writeFileSync(manifest, `${next.join("\n")}\n`);
+}
+
+test("a referenced blob already in the bucket is confirmed, not uploaded", async () => {
+  const images = { "one.png": "pixels", "two.png": "second" };
+  const first = blobFixture({ version: VERSION_1, publicationId: "4101-1", images });
+  const next = blobFixture({ version: VERSION_2, publicationId: "4102-1", images });
+  try {
+    const s3 = fakeS3();
+    await publishBundle(args(first, s3, { prNumber: "" }));
+    for (const [key, stored] of s3.objects) {
+      if (key.includes("/blobs/")) stored.head.LastModified = new Date();
+    }
+    withReferences(next, ["one.png", "two.png"]);
+    s3.events.length = 0;
+    const result = await publishBundle(
+      args(next, s3, { prNumber: "", actualKey: "e".repeat(40), snapshotVersion: VERSION_2 }),
+    );
+    assert.equal(result.status, "published");
+    assert.ok(!s3.events.some(([event, key]) => event === "PUT_START" && key.includes("/blobs/")));
+    assert.ok(!s3.events.some(([event]) => event === "COPY"));
+  } finally {
+    first.cleanup();
+    next.cleanup();
+  }
+});
+
+test("a referenced blob near the bucket's expiry is refreshed from itself, with no upload", async () => {
+  const images = { "one.png": "pixels" };
+  const first = blobFixture({ version: VERSION_1, publicationId: "4101-1", images });
+  const next = blobFixture({ version: VERSION_2, publicationId: "4102-1", images });
+  try {
+    const s3 = fakeS3();
+    await publishBundle(args(first, s3, { prNumber: "" }));
+    const [blobKey] = [...s3.objects.keys()].filter((key) => key.includes("/blobs/"));
+    s3.objects.get(blobKey).head.LastModified = new Date(Date.now() - 15 * 86_400_000);
+    withReferences(next, ["one.png"]);
+    s3.events.length = 0;
+    await publishBundle(
+      args(next, s3, { prNumber: "", actualKey: "e".repeat(40), snapshotVersion: VERSION_2 }),
+    );
+    assert.deepEqual(
+      s3.events.filter(([event]) => event === "COPY").map(([, key]) => key),
+      [blobKey],
+    );
+    assert.ok(!s3.events.some(([event, key]) => event === "PUT_START" && key.includes("/blobs/")));
+    assert.ok(Date.now() - s3.objects.get(blobKey).head.LastModified.getTime() < 60_000);
+  } finally {
+    first.cleanup();
+    next.cleanup();
+  }
+});
+
+test("a referenced blob that is missing or foreign fails before the marker is published", async () => {
+  const images = { "one.png": "pixels" };
+  const seed = blobFixture({ version: VERSION_1, publicationId: "4101-1", images });
+  const next = blobFixture({ version: VERSION_2, publicationId: "4102-1", images });
+  try {
+    withReferences(next, ["one.png"]);
+    const nextArgs = (s3) =>
+      args(next, s3, { prNumber: "", actualKey: "e".repeat(40), snapshotVersion: VERSION_2 });
+
+    const empty = fakeS3();
+    await assert.rejects(publishBundle(nextArgs(empty)), /referenced blob is missing/u);
+    assert.ok(![...empty.objects.keys()].some((key) => key.endsWith("/out.json")));
+
+    const foreign = fakeS3();
+    await publishBundle(args(seed, foreign, { prNumber: "" }));
+    const [blobKey] = [...foreign.objects.keys()].filter((key) => key.includes("/blobs/"));
+    foreign.objects.get(blobKey).head.Metadata["diveday-blob-sha256"] = "0".repeat(64);
+    await assert.rejects(publishBundle(nextArgs(foreign)), /provenance/u);
+    assert.ok(
+      ![...foreign.objects.keys()].some((key) => key.startsWith(`${BUCKET}/${"e".repeat(40)}/`)),
+    );
+  } finally {
+    seed.cleanup();
+    next.cleanup();
+  }
+});
+
+test("a reference must be a blob, and nothing else may take a third field", async () => {
+  const f = blobFixture({
+    version: VERSION_1,
+    publicationId: "4101-1",
+    images: { "one.png": "x" },
+  });
+  try {
+    const manifest = path.join(f.bundle, "manifest.tsv");
+    const original = readFileSync(manifest, "utf8");
+    for (const [from, to] of [
+      [
+        `snapshots/${VERSION_1}/index.html\ttext/html`,
+        `snapshots/${VERSION_1}/index.html\ttext/html\tref`,
+      ],
+      [
+        `snapshots/${VERSION_1}/index.html\ttext/html`,
+        `snapshots/${VERSION_1}/index.html\ttext/html\tmaybe`,
+      ],
+    ]) {
+      writeFileSync(manifest, original.replace(from, to));
+      await assert.rejects(
+        publishBundle(args(f, fakeS3(), { prNumber: "" })),
+        /only a blob can be a reference|malformed publisher manifest/u,
+      );
+    }
   } finally {
     f.cleanup();
   }
