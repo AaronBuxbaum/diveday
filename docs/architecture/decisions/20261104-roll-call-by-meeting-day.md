@@ -46,5 +46,6 @@ the first Saturday's "back aboard" closed the second's count (#2557). It amends
   queue, running late, `/ready`'s recap, help requests and the fly-safe line read the run's window;
   none raises a safety signal between days.
 - A late count past the halfway point of two same-day windows belongs to the later day.
-- Known limits: the offline manifest does not know the boundary (#3904), and its compare-and-set is
-  run-wide (#3905).
+- An offline mark's newest-wins check compares only marks on the meeting day of its own
+  `occurred_at` (`onSameMeetingDayAs`), so Saturday's queued tap is not refused by Sunday's count.
+- Known limit: the offline manifest does not know the boundary (#3904).

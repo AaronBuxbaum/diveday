@@ -88,6 +88,7 @@ import { resolveTrainingMarks } from "./training-mark-resolve";
 import { invalidateTrainingPlansForCrewChange } from "./training-plan-crew";
 import {
   currentMeetingDayMarks,
+  onSameMeetingDayAs,
   rollCallCurrentDayIndex,
   rollCallDayIndex,
 } from "./trip-meeting-windows";
@@ -2130,6 +2131,7 @@ async function writeRollCall(
           eq(rollCallEvents.tripId, input.tripId),
           eq(rollCallEvents.bookingId, booking.id),
           eq(rollCallEvents.checkpoint, checkpoint),
+          onSameMeetingDayAs(occurredAt),
         ),
       )
       .orderBy(...newestMarkFirst())
@@ -2545,6 +2547,7 @@ export async function recordCrewRollCall(
                 eq(rollCallEvents.tripId, input.tripId),
                 eq(rollCallEvents.crewPersonId, assigned.personId),
                 eq(rollCallEvents.checkpoint, checkpoint),
+                onSameMeetingDayAs(occurredAt),
               ),
             )
             .orderBy(...newestMarkFirst())
