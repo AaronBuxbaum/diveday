@@ -13,6 +13,7 @@ import {
   CAPABILITY_PURPOSES,
   type CapabilityPurpose,
   type CapabilitySubject,
+  expiringPurposes,
   purposesNaming,
   spentPurposes,
 } from "@/lib/capabilities";
@@ -48,9 +49,10 @@ const naming = (subject: CapabilitySubject) => sqlList(purposesNaming(subject));
  *
  * `token_hash` is the SHA-256 of the token (`src/lib/bearer-tokens.ts`); the
  * token itself is never stored. `used_at` is set only on a purpose a use
- * spends (`use: "once"`). The purposes here never expire
- * (`lifetime: "never"`), so the table has no `expires_at` or `revoked_at` yet:
- * those arrive with the first purpose that needs them.
+ * spends (`use: "once"`). `expires_at` is set on exactly the purposes that
+ * expire (`lifetime: "expires"`). `revoked_at` marks a link a newer mint
+ * superseded (`reissue: "supersedes"`); a revoked row opens nothing but stays,
+ * so its page can still say the link is no longer available.
  */
 export const capabilities = pgTable(
   "capabilities",
@@ -68,6 +70,10 @@ export const capabilities = pgTable(
     tokenHash: text("token_hash").notNull().unique(),
     issuedAt: appNowTimestamp("issued_at").notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),
+    /** Set on exactly the purposes that expire (`CAPABILITY_POLICY[purpose].lifetime`). */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /** A newer link of the same purpose superseded this one; it opens nothing. */
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
   },
   (table) => [
     index("capabilities_person_idx").on(table.personId),
@@ -89,6 +95,11 @@ export const capabilities = pgTable(
     check(
       "capabilities_used_only_when_spent",
       sql`${table.usedAt} is null or ${table.purpose}::text in (${sqlList(spentPurposes())})`,
+    ),
+    // A purpose that expires always carries its deadline, and no other does.
+    check(
+      "capabilities_expiry_by_purpose",
+      sql`(${table.expiresAt} is not null) = (${table.purpose}::text in (${sqlList(expiringPurposes())}))`,
     ),
     // An erasure sweeps a shop's links by the address they went to.
     index("capabilities_sent_to_idx").on(table.shopId, table.sentTo),

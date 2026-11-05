@@ -28,6 +28,7 @@ import {
   hasLivePersonWaiverRequest,
   hasLiveWaiverRequest,
   issueWaiverRequest,
+  openWaiverInThread,
   recordWaiverDelivery,
   staleWaiverRecordForToken,
 } from "./waivers";
@@ -597,8 +598,8 @@ export async function issueWaiverOnJoin(
 
 /**
  * The join-send's "is one owed?" rule, shared by the two ways a joining diver
- * receives the link: on its own (`issueWaiverOnJoin`) or inside the booking
- * confirmation (`issueJoinWaiverLink`).
+ * is asked to sign: a waiver link on its own (`issueWaiverOnJoin`) or the
+ * thread's Sign step inside the booking confirmation (`openJoinSignStep`).
  */
 async function joinWaiverOwed(db: DbExecutor, shopId: string, bookingId: string): Promise<boolean> {
   const readiness = await getBookingReadiness(db, shopId, bookingId);
@@ -622,32 +623,36 @@ async function joinWaiverOwed(db: DbExecutor, shopId: string, bookingId: string)
   return !seat?.identityUnconfirmedAt;
 }
 
-/** A waiver link issued for the booking confirmation to carry. */
-export type JoinWaiverLink = {
-  url: string;
-  expiresAt: Date;
+/**
+ * The seat's release, opened for the booking confirmation to carry as the
+ * thread's Sign step (issue #2743). It names the record and the seat it was
+ * opened on, and no link: the confirmation builds the Sign step from the
+ * readiness link it already carries (`readinessWaiverLinkPath`), so the diver
+ * holds one credential for the trip, paperwork included.
+ */
+export type JoinSignStep = {
   waiverRecordId: string;
   personId: string;
   tripId: string;
 };
 
 /**
- * **One booking, one email** (UX review 2026-10-11, item 7). The lead
- * booker's waiver link, issued by the same rule as `issueWaiverOnJoin` but
- * sent with nothing: the booking confirmation carries it as its first step,
- * and `settleJoinWaiverDelivery` then records how it went. Null when no
- * waiver is owed (a signature still covers the trip, the trip asks for none,
- * the seat is held) or there is no origin to build a link on; the caller then
- * falls back to `issueWaiverOnJoin`, which says why on the record.
+ * **One booking, one email, one link** (UX review 2026-10-11, item 7; issue
+ * #2743). The booker's release, opened by the same rule as
+ * `issueWaiverOnJoin` and sent with nothing: the booking confirmation carries
+ * it as its first step, on the confirmation's own readiness link, and
+ * `settleJoinWaiverDelivery` then records how it went. Null when no waiver is
+ * owed (a signature still covers the trip, the trip asks for none, the seat is
+ * held) or there is no origin to build a link on; the caller then falls back
+ * to `issueWaiverOnJoin`, which says why on the record.
  */
-export async function issueJoinWaiverLink(
+export async function openJoinSignStep(
   db: DbExecutor,
   shopId: string,
   bookingId: string,
   now: Date = nowDate(),
-): Promise<JoinWaiverLink | null> {
-  const origin = publicAppUrl();
-  if (!origin) return null;
+): Promise<JoinSignStep | null> {
+  if (!publicAppUrl()) return null;
   const [observed] = await db
     .select({ personId: bookings.personId, tripId: bookings.tripId, email: people.email })
     .from(bookings)
@@ -655,25 +660,11 @@ export async function issueJoinWaiverLink(
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))
     .limit(1);
   if (!observed) return null;
-  const issue = async (tx: DbExecutor) => {
+  const open = async (tx: DbExecutor) => {
     if (!(await joinWaiverOwed(tx, shopId, bookingId))) return null;
-    const outcome = await issueWaiverRequest(tx, {
-      shopId,
-      bookingId,
-      expectedPersonId: observed.personId,
-      expectedTripId: observed.tripId,
-      now,
-    });
-    if (!outcome.ok) return null;
-    return {
-      url: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
-      expiresAt: outcome.expiresAt,
-      waiverRecordId: outcome.recordId,
-      personId: observed.personId,
-      tripId: observed.tripId,
-    };
+    return openSignStep(tx, { shopId, bookingId, ...observed, now });
   };
-  if (isTransactionExecutor(db)) return issue(db);
+  if (isTransactionExecutor(db)) return open(db);
   return withErasureCoordinatedBookingSend(
     db,
     {
@@ -683,25 +674,41 @@ export async function issueJoinWaiverLink(
       expectedTripId: observed.tripId,
       expectedEmail: observed.email,
     },
-    issue,
+    open,
   );
 }
 
+/** Open the seat's release in its thread, for the holder and departure observed. */
+async function openSignStep(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; personId: string; tripId: string; now?: Date },
+): Promise<JoinSignStep | null> {
+  const outcome = await openWaiverInThread(db, {
+    shopId: input.shopId,
+    bookingId: input.bookingId,
+    expectedPersonId: input.personId,
+    expectedTripId: input.tripId,
+    now: input.now,
+  });
+  if (!outcome.ok) return null;
+  return { waiverRecordId: outcome.recordId, personId: input.personId, tripId: input.tripId };
+}
+
 /**
- * After the confirmation that carried `link` was attempted: when it went out,
- * the waiver went with it, and the record says it was emailed; when it did
- * not, the waiver goes on its own the old way, which hands back the same live
- * link (ADR 20260820-waiver-links-are-reused-not-reissued) rather than
- * minting a second one. Either way the diver is never left holding nothing.
- * Returns that fallback's result, so a staff door can say whether the link
- * reached anyone; null when the confirmation carried it.
+ * After the confirmation that carried `step` was attempted: when it went out,
+ * the Sign step went with it, and the record says it was emailed; when it did
+ * not, the waiver goes on its own as a waiver link, on the same record (ADR
+ * 20260820-waiver-links-are-reused-not-reissued) rather than a second one.
+ * Either way the diver is never left holding nothing. Returns that fallback's
+ * result, so a staff door can say whether the link reached anyone; null when
+ * the confirmation carried it.
  */
 export async function settleJoinWaiverDelivery(
   db: DbExecutor,
   input: {
     shopId: string;
     bookingId: string;
-    link: JoinWaiverLink;
+    step: JoinSignStep;
     confirmationSent: boolean;
     /**
      * The provider's id for the confirmation that carried the link. Stored on
@@ -716,8 +723,8 @@ export async function settleJoinWaiverDelivery(
   if (!input.confirmationSent) {
     return issueAndDeliverWaiver(db, input.shopId, input.bookingId, {
       now: input.now,
-      expectedPersonId: input.link.personId,
-      expectedTripId: input.link.tripId,
+      expectedPersonId: input.step.personId,
+      expectedTripId: input.step.tripId,
     });
   }
   const recordDelivery = async (tx: DbExecutor) => {
@@ -726,17 +733,17 @@ export async function settleJoinWaiverDelivery(
       .from(waiverRecords)
       .where(
         and(
-          eq(waiverRecords.id, input.link.waiverRecordId),
+          eq(waiverRecords.id, input.step.waiverRecordId),
           eq(waiverRecords.shopId, input.shopId),
           eq(waiverRecords.bookingId, input.bookingId),
-          eq(waiverRecords.personId, input.link.personId),
+          eq(waiverRecords.personId, input.step.personId),
         ),
       )
       .limit(1);
     if (!record) return;
     await recordWaiverDelivery(tx, {
       shopId: input.shopId,
-      waiverRecordId: input.link.waiverRecordId,
+      waiverRecordId: input.step.waiverRecordId,
       channel: "email",
       delivery: { status: "sent", providerMessageId: input.confirmationProviderMessageId },
       now: input.now,
@@ -747,8 +754,8 @@ export async function settleJoinWaiverDelivery(
     {
       shopId: input.shopId,
       bookingId: input.bookingId,
-      expectedPersonId: input.link.personId,
-      expectedTripId: input.link.tripId,
+      expectedPersonId: input.step.personId,
+      expectedTripId: input.step.tripId,
     },
     recordDelivery,
   );
@@ -756,20 +763,20 @@ export async function settleJoinWaiverDelivery(
 }
 
 /**
- * The waiver link a re-sent confirmation carries (issue #2473): the booking's
- * live link, handed back by `issueWaiverRequest` (ADR
- * 20260820-waiver-links-are-reused-not-reissued) rather than a second one,
- * while a waiver is still owed or out. Null when none is owed (signed, or the
- * trip asks for none), the seat is held, or there is no origin to build a link
- * on; the resend then goes out as before.
+ * The Sign step a re-sent confirmation carries (issue #2473): the seat's live
+ * release, kept by `openWaiverInThread` rather than replaced, while a waiver
+ * is still owed or out. The mail builds it on its own readiness link (issue
+ * #2743), so a waiver link a staffer already sent keeps working beside it.
+ * Null when none is owed (signed, or the trip asks for none), the seat is
+ * held, or there is no origin to build a link on; the resend then goes out as
+ * before.
  */
-async function liveWaiverLinkForResend(
+async function signStepForResend(
   db: AppDb,
   shopId: string,
   bookingId: string,
-): Promise<JoinWaiverLink | null> {
-  const origin = publicAppUrl();
-  if (!origin) return null;
+): Promise<JoinSignStep | null> {
+  if (!publicAppUrl()) return null;
   const readiness = await getBookingReadiness(db, shopId, bookingId);
   const owed = readiness?.blockers.some(
     (blocker) =>
@@ -784,36 +791,21 @@ async function liveWaiverLinkForResend(
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       personId: bookings.personId,
       tripId: bookings.tripId,
-      email: people.email,
     })
     .from(bookings)
-    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   if (!seat || seat.identityUnconfirmedAt) return null;
-  const outcome = await issueWaiverRequest(db, {
-    shopId,
-    bookingId,
-    expectedPersonId: seat.personId,
-    expectedTripId: seat.tripId,
-  });
-  if (!outcome.ok) return null;
-  return {
-    url: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
-    expiresAt: outcome.expiresAt,
-    waiverRecordId: outcome.recordId,
-    personId: seat.personId,
-    tripId: seat.tripId,
-  };
+  return openSignStep(db, { shopId, bookingId, personId: seat.personId, tripId: seat.tripId });
 }
 
 /**
  * **Re-send a booking's confirmation with its waiver step** (issue #2473):
- * staff's "resend" used to drop the waiver link, because the token is never
- * stored in the clear. The live link is handed back and rides in the mail as
- * the first step, and once the mail has left, the waiver's delivery is
- * recorded against the confirmation's message id so a bounce reaches both.
- * Returns what `retryBookingConfirmation` returns.
+ * staff's "resend" used to drop the waiver. The seat's live release rides in
+ * the mail as its first step, on the mail's own readiness link (issue #2743),
+ * and once the mail has left, the waiver's delivery is recorded against the
+ * confirmation's message id so a bounce reaches both. Returns what
+ * `retryBookingConfirmation` returns.
  */
 export async function resendConfirmationWithWaiver(
   db: AppDb,
@@ -821,7 +813,7 @@ export async function resendConfirmationWithWaiver(
   bookingId: string,
   provider?: NotificationProvider,
 ) {
-  const link = await liveWaiverLinkForResend(db, shopId, bookingId).catch((error: unknown) => {
+  const step = await signStepForResend(db, shopId, bookingId).catch((error: unknown) => {
     log("booking.resend_waiver_link_failed", "error", {
       bookingId,
       errorCode: error instanceof Error ? error.name : "unknown_error",
@@ -833,16 +825,20 @@ export async function resendConfirmationWithWaiver(
     shopId,
     bookingId,
     provider,
-    link ?? undefined,
+    step ?? undefined,
   );
-  if (link && delivery?.status === "sent") {
+  if (step && delivery?.status === "sent" && delivery.carriedSignStep) {
     await settleJoinWaiverDelivery(db, {
       shopId,
       bookingId,
-      link,
+      step,
       confirmationSent: true,
       confirmationProviderMessageId: delivery.providerMessageId,
     });
+  } else if (step && delivery?.status === "sent") {
+    // The mail went without the Sign step (the seat moved under it): the
+    // release goes on its own rather than being recorded as emailed.
+    await settleJoinWaiverDelivery(db, { shopId, bookingId, step, confirmationSent: false });
   }
   return delivery;
 }

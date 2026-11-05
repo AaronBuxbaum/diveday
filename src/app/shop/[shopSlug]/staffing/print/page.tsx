@@ -10,7 +10,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { WEEK_PARAM } from "@/lib/week-board";
 import { SheetDocument } from "../../print/_components/SheetDocument";
 import { formatPaperDateTime } from "../../trips/[id]/_components/DeparturePaperIdentity";
-import { PacketSheet } from "../../trips/[id]/print/_components/TripPacket";
+import { PacketSheet } from "../../trips/[id]/_components/packet/TripPacket";
 import { staffingGapWords } from "../_components/gap-words";
 import { StaffingRotaSheet } from "../_components/StaffingRotaSheet";
 import { readStaffingWeek } from "../_components/staffing-week-read";

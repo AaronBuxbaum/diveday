@@ -82,9 +82,11 @@ export async function standingArrivalStatus(
  * moved to another departure does not carry an arrival from the first one.
  * Rides `booking_arrival_events_shop_trip_booking_occurred_idx`.
  *
- * Only usable in a query whose `from` or join is the unaliased `bookings`.
+ * Only usable in a query whose `from` or join is the unaliased `bookings`. On
+ * its own it is the raw sighting (`hasArrived`), whatever the seat's status:
+ * the recap's logbook sheet reads it that way, beside its own row.
  */
-const trailSaysArrived = sql<boolean>`coalesce((
+export const deskTrailSaysArrived = sql<boolean>`coalesce((
   select ${bookingArrivalEvents.status} = 'arrived'
   from ${bookingArrivalEvents}
   where ${bookingArrivalEvents.shopId} = ${bookings.shopId}
@@ -104,4 +106,4 @@ const trailSaysArrived = sql<boolean>`coalesce((
  *
  * Usable as a selected column or a `where` clause.
  */
-export const seatCheckedIn = sql<boolean>`(${bookings.status} = 'booked' and ${trailSaysArrived})`;
+export const seatCheckedIn = sql<boolean>`(${bookings.status} = 'booked' and ${deskTrailSaysArrived})`;

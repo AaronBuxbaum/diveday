@@ -106,7 +106,7 @@
   the departure door's own: readiness, admission, waiver and capacity. The old
   `/trips/[id]/walk-in` page is gone and redirects to the door.
 - **Counter window** — when the counter may still seat a walk-in on a departure
-  (`walkInDoorOpen`, `src/lib/operational-window.ts`): it starts inside the arrivals window and has
+  (`walkInDoorOpen`, `src/lib/departure-clock.ts`): it starts inside the arrivals window and has
   not sailed (the one departure buffer). The staffer's door and the seat action both ask it, so a
   typed URL or a stale page cannot seat someone on a boat that has gone.
 - **Counter payment hold** — Cash or Card machine tapped on an open order's Record payment row: a
@@ -142,8 +142,9 @@
 - **Arrivals window** — the counter's narrower lens on the operational horizon: departures from six
   hours ago through the next thirty-six. The backwards reach is the one deliberate asymmetry (a
   diver still walks up to the desk for a boat that already sailed); forwards it never outruns the
-  horizon. It decides when a departure's Divers tab carries the arrival desk and what the **arrival lookup**
-  searches.
+  horizon. It is two rungs on the **departure clock** (`desk_opens`, `desk_closes`; `arrivalsWindow`
+  in `src/lib/departure-clock.ts`). It decides when a departure's Divers tab carries the arrival desk
+  and what the **arrival lookup** searches.
 - **Arrival lookup** — Today's search for "which boat is this diver on?" (`?q=`): a name, phone,
   email or booking ID matched across every departure in the **arrivals window**, each match a row
   that opens that boat's Divers tab at the diver's own row. The tab itself has no search.
@@ -1415,13 +1416,20 @@
   booking gate, the trip page, the Today queue, and — through Today's own reader — the shift
   roster's crew-gap count.
 - **Departure clock** — the one ladder of offsets measured from a departure's scheduled start and
-  end (`src/lib/departure-clock.ts`, issue #2714): `push_opens` (six hours ahead),
+  end (`src/lib/departure-clock.ts`, issue #2714): `week_out` and `day_before` (when the two
+  reminders open), `desk_opens` and `desk_closes` (thirty-six hours ahead and six past the start:
+  the **arrivals window**), `push_opens` (six hours ahead), `scheduled_start`,
   `sailing_grace_over` and `back_grace_over` (an hour past the scheduled start and return, what
-  `hasSailed` and `hasReturned` ask), `recap_due` (four hours past the return) and `push_closes`
-  (twelve hours past the end). A rung is an instant on the schedule, never a claim about who is
-  aboard: it does not say a diver **sailed**, that everyone is back, or that a day has
-  **settled**; those are read off roll-call evidence. A new window measured from a departure is a
-  rung here, not an offset of its own.
+  `hasSailed` and `hasReturned` ask), `stage_stale` (two hours past the return, when a **trip
+  stage** stops speaking), `recap_due` (four hours past the return) and `push_closes` (twelve
+  hours past the end). Each rung says whether it is crossed on its instant or only after it, so no
+  caller picks an operator. `departurePhase` names where a departure is on the ordered rungs:
+  ahead, week out, day before, morning of, due out, scheduled out, scheduled back, recap due,
+  past; a phase names the schedule only and is never shown to a diver or staffer as a fact about
+  the boat (a boat tied up for a late diver is still *due out*). A rung or phase is an instant on the schedule, never a claim about who is aboard: it does
+  not say a diver **sailed**, that everyone is back, or that a day has **settled**; those are read
+  off roll-call evidence. A new window measured from a departure is a rung here, not an offset of
+  its own.
 - **Deck count** — the heads the captain counted on deck at one **roll-call checkpoint**, typed as
   one number on the Boat tab (`deck_counts`, newest per checkpoint stands; loop 5, row 1). The roll
   call's own head count is the sum of per-person marks, so a mark made against the wrong name still
@@ -1516,8 +1524,8 @@
   `src/db/trip-stages.ts`), and records rather than edits: `trip_stage_events` is append-only, a
   crew that taps the wrong word taps the right one, and the newest row wins. **A stage goes stale
   rather than wrong** — on the anonymous surfaces (the storefront, the follow link, the diver link)
-  it stops speaking two late-arrival buffers past the departure's own end (`liveStageOf`,
-  `STAGE_STALE_AFTER_MS`), because a crew that tapped *Underway* and then got busy would otherwise
+  it stops speaking two late-arrival buffers past the departure's own end (`liveStageOf`, the
+  **departure clock**'s `stage_stale` rung), because a crew that tapped *Underway* and then got busy would otherwise
   leave a diver's family reading "out on the reef" at midnight. The staff surfaces (the departure
   header, the shop home's station chip) read `boatStageOf` instead, whose staleness is the end of
   the return shop day, as the **trip phase** entry says: a crew is told its own boat is still out
@@ -1997,13 +2005,14 @@
   one sentence, the one link and the shop's name as its line (issue #2660, decided by Aaron
   2026-10-17). A state is a notification kind, so the once-per-booking dedup rows stay exact:
   `trip_reminder_7d` is `week_out`, `trip_reminder_24h` is `tonight` and `trip_recap` is `home`.
-  Booking sends one message, `booking_confirmation`, the `booked` state: the waiver link rides in it
-  (UX review 2026-10-11, item 7), so there is no second booking-time email. The sentence says how many things the diver still has to finish
+  Booking sends one message, `booking_confirmation`, the `booked` state: the waiver rides in it as
+  the thread's Sign step, `/ready/<token>/waiver` on the mail's own readiness link (UX review
+  2026-10-11, item 7; issue #2743), so there is no second booking-time email and no second link. The sentence says how many things the diver still has to finish
   when there are any, and the recap's sentence is the fly-safe sentence when one exists. The one
   exception is `tonight` before a diver's last boat with the shop: a second paragraph under the
   dock time says the fly-safe rule in hours (H-20261022-reminder-fly-safe-in, see **Earliest flight**). The 7-day
   and 24-hour cadences and the recap's four-hour floor are unchanged. Renderer in
-  `src/lib/notifications/diver-state-email.ts`. The booked message still carries the waiver link,
+  `src/lib/notifications/diver-state-email.ts`. The booked message still carries the Sign step,
   the course's materials and the terms the diver agreed to, which no thread page has to repeat
   before the diver has opened it, so it keeps its own renderer.
 - **Desk hours** and the **after-hours ping** — when somebody is at the shop's desk: one window every day in the shop's own zone (`shops.desk_opens_minute`, `shops.desk_closes_minute`, 08:00–18:00 until the shop changes it under Settings → Messages; once saved, `shops.desk_hours_confirmed_at` lets the public footer print them). A diver message filed by the inbound email or WhatsApp webhook while the desk is closed sends a `desk_after_hours` email to each staffer who wants it: on by default for an owner or a manager, off for everyone else, and each staffer's own answer (`user_accounts.after_hours_ping`) wins, from their Email settings. At most one per person per half hour (`user_accounts.after_hours_pinged_at`, claimed by one conditional update), naming how many divers (distinct senders) wrote in since the desk closed and are still unanswered, with a link to the Inbox. Only a message whose sender the channel vouched for (`inbound_messages.sender_authenticated`) and that SES did not flag as spam (`inbound_messages.spam_flagged`) pings or is counted. A message batched behind a ping gets one trailing catch-up from the hourly `/api/cron/desk-pings` sweep once that staffer's half hour has run out, if it is still unanswered and the desk is still closed. The webhooks run the ping after they have answered (`after()`). Never the sender, the subject or a word of the message. Staff operational mail under H-20260724-channel-sends-booking-waiver: no unsubscribe, no postal footer, not queued for retry, and never from a demo shop. Rule in `src/lib/desk-hours.ts`, reads and the send in `src/db/desk-pings.ts`.

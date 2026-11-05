@@ -15,9 +15,9 @@ import {
 } from "@/db/seat-diver";
 import { getTripWithBooked } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
+import { walkInDoorOpen } from "@/lib/departure-clock";
 import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { walkInDoorOpen } from "@/lib/operational-window";
 import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireShopSurface } from "@/lib/session";

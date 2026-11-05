@@ -5,15 +5,16 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { routeSource } from "@/test/route-source";
 
 /**
- * **"Print with medical alerts"** (issue #2990) is a Server Component over the
+ * **"Print with medical alerts"** (issue #2990), the departure's `?print=medical-alerts`
+ * state (#2736), is a Server Component over the
  * whole trip packet, so these read its source: who it checks, that it records
  * before it renders, and that no other print ever carries the words. The
  * check and the recording themselves are `readMedicalAlertsForPrint`'s and `recordMedicalAlertsPrint`'s tests
  * (src/db/medical-alerts.test.ts); the rendered sheet is
  * `DiverRowMedicalAlert.test.tsx`'s and the e2e's.
  */
-const SOURCE = routeSource(import.meta.dirname, "page.tsx");
-const SRC = path.resolve(import.meta.dirname, "../../../../../../..");
+const SOURCE = routeSource(import.meta.dirname, "MedicalAlertsPacketSheet.tsx");
+const SRC = path.resolve(import.meta.dirname, "../../../../../..");
 
 function sourceFiles(directory: string): string[] {
   return readdirSync(directory).flatMap((name) => {
@@ -105,7 +106,7 @@ describe("the print with medical alerts", () => {
       return /printedMedicalAlerts:\s*(read\.)?printed/.test(text);
     });
     expect(handing.map((file) => path.relative(SRC, file)).sort()).toEqual([
-      "app/shop/[shopSlug]/trips/[id]/print/medical-alerts/page.tsx",
+      "app/shop/[shopSlug]/trips/[id]/_components/MedicalAlertsPacketSheet.tsx",
     ]);
     // The default packet and the day's paper never pass any.
     for (const other of [
@@ -118,7 +119,7 @@ describe("the print with medical alerts", () => {
 
   it("composes the manifest as paper, and the paper rows still carry the words (B03)", () => {
     const packet = readFileSync(
-      path.join(SRC, "app/shop/[shopSlug]/trips/[id]/print/_components/TripPacket.tsx"),
+      path.join(SRC, "app/shop/[shopSlug]/trips/[id]/_components/packet/TripPacket.tsx"),
       "utf8",
     );
     // The words reach the shared view as an argument, never a URL value.
@@ -137,5 +138,25 @@ describe("the print with medical alerts", () => {
     expect(paper).toContain("<PrintedSoulsOnBoard");
     expect(paper).toContain("<CrewRollCall {...rollCall.crew} paper />");
     expect(paper).toContain("{boatPaper}");
+  });
+});
+
+describe("the departure's print states (issue 2736)", () => {
+  const states = routeSource(import.meta.dirname, "departure-states.tsx");
+
+  it("answers ?print=medical-alerts with the alerts' packet, before the plain packet", () => {
+    const alerts = states.indexOf("if (params.print === MEDICAL_ALERTS_PRINT) {");
+    const plain = states.indexOf("if (params.print !== undefined) return <TripPacketSheet");
+    expect(alerts).toBeGreaterThan(-1);
+    expect(plain).toBeGreaterThan(alerts);
+  });
+
+  it("is reached from the trip id the page has already parsed, never a route of its own", () => {
+    const page = readFileSync(path.join(import.meta.dirname, "../page.tsx"), "utf8");
+    const parses = page.indexOf("if (!uuidParam(tripId)) notFound();");
+    const dispatches = page.indexOf("await departureStateOf(");
+    expect(parses).toBeGreaterThan(-1);
+    expect(dispatches).toBeGreaterThan(parses);
+    expect(page.indexOf("requireShopSurface(")).toBeGreaterThan(dispatches);
   });
 });

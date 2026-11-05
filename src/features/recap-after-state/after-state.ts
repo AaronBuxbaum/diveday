@@ -25,6 +25,7 @@ import type { DepthUnit } from "@/lib/depth-units";
 import type { DiveRecordComparison } from "@/lib/dive-record";
 import type { FlySafeAnchor, FlySafeReason } from "@/lib/fly-safe";
 import {
+  formatDateTimeTz,
   formatOrdinal,
   formatRelativeDay,
   formatShortDate,
@@ -76,6 +77,17 @@ export type AfterStateProps = {
   >;
   /** The trip's date, already formatted in the shop's zone. */
   when: string;
+  /**
+   * **What ties the logbook sheet to the shop's record** (reviews of #2745).
+   * `reference` is the booking's short reference and `asOf` the instant this
+   * page read the record, in the shop's zone with the zone named, so a signer
+   * can see a page that was printed from an old tab. `signable` is whether the
+   * shop has evidence the diver was on the boat or at the desk (a roll-call
+   * `boarded`, or the desk's sighting); without it the sheet leaves the
+   * signature line out, because a clock alone says nothing about a diver who
+   * never came.
+   */
+  sheet: { reference: string; asOf: string; signable: boolean };
   diverName: string;
   sites: RecapSite[];
   /**
@@ -279,6 +291,11 @@ export function recapBuddyLinkUrl(
   return `${schedule}?${BUDDY_PARAM}=${buddyReferralId(bookingId)}`;
 }
 
+/** The short reference a printed page names its booking by: eight characters of its id. */
+export function bookingReference(bookingId: string): string {
+  return bookingId.replace(/-/g, "").slice(0, 8).toUpperCase();
+}
+
 export async function buildAfterStateProps(input: {
   db: AppDb;
   data: RecapPageData;
@@ -326,9 +343,9 @@ export async function buildAfterStateProps(input: {
     getReviewForBooking(db, bookingId),
     nextPublicDeparture(db, shop.id, locale, shop.timezone),
     getRecapPulseForBooking(db, bookingId),
-    // **The four server-side-only fields on `RecapPageData` are read here and
-    // nowhere else** (`trip.id`, `trip.courseId`, `trip.lensId`, `personId` —
-    // see their own
+    // **The server-side-only fields on `RecapPageData` are read here and
+    // nowhere else** (`trip.id`, `trip.courseId`, `trip.lensId`, `personId`,
+    // and `seenThatDay` below — see their own
     // note in src/db/recap.ts). They never reach `AfterStateProps`: this props
     // object names every field explicitly rather than spreading `data`, which
     // is what keeps a person uuid off a client-visible bearer-token page.
@@ -347,6 +364,7 @@ export async function buildAfterStateProps(input: {
   ]);
   const [firstBooked] = booked;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
+  const asOf = nowDate();
 
   return {
     t,
@@ -382,6 +400,13 @@ export async function buildAfterStateProps(input: {
       isCourse: data.course !== null,
     }),
     when,
+    sheet: {
+      reference: bookingReference(bookingId),
+      asOf: formatDateTimeTz(asOf, locale, shop.timezone),
+      // Read with the recap's own row and dock read (`seenThatDay`), so the
+      // sheet costs this page no read of its own.
+      signable: data.seenThatDay.boardedAtRollCall || data.seenThatDay.arrivedAtDesk,
+    },
     diverName: data.diverName,
     sites: data.sites,
     // Read once in `getRecapPageData`, beside the plan it is compared against,

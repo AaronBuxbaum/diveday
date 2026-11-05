@@ -149,7 +149,6 @@ import {
   reviewModerationEvents,
   reviewReplies,
   rollCallEvents,
-  shopShoreAlertTokens,
   shops,
   staffCredentialHistory,
   staffCredentials,
@@ -2475,10 +2474,7 @@ async function scrubPiiBlob(
       .returning({ id: shops.id });
     logFuzzyMatch(ctx, "bookkeeper_email", unsent.length);
     if (unsent.length > 0) ctx.found.bookkeeperCleared = true;
-    await tx
-      .delete(shopShoreAlertTokens)
-      .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));
-    // The stop links mailed to that address (issue #3721): each names it.
+    // The links mailed to that address (issue #3721): each names it.
     await tx
       .delete(capabilities)
       .where(and(eq(capabilities.shopId, shopId), eq(capabilities.sentTo, address)));

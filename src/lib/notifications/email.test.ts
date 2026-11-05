@@ -66,21 +66,20 @@ describe("bookingConfirmationEmail", () => {
     expect(email.text).not.toContain("Bring");
     expect(email.html).not.toContain("Bring");
   });
-  /** UX review 2026-10-11, item 7: one booking, one email, the waiver its first step. */
-  it("carries the waiver as its first step, above the dock call", () => {
+  /** UX review 2026-10-11, item 7, and #2743: the thread's Sign step first, no expiry of its own. */
+  it("carries the Sign step as its first step, above the dock call", () => {
     const email = bookingConfirmationEmail({
       ...base,
       readinessUrl: "https://dive.day/ready/abc",
-      waiverUrl: "https://dive.day/waivers/xyz",
-      waiverExpiresAt: new Date("2026-07-30T13:00:00.000Z"),
+      waiverUrl: "https://dive.day/ready/abc/waiver",
     });
     const lead = "First, sign your waiver. Blue Mantis needs it before you board.";
     expect(email.text).toContain(lead);
-    expect(email.text).toContain("https://dive.day/waivers/xyz");
-    expect(email.text).toContain("This private link expires");
+    expect(email.text).toContain("https://dive.day/ready/abc/waiver");
+    expect(email.text).not.toContain("This private link expires");
     expect(email.text.indexOf(lead)).toBeLessThan(email.text.indexOf("be at the dock"));
-    expect(email.text.indexOf("waivers/xyz")).toBeLessThan(email.text.indexOf("ready/abc"));
-    expect(email.html).toContain('href="https://dive.day/waivers/xyz"');
+    expect(email.text.indexOf("ready/abc/waiver")).toBeLessThan(email.text.indexOf("ready/abc\n"));
+    expect(email.html).toContain('href="https://dive.day/ready/abc/waiver"');
     expect(email.html).toContain("Sign your waiver");
   });
 
@@ -95,7 +94,7 @@ describe("bookingConfirmationEmail", () => {
     const email = bookingConfirmationEmail({
       ...base,
       shopName: "<b>Mantis</b>",
-      waiverUrl: "https://dive.day/waivers/xyz",
+      waiverUrl: "https://dive.day/ready/abc/waiver",
     });
     expect(email.html).not.toContain("<b>Mantis</b>");
   });

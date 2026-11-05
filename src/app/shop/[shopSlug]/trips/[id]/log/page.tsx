@@ -17,7 +17,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { SheetDocument } from "../../../print/_components/SheetDocument";
 import { DeparturePaperIdentity, formatPaperDateTime } from "../_components/DeparturePaperIdentity";
-import { PacketSheet } from "../print/_components/TripPacket";
+import { PacketSheet } from "../_components/packet/TripPacket";
 import { BoatAtDeparture } from "./_components/BoatAtDeparture";
 import { CertificationEvidence } from "./_components/CertificationEvidence";
 import { CrewAtDeparture } from "./_components/CrewAtDeparture";

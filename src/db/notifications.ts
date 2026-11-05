@@ -13,7 +13,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { readinessLinkPath, readinessWaiverLinkPath } from "@/lib/booking-capabilities";
 import { nowDate, nowMs } from "@/lib/clock";
 import { readLearningMaterials } from "@/lib/courses";
 import {
@@ -2033,6 +2033,13 @@ export async function sendAndRecordNotification(
 }
 
 /**
+ * The seat whose release a confirmation carries as its Sign step: the mail
+ * builds it on its own readiness link, and only for this holder on this
+ * departure (issue #2743).
+ */
+export type ConfirmationSignStep = { personId: string; tripId: string };
+
+/**
  * Re-send a booking confirmation from stored booking/trip/shop data. Only
  * confirmations are retryable: a waiver link's one-time token is never stored,
  * so re-sending a waiver means issuing a fresh link, not a retry.
@@ -2042,10 +2049,10 @@ export async function retryBookingConfirmation(
   shopId: string,
   bookingId: string,
   provider?: NotificationProvider,
-  /** The live waiver link to carry as the confirmation's first step (`resendConfirmationWithWaiver`). */
-  waiver?: { url: string; expiresAt: Date; personId: string; tripId: string },
+  /** The seat's release to carry as the confirmation's Sign step (`resendConfirmationWithWaiver`). */
+  signStep?: ConfirmationSignStep,
 ) {
-  return sendStoredBookingConfirmation(db, shopId, bookingId, { provider, waiver });
+  return sendStoredBookingConfirmation(db, shopId, bookingId, { provider, signStep });
 }
 
 /**
@@ -2090,7 +2097,7 @@ export async function sendCourseSeatConfirmation(
  * no dock time, no meeting point, no `/ready` link until the seven-day
  * reminder. The same confirmation `bookSpot` sends, built from the stored
  * rows, with the diver's waiver riding in it as its first step when one is
- * owed (`issueJoinWaiverLink`), so one seating is still one email. Null when
+ * owed (`openJoinSignStep`), so one seating is still one email. Null when
  * the diver has no address on file.
  */
 export async function sendStaffSeatingConfirmation(
@@ -2098,13 +2105,13 @@ export async function sendStaffSeatingConfirmation(
   shopId: string,
   bookingId: string,
   options: {
-    waiver: { url: string; expiresAt: Date; personId: string; tripId: string } | null;
+    signStep: ConfirmationSignStep | null;
     provider?: NotificationProvider;
   },
 ) {
   return sendStoredBookingConfirmation(db, shopId, bookingId, {
     provider: options.provider,
-    waiver: options.waiver,
+    signStep: options.signStep,
   });
 }
 
@@ -2115,8 +2122,8 @@ async function sendStoredBookingConfirmation(
   options: {
     provider?: NotificationProvider;
     onlyWithMaterials?: boolean;
-    /** The diver's waiver link, when it rides in this confirmation. */
-    waiver?: { url: string; expiresAt: Date; personId?: string; tripId?: string } | null;
+    /** The diver's release, when it rides in this confirmation as its Sign step. */
+    signStep?: ConfirmationSignStep | null;
   },
 ) {
   const loadRows = (executor: DbExecutor) =>
@@ -2165,10 +2172,10 @@ async function sendStoredBookingConfirmation(
       const learningMaterials = readLearningMaterials(row.course?.learningMaterials);
       if (options.onlyWithMaterials && learningMaterials.length === 0) return null;
       const origin = publicAppUrl();
-      const waiver =
-        options.waiver?.personId === row.person.id && options.waiver.tripId === row.trip.id
-          ? options.waiver
-          : null;
+      // A Sign step opened for someone else's seat, or another departure, is
+      // never this mail's: the readiness link below opens only this seat.
+      const signs =
+        options.signStep?.personId === row.person.id && options.signStep.tripId === row.trip.id;
       const readinessCapability = origin
         ? await issueBookingCapability(tx, {
             shopId,
@@ -2199,8 +2206,16 @@ async function sendStoredBookingConfirmation(
         readinessUrl: readinessCapability
           ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
           : undefined,
+        // The Sign step is the readiness link's own (issue #2743): no waiver link.
+        ...(signs && readinessCapability
+          ? {
+              waiverUrl: new URL(
+                readinessWaiverLinkPath(readinessCapability.token),
+                `${origin}/`,
+              ).toString(),
+            }
+          : {}),
         ...(learningMaterials.length > 0 ? { learningMaterials } : {}),
-        ...(waiver ? { waiverUrl: waiver.url, waiverExpiresAt: waiver.expiresAt } : {}),
         // The same where, calendar, money and window the booking-time send
         // carried (ux review 2026-10-11, items 4 and 5). Online when a card
         // checkout took this seat's money; otherwise it is owed at the shop.
@@ -2221,10 +2236,15 @@ async function sendStoredBookingConfirmation(
         // original booking confirmation's provider idempotency key.
         confirmedAt: nowDate(),
       };
-      return sendAndRecordNotification(tx, notification, {
+      const delivery = await sendAndRecordNotification(tx, notification, {
         provider: options.provider,
         signal: notificationProviderSignal(),
       });
+      // Whether the mail rendered the Sign step, read off the notification it
+      // built: a caller records "emailed" evidence only on this, never on "sent"
+      // alone (a seat moved between the caller's read and the fenced one gets a
+      // confirmation with no step).
+      return { ...delivery, carriedSignStep: notification.waiverUrl !== undefined };
     },
   );
 }

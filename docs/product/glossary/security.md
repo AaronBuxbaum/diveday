@@ -29,8 +29,10 @@
   A token minted for one purpose never verifies under another. The purposes so far are the
   email-unsubscribe and stop links: `interest_unsubscribe`, `courtesy_email_unsubscribe`,
   `weekly_digest_unsubscribe`, and `shore_alert_stop` and `bookkeeper_stop` (each spent by one
-  use; issue #3721). Booking
-  capabilities, account tokens and the other link tables move onto it later.
+  use; issue #3721), and the first expiring one, `shore_alert_confirm`: it carries `expires_at`,
+  and a fresh one sets `revoked_at` on the outstanding one (it supersedes). Account tokens and the
+  other link tables move onto it later. Booking links stay on `booking_capabilities`, because
+  they are derived from their row rather than stored as a digest.
 - **Booking link** — a bearer link to one booking under one purpose (`readiness`, `confirm`,
   `claim`, `handoff`, `course_forms`), a row of `booking_capabilities` whose URL is derived, not
   stored: `c<version>.<row id>.<HMAC tag>` (ADR

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { seededTestDb } from "@/test/db";
 import type { AppDb, DbExecutor } from "./client";
 import { capturedDemoResetPlan, resetDemoFromSnapshot } from "./demo-reset-snapshot";
+import { PERSON_COLUMNS } from "./person-columns";
 import * as schema from "./schema";
 import { accountSessions, mediaDeletionAttempts, people, shops, userAccounts } from "./schema";
 import {
@@ -67,9 +68,9 @@ import {
  */
 
 /**
- * Every table that belongs to a shop: the ones carrying a `shop_id` column,
- * plus every table that reaches one of those through a foreign key, however
- * many hops it takes. `auth_provider_accounts` -> `user_accounts` -> `people`
+ * Every table that belongs to a shop: the ones carrying a `shop_id` column or
+ * a person column the registry (`./person-columns`) names, plus every table
+ * that reaches one of those through a foreign key, however many hops it takes. `auth_provider_accounts` -> `user_accounts` -> `people`
  * is three tables and one shop.
  *
  * The closure is run to a fixed point rather than one hop deep, because the
@@ -101,9 +102,17 @@ function shopScopedTableNames(): string[] {
   // its own, and leaving it out made both paths' answers about the shop row
   // unassertable — `RESET_KEEPS`'s "the shop itself survives" entry was inert
   // prose rather than a claim this file checks.
+  //
+  // So is every table the person-column registry names. A person belongs to a
+  // shop, so a row naming one belongs to it too, whether or not its column
+  // declares the foreign key: the registry holds a `person_id` without
+  // `.references(...)` as firmly as one with it (`person-columns.test.ts`), and
+  // the declared graph alone would leave that table for `UNSCOPED_REASONS` to
+  // excuse in prose (issue #2724, the reap slice).
+  const personTables = personColumnTables();
   const scoped = new Set(
     [...tables]
-      .filter(([name, table]) => table.hasShopId || name === "shops")
+      .filter(([name, table]) => table.hasShopId || name === "shops" || personTables.has(name))
       .map(([name]) => name),
   );
 
@@ -117,6 +126,11 @@ function shopScopedTableNames(): string[] {
     }
   }
   return [...scoped];
+}
+
+/** Every table that has a column the person-column registry names. */
+function personColumnTables(): Set<string> {
+  return new Set(PERSON_COLUMNS.map((row) => row.table));
 }
 
 /** Every table in the schema, by name. */
@@ -134,10 +148,12 @@ function allTableNames(): string[] {
 }
 
 /**
- * The complement of the closure: every table no foreign key connects to a
- * shop, and why that is the right answer for it. Adding a table that belongs
- * to a person or a shop but names them as *text* fails here, which is the only
- * place it can fail — see the note above.
+ * The complement of the closure: every table neither a foreign key nor the
+ * person-column registry connects to a shop, and why that is the right answer
+ * for it. A table that names a person by a `person_id` is in the closure through
+ * the registry, so it cannot be excused here. Adding a table that belongs to a
+ * person or a shop but names them as other *text* (an address, a slug) fails
+ * here, which is the only place it can fail — see the note above.
  */
 const UNSCOPED_REASONS: Record<string, string> = {
   retention_prune_state:
@@ -360,6 +376,14 @@ describe("shop-scoped delete-path coverage", () => {
         .filter((name) => !scoped.has(name))
         .sort(),
     ).toEqual(Object.keys(UNSCOPED_REASONS).sort());
+  });
+
+  it("excuses no table the person-column registry names", () => {
+    const personTables = personColumnTables();
+    expect(personTables.size).toBeGreaterThan(30);
+    expect(Object.keys(UNSCOPED_REASONS).filter((name) => personTables.has(name))).toEqual([]);
+    const scoped = new Set(shopScopedTableNames());
+    expect([...personTables].filter((name) => !scoped.has(name))).toEqual([]);
   });
 
   it("deletes or deliberately keeps every shop-scoped table in resetDemoSchedule", async () => {

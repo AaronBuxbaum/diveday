@@ -129,7 +129,7 @@ describe("the glossary's trip-stage entry", () => {
 
   it("says a stale stage is silence rather than a contradiction", async () => {
     const text = await entry();
-    expect(text).toContain("STAGE_STALE_AFTER_MS");
+    expect(text).toContain("`stage_stale` rung");
     expect(text).toMatch(/stale\s+rather than wrong/);
     expect(text).toMatch(/says nothing about whether the day may close/);
   });

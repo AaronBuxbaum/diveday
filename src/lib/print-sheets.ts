@@ -126,11 +126,22 @@ export function storefrontAddress(shopSlug: string, origin: string | null): stri
 
 /**
  * Where a departure's packet is drawn: the trip page in its print state
- * (`?print=1`, #2736), the way the blow-out is `?blowout=1`. The medical-alerts
- * variant keeps its own child route.
+ * (`?print=1`, #2736), the way the blow-out is `?blowout=1`.
  */
 export function tripPacketPath(shopSlug: string, tripId: string): string {
   return `${shopPath(shopSlug, "trips", tripId)}?print=1`;
+}
+
+/** The print state that carries the medical alerts' words. */
+export const MEDICAL_ALERTS_PRINT = "medical-alerts";
+
+/**
+ * Where the packet with the medical alerts' words is drawn: the same print
+ * state, with the alerts (#2736). Opened by a form's `window.open`, never a
+ * prefetching link, because drawing it writes the trail.
+ */
+export function tripMedicalAlertsPacketPath(shopSlug: string, tripId: string): string {
+  return `${shopPath(shopSlug, "trips", tripId)}?print=${MEDICAL_ALERTS_PRINT}`;
 }
 
 /**

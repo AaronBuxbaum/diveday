@@ -50,7 +50,7 @@ export function demoStageTaps(
  * after it** (issue #2421). A crew's word is a row, not a clock, so a demo
  * seeded while the dawn boat was underway still says Underway after she is
  * back, until `liveStageOf` retires the word two hours past her end
- * (`STAGE_STALE_AFTER_MS`). Nothing re-runs this between resets: a pass once a
+ * (the departure clock's `stage_stale` rung). Nothing re-runs this between resets: a pass once a
  * night could only add the words due at that one hour, and stamping taps
  * ahead of the clock would be words nobody has said yet.
  *

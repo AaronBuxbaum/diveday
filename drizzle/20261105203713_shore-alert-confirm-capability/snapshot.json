@@ -1,0 +1,279 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2ab17260-27cc-43fe-b2f8-03cc46797cb9",
+  "prevIds": [
+    "acf5a466-092a-430c-b0ea-c32841b3ae9b"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "capability_purpose"
+      ],
+      "writes": [
+        "s|enum|public.capability_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "shop_shore_alert_tokens"
+      ],
+      "writes": [
+        "s|tbl|public.shop_shore_alert_tokens",
+        "n|tbl|public.shop_shore_alert_tokens",
+        "e|tbl|public.shop_shore_alert_tokens",
+        "n|rel|public.shop_shore_alert_tokens",
+        "n|type|public.shop_shore_alert_tokens"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "capabilities",
+        "expires_at"
+      ],
+      "writes": [
+        "s|col|public.capabilities.expires_at",
+        "n|col|public.capabilities.expires_at",
+        "e|col|public.capabilities.expires_at"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "capabilities",
+        "revoked_at"
+      ],
+      "writes": [
+        "s|col|public.capabilities.revoked_at",
+        "n|col|public.capabilities.revoked_at",
+        "e|col|public.capabilities.revoked_at"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_expiry_by_purpose",
+        "n|ck|public.capabilities.capabilities_expiry_by_purpose",
+        "e|ck|public.capabilities.capabilities_expiry_by_purpose",
+        "n|con|public.capabilities.capabilities_expiry_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.expires_at",
+        "n|col|public.capabilities.purpose"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_subject_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.purpose",
+        "n|col|public.capabilities.interest_id",
+        "n|col|public.capabilities.person_id",
+        "n|col|public.capabilities.sent_to",
+        "e|col|public.capabilities.purpose",
+        "e|col|public.capabilities.interest_id",
+        "e|col|public.capabilities.person_id",
+        "e|col|public.capabilities.sent_to"
+      ],
+      "sqlHash": "fef641013e18c2ca"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_used_only_when_spent"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.used_at",
+        "n|col|public.capabilities.purpose",
+        "e|col|public.capabilities.used_at",
+        "e|col|public.capabilities.purpose"
+      ],
+      "sqlHash": "d086a45816d9e074"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "expires_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "revoked_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_expiry_by_purpose",
+        "value": "(\"expires_at\" is not null) = (\"purpose\"::text in ('shore_alert_confirm'))",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"shop_shore_alert_tokens\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_shore_alert_tokens\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_shore_alert_tokens\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_shore_alert_tokens\",\"purpose\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_shore_alert_tokens\",\"email\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_shore_alert_tokens\",\"token_hash\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_shore_alert_tokens\",\"expires_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_shore_alert_tokens\",\"used_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_shore_alert_tokens\",\"superseded_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_shore_alert_tokens\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"shop_shore_alert_tokens_shop_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"shop_shore_alert_tokens\",\"shop_shore_alert_tokens_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"shop_shore_alert_tokens\",\"shop_shore_alert_tokens_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "uniques\u0000[\"public\",\"shop_shore_alert_tokens\",\"shop_shore_alert_tokens_token_hash_key\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"shop_shore_alert_tokens\",\"shop_shore_alert_tokens_purpose\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"shop_shore_alert_tokens\",\"shop_shore_alert_tokens_expiry\"]"
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"capability_purpose\"]",
+      "set": {
+        "values": [
+          "interest_unsubscribe",
+          "courtesy_email_unsubscribe",
+          "weekly_digest_unsubscribe",
+          "shore_alert_stop",
+          "bookkeeper_stop",
+          "shore_alert_confirm"
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_subject_by_purpose\"]",
+      "set": {
+        "value": "(\"purpose\"::text in ('interest_unsubscribe') and \"interest_id\" is not null and \"person_id\" is null and \"sent_to\" is null)\n        or (\"purpose\"::text in ('courtesy_email_unsubscribe', 'weekly_digest_unsubscribe') and \"person_id\" is not null and \"interest_id\" is null and \"sent_to\" is null)\n        or (\"purpose\"::text in ('shore_alert_stop', 'bookkeeper_stop', 'shore_alert_confirm') and \"sent_to\" is not null and \"sent_to\" = lower(\"sent_to\") and \"person_id\" is null and \"interest_id\" is null)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_used_only_when_spent\"]",
+      "set": {
+        "value": "\"used_at\" is null or \"purpose\"::text in ('shore_alert_stop', 'bookkeeper_stop', 'shore_alert_confirm')"
+      }
+    }
+  ]
+}

@@ -43,7 +43,6 @@ import {
   setupRequests,
   shopBackupDeliveryClaims,
   shopContactEmailConfirmationTokens,
-  shopShoreAlertTokens,
   staffReplies,
   stripeWebhookEvents,
   todayReadMarks,
@@ -356,14 +355,9 @@ export const PRUNE_ARMS = {
     id: shopContactEmailConfirmationTokens.id,
     clock: shopContactEmailConfirmationTokens.expiresAt,
   },
-  // The shore contact's confirm links (H-20261014-stale-roll-call-recipients), from `created_at`.
-  shop_shore_alert_tokens: {
-    from: shopShoreAlertTokens,
-    id: shopShoreAlertTokens.id,
-    clock: shopShoreAlertTokens.createdAt,
-  },
-  // The stop links mailed to a shop's own addresses (issue #3721), from
-  // `issued_at`: they never expire, and they hold the address. The Monday
+  // The links mailed to a shop's own addresses (issue #3721), from
+  // `issued_at`: the shore contact's confirm link (which expires in days) and
+  // the stop links (which never do); they hold the address. The Monday
   // email's opt-out links age out with the send claims they used to live on
   // (`weekly_digest_sends`' window, security review D1): their clock is moved
   // forward by the difference, so one table window serves both. An unsubscribe

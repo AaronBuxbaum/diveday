@@ -41,8 +41,8 @@ audience, with the tag checked before any row is read.
 ## Consequences
 
 - The migration deletes every booking link; holders land on the dead-link page and its rescue mail.
-- `token_hash` and `token_sealed` stay declared, unused, for one release (the expand/contract
-  guard); #3901 drops them. Waiver links are #3903.
+- `token_hash` and `token_sealed` stayed declared, unused, for one release (the expand/contract
+  guard); #3901 dropped them. Waiver links are #3903.
 - In the deploy window an old instance's link inserts fail the new CHECK and index.
 - Dropping a version from both variables kills its links. Versions stop at 9.
 - Delivered links are not yet revoked on a contact change (#3902).

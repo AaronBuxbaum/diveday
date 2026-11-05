@@ -66,6 +66,9 @@ export async function openWaiverFromReady(token: string) {
   const opened = await openWaiverInThread(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
+    // The holder and departure this request read: a seat moved since refuses.
+    expectedPersonId: ctx.data.person.id,
+    expectedTripId: ctx.data.detail.trip.id,
   });
   if (!opened.ok) redirect(`${base(token)}?error=waiver`);
   redirect(waiverPath(token));

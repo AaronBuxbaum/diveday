@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { arrivalsWindow } from "./departure-clock";
 import {
-  ARRIVALS_AHEAD_HOURS,
-  ARRIVALS_LOOKBACK_HOURS,
-  arrivalsWindow,
   arrivalsWindowIsInsideHorizon,
   OPERATIONAL_HORIZON_DAYS,
   OPERATIONAL_HORIZON_MS,
@@ -37,8 +35,8 @@ describe("the operational horizon", () => {
 describe("the arrivals window", () => {
   it("reaches back over the boats that already sailed and forward over tomorrow's", () => {
     const window = arrivalsWindow(NOW);
-    expect(window.from.getTime()).toBe(NOW.getTime() - ARRIVALS_LOOKBACK_HOURS * HOUR);
-    expect(window.to.getTime()).toBe(NOW.getTime() + ARRIVALS_AHEAD_HOURS * HOUR);
+    expect(window.from.getTime()).toBe(NOW.getTime() - 6 * HOUR);
+    expect(window.to.getTime()).toBe(NOW.getTime() + 36 * HOUR);
   });
 
   it("never outruns the operational horizon, so Check-in can't show what Not ready dropped", () => {

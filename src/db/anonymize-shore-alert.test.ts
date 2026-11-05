@@ -1,8 +1,8 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { capabilities, people, personRoles, shopShoreAlertTokens, shops } from "./schema";
+import { capabilities, people, personRoles, shops } from "./schema";
 import { setShopShoreAlertContact } from "./shops";
 import { issueShoreAlertConfirmation, issueShoreAlertStopToken } from "./shore-alert-tokens";
 
@@ -48,15 +48,16 @@ describe("anonymizeDiver — the shore contact's address", () => {
         })
         .from(shops)
         .where(eq(shops.id, shop.id));
-      const tokens = await db
-        .select({ id: shopShoreAlertTokens.id })
-        .from(shopShoreAlertTokens)
-        .where(eq(shopShoreAlertTokens.shopId, shop.id));
-      const stops = await db
+      const links = await db
         .select({ id: capabilities.id })
         .from(capabilities)
-        .where(and(eq(capabilities.shopId, shop.id), eq(capabilities.purpose, "shore_alert_stop")));
-      return { ...row, tokens: tokens.length + stops.length };
+        .where(
+          and(
+            eq(capabilities.shopId, shop.id),
+            inArray(capabilities.purpose, ["shore_alert_confirm", "shore_alert_stop"]),
+          ),
+        );
+      return { ...row, tokens: links.length };
     };
     return { erase, shore };
   }

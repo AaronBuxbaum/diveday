@@ -71,6 +71,25 @@ describe("buildAfterStateProps", () => {
     expect(props).not.toHaveProperty("personId");
   });
 
+  it("ties the logbook sheet to the booking and the read, and signs for no one the shop never saw", async () => {
+    const { data, bookingId } = await recapData();
+    const props = await buildAfterStateProps({
+      db: ctx.db,
+      data,
+      bookingId,
+      locale: "en-US",
+      t: diverTranslator("en-US"),
+      params: {},
+      actions,
+      mintHandoff: false,
+      delivered: false,
+    });
+    expect(props.sheet.reference).toBe(bookingId.replace(/-/g, "").slice(0, 8).toUpperCase());
+    expect(props.sheet.asOf).toMatch(/\d/);
+    // Booked, no roll call, no sighting at the desk: nothing says they came.
+    expect(props.sheet.signable).toBe(false);
+  });
+
   it("offers the share-with-the-boat tick from a delivered readiness link only (security review r5-4, F3 and N-a)", async () => {
     const { data, bookingId } = await recapData();
     const build = (mintHandoff: boolean, delivered: boolean) =>

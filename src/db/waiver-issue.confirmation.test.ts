@@ -3,21 +3,28 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { verifyBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { applyProviderEmailEvent, recordNotificationDelivery } from "./notifications";
 import { bookings, tripRequirements, waiverDeliveries, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import {
-  issueJoinWaiverLink,
+  openJoinSignStep,
   resendConfirmationWithWaiver,
   settleJoinWaiverDelivery,
 } from "./waiver-issue";
-import { getDiverWaiverChannelStates, getDiverWaiverRequestStatus } from "./waivers";
+import {
+  getDiverWaiverChannelStates,
+  getDiverWaiverRequestStatus,
+  getWaiverForToken,
+  issueWaiverRequest,
+} from "./waivers";
 
 /**
  * Issue #2473: the join waiver rides in the confirmation, so its delivery
  * follows the confirmation's provider message id, and a staff resend carries
- * the live waiver link again.
+ * the seat's release again. Issue #2743: it rides as the thread's Sign step,
+ * on the readiness link the mail already carries, never as a waiver link.
  */
 
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
@@ -71,8 +78,8 @@ describe("the join waiver follows the confirmation that carried it", () => {
   it("a bounce on the confirmation marks the waiver bounced too", async () => {
     configureMail();
     const { db, shop, bookingId, personId } = await bookingWithWaiverOwed();
-    const link = await issueJoinWaiverLink(db, shop.id, bookingId);
-    if (!link) throw new Error("no link");
+    const step = await openJoinSignStep(db, shop.id, bookingId);
+    if (!step) throw new Error("no sign step");
     await recordNotificationDelivery(db, {
       shopId: shop.id,
       bookingId,
@@ -82,7 +89,7 @@ describe("the join waiver follows the confirmation that carried it", () => {
     await settleJoinWaiverDelivery(db, {
       shopId: shop.id,
       bookingId,
-      link,
+      step,
       confirmationSent: true,
       confirmationProviderMessageId: "ses-confirmation-1",
     });
@@ -100,14 +107,14 @@ describe("the join waiver follows the confirmation that carried it", () => {
     const [channel] = await db
       .select({ providerStatus: waiverDeliveries.providerStatus })
       .from(waiverDeliveries)
-      .where(eq(waiverDeliveries.waiverRecordId, link.waiverRecordId));
+      .where(eq(waiverDeliveries.waiverRecordId, step.waiverRecordId));
     expect(channel?.providerStatus).toBe("bounced");
     expect((await getDiverWaiverChannelStates(db, shop.id, personId)).email).toBe("failed");
     expect(await getDiverWaiverRequestStatus(db, shop.id, personId)).toBe("failed");
     const [record] = await db
       .select({ status: waiverRecords.deliveryProviderStatus })
       .from(waiverRecords)
-      .where(eq(waiverRecords.id, link.waiverRecordId));
+      .where(eq(waiverRecords.id, step.waiverRecordId));
     expect(record?.status).toBe("bounced");
   });
 });
@@ -119,20 +126,32 @@ describe("resendConfirmationWithWaiver", () => {
     return `${content?.Text?.Data ?? ""}${content?.Html?.Data ?? ""}`;
   }
 
-  it("carries the booking's live waiver link, the same one, and follows the resent mail", async () => {
+  /** The readiness token in the mail's Sign step, which must be its readiness link's own. */
+  function signStepToken(body: string): string {
+    const match = body.match(/\/ready\/([A-Za-z0-9._-]+)\/waiver/);
+    if (!match?.[1]) throw new Error("no Sign step in the mail");
+    return match[1];
+  }
+
+  it("carries the seat's release as the Sign step on its own readiness link, and follows the resent mail", async () => {
     configureMail();
     sesSend.mockResolvedValue({ MessageId: "ses-resend-1" });
     const { db, shop, bookingId, personId } = await bookingWithWaiverOwed();
-    const original = await issueJoinWaiverLink(db, shop.id, bookingId);
-    if (!original) throw new Error("no link");
+    const original = await openJoinSignStep(db, shop.id, bookingId);
+    if (!original) throw new Error("no sign step");
 
     const delivery = await resendConfirmationWithWaiver(db, shop.id, bookingId);
     expect(delivery).toMatchObject({ status: "sent", providerMessageId: "ses-resend-1" });
-    const token = original.url.split("/waivers/")[1] ?? "";
-    expect(token.length).toBeGreaterThan(20);
-    expect(sentBody()).toContain(token);
+    const body = sentBody();
+    // One credential: no waiver link, and the Sign step opens on the mail's
+    // own readiness link, which opens this seat and no other.
+    expect(body).not.toContain("/waivers/");
+    const token = signStepToken(body);
+    expect(body).toContain(`https://diveday.example/ready/${token}`);
+    const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
+    expect(capability).toMatchObject({ shopId: shop.id, bookingId });
 
-    // One record: the live link was handed back, not replaced.
+    // One record: the live release was kept, not replaced.
     const records = await db
       .select({ id: waiverRecords.id })
       .from(waiverRecords)
@@ -149,6 +168,22 @@ describe("resendConfirmationWithWaiver", () => {
     expect(await getDiverWaiverRequestStatus(db, shop.id, personId)).toBe("failed");
   });
 
+  it("keeps a waiver link a staffer already sent working beside the Sign step", async () => {
+    configureMail();
+    sesSend.mockResolvedValue({ MessageId: "ses-resend-3" });
+    const { db, shop, bookingId } = await bookingWithWaiverOwed();
+    const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!sent.ok) throw new Error(`issue failed: ${sent.reason}`);
+
+    await resendConfirmationWithWaiver(db, shop.id, bookingId);
+    expect(sentBody()).not.toContain(sent.token);
+    signStepToken(sentBody());
+    // The link in the diver's hands still opens the same, unsigned record.
+    const state = await getWaiverForToken(db, sent.token);
+    expect(state.state).toBe("available");
+    expect(state.state === "available" ? state.record.id : null).toBe(sent.recordId);
+  });
+
   it("sends the plain confirmation when no waiver is owed", async () => {
     configureMail();
     sesSend.mockResolvedValue({ MessageId: "ses-resend-2" });
@@ -160,6 +195,7 @@ describe("resendConfirmationWithWaiver", () => {
     const delivery = await resendConfirmationWithWaiver(db, shop.id, bookingId);
     expect(delivery?.status).toBe("sent");
     expect(sentBody()).not.toContain("/waivers/");
+    expect(sentBody()).not.toMatch(/\/ready\/[A-Za-z0-9._-]+\/waiver/);
     expect(
       await db.select().from(waiverRecords).where(eq(waiverRecords.bookingId, bookingId)),
     ).toEqual([]);

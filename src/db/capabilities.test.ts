@@ -2,9 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { CAPABILITY_POLICY, CAPABILITY_PURPOSES, type CapabilityPurpose } from "@/lib/capabilities";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { issueCapability, spendCapability, verifyCapability } from "./capabilities";
+import { issueCapability, openCapability, spendCapability, verifyCapability } from "./capabilities";
 import { mergeDiverRecords } from "./diver-merge";
 import { askAnytime } from "./interests";
 import { findOrCreatePerson } from "./people";
@@ -50,6 +51,13 @@ function subjectFor(
   }
 }
 
+/** A deadline for a purpose that expires, and none for one that does not. */
+function lifetimeFor(purpose: CapabilityPurpose): { expiresAt?: Date } {
+  return CAPABILITY_POLICY[purpose].lifetime === "expires"
+    ? { expiresAt: new Date(nowDate().getTime() + 60 * 60 * 1000) }
+    : {};
+}
+
 describe("issueCapability and verifyCapability", () => {
   it.each(CAPABILITY_PURPOSES)(
     "%s: verifies under its own purpose and no other",
@@ -57,7 +65,12 @@ describe("issueCapability and verifyCapability", () => {
       const { db, shop } = ctx;
       const ids = await subjects();
       const subjectId = subjectFor(purpose, ids);
-      const token = await issueCapability(db, { purpose, shopId: shop.id, subjectId });
+      const token = await issueCapability(db, {
+        purpose,
+        shopId: shop.id,
+        subjectId,
+        ...lifetimeFor(purpose),
+      });
 
       expect(await verifyCapability(db, { purpose, token })).toMatchObject({
         shopId: shop.id,
@@ -78,6 +91,7 @@ describe("issueCapability and verifyCapability", () => {
         purpose,
         shopId: shop.id,
         subjectId: subjectFor(purpose, ids),
+        ...lifetimeFor(purpose),
       });
       const [row] = await db
         .select()
@@ -169,6 +183,99 @@ describe("spendCapability", () => {
     await expect(
       spendCapability(db, { purpose: "courtesy_email_unsubscribe", token }),
     ).rejects.toThrow(/not spent/);
+  });
+});
+
+/**
+ * **The first expiring purpose** (issue #3721): the shore contact's confirm
+ * link. Adversarial: an expired, superseded or spent link opens nothing and
+ * cannot be spent, and the table refuses a deadline on the wrong purpose.
+ */
+describe("a purpose that expires and supersedes", () => {
+  const purpose = "shore_alert_confirm" as const;
+  const at = new Date("2026-10-15T12:00:00Z");
+  const later = new Date("2026-10-22T12:00:00Z");
+
+  it("refuses a mint without a deadline, and a deadline on a purpose that never expires", async () => {
+    const { db, shop } = ctx;
+    await expect(
+      issueCapability(db, { purpose, shopId: shop.id, subjectId: ADDRESS }),
+    ).rejects.toThrow(/expiresAt/);
+    await expect(
+      issueCapability(db, {
+        purpose: "shore_alert_stop",
+        shopId: shop.id,
+        subjectId: ADDRESS,
+        expiresAt: later,
+      }),
+    ).rejects.toThrow(/expiresAt/);
+  });
+
+  it("opens and spends before its deadline, and neither at or after it", async () => {
+    const { db, shop } = ctx;
+    const token = await issueCapability(db, {
+      purpose,
+      shopId: shop.id,
+      subjectId: ADDRESS,
+      expiresAt: later,
+      now: at,
+    });
+    expect(await openCapability(db, { purpose, token, now: at })).toMatchObject({
+      subjectId: ADDRESS,
+      expiresAt: later,
+    });
+    expect(await openCapability(db, { purpose, token, now: later })).toBeNull();
+    expect(await spendCapability(db, { purpose, token, now: later })).toBeNull();
+    // Still known, so the page can say the link is no longer available.
+    expect(await verifyCapability(db, { purpose, token })).toMatchObject({ usedAt: null });
+    expect(await spendCapability(db, { purpose, token, now: at })).toMatchObject({ usedAt: at });
+    expect(await openCapability(db, { purpose, token, now: at })).toBeNull();
+  });
+
+  it("a fresh mint revokes the outstanding one, in this shop only", async () => {
+    const { db, shop } = ctx;
+    const [other] = await db
+      .insert(shops)
+      .values({
+        name: "Other Shop",
+        slug: `other-${crypto.randomUUID().slice(0, 8)}`,
+        timezone: "UTC",
+      })
+      .returning({ id: shops.id });
+    if (!other) throw new Error("second shop missing");
+    const input = { purpose, subjectId: ADDRESS, expiresAt: later, now: at };
+    const elsewhere = await issueCapability(db, { ...input, shopId: other.id });
+    const first = await issueCapability(db, { ...input, shopId: shop.id });
+    const second = await issueCapability(db, { ...input, shopId: shop.id });
+
+    expect(await openCapability(db, { purpose, token: first, now: at })).toBeNull();
+    expect(await spendCapability(db, { purpose, token: first, now: at })).toBeNull();
+    expect(await verifyCapability(db, { purpose, token: first })).toMatchObject({
+      revokedAt: at,
+    });
+    expect(await openCapability(db, { purpose, token: second, now: at })).not.toBeNull();
+    expect(await openCapability(db, { purpose, token: elsewhere, now: at })).not.toBeNull();
+  });
+
+  it("the table refuses an expiring purpose with no deadline, and a deadline on any other", async () => {
+    const { db, shop } = ctx;
+    await expect(
+      db.insert(capabilities).values({
+        purpose,
+        shopId: shop.id,
+        sentTo: ADDRESS,
+        tokenHash: hashBearerToken("no-deadline"),
+      }),
+    ).rejects.toThrow();
+    await expect(
+      db.insert(capabilities).values({
+        purpose: "bookkeeper_stop",
+        shopId: shop.id,
+        sentTo: ADDRESS,
+        tokenHash: hashBearerToken("stray-deadline"),
+        expiresAt: later,
+      }),
+    ).rejects.toThrow();
   });
 });
 

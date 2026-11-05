@@ -1,5 +1,5 @@
-import { HOUR_MS, nowDate } from "./clock";
-import { ARRIVALS_LOOKBACK_HOURS } from "./operational-window";
+import { nowDate } from "./clock";
+import { hasCrossed } from "./departure-clock";
 import type { SimilarDeparture } from "./similar-departures";
 import { hasSailed } from "./trips";
 
@@ -147,7 +147,7 @@ export type NoShowGateInput = {
  * one mis-tap nobody ever learns to undo. The boat leaving is the first moment
  * "they did not come" is a statement rather than a guess.
  *
- * The closing stays {@link ARRIVALS_LOOKBACK_HOURS}, the same reach
+ * The closing stays the departure clock's `desk_closes` rung, the same reach
  * `arrivalsWindow` gives the queue, so the door can never outlive the row it
  * sits on. What the tap *claims* inside that window is not constant, though —
  * see {@link noShowClaim}.
@@ -161,10 +161,9 @@ export function noShowGate(input: NoShowGateInput): NoShowGate {
   if (input.bookingStatus === "no_show") return "already_marked";
   if (!seatIsHeld(input.bookingStatus)) return "not_booked";
   if (input.tripStatus === "cancelled") return "trip_cancelled";
-  const startsAt = input.startsAt.getTime();
-  const now = input.now.getTime();
-  if (now < startsAt) return "before_departure";
-  if (now > startsAt + ARRIVALS_LOOKBACK_HOURS * HOUR_MS) return "window_closed";
+  const departure = { startsAt: input.startsAt };
+  if (!hasCrossed("scheduled_start", departure, input.now)) return "before_departure";
+  if (hasCrossed("desk_closes", departure, input.now)) return "window_closed";
   return "eligible";
 }
 

@@ -4,11 +4,8 @@ import { inHorizonReadiness } from "@/db/blockers";
 import { listCheckInQueue } from "@/db/check-in";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import {
-  arrivalsWindow,
-  type OperationalWindow,
-  operationalWindow,
-} from "@/lib/operational-window";
+import { arrivalsWindow } from "@/lib/departure-clock";
+import { type OperationalWindow, operationalWindow } from "@/lib/operational-window";
 import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { countBlockedDiversNextBoatDay, getTodayWork } from "./index";

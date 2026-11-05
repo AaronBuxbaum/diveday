@@ -1,15 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
+import { DEPARTURE_BUFFER_MS, rungOffsetMs } from "@/lib/departure-clock";
 import { type CrewRollCallSubject, rollCallCompleteness } from "@/lib/manifests";
-import {
-  liveStageOf,
-  STAGE_STALE_AFTER_MS,
-  TRIP_STAGES,
-  type TripStage,
-  type TripStageReading,
-} from "@/lib/trip-stages";
+import { liveStageOf, TRIP_STAGES, type TripStage, type TripStageReading } from "@/lib/trip-stages";
 import {
   assembleDayCloseout,
   assembleEveningClose,
@@ -220,11 +214,11 @@ describe("assembleDayCloseout", () => {
 
     it("stops reading a stage the crew stopped maintaining", () => {
       // **Constraint 3.** A word goes stale two buffers past the departure's
-      // own end (`STAGE_STALE_AFTER_MS`), and by then the clock has long since
+      // own end (the clock's `stage_stale` rung), and by then the clock has long since
       // answered on its own — so a stale stage cannot move this reading in
       // *either* direction. The window in which it could is empty, and that is
       // arithmetic rather than convention:
-      expect(STAGE_STALE_AFTER_MS).toBeGreaterThan(DEPARTURE_BUFFER_MS);
+      expect(rungOffsetMs("stage_stale")).toBeGreaterThan(DEPARTURE_BUFFER_MS);
 
       const endsAt = new Date(now.getTime() - 3 * HOUR);
       const long = (word: TripStage) =>

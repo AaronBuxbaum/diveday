@@ -2,9 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import {
+  capabilities,
   mediaDeletionAttempts,
   processorErasureObligations,
-  shopShoreAlertTokens,
   shops,
 } from "@/db/schema";
 import { getShopById } from "@/db/shops";
@@ -342,7 +342,12 @@ describe("every settings mutation refuses the daily crew", () => {
       .where(eq(shops.id, shop.id));
     expect(await redirectedTo(() => resendShoreAlertConfirmationAction())).toBe(refused);
     expect(
-      await db.select().from(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shop.id)),
+      await db
+        .select()
+        .from(capabilities)
+        .where(
+          and(eq(capabilities.shopId, shop.id), eq(capabilities.purpose, "shore_alert_confirm")),
+        ),
     ).toEqual([]);
 
     const rentals = new FormData();

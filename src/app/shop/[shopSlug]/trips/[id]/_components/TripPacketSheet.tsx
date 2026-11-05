@@ -5,7 +5,7 @@ import { PACKET_PAPER } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { SheetDocument } from "../../../print/_components/SheetDocument";
-import { PACKET_READY_SELECTOR, PacketReady, TripPacket } from "../print/_components/TripPacket";
+import { PACKET_READY_SELECTOR, PacketReady, TripPacket } from "./packet/TripPacket";
 
 /**
  * **The trip packet: one departure's sheets** (issue #2745), the departure's own

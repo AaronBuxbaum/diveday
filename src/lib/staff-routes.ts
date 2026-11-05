@@ -117,8 +117,6 @@ export const STAFF_ROUTES = {
   "trips/[id]/manifest": { face: true },
   "trips/[id]/party/[leadId]/waivers": {},
   "trips/[id]/prep": { face: true },
-  // The packet is the departure's own `?print=1`; the medical alerts are it with other words: its way up is the faces'.
-  "trips/[id]/print/medical-alerts": { face: true },
   waivers: { parent: SETTINGS },
   "waivers/print": {},
 } as const satisfies Record<string, StaffRouteNode>;

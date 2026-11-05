@@ -1,5 +1,5 @@
 import { nowDate } from "./clock";
-import { recapIsDue } from "./recap-schedule";
+import { recapIsDue } from "./departure-clock";
 import { seatSailed } from "./seat-sailed";
 import { hasReturned } from "./trips";
 
@@ -156,7 +156,7 @@ export function sailingUnsaid(ladder: SeatLadder): boolean {
  *   for everyone else and left this seat unsaid, which is not the silence of a
  *   shop that keeps no roll call.
  * - **No roll call at all waits for the recap floor**
- *   (`RECAP_AUTOMATIC_DELAY_HOURS`, four hours). It is the delay the recap
+ *   (`recapIsDue`, four hours past the return). It is the delay the recap
  *   *send* has always used before it asserts the same thing by email, and a
  *   shop that does not run roll call should not have a second, looser rule
  *   invented for it here.

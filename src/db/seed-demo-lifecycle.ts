@@ -83,7 +83,6 @@ import {
   shopBackupDestinations,
   shopContactEmailConfirmationTokens,
   shopIntegrations,
-  shopShoreAlertTokens,
   shopStripeAccounts,
   shopSubscriptions,
   shops,
@@ -349,8 +348,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db
     .delete(shopContactEmailConfirmationTokens)
     .where(eq(shopContactEmailConfirmationTokens.shopId, shopId));
-  // The shore contact's links (H-20261014-stale-roll-call-recipients), the same shape and the same 23503.
-  await db.delete(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shopId));
   /*
    * Seven shop-scoped tables that reference `shops` (and most of them `people`)
    * with no `ON DELETE CASCADE`, so a minted demo carrying any of them made the

@@ -1,6 +1,6 @@
 # 20261103-waiver-signs-in-the-thread — The diver's own release signs on their readiness link
 
-- **Status:** Accepted
+- **Status:** Accepted; its rejected fold is now the direction ([20261105-waiver-folds-into-the-thread](20261105-waiver-folds-into-the-thread.md))
 - **Date:** 2026-11-03
 - **Decided by:** Aaron, 2026-11-02 ("Build all four" on decision group 7, issue #2743). The
   booking-scoped scope is the building thread's reading; Aaron named no shape.
@@ -47,5 +47,4 @@ A referred signer lands on the receipt in the thread; the doctor's page has a tw
 
 - One credential per trip for a diver signing their own seat, and no mint on the way to the form.
 - The evidence, the release's words, the typed-name standard and every writer are unchanged.
-- Still open on #2743: staff sends and booking emails could hand over the thread link instead of a
-  waiver link. That changes staff copy and delivery records, so it is a separate decision.
+- What remains of #2743 is ordered in 20261105-waiver-folds-into-the-thread.

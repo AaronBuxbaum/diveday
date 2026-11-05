@@ -1616,7 +1616,7 @@ test("an owner prints the packet with the medical alerts, and the print is on th
   await choice.click();
   const popup = await popupPromise;
   await popup.waitForLoadState("domcontentloaded");
-  await expect(popup).toHaveURL(new RegExp(`${tripPath}/print/medical-alerts$`));
+  await expect(popup).toHaveURL(new RegExp(`${tripPath}\\?print=medical-alerts$`));
   await popup.emulateMedia({ media: "print" });
   await expect(popup.getByText(DEMO_MEDICAL_ALERT)).toBeVisible();
   await expect(

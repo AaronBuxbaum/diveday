@@ -1,17 +1,12 @@
 import { describe, expect, it } from "vitest";
-import {
-  RECAP_AUTOMATIC_DELAY_HOURS,
-  recapAutoSendAt,
-  unpauseRecapAutoSendAt,
-} from "./recap-schedule";
+import { rungOffsetMs } from "./departure-clock";
+import { recapAutoSendAt, unpauseRecapAutoSendAt } from "./recap-schedule";
 
 describe("recapAutoSendAt", () => {
   it("defaults to 4 hours after endsAt", () => {
     const endsAt = new Date("2026-08-16T12:00:00.000Z");
     const autoSendAt = recapAutoSendAt(endsAt);
-    expect(autoSendAt).toEqual(
-      new Date(endsAt.getTime() + RECAP_AUTOMATIC_DELAY_HOURS * 60 * 60 * 1000),
-    );
+    expect(autoSendAt).toEqual(new Date(endsAt.getTime() + rungOffsetMs("recap_due")));
     expect(autoSendAt?.toISOString()).toBe("2026-08-16T16:00:00.000Z");
   });
 

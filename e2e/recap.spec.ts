@@ -310,6 +310,25 @@ test("the day's facts render once, inside the one record a diver keeps", async (
   // Nothing outside the record repeats them.
   await expect(record.getByTestId("dive-record-conditions")).toHaveCount(1);
   await expect(record.getByTestId("dive-record-sites")).toHaveCount(1);
+
+  // **What prints is the logbook sheet, never the screen** (issue #2745).
+  await page.evaluate(() => {
+    window.print = () => {};
+  });
+  await record.getByRole("button", { name: /Print log entry/i }).click();
+  const sheet = page.locator(".paper-sheet");
+  // A signature line where the shop has evidence the diver came, "Not yet
+  // confirmed" where it has none: never a bare clock-only line to sign.
+  await expect(
+    sheet
+      .getByTestId("dive-record-print-signature")
+      .or(sheet.getByTestId("dive-record-print-unconfirmed")),
+  ).toBeVisible();
+  await expect(sheet.getByTestId("dive-record-sites")).toHaveCount(1);
+  await expect(sheet.locator("button, a, input, textarea, form")).toHaveCount(0);
+  await expect(page.getByTestId("dive-record")).toHaveCount(0);
+  await page.getByRole("button", { name: "Back to your day" }).click();
+  await expect(page.getByTestId("dive-record")).toBeVisible();
 });
 
 /**

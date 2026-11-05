@@ -8,21 +8,35 @@
  */
 
 import { HOUR_MS } from "@/lib/clock";
+import { hasCrossed, rungOffsetMs } from "@/lib/departure-clock";
 import type { ChecklistState } from "@/lib/readiness-summary";
 
 /** The cadence kinds, kept in sync with the `notification_kind` enum. */
 export type ReminderKind = "trip_reminder_7d" | "trip_reminder_24h";
 
+/** The departure-clock rungs a reminder opens on. */
+type ReminderRung = "week_out" | "day_before";
+
 export type ReminderCadence = {
   kind: ReminderKind;
-  /** How long before departure this reminder becomes due. */
+  /** The rung on the departure's clock at which this reminder becomes due. */
+  rung: ReminderRung;
+  /** How long before departure that is, in hours: the rung, read as a lead time. */
   hoursBefore: number;
 };
 
-/** Sorted loosest-first. */
+function cadenceOn(kind: ReminderKind, rung: ReminderRung): ReminderCadence {
+  return { kind, rung, hoursBefore: -rungOffsetMs(rung) / HOUR_MS };
+}
+
+/**
+ * Sorted loosest-first, which is the order of their rungs on the departure's
+ * clock: the week-out reminder opens on `week_out`, the dock-call one on
+ * `day_before`.
+ */
 export const TRIP_REMINDER_CADENCES: readonly ReminderCadence[] = [
-  { kind: "trip_reminder_7d", hoursBefore: 168 },
-  { kind: "trip_reminder_24h", hoursBefore: 24 },
+  cadenceOn("trip_reminder_7d", "week_out"),
+  cadenceOn("trip_reminder_24h", "day_before"),
 ];
 
 /** The widest lead time any cadence needs — how far ahead a scan must look. */
@@ -39,26 +53,22 @@ export type DueReminderInput = {
 };
 
 /**
- * The single reminder due for a booking right now, or null. The cadences
- * partition the run-up to departure into half-open buckets — the 7-day reminder
- * is due from T-168h until T-24h, the 24-hour reminder from T-24h until
- * departure. `now` lands in at most one bucket, so a booking made late (already
- * inside 24h) gets only the accurate 24-hour text, never a stale "you sail in a
- * week". Already-sent kinds are skipped; nothing fires once the trip departs.
+ * The single reminder due for a booking right now, or null. The cadences'
+ * rungs partition the run-up to departure into half-open buckets — the 7-day
+ * reminder is due from `week_out` until `day_before`, the 24-hour reminder
+ * from `day_before` until `scheduled_start`. `now` lands in at most one
+ * bucket, so a booking made late (already inside 24h) gets only the accurate
+ * 24-hour text, never a stale "you sail in a week". Already-sent kinds are
+ * skipped; nothing fires once the trip departs.
  */
-export function dueReminder(
-  input: DueReminderInput,
-  cadences: readonly ReminderCadence[] = TRIP_REMINDER_CADENCES,
-): ReminderCadence | null {
-  const sorted = [...cadences].sort((a, b) => b.hoursBefore - a.hoursBefore);
-  const start = input.startsAt.getTime();
-  const nowMs = input.now.getTime();
-  for (let i = 0; i < sorted.length; i++) {
-    const opensAt = start - sorted[i].hoursBefore * HOUR_MS;
-    const closesAt = i + 1 < sorted.length ? start - sorted[i + 1].hoursBefore * HOUR_MS : start;
-    if (nowMs >= opensAt && nowMs < closesAt && !input.sentKinds.has(sorted[i].kind)) {
-      return sorted[i];
-    }
+export function dueReminder(input: DueReminderInput): ReminderCadence | null {
+  const departure = { startsAt: input.startsAt };
+  for (const [index, current] of TRIP_REMINDER_CADENCES.entries()) {
+    const closesOn = TRIP_REMINDER_CADENCES[index + 1]?.rung ?? "scheduled_start";
+    if (!hasCrossed(current.rung, departure, input.now)) continue;
+    if (hasCrossed(closesOn, departure, input.now)) continue;
+    if (input.sentKinds.has(current.kind)) continue;
+    return current;
   }
   return null;
 }

@@ -29,7 +29,7 @@ import {
   tripReadMarks,
   userAccounts,
 } from "./schema";
-import { insertShoreAlertStop, insertShoreAlertToken } from "./shore-alert-test-fixtures";
+import { insertShoreAlertStop } from "./shore-alert-test-fixtures";
 import { writeTodayReadMark } from "./today-catch-up-retention-fixture";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
@@ -655,8 +655,6 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.shopContactEmailConfirmationTokens.id }),
     ),
-  shop_shore_alert_tokens: async ({ db, shop }, at) =>
-    insertShoreAlertToken(db, { shopId: shop.id, tokenHash: token(), createdAt: at }),
   capabilities: async ({ db, shop }, at) =>
     insertShoreAlertStop(db, { shopId: shop.id, tokenHash: token(), issuedAt: at }),
   booking_capabilities: async ({ db, shop, entry }, at, n) =>

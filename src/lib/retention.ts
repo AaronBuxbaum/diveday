@@ -99,7 +99,6 @@ export type RetainedTable =
   | "account_sessions"
   | "account_sign_in_challenges"
   | "shop_contact_email_confirmation_tokens"
-  | "shop_shore_alert_tokens"
   | "capabilities"
   | "booking_capabilities"
   | "booking_payment_events"
@@ -241,18 +240,13 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    */
   shop_contact_email_confirmation_tokens: 90,
   /**
-   * A year from `created_at` (H-20261014-stale-roll-call-recipients review): the shore contact's confirmation
-   * links. The stop link every roll-call alert carries (a capability now)
-   * keeps the same year: it never expires on its own, because an opt-out that
-   * stops working leaves somebody unable to stop the mail; a year is longer
-   * than any shop goes between alerts, and each alert brings a fresh one. The
-   * rows hold the address, so they do not sit forever either.
-   */
-  shop_shore_alert_tokens: 365,
-  /**
-   * A year from `issued_at`, for the stop links mailed to a shop's own
-   * addresses (the shore contact's and the bookkeeper's, on the reasoning
-   * above; issue #3721): the rows hold the address. The Monday email's
+   * A year from `issued_at`, for the links mailed to a shop's own addresses
+   * (the shore contact's confirm and stop links and the bookkeeper's stop
+   * link; issue #3721). A stop link never expires on its own, because an
+   * opt-out that stops working leaves somebody unable to stop the mail; a
+   * year is longer than any shop goes between alerts, and each alert brings a
+   * fresh one. The rows hold the address, so they do not sit forever either
+   * (H-20261014-stale-roll-call-recipients review). The Monday email's
    * opt-out links keep `weekly_digest_sends`' window instead, as they did on
    * the claim (security review D1). An interest's or a courtesy email's
    * unsubscribe link is not pruned; it goes with its subject.

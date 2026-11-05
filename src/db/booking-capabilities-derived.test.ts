@@ -81,8 +81,8 @@ afterEach(() => {
 
 describe("a link lives only in its row", () => {
   // #2711 derived every booking link from its row; the stored hash and the
-  // sealed copy are retired, so the schema stops declaring them (#3901). The
-  // column drop follows one release later (the destructive-migration guard).
+  // sealed copy are retired and dropped (#3901; the database side is
+  // `retired-token-columns.test.ts`).
   it("declares no stored token hash and no sealed token", () => {
     const columns = Object.values(getTableColumns(bookingCapabilities)).map((c) => c.name);
     expect(columns).not.toContain("token_hash");

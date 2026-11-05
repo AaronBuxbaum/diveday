@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RECAP_AUTOMATIC_DELAY_MS } from "../../src/lib/recap-schedule";
+import { rungOffsetMs } from "../../src/lib/departure-clock";
 import { rollCallCheckpoints } from "../../src/lib/roll-call";
 import {
   DAY_STATES,
@@ -17,7 +17,7 @@ const endsAt = new Date("2026-07-21T18:30:00.000Z"); // 14:30
 
 describe("dayTimeline", () => {
   it("keeps the recap floor equal to the schedule's own", () => {
-    expect(RECAP_FLOOR_MS).toBe(RECAP_AUTOMATIC_DELAY_MS);
+    expect(RECAP_FLOOR_MS).toBe(rungOffsetMs("recap_due"));
   });
 
   it("places every state, in order, and never asks the clock to step back", () => {

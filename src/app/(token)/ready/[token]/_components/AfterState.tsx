@@ -15,9 +15,11 @@ import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";
 import { BuddyShareButton } from "./BuddyShareButton";
 import { CourseAfterState } from "./CourseAfterState";
 import { DiveRecord } from "./DiveRecord";
+import { DiveRecordSheet } from "./DiveRecordSheet";
 import { NextDiveCard } from "./NextDiveCard";
 import { Door, FieldGuideDoor, PhotoDoor, TipDoor } from "./RecapDoors";
 import { hasRecapPulseNotice, RecapPulse } from "./RecapPulse";
+import { RecordPaper } from "./RecordPaper";
 import { ReviewAsk } from "./ReviewAsk";
 import { ShareReviewButton } from "./ShareReviewButton";
 
@@ -100,6 +102,7 @@ export function AfterState({
     shop,
     trip,
     when,
+    sheet,
     diverName,
     sites,
     diveRecord,
@@ -160,116 +163,134 @@ export function AfterState({
   return (
     // Its own `<main>` rather than `ThreadShell`, for the same reason the
     // waiver's completed state has one (see `ThreadShell`'s doc comment): this
-    // state's header *is* its moment, and the header itself is `print:hidden`
-    // so the keepsake prints alone. The measure is the shell's own exported
+    // state's header *is* its moment. The measure is the shell's own exported
     // constant, so the thread's one column still cannot drift.
-    <main className={THREAD_MEASURE_CLASS}>
-      {/* The shop's brand, as tokens — the same `BrandStyle` the storefront
+    //
+    // **What prints is the record's sheet, never this screen** (issue #2745):
+    // `RecordPaper` swaps the page for the logbook sheet before any print.
+    <RecordPaper
+      sheet={
+        <DiveRecordSheet
+          t={t}
+          shop={shop}
+          trip={trip}
+          when={when}
+          sheet={sheet}
+          diverName={diverName}
+          sites={sites}
+          diveRecord={diveRecord}
+          observedSpecies={observedSpecies}
+          course={course}
+        />
+      }
+      backLabel={t("recap.paperBack")}
+      printLabel={t("recap.printRecord")}
+    >
+      <main className={THREAD_MEASURE_CLASS}>
+        {/* The shop's brand, as tokens — the same `BrandStyle` the storefront
           mounts, so the day a diver keeps is in the colour and face of the
           shop that gave it to them (slice 13i). Ink, ground and every signal
           colour stay DiveDay's; only the action tokens and the display face
           move, which is what keeps the review's primary and the tip's form on
           brand while a refusal never is. */}
-      <BrandStyle brandColor={shop.brandColor} brandDisplayFont={shop.brandDisplayFont} />
-      {celebrate ? (
-        <EarnedMoment
-          as="h1"
-          eyebrow={shop.name}
-          title={greeting}
-          titleClassName="font-brand-display"
-          className="print:hidden"
-        >
-          <p className="text-base">
-            {trip.title} · {when}
-          </p>
-        </EarnedMoment>
-      ) : (
-        <header className="print:hidden">
-          <p className={EYEBROW_CLASS}>{shop.name}</p>
-          <h1 className={`font-brand-display mt-2 ${SHELL_TITLE_CLASS} text-balance`}>
-            {greeting}
-          </h1>
-          <p className="mt-1 text-base text-muted">
-            {trip.title} · {when}
-          </p>
-        </header>
-      )}
+        <BrandStyle brandColor={shop.brandColor} brandDisplayFont={shop.brandDisplayFont} />
+        {celebrate ? (
+          <EarnedMoment
+            as="h1"
+            eyebrow={shop.name}
+            title={greeting}
+            titleClassName="font-brand-display"
+          >
+            <p className="text-base">
+              {trip.title} · {when}
+            </p>
+          </EarnedMoment>
+        ) : (
+          <header>
+            <p className={EYEBROW_CLASS}>{shop.name}</p>
+            <h1 className={`font-brand-display mt-2 ${SHELL_TITLE_CLASS} text-balance`}>
+              {greeting}
+            </h1>
+            <p className="mt-1 text-base text-muted">
+              {trip.title} · {when}
+            </p>
+          </header>
+        )}
 
-      <DiveRecord
-        t={t}
-        locale={locale}
-        shop={shop}
-        trip={trip}
-        when={when}
-        diverName={diverName}
-        sites={sites}
-        diveRecord={diveRecord}
-        observedSpecies={observedSpecies}
-        visitCount={visitCount}
-        siteMark={siteMark}
-        postcard={postcard}
-        course={course}
-        logFilePath={logFilePath}
-      />
+        <DiveRecord
+          t={t}
+          locale={locale}
+          shop={shop}
+          trip={trip}
+          when={when}
+          diverName={diverName}
+          sites={sites}
+          diveRecord={diveRecord}
+          observedSpecies={observedSpecies}
+          visitCount={visitCount}
+          siteMark={siteMark}
+          postcard={postcard}
+          course={course}
+          logFilePath={logFilePath}
+        />
 
-      {/* The one line the diver's body still needs after the record is closed
+        {/* The one line the diver's body still needs after the record is closed
           (issue #1425): when they may fly, in the shop's zone, with the hours
           and who set them in the same sentence. A sentence and no panel — it
-          informs, and a boxed warning would read as a gate. Off the print, which
-          is the keepsake alone. A section's `mt-10` like every one around it:
+          informs, and a boxed warning would read as a gate. A section's `mt-10` like every one around it:
           at `mt-6` it broke the page's 40px rhythm under the record (K-532). */}
-      {flySafe ? (
-        <p data-testid={AFTER_STATE_TEST_IDS.flySafe} className="mt-10 text-base print:hidden">
-          {t(`recap.${flySafeMessageKey(flySafe)}`, {
-            when: flySafe.when,
-            count: flySafe.hours,
-            shopName: shop.name,
-          })}
-        </p>
-      ) : null}
+        {flySafe ? (
+          <p data-testid={AFTER_STATE_TEST_IDS.flySafe} className="mt-10 text-base">
+            {t(`recap.${flySafeMessageKey(flySafe)}`, {
+              when: flySafe.when,
+              count: flySafe.hours,
+              shopName: shop.name,
+            })}
+          </p>
+        ) : null}
 
-      {/* The crew's own words carry themselves — a quote, not a boxed panel.
+        {/* The crew's own words carry themselves — a quote, not a boxed panel.
           The quote glyphs come from the bundle, since each locale sets its own
           convention (es-ES/README.md keeps “ ”). */}
-      {shoutout ? (
-        <figure className="mt-10 print:hidden">
-          <blockquote className="text-xl leading-relaxed font-medium text-pretty">
-            {t("recap.crewQuote", { words: shoutout })}
-          </blockquote>
-          <figcaption className="mt-2 text-sm text-muted">{t("recap.fromYourCrew")}</figcaption>
-        </figure>
-      ) : null}
+        {shoutout ? (
+          <figure className="mt-10">
+            <blockquote className="text-xl leading-relaxed font-medium text-pretty">
+              {t("recap.crewQuote", { words: shoutout })}
+            </blockquote>
+            <figcaption className="mt-2 text-sm text-muted">{t("recap.fromYourCrew")}</figcaption>
+          </figure>
+        ) : null}
 
-      {/* What a course day left the student holding — before the review ask,
+        {/* What a course day left the student holding — before the review ask,
           which stays the page's one primary (issues #1196, #1205). */}
-      {course ? (
-        <CourseAfterState
-          t={t}
-          courseTitle={course.title}
-          shopName={shop.name}
-          certification={course.certification}
-          nextStep={course.nextStep}
-        />
-      ) : null}
+        {course ? (
+          <CourseAfterState
+            t={t}
+            courseTitle={course.title}
+            shopName={shop.name}
+            certification={course.certification}
+            nextStep={course.nextStep}
+          />
+        ) : null}
 
-      {/* ——— The one ask. It is the page's single primary in every variant: a
+        {/* ——— The one ask. It is the page's single primary in every variant: a
           sparse keepsake never promotes a door to fill the space above it. */}
-      {canReview ? (
-        <ReviewAsk
-          t={t}
-          notice={reviewNotice}
-          ownReview={ownReview}
-          crewChoices={crewChoices}
-          stepsBack={externalReviewUrl !== null}
-          action={actions.submitReview}
-        />
-      ) : null}
+        {canReview ? (
+          <ReviewAsk
+            t={t}
+            notice={reviewNotice}
+            ownReview={ownReview}
+            crewChoices={crewChoices}
+            stepsBack={externalReviewUrl !== null}
+            action={actions.submitReview}
+          />
+        ) : null}
 
-      {/* ——— The quiet doors: hairline rows on the page background, each one a
+        {/* ——— The quiet doors: hairline rows on the page background, each one a
           tap away from the form it already had. Same grammar as the prep
           state's spine, one screen earlier in the same thread. */}
-      <ul className="mt-10 print:hidden">
-        {/* ——— The other thing worth saying, and it is private. It stands
+        <ul className="mt-10">
+          {/* ——— The other thing worth saying, and it is private. It stands
             **outside the review's `<form>`** — a private field inside a public
             one is a trap, and a diver who has already left a review must still
             be able to reach this.
@@ -283,131 +304,131 @@ export function AfterState({
             what disclosure is for (principle 8). It opens on arrival only when
             there is something in it already: a diver's own standing pulse, or
             a `?pulse=` this render has to answer. */}
-        <Door
-          id="pulse"
-          summary={t("recap.pulseHeading")}
-          open={hasRecapPulseNotice(params.pulse) || ownPulse !== null}
-        >
-          <RecapPulse
+          <Door
+            id="pulse"
+            summary={t("recap.pulseHeading")}
+            open={hasRecapPulseNotice(params.pulse) || ownPulse !== null}
+          >
+            <RecapPulse
+              t={t}
+              shopName={shop.name}
+              ownPulse={ownPulse}
+              notice={params.pulse}
+              action={actions.submitPulse}
+            />
+          </Door>
+
+          {/* Recap photos switched off on Features: no door at all. */}
+          {photosOn ? (
+            <PhotoDoor
+              t={t}
+              shopName={shop.name}
+              tripTitle={trip.title}
+              photos={photos}
+              maxPhotos={maxPhotos}
+              canShareWithBoat={canShareWithBoat}
+              notice={photoNotice}
+              action={actions.uploadPhoto}
+              unshareAction={actions.unsharePhoto}
+            />
+          ) : null}
+
+          <TipDoor
             t={t}
+            locale={locale}
             shopName={shop.name}
-            ownPulse={ownPulse}
-            notice={params.pulse}
-            action={actions.submitPulse}
+            currency={currency}
+            canTip={canTip}
+            tip={tip}
+            tipPresets={tipPresets}
+            tipParam={params.tip}
+            notice={tipNotice}
+            action={actions.startTip}
           />
-        </Door>
 
-        {/* Recap photos switched off on Features: no door at all. */}
-        {photosOn ? (
-          <PhotoDoor
-            t={t}
-            shopName={shop.name}
-            tripTitle={trip.title}
-            photos={photos}
-            maxPhotos={maxPhotos}
-            canShareWithBoat={canShareWithBoat}
-            notice={photoNotice}
-            action={actions.uploadPhoto}
-            unshareAction={actions.unsharePhoto}
-          />
-        ) : null}
-
-        <TipDoor
-          t={t}
-          locale={locale}
-          shopName={shop.name}
-          currency={currency}
-          canTip={canTip}
-          tip={tip}
-          tipPresets={tipPresets}
-          tipParam={params.tip}
-          notice={tipNotice}
-          action={actions.startTip}
-        />
-
-        {/* ——— What these places are known to hold, for a next dive.
+          {/* ——— What these places are known to hold, for a next dive.
             Closed on arrival and never promoted: the review ask above is the
             page's one primary, and this is a keepsake's footnote. Absent
             entirely when no site the day dived names a species — an empty
             drawer is a heading apologising for having nothing behind it. */}
-        <FieldGuideDoor t={t} groups={fieldGuideGroups} />
+          <FieldGuideDoor t={t} groups={fieldGuideGroups} />
 
-        {/* The one review ask left: a rating just landed, so offer to
+          {/* The one review ask left: a rating just landed, so offer to
             carry it further instead of stacking a second, separately-worded
             ask underneath. It is a door rather than a disclosure — the
             destination is somebody else's site. */}
-        {externalReviewUrl ? (
-          <li className="border-t border-border last:border-b">
-            <div className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-base font-semibold">{t("recap.externalReviewHeading")}</p>
-                <p className="mt-0.5 text-sm text-muted">
-                  {ownReview?.comment
-                    ? t("recap.externalReviewBody")
-                    : t("recap.externalReviewBodyNoComment")}
-                </p>
+          {externalReviewUrl ? (
+            <li className="border-t border-border last:border-b">
+              <div className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-semibold">{t("recap.externalReviewHeading")}</p>
+                  <p className="mt-0.5 text-sm text-muted">
+                    {ownReview?.comment
+                      ? t("recap.externalReviewBody")
+                      : t("recap.externalReviewBodyNoComment")}
+                  </p>
+                </div>
+                <ShareReviewButton
+                  reviewUrl={externalReviewUrl}
+                  comment={ownReview?.comment ?? null}
+                  cta={t("recap.externalReviewCta")}
+                  copiedLabel={t("recap.commentCopied")}
+                />
               </div>
-              <ShareReviewButton
-                reviewUrl={externalReviewUrl}
-                comment={ownReview?.comment ?? null}
-                cta={t("recap.externalReviewCta")}
-                copiedLabel={t("recap.commentCopied")}
-              />
-            </div>
-          </li>
-        ) : null}
-      </ul>
+            </li>
+          ) : null}
+        </ul>
 
-      {/* ——— One next dive, and one reason it is that one (D35, issue #1195).
+        {/* ——— One next dive, and one reason it is that one (D35, issue #1195).
           Renders nothing when the board has nothing this diver can dive. */}
-      <NextDiveCard
-        t={t}
-        shopSlug={shop.slug}
-        pick={nextDive}
-        href={nextDiveHref}
-        when={nextDiveWorded?.when ?? ""}
-        reason={nextDiveWorded?.reason ?? ""}
-        levelCovers={nextDiveWorded?.levelCovers ?? null}
-      />
-      {/* ——— **The seat they already hold, in the pick's place** (fifth-loop
+        <NextDiveCard
+          t={t}
+          shopSlug={shop.slug}
+          pick={nextDive}
+          href={nextDiveHref}
+          when={nextDiveWorded?.when ?? ""}
+          reason={nextDiveWorded?.reason ?? ""}
+          levelCovers={nextDiveWorded?.levelCovers ?? null}
+        />
+        {/* ——— **The seat they already hold, in the pick's place** (fifth-loop
           ideas, item 37). A regular booked on Dec 5 is told so rather than
           sold another seat; `/recap` never carries it. */}
-      {bookedNext ? (
-        <SectionCard padding="lg" className="mt-10 print:hidden" title={t("recap.nextDiveHeading")}>
-          <p className="text-base">{t("recap.bookedNext", bookedNext)}</p>
-        </SectionCard>
-      ) : null}
+        {bookedNext ? (
+          <SectionCard padding="lg" className="mt-10" title={t("recap.nextDiveHeading")}>
+            <p className="text-base">{t("recap.bookedNext", bookedNext)}</p>
+          </SectionCard>
+        ) : null}
 
-      {/* ——— Every other day with the shop, each row sending its own fresh
+        {/* ——— Every other day with the shop, each row sending its own fresh
           link (H-20261014-other-days-send-fresh). Only `/ready` fills it. */}
-      {yourDays}
+        {yourDays}
 
-      {/* ——— **Bring a buddy next time** (ADR 20260908-one-hand, decision 6,
+        {/* ——— **Bring a buddy next time** (ADR 20260908-one-hand, decision 6,
           lever W). One line under the day that just happened, and a link the
           diver hands to a friend. The friend books their own seat and signs
           their own waiver; the shop is told where the seat came from.
 
           **No discount, no code, no reward** — the roadmap's referral-program
           call stays parked. This is the door, counted. */}
-      {buddyLinkUrl ? (
-        <section className="mt-10 rounded-panel bg-surface-sunken p-5 print:hidden sm:p-6">
-          <h2 className={SECTION_TITLE_CLASS}>{t("recap.buddyHeading")}</h2>
-          <p className="mt-1 text-muted">{t("recap.buddyBody")}</p>
-          {/* The control is the affordance; the URL is not page furniture. It
+        {buddyLinkUrl ? (
+          <section className="mt-10 rounded-panel bg-surface-sunken p-5 sm:p-6">
+            <h2 className={SECTION_TITLE_CLASS}>{t("recap.buddyHeading")}</h2>
+            <p className="mt-1 text-muted">{t("recap.buddyBody")}</p>
+            {/* The control is the affordance; the URL is not page furniture. It
               used to print in full, mono, under a "Your link" caption — the
               loudest thing in the block and the one thing nobody reads. It
               reaches a screen reader as the button's description instead
               (`BuddyShareButton`). */}
-          <BuddyShareButton
-            url={buddyLinkUrl}
-            action={t("recap.buddyCta")}
-            copied={t("recap.buddyCopied")}
-            copyFailed={t("recap.buddyCopyFailed")}
-          />
-        </section>
-      ) : null}
+            <BuddyShareButton
+              url={buddyLinkUrl}
+              action={t("recap.buddyCta")}
+              copied={t("recap.buddyCopied")}
+              copyFailed={t("recap.buddyCopyFailed")}
+            />
+          </section>
+        ) : null}
 
-      {/* ——— One fact, one link. The shop's next public departure is the only
+        {/* ——— One fact, one link. The shop's next public departure is the only
           thing worth saying on the way out; when the board is empty the link
           goes on its own rather than borrowing a sentence.
 
@@ -415,19 +436,20 @@ export function AfterState({
           what is next" claims one scroll apart, naming two different
           departures, is the page arguing with itself — so the card wins and
           the footer keeps the link it always had. */}
-      <footer className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-6 print:hidden">
-        {nextDeparture && !nextDive && !bookedNext ? (
-          <p className="min-w-0 flex-1 text-base text-muted">
-            {nextDeparture.title} · {nextDeparture.when}
-          </p>
-        ) : null}
-        <Link
-          href={publicSchedulePath(shop.slug)}
-          className={buttonClass({ variant: "link", flush: true })}
-        >
-          {t("recap.seeWhatsNext")}
-        </Link>
-      </footer>
-    </main>
+        <footer className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-6">
+          {nextDeparture && !nextDive && !bookedNext ? (
+            <p className="min-w-0 flex-1 text-base text-muted">
+              {nextDeparture.title} · {nextDeparture.when}
+            </p>
+          ) : null}
+          <Link
+            href={publicSchedulePath(shop.slug)}
+            className={buttonClass({ variant: "link", flush: true })}
+          >
+            {t("recap.seeWhatsNext")}
+          </Link>
+        </footer>
+      </main>
+    </RecordPaper>
   );
 }

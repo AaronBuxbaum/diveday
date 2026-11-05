@@ -162,10 +162,11 @@ export function SavePostcard({
 
   return (
     <>
-      {/* The diver's own line, on the record and above its footer. `print:hidden`
-          because the printed sheet is a logbook page a divemaster signs, and a
-          sentence somebody wrote for themselves is not a fact of the day. */}
-      <div className="mt-5 border-t border-dashed border-border pt-4 print:hidden">
+      {/* The diver's own line, on the record and above its footer. Never on
+          the logbook sheet (`DiveRecordSheet`): that is a page a divemaster
+          signs, and a sentence somebody wrote for themselves is not a fact of
+          the day. */}
+      <div className="mt-5 border-t border-dashed border-border pt-4">
         <label htmlFor={lineId} className="text-xs font-medium text-muted">
           {copy.lineLabel}
         </label>
@@ -189,7 +190,7 @@ export function SavePostcard({
           can do with it on the right. */}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         {recordedBy}
-        <span className="flex flex-wrap items-center gap-2 print:hidden">
+        <span className="flex flex-wrap items-center gap-2">
           {state === "failed" ? (
             <span role="alert" className="text-xs text-danger">
               {copy.failed}

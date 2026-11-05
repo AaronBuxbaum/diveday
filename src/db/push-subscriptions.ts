@@ -1,10 +1,10 @@
 import { and, desc, eq, exists, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { pushIsLive } from "@/lib/departure-clock";
 import { manifestChangedPush, type StaffPushWords } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { sendWebPush, type WebPushTarget, webPushConfig } from "@/lib/notifications/web-push";
-import { isInPushWindow } from "@/lib/push-window";
 import type { AppDb } from "./client";
 import {
   people,
@@ -30,7 +30,7 @@ import { livePerson, liveTrip, notRehearsal } from "./trips-live";
  *
  * The other throttle, the **departure window**, deliberately does not live here
  * at all: it is checked against the live trip row in `pushManifestChanged`
- * (src/lib/push-window.ts). It used to be a value copied onto the subscription
+ * (`pushIsLive`, src/lib/departure-clock.ts). It used to be a value copied onto the subscription
  * when someone opted in, which could not follow a trip that moved.
  */
 
@@ -254,7 +254,7 @@ export async function claimDuePushTargets(
         // checked against the live trip row in `pushManifestChanged` before
         // this runs. Deciding it from a value copied onto the subscription at
         // subscribe time meant a trip that moved kept its old window — see
-        // src/lib/push-window.ts.
+        // `pushIsLive` in src/lib/departure-clock.ts.
         // Belt to the caps' braces: even if rows arrive by some path that does
         // not go through recordPushSubscription, one event can never claim more
         // than this. Ordering is unspecified and deliberately so — this is a
@@ -371,7 +371,7 @@ export async function pushManifestChanged(
       .limit(1);
     const endsAt =
       lastDay && lastDay.endsAt.getTime() > trip.endsAt.getTime() ? lastDay.endsAt : trip.endsAt;
-    if (!isInPushWindow({ startsAt: trip.startsAt, endsAt }, now)) return;
+    if (!pushIsLive({ startsAt: trip.startsAt, endsAt }, now)) return;
 
     const targets = await claimDuePushTargets(db, shopId, tripId, now);
     if (targets.length === 0) return;

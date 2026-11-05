@@ -19,6 +19,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { crewThanksChoice } from "@/lib/crew-thanks-choice";
+import { rungOffsetMs } from "@/lib/departure-clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { compareDiveRecord, type DiveRecordComparison } from "@/lib/dive-record";
 import { DEFAULT_FLY_SAFE_HOURS, type FlySafeResult, flySafeFrom } from "@/lib/fly-safe";
@@ -41,10 +42,11 @@ import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { firstNameOf } from "@/lib/person-name";
 import { diveDayOrdinal } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
-import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
+import { unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
 import { leftAtTheDock } from "@/lib/seat-ladder";
 import { shopClock } from "@/lib/shop-clock";
 import type { TemperatureUnit } from "@/lib/temperature-units";
+import { deskTrailSaysArrived } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
 import { levelCardLevel } from "./card-columns";
@@ -287,6 +289,15 @@ export type RecapPageData = {
    * by the next dive's admission filter and by nothing that renders.
    */
   personId: string;
+  /**
+   * **What the shop saw of this diver on the day**, for the logbook sheet's
+   * signature line (reviews of #2745). Server-side only, like `personId`:
+   * `buildAfterStateProps` turns it into one yes/no. `boardedAtRollCall` is the
+   * departure roll call's `boarded` after the late-boarding correction;
+   * `arrivedAtDesk` is the desk's standing `arrived` sighting (seen, not dived).
+   * Read with the recap's own row and dock read, not on their own.
+   */
+  seenThatDay: { boardedAtRollCall: boolean; arrivedAtDesk: boolean };
   /** A short crew-authored note for this trip, or null when the crew wrote none. */
   shoutout: string | null;
   /** The diver's own uploaded photos, newest first. */
@@ -401,12 +412,15 @@ export async function getRecapPageState(
   // only for an open recap's pending tip.
   // The dock reader returns the whole departure, not just this booking. Share
   // that same read with the gallery's check of other divers' shared photos.
-  const leftAtDock = bookingsLeftAtTheDock(db, [
+  // The same read answers whether the roll call put this diver aboard, for
+  // the logbook sheet's signature line (reviews of #2745).
+  const dock = readDockEvidence(db, [
     { booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } },
   ]);
+  const leftAtDock = dock.then(leftAtTheDockOf);
   const [bySeat, loaded] = await Promise.all([
     recapClosedBySeat(db, row, bookingId, now, leftAtDock),
-    loadRecapPageData(db, row, bookingId, leftAtDock),
+    loadRecapPageData(db, row, bookingId, dock),
   ]);
   if (bySeat) return closedRecapState(bySeat, shop);
   if (!loaded) return { kind: "dead", shop };
@@ -485,6 +499,7 @@ async function readRecapRow(db: AppDb, bookingId: string) {
       brandDisplayFont: shops.brandDisplayFont,
       courseNextStep: bookings.courseNextStep,
       courseNextStepByPersonId: bookings.courseNextStepByPersonId,
+      arrivedAtDesk: deskTrailSaysArrived,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -612,7 +627,10 @@ export async function bookingsLeftAtTheDock(
     trip: { id: string };
   }[],
 ): Promise<Set<string>> {
-  const evidence = await readDockEvidence(db, candidates);
+  return leftAtTheDockOf(await readDockEvidence(db, candidates));
+}
+
+function leftAtTheDockOf(evidence: DockEvidence): Set<string> {
   return new Set([...evidence.notBoarded, ...evidence.neverCounted]);
 }
 
@@ -639,10 +657,15 @@ export async function bookingsNeverCountedAtRollCall(
   return (await readDockEvidence(db, candidates)).neverCounted;
 }
 
+type DockEvidence = { notBoarded: Set<string>; neverCounted: Set<string>; boarded: Set<string> };
+
 /**
- * The dock's evidence for a set of candidates, in the two shapes the recap and
+ * The dock's evidence for a set of candidates, in the shapes the recap and
  * the afterglow ask for: a standing dock `not_boarded` with no after-dive
- * `boarded` after it, and no word at all on a counted departure.
+ * `boarded` after it, no word at all on a counted departure, and `boarded`:
+ * the departure roll call corrected for a late boarding, as
+ * {@link departureAfterLateBoarding} answers it for one seat (a dock
+ * `boarded`, or a dock `not_boarded` an after-dive `boarded` overrules).
  */
 async function readDockEvidence(
   db: DbExecutor,
@@ -651,7 +674,7 @@ async function readDockEvidence(
     shop: { id: string };
     trip: { id: string };
   }[],
-): Promise<{ notBoarded: Set<string>; neverCounted: Set<string> }> {
+): Promise<DockEvidence> {
   const bookingsByShop = new Map<string, Map<string, Set<string>>>();
   for (const { shop, trip, booking } of candidates) {
     const byTrip = bookingsByShop.get(shop.id) ?? new Map<string, Set<string>>();
@@ -662,6 +685,7 @@ async function readDockEvidence(
   }
   const notBoarded = new Set<string>();
   const neverCounted = new Set<string>();
+  const boarded = new Set<string>();
   // One shop at a time: the readers may share a transaction's single client.
   for (const [shopId, byTrip] of bookingsByShop) {
     const tripIds = [...byTrip.keys()];
@@ -679,6 +703,7 @@ async function readDockEvidence(
         // overrule it (dive-domain review of #2105).
         const countedAboardAfterDive = afterDiveHere?.get(bookingId) === "boarded";
         if (leftAtTheDock({ dockResult: state, countedAboardAfterDive })) notBoarded.add(bookingId);
+        else boarded.add(bookingId);
       }
     }
     for (const [tripId, ids] of byTrip) {
@@ -690,7 +715,7 @@ async function readDockEvidence(
       }
     }
   }
-  return { notBoarded, neverCounted };
+  return { notBoarded, neverCounted, boarded };
 }
 
 /**
@@ -786,7 +811,7 @@ async function loadRecapPageData(
   db: AppDb,
   row: RecapRow,
   bookingId: string,
-  leftAtDock: Promise<Set<string>>,
+  dock: Promise<DockEvidence>,
 ): Promise<{
   data: Omit<RecapPageData, "tip">;
   latestTip: Awaited<ReturnType<typeof getLatestTipForBooking>>;
@@ -808,6 +833,7 @@ async function loadRecapPageData(
     sessionCertifications,
     nextStepAuthors,
     tappedSightings,
+    dockEvidence,
   ] = await Promise.all([
     getTripWithBooked(db, row.shopId, row.tripId),
     listTripDives(db, row.shopId, row.tripId),
@@ -854,7 +880,7 @@ async function loadRecapPageData(
       })
       .from(priorVisits)
       .where(and(eq(priorVisits.shopId, row.shopId), eq(priorVisits.personId, row.personId))),
-    listRecapPhotosForBooking(db, row.shopId, bookingId, row.tripId, leftAtDock),
+    listRecapPhotosForBooking(db, row.shopId, bookingId, row.tripId, dock.then(leftAtTheDockOf)),
     getShopStripeAccount(db, row.shopId),
     getLatestTipForBooking(db, row.shopId, bookingId),
     // **The overclaim guard, as a query** (issues #1196, #1205). Three
@@ -893,6 +919,7 @@ async function loadRecapPageData(
           .limit(1)
       : Promise.resolve([]),
     listTripSightings(db, row.shopId, row.tripId),
+    dock,
   ]);
   if (!trip) return null;
 
@@ -1065,6 +1092,10 @@ async function loadRecapPageData(
     observedSpecies,
     bookingId,
     personId: row.personId,
+    seenThatDay: {
+      boardedAtRollCall: dockEvidence.boarded.has(bookingId),
+      arrivedAtDesk: row.arrivedAtDesk,
+    },
     shoutout: trip.recapShoutout,
     // Recap photos switched off: the diver's page shows no album; every photo
     // is kept, and staff still see each one for takedown.
@@ -1748,7 +1779,7 @@ async function sendRecaps(
   );
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const since = new Date(now.getTime() - RECAP_LOOKBACK_HOURS * HOUR_MS);
-  const eligibleBefore = new Date(now.getTime() - RECAP_AUTOMATIC_DELAY_HOURS * HOUR_MS);
+  const eligibleBefore = new Date(now.getTime() - rungOffsetMs("recap_due"));
 
   const candidates = await db
     .select({ booking: bookings, person: people, trip: trips, shop: shops })
