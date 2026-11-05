@@ -213,6 +213,7 @@ async function readEmergencyReads(
           departureStartsAt: trips.startsAt,
         })
         .from(activityEvents)
+        // diveday:allow-staff-events: the staff weekly digest, never a diver's; it reads one code, medical_alert_emergency_read, which owners and managers see.
         // diveday:allow-rehearsal: an emergency read on a rehearsal still opened a real diver's words, and the owner hears of every one.
         .innerJoin(trips, departure)
         .where(
@@ -234,6 +235,7 @@ async function readEmergencyReads(
       db
         .select({ reader: readerName, count: reads })
         .from(activityEvents)
+        // diveday:allow-staff-events: the staff weekly digest, never a diver's; it reads one code, medical_alert_emergency_read, which owners and managers see.
         // diveday:allow-rehearsal: an emergency read on a rehearsal still opened a real diver's words, and the owner hears of every one.
         .innerJoin(trips, departure)
         .where(
