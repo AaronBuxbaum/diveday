@@ -130,6 +130,7 @@ import {
   gearReservations,
   importedPaymentHistory,
   inboundMessages,
+  incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
   interestReplies,
@@ -214,36 +215,59 @@ export type AnonymizeDiverResult =
 
 /**
  * **Whether a held incident links this person** (issue #3805): a live report
- * of this shop under a legal hold whose departure carries a seat of theirs
- * (cancelled included, since the erasure scrubs every seat), whose own people
- * name them or one of their seats, or whose departure had them on its crew
- * roster or crew roll call. Read under the erasure's transaction, after the
- * target's row lock, so a hold placed before the erasure commits is seen.
+ * of this shop under a legal hold that any of these tie to them:
+ *
+ * - a seat of theirs on its departure (cancelled included, since the erasure
+ *   scrubs every seat);
+ * - its own people: them, one of their seats, or an outsider row whose typed
+ *   name the erasure's own outsider sweep would redact (`buddyMemberNameMatch`,
+ *   the same predicate, so a held row is never rewritten);
+ * - its departure's crew roster or crew roll call;
+ * - the report's own staff columns: who started it, filed it, raised or
+ *   reached by the missing-diver alarm, found the diver or sent the all clear,
+ *   and who wrote an addendum.
+ *
+ * Every report that links them is locked `FOR SHARE` **before** its hold is
+ * read, held or not: `setIncidentLegalHold` locks the report `FOR UPDATE`, so
+ * a hold placed while this erasure runs waits for it to commit, and an erasure
+ * that starts after a hold commits sees it.
  */
 async function linkedToHeldIncident(
   tx: AppTransaction,
   shopId: string,
   personId: string,
+  fullName: string,
 ): Promise<boolean> {
   const theirSeats = tx
     .select({ id: bookings.id })
     .from(bookings)
     .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)));
-  const [held] = await tx
-    .select({ id: incidentReports.id })
+  const outsiderPattern = buddyMemberNameMatch(fullName);
+  const asJson = JSON.stringify([personId]);
+  const linked = await tx
+    .select({ id: incidentReports.id, legalHoldAt: incidentReports.legalHoldAt })
     .from(incidentReports)
     .where(
       and(
         eq(incidentReports.shopId, shopId),
-        isNotNull(incidentReports.legalHoldAt),
         isNull(incidentReports.deletedAt),
         or(
+          eq(incidentReports.createdByPersonId, personId),
+          eq(incidentReports.filedByPersonId, personId),
+          eq(incidentReports.missingAlertRaisedByPersonId, personId),
+          eq(incidentReports.missingFoundByPersonId, personId),
+          sql`${incidentReports.missingAlertReachedPersonIds} @> ${asJson}::jsonb`,
+          sql`${incidentReports.missingAllClearSentPersonIds} @> ${asJson}::jsonb`,
+          sql`exists (select 1 from ${incidentReportAddenda}
+            where ${incidentReportAddenda.reportId} = ${incidentReports.id}
+            and ${incidentReportAddenda.authorPersonId} = ${personId})`,
           sql`exists (select 1 from ${bookings} where ${bookings.tripId} = ${incidentReports.tripId}
             and ${bookings.shopId} = ${shopId} and ${bookings.personId} = ${personId})`,
           sql`exists (select 1 from ${incidentReportPeople}
             where ${incidentReportPeople.reportId} = ${incidentReports.id}
             and (${incidentReportPeople.personId} = ${personId}
-              or ${incidentReportPeople.bookingId} in (${theirSeats})))`,
+              or ${incidentReportPeople.bookingId} in (${theirSeats})
+              ${outsiderPattern ? sql`or ${incidentReportPeople.outsiderName} ~* ${outsiderPattern}` : sql``}))`,
           sql`exists (select 1 from ${tripAssignments}
             where ${tripAssignments.tripId} = ${incidentReports.tripId}
             and ${tripAssignments.personId} = ${personId})`,
@@ -255,8 +279,8 @@ async function linkedToHeldIncident(
         ),
       ),
     )
-    .limit(1);
-  return held !== undefined;
+    .for("share");
+  return linked.some((report) => report.legalHoldAt !== null);
 }
 
 /** Every column `listDiverSummaries` already refuses to ship to the browser, plus the rest. */
@@ -569,7 +593,7 @@ export async function anonymizeDiver(
     if (roleRows.some((row) => STAFF_ROLES.includes(row.role))) {
       return { ok: false, reason: "staff_member" } as const;
     }
-    if (await linkedToHeldIncident(tx, input.shopId, input.personId)) {
+    if (await linkedToHeldIncident(tx, input.shopId, input.personId, person.fullName)) {
       return { ok: false, reason: "incident_hold" } as const;
     }
 
@@ -2922,6 +2946,12 @@ async function scrubIncidentReports(
       and(
         eq(incidentReportPeople.shopId, shopId),
         sql`${incidentReportPeople.outsiderName} ~* ${pattern}`,
+        // A held report is never rewritten (issue #3805). `linkedToHeldIncident`
+        // already refuses an erasure this would reach; this keeps the sweep
+        // safe on its own.
+        sql`not exists (select 1 from ${incidentReports}
+          where ${incidentReports.id} = ${incidentReportPeople.reportId}
+          and ${incidentReports.legalHoldAt} is not null)`,
       ),
     )
     .returning({ id: incidentReportPeople.id });

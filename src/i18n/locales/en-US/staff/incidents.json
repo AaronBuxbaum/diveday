@@ -183,7 +183,7 @@
     "nobodyChosen": "Choose a person, or write a name.",
     "blankNote": "Write the note before adding it.",
     "notYetFiled": "File the report before adding a later note.",
-    "held": "A report on legal hold can’t be deleted. Release the hold first.",
+    "held": "A report on legal hold can’t be deleted or lose a person. Release the hold first.",
     "holdSet": "Legal hold set",
     "holdReleased": "Legal hold released",
     "alerted": "The owners were alerted from this report, so it is kept. Mark the diver found instead.",

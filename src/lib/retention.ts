@@ -428,7 +428,8 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * report?" needs a stated answer (ADR 20261012-incident-reports). The people
    * in a report and its addenda go with it by cascade. Erasure does not wait
    * for this: `anonymizeDiver` unlinks a diver from a report at once and
-   * leaves the words staff wrote.
+   * leaves the words staff wrote, unless a report under a legal hold links
+   * them, when the erasure is refused until the hold is released (#3805).
    */
   incident_reports: 2555,
   /**

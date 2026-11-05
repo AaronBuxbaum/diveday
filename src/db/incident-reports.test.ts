@@ -666,8 +666,11 @@ describe("erasing a diver named in a report", () => {
 });
 
 describe("erasing a diver named in a report under a legal hold", () => {
-  /** Erasure wins over the hold on personal fields; the hold keeps the report itself (#2391). */
-  it("unlinks the diver and still keeps the report", async () => {
+  /**
+   * The erasure waits for the hold (issue #3805, Aaron's option A); once the
+   * hold is released it unlinks the diver and the report itself stays (#2391).
+   */
+  it("waits for the hold, then unlinks the diver and still keeps the report", async () => {
     const { db, shop } = ctx;
     const f = await fixture(db, shop.id);
     const name = f.seat.person.fullName;
@@ -692,13 +695,17 @@ describe("erasing a diver named in a report under a legal hold", () => {
       await setIncidentLegalHold(db, { ...base, actorPersonId: f.owner.id, held: true }),
     ).toEqual({ ok: true });
 
-    expect(
-      await anonymizeDiver(db, {
+    const erase = () =>
+      anonymizeDiver(db, {
         shopId: shop.id,
         personId: f.seat.person.id,
         actorPersonId: f.owner.id,
-      }),
-    ).toMatchObject({ ok: true });
+      });
+    expect(await erase()).toEqual({ ok: false, reason: "incident_hold" });
+    expect(
+      await setIncidentLegalHold(db, { ...base, actorPersonId: f.owner.id, held: false }),
+    ).toEqual({ ok: true });
+    expect(await erase()).toMatchObject({ ok: true });
 
     const view = await getIncidentReport(db, shop.id, started.reportId, f.owner.id);
     expect(view?.status).toBe("filed");
@@ -707,7 +714,7 @@ describe("erasing a diver named in a report under a legal hold", () => {
       .select({ heldAt: incidentReports.legalHoldAt, deletedAt: incidentReports.deletedAt })
       .from(incidentReports)
       .where(eq(incidentReports.id, started.reportId));
-    expect(row?.heldAt).not.toBeNull();
+    expect(row?.heldAt).toBeNull();
     expect(row?.deletedAt).toBeNull();
   });
 });

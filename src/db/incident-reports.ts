@@ -1049,6 +1049,9 @@ export async function removeIncidentPerson(
     const { report, allowed } = await lockForWrite(tx, input);
     if (!report || !allowed) return { ok: false, reason: "not_found" } as const;
     if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
+    // A held draft keeps its people: taking someone off would also take away
+    // the link that makes their erasure wait for the hold (issue #3805).
+    if (report.legalHoldAt) return { ok: false, reason: "held" } as const;
     // The person the owners were told is missing stays on the report (review
     // 2026-10-17); the foreign key on `missing_subject_row_id` refuses too.
     if (report.missingSubjectRowId === input.rowId) {

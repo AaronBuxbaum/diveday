@@ -183,7 +183,7 @@
     "nobodyChosen": "Elige a una persona o escribe un nombre.",
     "blankNote": "Escribe la nota antes de agregarla.",
     "notYetFiled": "Presenta el informe antes de agregar una nota posterior.",
-    "held": "Un informe con retención legal no se puede eliminar. Levanta antes la retención.",
+    "held": "Un informe con retención legal no se puede eliminar ni quitarle a nadie. Levanta antes la retención.",
     "holdSet": "Retención legal puesta",
     "holdReleased": "Retención legal levantada",
     "alerted": "Desde este informe se avisó a los propietarios, así que se conserva. Marca al buceador como encontrado.",

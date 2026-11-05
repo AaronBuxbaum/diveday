@@ -91,9 +91,14 @@ offboarding is a different problem.
 
 A third refusal (issue #3805, Aaron's option A): **anyone an incident report under legal hold
 links** (`incident_hold`) — a booking on the held report's departure at any status, a row in its
-people, or a place on its crew (trip assignment or a roll call taken). Erasing them would clear
-that departure's evidence while a claim is open. The owner sees why and releases the hold first;
-nothing changes until then.
+people (by person, by seat, or an outsider name the erasure's own name sweep would redact), a
+place on its crew (trip assignment or a crew roll-call mark), or the report's own staff columns
+(who started or filed it, raised, was reached by or found in the missing-diver alarm, sent the all
+clear, or wrote an addendum). Erasing them would clear that departure's evidence while a claim is
+open. The owner sees why and releases the hold first; nothing changes until then. Every report
+that links the person is locked `FOR SHARE` before its hold is read, so a hold placed while an
+erasure runs waits for it, and the outsider sweep skips held reports on its own as well. A held
+draft cannot lose a person from its people list while the hold stands.
 
 ### Amendment, 2026-08-21 — erasure runs on a deleted record only
 

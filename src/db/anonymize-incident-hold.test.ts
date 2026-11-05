@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
+import { removeIncidentPerson } from "./incident-reports";
 import {
   bookings,
+  incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
   people,
@@ -134,6 +136,111 @@ describe("erasure and an incident's legal hold", () => {
     const { db, shop, owner, diver, elsewhere } = await setting();
     await db.insert(tripAssignments).values({ tripId: elsewhere.id, personId: diver });
     await report(db, { shopId: shop.id, tripId: elsewhere.id, createdBy: owner, held: true });
+    expect(await erase(db, shop.id, diver, owner)).toMatchObject({ reason: "incident_hold" });
+  });
+
+  // Security review of #3805, blocker: the outsider sweep must not rewrite a
+  // held report, so a typed name it would redact is a link.
+  it("refuses while a held report lists them by typed name, and leaves that row as written", async () => {
+    const { db, shop, owner, diver, elsewhere } = await setting();
+    const [person] = await db
+      .select({ fullName: people.fullName })
+      .from(people)
+      .where(eq(people.id, diver));
+    if (!person) throw new Error("diver missing");
+    const reportId = await report(db, {
+      shopId: shop.id,
+      tripId: elsewhere.id,
+      createdBy: owner,
+      held: true,
+    });
+    await db.insert(incidentReportPeople).values({
+      shopId: shop.id,
+      reportId,
+      outsiderName: person.fullName,
+      involvement: "witness",
+    });
+    expect(await erase(db, shop.id, diver, owner)).toMatchObject({ reason: "incident_hold" });
+    const rows = await db
+      .select({ outsiderName: incidentReportPeople.outsiderName })
+      .from(incidentReportPeople)
+      .where(eq(incidentReportPeople.reportId, reportId));
+    expect(rows).toEqual([{ outsiderName: person.fullName }]);
+  });
+
+  it.each([
+    ["createdByPersonId", {}],
+    ["filedByPersonId", {}],
+  ] as const)("refuses a former staffer who is the held report's %s", async (column, with_) => {
+    const { db, shop, owner, diver, elsewhere } = await setting();
+    const reportId = await report(db, {
+      shopId: shop.id,
+      tripId: elsewhere.id,
+      createdBy: owner,
+      held: true,
+    });
+    await db
+      .update(incidentReports)
+      .set({ ...with_, [column]: diver })
+      .where(eq(incidentReports.id, reportId));
+    expect(await erase(db, shop.id, diver, owner)).toMatchObject({ reason: "incident_hold" });
+  });
+
+  it.each(["missingAlertReachedPersonIds", "missingAllClearSentPersonIds"] as const)(
+    "refuses a former staffer listed in the held report's %s",
+    async (column) => {
+      const { db, shop, owner, diver, elsewhere } = await setting();
+      const reportId = await report(db, {
+        shopId: shop.id,
+        tripId: elsewhere.id,
+        createdBy: owner,
+        held: true,
+      });
+      await db
+        .update(incidentReports)
+        .set({ [column]: [diver] })
+        .where(eq(incidentReports.id, reportId));
+      expect(await erase(db, shop.id, diver, owner)).toMatchObject({ reason: "incident_hold" });
+    },
+  );
+
+  it("refuses a former staffer who wrote an addendum on the held report", async () => {
+    const { db, shop, owner, diver, elsewhere } = await setting();
+    const reportId = await report(db, {
+      shopId: shop.id,
+      tripId: elsewhere.id,
+      createdBy: owner,
+      held: true,
+    });
+    await db
+      .insert(incidentReportAddenda)
+      .values({ shopId: shop.id, reportId, authorPersonId: diver, body: "Saw the ascent." });
+    expect(await erase(db, shop.id, diver, owner)).toMatchObject({ reason: "incident_hold" });
+  });
+
+  // Attacker review S5: the link cannot be edited away while the hold stands.
+  it("will not take a person off a held draft", async () => {
+    const { db, shop, owner, diver, elsewhere } = await setting();
+    const reportId = await report(db, {
+      shopId: shop.id,
+      tripId: elsewhere.id,
+      createdBy: owner,
+      held: true,
+    });
+    const [row] = await db
+      .insert(incidentReportPeople)
+      .values({ shopId: shop.id, reportId, personId: diver, involvement: "witness" })
+      .returning({ id: incidentReportPeople.id });
+    if (!row) throw new Error("row missing");
+    expect(
+      await removeIncidentPerson(db, {
+        shopId: shop.id,
+        reportId,
+        tripId: elsewhere.id,
+        rowId: row.id,
+        actorPersonId: owner,
+      }),
+    ).toEqual({ ok: false, reason: "held" });
     expect(await erase(db, shop.id, diver, owner)).toMatchObject({ reason: "incident_hold" });
   });
 
