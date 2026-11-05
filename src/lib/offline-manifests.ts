@@ -704,7 +704,8 @@ export type OfflineRollCallEvent = {
    * **Additive, and no `OFFLINE_MANIFEST_RECORD_VERSION` bump** — the same
    * reasoning as `cleared` itself, one field later. The snapshot payload is
    * untouched, older events parse with this undefined, and undefined means
-   * "took the pre-change path", which the server still accepts.
+   * "took the pre-change path". The server still accepts that at `departure`
+   * and refuses it after a dive as `retraction_superseded` (issue #3951).
    */
   retractsClientEventId?: string;
   /**

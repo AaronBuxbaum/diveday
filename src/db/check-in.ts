@@ -511,10 +511,12 @@ async function appliedArrivalEventId(
  *   direction: the diver stays checked in, which is a statement a human made
  *   about somebody they could see.
  *
- * An undo that names nothing keeps the old newest-wins-only behaviour, exactly
- * as roll call's does: an event with no `retractsClientEventId` was queued by a
- * build that predates the field, on a phone in a dry bag, and refusing it would
- * discard a correction a staffer really made.
+ * An undo that names nothing keeps the old newest-wins-only behaviour, as roll
+ * call's does at departure: an event with no `retractsClientEventId` was
+ * queued by a build that predates the field, on a phone in a dry bag, and
+ * refusing it would discard a correction a staffer really made. (Roll call
+ * refuses one after a dive, where a `cleared` reaches back to another meeting
+ * day, issue #3951; an arrival carries no missing-diver alarm.)
  */
 function offlineArrivalRefusal(input: {
   newest: NewestArrival | undefined;
