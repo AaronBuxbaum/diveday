@@ -27,21 +27,40 @@ describe("decide", () => {
 });
 
 describe("gate", () => {
-  const env = { GITHUB_EVENT_NAME: "pull_request", PR_NUMBER: "2", PR_BASE_REF: "x", DEFAULT_BRANCH: "main" };
+  const env = {
+    GITHUB_EVENT_NAME: "pull_request",
+    PR_NUMBER: "2",
+    PR_BASE_REF: "x",
+    DEFAULT_BRANCH: "main",
+  };
   it("runs anything that is not a pull request", async () => {
     expect((await gate({ GITHUB_EVENT_NAME: "push" }, async () => [])).run).toBe(true);
   });
   it("retries until the stack registers, then skips a lower layer", async () => {
     let calls = 0;
-    const result = await gate(env, async () => (++calls < 3 ? [] : [stack(9, 1, 2, 3)]), async () => {});
+    const result = await gate(
+      env,
+      async () => (++calls < 3 ? [] : [stack(9, 1, 2, 3)]),
+      async () => {},
+    );
     expect(result.run).toBe(false);
     expect(calls).toBe(3);
   });
   it("runs rather than wait forever for a registration", async () => {
-    expect((await gate(env, async () => [], async () => {})).run).toBe(true);
+    expect(
+      (
+        await gate(
+          env,
+          async () => [],
+          async () => {},
+        )
+      ).run,
+    ).toBe(true);
   });
   it("fails open when the API errors", async () => {
-    const result = await gate(env, async () => { throw new Error("HTTP 500"); });
+    const result = await gate(env, async () => {
+      throw new Error("HTTP 500");
+    });
     expect(result.run).toBe(true);
   });
 });

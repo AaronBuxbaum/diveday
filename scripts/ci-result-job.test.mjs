@@ -31,13 +31,17 @@ describe("the CI result job", () => {
     const others = jobIds(CI).filter((id) => id !== "ci-result");
     expect(others.length).toBeGreaterThan(5);
     expect(resultNeeds(CI).sort()).toEqual(others.sort());
-    expect([...CI_JOBS].sort()).toEqual(others.sort());
+    // `stack-gate` decides whether the run happens at all and skips every lower layer, so the
+    // merge verdict does not read it as a lane of its own.
+    expect([...CI_JOBS].sort()).toEqual(others.filter((id) => id !== "stack-gate").sort());
   });
 
   it("runs even when a job it needs failed and keeps a stable aggregate name", () => {
     const job = CI.slice(CI.indexOf("\n  ci-result:\n"));
     expect(job).toMatch(/^ {4}name: CI result$/mu);
-    expect(job).toMatch(/^ {4}if: always\(\) && github\.event_name != 'schedule'$/mu);
+    expect(job).toMatch(
+      /^ {4}if: always\(\) && github\.event_name != 'schedule' && needs\.stack-gate\.outputs\.run != 'false'$/mu,
+    );
   });
 
   it("checks current PR candidate identity with read-only pull request access", () => {
