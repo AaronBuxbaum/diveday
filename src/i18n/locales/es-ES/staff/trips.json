@@ -129,7 +129,7 @@
     "diverAdded": "Buceador agregado a la salida",
     "partySeatAdded": "Una plaza solicitada ya está reservada. Agrega al resto del grupo a esta salida.",
     "diverAddedConfirmed": "Buceador agregado. Su confirmación va en camino.",
-    "diverAddedWaiverUndelivered": "Buceador agregado a la salida, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
+    "diverAddedWaiverUndelivered": "Buceador agregado a la salida, pero no se envió su exención por correo. Envíala por correo o mensaje desde su fila de abajo.",
     "diverAddedIdentityUnconfirmed": "Buceador agregado a la salida, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila de abajo.",
     "diverWaitlisted": "Buceador agregado a la lista de espera",
     "invitationOptedOut": "Invitación registrada, pero no enviada por correo: este buceador desactivó los correos opcionales del centro.",

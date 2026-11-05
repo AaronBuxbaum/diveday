@@ -474,7 +474,7 @@
     "bookedConfirmed": "Reservado, y su confirmación va en camino. Revísalo abajo, luego crea y envía la factura.",
     "bookedConfirmedNoInvoice": "Reservado, y su confirmación va en camino.",
     "bookedNoInvoice": "Reservado",
-    "bookedWaiverUndelivered": "Reservado, pero no se envió su exención por correo. Abre la pestaña Buceadores de la salida para enviarla o compartir el enlace.",
+    "bookedWaiverUndelivered": "Reservado, pero no se envió su exención por correo. Abre la pestaña Buceadores de la salida para enviarla por correo o mensaje.",
     "bookedIdentityUnconfirmed": "Reservado, pero la plaza queda retenida hasta que confirmes que es la misma persona. Abre la pestaña Buceadores de la salida para confirmarlo.",
     "bookingInvalid": "Agrega un correo electrónico y elige una salida.",
     "cardCertifiedToast": "Marcada como certificada",
