@@ -343,7 +343,7 @@ test("a seat booked as under 18 asks for a parent on its release", async ({ page
  * 20261014-parent-signs-minor-release). Mia is booked "Under 18" with no
  * email of her own, so nothing reaches anyone for her; the lead's panel offers
  * "Sign Mia's waiver", which opens Mia's release with the guardian's card on
- * the parent's device. Mia's claim link says a parent signs with her.
+ * the parent's own link. Mia's claim link says a parent signs with her.
  */
 test("a parent signs the release of a child they booked, from their own page", async ({ page }) => {
   test.setTimeout(90_000);
@@ -389,7 +389,8 @@ test("a parent signs the release of a child they booked, from their own page", a
   expect(claimPath).toBeTruthy();
 
   await seatRow.getByRole("button", { name: `Sign ${child}’s waiver` }).click();
-  await expect(page).toHaveURL(/\/waivers\//);
+  // On the parent's own link, never a waiver link (issue #2743).
+  await expect(page).toHaveURL(/\/ready\/[^/]+\/party\/[^/]+\/waiver$/);
   await expect(page.getByRole("heading", { name: "Parent or guardian" })).toBeVisible();
   await expect(page.getByText(`${child} is under 18`)).toBeVisible();
 

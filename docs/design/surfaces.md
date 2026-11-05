@@ -601,9 +601,10 @@ H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explic
 thread's Sign step, at `/ready/[token]/waiver`, on the readiness link they already hold: no waiver
 link is handed over and no cookie carries them back. The words, rail and signature card are one
 render function (`waiverSigningForm`) both doors call. The waiver link stays the door for what a
-booking thread cannot hold: a release with no seat (counter registration, the diver record's send),
-a counter tablet, and a parent signing a child's seat from their party panel. Staff "Send waiver"
-for a seat sends the holder this thread link and never shows one to copy (ADR 20261105).
+booking thread cannot hold: a release with no seat (counter registration, the diver record's send)
+and a counter tablet. Staff "Send waiver" for a seat sends the holder this thread link and never
+shows one to copy, and a parent signs a child's seat from their party panel on their own link, at
+`/ready/[token]/party/[seatId]/waiver` (ADR 20261105).
 In the thread the expiry line is gone (the Sign step reopens the release) and a "Back to your trip
 prep" link closes the page; a referred signer lands on the receipt, whose doctor's page is
 `/ready/[token]/waiver/doctor`, and the Sign step offers "What your doctor needs" until a physician

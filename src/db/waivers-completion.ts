@@ -67,7 +67,9 @@ export type WaiverKey = string | ThreadWaiverKey;
  * record, pinned by id at the start of the request, so every re-read inside the
  * lock reaches the same row a token would. Only `threadWaiverKey` makes one,
  * and only a caller that has already verified the readiness capability for
- * `bookingId` may call that: the key is the authority, as the token is.
+ * `bookingId`, or the party lead's for a seat whose parent's door is open
+ * (`partySeatWaiverKey`), may call that: the key is the authority, as the
+ * token is.
  */
 export type ThreadWaiverKey = {
   readonly kind: "thread";

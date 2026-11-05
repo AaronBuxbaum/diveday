@@ -32,8 +32,8 @@ own device, as the child's parent or guardian.**
      `guardian_signature_missing`)
 
    Anything else gets one answer. The panel draws the button by the same predicates.
-3. **The waiver token is minted on the tap**, never printed into the lead's page. It is the seat's
-   booking-scoped `/waivers/[token]`, reused while live (20260820-waiver-links-are-reused-not-reissued).
+3. **No waiver token** (amended by 20261105-waiver-folds-into-the-thread): the parent signs on
+   their own link, `/ready/<token>/party/<seat>/waiver`, its door re-read on every act.
 4. **The release is the child's; the guardian card is the parent's.** The declared minor makes the
    page ask for both signatures (20260907, decision 1). Nothing new is stored, and the seal and
    `guardian_signature_missing` are unchanged.
