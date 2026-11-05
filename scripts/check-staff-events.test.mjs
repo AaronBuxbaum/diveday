@@ -84,6 +84,68 @@ describe("a read of activity_events outside src/db", () => {
   });
 });
 
+describe("reads that look filtered but are not (security review of layer 2, S2)", () => {
+  it("refuses a read that selects everything but the diver audience", () => {
+    expect(
+      lines(`
+        db.select().from(activityEvents).where(ne(activityEvents.audience, "diver"));
+      `),
+    ).toEqual([2]);
+  });
+
+  it("refuses a read that lets both audiences through", () => {
+    expect(
+      lines(`
+        db.select()
+          .from(activityEvents)
+          .where(or(eq(activityEvents.audience, "diver"), eq(activityEvents.audience, "staff")));
+      `),
+    ).toEqual([3]);
+  });
+
+  it("refuses a filter that is only in a comment", () => {
+    expect(
+      lines(`
+        db.select()
+          .from(activityEvents)
+          // filtered later: eq(activityEvents.audience, "diver")
+          .where(eq(activityEvents.shopId, shopId));
+      `),
+    ).toEqual([3]);
+  });
+
+  it("anchors an aliased table, and accepts the alias's own diver filter", () => {
+    expect(
+      lines(`
+        const ae = alias(activityEvents, "ae");
+        db.select().from(ae).where(eq(ae.shopId, shopId));
+      `),
+    ).toEqual([3]);
+    expect(
+      lines(`
+        const ae = alias(activityEvents, "ae");
+        db.select().from(ae).where(eq(ae.audience, "diver"));
+      `),
+    ).toEqual([]);
+  });
+
+  it("anchors a namespace import", () => {
+    expect(
+      lines(`
+        db.select().from(schema.activityEvents).where(eq(schema.activityEvents.shopId, shopId));
+      `),
+    ).toEqual([2]);
+  });
+
+  it("anchors raw SQL that interpolates the table", () => {
+    expect(
+      lines(`
+        sql\`select * from \${activityEvents} where shop_id = \${shopId}\`;
+      `),
+    ).toEqual([2]);
+  });
+});
+
 describe("which files are guarded", () => {
   it("guards source outside src/db, tests aside", () => {
     expect(guardsFile("src/app/s/[shopSlug]/page.tsx")).toBe(true);

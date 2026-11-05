@@ -22,8 +22,15 @@ import { filesUnder } from "./files-under.mjs";
  * `from|join activity_events`. Writes (`insert`, `update`) are not reads.
  *
  * A read passes when its own query, within {@link QUERY_WINDOW} lines of the
- * anchor and before the next one, filters `activityEvents.audience` to
- * `"diver"`, or carries `diveday:allow-staff-events: <why>` in a comment.
+ * anchor and before the next one, filters with `eq(activityEvents.audience,
+ * "diver")` (or SQL `audience = 'diver'`) and nowhere lets the staff audience
+ * through (`ne(...)`, a `"staff"` comparison), or carries
+ * `diveday:allow-staff-events: <why>` in a comment. Comments are blanked
+ * before the filter is read, so a comment naming the filter proves nothing.
+ * The table is recognised bare, through a namespace import
+ * (`schema.activityEvents`), under an `alias(activityEvents, …)`, and when
+ * raw SQL interpolates it (`from ${activityEvents}`); security review of
+ * layer 2, S2.
  * Ending at the next anchor is issue #635's lesson from
  * `check-live-trips.mjs`: a neighbour's filter never proves a read.
  */
@@ -31,11 +38,46 @@ import { filesUnder } from "./files-under.mjs";
 const ROOT = process.cwd();
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const QUERY_WINDOW = 60;
-const ANCHOR =
-  /\.from\(\s*activityEvents\s*\)|\.(?:inner|left|right|full)Join\(\s*activityEvents\b|\b(?:from|join)\s+"?activity_events"?\b/i;
-const DIVER_FILTER = /activityEvents\.audience\s*,\s*["']diver["']|audience"?\s*=\s*'diver'/;
-const ALLOW = /diveday:allow-staff-events:[ \t]*\S[^\n]{9,}/;
 const IS_TEST = /\.test\.tsx?$/;
+const ALLOW = /diveday:allow-staff-events:[ \t]*\S[^\n]{9,}/;
+/** `activityEvents`, bare or through a namespace import (`schema.activityEvents`). */
+const TABLE = String.raw`(?:\w+\.)?activityEvents`;
+/** `const ae = alias(activityEvents, "ae")`: the alias reads the same table. */
+const ALIAS = new RegExp(String.raw`\b(\w+)\s*=\s*alias\(\s*${TABLE}\b`, "g");
+
+/** The anchors and filters for one source: the table under every name it has there. */
+function patterns(source) {
+  // An alias is `\w+`, so it needs no escaping inside a pattern.
+  const aliases = [...source.matchAll(ALIAS)].map((match) => match[1]);
+  const names = [TABLE, ...aliases].join("|");
+  return {
+    anchor: new RegExp(
+      [
+        String.raw`\.from\(\s*(?:${names})\s*\)`,
+        String.raw`\.(?:inner|left|right|full)Join\(\s*(?:${names})\b`,
+        String.raw`\b(?:from|join)\s+"?activity_events"?\b`,
+        // Raw SQL that interpolates the table object reads it too.
+        String.raw`\b(?:from|join)\s+\$\{\s*${TABLE}\s*\}`,
+      ].join("|"),
+      "i",
+    ),
+    // Only an equality to the diver audience proves a read; a `ne(...)` or an
+    // `or(...)` that also lets "staff" through is caught by STAFF_AUDIENCE.
+    diver: new RegExp(
+      String.raw`\beq\(\s*(?:${names})\.audience\s*,\s*["']diver["']\s*\)|\baudience"?\s*=\s*'diver'`,
+    ),
+    staff: new RegExp(
+      String.raw`\bne\(\s*(?:${names})\.audience\b|(?:${names})\.audience\s*,\s*["']staff["']|\baudience"?\s*(?:=|<>|!=)\s*'staff'|\baudience"?\s*(?:<>|!=)\s*'diver'`,
+    ),
+  };
+}
+
+/** The source with its comments blanked, line structure kept: a comment proves nothing. */
+function withoutComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, " "))
+    .replace(/(^|[^:"'`])\/\/[^\n]*/g, (_match, before) => before);
+}
 
 /** Whether `file` (relative to the repository root) is one this guard reads. */
 export function guardsFile(file) {
@@ -48,15 +90,18 @@ export function guardsFile(file) {
 /** Every read of `activity_events` in one source, and which of them prove nothing. */
 export function findUnmarkedStaffEventReads(source) {
   const lines = source.split("\n");
-  const anchors = lines.reduce((found, line, index) => {
-    if (ANCHOR.test(line)) found.push(index);
+  const code = withoutComments(source).split("\n");
+  const { anchor, diver, staff } = patterns(source);
+  const anchors = code.reduce((found, line, index) => {
+    if (anchor.test(line)) found.push(index);
     return found;
   }, []);
   const findings = [];
   anchors.forEach((index, position) => {
     const end = Math.min(index + QUERY_WINDOW, anchors[position + 1] ?? lines.length);
-    const window = lines.slice(index, end).join("\n");
-    if (DIVER_FILTER.test(window) || ALLOW.test(window)) return;
+    if (ALLOW.test(lines.slice(index, end).join("\n"))) return;
+    const window = code.slice(index, end).join("\n");
+    if (diver.test(window) && !staff.test(window)) return;
     findings.push({ line: index + 1, text: lines[index].trim() });
   });
   return { guarded: anchors.length, findings };
