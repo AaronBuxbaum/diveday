@@ -32,6 +32,11 @@ import type { DiveDayMilestone } from "@/lib/visit-milestones";
 export type MastheadFacts = {
   shop: { name: string; slug: string; timezone: string; dockCallMinutes: number };
   trip: { id: string; title: string; startsAt: Date; endsAt: Date };
+  /**
+   * The departure's meeting days when it meets on more than one (#2558): the
+   * when line says day one's own hours, and each day is listed with its own.
+   */
+  days?: readonly { startsAt: Date; endsAt: Date }[];
   /** A scheduled hotel pickup replaces the dock call: the diver is told where they are collected. */
   pickup: { time: string | null; location: string | null };
 };
@@ -43,13 +48,47 @@ export function mastheadWhenParts(
   now: Date,
 ): { day: string; hours: string } {
   const { trip, shop } = facts;
+  // A run's own window spans every day; day one's hours are the ones to state.
+  const first = facts.days && facts.days.length > 1 ? facts.days[0] : undefined;
+  const window = first ?? trip;
   const relative = formatRelativeDay(trip.startsAt, now, locale, shop.timezone);
   const lead = relative.charAt(0).toLocaleUpperCase(locale) + relative.slice(1);
   const date = formatShortDate(trip.startsAt, locale, shop.timezone);
   return {
     day: `${lead} · ${date}`,
-    hours: formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone),
+    hours: formatTimeRangeTz(window.startsAt, window.endsAt, locale, shop.timezone),
   };
+}
+
+/**
+ * **Every day a multi-day departure meets, with its own hours** (#2558): a
+ * pool night at 6 PM and an open-water Saturday at 8 AM are one course, and a
+ * diver checks both here. Nothing for a one-day departure.
+ */
+export function MastheadDays({
+  facts,
+  locale,
+  t,
+}: {
+  facts: MastheadFacts;
+  locale: string;
+  t: DiverTranslator;
+}) {
+  const days = facts.days ?? [];
+  if (days.length < 2) return null;
+  return (
+    <ul className="mt-2 space-y-1 text-sm text-muted tabular-nums" data-testid="ready-meeting-days">
+      {days.map((day, index) => (
+        <li key={day.startsAt.toISOString()}>
+          {t("ready.meetingDayLine", {
+            number: index + 1,
+            date: formatShortDate(day.startsAt, locale, facts.shop.timezone),
+            hours: formatTimeRangeTz(day.startsAt, day.endsAt, locale, facts.shop.timezone),
+          })}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 /**
@@ -122,6 +161,7 @@ export function ReadyMastheadMeta({
   return (
     <>
       <MastheadWhen facts={facts} locale={locale} now={now} />
+      <MastheadDays facts={facts} locale={locale} t={t} />
       {dateActions}
       {/* The one number that matters on the morning of the trip, a shade
           stronger than the date line, never shouting. "Today" is said once,
@@ -312,6 +352,7 @@ export function ReadyThreadMasthead({
           dockCallMinutes: data.shop.dockCallMinutes,
         },
         trip: data.detail.trip,
+        days: data.meetingDays,
         pickup: { time: data.pickupTime, location: data.hotelPickupLocation },
       }}
       locale={locale}

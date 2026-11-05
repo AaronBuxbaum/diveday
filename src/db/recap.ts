@@ -41,6 +41,7 @@ import { firstNameOf } from "@/lib/person-name";
 import { diveDayOrdinal } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
 import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
+import { leftAtTheDock } from "@/lib/seat-ladder";
 import { shopClock } from "@/lib/shop-clock";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
@@ -661,14 +662,14 @@ async function readDockEvidence(
       () => departureRollCallTakenTripIds(db, shopId, tripIds),
     ]);
     for (const [tripId, states] of departure) {
-      const sailed = afterDive.get(tripId);
+      const afterDiveHere = afterDive.get(tripId);
       for (const [bookingId, state] of states) {
-        // Only a `boarded` tap is evidence they sailed. A "not back aboard"
+        // The seat ladder's rule (issue #3823): only an after-dive `boarded`
+        // puts a dock `not_boarded` diver on a boat. A "not back aboard"
         // after a dock `not_boarded` contradicts the dock, it does not
         // overrule it (dive-domain review of #2105).
-        if (state === "not_boarded" && sailed?.get(bookingId) !== "boarded") {
-          notBoarded.add(bookingId);
-        }
+        const countedAboardAfterDive = afterDiveHere?.get(bookingId) === "boarded";
+        if (leftAtTheDock({ dockResult: state, countedAboardAfterDive })) notBoarded.add(bookingId);
       }
     }
     for (const [tripId, ids] of byTrip) {

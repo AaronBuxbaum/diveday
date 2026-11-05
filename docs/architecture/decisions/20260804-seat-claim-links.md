@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-04
+- **Amended by:** [20261104-derived-booking-link-tokens](20261104-derived-booking-link-tokens.md) — claim links are derived from their row and a booking holds one live one, so the organizer's panel hands back the same link instead of minting under a cap.
 
 ## Context
 

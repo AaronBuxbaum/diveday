@@ -63,6 +63,12 @@ const serverEnv = {
   DIVEDAY_RATE_LIMIT_DISABLED: "1",
   AUTH_TRUST_HOST: "true",
   AUTH_SECRET: process.env.AUTH_SECRET ?? "diveday-e2e-secret",
+  // Booking links refuse a signing secret under 32 bytes, and the AUTH_SECRET
+  // pin above is shorter (recap tokens minted in this process depend on its
+  // value), so the e2e servers sign booking links under their own v2 key
+  // (ADR 20261104-derived-booking-link-tokens). A fixed test-only value.
+  BOOKING_LINK_SECRET:
+    process.env.BOOKING_LINK_SECRET ?? "v2:diveday-e2e-booking-link-secret-not-for-production",
   // External providers are unit-tested through injected fetchers. Keeping them
   // out of the browser suite makes it deterministic without mocking our own
   // server or database.

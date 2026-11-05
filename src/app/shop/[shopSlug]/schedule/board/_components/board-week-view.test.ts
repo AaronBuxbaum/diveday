@@ -153,6 +153,27 @@ describe("boardWeekView", () => {
     expect(week?.spans[0]).toMatchObject({ startColumn: 1, columnSpan: 2, dateIso: "2026-07-18" });
   });
 
+  /** #2557 review M1: one badge per course bar, and the newest open meeting day wins it. */
+  it("badges a course with the newest meeting day's open count, not an earlier day's row", () => {
+    const span = {
+      ...departure({ tripId: "c1", title: "Open Water" }),
+      firstDay: "2026-07-18",
+      lastDay: "2026-07-21",
+      dayCount: 4,
+      instructorName: "Ana",
+    };
+    const gap = (dayNumber: number, reason: string, diveNumber: number, uncounted: number) =>
+      ({ tripId: "c1", dayNumber, reason, diveNumber, uncounted }) as never;
+    const week = boardWeekView(
+      input({
+        weekRows: { days: {}, spans: [span] } as unknown as Input["weekRows"],
+        // Newest day first, as `listRollCallGaps` puts them out.
+        openRollCalls: [gap(2, "after_dive_uncounted", 2, 3), gap(1, "missing_diver", 1, 1)],
+      }),
+    );
+    expect(week?.spans[0]?.rollCallOpen).toEqual({ diveNumber: 2, uncounted: 3 });
+  });
+
   /** Fourth review, item 12: the crew member away on a day the departure meets. */
   it("names who is rostered and away, with their days, on a boat and a course bar", () => {
     const away = [

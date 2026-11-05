@@ -35,6 +35,13 @@ export async function todayCatchUpScenario(browser: Browser, owner: Page, worker
     // A submit sent while the page hydrates can land without posting the seating, so the
     // form is filled only once React owns it (the same wait check-in.spec.ts makes).
     await expect(owner.locator("[data-identity-menu]")).toHaveAttribute("data-hydrated", "true");
+    // The identity menu streams under its own boundary, so it says nothing about the form: a press
+    // before React owns the form posts natively and no seating response with a next-action header
+    // ever arrives (#3828, #3759).
+    await expect(owner.locator('[data-form-draft="new_diver"]')).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await owner.getByLabel("Full name").fill("Today Catchup Diver");
     await expect(owner.getByLabel("Full name")).toHaveValue("Today Catchup Diver");
     const seated = owner.waitForResponse(

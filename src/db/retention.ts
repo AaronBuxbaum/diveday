@@ -1,8 +1,10 @@
 import { and, eq, inArray, isNotNull, isNull, lt, or, SQL, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import { DESK_ONLY_CODES } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
+  deskLineRetentionCutoff,
   dietaryNoteCutoff,
   PRUNE_BATCH_LIMIT,
   RETENTION_DAYS,
@@ -43,7 +45,6 @@ import {
   staffReplies,
   stripeWebhookEvents,
   todayReadMarks,
-  tripDeskEvents,
   tripReadMarks,
   trips,
   waiverDeliveries,
@@ -221,7 +222,10 @@ async function pruneBatch(
   batchLimit: number = PRUNE_BATCH_LIMIT,
 ): Promise<PruneOutcome> {
   const retentionDays = RETENTION_DAYS[table];
-  const eligible = and(olderThan(arm.clock, retentionCutoff(table, now)), arm.extraWhere);
+  const eligible = and(
+    or(olderThan(arm.clock, retentionCutoff(table, now)), arm.sooner?.(now)),
+    arm.extraWhere,
+  );
   try {
     const rows = (await db
       .select({ id: arm.id })
@@ -275,6 +279,11 @@ type PruneArm = {
   id: PgColumn | SQL;
   clock: PgColumn | SQL;
   extraWhere?: SQL;
+  /**
+   * Rows of this table a shorter, per-code window takes before the table's
+   * own (`activityRetentionDays`): eligible when this holds at `now`.
+   */
+  sooner?: (now: Date) => SQL | undefined;
 };
 
 export const PRUNE_ARMS = {
@@ -303,10 +312,17 @@ export const PRUNE_ARMS = {
     id: notificationDeliveries.id,
     clock: notificationDeliveries.attemptedAt,
   },
+  // The trail's three years, and a desk-only line's thirty days
+  // (`activityRetentionDays`, issue #2701): both on the line's own time.
   activity_events: {
     from: activityEvents,
     id: activityEvents.id,
     clock: activityEvents.occurredAt,
+    sooner: (now) =>
+      and(
+        inArray(activityEvents.code, [...DESK_ONLY_CODES]),
+        lt(activityEvents.occurredAt, deskLineRetentionCutoff(now)),
+      ),
   },
   // The one arm measured from a column that is not "when it happened":
   // `expires_at` is when the credential stopped being usable, so the window is
@@ -476,15 +492,6 @@ export const PRUNE_ARMS = {
     id: departureNotes.id,
     clock: departureNotes.sentAt,
   },
-  // The manifest's shift catch-up (issues #1202, #1187). Pruned on the event's
-  // own `occurred_at`: a desk act is a same-day handoff, so its age is the only
-  // thing that decides, and a departure that was moved or never sailed is
-  // bounded the same way as one that did.
-  trip_desk_events: {
-    from: tripDeskEvents,
-    id: tripDeskEvents.id,
-    clock: tripDeskEvents.occurredAt,
-  },
   // A staff form's draft (ADR 20260906-before-you-ask, decision 3), on the
   // moment it was last typed into: the reader already hides one older than a
   // day, so this clears rows nobody can reach.
@@ -500,9 +507,10 @@ export const PRUNE_ARMS = {
     id: demoEntries.id,
     clock: demoEntries.enteredAt,
   },
-  // The marks that point into those events, on `last_seen_at` rather than a
-  // creation time: a mark a staffer keeps moving forward is live state, and
-  // only one nobody has touched in a month has nothing left to point at.
+  // The marks that point into the catch-up's desk lines, on `last_seen_at`
+  // rather than a creation time: a mark a staffer keeps moving forward is live
+  // state, and only one nobody has touched in a month has nothing left to
+  // point at.
   trip_read_marks: {
     from: tripReadMarks,
     id: tripReadMarks.id,

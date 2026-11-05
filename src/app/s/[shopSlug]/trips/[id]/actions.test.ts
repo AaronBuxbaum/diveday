@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
+import { issueBookingHandoff, readKnownDiver } from "@/db/booking-handoff";
 import type { AppDb } from "@/db/client";
 import { bookingCapabilities, bookings, cards, people, shops } from "@/db/schema";
 import { createTrip } from "@/db/trips-create";
@@ -320,6 +321,23 @@ describe("joining the wait list", () => {
  * undelivered, and "Your days" (every other seat that person holds) waits for
  * the confirmation email's own link, which only the inbox on file receives.
  */
+describe("the handoff a booking was opened through", () => {
+  // A derived link carries dots (issue #2711); a shape check written for the
+  // old dotless token silently skipped the consume, leaving it reusable.
+  it("is consumed by the booking it carried", async () => {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+    await post(shop.slug, tripId, submission([{ email: "first@example.com" }]));
+    const [first] = await db.select().from(bookings).where(eq(bookings.tripId, tripId));
+    const handoff = await issueBookingHandoff(db, { shopId: shop.id, bookingId: first?.id ?? "" });
+    if (!handoff) throw new Error("expected a handoff");
+    const form = submission([{ email: "second@example.com" }]);
+    form.set("handoff", handoff.token);
+    await post(shop.slug, tripId, form);
+    expect(await readKnownDiver(db, { shopId: shop.id, token: handoff.token })).toBeNull();
+  });
+});
+
 describe("the readiness link after booking", () => {
   it("redirects on an undelivered link and mails a delivered one", async () => {
     const { db, shop } = ctx;

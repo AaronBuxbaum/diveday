@@ -19,8 +19,7 @@ const RESCUE_NOTICES: Record<
   { tone: "success" | "danger" | "neutral"; key: DiverMessageKey }
 > = {
   ok: { tone: "success", key: "ready.freshLinkSent" },
-  // A newer link for this booking still works, so nothing was reissued — and
-  // reissuing would have counted against the booking's live-capability cap.
+  // The link in the diver's mail still works, so nothing was reissued.
   // Point them at their inbox without naming the address, like every other
   // notice on this card.
   live: { tone: "success", key: "ready.freshLinkCurrentLive" },

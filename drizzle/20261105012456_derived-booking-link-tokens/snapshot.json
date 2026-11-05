@@ -1,0 +1,132 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "e149bd5f-4939-455c-9563-d937391e76e6",
+  "prevIds": [
+    "06d6744a-482a-409c-9cb7-7d949a32bfb8"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "booking_capabilities",
+        "key_version"
+      ],
+      "writes": [
+        "s|col|public.booking_capabilities.key_version",
+        "n|col|public.booking_capabilities.key_version",
+        "e|col|public.booking_capabilities.key_version"
+      ],
+      "reads": [
+        "n|tbl|public.booking_capabilities",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "booking_capabilities",
+        "token_hash"
+      ],
+      "writes": [
+        "s|colprop|public.booking_capabilities.token_hash.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.booking_capabilities",
+        "n|sch|public",
+        "n|col|public.booking_capabilities.token_hash"
+      ],
+      "sqlHash": "0701276caf07aefe"
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "booking_capabilities",
+        "booking_capabilities_live_link_idx"
+      ],
+      "writes": [
+        "s|idx|public.booking_capabilities_live_link_idx",
+        "n|idx|public.booking_capabilities_live_link_idx",
+        "e|idx|public.booking_capabilities_live_link_idx",
+        "n|rel|public.booking_capabilities_live_link_idx"
+      ],
+      "reads": [
+        "n|tbl|public.booking_capabilities",
+        "n|sch|public",
+        "n|col|public.booking_capabilities.booking_id",
+        "n|col|public.booking_capabilities.purpose",
+        "n|col|public.booking_capabilities.delivered"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_capabilities",
+        "name": "key_version",
+        "type": "smallint",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_capabilities",
+        "name": "booking_capabilities_live_link_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "booking_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "purpose",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "delivered",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"revoked_at\" is null and \"source_capability_id\" is null",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"booking_capabilities\",\"token_hash\"]",
+      "set": {
+        "notNull": false
+      }
+    }
+  ]
+}

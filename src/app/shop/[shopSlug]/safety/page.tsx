@@ -3,15 +3,20 @@ import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { CREDENTIAL_KIND_KEYS } from "@/app/shop/[shopSlug]/settings/team/credential-kinds";
 import { EmptyState } from "@/components/EmptyState";
+import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonViewShopReports } from "@/db/safety-report";
 import { monthKey, monthLabel } from "@/lib/calendar";
 import { requireShopSurface } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { MonthFigures } from "../reports/_components/MonthFigures";
+import { DrillLog } from "./_components/DrillLog";
+import { readDrillLog } from "./_components/drill-log-read";
+import { drillNoticeMessages } from "./_components/drill-notices";
 import { SafetyLists } from "./_components/SafetyLists";
 import { readSafetyReport } from "./_components/safety-read";
 
@@ -28,10 +33,10 @@ export default async function SafetyReportPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string; year?: string }>;
+  searchParams: Promise<{ month?: string; year?: string; notice?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { month, year: yearParam } = await searchParams;
+  const { month, year: yearParam, notice } = await searchParams;
   // The Reports gate, re-read against the database; a refusal lands on Today
   // with its reason, as Reports' own does.
   const { session, db, shop } = await requireShopSurface(shopSlug, {
@@ -52,6 +57,16 @@ export default async function SafetyReportPage({
     figures,
     monthTiles,
   } = await readSafetyReport({ shopSlug, session, db, shop, month, year: yearParam });
+  // The drill log (loop 5, row 2): every kind's last drill, and the month's drills.
+  const drills = await readDrillLog({
+    db,
+    shopId: shop.id,
+    timeZone: tz,
+    month: year ? null : current,
+    locale,
+    t,
+  });
+  const banner = noticeFromParam(notice, drillNoticeMessages(t));
 
   const navClass = buttonClass({ variant: "secondary", size: "icon" });
   const navDisabledClass = `${navClass} pointer-events-none opacity-40`;
@@ -82,6 +97,8 @@ export default async function SafetyReportPage({
           </div>
         }
       />
+      <FlashParams params={["notice"]} />
+      {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className={SECTION_TITLE_CLASS}>
           {year ? String(year.number) : monthLabel(current, locale)}
@@ -158,6 +175,9 @@ export default async function SafetyReportPage({
           />
         </div>
       )}
+      <div className="mt-10">
+        <DrillLog view={drills} />
+      </div>
     </StaffPage>
   );
 }

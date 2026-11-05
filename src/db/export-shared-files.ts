@@ -1101,6 +1101,42 @@ export const RENTAL_FIT_CSV = sharedFile<ShopRow<"rentalFitRows">>({
   },
 });
 
+export const STAFF_CREDENTIALS_CSV = sharedFile<ShopRow<"staffCredentialRows">>({
+  file: "staff_credentials.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "person_id", in: "shop", value: (row) => row.personId },
+    {
+      header: "person_name",
+      in: "shop",
+      value: (row, { personName }) => personName.get(row.personId),
+    },
+    { header: "kind", in: "both", value: (row) => row.kind },
+    { header: "name", in: "both", value: (row) => row.name },
+    { header: "issuing_body", in: "both", value: (row) => row.issuingBody },
+    { header: "identifier", in: "both", value: (row) => row.identifier },
+    { header: "issued_at", in: "both", value: (row) => row.issuedAt },
+    { header: "renews_at", in: "both", value: (row) => row.renewsAt },
+    { header: "status", in: "both", value: (row) => row.status },
+    // Staff-typed free text, which can name somebody else.
+    { header: "review_note", in: "shop", value: (row) => row.reviewNote },
+    { header: "reviewed_at", in: "both", value: (row) => row.reviewedAt },
+    { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
+    { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
+    { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
+    { header: "created_at", in: "both", value: (row) => row.createdAt },
+    { header: "updated_at", in: "both", value: (row) => row.updatedAt },
+  ],
+  shop: {
+    rows: ({ staffCredentialRows }) => staffCredentialRows,
+    note: EXPORT_FILE_NOTES["staff_credentials.csv"],
+  },
+  diver: {
+    rows: ({ staffCredentialRows }) => staffCredentialRows,
+    note: "This person's own pro cards on file as staff: ratings, insurance and safety credentials, with their renewal dates.",
+  },
+});
+
 export const GEAR_RESERVATIONS_CSV = sharedFile<ShopRow<"gearReservationRows">>({
   file: "gear_reservations.csv",
   columns: [

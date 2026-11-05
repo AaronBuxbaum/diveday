@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gt, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
 import { nowDate } from "@/lib/clock";
 import type { IdentityMatchKind } from "@/lib/identity-match";
-import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import { OFFLINE_EVENT_SKEW_MS, offlineEventOutOfBounds } from "@/lib/offline-events";
 import { arrivalsWindow } from "@/lib/operational-window";
 import { hasArrived, type StandingArrival } from "@/lib/presence";
 import { priorVisitStanding } from "@/lib/prior-visits";
@@ -13,13 +13,13 @@ import { isUuid } from "@/lib/uuid";
 import { seatCheckedIn } from "./arrival-provenance";
 import { requireActiveStaffId } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { recordDeskEvent } from "./desk-events";
 import {
   departureRollCallForBooking,
   listAfterDiveRollCallByTrip,
   listDepartureBoardedBookingIds,
   type OnTheWater,
 } from "./manifests";
+import { recordActivityRow } from "./operations";
 import { personSearchMatch } from "./person-search";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import {
@@ -545,24 +545,36 @@ function offlineArrivalRefusal(input: {
  *   (`arrivalsWindow` at the tap's own instant): it was moved to another day,
  *   and the tap says nothing about that morning.
  *
- * Known limits (issue #3830 stays partly open): a seat re-pointed by an
- * identity split or repoint, or removed and restored after the tap, carries no
- * instant to compare, and a snapshot carries no person id by design (the
- * 14-day dock allow-list). A sound check needs a stored seat-changed instant.
+ * - The seat began a new life after the tablet saved its copy
+ *   (`bookings.seat_reopened_at`): it was removed and restored, rebooked,
+ *   moved away and back, its departure moved to another day, or a held seat
+ *   was re-pointed at another person by an identity repoint or split. The tap
+ *   was about the seat's earlier life, or about somebody else.
+ *
+ * A snapshot carries no person id by design (the 14-day dock allow-list), so
+ * the seat's own stamps stand in for "the person the tablet saw".
  *
  * Both refuse as `snapshot_invalid`, the word the departure check beside it
  * already uses for "this copy was about something that has changed". Offline
  * only; the live path re-reads the roster.
  */
 function offlineTapAboutAnotherSeatOrDay(
-  booking: { claimedAt: Date | null; tripStartsAt: Date },
+  booking: { claimedAt: Date | null; seatReopenedAt: Date | null; tripStartsAt: Date },
   input: { occurredAt?: Date; offlineSnapshotSavedAt?: Date },
 ): boolean {
-  if (
-    booking.claimedAt &&
-    (!input.offlineSnapshotSavedAt || booking.claimedAt > input.offlineSnapshotSavedAt)
-  ) {
-    return true;
+  // `savedAt` is the tablet's clock, which the sync lets run up to the skew
+  // ahead of ours: a copy counts as saved after a change only when it was
+  // saved more than that after it, so a fast tablet cannot slip a tap from a
+  // copy older than the change past this check. A slow one may see a fresh
+  // tap refused, and the desk taps again live.
+  for (const changedAt of [booking.claimedAt, booking.seatReopenedAt]) {
+    if (
+      changedAt &&
+      (!input.offlineSnapshotSavedAt ||
+        changedAt.getTime() > input.offlineSnapshotSavedAt.getTime() - OFFLINE_EVENT_SKEW_MS)
+    ) {
+      return true;
+    }
   }
   // The sync schema requires the instant; a direct caller that omits it skips the window.
   if (!input.occurredAt) return false;
@@ -610,6 +622,7 @@ export async function checkInBooking(
         status: bookings.status,
         arrivalTrailAfterSeq: bookings.arrivalTrailAfterSeq,
         claimedAt: bookings.claimedAt,
+        seatReopenedAt: bookings.seatReopenedAt,
         tripStartsAt: trips.startsAt,
         tripId: trips.id,
         tripStatus: trips.status,
@@ -713,28 +726,21 @@ export async function checkInBooking(
       offlineSnapshotSavedAt: source === "offline" ? (input.offlineSnapshotSavedAt ?? null) : null,
       occurredAt,
     });
-    await tx.insert(activityEvents).values({
+    // One line, read twice (issues #1202, #1187, #2701): the trail's "checked
+    // in", and the crew walking to the boat reading "Ada Lindqvist has checked
+    // in." on the manifest's catch-up strip ("did anyone tell them?"). Inside
+    // this transaction, so a check-in whose handoff line silently failed to
+    // write — the failure D27 exists about — cannot commit. The subject is
+    // what the strip names, live. `undoCheckInBooking` writes nothing — an undo
+    // is not news, and the strip drops the line once the seat is not checked in.
+    await recordActivityRow(tx, {
       shopId: input.shopId,
       tripId: booking.tripId,
-      bookingId: booking.id,
-      actorPersonId: recordedBy,
-      code: "counter_check_in",
-      params: { diver: booking.personName },
-      occurredAt,
-    });
-    // The crew walking to the boat read this as "Ada Lindqvist has checked in."
-    // on the manifest's catch-up strip (issues #1202, #1187 — "did anyone tell
-    // them?"). Inside this transaction, beside the activity line it mirrors:
-    // the two say the same fact to two different readers, and a check-in whose
-    // handoff line silently failed to write is the failure D27 exists about.
-    // `undoCheckInBooking` writes nothing — an undo is not news.
-    await recordDeskEvent(tx, {
-      shopId: input.shopId,
-      tripId: booking.tripId,
-      kind: "arrival",
       bookingId: booking.id,
       subjectPersonId: booking.personId,
       actorPersonId: recordedBy,
+      code: "counter_check_in",
+      params: { diver: booking.personName },
       occurredAt,
     });
     return { ok: true, bookingId: booking.id, personName: booking.personName };
@@ -808,6 +814,7 @@ export async function undoCheckInBooking(
         status: bookings.status,
         arrivalTrailAfterSeq: bookings.arrivalTrailAfterSeq,
         claimedAt: bookings.claimedAt,
+        seatReopenedAt: bookings.seatReopenedAt,
         tripStartsAt: trips.startsAt,
         tripId: trips.id,
         personName: people.fullName,

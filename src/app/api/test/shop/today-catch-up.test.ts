@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { people, personRoles, shops, tripDeskEvents } from "@/db/schema";
+import { activityEvents, people, personRoles, shops } from "@/db/schema";
 import { createDemoShop } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { readTodayCatchUp } from "@/db/today-catch-up";
@@ -94,13 +94,13 @@ describe("the todayCatchUp fact", () => {
     expect(seen.events[0]).toMatchObject({ kind: "seat_taken", tripTitle: fixture.tripTitle });
 
     const privateRows = await db
-      .select({ id: tripDeskEvents.id })
-      .from(tripDeskEvents)
-      .where(eq(tripDeskEvents.shopId, privateShop.id));
+      .select({ id: activityEvents.id })
+      .from(activityEvents)
+      .where(and(eq(activityEvents.shopId, privateShop.id), eq(activityEvents.code, "seat_added")));
     const canonicalRows = await db
-      .select({ id: tripDeskEvents.id })
-      .from(tripDeskEvents)
-      .where(eq(tripDeskEvents.shopId, canonical.id));
+      .select({ id: activityEvents.id })
+      .from(activityEvents)
+      .where(and(eq(activityEvents.shopId, canonical.id), eq(activityEvents.code, "seat_added")));
     expect(privateRows).toHaveLength(1);
     expect(canonicalRows).toHaveLength(0);
   });

@@ -34,29 +34,22 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the teen buddy policy renders (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
-        await openSettingsRow(
-          page,
-          staffCopy("settings.main.juniorBuddy.heading"),
+        await openSettingsRow(page, staffCopy("settings.main.juniorBuddy.heading"));
+        await expect(page.getByLabel(staffCopy("settings.main.juniorBuddy.label"))).toHaveValue(
+          "optional",
         );
-        await expect(
-          page.getByLabel(staffCopy("settings.main.juniorBuddy.label")),
-        ).toHaveValue("optional");
         await capture(page, "settings-teen-buddy-policy", scheme);
       });
 
       // The settings hub, the directory every shop setting hangs off.
-      test(`shop settings render true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
         // Capture the selected packing setting with its form open.
         await openSettingsRow(page, "Trip packing checklist");
         await capture(page, "settings-packing-checklist", scheme);
       });
 
-      test(`the settings section picker overlays its pane (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the settings section picker overlays its pane (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
         await expect(
           page.getByRole("heading", {
@@ -68,9 +61,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-sections-menu", scheme, {
           beforeShot: async () => {
             const rail = await openSettingsRail(page);
-            await expect(
-              rail.locator("[data-settings-rail-scroller]"),
-            ).toBeVisible();
+            await expect(rail.locator("[data-settings-rail-scroller]")).toBeVisible();
           },
         });
       });
@@ -80,13 +71,9 @@ for (const scheme of ["light", "dark"] as const) {
        * and a price box per piece, the terms and the service interval, one
        * save (#2815).
        */
-      test(`the rentals page renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the rentals page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/rentals");
-        await page
-          .getByRole("heading", { level: 1, name: "Rentals" })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: "Rentals" }).waitFor();
         await page.getByRole("button", { name: "Save rentals" }).waitFor();
         await capture(page, "settings-rentals", scheme);
       });
@@ -102,9 +89,7 @@ for (const scheme of ["light", "dark"] as const) {
        * place of it — which is what every local and self-hosted instance sees,
        * and what the seeded shop's stored address and Remove control sit under.
        */
-      test(`the shop address card renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the shop address card renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
         await openSettingsRow(page, "Shop address");
         await page.getByRole("button", { name: "Remove address" }).waitFor();
@@ -117,14 +102,10 @@ for (const scheme of ["light", "dark"] as const) {
        * carried. Its own page rather than a hub row: a list plus an add form
        * stopped fitting inside a disclosure.
        */
-      test(`the boats page renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/boats");
         await page.getByRole("heading", { level: 1, name: "Boats" }).waitFor();
-        const boat = page
-          .locator('details[id^="boat-"]:not(#boat-new)')
-          .first();
+        const boat = page.locator('details[id^="boat-"]:not(#boat-new)').first();
         await boat.locator("summary").waitFor();
         await capture(page, "settings-boats", scheme);
         await boat.locator("summary").click();
@@ -132,9 +113,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-boats-edit", scheme);
         await boat.locator("summary").click();
         await page.locator("#boat-new summary").click();
-        await page
-          .getByRole("button", { name: "Add a boat", exact: true })
-          .waitFor();
+        await page.getByRole("button", { name: "Add a boat", exact: true }).waitFor();
         await capture(page, "settings-boats-add", scheme);
       });
 
@@ -142,13 +121,9 @@ for (const scheme of ["light", "dark"] as const) {
        * The shop's trip tags (ADR 20260904-reef-all-the-way-down, decision 2)
        * — the list a diver then filters the public schedule by.
        */
-      test(`the trip-tags page renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the trip-tags page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/trip-tags");
-        await page
-          .getByRole("heading", { level: 1, name: "Trip tags" })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: "Trip tags" }).waitFor();
         await capture(page, "settings-trip-tags", scheme);
         const tag = page.locator('details[id^="tag-"]:not(#tag-new)').first();
         await tag.locator("summary").click();
@@ -156,10 +131,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-trip-tags-edit", scheme);
         await tag.locator("summary").click();
         await page.locator("#tag-new summary").click();
-        await page
-          .locator("#tag-new")
-          .getByLabel(staffCopy("lenses.nameLabel"))
-          .waitFor();
+        await page.locator("#tag-new").getByLabel(staffCopy("lenses.nameLabel")).waitFor();
         await capture(page, "settings-trip-tags-add", scheme);
       });
 
@@ -172,14 +144,10 @@ for (const scheme of ["light", "dark"] as const) {
        * diver's booking page renders, so a change to the model that quietly
        * stops matching shows up as pixels here.
        */
-      test(`the dock-day rhythm card renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the dock-day rhythm card renders true to the design (${scheme})`, async ({ page }) => {
         // A page of its own since #1854.
         await page.goto("/shop/blue-mantis/settings/dock-day");
-        await page
-          .getByRole("heading", { level: 1, name: "Dock-day rhythm" })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: "Dock-day rhythm" }).waitFor();
         await page.getByLabel("Surface interval between dives").waitFor();
         await capture(page, "settings-dock-day-rhythm", scheme);
       });
@@ -194,32 +162,24 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         // A page of its own since #1854.
         await page.goto("/shop/blue-mantis/settings/emergency-reference");
-        await page
-          .getByRole("heading", { level: 1, name: "Emergency reference" })
-          .waitFor();
-        await page
-          .getByRole("button", { name: "Save emergency reference" })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: "Emergency reference" }).waitFor();
+        await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
         await capture(page, "settings-emergency", scheme);
         const contact = page
-          .locator(
-            'details[id^="emergency-contact-"]:not(#emergency-contact-new)',
-          )
+          .locator('details[id^="emergency-contact-"]:not(#emergency-contact-new)')
           .first();
         await contact.locator("summary").click();
         await page.locator("#emergency-response summary").click();
         await page.locator("#emergency-alerts summary").click();
-        await page
-          .getByText(staffCopy("settings.main.emergency.shoreAlertDemo"))
-          .waitFor();
+        await page.getByText(staffCopy("settings.main.emergency.shoreAlertDemo")).waitFor();
         await capture(page, "settings-emergency-edit", scheme);
         await contact.locator("summary").click();
         await page.locator("#emergency-response summary").click();
         await page.locator("#emergency-alerts summary").click();
         await page.locator("#emergency-contact-new summary").click();
-        await page
-          .locator('#emergency-contact-new input[name^="emergencyLabel-"]')
-          .waitFor();
+        // Name a toggle that did not take (or was undone by a re-render) here, not as a hidden input 15 s on (#3750).
+        await expect(page.locator("#emergency-contact-new")).toHaveJSProperty("open", true);
+        await page.locator('#emergency-contact-new input[name^="emergencyLabel-"]').waitFor();
         await capture(page, "settings-emergency-add", scheme);
       });
 
@@ -242,10 +202,7 @@ for (const scheme of ["light", "dark"] as const) {
             get: () => "Chromium (visual capture)",
           });
           const announce = () => {
-            document.documentElement.setAttribute(
-              "data-diveday-cert-check",
-              "1.5.0",
-            );
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
             window.dispatchEvent(new Event("diveday-cert-check-ready"));
           };
           if (document.readyState === "loading") {
@@ -313,20 +270,14 @@ for (const scheme of ["light", "dark"] as const) {
        * the add form — which is exactly what a shop meets before the feature
        * turns itself on.
        */
-      test(`the dive-packages page renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the dive-packages page renders true to the design (${scheme})`, async ({ page }) => {
         // Dive packages are a section of Promos (A26).
         await page.goto("/shop/blue-mantis/promos#dive-packages");
-        await page
-          .getByRole("heading", { level: 2, name: "Dive packages" })
-          .waitFor();
+        await page.getByRole("heading", { level: 2, name: "Dive packages" }).waitFor();
         await page.locator("#package-new summary").waitFor();
         await capture(page, "settings-dive-packages", scheme);
         await page.locator("#package-new summary").click();
-        await page
-          .getByRole("button", { name: "Add package", exact: true })
-          .waitFor();
+        await page.getByRole("button", { name: "Add package", exact: true }).waitFor();
         await capture(page, "settings-dive-packages-add", scheme);
       });
 
@@ -339,13 +290,9 @@ for (const scheme of ["light", "dark"] as const) {
        * 20260815-per-test-private-shops); `e2e/tax.spec.ts` drives the switch
        * on a shop of its own.
        */
-      test(`the features page renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the features page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/features");
-        await page
-          .getByRole("heading", { level: 1, name: "Features" })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: "Features" }).waitFor();
         await page.getByRole("button", { name: "Save" }).waitFor();
         await capture(page, "settings-features", scheme);
       });
@@ -354,13 +301,9 @@ for (const scheme of ["light", "dark"] as const) {
       // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
       // credentials, so this captures the coming-soon state — which is what
       // every shop sees today, and where all of this surface's copy lives.
-      test(`WhatsApp settings render true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`WhatsApp settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/whatsapp");
-        await page
-          .getByRole("heading", { name: "No WhatsApp number connected" })
-          .waitFor();
+        await page.getByRole("heading", { name: "No WhatsApp number connected" }).waitFor();
         await capture(page, "settings-whatsapp", scheme);
       });
 
@@ -369,13 +312,9 @@ for (const scheme of ["light", "dark"] as const) {
       // what a shop sees for a provider DiveDay has not switched on: one muted
       // line and no control, which should stay understandable as more providers
       // join the registry.
-      test(`integrations settings render true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`integrations settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/integrations");
-        await page
-          .getByRole("heading", { level: 1, name: "Your data" })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
         await capture(page, "settings-integrations", scheme);
       });
 
@@ -391,19 +330,14 @@ for (const scheme of ["light", "dark"] as const) {
        * current setting: a settled amount is evidence and is never
        * re-denominated by a later settings change.
        */
-      test(`the orders list renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the orders list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/orders");
         await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
         // A row of the day ledger itself, not just the heading — the ledger
         // streams in and a capture taken on the header alone banks an empty
         // page. (The table became day groups with slice 6f, ADR
         // 20260827-clearwater-surface-language.)
-        await page
-          .locator('ul[aria-labelledby^="orders-day-"] > li')
-          .first()
-          .waitFor();
+        await page.locator('ul[aria-labelledby^="orders-day-"] > li').first().waitFor();
         await capture(page, "orders", scheme);
       });
 
@@ -427,18 +361,10 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await seedFacts(request, ["troublePanels", "owedRefund"]);
         await page.goto("/shop/blue-mantis/orders");
-        await page
-          .getByRole("region", { name: "Payments that need a check" })
-          .waitFor();
-        await page
-          .getByRole("region", { name: "Refunds you still owe" })
-          .waitFor();
-        await page
-          .getByRole("region", { name: "Paid after the checkout closed" })
-          .waitFor();
-        await page
-          .getByRole("region", { name: "Refunds that failed" })
-          .waitFor();
+        await page.getByRole("region", { name: "Payments that need a check" }).waitFor();
+        await page.getByRole("region", { name: "Refunds you still owe" }).waitFor();
+        await page.getByRole("region", { name: "Paid after the checkout closed" }).waitFor();
+        await page.getByRole("region", { name: "Refunds that failed" }).waitFor();
         await capture(page, "orders-unconfirmed-and-owed", scheme);
       });
 
@@ -460,14 +386,10 @@ for (const scheme of ["light", "dark"] as const) {
        * the same pager the unfiltered one wears (AGENTS.md's rule is against
        * shrinking a capture to dodge an unbounded page, which this is not).
        */
-      test(`a part-refunded order renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`a part-refunded order renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/orders?status=partly_refunded");
         await page
-          .locator(
-            'ul[aria-labelledby^="orders-day-"] > li a[href*="/orders/"]',
-          )
+          .locator('ul[aria-labelledby^="orders-day-"] > li a[href*="/orders/"]')
           .filter({ visible: true })
           .first()
           .click();
@@ -483,19 +405,11 @@ for (const scheme of ["light", "dark"] as const) {
 
       // One order in full: the total, and the per-line-item amounts that a
       // literal `$` and a hardcoded `/ 100` used to compose by hand.
-      test(`an order's detail renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`an order's detail renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/orders");
-        const ledgerRow = page.locator(
-          'ul[aria-labelledby^="orders-day-"] > li',
-        );
+        const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
         await ledgerRow.filter({ visible: true }).first().waitFor();
-        await ledgerRow
-          .locator('a[href*="/orders/"]')
-          .filter({ visible: true })
-          .first()
-          .click();
+        await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
         // Not "Money": the index this just navigated from wears that word as
         // its own `<h1>`, already on screen, so waiting on it resolves
         // instantly against the *old* page instead of the new one — capture()
@@ -512,46 +426,28 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/orders?status=open&range=all");
-        const ledgerRow = page.locator(
-          'ul[aria-labelledby^="orders-day-"] > li',
-        );
+        const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
         await ledgerRow.filter({ visible: true }).first().waitFor();
-        await ledgerRow
-          .locator('a[href*="/orders/"]')
-          .filter({ visible: true })
-          .first()
-          .click();
-        await page
-          .getByRole("button", { name: "Card machine", exact: true })
-          .waitFor();
+        await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
+        await page.getByRole("button", { name: "Card machine", exact: true }).waitFor();
         await capture(page, "order-detail-open-demo", scheme);
       });
 
       // **The dispute sheet on screen** (issue #2390): a seat's order, the
       // signed release, the check-in and the roll call, reached the way an
       // owner reaches it, from the order's own "Dispute sheet" door.
-      test(`a seat's dispute sheet renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`a seat's dispute sheet renders true to the design (${scheme})`, async ({ page }) => {
         await openDisputeSheet(page);
         await capture(page, "order-dispute-sheet", scheme);
       });
 
       // A deposit names the departure it was raised for and what the seat
       // still owes (third UX review, item 32).
-      test(`a deposit order's detail names its departure (${scheme})`, async ({
-        page,
-      }) => {
+      test(`a deposit order's detail names its departure (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/orders?q=Trip+deposit");
-        const ledgerRow = page.locator(
-          'ul[aria-labelledby^="orders-day-"] > li',
-        );
+        const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
         await ledgerRow.filter({ visible: true }).first().waitFor();
-        await ledgerRow
-          .locator('a[href*="/orders/"]')
-          .filter({ visible: true })
-          .first()
-          .click();
+        await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
         await page.getByRole("link", { name: "Open the departure" }).waitFor();
         await capture(page, "order-detail-deposit", scheme);
       });
@@ -565,13 +461,9 @@ for (const scheme of ["light", "dark"] as const) {
        * failed week, so the backup half still photographs doing its real job:
        * proving where the data went and naming the week it didn't.
        */
-      test(`the data-export page renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the data-export page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/export");
-        await page
-          .getByRole("heading", { level: 1, name: "Your data" })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
         // The crew sheet (N-43) is the second thing that leaves this page.
         await page.getByRole("heading", { name: "Crew sheet" }).waitFor();
         await capture(page, "settings-export", scheme);
@@ -579,13 +471,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       // The Backups tab of the same page set: the destination and the delivery
       // history, which used to sit under the download on one long page.
-      test(`the backups tab renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the backups tab renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/export/backups");
-        await page
-          .getByRole("heading", { level: 1, name: "Your data" })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
         await page.getByRole("heading", { name: "Delivery history" }).waitFor();
         // The history rows, not just the heading — the table is half the
         // surface, and a capture taken on the heading alone banks an empty one.
@@ -595,28 +483,18 @@ for (const scheme of ["light", "dark"] as const) {
 
       // The shop's activity log (D5): who did what, to what, when, across the
       // whole team, with its four filters above the first page of lines.
-      test(`the activity log renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the activity log renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/activity");
-        await page
-          .getByRole("heading", { level: 1, name: "Activity" })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: "Activity" }).waitFor();
         // The lines, not just the heading: a capture on the heading alone banks
         // the skeleton's list.
-        await page
-          .getByTestId("shop-activity")
-          .getByRole("listitem")
-          .first()
-          .waitFor();
+        await page.getByTestId("shop-activity").getByRole("listitem").first().waitFor();
         await capture(page, "settings-activity", scheme);
       });
 
       // The import surface: the honesty table stating what does and doesn't
       // come across, before any file is chosen.
-      test(`the data-import page renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the data-import page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/import");
         await page.getByText("What comes across", { exact: true }).waitFor();
         await capture(page, "settings-import", scheme);
@@ -626,9 +504,7 @@ for (const scheme of ["light", "dark"] as const) {
       // 2026-10-22, item 3): the preview counts them, names the system the
       // guide came from, and lists them. The browser's clock is the frozen
       // one, so "today" is the seed's day and the list never moves.
-      test(`the import preview lists bookings after today (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the import preview lists bookings after today (${scheme})`, async ({ page }) => {
         await page.clock.install({ time: E2E_FROZEN_CLOCK });
         await page.goto("/shop/blue-mantis/settings/import?from=fareharbor");
         await page
@@ -649,9 +525,7 @@ for (const scheme of ["light", "dark"] as const) {
             "utf-8",
           ),
         });
-        await page
-          .getByRole("list", { name: /bookings are after today/ })
-          .waitFor();
+        await page.getByRole("list", { name: /bookings are after today/ }).waitFor();
         await capture(page, "settings-import-bookings-after-today", scheme);
       });
 
@@ -660,17 +534,13 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/settings/import?what=gear");
-        await page
-          .getByRole("link", { name: "Download gear CSV template" })
-          .waitFor();
+        await page.getByRole("link", { name: "Download gear CSV template" }).waitFor();
         await capture(page, "settings-gear-import", scheme);
       });
 
       // The other half of `dive_sites.csv`: the bundle carried the shop's whole
       // library for a year while nothing could read one back (issue #1771).
-      test(`the dive-site import tab renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the dive-site import tab renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/import?what=dive-sites");
         await page.getByRole("button", { name: "Import dive sites" }).waitFor();
         await capture(page, "settings-dive-site-import", scheme);
@@ -690,12 +560,8 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await seedFacts(request, ["troublePanels"]);
         await page.goto("/shop/blue-mantis/settings");
-        await page
-          .getByRole("region", { name: "Photos that didn’t finish deleting" })
-          .waitFor();
-        await page
-          .getByRole("region", { name: "Erasures not finished at Stripe" })
-          .waitFor();
+        await page.getByRole("region", { name: "Photos that didn’t finish deleting" }).waitFor();
+        await page.getByRole("region", { name: "Erasures not finished at Stripe" }).waitFor();
         await capture(page, "settings-data-unfinished", scheme);
       });
 
@@ -705,9 +571,7 @@ for (const scheme of ["light", "dark"] as const) {
       // real deploy shows — the two SnippetField boxes and the copy buttons —
       // rather than the "hosting isn't configured" warning it was stuck on
       // while publicAppUrl() returned null here.
-      test(`the embed settings render true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the embed settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/embed");
         await page.getByRole("heading", { name: "Website embed" }).waitFor();
         // The snippets are a Client Component; wait for a control it only
@@ -716,18 +580,16 @@ for (const scheme of ["light", "dark"] as const) {
         // The preview box is drawn only once its frame has loaded, so a shot
         // taken before that drops it (the baseline did, then a later run
         // didn't). Wait for the drawn box.
-        await expect(
-          page.getByTitle(staffCopy("settings.embed.preview")),
-        ).not.toHaveClass(/\bh-0\b/);
+        await expect(page.getByTitle(staffCopy("settings.embed.preview"))).not.toHaveClass(
+          /\bh-0\b/,
+        );
         await capture(page, "settings-embed", scheme);
       });
 
       // The team surface at rest: inviting staff, and a roster whose rows read
       // their roles as words behind a disclosure — the page-level "Save
       // changes" is gone (ADR 20260827-the-shops-shelves, slice 9h).
-      test(`the team settings render true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the team settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/team");
         await page.getByRole("heading", { level: 1, name: "Team" }).waitFor();
         await capture(page, "settings-team", scheme, { darkPhone: true });
@@ -738,32 +600,24 @@ for (const scheme of ["light", "dark"] as const) {
           darkPhone: true,
           beforeShot: async () => {
             const summary = credentials.locator(":scope > summary");
-            const label = summary.getByText(
-              staffCopy("staffing.credentials.heading"),
-              {
-                exact: true,
-              },
-            );
+            const label = summary.getByText(staffCopy("staffing.credentials.heading"), {
+              exact: true,
+            });
             const value = summary.locator(":scope > span").last();
             await expect(label).toContainText("Credentials");
             await expect(value).toHaveText(
               staffCopy("staffing.credentials.onFileCount", { count: 3 }),
             );
-            await expect(credentials.locator("ul")).toContainText(
-              "Emergency First Response",
-            );
+            await expect(credentials.locator("ul")).toContainText("Emergency First Response");
             const labelBox = await label.boundingBox();
             const valueBox = await value.boundingBox();
-            if (!labelBox || !valueBox)
-              throw new Error("Credential summary did not render");
+            if (!labelBox || !valueBox) throw new Error("Credential summary did not render");
             expect(
               labelBox.x + labelBox.width <= valueBox.x + 1 ||
                 labelBox.y + labelBox.height <= valueBox.y + 1,
             ).toBe(true);
             expect(
-              await value.evaluate(
-                (element) => element.scrollWidth <= element.clientWidth,
-              ),
+              await value.evaluate((element) => element.scrollWidth <= element.clientWidth),
             ).toBe(true);
           },
         });
@@ -784,11 +638,8 @@ for (const scheme of ["light", "dark"] as const) {
             await expect(aboard).toBeVisible();
             const dateBox = await date.boundingBox();
             const aboardBox = await aboard.boundingBox();
-            if (!dateBox || !aboardBox)
-              throw new Error("Dock rider controls did not render");
-            expect(aboardBox.y).toBeGreaterThanOrEqual(
-              dateBox.y + dateBox.height,
-            );
+            if (!dateBox || !aboardBox) throw new Error("Dock rider controls did not render");
+            expect(aboardBox.y).toBeGreaterThanOrEqual(dateBox.y + dateBox.height);
           },
         });
       });
@@ -796,14 +647,10 @@ for (const scheme of ["light", "dark"] as const) {
       // One row's roles open, which is the state that has no still image
       // anywhere else: the checkbox grid inset in the row it belongs to, with
       // no Save button beneath it because closing the row is the save.
-      test(`the team roles disclosure renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the team roles disclosure renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/team");
         await page.getByRole("heading", { level: 1, name: "Team" }).waitFor();
-        const roles = page
-          .getByRole("button", { name: /^Edit roles for / })
-          .first();
+        const roles = page.getByRole("button", { name: /^Edit roles for / }).first();
         await roles.click();
         await expect(roles).toHaveAttribute("aria-expanded", "true");
         await capture(page, "team-role-disclosure", scheme);
@@ -816,15 +663,11 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/safety-checklist");
-        await page
-          .getByRole("heading", { level: 1, name: "Pre-departure checklist" })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: "Pre-departure checklist" }).waitFor();
         await page.getByText("VHF radio checked").waitFor();
         await capture(page, "settings-safety-checklist", scheme);
         await page.locator("#checklist-new summary").click();
-        await page
-          .getByLabel(staffCopy("settings.safetyChecklist.addLabel"))
-          .waitFor();
+        await page.getByLabel(staffCopy("settings.safetyChecklist.addLabel")).waitFor();
         await capture(page, "settings-safety-checklist-add", scheme);
       });
 
@@ -855,9 +698,7 @@ for (const scheme of ["light", "dark"] as const) {
         await inviteSection.getByLabel("Full name").fill("Priya Nair");
         await inviteSection.getByLabel("Email").fill(email);
         await inviteSection.getByLabel("Instructor", { exact: true }).check();
-        await inviteSection
-          .getByRole("button", { name: "Send invite" })
-          .click();
+        await inviteSection.getByRole("button", { name: "Send invite" }).click();
         await expect(page.getByText("Invite sent")).toBeVisible();
 
         const { accountToken } = await seedFacts(request, [
@@ -877,25 +718,18 @@ for (const scheme of ["light", "dark"] as const) {
       // offered to an owner, neither yet minted. Deliberately not the
       // just-minted state — that panel shows a live feed token, which is
       // different on every run and would never match a baseline.
-      test(`the calendar settings render true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the calendar settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/me/calendar");
         // Wait on the panel's own button, not the page's <h1>: the panels are
         // Client Components, and per this file's rule a server-rendered
         // heading resolves before the interesting part has mounted.
-        await page
-          .getByRole("button", { name: "Create subscription link" })
-          .first()
-          .waitFor();
+        await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         await capture(page, "settings-calendar", scheme);
       });
 
       // The staffer's own Email settings: the Monday email's row, on for the
       // owner by default, with its preview door, and the after-hours ping's.
-      test(`the email settings render true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the email settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/me/email");
         await page
           .getByRole("region", { name: "After-hours messages" })
@@ -906,13 +740,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       // The Monday email itself, as the preview renders it from the frozen
       // clock's week of the seeded demo shop: the one capture of an email body.
-      test(`the Monday email renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the Monday email renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/me/email/preview");
-        await page
-          .getByText(/Weeks run Monday to Sunday|no email goes out this Monday/)
-          .waitFor();
+        await page.getByText(/Weeks run Monday to Sunday|no email goes out this Monday/).waitFor();
         await capture(page, "weekly-digest-email", scheme);
       });
     });

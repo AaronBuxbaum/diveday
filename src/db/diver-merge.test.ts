@@ -36,7 +36,6 @@ import {
   rentalFitProfiles,
   rollCallEvents,
   shops,
-  tripDeskEvents,
   trips,
   waiverRecords,
   waiverTemplates,
@@ -699,14 +698,13 @@ describe("what the merge derives from the person-column registry", () => {
 
   /**
    * `activity_events.subject_person_id` has always stayed put, and the case at
-   * the top of this file pins it. `trip_desk_events` takes the same answer, so
-   * this says so out loud rather than leaving the new table's behaviour to be
-   * inferred from a map: a trail records who a thing happened to at the time,
-   * and this one is read by `trip_id`, so nothing is lost from the survivor's
-   * page by leaving it. The actor beside it is attribution and never moves
-   * either.
+   * the top of this file pins it. A desk line in the same table (issue #2701)
+   * takes the same answer, said out loud here: a trail records who a thing
+   * happened to at the time, and the catch-up strip reads it by `trip_id`, so
+   * nothing is lost from the survivor's page by leaving it. The actor beside
+   * it is attribution and never moves either.
    */
-  it("leaves a desk event's subject and actor on the ids that were there", async () => {
+  it("leaves a desk line's subject and actor on the ids that were there", async () => {
     const { db, shop, owner, source, survivor } = await mergeFixtures();
     const [trip] = await db
       .select({ id: trips.id })
@@ -716,16 +714,16 @@ describe("what the merge derives from the person-column registry", () => {
       .limit(1);
     if (!trip) throw new Error("expected a seeded trip");
     const [event] = await db
-      .insert(tripDeskEvents)
+      .insert(activityEvents)
       .values({
         shopId: shop.id,
         tripId: trip.id,
-        kind: "seat_taken",
+        code: "desk_gear_changed",
         actorPersonId: owner.id,
         subjectPersonId: source.id,
       })
       .returning();
-    if (!event) throw new Error("desk event fixture insert failed");
+    if (!event) throw new Error("desk line fixture insert failed");
 
     expect(
       await mergeDiverRecords({
@@ -739,11 +737,11 @@ describe("what the merge derives from the person-column registry", () => {
 
     const [after] = await db
       .select({
-        subjectPersonId: tripDeskEvents.subjectPersonId,
-        actorPersonId: tripDeskEvents.actorPersonId,
+        subjectPersonId: activityEvents.subjectPersonId,
+        actorPersonId: activityEvents.actorPersonId,
       })
-      .from(tripDeskEvents)
-      .where(eq(tripDeskEvents.id, event.id));
+      .from(activityEvents)
+      .where(eq(activityEvents.id, event.id));
     expect(after?.subjectPersonId).toBe(source.id);
     expect(after?.actorPersonId).toBe(owner.id);
   });

@@ -1,8 +1,8 @@
-import { and, eq, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, max, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { tripArrivalSnapshot } from "@/lib/trip-change-events";
 import type { DbExecutor } from "./client";
-import { recordDeskEvent } from "./desk-events";
+import { recordActivityRow, recordDeskLine } from "./operations";
 import { getBookingReadiness } from "./readiness";
 import {
   activityEvents,
@@ -45,7 +45,7 @@ import { recordTripChangeEvent } from "./trip-change-events";
  * trail and its activity line, and only for a seat readiness would let the
  * counter check in; the ask for a hand its `trip_help_requests` row; the moved
  * meeting point the departure's own columns and the diver-facing change
- * ledger. The strip's reader (`listDeskEventsSince`) also drops a roster line
+ * ledger. The strip's reader (`listCatchUpSince`) also drops a roster line
  * the roster no longer bears out, so the two cannot drift apart afterwards.
  *
  * Runs after every scenario that can block a diver on this boat, so the
@@ -109,6 +109,14 @@ export async function seedDeskHandoff(
     .limit(1);
   if (!reader || reader.id === ctx.actorPersonId) return;
 
+  // The reader's mark sits behind the desk's acts below and after every line
+  // an earlier scenario wrote on this boat: the strip reads desk lines from
+  // the shop's whole trail (issue #2701), so a mark of zero would replay them.
+  const [before] = await db
+    .select({ seq: max(activityEvents.seq) })
+    .from(activityEvents)
+    .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.tripId, ctx.trip.id)));
+
   for (const plan of DESK_PLANS) {
     const occurredAt = at(0, plan.hour, plan.minute);
     if (plan.kind === "meeting_point") {
@@ -133,38 +141,47 @@ export async function seedDeskHandoff(
         createdAt: occurredAt,
         updatedAt: occurredAt,
       });
-      await recordDeskEvent(db, {
+      await recordDeskLine(db, {
         shopId,
         tripId: ctx.trip.id,
-        kind: "help_request",
+        code: "desk_help_request",
         bookingId: booking.id,
         subjectPersonId: booking.personId,
         occurredAt,
       });
       continue;
     }
-    await recordDeskEvent(db, {
+    // A seat taken is the line seating writes (`seatDiver`), which the strip reads.
+    const names = await db
+      .select({ id: people.id, fullName: people.fullName })
+      .from(people)
+      .where(
+        and(eq(people.shopId, shopId), inArray(people.id, [ctx.actorPersonId, booking.personId])),
+      );
+    const nameOf = (id: string) => names.find((row) => row.id === id)?.fullName ?? "";
+    await recordActivityRow(db, {
       shopId,
       tripId: ctx.trip.id,
-      kind: plan.kind,
       bookingId: booking.id,
       subjectPersonId: booking.personId,
       actorPersonId: ctx.actorPersonId,
+      code: "seat_added",
+      params: { actor: nameOf(ctx.actorPersonId), diver: nameOf(booking.personId) },
       occurredAt,
     });
   }
 
-  // `last_seen_seq: 0` rather than a real sequence: every event above is on a
-  // freshly seeded trip, so nothing precedes them and zero means "behind all of
-  // them". The stamp is what the strip's label reads, and it is the one thing
-  // here that has to be a wall-clock time in the shop's own zone.
+  // The sequence read before the desk acted, so the mark is behind all of
+  // them and nothing else. The stamp is what the strip's label reads, and it
+  // is the one thing here that has to be a wall-clock time in the shop's own
+  // zone.
   await db
     .insert(tripReadMarks)
     .values({
       shopId,
       tripId: ctx.trip.id,
       personId: reader.id,
-      lastSeenSeq: 0,
+      lastSeenSeq: before?.seq ?? 0,
       lastSeenAt: at(0, READ_MARK_HOUR, READ_MARK_MINUTE),
     })
     .onConflictDoNothing();
@@ -206,8 +223,8 @@ export async function seedDeskHandoff(
 
 /**
  * A counter check-in, written the way `checkInBooking` writes one: the seat's
- * status, the arrival trail under it, the activity line and the crew's
- * catch-up line. Only for a seat readiness clears, which is the counter's own
+ * status, the arrival trail under it, and the activity line the crew's
+ * catch-up strip also reads. Only for a seat readiness clears, which is the counter's own
  * refusal; a seat it would refuse is left booked and says nothing.
  *
  * Written directly rather than through `checkInBooking`, which takes the
@@ -242,22 +259,14 @@ async function checkIn(
     status: "arrived",
     occurredAt,
   });
-  await db.insert(activityEvents).values({
+  await recordActivityRow(db, {
     shopId,
     tripId: booking.tripId,
-    bookingId: booking.id,
-    actorPersonId,
-    code: "counter_check_in",
-    params: { diver: diver.fullName },
-    occurredAt,
-  });
-  await recordDeskEvent(db, {
-    shopId,
-    tripId: booking.tripId,
-    kind: "arrival",
     bookingId: booking.id,
     subjectPersonId: booking.personId,
     actorPersonId,
+    code: "counter_check_in",
+    params: { diver: diver.fullName },
     occurredAt,
   });
 }
@@ -291,10 +300,10 @@ async function moveMeetingPoint(
     actorPersonId,
     occurredAt,
   });
-  await recordDeskEvent(db, {
+  await recordDeskLine(db, {
     shopId,
     tripId: trip.id,
-    kind: "meeting_point",
+    code: "desk_meeting_point",
     actorPersonId,
     occurredAt,
   });

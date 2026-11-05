@@ -12,7 +12,7 @@ import {
   setBookingPickupDetails,
   setBookingReEntryAsk,
 } from "./bookings";
-import { bookings, shops, tripDeskEvents, trips } from "./schema";
+import { activityEvents, bookings, shops, trips } from "./schema";
 
 // No transaction or concurrency semantics are under test: each test rolls back its writes.
 const ctx = fileScopedShopContext();
@@ -103,9 +103,9 @@ describe("booking detail public seam", () => {
     const events = () =>
       db
         .select()
-        .from(tripDeskEvents)
+        .from(activityEvents)
         .where(
-          and(eq(tripDeskEvents.bookingId, booking.id), eq(tripDeskEvents.kind, "pickup_set")),
+          and(eq(activityEvents.bookingId, booking.id), eq(activityEvents.code, "desk_pickup_set")),
         );
     const before = (await events()).length;
     await setBookingHotelPickup(db, { ...input, hotelPickupLocation: "Lobby" });

@@ -40,7 +40,7 @@
     "noSignatureDate": "No signature date",
     "noTrip": "Imported record",
     "openTrip": "Open the departure",
-    "integrityInvalid": "Integrity mismatch",
+    "integrityInvalid": "Changed after signing",
     "integrityUnsealed": "Can’t be checked for changes",
     "medicalWaiting": "Waiting on physician",
     "medicalCleared": "Cleared by physician",
@@ -53,7 +53,7 @@
     "views": {
       "label": "Signed record views",
       "all": "All",
-      "unchecked": "Can’t be checked",
+      "unchecked": "Unsealed or changed",
       "medical": "Medical holds"
     },
     "pagination": {

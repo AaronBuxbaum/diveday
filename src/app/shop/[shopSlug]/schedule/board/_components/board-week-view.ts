@@ -155,12 +155,17 @@ export function boardWeekView({
     cents === null ? null : formatMoneyScanned(cents, currency, locale);
   // Every departure that came home with its head count still open, whatever
   // page the *stream* is on. The week has no cursor (DOM-H3).
-  const weekRollCalls = new Map(
-    openRollCalls.map((open) => [
-      open.tripId,
-      { diveNumber: open.diveNumber, uncounted: open.uncounted },
-    ]),
-  );
+  // One badge per departure. A course that meets on several days has one gap
+  // list per meeting day, newest day first (#2557): the newest day keeps the
+  // badge, and an earlier day's row stays on Today in its own right.
+  const weekRollCalls = new Map<string, { diveNumber: number; uncounted: number }>();
+  const badgeDay = new Map<string, number>();
+  for (const open of openRollCalls) {
+    const day = open.dayNumber ?? 1;
+    if ((badgeDay.get(open.tripId) ?? day) !== day) continue;
+    badgeDay.set(open.tripId, day);
+    weekRollCalls.set(open.tripId, { diveNumber: open.diveNumber, uncounted: open.uncounted });
+  }
   // The same "say a shared fact once" gate the stream's price banner uses: a
   // whole week with no price anywhere is one condition, not seven warnings.
   // **Spans are weighed with the cells.** A multi-day course is drawn once as

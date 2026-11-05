@@ -25,6 +25,7 @@ import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { looksLikeBookingLinkToken } from "@/lib/booking-link-shape";
 import { BUDDY_COOKIE, buddyReferralFromCookie } from "@/lib/buddy-links";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
@@ -668,12 +669,8 @@ export async function bookSpot(
  * its one use. A stale or forged value is a no-op.
  */
 async function consumeHandoffFromForm(dbi: AppDb, shopId: string, value: unknown): Promise<void> {
-  const handoff = z
-    .string()
-    .regex(/^[A-Za-z0-9_-]{20,128}$/)
-    .safeParse(value);
-  if (handoff.success) {
-    await consumeBookingHandoff(dbi, { shopId, token: handoff.data });
+  if (looksLikeBookingLinkToken(value)) {
+    await consumeBookingHandoff(dbi, { shopId, token: value });
   }
 }
 
