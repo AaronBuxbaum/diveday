@@ -178,7 +178,6 @@ export const EXCLUDED_TABLES = [
  * file still orders its rows by it server-side.
  */
 export const GLOBAL_SEQ_TABLES = [
-  "deck_counts",
   "trip_stage_events",
   "trip_change_events",
   "staff_credential_history",

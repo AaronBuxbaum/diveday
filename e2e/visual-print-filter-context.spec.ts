@@ -32,20 +32,14 @@ test("printed filtered gear keeps the selected scope without navigation pills", 
   await capturePrint(page, "gear-filter-context");
 });
 
-test("printed diver roster keeps its order without add and download actions", async ({ page }) => {
+test("printed diver roster keeps its order without the add action", async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers");
   const add = page.getByRole("link", { name: "Add diver", exact: true });
-  const download = page.getByRole("link", { name: "Download this list (CSV)", exact: true });
-  const more = page.locator("main").getByRole("button", { name: "More", exact: true });
   await expect(add).toBeVisible();
-  await more.click();
-  await expect(download).toBeVisible();
   const sort = page.locator('main nav [aria-current="true"]').filter({ hasText: "Name" });
   await expect(sort).toBeVisible();
   await page.emulateMedia({ media: "print" });
   await expect(add).not.toBeVisible();
-  await expect(more).not.toBeVisible();
-  await expect(download).not.toBeVisible();
   await expect(sort).toBeVisible();
   await page.emulateMedia({ media: "screen" });
   await capturePrint(page, "divers-paper-roster");

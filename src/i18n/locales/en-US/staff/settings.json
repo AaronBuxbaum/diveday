@@ -834,7 +834,6 @@
       "trips": "Departures",
       "trip_change_events": "Departure changes",
       "trip_stage_events": "Departure stages",
-      "deck_counts": "Deck counts",
       "safety_drills": "Safety drills",
       "safety_drill_participants": "Who took part in each drill",
       "trip_series": "Repeating departures",

@@ -12,7 +12,6 @@ import { OfflineChecklist, OfflineSnags } from "./Checklist";
 import { OfflineCheckpointNav } from "./CheckpointNav";
 import { OfflineCounter } from "./Counter";
 import type { OfflineTripControls } from "./controls";
-import { OfflineDeckCount } from "./DeckCount";
 import { OfflineManifestSheet } from "./ManifestSheet";
 import { OfflineRollCallSection } from "./RollCallSection";
 import { StatusMessage } from "./StatusMessage";
@@ -189,13 +188,6 @@ export function OfflineTripScreen({
 
             <section id="offline-roll-call-context" tabIndex={-1} className="scroll-mt-24">
               <OfflineCheckpointNav view={view} controls={controls} />
-              <OfflineDeckCount
-                counts={envelope.snapshot.deckCounts}
-                checkpoint={view.checkpoint}
-                timeZone={envelope.snapshot.shop.timezone}
-                locale={controls.locale}
-                t={t}
-              />
 
               <OfflineRollCallSection view={view} controls={controls} />
             </section>

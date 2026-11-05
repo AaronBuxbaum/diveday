@@ -1,4 +1,4 @@
-import { canDeleteDiver, canExportShopData, canImportShopData, canMergeDiver } from "@/lib/authz";
+import { canDeleteDiver, canImportShopData, canMergeDiver } from "@/lib/authz";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb } from "./client";
 import { listDiverMergeDuplicateIds } from "./diver-merge";
@@ -30,7 +30,6 @@ export async function getDiversPage(
     delete: liveRoles !== null && canDeleteDiver(liveRoles),
     import: liveRoles !== null && canImportShopData(liveRoles),
     merge: liveRoles !== null && canMergeDiver(liveRoles),
-    download: liveRoles !== null && canExportShopData(liveRoles),
   };
   const sort = isDiverSort(input.sort) ? input.sort : "name";
   const requested = isDiverFilter(input.filter) ? input.filter : "all";

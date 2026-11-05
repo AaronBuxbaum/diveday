@@ -113,7 +113,6 @@ const NOT_READ_BACK: Record<string, string> = {
   "trip_stage_events.csv": EVIDENCE,
   "safety_drills.csv": EVIDENCE,
   "safety_drill_participants.csv": EVIDENCE,
-  "deck_counts.csv": EVIDENCE,
   "staff_credential_history.csv": EVIDENCE,
   "booking_payment_events.csv": EVIDENCE,
   "booking_checkouts.csv": EVIDENCE,

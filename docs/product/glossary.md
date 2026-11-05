@@ -237,7 +237,6 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Days at sea
 - Days away
 - Deal
-- Deck count
 - Decompression card reminder
 - Default course page
 - Delivery receipt

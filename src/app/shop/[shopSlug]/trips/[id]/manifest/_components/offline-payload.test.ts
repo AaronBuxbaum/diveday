@@ -26,7 +26,6 @@ describe("offlineManifestPayload", () => {
       boatSafety: null,
       meetingWindows: undefined,
       snags: [],
-      deckCounts: new Map(),
       locale: "en-US",
       t,
     });
@@ -80,7 +79,6 @@ describe("offlineManifestPayload", () => {
           stillThere: null,
         },
       ],
-      deckCounts: new Map(),
       locale: "en-US",
       t,
     });
@@ -110,7 +108,6 @@ describe("offlineManifestPayload", () => {
       checklistChecks: new Map() as never,
       boatSafety: null,
       meetingWindows: undefined,
-      deckCounts: new Map(),
       snags: [],
       locale: "en-US",
       t,
@@ -134,54 +131,5 @@ describe("offlineManifestPayload", () => {
       "rollCallDayBoundaries" in
         offlineManifestPayload({ ...base, snapshot, meetingWindows: [day(20)] }),
     ).toBe(false);
-  });
-
-  it("carries the newest deck count per checkpoint, and no field at all when nobody counted", () => {
-    const build = (deckCounts: Parameters<typeof offlineManifestPayload>[0]["deckCounts"]) =>
-      offlineManifestPayload({
-        snapshot: {
-          manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
-          snapshotId: "33333333-3333-4333-8333-333333333333",
-          erasureEpochToken: "authenticated-epoch",
-          snapshotRevision: 1,
-        },
-        shop: {
-          slug: "blue-mantis",
-          name: "Blue Mantis",
-          timezone: "America/New_York",
-          emergencyReference: null as never,
-        },
-        checklistItems: [] as never,
-        checklistChecks: new Map() as never,
-        boatSafety: null,
-        meetingWindows: undefined,
-        snags: [],
-        deckCounts,
-        locale: "en-US",
-        t,
-      });
-    expect("deckCounts" in build(new Map())).toBe(false);
-    expect(
-      build(
-        new Map([
-          [
-            "departure",
-            {
-              counted: 0,
-              recordedAt: new Date("2026-09-11T12:30:00.000Z"),
-              recordedByName: "Keiko Tanaka",
-            },
-          ],
-        ]),
-      ).deckCounts,
-    ).toEqual([
-      {
-        checkpoint: "departure",
-        counted: 0,
-        recordedAt: "2026-09-11T12:30:00.000Z",
-        recordedByName: "Keiko Tanaka",
-        stale: false,
-      },
-    ]);
   });
 });
