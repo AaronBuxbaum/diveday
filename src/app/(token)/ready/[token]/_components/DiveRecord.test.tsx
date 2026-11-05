@@ -7,6 +7,7 @@ import { AfterState, type AfterStateProps } from "./AfterState";
 import { props } from "./after-state-test-fixtures";
 import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";
 import { DiveRecord } from "./DiveRecord";
+import { DiveRecordSheet } from "./DiveRecordSheet";
 
 afterEach(cleanup);
 
@@ -28,6 +29,23 @@ function RecordOf({ context }: { context: AfterStateProps }) {
       postcard={context.postcard}
       course={context.course}
       logFilePath={context.logFilePath}
+    />
+  );
+}
+
+/** The record's sheet, from the same props. */
+function SheetOf({ context }: { context: AfterStateProps }) {
+  return (
+    <DiveRecordSheet
+      t={context.t}
+      shop={context.shop}
+      trip={context.trip}
+      when={context.when}
+      diverName={context.diverName}
+      sites={context.sites}
+      diveRecord={context.diveRecord}
+      observedSpecies={context.observedSpecies}
+      course={context.course}
     />
   );
 }
@@ -93,7 +111,7 @@ describe("what the record may claim", () => {
     // The numbers are the diver's to write and the signing divemaster's to
     // countersign. Deleting the claims without leaving the blanks would have
     // taken the keepsake down with them.
-    render(<RecordOf context={props()} />);
+    render(<SheetOf context={props()} />);
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.printNotes)).toBeInTheDocument();
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.printSignature)).toBeInTheDocument();
   });
@@ -120,40 +138,36 @@ describe("the milestone stamp", () => {
   });
 });
 
-describe("the keepsake prints like a logbook page", () => {
-  it("carries a ruled notes block and a signature rule, print-only", () => {
-    render(<RecordOf context={props()} />);
+describe("the logbook sheet (issue #2745)", () => {
+  it("carries a ruled notes block and a signature rule", () => {
+    render(<SheetOf context={props()} />);
     for (const id of [AFTER_STATE_TEST_IDS.printNotes, AFTER_STATE_TEST_IDS.printSignature]) {
-      const block = screen.getByTestId(id);
-      // `hidden` on screen, `print:block` on paper — the two halves of "this
-      // exists for the printer and nowhere else".
-      expect(block.className).toContain("hidden");
-      expect(block.className).toContain("print:block");
+      expect(screen.getByTestId(id)).toBeInTheDocument();
     }
   });
 
-  it("hides everything except the dive record when printing", () => {
+  it("is a sheet of the shop's paper with nothing on it to press", () => {
     const { container } = render(
-      <RecordOf context={props({ shoutout: "Come back for the wreck." })} />,
+      <SheetOf context={props({ siteMark: "wreck", observedSpecies: ["green-sea-turtle"] })} />,
     );
-    const record = screen.getByTestId(AFTER_STATE_TEST_IDS.record);
-    for (const child of [...(container.querySelector("main")?.children ?? [])]) {
-      if (child === record) {
-        expect(child.className).not.toContain("print:hidden");
-      } else {
-        expect(child.className).toContain("print:hidden");
-      }
-    }
+    const sheet = container.querySelector(".paper-sheet");
+    expect(sheet).not.toBeNull();
+    expect(sheet?.querySelectorAll("button, a, input, select, textarea, form")).toHaveLength(0);
+    // No drawing on a page a divemaster signs.
+    expect(container.querySelector("[data-site-mark]")).toBeNull();
   });
 
-  it("rules the facts' top edge on paper only, where the band's wash is gone", () => {
-    // On screen the band's wash is the facts' top edge, and a rule 20px
-    // under it drew that edge twice (K-595). In print the band goes
-    // transparent and the rule is the only edge left.
-    render(<RecordOf context={props()} />);
-    const facts = screen.getByTestId(AFTER_STATE_TEST_IDS.record).querySelector("dl");
-    expect(facts).toHaveClass("print:border-t", "divide-y");
-    expect(facts).not.toHaveClass("border-t");
+  it("says what the card says, and never a sighting", () => {
+    render(<SheetOf context={props({ observedSpecies: ["green-sea-turtle"] })} />);
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.sites).textContent).toContain("French Reef");
+    expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.seen)).toBeNull();
+    expect(screen.queryByText("recap.seenOnTheDay")).toBeNull();
+  });
+
+  it("leaves the screen's card without paper rows or print variants", () => {
+    const { container } = render(<RecordOf context={props()} />);
+    expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.printNotes)).toBeNull();
+    expect(container.innerHTML).not.toMatch(/print:/);
   });
 });
 
@@ -178,13 +192,12 @@ describe("the postcard (ADR 20260901-diveday-reimagined, slice 13i)", () => {
     expect(plain.container.querySelector("[data-brand-style]")).toBeNull();
   });
 
-  it("draws the day's site on the record's face, decorative and off the printed page", () => {
+  it("draws the day's site on the record's face, decorative", () => {
     const { container } = render(<RecordOf context={props({ siteMark: "wreck" })} />);
     const face = screen.getByTestId(AFTER_STATE_TEST_IDS.face);
     const mark = face.querySelector("[data-site-mark]");
     expect(mark?.getAttribute("data-site-mark")).toBe("wreck");
     expect(mark?.getAttribute("aria-hidden")).toBe("true");
-    expect(mark?.className).toContain("print:hidden");
     // One drawing on the page, and it sits on the shell so it keeps an edge
     // against the band that is the wash.
     expect(container.querySelectorAll("[data-site-mark]")).toHaveLength(1);
