@@ -132,6 +132,7 @@ export async function runShopBackup(
       origin: input.origin,
       now,
       readerPersonId: input.readerPersonId,
+      scheduled: input.trigger === "scheduled",
       fetchImpl: input.fetchImpl,
     });
     if (!bundle.ok) return fail("shop_missing");

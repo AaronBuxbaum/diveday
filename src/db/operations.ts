@@ -339,6 +339,65 @@ export async function recordMedicalAnswersExported(
 }
 
 /**
+ * **A scheduled backup carried divers' medical answers** (#3871, Aaron's
+ * option b). No person read them, so no `medical_answers_read` line: the
+ * shop's trail gets one line for the run, with how many divers' answers it
+ * held, and each diver's trail gets one line the first time a scheduled backup
+ * holds their answers, never again. Both are system lines (`scheduled_backup`).
+ * The platform backup writes neither (option c): it is DiveDay's own
+ * disaster-recovery copy, not a disclosure to the shop's storage.
+ */
+export async function recordScheduledBackupMedicalAnswers(
+  db: DbExecutor,
+  input: { shopId: string; personIds: readonly string[] },
+): Promise<void> {
+  const unique = [...new Set(input.personIds)];
+  if (unique.length === 0) return;
+  const occurredAt = nowDate();
+  await db.insert(activityEvents).values({
+    shopId: input.shopId,
+    actorPersonId: null,
+    systemReason: "scheduled_backup",
+    code: "scheduled_backup_medical_answers",
+    params: { count: String(unique.length) },
+    occurredAt,
+  });
+  // Chunked as `recordMedicalAnswersExported` is, for the same bind limit.
+  for (let from = 0; from < unique.length; from += 2000) {
+    const chunk = unique.slice(from, from + 2000);
+    const told = await db
+      .select({ id: activityEvents.subjectPersonId })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.shopId, input.shopId),
+          eq(activityEvents.code, "scheduled_backup_holds_medical_answers"),
+          inArray(activityEvents.subjectPersonId, chunk),
+        ),
+      );
+    const already = new Set(told.map((row) => row.id));
+    const divers = await db
+      .select({ id: people.id, name: people.fullName })
+      .from(people)
+      // diveday:allow-deleted-people: a removed diver's answers can still be in the file, and the line belongs on their record.
+      .where(and(eq(people.shopId, input.shopId), inArray(people.id, chunk)));
+    const first = divers.filter((diver) => !already.has(diver.id));
+    if (first.length === 0) continue;
+    await db.insert(activityEvents).values(
+      first.map((diver) => ({
+        shopId: input.shopId,
+        actorPersonId: null,
+        systemReason: "scheduled_backup" as const,
+        subjectPersonId: diver.id,
+        code: "scheduled_backup_holds_medical_answers" as const,
+        params: { diver: diver.name },
+        occurredAt,
+      })),
+    );
+  }
+}
+
+/**
  * A booking note deleted, softly (ADR 20260820-every-delete-is-soft; issue
  * #3701): the row stays, so the toast's Undo names it by id
  * (`restoreInternalNote`) and the note's words never ride in a URL.

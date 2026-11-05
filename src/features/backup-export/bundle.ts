@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
 import { loadShopExportBundleInput } from "@/db/export";
-import { recordMedicalAnswersExported } from "@/db/operations";
+import { recordMedicalAnswersExported, recordScheduledBackupMedicalAnswers } from "@/db/operations";
 import { type FeedLabels, feedDocument, listFeedTrips } from "@/features/calendar-sync";
 import {
   buildExportBundle,
@@ -36,11 +36,16 @@ export type BuildBackupBundleInput = {
   /**
    * The staffer who pressed "Test backup". The bundle hands out every release's
    * medical answers, so each diver's trail gets the same line the download
-   * route writes (issue #2618), before anything is assembled. The scheduled and
-   * platform runs have no staffer and write none: they are system acts
-   * (follow-up filed), so an absent reader writes no line.
+   * route writes (issue #2618), before anything is assembled.
    */
   readerPersonId?: string;
+  /**
+   * A scheduled run to the shop's own storage: no staffer read anything, so
+   * it writes the system lines instead (#3871), before anything is
+   * assembled and fail-closed like the reader's. The platform backup sets
+   * neither and writes nothing (Aaron's option c).
+   */
+  scheduled?: boolean;
   /** Used for the photo fetches, so tests own all I/O. */
   fetchImpl?: typeof fetch;
 };
@@ -66,6 +71,11 @@ export async function buildBackupBundle(
     await recordMedicalAnswersExported(db, {
       shopId: input.shopId,
       actorPersonId: input.readerPersonId,
+      personIds: bundleInput.medicalAnswerPersonIds,
+    });
+  } else if (input.scheduled) {
+    await recordScheduledBackupMedicalAnswers(db, {
+      shopId: input.shopId,
       personIds: bundleInput.medicalAnswerPersonIds,
     });
   }
