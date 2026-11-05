@@ -37,16 +37,37 @@ function CopyLink({
   link,
   copy: copyText,
   autoCopy,
+  resend,
 }: {
   link: WaiverFallbackLink;
   copy: WaiverSendCopy;
   /** True when the staffer's tap *was* "copy the link" — see `Copyable`. */
   autoCopy?: boolean;
+  /** Where a booked seat's "Send by text" posts; absent where it cannot. */
+  resend?: ResendTarget;
 }) {
+  const path = waiverLinkPath(link);
+  // A booked seat has no link to hand over (ADR 20261105-waiver-folds-into-
+  // the-thread): its name, and a text to the number on file instead.
+  if (!path) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-medium">{link.name}</span>
+        {resend && link.bookingId ? (
+          <WaiverSendControl
+            {...resend}
+            channel="sms"
+            bookingIds={[link.bookingId]}
+            label={copyText.sendByText}
+            wrapperClassName=""
+            copy={copyText}
+          />
+        ) : null}
+      </div>
+    );
+  }
   const url =
-    typeof window === "undefined"
-      ? waiverLinkPath(link)
-      : new URL(waiverLinkPath(link), window.location.origin).toString();
+    typeof window === "undefined" ? path : new URL(path, window.location.origin).toString();
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -104,6 +125,7 @@ export function reasonCopy(
     );
   }
   if (reason === "no_app_origin") return copy.reasonNoAppOrigin;
+  if (reason === "thread_only") return copy.reasonThreadOnly;
   return channel === "sms" ? copy.reasonTextUnconfigured : copy.reasonUnconfigured;
 }
 
@@ -121,15 +143,18 @@ function LinkGroups({
   copy,
   channel,
   autoCopy,
+  resend,
 }: {
   links: WaiverFallbackLink[];
   copy: WaiverSendCopy;
   /** Which button produced these — the two channel-named reasons read off it. */
   channel: WaiverSendChannel;
   autoCopy?: boolean;
+  resend?: ResendTarget;
 }) {
   const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
     link_only: links.filter((link) => link.reason === "link_only"),
+    thread_only: links.filter((link) => link.reason === "thread_only"),
     no_email: links.filter((link) => link.reason === "no_email"),
     no_phone: links.filter((link) => link.reason === "no_phone"),
     no_app_origin: links.filter((link) => link.reason === "no_app_origin"),
@@ -152,7 +177,14 @@ function LinkGroups({
             )}
             <div className="mt-2 flex flex-col gap-1.5">
               {group.map((link) => (
-                <CopyLink key={link.token} link={link} copy={copy} autoCopy={autoCopy} />
+                <CopyLink
+                  key={link.token ?? link.bookingId ?? link.name}
+                  link={link}
+                  copy={copy}
+                  autoCopy={autoCopy}
+                  // A text that just failed is not offered again as a text.
+                  resend={channel === "sms" ? undefined : resend}
+                />
               ))}
             </div>
           </div>
@@ -168,7 +200,18 @@ function LinkGroups({
  * the same way — one vocabulary for "sent", "already signed", "here is the
  * link", wherever staff tapped.
  */
-export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: WaiverSendCopy }) {
+/** Where a seat's "Send by text" posts: the same surface the first tap was on. */
+type ResendTarget = { surface: WaiverSendSurface; tripId?: string; ticketId?: string };
+
+export function ResultNotice({
+  state,
+  copy,
+  resend,
+}: {
+  state: WaiverSendState;
+  copy: WaiverSendCopy;
+  resend?: ResendTarget;
+}) {
   if (state.status !== "done") return null;
   const nothing =
     state.sent.length === 0 &&
@@ -211,6 +254,7 @@ export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: Wa
           copy={copy}
           channel={state.channel}
           autoCopy={state.channel === "link"}
+          resend={resend}
         />
       ) : null}
       {state.errors.length > 0 ? (
@@ -236,6 +280,7 @@ export function WaiverSendControl({
   ticketId,
   bookingIds,
   personId,
+  channel,
   label,
   hint,
   confirmMessage,
@@ -244,6 +289,8 @@ export function WaiverSendControl({
   copy,
 }: {
   surface: WaiverSendSurface;
+  /** Defaults to email; a seat's "Send by text" fallback passes `sms`. */
+  channel?: WaiverSendChannel;
   /** Required when surface is "roster" — which trip's guests page to revalidate. */
   tripId?: string;
   /** The counter rental's ticket, when surface is "counter" and there is one yet. */
@@ -331,12 +378,13 @@ export function WaiverSendControl({
             <input key={id} type="hidden" name="bookingId" value={id} />
           ))}
           {personId ? <input type="hidden" name="personId" value={personId} /> : null}
+          {channel ? <input type="hidden" name="channel" value={channel} /> : null}
           <button type="submit" className={buttonClassName}>
             {labelContent}
           </button>
         </SendHold>
       )}
-      <ResultNotice state={state} copy={copy} />
+      <ResultNotice state={state} copy={copy} resend={{ surface, tripId, ticketId }} />
     </div>
   );
 }

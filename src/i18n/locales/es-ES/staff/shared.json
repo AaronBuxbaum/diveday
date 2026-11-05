@@ -67,6 +67,8 @@
   "waiverSend": {
     "copyLink": "Copiar enlace",
     "copyFailed": "Reintentar",
+    "sendByText": "Enviar por mensaje",
+    "reasonThreadOnly": "La exención de un buceador con reserva va a su propio correo o teléfono, así que no hay enlace para copiar.",
     "reasonNoEmailOne": "Sin correo registrado",
     "reasonNoEmailOther": "{count} no tienen correo registrado.",
     "reasonNoPhoneOne": "Sin un número al que podamos enviar mensajes",

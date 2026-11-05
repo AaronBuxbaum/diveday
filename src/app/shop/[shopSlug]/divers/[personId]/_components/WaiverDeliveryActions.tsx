@@ -237,11 +237,12 @@ export function WaiverDeliveryActions({
     // an earlier tap's toast is still up (well within its four seconds) must
     // not leave that older, now-unrelated message sitting on screen looking
     // like it answers this one.
-    if (state.channel !== "link" || !state.links[0]) {
+    const path = state.links[0] ? waiverLinkPath(state.links[0]) : null;
+    if (state.channel !== "link" || !path) {
       setToast(null);
       return;
     }
-    const url = new URL(waiverLinkPath(state.links[0]), window.location.origin).toString();
+    const url = new URL(path, window.location.origin).toString();
     let alive = true;
     void copyToClipboard(url).then((ok) => {
       if (alive) setToast({ attempt, message: ok ? sendCopy.copied : sendCopy.copyFailed });

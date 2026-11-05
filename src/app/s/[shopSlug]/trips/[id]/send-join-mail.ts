@@ -26,10 +26,10 @@ function emailUrl(path: string): string | undefined {
 }
 
 /**
- * Send the just-booked party's confirmation and any waiver links safely. The
+ * Send the just-booked party's confirmation and any releases safely. The
  * lead's own release rides in the confirmation as the thread's Sign step, on
- * the readiness link it carries (issue #2743); every other seat's goes out as
- * its own waiver link.
+ * the readiness link it carries (issue #2743); every other seat's goes to
+ * that seat's holder as their own thread link, never the lead's.
  */
 export async function sendJoinMail(
   db: AppDb,

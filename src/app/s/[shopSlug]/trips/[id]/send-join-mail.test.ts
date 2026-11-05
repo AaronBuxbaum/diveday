@@ -132,7 +132,7 @@ describe("sendJoinMail", () => {
     expect(key?.recordId).toBe(records[0]?.id);
   });
 
-  it("never carries another seat's release: a party member gets their own waiver link", async () => {
+  it("never carries another seat's release: a party member gets their own thread link", async () => {
     configureMail();
     const { db } = ctx;
     const tripId = await upcomingTripId();
@@ -151,9 +151,15 @@ describe("sendJoinMail", () => {
     const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
     expect(capability?.bookingId).toBe(lead.bookingId);
     expect(toLead[0]?.body).not.toContain("/waivers/");
-    // The friend's own release still goes as its own link, to them alone.
-    expect(toFriend[0]?.body).toContain("/waivers/");
-    expect(toFriend[0]?.body).not.toMatch(SIGN_STEP);
+    // The friend's own release goes on the friend's own thread link, to them
+    // alone, never on the lead's (issue #2743).
+    expect(toFriend[0]?.body).not.toContain("/waivers/");
+    const friendToken = toFriend[0]?.body.match(SIGN_STEP)?.[1];
+    if (!friendToken) throw new Error("no thread link to the friend");
+    expect(friendToken).not.toBe(token);
+    expect(
+      await verifyBookingCapability(db, { token: friendToken, purpose: "readiness" }),
+    ).toMatchObject({ bookingId: friend.bookingId, delivered: true });
   });
 
   it("carries no Sign step when the booker owes no release", async () => {

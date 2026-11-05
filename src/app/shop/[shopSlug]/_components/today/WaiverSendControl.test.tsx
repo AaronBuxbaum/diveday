@@ -161,3 +161,58 @@ describe("WaiverSendControl", () => {
     expect(screen.getByRole("button", { name: "Resend waiver link" })).toBeInTheDocument();
   });
 });
+
+/**
+ * Issue #2743, layer 2: a booked seat's release is its holder's thread link,
+ * which never reaches a staff browser (security review of layer 1, "Copy
+ * link"). A seat's undelivered row names the diver and the reason, and offers
+ * a text to the number on file; there is no link on screen or to copy.
+ */
+describe("a booked seat that was not reached", () => {
+  it("offers Send by text and no Copy link", async () => {
+    outcome = {
+      ...outcome,
+      links: [{ name: "Declan Murphy", token: null, bookingId: "booking-1", reason: "no_email" }],
+    };
+    renderControl();
+    await tapSend();
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Declan Murphy");
+    expect(status).toHaveTextContent("No email on file");
+    expect(screen.queryByRole("button", { name: /copy link/i })).toBeNull();
+    expect(status.innerHTML).not.toMatch(/\/ready\/|\/waivers\//);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Send by text" }));
+    const formData = holdSendAction.mock.calls.at(-1)?.[0];
+    if (!formData) throw new Error("hold was not asked for");
+    expect(formData.get("channel")).toBe("sms");
+    expect(formData.getAll("bookingId")).toEqual(["booking-1"]);
+    expect(formData.get("surface")).toBe("today");
+  });
+
+  it("does not offer a text again after a text failed", async () => {
+    outcome = {
+      ...outcome,
+      channel: "sms",
+      links: [{ name: "Declan Murphy", token: null, bookingId: "booking-1", reason: "failed" }],
+    };
+    renderControl();
+    await tapSend();
+    expect(screen.queryByRole("button", { name: "Send by text" })).toBeNull();
+  });
+
+  it("answers a Copy link tap on a seat with the reason and nothing to copy", async () => {
+    outcome = {
+      ...outcome,
+      channel: "link",
+      links: [
+        { name: "Declan Murphy", token: null, bookingId: "booking-1", reason: "thread_only" },
+      ],
+    };
+    renderControl();
+    await tapSend();
+    expect(screen.getByRole("status")).toHaveTextContent("there’s no link to copy");
+    expect(screen.queryByRole("button", { name: /copy link/i })).toBeNull();
+  });
+});

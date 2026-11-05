@@ -27,7 +27,7 @@ import { isRosterBooking, requireRosterBooking, tripPath } from "./roster-bookin
  *
  * Owner or manager, refused on the live roles before anything is written. A
  * diver with no email on file still gets the seat freed for a new release, and
- * the row's own waiver controls (copy the link, text it, or record paper) take
+ * the row's own waiver controls (text it, or record paper) take
  * over.
  */
 const rosterBookingForm = z.object({ bookingId: text() });

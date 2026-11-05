@@ -36,7 +36,15 @@ export function isWaiverSendChannel(value: unknown): value is WaiverSendChannel 
 /** A private fallback link staff must hand over when a send did not go out. */
 export type WaiverFallbackLink = {
   name: string;
-  token: string;
+  /**
+   * Null for a booked seat: its release is the holder's thread link, which
+   * goes only to their contact on file and is never handed to staff (ADR
+   * 20261105-waiver-folds-into-the-thread). The row then shows the reason and
+   * "Send by text", never a link.
+   */
+  token: string | null;
+  /** The seat a null-token row is about, so its "Send by text" knows where to post. */
+  bookingId?: string;
   /**
    * The link's own path when it is not the release's: a signed release with
    * course forms still owed hands over `/ready/<token>/forms` (ADR
@@ -48,9 +56,12 @@ export type WaiverFallbackLink = {
    * both read differently from a deployment with no `APP_HOST` to build the
    * link on. Each gap points at a different setting, so each gets its own word.
    * `link_only` is not a gap at all: it is the staffer having asked for the URL
-   * to pass on themselves, so it renders the copy control and no sentence. */
+   * to pass on themselves, so it renders the copy control and no sentence.
+   * `thread_only` is a Copy link tap on a booked seat, which has no link to
+   * copy. */
   reason:
     | "link_only"
+    | "thread_only"
     | "no_email"
     | "no_phone"
     | "no_app_origin"
@@ -103,6 +114,8 @@ export type WaiverSendCopy = {
   copied: string;
   copyLink: string;
   copyFailed: string;
+  sendByText: string;
+  reasonThreadOnly: string;
   reasonNoEmailOne: string;
   reasonNoEmailOther: string;
   reasonNoPhoneOne: string;
@@ -147,6 +160,8 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     copied: t("words.did.copied"),
     copyLink: t("shared.waiverSend.copyLink"),
     copyFailed: t("shared.waiverSend.copyFailed"),
+    sendByText: t("shared.waiverSend.sendByText"),
+    reasonThreadOnly: t("shared.waiverSend.reasonThreadOnly"),
     reasonNoEmailOne: t("shared.waiverSend.reasonNoEmailOne"),
     reasonNoEmailOther: t.raw("shared.waiverSend.reasonNoEmailOther"),
     reasonNoPhoneOne: t("shared.waiverSend.reasonNoPhoneOne"),
@@ -198,7 +213,11 @@ export function waiverSendStateFromOutcome(
   };
 }
 
-/** The path a fallback link opens: its own when it carries one, the release's otherwise. */
-export function waiverLinkPath(link: Pick<WaiverFallbackLink, "token" | "path">): string {
-  return link.path ?? `/waivers/${link.token}`;
+/**
+ * The path a fallback link opens: its own when it carries one, the release's
+ * otherwise; null for a booked seat, which has no link to hand over.
+ */
+export function waiverLinkPath(link: Pick<WaiverFallbackLink, "token" | "path">): string | null {
+  if (link.path) return link.path;
+  return link.token ? `/waivers/${link.token}` : null;
 }
