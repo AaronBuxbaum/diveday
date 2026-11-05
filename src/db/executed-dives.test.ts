@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { DEFAULT_FLY_SAFE_HOURS, flySafeFrom } from "@/lib/fly-safe";
@@ -17,6 +17,7 @@ import { recordCrewRollCall, recordRollCall } from "./manifests";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
 import { markBookingNoShow } from "./no-show";
 import {
+  activityEvents,
   bookingArrivalEvents,
   bookings,
   cards,
@@ -28,7 +29,6 @@ import {
   rollCallEvents,
   shops,
   tripAssignments,
-  tripDeskEvents,
   tripDives,
   trips,
 } from "./schema";
@@ -441,7 +441,7 @@ describe("upsertExecutedDive — the plan change", () => {
     expect(after).toEqual(before);
   });
 
-  it("writes one desk event for the crew who were not on the dive", async () => {
+  it("writes one desk line for the crew who were not on the dive", async () => {
     const { db, shop, owner, trip } = await logFixture();
     await upsertExecutedDive(db, {
       shopId: shop.id,
@@ -451,13 +451,13 @@ describe("upsertExecutedDive — the plan change", () => {
       recordedByPersonId: owner.id,
     });
     const events = await db
-      .select({ kind: tripDeskEvents.kind })
-      .from(tripDeskEvents)
-      .where(and(eq(tripDeskEvents.shopId, shop.id), eq(tripDeskEvents.tripId, trip.id)));
-    expect(events).toEqual([{ kind: "plan_changed" }]);
+      .select({ kind: activityEvents.code })
+      .from(activityEvents)
+      .where(and(eq(activityEvents.tripId, trip.id), like(activityEvents.code, "desk_%")));
+    expect(events).toEqual([{ kind: "desk_plan_changed" }]);
   });
 
-  it("writes no desk event for a dive that went to plan", async () => {
+  it("writes no desk line for a dive that went to plan", async () => {
     const { db, shop, owner, trip } = await logFixture();
     await upsertExecutedDive(db, {
       shopId: shop.id,
@@ -467,9 +467,9 @@ describe("upsertExecutedDive — the plan change", () => {
       recordedByPersonId: owner.id,
     });
     const events = await db
-      .select({ kind: tripDeskEvents.kind })
-      .from(tripDeskEvents)
-      .where(and(eq(tripDeskEvents.shopId, shop.id), eq(tripDeskEvents.tripId, trip.id)));
+      .select({ kind: activityEvents.code })
+      .from(activityEvents)
+      .where(and(eq(activityEvents.tripId, trip.id), like(activityEvents.code, "desk_%")));
     expect(events).toEqual([]);
   });
 });

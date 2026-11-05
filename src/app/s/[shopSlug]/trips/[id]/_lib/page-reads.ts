@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
+import { liveBookingLink, verifyBookingCapability } from "@/db/booking-capabilities";
 import { readKnownDiver } from "@/db/booking-handoff";
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking } from "@/db/checkouts";
@@ -30,6 +30,7 @@ import {
 } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import type { auth } from "@/lib/auth";
+import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
@@ -122,6 +123,19 @@ export async function readTripPage(
             capability ? getBookingForTrip(db, shop.id, tripId, capability.bookingId) : null,
         )
       : Promise.resolve(null);
+  // The browser's own readiness link for that booking, **read, never minted**
+  // (issue #2711): the booking action issued it before landing here, and an
+  // anonymous GET writes nothing. Gone (revoked, expired) means no button.
+  const readinessLinkRead = confirmedRead.then(async (booked) => {
+    if (!booked) return null;
+    const token = await liveBookingLink(db, {
+      shopId: shop.id,
+      bookingId: booked.booking.id,
+      purpose: "readiness",
+      delivered: false,
+    });
+    return token ? readinessLinkPath(token) : null;
+  });
   const waitlistRead = interestId
     ? getDepartureInterestForTrip(db, shop.id, tripId, interestId)
     : Promise.resolve(null);
@@ -145,6 +159,7 @@ export async function readTripPage(
     board,
     reviewAggregate,
     run,
+    readinessLink,
   ] = await Promise.all([
     // A staffer looking at their own shop's booking page is *previewing* it, and
     // this page used to answer that with a redirect straight back to the
@@ -274,6 +289,7 @@ export async function readTripPage(
     tripRead.then((found) =>
       found?.seriesId ? publicRunOf(db, { shopId: shop.id, tripId: found.id, now }) : null,
     ),
+    readinessLinkRead,
   ]);
   return {
     staffPreview,
@@ -295,5 +311,6 @@ export async function readTripPage(
     board,
     reviewAggregate,
     run,
+    readinessLink,
   };
 }

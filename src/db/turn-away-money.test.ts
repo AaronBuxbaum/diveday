@@ -1,5 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { DESK_FLAGGED_CODES } from "@/lib/activity";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
@@ -13,12 +14,12 @@ import { getBookingReadiness } from "./readiness";
 import { refundBookingOnCancellation } from "./refunds";
 import { sendDueReminders } from "./reminders";
 import {
+  activityEvents,
   bookingCheckouts,
   bookings,
   notificationDeliveries,
   people,
   personRoles,
-  tripDeskEvents,
   trips,
 } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -70,10 +71,15 @@ describe("a seat the desk turned away", () => {
     expect(await cancelBooking(db, shop.id, bookingId)).toMatchObject({ ok: true });
     expect(
       await db
-        .select({ kind: tripDeskEvents.kind })
-        .from(tripDeskEvents)
-        .where(eq(tripDeskEvents.bookingId, bookingId)),
-    ).toEqual([{ kind: "seat_turned_away" }]);
+        .select({ kind: activityEvents.code })
+        .from(activityEvents)
+        .where(
+          and(
+            eq(activityEvents.bookingId, bookingId),
+            inArray(activityEvents.code, [...DESK_FLAGGED_CODES]),
+          ),
+        ),
+    ).toEqual([{ kind: "desk_seat_turned_away" }]);
   });
 
   /** dde-2 #1: turned away for payment at 07:00, paid at 07:10 for a resold seat. */

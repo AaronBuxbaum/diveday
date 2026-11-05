@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "01a2c5d2-14ff-4817-b18d-c93d52bd29de",
+  "prevIds": [
+    "1117301c-2bd5-4416-832a-9e12b5ef0a61"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "seat_reopened_at"
+      ],
+      "writes": [
+        "s|col|public.bookings.seat_reopened_at",
+        "n|col|public.bookings.seat_reopened_at",
+        "e|col|public.bookings.seat_reopened_at"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "seat_reopened_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

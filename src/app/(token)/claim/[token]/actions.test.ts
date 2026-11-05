@@ -66,8 +66,7 @@ vi.mock("@/db/seat-already-held", async (importOriginal) => {
 const { eq } = await import("drizzle-orm");
 const { createBookingParty } = await import("@/db/bookings");
 const { verifyBookingCapability } = await import("@/db/booking-capabilities");
-const { hashCapabilityToken } = await import("@/lib/booking-capabilities");
-const { bookings, bookingCapabilities, people, waiverRecords } = await import("@/db/schema");
+const { bookings, people, waiverRecords } = await import("@/db/schema");
 const { nowDate } = await import("@/lib/clock");
 const { issuePartySeatClaims } = await import("@/db/seat-claims");
 const { upcomingTripsWithCounts } = await import("@/db/trips");
@@ -165,7 +164,8 @@ describe("claimSeatAction answers a booked address as it answers a fresh one", (
     const live = (token: string) =>
       verifyBookingCapability(ctx.db, { token, purpose: "claim", now: nowDate() });
     expect(await live(freshToken)).not.toBeNull();
-    expect(await live(bookedToken)).not.toBeNull();
+    const refusedSeatId = (await live(bookedToken))?.bookingId ?? "";
+    expect(refusedSeatId).not.toBe("");
 
     mail.current = fakeEmail();
     await submit(freshToken, "Milo Member", "milo@example.com");
@@ -182,8 +182,7 @@ describe("claimSeatAction answers a booked address as it answers a fresh one", (
     const [seat] = await ctx.db
       .select({ claimedAt: bookings.claimedAt })
       .from(bookings)
-      .innerJoin(bookingCapabilities, eq(bookingCapabilities.bookingId, bookings.id))
-      .where(eq(bookingCapabilities.tokenHash, hashCapabilityToken(bookedToken)));
+      .where(eq(bookings.id, refusedSeatId));
     expect(seat?.claimedAt).toBeNull();
 
     // A second attempt with the dead link lands where a spent one does.

@@ -1,15 +1,33 @@
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { hashBearerToken } from "@/lib/bearer-tokens";
+import { capabilityExpiryFor } from "@/lib/booking-capabilities";
 import {
-  capabilityExpiryFor,
-  createCapabilityToken,
-  hashCapabilityToken,
-} from "@/lib/booking-capabilities";
+  bookingLinkToken,
+  deploymentKeyring,
+  parseVerifiedCapabilityToken,
+} from "@/lib/booking-link-token";
 import { DAY_MS, HOUR_MS, nowDate } from "@/lib/clock";
-import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import type { DbExecutor } from "./client";
 import { isTransactionExecutor } from "./query-helpers";
 import { bookingCapabilities, bookings, people, shops, trips } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
+
+/**
+ * **Booking links: one live row per booking, purpose and audience, and a token
+ * computed from it** (ADR 20261104-derived-booking-link-tokens, issue #2711).
+ *
+ * A link is `c<v>.<id>.<tag>` (`src/lib/booking-link-token.ts`): the row's id
+ * and an HMAC over it, its key version and its purpose. Nothing secret is
+ * stored, so issuing is get-or-create: every email, reminder, page render and
+ * "Send the link" for the same booking, purpose and `delivered` hands out the
+ * same URL, and retiring a leaked link is one act, revoking its row.
+ *
+ * **Every lookup from a presented token goes through
+ * `parseVerifiedCapabilityToken` first** and then requires the row's
+ * `purpose` and `key_version` to match (`rowMatchingToken`). A real id under a
+ * wrong tag is refused before any query. `booking-capability-door.test.ts`
+ * refuses an `eq(bookingCapabilities.id, …)` anywhere else.
+ */
 
 export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff" | "course_forms";
 
@@ -21,6 +39,13 @@ export const RETURNING_DIVER_MEMORY_MS = 30 * DAY_MS;
 export const RETURNING_DIVER_RECEIPT_LOCK_TIMEOUT = "250ms";
 export const RETURNING_DIVER_RECEIPT_STATEMENT_TIMEOUT = "400ms";
 
+/**
+ * A live row with less than this left is rotated (revoked, then a new one
+ * minted) rather than handed out again, so no send carries a link that dies
+ * on arrival (security review of #2711, finding 2).
+ */
+export const CAPABILITY_ROTATE_WITHIN_MS = DAY_MS;
+
 export type IssuedReturningDiverReceipt = {
   receiptId: string;
   receiptOrder: string;
@@ -28,59 +53,19 @@ export type IssuedReturningDiverReceipt = {
 };
 
 /**
- * How many live capabilities one booking may hold for one purpose at a time.
+ * **The booking's live link for this purpose, or a new one.** Refuses a
+ * booking that isn't this shop's, is cancelled, or whose person is erased: a
+ * cancelled booking never gets a link, and its outstanding ones already fail
+ * closed at verify time.
  *
- * Minting is unavoidably per-request: tokens are stored only as hashes, so an
- * existing row's plaintext can never be re-derived and a page render that needs
- * a link has no choice but to issue one. That made every GET of the booking
- * confirmation mint another `readiness` capability,
- * each now living to trip end + 30 days — an unbounded pile of live credentials
- * for a single booking, every one of them a working link if it ever leaked.
- *
- * So the pile is capped instead of reused: issuing retires the oldest live rows
- * beyond this many, newest kept. Well above what any honest diver accumulates —
- * a booking's confirmation email, its waiver-signed hand-off, and the 7-day and
- * next-day reminders are a handful, not twenty — so the newest links a real
- * person is actually holding never get pulled out from under them, while a
- * forwarded link from thirty page-loads ago stops working.
- */
-export const MAX_LIVE_CAPABILITIES_PER_PURPOSE = 20;
-
-/**
- * **The two readiness links a new booking gets** (security review r5-4, F1):
- * one for the browser that booked, which proved only a typed name and an
- * address and so stays undelivered, and one for the confirmation email, which
- * is delivered and opens the diver's other days. Issued one after the other,
- * never side by side, so a transaction executor stays sequential.
- */
-export async function issueBookedReadinessLinks(
-  db: DbExecutor,
-  input: { shopId: string; bookingId: string },
-): Promise<{ redirect: IssuedCapability | null; mailed: IssuedCapability | null }> {
-  const redirect = await issueBookingCapability(db, { ...input, purpose: "readiness" });
-  const mailed = await issueBookingCapability(db, {
-    ...input,
-    purpose: "readiness",
-    delivered: true,
-  });
-  return { redirect, mailed };
-}
-
-/**
- * Mints a fresh, purpose-bound bearer capability over a booking. Refuses a
- * booking that isn't this shop's or is already cancelled — a cancelled
- * booking never gets a new link, and any of its outstanding links already
- * fail closed at verify time regardless.
- *
- * Deliberately does not supersede an earlier still-valid capability for the
- * same booking+purpose: a diver may be holding an earlier email's link and a
- * later reminder's link at once, and both should keep working until they
- * individually expire or are explicitly revoked — up to
- * `MAX_LIVE_CAPABILITIES_PER_PURPOSE`, past which the oldest are revoked so the
- * set of live credentials for one booking stays bounded (see that constant).
- * Oldest-first is the right end to cut: the newest link is the one the person
- * in front of the page is about to follow, and the oldest is the one most
- * likely to have been forwarded, screenshotted, or left in a shared inbox.
+ * Get-or-create, under a lock on the person and then the booking (the order
+ * erasure takes, so a mint either precedes erasure and is revoked by it, or
+ * follows it and sees no subject). The live row is handed back with its expiry
+ * moved to what the trip asks for today, so a rescheduled departure carries
+ * its links with it. A row with under a day left, or one whose key this
+ * deployment no longer holds, is revoked and replaced. A `handoff` is never
+ * reused: each call revokes the last one and mints anew, because re-arming a
+ * ten-minute credential that pre-fills a diver's details would extend it.
  */
 export async function issueBookingCapability(
   // `DbExecutor`, so a caller that must decide and write atomically can hand in
@@ -95,11 +80,6 @@ export async function issueBookingCapability(
     expectedPersonId?: string;
     expectedTripId?: string;
     now?: Date;
-    /**
-     * Keep an openable copy of the token (`token_sealed`), so a later send can
-     * hand the same link back — `issueCourseFormsCapability` only.
-     */
-    sealingKey?: SecretKey | null;
     /**
      * A shorter life than the trip's, for a purpose that is about the next
      * ten minutes rather than the departure — the booking handoff. Never
@@ -151,27 +131,208 @@ export async function issueBookingCapability(
       (input.expectedTripId && booking.tripId !== input.expectedTripId)
     )
       return null;
-    // Erasure locks the person before revoking booking capabilities. Taking
-    // the same lock makes mint either precede erasure (and get revoked) or
-    // follow it (and see no eligible subject).
-    await retireOldestLiveCapabilities(tx, input.shopId, [input.bookingId], input.purpose, now);
-
-    const token = createCapabilityToken();
     const tripBound = capabilityExpiryFor(booking.tripEndsAt, now);
     const expiresAt = input.expiresAt && input.expiresAt < tripBound ? input.expiresAt : tripBound;
-    await tx.insert(bookingCapabilities).values({
+    const issued = await getOrCreateLiveLinks(tx, {
       shopId: input.shopId,
-      bookingId: input.bookingId,
       purpose: input.purpose,
-      tokenHash: hashCapabilityToken(token),
-      tokenSealed: input.sealingKey ? sealSecret(token, input.sealingKey) : null,
       delivered: input.delivered ?? false,
-      issuedAt: now,
-      expiresAt,
+      now,
+      seats: [{ bookingId: booking.id, expiresAt }],
     });
-    return { token, expiresAt };
+    return issued.get(booking.id) ?? null;
   };
   return isTransactionExecutor(db) ? issue(db) : db.transaction(issue);
+}
+
+/**
+ * The get-or-create every issuing path shares, for bookings the caller has
+ * already locked and checked. One select of the live rows, then at most one
+ * revoke, one expiry update per distinct target, and one insert.
+ *
+ * The insert is `ON CONFLICT DO NOTHING` on the live-link index, and a booking
+ * it skipped is read back: a concurrent issue that got there first wins, and
+ * both callers hand out its token (security review of #2711, finding 9).
+ */
+async function getOrCreateLiveLinks(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    purpose: CapabilityPurpose;
+    delivered: boolean;
+    now: Date;
+    seats: ReadonlyArray<{ bookingId: string; expiresAt: Date }>;
+  },
+): Promise<Map<string, IssuedCapability>> {
+  const issued = new Map<string, IssuedCapability>();
+  if (input.seats.length === 0) return issued;
+  const keyring = deploymentKeyring();
+  // Before any write: a misconfigured `BOOKING_LINK_SECRET` fails the send
+  // loudly instead of silently signing under another key.
+  const signingVersion = keyring.signingVersion();
+  const { purpose, delivered, now } = input;
+  const bookingIds = input.seats.map((seat) => seat.bookingId);
+  const liveScope = and(
+    eq(bookingCapabilities.shopId, input.shopId),
+    inArray(bookingCapabilities.bookingId, bookingIds),
+    eq(bookingCapabilities.purpose, purpose),
+    eq(bookingCapabilities.delivered, delivered),
+    isNull(bookingCapabilities.revokedAt),
+  );
+  const live = await tx
+    .select({
+      id: bookingCapabilities.id,
+      bookingId: bookingCapabilities.bookingId,
+      keyVersion: bookingCapabilities.keyVersion,
+      expiresAt: bookingCapabilities.expiresAt,
+    })
+    .from(bookingCapabilities)
+    .where(liveScope)
+    .orderBy(bookingCapabilities.id)
+    .for("update");
+  const liveByBooking = new Map(live.map((row) => [row.bookingId, row]));
+
+  const retire: string[] = [];
+  const moveExpiry = new Map<number, string[]>();
+  const mint: Array<{ bookingId: string; expiresAt: Date }> = [];
+  for (const seat of input.seats) {
+    const row = liveByBooking.get(seat.bookingId);
+    const reusable =
+      row &&
+      purpose !== "handoff" &&
+      // Only a row under the signing key is handed out again: re-sending (and
+      // extending) an older version would keep it alive after rotation.
+      row.keyVersion === signingVersion &&
+      row.expiresAt.getTime() - now.getTime() >= CAPABILITY_ROTATE_WITHIN_MS;
+    if (row && reusable && row.keyVersion !== null) {
+      if (row.expiresAt.getTime() !== seat.expiresAt.getTime()) {
+        const ids = moveExpiry.get(seat.expiresAt.getTime()) ?? [];
+        moveExpiry.set(seat.expiresAt.getTime(), [...ids, row.id]);
+      }
+      issued.set(seat.bookingId, {
+        token: bookingLinkToken({ id: row.id, keyVersion: row.keyVersion, purpose }, keyring),
+        expiresAt: seat.expiresAt,
+      });
+      continue;
+    }
+    if (row) retire.push(row.id);
+    mint.push(seat);
+  }
+
+  if (retire.length > 0) {
+    await tx
+      .update(bookingCapabilities)
+      .set({ revokedAt: now })
+      .where(and(inArray(bookingCapabilities.id, retire), isNull(bookingCapabilities.revokedAt)));
+  }
+  for (const [at, ids] of moveExpiry) {
+    await tx
+      .update(bookingCapabilities)
+      .set({ expiresAt: new Date(at) })
+      .where(inArray(bookingCapabilities.id, ids));
+  }
+  if (mint.length === 0) return issued;
+
+  const inserted = await tx
+    .insert(bookingCapabilities)
+    .values(
+      mint.map((seat) => ({
+        shopId: input.shopId,
+        bookingId: seat.bookingId,
+        purpose,
+        keyVersion: signingVersion,
+        delivered,
+        issuedAt: now,
+        expiresAt: seat.expiresAt,
+      })),
+    )
+    .onConflictDoNothing({
+      target: [
+        bookingCapabilities.bookingId,
+        bookingCapabilities.purpose,
+        bookingCapabilities.delivered,
+      ],
+      where: sql`"revoked_at" is null and "source_capability_id" is null`,
+    })
+    .returning({
+      id: bookingCapabilities.id,
+      bookingId: bookingCapabilities.bookingId,
+      expiresAt: bookingCapabilities.expiresAt,
+    });
+  for (const row of inserted) {
+    issued.set(row.bookingId, {
+      token: bookingLinkToken({ id: row.id, keyVersion: signingVersion, purpose }, keyring),
+      expiresAt: row.expiresAt,
+    });
+  }
+  const raced = mint.filter((seat) => !issued.has(seat.bookingId)).map((seat) => seat.bookingId);
+  if (raced.length === 0) return issued;
+  const winners = await tx
+    .select({
+      id: bookingCapabilities.id,
+      bookingId: bookingCapabilities.bookingId,
+      keyVersion: bookingCapabilities.keyVersion,
+      expiresAt: bookingCapabilities.expiresAt,
+    })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, input.shopId),
+        inArray(bookingCapabilities.bookingId, raced),
+        eq(bookingCapabilities.purpose, purpose),
+        eq(bookingCapabilities.delivered, delivered),
+        isNull(bookingCapabilities.revokedAt),
+      ),
+    );
+  for (const row of winners) {
+    if (row.keyVersion === null || !keyring.keyFor(row.keyVersion)) continue;
+    issued.set(row.bookingId, {
+      token: bookingLinkToken({ id: row.id, keyVersion: row.keyVersion, purpose }, keyring),
+      expiresAt: row.expiresAt,
+    });
+  }
+  return issued;
+}
+
+/**
+ * **The live link a page may show, read and never written.** The token of
+ * the booking's unrevoked, unexpired row for this purpose and audience, or
+ * null when there is none. The embed confirmation renders the browser's
+ * readiness link through this (security review of #2711, finding 3): an
+ * anonymous GET never mints, and a booking whose browser link was revoked
+ * simply shows none; the emailed link and "mail me my link" cover the rest.
+ */
+export async function liveBookingLink(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    bookingId: string;
+    purpose: CapabilityPurpose;
+    delivered: boolean;
+    now?: Date;
+  },
+): Promise<string | null> {
+  const now = input.now ?? nowDate();
+  const [row] = await db
+    .select({ id: bookingCapabilities.id, keyVersion: bookingCapabilities.keyVersion })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, input.shopId),
+        eq(bookingCapabilities.bookingId, input.bookingId),
+        eq(bookingCapabilities.purpose, input.purpose),
+        eq(bookingCapabilities.delivered, input.delivered),
+        isNull(bookingCapabilities.revokedAt),
+        gt(bookingCapabilities.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  const keyring = deploymentKeyring();
+  if (!row || row.keyVersion === null || !keyring.keyFor(row.keyVersion)) return null;
+  return bookingLinkToken(
+    { id: row.id, keyVersion: row.keyVersion, purpose: input.purpose },
+    keyring,
+  );
 }
 
 /**
@@ -254,13 +415,14 @@ export async function issueReturningDiverReceipt(
       return null;
     }
 
+    const redirect = rowMatchingToken(input.redirectReadinessToken, "readiness");
+    if (!redirect) return null;
     const [redirectCapability] = await tx
       .select({ id: bookingCapabilities.id, expiresAt: bookingCapabilities.expiresAt })
       .from(bookingCapabilities)
       .where(
         and(
-          eq(bookingCapabilities.tokenHash, hashCapabilityToken(input.redirectReadinessToken)),
-          eq(bookingCapabilities.purpose, "readiness"),
+          redirect,
           eq(bookingCapabilities.shopId, input.shopId),
           eq(bookingCapabilities.bookingId, input.bookingId),
           eq(bookingCapabilities.delivered, false),
@@ -272,7 +434,6 @@ export async function issueReturningDiverReceipt(
       .for("update");
     if (!redirectCapability) return null;
 
-    const token = createCapabilityToken();
     const expiresAt = new Date(
       Math.min(
         now.getTime() + RETURNING_DIVER_RECEIPT_TTL_MS,
@@ -285,8 +446,7 @@ export async function issueReturningDiverReceipt(
         shopId: input.shopId,
         bookingId: input.bookingId,
         purpose: "returning_diver_receipt",
-        tokenHash: hashCapabilityToken(token),
-        returningDeviceHash: hashCapabilityToken(input.deviceToken),
+        returningDeviceHash: hashBearerToken(input.deviceToken),
         returningDeviceGeneration: input.deviceGeneration,
         sourceCapabilityId: redirectCapability.id,
         issuedAt: now,
@@ -300,7 +460,7 @@ export async function issueReturningDiverReceipt(
         .set({ revokedAt: now })
         .where(
           and(
-            eq(bookingCapabilities.returningDeviceHash, hashCapabilityToken(input.deviceToken)),
+            eq(bookingCapabilities.returningDeviceHash, hashBearerToken(input.deviceToken)),
             eq(bookingCapabilities.shopId, input.shopId),
             eq(bookingCapabilities.purpose, "returning_diver_receipt"),
             lte(bookingCapabilities.returningOrder, receipt.order),
@@ -339,7 +499,7 @@ export async function readReturningDiverReceipt(
 } | null> {
   const now = input.now ?? nowDate();
   const resolve = async (tx: DbExecutor) => {
-    const deviceHash = hashCapabilityToken(input.deviceToken);
+    const deviceHash = hashBearerToken(input.deviceToken);
     const [row] = await tx
       .select({
         receiptId: bookingCapabilities.id,
@@ -473,7 +633,7 @@ export async function acknowledgeReturningDiverReceipt(
   },
 ): Promise<boolean> {
   const now = input.now ?? nowDate();
-  const deviceHash = hashCapabilityToken(input.deviceToken);
+  const deviceHash = hashBearerToken(input.deviceToken);
   const [receipt] = await db
     .select({
       id: bookingCapabilities.id,
@@ -539,7 +699,7 @@ export async function revokeReturningDiverReceipt(
     )
   )
     return false;
-  const deviceHash = hashCapabilityToken(input.deviceToken);
+  const deviceHash = hashBearerToken(input.deviceToken);
   const revoked = await db
     .update(bookingCapabilities)
     .set({ revokedAt: now, returningDeviceGeneration: input.nextDeviceGeneration })
@@ -559,13 +719,12 @@ export async function revokeReturningDiverReceipt(
 }
 
 /**
- * **One capability for each of many bookings, in a fixed number of statements**
+ * **One link for each of many bookings, in a fixed number of statements**
  * (code review 2026-10-13, item 35): the departure note's fan-out used to mint
  * one link per seat inside its send loop, three statements a seat, before the
  * first message left. Same rules as {@link issueBookingCapability}, applied to
  * the set: a booking that isn't this shop's or is cancelled gets nothing (it is
- * simply absent from the answer), and each booking's live set stays within
- * `MAX_LIVE_CAPABILITIES_PER_PURPOSE`, its oldest retired first.
+ * simply absent from the answer), and each booking's live link is reused.
  */
 export async function issueBookingCapabilities(
   db: DbExecutor,
@@ -611,17 +770,16 @@ export async function issueBookingCapabilities(
 }
 
 /**
- * **The minting half of {@link issueBookingCapabilities}, for a caller that has
+ * **The issuing half of {@link issueBookingCapabilities}, for a caller that has
  * already read its bookings** (#2488): the organizer's party panel reads every
  * seat with its departure in one statement, so asking the database again which
  * of them exist and when their boats return was a round trip spent learning
  * what the caller held.
  *
- * The caller owns the proof that every seat is this shop's and not cancelled,
- * read in the same request: nothing here re-checks it. The rules after that
- * are the same as ever: each booking's live set stays within
- * `MAX_LIVE_CAPABILITIES_PER_PURPOSE`, its oldest retired first, and the
- * retiring finishes before the new rows go in.
+ * The bookings are still locked, person rows first then bookings, and
+ * re-checked under the lock (not cancelled, subject unchanged) before the
+ * get-or-create, so a batch racing an erasure or a single issue stays in the
+ * lock order both take.
  */
 export async function mintBookingCapabilities(
   db: DbExecutor,
@@ -637,9 +795,8 @@ export async function mintBookingCapabilities(
   },
 ): Promise<Map<string, IssuedCapability>> {
   const issue = async (tx: DbExecutor) => {
-    const issued = new Map<string, IssuedCapability>();
     const requested = [...new Map(input.seats.map((seat) => [seat.bookingId, seat])).values()];
-    if (requested.length === 0) return issued;
+    if (requested.length === 0) return new Map<string, IssuedCapability>();
     // Stable person ordering avoids deadlocks when a party spans people and
     // concurrent erasures or capability batches overlap.
     const eligible = await tx
@@ -680,186 +837,36 @@ export async function mintBookingCapabilities(
       )
       .orderBy(bookings.id)
       .for("update");
-    const eligiblePeople = new Map(
-      lockedBookings.map(({ bookingId, personId, tripId, tripEndsAt, status }) => [
-        bookingId,
-        { personId, tripId, tripEndsAt, status },
-      ]),
-    );
-    const seats = requested.filter((seat) => {
-      const current = eligiblePeople.get(seat.bookingId);
+    const current = new Map(lockedBookings.map((row) => [row.bookingId, row]));
+    const seats = requested.flatMap((seat) => {
+      const locked = current.get(seat.bookingId);
       const expected = input.expectedPersonIds?.get(seat.bookingId);
       const expectedTripId = input.expectedTripIds?.get(seat.bookingId);
       const lockedPerson = eligible.find(({ bookingId }) => bookingId === seat.bookingId)?.personId;
-      return Boolean(
-        current &&
-          current.status !== "cancelled" &&
-          current.personId === lockedPerson &&
-          (!expected || current.personId === expected) &&
-          (!expectedTripId || current.tripId === expectedTripId),
-      );
+      const ok =
+        locked &&
+        locked.status !== "cancelled" &&
+        locked.personId === lockedPerson &&
+        (!expected || locked.personId === expected) &&
+        (!expectedTripId || locked.tripId === expectedTripId);
+      return ok
+        ? [
+            {
+              bookingId: seat.bookingId,
+              expiresAt: capabilityExpiryFor(locked.tripEndsAt, input.now),
+            },
+          ]
+        : [];
     });
-    if (seats.length === 0) return issued;
-
-    await retireOldestLiveCapabilities(
-      tx,
-      input.shopId,
-      seats.map((seat) => seat.bookingId),
-      input.purpose,
-      input.now,
-    );
-
-    const rows = seats.map((seat) => {
-      const token = createCapabilityToken();
-      const current = eligiblePeople.get(seat.bookingId);
-      if (!current) throw new Error("mintBookingCapabilities: locked booking disappeared");
-      const expiresAt = capabilityExpiryFor(current.tripEndsAt, input.now);
-      issued.set(seat.bookingId, { token, expiresAt });
-      return {
-        shopId: input.shopId,
-        bookingId: seat.bookingId,
-        purpose: input.purpose,
-        tokenHash: hashCapabilityToken(token),
-        tokenSealed: null,
-        delivered: input.delivered ?? false,
-        issuedAt: input.now,
-        expiresAt,
-      };
+    return getOrCreateLiveLinks(tx, {
+      shopId: input.shopId,
+      purpose: input.purpose,
+      delivered: input.delivered ?? false,
+      now: input.now,
+      seats,
     });
-    await tx.insert(bookingCapabilities).values(rows);
-    return issued;
   };
   return isTransactionExecutor(db) ? issue(db) : db.transaction(issue);
-}
-
-/**
- * **The course-forms link for one enrollment: the live one when there is one**
- * (ADR 20261008-course-forms). A staffer who emails the forms and then copies
- * the link hands over one URL, not two — the waiver link's rule (ADR
- * 20260820-waiver-links-are-reused-not-reissued), and for its reason: every
- * send minting another live credential is a pile of working links for one
- * booking. A `course_forms` token opens the forms page and nothing else.
- *
- * The live row's token is read back from its sealed copy. With no sealing key
- * there is no readable copy, and this mints as `issueBookingCapability` always
- * has, under the same per-purpose cap. Decided under a lock on the booking row,
- * so two sends at once cannot both mint.
- */
-export async function issueCourseFormsCapability(
-  db: DbExecutor,
-  input: {
-    shopId: string;
-    bookingId: string;
-    now?: Date;
-    expectedPersonId?: string;
-    expectedTripId?: string;
-  },
-): Promise<(IssuedCapability & { reused: boolean }) | null> {
-  const now = input.now ?? nowDate();
-  const keyResult = secretKeyFromEnvironment();
-  const sealingKey = keyResult.status === "ok" ? keyResult.key : null;
-  return db.transaction(async (tx) => {
-    const [booking] = await tx
-      .select({ id: bookings.id, tripId: bookings.tripId })
-      .from(bookings)
-      .innerJoin(people, eq(people.id, bookings.personId))
-      .where(
-        and(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.shopId, input.shopId),
-          seatNotCancelled,
-          isNull(people.anonymizedAt),
-          ...(input.expectedPersonId ? [eq(bookings.personId, input.expectedPersonId)] : []),
-        ),
-      )
-      .for("update", { of: people });
-    if (!booking || (input.expectedTripId && booking.tripId !== input.expectedTripId)) return null;
-    if (sealingKey) {
-      const [live] = await tx
-        .select({
-          tokenSealed: bookingCapabilities.tokenSealed,
-          expiresAt: bookingCapabilities.expiresAt,
-        })
-        .from(bookingCapabilities)
-        .where(
-          and(
-            eq(bookingCapabilities.shopId, input.shopId),
-            eq(bookingCapabilities.bookingId, booking.id),
-            eq(bookingCapabilities.purpose, "course_forms"),
-            isNull(bookingCapabilities.revokedAt),
-            gt(bookingCapabilities.expiresAt, now),
-            isNotNull(bookingCapabilities.tokenSealed),
-          ),
-        )
-        // diveday:allow-time-id-order: picks the newest live link to hand back; no list renders it.
-        .orderBy(desc(bookingCapabilities.issuedAt), desc(bookingCapabilities.id))
-        .limit(1);
-      const token = live?.tokenSealed ? openSecret(live.tokenSealed, sealingKey) : null;
-      if (live && token) return { token, expiresAt: live.expiresAt, reused: true };
-    }
-    const issued = await issueBookingCapability(tx, {
-      shopId: input.shopId,
-      bookingId: booking.id,
-      purpose: "course_forms",
-      expectedPersonId: input.expectedPersonId,
-      expectedTripId: input.expectedTripId,
-      now,
-      sealingKey,
-    });
-    return issued ? { ...issued, reused: false } : null;
-  });
-}
-
-/**
- * Makes room for one more: revokes every live capability for this
- * booking+purpose past the newest `MAX_LIVE_CAPABILITIES_PER_PURPOSE - 1`, so
- * that after the caller's insert the booking holds at most the cap.
- *
- * Revokes rather than deletes. A revoked row is the same "this link isn't
- * available" answer at `verifyBookingCapability` as a missing one, and keeping
- * it means `resolveRevokedBookingCapability` can still show a diver their
- * post-cancellation refund notice, `revokeBookingCapabilities` still walks the
- * whole set on cancellation (it filters on `revokedAt IS NULL`, so an
- * already-retired row is simply left alone), and the audit trail of what was
- * ever issued for a booking survives. Only "live" rows count towards the cap —
- * anything already expired or revoked is inert and needs no retiring.
- */
-async function retireOldestLiveCapabilities(
-  db: DbExecutor,
-  shopId: string,
-  bookingIds: string[],
-  purpose: CapabilityPurpose,
-  now: Date,
-): Promise<void> {
-  const live = await db
-    .select({ id: bookingCapabilities.id, bookingId: bookingCapabilities.bookingId })
-    .from(bookingCapabilities)
-    .where(
-      and(
-        eq(bookingCapabilities.shopId, shopId),
-        inArray(bookingCapabilities.bookingId, bookingIds),
-        eq(bookingCapabilities.purpose, purpose),
-        isNull(bookingCapabilities.revokedAt),
-        gt(bookingCapabilities.expiresAt, now),
-      ),
-    )
-    // Newest first, with `id` only as a tiebreaker so two rows minted in the
-    // same instant still order deterministically.
-    // diveday:allow-time-id-order: which surplus capabilities are revoked; no list renders it.
-    .orderBy(desc(bookingCapabilities.issuedAt), desc(bookingCapabilities.id));
-  // Each booking keeps its own newest `MAX_LIVE_CAPABILITIES_PER_PURPOSE - 1`.
-  const keptPerBooking = new Map<string, number>();
-  const doomed: string[] = [];
-  for (const row of live) {
-    const kept = keptPerBooking.get(row.bookingId) ?? 0;
-    if (kept >= MAX_LIVE_CAPABILITIES_PER_PURPOSE - 1) doomed.push(row.id);
-    else keptPerBooking.set(row.bookingId, kept + 1);
-  }
-  if (doomed.length === 0) return;
-  await db
-    .update(bookingCapabilities)
-    .set({ revokedAt: now, tokenSealed: null })
-    .where(inArray(bookingCapabilities.id, doomed));
 }
 
 export type BookingCapabilityContext = {
@@ -925,7 +932,7 @@ export async function verifyBookingCapability(
  * than a relaxed flag on the first, so no existing caller can reach it by
  * accident.
  *
- * Every other check stays as strict as `verifyBookingCapability`: the hash
+ * Every other check stays as strict as `verifyBookingCapability`: the tag
  * matches an unrevoked, unexpired `readiness` capability, the booking is
  * live, the departure is not deleted, and the capability's shop is the
  * booking's. Only the inverse of the one relaxation is required: the
@@ -953,7 +960,8 @@ async function liveCapabilityRow(
   input: { token: string; purpose: CapabilityPurpose; now?: Date },
 ) {
   const now = input.now ?? nowDate();
-  const tokenHash = hashCapabilityToken(input.token);
+  const matches = rowMatchingToken(input.token, input.purpose);
+  if (!matches) return null;
   const [row] = await db
     .select({
       bookingId: bookingCapabilities.bookingId,
@@ -974,12 +982,7 @@ async function liveCapabilityRow(
     // diveday:allow-deleted-trips: both verifiers read `tripDeleted` and refuse a deleted departure.
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(
-      and(
-        eq(bookingCapabilities.tokenHash, tokenHash),
-        eq(bookingCapabilities.purpose, input.purpose),
-        isNull(bookingCapabilities.revokedAt),
-        gt(bookingCapabilities.expiresAt, now),
-      ),
+      and(matches, isNull(bookingCapabilities.revokedAt), gt(bookingCapabilities.expiresAt, now)),
     )
     .limit(1);
   return row ?? null;
@@ -997,7 +1000,7 @@ async function liveCapabilityRow(
  * most needs right after cancelling.
  *
  * Safe to relax only the revocation/cancelled-booking checks here: the token
- * hash must still genuinely match a real, correctly-scoped, unexpired
+ * tag must verify and match a real, correctly-scoped, unexpired
  * capability row for the right purpose — the same guessing-resistance bar as
  * `verifyBookingCapability` — so this can't be used to fabricate a
  * cancellation notice for a booking the bearer never had a real link to.
@@ -1007,17 +1010,12 @@ export async function resolveRevokedBookingCapability(
   input: { token: string; purpose: CapabilityPurpose; now?: Date },
 ): Promise<{ bookingId: string } | null> {
   const now = input.now ?? nowDate();
-  const tokenHash = hashCapabilityToken(input.token);
+  const matches = rowMatchingToken(input.token, input.purpose);
+  if (!matches) return null;
   const [row] = await db
     .select({ bookingId: bookingCapabilities.bookingId })
     .from(bookingCapabilities)
-    .where(
-      and(
-        eq(bookingCapabilities.tokenHash, tokenHash),
-        eq(bookingCapabilities.purpose, input.purpose),
-        gt(bookingCapabilities.expiresAt, now),
-      ),
-    )
+    .where(and(matches, gt(bookingCapabilities.expiresAt, now)))
     .limit(1);
   return row ?? null;
 }
@@ -1038,7 +1036,7 @@ export async function resolveRevokedBookingCapability(
  * read of the booking, the diver, or the trip — the token has expired, and an
  * expired token is not a key.
  *
- * The guessing-resistance bar is unchanged: the hash must genuinely match a
+ * The guessing-resistance bar is unchanged: the tag must verify against a
  * capability row that was issued for this purpose. What is relaxed is only
  * *when* it was valid, never *whether* it was ours. The waiver page reached the
  * same conclusion first (`staleWaiverRecordForToken`) and its comments carry
@@ -1049,7 +1047,8 @@ export async function staleBookingCapabilityForToken(
   db: DbExecutor,
   input: { token: string; purpose: CapabilityPurpose },
 ): Promise<{ shopId: string } | null> {
-  const tokenHash = hashCapabilityToken(input.token);
+  const matches = rowMatchingToken(input.token, input.purpose);
+  if (!matches) return null;
   const [row] = await db
     // **`shopId` and nothing else, deliberately.** A `bookingId` here would sit
     // one line from `resolveRevokedBookingCapability`'s, which callers *do* use
@@ -1058,12 +1057,7 @@ export async function staleBookingCapabilityForToken(
     // (`security-reviewer`, on issue #801).
     .select({ shopId: bookingCapabilities.shopId })
     .from(bookingCapabilities)
-    .where(
-      and(
-        eq(bookingCapabilities.tokenHash, tokenHash),
-        eq(bookingCapabilities.purpose, input.purpose),
-      ),
-    )
+    .where(matches)
     .limit(1);
   return row ?? null;
 }
@@ -1101,6 +1095,8 @@ export async function staleReadinessBookingForResend(
   token: string,
   now: Date = nowDate(),
 ): Promise<{ shopId: string; bookingId: string } | null> {
+  const matches = rowMatchingToken(token, "readiness");
+  if (!matches) return null;
   const [row] = await db
     .select({
       shopId: bookingCapabilities.shopId,
@@ -1109,8 +1105,7 @@ export async function staleReadinessBookingForResend(
     .from(bookingCapabilities)
     .where(
       and(
-        eq(bookingCapabilities.tokenHash, hashCapabilityToken(token)),
-        eq(bookingCapabilities.purpose, "readiness"),
+        matches,
         or(isNotNull(bookingCapabilities.revokedAt), lte(bookingCapabilities.expiresAt, now)),
       ),
     )
@@ -1119,10 +1114,17 @@ export async function staleReadinessBookingForResend(
 }
 
 /**
- * Does this booking already hold a readiness link somebody could be using?
+ * Does this booking already hold a **delivered** readiness link somebody could
+ * be using — the one its emails carry?
  *
  * The guard that stops a *dead* URL driving a delivery on the live one. Same
  * shape and same argument as `hasLiveWaiverRequest` on the waiver side.
+ *
+ * **Delivered only** (security review of #2711, finding 1). The browser's
+ * undelivered link is the booking form's, not the diver's inbox: a booking
+ * whose emailed link died while the browser's lived on used to answer
+ * `current_link_live` here and mail nothing, which left the diver with no link
+ * in their mail and no way to get one.
  *
  * **"Live" here means the row, not the answer `verifyBookingCapability` would
  * give.** Those differ: verification also fails closed on a cancelled booking
@@ -1136,21 +1138,9 @@ export async function staleReadinessBookingForResend(
  * caller — its own query already filters to non-cancelled bookings on
  * scheduled, not-yet-departed trips before this is ever asked.
  */
-export async function hasLiveReadinessCapability(
+export async function hasLiveDeliveredReadinessLink(
   db: DbExecutor,
   input: { shopId: string; bookingId: string; now?: Date },
-): Promise<boolean> {
-  return hasLiveCapabilityRow(db, { ...input, purpose: "readiness" });
-}
-
-/**
- * One unrevoked, unexpired row for this booking+purpose, or none. Private: what
- * a caller may conclude from "live" differs per purpose, and the exported
- * door above is where that argument is written down.
- */
-async function hasLiveCapabilityRow(
-  db: DbExecutor,
-  input: { shopId: string; bookingId: string; purpose: CapabilityPurpose; now?: Date },
 ): Promise<boolean> {
   const now = input.now ?? nowDate();
   const [row] = await db
@@ -1160,13 +1150,127 @@ async function hasLiveCapabilityRow(
       and(
         eq(bookingCapabilities.shopId, input.shopId),
         eq(bookingCapabilities.bookingId, input.bookingId),
-        eq(bookingCapabilities.purpose, input.purpose),
+        eq(bookingCapabilities.purpose, "readiness"),
+        eq(bookingCapabilities.delivered, true),
         isNull(bookingCapabilities.revokedAt),
         gt(bookingCapabilities.expiresAt, now),
       ),
     )
     .limit(1);
   return Boolean(row);
+}
+
+/**
+ * **Spend a one-use link** (the booking handoff): revoke the live row the
+ * token names, scoped to the shop. Idempotent — consuming twice, or a token
+ * that never verified, changes nothing.
+ */
+export async function consumeBookingCapability(
+  db: DbExecutor,
+  input: { shopId: string; token: string; purpose: CapabilityPurpose; now?: Date },
+): Promise<void> {
+  const matches = rowMatchingToken(input.token, input.purpose);
+  if (!matches) return;
+  await db
+    .update(bookingCapabilities)
+    .set({ revokedAt: input.now ?? nowDate() })
+    .where(
+      and(
+        matches,
+        eq(bookingCapabilities.shopId, input.shopId),
+        isNull(bookingCapabilities.revokedAt),
+      ),
+    );
+}
+
+/**
+ * **Hold the row a presented link names, for a signature that rests on it**
+ * (`course-forms.ts`): share-locks the booking's row whose token this is,
+ * under any of `purposes`, so a revoke cannot land between the check and the
+ * write. False when the token names no row of this booking and shop.
+ */
+export async function lockBookingCapabilityForToken(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    bookingId: string;
+    token: string;
+    purposes: readonly CapabilityPurpose[];
+  },
+): Promise<boolean> {
+  const matches = input.purposes.flatMap((purpose) => {
+    const match = rowMatchingToken(input.token, purpose);
+    return match ? [match] : [];
+  });
+  if (matches.length === 0) return false;
+  const [bearer] = await tx
+    .select({ id: bookingCapabilities.id })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        or(...matches),
+        eq(bookingCapabilities.shopId, input.shopId),
+        eq(bookingCapabilities.bookingId, input.bookingId),
+      ),
+    )
+    .limit(1)
+    .for("share");
+  return Boolean(bearer);
+}
+
+/**
+ * **The one way from a presented token to a row**: the tag is checked first
+ * (`parseVerifiedCapabilityToken`, no query), and the row must carry the
+ * token's purpose and key version as well as its id. Null means refuse, and
+ * every caller returns before touching the database (security review of
+ * #2711, finding 5).
+ */
+function rowMatchingToken(token: string, purpose: CapabilityPurpose) {
+  const parsed = parseVerifiedCapabilityToken(token, purpose);
+  if (!parsed) return null;
+  return and(
+    eq(bookingCapabilities.id, parsed.id),
+    eq(bookingCapabilities.purpose, purpose),
+    eq(bookingCapabilities.keyVersion, parsed.version),
+  );
+}
+
+/**
+ * **A departure's live links follow its end** (issue #2711, code security
+ * review finding 4). Called in the transaction that saves a trip's new
+ * `endsAt`, or that moves one seat to another departure: every live link of
+ * those seats moves to the expiry issuing would give it now, so a boat moved earlier leaves no link outliving it and one
+ * moved later keeps its confirmation alive. A handoff keeps its ten minutes
+ * and a receipt its own window, so neither moves.
+ */
+export async function realignTripLinkExpiry(
+  tx: DbExecutor,
+  input: { shopId: string; endsAt: Date; now?: Date } & (
+    | { tripId: string; bookingId?: never }
+    | { bookingId: string; tripId?: never }
+  ),
+): Promise<void> {
+  const expiresAt = capabilityExpiryFor(input.endsAt, input.now ?? nowDate());
+  await tx
+    .update(bookingCapabilities)
+    .set({ expiresAt })
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, input.shopId),
+        isNull(bookingCapabilities.revokedAt),
+        isNull(bookingCapabilities.sourceCapabilityId),
+        ne(bookingCapabilities.purpose, "handoff"),
+        input.bookingId !== undefined
+          ? eq(bookingCapabilities.bookingId, input.bookingId)
+          : inArray(
+              bookingCapabilities.bookingId,
+              tx
+                .select({ id: bookings.id })
+                .from(bookings)
+                .where(and(eq(bookings.tripId, input.tripId), eq(bookings.shopId, input.shopId))),
+            ),
+      ),
+    );
 }
 
 /**
@@ -1199,33 +1303,6 @@ export async function revokeBookingCapabilities(
   if (input.purpose) conditions.push(eq(bookingCapabilities.purpose, input.purpose));
   await db
     .update(bookingCapabilities)
-    // A revoked link is dead, so its openable copy has no reason to exist.
-    .set({ revokedAt: now, tokenSealed: null })
+    .set({ revokedAt: now })
     .where(and(...conditions));
-}
-
-/**
- * **Take back links that were minted ahead of a send that did not go** (#2451).
- * A batch mints every reachable seat's link before the first message leaves,
- * because the link is part of the body; when the provider then answers
- * not-sent (a bounce, a stop-listed phone, a refused request), nobody holds
- * the token, and a live capability for no reader is only surface. This revokes
- * exactly the tokens it is handed — by hash, never by booking — so an earlier,
- * delivered link for the same booking stays live.
- */
-export async function revokeIssuedCapabilities(
-  db: DbExecutor,
-  input: { shopId: string; tokens: readonly string[]; now?: Date },
-): Promise<void> {
-  if (input.tokens.length === 0) return;
-  await db
-    .update(bookingCapabilities)
-    .set({ revokedAt: input.now ?? nowDate(), tokenSealed: null })
-    .where(
-      and(
-        eq(bookingCapabilities.shopId, input.shopId),
-        inArray(bookingCapabilities.tokenHash, input.tokens.map(hashCapabilityToken)),
-        isNull(bookingCapabilities.revokedAt),
-      ),
-    );
 }

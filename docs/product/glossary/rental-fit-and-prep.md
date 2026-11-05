@@ -8,7 +8,12 @@
   schedule, manifest export, or notifications.
 - **Activity event** — an append-only staff-facing sentence describing who did operational work and
   what happened (for example, “Maya added a private note about Dana”), with the time it happened.
-  Activity uses shop language, never table names or record identifiers.
+  Activity uses shop language, never table names or record identifiers. Each one has an
+  **audience**: `staff`, or `diver` for a line a diver-facing surface may print (none yet; the
+  #1202 boundary). A code can be flagged for the desk (`src/lib/activity.ts`): a **desk line** is
+  what the crew's catch-up strip reads, either a trail line it also says (a check-in, a seat
+  added) or a **desk-only line** the trail never shows (a pickup set, a diver asking for a hand),
+  kept 30 days rather than the trail's three years (issue #2701).
 - **Activity log** — the shop-wide, owner-facing reading of who did what, to what, and when
   (D5): every activity event, every review publish or hide, and every meeting-point or conditions
   change a staffer made, newest first, filtered by person, kind (seats, departures, money, cards

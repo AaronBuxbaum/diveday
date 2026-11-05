@@ -26,7 +26,7 @@ import {
   temperatureInUnit,
   temperatureUnitFor,
 } from "@/lib/temperature-units";
-import { laterMeetingDates } from "@/lib/trip-days";
+import { laterMeetingDates, laterMeetingHours } from "@/lib/trip-days";
 import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
 import { updateTripCrewAction } from "../crew-actions";
 import type { DepartureDetailsSection } from "../departure-detail-sections";
@@ -155,6 +155,7 @@ function departureEditor(context: TripAboutRowsContext, section: DepartureDetail
         dayCount: Math.max(1, scheduleDays.length),
         // The later days' own dates when the run has gaps (third UX
         // review, item 10), so a save keeps a course's weekends apart.
+        laterHours: laterMeetingHours(scheduleDays, shop.timezone),
         laterDates: laterMeetingDates(
           scheduleDays.map((day) => calendarDateInTimezone(day.startsAt, shop.timezone)),
         ),

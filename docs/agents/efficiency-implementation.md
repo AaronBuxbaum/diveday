@@ -33,7 +33,7 @@ fetching a run. Visual capture flags require a real changed-content selector. Se
 
 | Finding | Disposition and practical limit |
 | --- | --- |
-| C1: provider parity | Offline bootstrap exposes branch, Node, dependencies and state for all providers. Claude lifecycle hooks are configured but unverified; other hosts receive explicit commands. No invented Codex hook API. |
+| C1: provider parity | Offline bootstrap exposes branch, Node, dependencies and state for all providers. Claude lifecycle hooks are configured but unverified. Codex supports trust-gated project hooks; a safe Bash-guard probe in an untrusted worktree did not fire, so this repo uses explicit commands for Codex. |
 | C2: duplicated skills | One `.agents/skills` source, Claude symlinks, local/upstream provenance and mirror/path checks. Relative supporting links remain at the same directory depth. |
 | C3: broad retrieval | Broad books become optional references. Path packets select exact sibling tests, rules and preserved invariants; common UI paths select executable recipes. Unmapped paths explicitly fall back to the route map. |
 | C4: misleading budget | Reports distinguish repository Claude and canonical-provider estimates and excluded host context. The existing Claude ratchet remains; canonical estimates are not separate hard budgets. |

@@ -80,13 +80,16 @@ const dateInterestColumns = {
   closedAs: interests.closedAs,
 };
 
-/** A date interest is only ever closed `booked` or `done`; `unsubscribed` is an anytime interest's. */
+/** A date interest is only ever closed `booked`, `done` or `replied`; `unsubscribed` is an anytime interest's. */
 function asDateInterest<T extends { closedAs: string | null }>(
   row: T,
 ): Omit<T, "closedAs"> & { closedAs: DateRequestOutcome | null } {
   return {
     ...row,
-    closedAs: row.closedAs === "booked" || row.closedAs === "done" ? row.closedAs : null,
+    closedAs:
+      row.closedAs === "booked" || row.closedAs === "done" || row.closedAs === "replied"
+        ? row.closedAs
+        : null,
   };
 }
 

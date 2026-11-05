@@ -1,21 +1,26 @@
 import { and, eq, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
-import type { DeskEvent } from "@/lib/desk-events";
+import type { CatchUpEvent } from "@/lib/catch-up";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
-import { rosterStillSaysIt } from "./desk-events";
 import {
+  activityEvents,
   bookings,
   people,
   todayReadMarkEvents,
   todayReadMarks,
-  tripDeskEvents,
   tripHelpRequests,
   trips,
 } from "./schema";
+import { asCatchUpEvents, deskLine, rosterStillSaysIt } from "./trip-read-marks";
 import { liveTrip } from "./trips-live";
 
 type Reader = { shopId: string; personId: string; now: Date; timeZone: string };
-type TodayEvent = DeskEvent & { tripId: string; tripTitle: string; tripStartsAt: Date };
+type TodayEvent = CatchUpEvent & {
+  id: string;
+  tripId: string;
+  tripTitle: string;
+  tripStartsAt: Date;
+};
 
 /** Exact event IDs matter: sequence numbers can commit out of order. */
 export async function readTodayCatchUp(
@@ -40,59 +45,65 @@ export async function readTodayCatchUp(
     .limit(1);
   const rows = await db
     .select({
-      id: tripDeskEvents.id,
-      kind: tripDeskEvents.kind,
-      seq: tripDeskEvents.seq,
-      occurredAt: tripDeskEvents.occurredAt,
+      id: activityEvents.id,
+      code: activityEvents.code,
+      params: activityEvents.params,
+      seq: activityEvents.seq,
+      occurredAt: activityEvents.occurredAt,
       subjectName: people.fullName,
       tripId: trips.id,
       tripTitle: trips.title,
       tripStartsAt: trips.startsAt,
     })
-    .from(tripDeskEvents)
-    .innerJoin(trips, eq(trips.id, tripDeskEvents.tripId))
+    .from(activityEvents)
+    .innerJoin(trips, eq(trips.id, activityEvents.tripId))
     .leftJoin(
       people,
-      and(eq(people.id, tripDeskEvents.subjectPersonId), eq(people.shopId, input.shopId)),
+      and(eq(people.id, activityEvents.subjectPersonId), eq(people.shopId, input.shopId)),
     )
     .leftJoin(
       bookings,
-      and(eq(bookings.id, tripDeskEvents.bookingId), eq(bookings.shopId, input.shopId)),
+      and(eq(bookings.id, activityEvents.bookingId), eq(bookings.shopId, input.shopId)),
     )
     .leftJoin(
       tripHelpRequests,
       and(
-        eq(tripHelpRequests.bookingId, tripDeskEvents.bookingId),
+        eq(tripHelpRequests.bookingId, activityEvents.bookingId),
         eq(tripHelpRequests.shopId, input.shopId),
       ),
     )
     .leftJoin(
       todayReadMarkEvents,
       and(
-        eq(todayReadMarkEvents.eventId, tripDeskEvents.id),
+        eq(todayReadMarkEvents.eventId, activityEvents.id),
         eq(todayReadMarkEvents.shopId, input.shopId),
         mark ? eq(todayReadMarkEvents.markId, mark.id) : sql`false`,
       ),
     )
     .where(
       and(
-        eq(tripDeskEvents.shopId, input.shopId),
+        eq(activityEvents.shopId, input.shopId),
+        eq(activityEvents.audience, "staff"),
+        deskLine(),
         eq(trips.shopId, input.shopId),
         liveTrip(),
         gte(trips.startsAt, day.from),
         lt(trips.startsAt, day.to),
-        gte(tripDeskEvents.occurredAt, day.from),
+        gte(activityEvents.occurredAt, day.from),
         rosterStillSaysIt(),
-        or(isNull(tripDeskEvents.actorPersonId), ne(tripDeskEvents.actorPersonId, input.personId)),
+        or(isNull(activityEvents.actorPersonId), ne(activityEvents.actorPersonId, input.personId)),
         mark ? isNull(todayReadMarkEvents.eventId) : undefined,
       ),
     )
-    .orderBy(tripDeskEvents.seq);
+    .orderBy(activityEvents.seq);
+  // A row whose names feed no sentence (a seat moved away after it was turned
+  // away) is no line at all, so it is neither shown nor acknowledged.
+  const events = asCatchUpEvents(rows);
   // Before the first view, the snapshot is acknowledged but not presented as news.
   return {
     mark: mark ? { at: mark.at } : null,
-    events: mark ? rows : [],
-    snapshotIds: rows.map((r) => r.id),
+    events: mark ? events : [],
+    snapshotIds: events.map((r) => r.id),
   };
 }
 
@@ -151,22 +162,25 @@ async function writeAcknowledgements(
 ): Promise<void> {
   if (!eventIds.length) return;
   const rows = await db
-    .select({ id: tripDeskEvents.id })
-    .from(tripDeskEvents)
-    .innerJoin(trips, eq(trips.id, tripDeskEvents.tripId))
+    .select({ id: activityEvents.id })
+    .from(activityEvents)
+    .innerJoin(trips, eq(trips.id, activityEvents.tripId))
     .where(
       and(
-        inArray(tripDeskEvents.id, eventIds),
-        eq(tripDeskEvents.shopId, input.shopId),
+        inArray(activityEvents.id, eventIds),
+        eq(activityEvents.shopId, input.shopId),
+        // Only a desk line is acknowledged: a client-sent id is never a mark
+        // on the rest of the trail.
+        deskLine(),
         eq(trips.shopId, input.shopId),
         liveTrip(),
         gte(trips.startsAt, day.from),
         lt(trips.startsAt, day.to),
-        gte(tripDeskEvents.occurredAt, day.from),
+        gte(activityEvents.occurredAt, day.from),
       ),
     )
-    .orderBy(tripDeskEvents.id)
-    .for("key share", { of: tripDeskEvents });
+    .orderBy(activityEvents.id)
+    .for("key share", { of: activityEvents });
   if (rows.length)
     await db
       .insert(todayReadMarkEvents)

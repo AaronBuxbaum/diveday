@@ -8,6 +8,7 @@ import {
 } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { shopIdBySlug } from "@/db/shops";
+import { looksLikeBookingLinkToken } from "@/lib/booking-link-shape";
 import { nowDate } from "@/lib/clock";
 import { RETURNING_DIVER_DEVICE_TOKEN_PATTERN } from "@/lib/returning-diver";
 
@@ -38,11 +39,7 @@ async function resolveScopeShopId(
       return null;
     return shopIdBySlug(db, scope.shopSlug);
   }
-  if (
-    scope?.kind === "readiness" &&
-    typeof scope.readinessToken === "string" &&
-    /^[A-Za-z0-9_-]{40,128}$/.test(scope.readinessToken)
-  ) {
+  if (scope?.kind === "readiness" && looksLikeBookingLinkToken(scope.readinessToken)) {
     const capability = await verifyBookingCapability(db, {
       token: scope.readinessToken,
       purpose: "readiness",

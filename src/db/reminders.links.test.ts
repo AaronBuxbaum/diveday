@@ -45,9 +45,9 @@ const emailsFor = (email: ReturnType<typeof fakeEmail>, bookingId: string) =>
   email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId);
 
 /**
- * Issue #2451: the readiness link is part of the message body, so it is minted
- * ahead of the send. A reminder that does not go leaves nobody holding it, and
- * a live capability for no reader is surface for nothing.
+ * Issue #2451 minted nothing for a reminder that cannot go. Since #2711 the
+ * link a reminder carries is the booking's one live delivered link, so a send
+ * that fails takes nothing back: the diver may hold that link already.
  */
 describe("the trip-prep link on a reminder that does not go", () => {
   const capabilitiesFor = (
@@ -70,7 +70,7 @@ describe("the trip-prep link on a reminder that does not go", () => {
     expect(await capabilitiesFor(db, bookingId)).toEqual([]);
   });
 
-  it("revokes the link when the email bounces, and keeps it live when it goes", async () => {
+  it("leaves the link live when the email bounces, and the next send carries that same link", async () => {
     const bounced = await reminderContext();
     await sendDueReminders(bounced.db, {
       now: bounced.inWeekBucket,
@@ -79,11 +79,13 @@ describe("the trip-prep link on a reminder that does not go", () => {
       smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,
     });
-    const dead = await capabilitiesFor(bounced.db, bounced.bookingId);
-    expect(dead.length).toBeGreaterThan(0);
-    expect(dead.every((row) => row.revokedAt !== null)).toBe(true);
+    // One live delivered row: the booking's link, which an earlier mail may
+    // already have carried (issue #2711). Nothing is taken back.
+    const kept = (await capabilitiesFor(bounced.db, bounced.bookingId)).filter(
+      (row) => row.revokedAt === null,
+    );
+    expect(kept).toHaveLength(1);
 
-    // The same booking, now delivered: the link in the mail is a live one.
     const email = fakeEmail();
     await sendDueReminders(bounced.db, {
       now: bounced.inWeekBucket,
@@ -96,11 +98,11 @@ describe("the trip-prep link on a reminder that does not go", () => {
     const live = (await capabilitiesFor(bounced.db, bounced.bookingId)).filter(
       (row) => row.revokedAt === null,
     );
-    expect(live).toHaveLength(1);
-    expect(mail.readinessUrl).toMatch(/\/ready\//);
+    expect(live.map((row) => row.id)).toEqual(kept.map((row) => row.id));
+    expect(mail.readinessUrl).toMatch(/\/ready\/c1\./);
   });
 
-  it("revokes only the link it minted, never an earlier one a diver already holds", async () => {
+  it("never revokes the link a diver already holds when a later reminder fails", async () => {
     const { db, bookingId, inWeekBucket } = await reminderContext();
     await sendDueReminders(db, {
       now: inWeekBucket,

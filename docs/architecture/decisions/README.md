@@ -446,8 +446,10 @@ script again.
 | 20261103-one-roll-call-ledger | Seat and crew marks are… |
 | 20261103-waiver-signs-in-the-thread | The diver's own release signs… |
 | 20261104-arrival-is-a-trail | Read arrival from its trail;… |
+| 20261104-derived-booking-link-tokens | Derive a booking link's token… |
 | 20261104-loading-face-is-the-primitives-pending-face | Draw every loading face from… |
 | 20261104-move-a-party-as-one | A party moves between departures… |
 | 20261104-seed-is-one-context-and-named-sets | Seed the demo from one… |
+| 20261104-roll-call-by-meeting-day | Roll call and "the boat… |
 
 <!-- adr-index:end -->

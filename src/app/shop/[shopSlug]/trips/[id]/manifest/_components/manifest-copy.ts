@@ -1,8 +1,8 @@
 import type { OfflineManifestManagerCopy } from "@/components/OfflineManifestManager";
-import type { listDeskEventsSince } from "@/db/desk-events";
-import { catchUpSentences } from "@/i18n/desk-event-labels";
+import type { TripCatchUp } from "@/db/trip-read-marks";
+import { catchUpSentences } from "@/i18n/activity-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { groupCatchUp } from "@/lib/desk-events";
+import { groupCatchUp } from "@/lib/catch-up";
 import { formatTime } from "@/lib/format";
 
 /** The emergency reference card's words — one copy for all three places it renders. */
@@ -72,7 +72,7 @@ export function offlineManifestManagerCopy(t: StaffTranslator): OfflineManifestM
  * this departure — there is nothing for a catch-up to be "since".
  */
 export function catchUpStripView(
-  catchUp: Awaited<ReturnType<typeof listDeskEventsSince>>,
+  catchUp: TripCatchUp,
   locale: string,
   timeZone: string,
   t: StaffTranslator,
@@ -82,7 +82,7 @@ export function catchUpStripView(
     label: t("manifest.catchUp.label", {
       time: formatTime(catchUp.mark.at, locale, timeZone),
     }),
-    // One sentence per kind of desk act, in `DESK_EVENT_KINDS` order rather
+    // One sentence per kind of desk act, in `CATCH_UP_KINDS` order rather
     // than the order the desk happened to work. Composed here because the
     // names are joined by `Intl.ListFormat` in the reader's own locale.
     sentences: catchUpSentences(t, locale, groupCatchUp(catchUp.events)),

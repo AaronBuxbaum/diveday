@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
-import { recordDeskEvent } from "@/db/desk-events";
+import { recordSeatChange } from "@/db/operations";
 import { bookings, people, personRoles, trips } from "@/db/schema";
 import { initializeTodayCatchUp } from "@/db/today-catch-up";
 import { liveTrip } from "@/db/trips-live";
@@ -70,14 +70,13 @@ export async function takeASeatSinceTheOwnerLooked(
     now,
     eventIds: [],
   });
-  await recordDeskEvent(db, {
+  // The line seating writes, which the catch-up reads as "took a seat".
+  await recordSeatChange(db, {
     shopId: shop.id,
     tripId: seat.tripId,
-    kind: "seat_taken",
-    bookingId: seat.bookingId,
-    subjectPersonId: seat.personId,
     actorPersonId: actor.personId,
-    occurredAt: now,
+    bookingId: seat.bookingId,
+    code: "seat_added",
   });
   return { personName: seat.personName, tripTitle: seat.tripTitle };
 }

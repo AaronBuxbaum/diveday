@@ -1,0 +1,2 @@
+ALTER TABLE "booking_capabilities" ADD CONSTRAINT "booking_capabilities_key_version_iff_link" CHECK (("source_capability_id" is null) = ("key_version" is not null));--> statement-breakpoint
+ALTER TABLE "booking_capabilities" ADD CONSTRAINT "booking_capabilities_key_version_range" CHECK ("key_version" between 1 and 9);

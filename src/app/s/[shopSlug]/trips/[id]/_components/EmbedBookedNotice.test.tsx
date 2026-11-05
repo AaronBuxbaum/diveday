@@ -31,12 +31,12 @@ const confirmed = {
   person: { id: "person-1", fullName: "Ingrid Vogel", email: null },
 } as unknown as Confirmed;
 
-const readyRoute = "/s/reef-shop/trips/trip-1/ready?booking=tok";
+const readyRoute = "/ready/c1.AAAAAAAAAAAAAAAAAAAAAA.tag";
 
 function renderNotice(
   overrides: {
     fullName?: string;
-    readinessLink?: string;
+    readinessLink?: string | null;
     mailState?: "none" | "confirmation" | "confirmationWithWaiver";
     payNotice?: string;
   } = {},
@@ -55,7 +55,7 @@ function renderNotice(
               person: { ...confirmed.person, fullName: overrides.fullName },
             } as Confirmed)
       }
-      readinessLink={overrides.readinessLink ?? readyRoute}
+      readinessLink={overrides.readinessLink === undefined ? readyRoute : overrides.readinessLink}
       mailState={overrides.mailState ?? "none"}
       payNotice={overrides.payNotice}
     />,
@@ -110,10 +110,10 @@ describe("EmbedBookedNotice", () => {
    * and `#` under `target="_top"` is a *navigation* — it replaces the shop's own
    * page, the one thing this component exists to avoid (`coderabbitai`).
    *
-   * It cannot happen now because the href is a route, not a minted token, and
-   * the route decides at tap time — so there is no state where this component
-   * has nowhere to point. Pinned rather than argued: an `href` that is empty or
-   * a bare fragment is the shape of the bug, whatever reintroduces it.
+   * Now the page reads the booking's live browser link and never mints one
+   * (issue #2711); with none, no link is drawn at all. Pinned rather than
+   * argued: an `href` that is empty or a bare fragment is the shape of the bug,
+   * whatever reintroduces it.
    */
   it("never points the top-level window at a bare fragment", () => {
     renderNotice();
@@ -122,6 +122,12 @@ describe("EmbedBookedNotice", () => {
     expect(href.startsWith("#")).toBe(false);
     expect(href).not.toBe("");
     expect(link).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("draws no readiness button when the booking has no live browser link", () => {
+    renderNotice({ readinessLink: null });
+    expect(screen.queryByRole("link", { name: /readiness page/ })).toBeNull();
+    expect(screen.getAllByRole("link").length).toBeGreaterThan(0);
   });
 
   it("keeps the way back into the widget, still embedded", () => {

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { typeChangedDeskEventKind } from "./desk-events";
 import { gearAssignmentNeeds } from "./gear";
 import {
   countParticipants,
@@ -207,14 +206,6 @@ describe("joinPassengerSplit", () => {
       "8 diver · 3 snorkeler",
     );
     expect(joinPassengerSplit({ diver: 0, snorkeler: 0, rider: 2 }, word)).toBe("2 rider");
-  });
-});
-
-describe("typeChangedDeskEventKind", () => {
-  it("names the catch-up line for the new type", () => {
-    expect(typeChangedDeskEventKind("diver")).toBe("now_diving");
-    expect(typeChangedDeskEventKind("snorkeler")).toBe("now_snorkeling");
-    expect(typeChangedDeskEventKind("rider")).toBe("now_riding");
   });
 });
 

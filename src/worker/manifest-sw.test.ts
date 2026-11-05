@@ -408,8 +408,8 @@ describe("refreshSavedManifests (the push event)", () => {
 describe("a navigation on a network that never answers", () => {
   const SHELL = new Response("offline shell", { status: 200 });
   const TRIP = "0b6c3a52-6f1e-4c55-9d0a-2f1d8f2b9c11";
-  const READY_PATH = `/ready/${"R".repeat(43)}`;
-  const OTHER_READY_PATH = `/ready/${"S".repeat(43)}`;
+  const READY_PATH = `/ready/c1.${"R".repeat(22)}.${"R".repeat(43)}`;
+  const OTHER_READY_PATH = `/ready/c1.${"S".repeat(22)}.${"S".repeat(43)}`;
   let shellSaved = true;
   const cacheEntries = new Map<string, Map<string, Response>>();
 

@@ -2,7 +2,6 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { authSecret } from "@/lib/auth-secret";
 import { canManageWaiverTemplates, isStaff } from "@/lib/authz";
-import { hashCapabilityToken } from "@/lib/booking-capabilities";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -43,7 +42,7 @@ import { deriveLabelKey } from "@/lib/signed-token";
 import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "./authz";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
-import { verifyBookingCapability } from "./booking-capabilities";
+import { lockBookingCapabilityForToken, verifyBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEventsForPerson } from "./manifest-events";
@@ -1545,20 +1544,13 @@ async function lockFormsLinkRows(
     .limit(1)
     .for("share");
   if (!person) return false;
-  const [bearer] = await tx
-    .select({ id: bookingCapabilities.id })
-    .from(bookingCapabilities)
-    .where(
-      and(
-        eq(bookingCapabilities.shopId, shopId),
-        eq(bookingCapabilities.bookingId, bookingId),
-        eq(bookingCapabilities.tokenHash, hashCapabilityToken(token)),
-      ),
-    )
-    .limit(1)
-    .for("share");
-  if (!bearer) return false;
-  return true;
+  // The link that opened the forms: either kind that opens them.
+  return lockBookingCapabilityForToken(tx, {
+    shopId,
+    bookingId,
+    token,
+    purposes: ["readiness", "course_forms"],
+  });
 }
 
 /** The course's requirement set and the submitted form's current version stay stable during signing. */

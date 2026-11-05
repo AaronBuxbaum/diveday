@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-08
+- **Amended by:** [20261104-derived-booking-link-tokens](20261104-derived-booking-link-tokens.md) — the forms link is derived from its row and reused as the live link, so the sealed copy in `token_sealed` is gone.
 
 ## Context
 

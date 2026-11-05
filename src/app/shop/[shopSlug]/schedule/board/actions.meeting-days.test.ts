@@ -17,11 +17,10 @@ const ctx = fileScopedShopContext();
 
 /**
  * **A departure's days, named one by one.** Day one is the departure's date and
- * each later day is its own date, one departure, one roster, one certify. For
- * now the days run back to back (`MAX_MEETING_DAY_GAP_DAYS`): Today and the
- * roll call read a departure as one window, so a gap would read as days on the
- * water. Days must run forward, and a repeating departure must end before its
- * next one begins.
+ * each later day is its own date and, when it says so, its own hours (#2558):
+ * one departure, one roster, one certify. Today and the roll call read the
+ * meeting days (#2557), so a course may skip days. Days must run forward, and a
+ * repeating departure must end before its next one begins.
  */
 
 vi.mock("next/navigation", () => ({
@@ -120,13 +119,94 @@ describe("adding a course that meets on named days", () => {
     }
   });
 
-  it("refuses a course with two weeks between its days and adds nothing", async () => {
+  it("adds a course with two weeks between its days as one departure", async () => {
     const { db, shop } = await signedInOwner();
     const form = courseForm(shop.timezone, [14]);
     expect(await redirectedTo(() => addDepartureAction(shop.slug, form))).toContain(
-      "builder=days-out-of-order",
+      "builder=added",
+    );
+    const added = await departures(db, shop.id);
+    expect(added).toHaveLength(1);
+    const days = await db
+      .select({ startsAt: tripScheduleDays.startsAt })
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, added[0].id))
+      .orderBy(asc(tripScheduleDays.dayNumber));
+    expect(days.map((day) => calendarDateInTimezone(day.startsAt, shop.timezone))).toEqual([
+      dayAfterStart(shop.timezone, 0),
+      dayAfterStart(shop.timezone, 14),
+    ]);
+  });
+
+  it("keeps a later day's own hours, and day one's where it names none", async () => {
+    const { db, shop } = await signedInOwner();
+    const form = courseForm(shop.timezone, [1, 7]);
+    for (const [start, end] of [
+      ["09:00", "13:00"],
+      ["18:00", "21:30"],
+    ]) {
+      form.append("meetingStart", start);
+      form.append("meetingEnd", end);
+    }
+    expect(await redirectedTo(() => addDepartureAction(shop.slug, form))).toContain(
+      "builder=added",
+    );
+    const [trip] = await departures(db, shop.id);
+    const days = await db
+      .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, trip.id))
+      .orderBy(asc(tripScheduleDays.dayNumber));
+    const hhmm = (at: Date) => {
+      const wall = utcToWallTime(at, shop.timezone);
+      return `${pad(wall.hour)}:${pad(wall.minute)}`;
+    };
+    expect(days.map((day) => [hhmm(day.startsAt), hhmm(day.endsAt)])).toEqual([
+      ["09:00", "13:00"],
+      ["09:00", "13:00"],
+      ["18:00", "21:30"],
+    ]);
+    const [row] = await db
+      .select({ endsAt: trips.endsAt })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(row?.endsAt).toEqual(days[2]?.endsAt);
+  });
+
+  it("refuses a later day that ends before it starts, or forged hours, and adds nothing", async () => {
+    const { db, shop } = await signedInOwner();
+    const backwards = courseForm(shop.timezone, [7]);
+    backwards.append("meetingStart", "18:00");
+    backwards.append("meetingEnd", "09:00");
+    expect(await redirectedTo(() => addDepartureAction(shop.slug, backwards))).toContain(
+      "builder=end-before-start",
+    );
+    const forged = courseForm(shop.timezone, [7]);
+    forged.append("meetingStart", "18:00");
+    expect(await redirectedTo(() => addDepartureAction(shop.slug, forged))).toContain(
+      "builder=invalid",
     );
     expect(await departures(db, shop.id)).toEqual([]);
+  });
+
+  // #2557 review (dock M3): a night course past midnight saves as it is.
+  it("adds a night course that runs past midnight, each night ending the next morning", async () => {
+    const { db, shop } = await signedInOwner();
+    const form = courseForm(shop.timezone, [7], { startTime: "20:00", endTime: "01:00" });
+    form.append("meetingStart", "20:00");
+    form.append("meetingEnd", "01:00");
+    expect(await redirectedTo(() => addDepartureAction(shop.slug, form))).toContain(
+      "builder=added",
+    );
+    const [trip] = await departures(db, shop.id);
+    const days = await db
+      .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, trip.id))
+      .orderBy(asc(tripScheduleDays.dayNumber));
+    expect(days.map((day) => (day.endsAt.getTime() - day.startsAt.getTime()) / 3_600_000)).toEqual([
+      5, 5,
+    ]);
   });
 
   it("refuses days that do not run forward and adds nothing", async () => {

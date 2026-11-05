@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DetailsSection } from "./DetailsSection";
 import type { Trip } from "./types";
@@ -40,7 +40,11 @@ const trip = {
 const wall = { year: 2026, month: 10, day: 3, hour: 8, minute: 0 };
 
 function renderDetails(
-  days: { dayCount: number; laterDates: string[] } = {
+  days: {
+    dayCount: number;
+    laterDates: string[];
+    laterHours?: { start: string; end: string }[];
+  } = {
     dayCount: 1,
     laterDates: [],
   },
@@ -58,6 +62,7 @@ function renderDetails(
           diveSiteList: [],
           tripDiveList: [],
           startWall: wall,
+          laterHours: days.laterHours ?? [],
           endWall: { ...wall, hour: 12 },
           ...days,
           locale: "en-US",
@@ -99,17 +104,21 @@ describe("DetailsSection — the stored arrival photo", () => {
 });
 
 /**
- * **A departure's days run back to back, for now** (`MAX_MEETING_DAY_GAP_DAYS`):
- * Today and the roll call read a departure as one window, so the edit form
- * asks only how many days and offers no date to put a gap in. The date boxes
- * themselves are `MeetingDaysField.test.tsx`'s.
+ * **A departure's days may skip days and keep their own hours** (#2557,
+ * #2558): Today and the roll call read the meeting days, so the edit form
+ * offers a date and hours per later day, seeded from the stored days. The
+ * boxes' own behavior is `MeetingDaysField.test.tsx`'s.
  */
 describe("a departure that meets on several days", () => {
-  it("asks only how many days, with no date box for a later day", () => {
-    renderDetails({ dayCount: 1, laterDates: [] });
-    fireEvent.change(screen.getByRole("spinbutton", { name: /Days/ }), { target: { value: "3" } });
-    expect(screen.queryByLabelText("Day 2")).toBeNull();
-    expect(document.querySelector('input[name="meetingDate"]')).toBeNull();
+  it("shows each later day's stored date and hours", async () => {
+    renderDetails({
+      dayCount: 2,
+      laterDates: ["2026-10-17"],
+      laterHours: [{ start: "18:00", end: "21:00" }],
+    });
+    expect(((await screen.findByLabelText("Day 2")) as HTMLInputElement).value).toBe("2026-10-17");
+    expect((screen.getByLabelText("Day 2 departs") as HTMLInputElement).value).toBe("18:00");
+    expect((screen.getByLabelText("Day 2 returns") as HTMLInputElement).value).toBe("21:00");
   });
 });
 

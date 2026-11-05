@@ -3,7 +3,7 @@
  * record for staff, a diver's own copy, and every signed release a person
  * holds. Imported through the `./waivers` barrel.
  */
-import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { guardianSignatureOf } from "@/lib/guardian";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -105,7 +105,9 @@ export type SignedWaiverEntry = ReturnType<typeof toSignedWaiverEntry>;
  * The signed-record views the Waivers page offers beside "All": records whose
  * seal cannot be checked (`verifyWaiverIntegrity` → `unsealed`: no hash or no
  * seal version, which is every imported record and anything signed before
- * sealing), and every record that went to a physician (`medical_review`): a
+ * sealing) or whose seal failed its last check (`integrity_valid` false: an
+ * edit after signing, the record a reviewer goes looking for, issue #2562),
+ * and every record that went to a physician (`medical_review`): a
  * referral nobody has answered, one the physician did not clear, and one they
  * cleared, which keeps its status and stays in the diver's medical history.
  * Each row carries which of the three it is, and the log says so. The hold
@@ -122,7 +124,11 @@ export function signedRecordViewParam(value: string | undefined): SignedRecordVi
 
 function signedRecordViewWhere(view: SignedRecordView | undefined) {
   if (view === "unchecked")
-    return or(isNull(waiverRecords.integrityHash), isNull(waiverRecords.integrityVersion));
+    return or(
+      isNull(waiverRecords.integrityHash),
+      isNull(waiverRecords.integrityVersion),
+      eq(waiverRecords.integrityValid, false),
+    );
   if (view === "medical") return eq(waiverRecords.status, "medical_review");
   return undefined;
 }
@@ -208,7 +214,16 @@ export async function listWaiverIntegrityAudit(
         )
         .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, waiverRecords.shopId)))
         .where(scope)
-        .orderBy(desc(waiverRecords.signedAt), asc(people.fullName), desc(waiverRecords.id))
+        .orderBy(
+          // In the "Unsealed or changed" view a failed seal leads: it is the
+          // one to stop for, and legacy unsealed records would bury it.
+          ...(options.view === "unchecked"
+            ? [sql`coalesce(${waiverRecords.integrityValid} = false, false) desc`]
+            : []),
+          desc(waiverRecords.signedAt),
+          asc(people.fullName),
+          desc(waiverRecords.id),
+        )
         .limit(limit)
         .offset(offset),
   });

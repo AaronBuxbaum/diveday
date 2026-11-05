@@ -66,6 +66,7 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
       canCancelBooking: true,
       cancelPreview: "none",
       meetingDayCount: 1,
+      meetingDays: [],
     } as unknown as ReadyPageData,
     locale: "en-US",
     t,

@@ -16,8 +16,8 @@ import {
 import { DAY_MS, livePage, NOW, page, snapshotOf, stubSnapshotReply } from "./ready-test-support";
 
 const ORIGIN = "https://dive.day";
-const TOKEN = "A".repeat(43);
-const OTHER = "B".repeat(43);
+const TOKEN = `c1.${"A".repeat(22)}.${"A".repeat(43)}`;
+const OTHER = `c1.${"B".repeat(22)}.${"B".repeat(43)}`;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -56,6 +56,8 @@ describe("readyPagePath", () => {
     expect(readyPagePath(new URL(`https://evil.example/ready/${TOKEN}`), ORIGIN)).toBeNull();
     expect(readyPagePath(new URL(`${ORIGIN}/ready/${TOKEN}/forms`), ORIGIN)).toBeNull();
     expect(readyPagePath(new URL(`${ORIGIN}/ready/short`), ORIGIN)).toBeNull();
+    // The pre-#2711 shape: a bare 43-character random token is no longer a link.
+    expect(readyPagePath(new URL(`${ORIGIN}/ready/${"A".repeat(43)}`), ORIGIN)).toBeNull();
     expect(readyPagePath(new URL(`${ORIGIN}/shop/blue-mantis`), ORIGIN)).toBeNull();
   });
 });
@@ -134,7 +136,7 @@ describe("saveReadyPage and readyPageFallback", () => {
    */
   it("stores the server's snapshot and nothing of the live page", async () => {
     const path = `/ready/${TOKEN}`;
-    const claim = "C".repeat(43);
+    const claim = `c1.${"C".repeat(22)}.${"C".repeat(43)}`;
     const recap = `cmVjYXA6${"r".repeat(70)}.${"S".repeat(43)}`;
     const secrets = [
       TOKEN,

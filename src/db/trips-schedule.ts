@@ -13,6 +13,7 @@ import {
 } from "@/lib/zoned";
 import { arrivalTrailHighWater } from "./arrival-provenance";
 import { rebindDepartureBoatSafetyTime } from "./boat-safety";
+import { realignTripLinkExpiry } from "./booking-capabilities";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewTimeMoved } from "./crew-notices";
@@ -235,6 +236,7 @@ export async function moveTrip(
     if (!trip) return { ok: false, reason: "not_found" };
 
     await rebindDepartureBoatSafetyTime(tx, shopId, tripId, existing.startsAt, trip.startsAt, now);
+    await realignTripLinkExpiry(tx, { shopId, tripId, endsAt: trip.endsAt, now });
 
     // A boat moved to another day is a new morning at the desk: nobody it saw
     // for the old date is checked in for the new one (issue #2702). A delay
@@ -244,7 +246,7 @@ export async function moveTrip(
     if (before.year !== after.year || before.month !== after.month || before.day !== after.day) {
       await tx
         .update(bookings)
-        .set({ arrivalTrailAfterSeq: arrivalTrailHighWater })
+        .set({ arrivalTrailAfterSeq: arrivalTrailHighWater, seatReopenedAt: now })
         .where(and(eq(bookings.tripId, tripId), eq(bookings.shopId, shopId)));
     }
 

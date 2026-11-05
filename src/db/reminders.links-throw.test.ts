@@ -23,12 +23,12 @@ vi.mock("./notifications", async (importActual) => {
 const ctx = fileScopedShopContext();
 
 /**
- * **A link minted for a reminder is taken back when the pass throws** (issue
- * #2451 review). The links are minted ahead of the sends; a pass that dies
- * part-way leaves them live for readers who never got the message.
+ * **A pass that throws part-way takes no link back** (issue #2711). The link
+ * is the booking's one live delivered link, which an earlier email may carry;
+ * revoking it because this pass died would strand the diver.
  */
 describe("the trip-prep links of a reminder pass that throws part-way", () => {
-  it("are revoked, including those of sends it never reached", async () => {
+  it("stay live, one per booking, including those of sends it never reached", async () => {
     const { db, shop } = ctx;
     const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     const reef = upcoming.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
@@ -63,7 +63,7 @@ describe("the trip-prep links of a reminder pass that throws part-way", () => {
       .select()
       .from(bookingCapabilities)
       .where(eq(bookingCapabilities.bookingId, bookingId));
-    expect(minted.length).toBeGreaterThan(0);
-    expect(minted.every((row) => row.revokedAt !== null)).toBe(true);
+    expect(minted).toHaveLength(1);
+    expect(minted.every((row) => row.revokedAt === null && row.delivered)).toBe(true);
   });
 });

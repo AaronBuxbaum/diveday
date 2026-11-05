@@ -467,6 +467,12 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.getByRole("button", { name: "Mark done" }).first().waitFor();
         await capture(page, "staff-date-requests-row-menu", scheme);
+        await page.keyboard.press("Escape");
+        // The reply form under a lead, open (issue #2555): the box, where the
+        // reply goes, and Send.
+        await page.locator("summary").filter({ hasText: "Write a reply" }).first().click();
+        await page.getByRole("button", { name: "Send reply" }).first().waitFor();
+        await capture(page, "staff-date-requests-reply", scheme);
       });
 
       // A request staff closed (third UX review, item 13): off the open list

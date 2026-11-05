@@ -52,7 +52,6 @@ import { departureJsonLd } from "./_lib/departure-json-ld";
 import { fullFootLabel } from "./_lib/foot-bar-label";
 import { bookingFormTrip, readTripPage } from "./_lib/page-reads";
 import { publicForecast } from "./_lib/public-forecast";
-import { readinessDoorPath } from "./_lib/readiness-door";
 import { requirementSentenceFor } from "./_lib/requirement-sentence";
 import { offerHandoff } from "./actions";
 
@@ -162,6 +161,7 @@ export default async function TripDetailPage({
     board,
     reviewAggregate,
     run,
+    readinessLink,
   } = await readTripPage(db, shop, {
     tripId,
     isEmbed,
@@ -335,7 +335,7 @@ export default async function TripDetailPage({
                 locale={locale}
                 trip={trip}
                 confirmed={confirmed}
-                readinessLink={readinessDoorPath(shopSlug, tripId, bookingToken)}
+                readinessLink={readinessLink}
                 mailState={mailState}
                 payNotice={pay}
                 paymentUrl={paymentUrl}

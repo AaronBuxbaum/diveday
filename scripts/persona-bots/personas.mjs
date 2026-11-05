@@ -66,6 +66,11 @@ export const DEAD_CAPABILITY_TOKENS = Object.freeze(["not-a-real-token"]);
  * and logs a React 419 while saying its piece in the body. Both were measured
  * on the first dry run, and a probe that reported either would be wrong every
  * week forever. Everything else the walk visits still holds those two lines.
+ *
+ * `mint: "setup-link"` marks a surface that opens only through a link the walk
+ * must first mint: the walk asks the harness route for an open single-use
+ * setup link and visits the path it hands back, recording findings under the
+ * surface's own `path`.
  */
 export const PERSONAS = Object.freeze([
   {
@@ -197,10 +202,10 @@ export const PERSONAS = Object.freeze([
       { path: "/pricing" },
       { path: "/switching" },
       { path: "/switching/eve" },
-      // The form is shut without an open single-use setup link (ADR 20261009-single-use-setup-links),
-      // and a bare visit redirects to the set-up page's closed-door state. The walk mints no link,
-      // so this is a refusal surface: it has to render, not to hold a form (#3657).
-      { path: "/onboard", refusal: true },
+      // The form opens only through a single-use setup link (ADR 20261009-single-use-setup-links),
+      // so the walk mints one the way the founder's mail carries it (`/api/test/seed-setup-link`)
+      // and opens the form Victor would fill in (#3657). A bare visit is the closed door.
+      { path: "/onboard", mint: "setup-link" },
     ],
   },
   {
@@ -250,6 +255,7 @@ export function walkPlan(personas = PERSONAS) {
         as: surface.as ?? null,
         locale,
         refusal: surface.refusal ?? false,
+        mint: surface.mint ?? null,
         personas: [persona.id],
       });
     }

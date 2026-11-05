@@ -22,6 +22,7 @@ import {
   RENTAL_FIT_CSV,
   REVIEW_MODERATION_EVENTS_CSV,
   ROLL_CALL_EVENTS_CSV,
+  STAFF_CREDENTIALS_CSV,
   TIPS_CSV,
   TRIP_REVIEWS_CSV,
   WAIVER_RECORDS_CSV,
@@ -58,6 +59,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
       "phone",
       "date_of_birth",
       "dive_insurance",
+      "roles",
       "emergency_contact_name",
       "emergency_contact_phone",
       "courtesy_email_opt_out_at",
@@ -67,7 +69,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
       "deleted_at",
       "created_at",
     ],
-    rows: ({ person }) => [
+    rows: ({ person, rolesText }) => [
       [
         person.id,
         person.fullName,
@@ -75,6 +77,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
         person.phone,
         person.dateOfBirth,
         person.diveInsurance,
+        rolesText,
         person.emergencyContactName,
         person.emergencyContactPhone,
         person.courtesyEmailOptOutAt,
@@ -116,6 +119,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
   diverFile(WAIVER_RECORDS_CSV),
   diverFile(COURSE_FORM_RECORDS_CSV),
   diverFile(RENTAL_FIT_CSV),
+  diverFile(STAFF_CREDENTIALS_CSV),
   diverFile(GEAR_RESERVATIONS_CSV),
   diverFile(CUSTOMER_GEAR_ITEMS_CSV),
   diverFile(WORK_ORDERS_CSV),

@@ -627,8 +627,9 @@ describe("holdRescheduleNotice", () => {
 });
 
 /**
- * Issue #2451: the link is minted ahead of the send, so a notice that does not
- * go must not leave a live capability behind.
+ * Issue #2451 minted nothing for a notice that cannot go; since #2711 the link
+ * is the booking's one live delivered link, so a notice that fails leaves it
+ * live for the diver who may already hold it.
  */
 describe("the trip-prep link on a notice that does not go", () => {
   async function send() {
@@ -656,7 +657,7 @@ describe("the trip-prep link on a notice that does not go", () => {
     ).toEqual([]);
   });
 
-  it("revokes the link when the email bounces", async () => {
+  it("leaves the booking's link live when the email bounces (issue #2711)", async () => {
     const { moved } = await send();
     const { db, shop, priya, now } = moved;
     await sendRescheduleNotices(db, shop.id, payload(moved), {
@@ -671,8 +672,7 @@ describe("the trip-prep link on a notice that does not go", () => {
       .select()
       .from(bookingCapabilities)
       .where(eq(bookingCapabilities.bookingId, priya));
-    expect(rows.length).toBeGreaterThan(0);
-    expect(rows.every((row) => row.revokedAt !== null)).toBe(true);
+    expect(rows.filter((row) => row.revokedAt === null)).toHaveLength(1);
   });
 
   it("keeps the link live when the email goes", async () => {
