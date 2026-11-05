@@ -1,0 +1,95 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "b4e56f80-cd5a-471c-9c78-e82441b66c4b",
+  "prevIds": [
+    "a83bb21f-a97c-4083-a12c-f17f1d61fcae"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "deck_counts"
+      ],
+      "writes": [
+        "s|tbl|public.deck_counts",
+        "n|tbl|public.deck_counts",
+        "e|tbl|public.deck_counts",
+        "n|rel|public.deck_counts",
+        "n|type|public.deck_counts"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"deck_counts\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"deck_counts\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"deck_counts\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"deck_counts\",\"trip_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"deck_counts\",\"checkpoint\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"deck_counts\",\"counted\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"deck_counts\",\"recorded_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"deck_counts\",\"recorded_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"deck_counts\",\"seq\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"deck_counts_shop_trip_checkpoint_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"deck_counts_recorded_by_person_id_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"deck_counts\",\"deck_counts_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"deck_counts\",\"deck_counts_trip_id_trips_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"deck_counts\",\"deck_counts_recorded_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"deck_counts\",\"deck_counts_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"deck_counts\",\"deck_counts_counted_range\"]"
+    }
+  ]
+}

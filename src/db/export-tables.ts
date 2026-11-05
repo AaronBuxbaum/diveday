@@ -37,7 +37,6 @@ import {
   customerGearReminderSettings,
   dateRequestOfferBookings,
   deals,
-  deckCounts,
   departureBoatSafetySnapshots,
   divePackageEntitlements,
   divePackages,
@@ -254,11 +253,6 @@ export const EXPORT_TABLES = {
     table: safetyDrillParticipants,
     order: [asc(safetyDrillParticipants.drillId), asc(safetyDrillParticipants.id)],
     scope: { shopColumn: safetyDrillParticipants.shopId },
-  },
-  deckCounts: {
-    table: deckCounts,
-    order: [asc(deckCounts.recordedAt), asc(deckCounts.seq), asc(deckCounts.id)],
-    scope: { shopColumn: deckCounts.shopId },
   },
   tripStageEvents: {
     table: tripStageEvents,

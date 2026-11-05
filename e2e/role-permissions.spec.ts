@@ -30,9 +30,7 @@ test.describe.configure({ timeout: 30_000 });
 async function firstDiverDetailHref(page: Page): Promise<string> {
   await page.goto(`/shop/${SHOP}/divers`);
   const detailLinks = page
-    .locator(
-      `a[href^="/shop/${SHOP}/divers/"]:not([href*="?add="]):not([href*="/divers/download"])`,
-    )
+    .locator(`a[href^="/shop/${SHOP}/divers/"]:not([href*="?add="])`)
     .filter({ visible: true });
   // The roster streams behind its loading shell for slower role sessions.
   // Wait for the first actual record link instead of inspecting the DOM once.

@@ -1430,18 +1430,6 @@
   not say a diver **sailed**, that everyone is back, or that a day has **settled**; those are read
   off roll-call evidence. A new window measured from a departure is a rung here, not an offset of
   its own.
-- **Deck count** — the heads the captain counted on deck at one **roll-call checkpoint**, typed as
-  one number on the Boat tab (`deck_counts`, newest per checkpoint stands; loop 5, row 1). The roll
-  call's own head count is the sum of per-person marks, so a mark made against the wrong name still
-  reads as a full boat; the deck count is the second, independent count that catches it. It is held
-  against the passengers that checkpoint expects aboard (never crew) and the page agrees or names
-  the gap: "You count 11. The manifest says 12.", who has no mark, and when more people are marked
-  aboard than counted, that a mark may be on the wrong person. **It informs and never gates**:
-  nothing closes, opens or refuses anything on it, and a checkpoint stays complete or open by the
-  marks alone. The printed manifest carries a blank "Deck count: ___ at ___" line per checkpoint, or
-  the last count where one exists (a count older than the checkpoint's newest mark says to count
-  again, and an earlier day's names its date), and the saved offline copy shows the newest count read-only;
-  neither records one. Rule in `src/lib/deck-count.ts`, writer and reader in `src/db/deck-counts.ts`.
 - **Roll-call checkpoint** — one independent roll call: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite

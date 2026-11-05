@@ -13,7 +13,6 @@ export const EXPORT_PURPOSE_KEYS = {
   "trips.csv": "settings.export.filePurposes.trips",
   "trip_change_events.csv": "settings.export.filePurposes.trip_change_events",
   "trip_stage_events.csv": "settings.export.filePurposes.trip_stage_events",
-  "deck_counts.csv": "settings.export.filePurposes.deck_counts",
   "safety_drills.csv": "settings.export.filePurposes.safety_drills",
   "safety_drill_participants.csv": "settings.export.filePurposes.safety_drill_participants",
   "trip_series.csv": "settings.export.filePurposes.trip_series",

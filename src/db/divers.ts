@@ -593,57 +593,6 @@ function rosterOrder(sort: DiverSort | undefined, lastDivedAt: ReturnType<typeof
     : [asc(people.fullName), asc(people.id)];
 }
 
-/** The most rows "Download this list (CSV)" writes. */
-export const DIVER_LIST_EXPORT_MAX = 5_000;
-
-/**
- * **"Download this list (CSV)"** (fourth UX review, item 27): the roster as
- * filtered, searched and sorted, for a shop calling its lapsed divers. Name,
- * email, phone and the last dive only; dates of birth, insurance and emergency
- * contacts have no business in a call list. One extra row tells the caller
- * when the roster exceeds the CSV bound, without returning partial contact
- * data. The caller gates it on the people-export permission.
- */
-export async function listDiversForExport(
-  db: AppDb,
-  shopId: string,
-  options: RosterOptions & { sort?: DiverSort } = {},
-): Promise<
-  | { exceededLimit: true; rows: [] }
-  | {
-      exceededLimit: false;
-      rows: {
-        fullName: string;
-        email: string | null;
-        phone: string | null;
-        lastDivedAt: Date | null;
-      }[];
-    }
-> {
-  const now = options.now ?? nowDate();
-  const lastDivedAt = lastDivedAtSql(shopId, now);
-  const rows = await db
-    .select({
-      fullName: people.fullName,
-      email: people.email,
-      phone: people.phone,
-      lastDivedAt,
-    })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(rosterScope(db, shopId, { ...options, now }))
-    .orderBy(...rosterOrder(options.sort, lastDivedAt))
-    .limit(DIVER_LIST_EXPORT_MAX + 1);
-  if (rows.length > DIVER_LIST_EXPORT_MAX) return { exceededLimit: true, rows: [] };
-  return {
-    exceededLimit: false,
-    rows: rows.map((row) => ({
-      ...row,
-      lastDivedAt: row.lastDivedAt === null ? null : new Date(row.lastDivedAt),
-    })),
-  };
-}
-
 export async function listDiverSummaries(
   db: AppDb,
   shopId: string,

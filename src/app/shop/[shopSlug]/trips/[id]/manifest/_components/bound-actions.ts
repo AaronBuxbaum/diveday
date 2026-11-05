@@ -21,7 +21,6 @@ import {
   setTripStageAction,
   teamUpPartiesAction,
 } from "../actions";
-import { recordDeckCountAction } from "../deck-count-action";
 import {
   emergencyShowSeatMedicalAlertAction,
   showSeatMedicalAlertAction,
@@ -75,8 +74,6 @@ export function bindManifestActions(
     noteSnag: noteSnagAction.bind(null, { shopSlug, tripId }),
     answerSnag: answerSnagAction.bind(null, { shopSlug, tripId }),
     setTripStage: setTripStageAction.bind(null, { shopSlug, tripId }),
-    // A deck count is about one checkpoint, which the action re-proves (loop 5, row 1).
-    recordDeckCount: recordDeckCountAction.bind(null, actionContext),
     // A row's two missing-diver controls, the row binding its own seat; none
     // for a reader who may not start a report. Each write re-checks.
     missingDiver: {

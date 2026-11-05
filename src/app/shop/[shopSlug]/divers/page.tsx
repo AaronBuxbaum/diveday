@@ -51,7 +51,6 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   // (CR-008), or the record was erased and has no way back. Distinct from
   // `invalid`, which is about the add-a-diver form's three fields.
   "restore-refused": { tone: "danger", key: "divers.page.noticeRestoreRefused" },
-  "download-too-large": { tone: "danger", key: "divers.page.noticeDownloadTooLarge" },
   erased: { tone: "success", key: "divers.page.noticeErased" },
   // The erasure landed locally and deleted what it could at Stripe, but
   // something there is still owed — a failed customer delete, or the invoice
@@ -115,7 +114,7 @@ export default async function DiversPage({
   // making the otherwise bounded roster occasionally cross the five-second
   // runtime limit.
   const {
-    can: { delete: canDelete, import: canImport, download: canDownload },
+    can: { delete: canDelete, import: canImport },
     sort,
     filter,
     diverPage,
@@ -266,14 +265,7 @@ export default async function DiversPage({
         sort={sort}
         orderLine={
           rows.length > 0 ? (
-            <RosterOrderLine
-              roster={roster}
-              query={query}
-              filter={filter}
-              sort={sort}
-              canDownload={canDownload}
-              t={t}
-            />
+            <RosterOrderLine roster={roster} query={query} filter={filter} sort={sort} t={t} />
           ) : null
         }
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}

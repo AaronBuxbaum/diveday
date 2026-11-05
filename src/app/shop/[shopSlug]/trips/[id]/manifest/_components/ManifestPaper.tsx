@@ -7,7 +7,6 @@ import { CrewRollCall } from "./CrewRollCall";
 import { DiverRollCall } from "./DiverRollCall";
 import { DockDesk } from "./DockDesk";
 import { PreDepartureCheckList } from "./PreDepartureCheckList";
-import { PrintedDeckCount } from "./PrintedDeckCount";
 import { PrintedSoulsOnBoard } from "./PrintedSoulsOnBoard";
 import { PrintedStage } from "./PrintedStage";
 import type { manifestRollCallProps } from "./roll-call-props";
@@ -36,7 +35,6 @@ export function ManifestPaper({
   boatPaper,
   stage,
   dockDesk,
-  printedDeckCount,
   t,
 }: {
   cancelled: ComponentProps<typeof CancelledRollCallBanner>["state"];
@@ -50,8 +48,6 @@ export function ManifestPaper({
   /** `stageStripProps`, the same read the live strip takes. */
   stage: ComponentProps<typeof PrintedStage>;
   dockDesk: Omit<ComponentProps<typeof DockDesk>, "paper">;
-  /** `printedDeckCountLines`: a blank or filled count line per checkpoint. */
-  printedDeckCount: ComponentProps<typeof PrintedDeckCount>;
   t: StaffTranslator;
 }) {
   return (
@@ -62,7 +58,6 @@ export function ManifestPaper({
       <PrintedSoulsOnBoard manifest={manifest} vesselName={vesselName} t={t} />
       <div className="mt-5 space-y-10">
         <PrintedStage {...stage} />
-        {cancelled === "closed" ? null : <PrintedDeckCount {...printedDeckCount} />}
         {boatSafety ? <BoatSafetyNotices {...boatSafety} /> : null}
         <PreDepartureCheckList {...checklist} paper />
         <DiverRollCall context={{ ...rollCall.divers, paper: true }} />

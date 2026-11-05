@@ -1314,13 +1314,6 @@ const rows = [
     why: "a crew member who took part in a drill; the insurer's record keeps who drilled",
   },
   {
-    table: "deck_counts",
-    column: "recorded_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who counted the heads on deck",
-  },
-  {
     table: "customer_gear_notices",
     column: "sent_by_person_id",
     kind: "actor",
