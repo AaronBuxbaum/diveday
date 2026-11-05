@@ -1581,7 +1581,6 @@
     "src/db/seed-history.ts#seedHistory": 634,
     "src/db/seed-more-trips.ts#seedMoreTrips": 625,
     "src/db/seed-trips.ts#seedTrips": 363,
-    "src/db/trips-record.ts#updateTripRecord": 309,
     "src/lib/import.ts#prepareContactImport": 430
   },
   "live-people": {

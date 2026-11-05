@@ -591,6 +591,55 @@ export type UpdateTripOutcome =
  * already recorded a roll call against (CR-006). Both invariants fail
  * closed with a typed reason instead of silently discarding data.
  */
+/** Replaces a departure's meeting days; `true` when any day's window changed. */
+async function replaceScheduleDays(
+  tx: DbExecutor,
+  tripId: string,
+  after: readonly { startsAt: Date; endsAt: Date }[],
+): Promise<boolean> {
+  const before = await tx
+    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, tripId))
+    .orderBy(asc(tripScheduleDays.dayNumber));
+  await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
+  await tx
+    .insert(tripScheduleDays)
+    .values(after.map((day, index) => ({ tripId, ...day, dayNumber: index + 1 })));
+  return (
+    before.length !== after.length ||
+    before.some(
+      (day, index) =>
+        day.startsAt.getTime() !== after[index]?.startsAt.getTime() ||
+        day.endsAt.getTime() !== after[index]?.endsAt.getTime(),
+    )
+  );
+}
+
+/** {@link movedCountedMeetingDay} against the stored days, as `editTrip`'s refusal. */
+async function countedMeetingDayMoved(
+  tx: DbExecutor,
+  trip: { startsAt: Date; endsAt: Date },
+  tripId: string,
+  patch: { scheduleDays?: readonly { startsAt: Date; endsAt: Date }[] },
+  marks: readonly { occurredAt: Date }[],
+) {
+  if (!patch.scheduleDays) return null;
+  const current = await tx
+    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, tripId))
+    .orderBy(asc(tripScheduleDays.dayNumber));
+  const dayNumber = movedCountedMeetingDay(
+    meetingDayWindows(trip, current),
+    patch.scheduleDays,
+    marks.map((row) => row.occurredAt),
+  );
+  return dayNumber === null
+    ? null
+    : ({ ok: false, reason: "meeting_day_has_roll_call", detail: { dayNumber } } as const);
+}
+
 /**
  * **The first counted meeting day an edit would move or remove** (#2557
  * review), 1-based, or `null`. A roll-call result belongs to the meeting day
@@ -793,21 +842,8 @@ async function updateTripRecord(
     if (plannedDives < recordedDiveCount) {
       return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };
     }
-    if (patch.scheduleDays) {
-      const current = await tx
-        .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
-        .from(tripScheduleDays)
-        .where(eq(tripScheduleDays.tripId, tripId))
-        .orderBy(asc(tripScheduleDays.dayNumber));
-      const dayNumber = movedCountedMeetingDay(
-        meetingDayWindows(existing, current),
-        patch.scheduleDays,
-        checkpointRows.map((row) => row.occurredAt),
-      );
-      if (dayNumber !== null) {
-        return { ok: false, reason: "meeting_day_has_roll_call", detail: { dayNumber } };
-      }
-    }
+    const movedDay = await countedMeetingDayMoved(tx, existing, tripId, patch, checkpointRows);
+    if (movedDay) return movedDay;
 
     const drafts = patch.dives ? normalizedDiveDrafts(plannedDives, patch.dives) : undefined;
     if (drafts && !(await validateDiveSites(tx, shopId, drafts))) {
@@ -1004,26 +1040,9 @@ async function updateTripRecord(
         occurredAt: changedAt,
       });
     }
-    let scheduleDaysMoved = false;
-    if (patch.scheduleDays) {
-      const before = await tx
-        .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
-        .from(tripScheduleDays)
-        .where(eq(tripScheduleDays.tripId, tripId))
-        .orderBy(asc(tripScheduleDays.dayNumber));
-      const after = patch.scheduleDays;
-      scheduleDaysMoved =
-        before.length !== after.length ||
-        before.some(
-          (day, index) =>
-            day.startsAt.getTime() !== after[index]?.startsAt.getTime() ||
-            day.endsAt.getTime() !== after[index]?.endsAt.getTime(),
-        );
-      await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
-      await tx
-        .insert(tripScheduleDays)
-        .values(patch.scheduleDays.map((day, index) => ({ tripId, ...day, dayNumber: index + 1 })));
-    }
+    const scheduleDaysMoved = patch.scheduleDays
+      ? await replaceScheduleDays(tx, tripId, patch.scheduleDays)
+      : false;
     if (captureRescheduleStart && startMoved) {
       await rememberUnnotifiedTripStart(tx, {
         shopId,

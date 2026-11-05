@@ -738,6 +738,14 @@
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment. A course session can plan up to five dives; an ordinary departure
   can plan up to four. The count is a plan, not a record of underwater groups or completed dives.
+- **Meeting day** — one dated window of a departure that meets on more than one day (a course on
+  two Saturdays, a pool night then an open-water weekend), stored in `trip_schedule_days`. Each
+  has its own hours and its own roll call: a result belongs to the meeting day it was taken on,
+  by the **roll-call day boundary** (ADR 20261104-roll-call-by-meeting-day). A one-day departure
+  has one meeting day, its own window.
+- **Roll-call day boundary** — where one meeting day's roll call ends and the next one's begins:
+  the next day's start, or halfway from the day before's end to it if that is earlier. A stated
+  missing person stays on the manifest and on Today past it until counted again.
 - **Course catalog copy** — a shop's configurable copy of the PADI/SSI course list. The agency owns
   course identity, the prerequisite card (certification and minimum age), and the fact that every
   course session needs an instructor and a signed waiver; the shop controls its two prices, its

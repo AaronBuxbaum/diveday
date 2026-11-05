@@ -3,6 +3,7 @@ import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, noticeFromParam } from "@/lib/staff-notices";
 import { tripGateBinding, verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { DETAILS_SAVE_NOTICES } from "./details-save-notices";
 import { MOVE_SEAT_NOTICES } from "./move-seat-notices";
 import { DETAILS_FORMS, ROSTER_FORMS } from "./trip-notice-tabs";
 
@@ -712,34 +713,7 @@ const NOTICE_KEYS: Record<
   },
   "not-authorized": { form: "page", tone: "danger", key: "trips.notices.notAuthorized" },
   invalid: { form: "page", tone: "danger", key: "trips.notices.invalid" },
-  "end-before-start": { form: "details", tone: "danger", key: "trips.notices.endBeforeStart" },
-  "days-out-of-order": { form: "details", tone: "danger", key: "trips.notices.daysOutOfOrder" },
-  "capacity-below-booked": {
-    form: "details",
-    tone: "danger",
-    key: "trips.notices.capacityBelowBooked",
-    countKey: "trips.notices.capacityBelowBookedCount",
-  },
-  // This form has no boat field, so the refusal has to name the hull's number —
-  // otherwise a staffer is told they are over a limit they cannot see.
-  // A hull that is not this shop's live one. Reached only by a hand-built
-  // submission or a boat deleted in another tab, so it reads as a plain
-  // refusal rather than explaining a fleet the reader can see.
-  "boat-not-found": { form: "details", tone: "danger", key: "trips.notices.boatNotFound" },
-  "capacity-above-boat": {
-    form: "details",
-    tone: "danger",
-    key: "trips.notices.capacityAboveBoat",
-    countKey: "trips.notices.capacityAboveBoatCount",
-  },
-  // H-20261009-certificate-caps-seats: the hull's certificate is a ceiling too, and this form shows
-  // neither number, so the refusal names the limit.
-  "capacity-above-certificate": {
-    form: "details",
-    tone: "danger",
-    key: "trips.notices.capacityAboveCertificate",
-    countKey: "trips.notices.capacityAboveCertificateCount",
-  },
+  ...DETAILS_SAVE_NOTICES,
   // Both doors onto the same trap: a departure that demands payment and has no
   // price asks nobody for money and blocks every diver who books it, forever
   // (issue #692). Danger, not warning — the save was refused, so the staffer
@@ -789,18 +763,6 @@ const NOTICE_KEYS: Record<
     form: "last-minute-deal",
     tone: "danger",
     key: "trips.notices.lastMinuteStripeFailed",
-  },
-  "planned-dives-below-history": {
-    form: "details",
-    tone: "danger",
-    key: "trips.notices.plannedDivesBelowHistory",
-    countKey: "trips.notices.plannedDivesBelowHistoryCount",
-  },
-  "meeting-day-has-roll-call": {
-    form: "details",
-    tone: "danger",
-    key: "trips.notices.meetingDayHasRollCall",
-    countKey: "trips.notices.meetingDayHasRollCallCount",
   },
 };
 
