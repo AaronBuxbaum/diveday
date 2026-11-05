@@ -5,6 +5,7 @@ import {
   issueBookkeeperConfirmation,
   readBookkeeper,
   recordBookkeeperDeliveryOutcome,
+  resolveBookkeeperStopToken,
   setBookkeeper,
 } from "@/db/bookkeeper";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
@@ -110,6 +111,23 @@ describe("sendDueMonthEndEmails", () => {
       await sendDueMonthEndEmails(db, { now: SECOND, provider, origin: ORIGIN }),
     ).toMatchObject({ due: 0 });
     expect(ofKind(sent, "bookkeeper_month_end")).toHaveLength(1);
+  });
+
+  it("leaves only the newest delivered email's stop link working (ADR 20261016, N1)", async () => {
+    const { db } = await shopWithBookkeeper();
+    const { sent, provider } = capturing();
+    await sendDueMonthEndEmails(db, { now: SECOND, provider, origin: ORIGIN });
+    await sendDueMonthEndEmails(db, {
+      now: new Date("2026-12-02T15:00:00Z"),
+      provider,
+      origin: ORIGIN,
+    });
+    const [october, november] = ofKind(sent, "bookkeeper_month_end").map(
+      (email) => email.stopUrl.split("/unsubscribe/")[1] ?? "",
+    );
+    if (!october || !november) throw new Error("expected two month-end emails");
+    expect(await resolveBookkeeperStopToken(db, october)).toBeNull();
+    expect(await resolveBookkeeperStopToken(db, november)).toMatchObject({ alreadyStopped: false });
   });
 
   it("sends nothing to an address whose inbox has not confirmed", async () => {

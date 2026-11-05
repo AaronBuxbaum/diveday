@@ -1,5 +1,6 @@
 import {
   claimBookkeeperMonth,
+  keepOnlyNewestBookkeeperStop,
   listBookkeeperShops,
   releaseBookkeeperMonth,
   tellOwnersAboutBookkeeper,
@@ -110,6 +111,7 @@ export async function sendDueMonthEndEmails(
       );
       if (delivery.status === "sent") {
         summary.sent += 1;
+        await keepOnlyNewestBookkeeperStop(db, { shopId: shop.id, stopToken: claim.stopToken });
         await tellOwnersAboutBookkeeper(db, {
           shopId: shop.id,
           what: { event: "sent", email: shop.email, month },

@@ -331,7 +331,8 @@ export async function listBookkeeperShops(db: DbExecutor) {
  * mailed the old one's files. The winner gets that month's stop link, a
  * `bookkeeper_stop` capability bound to the address, minted in the same
  * transaction, and the confirmation it claimed under; null when this caller
- * lost. Earlier emails' links to the same address keep working.
+ * lost. Earlier emails' links work until this one is delivered
+ * ({@link keepOnlyNewestBookkeeperStop}).
  */
 export async function claimBookkeeperMonth(
   db: AppDb,
@@ -393,6 +394,24 @@ export async function releaseBookkeeperMonth(
         eq(shops.bookkeeperConfirmedAt, input.confirmedAt),
       ),
     );
+}
+
+/**
+ * **Only the newest email's stop link works** (ADR 20261016, security review
+ * N1, kept by the l8 review B1): once a month's email is delivered, every
+ * other unspent link the shop holds is withdrawn, so a forwarded older email
+ * stops nothing. A send that failed keeps the earlier links, since its own
+ * email may never have arrived.
+ */
+export async function keepOnlyNewestBookkeeperStop(
+  db: DbExecutor,
+  input: { shopId: string; stopToken: string },
+): Promise<void> {
+  await withdrawUnspentCapabilities(db, {
+    purpose: "bookkeeper_stop",
+    shopId: input.shopId,
+    except: input.stopToken,
+  });
 }
 
 /** What SES said about a month-end send, as the delivery webhook reads it. */
@@ -494,20 +513,22 @@ export async function stopBookkeeperByToken(
 ): Promise<BookkeeperStopContext | null> {
   const now = input.now ?? nowDate();
   const stopped = await db.transaction(async (tx) => {
+    // The shop row first, then the link: the same order an address save and
+    // an erasure take, so a stop racing either, or a second link, never
+    // deadlocks (security review B2).
+    const known = await verifyCapability(tx, { purpose: "bookkeeper_stop", token: input.token });
+    if (!known) return null;
+    const [row] = await tx
+      .select({ id: shops.id, name: shops.name, email: shops.bookkeeperEmail })
+      .from(shops)
+      .where(eq(shops.id, known.shopId))
+      .for("no key update");
     const spent = await spendCapability(tx, {
       purpose: "bookkeeper_stop",
       token: input.token,
       now,
     });
-    if (!spent) return null;
-    const [row] = await tx
-      .select({ id: shops.id, name: shops.name, email: shops.bookkeeperEmail })
-      .from(shops)
-      .where(
-        and(eq(shops.id, spent.shopId), sql`lower(${shops.bookkeeperEmail}) = ${spent.subjectId}`),
-      )
-      .for("no key update");
-    if (!row?.email) return null;
+    if (!spent || !row?.email || row.email.toLowerCase() !== spent.subjectId) return null;
     await tx.update(shops).set(BOOKKEEPER_CLEARED).where(eq(shops.id, row.id));
     await withdrawUnspentCapabilities(tx, { purpose: "bookkeeper_stop", shopId: row.id });
     await tx.insert(activityEvents).values({

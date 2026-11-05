@@ -45,7 +45,7 @@ someone outside its staff, every month with nobody pressing Send.
 
 - A stranger who confirms a typo starts the send, and every owner is told the address on each.
 - A departed manager's address stops by itself until someone else vouches for it.
-- Each email's stop link works once, while its address stands.
+- Only the newest delivered email's stop link works, once (#3721).
 - A send accepted but answered with an error is retried, so a month can arrive twice (N1).
 - A bounced address is told once to each owner, without a month, and warned on the field until
   saved again or a send is delivered (N2, #2798). The pass keeps sending.

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { CAPABILITY_POLICY, type CapabilityPurpose, capabilitySubject } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
@@ -147,12 +147,13 @@ export async function spendCapability(
 /**
  * Withdraws every unspent link of one purpose a shop holds: for a
  * `shop_address` purpose whose address the shop just changed or cleared, so a
- * link mailed to the old address opens nothing (it reads as unknown). A spent
- * link stays, so it still reads as "already done". Returns how many went.
+ * link mailed to the old address opens nothing (it reads as unknown), or every
+ * link but the newest delivered one (`except`). A spent link stays, so it
+ * still reads as "already done". Returns how many went.
  */
 export async function withdrawUnspentCapabilities(
   db: DbExecutor,
-  input: { purpose: CapabilityPurpose; shopId: string },
+  input: { purpose: CapabilityPurpose; shopId: string; except?: string },
 ): Promise<number> {
   const withdrawn = await db
     .delete(capabilities)
@@ -161,6 +162,7 @@ export async function withdrawUnspentCapabilities(
         eq(capabilities.purpose, input.purpose),
         eq(capabilities.shopId, input.shopId),
         isNull(capabilities.usedAt),
+        input.except ? ne(capabilities.tokenHash, hashBearerToken(input.except)) : undefined,
       ),
     )
     .returning({ id: capabilities.id });

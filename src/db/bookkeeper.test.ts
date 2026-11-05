@@ -8,6 +8,7 @@ import {
   consumeBookkeeperConfirmation,
   isBookkeeperToken,
   issueBookkeeperConfirmation,
+  keepOnlyNewestBookkeeperStop,
   listBookkeeperShops,
   readBookkeeper,
   releaseBookkeeperMonth,
@@ -359,19 +360,27 @@ describe("the stop link (second-pass N1)", () => {
     expect(await resolveBookkeeperStopToken(db, "not-a-token")).toBeNull();
   });
 
-  it("works from any email to the address on file, and never on an address set after it", async () => {
+  it("works only from the newest delivered email, and never on an address set after it", async () => {
     const db = await unseededTestDb();
     const shopId = await shopRow(db, "books-stop-old");
     await confirmed(db, shopId);
     const october = await claim(db, shopId, "2026-10");
+    if (!october) throw new Error("no claim");
+    await keepOnlyNewestBookkeeperStop(db, { shopId, stopToken: october.stopToken });
     const november = await claim(db, shopId, "2026-11");
-    if (!october || !november) throw new Error("no claim");
-    // Both went to the same inbox: an older email's link still stops it.
-    expect(await resolveBookkeeperStopToken(db, october.stopToken)).toEqual({
+    if (!november) throw new Error("no claim");
+    // November's email is delivered: October's forwarded copy stops nothing
+    // (ADR 20261016, security review N1; l8 review B1).
+    await keepOnlyNewestBookkeeperStop(db, { shopId, stopToken: november.stopToken });
+    expect(await resolveBookkeeperStopToken(db, october.stopToken)).toBeNull();
+    expect(await stopBookkeeperByToken(db, { token: october.stopToken, origin: null })).toBeNull();
+    expect((await readBookkeeper(db, shopId))?.email).toBe(BOOKS);
+    expect(await resolveBookkeeperStopToken(db, november.stopToken)).toEqual({
       shopName: "books-stop-old",
       alreadyStopped: false,
     });
-    // A failed send keeps its link: the email may still have arrived.
+    // A failed send keeps the last delivered email's link, and its own (the
+    // email may still have arrived).
     const december = await claim(db, shopId, "2026-12");
     if (!december) throw new Error("no claim");
     await releaseBookkeeperMonth(db, {
@@ -381,10 +390,11 @@ describe("the stop link (second-pass N1)", () => {
       confirmedAt: december.confirmedAt,
       previous: "2026-11",
     });
+    expect(await resolveBookkeeperStopToken(db, november.stopToken)).not.toBeNull();
     expect(await resolveBookkeeperStopToken(db, december.stopToken)).not.toBeNull();
     // A new address withdraws the links: the old bookkeeper cannot stop the new one.
     await set(db, shopId, "new@example.com");
-    for (const link of [october, november, december]) {
+    for (const link of [november, december]) {
       expect(await resolveBookkeeperStopToken(db, link.stopToken)).toBeNull();
       expect(await stopBookkeeperByToken(db, { token: link.stopToken, origin: null })).toBeNull();
     }
