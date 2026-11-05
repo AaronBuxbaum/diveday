@@ -29,8 +29,8 @@ import {
   getClaimPageState,
   issuePartySeatClaims,
   openMinorSeatWaiver,
-  partyLeadReturnToken,
   partySeatsKeptAfterLeadCancel,
+  partySeatWaiverKey,
 } from "./seat-claims";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
 import { getWaiverSignerOnFile } from "./waiver-signing";
@@ -1167,8 +1167,16 @@ describe("a parent signs a minor seat's release", () => {
       .from(waiverRecords)
       .where(and(eq(waiverRecords.bookingId, mia.bookingId)));
     expect(record).toMatchObject({ bookingId: mia.bookingId, status: "pending" });
-    // The link the parent lands on is Mia's release, and it asks for a guardian.
-    const onPage = await getWaiverForToken(db, opened.token);
+    // The page the parent lands on draws Mia's release, and it asks for a guardian.
+    const door = await partySeatWaiverKey(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+      seatBookingId: mia.bookingId,
+    });
+    expect(door?.door).toBe("sign");
+    if (!door) throw new Error("expected the lead's key to Mia's release");
+    expect(door.key.recordId).toBe(opened.recordId);
+    const onPage = await getWaiverForToken(db, door.key);
     if (onPage.state !== "available")
       throw new Error(`expected a signable link, got ${onPage.state}`);
     expect(onPage.record.bookingId).toBe(mia.bookingId);
@@ -1486,44 +1494,36 @@ describe("a parent signs a minor seat's release", () => {
   });
 
   /**
-   * Dive-domain review F6 of layer r4-1: a parent who signs from the party
-   * panel goes back to their own page, so the next child is one tap away.
-   * The return only ever names the lead's own readiness link, handed in by
-   * the lead's own tap, and only for a seat in that lead's party.
+   * Issue #2743: the lead's key to a child's release is the panel's door, re-read every
+   * time; another lead's, an adult's or the lead's own seat reaches nothing.
    */
-  it("returns the parent to their own page, and nobody else to it", async () => {
-    const { db, shop, lead, mia } = await familyParty();
-    const leadLink = await issueBookingCapability(db, {
+  it("keys only the lead's own open door, and only the receipt once referred", async () => {
+    const { db, shop, lead, mia, lee } = await familyParty();
+    const other = await bookParty(db, shop.id, (await seededContext()).open.id);
+    const opened = await openMinorSeatWaiver(db, {
       shopId: shop.id,
-      bookingId: lead.bookingId,
-      purpose: "readiness",
+      leadBookingId: lead.bookingId,
+      seatBookingId: mia.bookingId,
     });
-    if (!leadLink) throw new Error("expected a readiness link");
-    const miaLink = await issueBookingCapability(db, {
-      shopId: shop.id,
-      bookingId: mia.bookingId,
-      purpose: "readiness",
-    });
-    if (!miaLink) throw new Error("expected a readiness link");
-    expect(
-      await partyLeadReturnToken(db, {
-        shopId: shop.id,
-        seatBookingId: mia.bookingId,
-        leadToken: leadLink.token,
-      }),
-    ).toBe(leadLink.token);
-    // A link that is not the seat's lead, a stranger's string, or another shop: no return.
+    if (!opened.ok) throw new Error("expected the minor's release to open");
     for (const input of [
-      { shopId: shop.id, seatBookingId: mia.bookingId, leadToken: miaLink.token },
-      { shopId: shop.id, seatBookingId: mia.bookingId, leadToken: "not-a-token" },
-      { shopId: shop.id, seatBookingId: lead.bookingId, leadToken: leadLink.token },
+      { shopId: shop.id, leadBookingId: lead.bookingId, seatBookingId: lee.bookingId },
+      { shopId: shop.id, leadBookingId: other.lead.bookingId, seatBookingId: mia.bookingId },
+      { shopId: shop.id, leadBookingId: lead.bookingId, seatBookingId: lead.bookingId },
+      { shopId: shop.id, leadBookingId: mia.bookingId, seatBookingId: mia.bookingId },
       {
         shopId: "00000000-0000-4000-8000-000000000000",
+        leadBookingId: lead.bookingId,
         seatBookingId: mia.bookingId,
-        leadToken: leadLink.token,
       },
     ]) {
-      expect(await partyLeadReturnToken(db, input)).toBeNull();
+      expect(await partySeatWaiverKey(db, input)).toBeNull();
     }
+    const input = { shopId: shop.id, leadBookingId: lead.bookingId, seatBookingId: mia.bookingId };
+    await db
+      .update(waiverRecords)
+      .set({ status: "medical_review", signedAt: new Date(nowMs()) })
+      .where(eq(waiverRecords.id, opened.recordId));
+    expect((await partySeatWaiverKey(db, input))?.door).toBe("physician");
   });
 });

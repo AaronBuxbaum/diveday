@@ -1,16 +1,12 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { emailFreshWaiverLink, type WaiverLinkRescue } from "@/db/waiver-issue";
 import { staleWaiverRecordForToken } from "@/db/waivers";
-import { isCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { PARTY_RETURN_COOKIE, partyReturnCookiePath } from "@/lib/party-return";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-import { waiverReturnPath } from "./return-path";
 import { completeWaiverThrough, type SigningDoor, saveWaiverDraftThrough } from "./signing";
 
 /**
@@ -85,24 +81,10 @@ export async function saveWaiverDraftAction(token: string, formData: FormData) {
 }
 
 export async function completeWaiverAction(token: string, formData: FormData) {
-  const { record, status } = await completeWaiverThrough(await tokenDoor(token), formData);
-  // A waiver link is authority to sign that waiver, not to issue trip prep access.
-  if (isCounterWaiverToken(token)) revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
-  // Show the mandatory physician instructions on the waiver receipt first.
-  if (status === "medical_review") revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
-  // A parent who opened this from their party panel goes back to it, so the
-  // next child's release is one tap away (dive-domain review F6).
-  const jar = await cookies();
-  const partyToken = jar.get(PARTY_RETURN_COOKIE)?.value;
-  if (partyToken) jar.delete({ name: PARTY_RETURN_COOKIE, path: partyReturnCookiePath(token) });
-  const returnPath =
-    record.bookingId && partyToken
-      ? await waiverReturnPath(await getDb(), {
-          shopId: record.shopId,
-          bookingId: record.bookingId,
-          partyToken,
-        })
-      : null;
-  if (returnPath) revalidateAndRedirect(`/waivers/${token}`, returnPath);
+  await completeWaiverThrough(await tokenDoor(token), formData);
+  // Always the receipt, which carries the physician instructions when
+  // referred: a waiver link is authority to sign that waiver, not to open trip
+  // prep. A parent signing a child's seat signs on their own link instead
+  // (`completeMinorWaiver`, issue #2743), so there is nowhere else to return.
   revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
 }

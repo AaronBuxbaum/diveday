@@ -1,17 +1,16 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { openMinorSeatWaiver } from "@/db/seat-claims";
 import { parseForm, single } from "@/lib/form-parse";
 import {
-  PARTY_RETURN_COOKIE,
-  PARTY_RETURN_MAX_AGE_SECONDS,
-  partyReturnCookiePath,
-  partyReturnCookieSecure,
-} from "@/lib/party-return";
-import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";
+  base,
+  bounceTarget,
+  contextFor,
+  partySeatWaiverPath,
+  refuseWhileHeld,
+} from "./action-helpers";
 
 const seatSchema = z.string().uuid();
 
@@ -25,7 +24,9 @@ const seatSchema = z.string().uuid();
  * which of *their* seats: `openMinorSeatWaiver` re-reads that the seat is in
  * this lead's party, in this shop, unclaimed, declared a minor, not held and
  * still owing a release, and refuses anything else with one answer. The
- * waiver link is minted here, on the tap, never printed into the lead's page.
+ * release is signed on the lead's own link (issue #2743), at
+ * `partySeatWaiverPath`: no waiver link is minted, and nothing carries the
+ * lead's token anywhere but the lead's own URL.
  */
 const minorSeatForm = z.object({ bookingId: single(seatSchema) });
 
@@ -41,15 +42,5 @@ export async function signMinorWaiverAction(token: string, formData: FormData) {
     seatBookingId: seat.data.bookingId,
   });
   if (!opened.ok) redirect(`${base(token)}?error=minor-waiver#party-seats`);
-  // Once it is signed, back to this page's party panel, so the next child's
-  // release is one tap away (dive-domain review F6). The lead's own token,
-  // sent only on that release's path; the waiver action re-checks it.
-  (await cookies()).set(PARTY_RETURN_COOKIE, token, {
-    path: partyReturnCookiePath(opened.token),
-    maxAge: PARTY_RETURN_MAX_AGE_SECONDS,
-    sameSite: "lax",
-    httpOnly: true,
-    secure: partyReturnCookieSecure(),
-  });
-  redirect(`/waivers/${opened.token}`);
+  redirect(partySeatWaiverPath(token, seat.data.bookingId));
 }

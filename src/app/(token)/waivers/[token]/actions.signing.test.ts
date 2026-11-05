@@ -289,11 +289,11 @@ describe("the signing doors", () => {
   });
 
   /**
-   * Dive-domain review F6 of layer r4-1: a parent who opened this from their
-   * party panel lands back on it; a link that is not the seat's lead is
-   * ignored, and the signer lands where every signer does.
+   * Issue #2743: a parent signs a child's seat on their own link
+   * (`completeMinorWaiver`), so a waiver link returns to no readiness link,
+   * whatever a cookie says. A lead's token planted beside it goes nowhere.
    */
-  it("send a parent who came from the party panel back to it", async () => {
+  it("never sends a waiver link's signer to a readiness link", async () => {
     const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
@@ -327,72 +327,6 @@ describe("the signing doors", () => {
           signedForm(shop, { signerName: "Sol Seat", acknowledged: "on" }),
         ),
       ),
-    ).toBe(`/ready/${leadLink.token}#party-seats`);
-    expect(cookieJar.has("diveday_party_return")).toBe(false);
-  });
-
-  it("shows a parent the referral instructions before returning to the party", async () => {
-    const { db, shop } = ctx;
-    vi.mocked(getDb).mockResolvedValue(db);
-    const [trip] = await upcomingTripsWithCounts(db, shop.id);
-    if (!trip) throw new Error("seeded shop has no upcoming trip");
-    const party = await createBookingParty(db, [
-      {
-        actor: "public",
-        shopId: shop.id,
-        tripId: trip.id,
-        fullName: "Rae Family",
-        email: "rae.family@example.com",
-      },
-      {
-        actor: "public",
-        shopId: shop.id,
-        tripId: trip.id,
-        fullName: "Sol Family",
-        minorDeclared: true,
-      },
-    ]);
-    if (!party.ok || !party.bookings[0] || !party.bookings[1]) throw new Error("party incomplete");
-    await db
-      .update(people)
-      .set({ dateOfBirth: "2014-05-01" })
-      .where(eq(people.id, party.bookings[1].personId));
-    const readiness = await issueBookingCapability(db, {
-      shopId: shop.id,
-      bookingId: party.bookings[0].bookingId,
-      purpose: "readiness",
-    });
-    const issued = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId: party.bookings[1].bookingId,
-    });
-    if (!issued.ok || !readiness) throw new Error("links unavailable");
-    cookieJar.set("diveday_party_return", readiness.token);
-    const form = signedForm(shop, {
-      signerName: "Sol Family",
-      acknowledged: "on",
-      guardianName: "Rae Family",
-      guardianRelationship: "parent",
-      guardianAcknowledged: "on",
-    });
-    form.set(medicalQuestionField("q3"), "yes");
-    const target = await redirectedTo(() => completeWaiverAction(issued.token, form));
-    expect(target === `/waivers/${issued.token}`).toBe(true);
-    expect(cookieJar.has("diveday_party_return")).toBe(true);
-    const [record] = await db
-      .select()
-      .from(waiverRecords)
-      .where(eq(waiverRecords.id, issued.recordId));
-    expect(record).toMatchObject({ status: "medical_review", guardianName: "Rae Family" });
-    const html = renderToStaticMarkup(
-      await WaiverPage({
-        params: Promise.resolve({ token: issued.token }),
-        searchParams: Promise.resolve({}),
-      }),
-    );
-    const t = diverTranslator("en-US");
-    expect(html).toContain(t("waiver.medicalReferralNext"));
-    expect(html).toContain(t("waiver.doctor.open"));
-    expect(html.includes(`/ready/${readiness.token}#party-seats`)).toBe(true);
+    ).toBe(`/waivers/${issued.token}`);
   });
 });

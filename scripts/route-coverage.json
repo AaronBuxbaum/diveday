@@ -42,6 +42,12 @@
     "e2e": ["booking.spec.ts"],
     "exempt": "No capture of its own: the page is waiverSigningForm, the same form the waiver link draws and the waiver-active, waiver-rail and waiver-rail-follow-ups captures photograph; only the door differs, and it is held against a real record by src/app/(token)/ready/[token]/waiver-actions.test.ts. Reaching it in the visual suite means booking a seat on the demo shop's open trip, which moves every capture that counts that trip's seats (issue #2743)."
   },
+  "/ready/[token]/party/[seatId]/waiver": {
+    "exempt": "The same waiverSigningForm the waiver link draws, which the waiver captures photograph with its guardian card; only the door differs. guardian-co-signature.spec.ts reaches this page by the party panel's Sign tap, and src/app/(token)/ready/[token]/party-waiver-actions.test.ts holds the door against a real record (issue #2743)."
+  },
+  "/ready/[token]/party/[seatId]/waiver/doctor": {
+    "exempt": "The same DoctorReferralBody the waiver link's doctor page draws, which waivers.spec.ts walks and the waiver-doctor capture photographs; only the door differs, and that door (the lead's readiness link, the panel's physician door on the seat, the referral gate) is held against a real record by src/app/(token)/ready/[token]/party-waiver-actions.test.ts (issue #2743)."
+  },
   "/ready/[token]/waiver/doctor": {
     "exempt": "The same DoctorReferralBody the waiver link's doctor page draws, which waivers.spec.ts walks and the waiver-doctor capture photographs; only the door differs, and that door (the readiness link, the seat's own record, the referral gate) is held against a real record by src/app/(token)/ready/[token]/waiver-actions.test.ts (issue #2743)."
   },
