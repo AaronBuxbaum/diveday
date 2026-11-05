@@ -35,10 +35,16 @@ export type DeckCountInput = {
   markedAboard: number;
   /** Expected passengers with no mark at this checkpoint, by name. */
   unmarked: readonly string[];
+  /** Passengers recorded not back aboard at this checkpoint, by name (always none at the dock). */
+  notBackAboard: readonly string[];
 };
 
 export type DeckCountReading = {
-  /** The deck and the manifest say the same number. */
+  /**
+   * The deck, the manifest and the marks all say the same number, and nobody
+   * is recorded not back aboard. Two counts that disagree about a person in
+   * the water never read as agreeing (dock review M1).
+   */
   agrees: boolean;
   counted: number;
   expected: number;
@@ -49,16 +55,30 @@ export type DeckCountReading = {
    */
   marksExceedCount: boolean;
   unmarked: readonly string[];
+  notBackAboard: readonly string[];
 };
+
+/**
+ * **A count older than the newest mark at its checkpoint is stale** (dock
+ * review M2): the marks moved after the captain counted, so the page asks for
+ * a recount rather than agreeing or disagreeing with numbers nobody counted.
+ */
+export function isDeckCountStale(recordedAt: Date, latestMarkAt: Date | null): boolean {
+  return latestMarkAt !== null && latestMarkAt.getTime() > recordedAt.getTime();
+}
 
 /** Hold one deck count against the manifest. Codes and numbers; the page picks the words. */
 export function readDeckCount(input: DeckCountInput): DeckCountReading {
   return {
-    agrees: input.counted === input.expected,
+    agrees:
+      input.counted === input.expected &&
+      input.markedAboard === input.counted &&
+      input.notBackAboard.length === 0,
     counted: input.counted,
     expected: input.expected,
     markedAboard: input.markedAboard,
     marksExceedCount: input.markedAboard > input.counted,
     unmarked: input.unmarked,
+    notBackAboard: input.notBackAboard,
   };
 }

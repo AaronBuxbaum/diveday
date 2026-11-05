@@ -62,17 +62,45 @@ export async function meetingWindowsByTrip(
  */
 export function currentMeetingDayMarks(now: Date = nowDate()): SQL {
   return sql`"roll_call_events"."occurred_at" >= coalesce((
-    select max(day_start.boundary) from (
-      -- Day one has no boundary: no day before it. (least() would skip the null.)
-      select case when lag(d.ends_at) over w is null then null else least(
-        d.starts_at,
-        d.starts_at - (d.starts_at - lag(d.ends_at) over w) / 2
-      ) end as boundary
-      from ${tripScheduleDays} d
-      -- Spelled out: inside a subquery a bare column name would bind to "d".
-      where d.trip_id = "roll_call_events"."trip_id"
-      window w as (order by d.starts_at)
-    ) day_start
+    select max(day_start.boundary) from ${dayBoundaries()} day_start
     where day_start.boundary <= ${now.toISOString()}::timestamptz
   ), '-infinity'::timestamptz)`;
+}
+
+/**
+ * Each later meeting day's roll-call boundary for the row's departure, as a
+ * derived table (`boundary`, null for day one). `rollCallDayStarts`'s rule in
+ * SQL; correlated on `roll_call_events.trip_id`, spelled out because inside a
+ * subquery a bare column name would bind to "d".
+ */
+function dayBoundaries(): SQL {
+  return sql`(
+    select case when lag(d.ends_at) over w is null then null else least(
+      d.starts_at,
+      d.starts_at - (d.starts_at - lag(d.ends_at) over w) / 2
+    ) end as boundary
+    from ${tripScheduleDays} d
+    where d.trip_id = "roll_call_events"."trip_id"
+    window w as (order by d.starts_at)
+  )`;
+}
+
+/**
+ * **The meeting day a roll-call result belongs to** (0-based, `rollCallDayOf`
+ * in SQL): how many day boundaries its `occurred_at` has passed. 0 for every
+ * result on a one-day departure.
+ */
+export function rollCallDayIndex(): SQL<number> {
+  return sql<number>`(
+    select count(*)::int from ${dayBoundaries()} b
+    where b.boundary <= "roll_call_events"."occurred_at"
+  )`;
+}
+
+/** The meeting day being counted at `now` for the row's departure (0-based). */
+export function rollCallCurrentDayIndex(now: Date = nowDate()): SQL<number> {
+  return sql<number>`(
+    select count(*)::int from ${dayBoundaries()} b
+    where b.boundary <= ${now.toISOString()}::timestamptz
+  )`;
 }

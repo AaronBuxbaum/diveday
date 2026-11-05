@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { boardAtDeparture, HOUR, returnedTrip } from "./roll-call-test-fixtures";
-import { rollCallEvents, trips } from "./schema";
+import { rollCallEvents, tripAssignments, trips } from "./schema";
 import { resetDemoSchedule } from "./seed";
 import { latestTripStage, readDepartureStage, recordTripStage } from "./trip-stages";
 import { liveTrip } from "./trips-live";
@@ -63,8 +63,16 @@ describe("readDepartureStage: an after-dive count still open", () => {
     expect((await reading()).finished).toBe(false);
   });
 
-  it("keeps it live when no after-dive count was taken at all", async () => {
+  it("finishes a boat whose shop counts only at the dock: no after-dive count was started", async () => {
     const { reading } = await boat();
+    expect((await reading()).finished).toBe(true);
+  });
+
+  it("keeps it live when a diver was recorded not back aboard", async () => {
+    const { bookingIds, say, reading } = await boat();
+    const [first, second] = bookingIds as [string, string];
+    await say(first, "after_dive_1", "boarded");
+    await say(second, "after_dive_1", "not_boarded");
     expect((await reading()).finished).toBe(false);
   });
 
@@ -85,6 +93,53 @@ describe("readDepartureStage: an after-dive count still open", () => {
       stage: "home",
       recordedByPersonId: staffId,
     });
+    expect((await reading()).finished).toBe(true);
+  });
+});
+
+describe("readDepartureStage: a departure cancelled after boarding", () => {
+  it("never reads finished by the clock, whatever the roll call says (attacker S5)", async () => {
+    const { db, shop } = ctx;
+    const { trip } = await boat();
+    // Boarded at the dock, nobody counted after a dive, then called off.
+    const reading = await readDepartureStage(db, shop.id, trip.id, {
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      now: nowDate(),
+      timeZone: shop.timezone,
+      stage: await latestTripStage(db, shop.id, trip.id),
+      cancelled: true,
+    });
+    expect(reading.finished).toBe(false);
+  });
+});
+
+describe("readDepartureStage: crew counted back at a later dive", () => {
+  it("finishes when a divemaster missing after dive 1 is counted aboard after dive 2 (dock S2)", async () => {
+    const { db, shop } = ctx;
+    const { trip, staffId, bookingIds, say, reading } = await boat();
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: staffId });
+    let minute = 30;
+    const crew = async (checkpoint: string, status: "boarded" | "not_boarded") => {
+      minute += 1;
+      await db.insert(rollCallEvents).values({
+        shopId: shop.id,
+        tripId: trip.id,
+        subjectKind: "crew",
+        crewPersonId: staffId,
+        recordedByPersonId: staffId,
+        status,
+        checkpoint,
+        source: "live",
+        occurredAt: new Date(nowMs() - 5 * HOUR + minute * 60_000),
+      });
+    };
+    await crew("departure", "boarded");
+    await crew("after_dive_1", "not_boarded");
+    await crew("after_dive_2", "boarded");
+    for (const checkpoint of ["after_dive_1", "after_dive_2"]) {
+      for (const id of bookingIds) await say(id, checkpoint, "boarded");
+    }
     expect((await reading()).finished).toBe(true);
   });
 });

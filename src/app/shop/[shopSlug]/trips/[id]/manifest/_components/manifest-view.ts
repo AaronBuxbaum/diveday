@@ -149,7 +149,7 @@ export async function readManifestView({
       locale,
       timeZone: shop.timezone,
       record: read.deckCounts.get(checkpoint) ?? null,
-      facts: deckCountFacts(manifest, checkpoint),
+      facts: deckCountFacts(manifest, checkpoint, completeManifests),
     }),
   };
   const paperIdentity = manifestPaperIdentity(

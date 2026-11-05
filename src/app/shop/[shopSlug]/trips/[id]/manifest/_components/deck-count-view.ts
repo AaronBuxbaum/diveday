@@ -1,6 +1,6 @@
 import type { DeckCountRecord } from "@/db/deck-counts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { readDeckCount } from "@/lib/deck-count";
+import { isDeckCountStale, readDeckCount } from "@/lib/deck-count";
 import { formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { DeckCountCopy } from "./DeckCount";
@@ -38,6 +38,26 @@ export function deckCountView({
     refusal: t("manifest.deckCount.refusal"),
   };
   if (!record) return copy;
+  const recordedLine = t("manifest.deckCount.recordedLine", {
+    name: record.recordedByName,
+    time: formatTime(record.recordedAt, locale, timeZone),
+  });
+  // Marks moved after the captain counted: ask again, never a verdict (M2).
+  if (isDeckCountStale(record.recordedAt, facts.latestMarkAt)) {
+    return {
+      ...copy,
+      reading: {
+        tone: "stale",
+        lines: [
+          t("manifest.deckCount.stale", {
+            counted: record.counted,
+            time: formatTime(record.recordedAt, locale, timeZone),
+          }),
+        ],
+        recordedLine,
+      },
+    };
+  }
   const reading = readDeckCount({ counted: record.counted, ...facts });
   const lines = [
     reading.agrees
@@ -47,6 +67,11 @@ export function deckCountView({
           expected: reading.expected,
         }),
   ];
+  if (reading.notBackAboard.length > 0) {
+    lines.push(
+      t("manifest.deckCount.notBack", { names: namesOf(t, locale, reading.notBackAboard) }),
+    );
+  }
   if (reading.unmarked.length > 0) {
     lines.push(t("manifest.deckCount.unmarked", { names: namesOf(t, locale, reading.unmarked) }));
   }
@@ -58,10 +83,7 @@ export function deckCountView({
     reading: {
       tone: reading.agrees ? "agrees" : "differs",
       lines,
-      recordedLine: t("manifest.deckCount.recordedLine", {
-        name: record.recordedByName,
-        time: formatTime(record.recordedAt, locale, timeZone),
-      }),
+      recordedLine,
     },
   };
 }

@@ -62,7 +62,11 @@ async function course() {
     .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: person.id })
     .returning();
   if (!booking) throw new Error("booking insert failed");
-  const mark = (checkpoint: string, status: "boarded" | "not_boarded", occurredAt: string) =>
+  const mark = (
+    checkpoint: string,
+    status: "boarded" | "not_boarded" | "cleared",
+    occurredAt: string,
+  ) =>
     db.insert(rollCallEvents).values({
       shopId: shop.id,
       tripId: trip.id,
@@ -115,5 +119,41 @@ describe("the roll call a course's manifest shows on its second Saturday", () =>
     expect(
       (await listUnaccountedForByTrip(db, shopId, [trip.id])).get(trip.id)?.has(bookingId),
     ).toBe(true);
+  });
+
+  it("keeps a first-Saturday diver not back aboard on the manifest past the cut, until counted or taken back", async () => {
+    const { db, shopId, trip, bookingId, mark } = await course();
+    await mark("departure", "boarded", "2026-08-01T12:45:00Z");
+    await mark("after_dive_1", "not_boarded", "2026-08-01T15:00:00Z");
+    const seat = async (checkpoint: "departure" | "after_dive_1") =>
+      (await getTripManifest(db, shopId, trip.id, checkpoint))?.divers.find(
+        (diver) => diver.bookingId === bookingId,
+      )?.rollCall?.state;
+    // Past the halfway cut: the dock count starts empty, the search does not.
+    vi.stubEnv("DIVEDAY_CLOCK", "2026-08-10T12:00:00Z");
+    expect(await seat("departure")).toBeUndefined();
+    expect(await seat("after_dive_1")).toBe("not_boarded");
+    // The crew take the mis-tap back from today's manifest.
+    await mark("after_dive_1", "cleared", "2026-08-10T12:05:00Z");
+    expect(await seat("after_dive_1")).toBeUndefined();
+    expect((await listUnaccountedForByTrip(db, shopId, [trip.id])).get(trip.id)).toBeUndefined();
+  });
+
+  it("compares dive numbers within a day: day one's back after dive 2 does not account for day two's dive 1", async () => {
+    const { db, shopId, trip, bookingId, mark } = await course();
+    await mark("after_dive_1", "boarded", "2026-08-01T14:00:00Z");
+    await mark("after_dive_2", "boarded", "2026-08-01T16:00:00Z");
+    await mark("after_dive_1", "not_boarded", "2026-08-15T14:00:00Z");
+    expect(
+      (await listUnaccountedForByTrip(db, shopId, [trip.id])).get(trip.id)?.has(bookingId),
+    ).toBe(true);
+  });
+
+  it("lets a second-Saturday count settle a first-Saturday not-back after a later dive", async () => {
+    const { db, shopId, trip, mark } = await course();
+    await mark("after_dive_2", "not_boarded", "2026-08-01T16:00:00Z");
+    await mark("departure", "boarded", "2026-08-15T12:45:00Z");
+    await mark("after_dive_1", "boarded", "2026-08-15T14:00:00Z");
+    expect((await listUnaccountedForByTrip(db, shopId, [trip.id])).get(trip.id)).toBeUndefined();
   });
 });

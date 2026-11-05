@@ -75,8 +75,11 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
   // on most trips is a warning nobody reads.
   for (const gap of rollCallGaps) {
     const checkpoint = gap.diveNumber >= 1 ? `after_dive_${gap.diveNumber}` : "departure";
+    // A course raises one row per meeting day (#2557): the day keeps the ids
+    // apart, and a one-day trip's id is the same as before.
+    const day = (gap.dayNumber ?? 1) > 1 ? `:day${gap.dayNumber}` : "";
     actions.push({
-      id: `roll-call:${gap.tripId}:${gap.reason}:${checkpoint}`,
+      id: `roll-call:${gap.tripId}:${gap.reason}:${checkpoint}${day}`,
       kind: ROLL_CALL_GAP_KINDS[gap.reason],
       urgency: rollCallGapUrgency(gap.reason, gap.stale),
       subject: gap.title,

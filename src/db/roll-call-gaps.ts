@@ -13,6 +13,7 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { isTurnedAwayOffBoat, isTurnedAwaySeat, rollCallCheckpoints } from "@/lib/manifests";
+import { type DayMark, seenAfter, standingByDay } from "@/lib/roll-call-days";
 import type { RollCallGapReason } from "@/lib/roll-call-gaps";
 import { inAfterDivePopulation, isAccountedForAfterDive } from "@/lib/roll-call-population";
 import { meetingDayWindows, rollCallDayOf, rollCallDayStarts } from "@/lib/trip-days";
@@ -239,9 +240,11 @@ export type OpenRollCall = {
  * two's count, and between a course's two Saturdays nobody is on the water.
  * A person recorded on a later day (any `boarded`) is not missing from an
  * earlier one. The trip still gets at most one diver row, one crew row and
- * one dock row: a stated missing person on any day first (newest day first),
- * then the newest day's open count. A one-day trip is one day over its whole
- * record, exactly as before.
+ * one dock row **per begun meeting day** (#2557 review M1), newest day first,
+ * so an old "not back" never hides a later day's open count; `oneRowPerHalf`
+ * folds them for a reader drawn per departure. A later day's `cleared` takes an
+ * earlier day's "not back" back (`standingByDay`). A one-day trip is one day
+ * over its whole record, exactly as before.
  *
  * **`historical`: the record of named boats, not Today's queue** (issue
  * #2662; review dom-w4-dock B1). The thirty-day residue and the 48-hour dock
@@ -406,25 +409,31 @@ export async function listRollCallGaps(
   const dayOf = (tripId: string | undefined, at: Date) =>
     rollCallDayOf((tripId && dayStartsByTrip.get(tripId)) || [], at);
 
-  // Ordered oldest-first, so the last write per booking, checkpoint *and day* wins.
-  const latestByBookingCheckpoint = new Map<string, (typeof events)[number]>();
+  // Each trip's results filed by meeting day, oldest first, folded by the one
+  // rule every roll-call reader shares (`standingByDay`, src/lib/roll-call-days.ts):
+  // the newest word per person, checkpoint and day stands, and a later day's
+  // `cleared` takes an earlier day's "not back" back.
+  type DiverMark = (typeof events)[number] & DayMark;
+  type CrewMark = (typeof crewEvents)[number] & DayMark;
+  const diverMarksByTrip = new Map<string, DiverMark[]>();
   for (const event of events) {
-    const day = dayOf(tripOfBooking.get(event.bookingId), event.occurredAt);
-    latestByBookingCheckpoint.set(`${day}\0${event.bookingId}\0${event.checkpoint}`, event);
+    const tripId = tripOfBooking.get(event.bookingId);
+    if (!tripId) continue;
+    const marks = diverMarksByTrip.get(tripId) ?? [];
+    marks.push({ ...event, subject: event.bookingId, day: dayOf(tripId, event.occurredAt) });
+    diverMarksByTrip.set(tripId, marks);
   }
 
-  // The crew half, keyed the same way and superseded by the same rule. The
-  // crew "roster" for a trip is whoever has a result on it: a shop that has
-  // never tapped a crew roll call has no crew subjects here, so it raises no
-  // crew rows at all rather than a red row on every trip it ever ran.
+  // The crew half, filed the same way. The crew "roster" for a trip is whoever
+  // has a result on it: a shop that has never tapped a crew roll call has no
+  // crew subjects here, so it raises no crew rows at all rather than a red row
+  // on every trip it ever ran.
   const crewByTripId = new Map<string, Set<string>>();
-  const latestByCrewCheckpoint = new Map<string, (typeof crewEvents)[number]>();
+  const crewMarksByTrip = new Map<string, CrewMark[]>();
   for (const event of crewEvents) {
-    const day = dayOf(event.tripId, event.occurredAt);
-    latestByCrewCheckpoint.set(
-      `${day}\0${event.tripId}\0${event.personId}\0${event.checkpoint}`,
-      event,
-    );
+    const marks = crewMarksByTrip.get(event.tripId) ?? [];
+    marks.push({ ...event, subject: event.personId, day: dayOf(event.tripId, event.occurredAt) });
+    crewMarksByTrip.set(event.tripId, marks);
     const people = crewByTripId.get(event.tripId) ?? new Set<string>();
     people.add(event.personId);
     crewByTripId.set(event.tripId, people);
@@ -442,6 +451,9 @@ export async function listRollCallGaps(
     if (bookingIds.length === 0 && crewIds.length === 0) continue;
     const checkpoints = rollCallCheckpoints(trip.plannedDives);
     const days = daysByTrip.get(trip.id) ?? [];
+    const dayStarts = dayStartsByTrip.get(trip.id) ?? [];
+    const diverStanding = standingByDay(diverMarksByTrip.get(trip.id) ?? []);
+    const crewStanding = standingByDay(crewMarksByTrip.get(trip.id) ?? []);
     const stateOf = (
       event: { status: "boarded" | "not_boarded" | "cleared" } | undefined,
     ): "boarded" | "not_boarded" | undefined =>
@@ -450,36 +462,59 @@ export async function listRollCallGaps(
       // state decides a head count; the recorder's name and note are the
       // manifest's display fields, so they are deliberately not queried.
       !event || event.status === "cleared" ? undefined : event.status;
-    const diverStates = (day: number, bookingId: string) =>
-      checkpoints.map((checkpoint) =>
-        stateOf(latestByBookingCheckpoint.get(`${day}\0${bookingId}\0${checkpoint}`)),
-      );
-    const crewStates = (day: number, personId: string) =>
-      checkpoints.map((checkpoint) =>
-        stateOf(latestByCrewCheckpoint.get(`${day}\0${trip.id}\0${personId}\0${checkpoint}`)),
-      );
+    // **Dives numbered on across the run.** A later day whose first result is
+    // at a later checkpoint (a weekend course logging dives 3 and 4 on day
+    // two) carries on the earlier days' numbering: the checkpoints below it
+    // read the earlier days' results, not an empty count. A day whose results
+    // start at the dock, or that has none yet, counts every checkpoint afresh.
+    const firstCheckpointOf = (day: number) => {
+      if (day === 0) return 0;
+      let first = Number.POSITIVE_INFINITY;
+      for (const standing of [diverStanding.get(day), crewStanding.get(day)]) {
+        for (const mark of standing?.values() ?? []) {
+          const index = (checkpoints as readonly string[]).indexOf(mark.checkpoint);
+          if (index >= 0 && index < first) first = index;
+        }
+      }
+      return Number.isFinite(first) ? first : 0;
+    };
+    const statesOf =
+      (standing: typeof diverStanding | typeof crewStanding) => (day: number, subject: string) => {
+        const first = firstCheckpointOf(day);
+        return checkpoints.map((checkpoint, index) => {
+          const key = `${subject}\u0000${checkpoint}`;
+          if (index >= first) return stateOf(standing.get(day)?.get(key));
+          for (let earlier = day - 1; earlier >= 0; earlier--) {
+            const mark = standing.get(earlier)?.get(key);
+            if (mark) return stateOf(mark);
+          }
+          return undefined;
+        });
+      };
+    const diverStates = statesOf(diverStanding);
+    const crewStates = statesOf(crewStanding);
 
-    // Every meeting day that has begun, newest first; a day that only ended
-    // longer ago than the residue window is history, not Today's.
+    // Every meeting day that has begun, newest first: its window has opened,
+    // or its roll-call boundary has passed and somebody was counted on it (a
+    // boat that left before the hours on file still raises a "not back" at
+    // once). A day that only ended longer ago than the residue window is
+    // history, not Today's.
     const begun = days
       .map((window, index) => ({ window, index }))
       .filter(
-        ({ window }) =>
-          window.startsAt.getTime() <= now.getTime() &&
+        ({ window, index }) =>
+          (window.startsAt.getTime() <= now.getTime() ||
+            ((dayStarts[index] ?? Number.POSITIVE_INFINITY) <= now.getTime() &&
+              ((diverStanding.get(index)?.size ?? 0) > 0 ||
+                (crewStanding.get(index)?.size ?? 0) > 0))) &&
           (historical || window.endsAt.getTime() >= now.getTime() - ROLL_CALL_RESIDUE_MS),
       )
       .reverse();
-    let diverRow: OpenRollCall | undefined;
-    let diverOpenRow: OpenRollCall | undefined;
-    let crewRow: OpenRollCall | undefined;
-    let crewOpenRow: OpenRollCall | undefined;
-    let dockRow: OpenRollCall | undefined;
+    // **One head count per meeting day** (#2557 review M1): each begun day
+    // puts out its own rows, newest day first, so a first-Saturday "not back"
+    // never takes the place of the second Saturday's open count on Today, the
+    // board or the stale alert. A one-day trip has one day, as before.
     for (const { window, index: day } of begun) {
-      // Somebody counted back aboard on a later meeting day is not lost from
-      // an earlier one: they stood on the dock since.
-      const laterDays = days.map((_, later) => later).filter((later) => later > day);
-      const seenLater = (states: (later: number) => ReturnType<typeof diverStates>) =>
-        laterDays.some((later) => states(later).includes("boarded"));
       const found = dayGaps({
         trip,
         window,
@@ -492,38 +527,58 @@ export async function listRollCallGaps(
         turnedAwayIds,
         diverStates: (bookingId) => diverStates(day, bookingId),
         crewStates: (personId) => crewStates(day, personId),
-        diverSeenLater: (bookingId) => seenLater((later) => diverStates(later, bookingId)),
-        crewSeenLater: (personId) => seenLater((later) => crewStates(later, personId)),
+        // Somebody counted back aboard on a later meeting day is not lost
+        // from an earlier one: they stood on the dock since.
+        diverSeenLater: (bookingId) => seenAfter(diverStanding, bookingId, day),
+        crewSeenLater: (personId) => seenAfter(crewStanding, personId, day),
         latestEventAt: (checkpoint) => {
           let latest: Date | null = null;
-          const standing = [
-            ...bookingIds.map((bookingId) =>
-              latestByBookingCheckpoint.get(`${day}\0${bookingId}\0${checkpoint}`),
-            ),
-            ...crewIds.map((personId) =>
-              latestByCrewCheckpoint.get(`${day}\0${trip.id}\0${personId}\0${checkpoint}`),
-            ),
-          ];
-          for (const event of standing) {
-            if (!event || event.status === "cleared") continue;
-            if (!latest || event.occurredAt > latest) latest = event.occurredAt;
+          for (const standing of [diverStanding.get(day), crewStanding.get(day)]) {
+            for (const event of standing?.values() ?? []) {
+              if (event.checkpoint !== checkpoint || event.status === "cleared") continue;
+              if (!latest || event.occurredAt > latest) latest = event.occurredAt;
+            }
           }
           return latest;
         },
       });
-      // A stated missing person on any day outranks every count left open,
-      // the newest day's first; then the newest day's open count.
-      if (!diverRow && found.diver?.reason === "missing_diver") diverRow = found.diver;
-      diverOpenRow ??= found.diver;
-      if (!crewRow && found.crew?.reason === "missing_crew") crewRow = found.crew;
-      crewOpenRow ??= found.crew;
-      dockRow ??= found.dock;
-    }
-    for (const row of [diverRow ?? diverOpenRow, crewRow ?? crewOpenRow, dockRow]) {
-      if (row) gaps.push(row);
+      for (const row of [found.diver, found.crew, found.dock]) if (row) gaps.push(row);
     }
   }
   return gaps;
+}
+
+/**
+ * **One row per half per departure**, for a reader drawn per departure rather
+ * than per meeting day (the day's close-out, which subtracts one gap per
+ * station): a stated missing person on any day first, newest day first, then
+ * the newest day's open count; the newest day's dock row. A one-day trip's
+ * rows pass through unchanged.
+ */
+export function oneRowPerHalf<G extends Pick<OpenRollCall, "tripId" | "reason" | "dayNumber">>(
+  gaps: readonly G[],
+): G[] {
+  const half = (reason: G["reason"]) =>
+    reason === "missing_diver" || reason === "after_dive_uncounted"
+      ? "diver"
+      : reason === "missing_crew" || reason === "crew_uncounted"
+        ? "crew"
+        : "dock";
+  const kept = new Map<string, G>();
+  for (const gap of gaps) {
+    const key = `${gap.tripId}\u0000${half(gap.reason)}`;
+    const current = kept.get(key);
+    const missing = (row: G) => row.reason === "missing_diver" || row.reason === "missing_crew";
+    const newer = (gap.dayNumber ?? 1) > (current?.dayNumber ?? 1);
+    if (
+      !current ||
+      (missing(gap) && !missing(current)) ||
+      (missing(gap) === missing(current) && newer)
+    ) {
+      kept.set(key, gap);
+    }
+  }
+  return gaps.filter((gap) => [...kept.values()].includes(gap));
 }
 
 /**
@@ -616,6 +671,10 @@ function dayGaps(input: {
       crewPopulation[dive] = (crewPopulation[dive] ?? 0) + 1;
       if (state !== undefined) crewRecorded[dive] = (crewRecorded[dive] ?? 0) + 1;
       if (isAccountedForAfterDive(state) || seenLater) continue;
+      // The latest checkpoint speaks for crew as it does for divers above: a
+      // divemaster "not back" after dive 1 and counted aboard after dive 2
+      // is back (dock review S2 of #3884).
+      if (state === "not_boarded" && states.slice(dive + 1).includes("boarded")) continue;
       crewUnaccounted[dive] = (crewUnaccounted[dive] ?? 0) + 1;
       if (state === "not_boarded") crewNotBackAboard[dive] = (crewNotBackAboard[dive] ?? 0) + 1;
     }
@@ -630,8 +689,9 @@ function dayGaps(input: {
   const latestMarkAt =
     latestMarkedDive > 0 ? input.latestEventAt(checkpoints[latestMarkedDive] as string) : null;
 
-  // An owners' alert sent before this day began was about an earlier day.
-  const sinceDay = (at: Date | null) => (at && at >= window.startsAt ? at : null);
+  // An owners' alert is only due once a day ends: one sent before this day
+  // ended was about an earlier day (#2557 review).
+  const sinceDay = (at: Date | null) => (at && at >= window.endsAt ? at : null);
   const base = {
     tripId: trip.id,
     title: trip.title,

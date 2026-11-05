@@ -1,7 +1,7 @@
 import { isValidCalendarDate } from "./calendar-date";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "./money";
 import { paymentGateIsUnclearable } from "./readiness";
-import { type MeetingDayHours, meetingDaysFor } from "./trip-days";
+import { type MeetingDayHours, meetingDaysFor, wallWindowEnd } from "./trip-days";
 import { parseWallTime, wallTimeToUtc } from "./zoned";
 
 /**
@@ -152,12 +152,16 @@ export function tripDetailsPatch(
   const invalid = { ok: false, reason: "invalid" } as const;
 
   const startWall = parseWallTime(fields.date, fields.startTime);
-  const endWall = parseWallTime(fields.date, fields.endTime);
+  const typedEndWall = parseWallTime(fields.date, fields.endTime);
   // `parseWallTime` accepts a shape; `isValidCalendarDate` accepts a *day* — and
   // a series stores this string as the anchor its whole cadence is counted from,
   // so "2026-02-31" has to die here rather than three months later. The trip
   // edit form checked only the shape until this module existed.
-  if (!startWall || !endWall || !isValidCalendarDate(fields.date)) return invalid;
+  if (!startWall || !typedEndWall || !isValidCalendarDate(fields.date)) return invalid;
+  // A night out that runs past midnight ends the next morning (#2557 review);
+  // an end before the start past one night's length is a mistake to fix.
+  const endWall = wallWindowEnd(startWall, typedEndWall);
+  if (!endWall) return { ok: false, reason: "end_before_start" };
 
   // The times must be a coherent single day before we shift them across days or
   // weeks; every meeting day and every occurrence inherits this wall-clock

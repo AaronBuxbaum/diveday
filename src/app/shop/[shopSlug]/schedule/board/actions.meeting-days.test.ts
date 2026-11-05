@@ -189,6 +189,26 @@ describe("adding a course that meets on named days", () => {
     expect(await departures(db, shop.id)).toEqual([]);
   });
 
+  // #2557 review (dock M3): a night course past midnight saves as it is.
+  it("adds a night course that runs past midnight, each night ending the next morning", async () => {
+    const { db, shop } = await signedInOwner();
+    const form = courseForm(shop.timezone, [7], { startTime: "20:00", endTime: "01:00" });
+    form.append("meetingStart", "20:00");
+    form.append("meetingEnd", "01:00");
+    expect(await redirectedTo(() => addDepartureAction(shop.slug, form))).toContain(
+      "builder=added",
+    );
+    const [trip] = await departures(db, shop.id);
+    const days = await db
+      .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, trip.id))
+      .orderBy(asc(tripScheduleDays.dayNumber));
+    expect(days.map((day) => (day.endsAt.getTime() - day.startsAt.getTime()) / 3_600_000)).toEqual([
+      5, 5,
+    ]);
+  });
+
   it("refuses days that do not run forward and adds nothing", async () => {
     const { db, shop } = await signedInOwner();
     const form = courseForm(shop.timezone, [2, 1]);

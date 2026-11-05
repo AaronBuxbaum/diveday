@@ -42,9 +42,9 @@ import {
   type RentalFitItem,
   toDiverRentalFit,
 } from "./rental-fit";
-import { bookings, cards, people, shops, trips } from "./schema";
+import { bookings, cards, people, shops, tripScheduleDays, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBookedOnce, listTripScheduleDays } from "./trips";
+import { getTripWithBookedOnce } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 import { diveDayCountForSeat, welcomeCueInputsByBooking } from "./welcome-cues";
 
@@ -536,6 +536,15 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       noCertificationClearedAt: people.noCertificationClearedAt,
       tripStartsAt: trips.startsAt,
       tripCourseId: trips.courseId,
+      // The departure's meeting days in this same statement (#2558), in day
+      // order, so the masthead's day list costs no read of its own.
+      meetingDayRows: sql<{ startsAt: string; endsAt: string }[] | null>`(
+        select json_agg(
+          json_build_object('startsAt', d.starts_at, 'endsAt', d.ends_at) order by d.day_number
+        )
+        from ${tripScheduleDays} d
+        where d.trip_id = ${trips.id}
+      )`,
       tripLunchAboard: trips.lunchAboard,
       // Any live card of any kind, verified or not: whether a course student
       // has dives to log (`packsLogbook`, issue #2795). A nitrox or Deep card
@@ -579,7 +588,6 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     pendingMoveAsk,
-    meetingDays,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
@@ -620,12 +628,15 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     row.identityUnconfirmedAt === null
       ? getPendingMoveAsk(db, row.shopId, bookingId, row.tripId)
       : null,
-    // How many days a course session meets on, for its own day plan
-    // (`SessionDayPlan`, issue #2795); a charter says no plan day.
-    // Every departure's, so a multi-day run lists its days and hours (#2558).
-    listTripScheduleDays(db, row.shopId, row.tripId),
   ]);
   if (!trip) return null;
+  // How many days a course session meets on, for its own day plan
+  // (`SessionDayPlan`, issue #2795); a charter says no plan day. Every
+  // departure's days, so a multi-day run lists its days and hours (#2558).
+  const meetingDays = (row.meetingDayRows ?? []).map((day) => ({
+    startsAt: new Date(day.startsAt),
+    endsAt: new Date(day.endsAt),
+  }));
   return {
     row,
     trip,
@@ -645,7 +656,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     // Nothing is read off a held seat's matched person, so a held seat holds none.
     holdsCertification: row.identityUnconfirmedAt === null && row.holdsAnyCertification,
     meetingDayCount: row.tripCourseId !== null ? meetingDays.length : 0,
-    meetingDays: meetingDays.map((day) => ({ startsAt: day.startsAt, endsAt: day.endsAt })),
+    meetingDays,
   };
 }
 
