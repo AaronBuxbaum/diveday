@@ -32,7 +32,7 @@ import { trips } from "./trips";
  * typed into settings (issue #1288). Minted on every save that changes
  * `shops.contact_email` and on a "resend" tap; the link goes to that address
  * and nowhere else, so opening it is the proof. Same lifecycle as
- * `accountTokens` rather than the never-expiring unsubscribe tokens: a fresh
+ * the account tokens rather than the never-expiring unsubscribe tokens: a fresh
  * mint supersedes the outstanding one, consuming is one-time, and it expires --
  * an unconfirmed address costs the shop nothing but Reply-To, so a stale link
  * has nobody to lock out. `email` is the address the token vouches for, so a

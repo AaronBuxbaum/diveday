@@ -8,10 +8,7 @@ import {
   UNBOUNDED_BY_DECISION,
 } from "@/lib/retention";
 import { fileScopedShopContext } from "@/test/db";
-import {
-  accountTokenForRetention,
-  pendingSignInForRetention,
-} from "@/test/retention-account-tokens";
+import { pendingSignInForRetention } from "@/test/retention-pending-sign-in";
 import { setupRequestForRetention } from "@/test/retention-setup-request";
 import { schemaTableNames } from "@/test/schema-tables";
 import { getBookingPayment, setBookingPayment } from "./payments";
@@ -21,7 +18,6 @@ import { OUTSIDE_RETENTION } from "./retention-table-classification.test-support
 import * as schema from "./schema";
 import {
   accountSessions,
-  accountTokens,
   activityEvents,
   bookingPaymentEvents,
   notificationDeliveries,
@@ -178,44 +174,6 @@ describe("pruneExpiredRecords", () => {
       .where(eq(activityEvents.shopId, shop.id));
     // The seeded rows plus the one recent insert; the ancient one is gone.
     expect(activity).toHaveLength(seededActivity.length + 1);
-  });
-
-  // The one arm measured from a column that is not "when it happened". A live
-  // credential is never eligible at any age; the window runs from expiry.
-  it("prunes only long-expired account tokens, never a live one", async () => {
-    const { db, owner } = await retentionContext();
-    if (!owner) throw new Error("seeded user account missing");
-    const window = RETENTION_DAYS.account_tokens;
-    await db.insert(accountTokens).values([
-      {
-        userAccountId: owner.id,
-        purpose: "password_reset",
-        tokenHash: "hash-long-dead",
-        expiresAt: daysAgo(window + 1),
-      },
-      {
-        userAccountId: owner.id,
-        purpose: "password_reset",
-        tokenHash: "hash-recently-dead",
-        expiresAt: daysAgo(window - 1),
-      },
-      {
-        // Issued a decade ago is impossible, but "very old row, still live" is
-        // the shape that must survive: eligibility is expiry, not age.
-        userAccountId: owner.id,
-        purpose: "email_verification",
-        tokenHash: "hash-still-live",
-        expiresAt: new Date(NOW.getTime() + 60 * 60 * 1000),
-      },
-    ]);
-
-    const summary = await pruneExpiredRecords(db, { now: NOW });
-    expect(outcomeFor(summary, "account_tokens").deleted).toBe(1);
-    const remaining = await db.select({ tokenHash: accountTokens.tokenHash }).from(accountTokens);
-    expect(remaining.map((row) => row.tokenHash).sort()).toEqual([
-      "hash-recently-dead",
-      "hash-still-live",
-    ]);
   });
 
   // A session carries its device's IP address and user agent. It ages out on
@@ -626,7 +584,6 @@ const STALE_AND_FRESH = {
         .returning({ id: schema.activityEvents.id }),
     ),
   account_sign_in_challenges: pendingSignInForRetention,
-  account_tokens: accountTokenForRetention,
   account_sessions: async ({ db, shop, owner, people }, at) =>
     idOf(
       await db

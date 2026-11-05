@@ -5,6 +5,7 @@ import { purposesNaming } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
+  ACCOUNT_TOKEN_RETENTION_DAYS,
   deskLineRetentionCutoff,
   dietaryNoteCutoff,
   PRUNE_BATCH_LIMIT,
@@ -17,7 +18,6 @@ import { boundLockWaits } from "./lock-bounds";
 import {
   accountSessions,
   accountSignInChallenges,
-  accountTokens,
   activityEvents,
   assistResults,
   bookingCapabilities,
@@ -325,17 +325,7 @@ export const PRUNE_ARMS = {
         lt(activityEvents.occurredAt, deskLineRetentionCutoff(now)),
       ),
   },
-  // The one arm measured from a column that is not "when it happened":
-  // `expires_at` is when the credential stopped being usable, so the window is
-  // "90 days after it went dead", and a token still live at any age is never
-  // eligible. A used or superseded token still carries its original
-  // `expires_at`, so it ages out on the same clock.
-  account_tokens: {
-    from: accountTokens,
-    id: accountTokens.id,
-    clock: accountTokens.expiresAt,
-  },
-  // Same clock as account_tokens. A session past its own `expires_at` is one the
+  // Same clock as the account tokens (the `capabilities` arm below). A session past its own `expires_at` is one the
   // auth layer already refuses; deleting it takes its IP address and user agent
   // with it, and its step-up grants cascade away.
   account_sign_in_challenges: {
@@ -348,7 +338,7 @@ export const PRUNE_ARMS = {
     id: accountSessions.id,
     clock: accountSessions.expiresAt,
   },
-  // Same shape and same clock as account_tokens: measured from each link's
+  // Same shape and same clock as the account tokens: measured from each link's
   // own `expires_at`, so a live confirmation link is never eligible.
   shop_contact_email_confirmation_tokens: {
     from: shopContactEmailConfirmationTokens,
@@ -362,12 +352,18 @@ export const PRUNE_ARMS = {
   // (`weekly_digest_sends`' window, security review D1): their clock is moved
   // forward by the difference, so one table window serves both. An unsubscribe
   // link of an interest or a person's courtesy email goes with its subject.
+  // The account tokens are measured from `expires_at`, when the credential
+  // stopped being usable, so their window is "90 days after it went dead" and
+  // a token still live at any age is never eligible; a used or superseded one
+  // still carries its original `expires_at`, so it ages out on the same clock.
+  // Each clock is moved by the difference from the table's window.
   capabilities: {
     from: capabilities,
     id: capabilities.id,
-    clock: sql`case when ${capabilities.purpose} = 'weekly_digest_unsubscribe' then ${capabilities.issuedAt} + make_interval(days => ${sql.raw(String(RETENTION_DAYS.weekly_digest_sends - RETENTION_DAYS.capabilities))}) else ${capabilities.issuedAt} end`,
+    clock: sql`case when ${capabilities.purpose} = 'weekly_digest_unsubscribe' then ${capabilities.issuedAt} + make_interval(days => ${sql.raw(String(RETENTION_DAYS.weekly_digest_sends - RETENTION_DAYS.capabilities))}) when ${capabilities.userAccountId} is not null then ${capabilities.expiresAt} + make_interval(days => ${sql.raw(String(ACCOUNT_TOKEN_RETENTION_DAYS - RETENTION_DAYS.capabilities))}) else ${capabilities.issuedAt} end`,
     extraWhere: inArray(capabilities.purpose, [
       ...purposesNaming("shop_address"),
+      ...purposesNaming("user_account"),
       "weekly_digest_unsubscribe",
     ]),
   },

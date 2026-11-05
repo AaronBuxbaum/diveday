@@ -1,0 +1,449 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a6f820ca-faa8-4ad8-a3ba-63ba6bf44569",
+  "prevIds": [
+    "a83bb21f-a97c-4083-a12c-f17f1d61fcae"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "capability_purpose"
+      ],
+      "writes": [
+        "s|enum|public.capability_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_tokens"
+      ],
+      "writes": [
+        "s|tbl|public.account_tokens",
+        "n|tbl|public.account_tokens",
+        "e|tbl|public.account_tokens",
+        "n|rel|public.account_tokens",
+        "n|type|public.account_tokens"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "capabilities",
+        "user_account_id"
+      ],
+      "writes": [
+        "s|col|public.capabilities.user_account_id",
+        "n|col|public.capabilities.user_account_id",
+        "e|col|public.capabilities.user_account_id"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "capabilities",
+        "shop_id"
+      ],
+      "writes": [
+        "s|colprop|public.capabilities.shop_id.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.shop_id"
+      ],
+      "sqlHash": "46f36b21f6b83b87"
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "capabilities",
+        "capabilities_user_account_idx"
+      ],
+      "writes": [
+        "s|idx|public.capabilities_user_account_idx",
+        "n|idx|public.capabilities_user_account_idx",
+        "e|idx|public.capabilities_user_account_idx",
+        "n|rel|public.capabilities_user_account_idx"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.user_account_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "capabilities",
+        "capabilities_live_account_purpose_idx"
+      ],
+      "writes": [
+        "s|idx|public.capabilities_live_account_purpose_idx",
+        "n|idx|public.capabilities_live_account_purpose_idx",
+        "e|idx|public.capabilities_live_account_purpose_idx",
+        "n|rel|public.capabilities_live_account_purpose_idx"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.user_account_id",
+        "n|col|public.capabilities.purpose"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|fk|public.capabilities.capabilities_user_account_id_user_accounts_id_fkey",
+        "n|fk|public.capabilities.capabilities_user_account_id_user_accounts_id_fkey",
+        "e|fk|public.capabilities.capabilities_user_account_id_user_accounts_id_fkey",
+        "n|con|public.capabilities.capabilities_user_account_id_user_accounts_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|tbl|public.user_accounts",
+        "n|sch|public",
+        "n|col|public.capabilities.user_account_id",
+        "n|col|public.user_accounts.id",
+        "e|uniqueness|public.user_accounts.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_scope_by_purpose",
+        "n|ck|public.capabilities.capabilities_scope_by_purpose",
+        "e|ck|public.capabilities.capabilities_scope_by_purpose",
+        "n|con|public.capabilities.capabilities_scope_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.shop_id",
+        "n|col|public.capabilities.purpose"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_subject_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.purpose",
+        "n|col|public.capabilities.interest_id",
+        "n|col|public.capabilities.person_id",
+        "n|col|public.capabilities.sent_to",
+        "n|col|public.capabilities.user_account_id",
+        "e|col|public.capabilities.purpose",
+        "e|col|public.capabilities.interest_id",
+        "e|col|public.capabilities.person_id",
+        "e|col|public.capabilities.sent_to"
+      ],
+      "sqlHash": "a1983bed6e5cf6e4"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_used_only_when_spent"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.used_at",
+        "n|col|public.capabilities.purpose",
+        "e|col|public.capabilities.used_at",
+        "e|col|public.capabilities.purpose"
+      ],
+      "sqlHash": "05b3b13b41f6f041"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_expiry_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.expires_at",
+        "n|col|public.capabilities.purpose",
+        "e|col|public.capabilities.expires_at",
+        "e|col|public.capabilities.purpose"
+      ],
+      "sqlHash": "01eeea9bc9e32175"
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "account_token_purpose"
+      ],
+      "writes": [
+        "s|enum|public.account_token_purpose",
+        "n|enum|public.account_token_purpose",
+        "e|enum|public.account_token_purpose",
+        "n|type|public.account_token_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "user_account_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_user_account_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_account_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_live_account_purpose_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_account_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "purpose",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"user_account_id\" is not null and \"used_at\" is null and \"revoked_at\" is null",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_user_account_id_user_accounts_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "user_account_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user_accounts",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_scope_by_purpose",
+        "value": "(\"shop_id\" is null) = (\"purpose\"::text in ('email_verification', 'password_reset', 'invite'))",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"account_tokens\"]"
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"account_token_purpose\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"account_tokens\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"account_tokens\",\"user_account_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"account_tokens\",\"purpose\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"account_tokens\",\"token_hash\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"account_tokens\",\"expires_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"account_tokens\",\"used_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"account_tokens\",\"superseded_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"account_tokens\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"account_tokens_account_purpose_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"account_tokens\",\"account_tokens_user_account_id_user_accounts_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"account_tokens\",\"account_tokens_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "uniques\u0000[\"public\",\"account_tokens\",\"account_tokens_token_hash_key\"]"
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"capability_purpose\"]",
+      "set": {
+        "values": [
+          "interest_unsubscribe",
+          "courtesy_email_unsubscribe",
+          "weekly_digest_unsubscribe",
+          "shore_alert_stop",
+          "bookkeeper_stop",
+          "shore_alert_confirm",
+          "email_verification",
+          "password_reset",
+          "invite"
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"capabilities\",\"shop_id\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_subject_by_purpose\"]",
+      "set": {
+        "value": "(\"purpose\"::text in ('interest_unsubscribe') and \"interest_id\" is not null and \"person_id\" is null and \"sent_to\" is null and \"user_account_id\" is null)\n        or (\"purpose\"::text in ('courtesy_email_unsubscribe', 'weekly_digest_unsubscribe') and \"person_id\" is not null and \"interest_id\" is null and \"sent_to\" is null and \"user_account_id\" is null)\n        or (\"purpose\"::text in ('shore_alert_stop', 'bookkeeper_stop', 'shore_alert_confirm') and \"sent_to\" is not null and \"sent_to\" = lower(\"sent_to\") and \"person_id\" is null and \"interest_id\" is null and \"user_account_id\" is null)\n        or (\"purpose\"::text in ('email_verification', 'password_reset', 'invite') and \"user_account_id\" is not null and \"person_id\" is null and \"interest_id\" is null and \"sent_to\" is null)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_used_only_when_spent\"]",
+      "set": {
+        "value": "\"used_at\" is null or \"purpose\"::text in ('shore_alert_stop', 'bookkeeper_stop', 'shore_alert_confirm', 'email_verification', 'password_reset', 'invite')"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_expiry_by_purpose\"]",
+      "set": {
+        "value": "(\"expires_at\" is not null) = (\"purpose\"::text in ('shore_alert_confirm', 'email_verification', 'password_reset', 'invite'))"
+      }
+    }
+  ]
+}

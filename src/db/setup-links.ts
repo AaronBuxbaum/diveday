@@ -1,5 +1,5 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
-import { createAccountToken, hashAccountToken } from "@/lib/account-tokens";
+import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import { isSetupLinkTokenShape, SETUP_LINK_TTL_MS } from "@/lib/setup-links";
 import type { DbExecutor } from "./client";
@@ -18,10 +18,10 @@ export async function issueSetupLink(
   input: { setupRequestId: string; now?: Date },
 ): Promise<IssuedSetupLink> {
   const now = input.now ?? nowDate();
-  const token = createAccountToken();
+  const token = createBearerToken();
   const expiresAt = new Date(now.getTime() + SETUP_LINK_TTL_MS);
   await db.insert(shopSetupLinks).values({
-    tokenHash: hashAccountToken(token),
+    tokenHash: hashBearerToken(token),
     setupRequestId: input.setupRequestId,
     expiresAt,
     createdAt: now,
@@ -38,7 +38,7 @@ export type OpenSetupLink = {
 
 function openLinkCondition(token: string, now: Date) {
   return and(
-    eq(shopSetupLinks.tokenHash, hashAccountToken(token)),
+    eq(shopSetupLinks.tokenHash, hashBearerToken(token)),
     isNull(shopSetupLinks.spentAt),
     gt(shopSetupLinks.expiresAt, now),
   );
@@ -99,7 +99,7 @@ export async function recordSetupLinkShop(
   const [row] = await db
     .update(shopSetupLinks)
     .set({ spentByShopId: shopId })
-    .where(eq(shopSetupLinks.tokenHash, hashAccountToken(token)))
+    .where(eq(shopSetupLinks.tokenHash, hashBearerToken(token)))
     .returning({ setupRequestId: shopSetupLinks.setupRequestId });
   return row ?? null;
 }

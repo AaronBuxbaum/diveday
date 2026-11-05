@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { consumeAccountToken, issueAccountToken } from "./account-tokens";
 import type { AppDb } from "./client";
-import { accountTokens, people, shops, userAccounts } from "./schema";
+import { capabilities, people, shops, userAccounts } from "./schema";
 
 /**
  * One-time account tokens under genuine contention (A§4 item 8).
@@ -21,8 +21,8 @@ import { accountTokens, people, shops, userAccounts } from "./schema";
  *
  * Each test asserts the outcome (one consumer, one live token), never who won;
  * the gate only makes the contenders simultaneous (docs/engineering/testing.md,
- * "Reading a race test correctly"). Removing `isNull(accountTokens.usedAt)`
- * from the consume makes both taps succeed; removing the account-row lock
+ * "Reading a race test correctly"). Removing `isNull(capabilities.usedAt)`
+ * from the spend (`spendCapability`) makes both taps succeed; removing the account-row lock
  * from the issue leaves more than one live token.
  */
 
@@ -57,7 +57,7 @@ describePostgres("account tokens under real concurrency", () => {
 
       const gate = await holdRowLock(
         pg,
-        sql`select id from account_tokens where id = ${issued.tokenId} for update`,
+        sql`select id from capabilities where id = ${issued.tokenId} for update`,
       );
       const taps = [0, 1].map(() =>
         consumeAccountToken(pg.connect(), { token: issued.token, purpose }),
@@ -86,13 +86,13 @@ describePostgres("account tokens under real concurrency", () => {
     await Promise.all(requests);
 
     const live = await pg.db
-      .select({ id: accountTokens.id })
-      .from(accountTokens)
+      .select({ id: capabilities.id })
+      .from(capabilities)
       .where(
         and(
-          eq(accountTokens.userAccountId, userAccountId),
-          isNull(accountTokens.usedAt),
-          isNull(accountTokens.supersededAt),
+          eq(capabilities.userAccountId, userAccountId),
+          isNull(capabilities.usedAt),
+          isNull(capabilities.revokedAt),
         ),
       );
     expect(live).toHaveLength(1);

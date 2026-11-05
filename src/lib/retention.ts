@@ -95,7 +95,6 @@ export type RetainedTable =
   | "integration_oauth_states"
   | "notification_deliveries"
   | "activity_events"
-  | "account_tokens"
   | "account_sessions"
   | "account_sign_in_challenges"
   | "shop_contact_email_confirmation_tokens"
@@ -123,6 +122,19 @@ export type RetainedTable =
   | "incident_reports"
   | "lost_items"
   | "departure_notes";
+
+/**
+ * 90 days **past each account token's own expiry**, not past its creation
+ * (the verify, reset and invite links, `capabilities` rows since ADR
+ * 20261105-capabilities-shop-id-nullable; the `capabilities` arm in
+ * `src/db/retention.ts` measures them from `expires_at`). These are hashed
+ * bearer credentials over account takeover, so the conservative direction is
+ * the opposite of the trails: keep them long enough to answer "was this reset
+ * link ever issued/used?" during an incident review, and no longer. Only
+ * already-expired rows are ever eligible — a live token is never pruned
+ * regardless of age.
+ */
+export const ACCOUNT_TOKEN_RETENTION_DAYS = 90;
 
 /**
  * The append-only trails this mechanism deliberately leaves unbounded, as a
@@ -210,21 +222,13 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    */
   activity_events: 1095,
   /**
-   * 90 days **past each token's own expiry**, not past its creation. These are
-   * hashed bearer credentials over account takeover, so the conservative
-   * direction here is the opposite of the tables above: keep them long enough
-   * to answer "was this reset link ever issued/used?" during an incident
-   * review, and no longer. Only already-expired rows are ever eligible — a
-   * live token is never pruned regardless of age.
-   */
-  account_tokens: 90,
-  /**
    * The same 90 days past each session's own `expires_at`. A session row is a
    * sign-in on one device, and it carries that device's IP address and user
    * agent; nothing deleted it except signing out, revoking it, or erasure, so
    * a staffer who never signed out kept one such row per device for ever. The
    * incident question it answers ("which device was signed in to this
-   * account?") is the same one `account_tokens` keeps its 90 days for, and a
+   * account?") is the same one the account tokens keep their 90 days for
+   * ({@link ACCOUNT_TOKEN_RETENTION_DAYS}), and a
    * session the auth layer still honours is never eligible: the clock is the
    * expiry, which every use slides forward.
    */
@@ -232,7 +236,7 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
   /** Pending proof ends at expiry; bounded issuance and weekly sweeps remove expired rows. */
   account_sign_in_challenges: 0,
   /**
-   * The same 90 days past `expires_at` as `account_tokens`, for the same shape
+   * The same 90 days past `expires_at` as the account tokens, for the same shape
    * of row: a hashed one-time link (issue #1288) that is dead the moment it is
    * spent, superseded, or expired, and that carries the shop's front-desk
    * address -- a business address, but still one with no reason to sit in a
@@ -248,8 +252,10 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * fresh one. The rows hold the address, so they do not sit forever either
    * (H-20261014-stale-roll-call-recipients review). The Monday email's
    * opt-out links keep `weekly_digest_sends`' window instead, as they did on
-   * the claim (security review D1). An interest's or a courtesy email's
-   * unsubscribe link is not pruned; it goes with its subject.
+   * the claim (security review D1), and the account tokens keep
+   * {@link ACCOUNT_TOKEN_RETENTION_DAYS} past their own expiry. An interest's
+   * or a courtesy email's unsubscribe link is not pruned; it goes with its
+   * subject.
    */
   capabilities: 365,
   /**

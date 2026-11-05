@@ -84,7 +84,7 @@ test("a valid password-reset link sets a new password and signs the owner in", a
 /**
  * Against a shop of this test's own (`privateShop`, ADR
  * 20260815-per-test-private-shops) rather than the seeded demo owner: asking
- * for a reset link mints a live `account_tokens` row against the account, and
+ * for a reset link mints a live `password_reset` capability against the account, and
  * the per-test reset only clears tokens belonging to people it purges — so the
  * four permanent staff keep theirs for the rest of the worker's run. Here the
  * token dies with the shop.

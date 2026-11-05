@@ -1,14 +1,15 @@
-import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or, type SQL } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import {
   CAPABILITY_POLICY,
+  type CapabilityPolicy,
   type CapabilityPurpose,
   capabilityExpiry,
   capabilitySubject,
 } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { capabilities, shops } from "./schema";
+import { capabilities, people, shops, userAccounts } from "./schema";
 
 /**
  * The `capabilities` table's rows and the transitions on them (issue #2710):
@@ -19,27 +20,57 @@ import { capabilities, shops } from "./schema";
  * subject id lands in.
  *
  * What a capability opens, and what opening it does, stays with the thing it
- * opens (`src/db/interests.ts`, `src/db/courtesy-email.ts`): those modules call
- * `verifyCapability` with their own purpose and then read their own subject.
+ * opens (`src/db/interests.ts`, `src/db/courtesy-email.ts`,
+ * `src/db/account-tokens.ts`): those modules call `verifyCapability` with their
+ * own purpose and then read their own subject.
  */
 
+/**
+ * The shop a purpose's rows carry: a string for a `shop` purpose, null for a
+ * `platform` one (ADR 20261105-capabilities-shop-id-nullable). The table's
+ * `capabilities_scope_by_purpose` check holds every row to it.
+ */
+export type CapabilityShop<P extends CapabilityPurpose> = P extends CapabilityPurpose
+  ? (typeof CAPABILITY_POLICY)[P]["scope"] extends "platform"
+    ? null
+    : string
+  : never;
+
 function subjectColumns(purpose: CapabilityPurpose, subjectId: string) {
+  const none = { interestId: null, personId: null, sentTo: null, userAccountId: null };
   switch (capabilitySubject(purpose)) {
     case "interest":
-      return { interestId: subjectId, personId: null, sentTo: null };
+      return { ...none, interestId: subjectId };
     case "person":
-      return { personId: subjectId, interestId: null, sentTo: null };
+      return { ...none, personId: subjectId };
     case "shop_address":
-      return { sentTo: subjectId.trim().toLowerCase(), personId: null, interestId: null };
+      return { ...none, sentTo: subjectId.trim().toLowerCase() };
+    case "user_account":
+      return { ...none, userAccountId: subjectId };
+  }
+}
+
+/** The column a purpose's subject sits in. */
+function subjectColumn(purpose: CapabilityPurpose) {
+  switch (capabilitySubject(purpose)) {
+    case "interest":
+      return capabilities.interestId;
+    case "person":
+      return capabilities.personId;
+    case "shop_address":
+      return capabilities.sentTo;
+    case "user_account":
+      return capabilities.userAccountId;
   }
 }
 
 type CapabilityRow = {
   id: string;
-  shopId: string;
+  shopId: string | null;
   personId: string | null;
   interestId: string | null;
   sentTo: string | null;
+  userAccountId: string | null;
   usedAt: Date | null;
   expiresAt: Date | null;
   revokedAt: Date | null;
@@ -51,21 +82,33 @@ const ROW = {
   personId: capabilities.personId,
   interestId: capabilities.interestId,
   sentTo: capabilities.sentTo,
+  userAccountId: capabilities.userAccountId,
   usedAt: capabilities.usedAt,
   expiresAt: capabilities.expiresAt,
   revokedAt: capabilities.revokedAt,
 };
 
-function verified(purpose: CapabilityPurpose, row: CapabilityRow): VerifiedCapability | null {
+function verified<P extends CapabilityPurpose>(
+  purpose: P,
+  row: CapabilityRow,
+): VerifiedCapability<P> | null {
   const subject = capabilitySubject(purpose);
   const subjectId =
-    subject === "interest" ? row.interestId : subject === "person" ? row.personId : row.sentTo;
-  // The table's check makes this unreachable; a null subject must still never
-  // be handed on as an id.
+    subject === "interest"
+      ? row.interestId
+      : subject === "person"
+        ? row.personId
+        : subject === "shop_address"
+          ? row.sentTo
+          : row.userAccountId;
+  // The table's checks make both unreachable; a null subject must still never
+  // be handed on as an id, nor a shop purpose's row as one with no shop.
   if (!subjectId) return null;
+  const platform = CAPABILITY_POLICY[purpose].scope === "platform";
+  if (platform !== (row.shopId === null)) return null;
   return {
     id: row.id,
-    shopId: row.shopId,
+    shopId: row.shopId as CapabilityShop<P>,
     subjectId,
     usedAt: row.usedAt,
     expiresAt: row.expiresAt,
@@ -87,49 +130,95 @@ function unrevokedAndUnexpired(now: Date) {
  * `subjectId` is the address the link is mailed to.
  *
  * A purpose that expires (`lifetime: "expires"`) gets `expires_at` from its
- * policy's `ttlMs` at `now`; a caller cannot choose a deadline. A purpose that `supersedes` revokes every live link
- * of that purpose the shop holds before inserting, so only the newest works;
- * the mint locks the shop row first (inside the caller's transaction, if
- * it has one), so two mints in flight cannot both leave a live link. A purpose that `adds` leaves earlier links working.
+ * policy's `ttlMs` at `now`; a caller cannot choose a deadline. A purpose that
+ * `supersedes` revokes every live link of that purpose before inserting, so
+ * only the newest works: the shop's (`per: "shop"`) or the subject's
+ * (`per: "subject"`). The mint locks that shop's or subject's row first
+ * (inside the caller's transaction, if it has one), so two mints in flight
+ * cannot both leave a live link. A purpose that `adds` leaves earlier links
+ * working.
  */
-export async function issueCapability(
+export async function issueCapability<P extends CapabilityPurpose>(
   db: DbExecutor,
-  input: IssueCapabilityInput,
+  input: IssueCapabilityInput<P>,
 ): Promise<string> {
   return (await mintCapability(db, input)).token;
 }
 
-export type IssueCapabilityInput = {
-  purpose: CapabilityPurpose;
-  shopId: string;
+export type IssueCapabilityInput<P extends CapabilityPurpose> = {
+  purpose: P;
+  /** The minting shop for a `shop` purpose; null for a `platform` one. */
+  shopId: CapabilityShop<P>;
   subjectId: string;
   now?: Date;
 };
 
-/** `issueCapability`, also returning the row's id (a delivery records which link it carried). */
-export async function mintCapability(
+/**
+ * Locks the row a supersede is serialised on, so two mints in flight queue and
+ * the second one's revoke sees the first one's insert. Throws for a subject
+ * this module has no row to lock for, so a new policy cannot quietly lose the
+ * invariant.
+ */
+async function lockForSupersede(
   db: DbExecutor,
-  input: IssueCapabilityInput,
+  purpose: CapabilityPurpose,
+  per: "shop" | "subject",
+  shopId: string | null,
+  subjectId: string,
+): Promise<void> {
+  if (per === "shop") {
+    if (!shopId) throw new Error(`${purpose} supersedes per shop but names no shop`);
+    await db.select({ id: shops.id }).from(shops).where(eq(shops.id, shopId)).for("no key update");
+    return;
+  }
+  switch (capabilitySubject(purpose)) {
+    case "user_account":
+      await db
+        .select({ id: userAccounts.id })
+        .from(userAccounts)
+        .where(eq(userAccounts.id, subjectId))
+        .for("update");
+      return;
+    case "person":
+      await db
+        .select({ id: people.id })
+        .from(people)
+        // diveday:allow-deleted-people: a lock on the row the caller already proved, by id; it reads nothing.
+        .where(eq(people.id, subjectId))
+        .for("no key update");
+      return;
+    default:
+      throw new Error(`${purpose} supersedes per subject, which has no row to lock`);
+  }
+}
+
+/** `issueCapability`, also returning the row's id (a delivery records which link it carried). */
+export async function mintCapability<P extends CapabilityPurpose>(
+  db: DbExecutor,
+  input: IssueCapabilityInput<P>,
 ): Promise<{ token: string; id: string; expiresAt: Date | null }> {
-  const policy = CAPABILITY_POLICY[input.purpose];
+  const policy: CapabilityPolicy = CAPABILITY_POLICY[input.purpose];
+  const shopId: string | null = input.shopId;
+  // The table refuses the wrong shape too; this names the caller's mistake.
+  if ((policy.scope === "platform") !== (shopId === null)) {
+    throw new Error(`${input.purpose} is a ${policy.scope} purpose`);
+  }
   const now = input.now ?? nowDate();
   const expiresAt = capabilityExpiry(input.purpose, now);
+  const columns = subjectColumns(input.purpose, input.subjectId);
   if (policy.reissue === "supersedes") {
-    // The invariant (one live link per shop per purpose) belongs to this module,
-    // not to its callers: lock the shop row so two mints in flight serialise
-    // and the second one's revoke sees the first one's insert.
-    await db
-      .select({ id: shops.id })
-      .from(shops)
-      .where(eq(shops.id, input.shopId))
-      .for("no key update");
+    // The invariant (one live link per shop, or per subject, per purpose)
+    // belongs to this module, not to its callers.
+    await lockForSupersede(db, input.purpose, policy.per, shopId, input.subjectId);
     await db
       .update(capabilities)
       .set({ revokedAt: now })
       .where(
         and(
           eq(capabilities.purpose, input.purpose),
-          eq(capabilities.shopId, input.shopId),
+          policy.per === "shop"
+            ? eq(capabilities.shopId, shopId as string)
+            : eq(subjectColumn(input.purpose), input.subjectId),
           isNull(capabilities.usedAt),
           isNull(capabilities.revokedAt),
         ),
@@ -140,9 +229,10 @@ export async function mintCapability(
     .insert(capabilities)
     .values({
       purpose: input.purpose,
-      shopId: input.shopId,
-      ...subjectColumns(input.purpose, input.subjectId),
+      shopId,
+      ...columns,
       tokenHash: hashBearerToken(token),
+      issuedAt: now,
       expiresAt,
     })
     .returning({ id: capabilities.id });
@@ -150,9 +240,10 @@ export async function mintCapability(
   return { token, id: row.id, expiresAt };
 }
 
-export type VerifiedCapability = {
+export type VerifiedCapability<P extends CapabilityPurpose = CapabilityPurpose> = {
   id: string;
-  shopId: string;
+  /** The row's own shop; null exactly on a `platform` purpose. */
+  shopId: CapabilityShop<P>;
   /**
    * The value in the purpose's subject column (`CAPABILITY_POLICY[purpose].subject`):
    * an id, or for a `shop_address` purpose the lower-cased address.
@@ -180,10 +271,10 @@ export type VerifiedCapability = {
  * The returned `shopId` is the row's own. A caller that joins its subject must
  * still check the subject is in that shop before trusting it.
  */
-export async function verifyCapability(
+export async function verifyCapability<P extends CapabilityPurpose>(
   db: DbExecutor,
-  input: { purpose: CapabilityPurpose; token: string },
-): Promise<VerifiedCapability | null> {
+  input: { purpose: P; token: string },
+): Promise<VerifiedCapability<P> | null> {
   const [row] = await db
     .select(ROW)
     .from(capabilities)
@@ -203,10 +294,10 @@ export async function verifyCapability(
  * them. Read-only: a page decides from it what to render, and the action that
  * does what the link does spends it with `spendCapability`.
  */
-export async function openCapability(
+export async function openCapability<P extends CapabilityPurpose>(
   db: DbExecutor,
-  input: { purpose: CapabilityPurpose; token: string; now?: Date },
-): Promise<VerifiedCapability | null> {
+  input: { purpose: P; token: string; now?: Date },
+): Promise<VerifiedCapability<P> | null> {
   const [row] = await db
     .select(ROW)
     .from(capabilities)
@@ -226,14 +317,18 @@ export async function openCapability(
  * Spends a capability whose purpose a use spends (`use: "once"`): marks it
  * used in one conditional update and returns it, or null for an unknown
  * token, a wrong purpose, or a link already spent, revoked or expired. Two
- * opens at once spend it
- * once. Call it inside the transaction that does what the link does, so a
- * refusal there rolls the spend back.
+ * opens at once spend it once. Call it inside the transaction that does what
+ * the link does, so a refusal there rolls the spend back.
+ *
+ * `alsoRequire` is a further condition on the row, checked in the same
+ * update (the account a token names is not disabled): a spend that then
+ * checks could act on a state that changed in between, and burn the link for
+ * nothing when it refuses.
  */
-export async function spendCapability(
+export async function spendCapability<P extends CapabilityPurpose>(
   db: DbExecutor,
-  input: { purpose: CapabilityPurpose; token: string; now?: Date },
-): Promise<VerifiedCapability | null> {
+  input: { purpose: P; token: string; now?: Date; alsoRequire?: SQL },
+): Promise<VerifiedCapability<P> | null> {
   if (CAPABILITY_POLICY[input.purpose].use !== "once") {
     throw new Error(`${input.purpose} is not spent by a use`);
   }
@@ -247,6 +342,7 @@ export async function spendCapability(
         eq(capabilities.tokenHash, hashBearerToken(input.token)),
         isNull(capabilities.usedAt),
         unrevokedAndUnexpired(now),
+        input.alsoRequire,
       ),
     )
     .returning(ROW);

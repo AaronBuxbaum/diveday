@@ -107,7 +107,6 @@ export const EXCLUDED_TABLES = [
   "global_dive_site_versions",
   "user_accounts", // credentials are never exported
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
-  "account_tokens", // bearer credentials (email verify / password reset), never exported
   "account_sign_in_challenges", // pending authentication capabilities, never exported
   "account_sessions", // a live sign-in session — more sensitive than a bearer token, never exported
   "account_security", // TOTP seeds and recovery-code hashes are credentials
@@ -118,7 +117,7 @@ export const EXCLUDED_TABLES = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
-  "capabilities", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "capabilities", // bearer credentials (unsubscribe and stop links, account tokens), never exported — same reasoning as booking_capabilities
   "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
   "website_setup_drafts", // proposals read off the shop's public website, waiting for the owner's tap — a working draft, and what it accepts is exported where it lands
   "claude_usage", // token counts and cost codes for Claude calls — DiveDay's billing ledger, not the shop's records

@@ -63,9 +63,9 @@ describe("retention windows", () => {
   });
 
   it("computes a cutoff that many days back", () => {
-    const cutoff = retentionCutoff("account_tokens", NOW);
+    const cutoff = retentionCutoff("account_sessions", NOW);
     const days = (NOW.getTime() - cutoff.getTime()) / (24 * 60 * 60 * 1000);
-    expect(days).toBe(RETENTION_DAYS.account_tokens);
+    expect(days).toBe(RETENTION_DAYS.account_sessions);
   });
 
   it("keeps the pending-proof cutoff at this exact instant without day rounding", () => {

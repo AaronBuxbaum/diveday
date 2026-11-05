@@ -16,10 +16,11 @@ import {
   spendCapability,
   verifyCapability,
 } from "./capabilities";
+import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { mergeDiverRecords } from "./diver-merge";
 import { askAnytime } from "./interests";
 import { findOrCreatePerson } from "./people";
-import { capabilities, people, personRoles, shops } from "./schema";
+import { capabilities, people, personRoles, shops, userAccounts } from "./schema";
 
 /**
  * Issue #2710, security-sensitive (bearer tokens): one table, one verify, the
@@ -42,15 +43,25 @@ async function subjects() {
     fullName: "Ines Mora",
     email: "ines-capability@example.com",
   } as never);
-  return { personId: person.id, interestId: joined.interestId };
+  const [account] = await db
+    .select({ id: userAccounts.id })
+    .from(userAccounts)
+    .where(eq(userAccounts.email, DEV_STAFF_LOGINS.owner.email))
+    .limit(1);
+  if (!account) throw new Error("seeded owner account missing");
+  return { personId: person.id, interestId: joined.interestId, userAccountId: account.id };
+}
+
+type Subjects = Awaited<ReturnType<typeof subjects>>;
+
+/** The shop a purpose's rows carry: this file's shop, or none for a platform purpose. */
+function shopFor(purpose: CapabilityPurpose): string | null {
+  return CAPABILITY_POLICY[purpose].scope === "platform" ? null : ctx.shop.id;
 }
 
 const ADDRESS = "books@example.com";
 
-function subjectFor(
-  purpose: CapabilityPurpose,
-  ids: { personId: string; interestId: string },
-): string {
+function subjectFor(purpose: CapabilityPurpose, ids: Subjects): string {
   switch (CAPABILITY_POLICY[purpose].subject) {
     case "interest":
       return ids.interestId;
@@ -58,6 +69,8 @@ function subjectFor(
       return ids.personId;
     case "shop_address":
       return ADDRESS;
+    case "user_account":
+      return ids.userAccountId;
   }
 }
 
@@ -65,17 +78,17 @@ describe("issueCapability and verifyCapability", () => {
   it.each(CAPABILITY_PURPOSES)(
     "%s: verifies under its own purpose and no other",
     async (purpose) => {
-      const { db, shop } = ctx;
+      const { db } = ctx;
       const ids = await subjects();
       const subjectId = subjectFor(purpose, ids);
       const token = await issueCapability(db, {
         purpose,
-        shopId: shop.id,
+        shopId: shopFor(purpose),
         subjectId,
       });
 
       expect(await verifyCapability(db, { purpose, token })).toMatchObject({
-        shopId: shop.id,
+        shopId: shopFor(purpose),
         subjectId,
       });
       for (const other of CAPABILITY_PURPOSES.filter((p) => p !== purpose)) {
@@ -87,23 +100,25 @@ describe("issueCapability and verifyCapability", () => {
   it.each(CAPABILITY_PURPOSES)(
     "%s: writes the policy's subject column and only that",
     async (purpose) => {
-      const { db, shop } = ctx;
+      const { db } = ctx;
       const ids = await subjects();
       const token = await issueCapability(db, {
         purpose,
-        shopId: shop.id,
+        shopId: shopFor(purpose),
         subjectId: subjectFor(purpose, ids),
       });
       const [row] = await db
         .select()
         .from(capabilities)
         .where(eq(capabilities.tokenHash, hashBearerToken(token)));
+      const none = { interestId: null, personId: null, sentTo: null, userAccountId: null };
       const expected = {
-        interest: { interestId: ids.interestId, personId: null, sentTo: null },
-        person: { personId: ids.personId, interestId: null, sentTo: null },
-        shop_address: { sentTo: ADDRESS, personId: null, interestId: null },
+        interest: { ...none, interestId: ids.interestId },
+        person: { ...none, personId: ids.personId },
+        shop_address: { ...none, sentTo: ADDRESS },
+        user_account: { ...none, userAccountId: ids.userAccountId },
       }[CAPABILITY_POLICY[purpose].subject];
-      expect(row).toMatchObject({ ...expected, usedAt: null });
+      expect(row).toMatchObject({ ...expected, shopId: shopFor(purpose), usedAt: null });
     },
   );
 
@@ -286,14 +301,15 @@ describe("a purpose that expires and supersedes", () => {
 
 describe("capabilities_subject_by_purpose", () => {
   it("refuses a row naming the other purpose's subject, both subjects, or none", async () => {
-    const { db, shop } = ctx;
+    const { db } = ctx;
     const ids = await subjects();
-    const none = { personId: null, interestId: null, sentTo: null };
+    const none = { personId: null, interestId: null, sentTo: null, userAccountId: null };
     const bad: {
       purpose: CapabilityPurpose;
       personId: string | null;
       interestId: string | null;
       sentTo: string | null;
+      userAccountId?: string | null;
       usedAt?: Date;
     }[] = [
       { purpose: "interest_unsubscribe", ...none, personId: ids.personId },
@@ -319,6 +335,14 @@ describe("capabilities_subject_by_purpose", () => {
       { purpose: "shore_alert_stop", ...none, sentTo: ADDRESS, personId: ids.personId },
       // The address is stored lower-cased, the handle an erasure sweeps by.
       { purpose: "shore_alert_stop", ...none, sentTo: "Books@Example.com" },
+      // An account token names its account and nothing else.
+      {
+        purpose: "password_reset",
+        ...none,
+        userAccountId: ids.userAccountId,
+        personId: ids.personId,
+      },
+      { purpose: "courtesy_email_unsubscribe", ...none, userAccountId: ids.userAccountId },
       // Only a purpose a use spends is ever marked used.
       {
         purpose: "courtesy_email_unsubscribe",
@@ -330,12 +354,118 @@ describe("capabilities_subject_by_purpose", () => {
     for (const [index, row] of bad.entries()) {
       await expect(
         db.transaction(async (tx) => {
-          await tx
-            .insert(capabilities)
-            .values({ ...row, shopId: shop.id, tokenHash: `bad-subject-${index}` });
+          await tx.insert(capabilities).values({
+            ...row,
+            shopId: shopFor(row.purpose),
+            tokenHash: `bad-subject-${index}`,
+            expiresAt: capabilityExpiry(row.purpose, new Date("2026-10-15T12:00:00Z")),
+          });
         }),
       ).rejects.toThrow();
     }
+  });
+});
+
+/**
+ * `shop_id` is null exactly on a platform purpose (ADR
+ * 20261105-capabilities-shop-id-nullable): the table refuses an account token
+ * that names a shop and a shop's link that names none, and the mint refuses
+ * the caller's mistake before the table has to.
+ */
+describe("capabilities_scope_by_purpose", () => {
+  const at = new Date("2026-10-15T12:00:00Z");
+
+  it("refuses a platform purpose with a shop, and a shop purpose without one", async () => {
+    const { db, shop } = ctx;
+    const ids = await subjects();
+    const rows = [
+      {
+        purpose: "password_reset" as const,
+        shopId: shop.id,
+        userAccountId: ids.userAccountId,
+        expiresAt: capabilityExpiry("password_reset", at),
+      },
+      { purpose: "courtesy_email_unsubscribe" as const, shopId: null, personId: ids.personId },
+      { purpose: "shore_alert_stop" as const, shopId: null, sentTo: ADDRESS },
+    ];
+    for (const [index, row] of rows.entries()) {
+      await expect(
+        db.transaction(async (tx) => {
+          await tx.insert(capabilities).values({ ...row, tokenHash: `bad-scope-${index}` });
+        }),
+      ).rejects.toThrow();
+    }
+  });
+
+  it("the mint refuses the wrong shop for the purpose's scope", async () => {
+    const { db, shop } = ctx;
+    const ids = await subjects();
+    await expect(
+      mintCapability(db, {
+        purpose: "invite",
+        shopId: shop.id as never,
+        subjectId: ids.userAccountId,
+      }),
+    ).rejects.toThrow(/platform/);
+    await expect(
+      mintCapability(db, {
+        purpose: "courtesy_email_unsubscribe",
+        shopId: null as never,
+        subjectId: ids.personId,
+      }),
+    ).rejects.toThrow(/shop/);
+  });
+
+  it("supersedes an account token per account, not per purpose across accounts", async () => {
+    const { db, shop } = ctx;
+    const ids = await subjects();
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Second Login", email: "second-login@example.com" })
+      .returning({ id: people.id });
+    if (!person) throw new Error("fixture insert failed");
+    const [other] = await db
+      .insert(userAccounts)
+      .values({
+        personId: person.id,
+        email: "second-login@example.com",
+        hashedPassword: "x",
+        status: "active",
+      })
+      .returning({ id: userAccounts.id });
+    if (!other) throw new Error("fixture insert failed");
+    const input = { purpose: "password_reset" as const, shopId: null, now: at };
+    const mine = await issueCapability(db, { ...input, subjectId: ids.userAccountId });
+    const theirs = await issueCapability(db, { ...input, subjectId: other.id });
+    const mineAgain = await issueCapability(db, { ...input, subjectId: ids.userAccountId });
+
+    expect(
+      await openCapability(db, { purpose: "password_reset", token: mine, now: at }),
+    ).toBeNull();
+    expect(
+      await openCapability(db, { purpose: "password_reset", token: theirs, now: at }),
+    ).toMatchObject({ shopId: null, subjectId: other.id });
+    expect(
+      await openCapability(db, { purpose: "password_reset", token: mineAgain, now: at }),
+    ).toMatchObject({ shopId: null, subjectId: ids.userAccountId });
+  });
+
+  it("holds one live token per account and purpose even past the mint", async () => {
+    const { db } = ctx;
+    const ids = await subjects();
+    const live = {
+      purpose: "invite" as const,
+      userAccountId: ids.userAccountId,
+      expiresAt: capabilityExpiry("invite", at),
+    };
+    await expect(
+      db.transaction(async (tx) => {
+        await tx.insert(capabilities).values([
+          { ...live, tokenHash: "live-one" },
+          { ...live, tokenHash: "live-two" },
+        ]);
+      }),
+    ).rejects.toThrow();
   });
 });
 

@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
  * better-auth itself (the cookie it sets, the cookie cache, the sliding
  * refresh) never sees a digest. The database never sees the raw value. Every
  * other model passes straight through. This is the same at-rest promise
- * `account_tokens.token_hash` (src/lib/account-tokens.ts) and the booking
+ * `capabilities.token_hash` (src/lib/bearer-tokens.ts) and the booking
  * links already make.
  *
  * **One limit, on purpose.** A read that does not name the token (better-auth's

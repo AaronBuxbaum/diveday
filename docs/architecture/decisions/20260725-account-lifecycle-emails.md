@@ -1,6 +1,6 @@
 # 20260725-account-lifecycle-emails — Hashed, expiring DB tokens for verify/reset; account emails stay outside notification_deliveries
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-11-05** by [20261105-capabilities-shop-id-nullable](20261105-capabilities-shop-id-nullable.md)
 - **Date:** 2026-07-25
 
 ## Context
@@ -94,3 +94,7 @@ consequence once deferred is now built exactly as anticipated — `account_token
 
 The booking-scoped attempts table named above is dropped; `notification_deliveries` holds one row
 per send. The reasoning (account mail is not booking-scoped, so neither table fits it) is unchanged.
+
+## Amendment 2026-11-05 (#3721)
+
+The tokens are `capabilities` rows now (purposes `email_verification` and `password_reset`, subject `user_account_id`, no shop), and `account_tokens` is dropped. Hashing, expiry, superseding per account and purpose, once-use and the disabled-account check at consume are unchanged; the check is a condition of the spend's own update (`alsoRequire`). See [20261105-capabilities-shop-id-nullable](20261105-capabilities-shop-id-nullable.md).

@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import {
@@ -14,11 +15,12 @@ import {
   type CapabilityPurpose,
   type CapabilitySubject,
   expiringPurposes,
+  platformPurposes,
   purposesNaming,
   spentPurposes,
 } from "@/lib/capabilities";
 import { appNowTimestamp } from "./columns";
-import { people, shops } from "./core";
+import { people, shops, userAccounts } from "./core";
 import { interests } from "./interests";
 
 /**
@@ -44,6 +46,10 @@ const naming = (subject: CapabilitySubject) => sqlList(purposesNaming(subject));
  *
  * The subject is a typed nullable column per kind, not a polymorphic id, so
  * each one is a real foreign key and an erasure or a merge can find it.
+ * `shop_id` is null exactly on a purpose whose policy `scope` is `platform`
+ * (an account token names a sign-in account, not a shop's records):
+ * `capabilities_scope_by_purpose` holds that both ways (ADR
+ * 20261105-capabilities-shop-id-nullable).
  * `capabilities_subject_by_purpose` holds every row to exactly the subject its
  * purpose names. Facts about the thing a capability opens stay on that thing.
  *
@@ -59,10 +65,11 @@ export const capabilities = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     purpose: capabilityPurpose("purpose").notNull(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
+    /** Null exactly on a `platform` purpose (`capabilities_scope_by_purpose`). */
+    shopId: uuid("shop_id").references(() => shops.id),
     personId: uuid("person_id").references(() => people.id),
+    /** A `user_account` purpose's subject: the sign-in account an account token proves. */
+    userAccountId: uuid("user_account_id").references(() => userAccounts.id),
     // Bound to the row's own shop by the composite key below, not a bare id.
     interestId: uuid("interest_id"),
     /** A `shop_address` purpose's subject: the lower-cased address the link was mailed to. */
@@ -78,6 +85,14 @@ export const capabilities = pgTable(
   (table) => [
     index("capabilities_person_idx").on(table.personId),
     index("capabilities_interest_idx").on(table.interestId),
+    index("capabilities_user_account_idx").on(table.userAccountId),
+    // One live account token per account and purpose: the mint's revoke under
+    // the account-row lock is the rule, this is its backstop.
+    uniqueIndex("capabilities_live_account_purpose_idx")
+      .on(table.userAccountId, table.purpose)
+      .where(
+        sql`${table.userAccountId} is not null and ${table.usedAt} is null and ${table.revokedAt} is null`,
+      ),
     // An interest capability can only name an interest of its own shop, so an
     // erasure, a merge or a demo reset scoped by shop always finds it.
     foreignKey({
@@ -87,9 +102,15 @@ export const capabilities = pgTable(
     }),
     check(
       "capabilities_subject_by_purpose",
-      sql`(${table.purpose}::text in (${naming("interest")}) and ${table.interestId} is not null and ${table.personId} is null and ${table.sentTo} is null)
-        or (${table.purpose}::text in (${naming("person")}) and ${table.personId} is not null and ${table.interestId} is null and ${table.sentTo} is null)
-        or (${table.purpose}::text in (${naming("shop_address")}) and ${table.sentTo} is not null and ${table.sentTo} = lower(${table.sentTo}) and ${table.personId} is null and ${table.interestId} is null)`,
+      sql`(${table.purpose}::text in (${naming("interest")}) and ${table.interestId} is not null and ${table.personId} is null and ${table.sentTo} is null and ${table.userAccountId} is null)
+        or (${table.purpose}::text in (${naming("person")}) and ${table.personId} is not null and ${table.interestId} is null and ${table.sentTo} is null and ${table.userAccountId} is null)
+        or (${table.purpose}::text in (${naming("shop_address")}) and ${table.sentTo} is not null and ${table.sentTo} = lower(${table.sentTo}) and ${table.personId} is null and ${table.interestId} is null and ${table.userAccountId} is null)
+        or (${table.purpose}::text in (${naming("user_account")}) and ${table.userAccountId} is not null and ${table.personId} is null and ${table.interestId} is null and ${table.sentTo} is null)`,
+    ),
+    // A platform purpose names no shop, and every other purpose names one.
+    check(
+      "capabilities_scope_by_purpose",
+      sql`(${table.shopId} is null) = (${table.purpose}::text in (${sqlList(platformPurposes())}))`,
     ),
     // Only a purpose a use spends is ever marked used.
     check(

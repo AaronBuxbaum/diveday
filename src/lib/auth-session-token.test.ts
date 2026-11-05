@@ -15,7 +15,7 @@ const ctx = fileScopedShopContext();
  * 2026-10-11, item 40).
  *
  * The cookie carries the raw token; `account_sessions.token` holds its SHA-256,
- * the way `account_tokens.token_hash` holds a reset link's. A copy of the
+ * the way `capabilities.token_hash` holds a reset link's. A copy of the
  * table, a replica or a support query then hands its reader nothing a browser
  * could present. Runs the real better-auth instance over a seeded database,
  * because the hashing sits between better-auth and its adapter

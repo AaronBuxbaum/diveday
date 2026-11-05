@@ -4,7 +4,6 @@ import { fileScopedShopContext } from "@/test/db";
 import { insertTip, tipsOf } from "@/test/tips";
 import { issueAccountToken } from "./account-tokens";
 import {
-  accountTokens,
   activityEvents,
   authProviderAccounts,
   authVerifications,
@@ -390,12 +389,8 @@ describe("deleteDemoShopCascade", () => {
 
     expect(await findShop(db, slug)).toBeUndefined();
     expect(
-      (
-        await db
-          .select()
-          .from(accountTokens)
-          .where(eq(accountTokens.userAccountId, ownerAccount.id))
-      ).length,
+      (await db.select().from(capabilities).where(eq(capabilities.userAccountId, ownerAccount.id)))
+        .length,
     ).toBe(0);
   });
 
