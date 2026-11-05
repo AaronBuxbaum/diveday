@@ -1,6 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { ParticipantType } from "@/lib/participant-types";
@@ -20,7 +19,7 @@ import { correctFlySafeForPerson, type FlySafeCorrectionOutcome } from "./fly-sa
 import { publishManifestEvent } from "./manifest-events";
 import { sendCourseSeatConfirmation, sendStaffSeatingConfirmation } from "./notifications";
 import { recordSeatChange, type SeatChangeCode } from "./operations";
-import { people, shops, trips } from "./schema";
+import { people, trips } from "./schema";
 import { type SendRescheduleNoticesOptions, sendSeatMoveNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
 import {
@@ -421,12 +420,13 @@ async function seatConsequences(
   // seat from a date request, a regular put on next Saturday. The waiver
   // rides in it as its first step, the way `bookSpot`'s does, so one seating
   // is still one email; when the confirmation cannot go, the waiver goes on
-  // its own the old way. Only the walk-in counter knows the diver is standing
-  // at the desk, so only its seat on today's boat keeps the counter's path;
-  // a held seat is owed nothing until its identity is confirmed (#2125).
+  // its own the old way. The counter confirms too: inside the arrivals window
+  // the door cannot tell a diver at the desk from a same-day phone booking, and
+  // a diver with no address is simply not mailed. A held seat is owed nothing
+  // until its identity is confirmed (#2125).
   const confirms =
     !outcome.identityUnconfirmed &&
-    (await departureOwesConfirmation(db, input.shopId, input.tripId, input.entry));
+    (await departureOwesConfirmation(db, input.shopId, input.tripId));
   if (confirms) {
     try {
       const step = await openJoinSignStep(db, input.shopId, outcome.bookingId);
@@ -525,28 +525,20 @@ async function seatConsequences(
 
 /**
  * Whether a staff seating on this departure is a booking to confirm: any
- * departure that has not sailed, except the walk-in counter's seat on today's
- * boat (both days read in the shop's own time zone), where the diver is
- * standing at the desk. The door says which it is; the calendar never guesses.
+ * departure that has not sailed, whichever door seated it.
  */
 async function departureOwesConfirmation(
   db: AppDb,
   shopId: string,
   tripId: string,
-  entry: SeatDiverEntry,
   now: Date = nowDate(),
 ): Promise<boolean> {
   const [row] = await db
-    .select({ startsAt: trips.startsAt, timezone: shops.timezone })
+    .select({ startsAt: trips.startsAt })
     .from(trips)
-    .innerJoin(shops, eq(shops.id, trips.shopId))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
-  if (!row || hasSailed(row.startsAt, now)) return false;
-  if (entry === "roster") return true;
-  return (
-    calendarDateInTimezone(row.startsAt, row.timezone) > calendarDateInTimezone(now, row.timezone)
-  );
+  return Boolean(row) && !hasSailed(row.startsAt, now);
 }
 
 export type { MoveBookingRefusal as MoveSeatRefusal } from "./bookings";

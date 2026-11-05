@@ -481,7 +481,7 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
   const diverCandidates = picked?.candidates ?? guests.diverCandidates;
   const mode = addBandMode({
     walkInWindow: context.walkInOpen ?? false,
-    hasRequest: Boolean(seatRequest || context.addBand?.requestGone),
+    hasRequest: Boolean(seatRequest),
   });
   const seatActions = addBandSeatActions(mode, actions);
 
