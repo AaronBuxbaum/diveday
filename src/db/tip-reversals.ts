@@ -80,7 +80,7 @@ export async function recordTipRefund(
   if (tip.status !== "completed") return { status: "not_found" };
   return db.transaction(async (tx): Promise<TipRefundOutcome> => {
     const current = await lockedTip(tx, tip.id);
-    if (!current || current.status !== "completed") return { status: "not_found" };
+    if (current?.status !== "completed") return { status: "not_found" };
     // A running total older than a failure the tip has since had still counts
     // the refund that failed: take that refund off it, by its own amount.
     const [failures] = await tx
