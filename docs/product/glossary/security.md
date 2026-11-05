@@ -29,3 +29,10 @@
   purposes so far, the email-unsubscribe links: `interest_unsubscribe` and
   `courtesy_email_unsubscribe`. Booking capabilities, account tokens and the other link tables
   move onto it later.
+- **Booking link** — a bearer link to one booking under one purpose (`readiness`, `confirm`,
+  `claim`, `handoff`, `course_forms`), a row of `booking_capabilities` whose URL is derived, not
+  stored: `c<version>.<row id>.<HMAC tag>` (ADR
+  [20261104-derived-booking-link-tokens](../../architecture/decisions/20261104-derived-booking-link-tokens.md)).
+  A booking holds at most one live link per purpose and audience (mailed or shown in the browser),
+  so asking again hands back the same URL. A handoff link is never reused, and the
+  returning-diver receipt is one-use. A wrong tag is refused before any row is read.

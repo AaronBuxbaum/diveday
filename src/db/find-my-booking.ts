@@ -6,7 +6,7 @@ import { notificationProviderSignal } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
-import { hasLiveReadinessCapability, issueBookingCapability } from "./booking-capabilities";
+import { hasLiveDeliveredReadinessLink, issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { sendAndRecordNotification } from "./notifications";
@@ -102,7 +102,7 @@ export async function sendFindMyBookingLinks(
   // any real work is pending, never whether a specific booking gets minted.
   const candidates = [];
   for (const row of rows) {
-    const live = await hasLiveReadinessCapability(db, {
+    const live = await hasLiveDeliveredReadinessLink(db, {
       shopId: input.shopId,
       bookingId: row.bookingId,
       now,
@@ -143,7 +143,7 @@ export async function sendFindMyBookingLinks(
         },
         async (tx) => {
           if (
-            await hasLiveReadinessCapability(tx, {
+            await hasLiveDeliveredReadinessLink(tx, {
               shopId: input.shopId,
               bookingId: row.bookingId,
               now,

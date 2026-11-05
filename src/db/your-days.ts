@@ -231,9 +231,10 @@ async function planForDay(
 
 /**
  * Mail the planned day's own link to the address on file: a fresh trip-prep
- * capability for an upcoming day, a recap link for a past one. A fresh
- * capability every time, not "is one live?": the diver asking is the one who
- * cannot find it, and `issueBookingCapability` keeps the live set bounded.
+ * link for an upcoming day, a recap link for a past one. Mailed every time,
+ * not "is one live?": the diver asking is the one who cannot find it, and
+ * `issueBookingCapability` hands back that day's one live delivered link
+ * (issue #2711), so asking again sends the same URL rather than another.
  */
 export async function sendYourDayLink(
   db: AppDb,

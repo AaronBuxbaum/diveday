@@ -765,9 +765,9 @@ const partyLead = alias(bookings, "party_lead");
  * over the lead booking (`confirm` on the confirmation panel, `readiness` on
  * /ready) — this function only ever walks seats whose
  * `party_lead_booking_id` equals that lead within the same shop, so no other
- * booking is reachable however it is called. Tokens are minted per render
- * because only hashes are stored; `MAX_LIVE_CAPABILITIES_PER_PURPOSE` keeps
- * the pile bounded.
+ * booking is reachable however it is called. Each seat's link is its one live
+ * `claim` row's, computed again on every render (issue #2711), so a reload
+ * writes nothing and shows the same links.
  *
  * After departure the links stop being mintable on purpose (`claimableNow`
  * would refuse them anyway): the panel keeps showing who claimed, but a seat

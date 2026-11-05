@@ -2,6 +2,7 @@
 
 - **Status:** Accepted, **amended 2026-08-03** (expiry window — see the derived-expiry bullet)
 - **Date:** 2026-07-23
+- **Amended by:** [20261104-derived-booking-link-tokens](20261104-derived-booking-link-tokens.md) — a link is now its row id plus an HMAC tag rather than a stored hash; one live row per booking, purpose and audience replaces the per-purpose cap, and `token_hash` goes.
 
 ## Context
 

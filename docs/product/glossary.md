@@ -479,6 +479,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 [glossary/security.md](glossary/security.md)
 
 - Address confirmation token
+- Booking link
 - Capability
 - Pending sign-in challenge
 - Recovery code
