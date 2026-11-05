@@ -13,6 +13,7 @@
   "charter": "Barco entero",
   "charterQuoted": "Presupuesto: {amount}",
   "charterQuotedInBrief": "Presupuesto de {amount} por el barco entero. El precio se fija aparte.",
+  "replyUnsettled": "Puede que la respuesta no se haya enviado",
   "charterAsk": "Quiere el barco entero: {interest}. Esta salida será privada.",
   "flexibleAround": "Pidió el {date} y puede moverse unos días",
   "alternateOf": "Primera opción: {date}",

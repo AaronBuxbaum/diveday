@@ -1,4 +1,4 @@
-import { and, count, eq, gt, isNull } from "drizzle-orm";
+import { and, count, eq, gt, isNull, sql } from "drizzle-orm";
 import { parseCharterQuote } from "@/lib/charter-quote";
 import { nowDate } from "@/lib/clock";
 import {
@@ -155,8 +155,8 @@ export async function sendInterestReply(
     return { status: "refused", reason: "quote_not_a_charter" };
   if (quoteCents !== null && !(await canPersonQuoteCharter(db, input.shopId, input.sentByPersonId)))
     return { status: "refused", reason: "quote_not_allowed" };
-  const route = interestReplyRoute({ email: row.email, phone: row.phone }, row.shopCountry);
-  if (!route) return { status: "refused", reason: "no_route" };
+  const firstRoute = interestReplyRoute({ email: row.email, phone: row.phone }, row.shopCountry);
+  if (!firstRoute) return { status: "refused", reason: "no_route" };
   // The message as it goes, quote line included, is what the bound is on
   // (security review, layer 3, M1): checked before anything is claimed or sent.
   const locale = recipientLocale(row.personLocale, row.shopLocale);
@@ -187,33 +187,49 @@ export async function sendInterestReply(
     eq(interests.scope, "date"),
   );
   const replyId = crypto.randomUUID();
-  const sentBody = route.channel === "email" ? body : foldInterestReplyForText(body);
   // The claim and the reply's row are one write: a crash after it leaves a
   // request closed as replied *with* a reply on record, still `pending` until
   // the provider has answered (issue #3892). Nothing is sent inside it.
-  const claimed = await db.transaction(async (tx) => {
-    const [claim] = await tx
-      .update(interests)
-      .set({ closedAt: now, closedAs: "replied" })
-      .where(and(scope, isNull(interests.closedAt)))
-      .returning({ id: interests.id });
-    if (!claim) return false;
-    await tx.insert(interestReplies).values({
-      id: replyId,
-      shopId: input.shopId,
-      interestId: input.interestId,
-      // A text may still go on either channel; the settle below says which.
-      channel: route.channel === "email" ? "email" : "sms",
-      toAddress: route.to,
-      body: sentBody,
-      locale,
-      sentByPersonId: input.sentByPersonId,
-      status: "pending",
-      sentAt: now,
+  //
+  // The address is read **from the claim itself**, not from the read above: an
+  // erasure that blanked the request in between does not close it, so the claim
+  // still matches, and the earlier read would put the erased contact back on
+  // record and send to it (security review of layer 3, S3).
+  const noRoute = Symbol("no_route");
+  let claimedRoute: NonNullable<typeof firstRoute> | null = null;
+  try {
+    claimedRoute = await db.transaction(async (tx) => {
+      const [claim] = await tx
+        .update(interests)
+        .set({ closedAt: now, closedAs: "replied" })
+        .where(and(scope, isNull(interests.closedAt)))
+        .returning({ email: interests.email, phone: interests.phone });
+      if (!claim) return null;
+      const current = interestReplyRoute(claim, row.shopCountry);
+      // Nothing to send to: undo the claim with the rest of the transaction.
+      if (!current) throw noRoute;
+      await tx.insert(interestReplies).values({
+        id: replyId,
+        shopId: input.shopId,
+        interestId: input.interestId,
+        // A text may still go on either channel; the settle below says which.
+        channel: current.channel === "email" ? "email" : "sms",
+        toAddress: current.to,
+        body: current.channel === "email" ? body : foldInterestReplyForText(body),
+        locale,
+        sentByPersonId: input.sentByPersonId,
+        status: "pending",
+        sentAt: now,
+      });
+      return current;
     });
-    return true;
-  });
-  if (!claimed) return { status: "refused", reason: "not_open" };
+  } catch (error) {
+    if (error === noRoute) return { status: "refused", reason: "no_route" };
+    throw error;
+  }
+  if (!claimedRoute) return { status: "refused", reason: "not_open" };
+  const route = claimedRoute;
+  const sentBody = route.channel === "email" ? body : foldInterestReplyForText(body);
   const release = () =>
     db
       .update(interests)
@@ -291,7 +307,12 @@ export async function sendInterestReply(
     .set({
       channel,
       status: delivery.status,
-      providerMessageId: delivery.status === "sent" ? delivery.providerMessageId : null,
+      // Not written back once an erasure has blanked the address: a WhatsApp
+      // message id spells the number (`scrubInterests`).
+      providerMessageId:
+        delivery.status === "sent"
+          ? sql`case when ${interestReplies.toAddress} is null then null else ${delivery.providerMessageId} end`
+          : null,
       sendErrorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,
     })
     .where(thisReply);

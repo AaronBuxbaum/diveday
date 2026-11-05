@@ -305,8 +305,8 @@ export const interestReplyChannel = pgEnum("interest_reply_channel", ["email", "
  * Where a reply stands: `pending` from the moment the request is closed until
  * the provider has answered (issue #3892), then the delivery trail's outcome
  * (`notification_delivery_status`). A row still `pending` is a send that never
- * settled, which a crash between the two steps leaves behind and a staffer can
- * see.
+ * settled, which a crash between the two steps leaves behind; Date requests
+ * says so on that request ("Reply may not have been sent").
  */
 export const interestReplyStatus = pgEnum("interest_reply_status", [
   "pending",
@@ -319,13 +319,13 @@ export const interestReplyStatus = pgEnum("interest_reply_status", [
  * **A reply the shop sent to a date request from DiveDay** (issue #2555): the
  * words, where they went, who sent them and what the provider said. One row per
  * attempt, so a reply that did not go is on record beside the one that did; the
- * request closes as `replied` only on a send that went (`sendInterestReply`,
- * src/db/interest-replies.ts).
+ * request closes as `replied` when the reply is claimed and reopens on a send
+ * that did not go (`sendInterestReply`, src/db/interest-replies.ts).
  *
  * Its own table rather than a `staff_replies` row, because a date interest is
  * deliberately person-less (H-20260724-one-person-per-email) and that table is
  * keyed by a person and a message. The outcome vocabulary is the delivery
- * trail's (`notification_delivery_status`). `to_address` and `body` are the
+ * trail's, plus `pending` (`interest_reply_status`). `to_address` and `body` are the
  * stranger's contact and a sentence about them, so the erasure that blanks the
  * interest blanks them too (`scrubInterests`); the row keeps that a reply went.
  */
