@@ -68,7 +68,9 @@ describePostgres("booking link issuing under concurrency", () => {
     const live = await pg.db
       .select({ id: bookingCapabilities.id })
       .from(bookingCapabilities)
-      .where(and(eq(bookingCapabilities.bookingId, booking.id), isNull(bookingCapabilities.revokedAt)));
+      .where(
+        and(eq(bookingCapabilities.bookingId, booking.id), isNull(bookingCapabilities.revokedAt)),
+      );
     expect(live).toHaveLength(1);
   });
 
