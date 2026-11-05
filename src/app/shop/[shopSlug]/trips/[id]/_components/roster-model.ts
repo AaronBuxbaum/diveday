@@ -408,8 +408,16 @@ export type RosterRecord = {
    */
   notCountedAfterDive?: ReadonlyMap<string, number>;
   /**
-   * The crew said Home with this many people not accounted for at the last
-   * after-dive count (`trip_stage_events.not_counted`, issue #3896).
+   * Crew no started after-dive count included, by name and first such dive
+   * (`readDepartureStage`, dock review S1 of #3896): the Home count includes
+   * them, so the record names them too.
+   */
+  crewNotCountedAfterDive?: readonly { personId: string; name: string; dive: number }[];
+  /**
+   * How many the record named as not counted after a dive when the crew said
+   * Home, the largest any Home on this departure stored
+   * (`trip_stage_events.not_counted`, issue #3896). A fact about that moment:
+   * a count recorded since moves the names, never this.
    */
   homeNotCounted?: number;
   /**

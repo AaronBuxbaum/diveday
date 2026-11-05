@@ -326,10 +326,11 @@ export const tripStageEvents = pgTable(
       .references(() => people.id),
     recordedAt: appNowTimestamp("recorded_at").notNull(),
     /**
-     * On a `home` tap only: how many people the last after-dive count had not
-     * accounted for when the crew said Home anyway (issue #3896), so the
-     * record says "Home with 2 not counted". Null on every other word, and on
-     * a Home with everyone counted or no count to read.
+     * On a `home` tap only: how many seats and crew the record named as not
+     * counted after a dive when the crew said Home (issue #3896), the largest
+     * any Home on the departure stored, so the record says "Home was said with
+     * 2 people not counted". Null on every other word, and on a Home with
+     * nobody left out of a started count.
      */
     notCounted: integer("not_counted"),
     /** The final tiebreak when two taps share an instant, as on the roll call. */

@@ -13,6 +13,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { signingDate } from "@/lib/guardian";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { issueCourseFormQrAction } from "../course-form-qr-action";
 import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
 import { CourseFormsQrProvider } from "./CourseFormsQr";
@@ -218,6 +219,11 @@ export function RosterSection({
                 context={context}
               />
             ))}
+            {crewNotCountedLines(record?.crewNotCountedAfterDive, locale).map(({ dive, names }) => (
+              <p key={dive} className="px-4 py-2 text-sm font-semibold text-danger">
+                {t("manifest.stage.crewNotCountedAfterDive", { dive, names })}
+              </p>
+            ))}
             <RosterSeatGroup
               label={t("trips.roster.groupSailed")}
               entries={groups.sailed}
@@ -356,4 +362,17 @@ export function RosterSection({
   ) : (
     section
   );
+}
+
+/** Crew the record names as not counted, one line per dive, names joined in the shop's words. */
+function crewNotCountedLines(
+  crew: readonly { name: string; dive: number }[] | undefined,
+  locale: string,
+): { dive: number; names: string }[] {
+  const byDive = new Map<number, string[]>();
+  for (const member of crew ?? []) {
+    byDive.set(member.dive, [...(byDive.get(member.dive) ?? []), member.name]);
+  }
+  const list = cachedListFormat(locale, { style: "long", type: "conjunction" });
+  return [...byDive].map(([dive, names]) => ({ dive, names: list.format(names) }));
 }

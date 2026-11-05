@@ -1,11 +1,6 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, max } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
-import {
-  type CheckpointGap,
-  homeNotCountedCount,
-  homewardCheckpointGap,
-  isHomewardStage,
-} from "@/lib/checkpoint-gaps";
+import { type CheckpointGap, homewardCheckpointGap, isHomewardStage } from "@/lib/checkpoint-gaps";
 import { nowDate } from "@/lib/clock";
 import { departureStage } from "@/lib/trip-phase";
 import type { TripStage, TripStageReading } from "@/lib/trip-stages";
@@ -60,14 +55,20 @@ export async function recordTripStage(
   },
 ): Promise<RecordTripStageOutcome> {
   // **Home said with the count open** (issue #3896): read before the word,
-  // so the event keeps how many the last after-dive count had not accounted
-  // for. Home is never refused: the crew's word is final. A read that fails
-  // records the word without a count rather than making the crew tap again.
+  // so the event keeps how many the record names as not counted after a dive
+  // (`notCountedAtHome`), crew included and anyone recorded not back aboard
+  // left to their own band (dock review S1). Home is never refused: the
+  // crew's word is final. A read that fails records the word without a count
+  // rather than making the crew tap again.
+  const recordedAt = input.recordedAt ?? nowDate();
   const manifestsBefore =
     input.stage === "home"
       ? await getTripManifests(db, input.shopId, input.tripId).catch(() => null)
       : null;
-  const notCounted = manifestsBefore ? homeNotCountedCount(manifestsBefore) : null;
+  const countedNow =
+    input.stage === "home"
+      ? await notCountedAtHome(db, input.shopId, input.tripId, recordedAt).catch(() => null)
+      : null;
   const recorded = await db.transaction(async (tx) => {
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
     if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" } as const;
@@ -91,6 +92,24 @@ export async function recordTripStage(
       .orderBy(asc(tripDives.diveNumber))
       .limit(1);
 
+    // **A second Home never erases the first's count** (attacker review S3):
+    // the line is evidence of the count Home was said over, so the largest
+    // one any earlier Home on this departure stored is carried forward.
+    const [earlier] =
+      input.stage === "home"
+        ? await tx
+            .select({ most: max(tripStageEvents.notCounted) })
+            .from(tripStageEvents)
+            .where(
+              and(
+                eq(tripStageEvents.shopId, input.shopId),
+                eq(tripStageEvents.tripId, input.tripId),
+                eq(tripStageEvents.stage, "home"),
+              ),
+            )
+        : [];
+    const notCounted = Math.max(countedNow ?? 0, earlier?.most ?? 0) || null;
+
     const [event] = await tx
       .insert(tripStageEvents)
       .values({
@@ -99,7 +118,7 @@ export async function recordTripStage(
         stage: input.stage,
         diveSiteId: firstDive?.diveSiteId ?? null,
         recordedByPersonId: input.recordedByPersonId,
-        recordedAt: input.recordedAt ?? nowDate(),
+        recordedAt,
         notCounted,
       })
       .returning({ id: tripStageEvents.id });
@@ -254,7 +273,7 @@ export async function readDepartureStage(
   const unaccounted =
     (await listUnaccountedForByTrip(db, shopId, [tripId])).get(tripId) ?? new Set<string>();
   let stage = departureStage({ ...reading, unaccountedFor: unaccounted.size > 0 });
-  const notCountedAfterDive = new Map<string, number>();
+  let notCounted: NotCountedAfterDive = { seats: new Map(), crew: [] };
   if (stage.finished) {
     const gaps = await listRollCallGaps(db, shopId, reading.now, [tripId], { historical: true });
     // An after-dive checkpoint only, and only one someone started or a person
@@ -263,22 +282,82 @@ export async function readDepartureStage(
     if (unaccounted.size === 0 && gaps.some(holdsTheBoat)) {
       stage = departureStage({ ...reading, unaccountedFor: true });
     }
-    // Finished all the same (the crew's Home): the seats no started after-dive
-    // count included, for the record to name apart from Sailed (#3895). The
-    // first dive a seat was left out of wins, across meeting days too.
-    if (stage.finished) {
-      for (const gap of gaps) {
-        for (const [bookingId, dive] of gap.notCountedAfterDive ?? []) {
-          if (unaccounted.has(bookingId)) continue;
-          const known = notCountedAfterDive.get(bookingId);
-          if (known === undefined || dive < known) notCountedAfterDive.set(bookingId, dive);
-        }
-      }
-    }
+    // Finished all the same (the crew's Home): the seats and crew no started
+    // after-dive count included, for the record to name apart from Sailed
+    // (#3895).
+    if (stage.finished) notCounted = await namedNotCounted(db, shopId, gaps, unaccounted);
   }
   return {
     ...stage,
     unaccounted: unaccounted as ReadonlySet<string>,
-    notCountedAfterDive: notCountedAfterDive as ReadonlyMap<string, number>,
+    notCountedAfterDive: notCounted.seats,
+    crewNotCountedAfterDive: notCounted.crew,
   };
+}
+
+type NotCountedAfterDive = {
+  /** Booking id to the first started after-dive count that left the seat out. */
+  seats: ReadonlyMap<string, number>;
+  /** Crew left out of a started after-dive count, by name, first such dive. */
+  crew: readonly { personId: string; name: string; dive: number }[];
+};
+
+/**
+ * Who no started after-dive count included, apart from anyone recorded not
+ * back aboard (`unaccounted`, named as missing). The first dive each was left
+ * out of wins, across meeting days too.
+ */
+async function namedNotCounted(
+  db: DbExecutor,
+  shopId: string,
+  gaps: Awaited<ReturnType<typeof listRollCallGaps>>,
+  unaccounted: ReadonlySet<string>,
+): Promise<NotCountedAfterDive> {
+  const seats = new Map<string, number>();
+  const crew = new Map<string, number>();
+  for (const gap of gaps) {
+    const crewRow = gap.reason === "missing_crew" || gap.reason === "crew_uncounted";
+    const into = crewRow ? crew : seats;
+    for (const [id, dive] of gap.notCountedAfterDive ?? []) {
+      if (!crewRow && unaccounted.has(id)) continue;
+      const known = into.get(id);
+      if (known === undefined || dive < known) into.set(id, dive);
+    }
+  }
+  const names =
+    crew.size === 0
+      ? []
+      : await db
+          .select({ id: people.id, name: people.fullName })
+          .from(people)
+          // diveday:allow-deleted-people: a record of who was aboard names the
+          // crew member who was, by an id the roll call already proved.
+          .where(and(eq(people.shopId, shopId), inArray(people.id, [...crew.keys()])));
+  return {
+    seats,
+    crew: names
+      .map((row) => ({ personId: row.id, name: row.name, dive: crew.get(row.id) ?? 0 }))
+      .sort((a, b) => a.dive - b.dive || a.name.localeCompare(b.name)),
+  };
+}
+
+/**
+ * **How many Home leaves uncounted** (issues #3895, #3896): the seats and
+ * crew the departure record will name under "Not counted after dive N", read
+ * by the same rule at the moment of the tap, so the stored number and the
+ * names under it agree when Home is said. A dive nobody started counting
+ * (one called off with the plan left at the old count) names nobody and adds
+ * nothing; a person recorded not back aboard is missing, not uncounted.
+ */
+async function notCountedAtHome(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  now: Date,
+): Promise<number> {
+  const unaccounted =
+    (await listUnaccountedForByTrip(db, shopId, [tripId])).get(tripId) ?? new Set<string>();
+  const gaps = await listRollCallGaps(db, shopId, now, [tripId], { historical: true });
+  const named = await namedNotCounted(db, shopId, gaps, unaccounted);
+  return named.seats.size + named.crew.length;
 }

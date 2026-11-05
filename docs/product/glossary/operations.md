@@ -1011,7 +1011,9 @@
   tapped Home with that count open (`notCountedAfterDive`, `readDepartureStage`,
   `src/db/trip-stages.ts`; issue #3895). N is the first such dive. It names a gap in the count,
   not a missing diver: nobody said they were not back, so they are never filed under **Not back
-  aboard**. Spanish: "Sin contar tras la inmersión N".
+  aboard**. Crew left out of a started count are named on a line of their own beneath it ("Crew
+  not counted after dive N: …"). A dive nobody started counting (one called off with the plan
+  left at the old count) names nobody. Spanish: "Sin contar tras la inmersión N".
 - **Not counted at the dock** — a finished departure's record band for a seat with no dock result,
   no standing after-dive result and no `no_show`, on a departure whose dock roll call *was* taken.
   It names a gap in the count, not a fact about the diver: nobody said they sailed and nobody said
@@ -1503,9 +1505,13 @@
   the return shop day, as the **trip phase** entry says: a crew is told its own boat is still out
   until someone taps *Home*. **Home with the count open asks first**: while the last after-dive
   count has someone unmarked or not back aboard, the strip names the count and asks "Mark the boat
-  home anyway?"; Home is never refused, and the event keeps how many were not counted
-  (`trip_stage_events.not_counted`), so the manifest and the record say "Home with 2 not counted"
-  (issue #3896, Aaron 2026-11-05). `home` alone carries
+  home anyway?"; Home is never refused, and the event keeps how many the record names under **Not
+  counted after dive N**, seats and crew, read by that band's own rule at the tap, so nobody
+  recorded not back aboard is worded as a counting gap
+  (`trip_stage_events.not_counted`). The manifest and the record say "Home was said with 2 people
+  not counted": a fact about that moment, which a count recorded since does not change, and a
+  second Home keeps the largest count any earlier Home stored (issue #3896, Aaron 2026-11-05;
+  review fixes). `home` alone carries
   the roll call's success tone, and `home` alone is withheld from the anonymous surfaces: the diver
   who was aboard reads it on their own link, a storefront panel about tomorrow does not. It was a
   display word until issue #1480 made it load-bearing — the **close-out** reads a live `home` as a

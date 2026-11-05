@@ -17,7 +17,8 @@
     "homeConfirmQuestion": "¿Marcar el barco en puerto igualmente?",
     "homeConfirm": "Marcar en puerto igualmente",
     "homeConfirmBack": "Todavía no",
-    "homeNotCounted": "En puerto con {count, plural, one {# sin contar} other {# sin contar}}"
+    "homeNotCounted": "Se marcó En puerto con {count, plural, one {# persona sin contar} other {# personas sin contar}}",
+    "crewNotCountedAfterDive": "Tripulación sin contar tras la inmersión {dive}: {names}"
   },
   "deckCount": {
     "heading": "Recuento en cubierta",

@@ -53,6 +53,7 @@ export async function diversTabState(
       record: {
         ...record,
         notCountedAfterDive: reading.notCountedAfterDive,
+        crewNotCountedAfterDive: reading.crewNotCountedAfterDive,
         ...(homeAt && reading.shown?.notCounted
           ? { homeNotCounted: reading.shown.notCounted }
           : {}),

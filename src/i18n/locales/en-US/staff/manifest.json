@@ -17,7 +17,8 @@
     "homeConfirmQuestion": "Mark the boat home anyway?",
     "homeConfirm": "Mark home anyway",
     "homeConfirmBack": "Not yet",
-    "homeNotCounted": "Home with {count, plural, one {# not counted} other {# not counted}}"
+    "homeNotCounted": "Home was said with {count, plural, one {# person not counted} other {# people not counted}}",
+    "crewNotCountedAfterDive": "Crew not counted after dive {dive}: {names}"
   },
   "deckCount": {
     "heading": "Count on deck",
