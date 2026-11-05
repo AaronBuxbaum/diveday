@@ -292,11 +292,11 @@ The stack provisions two **alert-only** mechanisms — see
 the full reasoning. Neither one ever disables or throttles a resource; both only send email.
 
 - **`AWS::Budgets::Budget`** — a monthly `COST` budget, default $90 (it was $5, then $30 on
-  2026-08-12, then $90 on 2026-09-10 when Business Support+ arrived; see the ADR's two amendments),
+  2026-08-12, then $90 on 2026-09-10 when Business Support+ arrived, which was dropped to Basic on 2026-11-02; see the ADR's amendments),
   with five graduated email notifications. Since 2026-09-10 the thresholds are **dollar amounts,
-  not percentages** — $55 and $70 of actual spend, the cap itself on *forecasted* spend (an early
+  not percentages** — $30 and $70 of actual spend, the cap itself on *forecasted* spend (an early
   warning before the month even ends), the cap on actual spend, and twice the cap as the "this is
-  outside normal bands" siren. $55 is about $11 above the fixed floor, which is what lets it mean
+  outside normal bands" siren. $30 is about $11 above the fixed floor, which is what lets it mean
   "something is running that was not running before"; a percentage stopped being able to mean that
   once the floor grew past the cap. The budget has no fixed name (see the troubleshooting note below
   for why); find the AWS-assigned one in the `MonthlyCostGuardrailBudgetName` stack output, or
@@ -319,7 +319,7 @@ pnpm infra:deploy --context alertEmail=you@example.com --context monthlyBudgetLi
   the default only takes effect on the next deploy, and the SNS email subscription it creates has to
   be confirmed from the mailbox before AWS will send to it.
 - `monthlyBudgetLimit` — the monthly USD cap (default `90`). The forecast, actual and siren
-  notifications are derived from it; the $55 and $70 figures are **not** — those are dollars chosen
+  notifications are derived from it; the $30 and $70 figures are **not** — those are dollars chosen
   against this account's fixed floor, so an account with a different floor edits them in
   `infra/lib/infra-stack.ts` rather than expecting a lower cap to scale them down.
 
@@ -353,24 +353,23 @@ API, and reports nothing until it has accumulated spend history. That is a prere
 [manual-actions.md](manual-actions.md), not something the stack handles.
 
 **What this account costs when idle**, read off the August and early-September bills rather than
-estimated from the stack:
+estimated from the stack, less the Business Support+ line ($25) that went away on 2026-11-02:
 
 | Line | $/month |
 | --- | ---: |
-| Business Support+ | 25.00 |
 | S3, across the four buckets | 12.00 |
 | Route 53 health check, 30s interval with string matching, on a non-AWS endpoint | 2.75 |
 | CloudWatch metrics and alarms past the always-free ten ([cloudwatch-observability-runbook.md](cloudwatch-observability-runbook.md)) | 2.50 |
 | Secrets Manager, three secrets ([§10](#10-the-credentials-secret), plus the database dump's URL) | 1.20 |
 | Tax | 0.10 |
-| **Floor** | **43.55** |
+| **Floor** | **18.55** |
 
 That is cost which exists whether or not anyone uses DiveDay. Everything else here is per-use. The
 whole bill across every provider, and what moving a service would and would not save, is in
 [cost-guardrails-runbook.md](cost-guardrails-runbook.md)'s "Where the money actually goes".
 
-**$43.55 is the number the `monthlyBudgetLimit` default of `90` is set against**, and the $55
-notification is that floor plus about $11. The cap was `5` until 2026-08-12 and `30` until
+**$18.55 is the floor**, with the support fee gone since the drop to Basic on 2026-11-02. The
+`monthlyBudgetLimit` default of `90` is unchanged, and the $30 notification is the floor plus about $11. The cap was `5` until 2026-08-12 and `30` until
 2026-09-10; each raise happened because the floor had grown into the thresholds and they had begun
 firing every month on cost that never changes. If you add fixed cost, move the figures with it and
 update this table — that is the whole maintenance contract of this guardrail.
@@ -770,7 +769,7 @@ A well-formed wrong key is caught by the deploy instead (issue #2999). After `db
 Secrets Manager bills $0.40 per secret per month and has no free tier. Eight credential secrets plus
 three app-secret secrets would be $4.40 of fixed monthly cost — against the $5 budget this section
 was written for that was permanent noise in the 50% and 80% notifications, and against today's $90
-cap and $43.55 floor
+cap and $18.55 floor
 ([ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md), as
 amended 2026-08-12 and 2026-09-10) it is affordable but still eleven documents to keep straight. Two secrets cost $0.80:
 one hand-off document and one stable root from which HKDF derives three independent app values. What

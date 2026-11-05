@@ -614,8 +614,9 @@ export class InfraStack extends cdk.Stack {
     // Raised from 30 to 90 on 2026-09-10 (second amendment to ADR
     // 20260802-aws-cost-guardrails), in the same change that turned the
     // thresholds below from percentages into dollars. Both moves come from one
-    // fact: this account now carries a Business Support+ subscription at about
-    // $25/month, and a fixed floor that size cannot be made small relative to
+    // fact: this account then carried a Business Support+ subscription at about
+    // $25/month (dropped to Basic on 2026-11-02; the floor is now $18.55 and the
+    // first notification is $30 -- ADR amendment 2026-11-05), and a fixed floor that size cannot be made small relative to
     // any cap a pre-pilot app would be willing to set. The floor, read off the
     // August and early-September bills rather than estimated --
     //
@@ -681,11 +682,11 @@ export class InfraStack extends cdk.Stack {
         },
       },
       notificationsWithSubscribers: [
-        // About $11 above the floor: the first month in which something is
+        // About $11 above the $18.55 floor: the first month in which something is
         // running that was not running before. This is the notification the
         // whole guardrail exists for, and the one the old 50% had stopped
         // being able to be.
-        budgetNotification("ACTUAL", 55),
+        budgetNotification("ACTUAL", 30),
         budgetNotification("ACTUAL", 70),
         // Trending to exceed the cap before the month is over.
         budgetNotification("FORECASTED", monthlyBudgetLimit),
@@ -2220,7 +2221,7 @@ exports.handler = async (event) => {
     // cost. Be honest that this argument got weaker twice: against the
     // $5 budget this was written for, $3.20 was most of the cap and would have
     // fired the 50% and 80% notifications every month on cost that never
-    // changes; against today's $90 cap and $43.55 floor it is under 4% of one
+    // changes; against today's $90 cap and $18.55 floor it is under 4% of one
     // and 7% of the other, which is affordable rather than disqualifying. One
     // secret is still the right call, but now on the
     // simpler ground that eight hand-off documents for one operator to read is

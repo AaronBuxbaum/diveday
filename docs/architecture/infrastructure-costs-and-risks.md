@@ -27,7 +27,7 @@ error tracking; **Meta Cloud API** for shop-connected WhatsApp; and **Stripe Con
 | --- | --- | --- | --- | --- |
 | **Vercel** | Pro ($20/seat/mo) + Build compute + Serverless execution + Blob | ~$20.00 – $35.00 | $60.00/mo (`vercel_spend`) | Base fee + usage overage |
 | **Neon** | Serverless Postgres (Free tier) | $0.00 | 300 CU-hrs (`neon_compute`), 50 GiB-mo (`neon_storage`) | Free tier **suspends** on exhaustion; Paid meters |
-| **AWS** | Business Support+ ($25/mo) plus 22 provisioned CDK subsystems (SES, SNS, S3, CloudFront, CloudWatch, Route 53, Secrets Manager, CodeBuild, Location) | ~$43.55 measured | $90.00/mo (`AWS::Budgets::Budget`, dollar thresholds) + Cost Anomaly Detection | Support subscription + pay-as-you-go |
+| **AWS** | Basic Support (no fee; Business Support+ was dropped 2026-11-02) plus 22 provisioned CDK subsystems (SES, SNS, S3, CloudFront, CloudWatch, Route 53, Secrets Manager, CodeBuild, Location) | ~$18.55 (the 2026-09 bills less the old support fee) | $90.00/mo (`AWS::Budgets::Budget`, dollar thresholds) + Cost Anomaly Detection | Pay-as-you-go |
 | **Sentry** | Developer (Free tier) | $0.00 | 50,000 events/mo (`sentry_errors`) | Free tier **silently drops** over quota |
 | **Meta / WhatsApp** | Cloud API (per-shop sender) | $0.00 (under 1,000 free service convs/mo) | 1,000 convs/mo (`whatsapp_conversations`) | Per-conversation overage |
 | **Stripe** | Connect Standard | Proportional to GMV (2.9% + $0.30) | None (revenue-aligned) | Per-transaction |
@@ -105,7 +105,7 @@ AWS houses 21 distinct infrastructure subsystems managed via AWS CDK:
    - EventBridge schedulers triggering backup freshness watchdogs and VRT pruner Lambdas.
 9. **Cost Guardrails (§7)**:
    - `AWS::Budgets::Budget` ($90/mo, `ABSOLUTE_VALUE` thresholds) and `AWS::CE::AnomalyMonitor` (Service Dimensional Monitor). Free.
-   - The budget itself is free; the account's **Business Support+ subscription is $25/month** and is the largest single line on the AWS bill.
+   - The budget itself is free; the account is on **Basic Support**, which has no fee; the Business Support+ subscription ($25/month) was dropped on 2026-11-02, and S3 is now the largest single line.
 
 ### 4. Sentry
 
@@ -266,7 +266,7 @@ providers.
 ```
 
 1. **AWS Account Level ([infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts) §7)**:
-   - `AWS::Budgets::Budget` (`MonthlyCostGuardrail`) evaluates actual and forecasted AWS charges against the $90 limit, emailing `alerts@dive.day` at $55 actual, $70 actual, $90 forecasted, $90 actual, and $180 actual. The thresholds are absolute dollars rather than percentages because the account's fixed floor ($43.55, of which $25 is Business Support+) had grown past the old cap — ADR 20260802-aws-cost-guardrails, amended 2026-09-10.
+   - `AWS::Budgets::Budget` (`MonthlyCostGuardrail`) evaluates actual and forecasted AWS charges against the $90 limit, emailing `alerts@dive.day` at $30 actual, $70 actual, $90 forecasted, $90 actual, and $180 actual. The thresholds are absolute dollars rather than percentages because the account's fixed floor had grown past the old cap ($43.55 with Business Support+, $18.55 since it was dropped) — ADR 20260802-aws-cost-guardrails, amended 2026-09-10 and 2026-11-05.
    - `AWS::CE::AnomalyMonitor` monitors service-by-service spending spikes daily with a $1.00 impact threshold.
 2. **Multi-Vendor In-App Monitor (`/api/cron/usage`)**:
    - `fetchVercelSpend` (`src/lib/usage/vercel.ts`): Queries Vercel's Billing API using FOCUS v1.3 format.
