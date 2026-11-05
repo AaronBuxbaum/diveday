@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   listBucketPrefixes,
   listPrefixObjects,
+  pruneBlobsInBucket,
   pruneVisualBucket,
   resolveActiveBaseline,
   snapshotExists,
@@ -589,6 +590,62 @@ describe("prune-visual-bucket-lib", () => {
       });
 
       expect(result.deleteErrors).toEqual([`${SHA_2}/out.json: AccessDenied`]);
+    });
+  });
+
+  describe("pruneBlobsInBucket", () => {
+    const keepHash = "a".repeat(64);
+    const dropHash = "c".repeat(64);
+    function blobBucket({ manifest }) {
+      const deleted = [];
+      const s3Client = {
+        send: vi.fn(async (cmd) => {
+          if (cmd.input?.Delete) {
+            deleted.push(...cmd.input.Delete.Objects.map((o) => o.Key));
+            return { Deleted: cmd.input.Delete.Objects.map(({ Key }) => ({ Key })) };
+          }
+          if (cmd.input?.Key) {
+            if (manifest === null) throw new Error("AccessDenied");
+            return { Body: { transformToString: async () => JSON.stringify(manifest) } };
+          }
+          return {
+            Contents: [keepHash, dropHash].map((h) => ({
+              Key: `blobs/${h}.png`,
+              Size: 5,
+              ETag: '"x"',
+              LastModified: OLD,
+            })),
+            IsTruncated: false,
+          };
+        }),
+      };
+      return { s3Client, deleted };
+    }
+
+    it("deletes only the blob main's manifest does not name", async () => {
+      const { s3Client, deleted } = blobBucket({ manifest: { actualBlobs: { shot: keepHash } } });
+      const result = await pruneBlobsInBucket({ s3Client, keepShas: [SHA_1], now: NOW });
+      expect(deleted).toEqual([`blobs/${dropHash}.png`]);
+      expect(result.deletedCount).toBe(1);
+    });
+
+    it("dry run deletes nothing", async () => {
+      const { s3Client, deleted } = blobBucket({ manifest: { actualBlobs: { shot: keepHash } } });
+      const result = await pruneBlobsInBucket({
+        s3Client,
+        keepShas: [SHA_1],
+        now: NOW,
+        dryRun: true,
+      });
+      expect(deleted).toEqual([]);
+      expect(result.wouldDeleteCount).toBe(1);
+    });
+
+    it("deletes nothing when main's manifest cannot be read", async () => {
+      const { s3Client, deleted } = blobBucket({ manifest: null });
+      const result = await pruneBlobsInBucket({ s3Client, keepShas: [SHA_1], now: NOW });
+      expect(deleted).toEqual([]);
+      expect(result.skipped).toBeTruthy();
     });
   });
 });

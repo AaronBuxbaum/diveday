@@ -4,7 +4,7 @@
 //
 // Usage:
 //   node scripts/prune-visual-bucket.mjs [--dry-run] [--bucket <name>] [--keep <sha>] [--repo <owner/repo>] [--branch <name>]
-//     [--keep-baselines <n>] [--keep-age-hours <h>] [--min-age-hours <h>]
+//     [--keep-baselines <n>] [--keep-age-hours <h>] [--min-age-hours <h>] [--blob-retention-days <d>] [--skip-blobs]
 import process from "node:process";
 import { S3Client } from "@aws-sdk/client-s3";
 import { PRIMARY_REGION } from "../config/aws-regions.mjs";
@@ -13,9 +13,11 @@ import {
   DEFAULT_BUCKET,
   DEFAULT_REPO,
   KEEP_MAIN_BASELINE_AGE_MS,
+  BLOB_RETENTION_MS,
   KEEP_MAIN_BASELINES,
   MIN_PRUNE_AGE_MS,
   MIN_PUBLICATION_GRACE_MS,
+  pruneBlobsInBucket,
   pruneVisualBucket,
   resolveActiveBaseline,
 } from "./prune-visual-bucket-lib.mjs";
@@ -42,6 +44,9 @@ function parseArgs(argv) {
     else if (arg === "--keep-baselines") args.keepBaselines = parseCount(arg, argv[++i], 1);
     else if (arg === "--keep-age-hours") args.keepAgeHours = parseCount(arg, argv[++i], 0);
     else if (arg === "--min-age-hours") args.minAgeHours = parseCount(arg, argv[++i], 0);
+    else if (arg === "--blob-retention-days")
+      args.blobRetentionDays = parseCount(arg, argv[++i], 1);
+    else if (arg === "--skip-blobs") args.skipBlobs = true;
     else if (arg === "-h" || arg === "--help") {
       console.log("Usage: node scripts/prune-visual-bucket.mjs [options]");
       console.log("Options:");
@@ -65,6 +70,10 @@ function parseArgs(argv) {
       console.log(
         `  --min-age-hours <h>   Never delete a prefix with an object younger than this (default: ${MIN_PRUNE_AGE_MS / 3600000}; floored at ${MIN_PUBLICATION_GRACE_MS / 60000} min)`,
       );
+      console.log(
+        `  --blob-retention-days <d> Keep unreferenced blobs this long (default: ${BLOB_RETENTION_MS / 86400000}); referenced blobs are always kept`,
+      );
+      console.log("  --skip-blobs          Leave blobs/ alone");
       process.exit(0);
     } else {
       console.error(`prune-visual-bucket: unknown argument "${arg}"`);
@@ -163,10 +172,40 @@ async function main() {
   console.log(
     `  ${args.dryRun ? "Storage to reclaim:" : "Storage reclaimed:"}          ${Math.round(pruneResult.deletedBytesTotal / (1024 * 1024))} MB`,
   );
-  if (pruneResult.deleteErrors.length > 0) {
-    console.error(
-      `  S3 refused ${pruneResult.deleteErrors.length} deletes -- see the lines above.`,
-    );
+  let blobErrors = 0;
+  if (!args.skipBlobs) {
+    const blobResult = await pruneBlobsInBucket({
+      s3Client,
+      bucket,
+      keepShas,
+      dryRun: args.dryRun,
+      ...(args.blobRetentionDays !== undefined && {
+        retentionMs: args.blobRetentionDays * 86400000,
+      }),
+    });
+    blobErrors = blobResult.errors.length;
+    if (blobResult.skipped) {
+      console.log(`  Blobs: skipped, nothing deleted (${blobResult.skipped})`);
+    } else {
+      console.log(
+        `  Blobs: ${blobResult.referenced} referenced by main, ${blobResult.keptCount} kept, ${
+          args.dryRun
+            ? `${blobResult.wouldDeleteCount} to delete (${Math.round(blobResult.wouldDeleteBytes / (1024 * 1024))} MB)`
+            : `${blobResult.deletedCount} deleted (${Math.round(blobResult.deletedBytes / (1024 * 1024))} MB)`
+        }`,
+      );
+    }
+    if (blobErrors > 0)
+      console.error(
+        `  S3 refused ${blobErrors} blob deletes: ${blobResult.errors.slice(0, 10).join(", ")}`,
+      );
+  }
+  if (pruneResult.deleteErrors.length > 0 || blobErrors > 0) {
+    if (pruneResult.deleteErrors.length > 0) {
+      console.error(
+        `  S3 refused ${pruneResult.deleteErrors.length} deletes -- see the lines above.`,
+      );
+    }
     process.exit(1);
   }
 }
