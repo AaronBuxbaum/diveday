@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { people, shops, waiverRecords, waiverTemplates } from "./schema";
-import { recheckWaiverSeals, waiverSealPassHealthy } from "./waiver-seal-checks";
+import {
+  recheckWaiverSeals,
+  WAIVER_SEALING_SHIPPED_AT,
+  waiverSealPassHealthy,
+} from "./waiver-seal-checks";
 import { listWaiverIntegrityAudit } from "./waivers-audit";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
@@ -202,6 +206,68 @@ describe("recheckWaiverSeals", () => {
     expect(again.newlyInvalid).toBe(0);
   });
 
+  /**
+   * **Pre-marked as failing** (attacker review, finding 2): "already broken"
+   * comes from a column the tamperer can write, so the alarm reads every
+   * broken release, not only a newly broken one.
+   */
+  it("still raises the alarm for a tampered row pre-marked invalid in the database", async () => {
+    const { db, recordId } = await signedRelease();
+    await tamper(db, recordId);
+    await db
+      .update(waiverRecords)
+      .set({ integrityValid: false, integrityCheckedAt: new Date(later.getTime() - 60_000) })
+      .where(eq(waiverRecords.id, recordId));
+    const pass = await recheckWaiverSeals(db, { now: later });
+    expect(pass.invalid).toBeGreaterThanOrEqual(1);
+    expect(waiverSealPassHealthy(pass)).toBe(false);
+  });
+
+  /**
+   * **A seal removed rather than broken** (attacker review, finding 1): the
+   * cheapest tamper nulls the hash. A row that carries a verdict was sealed,
+   * so losing its seal is a broken seal.
+   */
+  it("finds a release whose seal was removed after it was checked", async () => {
+    const { db, shop, recordId } = await signedRelease();
+    await db
+      .update(waiverRecords)
+      .set({ integrityHash: null })
+      .where(eq(waiverRecords.id, recordId));
+    const pass = await recheckWaiverSeals(db, { now: later });
+    expect(await verdictOf(db, recordId)).toMatchObject({ valid: false, checkedAt: later });
+    expect(pass.newlyInvalid).toBeGreaterThanOrEqual(1);
+    expect(waiverSealPassHealthy(pass)).toBe(false);
+    expect(await inUncheckedView(db, shop.id, recordId)).toBe(true);
+  });
+
+  it("finds a release signed since sealing shipped with no seal and no verdict, but not an import", async () => {
+    const { db, shop, recordId } = await signedRelease();
+    const signedAt = new Date(WAIVER_SEALING_SHIPPED_AT.getTime() + 24 * 60 * 60 * 1000);
+    await db
+      .update(shops)
+      .set({ createdAt: new Date("2026-01-01T00:00:00.000Z") })
+      .where(eq(shops.id, shop.id));
+    const stripped = {
+      integrityHash: null,
+      integrityVersion: null,
+      integrityValid: null,
+      integrityCheckedAt: null,
+      signedAt,
+    };
+    await db.update(waiverRecords).set(stripped).where(eq(waiverRecords.id, recordId));
+    await recheckWaiverSeals(db, { now: later });
+    expect(await verdictOf(db, recordId)).toMatchObject({ valid: false, checkedAt: later });
+
+    // The same row as an import carries no seal by design, and stays unchecked.
+    await db
+      .update(waiverRecords)
+      .set({ ...stripped, signatureMethod: "imported" })
+      .where(eq(waiverRecords.id, recordId));
+    await recheckWaiverSeals(db, { now: new Date(later.getTime() + 1) });
+    expect(await verdictOf(db, recordId)).toMatchObject({ valid: null, checkedAt: null });
+  });
+
   it("reads a seal version this build does not know as invalid, never as valid", async () => {
     const { db, shop, recordId } = await signedRelease();
     await db
@@ -243,10 +309,10 @@ describe("recheckWaiverSeals", () => {
     expect(times.every(({ at }) => at !== null && at.getTime() >= later.getTime())).toBe(true);
   });
 
-  it("calls a pass unhealthy only when a seal broke since the last check", () => {
-    const quiet = { checked: 10, invalid: 1, newlyInvalid: 0, capped: true };
+  it("calls a pass unhealthy while any release it checked is broken, capped or not", () => {
+    const quiet = { checked: 10, invalid: 0, newlyInvalid: 0, capped: true };
     expect(waiverSealPassHealthy(quiet)).toBe(true);
-    expect(waiverSealPassHealthy({ ...quiet, newlyInvalid: 1, capped: false })).toBe(false);
+    expect(waiverSealPassHealthy({ ...quiet, invalid: 1 })).toBe(false);
   });
 
   it("re-checks each row once a pass, and stops at its limit saying so", async () => {

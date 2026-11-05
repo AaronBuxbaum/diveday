@@ -10,10 +10,13 @@ export const maxDuration = 60;
 /**
  * **Every signed release's seal, re-checked nightly** (issue #2562): the
  * verdict the signature log's "Unsealed or changed" view filters on
- * (`recheckWaiverSeals`). A seal that broke since its last check, or a pass
- * that stopped at its limit, checks in as an error: a release edited after
- * signing is the record a reviewer must hear about, and the next pass resumes
- * with the rows checked longest ago.
+ * (`recheckWaiverSeals`). A pass that checked any broken release, one changed
+ * after signing or stripped of its seal, checks in as an error
+ * (`waiverSealPassHealthy`), and each such release is logged by its shop's id
+ * and its own (`cron_waiver_seals.seal_invalid`): a release edited after
+ * signing is the record a reviewer must hear about. A pass that stops at its
+ * limit is not an error, since the next one resumes with the rows checked
+ * longest ago.
  */
 export const GET = cronRoute({
   id: "waiver-seals",
