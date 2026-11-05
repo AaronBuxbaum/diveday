@@ -649,7 +649,11 @@ describePostgres("capability issuance and erasure serialization", () => {
       send: provider,
     });
 
-    expect(delivery).toEqual({ status: "sent", providerMessageId: `confirmation-${suffix}` });
+    expect(delivery).toEqual({
+      status: "sent",
+      providerMessageId: `confirmation-${suffix}`,
+      carriedSignStep: false,
+    });
     expect(provider).toHaveBeenCalledTimes(1);
     expect(provider.mock.calls[0]?.[0]).toMatchObject({
       kind: "booking_confirmation",
