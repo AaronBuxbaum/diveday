@@ -402,6 +402,12 @@ export type RosterRecord = {
    */
   countedAboardBlocked: ReadonlyMap<string, CountedAboardBlocked>;
   /**
+   * Seats no started after-dive count included, mapped to the first such dive
+   * (`readDepartureStage`, issue #3895). Not missing: nobody said they were.
+   * Not Sailed either: the record says which count left them out.
+   */
+  notCountedAfterDive?: ReadonlyMap<string, number>;
+  /**
    * Under a seat, what that diver could do next ("Booked Sat 11:30 AM", or an
    * open day with Add them and Email them this date), keyed by booking id
    * (fifth-loop ideas, item 4). Absent says nothing.
@@ -800,9 +806,13 @@ export function groupRoster({
     uncounted: [] as RosterEntry[],
     unrecorded: [] as RosterEntry[],
     unaccounted: [] as RosterEntry[],
+    notCountedAfterDive: [] as NotCountedAfterDiveGroup[],
     sailedMeta: undefined as string | undefined,
   };
 }
+
+/** The seats one after-dive count left out, on the record (issue #3895). */
+export type NotCountedAfterDiveGroup = { dive: number; entries: RosterEntry[] };
 
 /**
  * **The record's groups**, one seat at a time by its rung on the seat ladder
@@ -823,6 +833,9 @@ export function groupRoster({
  * - **Not back aboard**: said missing at an after-dive checkpoint and not
  *   counted since. Ahead of every other group, and the departure stays open
  *   while one is here (`departureStage`, issue #2404).
+ * - **Not counted after dive N**: a seat that would read Sailed, but a started
+ *   after-dive count never included it and no later count did (issue #3895).
+ *   Never moved into Not back aboard: nobody said they were missing.
  *
  * Nothing is still to clear, nothing is blocked, and no shared advisory is
  * said: the dive is over (dive-domain rule: a record never asks for action).
@@ -835,6 +848,7 @@ function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterR
   const unrecorded: RosterEntry[] = [];
   const turnedAway: RosterEntry[] = [];
   const unaccounted: RosterEntry[] = [];
+  const notCounted = new Map<number, RosterEntry[]>();
   for (const entry of roster) {
     const id = entry.booking.id;
     const noShow = entry.booking.status === "no_show";
@@ -849,8 +863,11 @@ function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterR
       missingAfterDive: record.unaccounted.has(id),
     });
     // First: the one group that is still a question, whatever else is on file.
+    const notCountedAfter = record.notCountedAfterDive?.get(id);
     if (ladder.rung === "missing") {
       unaccounted.push(entry);
+    } else if (notCountedAfter !== undefined) {
+      notCounted.set(notCountedAfter, [...(notCounted.get(notCountedAfter) ?? []), entry]);
     } else if (sailingUnsaid(ladder)) {
       (record.rollCallTaken ? uncounted : unrecorded).push(entry);
     } else if (ladder.countsAsSailed) {
@@ -882,6 +899,9 @@ function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterR
     uncounted,
     unrecorded,
     unaccounted,
+    notCountedAfterDive: [...notCounted]
+      .sort(([a], [b]) => a - b)
+      .map(([dive, entries]) => ({ dive, entries })),
     // The group's fact, said once (principle 9): how many of those who sailed
     // were counted aboard while blocked. Nothing at all when none were.
     sailedMeta: countedBlockedMeta(t, sailed, record),

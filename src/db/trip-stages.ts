@@ -214,9 +214,9 @@ function holdsTheBoat(gap: {
  * the one detector Today and the close-out read). A night boat out past
  * midnight with a diver unmarked used to read as finished by the clock. The
  * crew's own Home still finishes it (`departureStage`): that is the
- * departure's last word. The record names a seat recorded not back aboard;
- * a seat merely unmarked after a dive is not named there yet (#3895), and
- * Today keeps chasing that count.
+ * departure's last word. The record names a seat recorded not back aboard,
+ * and, apart from Sailed, a seat no started after-dive count included
+ * (`notCountedAfterDive`, #3895); Today keeps chasing that count.
  * The gap read runs only once the departure would otherwise read finished, so
  * a boat still out costs nothing more.
  */
@@ -229,17 +229,31 @@ export async function readDepartureStage(
   const unaccounted =
     (await listUnaccountedForByTrip(db, shopId, [tripId])).get(tripId) ?? new Set<string>();
   let stage = departureStage({ ...reading, unaccountedFor: unaccounted.size > 0 });
-  if (stage.finished && unaccounted.size === 0) {
+  const notCountedAfterDive = new Map<string, number>();
+  if (stage.finished) {
     const gaps = await listRollCallGaps(db, shopId, reading.now, [tripId], { historical: true });
     // An after-dive checkpoint only, and only one someone started or a person
     // recorded not back: a dock count left open, a shop that never counts after
     // a dive, or no roll call at all is paperwork and never holds a boat.
-    if (gaps.some(holdsTheBoat)) {
+    if (unaccounted.size === 0 && gaps.some(holdsTheBoat)) {
       stage = departureStage({ ...reading, unaccountedFor: true });
+    }
+    // Finished all the same (the crew's Home): the seats no started after-dive
+    // count included, for the record to name apart from Sailed (#3895). The
+    // first dive a seat was left out of wins, across meeting days too.
+    if (stage.finished) {
+      for (const gap of gaps) {
+        for (const [bookingId, dive] of gap.notCountedAfterDive ?? []) {
+          if (unaccounted.has(bookingId)) continue;
+          const known = notCountedAfterDive.get(bookingId);
+          if (known === undefined || dive < known) notCountedAfterDive.set(bookingId, dive);
+        }
+      }
     }
   }
   return {
     ...stage,
     unaccounted: unaccounted as ReadonlySet<string>,
+    notCountedAfterDive: notCountedAfterDive as ReadonlyMap<string, number>,
   };
 }

@@ -134,6 +134,14 @@ export type OpenRollCall = {
    * while this is recent (issue #2925). Optional for the same reason.
    */
   latestMarkAt?: Date | null;
+  /**
+   * On a diver row only: each seat with no result at an after-dive checkpoint
+   * somebody started (diver or crew counted there), by booking, mapped to the
+   * first such dive number (issue #3895). Not a seat recorded not back aboard:
+   * that seat is named as missing. The departure record names these seats
+   * apart from Sailed, because nobody counted them after that dive.
+   */
+  notCountedAfterDive?: ReadonlyMap<string, number>;
 };
 
 /**
@@ -631,6 +639,9 @@ function dayGaps(input: {
   const crewUnaccounted = checkpoints.map(() => 0);
   const crewNotBackAboard = checkpoints.map(() => 0);
   let departureAwaiting = 0;
+  // Each seat with no result at an after-dive checkpoint, by booking, mapped
+  // to that dive; kept to checkpoints someone started once the scan is done.
+  const awaitingAt = new Map<string, number[]>();
   // Seats turned away at the desk with no dock result: not the dock count's.
   let dockOffBoat = 0;
   let anyEvent = false;
@@ -656,6 +667,11 @@ function dayGaps(input: {
       if (state === "not_boarded" && states.slice(dive + 1).includes("boarded")) continue;
       unaccounted[dive] = (unaccounted[dive] ?? 0) + 1;
       if (state === "not_boarded") notBackAboard[dive] = (notBackAboard[dive] ?? 0) + 1;
+      // Counted back aboard after a later dive: they are back, and the record
+      // has nothing to say about them.
+      else if (!states.slice(dive + 1).includes("boarded")) {
+        awaitingAt.set(bookingId, [...(awaitingAt.get(bookingId) ?? []), dive]);
+      }
     }
   }
 
@@ -710,6 +726,13 @@ function dayGaps(input: {
   };
   const found: { diver?: OpenRollCall; crew?: OpenRollCall; dock?: OpenRollCall } = {};
 
+  // The first started checkpoint each awaiting seat has no result at (#3895).
+  const notCountedAfterDive = new Map<string, number>();
+  for (const [bookingId, dives] of awaitingAt) {
+    const started = dives.find((dive) => (recorded[dive] ?? 0) + (crewRecorded[dive] ?? 0) > 0);
+    if (started !== undefined) notCountedAfterDive.set(bookingId, started);
+  }
+
   // A human said a diver did not come back. That outranks every other gap on
   // this boat wherever it sits, so it is searched across all dives first — a
   // per-dive "first problem wins" scan would hide a dive-two missing diver
@@ -734,6 +757,7 @@ function dayGaps(input: {
       uncounted: notBackAboard[missingDive] ?? 0,
       awaiting: (unaccounted[missingDive] ?? 0) - (notBackAboard[missingDive] ?? 0),
       total: population[missingDive] ?? 0,
+      notCountedAfterDive,
     };
   } else if (openDive >= 1) {
     found.diver = {
@@ -743,6 +767,7 @@ function dayGaps(input: {
       uncounted: unaccounted[openDive] ?? 0,
       awaiting: (unaccounted[openDive] ?? 0) - (notBackAboard[openDive] ?? 0),
       total: population[openDive] ?? 0,
+      notCountedAfterDive,
     };
   }
 

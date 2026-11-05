@@ -97,6 +97,78 @@ describe("readDepartureStage: an after-dive count still open", () => {
   });
 });
 
+/**
+ * **The record names a seat no started after-dive count included** (issue
+ * #3895). Once Home finishes the departure, a diver boarded at the dock with
+ * no mark at a started after-dive checkpoint is not filed under Sailed as if
+ * counted: the record says "Not counted after dive N". A seat recorded not
+ * back aboard stays in its own group.
+ */
+describe("readDepartureStage: who the record says was not counted after a dive", () => {
+  async function home(made: Awaited<ReturnType<typeof boat>>) {
+    const { db, shop } = ctx;
+    await recordTripStage(db, {
+      shopId: shop.id,
+      tripId: made.trip.id,
+      stage: "home",
+      recordedByPersonId: made.staffId,
+    });
+    return made.reading();
+  }
+
+  it("names a diver left out of the started count after dive 2", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(second, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "boarded");
+    const reading = await home(made);
+    expect(reading.finished).toBe(true);
+    expect([...reading.notCountedAfterDive]).toEqual([[second, 2]]);
+  });
+
+  it("names the first dive a diver was left out of", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "boarded");
+    expect([...(await home(made)).notCountedAfterDive]).toEqual([[second, 1]]);
+  });
+
+  it("does not name a diver counted back aboard after a later dive", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "boarded");
+    await made.say(second, "after_dive_2", "boarded");
+    expect((await home(made)).notCountedAfterDive.size).toBe(0);
+  });
+
+  it("keeps a diver recorded not back aboard in the missing group, not this one", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(second, "after_dive_1", "not_boarded");
+    const reading = await home(made);
+    expect(reading.unaccounted.has(second)).toBe(true);
+    expect(reading.notCountedAfterDive.has(second)).toBe(false);
+  });
+
+  it("names nobody where no after-dive count was started", async () => {
+    const made = await boat();
+    expect((await home(made)).notCountedAfterDive.size).toBe(0);
+  });
+
+  it("names nobody while the departure is still live", async () => {
+    const made = await boat();
+    const [first] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    const reading = await made.reading();
+    expect(reading.finished).toBe(false);
+    expect(reading.notCountedAfterDive.size).toBe(0);
+  });
+});
+
 describe("readDepartureStage: a departure cancelled after boarding", () => {
   it("never reads finished by the clock, whatever the roll call says (attacker S5)", async () => {
     const { db, shop } = ctx;

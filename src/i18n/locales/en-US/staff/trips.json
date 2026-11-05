@@ -593,6 +593,7 @@
     "groupJoinedAtSite": "Joined at a dive site",
     "groupNotCounted": "Not counted at the dock",
     "groupUnaccounted": "Not back aboard",
+    "groupNotCountedAfterDive": "Not counted after dive {dive}",
     "recordCountedBlocked": "Counted aboard ({checkpoint}) while blocked: {reasons}",
     "sailedBlockedMeta": "{count, plural, one {# counted aboard while blocked} other {# counted aboard while blocked}}",
     "groupNoRollCall": "No roll call taken",

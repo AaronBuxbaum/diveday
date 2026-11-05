@@ -979,7 +979,8 @@
   them ashore at the dock; the Safety page reads each against the crew member's credentials as they
   stand today, on the departure's last day.
 - **The record** — a home departure's Divers tab: each seat filed under **Not back aboard**
-  (said missing after a dive and not counted since, ahead of every band), **Sailed**, **Didn't
+  (said missing after a dive and not counted since, ahead of every band), **Not counted after
+  dive N**, **Sailed**, **Didn't
   sail**, **Turned away**, **Not counted at the dock** or **No roll call taken** (`recordGroups`,
   by each seat's rung on the **Seat ladder**,
   `src/app/shop/[shopSlug]/trips/[id]/_components/roster-model.ts`), built from the crew's
@@ -1000,6 +1001,12 @@
   they dived, so they are not **Didn't sail**. The **Seat ladder** puts them on `out`, and the recap
   and the diver's page welcome them back (`joinedAtADiveSite`, `leftAtTheDock`,
   `src/lib/seat-ladder.ts`). Spanish: "Se unieron en el sitio de buceo".
+- **Not counted after dive N** — a finished departure's record band, above **Sailed**, for a seat
+  an after-dive count somebody started never included, and no later count did either: the crew
+  tapped Home with that count open (`notCountedAfterDive`, `readDepartureStage`,
+  `src/db/trip-stages.ts`; issue #3895). N is the first such dive. It names a gap in the count,
+  not a missing diver: nobody said they were not back, so they are never filed under **Not back
+  aboard**. Spanish: "Sin contar tras la inmersión N".
 - **Not counted at the dock** — a finished departure's record band for a seat with no dock result,
   no standing after-dive result and no `no_show`, on a departure whose dock roll call *was* taken.
   It names a gap in the count, not a fact about the diver: nobody said they sailed and nobody said

@@ -204,6 +204,15 @@ export function RosterSection({
               settled={false}
               context={context}
             />
+            {groups.notCountedAfterDive.map(({ dive, entries }) => (
+              <RosterSeatGroup
+                key={dive}
+                label={t("trips.roster.groupNotCountedAfterDive", { dive })}
+                entries={entries}
+                settled={false}
+                context={context}
+              />
+            ))}
             <RosterSeatGroup
               label={t("trips.roster.groupSailed")}
               entries={groups.sailed}
