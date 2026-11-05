@@ -17,7 +17,6 @@ import {
   accountSecurity,
   accountSessions,
   accountStepUps,
-  accountTokens,
   activityEvents,
   authProviderAccounts,
   authVerifications,
@@ -1198,7 +1197,7 @@ export async function clearDemoSchedule(
       .where(inArray(userAccounts.personId, purgeIds));
     const purgeAccountIds = purgeAccounts.map((row) => row.id);
     if (purgeAccountIds.length > 0) {
-      await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, purgeAccountIds));
+      await db.delete(capabilities).where(inArray(capabilities.userAccountId, purgeAccountIds));
       // A provider login references the account row and carries no cascade, so
       // it must go before user_accounts for the same reason the tokens above
       // do. Nothing writes this table yet — no OAuth provider is configured —

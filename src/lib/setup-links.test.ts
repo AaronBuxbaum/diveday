@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createAccountToken } from "./account-tokens";
+import { createBearerToken } from "./bearer-tokens";
 import { redactCapabilityUrl } from "./capability-urls";
 import { DAY_MS } from "./clock";
 import {
@@ -11,8 +11,8 @@ import {
 
 describe("a setup link's token (ADR 20261009-single-use-setup-links)", () => {
   it("has the shape every minted token has, and nothing else does", () => {
-    for (let i = 0; i < 20; i += 1) expect(isSetupLinkTokenShape(createAccountToken())).toBe(true);
-    const token = createAccountToken();
+    for (let i = 0; i < 20; i += 1) expect(isSetupLinkTokenShape(createBearerToken())).toBe(true);
+    const token = createBearerToken();
     for (const candidate of [
       token.slice(1),
       `${token}A`,
@@ -34,7 +34,7 @@ describe("a setup link's token (ADR 20261009-single-use-setup-links)", () => {
   });
 
   it("never reaches telemetry", () => {
-    const token = createAccountToken();
+    const token = createBearerToken();
     const redacted = redactCapabilityUrl(`${setupLinkPath(token)}&error=email_taken`);
     expect(redacted).not.toContain(token);
     expect(redacted).toContain("error=email_taken");

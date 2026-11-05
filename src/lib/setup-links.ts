@@ -11,7 +11,7 @@ import { DAY_MS } from "./clock";
  * expires and is spent by the shop it creates. The founder receives it in the
  * request's onboarding mail and either fills the form in or forwards it.
  *
- * The token is the same shape as an account token (`account-tokens.ts`): 32
+ * The token is a bearer token (`bearer-tokens.ts`), as every stored link is: 32
  * random bytes, base64url, hashed with SHA-256.
  */
 

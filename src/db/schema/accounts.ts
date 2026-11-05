@@ -19,12 +19,6 @@ import { people, shops, userAccounts } from "./core";
  * security state, and the auth-provider tables.
  */
 
-export const accountTokenPurpose = pgEnum("account_token_purpose", [
-  "email_verification",
-  "password_reset",
-  "invite",
-]);
-
 /** Pending password proof, never an authenticated session. Machinery, hard deleted. */
 export const accountSignInChallenges = pgTable(
   "account_sign_in_challenges",
@@ -50,36 +44,8 @@ export const accountSignInChallenges = pgTable(
 );
 
 /**
- * A hashed, expiring, one-time bearer token proving control of a user
- * account's own email address — confirming a freshly created account, or
- * authorizing a password reset (20260725-account-lifecycle-emails). Shaped
- * like `waiver_records`'/`booking_capabilities`' tokens, not
- * `recap-links.ts`'s stateless one: a password-reset token is a bearer
- * credential over account takeover and must be individually revocable.
- * Issuing a fresh token for the same account+purpose supersedes any prior
- * outstanding one, exactly like a reissued waiver link.
- */
-export const accountTokens = pgTable(
-  "account_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userAccountId: uuid("user_account_id")
-      .notNull()
-      .references(() => userAccounts.id),
-    purpose: accountTokenPurpose("purpose").notNull(),
-    /** SHA-256 hash only — the raw bearer token is shown once when issued. */
-    tokenHash: text("token_hash").notNull().unique(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    usedAt: timestamp("used_at", { withTimezone: true }),
-    supersededAt: timestamp("superseded_at", { withTimezone: true }),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [index("account_tokens_account_purpose_idx").on(table.userAccountId, table.purpose)],
-);
-
-/**
  * A signed-in session — better-auth's `session` model, mapped here by name
- * for consistency with `account_tokens` rather than better-auth's default
+ * for consistency with the other `account_*` tables rather than better-auth's default
  * `session`. Unlike the JWT next-auth used (ADR-0006), this row is the
  * session, and revoking sign-in means deleting or expiring this row rather
  * than waiting out a JWT's lifetime.
@@ -233,7 +199,7 @@ export const authProviderAccounts = pgTable("auth_provider_accounts", {
 /**
  * better-auth's `verification` model — required adapter scaffolding,
  * functionally unused here: email verification, password reset, and staff
- * invites all run through the existing, unrelated `account_tokens` system
+ * invites all run through the existing, unrelated account-token capabilities (`src/db/account-tokens.ts`)
  * (src/db/account-tokens.ts), not better-auth's own flows.
  */
 export const authVerifications = pgTable("auth_verifications", {

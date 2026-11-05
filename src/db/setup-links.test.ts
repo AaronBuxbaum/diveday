@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hashAccountToken } from "@/lib/account-tokens";
+import { hashBearerToken } from "@/lib/bearer-tokens";
 import { SETUP_LINK_TTL_MS, setupLinkPath } from "@/lib/setup-links";
 import { unseededTestDb } from "@/test/db";
 import { deleteSetupRequestsByEmail, recordSetupRequest } from "./funnel";
@@ -28,7 +28,7 @@ describe("a setup link (ADR 20261009-single-use-setup-links)", () => {
     const db = await unseededTestDb();
     const { link } = await requestedLink(db);
     const [row] = await db.select().from(shopSetupLinks);
-    expect(row?.tokenHash).toBe(hashAccountToken(link.token));
+    expect(row?.tokenHash).toBe(hashBearerToken(link.token));
     expect(JSON.stringify(row)).not.toContain(link.token);
     expect(link.expiresAt.getTime() - NOW.getTime()).toBe(SETUP_LINK_TTL_MS);
     expect(setupLinkPath(link.token)).toBe(`/onboard?setup=${link.token}`);

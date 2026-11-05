@@ -189,7 +189,7 @@ describe("GET /api/cron/retention — reporting", () => {
     vi.mocked(pruneExpiredRecords).mockResolvedValue({
       outcomes: [
         {
-          table: "account_tokens",
+          table: "account_sessions",
           deleted: 0,
           capped: false,
           failed: true,
@@ -198,22 +198,22 @@ describe("GET /api/cron/retention — reporting", () => {
         },
       ],
       totalDeleted: 0,
-      failedTables: ["account_tokens"],
+      failedTables: ["account_sessions"],
       skippedTables: [],
     } as never);
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(500);
     expect(summaryLine()).toEqual(
-      expect.objectContaining({ tablesFailed: 1, failedTables: "account_tokens" }),
+      expect.objectContaining({ tablesFailed: 1, failedTables: "account_sessions" }),
     );
     expect(
       vi.mocked(console.error).mock.calls.map((call) => JSON.parse(String(call[0]))),
     ).toContainEqual(
-      expect.objectContaining({ event: "cron_retention.prune_failed", table: "account_tokens" }),
+      expect.objectContaining({ event: "cron_retention.prune_failed", table: "account_sessions" }),
     );
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ tags: { retention_table: "account_tokens" } }),
+      expect.objectContaining({ tags: { retention_table: "account_sessions" } }),
     );
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: "error" }),

@@ -160,7 +160,7 @@ somewhere else.
 The prefix half of that scoping was missing until 2026-08-15: the grant said `arnForObjects("*")`,
 which is the *whole* bucket, and the bucket also held `dumps/`. So a leaked Vercel environment could
 overwrite the weekly `pg_dump` — the one artifact that restores a login, since the bundles exclude
-`user_accounts`, `account_tokens` and `calendar_feeds` by design. It could never *read* one, which is
+`user_accounts` and the bearer links in `capabilities` by design. It could never *read* one, which is
 the property the whole design rests on and which was never at risk. Versioning meant the real dump
 survived as a non-current version, so this was a risk rather than an incident, but nothing would have
 said so: the freshness check only asked whether a dated prefix under `dumps/` was recent. It now also
@@ -315,7 +315,7 @@ portability feature it was built as.
 
 | Property | Reality |
 | --- | --- |
-| What it is | `pg_dump --format=custom --no-owner --no-privileges` over the whole cluster, gzipped. Covers `user_accounts`, `account_tokens` and `calendar_feeds` — and everything else — in one file |
+| What it is | `pg_dump --format=custom --no-owner --no-privileges` over the whole cluster, gzipped. Covers `user_accounts` and `capabilities` (account tokens, calendar feeds) — and everything else — in one file |
 | Host | CodeBuild project `diveday-database-dump` (`infra/lib/infra-stack.ts` §20), using the digest-pinned Postgres 17 image in `config/postgres-image/Dockerfile`. `pg_dump` may be newer than its server, never older, so revisit the major version when Neon upgrades |
 | Cadence | Weekly, **Mondays 05:30 UTC**, EventBridge Scheduler → `codebuild:StartBuild`. Half an hour after the export pass, a day before the watchdog, so one week's dump and one week's bundles share a run date |
 | Key convention | `dumps/<YYYY-MM-DD>/diveday.dump.gz` in `DatabaseDumpBucket`, default name `diveday-database-dumps`, override with `--context dumpBucketName=...`. **Not** the bundles' bucket, since 2026-08-15 — and there is no second place to look, see the abandoned prefix below |
@@ -637,7 +637,7 @@ It should take under an hour.
   full-cluster dump and checked selected records plus a future manifest; it did not verify a bundle,
   exercise the import path, or open a signed waiver. Those checks remain in the quarterly test above.
 - **The export's credential gap is now covered elsewhere, not fixed in the export.** §2c's
-  full-cluster dump carries `user_accounts`, `account_tokens` and `calendar_feeds`; the bundles still
+  full-cluster dump carries `user_accounts` and `capabilities`; the bundles still
   do not and still should not. What that means practically: a restore from bundles *alone* still yields
   nobody who can sign in, so recovery is the two-part procedure in §2c rather than one artifact.
 - **The photo gap is unchanged, by either layer.** A photo that fails to fetch is still dropped
@@ -662,7 +662,7 @@ It should take under an hour.
 | Symptom | Look at |
 | --- | --- |
 | The branch you need is older than Neon will go | The PITR window at the top of this file — if it is unrecorded, that is the finding. Fall back to the newest export bundle in S3 and accept its gaps (no credentials, possibly missing photos) |
-| Restored app boots but nobody can sign in | Expected when restoring from export bundles alone: `user_accounts`/`account_tokens` are never exported (`NOT_INCLUDED`, `src/lib/export.ts`). Restore the newest dump from `s3://diveday-database-dumps/dumps/` first (§2c) and layer the bundles on top; re-inviting staff and forcing password resets is now the fallback for when no dump is available, not the standard procedure |
+| Restored app boots but nobody can sign in | Expected when restoring from export bundles alone: `user_accounts` and the account tokens in `capabilities` are never exported (`NOT_INCLUDED`, `src/lib/export.ts`). Restore the newest dump from `s3://diveday-database-dumps/dumps/` first (§2c) and layer the bundles on top; re-inviting staff and forcing password resets is now the fallback for when no dump is available, not the standard procedure |
 | No dump in `diveday-database-dumps` at all | Either the `diveday/database-url-unpooled` secret was never filled in, so every build refused (§2c, and the weekly watchdog alarms on exactly this — check the `diveday-database-dump` project's last build log for the named refusal), or no dump has run since the 2026-08-15 bucket split. Start one by hand; do **not** reach for `s3://diveday-backups/dumps/`, whose contents are abandoned pre-split dumps of demo data (§2c) |
 | `pg_restore` fails on ownership or grants | The dump is taken `--no-owner --no-privileges`; pass both on the way in too — the target branch's roles are not the source cluster's |
 | A waiver renders but its integrity hash does not verify | Compare `waiver_templates.csv`'s `body` for that `template_version` against what the app is rendering — a restore that mixed a current template with an old record is the usual cause |

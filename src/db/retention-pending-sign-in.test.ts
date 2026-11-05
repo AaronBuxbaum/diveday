@@ -1,7 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { pendingSignInForRetention } from "@/test/retention-account-tokens";
+import { pendingSignInForRetention } from "@/test/retention-pending-sign-in";
 import { PRUNE_ARMS, pruneExpiredRecords } from "./retention";
 import { people, userAccounts } from "./schema";
 

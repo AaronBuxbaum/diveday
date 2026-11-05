@@ -8,7 +8,6 @@ import {
   accountSessions,
   accountSignInChallenges,
   accountStepUps,
-  accountTokens,
   activityEvents,
   authProviderAccounts,
   authVerifications,
@@ -380,7 +379,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(accountSessions).where(eq(accountSessions.shopId, shopId));
 
   if (personIds.length > 0) {
-    // Account tokens reference user_accounts, one layer further down the same
+    // Account tokens (capabilities naming the account) reference user_accounts, one layer further down the same
     // chain the comment above already walks — a demo owner who ever requested
     // a reset link leaves one behind, and it must go before user_accounts or
     // this FK-violates and strands the shop past the reaper's TTL (security
@@ -391,7 +390,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
       .where(inArray(userAccounts.personId, personIds));
     const demoAccountIds = demoAccounts.map((row) => row.id);
     if (demoAccountIds.length > 0) {
-      await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, demoAccountIds));
+      await db.delete(capabilities).where(inArray(capabilities.userAccountId, demoAccountIds));
       // A provider login references the account row and carries no cascade, so
       // it must go before user_accounts for the same reason the tokens above
       // do. Nothing writes this table yet — no OAuth provider is configured —

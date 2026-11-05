@@ -165,8 +165,9 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "dive_package_entitlements",
   // Credentials that live and die with the thing they open: revoked, spent, or
   // deleted with their parent. The token tables that are *not* here
-  // (`account_tokens`, `account_sessions`, `shop_contact_email_confirmation_tokens`,
-  // `integration_oauth_states`, `booking_capabilities`) are the ones whose
+  // (`capabilities`, for the account tokens; `account_sessions`,
+  // `shop_contact_email_confirmation_tokens`, `integration_oauth_states`,
+  // `booking_capabilities`) are the ones whose
   // already-dead rows are kept on purpose for an incident review — which is
   // what a window is for, and why they have one.
   "user_accounts",

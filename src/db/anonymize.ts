@@ -108,7 +108,6 @@ import {
   accountSecurity,
   accountSessions,
   accountSignInChallenges,
-  accountTokens,
   activityEvents,
   authProviderAccounts,
   authVerifications,
@@ -1264,7 +1263,8 @@ async function scrubDiverLogin(
     await tx
       .delete(accountSignInChallenges)
       .where(eq(accountSignInChallenges.userAccountId, account.id));
-    await tx.delete(accountTokens).where(eq(accountTokens.userAccountId, account.id));
+    // Their account tokens (verify, reset, invite): capabilities naming the account.
+    await tx.delete(capabilities).where(eq(capabilities.userAccountId, account.id));
     await tx.delete(accountSecurity).where(eq(accountSecurity.userAccountId, account.id));
     // A provider login for this account, if one ever existed. Nothing writes
     // this table today — no OAuth provider is configured and no route mounts

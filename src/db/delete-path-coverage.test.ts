@@ -42,7 +42,7 @@ import {
  *
  * **Scope is the foreign-key graph, not the `shop_id` column.** It used to be
  * the column, and that left the tables reached through a parent's id list —
- * `user_accounts`, `account_tokens`, `person_roles`, `trip_assignments` —
+ * `user_accounts`, `person_roles`, `trip_assignments` —
  * invisible to the guard whose whole job is finding tables nobody deletes.
  * `auth_provider_accounts` is what made the cost visible: it reaches a shop
  * only as `user_account_id` -> `person_id` -> `shop_id`, so it sat with no

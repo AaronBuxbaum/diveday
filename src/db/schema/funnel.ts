@@ -102,7 +102,7 @@ export type SetupRequest = typeof setupRequests.$inferSelect;
  *
  * Minted for each set-up request and sent to the founder in that request's
  * onboarding mail, so the founder can fill the form in or forward the link to
- * the shop. Hashed at rest like `account_tokens`: the raw token exists only in
+ * the shop. Hashed at rest like every bearer link: the raw token exists only in
  * that mail and the URL it opens. It expires (`SETUP_LINK_TTL_MS`) and is spent
  * in the same transaction that creates the shop, so a forwarded or leaked copy
  * opens nothing after the first shop.
