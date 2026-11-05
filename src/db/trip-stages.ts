@@ -1,6 +1,11 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
-import { type CheckpointGap, homewardCheckpointGap, isHomewardStage } from "@/lib/checkpoint-gaps";
+import {
+  type CheckpointGap,
+  homeNotCountedCount,
+  homewardCheckpointGap,
+  isHomewardStage,
+} from "@/lib/checkpoint-gaps";
 import { nowDate } from "@/lib/clock";
 import { departureStage } from "@/lib/trip-phase";
 import type { TripStage, TripStageReading } from "@/lib/trip-stages";
@@ -54,6 +59,15 @@ export async function recordTripStage(
     recordedAt?: Date;
   },
 ): Promise<RecordTripStageOutcome> {
+  // **Home said with the count open** (issue #3896): read before the word,
+  // so the event keeps how many the last after-dive count had not accounted
+  // for. Home is never refused: the crew's word is final. A read that fails
+  // records the word without a count rather than making the crew tap again.
+  const manifestsBefore =
+    input.stage === "home"
+      ? await getTripManifests(db, input.shopId, input.tripId).catch(() => null)
+      : null;
+  const notCounted = manifestsBefore ? homeNotCountedCount(manifestsBefore) : null;
   const recorded = await db.transaction(async (tx) => {
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
     if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" } as const;
@@ -86,6 +100,7 @@ export async function recordTripStage(
         diveSiteId: firstDive?.diveSiteId ?? null,
         recordedByPersonId: input.recordedByPersonId,
         recordedAt: input.recordedAt ?? nowDate(),
+        notCounted,
       })
       .returning({ id: tripStageEvents.id });
     if (!event) return { ok: false, reason: "trip_unavailable" } as const;
@@ -97,11 +112,13 @@ export async function recordTripStage(
   // A read that fails here must not turn a recorded word into an error the
   // crew answers by tapping again: the manifest re-renders with the same
   // warning from its own read (`stageStripProps`).
-  const rollCallOpen = isHomewardStage(input.stage)
-    ? await getTripManifests(db, input.shopId, input.tripId)
-        .then((manifests) => homewardCheckpointGap(manifests ?? []))
-        .catch(() => null)
-    : null;
+  const rollCallOpen = manifestsBefore
+    ? homewardCheckpointGap(manifestsBefore)
+    : isHomewardStage(input.stage)
+      ? await getTripManifests(db, input.shopId, input.tripId)
+          .then((manifests) => homewardCheckpointGap(manifests ?? []))
+          .catch(() => null)
+      : null;
   return { ...recorded, rollCallOpen };
 }
 
@@ -111,6 +128,7 @@ const READING_COLUMNS = {
   siteName: diveSites.name,
   recordedAt: tripStageEvents.recordedAt,
   recordedByName: people.fullName,
+  notCounted: tripStageEvents.notCounted,
   seq: tripStageEvents.seq,
 };
 
@@ -143,7 +161,13 @@ export async function latestTripStage(
     .orderBy(desc(tripStageEvents.recordedAt), desc(tripStageEvents.seq))
     .limit(1);
   return row
-    ? { ...row, siteName: row.siteName ?? null, recordedByName: row.recordedByName }
+    ? {
+        stage: row.stage,
+        siteName: row.siteName ?? null,
+        recordedAt: row.recordedAt,
+        recordedByName: row.recordedByName,
+        notCounted: row.notCounted,
+      }
     : null;
 }
 
@@ -187,6 +211,7 @@ export async function latestTripStagesByTrip(
       siteName: row.siteName ?? null,
       recordedAt: row.recordedAt,
       recordedByName: row.recordedByName,
+      notCounted: row.notCounted,
     });
   }
   return newest;

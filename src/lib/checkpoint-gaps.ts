@@ -173,6 +173,23 @@ export function homewardCheckpointGap(manifests: readonly GapManifest[]): Checkp
   return nobodyCounted && beforeClosed ? { kind: "not_counted", checkpoint: last.checkpoint } : gap;
 }
 
+/**
+ * **How many people a Home tap leaves uncounted** (issue #3896): everyone the
+ * last after-dive count has not accounted for (`homewardCheckpointGap`),
+ * passengers, crew and those recorded not back aboard together, or null when
+ * it has everyone. A `not_counted` gap is counted from the same checkpoint,
+ * so a dive called off with the plan left at the old count still says how
+ * many went uncounted. The stage event keeps this number.
+ */
+export function homeNotCountedCount(manifests: readonly GapManifest[]): number | null {
+  const gap = homewardCheckpointGap(manifests);
+  if (!gap) return null;
+  const counts = gap.kind === "unmarked" ? gap : checkpointGap(manifests, gap.checkpoint);
+  if (counts?.kind !== "unmarked") return null;
+  const total = counts.divers + counts.crew + counts.missing;
+  return total > 0 ? total : null;
+}
+
 /** The dive count a `not_counted` gap suggests: the dives before the uncounted one. */
 export function plannedDivesWithout(gap: CheckpointGap): number {
   return rollCallCheckpointOrdinal(gap.checkpoint) - 1;

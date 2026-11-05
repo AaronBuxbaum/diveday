@@ -196,6 +196,11 @@ export function RosterSection({
               to exist: a `<Link>` transition does not run the browser's own
               fragment scroll. */}
             <ScrollToHash />
+            {record?.homeNotCounted ? (
+              <p className="px-4 py-2 text-sm font-semibold text-danger">
+                {t("trips.roster.recordHomeNotCounted", { count: record.homeNotCounted })}
+              </p>
+            ) : null}
             {/* The record's groups (UX review 2026-10-10, item 10): empty
               unless the departure is finished, and then the only ones. */}
             <RosterSeatGroup

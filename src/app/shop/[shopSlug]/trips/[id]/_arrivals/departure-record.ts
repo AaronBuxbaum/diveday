@@ -50,7 +50,14 @@ export async function diversTabState(
     return {
       ...reading,
       desk: null,
-      record: { ...record, notCountedAfterDive: reading.notCountedAfterDive, below },
+      record: {
+        ...record,
+        notCountedAfterDive: reading.notCountedAfterDive,
+        ...(homeAt && reading.shown?.notCounted
+          ? { homeNotCounted: reading.shown.notCounted }
+          : {}),
+        below,
+      },
     };
   }
   return { ...reading, desk: await buildArrivalDesk(deskInput), record: undefined };

@@ -1496,7 +1496,11 @@
   leave a diver's family reading "out on the reef" at midnight. The staff surfaces (the departure
   header, the shop home's station chip) read `boatStageOf` instead, whose staleness is the end of
   the return shop day, as the **trip phase** entry says: a crew is told its own boat is still out
-  until someone taps *Home*. `home` alone carries
+  until someone taps *Home*. **Home with the count open asks first**: while the last after-dive
+  count has someone unmarked or not back aboard, the strip names the count and asks "Mark the boat
+  home anyway?"; Home is never refused, and the event keeps how many were not counted
+  (`trip_stage_events.not_counted`), so the manifest and the record say "Home with 2 not counted"
+  (issue #3896, Aaron 2026-11-05). `home` alone carries
   the roll call's success tone, and `home` alone is withheld from the anonymous surfaces: the diver
   who was aboard reads it on their own link, a storefront panel about tomorrow does not. It was a
   display word until issue #1480 made it load-bearing — the **close-out** reads a live `home` as a

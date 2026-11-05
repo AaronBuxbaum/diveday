@@ -13,7 +13,11 @@
     "shortHome": "Home",
     "recordedLine": "{name} · {time}",
     "errorRefusal": "That didn’t save. Check your connection and tap again.",
-    "openRollCall": "Open roll call"
+    "openRollCall": "Open roll call",
+    "homeConfirmQuestion": "Mark the boat home anyway?",
+    "homeConfirm": "Mark home anyway",
+    "homeConfirmBack": "Not yet",
+    "homeNotCounted": "Home with {count, plural, one {# not counted} other {# not counted}}"
   },
   "deckCount": {
     "heading": "Count on deck",

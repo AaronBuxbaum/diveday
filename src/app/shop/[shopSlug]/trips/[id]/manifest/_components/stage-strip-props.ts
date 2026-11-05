@@ -93,6 +93,20 @@ export function stageStripProps(
             time: formatTime(shown.recordedAt, input.locale, input.timeZone),
           })
         : undefined,
+      // Home said with the last after-dive count open (issue #3896): the
+      // strip asks first, naming the count, and never refuses.
+      homeConfirm: homewardGap
+        ? {
+            question: `${checkpointGapLine(t, homewardGap)} ${t("manifest.stage.homeConfirmQuestion")}`,
+            confirmLabel: t("manifest.stage.homeConfirm"),
+            backLabel: t("manifest.stage.homeConfirmBack"),
+          }
+        : undefined,
+      // What the Home tap recorded, said beside who said it.
+      homeNotCounted:
+        shown?.stage === "home" && shown.notCounted
+          ? t("manifest.stage.homeNotCounted", { count: shown.notCounted })
+          : undefined,
       // A same-page address: the roll call is this manifest at that checkpoint.
       rollCallOpen: homewardGap
         ? {

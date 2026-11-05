@@ -169,6 +169,64 @@ describe("readDepartureStage: who the record says was not counted after a dive",
   });
 });
 
+/**
+ * **Home keeps how many the last count left out** (issue #3896). Home is never
+ * refused; the event records the count so the record says "Home with 2 not
+ * counted".
+ */
+describe("recordTripStage: Home with the after-dive count open", () => {
+  async function sayHome(
+    made: Awaited<ReturnType<typeof boat>>,
+    stage: "home" | "heading_in" = "home",
+  ) {
+    const { db, shop } = ctx;
+    const outcome = await recordTripStage(db, {
+      shopId: shop.id,
+      tripId: made.trip.id,
+      stage,
+      recordedByPersonId: made.staffId,
+    });
+    return { outcome, latest: await latestTripStage(db, shop.id, made.trip.id) };
+  }
+
+  it("records Home with the people the last count has not accounted for", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(second, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "boarded");
+    const { outcome, latest } = await sayHome(made);
+    expect(outcome).toMatchObject({ ok: true });
+    expect(latest).toMatchObject({ stage: "home", notCounted: 1 });
+  });
+
+  it("counts a person recorded not back aboard with the unmarked", async () => {
+    const made = await boat();
+    const [first, second] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_1", "boarded");
+    await made.say(second, "after_dive_1", "boarded");
+    await made.say(first, "after_dive_2", "not_boarded");
+    expect((await sayHome(made)).latest).toMatchObject({ notCounted: 2 });
+  });
+
+  it("records no count when everyone is counted back", async () => {
+    const made = await boat();
+    for (const checkpoint of ["after_dive_1", "after_dive_2"]) {
+      for (const id of made.bookingIds) await made.say(id, checkpoint, "boarded");
+    }
+    expect((await sayHome(made)).latest).toMatchObject({ stage: "home", notCounted: null });
+  });
+
+  it("records no count on Heading in, which still warns", async () => {
+    const made = await boat();
+    const [first] = made.bookingIds as [string, string];
+    await made.say(first, "after_dive_2", "boarded");
+    const { outcome, latest } = await sayHome(made, "heading_in");
+    expect(latest).toMatchObject({ stage: "heading_in", notCounted: null });
+    expect(outcome.ok && outcome.rollCallOpen).toBeTruthy();
+  });
+});
+
 describe("readDepartureStage: a departure cancelled after boarding", () => {
   it("never reads finished by the clock, whatever the roll call says (attacker S5)", async () => {
     const { db, shop } = ctx;

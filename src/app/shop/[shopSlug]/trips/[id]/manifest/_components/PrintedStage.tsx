@@ -23,6 +23,9 @@ export function PrintedStage({
       {copy.recordedLine ? (
         <p className="mt-1 text-sm text-muted tabular-nums">{copy.recordedLine}</p>
       ) : null}
+      {copy.homeNotCounted && current === "home" ? (
+        <p className="mt-1 text-sm font-semibold">{copy.homeNotCounted}</p>
+      ) : null}
     </section>
   );
 }

@@ -13,7 +13,11 @@
     "shortHome": "Puerto",
     "recordedLine": "{name} · {time}",
     "errorRefusal": "No se guardó. Revisa tu conexión y vuelve a tocar.",
-    "openRollCall": "Abrir pase de lista"
+    "openRollCall": "Abrir pase de lista",
+    "homeConfirmQuestion": "¿Marcar el barco en puerto igualmente?",
+    "homeConfirm": "Marcar en puerto igualmente",
+    "homeConfirmBack": "Todavía no",
+    "homeNotCounted": "En puerto con {count, plural, one {# sin contar} other {# sin contar}}"
   },
   "deckCount": {
     "heading": "Recuento en cubierta",
