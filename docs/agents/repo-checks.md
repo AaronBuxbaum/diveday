@@ -1214,7 +1214,8 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
   `.claude/rules/*.md` exists, and in the handoff docs (`docs/agents/*.md`, the local skills'
   `SKILL.md`, `.claude/agents/*.md`) too, except on a line telling history ("(was …)", "until
   2026-…") or naming a gitignored output — ten live instructions there pointed at moved files on
-  2026-10-13; every allowlist entry and every hook command in
+  2026-10-13; every file a feature module's `README.md` names exists too, a bare name (`registry.ts`)
+  read against the module and anything outside it written as a repo path (issue #2755); every allowlist entry and every hook command in
   `.claude/settings.json` names a real script or package script; nothing in `.mcp.json` launches
   through a package manager.
 - **Always-loaded context is budgeted** (`scripts/check-context-budget.mjs`): `AGENTS.md`,

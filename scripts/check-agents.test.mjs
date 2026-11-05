@@ -7,6 +7,7 @@ import {
   gitignoredPaths,
   linkedSkillProblems,
   missingDocPaths,
+  missingModulePaths,
   vendoredSkillProblems,
 } from "./agent-layer.mjs";
 import { findLaunchProblems, packageManagerIn } from "./mcp-launch-guard.mjs";
@@ -207,6 +208,27 @@ describe("the handoff docs' paths", () => {
     ]) {
       expect(missingDocPaths(line, exists)).toEqual([]);
     }
+  });
+
+  it("reads a feature README's bare file names against its own module (issue #2755)", () => {
+    const moduleExists = (relative) =>
+      ["src/features/today/today.ts", "src/features/today/index.ts", "src/db/schema"].includes(
+        relative,
+      );
+    const text =
+      "`today.ts` holds the queue, `index.ts` is the door, `queue.ts` drains it, and `src/db/schema/` stays put.";
+    expect(missingModulePaths(text, "src/features/today", moduleExists)).toEqual(["queue.ts"]);
+  });
+
+  it("names a missing repo path in a feature README, as in any handoff doc", () => {
+    expect(
+      missingModulePaths("Read `src/db/nothing.ts`.", "src/features/today", () => false),
+    ).toEqual(["src/db/nothing.ts"]);
+  });
+
+  it("leaves alone a README's placeholders and globs", () => {
+    const text = "`staff/<namespace>.json`, `*.test.ts`, `example.ts`";
+    expect(missingModulePaths(text, "src/features/today", () => false)).toEqual([]);
   });
 
   it("counts a gitignored output as named, whether or not this checkout has made it yet", () => {

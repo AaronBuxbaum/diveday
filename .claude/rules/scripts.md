@@ -27,7 +27,7 @@ names what enforces it; the reasoning and incidents are in
   reason. `locale`'s count never reaches zero; name a deliberate one in `DELIBERATELY_IDENTICAL`.
 - **The agent layer is checked** by `scripts/check-agents.mjs`: skill frontmatter, the skill index,
   every backticked path in `AGENTS.md`, these rules, `docs/agents/`, the
-  local skills and the reviewer agents, hook and allowlist
+  local skills, the reviewer agents and each `src/features/*/README.md`, hook and allowlist
   commands, and `.mcp.json` launches.
 - **Always-loaded context is budgeted** by `scripts/check-context-budget.mjs` (`AGENTS.md`,
   `CLAUDE.md`, unscoped rules, model-visible skill and agent descriptions). The fix for red is to

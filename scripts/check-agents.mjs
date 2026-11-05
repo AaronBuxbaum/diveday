@@ -10,6 +10,7 @@ import {
   gitignoredPaths,
   linkedSkillProblems,
   missingDocPaths,
+  missingModulePaths,
   providerSkillProblems,
   vendoredSkillProblems,
 } from "./agent-layer.mjs";
@@ -261,6 +262,22 @@ for (const { file, token } of missingHandoff) {
   if (!ignoredHandoff.has(token)) problems.push(`${file}: path "${token}" does not exist`);
 }
 
+// 5d. A feature module's README is that module's map (issue #2755): it names its own files bare
+// (`registry.ts`), relative to the module, and anything else by repo path. A renamed file
+// misroutes the next session exactly as a stale handoff doc does.
+let featureReadmeCount = 0;
+for (const feature of await listDirs(ROOT, "src/features")) {
+  const moduleDir = `src/features/${feature}`;
+  const readme = `${moduleDir}/README.md`;
+  if (!existsSync(path.join(ROOT, readme))) continue;
+  featureReadmeCount += 1;
+  const contents = await readFile(path.join(ROOT, readme), "utf8");
+  for (const token of missingModulePaths(contents, moduleDir, (relative) =>
+    existsSync(path.join(ROOT, relative)),
+  ))
+    problems.push(`${readme}: path "${token}" does not exist`);
+}
+
 // 6. The permission allowlist references real things. A dead entry is worse
 // than a missing one: it advertises a tool that doesn't exist (sessions go
 // looking for scripts/screenshot.mjs) or silently grants nothing (a pnpm
@@ -410,5 +427,5 @@ if (problems.length > 0) {
 }
 
 console.log(
-  `agents: ${skillDirs.length} skills (${linkedSkills.size} linked in from .agents/skills), ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync, ${handoffDocs.length} handoff docs' paths resolve`,
+  `agents: ${skillDirs.length} skills (${linkedSkills.size} linked in from .agents/skills), ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync, ${handoffDocs.length} handoff docs' and ${featureReadmeCount} feature READMEs' paths resolve`,
 );
