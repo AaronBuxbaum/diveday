@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { departureCounts } from "./departure-counts";
 import {
   getTripManifest,
   listBoardedAtAnyCheckpointByTrip,
@@ -87,6 +88,11 @@ describe("the roll call a course's manifest shows on its second Saturday", () =>
     vi.stubEnv("DIVEDAY_CLOCK", "2026-08-02T14:00:00Z");
     expect(await seat("departure")).toBe("boarded");
     expect(await seat("after_dive_1")).toBe("boarded");
+
+    const back = async (now: string) =>
+      (await departureCounts(db, shopId, [trip.id], { now: new Date(now) })).get(trip.id)?.back;
+    expect(await back("2026-08-02T14:00:00Z")).toBe(1);
+    expect(await back("2026-08-15T12:30:00Z")).toBe(0);
 
     vi.stubEnv("DIVEDAY_CLOCK", "2026-08-15T12:30:00Z");
     expect(await seat("departure")).toBeUndefined();
