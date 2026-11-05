@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Certification, TripRequirement } from "@/db/schema";
+import type { Certification, DiveSpecialty, TripRequirement } from "@/db/schema";
 import { levelShort, noSpecialty } from "@/test/admission-refusals";
 import {
   type CertificationLevel,
@@ -7,7 +7,12 @@ import {
   calculateReadiness,
   type SiteCertRequirement,
 } from "./readiness";
-import { type TrainingDiveCourse, trainingSiteAttributionKnown } from "./training-mark";
+import {
+  type TrainingDiveCourse,
+  type TripLevelRequirement,
+  trainingDiveAsksNoCardForSite,
+  trainingSiteAttributionKnown,
+} from "./training-mark";
 import { decideTripAdmission, type TripAdmissionEvidence } from "./trip-admission";
 
 const aow: TrainingDiveCourse = {
@@ -31,8 +36,9 @@ function evidence(overrides: Partial<TripAdmissionEvidence> = {}): TripAdmission
   };
 }
 
-function requirement(overrides: Partial<CertRequirementSource> = {}): CertRequirementSource {
+function requirement(overrides: Partial<TripLevelRequirement> = {}): TripLevelRequirement {
   return {
+    minimumCertificationIsDefault: false,
     minimumCertificationLevel: null,
     requiredSpecialties: [],
     requiresNitrox: false,
@@ -245,5 +251,228 @@ describe("trainingSiteAttributionKnown (issue #3839)", () => {
     expect(trainingSiteAttributionKnown(1, 0)).toBe(false);
     expect(trainingSiteAttributionKnown(null, 1)).toBe(false);
     expect(trainingSiteAttributionKnown(undefined, 1)).toBe(false);
+  });
+});
+
+/**
+ * **A default level nobody chose** (issue #3872, Aaron on #3839 2026-11-04).
+ * `insertTripInstance` writes Open Water on every non-course departure and
+ * flags it `minimumCertificationIsDefault`. Both gates read that level as the
+ * site side of the requirement, so a training mark may lower it exactly as it
+ * lowers a site's level. A level a person chose keeps standing, and an
+ * unmarked seat is held to the default as before.
+ */
+describe("a default trip level a training mark may lower (issue #3872)", () => {
+  const openWaterCourse: TrainingDiveCourse = {
+    minimumLevel: null,
+    certifiesLevel: "open_water",
+    intro: false,
+  };
+  const defaultTrip = {
+    ...requirement({ minimumCertificationLevel: "open_water" }),
+    minimumCertificationIsDefault: true,
+  };
+  const chosenTrip = { ...defaultTrip, minimumCertificationIsDefault: false };
+  const openWaterSite = site({ minimumCertificationLevel: "open_water" });
+  // An uncertified diver the shop knows something about: the sale gate admits
+  // a stranger who has said nothing (H-20260724-certification-levels-agency-rules),
+  // so this one ticked nitrox on the form, which makes the level count.
+  const uncertified = { evidence: evidence(), declared: { nitrox: true } };
+
+  it("boards and sells an Open Water student marked on a one-dive charter whose only level is the default", () => {
+    expect(
+      markedLevelBlockers({
+        trip: defaultTrip,
+        site: openWaterSite,
+        certifications: [],
+        course: openWaterCourse,
+      }),
+    ).toEqual([]);
+    expect(
+      decideTripAdmission({
+        requirement: defaultTrip,
+        siteRequirement: openWaterSite,
+        ...uncertified,
+        evidence: evidence({ trainingDives: [openWaterCourse] }),
+      }),
+    ).toEqual({ admitted: true });
+  });
+
+  // Attacker review of #3909: where no site states a level, the default is the
+  // only level anyone stated, so it stays the trip's and no mark lowers it.
+  it("keeps the default where no site states a level", () => {
+    for (const siteRow of [null, site(), site({ requiresNitrox: true })]) {
+      expect(
+        markedLevelBlockers({
+          trip: defaultTrip,
+          site: siteRow,
+          certifications: [],
+          course: openWaterCourse,
+        }).map((blocker) => blocker.code),
+        JSON.stringify(siteRow),
+      ).toEqual(["certification_missing"]);
+      expect(
+        decideTripAdmission({
+          requirement: defaultTrip,
+          siteRequirement: siteRow,
+          ...uncertified,
+          evidence: evidence({ trainingDives: [openWaterCourse] }),
+        }).admitted,
+      ).toBe(false);
+    }
+  });
+
+  it("still refuses the same student when a person chose the level", () => {
+    expect(
+      markedLevelBlockers({
+        trip: chosenTrip,
+        site: openWaterSite,
+        certifications: [],
+        course: openWaterCourse,
+      }).map((blocker) => blocker.code),
+    ).toEqual(["certification_missing"]);
+    expect(
+      decideTripAdmission({
+        requirement: chosenTrip,
+        siteRequirement: openWaterSite,
+        ...uncertified,
+        evidence: evidence({ trainingDives: [openWaterCourse] }),
+      }),
+    ).toMatchObject({ admitted: false, refusal: [{ code: "certification_missing" }] });
+  });
+
+  // Attacker review of #3909: a reader that dropped the flag would make the
+  // sale refuse a seat readiness clears, so the flag is required and a
+  // requirement without it does not compile.
+  it("will not take a trip requirement that does not say whether its level is the default", () => {
+    const { minimumCertificationIsDefault: _dropped, ...unflagged } = defaultTrip;
+    const decide = () =>
+      decideTripAdmission({
+        // @ts-expect-error the flag is required (issue #3872)
+        requirement: unflagged,
+        siteRequirement: openWaterSite,
+        evidence: evidence(),
+      });
+    expect(decide().admitted).toBe(true);
+    // @ts-expect-error the flag is required (issue #3872)
+    expect(trainingDiveAsksNoCardForSite(unflagged, openWaterSite, openWaterCourse)).toBe(false);
+  });
+
+  it("still refuses an unmarked uncertified diver on the default", () => {
+    const readiness = calculateReadiness({
+      requirement: { ...defaultTrip, requiresWaiver: false } as unknown as TripRequirement,
+      siteRequirement: openWaterSite,
+      waiver: null,
+      certifications: [],
+      timezone: "UTC",
+    });
+    expect(readiness.blockers.map((blocker) => blocker.code)).toContain("certification_missing");
+    expect(
+      decideTripAdmission({
+        requirement: defaultTrip,
+        siteRequirement: openWaterSite,
+        ...uncertified,
+      }),
+    ).toMatchObject({ admitted: false, refusal: [{ code: "certification_missing" }] });
+  });
+
+  it("lowers the default no further than the course reaches, nor for an intro session", () => {
+    // An Advanced course's own minimum is Open Water: the default stays asked.
+    for (const course of [aow, dsd, { ...openWaterCourse, certifiesLevel: null }]) {
+      expect(
+        markedLevelBlockers({ trip: defaultTrip, site: null, certifications: [], course }).map(
+          (blocker) => blocker.code,
+        ),
+        JSON.stringify(course),
+      ).toEqual(["certification_missing"]);
+      expect(
+        decideTripAdmission({
+          requirement: defaultTrip,
+          siteRequirement: null,
+          ...uncertified,
+          evidence: evidence({ trainingDives: [course] }),
+        }).admitted,
+        JSON.stringify(course),
+      ).toBe(false);
+    }
+  });
+
+  it("lowers only the level: the trip's own specialty and nitrox gates stand", () => {
+    const deepTrip = { ...defaultTrip, requiredSpecialties: ["deep"] as DiveSpecialty[] };
+    expect(
+      markedLevelBlockers({
+        trip: deepTrip,
+        site: openWaterSite,
+        certifications: [],
+        course: openWaterCourse,
+      }),
+    ).toEqual([]);
+    expect(
+      calculateReadiness({
+        requirement: { ...deepTrip, requiresWaiver: false } as unknown as TripRequirement,
+        siteRequirement: openWaterSite,
+        waiver: null,
+        certifications: [],
+        timezone: "UTC",
+        trainingDive: openWaterCourse,
+      }).blockers.map((blocker) => blocker.code),
+    ).toContain("specialty_missing");
+    expect(
+      decideTripAdmission({
+        requirement: { ...defaultTrip, requiresNitrox: true },
+        siteRequirement: openWaterSite,
+        evidence: evidence({ trainingDives: [openWaterCourse] }),
+        declared: { level: "open_water" },
+      }),
+    ).toMatchObject({ admitted: false, refusal: [{ code: "nitrox_missing" }] });
+  });
+
+  it("never lets a stronger site level fall below what the course reaches", () => {
+    // The default folds into an Advanced site; the Open Water course certifies
+    // below it, so the site's Advanced stands.
+    expect(
+      markedLevelBlockers({
+        trip: defaultTrip,
+        site: advancedSite,
+        certifications: [],
+        course: openWaterCourse,
+      }).map((blocker) => blocker.code),
+    ).toEqual(["certification_missing"]);
+  });
+
+  it("says no card is asked only when the default is the only card asked", () => {
+    expect(trainingDiveAsksNoCardForSite(defaultTrip, openWaterSite, openWaterCourse)).toBe(true);
+    expect(trainingDiveAsksNoCardForSite(defaultTrip, null, openWaterCourse)).toBe(false);
+    expect(trainingDiveAsksNoCardForSite(chosenTrip, openWaterSite, openWaterCourse)).toBe(false);
+    expect(trainingDiveAsksNoCardForSite(defaultTrip, advancedSite, openWaterCourse)).toBe(false);
+    expect(
+      trainingDiveAsksNoCardForSite(
+        { ...defaultTrip, requiresNitrox: true },
+        openWaterSite,
+        openWaterCourse,
+      ),
+    ).toBe(false);
+    expect(trainingDiveAsksNoCardForSite(defaultTrip, openWaterSite, null)).toBe(false);
+  });
+
+  it("agrees with readiness on the level, default or chosen, for every site, card and course", () => {
+    const levels: (CertificationLevel | null)[] = [null, "open_water", "advanced_open_water"];
+    for (const isDefault of [true, false])
+      for (const siteLevel of levels)
+        for (const certifications of [[], [certification({ level: "open_water" })]])
+          for (const course of [aow, openWaterCourse, dsd]) {
+            const trip = { ...defaultTrip, minimumCertificationIsDefault: isDefault };
+            const siteRow = siteLevel ? site({ minimumCertificationLevel: siteLevel }) : null;
+            const readinessClears =
+              markedLevelBlockers({ trip, site: siteRow, certifications, course }).length === 0;
+            const admitted = decideTripAdmission({
+              requirement: trip,
+              siteRequirement: siteRow,
+              evidence: evidence({ certifications, trainingDives: [course] }),
+              declared: { nitrox: true },
+            }).admitted;
+            const label = JSON.stringify({ isDefault, siteLevel, certifications, course });
+            expect(admitted, label).toBe(readinessClears);
+          }
   });
 });

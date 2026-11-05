@@ -1578,7 +1578,12 @@
   multi-dive departures and one-dive departures with conflicting site records retain their site
   requirements; the roster and manifest explain why. An explicit
   departure requirement always stands, at the sale as at the dock: trip admission lets a
-  marked level through only where the site set it, never a trip-set level (issue #3776). A course
+  marked level through only where the site set it, never a trip-set level (issue #3776). The
+  Open Water every new non-course departure starts with is not trip-set until a person changes the
+  level (`trip_requirements.minimum_certification_is_default`; a duplicate or series roll carries
+  its source's flag): where the one site states a level, both gates read that default as the
+  site's, so a mark may lower it too; where no site states one it stands (issue #3872). The
+  requirements form says when the level is the default. A course
   with no minimum
   (Open Water) asks no card for a site level it
   certifies; never past it, never for an intro session or a course that certifies none (issue

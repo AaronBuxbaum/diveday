@@ -10,11 +10,11 @@ import type {
 import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 import {
   type CertificationLevel,
-  type CertRequirementSource,
   calculateReadiness,
   type ReadinessBlocker,
   type SiteCertRequirement,
 } from "./readiness";
+import type { TripLevelRequirement } from "./training-mark";
 import {
   decideTripAdmission,
   type SelfDeclaration,
@@ -53,8 +53,9 @@ function evidence(overrides: Partial<TripAdmissionEvidence> = {}): TripAdmission
   };
 }
 
-function requirement(overrides: Partial<CertRequirementSource> = {}): CertRequirementSource {
+function requirement(overrides: Partial<TripLevelRequirement> = {}): TripLevelRequirement {
   return {
+    minimumCertificationIsDefault: false,
     minimumCertificationLevel: null,
     requiredSpecialties: [],
     requiresNitrox: false,
@@ -146,6 +147,7 @@ describe("decideTripAdmission — what the booker just typed", () => {
     expect(
       decideTripAdmission({
         requirement: {
+          minimumCertificationIsDefault: false,
           minimumCertificationLevel: null,
           requiredSpecialties: [],
           requiresNitrox: true,
@@ -702,7 +704,8 @@ describe("admission is monotone with respect to readiness", () => {
         for (const requiresNitrox of [false, true]) {
           for (const { name, evidence: held } of evidenceCases) {
             for (const { name: claim, declared } of declarationCases) {
-              const source: CertRequirementSource = {
+              const source = {
+                minimumCertificationIsDefault: false,
                 minimumCertificationLevel: level,
                 requiredSpecialties: specialties,
                 requiresNitrox,
@@ -765,8 +768,9 @@ describe("admission is monotone with respect to readiness", () => {
     // fail-open on absence of evidence. The line that stops the seat is
     // readiness, which fails closed on the same flag at the rail. If either
     // half ever moves, this fails rather than quietly opening the boat.
-    const source: CertRequirementSource = {
-      minimumCertificationLevel: "advanced_open_water",
+    const source = {
+      minimumCertificationIsDefault: false,
+      minimumCertificationLevel: "advanced_open_water" as const,
       requiredSpecialties: [],
       requiresNitrox: false,
     };
@@ -781,7 +785,11 @@ describe("admission is monotone with respect to readiness", () => {
 
     const readiness = calculateReadiness({
       timezone: "UTC",
-      requirement: { ...source, requiresWaiver: false, requiresPayment: false } as TripRequirement,
+      requirement: {
+        ...source,
+        requiresWaiver: false,
+        requiresPayment: false,
+      } as unknown as TripRequirement,
       siteRequirement: null,
       waiver: null,
       certifications: [certification({ level: "instructor" })],

@@ -275,6 +275,7 @@ describe("trainingDiveRequiredLevel — lowers only as far as the course certifi
       intro: false,
     };
     const level = {
+      minimumCertificationIsDefault: false,
       minimumCertificationLevel: "open_water" as const,
       requiredSpecialties: [],
       requiresNitrox: false,

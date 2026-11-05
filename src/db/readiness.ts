@@ -115,14 +115,19 @@ export async function upsertTripRequirements(
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (!trip) return null;
+  // The default stays the default only while the level is unchanged: the
+  // form re-sends the select with every save, so ticking payment is not
+  // choosing a level, and changing it is (issue #3872; dock review of #3909).
+  // Read against the stored row, inside the one statement.
   const [requirement] = await db
     .insert(tripRequirements)
-    .values(input)
+    .values({ ...input, minimumCertificationIsDefault: false })
     .onConflictDoUpdate({
       target: tripRequirements.tripId,
       set: {
         requiresWaiver: input.requiresWaiver,
         minimumCertificationLevel: input.minimumCertificationLevel,
+        minimumCertificationIsDefault: sql`${tripRequirements.minimumCertificationIsDefault} and ${tripRequirements.minimumCertificationLevel} is not distinct from ${input.minimumCertificationLevel}::certification_level`,
         requiredSpecialties: input.requiredSpecialties,
         requiresNitrox: input.requiresNitrox,
         requiresPayment: input.requiresPayment,

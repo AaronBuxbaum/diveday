@@ -949,12 +949,32 @@ export const tripRequirements = pgTable(
       .references(() => shops.id),
     requiresWaiver: boolean("requires_waiver").notNull().default(true),
     ...requirementColumns(),
+    /**
+     * The level is the Open Water default `insertTripInstance` writes on a
+     * non-course departure, not one a person chose (issue #3872). The gates
+     * read such a level as the site's, so a training mark may lower it
+     * where a site states a level (`tripAndSiteSides`, src/lib/training-mark.ts).
+     * Changing the level on the requirements form clears it; a duplicate or a
+     * series roll carries its source's; every other writer leaves it false,
+     * which keeps the level.
+     */
+    minimumCertificationIsDefault: boolean("minimum_certification_is_default")
+      .notNull()
+      .default(false),
     /** Whether a diver must have paid (or a deposit/waiver) to board. */
     requiresPayment: boolean("requires_payment").notNull().default(false),
     createdAt: appNowTimestamp("created_at").notNull(),
     updatedAt: appNowTimestamp("updated_at").notNull(),
   },
-  (table) => [index("trip_requirements_shop_idx").on(table.shopId)],
+  (table) => [
+    index("trip_requirements_shop_idx").on(table.shopId),
+    // Only the Open Water default is ever a default: a flag on any other level,
+    // or on none, is a write nothing should make.
+    check(
+      "trip_requirements_default_level_is_open_water",
+      sql`not ${table.minimumCertificationIsDefault} or ${table.minimumCertificationLevel} = 'open_water'`,
+    ),
+  ],
 );
 
 export type Trip = typeof trips.$inferSelect;

@@ -37,8 +37,9 @@ function evidence(overrides: Partial<TripAdmissionEvidence> = {}): TripAdmission
   };
 }
 
-function requirement(overrides: Partial<CertRequirementSource> = {}): CertRequirementSource {
+function requirement(overrides: Partial<CertRequirementSource> = {}) {
   return {
+    minimumCertificationIsDefault: false,
     minimumCertificationLevel: null,
     requiredSpecialties: [],
     requiresNitrox: false,
