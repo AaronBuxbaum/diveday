@@ -127,9 +127,11 @@ export async function settleStaffHydration(page: Page): Promise<void> {
   ).toHaveCount(0);
   // A disclosure toggled while React is still adopting it is the one place a click
   // and hydration interleave (`AutoOpenDetails`, the emergency reference's
-  // contact rows, #3750): wait until each on the page is React's.
+  // contact rows, #3750): wait until each on the page is React's. Only the ones in view: a
+  // route the router keeps behind the one on screen (a hidden Activity, the home's call panel
+  // after a call is logged) never runs its effects and is not the page the test acts on.
   await expect(
-    page.locator(`${DISCLOSURE_PROBE}:not([data-hydrated="true"])`),
+    page.locator(`${DISCLOSURE_PROBE}:not([data-hydrated="true"]):visible`),
     `${pathname} loaded, but React never took over a disclosure on it`,
   ).toHaveCount(0);
   // The settings hub is server-rendered with every group and picks the selected
