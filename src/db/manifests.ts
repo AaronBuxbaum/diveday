@@ -258,7 +258,6 @@ async function listLatestRollCallsByCheckpoint(
   const byCheckpoint = new Map<RollCallCheckpoint, Map<string, Latest>>(
     checkpoints.map((checkpoint) => [checkpoint, new Map<string, Latest>()]),
   );
-  if (checkpoints.length === 0) return [];
   const rows = await db
     .select({ event: rollCallEvents, recorder: people })
     .from(rollCallEvents)
