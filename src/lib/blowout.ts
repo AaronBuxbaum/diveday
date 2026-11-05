@@ -1,6 +1,7 @@
 import { type CourseSeatInTraining, inTrainingBefore } from "./in-training";
 import { offeredParticipantTypes, type ParticipantType, seatRefusal } from "./participant-types";
-import type { CertRequirementSource, SiteCertRequirement } from "./readiness";
+import type { SiteCertRequirement } from "./readiness";
+import type { TripLevelRequirement } from "./training-mark";
 import { decideTripAdmission, type TripAdmissionEvidence } from "./trip-admission";
 
 /**
@@ -67,7 +68,7 @@ export type BlowoutCandidateTrip = {
   /** True when the departure is a scheduled course session (`trips.course_id`). */
   courseSession: boolean;
   /** The trip's own requirement row, or null when the shop configured none. */
-  requirement: CertRequirementSource | null;
+  requirement: TripLevelRequirement | null;
   /** Every site the trip visits, folded into one gate (`combineSiteRequirements`). */
   siteRequirement: SiteCertRequirement | null;
 };

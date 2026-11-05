@@ -953,8 +953,10 @@ export const tripRequirements = pgTable(
      * The level is the Open Water default `insertTripInstance` writes on a
      * non-course departure, not one a person chose (issue #3872). The gates
      * read such a level as the site's, so a training mark may lower it
-     * (`tripAndSiteSides`, src/lib/training-mark.ts). Saving the requirements
-     * form clears it; every other writer leaves it false, which keeps the level.
+     * where a site states a level (`tripAndSiteSides`, src/lib/training-mark.ts).
+     * Changing the level on the requirements form clears it; a duplicate or a
+     * series roll carries its source's; every other writer leaves it false,
+     * which keeps the level.
      */
     minimumCertificationIsDefault: boolean("minimum_certification_is_default")
       .notNull()

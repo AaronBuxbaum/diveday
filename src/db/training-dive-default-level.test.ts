@@ -1,5 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
 import {
   type CharterContext,
@@ -19,6 +20,8 @@ import {
 } from "./schema";
 import { markableTrainingDives } from "./training-mark-resolve";
 import { createTrip } from "./trips-create";
+import { duplicateTrip } from "./trips-schedule";
+import { createTripSeries, rollSeriesForward } from "./trips-series";
 
 /**
  * **A default level nobody chose** (issue #3872, Aaron on #3839 2026-11-04).
@@ -34,7 +37,10 @@ const fileCtx = fileScopedShopContext();
  * student holds no card and is enrolled on an Open Water course (no minimum,
  * certifies Open Water) whose instructor teaches the session and is aboard.
  */
-async function defaultLevelCharter(isDefault = true): Promise<CharterContext> {
+async function defaultLevelCharter(
+  isDefault = true,
+  siteLevel: "open_water" | null = "open_water",
+): Promise<CharterContext> {
   const ctx = await charterContextFor(fileCtx);
   await ctx.db
     .update(tripRequirements)
@@ -59,7 +65,7 @@ async function defaultLevelCharter(isDefault = true): Promise<CharterContext> {
       shopId: ctx.shop.id,
       name: "Default level reef",
       slug: `default-level-reef-${ctx.charter.id.slice(0, 8)}`,
-      minimumCertificationLevel: "open_water",
+      minimumCertificationLevel: siteLevel,
     })
     .returning({ id: diveSites.id });
   if (!site) throw new Error("site insert failed");
@@ -103,20 +109,57 @@ describe("a default trip level a training mark may lower (issue #3872, in-memory
     expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
 
-  it("keeps a level a person saved, even the same Open Water", async () => {
-    const ctx = await defaultLevelCharter();
+  const saveForm = async (
+    ctx: CharterContext,
+    change: {
+      minimumCertificationLevel?: "open_water" | "advanced_open_water" | null;
+      requiresPayment?: boolean;
+    },
+  ) => {
     const current = await getTripRequirements(ctx.db, ctx.shop.id, ctx.charter.id);
     if (!current) throw new Error("requirement missing");
-    const saved = await upsertTripRequirements(ctx.db, {
+    return upsertTripRequirements(ctx.db, {
       shopId: ctx.shop.id,
       tripId: ctx.charter.id,
       requiresWaiver: current.requiresWaiver,
-      minimumCertificationLevel: "open_water",
+      minimumCertificationLevel:
+        change.minimumCertificationLevel === undefined
+          ? current.minimumCertificationLevel
+          : change.minimumCertificationLevel,
       requiredSpecialties: current.requiredSpecialties,
       requiresNitrox: current.requiresNitrox,
-      requiresPayment: current.requiresPayment,
+      requiresPayment: change.requiresPayment ?? current.requiresPayment,
     });
-    expect(saved?.minimumCertificationIsDefault).toBe(false);
+  };
+
+  // Dock review of #3909: ticking payment at 07:10 must not re-raise Open
+  // Water on four marked students nobody chose it for.
+  it("keeps the default when the form is saved with the level unchanged", async () => {
+    const ctx = await defaultLevelCharter();
+    const saved = await saveForm(ctx, { requiresPayment: false });
+    expect(saved?.minimumCertificationIsDefault).toBe(true);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual([]);
+  });
+
+  it("makes the level chosen once a person changes it, even back to Open Water", async () => {
+    const ctx = await defaultLevelCharter();
+    expect(
+      (await saveForm(ctx, { minimumCertificationLevel: "advanced_open_water" }))
+        ?.minimumCertificationIsDefault,
+    ).toBe(false);
+    expect(
+      (await saveForm(ctx, { minimumCertificationLevel: "open_water" }))
+        ?.minimumCertificationIsDefault,
+    ).toBe(false);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+  });
+
+  // Attacker review of #3909: at a site with no recorded level the default is
+  // the only level anyone stated, so it stays the trip's.
+  it("keeps the default where the site states no level", async () => {
+    const ctx = await defaultLevelCharter(true, null);
     expect(await markSeat(ctx)).toMatchObject({ ok: true });
     expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
@@ -183,5 +226,97 @@ describe("who writes the default flag (issue #3872)", () => {
           .where(eq(tripRequirements.tripId, trip.id)),
       ).rejects.toThrow();
     }
+  });
+
+  // Both reviews of #3909: a copy carries its source's requirement row, so a
+  // level a person chose stays chosen, and a saved gate is not lost.
+  it("copies a duplicated departure's requirements, chosen or default", async () => {
+    const { db, shop } = fileCtx;
+    const source = await createTrip(db, { ...departure, shopId: shop.id });
+    if (!source) throw new Error("trip not created");
+    const fresh = await duplicateTrip(db, shop.id, source.id, new Date("2026-09-08T12:00:00Z"));
+    if (!fresh) throw new Error("copy not created");
+    expect(await getTripRequirements(db, shop.id, fresh.id)).toMatchObject({
+      minimumCertificationIsDefault: true,
+    });
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: source.id,
+      requiresWaiver: true,
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["night"],
+      requiresNitrox: true,
+      requiresPayment: false,
+    });
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: source.id,
+      requiresWaiver: true,
+      minimumCertificationLevel: "open_water",
+      requiredSpecialties: ["night"],
+      requiresNitrox: true,
+      requiresPayment: false,
+    });
+    const copy = await duplicateTrip(db, shop.id, source.id, new Date("2026-09-15T12:00:00Z"));
+    if (!copy) throw new Error("copy not created");
+    expect(await getTripRequirements(db, shop.id, copy.id)).toMatchObject({
+      minimumCertificationLevel: "open_water",
+      minimumCertificationIsDefault: false,
+      requiredSpecialties: ["night"],
+      requiresNitrox: true,
+    });
+  });
+
+  it("rolls a series forward with the template's requirements, chosen or default", async () => {
+    const { db, shop } = fileCtx;
+    const created = await createTripSeries(db, {
+      shopId: shop.id,
+      title: "Saturday Reef",
+      capacity: 6,
+      plannedDives: 1,
+      frequency: "weekly",
+      intervalWeeks: 1,
+      weekdays: weekdaySetFrom([6]),
+      anchorDate: "2030-09-07",
+      endsOn: null,
+      timeZone: "America/New_York",
+      template: {
+        startsAt: new Date("2030-09-07T11:00:00.000Z"),
+        endsAt: new Date("2030-09-07T15:00:00.000Z"),
+      },
+    });
+    const last = created?.trips.at(-1);
+    if (!created || !last) throw new Error("series not created");
+    expect(await getTripRequirements(db, shop.id, last.id)).toMatchObject({
+      minimumCertificationIsDefault: true,
+    });
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: last.id,
+      requiresWaiver: true,
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep"],
+      requiresNitrox: false,
+      requiresPayment: false,
+    });
+    const rolled = await rollSeriesForward(
+      db,
+      shop.id,
+      created.series.id,
+      new Date("2030-10-07T12:00:00.000Z"),
+    );
+    expect(rolled?.created).toBeGreaterThan(0);
+    const [next] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.seriesId, created.series.id))
+      .orderBy(desc(trips.startsAt))
+      .limit(1);
+    if (!next || next.id === last.id) throw new Error("nothing rolled");
+    expect(await getTripRequirements(db, shop.id, next.id)).toMatchObject({
+      minimumCertificationLevel: "advanced_open_water",
+      minimumCertificationIsDefault: false,
+      requiredSpecialties: ["deep"],
+    });
   });
 });

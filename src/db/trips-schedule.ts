@@ -35,7 +35,7 @@ import {
 import { forgetTranslationsOf } from "./shop-text-translations";
 import { rememberUnnotifiedTripStart } from "./trip-reschedule-marker";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
-import { insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
+import { copiedRequirement, insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
 import { liveTrip } from "./trips-live";
 import { boatCertifiedPassengers } from "./trips-queries";
 import { recordSeriesSkip } from "./trips-series";
@@ -459,6 +459,8 @@ export async function duplicateTrip(
 
     return insertTripInstance(tx, {
       shopId,
+      // The source's gates, chosen or default, as staff left them (issue #3872).
+      requirement: await copiedRequirement(tx, shopId, tripId),
       courseId: source.courseId ?? undefined,
       course,
       title: source.title,
