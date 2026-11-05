@@ -4,6 +4,7 @@ import { AddPanelFocus } from "@/components/AddPanelFocus";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
@@ -88,14 +89,14 @@ export function AddPanel({
 /** Three field-shaped bars and an action: the panel's form, before its reads land. */
 export function AddPanelFormSkeleton() {
   return (
-    <div className="animate-pulse space-y-4" aria-hidden="true">
+    <Pending className="space-y-4" aria-hidden="true">
       {["one", "two", "three"].map((slot) => (
         <div key={slot}>
-          <div className="h-4 w-24 rounded bg-surface-sunken" />
-          <div className="mt-2 h-12 w-full rounded-lg bg-surface-sunken" />
+          <Bone className="h-4 w-24" />
+          <Bone shape="control" className="mt-2 h-12 w-full" />
         </div>
       ))}
-      <div className="h-12 w-32 rounded-lg bg-surface-sunken" />
-    </div>
+      <Bone shape="control" className="h-12 w-32" />
+    </Pending>
   );
 }

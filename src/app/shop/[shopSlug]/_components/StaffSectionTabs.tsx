@@ -1,4 +1,4 @@
-import { SectionTabs, SectionTabsSkeleton } from "@/components/SectionTabs";
+import { SectionTabs } from "@/components/SectionTabs";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { type Role, staffDestinationGates } from "@/lib/authz";
 import { type ShopSwitchFlags, shopSwitchesOn } from "@/lib/shop-features";
@@ -56,5 +56,5 @@ export function StaffSectionTabs({
  * full count, the shape an owner sees.
  */
 export function StaffSectionTabsSkeleton({ section }: { section: TabbedStaffSection }) {
-  return <SectionTabsSkeleton count={STAFF_SECTION_TABS[section].length} />;
+  return <SectionTabs pending count={STAFF_SECTION_TABS[section].length} />;
 }

@@ -25,7 +25,7 @@ import { isDiver } from "@/lib/participant-types";
 import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
-import { readSeatLadder, sailingUnsaid } from "@/lib/seat-ladder";
+import { joinedAtADiveSite, readSeatLadder, sailingUnsaid } from "@/lib/seat-ladder";
 import { type SeatWaiverStanding, seatWaiverStanding, type WaiverStanding } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
@@ -795,6 +795,7 @@ export function groupRoster({
     sharedAdvisoryTexts,
     sailed: [] as RosterEntry[],
     didNotSail: [] as RosterEntry[],
+    joinedAtSite: [] as RosterEntry[],
     uncounted: [] as RosterEntry[],
     unrecorded: [] as RosterEntry[],
     unaccounted: [] as RosterEntry[],
@@ -812,6 +813,8 @@ export function groupRoster({
  *   desk's `no_show`).
  * - **Didn't sail**: only what somebody said: the crew's `not_boarded` at the
  *   dock, or a released seat (`no_show`) nobody counted aboard.
+ * - **Joined at a dive site**: a dock `not_boarded`, then counted after a dive
+ *   (a chase boat, #3823): not Sailed by the vessel, but dived (rung `out`).
  * - **Not counted at the dock**: a seat nobody said anything about on a
  *   departure whose roll call was taken. Silence is not "didn't sail".
  * - **No roll call taken**: the same silence on a departure with no dock roll
@@ -826,6 +829,7 @@ export function groupRoster({
 function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterRecord) {
   const sailed: RosterEntry[] = [];
   const didNotSail: RosterEntry[] = [];
+  const joinedAtSite: RosterEntry[] = [];
   const uncounted: RosterEntry[] = [];
   const unrecorded: RosterEntry[] = [];
   const turnedAway: RosterEntry[] = [];
@@ -850,6 +854,8 @@ function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterR
       (record.rollCallTaken ? uncounted : unrecorded).push(entry);
     } else if (ladder.countsAsSailed) {
       sailed.push(entry);
+    } else if (joinedAtADiveSite(ladder, record.dock.get(id) ?? null)) {
+      joinedAtSite.push(entry);
     } else if (noShow && entry.booking.turnedAwayAt) {
       // Did not sail because the desk refused them (H-20261015-who-may-turn-someone), said apart from
       // the divers who never came.
@@ -871,6 +877,7 @@ function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterR
     sharedAdvisoryTexts: new Set<string>(),
     sailed,
     didNotSail,
+    joinedAtSite,
     uncounted,
     unrecorded,
     unaccounted,

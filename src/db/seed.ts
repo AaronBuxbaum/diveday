@@ -78,8 +78,6 @@ import {
   recapPhotos,
   recapPulses,
   rentalFitProfiles,
-  retiredShopPromoCodes,
-  retiredTripLastMinutePromos,
   reviewModerationEvents,
   reviewReplies,
   shopBackupDeliveryClaims,
@@ -1632,9 +1630,6 @@ export async function clearDemoSchedule(
   // or this FK-violates and aborts the whole reset mid-run (docs ADR
   // 20260727-last-minute-fill-promos).
   await db.delete(deals).where(and(eq(deals.shopId, shopId), isNotNull(deals.tripId)));
-  await db
-    .delete(retiredTripLastMinutePromos)
-    .where(eq(retiredTripLastMinutePromos.shopId, shopId));
   // The blow-out cascade's two tables, innermost first: the per-diver rows
   // reference both `bookings` and `trip_blowouts`, and the cascade row
   // references `trips`. Missing from this ordering when the cascade shipped,
@@ -1877,7 +1872,6 @@ export async function clearDemoSchedule(
   // re-inserts REEF10 and OPENWATER25 in their seeded state below; a code some
   // test minted is not seeded state and correctly does not come back.
   await db.delete(deals).where(and(eq(deals.shopId, shopId), isNull(deals.tripId)));
-  await db.delete(retiredShopPromoCodes).where(eq(retiredShopPromoCodes.shopId, shopId));
 
   return { waiverTitle: existingWaiver?.title ?? DEFAULT_WAIVER_TITLE };
 }

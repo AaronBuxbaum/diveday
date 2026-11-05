@@ -1,4 +1,4 @@
-import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
+import { EntryShell } from "@/components/account/EntryShell";
 
 /**
  * Entry-shell-shaped skeleton for /unsubscribe (design principle 1) — the
@@ -6,5 +6,5 @@ import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
  * centered one-question block every branch of this page lands in.
  */
 export default function UnsubscribeLoading() {
-  return <EntryShellSkeleton wordmark panel={false} footnote={false} />;
+  return <EntryShell pending wordmark panel={false} footnote={false} />;
 }

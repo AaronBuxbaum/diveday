@@ -577,6 +577,7 @@
     "groupStillToClear": "Still to clear",
     "groupSailed": "Sailed",
     "groupDidNotSail": "Didn’t sail",
+    "groupJoinedAtSite": "Joined at a dive site",
     "groupNotCounted": "Not counted at the dock",
     "groupUnaccounted": "Not back aboard",
     "recordCountedBlocked": "Counted aboard ({checkpoint}) while blocked: {reasons}",

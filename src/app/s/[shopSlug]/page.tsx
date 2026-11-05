@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
-import { ShopReviews, ShopReviewsSkeleton } from "@/components/ShopReviews";
+import { ShopReviews } from "@/components/ShopReviews";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { PAGE_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { type AppDb, getDb } from "@/db/client";
@@ -485,7 +485,7 @@ export default async function SchedulePage({
           come from the same fetch. The aggregate is already in hand — it belongs to the hero now,
           and is handed down here rather than read a second time. */}
       <div className="print:hidden">
-        <Suspense fallback={<ShopReviewsSkeleton className={SECTION_GAP} />}>
+        <Suspense fallback={<ShopReviews pending className={SECTION_GAP} />}>
           <ScheduleReviewsSection
             db={db}
             shop={shop}

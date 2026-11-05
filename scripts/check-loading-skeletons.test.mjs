@@ -4,6 +4,7 @@ import {
   containerWidth,
   SKELETON_EXEMPT,
   skeletonLiteralCount,
+  skeletonLiteralCounts,
 } from "./check-loading-skeletons.mjs";
 
 describe("containerWidth", () => {
@@ -78,5 +79,16 @@ describe("skeletonLiteralCount", () => {
   it("counts nothing for a page composed of pending primitives, or for a comment", () => {
     expect(skeletonLiteralCount("<ShopPageHeader pending />")).toBe(0);
     expect(skeletonLiteralCount("// no bg-surface-sunken here\nconst a = 1;")).toBe(0);
+  });
+});
+
+describe("skeletonLiteralCounts", () => {
+  /**
+   * The rule is absolute (ADR 20261104-loading-face-is-the-primitives-pending-face):
+   * no ratchet, no allowance per file. Every loading face is composed of pending
+   * primitives, so the tree as it stands carries none.
+   */
+  it("finds no hand-drawn bar or pulse in any loading.tsx", async () => {
+    expect(await skeletonLiteralCounts()).toEqual({});
   });
 });

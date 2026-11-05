@@ -1,6 +1,7 @@
-import { SectionTabsSkeleton } from "@/components/SectionTabs";
+import { SectionTabs } from "@/components/SectionTabs";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 import { settingsPaneClass } from "../_components/settings-pane";
 
 /**
@@ -16,21 +17,21 @@ import { settingsPaneClass } from "../_components/settings-pane";
 export default function Loading() {
   return (
     <main className={settingsPaneClass()}>
-      <div className="animate-pulse">
+      <Pending>
         {/* The download button sits beside the title. */}
         <ShopPageHeader pending titleWidth="w-56" description={false} actions />
-        <SectionTabsSkeleton count={4} />
+        <SectionTabs pending count={4} />
         <div className="space-y-10">
           <SectionCard as="div" pending padding="lg">
-            <div className="h-5 w-44 rounded bg-surface-sunken" />
-            <div className="mt-2 h-4 w-56 rounded bg-surface-sunken" />
+            <Bone className="h-5 w-44" />
+            <Bone className="mt-2 h-4 w-56" />
           </SectionCard>
           <SectionCard as="div" pending padding="lg">
-            <div className="h-5 w-44 rounded bg-surface-sunken" />
-            <div className="mt-4 h-11 w-56 rounded-lg bg-surface-sunken" />
+            <Bone className="h-5 w-44" />
+            <Bone shape="control" className="mt-4 h-11 w-56" />
           </SectionCard>
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }

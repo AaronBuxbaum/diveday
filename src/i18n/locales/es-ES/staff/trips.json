@@ -577,6 +577,7 @@
     "groupStillToClear": "Pendientes de resolver",
     "groupSailed": "Zarparon",
     "groupDidNotSail": "No zarparon",
+    "groupJoinedAtSite": "Se unieron en el sitio de buceo",
     "groupNotCounted": "Sin contar en el muelle",
     "groupUnaccounted": "Sin volver a bordo",
     "recordCountedBlocked": "Contado a bordo ({checkpoint}) estando bloqueado: {reasons}",

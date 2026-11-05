@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { ShopStatSkeleton } from "@/components/ShopPageHeader";
+import { ShopStat } from "@/components/ShopPageHeader";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { TripPageHeaderSkeleton } from "../../_components/TripPageHeader";
 import TripPrepLoading from "../loading";
@@ -48,7 +48,7 @@ describe("PrepBodySkeleton", () => {
     const tiles = tanks()?.children[2];
     expect(tiles?.className).not.toMatch(/(?:^|\s)sm:grid-cols-/);
     expect(tiles?.children).toHaveLength(3);
-    const tile = render(<ShopStatSkeleton />).container.firstElementChild?.outerHTML;
+    const tile = render(<ShopStat pending />).container.firstElementChild?.outerHTML;
     for (const child of Array.from(tiles?.children ?? [])) expect(child.outerHTML).toBe(tile);
   });
 

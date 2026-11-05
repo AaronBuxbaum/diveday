@@ -1,4 +1,4 @@
-import { LegalDocumentSkeleton, type LegalSkeletonBlock } from "@/components/LegalDocument";
+import { LegalDocument, type LegalSkeletonBlock } from "@/components/LegalDocument";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
 
 /**
@@ -13,7 +13,7 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
  * would throw away anything the reader did to it when the localized body landed
  * (ADR 20260804-instant-navigation's 2026-08-14 amendment).
  *
- * The bars stand in the document's own boxes (`LegalDocumentSkeleton`, which
+ * The bars stand in the document's own boxes (`<LegalDocument pending>`, which
  * `/terms` draws through too), so the streamed page lands where they stood.
  * What is this page's own is how far its words wrap: the en-US copy's lines at
  * 390 (`base`) and 1280 (`sm`; the column stops widening at 768), the widths
@@ -28,7 +28,8 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
 export default function PrivacyLoading() {
   return (
     <div className="flex flex-1 flex-col">
-      <LegalDocumentSkeleton
+      <LegalDocument
+        pending
         eyebrowWidth="w-60"
         titleWidth="w-5/6 sm:w-11/12"
         titleLines={{ base: 2, sm: 1 }}

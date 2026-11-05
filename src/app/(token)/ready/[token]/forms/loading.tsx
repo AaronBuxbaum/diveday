@@ -1,5 +1,6 @@
 import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * Body-shaped skeleton for a course form (design principle 1): the header and
@@ -8,10 +9,10 @@ import { SectionCard } from "@/components/ui/card";
 export default function CourseFormsLoading() {
   return (
     <main className={THREAD_MEASURE_CLASS}>
-      <div className="animate-pulse">
-        <div className="h-4 w-32 rounded bg-surface-sunken" />
-        <div className="mt-2 h-9 w-72 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-2 h-6 w-56 max-w-full rounded bg-surface-sunken" />
+      <Pending>
+        <Bone className="h-4 w-32" />
+        <Bone className="mt-2 h-9 w-72 max-w-full" />
+        <Bone className="mt-2 h-6 w-56 max-w-full" />
         <div className="mt-6 flex flex-col gap-3 border-b border-border pb-8">
           {[
             ["a", "w-full"],
@@ -20,11 +21,11 @@ export default function CourseFormsLoading() {
             ["d", "w-full"],
             ["e", "w-2/3"],
           ].map(([key, width]) => (
-            <div key={key} className={`h-5 ${width} rounded bg-surface-sunken`} />
+            <Bone key={key} className={`h-5 ${width}`} />
           ))}
         </div>
         <SectionCard as="div" pending padding="none" className="mt-8 h-56" />
-      </div>
+      </Pending>
     </main>
   );
 }

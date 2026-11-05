@@ -1125,13 +1125,6 @@ const rows = [
     why: "who wrote the code or sent the deal",
   },
   {
-    table: "shop_promo_codes",
-    column: "created_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who wrote the code",
-  },
-  {
     table: "staff_credentials",
     column: "deleted_by_person_id",
     kind: "actor",
@@ -1190,13 +1183,6 @@ const rows = [
     kind: "actor",
     merge: "leave",
     why: "who raised the interest or sent the offer",
-  },
-  {
-    table: "trip_last_minute_promos",
-    column: "created_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who wrote the deal",
   },
   {
     table: "trip_recap_photos",

@@ -102,5 +102,9 @@ lost dispute took, capped at the tip) is written to give one answer in any order
   refund it undoes.
 - **Not done, and unconfirmed:** whether Stripe lowers `amount_refunded` on a charge when a refund
   fails. Nothing here relies on it either way (the failure reverses the stored figure by the failed
-  amount, and older totals are ignored), but a Stripe test-mode run should settle it. The same
-  event-time guard for fares (`refund-failures.ts`, `refunds.ts`) is still open.
+  amount, and older totals are ignored), but a Stripe test-mode run should settle it.
+- Fares keep the same guard (`refundedTotalNetOfLaterFailures`, `src/db/refunds.ts`): an order's or
+  a checkout's refund event counts Stripe's running total less each refund failure recorded after
+  the event's own instant (an order's read under its lock), so a refund event delivered after its
+  failure puts nothing back. A fare failure delivered before its refund is written down too, with the
+  refund's own amount, and never reads as owed.

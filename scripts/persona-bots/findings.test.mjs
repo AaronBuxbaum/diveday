@@ -485,11 +485,13 @@ describe("the persona registry", () => {
     }
   });
 
-  it("walks the shut /onboard door as a refusal surface, since the walk mints no setup link (#3657)", () => {
+  it("walks Victor through the onboarding form behind a minted setup link, not its closed door (#3657)", () => {
     const victor = PERSONAS.find((persona) => persona.id === "victor");
-    expect(victor?.surfaces).toContainEqual({ path: "/onboard", refusal: true });
+    expect(victor?.surfaces).toContainEqual({ path: "/onboard", mint: "setup-link" });
     const visit = walkPlan(PERSONAS).find((entry) => entry.path === "/onboard");
-    expect(visit?.refusal).toBe(true);
+    // Held to every line a form surface holds: not a refusal.
+    expect(visit?.refusal).toBe(false);
+    expect(visit?.mint).toBe("setup-link");
     expect(visit?.personas).toContain("victor");
   });
 

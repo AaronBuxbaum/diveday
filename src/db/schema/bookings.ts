@@ -294,6 +294,18 @@ export const bookings = pgTable(
      */
     arrivalTrailAfterSeq: bigint("arrival_trail_after_seq", { mode: "number" }),
     /**
+     * **When this seat last began a new life**, for the offline counter (issue
+     * #3830): stamped beside `arrival_trail_after_seq` (a rebook, a restore, a
+     * move, a departure moved to another day) and when a held seat is
+     * re-pointed at another person (an identity repoint or split). A tap
+     * queued on a copy saved before it is about a seat that has changed since,
+     * and the sync refuses it (`offlineTapAboutAnotherSeatOrDay`,
+     * src/db/check-in.ts). An instant beside the sequence, because the device
+     * knows only when it saved its copy. Null on a row that has only ever been
+     * one seat.
+     */
+    seatReopenedAt: timestamp("seat_reopened_at", { withTimezone: true }),
+    /**
      * **The desk saw this diver and turned them away**, and why: one category
      * from the seat's own blockers (`turnAwayReasons`, src/lib/turn-away.ts).
      * Set with `status = 'no_show'` by `turnBookingAway` (src/db/turn-away.ts),
@@ -724,60 +736,6 @@ export const tripHelpRequests = pgTable(
     index("trip_help_requests_shop_status_idx").on(table.shopId, table.status, table.createdAt),
     index("trip_help_requests_trip_idx").on(table.tripId, table.createdAt),
     index("trip_help_requests_helper_person_idx").on(table.helperPersonId),
-  ],
-);
-
-/** **Retired** with `trip_last_minute_promos` (issue #2720); dropped with it next release. */
-export const retiredTripLastMinutePromoStatus = pgEnum("trip_last_minute_promo_status", [
-  "pending",
-  "sent",
-  "failed",
-]);
-
-/**
- * **Retired: nothing reads or writes this table.** A last-minute deal is a
- * `deals` row with `trip_id` set (issue #2720). The declaration stays one
- * release so the release still serving while that migration runs keeps its
- * table; the next release drops it (expand/contract,
- * `.agents/skills/schema-change/removing.md`). Do not add a reader.
- */
-export const retiredTripLastMinutePromos = pgTable(
-  "trip_last_minute_promos",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    tripId: uuid("trip_id")
-      .notNull()
-      .references(() => trips.id),
-    status: retiredTripLastMinutePromoStatus("status").notNull().default("pending"),
-    discountPercent: integer("discount_percent"),
-    discountAmountCents: integer("discount_amount_cents"),
-    code: text("code").notNull(),
-    stripeCouponId: text("stripe_coupon_id"),
-    stripePromotionCodeId: text("stripe_promotion_code_id"),
-    maxRedemptions: integer("max_redemptions"),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    recipientCount: integer("recipient_count").notNull().default(0),
-    createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [
-    index("trip_last_minute_promos_trip_created_idx").on(table.tripId, table.createdAt),
-    uniqueIndex("trip_last_minute_promos_shop_code_unique").on(table.shopId, table.code),
-    check(
-      "trip_last_minute_promos_discount_range",
-      sql`${table.discountPercent} is null or ${table.discountPercent} between 5 and 90`,
-    ),
-    check(
-      "trip_last_minute_promos_discount_amount_positive",
-      sql`${table.discountAmountCents} is null or ${table.discountAmountCents} > 0`,
-    ),
-    check(
-      "trip_last_minute_promos_one_discount",
-      sql`(${table.discountPercent} is null) <> (${table.discountAmountCents} is null)`,
-    ),
   ],
 );
 

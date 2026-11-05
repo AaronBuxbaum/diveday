@@ -973,6 +973,12 @@
   without a dock `boarded` once one seat boarded, which filed a diver picked up at a later site, and
   a seat nobody counted, as not having sailed (dive-domain review of UX batch 1). Spanish: "No
   zarparon".
+- **Joined at a dive site** — a finished departure's record band for a diver the crew wrote
+  `not_boarded` at the dock and then counted at an after-dive checkpoint (a chase boat, a pickup at
+  the second site; issue #3823). The vessel did not leave with them, so they are not **Sailed**;
+  they dived, so they are not **Didn't sail**. The **Seat ladder** puts them on `out`, and the recap
+  and the diver's page welcome them back (`joinedAtADiveSite`, `leftAtTheDock`,
+  `src/lib/seat-ladder.ts`). Spanish: "Se unieron en el sitio de buceo".
 - **Not counted at the dock** — a finished departure's record band for a seat with no dock result,
   no standing after-dive result and no `no_show`, on a departure whose dock roll call *was* taken.
   It names a gap in the count, not a fact about the diver: nobody said they sailed and nobody said

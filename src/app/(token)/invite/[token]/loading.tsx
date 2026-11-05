@@ -1,4 +1,4 @@
-import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
+import { EntryShell } from "@/components/account/EntryShell";
 
 /**
  * Entry-shell-shaped skeleton for a staff invitation (design principle 1) —
@@ -7,5 +7,5 @@ import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
  * into.
  */
 export default function InviteLoading() {
-  return <EntryShellSkeleton wordmark fields={["password", "confirm"]} />;
+  return <EntryShell pending wordmark fields={["password", "confirm"]} />;
 }

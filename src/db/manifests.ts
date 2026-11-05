@@ -258,7 +258,6 @@ async function listLatestRollCallsByCheckpoint(
   const byCheckpoint = new Map<RollCallCheckpoint, Map<string, Latest>>(
     checkpoints.map((checkpoint) => [checkpoint, new Map<string, Latest>()]),
   );
-  if (checkpoints.length === 0) return [];
   const rows = await db
     .select({ event: rollCallEvents, recorder: people })
     .from(rollCallEvents)
@@ -480,28 +479,29 @@ export async function listAfterDiveRollCallByTrip(
   shopId: string,
   tripIds: string[],
 ): Promise<Map<string, Map<string, "boarded" | "missing_after_dive">>> {
-  const byTrip = new Map<string, Map<string, "boarded" | "missing_after_dive">>();
-  // A `boarded` anywhere outranks a `missing_after_dive`, the same precedence
-  // `onTheWaterByRollCall` applies: the crew counted this person back onto the
-  // boat.
-  for (const row of await standingAfterDiveResults(db, shopId, tripIds)) {
-    const spoken = byTrip.get(row.tripId) ?? new Map<string, "boarded" | "missing_after_dive">();
-    if (row.status === "boarded") spoken.set(row.bookingId, "boarded");
-    else if (!spoken.has(row.bookingId)) spoken.set(row.bookingId, "missing_after_dive");
-    byTrip.set(row.tripId, spoken);
-  }
-  return byTrip;
+  return foldAfterDiveByTrip(await afterDiveRollCallRows(db, shopId, tripIds));
 }
 
+type AfterDiveRow = {
+  tripId: string;
+  bookingId: string;
+  checkpoint: string;
+  status: (typeof rollCallEvents.$inferSelect)["status"];
+};
+
 /**
- * Each booking's **standing result at each after-dive checkpoint** of the trips
- * asked about: newest event per booking and checkpoint wins, a newest `cleared`
- * drops that checkpoint out, and a cancelled booking is nobody. The one diver
- * query behind `listAfterDiveRollCallByTrip`.
+ * Every diver mark at an after-dive checkpoint of the trips asked about,
+ * newest first, on seats that are not cancelled. The one query behind both
+ * `listAfterDiveRollCallByTrip` and `listUnaccountedForByTrip`, so a reader
+ * that needs both reads them off the same rows (`readAfterDiveRollCallByTrip`).
  */
-async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds: string[]) {
+async function afterDiveRollCallRows(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<AfterDiveRow[]> {
   if (tripIds.length === 0) return [];
-  const rows = await db
+  return db
     .select({
       tripId: rollCallEvents.tripId,
       bookingId: markBookingId(),
@@ -514,11 +514,20 @@ async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds:
       and(
         eq(rollCallEvents.shopId, shopId),
         seatMarks(),
-        inArray(rollCallEvents.tripId, tripIds),
+        inArray(rollCallEvents.tripId, [...tripIds]),
         ne(rollCallEvents.checkpoint, "departure"),
       ),
     )
-    .orderBy(...newestMarkFirst());
+    .orderBy(...newestMarkFirst()) as Promise<AfterDiveRow[]>;
+}
+
+/**
+ * Each booking's **standing result at each after-dive checkpoint** of the trips
+ * asked about: newest event per booking and checkpoint wins, a newest `cleared`
+ * drops that checkpoint out, and a cancelled booking is nobody. Folded off
+ * `afterDiveRollCallRows`.
+ */
+function foldStandingAfterDive(rows: readonly AfterDiveRow[]) {
   // Newest first, so the first row seen per booking *and* checkpoint is that
   // checkpoint's standing result.
   const seen = new Set<string>();
@@ -532,6 +541,38 @@ async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds:
     standing.push({ tripId: row.tripId, bookingId: row.bookingId, status: row.status });
   }
   return standing;
+}
+
+function foldAfterDiveByTrip(rows: readonly AfterDiveRow[]) {
+  const byTrip = new Map<string, Map<string, "boarded" | "missing_after_dive">>();
+  // A `boarded` anywhere outranks a `missing_after_dive`, the same precedence
+  // `onTheWaterByRollCall` applies: the crew counted this person back onto the
+  // boat.
+  for (const row of foldStandingAfterDive(rows)) {
+    const spoken = byTrip.get(row.tripId) ?? new Map<string, "boarded" | "missing_after_dive">();
+    if (row.status === "boarded") spoken.set(row.bookingId, "boarded");
+    else if (!spoken.has(row.bookingId)) spoken.set(row.bookingId, "missing_after_dive");
+    byTrip.set(row.tripId, spoken);
+  }
+  return byTrip;
+}
+
+/**
+ * **The after-dive results and the seats not back aboard, off one read**
+ * (issue #3823). A finished departure's record files a seat by both; read
+ * apart, a "not back aboard" tap landing between the two reads could file a
+ * missing diver under Sailed for one render. One query, two folds.
+ */
+export async function readAfterDiveRollCallByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<{
+  afterDive: Map<string, Map<string, "boarded" | "missing_after_dive">>;
+  unaccounted: Map<string, Set<string>>;
+}> {
+  const rows = await afterDiveRollCallRows(db, shopId, tripIds);
+  return { afterDive: foldAfterDiveByTrip(rows), unaccounted: foldUnaccountedByTrip(rows) };
 }
 
 /**
@@ -564,26 +605,11 @@ export async function listUnaccountedForByTrip(
   shopId: string,
   tripIds: readonly string[],
 ): Promise<Map<string, Set<string>>> {
+  return foldUnaccountedByTrip(await afterDiveRollCallRows(db, shopId, tripIds));
+}
+
+function foldUnaccountedByTrip(rows: readonly AfterDiveRow[]): Map<string, Set<string>> {
   const byTrip = new Map<string, Set<string>>();
-  if (tripIds.length === 0) return byTrip;
-  const rows = await db
-    .select({
-      tripId: rollCallEvents.tripId,
-      bookingId: markBookingId(),
-      checkpoint: rollCallEvents.checkpoint,
-      status: rollCallEvents.status,
-    })
-    .from(rollCallEvents)
-    .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
-    .where(
-      and(
-        eq(rollCallEvents.shopId, shopId),
-        seatMarks(),
-        inArray(rollCallEvents.tripId, [...tripIds]),
-        ne(rollCallEvents.checkpoint, "departure"),
-      ),
-    )
-    .orderBy(...newestMarkFirst());
   // Newest first, so the first row seen per seat and checkpoint is that
   // checkpoint's standing result; a `cleared` newest drops it out.
   const seen = new Set<string>();

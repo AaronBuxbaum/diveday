@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Wordmark } from "@/components/Logo";
-import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
+import { EYEBROW_CLASS, SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
+import { Bone, Pending } from "@/components/ui/pending";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
@@ -43,7 +44,7 @@ import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
  * Words arrive as props; this component reads no translator, so it serves
  * every locale context the pages already resolve.
  */
-export function EntryShell({
+function ResolvedEntryShell({
   wordmark = false,
   homeLink = false,
   eyebrow,
@@ -145,7 +146,7 @@ const ACTION_LINK_SLOT =
   "[:where(&)>a]:inline-flex [:where(&)>a]:min-h-11 [:where(&)>a]:items-center [:where(&)>a]:-my-3";
 
 /**
- * The centered column every door shares. Exported so `EntryShellSkeleton`
+ * The centered column every door shares. Exported so the pending face
  * wears the *same* frame as the shell that replaces it — a skeleton narrower
  * or wider than its page is a sideways layout jump on every navigation into
  * the route (docs/design/principles.md #10), and two width-mismatched
@@ -169,7 +170,7 @@ export function entryMainClass(width: "sm" | "lg") {
  * one centered column inside the viewport's own box needs no box of its own,
  * which is what the anatomy above already said.
  *
- * `EntryShellSkeleton` wears this same constant, so the door and the skeleton
+ * The pending face wears this same constant, so the door and the skeleton
  * that stands in for it cannot drift apart.
  */
 export const entryPanelClass =
@@ -302,4 +303,165 @@ export function EntryDone({
       ) : null}
     </main>
   );
+}
+
+/**
+ * Body-shaped skeleton matching `EntryShell` (design principle 1): centered
+ * title and description bars, then either the form panel (borderless on a
+ * phone, a bordered surface from `sm` up — the *same* exported class
+ * constants as the real shell, so nothing can drift or shift when the page
+ * streams in) or, for the single-button doors (`panel={false}`), a centered
+ * button bar.
+ *
+ * `fields` is a list of slot names, one per stacked label+control pair, so
+ * each page's skeleton carries the same number of rows as its real form.
+ *
+ * A door's words wrap, and a bar cannot: how many lines the title, the
+ * description, a panel's sentence and each footer sentence wrap to is the
+ * page's to say, in `<ShopPageHeader pending>`'s spelling (`SkeletonLines`: one
+ * count, or one below `sm` and one from it).
+ */
+function PendingEntryShell({
+  wordmark = false,
+  eyebrow = false,
+  titleLines = 1,
+  description = true,
+  descriptionLines = 1,
+  width = "sm",
+  panel = true,
+  fields = [],
+  body,
+  trailingLink = false,
+  footnote = true,
+}: {
+  wordmark?: boolean;
+  /** Stands in for the small uppercase line above the title. */
+  eyebrow?: boolean;
+  /** How many lines the title wraps to. */
+  titleLines?: SkeletonLines;
+  /** `false` for a door whose shell has no `description` (sign-in, verify, onboarding). */
+  description?: boolean;
+  /** How many lines the description wraps to. */
+  descriptionLines?: SkeletonLines;
+  width?: "sm" | "lg";
+  panel?: boolean;
+  fields?: readonly string[];
+  /**
+   * A panel that holds a sentence and one button rather than a form — the
+   * closed onboarding door — as the number of lines the sentence wraps to.
+   */
+  body?: SkeletonLines;
+  /** A text link after the last field — sign-in's "Forgot password?". */
+  trailingLink?: boolean;
+  /**
+   * The footer's row: `true` for one one-line sentence, or the lines each of
+   * its sentences wraps to (`[2, 1]`: a two-line sentence over a one-line one).
+   */
+  footnote?: boolean | readonly SkeletonLines[];
+}) {
+  return (
+    <main className={entryMainClass(width)}>
+      <Pending>
+        {/* The shell's `<header>`, bar for line. The wordmark's `mb-8` is the
+            wordmark's own, as the shell's is, so an eyebrow under it stands
+            32px down and 8px over the title; the title bar carried the 32px,
+            which stood a demo door's eyebrow flush under its wordmark
+            (K-576). The bars are the shell's own line boxes, read off
+            `EntryShell`: the wordmark is a 24px lockup (`h-6`), the eyebrow
+            `EYEBROW_CLASS`'s `leading-4` (`h-4`), the `<h1>`
+            `SHELL_TITLE_CLASS` at both widths, whose `text-3xl` line box is
+            36px (`h-9`), and the description an unsized `<p>` at 24px (`h-6`)
+            under the header's own `mt-2`. */}
+        <div>
+          {wordmark ? <Bone className="mx-auto mb-8 h-6 w-28" /> : null}
+          {eyebrow ? <Bone className="mx-auto mb-2 h-4 w-24" /> : null}
+          <SkeletonLineBars lines={titleLines} height="h-9" width="mx-auto w-56 max-w-full" />
+          {description ? (
+            <div className="mt-2">
+              <SkeletonLineBars
+                lines={descriptionLines}
+                height="h-6"
+                width="mx-auto w-72 max-w-full"
+              />
+            </div>
+          ) : null}
+        </div>
+        {/* The form's own rhythm: every door's form is `flex flex-col gap-4`
+            around a `buttonClass()` submit, which is `md`, 48px — so the
+            button bar is `mt-4 h-12`. It was `mt-6 h-11`, drawn before `md`
+            was 48px, and the form moved 4px when it streamed in.
+
+            Sign-in's "Forgot password?" is a 48px link pulled to 32px of flow
+            by its `-my-2`, between two of those 16px gaps: an `h-8` row with
+            a text bar at its end, where the link's words end.
+
+            A door with no form (`body`) holds a `<p>` and its one button
+            `mt-6` under it, so the sentence's line boxes and then `mt-6 h-12`. */}
+        {panel ? (
+          <div className={entryPanelClass}>
+            {fields.map((slot, index) => (
+              <div key={slot} className={index === 0 ? "" : "mt-4"}>
+                <Bone className="h-4 w-28" />
+                <Bone shape="control" className="mt-2 h-12 w-full" />
+              </div>
+            ))}
+            {body !== undefined ? (
+              <SkeletonLineBars lines={body} height="h-6" width="w-full max-w-sm" />
+            ) : null}
+            {trailingLink ? (
+              <div className="mt-4 flex h-8 items-center justify-end">
+                <Bone className="h-4 w-32" />
+              </div>
+            ) : null}
+            <Bone
+              shape="control"
+              className={`${body !== undefined ? "mt-6" : "mt-4"} h-12 w-full`}
+            />
+          </div>
+        ) : (
+          <Bone shape="control" className="mx-auto mt-8 h-12 w-44" />
+        )}
+        {/* The footer's row: `EntryShell`'s footer is `mt-8` over `text-sm`
+            lines, and its 44px links hand back what they add to the line
+            (`FOOTER_LINK_SLOT`), so the row is 20px. The bar stands centred
+            in an `h-5` row at the same margin; it was a bare `h-4` bar, 4px
+            short of the line it stood in for. A footer of several sentences
+            is the shell's `gap-2` column of them, a 20px line box for each
+            line each one wraps to. */}
+        {footnote === true ? (
+          <div className="mt-8 flex h-5 items-center justify-center">
+            <Bone className="h-4 w-44" />
+          </div>
+        ) : footnote ? (
+          <div className="mt-8 flex flex-col gap-2">
+            {footnote.map((lines, row) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the row number is the only identity a placeholder row has
+              <div key={row}>
+                <SkeletonLineBars lines={lines} height="h-5" width="mx-auto w-72 max-w-full" />
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </Pending>
+    </main>
+  );
+}
+
+/**
+ * The door — or, with `pending`, the same door drawn as bars for a route's
+ * `loading.tsx`, on the shell's own column and panel classes (#2769). It was a
+ * second component, `EntryShellSkeleton`, until the pending face moved in
+ * beside the shell it measures itself off.
+ */
+export function EntryShell(
+  props:
+    | ({ pending?: false } & ComponentProps<typeof ResolvedEntryShell>)
+    | ({ pending: true } & ComponentProps<typeof PendingEntryShell>),
+) {
+  if (props.pending) {
+    const { pending: _pending, ...bars } = props;
+    return <PendingEntryShell {...bars} />;
+  }
+  const { pending: _resolved, ...shell } = props;
+  return <ResolvedEntryShell {...shell} />;
 }

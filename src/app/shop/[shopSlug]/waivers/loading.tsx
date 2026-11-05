@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * Body-shaped skeleton for the waiver surface (design principle 1): the
@@ -26,9 +27,9 @@ function LogRows({ count }: { count: number }) {
               departure does; a fixed one-line row would shift the log when
               its records arrive. */}
           <div className="flex min-h-12.75 flex-wrap items-center gap-x-3 gap-y-1 py-2">
-            <div className="my-1 h-4 min-w-0 flex-1 rounded bg-surface-sunken" />
-            <div className="order-last my-0.5 h-4 min-w-0 basis-full rounded bg-surface-sunken" />
-            <div className="h-4 w-14 shrink-0 rounded bg-surface-sunken" />
+            <Bone className="my-1 h-4 min-w-0 flex-1" />
+            <Bone className="order-last my-0.5 h-4 min-w-0 basis-full" />
+            <Bone className="h-4 w-14 shrink-0" />
           </div>
         </div>
       ))}
@@ -39,31 +40,31 @@ function LogRows({ count }: { count: number }) {
 export default function WaiversLoading() {
   return (
     <StaffPage width="reading">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader
           pending
           description={false}
-          meta={<div className="h-5 w-56 max-w-full rounded bg-surface-sunken" />}
+          meta={<Bone className="h-5 w-56 max-w-full" />}
         />
         {/* The release editor is a door at rest (`waivers/page.tsx`: "the
             ledger leads; the editor is a door"), one `md` secondary button.
             The open editor's card stood here, 426px of it, and the log landed
             378px above its own bars. */}
-        <div className="h-12 w-40 rounded-lg bg-surface-sunken" />
+        <Bone shape="control" className="h-12 w-40" />
         <div className="mt-10">
-          <div className="h-4 w-36 rounded bg-surface-sunken" />
+          <Bone className="h-4 w-36" />
           <div className="mt-4 space-y-8">
             <div>
-              <div className="h-4 w-28 rounded bg-surface-sunken" />
+              <Bone className="h-4 w-28" />
               <LogRows count={3} />
             </div>
             <div>
-              <div className="h-4 w-28 rounded bg-surface-sunken" />
+              <Bone className="h-4 w-28" />
               <LogRows count={2} />
             </div>
           </div>
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

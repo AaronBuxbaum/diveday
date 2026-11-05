@@ -1,4 +1,5 @@
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 import { TripPageHeaderSkeleton } from "./_components/TripPageHeader";
 
 /**
@@ -16,12 +17,12 @@ import { TripPageHeaderSkeleton } from "./_components/TripPageHeader";
  */
 export default function TripSurfaceLoading() {
   return (
-    <div className="animate-pulse space-y-10">
+    <Pending className="space-y-10">
       <TripPageHeaderSkeleton className="" />
       <div>
         <SectionCard as="div" pending padding="none" className="h-80" />
-        <div className="mt-6 h-11 w-44 rounded bg-surface-sunken" />
+        <Bone className="mt-6 h-11 w-44" />
       </div>
-    </div>
+    </Pending>
   );
 }

@@ -9,8 +9,6 @@
  * its export fate fails the coverage test below.
  */
 export const EXCLUDED_TABLES = [
-  "shop_promo_codes", // retired by #2720: a shop-wide code is a deals row, exported as shop_promo_codes.csv
-  "trip_last_minute_promos", // retired by #2720: a last-minute deal is a deals row, exported as trip_last_minute_promos.csv
   "retention_prune_state", // global scheduler cursor, no tenant or personal data
   "platform_backup_progress", // one shop-scoped scheduler checkpoint, not portable shop data
   "shop_backup_delivery_claims", // one per-shop scheduler lease, not portable shop data

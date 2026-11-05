@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
+import { E2E_TEST_ROUTE_SECRET } from "../../e2e/servers";
 import { DEV_STAFF_LOGINS } from "../../src/db/dev-credentials";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "../subprocess.mjs";
 import { classify } from "./findings.mjs";
@@ -141,6 +142,22 @@ for (const visit of walkPlan()) {
   });
 }
 
+/**
+ * The path to open for a visit: its own, or for `mint: "setup-link"` the path
+ * of an open single-use setup link the harness route mints (#3657), the way the
+ * founder's mail would carry it. A route that will not mint is the harness
+ * breaking, not a finding, so it throws.
+ */
+async function visitPath(page: Page, visit: ReturnType<typeof walkPlan>[number]) {
+  if (visit.mint !== "setup-link") return visit.path;
+  const minted = await page.request.post("/api/test/seed-setup-link", {
+    headers: { authorization: `Bearer ${E2E_TEST_ROUTE_SECRET}` },
+  });
+  if (!minted.ok()) throw new Error(`persona-bots: no setup link minted (${minted.status()})`);
+  const { path: linkPath } = (await minted.json()) as { path: string };
+  return linkPath;
+}
+
 /** One surface, opened and probed. Throws only when the harness broke. */
 async function visitSurface(
   browser: import("@playwright/test").Browser,
@@ -171,7 +188,7 @@ async function visitSurface(
 
   let rendered = false;
   try {
-    const response = await page.goto(visit.path, { waitUntil: "load" });
+    const response = await page.goto(await visitPath(page, visit), { waitUntil: "load" });
     const status = response?.status() ?? 0;
     // A **refusal** surface is asked for nothing but that it render: a
     // `notFound()` reached from inside a streamed segment cannot change a

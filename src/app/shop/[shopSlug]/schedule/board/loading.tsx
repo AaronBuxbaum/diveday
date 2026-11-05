@@ -1,5 +1,6 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { Bone, Pending } from "@/components/ui/pending";
 import { ScheduleViewsSkeleton } from "../_components/ScheduleViews";
 import {
   WEEK_DAY_GRID_CLASS,
@@ -30,7 +31,7 @@ const DEPARTURES_PER_DAY = [1, 2, 0, 1, 0, 2, 0];
 export default function ScheduleBoardLoading() {
   return (
     <StaffPage width="full">
-      <div className="animate-pulse">
+      <Pending>
         {/* Two rows of doors on a phone: "View public page", "Add a
             departure" and "Add a booking" wrap to two at 390px for anyone
             who can configure the board. */}
@@ -41,12 +42,12 @@ export default function ScheduleBoardLoading() {
               week's seat tally at the line's end, over the board's rule. */}
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-3">
             <div className="flex items-center gap-2">
-              <div className="size-12 rounded-lg bg-surface-sunken" />
-              <div className="size-12 rounded-lg bg-surface-sunken" />
-              <div className="ms-2 h-5 w-40 rounded bg-surface-sunken" />
+              <Bone shape="control" className="size-12" />
+              <Bone shape="control" className="size-12" />
+              <Bone className="ms-2 h-5 w-40" />
             </div>
             <div className="flex h-5 items-center">
-              <div className="h-3.5 w-24 rounded bg-surface-sunken" />
+              <Bone className="h-3.5 w-24" />
             </div>
           </div>
           {DEPARTURES_PER_DAY.map((departures, day) => (
@@ -58,10 +59,10 @@ export default function ScheduleBoardLoading() {
                 <div className="py-2">
                   <div className="flex min-h-8 items-center gap-1.5">
                     <div className="flex h-8 w-8 shrink-0 items-center">
-                      <div className="h-3 w-8 rounded bg-surface-sunken" />
+                      <Bone className="h-3 w-8" />
                     </div>
                     <div className="flex h-7 items-center">
-                      <div className="h-5 w-6 rounded bg-surface-sunken" />
+                      <Bone className="h-5 w-6" />
                     </div>
                   </div>
                 </div>
@@ -69,9 +70,9 @@ export default function ScheduleBoardLoading() {
                   {departures === 0 ? (
                     // "No boats", on the first line the departures use.
                     <div className={WEEK_EMPTY_DAY_CLASS}>
-                      <div className="h-3.5 w-16 rounded bg-surface-sunken" />
+                      <Bone className="h-3.5 w-16" />
                       {/* The day's "+ Add", at the line's end. */}
-                      <div className="h-3.5 w-10 rounded bg-surface-sunken" />
+                      <Bone className="h-3.5 w-10" />
                     </div>
                   ) : (
                     Array.from({ length: departures }, (_, departure) => (
@@ -82,19 +83,19 @@ export default function ScheduleBoardLoading() {
                             facts take the line under the time. */}
                         <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 md:grid-cols-[4.75rem_minmax(0,1fr)_auto]">
                           <div className="col-start-1 row-start-1 flex min-h-8 items-center">
-                            <div className="h-4 w-16 rounded bg-surface-sunken" />
+                            <Bone className="h-4 w-16" />
                           </div>
                           <div className="col-span-full row-start-2 md:col-span-1 md:col-start-2 md:row-start-1 md:pt-1">
                             <div className="flex h-6 items-center">
-                              <div className="h-4 w-56 max-w-full rounded bg-surface-sunken" />
+                              <Bone className="h-4 w-56 max-w-full" />
                             </div>
                             <div className="mt-0.5 flex h-5 items-center">
-                              <div className="h-3.5 w-40 max-w-full rounded bg-surface-sunken" />
+                              <Bone className="h-3.5 w-40 max-w-full" />
                             </div>
                           </div>
                           <div className="col-start-2 row-start-1 flex min-h-8 items-center gap-2 md:col-start-3">
-                            <div className="hidden h-1.5 w-16 rounded-full bg-surface-sunken sm:block" />
-                            <div className="h-3.5 w-12 rounded bg-surface-sunken" />
+                            <Bone shape="pill" className="hidden h-1.5 w-16 sm:block" />
+                            <Bone className="h-3.5 w-12" />
                           </div>
                         </div>
                       </div>
@@ -103,7 +104,7 @@ export default function ScheduleBoardLoading() {
                   {/* A day with boats: its "+ Add" under them, a 36px ghost. */}
                   {departures === 0 ? null : (
                     <div className="flex h-9 items-center px-2 pb-1">
-                      <div className="h-3.5 w-10 rounded bg-surface-sunken" />
+                      <Bone className="h-3.5 w-10" />
                     </div>
                   )}
                 </div>
@@ -111,7 +112,7 @@ export default function ScheduleBoardLoading() {
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

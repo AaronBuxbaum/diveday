@@ -197,6 +197,22 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: null,
+    doc: [
+      "Reserved for the booking-capability signing change tracked in issue #2711.",
+      "The current booking-capability implementation does not read this value yet,",
+      "so setting it before that consumer lands has no runtime effect.",
+    ],
+    keys: [
+      {
+        key: "BOOKING_LINK_SECRET",
+        from: "manual",
+        targets: VERCEL,
+        absent: "the current booking-capability implementation is unchanged",
+      },
+    ],
+  },
+  {
     seam: "ses",
     doc: [
       "Transactional email through AWS SES (ADR 20260803-ses-sole-email-provider,",
