@@ -67,6 +67,8 @@
   "waiverSend": {
     "copyLink": "Copy link",
     "copyFailed": "Try again",
+    "sendByText": "Send by text",
+    "reasonThreadOnly": "A booked diver’s waiver goes to their own email or phone, so there’s no link to copy.",
     "reasonNoEmailOne": "No email on file",
     "reasonNoEmailOther": "{count} have no email on file.",
     "reasonNoPhoneOne": "No number we can text on file",

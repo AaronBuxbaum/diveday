@@ -167,7 +167,7 @@ describe("issueAndDeliverWaiver", () => {
     expect(delivery?.status).toBe("sent");
   });
 
-  it("surfaces the private link when email is not configured", async () => {
+  it("names an unconfigured provider, and hands a seat's link to nobody", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     vi.stubEnv("SES_AWS_REGION", "");
     vi.stubEnv("SES_FROM_EMAIL", "");
@@ -175,8 +175,7 @@ describe("issueAndDeliverWaiver", () => {
     const { db, shop, bookingId } = await seededBooking();
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
 
-    expect(result).toMatchObject({ ok: true, delivery: "unconfigured" });
-    if (result.ok) expect(result.token).toBeTruthy();
+    expect(result).toMatchObject({ ok: true, delivery: "unconfigured", token: null });
   });
 
   it("names a missing APP_HOST as its own gap, not as an unconfigured provider", async () => {
@@ -193,10 +192,9 @@ describe("issueAndDeliverWaiver", () => {
     const { db, shop, bookingId } = await seededBooking();
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
 
-    expect(result).toMatchObject({ ok: true, delivery: "no_app_origin" });
+    expect(result).toMatchObject({ ok: true, delivery: "no_app_origin", token: null });
     // Nothing was attempted: there is no link to put in the mail.
     expect(sesSend).not.toHaveBeenCalled();
-    if (result.ok) expect(result.token).toBeTruthy();
   });
 
   it("surfaces reserved test recipients without calling SES", async () => {
@@ -236,8 +234,7 @@ describe("issueAndDeliverWaiver", () => {
     const { db, shop, bookingId } = await seededBooking();
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
 
-    expect(result).toMatchObject({ ok: true, delivery: "failed" });
-    if (result.ok) expect(result.token).toBeTruthy();
+    expect(result).toMatchObject({ ok: true, delivery: "failed", token: null });
     const [delivery] = await db
       .select()
       .from(notificationDeliveries)
@@ -283,7 +280,9 @@ describe("issueAndDeliverWaiver", () => {
     // a copy the shop did not ask to send.
     expect(sesSend).not.toHaveBeenCalled();
     const body = whatsapp.send.mock.calls[0]?.[0]?.body ?? "";
-    expect(body).toContain(`https://diveday.example/waivers/${result.ok ? result.token : ""}`);
+    // The holder's own thread link, never a waiver link (issue #2743).
+    expect(body).toMatch(/https:\/\/diveday\.example\/ready\/[^/\s]+\/waiver/);
+    expect(body).not.toContain("/waivers/");
     // The departure is named: a diver with two boats this week needs to know
     // which release this is.
     expect(body).toContain(trip.title);
@@ -569,10 +568,10 @@ describe("issueAndDeliverWaiver", () => {
       // A forms-only link for this very booking: it is not a readiness link,
       // so whoever it is handed to cannot open the diver's trip prep with it.
       expect(
-        await verifyBookingCapability(db, { token: result.token, purpose: "course_forms" }),
+        await verifyBookingCapability(db, { token: result.token ?? "", purpose: "course_forms" }),
       ).toMatchObject({ bookingId, shopId: shop.id });
       expect(
-        await verifyBookingCapability(db, { token: result.token, purpose: "readiness" }),
+        await verifyBookingCapability(db, { token: result.token ?? "", purpose: "readiness" }),
       ).toBeNull();
     });
 
@@ -697,7 +696,7 @@ describe("emailFreshWaiverLink", () => {
     // would hand fresh access to whoever is holding the dead link.
     const command = send.mock.calls[0]?.[0] as SendEmailCommand;
     const html = command.input.Content?.Simple?.Body?.Html?.Data;
-    expect(String(html)).toContain("/waivers/");
+    expect(String(html)).toMatch(/\/ready\/[^/"]+\/waiver/);
     expect(String(html)).not.toContain(token);
   });
 
@@ -714,10 +713,10 @@ describe("emailFreshWaiverLink", () => {
     // While the replacement is still signable, a second tap reports that rather
     // than issuing over it and killing the link the diver is using.
     await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("current_link_live");
-    // Once the replacement has aged out too, the same dead URL rescues again —
-    // the whole point of it staying resolvable.
     const afterReplacement = new Date(after.getTime() + WAIVER_LINK_TTL_MS + 1);
-    await expect(emailFreshWaiverLink(db, token, afterReplacement)).resolves.toBe("sent");
+    await expect(emailFreshWaiverLink(db, token, afterReplacement)).resolves.toBe(
+      "current_link_live",
+    );
   });
 
   it("refuses when a fresher link is still live, and leaves that link and its draft alone", async () => {
