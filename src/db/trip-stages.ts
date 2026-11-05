@@ -192,6 +192,17 @@ export async function latestTripStagesByTrip(
   return newest;
 }
 
+function holdsTheBoat(gap: {
+  reason: string;
+  diveNumber: number;
+  awaiting: number;
+  total: number;
+}) {
+  if (gap.diveNumber < 1) return false;
+  if (gap.reason === "missing_diver" || gap.reason === "missing_crew") return true;
+  return gap.awaiting < gap.total;
+}
+
 /**
  * Read departure timing and crew stage with shop-scoped roll-call data; the
  * clock alone cannot mark a departure home while someone may be in the water.
@@ -218,9 +229,10 @@ export async function readDepartureStage(
   let stage = departureStage({ ...reading, unaccountedFor: unaccounted.size > 0 });
   if (stage.finished && unaccounted.size === 0) {
     const gaps = await listRollCallGaps(db, shopId, reading.now, [tripId], { historical: true });
-    // An after-dive checkpoint only: a dock count left open, or no roll call
-    // at all, is paperwork and never holds a boat at sea.
-    if (gaps.some((gap) => gap.diveNumber >= 1)) {
+    // An after-dive checkpoint only, and only one someone started or a person
+    // recorded not back: a dock count left open, a shop that never counts after
+    // a dive, or no roll call at all is paperwork and never holds a boat.
+    if (gaps.some(holdsTheBoat)) {
       stage = departureStage({ ...reading, unaccountedFor: true });
     }
   }

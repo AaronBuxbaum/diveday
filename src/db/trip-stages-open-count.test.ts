@@ -63,8 +63,16 @@ describe("readDepartureStage: an after-dive count still open", () => {
     expect((await reading()).finished).toBe(false);
   });
 
-  it("keeps it live when no after-dive count was taken at all", async () => {
+  it("finishes a boat whose shop counts only at the dock: no after-dive count was started", async () => {
     const { reading } = await boat();
+    expect((await reading()).finished).toBe(true);
+  });
+
+  it("keeps it live when a diver was recorded not back aboard", async () => {
+    const { bookingIds, say, reading } = await boat();
+    const [first, second] = bookingIds as [string, string];
+    await say(first, "after_dive_1", "boarded");
+    await say(second, "after_dive_1", "not_boarded");
     expect((await reading()).finished).toBe(false);
   });
 
