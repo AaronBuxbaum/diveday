@@ -1,12 +1,17 @@
-import { and, eq, getTableColumns } from "drizzle-orm";
+import { and, eq, getTableColumns, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { createWaiverToken, hashWaiverToken, waiverLinkToken } from "@/lib/waiver-tokens";
 import { fileScopedShopContext } from "@/test/db";
-import { waiverRecords, waiverTemplates } from "./schema";
+import { people, waiverRecords, waiverTemplates } from "./schema";
 import { setTripStatus } from "./trips";
 import { completeWaiver, getWaiverForToken, threadWaiverKey } from "./waivers-completion";
-import { issueWaiverRequest, openWaiverInThread } from "./waivers-requests";
+import {
+  hasLivePersonWaiverRequest,
+  hasLiveWaiverRequest,
+  issueWaiverRequest,
+  openWaiverInThread,
+} from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
 import { now, waiverContextFor } from "./waivers-test-fixtures";
 
@@ -396,6 +401,131 @@ describe("waiver records (in-memory PGlite)", () => {
  * door that refuses "already completed" must not count a record whose seal
  * failed, on either scope, or the diver could never be asked to sign again.
  */
+describe("who a waiver link may be issued for", () => {
+  const unknown = "00000000-0000-4000-8000-000000000000";
+
+  it("refuses a request that names neither a seat nor a person", async () => {
+    const { db, shop } = await waiverContext();
+    expect(await issueWaiverRequest(db, { shopId: shop.id, now })).toEqual({
+      ok: false,
+      reason: "person_not_found",
+    });
+  });
+
+  it("refuses a person this shop does not hold, an erased one and a merged one", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const refused = { ok: false, reason: "person_not_found" };
+    expect(await issueWaiverRequest(db, { shopId: shop.id, personId: unknown, now })).toEqual(
+      refused,
+    );
+
+    await db
+      .update(people)
+      .set({ anonymizedAt: now, deletedAt: now })
+      .where(and(eq(people.id, booking.personId), eq(people.shopId, shop.id)));
+    expect(
+      await issueWaiverRequest(db, { shopId: shop.id, personId: booking.personId, now }),
+    ).toEqual(refused);
+
+    const [survivor] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), ne(people.id, booking.personId)))
+      .limit(1);
+    if (!survivor) throw new Error("expected a second person in the demo shop");
+    await db
+      .update(people)
+      .set({
+        anonymizedAt: null,
+        mergedIntoPersonId: survivor.id,
+        mergedAt: now,
+        mergedByPersonId: survivor.id,
+      })
+      .where(and(eq(people.id, booking.personId), eq(people.shopId, shop.id)));
+    expect(
+      await issueWaiverRequest(db, { shopId: shop.id, personId: booking.personId, now }),
+    ).toEqual(refused);
+  });
+
+  it("refuses a removed person when no seat is named", async () => {
+    const { db, shop, booking } = await waiverContext();
+    await db
+      .update(people)
+      .set({ deletedAt: now })
+      .where(and(eq(people.id, booking.personId), eq(people.shopId, shop.id)));
+    expect(
+      await issueWaiverRequest(db, { shopId: shop.id, personId: booking.personId, now }),
+    ).toEqual({ ok: false, reason: "person_not_found" });
+  });
+
+  it("refuses a seat that is not the person or trip the caller expected", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const refused = { ok: false, reason: "booking_not_found" };
+    expect(
+      await issueWaiverRequest(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        expectedPersonId: unknown,
+        now,
+      }),
+    ).toEqual(refused);
+    expect(
+      await issueWaiverRequest(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        expectedTripId: unknown,
+        now,
+      }),
+    ).toEqual(refused);
+    // The expectations the seat does meet change nothing.
+    expect(
+      await issueWaiverRequest(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        expectedPersonId: booking.personId,
+        expectedTripId: booking.tripId,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+  });
+});
+
+describe("asking whether a live waiver link exists", () => {
+  it("answers for a seat, and for a person with no seat, against the clock", async () => {
+    const { db, shop, booking } = await waiverContext();
+    expect(await hasLiveWaiverRequest(db, booking.id, now)).toBe(false);
+    expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId, now)).toBe(false);
+
+    const seat = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    const person = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      now,
+    });
+    if (!seat.ok || !person.ok) throw new Error("expected both links to issue");
+    expect(await hasLiveWaiverRequest(db, booking.id, now)).toBe(true);
+    expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId, now)).toBe(true);
+
+    const dead = new Date(seat.expiresAt.getTime() + 1);
+    expect(await hasLiveWaiverRequest(db, booking.id, dead)).toBe(false);
+    expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId, dead)).toBe(false);
+  });
+
+  it("reads the clock when none is given", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(now);
+      const { db, shop, booking } = await waiverContext();
+      await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+      await issueWaiverRequest(db, { shopId: shop.id, personId: booking.personId, now });
+      expect(await hasLiveWaiverRequest(db, booking.id)).toBe(true);
+      expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId)).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("issuing over a signed release whose seal has been checked", () => {
   async function signed(scope: "booking" | "person") {
     const { db, shop, booking, person } = await waiverContext();
