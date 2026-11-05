@@ -463,7 +463,7 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
     expect(sentBodies(send)[0]).not.toMatch(/\/ready\/[A-Za-z0-9._-]+\/waiver/);
   });
 
-  it("keeps the counter's path for today's boat: the waiver alone, no confirmation", async () => {
+  it("confirms the counter seat on today's boat, the waiver riding in it", async () => {
     const { db, shop, open, actorPersonId } = await context();
     const send = deliverableEmailEnv();
     // The frozen test clock is 09:30 in the shop's zone; this boat leaves at 11:30.
@@ -482,13 +482,13 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
       refusals: "coarse",
     });
 
-    expect(result).toMatchObject({ ok: true, confirmation: "not_needed", waiver: "sent" });
+    expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "sent" });
     expect(send).toHaveBeenCalledOnce();
   });
 
-  it("seats a returning diver picked at the counter as a walk-in: trail code and no confirmation owed", async () => {
+  it("seats a returning diver picked at the counter as a walk-in: trail code", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const send = deliverableEmailEnv();
+    const _send = deliverableEmailEnv();
     const startsAt = new Date(nowDate().getTime() + 2 * 60 * 60 * 1000);
     await db
       .update(tripsTable)
@@ -505,22 +505,18 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
       refusals: "specific",
     });
 
-    expect(result).toMatchObject({ ok: true, confirmation: "not_needed" });
+    expect(result).toMatchObject({ ok: true });
     expect(await activityLines(db, open.id)).toContainEqual({
       code: "seat_added_walk_in",
       params: expect.objectContaining({ diver: diver.fullName }),
     });
-    // The booking confirmation is the one email a walk-in is not owed.
-    for (const call of send.mock.calls) {
-      expect(JSON.stringify(call)).not.toMatch(/confirm/i);
-    }
   });
 
   /**
    * Dive-domain review F2 of layer r4-1: "Can you get me on the 1:30?" at
-   * 9 AM is the commonest phone booking a shop takes. Only the walk-in counter
-   * knows the diver is standing there; every other door confirms any
-   * departure that has not sailed.
+   * 9 AM is the commonest phone booking a shop takes. The counter cannot tell
+   * it from a diver at the desk, so every door confirms any departure that has
+   * not sailed.
    */
   it("confirms a phoned-in seat on today's boat", async () => {
     const { db, shop, open, actorPersonId } = await context();
@@ -546,7 +542,7 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
     expect(sentBodies(send)[0]).not.toContain("/waivers/");
   });
 
-  it("confirms a counter seat on a later day's boat", async () => {
+  it("confirms a counter seat on a boat that has not sailed", async () => {
     const { db, shop, open, actorPersonId } = await context();
     const send = deliverableEmailEnv();
 

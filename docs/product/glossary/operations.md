@@ -99,8 +99,9 @@
   (retention, backups, integrations, the daily retry drain) stay UTC routes of their own. A scan
   that fails is isolated, logged as `cron_shop_tick.scan_failed` with its name, and turns the
   `diveday-shop-tick` monitor to error.
-- **Walk-in** — a person who turns up at the counter for a boat that has not left, seated from the
-  departure door in walk-in mode (`walkIn=true`, entry `walk_in`, activity `seat_added_walk_in`).
+- **Walk-in** — a seat made at the counter for a boat that has not left, seated from the
+  departure door in walk-in mode. Inside the counter window every add without a date request is one,
+  so a same-day phone booking files as a walk-in too (Aaron, 2026-11-05) (`walkIn=true`, entry `walk_in`, activity `seat_added_walk_in`).
   The mode is a claim from the client and holds only while the boat's **counter window** is open;
   in it a name is enough (the email is optional) and the seat is told as a walk-in. Every gate is
   the departure door's own: readiness, admission, waiver and capacity. The old
