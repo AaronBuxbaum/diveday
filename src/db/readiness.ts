@@ -1710,6 +1710,13 @@ function seatTrainingDive(
   };
 }
 
+/** Rows grouped by the person they belong to, in the order they came. */
+function byPerson<T extends { personId: string }>(rows: readonly T[]): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
+  for (const row of rows) grouped.set(row.personId, [...(grouped.get(row.personId) ?? []), row]);
+  return grouped;
+}
+
 /**
  * The guardian rule's "Under 18" for a seat: its own booker's, or — on a seat
  * whose training mark stands — the course seat's too, so the charter and the
@@ -1892,30 +1899,10 @@ export async function listTripsReadiness(
 
   const currentTemplateGeneration = currentTemplate?.materialGeneration ?? null;
 
-  const certificationsByPerson = new Map<string, typeof certificationRows>();
-  for (const certification of certificationRows) {
-    const current = certificationsByPerson.get(certification.personId) ?? [];
-    current.push(certification);
-    certificationsByPerson.set(certification.personId, current);
-  }
-  const specialtiesByPerson = new Map<string, typeof specialtyRows>();
-  for (const specialty of specialtyRows) {
-    const current = specialtiesByPerson.get(specialty.personId) ?? [];
-    current.push(specialty);
-    specialtiesByPerson.set(specialty.personId, current);
-  }
-  const courseSeatsByPerson = new Map<string, CourseSeatInTraining[]>();
-  for (const seat of courseSeatRows) {
-    const current = courseSeatsByPerson.get(seat.personId) ?? [];
-    current.push(seat);
-    courseSeatsByPerson.set(seat.personId, current);
-  }
-  const nitroxByPerson = new Map<string, typeof nitroxRows>();
-  for (const card of nitroxRows) {
-    const current = nitroxByPerson.get(card.personId) ?? [];
-    current.push(card);
-    nitroxByPerson.set(card.personId, current);
-  }
+  const certificationsByPerson = byPerson(certificationRows);
+  const specialtiesByPerson = byPerson(specialtyRows);
+  const courseSeatsByPerson = byPerson<CourseSeatInTraining>(courseSeatRows);
+  const nitroxByPerson = byPerson(nitroxRows);
 
   return waiverRows.map((row) => {
     const tripId = row.booking.tripId;

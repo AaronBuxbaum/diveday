@@ -1462,7 +1462,6 @@
       {
         "why": "the trip page readers left the trips barrel (issue #2757): two import lines, removed again when the page reads through one reader in the next layer",
         "files": {
-          "src/db/incident-reports.test.ts": "1011 -> 1013",
           "src/db/rental-fit.test.ts": "1227 -> 1237"
         }
       },
@@ -1510,7 +1509,7 @@
     "src/db/executed-dives.test.ts": 1085,
     "src/db/export.test.ts": 1185,
     "src/db/import.test.ts": 1076,
-    "src/db/incident-reports.test.ts": 1013,
+    "src/db/incident-reports.test.ts": 966,
     "src/db/manifests.test.ts": 3587,
     "src/db/no-show.test.ts": 1158,
     "src/db/notifications.test.ts": 1864,

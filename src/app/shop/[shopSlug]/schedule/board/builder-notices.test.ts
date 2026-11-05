@@ -37,7 +37,7 @@ describe("builderNoticeMessage", () => {
 });
 
 describe("builderNoticeFor", () => {
-  const none = { count: undefined, created: undefined, series: undefined, st };
+  const none = { count: undefined, created: undefined, series: undefined, locale: "en-US", st };
 
   it("says nothing for an unknown or missing outcome", () => {
     expect(builderNoticeFor({ ...none, builder: undefined })).toBeUndefined();
@@ -63,14 +63,13 @@ describe("builderNoticeFor", () => {
 });
 
 describe("the series hull-in-the-yard notice", () => {
-  const none = { count: undefined, created: undefined, series: undefined, st };
+  const none = { count: undefined, created: undefined, series: undefined, locale: "en-US", st };
 
   it("names the first day the run would sail with the hull in the yard", () => {
     const notice = builderNoticeFor({
       ...none,
       builder: "series-boat-out-of-service",
       on: "2031-02-12",
-      locale: "en-US",
     });
     expect(notice?.tone).toBe("danger");
     expect(notice?.message).toBe(

@@ -95,7 +95,7 @@ export function builderNoticeFor({
   created,
   series,
   on,
-  locale = "en-US",
+  locale,
   st,
 }: {
   builder: string | undefined;
@@ -104,7 +104,8 @@ export function builderNoticeFor({
   series: string | undefined;
   /** The shop-local day the notice names (`?on=`), when it names one. */
   on?: string | undefined;
-  locale?: string;
+  /** The page's own locale, for the day the notice names. */
+  locale: string;
   st: StaffTranslator;
 }): { tone: "success" | "danger" | "warning"; message: string } | undefined {
   const builderNoticeEntry = noticeFromParam(builder, BUILDER_NOTICE_KEYS);
