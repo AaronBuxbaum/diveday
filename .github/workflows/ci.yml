@@ -62,9 +62,11 @@ jobs:
   # account has a fixed number of runners, so a slice of CI on every layer only delays the answer.
   # A lower layer's run is skipped, not green: every job below is skipped with it, and the run
   # summary names the layer that runs. The gate is fail-open: when it cannot tell, CI runs.
+  # It runs on every event and answers `true` off a pull request (scripts/ci-stack-gate.mjs): a job
+  # skipped here would skip every job downstream of it, `changes` and the browser jobs included,
+  # even where they carry `!cancelled()`, and a push to main would then publish no visual baseline.
   stack-gate:
     name: Top of the stack?
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     permissions:
