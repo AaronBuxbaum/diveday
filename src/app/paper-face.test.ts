@@ -59,6 +59,26 @@ describe("the paper face", () => {
     }
   });
 
+  it("prints a page that holds a sheet as its sheets, and nothing of its screen", () => {
+    const only = rules.find((rule) => rule.selector.startsWith("body:has(.paper-sheet-frame)"));
+    expect(only?.body, "the screen's hide on paper").toMatch(/display:\s*none\s*!important/);
+    document.body.innerHTML = `<header id="chrome"><button>Menu</button></header>
+      <main id="screen-around"><form id="answers"><input name="birthdate" /></form>
+      <div class="paper-sheet-frame" data-paper-print-only=""><div>
+      <section class="paper-sheet"><p id="sheet-line">Name</p></section></div></div></main>
+      <div id="toast">Saved</div>`;
+    const selector = only?.selector ?? "";
+    for (const id of ["chrome", "answers", "toast"]) {
+      expect(document.getElementById(id)?.matches(selector), id).toBe(true);
+    }
+    for (const kept of ["#screen-around", ".paper-sheet-frame", ".paper-sheet", "#sheet-line"]) {
+      expect(document.querySelector(kept)?.matches(selector), kept).toBe(false);
+    }
+    // A page with no sheet is not a document: the rule leaves it alone.
+    document.body.innerHTML = `<header id="chrome">Menu</header><main>Screen</main>`;
+    expect(document.getElementById("chrome")?.matches(selector)).toBe(false);
+  });
+
   it("restores nothing on a sheet with !important", () => {
     for (const rule of rules.filter((r) => /\.paper-sheet(-band|-mark)?\s*$/.test(r.selector))) {
       expect(rule.body, rule.selector).not.toMatch(/background[^;]*!important/);

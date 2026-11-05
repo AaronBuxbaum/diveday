@@ -1,7 +1,6 @@
 "use client";
 
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
-import { flushSync } from "react-dom";
+import { createContext, type ReactNode, useContext, useState } from "react";
 import { AutoPrint } from "@/components/paper/AutoPrint";
 import { buttonClass } from "@/components/ui/button";
 
@@ -14,11 +13,13 @@ const OpenPaper = createContext<(() => void) | null>(null);
  * the offline manifest's saved copy is: the screen is gone while the sheet
  * shows, so nothing that taps prints and nothing printed taps.
  *
- * Two doors reach it. "Print log entry" (`PrintRecordButton`) opens it and the
- * print dialog with it. The browser's own Print reaches it too: `beforeprint`
- * swaps the screen for the sheet before the browser takes its picture
- * (`flushSync`), so Ctrl+P on a diver's day prints the logbook page and never
- * the screen. Back returns to the screen.
+ * "Print log entry" (`PrintRecordButton`) opens it and the print dialog with
+ * it; Back returns to the screen. The browser's own Print needs no door: the
+ * sheet is drawn under the screen too, shown only to the printer
+ * (`data-paper-print-only`), and on paper a page holding a sheet is its
+ * sheets (`globals.css`). So Ctrl+P on a diver's day prints the logbook page
+ * and never the screen, including from a browser that prints without firing
+ * `beforeprint` (reviews of #2745, dock nit 3).
  *
  * The sheet arrives drawn by the server (`DiveRecordSheet`); this holds only
  * which face shows. Words arrive as props: it reads no translator.
@@ -37,16 +38,13 @@ export function RecordPaper({
 }) {
   const [paper, setPaper] = useState<PaperState>(null);
 
-  useEffect(() => {
-    const beforePrint = () => flushSync(() => setPaper((now) => now ?? { autoPrint: false }));
-    window.addEventListener("beforeprint", beforePrint);
-    return () => window.removeEventListener("beforeprint", beforePrint);
-  }, []);
-
   if (!paper) {
     return (
       <OpenPaper.Provider value={() => setPaper({ autoPrint: true })}>
         {children}
+        <div className="paper-sheet-frame" data-paper-print-only="">
+          <div>{sheet}</div>
+        </div>
       </OpenPaper.Provider>
     );
   }
@@ -54,9 +52,8 @@ export function RecordPaper({
     <main className="w-full flex-1 bg-background" data-testid="dive-record-paper">
       {paper.autoPrint ? <AutoPrint /> : null}
       {/* The way back and a second Print, for a diver who dismissed the
-          dialog. The browser prints this row too unless it is told not to,
-          and it is the one row on this page that is not the sheet. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 print:hidden">
+          dialog. Never printed: on paper the page is its sheet. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <button
           type="button"
           onClick={() => setPaper(null)}

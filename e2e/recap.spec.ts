@@ -297,7 +297,7 @@ test("the day's facts render once, inside the one record a diver keeps", async (
   // prints, under a divemaster signature rule, and DiveDay verifies nothing
   // about the dive itself. For the same reason it states no dive count and no
   // depth — both were numbers nobody observed (review, 2026-08-28).
-  await expect(page.getByText(/Recorded by/i)).toBeVisible();
+  await expect(page.getByText(/Recorded by/i).filter({ visible: true })).toBeVisible();
   await expect(page.getByText(/dives? logged/i)).toHaveCount(0);
   await expect(record.getByText(/Max depth/i)).toHaveCount(0);
 
@@ -305,8 +305,9 @@ test("the day's facts render once, inside the one record a diver keeps", async (
   // decision 4): the page it replaced said the day's conditions and its sites
   // twice — a quiet stat row in its first act, then a keepsake card under it —
   // so a diver read the same two numbers in two typefaces one screen apart.
-  await expect(page.getByTestId("dive-record-conditions")).toHaveCount(1);
-  await expect(page.getByTestId("dive-record-sites")).toHaveCount(1);
+  // (The printer's sheet under the screen repeats them; it never shows here.)
+  await expect(page.getByTestId("dive-record-conditions").filter({ visible: true })).toHaveCount(1);
+  await expect(page.getByTestId("dive-record-sites").filter({ visible: true })).toHaveCount(1);
   // Nothing outside the record repeats them.
   await expect(record.getByTestId("dive-record-conditions")).toHaveCount(1);
   await expect(record.getByTestId("dive-record-sites")).toHaveCount(1);

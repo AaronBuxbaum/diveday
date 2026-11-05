@@ -27,8 +27,8 @@ export type DoctorFormCopy = {
  * 20261024-diver-sent-doctors-form). One file, a photo or a PDF; the action
  * stores it privately for the shop's staff and answers with an outcome only.
  * Once the shop has a form the section says so and offers nothing more, so a
- * forwarded copy of the link cannot replace it. The picker is hidden on paper;
- * the other ways back (`fallback`) are not.
+ * forwarded copy of the link cannot replace it. This is the screen's; the
+ * page's sheet prints the other ways back on its own (`DoctorReferralSheet`).
  */
 export function DoctorFormUpload({
   action,
@@ -67,7 +67,7 @@ export function DoctorFormUpload({
       <form
         action={formAction}
         encType="multipart/form-data"
-        className="mt-4 flex flex-wrap items-end gap-3 print:hidden"
+        className="mt-4 flex flex-wrap items-end gap-3"
       >
         <Field label={copy.label} error={refusal} htmlFor="doctorForm" className="min-w-56">
           {/* The clearance control's file picker, for the same reason: a bare
