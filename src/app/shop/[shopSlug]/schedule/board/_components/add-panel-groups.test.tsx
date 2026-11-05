@@ -220,8 +220,8 @@ describe("RequestPlanBrief", () => {
           suggestedDivemasters: 0,
           diversPerDivemaster: 6,
           requests: [
-            { id: "r1", name: "Ana", subject: "Wreck day", divers: 2 },
-            { id: "r2", name: "Ben", subject: "Night dive", divers: 1 },
+            { id: "r1", name: "Ana", subject: "Wreck day", divers: 2, quote: null },
+            { id: "r2", name: "Ben", subject: "Night dive", divers: 1, quote: null },
           ],
         }}
       />,
@@ -231,6 +231,31 @@ describe("RequestPlanBrief", () => {
       ["r1", true],
       ["r2", true],
     ]);
+  });
+
+  it("says a charter's whole-boat quote under its request, and only there", () => {
+    render(
+      <RequestPlanBrief
+        copy={COPY}
+        requestPlan={{
+          estimatedDivers: 6,
+          suggestedCapacity: 8,
+          suggestedDivemasters: 0,
+          diversPerDivemaster: 6,
+          requests: [
+            {
+              id: "r1",
+              name: "Ana",
+              subject: "Whole boat",
+              divers: 6,
+              quote: "Quoted $1,800 for the whole boat. The price is set separately.",
+            },
+            { id: "r2", name: "Ben", subject: "Night dive", divers: 1, quote: null },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getAllByText(/Quoted \$1,800 for the whole boat/)).toHaveLength(1);
   });
 });
 

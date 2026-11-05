@@ -304,6 +304,8 @@ export type BuilderRequestPlan = {
     name: string;
     subject: string;
     divers: number;
+    /** A private charter's whole-boat quote, worded; null when none was sent. */
+    quote: string | null;
   }>;
 };
 

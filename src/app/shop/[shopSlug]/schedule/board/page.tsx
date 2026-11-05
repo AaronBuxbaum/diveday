@@ -136,7 +136,7 @@ export default async function ScheduleBoardPage({
   const addDraft = draftForForm(draft, locale, shop.timezone);
   const boatMap = new Map(boatsEverOwned.map((boat) => [boat.id, boat.name]));
   const hasUpcoming = range.first !== null;
-  const requestPlan = builderRequestPlan({ requestRows, shop, shopBoats, st });
+  const requestPlan = builderRequestPlan({ requestRows, shop, shopBoats, st, locale });
 
   const builderNotice = builderNoticeFor({ builder, count, created, series, on, locale, st });
   const rescheduleNotice =
