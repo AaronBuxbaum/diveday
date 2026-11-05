@@ -14,7 +14,6 @@ describe("offlineManifestPayload", () => {
         snapshotId: "11111111-1111-4111-8111-111111111111",
         erasureEpochToken: "authenticated-epoch",
         snapshotRevision: 1,
-        rollCallDayBoundaries: undefined,
       },
       shop: {
         slug: "blue-mantis",
@@ -25,6 +24,7 @@ describe("offlineManifestPayload", () => {
       checklistItems: [{ id: "radio", label: "Radio check" }] as never,
       checklistChecks: new Map() as never,
       boatSafety: null,
+      meetingWindows: undefined,
       snags: [],
       locale: "en-US",
       t,
@@ -46,7 +46,6 @@ describe("offlineManifestPayload", () => {
         snapshotId: "22222222-2222-4222-8222-222222222222",
         erasureEpochToken: "authenticated-epoch",
         snapshotRevision: 1,
-        rollCallDayBoundaries: undefined,
       },
       shop: {
         slug: "blue-mantis",
@@ -57,6 +56,7 @@ describe("offlineManifestPayload", () => {
       checklistItems: [{ id: "radio", label: "Radio check" }] as never,
       checklistChecks: new Map() as never,
       boatSafety: null,
+      meetingWindows: undefined,
       snags: [
         {
           id: "s-1",
@@ -107,6 +107,7 @@ describe("offlineManifestPayload", () => {
       checklistItems: [] as never,
       checklistChecks: new Map() as never,
       boatSafety: null,
+      meetingWindows: undefined,
       snags: [],
       locale: "en-US",
       t,
@@ -117,18 +118,18 @@ describe("offlineManifestPayload", () => {
       erasureEpochToken: "authenticated-epoch",
       snapshotRevision: 1,
     };
+    const day = (date: number) => ({
+      startsAt: new Date(Date.UTC(2026, 6, date, 10)),
+      endsAt: new Date(Date.UTC(2026, 6, date, 14)),
+    });
+    // Halfway between day one's end (14:00) and day two's start (10:00 the next day).
     expect(
-      offlineManifestPayload({
-        ...base,
-        snapshot: { ...snapshot, rollCallDayBoundaries: ["2026-07-21T00:00:00.000Z"] },
-      }).rollCallDayBoundaries,
+      offlineManifestPayload({ ...base, snapshot, meetingWindows: [day(20), day(21)] })
+        .rollCallDayBoundaries,
     ).toEqual(["2026-07-21T00:00:00.000Z"]);
     expect(
       "rollCallDayBoundaries" in
-        offlineManifestPayload({
-          ...base,
-          snapshot: { ...snapshot, rollCallDayBoundaries: undefined },
-        }),
+        offlineManifestPayload({ ...base, snapshot, meetingWindows: [day(20)] }),
     ).toBe(false);
   });
 });

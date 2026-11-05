@@ -1,6 +1,5 @@
-import { asc, inArray, type SQL, sql } from "drizzle-orm";
+import { inArray, type SQL, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { rollCallDayStarts } from "@/lib/trip-days";
 import type { MeetingWindow } from "@/lib/trip-phase";
 import type { DbExecutor } from "./client";
 import { tripScheduleDays } from "./schema";
@@ -19,7 +18,7 @@ import { tripScheduleDays } from "./schema";
  */
 export async function meetingWindowsByTrip(
   db: DbExecutor,
-  trips: readonly { id: string; startsAt: Date; endsAt: Date }[],
+  trips: readonly { id: string }[],
 ): Promise<Map<string, MeetingWindow[]>> {
   const byTrip = new Map<string, MeetingWindow[]>();
   if (trips.length === 0) return byTrip;
@@ -42,46 +41,6 @@ export async function meetingWindowsByTrip(
     byTrip.set(row.tripId, windows);
   }
   return byTrip;
-}
-
-/**
- * **Where each later meeting day's roll call begins**, per departure, as ISO
- * instants for the offline copy (issue #3904): `rollCallDayStarts` over the
- * run's windows, day one's dropped. A one-day departure, and one with no
- * windows on file, is absent: the copy then reads as it always has. One query
- * for every departure asked about.
- */
-export async function rollCallDayBoundariesByTrip(
-  db: DbExecutor,
-  tripIds: readonly string[],
-): Promise<Map<string, string[]>> {
-  const boundaries = new Map<string, string[]>();
-  if (tripIds.length === 0) return boundaries;
-  const rows = await db
-    .select({
-      tripId: tripScheduleDays.tripId,
-      startsAt: tripScheduleDays.startsAt,
-      endsAt: tripScheduleDays.endsAt,
-    })
-    .from(tripScheduleDays)
-    .where(inArray(tripScheduleDays.tripId, [...tripIds]))
-    .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.startsAt));
-  const windows = new Map<string, { startsAt: Date; endsAt: Date }[]>();
-  for (const row of rows) {
-    const list = windows.get(row.tripId) ?? [];
-    list.push({ startsAt: row.startsAt, endsAt: row.endsAt });
-    windows.set(row.tripId, list);
-  }
-  for (const [tripId, list] of windows) {
-    if (list.length < 2) continue;
-    boundaries.set(
-      tripId,
-      rollCallDayStarts(list)
-        .slice(1)
-        .map((start) => new Date(start).toISOString()),
-    );
-  }
-  return boundaries;
 }
 
 /**

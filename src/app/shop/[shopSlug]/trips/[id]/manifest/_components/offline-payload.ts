@@ -6,6 +6,7 @@ import { crewBlockerText } from "@/i18n/identity-check-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { BoatSafetySection } from "@/lib/boat-safety";
 import { type OfflineManifestPayload, serializeManifests } from "@/lib/offline-manifests";
+import { type DayWindow, rollCallDayBoundariesOf } from "@/lib/trip-days";
 import { snagSentences } from "./pre-departure-check-view";
 
 /**
@@ -22,6 +23,7 @@ export function offlineManifestPayload({
   checklistChecks,
   boatSafety,
   snags,
+  meetingWindows,
   locale,
   t,
 }: {
@@ -32,9 +34,12 @@ export function offlineManifestPayload({
   boatSafety: BoatSafetySection | null;
   /** `openSnagsForTrip`: carried and this crew's own, in the reader's order. */
   snags: readonly OpenSnag[];
+  /** The run's real windows (`trip_schedule_days`), which the page has already read. */
+  meetingWindows: readonly DayWindow[] | undefined;
   locale: string;
   t: StaffTranslator;
 }) {
+  const boundaries = rollCallDayBoundariesOf(meetingWindows);
   return {
     ...serializeManifests(
       snapshot.manifests,
@@ -67,9 +72,7 @@ export function offlineManifestPayload({
           ? t("shared.offlineManifest.juniorCheckRequired")
           : depthWarningText(t, advisory),
     ),
-    ...(snapshot.rollCallDayBoundaries
-      ? { rollCallDayBoundaries: snapshot.rollCallDayBoundaries }
-      : {}),
+    ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
     snapshotId: snapshot.snapshotId,
     erasureEpochToken: snapshot.erasureEpochToken,
   };

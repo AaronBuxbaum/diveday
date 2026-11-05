@@ -12,7 +12,7 @@ import { getTripManifests } from "@/db/manifests";
 import { nextOfflineManifestSnapshotRevision } from "@/db/offline-manifest-snapshots";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { getShopOfflineErasureEpoch } from "@/db/shops";
-import { rollCallDayBoundariesByTrip } from "@/db/trip-meeting-windows";
+import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
 import { boatSafetySection } from "@/i18n/boat-safety-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -29,6 +29,7 @@ import type {
   OfflineManifestUpcomingResponse,
 } from "@/lib/offline-manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
+import { rollCallDayBoundariesOf } from "@/lib/trip-days";
 
 // See ADR 20260726-shopwide-offline-manifest-priming: 48 hours covers "today
 // and tomorrow" in any shop timezone without depending on a staffer having
@@ -82,7 +83,12 @@ async function getUpcomingManifests() {
     // the device when the signal goes (issue #688).
     emergencyReference: shop.emergencyReference,
   };
-  const dayBoundaries = await rollCallDayBoundariesByTrip(db, tripIds);
+  // One read for every trip in the window: each copy carries where its later
+  // meeting days begin (issue #3904).
+  const meetingWindows = await meetingWindowsByTrip(
+    db,
+    tripIds.map((id) => ({ id })),
+  );
   const payloads = await Promise.all(
     tripIds.map(
       async (tripId): Promise<OfflineManifestPayload | null> =>
@@ -147,7 +153,7 @@ async function getUpcomingManifests() {
                 ? t("shared.offlineManifest.juniorCheckRequired")
                 : depthWarningText(t, advisory),
           );
-          const boundaries = dayBoundaries.get(tripId);
+          const boundaries = rollCallDayBoundariesOf(meetingWindows.get(tripId));
           return {
             ...payload,
             ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),

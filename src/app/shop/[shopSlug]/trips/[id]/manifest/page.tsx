@@ -335,6 +335,7 @@ export default async function TripManifestPage({
               shop: { ...shop, emergencyReference },
               ...boatCheck,
               boatSafety,
+              meetingWindows: view.stageStrip.meetingWindows,
               locale,
               t,
             })}
