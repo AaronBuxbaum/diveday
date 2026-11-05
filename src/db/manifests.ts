@@ -1470,14 +1470,21 @@ export async function getTripManifest(
  * or frozen clock, which is exactly the tie `latestQueuedAttempt` exists to
  * break.
  *
- * **A retraction naming nothing keeps the old behaviour**, deliberately and
- * with no expiry date on it. Those are events queued by a build that predates
- * the field, on a phone in a dry bag — the case this whole feature is for — and
- * refusing them would discard a statement a crew member really made to enforce
- * a rule their device cannot know about. The device half (`OfflineRollCallResult.local`,
- * ADR 20260815-offline-can-unsay-a-missing-diver) already scopes those to this
- * device's own statement, which is what has been carrying the risk since
- * 2026-08-15; this is a strict tightening on top of it, never a replacement.
+ * **A retraction naming nothing is refused after a dive** (issue #3951). An
+ * after-dive `cleared` reaches back across meeting days to an earlier day's
+ * stated missing diver (`standingByDay`, ADR 20261104-roll-call-by-meeting-day),
+ * while `newest` above reads only the retraction's own day, so a bare one met
+ * nothing, applied, and silenced a "did not come back" it never named. Every
+ * current control names its target (`reTap`), so the only senders are a build
+ * from before 2026-08-15 and a forged event. The refusal is
+ * `retraction_superseded`, which the device already reads as "undo it there,
+ * not here" and under which a stated alarm stays on screen.
+ *
+ * **At `departure` a bare retraction still applies.** A dock `cleared` never
+ * reaches back (`standingByDay` reaches only after a dive), so it can touch
+ * nothing but its own day's newest mark under the timestamp rule above, and no
+ * missing-diver alarm lives at the dock. Refusing it would only cost an old
+ * build's honest dock correction.
  *
  * Read only for `cleared`. An event carrying the field with any other status is
  * a device bug, and it is *ignored* rather than refused: refusing would cost the
@@ -1486,10 +1493,12 @@ export async function getTripManifest(
  */
 function offlineRetractionSuperseded(input: {
   status: RollCallEventStatus;
+  checkpoint: RollCallCheckpoint;
   retractsClientEventId: string | undefined;
   newest: { clientEventId: string | null } | undefined;
 }): boolean {
-  if (input.status !== "cleared" || !input.retractsClientEventId) return false;
+  if (input.status !== "cleared") return false;
+  if (!input.retractsClientEventId) return input.checkpoint !== "departure";
   // Case-folded on both sides, because the sibling dedup lookup a few lines
   // above compares the same value *inside* Postgres against a `uuid` column,
   // where `AAAA…` and `aaaa…` are one value. Compared here as raw JavaScript
@@ -2148,6 +2157,7 @@ async function writeRollCall(
     if (
       offlineRetractionSuperseded({
         status: input.status,
+        checkpoint,
         retractsClientEventId: input.retractsClientEventId,
         newest,
       })
@@ -2562,6 +2572,7 @@ export async function recordCrewRollCall(
           if (
             offlineRetractionSuperseded({
               status: input.status,
+              checkpoint,
               retractsClientEventId: input.retractsClientEventId,
               newest,
             })

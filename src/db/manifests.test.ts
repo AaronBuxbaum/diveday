@@ -1541,18 +1541,13 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   /**
-   * The transition window, and the reason there isn't one.
-   *
-   * A retraction naming nothing is a retraction queued by a device that has not
-   * had this deploy — a phone in a dry bag on a boat, which is the case the
-   * whole feature exists for. Refusing it would discard a statement a crew
-   * member actually made and mark it `rejected` on their screen, to enforce a
-   * rule their build predates. So an absent `retractsClientEventId` keeps
-   * exactly the behaviour it had before the field existed (newest-wins on
-   * timestamp, scoped on the device to this device's own statement), and the
-   * compare-and-set is a strict tightening of the events that do carry it.
+   * A retraction naming nothing retracts nothing after a dive (issue #3951).
+   * Every current control names its target, so a bare `cleared` is a build from
+   * before the field or a forged event, and after a dive the statement it could
+   * be undoing is somebody's "did not come back". Refused with the code the
+   * device already reads as "undo it there, not here"; the alarm stays.
    */
-  it("still applies an offline retraction that names nothing, for a device queued before the field existed", async () => {
+  it("refuses an offline retraction after a dive that names nothing", async () => {
     vi.mocked(log).mockClear();
     const { db, shop, reef, booking, staff } = await manifestContext();
     const now = nowMs();
@@ -1580,11 +1575,16 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         clientEventId: "ffffffff-6666-4666-8666-ffffffffffff",
         occurredAt: new Date(now - 60 * 60 * 1000),
       }),
-    ).resolves.toMatchObject({ ok: true });
+    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
     expect(log).toHaveBeenCalledWith("manifest.offline_retraction_unnamed", "info", {
       shopId: shop.id,
       tripId: reef.id,
     });
+    expect(
+      (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.divers.find(
+        (diver) => diver.bookingId === booking.booking.id,
+      )?.rollCall,
+    ).toMatchObject({ state: "not_boarded" });
   });
 
   it("raises the manifest-events push signal for a genuine write but not a duplicate replay", async () => {

@@ -116,7 +116,16 @@ string: it is one exported constant, `RETRACTION_SUPERSEDED` in the dependency-f
 `src/lib/roll-call.ts`, so renaming it on the writer side is a `tsc` failure rather than a reader
 that silently believes a stale value forever.
 
-**3. A retraction naming nothing keeps the old behaviour, with no transition window and no expiry.**
+**3. A retraction naming nothing keeps the old behaviour at `departure` only.** *Amended
+2026-11-05 (issue #3951):* after a dive a bare `cleared` is refused as `retraction_superseded`.
+Since [20261104-roll-call-by-meeting-day](20261104-roll-call-by-meeting-day.md) an after-dive
+`cleared` reaches back to an earlier day's stated missing diver, while the compare-and-set reads only
+the retraction's own day, so a bare one silenced a "did not come back" it never named. Every control
+has named its target since 2026-08-15, so the refusal costs only a build older than that or a forged
+event, and the device keeps the alarm on screen under the refusal. A dock `cleared` never reaches
+back and no alarm lives at the dock, so there it still applies. The original reasoning follows.
+
+**3 (as first decided). A retraction naming nothing keeps the old behaviour, with no transition window and no expiry.**
 An event with no `retractsClientEventId` is one queued by a build that predates the field — a phone
 in a dry bag on a boat, which is the case this whole feature exists for. Refusing it would discard a
 statement a crew member really made in order to enforce a rule their device cannot know about, and
