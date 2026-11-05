@@ -9,11 +9,11 @@ import process from "node:process";
 import { S3Client } from "@aws-sdk/client-s3";
 import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 import {
+  BLOB_RETENTION_MS,
   DEFAULT_BRANCH,
   DEFAULT_BUCKET,
   DEFAULT_REPO,
   KEEP_MAIN_BASELINE_AGE_MS,
-  BLOB_RETENTION_MS,
   KEEP_MAIN_BASELINES,
   MIN_PRUNE_AGE_MS,
   MIN_PUBLICATION_GRACE_MS,
