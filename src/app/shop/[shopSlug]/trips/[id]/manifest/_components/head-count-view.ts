@@ -6,12 +6,14 @@ import {
   blockedAtDock,
   isTurnedAwayOffBoat,
   type RollCallCheckpoint,
-  type RollCallState,
   rollCallRowState,
   splitBuddyTeamIds,
   type TripManifest,
 } from "@/lib/manifests";
-import { inAfterDivePopulation } from "@/lib/roll-call-population";
+import {
+  inAfterDivePopulation,
+  type RollCallState as PopulationState,
+} from "@/lib/roll-call-population";
 
 /**
  * **What the count panel says beside its number**: how many buddy teams are
@@ -100,12 +102,13 @@ export function deckCountFacts(
   manifests: readonly TripManifest[] = [],
 ) {
   const afterDive = checkpoint !== "departure" && manifests.length > 0;
-  const statesBySeat = new Map<string, RollCallState[]>();
+  const statesBySeat = new Map<string, PopulationState[]>();
   for (const [index, sheet] of manifests.entries()) {
     for (const diver of sheet.divers) {
       const states = statesBySeat.get(diver.bookingId) ?? [];
       // A carried-forward result is nobody's word at that checkpoint: a hole.
-      if (diver.rollCall && diver.rollCall.implied !== true) states[index] = diver.rollCall.state;
+      const word = diver.rollCall && diver.rollCall.implied !== true ? diver.rollCall.state : null;
+      if (word === "boarded" || word === "not_boarded") states[index] = word;
       statesBySeat.set(diver.bookingId, states);
     }
   }
