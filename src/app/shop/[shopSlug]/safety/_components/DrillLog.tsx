@@ -6,6 +6,7 @@ import {
   ChoiceFieldset,
   ChoiceRow,
   controlClass,
+  DateField,
   Field,
   FieldGrid,
   textareaClassFor,
@@ -104,14 +105,12 @@ export function DrillLog({ view, paper = false }: { view: DrillLogView; paper?: 
                 </select>
               </Field>
               <Field label={form.copy.dateLabel}>
-                <input
+                <DateField
                   name="heldOn"
-                  type="date"
                   required
                   min={form.earliest}
                   max={form.today}
                   defaultValue={form.today}
-                  className={controlClass}
                 />
               </Field>
               {form.staff.length > 0 ? (
@@ -132,7 +131,12 @@ export function DrillLog({ view, paper = false }: { view: DrillLogView; paper?: 
                 hint={form.copy.optional}
                 className="sm:col-span-2"
               >
-                <textarea name="note" maxLength={form.noteMax} className={textareaClassFor(2)} />
+                <textarea
+                  name="note"
+                  rows={2}
+                  maxLength={form.noteMax}
+                  className={textareaClassFor(2)}
+                />
               </Field>
               <div className="flex justify-end sm:col-span-2">
                 <SubmitButton
