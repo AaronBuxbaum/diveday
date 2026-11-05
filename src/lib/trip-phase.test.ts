@@ -668,3 +668,76 @@ describe("a three-night 22:00 to 02:00 run", () => {
     expect(boatStageOf({ ...one, stage: tap })).toBe(tap);
   });
 });
+
+/**
+ * **A course on two Saturdays is not a boat on the water for the fortnight
+ * between** (#2557). `starts_at`/`ends_at` bound the whole run; the meeting
+ * days say when anybody is aboard.
+ */
+describe("a course on two Saturdays", () => {
+  // Saturday Aug 1 and Saturday Aug 15 2026, 09:00 to 13:00 EDT.
+  const days = [
+    {
+      startsAt: new Date("2026-08-01T13:00:00.000Z"),
+      endsAt: new Date("2026-08-01T17:00:00.000Z"),
+    },
+    {
+      startsAt: new Date("2026-08-15T13:00:00.000Z"),
+      endsAt: new Date("2026-08-15T17:00:00.000Z"),
+    },
+  ];
+  const phase = (now: string, stage: { stage: TripStage; recordedAt: Date } | null = null) =>
+    tripPhaseOf({
+      startsAt: days[0].startsAt,
+      endsAt: days[1].endsAt,
+      now: new Date(now),
+      timeZone: ZONE,
+      stage,
+      cancelled: false,
+      meetingWindows: days,
+    });
+
+  it("is Aboard inside each Saturday's window and its return hour", () => {
+    expect(phase("2026-08-01T14:00:00.000Z")).toBe("aboard");
+    expect(phase("2026-08-01T17:30:00.000Z")).toBe("aboard");
+    expect(phase("2026-08-15T14:00:00.000Z")).toBe("aboard");
+  });
+
+  it("is never Aboard on a day between, with or without a day-one tap", () => {
+    const underwayDayOne = {
+      stage: "underway" as const,
+      recordedAt: new Date("2026-08-01T14:00:00.000Z"),
+    };
+    // Day one's evening: the clock says ashore, and an Underway nobody
+    // followed with Home is still the crew's word until that day is over.
+    expect(phase("2026-08-01T19:00:00.000Z")).toBe("prep");
+    expect(phase("2026-08-01T19:00:00.000Z", underwayDayOne)).toBe("aboard");
+    for (const now of [
+      "2026-08-02T14:00:00.000Z",
+      "2026-08-08T14:00:00.000Z",
+      "2026-08-14T23:00:00.000Z",
+    ]) {
+      expect(phase(now), now).toBe("prep");
+      expect(phase(now, underwayDayOne), now).toBe("prep");
+    }
+  });
+
+  it("opens check-in on the second Saturday's own day, and is Back after it", () => {
+    expect(phase("2026-08-15T05:00:00.000Z")).toBe("checkin");
+    expect(phase("2026-08-15T18:30:00.000Z")).toBe("back");
+  });
+
+  it("has not sailed between the Saturdays, so the next day's kit is still to pack", () => {
+    expect(
+      departureSailed({
+        startsAt: days[0].startsAt,
+        endsAt: days[1].endsAt,
+        now: new Date("2026-08-08T14:00:00.000Z"),
+        timeZone: ZONE,
+        stage: null,
+        cancelled: false,
+        meetingWindows: days,
+      }),
+    ).toBe(false);
+  });
+});

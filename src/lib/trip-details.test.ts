@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { laterMeetingHours } from "./trip-days";
 import { type TripDetailsFields, type TripDetailsShop, tripDetailsPatch } from "./trip-details";
 
 const shop: TripDetailsShop = {
@@ -35,6 +36,42 @@ describe("the wall-clock window", () => {
     const patch = ok();
     expect(patch.startsAt.toISOString()).toBe("2026-06-10T11:30:00.000Z");
     expect(patch.endsAt.toISOString()).toBe("2026-06-10T16:30:00.000Z");
+  });
+
+  // #2557 review (dock M3, attacker S1): a night course that runs past
+  // midnight saves, new and edited, rather than being cut to 23:59.
+  it("ends a night window past midnight on the next morning, on every day", () => {
+    const night = ok({
+      date: "2026-10-24",
+      startTime: "20:00",
+      endTime: "01:00",
+      dayCount: 2,
+      laterDates: ["2026-10-25"],
+      laterHours: [{ start: "20:00", end: "01:00" }],
+    });
+    expect(night.scheduleDays.map((day) => [day.startsAt, day.endsAt])).toEqual([
+      [new Date("2026-10-25T00:00:00.000Z"), new Date("2026-10-25T05:00:00.000Z")],
+      [new Date("2026-10-26T00:00:00.000Z"), new Date("2026-10-26T05:00:00.000Z")],
+    ]);
+    expect(night.endsAt).toEqual(new Date("2026-10-26T05:00:00.000Z"));
+    // The consecutive run with no hours named, and a one-night departure.
+    expect(ok({ startTime: "20:00", endTime: "01:00", dayCount: 2 }).scheduleDays).toHaveLength(2);
+    expect(ok({ startTime: "21:00", endTime: "00:30" }).endsAt).toEqual(
+      new Date("2026-06-11T04:30:00.000Z"),
+    );
+  });
+
+  it("saves a stored night course's edit form back to the same windows", () => {
+    const night = {
+      date: "2026-10-24",
+      startTime: "20:00",
+      endTime: "01:00",
+      dayCount: 2,
+      laterDates: ["2026-10-31"],
+    };
+    const stored = ok({ ...night, laterHours: [{ start: "", end: "" }] }).scheduleDays;
+    const again = ok({ ...night, laterHours: laterMeetingHours(stored, shop.timezone) });
+    expect(again.scheduleDays).toEqual(stored);
   });
 
   it("refuses an end at or before the start, distinguishably", () => {
@@ -114,8 +151,13 @@ describe("a course that meets on named days", () => {
     ).toBe("days_out_of_order");
   });
 
-  it("refuses an edit that puts two weeks between a departure's days", () => {
-    expect(refusal({ date: "2026-10-24", dayCount: 2, laterDates: ["2026-11-07"] })).toBe(
+  // #2557: a course may skip days, two Saturdays a fortnight apart included;
+  // past six weeks from day one is a mistyped date.
+  it("takes two weeks between a departure's days, and refuses a day past six weeks", () => {
+    expect(
+      ok({ date: "2026-10-24", dayCount: 2, laterDates: ["2026-11-07"] }).scheduleDays,
+    ).toHaveLength(2);
+    expect(refusal({ date: "2026-10-24", dayCount: 2, laterDates: ["2026-12-12"] })).toBe(
       "days_out_of_order",
     );
   });

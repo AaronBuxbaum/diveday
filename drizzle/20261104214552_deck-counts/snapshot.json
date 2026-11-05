@@ -1,0 +1,441 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "f3920790-3708-4f6b-b3c1-c58ffdb16812",
+  "prevIds": [
+    "1117301c-2bd5-4416-832a-9e12b5ef0a61"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "deck_counts"
+      ],
+      "writes": [
+        "s|tbl|public.deck_counts",
+        "n|tbl|public.deck_counts",
+        "e|tbl|public.deck_counts",
+        "n|rel|public.deck_counts",
+        "n|type|public.deck_counts",
+        "n|rel|public.deck_counts_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "deck_counts",
+        "deck_counts_shop_trip_checkpoint_idx"
+      ],
+      "writes": [
+        "s|idx|public.deck_counts_shop_trip_checkpoint_idx",
+        "n|idx|public.deck_counts_shop_trip_checkpoint_idx",
+        "e|idx|public.deck_counts_shop_trip_checkpoint_idx",
+        "n|rel|public.deck_counts_shop_trip_checkpoint_idx"
+      ],
+      "reads": [
+        "n|tbl|public.deck_counts",
+        "n|sch|public",
+        "n|col|public.deck_counts.shop_id",
+        "n|col|public.deck_counts.trip_id",
+        "n|col|public.deck_counts.checkpoint",
+        "n|col|public.deck_counts.recorded_at",
+        "n|col|public.deck_counts.seq"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "deck_counts",
+        "deck_counts_recorded_by_person_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.deck_counts_recorded_by_person_id_idx",
+        "n|idx|public.deck_counts_recorded_by_person_id_idx",
+        "e|idx|public.deck_counts_recorded_by_person_id_idx",
+        "n|rel|public.deck_counts_recorded_by_person_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.deck_counts",
+        "n|sch|public",
+        "n|col|public.deck_counts.recorded_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "deck_counts"
+      ],
+      "writes": [
+        "s|fk|public.deck_counts.deck_counts_shop_id_shops_id_fkey",
+        "n|fk|public.deck_counts.deck_counts_shop_id_shops_id_fkey",
+        "e|fk|public.deck_counts.deck_counts_shop_id_shops_id_fkey",
+        "n|con|public.deck_counts.deck_counts_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.deck_counts",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.deck_counts.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "deck_counts"
+      ],
+      "writes": [
+        "s|fk|public.deck_counts.deck_counts_trip_id_trips_id_fkey",
+        "n|fk|public.deck_counts.deck_counts_trip_id_trips_id_fkey",
+        "e|fk|public.deck_counts.deck_counts_trip_id_trips_id_fkey",
+        "n|con|public.deck_counts.deck_counts_trip_id_trips_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.deck_counts",
+        "n|sch|public",
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.deck_counts.trip_id",
+        "n|col|public.trips.id",
+        "e|uniqueness|public.trips.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "deck_counts"
+      ],
+      "writes": [
+        "s|fk|public.deck_counts.deck_counts_recorded_by_person_id_people_id_fkey",
+        "n|fk|public.deck_counts.deck_counts_recorded_by_person_id_people_id_fkey",
+        "e|fk|public.deck_counts.deck_counts_recorded_by_person_id_people_id_fkey",
+        "n|con|public.deck_counts.deck_counts_recorded_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.deck_counts",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.deck_counts.recorded_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "deck_counts",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "checkpoint",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "counted",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "recorded_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "recorded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "seq",
+        "type": "bigserial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "deck_counts_shop_trip_checkpoint_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "trip_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "checkpoint",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "recorded_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "seq",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "deck_counts_recorded_by_person_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "recorded_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "deck_counts_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "deck_counts_trip_id_trips_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "trip_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "trips",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "deck_counts_recorded_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "recorded_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "deck_counts_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deck_counts",
+        "name": "deck_counts_counted_range",
+        "value": "\"counted\" >= 0 and \"counted\" <= 999",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

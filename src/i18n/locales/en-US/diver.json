@@ -968,6 +968,7 @@
       "trainingMarkInvalid": "Your shop needs to check your course details before you’re cleared. They’ll be in touch if anything’s needed."
     },
     "gearAndSetup": "Gear and setup",
+    "meetingDayLine": "Day {number} · {date} · {hours}",
     "dockCallLine": "Aim to be at the dock by {time}, {dock} before we sail.",
     "flySafePlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
     "flySafePlannedDivesPlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: we plan more than one dive, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",

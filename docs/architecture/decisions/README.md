@@ -449,5 +449,6 @@ script again.
 | 20261104-derived-booking-link-tokens | Derive a booking link's token… |
 | 20261104-loading-face-is-the-primitives-pending-face | Draw every loading face from… |
 | 20261104-move-a-party-as-one | A party moves between departures… |
+| 20261104-roll-call-by-meeting-day | Roll call and "the boat… |
 
 <!-- adr-index:end -->

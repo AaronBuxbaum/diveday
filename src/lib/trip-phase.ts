@@ -1,4 +1,5 @@
 import { DAY_MS } from "./clock";
+import { meetingDayWindows, onTheWaterDay } from "./trip-days";
 import type { TripStage } from "./trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "./trips";
 import { shopDayBounds } from "./zoned";
@@ -35,6 +36,11 @@ import { shopDayBounds } from "./zoned";
  * - **Aboard** from then until `hasReturned` (an hour past the scheduled
  *   return, the same buffer every "is everyone home" question uses).
  * - **Back** after that.
+ *
+ * A run with its meeting days on file (`meetingWindows`, more than one) is
+ * Aboard only inside a day's window and its return hour, and Prep or Check-in
+ * for the next day between them (#2557): a course on two Saturdays is not a
+ * boat on the water for the fortnight between.
  *
  * A cancelled departure has no phase: none of the four is its next step.
  */
@@ -78,6 +84,19 @@ export function tripPhaseOf({
   // course is the crew tying up for the night: the clock answers.
   if (reading === "speaks" && stage?.stage !== "home") return "aboard";
   if (hasReturned(endsAt, now)) return "back";
+  if (meetingWindows && meetingWindows.length > 1) {
+    // A run with real meeting days is out only inside one of them (#2557):
+    // between a course's two Saturdays nobody is aboard, and the next day is
+    // ahead of it the way a departure's first day is.
+    const days = meetingDayWindows({ startsAt, endsAt }, meetingWindows);
+    if (onTheWaterDay(days, now)) return "aboard";
+    const next = days.find((day) => day.startsAt.getTime() > now.getTime());
+    if (next) {
+      return now.getTime() >= shopDayBounds(next.startsAt, timeZone).from.getTime()
+        ? "checkin"
+        : "prep";
+    }
+  }
   if (now.getTime() >= startsAt.getTime()) return "aboard";
   if (now.getTime() >= departureDay.from.getTime()) return "checkin";
   return "prep";

@@ -137,6 +137,8 @@ function AddPanelTimingFields({
           daysLabel: copy.daysLabel,
           daysDescription: copy.daysDescription,
           dayLabel: copy.meetingDayLabel,
+          dayStartLabel: copy.meetingDayStartLabel,
+          dayEndLabel: copy.meetingDayEndLabel,
         }}
         minDays={more.minDays}
         maxDays={more.maxDays}

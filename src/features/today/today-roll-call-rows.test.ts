@@ -122,6 +122,36 @@ describe("pushRollCallRows after the stale-roll-call alert", () => {
     );
   });
 
+  // #2557 review M1: a course puts out one row per meeting day, so two days
+  // with the same open checkpoint are two rows, never one id twice.
+  it("gives each meeting day's row of a course its own id", () => {
+    const actions: TodayAction[] = [];
+    const day = (dayNumber: number, endsAt: string) => ({
+      ...gap,
+      dayNumber,
+      endsAt: new Date(endsAt),
+      alertedAt: null,
+      shoreAlertedAt: null,
+    });
+    pushRollCallRows(
+      actions,
+      rowsContext({
+        boatsOut: { out: [], blocked: [] },
+        rollCallGaps: [day(2, "2026-07-28T16:00:00Z"), day(1, "2026-07-21T16:00:00Z")],
+        crewClashState: {
+          departures: [],
+          clashes: new Map(),
+          boatClashes: new Map(),
+          crew: new Map(),
+          divers: new Map(),
+        },
+      }),
+    );
+    const ids = actions.map((action) => action.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
   it("says nothing of an alert that has not gone", () => {
     const [row] = rows(null);
     expect(row?.detail).not.toContain("alerted");

@@ -213,6 +213,9 @@ export type BuilderCopy = {
   daysDescription: string;
   /** "Day {number}" over each later day's date box (third UX review, item 10). */
   meetingDayLabel: string;
+  /** "Day {number} departs" / "returns": a later day's own hours (#2558). */
+  meetingDayStartLabel: string;
+  meetingDayEndLabel: string;
   payAtBookingLegend: string;
   payAtBookingDescription: string;
   depositLabel: string;

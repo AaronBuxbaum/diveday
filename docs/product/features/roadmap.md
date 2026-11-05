@@ -824,9 +824,8 @@ alongside them moved several of these prerequisites.
   `missing_diver_events` table, `src/lib/missing-diver.ts`, a boat-mode surface under the manifest
   and the offline copy; the incident export gains the trail. *Effort:* L. *Needs:* domain,
   security, ADR.
-- **N-09 Drill log.** A shop records an emergency drill (missing diver, O2 administration,
-  man-overboard) as a dated event with who took part. Renders on Reports and feeds N-46. *Build:*
-  `shop_drills` table, one Settings inset. *Effort:* S.
+- **N-09 Drill log.** *Built (loop 5, row 2, issue #3648)*: `safety_drills` and
+  `safety_drill_participants`, on the Safety tab and its printed sheet (glossary **Drill log**).
 - **N-10 Boat clocks.** Engine hours and fuel per departure (the crew enters both at *Home*),
   rendered as one "Boat" panel with the register's service-clock sentences. The Coast Guard
   inspection, registration and insurance dates and the safety kit aboard shipped 2026-10-09 with

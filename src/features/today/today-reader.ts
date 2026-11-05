@@ -70,7 +70,7 @@ import {
   paymentsRestrictedSince,
   shopStripeAccountForRender,
 } from "@/db/stripe-accounts";
-import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
+import { currentMeetingDayMarks, meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { plannedSitesByTrip } from "@/db/trip-planned-sites";
 import { latestTripStagesByTrip } from "@/db/trip-stages";
 import {
@@ -628,6 +628,8 @@ async function boardedAfterLastDive(
           rollCallEvents.tripId,
           departures.map((trip) => trip.id),
         ),
+        // The meeting day out now: day one's last count is not day two's (#2557).
+        currentMeetingDayMarks(),
       ),
     )
     .orderBy(...newestMarkFirst());
