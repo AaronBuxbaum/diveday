@@ -9,6 +9,7 @@ import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, test } from "./fixtures";
 import { openSettingsRow } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   FLOW_TIMEOUT_MS,
@@ -56,7 +57,7 @@ for (const scheme of ["light", "dark"] as const) {
        * public `page` never holds a session. The tip section (docs ADR
        * 20260726-post-trip-tipping) needs a connected, charges-enabled Stripe
        * account — `canAcceptPayments` is a pure DB check, independent of
-       * whether STRIPE_SECRET_KEY is set — so /api/test/seed-stripe-account
+       * whether STRIPE_SECRET_KEY is set — so the `stripeAccount` fact
        * marks the demo shop connected without ever calling Stripe, purely to
        * render the surface for this capture. The actual checkout button stays
        * inert (no STRIPE_SECRET_KEY in this fleet), the same reason no capture
@@ -86,7 +87,7 @@ for (const scheme of ["light", "dark"] as const) {
         await reviewSettingsPage.getByText("Review link saved").filter({ visible: true }).waitFor();
         await reviewSettingsContext.close();
 
-        await request.post("/api/test/seed-stripe-account");
+        await seedFacts(request, ["stripeAccount"]);
         await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
         await page.getByRole("heading", { name: /Welcome back/ }).waitFor();
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
@@ -116,8 +117,7 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const seeded = await request.post("/api/test/seed-changed-dive-site");
-        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await seedFacts(request, ["changedDiveSite"]);
         await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         // The "Planned" row is the whole subject: waiting on it is what proves
@@ -151,8 +151,7 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const seeded = await request.post("/api/test/seed-observed-species");
-        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await seedFacts(request, ["observedSpecies"]);
         await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         // Waiting on the line itself, not on the page: photographing the calm
@@ -172,8 +171,7 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const seeded = await request.post("/api/test/seed-shared-recap-photo");
-        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await seedFacts(request, ["sharedRecapPhoto"]);
         await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         await page
@@ -188,9 +186,8 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const seeded = await request.post("/api/test/seed-shared-recap-photo?secondary=1");
-        expect(seeded.ok(), await seeded.text()).toBe(true);
-        const { bookingId } = (await seeded.json()) as { bookingId: string };
+        const { secondarySharedPhoto } = await seedFacts(request, ["secondarySharedPhoto"]);
+        const { bookingId } = secondarySharedPhoto as { bookingId: string };
         expect(bookingId).not.toBe(DEMO_RECAP_BOOKING_ID);
         await page.goto(`/recap/${signRecapToken(bookingId)}`);
         await expect(page.getByRole("heading", { name: "Dive log entry" })).toBeVisible();
@@ -211,8 +208,7 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const seeded = await request.post("/api/test/seed-certified-recap");
-        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await seedFacts(request, ["certifiedRecap"]);
         await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         await page.getByTestId(AFTER_STATE_TEST_IDS.certified).filter({ visible: true }).waitFor();
@@ -237,8 +233,7 @@ for (const scheme of ["light", "dark"] as const) {
         request,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const seeded = await request.post("/api/test/seed-dive-times");
-        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await seedFacts(request, ["diveTimes"]);
         await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         // Waiting on the line itself, not on the page — see the capture above.

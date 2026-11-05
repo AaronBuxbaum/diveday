@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, tripPathByTitle } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 const REEF = "Two-Tank Reef — Molasses & French";
 const BOAT = "Mantis I";
@@ -227,12 +228,9 @@ test.describe("a seeded lapse on the demo's reef boat", () => {
     page,
     request,
   }) => {
-    const seeded = await request.post(
-      "/api/test/seed-trouble-states?facts=troublePanels,boatSafety",
-    );
-    expect(seeded.ok()).toBe(true);
-    const { boatSafety } = (await seeded.json()) as { boatSafety?: { tripId: string } };
-    if (!boatSafety) throw new Error("seed-trouble-states found no reef departure on a boat");
+    const seeded = await seedFacts(request, ["troublePanels", "boatSafety"]);
+    const { boatSafety } = seeded as { boatSafety?: { tripId: string } };
+    if (!boatSafety) throw new Error("the fact found no reef departure on a boat");
 
     await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}/manifest`);
     const section = page.getByRole("region", { name: `${BOAT}: papers and safety kit` });

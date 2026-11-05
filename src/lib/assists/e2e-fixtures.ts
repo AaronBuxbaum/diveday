@@ -19,7 +19,7 @@ import { SITE_BRIEF_SYSTEM, siteBriefFixture } from "./site-brief";
  * photographed. The fleet runs with `DIVEDAY_DISABLE_EXTERNAL_HTTP=1` and no
  * key, so every assist is dark there by the
  * seam's own rules. A spec arms one private shop through
- * `/api/test/claude-fixtures`; for that shop alone the assists answer from the
+ * the `claudeAssists` fact (`/api/test/shop`); for that shop alone the assists answer from the
  * fixtures below, chosen by the feature's fixed instructions.
  *
  * Never in a real deployment: `e2eClaudeFixtureProvider` answers null unless
@@ -102,7 +102,7 @@ export function armClaudeFixtures(shopId: string, armed: boolean): void {
 }
 
 /**
- * Whether this server armed this shop through `/api/test/claude-fixtures`.
+ * Whether this server armed this shop through the `claudeAssists` fact (`/api/test/shop`).
  * Only a demo shop is ever armed, so `requireDemoTenant` still treats it as
  * one while its flag is cleared.
  */

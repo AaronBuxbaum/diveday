@@ -38,7 +38,7 @@ const HISTORY_DESCRIPTION = "Sailed. Kept in the log for the shop's monthly numb
 describe("seeded history manifests", () => {
   it("never shows a boarded diver beside a blocked readiness result", async () => {
     const { db, shop } = ctx;
-    await resetDemoSchedule(db, shop.id, { history: true });
+    await resetDemoSchedule(db, shop.id, "history");
 
     const history = await db
       .select({ id: tripsTable.id, title: tripsTable.title })
@@ -76,7 +76,7 @@ describe("seeded history manifests", () => {
    */
   it("seats no Open Water diver on a deep wreck, and blanks no site to hide one", async () => {
     const { db, shop } = ctx;
-    await resetDemoSchedule(db, shop.id, { history: true });
+    await resetDemoSchedule(db, shop.id, "history");
     const history = await db
       .select({
         id: tripsTable.id,
@@ -123,7 +123,7 @@ describe("seeded history manifests", () => {
    */
   it("gives the sailed year more than one dive site to name", async () => {
     const { db, shop } = ctx;
-    await resetDemoSchedule(db, shop.id, { history: true });
+    await resetDemoSchedule(db, shop.id, "history");
     const now = nowDate();
     const year = calendarDateInTimezone(now, shop.timezone).slice(0, 4);
     const sailed = await getShopYear(db, shop.id, {
@@ -145,7 +145,7 @@ describe("seeded history manifests", () => {
    */
   it("never boards a diver on the completed boat whom readiness would refuse", async () => {
     const { db, shop } = ctx;
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
     const [completed] = await db
       .select({ id: tripsTable.id })
       .from(tripsTable)
@@ -170,7 +170,7 @@ describe("seeded history manifests", () => {
     // only place in the demo (and therefore in the visual fleet) where that
     // state is exercised at all.
     const { db, shop } = ctx;
-    await resetDemoSchedule(db, shop.id, { history: true });
+    await resetDemoSchedule(db, shop.id, "history");
 
     const history = await db
       .select({ id: tripsTable.id })
@@ -205,7 +205,7 @@ describe("seeded history manifests", () => {
    */
   it("reports the tax it collected, without moving net revenue", async () => {
     const { db, shop } = ctx;
-    await resetDemoSchedule(db, shop.id, { history: true });
+    await resetDemoSchedule(db, shop.id, "history");
 
     // A wide window over the whole back-fill, so this does not depend on which
     // day of the month the suite happens to run on.
@@ -235,7 +235,7 @@ describe("seeded history manifests", () => {
 describe("seeded history crew", () => {
   it("puts a captain and a divemaster on every sailed history boat", async () => {
     const { db, shop } = ctx;
-    await resetDemoSchedule(db, shop.id, { history: true });
+    await resetDemoSchedule(db, shop.id, "history");
     const history = await db
       .select({ id: tripsTable.id })
       .from(tripsTable)

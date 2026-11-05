@@ -69,7 +69,7 @@ its account, and must never be called with the live one.
   A visitor's own minted demo does not.
 - **Without the variables nothing changes**: no row, and the demo books without payment as before.
   The e2e fleet sets neither, and reaches the paying surfaces through
-  `/api/test/seed-stripe-account` as it already did.
+  the `stripeAccount` fact on `/api/test/shop` as it already did.
 
 ## Alternatives considered
 

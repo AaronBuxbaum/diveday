@@ -4,6 +4,14 @@ import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/u
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CertificationLevel } from "@/lib/certification-levels";
+import type { ReferralPaper } from "@/lib/referral-student";
+
+/** A referral student's line and its two papers, worded by the row (loop 5, row 10). */
+export type ReferralControls = {
+  /** "Referral student: theory and pool done elsewhere · marked Nov 5". */
+  markedLine: string;
+  papers: { paper: ReferralPaper; label: string; doneLine: string | null }[];
+};
 
 /**
  * The course session's two acts of teaching (issues #717, #975, #1196, #1205):
@@ -23,6 +31,8 @@ export function SeatCourseControls({
   certifyMaterialsNote = null,
   markCardProcessedAction,
   processedCard = null,
+  referralStudentAction,
+  referral = null,
 }: {
   bookingId: string;
   personId: string;
@@ -49,6 +59,10 @@ export function SeatCourseControls({
     agency: string;
     doneLine: string | null;
   } | null;
+  /** Mark a referral student or tick a paper (loop 5, row 10); only on a course session. */
+  referralStudentAction?: (formData: FormData) => void;
+  /** Null while the seat is not a referral. */
+  referral?: ReferralControls | null;
 }) {
   return (
     <>
@@ -79,6 +93,19 @@ export function SeatCourseControls({
               : t("trips.roster.materialsMarkDone")}
           </SubmitButton>
         </form>
+      ) : null}
+
+      {/* **A referral student** (loop 5, row 10): theory and pool done with
+          another instructor, here for the open-water dives. The desk then
+          collects two papers, each ticked with its date. Bookkeeping that
+          gates nothing; the instructor still reads the referral form. */}
+      {referralStudentAction ? (
+        <ReferralStudentControls
+          action={referralStudentAction}
+          bookingId={bookingId}
+          referral={referral}
+          t={t}
+        />
       ) : null}
 
       {/* The one path from "this shop taught and ran this course" to a card
@@ -224,5 +251,63 @@ export function SeatCourseControls({
         </details>
       ) : null}
     </>
+  );
+}
+
+function ReferralStudentControls({
+  action,
+  bookingId,
+  referral,
+  t,
+}: {
+  action: (formData: FormData) => void;
+  bookingId: string;
+  referral: ReferralControls | null;
+  t: StaffTranslator;
+}) {
+  const linkButton = buttonClass({ variant: "link", size: "sm", flush: true });
+  if (!referral) {
+    return (
+      <form action={action} className="mt-3">
+        <input type="hidden" name="bookingId" value={bookingId} />
+        <input type="hidden" name="act" value="mark" />
+        <SubmitButton
+          pendingLabel={t("words.busy.saving")}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("trips.roster.referralMark")}
+        </SubmitButton>
+      </form>
+    );
+  }
+  return (
+    <div className="mt-3 text-sm" data-testid="referral-student">
+      <p>{referral.markedLine}</p>
+      <ul className="mt-1 space-y-1">
+        {referral.papers.map(({ paper, label, doneLine }) => (
+          <li key={paper}>
+            <form action={action} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <input type="hidden" name="bookingId" value={bookingId} />
+              <input type="hidden" name="paper" value={paper} />
+              <input type="hidden" name="act" value={doneLine ? "uncollect" : "collect"} />
+              <span className={doneLine ? "text-muted" : "font-medium text-warning-strong"}>
+                {label}
+              </span>
+              {doneLine ? <span className="text-muted">{doneLine}</span> : null}
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={linkButton}>
+                {doneLine ? t("trips.roster.referralUncollect") : t("trips.roster.referralCollect")}
+              </SubmitButton>
+            </form>
+          </li>
+        ))}
+      </ul>
+      <form action={action} className="mt-1">
+        <input type="hidden" name="bookingId" value={bookingId} />
+        <input type="hidden" name="act" value="unmark" />
+        <SubmitButton pendingLabel={t("words.busy.saving")} className={linkButton}>
+          {t("trips.roster.referralUnmark")}
+        </SubmitButton>
+      </form>
+    </div>
   );
 }

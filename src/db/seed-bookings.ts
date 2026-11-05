@@ -273,7 +273,7 @@ export async function seedBookings(
   // shout-out block and the photo strip out of the box.
   //
   // The words name no shop. This seed runs for the canonical demo and for every
-  // shop minted through /api/test/seed-private-shop (ADR
+  // shop minted through privateShop (a mint through /api/test/shop) (ADR
   // 20260815-per-test-private-shops), so a shop name baked in here turns up on a
   // recap belonging to a shop of another name (issue #1513).
   await db

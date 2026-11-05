@@ -13,6 +13,7 @@ import {
   signOut,
   waiverLinkFromToast,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 const diverText = diverTranslator("en-US");
 
@@ -164,14 +165,11 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   // both, so the one row this flow needs is seeded rather than built: Lena
   // Fischer, thirteen, with her release taken back out from under her. The
   // seat comes back by id because the queue addresses its departure that way.
-  const seeded = await request.post(
-    "/api/test/seed-trouble-states?facts=troublePanels,blockedMinor",
-  );
-  expect(seeded.ok()).toBe(true);
-  const { blockedMinor } = (await seeded.json()) as {
+  const seeded = await seedFacts(request, ["troublePanels", "blockedMinor"]);
+  const { blockedMinor } = seeded as {
     blockedMinor?: { bookingId: string; tripId: string };
   };
-  if (!blockedMinor) throw new Error("seed-trouble-states found no seat for the demo's minor");
+  if (!blockedMinor) throw new Error("the fact found no seat for the demo's minor");
 
   // Straight to her departure's Divers tab — the counter while its arrivals
   // are open — which puts her row on screen in one render and keeps it there.

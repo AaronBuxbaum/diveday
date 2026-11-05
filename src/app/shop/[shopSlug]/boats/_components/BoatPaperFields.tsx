@@ -8,6 +8,8 @@ import {
   boatSafetyNoticeTone,
 } from "@/lib/boat-safety";
 import { MAX_CALL_SIGN_LENGTH, MAX_WORKING_CHANNEL_LENGTH } from "@/lib/emergency-reference";
+import { formatCalendarDateRange } from "@/lib/format";
+import { SERVICE_WINDOW_REASON_MAX } from "@/lib/service-window";
 
 /**
  * **The certificate and the paper dates** (roadmap N-10), under the boat's
@@ -123,6 +125,24 @@ export function BoatPaperFields({
           className={`${controlClass} font-mono tabular-nums`}
         />
       </Field>
+      {/* The hull in the yard (loop 5, row 5): both days or neither. The
+          builder refuses the boat for a day inside them and the board warns
+          about a departure already on it. */}
+      <Field label={t("boats.outOfServiceFromLabel")}>
+        <DateField name="outOfServiceFrom" defaultValue={boat?.outOfServiceFrom ?? ""} />
+      </Field>
+      <Field label={t("boats.outOfServiceUntilLabel")}>
+        <DateField name="outOfServiceUntil" defaultValue={boat?.outOfServiceUntil ?? ""} />
+      </Field>
+      <Field label={t("boats.outOfServiceReasonLabel")}>
+        <input
+          name="outOfServiceReason"
+          type="text"
+          maxLength={SERVICE_WINDOW_REASON_MAX}
+          defaultValue={boat?.outOfServiceReason ?? ""}
+          className={controlClass}
+        />
+      </Field>
     </div>
   );
 }
@@ -156,9 +176,25 @@ export function BoatPaperFacts({
 }) {
   const papers = boatPaperNotices(boat, todayLocal);
   const overTotalPersons = boatCapacityAboveTotalPersons(boat.capacity, boat.certifiedTotalPersons);
-  if (papers.length === 0 && !overTotalPersons) return null;
+  // The yard window while it is ahead or under way (loop 5, row 5); a past
+  // one says nothing.
+  const yard =
+    boat.outOfServiceFrom && boat.outOfServiceUntil && boat.outOfServiceUntil >= todayLocal
+      ? {
+          dates: formatCalendarDateRange(boat.outOfServiceFrom, boat.outOfServiceUntil, locale),
+          reason: boat.outOfServiceReason,
+        }
+      : null;
+  if (papers.length === 0 && !overTotalPersons && !yard) return null;
   return (
     <ul className="w-full space-y-1 text-base sm:basis-full">
+      {yard ? (
+        <li className={PAPER_INK.warning}>
+          {yard.reason
+            ? t("boats.outOfServiceLine", { dates: yard.dates, reason: yard.reason })
+            : t("boats.outOfServiceLineNoReason", { dates: yard.dates })}
+        </li>
+      ) : null}
       {overTotalPersons ? (
         <li className="font-medium text-danger">
           {t("boats.capacityAboveTotalPersons", {

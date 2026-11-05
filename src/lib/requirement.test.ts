@@ -370,8 +370,11 @@ describe("every gate still refuses and clears as it did, with a site in the sum"
       for (const site of sites) {
         const asks = !oldEmpty(oldCombine(trip, site));
         expect(
-          decideTripAdmission({ requirement: trip, siteRequirement: site, evidence: NOTHING })
-            .admitted,
+          decideTripAdmission({
+            requirement: { ...trip, minimumCertificationIsDefault: false },
+            siteRequirement: site,
+            evidence: NOTHING,
+          }).admitted,
           JSON.stringify({ trip, site }),
         ).toBe(true);
         expect(readinessBlocksOnCerts(trip, site, NOTHING), JSON.stringify({ trip, site })).toBe(
@@ -387,7 +390,7 @@ describe("every gate still refuses and clears as it did, with a site in the sum"
         const lacks = openWaterDiverLacks(trip, site);
         expect(
           decideTripAdmission({
-            requirement: trip,
+            requirement: { ...trip, minimumCertificationIsDefault: false },
             siteRequirement: site,
             evidence: OPEN_WATER_ONLY,
           }).admitted,
@@ -405,7 +408,7 @@ describe("every gate still refuses and clears as it did, with a site in the sum"
     for (const trip of ALL_REQUIREMENTS) {
       for (const site of sites) {
         const admission = decideTripAdmission({
-          requirement: trip,
+          requirement: { ...trip, minimumCertificationIsDefault: false },
           siteRequirement: site,
           evidence: EVERYTHING,
         });
@@ -440,15 +443,18 @@ describe("every gate still refuses and clears as it did, with a site in the sum"
       [site, trip],
     ] as const) {
       expect(
-        decideTripAdmission({ requirement: from, siteRequirement: to, evidence: OPEN_WATER_ONLY })
-          .admitted,
+        decideTripAdmission({
+          requirement: { ...from, minimumCertificationIsDefault: false },
+          siteRequirement: to,
+          evidence: OPEN_WATER_ONLY,
+        }).admitted,
       ).toBe(false);
       expect(readinessBlocksOnCerts(from, to, OPEN_WATER_ONLY)).toBe(true);
     }
     // And a site's nitrox demand refuses a trip that never mentioned it.
     expect(
       decideTripAdmission({
-        requirement: NO_REQUIREMENT,
+        requirement: { ...NO_REQUIREMENT, minimumCertificationIsDefault: false },
         siteRequirement: { ...NO_REQUIREMENT, requiresNitrox: true },
         evidence: OPEN_WATER_ONLY,
       }).admitted,
@@ -462,7 +468,7 @@ describe("every gate still refuses and clears as it did, with a site in the sum"
       for (const site of sites) {
         for (const evidence of held) {
           const admission = decideTripAdmission({
-            requirement: trip,
+            requirement: { ...trip, minimumCertificationIsDefault: false },
             siteRequirement: site,
             evidence,
           });
@@ -486,7 +492,7 @@ describe("every gate still refuses and clears as it did, with a site in the sum"
         for (const site of sites) {
           for (const evidence of held) {
             const admitted = decideTripAdmission({
-              requirement: trip,
+              requirement: { ...trip, minimumCertificationIsDefault: false },
               siteRequirement: site,
               evidence,
               participantType,

@@ -1,4 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 
 /**
  * **The register's Rentals view** (plan `rental-tracking`, layer 2): every
@@ -42,7 +43,7 @@ test.describe("staff", () => {
     page,
     request,
   }) => {
-    await request.post("/api/test/seed-trouble-states?facts=troublePanels,gearOut");
+    await seedFacts(request, ["troublePanels", "gearOut"]);
     await page.goto("/shop/blue-mantis/gear?view=rentals");
     const rentals = page.getByRole("region", { name: "Rentals" });
     const late = rentals

@@ -42,7 +42,7 @@ describe("seeded tide stations", () => {
     const lean = await seededShopContext();
     expect((await tideOf(lean.db, lean.shop.id, "Molasses Reef")).stationId).toBe("8723583");
 
-    const { slug } = await createDemoShop(lean.db, { history: false });
+    const { slug } = await createDemoShop(lean.db, { shape: "lean" });
     const [minted] = await lean.db.select({ id: shops.id }).from(shops).where(eq(shops.slug, slug));
     if (!minted) throw new Error("minted shop missing");
     expect((await tideOf(lean.db, minted.id, "Molasses Reef")).stationId).toBe("8723583");

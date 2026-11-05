@@ -8,7 +8,7 @@ import { PrintTripBundleButton } from "./PrintTripBundleButton";
 afterEach(cleanup);
 
 const props = {
-  href: "/shop/blue-mantis/trips/t1/print",
+  href: "/shop/blue-mantis/trips/t1?print=1",
   label: "Print packet",
   popupBlockedLabel: "Allow pop-ups to print",
   recordAction: () => {},

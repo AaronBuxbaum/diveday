@@ -132,7 +132,7 @@ export async function seededTestDb(options: { history?: boolean } = {}): Promise
     // snapshot would have held.
     warnAboutFullPrice(variant);
     const db = await createTestDb();
-    await seedDemo(db, { history: variant === "history" });
+    await seedDemo(db, variant);
     closeWhenTestFinishes(db.$client as PGlite);
     return db;
   }
@@ -304,7 +304,7 @@ async function seededTestDbWithoutTeardown(options: { history?: boolean } = {}):
   if (!bytes) {
     warnAboutFullPrice(variant);
     const db = await createTestDb();
-    await seedDemo(db, { history: variant === "history" });
+    await seedDemo(db, variant);
     return db;
   }
   return drizzle({

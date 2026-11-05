@@ -11,7 +11,7 @@ import { AT_SEA_DAY_TITLE } from "./seed-boat-at-sea";
 describePostgres("the canonical demo refresh identity lock", () => {
   it("keeps the refresh ahead of concurrent shop, role, and account identity edits", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db, { history: false });
+    await seedDemo(pg.db, "lean");
     const [shop] = await pg.db
       .select({ id: shops.id })
       .from(shops)

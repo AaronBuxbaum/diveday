@@ -807,8 +807,8 @@ A publish toggle is "Hidden", not deleted. The full rule and its exceptions are 
 
 #### A panel that only renders when something has gone wrong
 
-is photographed through `/api/test/seed-trouble-states`
-(`src/app/api/test/seed-trouble-states/route.ts`), never by seeding the failure into the demo shop:
+is photographed through a fact on `/api/test/shop`
+(`src/app/api/test/shop/route.ts`, the registry in `src/db/facts/index.ts`), never by seeding the failure into the demo shop:
 add it as a named fact in `src/db/facts/index.ts` and a capture beside the surface's calm one. A demo permanently
 shouting that four payments are broken is a worse demo. Mutating is safe because each Playwright
 worker owns its own database and resets it before every test (`e2e/servers.ts`).
@@ -838,7 +838,7 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
   orchestrator — never wedge rows into an existing scenario, which is how that file became the
   repo's top conflict magnet (ADR 20260803-seed-scenario-modules). Do **not** seed a failure state
   into blue-mantis (see the e2e rules: trouble states are seeded through
-  `/api/test/seed-trouble-states`); `src/db/seed-front-desk.ts` says so at the row it deliberately
+  a fact on `/api/test/shop`); `src/db/seed-front-desk.ts` says so at the row it deliberately
   seeds `succeeded`.
 - **The booking transaction** (capacity enforcement): `src/db/bookings.ts` — read its tests first.
 - **Staff seating a diver**: one consequence path, `src/db/seat-diver.ts` (booking + waiver-on-join
@@ -1151,7 +1151,7 @@ For `e2e/`; the rules themselves are in `.claude/rules/e2e.md`.
   capture to make it cheap silently narrows what it can catch; the orders index was found this way:
   323 seeded orders, no pager, no baseline at all.
 - **A panel that only renders when something has gone wrong** is photographed through
-  `/api/test/seed-trouble-states`, never by seeding the failure into the demo shop. Add it as a fact in
+  a fact on `/api/test/shop`, never by seeding the failure into the demo shop. Add it as a fact in
   `src/db/facts/index.ts` (the route applies `?facts=name,…`) and a capture beside the surface's calm one.
 - **Route coverage**: every `src/app/**/page.tsx` route has a spec and an `e2e/visual-*.spec.ts`
   capture, or a written `exempt` reason. Coverage is derived from the path literals in `e2e/`

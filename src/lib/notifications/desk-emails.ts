@@ -100,3 +100,42 @@ export function moveAskSoonEmail(input: MoveAskSoonEmailInput): NotificationEmai
     html: `<p>${greeting.html}</p><p>${escapeHtml(body)}</p>${emailButton(input.inboxUrl, open)}`,
   };
 }
+
+export type SeatSoldDigestEmailInput = {
+  locale: DiverLocale;
+  recipientName: string;
+  shopName: string;
+  timezone: string;
+  departures: readonly { title: string; startsAt: Date; seats: number }[];
+  moreSeats: number;
+  boardUrl: string;
+  settingsUrl: string;
+};
+
+/**
+ * "3 seats sold in the last hour", then one line a departure (loop 5, row 8).
+ * The count is the whole of what is said: no diver, no amount, and the words
+ * of any booking stay behind the board's sign-in.
+ */
+export function seatSoldDigestEmail(input: SeatSoldDigestEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const greeting = notificationGreeting(t, input.recipientName);
+  const seats =
+    input.departures.reduce((sum, departure) => sum + departure.seats, 0) + input.moreSeats;
+  const body = t("notifications.seatSold.body", { seats });
+  const lines = input.departures.map((departure) =>
+    t("notifications.seatSold.line", {
+      title: departure.title,
+      when: formatDateTimeTz(departure.startsAt, input.locale, input.timezone),
+      seats: departure.seats,
+    }),
+  );
+  if (input.moreSeats > 0) lines.push(t("notifications.seatSold.more", { seats: input.moreSeats }));
+  const open = t("notifications.seatSold.open");
+  const turnOff = t("notifications.seatSold.turnOff");
+  return {
+    subject: t("notifications.seatSold.subject", { shopName: input.shopName, seats }),
+    text: `${greeting.text}\n\n${body}\n\n${lines.join("\n")}\n\n${open}:\n${input.boardUrl}\n\n${turnOff}:\n${input.settingsUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${escapeHtml(body)}</p><ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>${emailButton(input.boardUrl, open)}<p><a href="${escapeHtml(input.settingsUrl)}">${escapeHtml(turnOff)}</a></p>`,
+  };
+}

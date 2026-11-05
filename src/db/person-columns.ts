@@ -321,6 +321,34 @@ const rows = [
     erase: "scrub",
     eraseIn: "scrubReviews",
   },
+  // The crew member a diver thanked on their review (loop 5, row 6). The words
+  // are the diver's (`trip_reviews.crew_thanks`: their export reads them, and
+  // their erasure clears them in `scrubReviews`); this column only names who
+  // they are for, so it is a staff record on the crew side.
+  {
+    table: "trip_reviews",
+    column: "crew_thanks_person_id",
+    export: "withheld",
+    exportWhy:
+      "words another diver wrote about this crew member; the writer's own export carries them, and a staffer's request does not hand over a diver's words",
+    kind: "crew",
+    merge: "leave",
+    why: "names a crew member of the departure, a staff record whose own merge is refused; the pointer stays on the id it had",
+    erase: "keep",
+    eraseWhy:
+      "a pointer at an erased person discloses nothing: the name is joined at read, and the diver's words are cleared by their own erasure",
+  },
+  // The staffer who hid a thanks from the crew member.
+  {
+    table: "trip_reviews",
+    column: "crew_thanks_hidden_by_person_id",
+    export: "withheld",
+    exportWhy: "a staff moderation record, not the diver's own words",
+    kind: "actor",
+    merge: "leave",
+    why: "names the staffer who hid the line, a staff record whose own merge is refused; the pointer stays on the id it had",
+    erase: "keep",
+  },
   // The private half of the same act (ADR 20260904-reef-all-the-way-down,
   // D40): the diver's own word about how the day went, on the booking they
   // sat in. It moves for the reason the review above it does — it is the
@@ -671,6 +699,28 @@ const rows = [
     kind: "actor",
     merge: "leave",
     why: "which staffer marked the materials done",
+  },
+  // Loop 5, row 10: who marked a referral student, and who collected each paper.
+  {
+    table: "bookings",
+    column: "referred_in_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer marked the seat as a referral student",
+  },
+  {
+    table: "bookings",
+    column: "referral_form_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer collected the referral form",
+  },
+  {
+    table: "bookings",
+    column: "referral_record_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer collected the eLearning record",
   },
   {
     table: "bookings",
@@ -1186,6 +1236,14 @@ const rows = [
     kind: "actor",
     merge: "leave",
     why: "who raised the interest or sent the offer",
+  },
+  {
+    // Loop 5, row 11: the staffer who sent a charter quote.
+    table: "interests",
+    column: "charter_quoted_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer sent the charter quote",
   },
   {
     table: "trip_recap_photos",

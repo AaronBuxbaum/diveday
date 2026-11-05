@@ -9,10 +9,14 @@ import type { DateInterestRow } from "@/db/interest-dates";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
-import { formatShortDate } from "@/lib/format";
+import { formatMoneyScanned, formatShortDate } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import { callPanelHref } from "@/lib/took-a-call";
-import { type RequestReplyCopy, RequestReplyForm } from "./RequestReplyForm";
+import {
+  type RequestQuoteField,
+  type RequestReplyCopy,
+  RequestReplyForm,
+} from "./RequestReplyForm";
 
 /**
  * Where a diver is up to, in staff words. `src/db` returns the code and this
@@ -104,6 +108,7 @@ export function RequestLedgerRow({
   reply?: {
     action: (formData: FormData) => void;
     copy: RequestReplyCopy;
+    quote?: RequestQuoteField;
     error?: string;
   };
   /**
@@ -137,6 +142,20 @@ export function RequestLedgerRow({
     ? t(EXPERIENCE_KEYS[request.experienceLevel])
     : null;
   const facts = [
+    // A private charter asks for the boat, not a seat (loop 5, row 11).
+    request.charter ? { text: t("requests.charter"), whole: true } : null,
+    request.charterQuoteCents !== null && request.charterQuoteCurrency
+      ? {
+          text: t("requests.charterQuoted", {
+            amount: formatMoneyScanned(
+              request.charterQuoteCents,
+              request.charterQuoteCurrency,
+              locale,
+            ),
+          }),
+          whole: true,
+        }
+      : null,
     request.partySize
       ? { text: t("requests.divers", { count: request.partySize }), whole: true }
       : null,
@@ -261,6 +280,7 @@ export function RequestLedgerRow({
               requestId={request.id}
               action={reply.action}
               copy={reply.copy}
+              quote={reply.quote}
               error={reply.error}
             />
           ) : null}

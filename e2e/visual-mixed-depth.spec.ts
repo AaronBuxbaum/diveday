@@ -1,6 +1,7 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { capturePrintPdfs } from "./print-pdf";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   installVisualBuildGuard,
@@ -16,9 +17,9 @@ const staff = staffTranslator("en-US");
 test.describe("mixed training depth warning", () => {
   signedInAsOwner();
   test("shows the conditional check on the roster and Boat manifest", async ({ page, request }) => {
-    const response = await request.post("/api/test/seed-trouble-states?mixedDepth=1");
-    expect(response.ok()).toBe(true);
-    const { mixedDepth } = (await response.json()) as { mixedDepth: { tripId: string } };
+    const { mixedDepth } = (await seedFacts(request, ["mixedDepth"])) as {
+      mixedDepth: { tripId: string };
+    };
     await page.goto(`/shop/blue-mantis/trips/${mixedDepth.tripId}`);
     await expect(page.getByText(staff("manifest.mixedTrainingDepthWarning"))).toBeVisible();
     const plan = page.locator("#training-plan");

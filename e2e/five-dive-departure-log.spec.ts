@@ -2,18 +2,13 @@ import { execFileSync } from "node:child_process";
 import { expect, test } from "./fixtures";
 import { capturePrintPdfs } from "./print-pdf";
 
-test.use({ privateShopSlug: "five-dive-print" });
+test.use({ privateShopSlug: "five-dive-print", privateShopFacts: ["fiveDivePrint"] });
 
 test("five-dive departure log keeps the final head count on screen and paper", async ({
   page,
-  request,
   privateShop,
 }, testInfo) => {
-  const response = await request.post(
-    `/api/test/seed-trouble-states?fiveDivePrint=1&shop=${privateShop.slug}`,
-  );
-  expect(response.ok()).toBe(true);
-  const { tripId } = await response.json();
+  const { tripId } = privateShop.values.fiveDivePrint as { tripId: string };
   const sessionCheck = page.waitForResponse(
     (response) =>
       response.url().includes("/api/staff-activity") && response.request().method() === "GET",

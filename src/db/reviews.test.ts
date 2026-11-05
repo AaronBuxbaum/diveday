@@ -115,7 +115,7 @@ describe("submitTripReview", () => {
       average: 3,
       suppressedCount: 0,
     });
-    expect(await getReviewForBooking(db, bookingIds[0])).toEqual({
+    expect(await getReviewForBooking(db, bookingIds[0])).toMatchObject({
       rating: 3,
       comment: null,
       isPublished: true,

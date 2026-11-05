@@ -13,6 +13,7 @@ import { enrollSignInChallenge, startSignInChallenge } from "./auth-challenge";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   diverCopy,
@@ -478,13 +479,7 @@ for (const scheme of ["light", "dark"] as const) {
             await expect(
               page.getByRole("button", { name: words("account.signIn.verify"), exact: true }),
             ).toBeEnabled();
-            expect(
-              (
-                await page.request.post(
-                  `/api/test/seed-trouble-states?authChallengeState=expired&shop=${privateShop.slug}`,
-                )
-              ).ok(),
-            ).toBe(true);
+            await seedFacts(page.request, ["authChallengeExpired"], { slug: privateShop.slug });
             await page.reload();
             await expect(
               page.getByLabel(words("account.common.password"), { exact: true }),

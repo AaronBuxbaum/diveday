@@ -7,6 +7,7 @@ import type {
   PreparedDiveSiteImportRow,
 } from "@/lib/dive-site-import";
 import type { AppDb } from "./client";
+import { recordDiveSiteClosure } from "./dive-site-closures";
 import {
   createDiveSite,
   type DiveSiteInput,
@@ -158,6 +159,7 @@ export async function commitDiveSiteImport(
       summary.updated += 1;
       claimed.add(match.id);
       if (row.sourceId) placed.set(row.sourceId, match.id);
+      await restoreClosure(db, shopId, match.id, row);
       await applyDeletedState(db, shopId, match.id, row, summary);
       continue;
     }
@@ -179,6 +181,7 @@ export async function commitDiveSiteImport(
     if (row.sourceId) placed.set(row.sourceId, created.id);
     byId.set(created.id, { id: created.id, name: created.name, deletedAt: null });
     byName.set(created.name, { id: created.id, name: created.name, deletedAt: null });
+    await restoreClosure(db, shopId, created.id, row);
     await applyDeletedState(db, shopId, created.id, row, summary);
   }
 
@@ -278,6 +281,22 @@ async function applyDeletedState(
       and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)),
     );
   summary.deleted += 1;
+}
+
+/**
+ * **A closed site comes back closed.** The window is not on `DiveSiteInput`
+ * (it has its own writer), so it is a second statement. One direction only,
+ * like `deleted_at`: a bundle that carries no window leaves the site's own
+ * alone, because an older export says nothing about it.
+ */
+async function restoreClosure(
+  db: AppDb,
+  shopId: string,
+  siteId: string,
+  row: PreparedDiveSiteImportRow,
+): Promise<void> {
+  if (!row.closure) return;
+  await recordDiveSiteClosure(db, { shopId, siteId, window: row.closure });
 }
 
 function member<T extends string>(value: string | null, allowed: readonly string[]): T | null {

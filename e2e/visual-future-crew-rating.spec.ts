@@ -1,5 +1,6 @@
 import { formatCalendarDate } from "../src/lib/calendar-date";
 import { expect, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   FLOW_TIMEOUT_MS,
@@ -23,11 +24,9 @@ test.describe("light mode", () => {
     request,
     privateShop,
   }) => {
-    const seeded = await request.post(
-      `/api/test/seed-trouble-states?futureCrew=1&shop=${privateShop.slug}`,
-    );
-    expect(seeded.ok()).toBe(true);
-    const { futureCrew } = (await seeded.json()) as {
+    const { futureCrew } = (await seedFacts(request, ["futureCrew"], {
+      slug: privateShop.slug,
+    })) as {
       futureCrew: { tripId: string; uncrewedTripId: string; issueDate: string };
     };
     const note = staffCopy("today.detail.ratingUnverified", { names: "Alex Future", count: 1 });

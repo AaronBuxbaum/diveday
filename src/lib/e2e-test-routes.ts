@@ -3,10 +3,9 @@ import { claudeFixturesArmed } from "./assists/e2e-fixtures";
 import { runtimeMode } from "./runtime-mode";
 
 /**
- * Shared guard for every `/api/test/*` route (`reset`, `seed-account-token`,
- * `seed-stripe-account`, `seed-interest-unsubscribe-token`,
- * `seed-courtesy-email-unsubscribe-token`). Two independent checks, both
- * required:
+ * Shared guard for every `/api/test/*` route (`reset`, `clock`, the `shop` door
+ * that writes every named fact, and the few that are not state). Two
+ * independent checks, both required:
  *
  * 1. The original env-var predicate: never reachable with a real database
  *    configured, and outside a production runtime the harness must
@@ -19,8 +18,8 @@ import { runtimeMode } from "./runtime-mode";
  *
  * (1) alone is pure configuration: one misconfigured staging deployment
  * (production build, `DIVEDAY_E2E=1` left set from a CI template, PGlite
- * fallback) turns `seed-account-token` — which mints a valid password-reset
- * token for any account by email — into instant account takeover. (2) closes
+ * fallback) turns the door's `accountToken` fact — which mints a valid
+ * password-reset token for any account by email — into instant account takeover. (2) closes
  * that gap the same way `CRON_SECRET` closes it for the cron endpoint:
  * config drift alone is no longer enough (security review finding,
  * docs/product/archive/specialist-optimization-audit-20260731.md §5).
@@ -60,9 +59,9 @@ export type DemoTenant<Shop> = { ok: true; shop: Shop } | { ok: false; response:
  * `testRouteRefused`.
  *
  * One exception, and it is still a demo tenant: a shop this server armed
- * through `/api/test/claude-fixtures`. Arming takes a demo shop and clears its
- * flag so the assists light up (`claudeFixturesArmed`), and a spec drives that
- * shop's inbox while it is armed; disarming sets the flag back.
+ * through the door's `claudeAssists` fact. Arming takes a demo shop and clears
+ * its flag so the assists light up (`claudeFixturesArmed`), and a spec drives
+ * that shop's inbox while it is armed; the door's teardown disarms it.
  *
  * `findShop` is the caller's lookup (`getShopBySlug` on its own database),
  * because `src/lib` takes only types from `src/db`. Sign-in's demo bypass
@@ -79,4 +78,30 @@ export async function requireDemoTenant<Shop extends { id: string; isDemo: boole
     return { ok: false, response: testRouteRefused() };
   }
   return { ok: true, shop };
+}
+
+const NON_DEMO_FIXTURES_KEY = Symbol.for("diveday.e2e.nonDemoFixtureShops");
+
+/** Held on `globalThis`, like the armed assists, so every route bundle sees one set. */
+function nonDemoFixtures(): Set<string> {
+  const holder = globalThis as { [NON_DEMO_FIXTURES_KEY]?: Set<string> };
+  holder[NON_DEMO_FIXTURES_KEY] ??= new Set<string>();
+  return holder[NON_DEMO_FIXTURES_KEY];
+}
+
+/**
+ * **A shop this server made real-shaped**, by minting it with `demo: false`
+ * (issue #2783) or by a fact that clears a minted demo's flag for one capture
+ * (`chargeToRoomInvoice`). The door's teardown drops a demo shop or one held
+ * here, and nothing else that is not a demo: a caller names a slug, but only
+ * this server's own memory makes a non-demo shop droppable, so no slug can
+ * reach a real tenant. `requireDemoTenant` does not accept these.
+ */
+export function holdNonDemoFixture(shopId: string): void {
+  nonDemoFixtures().add(shopId);
+}
+
+/** Whether this server made the shop real-shaped; taking it forgets it. */
+export function takeNonDemoFixture(shopId: string): boolean {
+  return nonDemoFixtures().delete(shopId);
 }

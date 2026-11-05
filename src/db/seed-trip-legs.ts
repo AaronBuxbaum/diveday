@@ -32,11 +32,11 @@ import { tripDives, trips } from "./schema";
  * Abyss morning and every course session are left alone, and the demo shows
  * both halves of the model.
  *
- * **These legs ride the history flag**, so they are seeded for *any* demo with
- * history — the canonical `blue-mantis` fixture and the visitor's "Try the live
- * demo" mint alike, since `createDemoShop` defaults history on. The one demo
- * that goes without is `privateShop` (ADR 20260815-per-test-private-shops), and
- * only because `/api/test/seed-private-shop` mints with `history: false`.
+ * **These legs are in the `history` set**, so they are seeded for *any* demo of
+ * the `history` shape — the canonical `blue-mantis` fixture and the visitor's
+ * "Try the live demo" mint alike, since `createDemoShop` defaults to it. The one
+ * demo that goes without is `privateShop` (ADR 20260815-per-test-private-shops),
+ * and only because it mints in the `lean` shape.
  * Nothing in this module reads a slug.
  *
  * That exemption is the one worth keeping, because `privateShop` is the shop a
@@ -82,13 +82,7 @@ const LEG_TRAVEL_MINUTES: Record<string, readonly number[]> = {
   "Long-Range Day — Duane & Outer Reef": [120, 75, 25],
 };
 
-export async function seedTripLegs(
-  db: DbExecutor,
-  shopId: string,
-  includeHistoryData: boolean,
-  now = nowDate(),
-): Promise<void> {
-  if (!includeHistoryData) return;
+export async function seedTripLegs(db: DbExecutor, shopId: string, now = nowDate()): Promise<void> {
   const titles = Object.keys(LEG_TRAVEL_MINUTES);
   // **Upcoming only, and this is not a nicety.** `seed-history.ts` back-fills a
   // trailing quarter of sailed departures under these *same titles* — three more

@@ -31,7 +31,7 @@ import {
  *
  * Dates hang off the (frozen in e2e) clock so every render is pixel-stable,
  * and nothing here is a trouble state: those are seeded per test through
- * `/api/test/seed-trouble-states`.
+ * a fact through `/api/test/shop`.
  */
 export async function seedWorkOrders(
   db: DbExecutor,

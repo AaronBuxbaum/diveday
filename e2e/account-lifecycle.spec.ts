@@ -1,12 +1,13 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { mintOnboardFormPath } from "./setup-link";
+import { seedFacts } from "./shop-facts";
 
 // Real verify/reset links only ever exist inside a real email — there is no
 // staff-facing screen that displays them (unlike a waiver or readiness
 // link), and the token is a hashed DB row rather than something this spec
 // can compute the way recap's stateless signed token can (e2e/recap.spec.ts).
-// /api/test/seed-account-token mints a real one (test-only, gated identically
+// The `accountToken` fact (`/api/test/shop`) mints a real one (test-only, gated identically
 // to /api/test/reset) so the happy paths below still drive the actual pages
 // and server actions rather than stopping at the token-storage layer.
 
@@ -36,11 +37,10 @@ test("a valid email-verification link confirms the account through the real page
   request,
 }) => {
   const email = await onboardFreshOwner(page, "verify-e2e");
-  const seeded = await request.post("/api/test/seed-account-token", {
-    data: { email, purpose: "email_verification" },
-  });
-  expect(seeded.ok()).toBe(true);
-  const { token } = await seeded.json();
+  const { accountToken } = await seedFacts(request, [
+    { name: "accountToken", email, purpose: "email_verification" },
+  ]);
+  const { token } = accountToken;
 
   await page.goto(`/verify/${token}`);
   await page.getByRole("button", { name: "Confirm my email" }).click();
@@ -61,11 +61,10 @@ test("a valid password-reset link sets a new password and signs the owner in", a
   request,
 }) => {
   const email = await onboardFreshOwner(page, "reset-e2e");
-  const seeded = await request.post("/api/test/seed-account-token", {
-    data: { email, purpose: "password_reset" },
-  });
-  expect(seeded.ok()).toBe(true);
-  const { token } = await seeded.json();
+  const { accountToken } = await seedFacts(request, [
+    { name: "accountToken", email, purpose: "password_reset" },
+  ]);
+  const { token } = accountToken;
 
   await page.goto(`/reset-password/${token}`);
   // exact: true — "New password" is otherwise a substring match of "Confirm

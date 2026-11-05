@@ -86,8 +86,8 @@ describe("createDemoShop", () => {
 
   it("mints two demos side by side without a slug or email collision", async () => {
     const db = await seededTestDb();
-    const a = await createDemoShop(db, { history: false });
-    const b = await createDemoShop(db, { history: false });
+    const a = await createDemoShop(db, { shape: "lean" });
+    const b = await createDemoShop(db, { shape: "lean" });
 
     expect(a.slug).not.toBe(b.slug);
     expect(a.ownerEmail).not.toBe(b.ownerEmail);
@@ -99,7 +99,7 @@ describe("createDemoShop", () => {
 
   it("regenerates the whole identity when a generated name is already taken", async () => {
     const db = await seededTestDb();
-    const taken = await createDemoShop(db, { history: false });
+    const taken = await createDemoShop(db, { shape: "lean" });
 
     // Force the exact collision the dropped random suffix made possible: the
     // next mint draws a name that already exists. It must recover with a fresh
@@ -116,7 +116,7 @@ describe("createDemoShop", () => {
       .mockImplementation(real);
 
     try {
-      const minted = await createDemoShop(db, { history: false });
+      const minted = await createDemoShop(db, { shape: "lean" });
       expect(minted.slug).not.toBe(taken.slug);
       // The retry took a *whole* fresh identity: the emails agree with the
       // slug that actually landed, never the one that lost the race.
@@ -140,7 +140,7 @@ describe("createDemoShop", () => {
    */
   it("wears the canonical demo's brand, and a logo, only when asked", async () => {
     const db = await seededTestDb();
-    const plain = await requireShop(db, (await createDemoShop(db, { history: false })).slug);
+    const plain = await requireShop(db, (await createDemoShop(db, { shape: "lean" })).slug);
     expect(plain.logoUrl).toBeNull();
     expect(plain.brandHeroImageUrl).toBeNull();
     expect(plain.brandBadges).toEqual([]);
@@ -148,7 +148,7 @@ describe("createDemoShop", () => {
     const canonical = await requireShop(db, DEMO_SHOP_SLUG);
     const branded = await requireShop(
       db,
-      (await createDemoShop(db, { brand: true, history: false })).slug,
+      (await createDemoShop(db, { brand: true, shape: "lean" })).slug,
     );
     expect(branded.brandHeroImageUrl).toBe(canonical.brandHeroImageUrl);
     expect(branded.brandHeroImageAlt).toBe(canonical.brandHeroImageAlt);
@@ -173,8 +173,8 @@ describe("createDemoShop", () => {
     const prev = process.env.DEMO_SHOP_MAX_LIVE;
     process.env.DEMO_SHOP_MAX_LIVE = "2";
     try {
-      const a = await createDemoShop(db, { history: false });
-      const b = await createDemoShop(db, { history: false });
+      const a = await createDemoShop(db, { shape: "lean" });
+      const b = await createDemoShop(db, { shape: "lean" });
       // Age `a` explicitly. The test clock is frozen (src/test/frozen-clock.ts),
       // so every mint here shares one `createdAt` and "the oldest" would other-
       // wise be decided by `enforceMintedDemoCap`'s `id` tiebreak — which is
@@ -186,7 +186,7 @@ describe("createDemoShop", () => {
         .set({ createdAt: new Date(nowMs() - HOUR_MS) })
         .where(eq(shops.slug, a.slug));
       const aId = (await requireShop(db, a.slug)).id;
-      const c = await createDemoShop(db, { history: false });
+      const c = await createDemoShop(db, { shape: "lean" });
 
       // Cap is 2, so minting c evicts the oldest minted demo (a); b and c stay,
       // and the canonical demo is never a candidate. By id, not slug: a demo
@@ -235,7 +235,7 @@ describe("deleteDemoShopCascade", () => {
 describe("reapExpiredDemoShops", () => {
   it("clears minted demos past the TTL but never a fresh one or the canonical demo", async () => {
     const db = await seededTestDb();
-    const fresh = await createDemoShop(db, { history: false });
+    const fresh = await createDemoShop(db, { shape: "lean" });
     const stale = await createDemoShop(db);
 
     // Age the stale demo — and the canonical demo — well past the 7-day window.

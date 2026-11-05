@@ -145,6 +145,7 @@
   "src/lib/medical-alert.ts": 100,
   "src/lib/medical.ts": 90,
   "src/lib/nitrox-fill.ts": 100,
+  "src/lib/nitrox-mod.ts": 100,
   "src/lib/notifications/roll-call-emails.ts": 100,
   "src/lib/notifications/waiver-text.ts": 100,
   "src/lib/offline-erasure-epoch.ts": 88.23,

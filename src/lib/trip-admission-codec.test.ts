@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Certification, DiveSpecialty } from "@/db/schema";
 import { levelShort, NO_NITROX, noLevel, noSpecialty } from "@/test/admission-refusals";
-import type { CertRequirementSource } from "./readiness";
+import type { TripLevelRequirement } from "./training-mark";
 import {
   decideTripAdmission,
   decodeTripAdmissionRefusal,
@@ -31,8 +31,9 @@ function evidence(overrides: Partial<TripAdmissionEvidence> = {}): TripAdmission
   };
 }
 
-function requirement(overrides: Partial<CertRequirementSource> = {}): CertRequirementSource {
+function requirement(overrides: Partial<TripLevelRequirement> = {}): TripLevelRequirement {
   return {
+    minimumCertificationIsDefault: false,
     minimumCertificationLevel: null,
     requiredSpecialties: [],
     requiresNitrox: false,

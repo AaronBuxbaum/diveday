@@ -118,6 +118,7 @@ export function AfterState({
     tipPresets,
     canReview,
     ownReview,
+    crewChoices,
     ownPulse,
     params,
     nextDeparture,
@@ -128,6 +129,7 @@ export function AfterState({
     bookedNext = null,
     yourDays = null,
     buddyLinkUrl = null,
+    logFilePath = null,
     canShareWithBoat,
     actions,
     siteMark,
@@ -207,6 +209,7 @@ export function AfterState({
         siteMark={siteMark}
         postcard={postcard}
         course={course}
+        logFilePath={logFilePath}
       />
 
       {/* The one line the diver's body still needs after the record is closed
@@ -256,6 +259,7 @@ export function AfterState({
           t={t}
           notice={reviewNotice}
           ownReview={ownReview}
+          crewChoices={crewChoices}
           stepsBack={externalReviewUrl !== null}
           action={actions.submitReview}
         />

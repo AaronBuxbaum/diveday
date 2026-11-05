@@ -52,7 +52,12 @@ const MUST_LEAD = [
 // 111-112 with #2275: `bookings.training_marked_by_person_id` and
 // `bookings.training_cleared_by_person_id` attribute a staffer's training
 // mark, for the same reason.
-const UNINDEXED_CEILING = 112;
+// 113-116 with loop 5: `bookings.referred_in_by_person_id`,
+// `referral_form_by_person_id` and `referral_record_by_person_id` attribute a
+// referral student's marks, and `interests.charter_quoted_by_person_id` the
+// staffer who sent a charter quote. Each is written once per act and read
+// with its row, never probed by person.
+const UNINDEXED_CEILING = 116;
 
 async function unindexedPeopleForeignKeys(db: AppDb): Promise<string[]> {
   const result = await db.execute(sql`

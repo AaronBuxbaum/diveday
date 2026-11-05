@@ -140,6 +140,21 @@ export const interests = pgTable(
     /** The last-minute deal this offer carried. */
     promoId: uuid("promo_id").references(() => deals.id),
 
+    /**
+     * **A private charter** (loop 5, row 11; glossary "Charter inquiry"): the
+     * asker wants a boat for their own group on the day, not seats among
+     * strangers. Date rows only. The quote is the shop's price for the whole
+     * boat, in the shop's currency at the moment it was sent, recorded with who
+     * sent it only once the reply carrying it went (`sendInterestReply`). The
+     * booking is the ordinary request path: the builder makes the private
+     * departure and the party is offered its seats from it.
+     */
+    charter: boolean("charter").notNull().default(false),
+    charterQuoteCents: integer("charter_quote_cents"),
+    charterQuoteCurrency: text("charter_quote_currency"),
+    charterQuotedAt: timestamp("charter_quoted_at", { withTimezone: true }),
+    charterQuotedByPersonId: uuid("charter_quoted_by_person_id").references(() => people.id),
+
     // the end
     closedAt: timestamp("closed_at", { withTimezone: true }),
     closedAs: interestClosedAs("closed_as"),
@@ -191,6 +206,15 @@ export const interests = pgTable(
     check(
       "interests_emailed_after_offer",
       sql`${table.emailedAt} is null or ${table.offeredAt} is not null`,
+    ),
+    check("interests_charter_is_a_date", sql`not ${table.charter} or ${table.scope} = 'date'`),
+    // A quote is an amount, a currency, a moment and an author, on a charter.
+    check(
+      "interests_charter_quote",
+      sql`(${table.charterQuoteCents} is null) = (${table.charterQuotedAt} is null)
+        and (${table.charterQuotedAt} is null) = (${table.charterQuotedByPersonId} is null)
+        and (${table.charterQuoteCents} is null) = (${table.charterQuoteCurrency} is null)
+        and (${table.charterQuoteCents} is null or (${table.charter} and ${table.charterQuoteCents} > 0))`,
     ),
     check(
       "interests_closed_together",

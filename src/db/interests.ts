@@ -559,6 +559,11 @@ export type DateAsk = {
   message?: string | null;
   /** The staffer who wrote down a phone call; absent for the diver's own form. */
   createdByPersonId?: string | null;
+  /**
+   * A boat for the asker's own group (loop 5, row 11). The caller decides
+   * whether the shop offers it; a course question is never one.
+   */
+  charter?: boolean;
 };
 
 /**
@@ -613,6 +618,7 @@ export async function askForDate(
       partySize,
       message: normalizeOptional(input.message),
       createdByPersonId: input.createdByPersonId ?? null,
+      charter: Boolean(input.charter) && !courseId,
     })
     .returning({ id: interests.id, askedAt: interests.askedAt });
   if (!inserted) throw new Error("askForDate: insert returned no row");
@@ -701,6 +707,33 @@ export async function associateDateRequestOfferBooking(
       partySize: offer.partySize,
     });
   });
+}
+
+/**
+ * **Whether a departure built from these requests is a private charter** (loop
+ * 5, row 11; glossary "Charter inquiry"): any one of them, read inside this
+ * shop's date interests, asked for the whole boat. The ids are navigation
+ * context, so one from another shop reads as nothing.
+ */
+export async function dateInterestsAskForCharter(
+  db: AppDb,
+  shopId: string,
+  interestIds: readonly string[],
+): Promise<boolean> {
+  if (interestIds.length === 0) return false;
+  const [row] = await db
+    .select({ id: interests.id })
+    .from(interests)
+    .where(
+      and(
+        eq(interests.shopId, shopId),
+        eq(interests.scope, "date"),
+        eq(interests.charter, true),
+        inArray(interests.id, [...interestIds]),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }
 
 /**

@@ -40,8 +40,8 @@ the minute is the one after the usage pass so the 09:xx wake stays a single wake
 
 - **Measure the runway** — days between now and the furthest-out upcoming departure. One indexed
   aggregate; on most nights the pass writes nothing at all.
-- **Restore below `DEMO_SCHEDULE_MIN_RUNWAY_DAYS` (21)**, via the existing `resetDemoSchedule` with
-  `{ history: true }` — the same operation the in-demo "Reset demo shop" button and the e2e fixture
+- **Restore below `DEMO_SCHEDULE_MIN_RUNWAY_DAYS` (21)**, via the existing `resetDemoSchedule` in
+  the `history` shape — the same operation the in-demo "Reset demo shop" button and the e2e fixture
   already run, wrapped in one transaction so a failure leaves an aging board rather than a half-wiped
   shop. The stable half (shop, staff, their logins, the backup destination) is untouched by
   construction, so demo sign-ins survive a restore.

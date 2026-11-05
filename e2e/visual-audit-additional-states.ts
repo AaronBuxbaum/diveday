@@ -3,6 +3,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { enrollSignInChallenge, startSignInChallenge } from "./auth-challenge";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 import type { AuditCapture } from "./visual-audit-capture";
 
 const diver = diverTranslator("en-US");
@@ -93,10 +94,7 @@ export function registerAdditionalAuditCaptures(capture: AuditCapture) {
     });
 
     test("a payment needing a check opens its Stripe reference", async ({ page, request }) => {
-      const seeded = await request.post(
-        "/api/test/seed-trouble-states?facts=troublePanels,owedRefund",
-      );
-      expect(seeded.ok()).toBe(true);
+      await seedFacts(request, ["troublePanels", "owedRefund"]);
       await page.goto("/shop/blue-mantis/orders");
       const checks = page.getByRole("region", { name: "Payments that need a check" });
       const reference = checks

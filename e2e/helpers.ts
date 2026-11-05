@@ -651,6 +651,12 @@ export async function seededTripId(
 export async function openSettingsRail(page: Page): Promise<Locator> {
   const rail = page.getByRole("navigation", { name: "Settings sections" });
   await expect(rail).toBeVisible();
+  // A row clicked while the rail is still moving its current row into view is
+  // clicked where its neighbour is now (#3640).
+  await expect(rail.locator("[data-settings-rail-scroller]")).toHaveAttribute(
+    "data-rail-settled",
+    "",
+  );
   return rail;
 }
 

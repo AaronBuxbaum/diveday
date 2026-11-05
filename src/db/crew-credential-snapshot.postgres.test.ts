@@ -12,7 +12,7 @@ import { listStaff, upcomingTripsWithCounts } from "./trips";
 describePostgres("crew boarding credential observation", () => {
   it("captures only committed credentials when a renewal is blocked, then sees the committed renewal", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const [staff] = await listStaff(pg.db, shop.id);
@@ -84,7 +84,7 @@ describePostgres("crew boarding credential observation", () => {
   });
   it("erases evidence when a former crew member's live mark races with erasure", async () => {
     const pg = await postgresTestDb();
-    await seedDemo(pg.db);
+    await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
     if (!shop) throw new Error("shop missing");
     const owner = (await listStaff(pg.db, shop.id)).find((staff) => staff.roles.includes("owner"));

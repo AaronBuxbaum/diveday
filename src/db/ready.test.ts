@@ -25,6 +25,7 @@ import { carriedPreparationForDiver, getBookedCard, getReadyPageData } from "./r
 import { getRentalFit, toDiverRentalFit } from "./rental-fit";
 import {
   bookings,
+  cards,
   people,
   priorVisits,
   rollCallEvents,
@@ -834,5 +835,52 @@ describe("getBookedCard", () => {
         delivered: true,
       }),
     ).toBeNull();
+  });
+});
+
+/**
+ * Dive-domain review, row 9, attacker F4: the nitrox planning line rides
+ * `nitroxCardVerified`, so a held seat never reads the matched person's card,
+ * and an imported card waits for its confirm, as the fill gate does.
+ */
+describe("getReadyPageData — the nitrox card behind the planning line", () => {
+  async function bookingWithCard(values: Partial<typeof cards.$inferInsert> = {}) {
+    const { db, shop, bookingId } = await unpaidBooking();
+    const [booking] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!booking) throw new Error("booking missing");
+    const [card] = await db
+      .insert(cards)
+      .values({
+        kind: "nitrox",
+        shopId: shop.id,
+        personId: booking.personId,
+        agency: "ssi",
+        identifier: "N-4471",
+        status: "verified",
+        ...values,
+      })
+      .returning();
+    if (!card) throw new Error("card missing");
+    return { db, bookingId, cardId: card.id };
+  }
+
+  it("never reads the matched person's card for a held seat", async () => {
+    const { db, bookingId } = await bookingWithCard();
+    expect((await getReadyPageData(db, bookingId))?.nitroxCardVerified).toBe(true);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Nora Q" })
+      .where(eq(bookings.id, bookingId));
+    expect((await getReadyPageData(db, bookingId))?.nitroxCardVerified).toBe(false);
+  });
+
+  it("waits for a staffer to confirm an imported card", async () => {
+    const { db, bookingId, cardId } = await bookingWithCard({ importedAt: nowDate() });
+    expect((await getReadyPageData(db, bookingId))?.nitroxCardVerified).toBe(false);
+    await db.update(cards).set({ reviewedAt: nowDate() }).where(eq(cards.id, cardId));
+    expect((await getReadyPageData(db, bookingId))?.nitroxCardVerified).toBe(true);
   });
 });

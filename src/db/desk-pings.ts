@@ -38,7 +38,7 @@ import { inboundMessages, people, personRoles, shops, userAccounts } from "./sch
  * already in the Inbox.
  */
 
-type StaffLogin = {
+export type StaffLogin = {
   accountId: string;
   personId: string;
   fullName: string;
@@ -49,7 +49,7 @@ type StaffLogin = {
 };
 
 /** Every active staff login at this shop, with their roles and their own answer. */
-async function staffLogins(db: DbExecutor, shopId: string): Promise<StaffLogin[]> {
+export async function staffLogins(db: DbExecutor, shopId: string): Promise<StaffLogin[]> {
   const rows = await db
     .select({
       accountId: userAccounts.id,

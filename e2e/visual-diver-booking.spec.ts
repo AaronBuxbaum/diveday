@@ -22,6 +22,7 @@ import {
   signOut,
   threadStatus,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import {
   bookAVisualRegressionSeat,
   capture,
@@ -232,10 +233,9 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await bookAVisualRegressionSeat(page, scheme);
-        const seeded = await request.post("/api/test/seed-returning-diver", {
-          data: { shopSlug: "blue-mantis", email: `visual-regression-${scheme}@example.com` },
-        });
-        expect(seeded.ok()).toBe(true);
+        await seedFacts(request, [
+          { name: "returningDiver", email: `visual-regression-${scheme}@example.com` },
+        ]);
         await page.goto(new URL(page.url()).pathname);
         await threadStatus(page).waitFor();
         await openThreadStep(page, "changes");
@@ -247,7 +247,7 @@ for (const scheme of ["light", "dark"] as const) {
        * decision 3). The booking page as a known diver reaches it from the
        * thread's next-dive link: the standing facts folded into one panel above
        * the fields, the lead's own details already in them, and "Not you?"
-       * beneath. Reached through `/api/test/seed-booking-handoff`, which mints
+       * beneath. Reached through the `bookingHandoff` fact, which mints
        * the same ten-minute handoff the thread would; the cold page is every
        * other booking capture in this file.
        */
@@ -257,11 +257,10 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await bookAVisualRegressionSeat(page, scheme);
-        const seeded = await request.post("/api/test/seed-booking-handoff", {
-          data: { shopSlug: "blue-mantis", email: `visual-regression-${scheme}@example.com` },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { href } = (await seeded.json()) as { href: string };
+        const { bookingHandoff } = await seedFacts(request, [
+          { name: "bookingHandoff", email: `visual-regression-${scheme}@example.com` },
+        ]);
+        const { href } = bookingHandoff as { href: string };
         await page.goto(href);
         await page.getByText("Booking as Visual Regression Diver").waitFor();
         await expect(page.getByLabel("Name", { exact: true })).toHaveValue(

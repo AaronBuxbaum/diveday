@@ -315,4 +315,11 @@ refused no-show undo writes its reason to the trail. Trip admission's level, spe
 checks are not re-run on an ordinary departure's undo; boarding readiness still asks them.
 
 In the same change, a **training mark** lowers only a site's certification requirement at the sale,
-as boarding already did: a level the departure itself sets always stands (issue #3776).
+as boarding already did: a level the departure itself sets always stands (issue #3776). The Open
+Water default a new non-course departure starts with is not a level anyone set: until a person
+changes the level, `trip_requirements.minimum_certification_is_default` marks it, and a duplicate
+or a series roll carries the source's flag with its other gates. Where the departure's one site
+states a level, both gates read the default as the site's, so a mark may lower it; where no site
+states a level, the default is the only level anyone stated and it stands (issue #3872, Aaron on
+#3839 2026-11-04; domain reviews of #3909). Storing the default as no level was rejected: it would drop the Open Water gate for
+every unmarked uncertified diver.

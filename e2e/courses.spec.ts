@@ -15,6 +15,7 @@ import {
   openTripTab,
   publicTripUrl,
 } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 /**
  * Open one of the course editor's closed sections (visual review 2026-10-24,
@@ -115,10 +116,7 @@ test("a gear-included course session quotes no rental at booking", async ({
 }) => {
   const diver = diverTranslator("en-US");
   const SHOP = privateShop.slug;
-  const connected = await request.post(
-    `/api/test/seed-stripe-account?slug=${encodeURIComponent(SHOP)}`,
-  );
-  expect(connected.ok()).toBe(true);
+  await seedFacts(request, ["stripeAccount"], { slug: SHOP });
   await page.context().clearCookies();
 
   await page.goto(`/s/${SHOP}`);
@@ -1479,8 +1477,7 @@ test("a course that includes its gear asks the student for sizes, not money", as
  * 53), so each test first adds one the shop has named and not yet written.
  */
 async function addUnwordedForm(request: APIRequestContext) {
-  const seeded = await request.post("/api/test/seed-unworded-course-form");
-  expect(seeded.ok(), await seeded.text()).toBe(true);
+  await seedFacts(request, ["unwordedCourseForm"]);
 }
 
 test.describe("the agency-wording notice on the course roster", () => {

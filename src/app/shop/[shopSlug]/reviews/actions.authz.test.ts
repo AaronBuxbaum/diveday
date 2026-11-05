@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 import { submitRecapPulse } from "@/db/recap-pulses";
 import { liveReviewReply } from "@/db/review-replies";
 import { setReviewPublished, submitTripReview } from "@/db/reviews";
-import { bookings, recapPulses, tripReviews } from "@/db/schema";
+import { bookings, recapPulses, tripAssignments, tripReviews } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
@@ -54,7 +54,7 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { markPulseAddressedAction, reviewReplyAction } = await import("./actions");
+const { markPulseAddressedAction, reviewReplyAction, reviewRowAction } = await import("./actions");
 
 /** The pulse row as the shop's panel would find it: open, or answered. */
 async function pulseFor(db: AppDb, bookingId: string) {
@@ -244,5 +244,83 @@ describe("replying to a review in public", () => {
       effect: "deleted",
     });
     expect(await liveReviewReply(db, shop.id, reviewId)).toBeNull();
+  });
+});
+
+/**
+ * **Hiding a crew thanks is owner/manager work, and records who** (security
+ * review of layer 2, M2). A thanks line is private text aimed at one staff
+ * member, so a crew login can neither hide nor show one.
+ */
+describe("hiding a thanks to the crew", () => {
+  async function thanksContext() {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const captain = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
+    const [booking] = await db
+      .select({ id: bookings.id, tripId: bookings.tripId })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), eq(bookings.status, "booked")))
+      .orderBy(bookings.id)
+      .limit(1);
+    if (!booking) throw new Error("seeded shop has no live booking");
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: booking.tripId, personId: captain })
+      .onConflictDoNothing();
+    const submitted = await submitTripReview(db, {
+      bookingId: booking.id,
+      rating: 5,
+      crewThanks: { crewPersonId: captain, text: "Great day" },
+    });
+    if (!submitted.ok) throw new Error("review refused");
+    const [review] = await db
+      .select({ id: tripReviews.id })
+      .from(tripReviews)
+      .where(eq(tripReviews.bookingId, booking.id));
+    if (!review) throw new Error("review missing");
+    return { db, shop, owner, captain, reviewId: review.id };
+  }
+
+  function post(reviewId: string, hidden: boolean) {
+    const formData = new FormData();
+    formData.set("intent", "crew-thanks");
+    formData.set("reviewId", reviewId);
+    formData.set("thanksHidden", hidden ? "true" : "false");
+    return formData;
+  }
+
+  async function hiddenState(db: AppDb, reviewId: string) {
+    const [row] = await db
+      .select({ at: tripReviews.crewThanksHiddenAt, by: tripReviews.crewThanksHiddenByPersonId })
+      .from(tripReviews)
+      .where(eq(tripReviews.id, reviewId));
+    return row;
+  }
+
+  it("refuses a crew login, and the line is unchanged", async () => {
+    const { db, shop, captain, reviewId } = await thanksContext();
+    signIn(shop, captain);
+    expect(await reviewRowAction(null, post(reviewId, true))).toMatchObject({ ok: false });
+    expect((await hiddenState(db, reviewId))?.at).toBeNull();
+  });
+
+  it("lets the owner hide it and records the owner", async () => {
+    const { db, shop, owner, reviewId } = await thanksContext();
+    signIn(shop, owner);
+    expect(await reviewRowAction(null, post(reviewId, true))).toMatchObject({ ok: true });
+    const state = await hiddenState(db, reviewId);
+    expect(state?.at).not.toBeNull();
+    expect(state?.by).toBe(owner);
+  });
+
+  it("refuses a crew login who shows a line a manager hid", async () => {
+    const { db, shop, owner, captain, reviewId } = await thanksContext();
+    signIn(shop, owner);
+    await reviewRowAction(null, post(reviewId, true));
+    signIn(shop, captain);
+    expect(await reviewRowAction(null, post(reviewId, false))).toMatchObject({ ok: false });
+    expect((await hiddenState(db, reviewId))?.at).not.toBeNull();
   });
 });

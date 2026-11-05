@@ -51,7 +51,7 @@ const ctx = fileScopedShopContext();
 describe("resetDemoSchedule", () => {
   it("resets the seeded schedule", async () => {
     const { db, shop } = ctx;
-    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+    await expect(resetDemoSchedule(db, shop.id, "lean")).resolves.toBeUndefined();
     expect((await upcomingTripsWithCounts(db, shop.id)).length).toBeGreaterThan(0);
   });
 
@@ -66,7 +66,7 @@ describe("resetDemoSchedule", () => {
       .set({ capacity: 11 })
       .where(and(eq(boats.shopId, shop.id), eq(boats.name, "Mantis II")));
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     const hulls = await db
       .select({ name: boats.name, capacity: boats.capacity })
@@ -105,7 +105,7 @@ describe("resetDemoSchedule", () => {
       .insert(todayReadMarkEvents)
       .values({ shopId: shop.id, markId: mark.id, eventId: event.id });
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     expect(
       await db.select().from(todayReadMarks).where(eq(todayReadMarks.shopId, shop.id)),
@@ -118,7 +118,7 @@ describe("resetDemoSchedule", () => {
   it("can restore the full history used by the browser demo", async () => {
     const { db, shop } = ctx;
 
-    await resetDemoSchedule(db, shop.id, { history: true });
+    await resetDemoSchedule(db, shop.id, "history");
 
     expect(
       (await db.select().from(orders).where(eq(orders.shopId, shop.id))).length,
@@ -143,7 +143,7 @@ describe("resetDemoSchedule", () => {
     });
     expect(outcome.ok).toBe(true);
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     const after = await upcomingTripsWithCounts(db, shop.id);
     expect(after.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity }))).toEqual(
@@ -177,7 +177,7 @@ describe("resetDemoSchedule", () => {
     expect(outcome.ok).toBe(true);
 
     // Must not throw on the trips/people deletes, and must fully restore.
-    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+    await expect(resetDemoSchedule(db, shop.id, "lean")).resolves.toBeUndefined();
 
     const after = await upcomingTripsWithCounts(db, shop.id);
     expect(after.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity }))).toEqual(
@@ -216,7 +216,7 @@ describe("resetDemoSchedule", () => {
     });
 
     // Resolving rather than throwing is the whole assertion.
-    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+    await expect(resetDemoSchedule(db, shop.id, "lean")).resolves.toBeUndefined();
 
     expect(
       await db.select().from(capabilities).where(eq(capabilities.shopId, shop.id)),
@@ -243,7 +243,7 @@ describe("resetDemoSchedule", () => {
     });
 
     // Resolving rather than throwing is the whole assertion.
-    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+    await expect(resetDemoSchedule(db, shop.id, "lean")).resolves.toBeUndefined();
 
     expect(
       await db.select().from(capabilities).where(eq(capabilities.shopId, shop.id)),
@@ -252,7 +252,7 @@ describe("resetDemoSchedule", () => {
 
   it("restores shop-level fixtures a test can mutate directly, not just schedule/booking data (Codex finding)", async () => {
     // e2e/visual.spec.ts sets a review link via the Settings UI and connects
-    // a Stripe account via /api/test/seed-stripe-account, purely to render
+    // a Stripe account via the `stripeAccount` fact, purely to render
     // those surfaces for a screenshot — neither is schedule/booking data, so
     // without this both leaked across specs in the same worker, making
     // assertions like "the review link starts absent" order-dependent.
@@ -280,7 +280,7 @@ describe("resetDemoSchedule", () => {
       detailsSubmitted: true,
     });
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     const [resetShop] = await db.select().from(shops).where(eq(shops.id, shop.id));
     expect(resetShop?.reviewUrl).toBeNull();
@@ -313,7 +313,7 @@ describe("resetDemoSchedule", () => {
       })
       .where(eq(boats.shopId, shop.id));
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     const fleet = await db.select().from(boats).where(eq(boats.shopId, shop.id));
     expect(fleet.length).toBeGreaterThan(0);
@@ -351,7 +351,7 @@ describe("resetDemoSchedule", () => {
     });
     expect(edited.template.version).toBe(seededHistory.length + 1);
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     const after = await getCurrentWaiverTemplate(db, shop.id);
     expect(after?.version).toBe(seededHistory.length);
@@ -399,7 +399,7 @@ describe("resetDemoSchedule", () => {
     );
     expect(minted.ok).toBe(true);
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     const after = await getShopPromoByCode(db, shop.id, "REEF10");
     expect(after?.status).toBe("active");
@@ -429,7 +429,7 @@ describe("resetDemoSchedule", () => {
     });
     expect(invite.ok).toBe(true);
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     const after = await listStaff(db, shop.id);
     expect(after.map((s) => s.person.fullName).sort()).toEqual(
@@ -465,7 +465,7 @@ describe("resetDemoSchedule", () => {
     });
 
     // No FK violation here is the real assertion — tips must go before bookings.
-    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+    await expect(resetDemoSchedule(db, shop.id, "lean")).resolves.toBeUndefined();
     expect((await tipsOf(db, shop.id)).length).toBe(0);
   });
 
@@ -493,7 +493,7 @@ describe("resetDemoSchedule", () => {
     });
     expect(issued).not.toBeNull();
 
-    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+    await expect(resetDemoSchedule(db, shop.id, "lean")).resolves.toBeUndefined();
 
     const after = await upcomingTripsWithCounts(db, shop.id);
     expect(after.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity }))).toEqual(
@@ -549,7 +549,7 @@ describe("resetDemoSchedule", () => {
       bookingId: outcome.bookingId,
     });
 
-    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+    await expect(resetDemoSchedule(db, shop.id, "lean")).resolves.toBeUndefined();
 
     const after = await upcomingTripsWithCounts(db, shop.id);
     expect(after.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity }))).toEqual(
@@ -614,7 +614,7 @@ describe("resetDemoSchedule", () => {
       expiresAt: new Date("2099-01-01T00:00:00.000Z"),
     });
 
-    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+    await expect(resetDemoSchedule(db, shop.id, "lean")).resolves.toBeUndefined();
 
     const after = await upcomingTripsWithCounts(db, shop.id);
     expect(after.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity }))).toEqual(
@@ -637,7 +637,7 @@ describe("resetDemoSchedule", () => {
     const staffBefore = await listStaff(db, shop.id);
     const accountsBefore = await db.select().from(userAccounts);
 
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     const staffAfter = await listStaff(db, shop.id);
     const accountsAfter = await db.select().from(userAccounts);
@@ -649,7 +649,7 @@ describe("resetDemoSchedule", () => {
 
   it("leaves no orphaned bookings, customers, or roles after reset", async () => {
     const { db, shop } = ctx;
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, "lean");
 
     // Every remaining booking points at a live trip and person (no dangling rows).
     const roster = await db
@@ -714,7 +714,7 @@ describe("seedIfEmpty (CR-010)", () => {
 describe("seeded addresses", () => {
   it("read like a person's to staff, and deliver to the SES mailbox simulator, never to a domain the provider refuses", async () => {
     const { db, shop } = ctx;
-    await resetDemoSchedule(db, shop.id, { history: true });
+    await resetDemoSchedule(db, shop.id, "history");
 
     const staffIds = new Set(
       (

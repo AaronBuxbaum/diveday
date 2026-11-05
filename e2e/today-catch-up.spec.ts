@@ -17,21 +17,21 @@ test.describe("with a seeded staff session", () => {
   });
 });
 
-test("Today remembers Got it after reload", async ({ page, privateShop, request }) => {
-  const seeded = await request.post(
-    `/api/test/seed-today-catch-up?shop=${encodeURIComponent(privateShop.slug)}`,
-  );
-  expect(seeded.status()).toBe(200);
-  const fixture = (await seeded.json()) as { personName: string; tripTitle: string };
+test.describe("Today's catch-up on a shop of its own", () => {
+  test.use({ privateShopFacts: ["todayCatchUp"] });
 
-  await page.goto(`/shop/${privateShop.slug}`);
-  const strip = page.getByRole("region", { name: /Since / });
-  await expect(strip).toBeVisible();
-  await expect(strip).toContainText(fixture.personName);
-  await expect(strip).toContainText(fixture.tripTitle);
-  await strip.getByRole("button", { name: "Got it" }).click();
-  await expect(strip).toHaveCount(0);
+  test("Today remembers Got it after reload", async ({ page, privateShop }) => {
+    const fixture = privateShop.values.todayCatchUp as { personName: string; tripTitle: string };
 
-  await page.reload();
-  await expect(page.getByRole("region", { name: /Since / })).toHaveCount(0);
+    await page.goto(`/shop/${privateShop.slug}`);
+    const strip = page.getByRole("region", { name: /Since / });
+    await expect(strip).toBeVisible();
+    await expect(strip).toContainText(fixture.personName);
+    await expect(strip).toContainText(fixture.tripTitle);
+    await strip.getByRole("button", { name: "Got it" }).click();
+    await expect(strip).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByRole("region", { name: /Since / })).toHaveCount(0);
+  });
 });

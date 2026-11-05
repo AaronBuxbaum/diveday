@@ -1,8 +1,10 @@
 import { and, count, eq, gt, isNull } from "drizzle-orm";
+import { parseCharterQuote } from "@/lib/charter-quote";
 import { nowDate } from "@/lib/clock";
 import {
   foldInterestReplyForText,
   INTEREST_REPLY_DAILY_CAP,
+  INTEREST_REPLY_MAX,
   interestReplyProblem,
   interestReplyRoute,
   normalizeInterestReply,
@@ -10,6 +12,7 @@ import {
 import { log } from "@/lib/log";
 import {
   type CourtesyProvider,
+  charterQuoteLine,
   interestReplySubject,
   interestReplyText,
   type NotificationProvider,
@@ -18,6 +21,7 @@ import {
   sendCourtesyMessage,
   smsProviderFromEnvironment,
 } from "@/lib/notifications";
+import { canPersonQuoteCharter } from "./authz";
 import type { AppDb } from "./client";
 import { notificationProviderForDb, sendNotification } from "./notifications";
 import { interestReplies, interests, people, shops } from "./schema";
@@ -44,7 +48,13 @@ export type InterestReplyRefusal =
   /** The request has had its day's replies (`INTEREST_REPLY_DAILY_CAP`), sent or not. */
   | "capped"
   /** The email this reply would be refuses its own schema; a retry changes nothing. */
-  | "cannot_be_sent";
+  | "cannot_be_sent"
+  /** A quote on a request that did not ask for the whole boat. */
+  | "quote_not_a_charter"
+  /** A quote that is not a whole, positive amount the shop could charge. */
+  | "bad_quote"
+  /** A whole-boat price from a staffer who may not set prices (`canQuoteCharter`). */
+  | "quote_not_allowed";
 
 export type InterestReplyResult =
   | { status: "sent"; channel: "email" | "sms" | "whatsapp"; replyId: string }
@@ -91,23 +101,32 @@ export async function sendInterestReply(
     body: string;
     /** The staffer sending it; the caller has resolved them from the session. */
     sentByPersonId: string;
+    /**
+     * A private charter's quote for the whole boat, as the staffer typed it in
+     * the shop's major unit (loop 5, row 11). Parsed here, in the currency this
+     * writer reads, stores and sends it in, never one the caller names. Blank
+     * is no quote.
+     */
+    quote?: string | null;
     now?: Date;
   },
   providers: InterestReplyProviders = {},
 ): Promise<InterestReplyResult> {
   const problem = interestReplyProblem(input.body);
   if (problem) return { status: "refused", reason: problem };
-  const body = normalizeInterestReply(input.body);
+  const typed = normalizeInterestReply(input.body);
 
   const [row] = await db
     .select({
       email: interests.email,
       phone: interests.phone,
       closedAt: interests.closedAt,
+      charter: interests.charter,
       personLocale: people.locale,
       shopName: shops.name,
       shopLocale: shops.defaultLocale,
       shopCountry: shops.addressCountry,
+      shopCurrency: shops.currency,
     })
     .from(interests)
     .innerJoin(shops, eq(shops.id, interests.shopId))
@@ -129,8 +148,23 @@ export async function sendInterestReply(
     .limit(1);
   if (!row) return { status: "refused", reason: "not_found" };
   if (row.closedAt) return { status: "refused", reason: "not_open" };
+  const quote = parseCharterQuote(input.quote ?? "", row.shopCurrency);
+  if (!quote.ok) return { status: "refused", reason: "bad_quote" };
+  const quoteCents = quote.cents;
+  if (quoteCents !== null && !row.charter)
+    return { status: "refused", reason: "quote_not_a_charter" };
+  if (quoteCents !== null && !(await canPersonQuoteCharter(db, input.shopId, input.sentByPersonId)))
+    return { status: "refused", reason: "quote_not_allowed" };
   const route = interestReplyRoute({ email: row.email, phone: row.phone }, row.shopCountry);
   if (!route) return { status: "refused", reason: "no_route" };
+  // The message as it goes, quote line included, is what the bound is on
+  // (security review, layer 3, M1): checked before anything is claimed or sent.
+  const locale = recipientLocale(row.personLocale, row.shopLocale);
+  const body =
+    quoteCents === null
+      ? typed
+      : `${charterQuoteLine(locale, quoteCents, row.shopCurrency)}\n\n${typed}`;
+  if (body.length > INTEREST_REPLY_MAX) return { status: "refused", reason: "too_long" };
 
   const now = input.now ?? nowDate();
   // Every attempt counts: a provider that timed out may still have delivered.
@@ -164,7 +198,6 @@ export async function sendInterestReply(
       .set({ closedAt: null, closedAs: null })
       .where(and(scope, eq(interests.closedAs, "replied"), eq(interests.closedAt, now)));
 
-  const locale = recipientLocale(row.personLocale, row.shopLocale);
   const replyId = crypto.randomUUID();
   let channel: "email" | "sms" | "whatsapp";
   let delivery: Delivery;
@@ -239,7 +272,21 @@ export async function sendInterestReply(
     sendErrorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,
     sentAt: now,
   });
-  if (delivery.status === "sent") return { status: "sent", channel, replyId };
+  if (delivery.status === "sent") {
+    // The quote is the shop's word only once the diver has it.
+    if (quoteCents !== null) {
+      await db
+        .update(interests)
+        .set({
+          charterQuoteCents: quoteCents,
+          charterQuoteCurrency: row.shopCurrency,
+          charterQuotedAt: now,
+          charterQuotedByPersonId: input.sentByPersonId,
+        })
+        .where(scope);
+    }
+    return { status: "sent", channel, replyId };
+  }
   // Ids and codes only: the address and the words stay on the row.
   log("requests.reply_send_failed", "warn", {
     shopId: input.shopId,

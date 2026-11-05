@@ -27,16 +27,26 @@ import { at, dateAt, nextCreatedAt } from "./seed-clock";
  * morning where the work has not been done yet — which is the point of showing
  * it.
  */
-export async function seedFrontDesk(
+type FrontDeskInputs = {
+  cast: Cast<{ id: string; fullName: string }>;
+  tripRows: { id: string; title: string }[];
+  bookingRows: { id: string; tripId: string; personId: string }[];
+};
+
+const wreckIdOf = (tripRows: FrontDeskInputs["tripRows"]) =>
+  new Map(tripRows.map((trip) => [trip.title, trip.id])).get("Wreck Trip — Spiegel Grove");
+
+/**
+ * The working week's lists: the last-minute list, the wait list on the sold-out
+ * charter, its deal, a checkout left pending. Part of the `history` set, so a
+ * lean shop has no lists to read.
+ */
+export async function seedFrontDeskLists(
   db: DbExecutor,
   shopId: string,
-  cast: Cast<{ id: string; fullName: string }>,
-  tripRows: { id: string; title: string }[],
-  bookingRows: { id: string; tripId: string; personId: string }[],
-  includeHistoryData: boolean,
+  { cast, tripRows, bookingRows }: FrontDeskInputs,
 ): Promise<void> {
-  const tripByTitle = new Map(tripRows.map((trip) => [trip.title, trip.id]));
-  const wreckId = tripByTitle.get("Wreck Trip — Spiegel Grove");
+  const wreckId = wreckIdOf(tripRows);
 
   // Keep the export useful on a fresh demo: these are the small operational
   // records that otherwise tend to remain empty because they are created by
@@ -44,7 +54,7 @@ export async function seedFrontDesk(
   const listPeople = [9, 10, 11, 12, 43, 45, 47, 49, 51]
     .map((index) => cast.slot(index))
     .filter((person) => person !== undefined);
-  if (includeHistoryData && listPeople.length > 0) {
+  if (listPeople.length > 0) {
     await db
       .insert(interests)
       .values(
@@ -65,7 +75,7 @@ export async function seedFrontDesk(
   }
 
   // The sold-out charter is where a wait-list earns its keep.
-  if (includeHistoryData && wreckId) {
+  if (wreckId) {
     const waiting = [cast.amara, cast.felix, cast.hana];
     if (waiting.length > 0) {
       await db.insert(interests).values(
@@ -164,6 +174,17 @@ export async function seedFrontDesk(
         .onConflictDoNothing();
     }
   }
+}
+
+/**
+ * The confirmations that went out on the charter, which every shape carries.
+ */
+export async function seedFrontDesk(
+  db: DbExecutor,
+  shopId: string,
+  { tripRows, bookingRows }: Omit<FrontDeskInputs, "cast">,
+): Promise<void> {
+  const wreckId = wreckIdOf(tripRows);
 
   // Orders are deliberately absent. An order belongs to a Stripe account the
   // shop connected itself, and fabricating one here would show the settings

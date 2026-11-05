@@ -41,6 +41,8 @@ const replyForm = z.object({
   // The words are checked by `sendInterestReply` (empty, too long), which
   // answers with a code; refusing here would say less.
   body: single(z.string()),
+  // A private charter's whole-boat quote, in the shop's major unit; blank is none.
+  quote: single(z.string()).optional(),
 });
 
 /**
@@ -54,6 +56,8 @@ export type RequestReplyNotice =
   | "reply-failed"
   | "reply-refused"
   | "reply-capped"
+  | "reply-bad-quote"
+  | "reply-quote-not-allowed"
   | "reply-send-limit";
 
 /**
@@ -83,6 +87,7 @@ export async function replyToRequestAction(shopSlug: string, formData: FormData)
     shopId: shop.id,
     interestId: parsed.data.requestId,
     body: parsed.data.body,
+    quote: parsed.data.quote ?? null,
     sentByPersonId: session.user.personId,
     now: nowDate(),
   });
@@ -95,7 +100,11 @@ export async function replyToRequestAction(shopSlug: string, formData: FormData)
           ? "reply-closed"
           : result.reason === "capped"
             ? "reply-capped"
-            : "reply-refused";
+            : result.reason === "bad_quote"
+              ? "reply-bad-quote"
+              : result.reason === "quote_not_allowed"
+                ? "reply-quote-not-allowed"
+                : "reply-refused";
   const row = notice !== "reply-sent" && notice !== "reply-closed";
   revalidateAndRedirect(
     back,

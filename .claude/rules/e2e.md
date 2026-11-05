@@ -58,7 +58,7 @@ red run. Each rule names what enforces it; the reasoning and the incidents are i
   ([testing.md](../../docs/engineering/testing.md#what-each-layer-is-for)).
 - **Bound the page, not the capture**: a huge screenshot means the page needs a pager, never a
   `?filter=` in the spec.
-- **A trouble state is photographed through a named fact** (`src/db/facts/index.ts`, applied by `/api/test/seed-trouble-states?facts=…`),
+- **A trouble state is photographed through a named fact** (`src/db/facts/index.ts`, applied by `POST /api/test/shop`),
   never seeded into the demo shop.
 - **Every route has a spec and a capture**, derived from the path literals in `e2e/`, or a hand
   entry in `scripts/route-coverage.json` (click-reached coverage, or a written `exempt` reason):

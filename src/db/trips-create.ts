@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { maxPlannedDives } from "@/lib/trip-dive-limits";
 import type { AppTransaction, DbExecutor } from "./client";
-import type { Course } from "./schema";
+import type { Course, TripRequirement } from "./schema";
 import {
   boats,
   courses,
@@ -209,7 +209,50 @@ export type TripInstanceParams = {
   lensId?: string | null;
   /** A practice departure (ADR 20261012-rehearsal-departures). Never part of a series. */
   isRehearsal?: boolean;
+  /**
+   * The requirement row a copy carries from its source (a duplicate, a series
+   * roll), whether its level is the default or chosen included, so a level a
+   * person saved stays chosen and a saved gate is not lost (issue #3872;
+   * both domain reviews of #3909). Ignored on a course session, whose level
+   * is the course's.
+   */
+  requirement?: CopiedRequirement | null;
 };
+
+/** The columns of `trip_requirements` a copied departure takes from its source. */
+export type CopiedRequirement = Pick<
+  TripRequirement,
+  | "requiresWaiver"
+  | "minimumCertificationLevel"
+  | "minimumCertificationIsDefault"
+  | "requiredSpecialties"
+  | "requiresNitrox"
+  | "requiresPayment"
+>;
+
+/** The columns a copy reads, for a reader that joins them onto its own select. */
+export const copiedRequirementColumns = {
+  requiresWaiver: tripRequirements.requiresWaiver,
+  minimumCertificationLevel: tripRequirements.minimumCertificationLevel,
+  minimumCertificationIsDefault: tripRequirements.minimumCertificationIsDefault,
+  requiredSpecialties: tripRequirements.requiredSpecialties,
+  requiresNitrox: tripRequirements.requiresNitrox,
+  requiresPayment: tripRequirements.requiresPayment,
+};
+
+/** The source's requirement row as a copy carries it, or null when it has none. */
+export async function copiedRequirement(
+  tx: AppTransaction,
+  shopId: string,
+  tripId: string,
+): Promise<CopiedRequirement | null> {
+  const [row] = await tx
+    .select(copiedRequirementColumns)
+    .from(tripRequirements)
+    .where(and(eq(tripRequirements.shopId, shopId), eq(tripRequirements.tripId, tripId)))
+    .limit(1);
+  return row ?? null;
+}
 
 /** One departure through {@link insertTripInstances}. */
 export async function insertTripInstance(tx: AppTransaction, params: TripInstanceParams) {
@@ -343,22 +386,29 @@ export async function insertTripInstances(tx: AppTransaction, list: TripInstance
       ),
     );
   await tx.insert(tripRequirements).values(
-    planned.map(({ id, params }) => ({
-      tripId: id,
-      shopId: params.shopId,
-      // Every trip starts waiver-gated; staff can lift it per trip, but nothing
-      // in the catalog schedules an unsigned session by default.
-      requiresWaiver: true,
-      // A course session inherits its catalog baseline verbatim, including a
-      // deliberate null: uncertified students are the whole point of Discover
-      // Scuba and Open Water. `??` cannot tell "no course" from "a course open to
-      // uncertified divers", and collapsing the two put an Open Water gate on
-      // every entry-level class — which staff then clear by blanking the trip's
-      // requirements, taking the waiver gate down with it.
-      minimumCertificationLevel: params.course
-        ? params.course.minimumCertificationLevel
-        : "open_water",
-    })),
+    planned.map(({ id, params }) =>
+      !params.course && params.requirement
+        ? { tripId: id, shopId: params.shopId, ...params.requirement }
+        : {
+            tripId: id,
+            shopId: params.shopId,
+            // Every trip starts waiver-gated; staff can lift it per trip, but nothing
+            // in the catalog schedules an unsigned session by default.
+            requiresWaiver: true,
+            // A course session inherits its catalog baseline verbatim, including a
+            // deliberate null: uncertified students are the whole point of Discover
+            // Scuba and Open Water. `??` cannot tell "no course" from "a course open to
+            // uncertified divers", and collapsing the two put an Open Water gate on
+            // every entry-level class — which staff then clear by blanking the trip's
+            // requirements, taking the waiver gate down with it.
+            minimumCertificationLevel: params.course
+              ? params.course.minimumCertificationLevel
+              : "open_water",
+            // Nobody chose that Open Water: a training mark may lower it as it
+            // lowers a site's level, until a person changes the level (issue #3872).
+            minimumCertificationIsDefault: !params.course,
+          },
+    ),
   );
   return created;
 }

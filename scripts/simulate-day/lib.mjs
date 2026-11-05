@@ -24,7 +24,7 @@ export const RECAP_FLOOR_MS = 4 * HOUR_MS;
  * reads as over once every departure of the shop day is home with the standing
  * one-hour late-arrival buffer; a second hour keeps the simulation clear of
  * that boundary rather than sitting on it (the same margin
- * `/api/test/seed-evening` takes, for the same reason).
+ * `evening` fact on `/api/test/shop` takes, for the same reason).
  */
 export const EVENING_AFTER_MS = 2 * HOUR_MS;
 

@@ -43,7 +43,7 @@ import { recordSelfDeclaredCards } from "./self-declared-cards";
  * seeded before it moves, and neither joiner is booked on anything, so no head
  * count opens and no roster changes.
  *
- * **Rides the history flag**, exactly like the last-minute list these two join
+ * **In the `history` set**, exactly like the last-minute list these two join
  * (`seed-front-desk.ts`). Not decoration: an entry on that list is what makes
  * Today raise a `last_minute_fill` row for an under-booked departure, so seeding
  * one into the lean unit-test template — or into a freshly minted demo shop,
@@ -96,12 +96,7 @@ const JOINERS = [
   },
 ] as const;
 
-export async function seedSelfDeclaredJoiners(
-  db: DbExecutor,
-  shopId: string,
-  includeHistoryData: boolean,
-): Promise<void> {
-  if (!includeHistoryData) return;
+export async function seedSelfDeclaredJoiners(db: DbExecutor, shopId: string): Promise<void> {
   const availableUntil = dateAt(AVAILABLE_UNTIL_DAYS);
 
   // Sequential, never `Promise.all`: this can be handed a transaction, and a

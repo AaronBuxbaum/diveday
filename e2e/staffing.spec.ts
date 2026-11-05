@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow, openTripFromBoard, seededTripId } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 /**
  * The staffing week (`/shop/[shopSlug]/staffing`): people down the side, the
@@ -404,14 +405,11 @@ test.describe("approving a divemaster onto an intro session over its ratio", () 
     staffStorageState,
   }) => {
     test.setTimeout(60_000);
-    const seeded = await request.post(
-      "/api/test/seed-trouble-states?facts=troublePanels,introOverRatio",
-    );
-    expect(seeded.ok()).toBe(true);
-    const { introOverRatio } = (await seeded.json()) as {
+    const seeded = await seedFacts(request, ["troublePanels", "introOverRatio"]);
+    const { introOverRatio } = seeded as {
       introOverRatio?: { tripId: string; title: string; asker: string; date: string };
     };
-    if (!introOverRatio) throw new Error("seed-trouble-states found no intro session to crowd");
+    if (!introOverRatio) throw new Error("the fact found no intro session to crowd");
     const { title, asker, date } = introOverRatio;
     // The week the session sits in, whichever week the frozen clock is in.
     const sessionWeek = `${STAFFING}?week=${date}`;

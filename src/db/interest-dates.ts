@@ -57,6 +57,11 @@ export type DateInterestRow = {
   /** Null while the interest is open (third UX review, item 13). */
   closedAt: Date | null;
   closedAs: DateRequestOutcome | null;
+  /** A private charter (loop 5, row 11), and the quote sent for it, if any. */
+  charter: boolean;
+  charterQuoteCents: number | null;
+  charterQuoteCurrency: string | null;
+  charterQuotedAt: Date | null;
 };
 
 const dateInterestColumns = {
@@ -78,6 +83,10 @@ const dateInterestColumns = {
   askedAt: interests.askedAt,
   closedAt: interests.closedAt,
   closedAs: interests.closedAs,
+  charter: interests.charter,
+  charterQuoteCents: interests.charterQuoteCents,
+  charterQuoteCurrency: interests.charterQuoteCurrency,
+  charterQuotedAt: interests.charterQuotedAt,
 };
 
 /** A date interest is only ever closed `booked`, `done` or `replied`; `unsubscribed` is an anytime interest's. */

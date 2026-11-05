@@ -74,7 +74,7 @@ const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
 /** The demo shop's reef departure, with one diver readiness will clear. */
 async function readyDiverAtTheDock(db: AppDb) {
-  await seedDemo(db);
+  await seedDemo(db, "history");
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
@@ -173,7 +173,7 @@ describePostgres("the counter's mark and the crew's tap, racing for one booking"
  * exactly the one the dock would refuse a diver-side boarding on.
  */
 async function crewMemberWithASeat(db: AppDb) {
-  await seedDemo(db);
+  await seedDemo(db, "history");
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
@@ -291,7 +291,7 @@ describePostgres("the counter's mark and the crew's tap, racing for a staffer's 
 const MINUTE_MS = 60_000;
 
 async function firstSeatOnTheReef(db: AppDb) {
-  await seedDemo(db);
+  await seedDemo(db, "history");
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));

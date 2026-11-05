@@ -76,7 +76,7 @@ Staff review covered 73 route templates and inspected 125 pages from 67 unique P
 | `/shop/[shopSlug]/trips/[id]/manifest` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/trips/[id]/prep` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]` | Seeded or disposable PDF reviewed before final changes |
-| `/shop/[shopSlug]/trips/[id]/print` | Seeded or disposable PDF reviewed before final changes |
+| `/shop/[shopSlug]/trips/[id]?print=1` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/trips/[id]/print/medical-alerts` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/waivers` | Prior PDF reviewed |
 

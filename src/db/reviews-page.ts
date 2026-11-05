@@ -1,4 +1,4 @@
-import { canPersonManageShopSettings } from "./authz";
+import { canPersonManageShopSettings, canPersonReplyToReviews } from "./authz";
 import type { AppDb } from "./client";
 import { listOpenRecapPulses, type OpenRecapPulse } from "./recap-pulses";
 import {
@@ -30,6 +30,7 @@ export async function getReviewsPage(
   },
 ) {
   const { narrow, page, monthStart, canReadPulses } = options;
+  const withCrewThanks = await canPersonReplyToReviews(db, shopId, personId);
   const [
     manageSettings,
     waitingPage,
@@ -40,8 +41,13 @@ export async function getReviewsPage(
     openPulses,
   ] = await Promise.all([
     canPersonManageShopSettings(db, shopId, personId),
-    listShopReviewsForStaff(db, shopId, { scope: "waiting", limit: MAX_BULK_PUBLISH, narrow }),
-    listShopReviewsForStaff(db, shopId, { page, scope: "moderated", narrow }),
+    listShopReviewsForStaff(db, shopId, {
+      scope: "waiting",
+      limit: MAX_BULK_PUBLISH,
+      narrow,
+      withCrewThanks,
+    }),
+    listShopReviewsForStaff(db, shopId, { page, scope: "moderated", narrow, withCrewThanks }),
     getShopReviewAggregate(db, shopId),
     getShopReviewAggregate(db, shopId, { since: monthStart }),
     countStaffReviewGroups(db, shopId, narrow),

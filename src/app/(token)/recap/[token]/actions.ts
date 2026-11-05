@@ -21,7 +21,13 @@ import { parseReviewRating } from "@/lib/reviews";
 import { uploadRecapPhotos } from "./photo-upload";
 
 /** A review: the rating is narrowed by `parseReviewRating`, the comment by the writer. */
-const reviewForm = z.object({ rating: z.string().optional(), comment: z.string().default("") });
+const reviewForm = z.object({
+  rating: z.string().optional(),
+  comment: z.string().default(""),
+  // The optional thanks to one crew member (loop 5, row 6); the writer checks the person.
+  crewThanksPerson: z.string().default(""),
+  crewThanks: z.string().default(""),
+});
 /** A pulse's note; its categories are read with `getAll` below. */
 const pulseNoteForm = z.object({ note: z.string().default("") });
 
@@ -211,6 +217,7 @@ export async function submitReviewAction(token: string, formData: FormData) {
     bookingId,
     rating,
     comment: review.data.comment,
+    crewThanks: { crewPersonId: review.data.crewThanksPerson, text: review.data.crewThanks },
   }).catch(() => null);
   // A no-show/cancelled booking gets its own truthful notice — "pick a
   // rating and try again" is a lie when the real problem is there was no

@@ -1,6 +1,13 @@
 "use client";
 
-import { type Key, type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type Key,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { motionMs } from "@/lib/motion";
 
 // Matches the `.toast-dismiss` keyframe duration in globals.css. Kept as a
@@ -8,6 +15,25 @@ import { motionMs } from "@/lib/motion";
 // only shortens the animation to ~0ms — it doesn't skip it — and we want one
 // unmount path that works identically either way.
 const EXIT_DURATION_MS = motionMs("base");
+
+/** How far a sideways drag must travel (px) before letting go sends the toast away. */
+export const SWIPE_AWAY_DISTANCE_PX = 72;
+/** A shorter flick still counts when it is quick: this far (px) inside this long (ms). */
+const SWIPE_AWAY_FLICK_PX = 32;
+const SWIPE_AWAY_FLICK_MS = 250;
+
+/**
+ * Whether a sideways drag of `dx` px that lasted `ms` sends a toast away: a
+ * long drag, or a short quick flick. Sideways only; the caller has already
+ * decided the drag was mostly horizontal.
+ */
+export function swipeSendsAway(dx: number, ms: number): boolean {
+  const distance = Math.abs(dx);
+  return (
+    distance >= SWIPE_AWAY_DISTANCE_PX ||
+    (distance >= SWIPE_AWAY_FLICK_PX && ms <= SWIPE_AWAY_FLICK_MS)
+  );
+}
 
 /**
  * **The one toast**: pinned above the foot of the screen (and the phone's tab
@@ -23,6 +49,7 @@ export function ToastShell({
   pausable = false,
   placement = "fixed",
   className,
+  onSwipeAway,
   children,
 }: {
   autoDismissMs: number | null;
@@ -31,9 +58,20 @@ export function ToastShell({
   placement?: "fixed" | "inline";
   /** The box's own layout and inset; the frame, fill and shadow are shared. */
   className: string;
+  /**
+   * Swipe to dismiss (loop 5, row 15): a sideways drag past
+   * {@link SWIPE_AWAY_DISTANCE_PX}, or a quick flick, calls this and nothing
+   * else. It only ever puts the toast away; whatever the toast offers (an
+   * Undo) is not touched, so the reversal's window is the same as after the
+   * Dismiss button.
+   */
+  onSwipeAway?: () => void;
   children: ReactNode;
 }) {
   const [visible, setVisible] = useState(true);
+  const [dragX, setDragX] = useState(0);
+  const dragRef = useRef<{ x: number; y: number; at: number; sideways: boolean } | null>(null);
+  const justSwiped = useRef(false);
   const [dismissing, setDismissing] = useState(false);
 
   // Pending auto-dismiss timer, or null while paused (hover/focus) or once
@@ -78,17 +116,76 @@ export function ToastShell({
     timerRef.current = setTimeout(() => setDismissing(true), remainingMsRef.current);
   }
 
+  function dragStart(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!onSwipeAway || (event.pointerType === "mouse" && event.button !== 0)) return;
+    dragRef.current = { x: event.clientX, y: event.clientY, at: Date.now(), sideways: false };
+  }
+
+  function dragMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const start = dragRef.current;
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (!start.sideways) {
+      if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return;
+      start.sideways = true;
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    }
+    setDragX(dx);
+  }
+
+  function dragEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    const start = dragRef.current;
+    dragRef.current = null;
+    if (!start?.sideways) return;
+    const dx = event.clientX - start.x;
+    setDragX(0);
+    if (swipeSendsAway(dx, Date.now() - start.at)) {
+      // The release of a swipe that began on a button must not press it.
+      justSwiped.current = true;
+      setTimeout(() => {
+        justSwiped.current = false;
+      }, 0);
+      onSwipeAway?.();
+    }
+  }
+
   if (!visible) return null;
   const toast = (
     <div
       role="status"
+      onPointerDown={onSwipeAway ? dragStart : undefined}
+      onPointerMove={onSwipeAway ? dragMove : undefined}
+      onPointerUp={onSwipeAway ? dragEnd : undefined}
+      onPointerCancel={
+        onSwipeAway
+          ? () => {
+              dragRef.current = null;
+              setDragX(0);
+            }
+          : undefined
+      }
+      onClickCapture={(event) => {
+        if (justSwiped.current) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }}
+      style={
+        dragX !== 0
+          ? {
+              transform: `translateX(${dragX}px)`,
+              opacity: 1 - Math.min(Math.abs(dragX) / 160, 0.6),
+            }
+          : undefined
+      }
       onMouseEnter={pausable ? pause : undefined}
       onMouseLeave={pausable ? resume : undefined}
       onFocusCapture={pausable ? pause : undefined}
       onBlurCapture={pausable ? resume : undefined}
       className={`${className} rounded-inset border border-border bg-surface shadow-2xl ${
-        dismissing ? "toast-dismiss" : "rise-in"
-      }`}
+        onSwipeAway ? "touch-pan-y " : ""
+      }${dismissing ? "toast-dismiss" : "rise-in"}`}
     >
       {children}
     </div>

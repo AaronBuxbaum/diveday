@@ -231,6 +231,13 @@ export type RecapPageData = {
     crew: string[];
   };
   diverName: string;
+  /**
+   * The departure's crew as the review's "thank someone" menu offers them
+   * (loop 5, row 6): id and the name the recap already prints under Crew. The
+   * id only names who a thanks is for; the writer re-checks the person is on
+   * this departure's crew, so a crafted post names no one else.
+   */
+  crewChoices: Array<{ id: string; name: string }>;
   sites: RecapSite[];
   /**
    * Where the day went against where it meant to go, or **null** when it went
@@ -1045,6 +1052,7 @@ async function loadRecapPageData(
       crew,
     },
     diverName: row.diverName,
+    crewChoices: crewMap.get(row.tripId) ?? [],
     sites,
     diveRecord,
     flySafe,

@@ -1,5 +1,6 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openCounterFor, openDiverFileGroup, openRosterRow, walkInFormPath } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 for (const width of [390, 1280]) {
   test.describe(`consistent controls at ${width}px`, () => {
@@ -68,11 +69,8 @@ for (const width of [390, 1280]) {
       page,
       request,
     }) => {
-      const seeded = await request.post(
-        "/api/test/seed-trouble-states?facts=troublePanels,mixedBoat",
-      );
-      expect(seeded.ok()).toBe(true);
-      const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
+      const seeded = await seedFacts(request, ["troublePanels", "mixedBoat"]);
+      const { mixedBoat } = seeded as { mixedBoat?: { tripId: string } };
       if (!mixedBoat) throw new Error("The mixed departure is missing");
       await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}/manifest`);
       const strip = page.getByRole("region", { name: /Since you looked at/ });

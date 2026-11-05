@@ -40,7 +40,7 @@ export const DB_TEST_TIMEOUT_MS = 60_000;
  * of it. `src/db/**` is the bulk, and it is a path test so it holds even when a
  * file reaches the fixture through a local helper. The second rule closes the
  * gap this docblock used to name as acceptable: **a db-backed test that lives
- * beside its feature.** `src/app/api/test/seed-evening/route.test.ts` hydrates
+ * beside its feature.** `src/app/api/test/shop/evening.test.ts` hydrates
  * six times and is not under `src/db`, so it kept the 20s ceiling and timed out
  * on a contended runner — inside `seededShopContext()` on a test's first line,
  * the identical signature #1306 recorded.

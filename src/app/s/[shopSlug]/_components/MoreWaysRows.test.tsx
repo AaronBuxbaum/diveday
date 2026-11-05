@@ -5,7 +5,11 @@ import { diverTranslator } from "@/i18n/messages";
 import { MoreWaysRows } from "./MoreWaysRows";
 
 vi.mock("@/app/actions/inquiry", () => ({ submitInquiryAction: async () => {} }));
-vi.mock("@/components/DateRequestForm", () => ({ DateRequestForm: () => <li>date-request</li> }));
+vi.mock("@/components/DateRequestForm", () => ({
+  DateRequestForm: ({ offerCharter }: { offerCharter?: boolean }) => (
+    <li>{offerCharter ? "date-request-charter" : "date-request"}</li>
+  ),
+}));
 vi.mock("./LastMinuteListForm", () => ({
   LastMinuteListForm: ({ waitlistOn }: { waitlistOn: boolean }) => (
     <li>{waitlistOn ? "deal-list" : "deal-list-no-wait-list"}</li>
@@ -17,7 +21,13 @@ const t = diverTranslator("en-US");
 
 afterEach(cleanup);
 
-const ALL_ON = { dateRequestsEnabled: true, lastMinuteListEnabled: true, waitlistEnabled: true };
+const ALL_ON = {
+  dateRequestsEnabled: true,
+  lastMinuteListEnabled: true,
+  waitlistEnabled: true,
+  privateChartersEnabled: true,
+  hasBoatDiving: true,
+};
 
 function show(
   over: Partial<React.ComponentProps<typeof MoreWaysRows>> = {},
@@ -37,8 +47,21 @@ function show(
 }
 
 describe("MoreWaysRows", () => {
-  it("offers the date request, the deal list and the booking finder, in that order", () => {
+  // Loop 5, row 11: a private charter is asked on the same form, by a shop
+  // that runs boats and keeps the switch on.
+  it("offers a private charter only to a boat shop that keeps charters on", () => {
     show();
+    expect(screen.getByText("date-request-charter")).toBeTruthy();
+    cleanup();
+    show({}, { privateChartersEnabled: false });
+    expect(screen.getByText("date-request")).toBeTruthy();
+    cleanup();
+    show({}, { hasBoatDiving: false });
+    expect(screen.getByText("date-request")).toBeTruthy();
+  });
+
+  it("offers the date request, the deal list and the booking finder, in that order", () => {
+    show({}, { privateChartersEnabled: false });
     const text = document.body.textContent ?? "";
     expect(text.indexOf("date-request")).toBeLessThan(text.indexOf("deal-list"));
     expect(text.indexOf("deal-list")).toBeLessThan(text.indexOf("find-booking"));

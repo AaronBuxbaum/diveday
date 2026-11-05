@@ -47,7 +47,7 @@ import {
   MonthPayouts,
   QuietMonth,
 } from "./_components/MonthMoneyDetail";
-import { LeadTimes, readMonthOwner, WeatherLine } from "./_components/MonthOwnerLines";
+import { LeadTimes, OwnerLines, readMonthOwner } from "./_components/MonthOwnerLines";
 import { monthFigureBasis, monthFigureList } from "./_components/month-figure-list";
 import { MonthReportActions } from "./_components/ReportExportMenu";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
@@ -408,7 +408,7 @@ export default async function ReportsPage({
             counterTaxIncludedCents={moneyDetail.counterTaxIncludedCents}
             {...{ t, money }}
           />
-          <WeatherLine weather={owner.weather} t={t} money={money} />
+          <OwnerLines owner={owner} t={t} money={money} />
 
           {report.importedFinancialRecordCount > 0 ? (
             <section aria-label={t("reports.importedHistory.sectionLabel")} className="mt-6">
