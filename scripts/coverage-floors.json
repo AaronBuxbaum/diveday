@@ -51,6 +51,13 @@
       "files": {
         "src/db/manifests.ts": "89.1 -> 88.88"
       }
+    },
+    {
+      "why": "Roll call by meeting day (#2557): manifests.ts and roll-call-alerts.ts now fold marks per meeting day, and the single-day path skips the later-day branches (an earlier day's missing diver held past the cut, a claim compared to a later day's end). Those branches are tested where the fold lives, in src/lib/roll-call-days.test.ts and the two-Saturday suites.",
+      "files": {
+        "src/db/manifests.ts": "88.88 -> 87.91",
+        "src/db/roll-call-alerts.ts": "90.47 -> 89.02"
+      }
     }
   ],
   "src/db/aboard-at-sea.ts": 94.82,
@@ -72,7 +79,7 @@
   "src/db/facts/party-waiver-capacity-state.ts": 50.0,
   "src/db/guardian-erasure.ts": 95.65,
   "src/db/manifest-events.ts": 75.92,
-  "src/db/manifests.ts": 88.88,
+  "src/db/manifests.ts": 87.91,
   "src/db/medical-alerts.ts": 93.65,
   "src/db/nitrox.ts": 83.6,
   "src/db/offline-manifest-snapshots.ts": 70,
@@ -83,8 +90,8 @@
   "src/db/readiness-link-rescue.ts": 74.07,
   "src/db/readiness.ts": 86.17,
   "src/db/refunds.ts": 84.26,
-  "src/db/roll-call-alerts.ts": 90.47,
-  "src/db/roll-call-gaps.ts": 80.97,
+  "src/db/roll-call-alerts.ts": 89.02,
+  "src/db/roll-call-gaps.ts": 83.72,
   "src/db/roll-call-history.ts": 50,
   "src/db/roll-call-order.ts": 100.0,
   "src/db/roll-call-subject.ts": 93.75,
@@ -110,7 +117,7 @@
   "src/db/waivers-templates.ts": 78.43,
   "src/db/waivers-trip-status.ts": 50,
   "src/db/waivers.ts": 100,
-  "src/features/today/today-roll-call-rows.ts": 80,
+  "src/features/today/today-roll-call-rows.ts": 81.48,
   "src/lib/anonymization.ts": 100,
   "src/lib/assists/cert-scan.ts": 85.1,
   "src/lib/assists/waiver-draft.ts": 100,
@@ -143,7 +150,7 @@
   "src/lib/readiness.ts": 100.0,
   "src/lib/requirement.ts": 91.66,
   "src/lib/roll-call-alerts.ts": 100,
-  "src/lib/roll-call-days.ts": 85,
+  "src/lib/roll-call-days.ts": 90,
   "src/lib/roll-call-gaps.ts": 100,
   "src/lib/roll-call-population.ts": 100,
   "src/lib/roll-call-readiness.ts": 100,
