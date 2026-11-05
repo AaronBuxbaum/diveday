@@ -1,11 +1,7 @@
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
-function run(command, args, timeoutMs, env) {
-  const result = runBounded(command, args, {
-    stdio: "inherit",
-    timeoutMs,
-    ...(env ? { env: { ...process.env, ...env } } : {}),
-  });
+function run(command, args, timeoutMs) {
+  const result = runBounded(command, args, { stdio: "inherit", timeoutMs });
 
   if (result.error) throw result.error;
   if (result.status !== 0) {
@@ -13,26 +9,10 @@ function run(command, args, timeoutMs, env) {
   }
 }
 
-// Keep the production refusal gate without retaining Next's compiled application
-// beside the TypeScript 7 checker on Vercel's 8 GB builder. Generate the current
-// route types first, then run both TypeScript projects in a separate process.
-// next.config.ts skips only that overlapping in-build pass on Vercel; local
-// `pnpm build` still checks. Run before any production migration so a type error
-// cannot leave the schema ahead of the code that would have used it.
-if (process.env.VERCEL === "1") {
-  run("pnpm", ["exec", "next", "typegen"], SUBPROCESS_TIMEOUTS.build);
-  // TypeScript 7's checker peaks near 7.7 GB uncapped, and the 8 GB builder
-  // SIGKILLed it (exit 137, 2026-11-05). One checker and a Go memory limit hold
-  // the peak near 4 GB; `pnpm typecheck` in CI and locally stays uncapped.
-  const lean = { GOMEMLIMIT: "1GiB" };
-  run("pnpm", ["exec", "tsc", "--noEmit", "--checkers", "1"], SUBPROCESS_TIMEOUTS.build, lean);
-  run(
-    "pnpm",
-    ["exec", "tsc", "--noEmit", "--checkers", "1", "-p", "src/worker"],
-    SUBPROCESS_TIMEOUTS.build,
-    lean,
-  );
-}
+// No typecheck here. TypeScript 7's checker peaks near 7.7 GB, and Vercel's 8 GB
+// builder SIGKILLed it (exit 137, 2026-11-05). Types are gated by CI on every
+// commit, and the deploy gate (below) builds only commits whose CI is green;
+// next.config.ts sets `ignoreBuildErrors` on Vercel for the same reason.
 
 // VERCEL_ENV is available only when Vercel's System Environment Variables are enabled.
 // Keep previews read-only: schema changes apply only to the production deployment of main.

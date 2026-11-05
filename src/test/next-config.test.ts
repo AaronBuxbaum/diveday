@@ -212,10 +212,9 @@ describe("next.config.ts outputFileTracingExcludes", () => {
 });
 
 /**
- * The Vercel build keeps the refusal gate decided in #1377, but runs it after
- * route type generation as a separate preflight so it does not overlap the
- * compiled app's retained memory. Local `pnpm build` and CI keep their current
- * in-build/typecheck behavior.
+ * Vercel runs no typecheck (the 8 GB builder cannot hold the checker); CI
+ * gates types. Local `pnpm build` and CI keep their current in-build/typecheck
+ * behavior.
  */
 describe("next.config.ts typescript", () => {
   it("keeps Next's in-build type check for local builds", async () => {
@@ -226,7 +225,7 @@ describe("next.config.ts typescript", () => {
     ).toBeUndefined();
   });
 
-  it("lets Vercel use the separate typecheck preflight", async () => {
+  it("skips Next's in-build type check on Vercel", async () => {
     const config = await loadConfig({ ...CONFIGURED, VERCEL: "1" });
     expect(config.typescript?.ignoreBuildErrors).toBe(true);
   });
