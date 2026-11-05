@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * Receipt-shaped skeleton for one order (design principle 1) — line items,
@@ -18,22 +19,22 @@ import { SectionCard } from "@/components/ui/card";
 export default function OrderLoading() {
   return (
     <StaffPage width="reading">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader
           pending
           titleWidth="w-64 max-w-full"
           description
           descriptionWidth="w-48"
-          meta={<div className="h-5 w-80 max-w-full rounded bg-surface-sunken" />}
+          meta={<Bone className="h-5 w-80 max-w-full" />}
         />
         <SectionCard as="div" pending padding="lg">
           <div className="flex flex-col gap-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-12 rounded-inset bg-surface-sunken" />
+              <Bone shape="inset" key={i} className="h-12" />
             ))}
           </div>
         </SectionCard>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

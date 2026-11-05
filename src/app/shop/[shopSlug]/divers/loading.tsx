@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * Body-shaped skeleton for the Divers roster (design principle 1): the chip
@@ -28,30 +29,30 @@ export default function DiversLoading() {
     // shop home's. A narrower skeleton made every navigation into the
     // roster slide sideways when the real page landed.
     <StaffPage width="full">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending titleWidth="w-56" description={false} eyebrow={false} />
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex w-full items-center gap-2 sm:w-auto">
-            <div className="h-12 min-w-0 flex-1 rounded-lg bg-surface-sunken sm:w-80 sm:flex-none" />
-            <div className="h-12 w-32 shrink-0 rounded-lg bg-surface-sunken" />
+            <Bone shape="control" className="h-12 min-w-0 flex-1 sm:w-80 sm:flex-none" />
+            <Bone shape="control" className="h-12 w-32 shrink-0" />
           </div>
-          <div className="my-0.5 h-4 w-24 rounded bg-surface-sunken" />
+          <Bone className="my-0.5 h-4 w-24" />
         </div>
         <div className="mt-3 flex gap-2 max-sm:overflow-hidden sm:flex-wrap">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-11 w-28 shrink-0 rounded-full bg-surface-sunken" />
+            <Bone shape="pill" key={i} className="h-11 w-28 shrink-0" />
           ))}
         </div>
         <div className="mt-8 flex flex-col gap-7">
           {[0, 1].map((group) => (
             <div key={group}>
-              <div className="h-4 w-6 rounded bg-surface-sunken" />
+              <Bone className="h-4 w-6" />
               <div className="mt-2">
                 {[0, 1, 2].map((row) => (
                   <div key={row} className={`flex min-h-13 items-center py-2 ${ledgerRowBoxClass}`}>
                     <div className="flex h-12 min-w-0 flex-1 flex-col justify-center gap-2 sm:h-6">
-                      <div className="h-4 w-44 max-w-[60%] rounded bg-surface-sunken" />
-                      <div className="h-3 w-32 max-w-[45%] rounded bg-surface-sunken sm:hidden" />
+                      <Bone className="h-4 w-44 max-w-[60%]" />
+                      <Bone className="h-3 w-32 max-w-[45%] sm:hidden" />
                     </div>
                   </div>
                 ))}
@@ -59,7 +60,7 @@ export default function DiversLoading() {
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

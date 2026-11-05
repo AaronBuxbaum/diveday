@@ -1,4 +1,5 @@
 import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
+import { Bone, Pending } from "@/components/ui/pending";
 import { ReadyThreadBodySkeleton } from "./_components/ReadyThreadBodySkeleton";
 
 /**
@@ -15,13 +16,13 @@ import { ReadyThreadBodySkeleton } from "./_components/ReadyThreadBodySkeleton";
 export default function ReadyLoading() {
   return (
     <main className={THREAD_MEASURE_CLASS}>
-      <div className="animate-pulse">
-        <div className="h-4 w-32 rounded bg-surface-sunken" />
-        <div className="mt-2 h-9 w-72 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-3 h-5 w-56 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-2 h-5 w-64 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-3 h-4 w-full max-w-sm rounded bg-surface-sunken" />
-      </div>
+      <Pending>
+        <Bone className="h-4 w-32" />
+        <Bone className="mt-2 h-9 w-72 max-w-full" />
+        <Bone className="mt-3 h-5 w-56 max-w-full" />
+        <Bone className="mt-2 h-5 w-64 max-w-full" />
+        <Bone className="mt-3 h-4 w-full max-w-sm" />
+      </Pending>
       <ReadyThreadBodySkeleton />
     </main>
   );

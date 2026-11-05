@@ -2,6 +2,7 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * The staff subtree's page frame (design principle 1) — the shop home's own
@@ -23,7 +24,7 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
 export default function ShopSurfaceLoading() {
   return (
     <StaffPage width="full">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending titleWidth="w-56" description descriptionWidth="w-72 max-w-full" />
         {/* Three station-shaped panels (ADR 20260904-reef-all-the-way-down,
             slice 16a): the shell the spine paints into, so the skeleton and
@@ -32,27 +33,27 @@ export default function ShopSurfaceLoading() {
           {[0, 1, 2].map((i) => (
             <SectionCard key={i} as="div" pending padding="lg">
               <div className="flex items-start gap-5">
-                <div className="h-15 w-21 shrink-0 rounded-inset bg-surface-sunken" />
+                <Bone shape="inset" className="h-15 w-21 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <div className="h-6 w-24 rounded bg-surface-sunken" />
-                  <div className="mt-2 h-5 w-64 max-w-full rounded bg-surface-sunken" />
-                  <div className="mt-2 h-4 w-80 max-w-full rounded bg-surface-sunken" />
+                  <Bone className="h-6 w-24" />
+                  <Bone className="mt-2 h-5 w-64 max-w-full" />
+                  <Bone className="mt-2 h-4 w-80 max-w-full" />
                 </div>
-                <div className="size-19 shrink-0 rounded-full bg-surface-sunken" />
+                <Bone shape="pill" className="size-19 shrink-0" />
               </div>
               <div className="mt-5 flex flex-col">
                 {[0, 1, 2].map((row) => (
                   <div key={row} className={`flex items-center gap-3 py-4 ${ledgerRowBoxClass}`}>
-                    <div className="size-5 rounded-full bg-surface-sunken" />
-                    <div className="h-4 w-20 rounded bg-surface-sunken" />
-                    <div className="h-4 flex-1 rounded bg-surface-sunken" />
+                    <Bone shape="pill" className="size-5" />
+                    <Bone className="h-4 w-20" />
+                    <Bone className="h-4 flex-1" />
                   </div>
                 ))}
               </div>
             </SectionCard>
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

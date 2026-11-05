@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { EntryDone, EntryShell, entryMainClass } from "@/components/account/EntryShell";
-import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
@@ -280,7 +279,7 @@ describe("the doors keep max-w-md", () => {
    * files were found exactly that way. The frame is shared constants, so the
    * drift is structurally impossible — this holds the wiring.
    */
-  it("hands EntryShellSkeleton the identical frame", () => {
+  it("hands the pending EntryShell the identical frame", () => {
     for (const width of ["sm", "lg"] as const) {
       const shell = render(
         <EntryShell width={width} title="Sign in">
@@ -289,7 +288,7 @@ describe("the doors keep max-w-md", () => {
       );
       const shellMain = shell.container.querySelector("main")?.className;
       shell.unmount();
-      const skeleton = render(<EntryShellSkeleton width={width} fields={["email"]} />);
+      const skeleton = render(<EntryShell pending width={width} fields={["email"]} />);
       expect(skeleton.container.querySelector("main")?.className).toBe(shellMain);
       skeleton.unmount();
     }

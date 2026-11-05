@@ -1,4 +1,4 @@
-import { SectionTabs, SectionTabsSkeleton } from "@/components/SectionTabs";
+import { SectionTabs } from "@/components/SectionTabs";
 
 /**
  * **Schedule is one place with two views** — ADR 20261001-logbook: the week of
@@ -54,5 +54,5 @@ export function ScheduleViews({
 
 /** The two views as both views' `loading.tsx` draws them. */
 export function ScheduleViewsSkeleton() {
-  return <SectionTabsSkeleton count={SCHEDULE_VIEWS.length} />;
+  return <SectionTabs pending count={SCHEDULE_VIEWS.length} />;
 }

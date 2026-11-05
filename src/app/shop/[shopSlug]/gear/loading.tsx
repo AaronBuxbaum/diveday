@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { LedgerRow } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
@@ -37,7 +38,7 @@ const CHIP_STUBS = [
 export default function GearLoading() {
   return (
     <StaffPage width="full">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending eyebrow={false} description={false} actions />
         <StaffSectionTabsSkeleton section="gear" />
         {/* The chip band, laid out as `FilterChips` lays it: one line that
@@ -46,7 +47,7 @@ export default function GearLoading() {
             gap the real page opens with, and doubling it is a layout jump. */}
         <div className="flex gap-2 max-sm:overflow-hidden sm:flex-wrap">
           {CHIP_STUBS.map(([chip, width]) => (
-            <div key={chip} className={`h-11 ${width} shrink-0 rounded-full bg-surface-sunken`} />
+            <Bone shape="pill" key={chip} className={`h-11 ${width} shrink-0`} />
           ))}
         </div>
         <div className="mt-6 space-y-8">
@@ -58,7 +59,7 @@ export default function GearLoading() {
           ].map(({ rows, act }, group) => (
             <div key={rows}>
               {/* The group label, at `GroupLabel`'s own height. */}
-              <div className="h-4 w-32 rounded bg-surface-sunken" />
+              <Bone className="h-4 w-32" />
               <div className="mt-2">
                 {Array.from({ length: rows }, (_unused, row) => (
                   <LedgerRow
@@ -69,12 +70,12 @@ export default function GearLoading() {
                     // biome-ignore lint/suspicious/noArrayIndexKey: see above
                     key={`${group}-${row}`}
                     trailing={
-                      act ? <span className="block h-11 w-32 rounded-lg bg-surface-sunken" /> : null
+                      act ? <Bone as="span" shape="control" className="block h-11 w-32" /> : null
                     }
                   >
                     <span className="flex w-full max-w-lg items-center gap-3">
-                      <span className="block h-5 w-20 shrink-0 rounded bg-surface-sunken" />
-                      <span className="block h-4 w-40 max-w-full rounded bg-surface-sunken" />
+                      <Bone as="span" className="block h-5 w-20 shrink-0" />
+                      <Bone as="span" className="block h-4 w-40 max-w-full" />
                     </span>
                   </LedgerRow>
                 ))}
@@ -82,7 +83,7 @@ export default function GearLoading() {
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

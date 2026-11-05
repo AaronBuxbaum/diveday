@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
@@ -18,13 +19,13 @@ function MessageRows({ count }: { count: number }) {
           key={index}
           className={`flex items-center gap-3 py-3 ${ledgerRowBoxClass}`}
         >
-          <div className="h-4 w-20 shrink-0 rounded bg-surface-sunken" />
-          <div className="h-4 w-32 shrink-0 rounded bg-surface-sunken max-md:hidden" />
+          <Bone className="h-4 w-20 shrink-0" />
+          <Bone className="h-4 w-32 shrink-0 max-md:hidden" />
           <div className="flex-1 space-y-2">
-            <div className="h-4 w-2/3 rounded bg-surface-sunken" />
-            <div className="h-3 w-1/2 rounded bg-surface-sunken" />
+            <Bone className="h-4 w-2/3" />
+            <Bone className="h-3 w-1/2" />
           </div>
-          <div className="h-4 w-24 shrink-0 rounded bg-surface-sunken" />
+          <Bone className="h-4 w-24 shrink-0" />
         </div>
       ))}
     </div>
@@ -34,18 +35,18 @@ function MessageRows({ count }: { count: number }) {
 export default function InboxLoading() {
   return (
     <StaffPage width="full">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="inbox" />
         <div className="space-y-10">
           {[3, 2].map((rows) => (
             <div key={rows}>
-              <div className="h-4 w-40 max-w-full rounded bg-surface-sunken" />
+              <Bone className="h-4 w-40 max-w-full" />
               <MessageRows count={rows} />
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

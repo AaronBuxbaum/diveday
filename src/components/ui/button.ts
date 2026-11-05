@@ -96,6 +96,9 @@ const flushLinkBase =
  */
 const SHAPES = { rounded: "rounded-lg", pill: "rounded-full" } as const;
 
+/** The two corners, for a pending face that stands in for a control (`ui/pending.tsx`). */
+export const BUTTON_RADIUS = SHAPES;
+
 export type ButtonShape = keyof typeof SHAPES;
 
 /** The sizes that are a circle by definition, whatever `shape` says: the roll-call mark. */

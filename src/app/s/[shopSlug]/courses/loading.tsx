@@ -1,5 +1,6 @@
 import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 import { ShopPageHeader, SkeletonLineBars } from "@/components/ShopPageHeader";
+import { Bone, Pending } from "@/components/ui/pending";
 import { segmentedTrackClass } from "@/components/ui/segmented";
 
 /**
@@ -32,7 +33,7 @@ import { segmentedTrackClass } from "@/components/ui/segmented";
 export default function PublicCoursesLoading() {
   return (
     <main className={SHOP_MAIN_CLASS}>
-      <div className="animate-pulse">
+      <Pending>
         {/* No eyebrow bar: the page's header has none ("COURSES" over
             "Courses" was cut), and the default drew one anyway. The
             description is a desktop caption, absent on a phone. */}
@@ -51,14 +52,14 @@ export default function PublicCoursesLoading() {
           ))}
         </div>
         <div className="mt-8">
-          <div className="h-4 w-24 rounded bg-surface-sunken" />
+          <Bone className="h-4 w-24" />
           <div className="-mx-2 mt-2 divide-y divide-border border-y border-border">
             {[0, 1, 2, 3].map((row) => (
               <div key={row} className="flex gap-4 px-2 py-5">
-                <div className="size-16 shrink-0 rounded-inset bg-surface-sunken" />
+                <Bone shape="inset" className="size-16 shrink-0" />
                 <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:justify-between sm:gap-6">
                   <div className="min-w-0 flex-1">
-                    <div className="h-7 w-56 max-w-full rounded bg-surface-sunken" />
+                    <Bone className="h-7 w-56 max-w-full" />
                     <div className="mt-1">
                       <SkeletonLineBars
                         lines={{ base: 2, sm: 1 }}
@@ -66,15 +67,15 @@ export default function PublicCoursesLoading() {
                         width="w-full max-w-md"
                       />
                     </div>
-                    <div className="mt-2 h-5 w-44 max-w-full rounded bg-surface-sunken" />
+                    <Bone className="mt-2 h-5 w-44 max-w-full" />
                   </div>
-                  <div className="h-6 w-16 shrink-0 rounded bg-surface-sunken" />
+                  <Bone className="h-6 w-16 shrink-0" />
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }

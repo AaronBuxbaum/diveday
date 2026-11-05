@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
@@ -19,12 +20,12 @@ function RequestRows({ count }: { count: number }) {
           key={index}
           className={`flex items-center gap-4 py-3 ${ledgerRowBoxClass}`}
         >
-          <div className="h-4 w-32 shrink-0 rounded bg-surface-sunken" />
+          <Bone className="h-4 w-32 shrink-0" />
           <div className="flex-1 space-y-2">
-            <div className="h-4 w-2/3 rounded bg-surface-sunken" />
-            <div className="h-3 w-1/2 rounded bg-surface-sunken" />
+            <Bone className="h-4 w-2/3" />
+            <Bone className="h-3 w-1/2" />
           </div>
-          <div className="h-4 w-24 shrink-0 rounded bg-surface-sunken" />
+          <Bone className="h-4 w-24 shrink-0" />
         </div>
       ))}
     </div>
@@ -34,20 +35,20 @@ function RequestRows({ count }: { count: number }) {
 export default function RequestsLoading() {
   return (
     <StaffPage width="reading">
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="inbox" />
         <div className="space-y-10">
           {[2, 1].map((rows) => (
             <div key={rows}>
               {/* `RequestDayGroup`'s label alone: the day's act is on each row. */}
-              <div className="h-4 w-56 max-w-full rounded bg-surface-sunken" />
-              <div className="mt-2 h-4 w-72 max-w-full rounded bg-surface-sunken" />
+              <Bone className="h-4 w-56 max-w-full" />
+              <Bone className="mt-2 h-4 w-72 max-w-full" />
               <RequestRows count={rows} />
             </div>
           ))}
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

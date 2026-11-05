@@ -1,11 +1,12 @@
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /** The title, compact day plan and booking decision, then supporting detail. */
 export default function TripDetailLoading() {
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
-      <div className="animate-pulse lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
+      <Pending className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
         {/* No bar for a back link: the page dropped its standalone "← All
             trips" when the header's eyebrow became the way back, and the bar
             that outlived it put every line below 16px low (pixel-craft class
@@ -18,18 +19,18 @@ export default function TripDetailLoading() {
             description={false}
             meta={
               <>
-                <div className="h-7 w-56 max-w-full rounded bg-surface-sunken" />
-                <div className="mt-4 h-9 w-36 rounded bg-surface-sunken" />
+                <Bone className="h-7 w-56 max-w-full" />
+                <Bone className="mt-4 h-9 w-36" />
               </>
             }
           />
           {/* The hero's Add-to-calendar / Share row, `TripActions`: 16px under
             the header and a 44px target tall, on every page but the embed. */}
           <div className="mt-4 flex h-11 items-center">
-            <div className="h-5 w-64 max-w-full rounded bg-surface-sunken" />
+            <Bone className="h-5 w-64 max-w-full" />
           </div>
         </div>
-        <div className="mt-10 h-28 rounded bg-surface-sunken lg:mt-0 lg:col-start-1 lg:row-start-2" />
+        <Bone className="mt-10 h-28 lg:mt-0 lg:col-start-1 lg:row-start-2" />
         {/* The same right-hand booking column as the loaded page. */}
         <SectionCard
           as="div"
@@ -45,21 +46,21 @@ export default function TripDetailLoading() {
               block as the page draws it. Flat bands on the page background,
               not cards. */}
           <div>
-            <div className="h-7 w-40 rounded-full bg-surface-sunken" />
+            <Bone shape="pill" className="h-7 w-40" />
             <div className="mt-3 grid grid-cols-3 gap-2">
-              <div className="h-24 rounded bg-surface-sunken" />
-              <div className="h-24 rounded bg-surface-sunken" />
-              <div className="h-24 rounded bg-surface-sunken" />
+              <Bone className="h-24" />
+              <Bone className="h-24" />
+              <Bone className="h-24" />
             </div>
-            <div className="mt-4 h-14 rounded bg-surface-sunken" />
+            <Bone className="mt-4 h-14" />
             <div className="pt-4">
-              <div className="h-12 rounded bg-surface-sunken" />
+              <Bone className="h-12" />
             </div>
           </div>
           {/* The two alternates. */}
-          <div className="h-26 rounded bg-surface-sunken" />
+          <Bone className="h-26" />
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }

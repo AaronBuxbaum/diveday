@@ -1,6 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { LedgerRow } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
@@ -28,11 +29,11 @@ function LedgerRows({ count, quote }: { count: number; quote: "h-6" | "h-5" }) {
           pad="lg"
           // biome-ignore lint/suspicious/noArrayIndexKey: static bars, no identity of their own
           key={index}
-          trailing={<div className="h-11 w-28 rounded-lg bg-surface-sunken" />}
+          trailing={<Bone shape="control" className="h-11 w-28" />}
         >
-          <div className="h-6 w-24 rounded bg-surface-sunken" />
-          <div className={`mt-1 ${quote} w-full max-w-md rounded bg-surface-sunken`} />
-          <div className="mt-1 h-4 w-56 max-w-full rounded bg-surface-sunken" />
+          <Bone className="h-6 w-24" />
+          <Bone className={`mt-1 ${quote} w-full max-w-md`} />
+          <Bone className="mt-1 h-4 w-56 max-w-full" />
         </LedgerRow>
       ))}
     </div>
@@ -42,7 +43,7 @@ function LedgerRows({ count, quote }: { count: number; quote: "h-6" | "h-5" }) {
 export default function ReviewsLoading() {
   return (
     <StaffPage width="reading">
-      <div className="animate-pulse">
+      <Pending>
         {/* The aggregate line wraps to two lines at 390px, one at 1280; the
             "View public page" door stacks under it on a phone (K-86). */}
         <ShopPageHeader
@@ -58,15 +59,15 @@ export default function ReviewsLoading() {
         <StaffSectionTabsSkeleton section="inbox" />
         <div className="space-y-10">
           <div>
-            <div className="h-4 w-40 rounded bg-surface-sunken" />
+            <Bone className="h-4 w-40" />
             <LedgerRows count={2} quote="h-6" />
           </div>
           <div>
-            <div className="h-4 w-32 rounded bg-surface-sunken" />
+            <Bone className="h-4 w-32" />
             <LedgerRows count={4} quote="h-5" />
           </div>
         </div>
-      </div>
+      </Pending>
     </StaffPage>
   );
 }

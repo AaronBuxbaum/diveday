@@ -76,15 +76,17 @@ describe("every loading.tsx this repo ships", () => {
         if (entry.isDirectory()) walk(full);
         else if (entry.name === "loading.tsx") {
           const source = readFileSync(full, "utf8");
-          // Skeletons that put animate-pulse directly on `<main>`, whether inlined
-          // or rendered via shared skeleton helpers (LegalDocumentSkeleton, GuideBodySkeleton).
+          // Skeletons that put the pulse directly on `<main>`: `<Pending as="main">`,
+          // `<Pending as={StaffPage}>` (whose element is the `<main>`), or a shared
+          // pending face (`<LegalDocument pending>`, GuideBodySkeleton). A loading file
+          // never spells `animate-pulse` itself; `<Pending>` does (ui/pending.tsx).
           const delegatesToMainSkeleton =
-            source.includes("LegalDocumentSkeleton") || source.includes("GuideBodySkeleton");
+            source.includes("<LegalDocument") || source.includes("GuideBodySkeleton");
           found.push({
             file: path.relative(REPO, full),
             onMain:
-              /<main[^>]*className="[^"]*animate-pulse/.test(source) || delegatesToMainSkeleton,
-            anywhere: source.includes("animate-pulse") || delegatesToMainSkeleton,
+              /<Pending\s+as=(?:"main"|\{StaffPage\})/.test(source) || delegatesToMainSkeleton,
+            anywhere: /<Pending[\s>]/.test(source) || delegatesToMainSkeleton,
           });
         }
       }

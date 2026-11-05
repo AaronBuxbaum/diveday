@@ -1,6 +1,7 @@
-import { SectionTabsSkeleton } from "@/components/SectionTabs";
+import { SectionTabs } from "@/components/SectionTabs";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 import { settingsPaneClass } from "../../_components/settings-pane";
 
 /**
@@ -10,31 +11,31 @@ import { settingsPaneClass } from "../../_components/settings-pane";
 export default function Loading() {
   return (
     <main className={settingsPaneClass()}>
-      <div className="animate-pulse">
+      <Pending>
         <ShopPageHeader pending titleWidth="w-56" description={false} />
-        <SectionTabsSkeleton count={4} />
+        <SectionTabs pending count={4} />
         <div>
-          <div className="h-5 w-28 rounded bg-surface-sunken" />
+          <Bone className="h-5 w-28" />
           <div className="mt-4 space-y-6">
             <SectionCard as="div" pending padding="lg">
-              <div className="h-5 w-44 rounded bg-surface-sunken" />
+              <Bone className="h-5 w-44" />
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {["a", "b", "c", "d"].map((slot) => (
-                  <div key={slot} className="h-10 rounded-lg bg-surface-sunken" />
+                  <Bone shape="control" key={slot} className="h-10" />
                 ))}
               </div>
             </SectionCard>
             <SectionCard as="div" pending padding="lg">
-              <div className="h-5 w-52 rounded bg-surface-sunken" />
+              <Bone className="h-5 w-52" />
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {["a", "b", "c", "d", "e", "f"].map((slot) => (
-                  <div key={slot} className="h-11 rounded-lg bg-surface-sunken" />
+                  <Bone shape="control" key={slot} className="h-11" />
                 ))}
               </div>
             </SectionCard>
           </div>
         </div>
-      </div>
+      </Pending>
     </main>
   );
 }

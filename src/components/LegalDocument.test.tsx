@@ -4,7 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { LegalDocument, LegalDocumentSkeleton, LegalSection, LegalTermList } from "./LegalDocument";
+import { LegalDocument, LegalSection, LegalTermList } from "./LegalDocument";
 import { MARKETING_EYEBROW_CLASS } from "./ui/typography";
 
 afterEach(cleanup);
@@ -121,7 +121,7 @@ describe("the legal document's skeleton", () => {
     cleanup();
 
     const skeleton = columnOf(
-      render(<LegalDocumentSkeleton titleLines={1} introLines={1} sections={SECTIONS} />).container,
+      render(<LegalDocument pending titleLines={1} introLines={1} sections={SECTIONS} />).container,
     );
     const [heading, body] = Array.from(skeleton.sections?.firstElementChild?.children ?? []);
     expect({
@@ -139,7 +139,8 @@ describe("the legal document's skeleton", () => {
 
   it("draws every line one line box tall, with nothing between the lines", () => {
     const { container } = render(
-      <LegalDocumentSkeleton
+      <LegalDocument
+        pending
         titleLines={{ base: 2, sm: 1 }}
         introLines={{ base: 4, sm: 2 }}
         sections={[[{ base: 3, sm: 2 }, { terms: [2, { base: 3, sm: 1 }] }]]}
@@ -157,7 +158,8 @@ describe("the legal document's skeleton", () => {
 
   it("draws a line per line, hiding the ones one side of sm does not wrap to", () => {
     const { container } = render(
-      <LegalDocumentSkeleton
+      <LegalDocument
+        pending
         titleLines={{ base: 2, sm: 1 }}
         introLines={{ base: 4, sm: 2 }}
         sections={[]}
@@ -178,7 +180,7 @@ describe("the legal document's skeleton", () => {
 
   it("paints nothing a reader could act on", () => {
     const { container } = render(
-      <LegalDocumentSkeleton titleLines={1} introLines={1} sections={SECTIONS} />,
+      <LegalDocument pending titleLines={1} introLines={1} sections={SECTIONS} />,
     );
     expect(container.querySelector("main")).toHaveClass("flex-1", "animate-pulse");
     expect(container.querySelectorAll("h1, h2, p, dl, a, button")).toHaveLength(0);

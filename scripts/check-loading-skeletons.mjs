@@ -2,7 +2,6 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
-import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 import { pageRoutes, sourceFiles, withoutComments } from "./source-tree.mjs";
 
 /**
@@ -82,10 +81,12 @@ export function containerWidth(source) {
 
 /**
  * Hand-drawn skeleton literals in a `loading.tsx`: each `bg-surface-sunken` bar and each
- * `animate-pulse` wrapper. A primitive with a resting shape draws its own pending face
- * (`<ShopPageHeader pending>`, `<SectionCard pending>`), so a loading file that types the
- * bar itself is a twin that can drift from the page it stands for (#1857, #2769). Counted
- * per file, comments stripped, and ratcheted: the number may only fall.
+ * `animate-pulse` wrapper. A loading face is the page's own primitives, pending
+ * (ADR 20261104-loading-face-is-the-primitives-pending-face): `<ShopPageHeader pending>`,
+ * `<SectionCard pending>`, `<ShopStat pending>`, and `<Bone>` / `<Pending>` from
+ * `src/components/ui/pending.tsx`, the one file that spells the two literals. A loading
+ * file that types either itself is a twin that can drift from the page it stands for
+ * (#1857, #2769), so the rule is absolute: any count above zero fails. Comments stripped.
  */
 export function skeletonLiteralCount(source) {
   return (withoutComments(source).match(/bg-surface-sunken|animate-pulse/g) ?? []).length;
@@ -150,42 +151,20 @@ async function main() {
 
   const failures = [];
 
-  const literals = await skeletonLiteralCounts();
-  const { counts: allowed, exists } = await readCounts(ROOT, "loading-skeleton-literals");
-  const { write, absorb } = ratchetFlags();
-  if (write || absorb !== null) {
-    process.exit(
-      await bankCounts({
-        root: ROOT,
-        guard: "loading-skeleton-literals",
-        script: "check-loading-skeletons",
-        counts: literals,
-        allowed,
-        exists,
-        note: "Hand-typed bg-surface-sunken / animate-pulse in a loading.tsx, per file. Written by `node scripts/check-loading-skeletons.mjs --write`. This number may only go down: compose the page's own primitives with `pending` instead (issue #2769).",
-        refusal:
-          "The ratchet only turns one way. Use <ShopPageHeader pending> and <SectionCard pending> instead of a hand-drawn bar",
-        absorb,
-        summary: (files, total) => `${files} files, ${total} literals`,
-      }),
+  const literals = Object.entries(await skeletonLiteralCounts());
+  if (literals.length > 0) {
+    failures.push(
+      `Hand-drawn skeleton bars in a loading.tsx:\n${literals
+        .map(([file, count]) => `- ${file}: ${count}`)
+        .join("\n")}
+A loading face is the page's own primitives, pending, so it cannot drift from the page: <ShopPageHeader pending>, <SectionCard pending>, <ShopStat pending>, and <Bone> / <Pending> from src/components/ui/pending.tsx for a line of words and the pulse. Neither bg-surface-sunken nor animate-pulse is spelled in a loading.tsx (ADR 20261104-loading-face-is-the-primitives-pending-face).`,
     );
-  }
-  if (exists) {
-    const grew = Object.entries(literals).filter(([file, count]) => count > (allowed[file] ?? 0));
-    if (grew.length > 0) {
-      failures.push(
-        `Hand-drawn skeleton bars in a loading.tsx:\n${grew
-          .map(([file, count]) => `- ${file}: ${count} (allowed ${allowed[file] ?? 0})`)
-          .join("\n")}
-A primitive with a resting shape draws its own pending face from its own class strings, so the skeleton cannot drift from the page: <ShopPageHeader pending>, <SectionCard pending>. If a file fell below its allowance, bank it with \`node scripts/check-loading-skeletons.mjs --write\`.`,
-      );
-    }
   }
 
   if (missing.length > 0) {
     failures.push(
       `Routes with no sibling loading.tsx:\n${missing.map((page) => `- ${page}`).join("\n")}
-Each of these paints the nearest ancestor loading.tsx instead, which is a picture of a different page. Add a loading.tsx beside the page, shaped like its body and at its width — copy the idiom from a neighbour such as src/app/shop/[shopSlug]/orders/loading.tsx (an animate-pulse wrapper, <ShopPageHeader pending>, <SectionCard pending> shells, never a spinner). A route that genuinely needs none goes in SKELETON_EXEMPT in this script with its reason.`,
+Each of these paints the nearest ancestor loading.tsx instead, which is a picture of a different page. Add a loading.tsx beside the page, shaped like its body and at its width — copy the idiom from a neighbour such as src/app/shop/[shopSlug]/orders/loading.tsx (a <Pending> wrapper, <ShopPageHeader pending>, <SectionCard pending> shells, <Bone> lines, never a spinner). A route that genuinely needs none goes in SKELETON_EXEMPT in this script with its reason.`,
     );
   }
 

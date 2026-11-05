@@ -1,4 +1,4 @@
-import { ShopStatSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
+import { ShopStat, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
@@ -25,7 +25,7 @@ export function PrepBodySkeleton({ className }: { className: string }) {
         </div>
         <div className="mt-3 grid grid-cols-3 gap-3">
           {[0, 1, 2].map((i) => (
-            <ShopStatSkeleton key={i} />
+            <ShopStat key={i} pending />
           ))}
         </div>
       </div>

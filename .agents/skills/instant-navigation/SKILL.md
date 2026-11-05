@@ -15,8 +15,10 @@ rules below are the ones sessions have already gotten wrong, each with the shipp
    waiting on the request (ADR `20260804-instant-navigation`).
 2. **A body-shaped `loading.tsx` in the segment.** That file *is* the `<Suspense>` boundary: it
    is what a client navigation into the segment paints while request-scoped reads stream in.
-   Shape it like the body it stands in for (`animate-pulse` wrapper, `bg-surface-sunken` bars,
-   `border-border bg-surface` cards) — never a spinner. Copy the pattern from a sibling segment.
+   Shape it like the body it stands in for, in the page's own primitives with `pending` (a
+   `<Pending>` wrapper, `<ShopPageHeader pending>`, `<SectionCard pending>` cards, `<Bone>` lines
+   from `src/components/ui/pending.tsx`) — never a spinner, never a typed `bg-surface-sunken` bar.
+   Copy the pattern from a sibling segment.
 3. `next build` enforces this: a route with no explicit `instant = false` above it must produce a
    non-empty static shell or the build fails with `blocking-prerender-dynamic` /
    `blocking-prerender-client-hook`, naming the component. That failure is the feature working —

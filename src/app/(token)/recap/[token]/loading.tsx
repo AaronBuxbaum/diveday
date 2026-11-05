@@ -1,5 +1,6 @@
 import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { SectionCard } from "@/components/ui/card";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * Body-shaped skeleton for `/recap` (design principle 1), shaped like the
@@ -13,39 +14,39 @@ import { SectionCard } from "@/components/ui/card";
 export default function RecapLoading() {
   return (
     <main className={THREAD_MEASURE_CLASS}>
-      <div className="animate-pulse">
+      <Pending>
         {/* The greeting, which is this state's earned moment: one block. */}
         <SectionCard as="div" pending padding="none" className="h-36" />
         {/* The dive record — the only thing on the page that prints. */}
         <SectionCard as="div" pending padding="none" className="mt-8 h-72" />
         {/* The crew's word. */}
-        <div className="mt-10 h-6 w-full max-w-md rounded bg-surface-sunken" />
-        <div className="mt-2 h-5 w-40 rounded bg-surface-sunken" />
+        <Bone className="mt-10 h-6 w-full max-w-md" />
+        <Bone className="mt-2 h-5 w-40" />
         {/* The one ask. */}
         <SectionCard as="div" pending padding="none" className="mt-10 h-64" />
         {/* The private pulse, beside the review and not a card: a heading, a
             line under it, a row of chips and a note (slice 16i). */}
         <div className="mt-10">
-          <div className="h-6 w-48 rounded bg-surface-sunken" />
-          <div className="mt-2 h-5 w-full max-w-sm rounded bg-surface-sunken" />
+          <Bone className="h-6 w-48" />
+          <Bone className="mt-2 h-5 w-full max-w-sm" />
           <div className="mt-4 flex flex-wrap gap-2">
             {[0, 1, 2, 3, 4].map((chip) => (
-              <div key={chip} className="h-11 w-24 rounded-lg bg-surface-sunken" />
+              <Bone shape="control" key={chip} className="h-11 w-24" />
             ))}
           </div>
-          <div className="mt-3 h-20 w-full rounded-lg bg-surface-sunken" />
+          <Bone shape="control" className="mt-3 h-20 w-full" />
         </div>
         {/* The quiet doors: hairline rows on the page background, no card. */}
         <div className="mt-10">
           {[0, 1].map((row) => (
             <div key={row} className="border-t border-border py-4 last:border-b">
-              <div className="h-6 w-40 rounded bg-surface-sunken" />
+              <Bone className="h-6 w-40" />
             </div>
           ))}
         </div>
         {/* One next dive, when the board has one for this diver. */}
         <SectionCard as="div" pending padding="none" className="mt-10 h-40" />
-      </div>
+      </Pending>
     </main>
   );
 }

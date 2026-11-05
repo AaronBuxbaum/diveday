@@ -1,5 +1,6 @@
 import { SkeletonLineBars } from "@/components/ShopPageHeader";
 import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
+import { Bone, Pending } from "@/components/ui/pending";
 
 /**
  * Body-shaped skeleton for /claim (design principle 1) — the token lookup has
@@ -16,14 +17,14 @@ import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 export default function ClaimLoading() {
   return (
     <main className={THREAD_MEASURE_CLASS}>
-      <div className="animate-pulse">
-        <div className="h-4 w-32 rounded bg-surface-sunken" />
+      <Pending>
+        <Bone className="h-4 w-32" />
         <div className="mt-2">
           <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-9" width="w-full max-w-md" />
         </div>
-        <div className="mt-1 h-6 w-64 max-w-full rounded bg-surface-sunken" />
+        <Bone className="mt-1 h-6 w-64 max-w-full" />
         <div className="mt-8 h-64 rounded-panel border border-border bg-surface shadow-bed" />
-      </div>
+      </Pending>
     </main>
   );
 }
