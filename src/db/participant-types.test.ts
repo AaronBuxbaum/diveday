@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { serializeManifests } from "@/lib/offline-manifests";
@@ -31,7 +31,6 @@ import {
   courses,
   gearItems,
   gearReservations,
-  tripDeskEvents,
   tripRequirements,
   trips,
   waiverRecords,
@@ -641,8 +640,8 @@ describe("setBookingParticipantType", () => {
 
     const desk = await db
       .select()
-      .from(tripDeskEvents)
-      .where(and(eq(tripDeskEvents.tripId, trip.id), eq(tripDeskEvents.kind, "now_snorkeling")));
+      .from(activityEvents)
+      .where(sql`trip_id = ${trip.id} and params->>'type' = 'snorkeler'`);
     expect(desk).toHaveLength(1);
     expect(desk[0]?.bookingId).toBe(diver.bookingId);
   });
@@ -894,8 +893,8 @@ describe("a boarding record is not carried into the water", () => {
     expect(await change(db, ids, bookingId, "diver")).toMatchObject({ ok: true, changed: true });
     const desk = await db
       .select()
-      .from(tripDeskEvents)
-      .where(and(eq(tripDeskEvents.tripId, trip.id), eq(tripDeskEvents.kind, "now_diving")));
+      .from(activityEvents)
+      .where(sql`trip_id = ${trip.id} and params->>'type' = 'diver'`);
     expect(desk).toHaveLength(1);
   });
 
@@ -993,8 +992,8 @@ describe("what a type change leaves behind", () => {
     });
     const owed = await db
       .select()
-      .from(tripDeskEvents)
-      .where(and(eq(tripDeskEvents.tripId, trip.id), eq(tripDeskEvents.kind, "balance_owed")));
+      .from(activityEvents)
+      .where(and(eq(activityEvents.tripId, trip.id), eq(activityEvents.code, "desk_balance_owed")));
     expect(owed).toHaveLength(1);
 
     // Cheaper the other way: nothing owed, and nothing said.

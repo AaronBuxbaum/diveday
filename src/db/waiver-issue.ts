@@ -11,7 +11,7 @@ import {
 } from "@/lib/notifications";
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
-import { issueCourseFormsCapability } from "./booking-capabilities";
+import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { getCourseFormsForBooking } from "./course-forms";
 import {
@@ -217,9 +217,10 @@ async function deliverCourseFormsLink(
   // A forms-only link, and the live one when the diver already holds it:
   // never the readiness link, which would also open the diver's whole trip
   // prep to whoever the URL is handed to (security review).
-  const issued = await issueCourseFormsCapability(db, {
+  const issued = await issueBookingCapability(db, {
     shopId,
     bookingId,
+    purpose: "course_forms",
     expectedPersonId: ctx.person.id,
     expectedTripId,
     now: options.now,

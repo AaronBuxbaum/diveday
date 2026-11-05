@@ -62,7 +62,6 @@ describe("publicRouteShape", () => {
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}`)).toEqual(shape);
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/calendar`)).toEqual(shape);
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/arrival-card`)).toEqual(shape);
-    expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/ready`)).toEqual(shape);
   });
 
   it("calls an id that is not a uuid malformed rather than putting it in a query", () => {
@@ -129,7 +128,8 @@ describe("publicRouteShape", () => {
       "courses/open-water/extra",
       "sites/molasses-reef/extra",
       `trips/${TRIP_ID}/nope`,
-      `trips/${TRIP_ID}/ready/extra`,
+      // The exchange route is gone (issue #2711): the confirmation reads its link.
+      `trips/${TRIP_ID}/ready`,
       "a/b/c/d",
     ]) {
       expect(publicRouteShape(`/s/${SHOP}/${path}`), path).toEqual(unrouted);

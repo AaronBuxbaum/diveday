@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   issueBookingCapability,
@@ -9,8 +10,12 @@ import {
 } from "./booking-capabilities";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { emailFreshReadinessLink, planReadinessLinkRescue } from "./readiness-link-rescue";
-import { bookingCapabilities, people } from "./schema";
+import {
+  emailFreshReadinessLink,
+  planReadinessLinkRescue,
+  RESCUE_RESEND_COOLDOWN_MS,
+} from "./readiness-link-rescue";
+import { bookingCapabilities, notificationDeliveries, people } from "./schema";
 import { setTripStatus, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -30,10 +35,24 @@ vi.mock("@/lib/notifications/app-url", () => ({
 }));
 
 const sent = vi.fn();
+const delivery = vi.hoisted(() => ({ status: "sent" as "sent" | "failed" }));
 vi.mock("./notifications", () => ({
-  sendAndRecordNotification: (_db: unknown, notification: unknown) => {
+  // Records the delivery row as the real one does: the rescue's cooldown reads it.
+  sendAndRecordNotification: async (
+    db: AppDb,
+    notification: { shopId: string; bookingId: string },
+  ) => {
     sent(notification);
-    return Promise.resolve({ status: "sent", providerMessageId: "test" });
+    await db.insert(notificationDeliveries).values({
+      shopId: notification.shopId,
+      bookingId: notification.bookingId,
+      kind: "readiness_link",
+      status: delivery.status,
+      attemptedAt: nowDate(),
+    });
+    return delivery.status === "sent"
+      ? { status: "sent", providerMessageId: "test" }
+      : { status: "failed" };
   },
 }));
 
@@ -41,7 +60,10 @@ vi.mock("./notifications", () => ({
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
 
-beforeEach(() => sent.mockClear());
+beforeEach(() => {
+  sent.mockClear();
+  delivery.status = "sent";
+});
 
 async function bookedDiver(db: AppDb, shopId: string, tripId: string, email?: string) {
   const outcome = await createBooking(db, {
@@ -101,17 +123,55 @@ describe("emailFreshReadinessLink", () => {
   });
 
   /**
-   * The guard that stops a *dead* URL driving a delivery on the live one. It
-   * also protects the booking's live-capability cap: issuing retires the oldest
-   * live row past `MAX_LIVE_CAPABILITIES_PER_PURPOSE`, so an unguarded rescue
-   * loop is a way to push a diver's working link out from under them.
+   * A live mailed link may never have reached the diver: a rotation revokes
+   * the link they hold and the send carrying its replacement can bounce
+   * (code security review of #2711, finding 2). So the rescue re-sends that
+   * live link, to the address on file, rather than refusing with nothing sent.
+   * A dead URL still buys only a mail to the owner.
    */
-  it("refuses to reissue while the booking still holds a live link", async () => {
+  it("re-sends the booking's live delivered link instead of refusing", async () => {
+    const { db, shop, bookingId, token } = await bookingWithDeadLink();
+    const live = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+      delivered: true,
+    });
+
+    expect(await emailFreshReadinessLink(db, token)).toBe("sent");
+    const notification = sent.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(String(notification.readinessUrl)).toContain(live?.token ?? "missing");
+  });
+
+  /**
+   * What bounds a dead URL now that a live link no longer refuses: one mail per
+   * booking per cooldown, decided under the booking lock from the delivery
+   * trail, so it holds even when the rate limiter fails open. A send that
+   * failed does not count.
+   */
+  it("mails once per cooldown, and again at once after a failed send", async () => {
+    const { db, token } = await bookingWithDeadLink();
+    delivery.status = "failed";
+    expect(await emailFreshReadinessLink(db, token)).toBe("failed");
+    delivery.status = "sent";
+    expect(await emailFreshReadinessLink(db, token)).toBe("sent");
+    expect(await emailFreshReadinessLink(db, token)).toBe("current_link_live");
+    expect(sent).toHaveBeenCalledTimes(2);
+    const later = new Date(nowDate().getTime() + RESCUE_RESEND_COOLDOWN_MS + 1000);
+    expect(await emailFreshReadinessLink(db, token, later)).toBe("sent");
+  });
+
+  /**
+   * Only the delivered link counts (security review of #2711, finding 1). The
+   * browser's undelivered link is not in the diver's inbox, so a booking whose
+   * mailed link died while that one lived on must still get a fresh mail.
+   */
+  it("mails a fresh link when only the browser's undelivered link is alive", async () => {
     const { db, shop, bookingId, token } = await bookingWithDeadLink();
     await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" });
 
-    expect(await emailFreshReadinessLink(db, token)).toBe("current_link_live");
-    expect(sent).not.toHaveBeenCalled();
+    expect(await emailFreshReadinessLink(db, token)).toBe("sent");
+    expect(sent).toHaveBeenCalledTimes(1);
   });
 
   it("says unavailable for a token that was never ours", async () => {
@@ -161,10 +221,13 @@ describe("emailFreshReadinessLink", () => {
   it("lets the same dead link rescue again once its replacement has died too", async () => {
     const { db, shop, bookingId, token } = await bookingWithDeadLink();
     expect(await emailFreshReadinessLink(db, token)).toBe("sent");
-    expect(await emailFreshReadinessLink(db, token)).toBe("current_link_live");
+    const first = sent.mock.calls[0]?.[0] as Record<string, unknown>;
 
     await revokeBookingCapabilities(db, { shopId: shop.id, bookingId, purpose: "readiness" });
-    expect(await emailFreshReadinessLink(db, token)).toBe("sent");
+    const later = new Date(nowDate().getTime() + RESCUE_RESEND_COOLDOWN_MS + 1000);
+    expect(await emailFreshReadinessLink(db, token, later)).toBe("sent");
+    const second = sent.mock.calls[1]?.[0] as Record<string, unknown>;
+    expect(second.readinessUrl).not.toBe(first.readinessUrl);
   });
 
   /**
@@ -204,8 +267,9 @@ describe("emailFreshReadinessLink", () => {
    * alone, with nothing issued and nothing sent.
    */
   it("decides every refusal before anything is issued or spent", async () => {
-    const { db, shop, bookingId, token } = await bookingWithDeadLink();
-    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" });
+    const { db, token } = await bookingWithDeadLink();
+    expect(await emailFreshReadinessLink(db, token)).toBe("sent");
+    sent.mockClear();
 
     const plan = await planReadinessLinkRescue(db, token);
     expect(plan).toEqual({ ok: false, reason: "current_link_live" });

@@ -43,6 +43,9 @@ export const EXCLUDED_TABLES = [
   // not a column on an existing one.
   "inbound_messages",
   "staff_replies",
+  // A reply to a date request (issue #2555): correspondence, out for the same
+  // reason. The request it answers is on interests.csv, closed as `replied`.
+  "interest_replies",
   // Which way each waiver link was handed over and what happened on that
   // channel. The outcome another system could act on is already on
   // waiver_records.csv (`delivery_status` and the provider columns beside it);
@@ -148,15 +151,9 @@ export const EXCLUDED_TABLES = [
   "integration_events",
   "integration_deliveries",
   "integration_sync_records",
-  // The manifest's shift catch-up (issues #1202, #1187). A same-day handoff
-  // between two people standing in one shop on one morning, kept for thirty
-  // days and read by nobody after the boat is home — operational plumbing, not
-  // a shop record, and the same reasoning as `notification_deliveries`.
-  // Exporting it would also be the one thing #1202's boundary rules out: a
-  // durable, downloadable, per-person account of who did what and when.
-  "trip_desk_events",
-  // Per-staff read state has no meaning without the desk events.
-  // It is not portable to another system.
+  // Per-staff read state for the manifest's shift catch-up (issues #1202,
+  // #1187): it has no meaning without the desk lines, which the export leaves
+  // out of `activity_events.csv` (#2701), and is not portable to another system.
   "trip_read_marks",
   "offline_manifest_snapshot_revisions", // monotone device-snapshot ordering machinery, not a shop record
   "today_read_marks",

@@ -452,6 +452,23 @@ export const waiverRecords = pgTable(
     integrityHash: text("integrity_hash"),
     integrityVersion: integer("integrity_version"),
     /**
+     * **The seal's last verdict, cached** (issue #2562): what
+     * `verifyWaiverIntegrity` said about this row when `integrity_checked_at`
+     * was stamped. True for a seal that matched, false for one that did not
+     * (an edit after signing, or a seal version this build does not know),
+     * and null with `integrity_checked_at` on a row that has no seal to check.
+     *
+     * Written beside every seal (`waiverIntegrityVerdict`) and re-written by
+     * the nightly `/api/cron/waiver-seals` pass, so the signature log's
+     * "Unsealed or changed" view can filter a failed seal in SQL rather than
+     * recomputing every hash to page one list. A cache, never the evidence:
+     * every reader that shows a row's seal still recomputes it, and a row
+     * edited since its last check reads `invalid` there while this column
+     * catches up on the next pass. Outside the seal itself.
+     */
+    integrityValid: boolean("integrity_valid"),
+    integrityCheckedAt: timestamp("integrity_checked_at", { withTimezone: true }),
+    /**
      * Provenance for an imported record (ADR 20260724-import-waiver-acceptance):
      * a free-text label of the prior shop/system the row named, and any
      * source document(s) re-stored through DiveDay's own image pipeline
@@ -604,6 +621,15 @@ export const waiverRecords = pgTable(
     // relationship would render as a co-signature by nobody in particular.
     // The name and email are deliberately outside this rule: erasure strips
     // them and the signature's fact survives (ADR 20260907-guardian-co-signature).
+    // A verdict is one act with two facts: what the check said and when.
+    check(
+      "waiver_records_integrity_verdict_whole",
+      sql`(${table.integrityValid} is null) = (${table.integrityCheckedAt} is null)`,
+    ),
+    // The nightly re-check takes the sealed rows checked longest ago first.
+    index("waiver_records_integrity_checked_idx")
+      .on(table.integrityCheckedAt)
+      .where(sql`${table.integrityHash} is not null and ${table.integrityVersion} is not null`),
     check(
       "waiver_records_guardian_signature_whole",
       sql`(${table.guardianSignedAt} is null) = (${table.guardianConsentedAt} is null)

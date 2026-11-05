@@ -190,7 +190,7 @@ const routes: SeedRoute[] = [
     slug: "seed-today-catch-up",
     query: "?shop=private-fixture",
     // Reaches the database only after the E2E bearer guard. Past that it writes
-    // a desk event and a Today read mark, so a misconfigured deployment must
+    // a desk line and a Today read mark, so a misconfigured deployment must
     // never let a caller add fabricated crew activity to any shop.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();

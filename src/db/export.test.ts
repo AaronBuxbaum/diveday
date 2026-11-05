@@ -161,22 +161,22 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "delivery_provider_status",
     "delivery_provider_status_at",
     "delivery_error",
-    // The physician's evaluation itself (issue #1252), and the diver's own copy
-    // before an answer (`diver_medical_form_url`, issue #2797). The *facts* are
-    // exported; the documents are not, for the reason `token_sealed` is not.
+    // The physician's evaluation itself (issue #1252), and the diver's own copy before an answer
+    // (`diver_medical_form_url`, issue #2797). The *facts* are exported; the documents are not, for
+    // the reason `token_sealed` is not.
     //
-    // **Revisited when the read path landed** (issue #1283), and unchanged. The
-    // app can now fetch these bytes back — through one permission-gated route,
-    // signed as the uploader credential — but the object itself stays private:
-    // the media bucket blocks all public access and `medical-clearances/` has
-    // no CloudFront behaviour. So a URL in a CSV would still point at something
-    // its recipient cannot fetch, and a bundle leaves DiveDay's custody
-    // entirely. A broken link in an export is not better than an absent one,
-    // and the file being retrievable *inside* the product is precisely why it
-    // does not need to travel outside it.
+    // **Revisited when the read path landed** (issue #1283), and unchanged. The app can now fetch
+    // these bytes back — through one permission-gated route, signed as the uploader credential —
+    // but the object itself stays private: the media bucket blocks all public access and
+    // `medical-clearances/` has no CloudFront behaviour. So a URL in a CSV would still point at
+    // something its recipient cannot fetch, and a bundle leaves DiveDay's custody entirely. A
+    // broken link in an export is not better than an absent one, and the file being retrievable
+    // *inside* the product is precisely why it does not need to travel outside it.
     "medical_clearance_document_url",
     "diver_medical_form_url",
     "doctor_unlock_failures", // abuse control on the doctor's page, not part of the record
+    "integrity_valid", // cached seal verdict (#2562); integrity_hash itself is exported
+    "integrity_checked_at", // when that verdict was taken
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
   // money actually moved, and that is the one a reader replays.

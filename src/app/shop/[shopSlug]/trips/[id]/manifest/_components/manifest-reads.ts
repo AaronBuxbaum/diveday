@@ -5,7 +5,6 @@ import { departureVessels } from "@/db/boats";
 import { listTripBuddyTeams, planPartyTeams } from "@/db/buddy-teams";
 import type { AppDb } from "@/db/client";
 import { latestDeckCounts } from "@/db/deck-counts";
-import { listDeskEventsSince } from "@/db/desk-events";
 import { diveIntentTallyForTrip } from "@/db/dive-intent";
 import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
@@ -16,6 +15,7 @@ import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { lastAtSites } from "@/db/site-history";
 import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
+import { listCatchUpSince } from "@/db/trip-read-marks";
 import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
@@ -87,7 +87,7 @@ export async function readManifestPage(
     // #1187). Empty for somebody who has never worked this departure — there is
     // nothing for a catch-up to be "since", and replaying the morning to a
     // first-time reader is the surveillance feed the boundary refuses.
-    listDeskEventsSince(db, shopId, tripId, personId),
+    listCatchUpSince(db, shopId, tripId, personId),
     // Codes and counts, never a row per seat (#1183's boundary).
     diveIntentTallyForTrip(db, shopId, tripId),
     // The newest word the crew tapped; `stageStripProps` reads it by the rule

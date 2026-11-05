@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-16
+- **Amended by:** [20261104-derived-booking-link-tokens](20261104-derived-booking-link-tokens.md) — a send mails the one live link.
 - **Extends:** [20260804-seat-claim-links](20260804-seat-claim-links.md); decision H-20261014-other-days-send-fresh
 
 ## Context
@@ -43,8 +44,7 @@ email on file (H-20261014-other-days-send-fresh).
 ## Consequences
 
 - Any day is reachable from one mailed page, at the cost of a trip to the inbox per day.
-- A fresh capability per tap grows the booking's live set until `MAX_LIVE_CAPABILITIES_PER_PURPOSE`
-  retires the oldest, which is the newest-link-wins behavior the capability table already has.
+- Each tap mails the booking's one live link again (amended 2026-11-04).
 - Someone holding a diver's live link can trigger mail to that diver's own address about their other
   days, bounded by the budgets, and sees those days' titles and dates: the feature, kept within
   one person's record in one shop.

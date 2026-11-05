@@ -13,7 +13,7 @@ const failBooking = vi.hoisted(() => ({ id: null as string | null }));
 
 // Wraps `issueBookingCapability` so a single test can make one *specific*
 // booking's mint throw, to prove the per-booking isolation Finding 2 asked
-// for — everything else (including `hasLiveReadinessCapability` and
+// for — everything else (including `hasLiveDeliveredReadinessLink` and
 // `revokeBookingCapabilities`, which most tests below still use directly)
 // passes through to the real module untouched.
 vi.mock("./booking-capabilities", async (importOriginal) => {
@@ -27,7 +27,7 @@ vi.mock("./booking-capabilities", async (importOriginal) => {
   };
 });
 
-const { hasLiveReadinessCapability, issueBookingCapability, revokeBookingCapabilities } =
+const { hasLiveDeliveredReadinessLink, issueBookingCapability, revokeBookingCapabilities } =
   await import("./booking-capabilities");
 
 /**
@@ -177,7 +177,7 @@ describe("sendFindMyBookingLinks", () => {
     expect(issueBookingCapability).not.toHaveBeenCalled();
     expect(checkRateLimit).not.toHaveBeenCalled();
     expect(
-      await hasLiveReadinessCapability(db, { shopId: rival.id, bookingId: rivalBooking }),
+      await hasLiveDeliveredReadinessLink(db, { shopId: rival.id, bookingId: rivalBooking }),
     ).toBe(false);
 
     // The same address, asked at the shop that holds the booking, is answered.
@@ -306,7 +306,12 @@ describe("sendFindMyBookingLinks", () => {
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     const bookingId = await bookedDiver(db, shop.id, trip.id);
-    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" });
+    await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+      delivered: true,
+    });
 
     await sendFindMyBookingLinks(db, {
       shopId: shop.id,
@@ -316,7 +321,7 @@ describe("sendFindMyBookingLinks", () => {
 
     expect(sent).not.toHaveBeenCalled();
     expect(
-      await hasLiveReadinessCapability(db, { shopId: shop.id, bookingId, now: nowDate() }),
+      await hasLiveDeliveredReadinessLink(db, { shopId: shop.id, bookingId, now: nowDate() }),
     ).toBe(true);
   });
 
@@ -403,7 +408,12 @@ describe("sendFindMyBookingLinks", () => {
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     const bookingId = await bookedDiver(db, shop.id, trip.id);
-    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" });
+    await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+      delivered: true,
+    });
     vi.mocked(checkRateLimit).mockClear();
 
     await sendFindMyBookingLinks(db, {
@@ -457,7 +467,7 @@ describe("sendFindMyBookingLinks", () => {
     const notification = sent.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(notification.bookingId).toBe(okBookingId);
     expect(
-      await hasLiveReadinessCapability(db, {
+      await hasLiveDeliveredReadinessLink(db, {
         shopId: shop.id,
         bookingId: failingBookingId,
         now: nowDate(),

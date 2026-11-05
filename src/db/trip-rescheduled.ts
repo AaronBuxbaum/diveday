@@ -24,7 +24,7 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
-import { issueBookingCapability, revokeIssuedCapabilities } from "./booking-capabilities";
+import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { lastDayStartsAt } from "./departure-notes";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
@@ -638,16 +638,10 @@ async function tellSeatWithinFence(
           delivered: true,
         })
       : null;
-  // The link was minted ahead of the send; when the send did not go nobody
-  // holds it, so it is taken back (#2451).
-  const settle = async (delivery: NotificationDelivery): Promise<"told" | "failed"> => {
-    const queued =
-      delivery.status === "failed" && "retryQueued" in delivery && delivery.retryQueued === true;
-    if (delivery.status !== "sent" && !queued && capability) {
-      await revokeIssuedCapabilities(db, { shopId: shop.id, tokens: [capability.token], now });
-    }
-    return delivery.status === "sent" ? "told" : "failed";
-  };
+  // The link is the booking's one live delivered link (issue #2711): a send
+  // that did not go leaves it as it was, for the next send to carry.
+  const settle = async (delivery: NotificationDelivery): Promise<"told" | "failed"> =>
+    delivery.status === "sent" ? "told" : "failed";
   const readinessUrl = capability
     ? new URL(readinessLinkPath(capability.token), `${channels.origin}/`).toString()
     : undefined;

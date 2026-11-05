@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { DESK_EVENT_KINDS, type DeskEvent, groupCatchUp } from "./desk-events";
+import { CATCH_UP_KINDS, type CatchUpEvent, type CatchUpKind, groupCatchUp } from "./catch-up";
 
 const AT = new Date("2026-07-21T13:30:00.000Z");
 
-function event(kind: DeskEvent["kind"], subjectName: string | null, seq: number): DeskEvent {
+function event(kind: CatchUpKind, subjectName: string | null, seq: number): CatchUpEvent {
   return { kind, subjectName, seq, occurredAt: AT };
 }
 
@@ -29,12 +29,12 @@ describe("groupCatchUp", () => {
     expect(groups.map((group) => group.kind)).toEqual(["arrival", "help_request", "plan_changed"]);
   });
 
-  it("keeps the order DESK_EVENT_KINDS declares, whatever order the rows arrive in", () => {
-    const shuffled = [...DESK_EVENT_KINDS].reverse();
+  it("keeps the order CATCH_UP_KINDS declares, whatever order the rows arrive in", () => {
+    const shuffled = [...CATCH_UP_KINDS].reverse();
     const groups = groupCatchUp(
       shuffled.map((kind, index) => event(kind, `Diver ${index}`, index + 1)),
     );
-    expect(groups.map((group) => group.kind)).toEqual([...DESK_EVENT_KINDS]);
+    expect(groups.map((group) => group.kind)).toEqual([...CATCH_UP_KINDS]);
   });
 
   it("names a diver once inside a kind, in the order they were first seen", () => {

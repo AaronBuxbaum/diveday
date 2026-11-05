@@ -1268,7 +1268,7 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
  * *Got it* — because a strip that reappears is a strip a crew learns to ignore.
  *
  * The third state, "an act that lands *after* Got it comes back", is pinned in
- * `src/db/desk-events.test.ts`: producing one from the browser needs a second
+ * `src/db/trip-read-marks.test.ts`: producing one from the browser needs a second
  * actor, and this spec signs in as one person.
  */
 test("the catch-up strip says what the desk did, and stops once the crew has read it", async ({

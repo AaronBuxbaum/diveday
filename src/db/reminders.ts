@@ -765,144 +765,142 @@ export async function sendDueReminders(
 
   const links = await mintReminderLinks(db, origin, sending, now, whatsAppProviders);
   const sendable = remindersWithIssuedLinks(sending, links, summary);
-  await links.whileSending(db, now, async () => {
-    for (const {
-      row: { booking, person, trip, shop },
-      cadence,
-      checklist,
-      materialsDue,
-    } of sendable) {
-      const student = Boolean(trip.courseId) && isDiver(booking.participantType);
-      const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
-      // No request to negotiate `Accept-Language` from at a cron fire: this reads
-      // what the diver's past requests recorded, else the shop's stored locale,
-      // as the calendar feed does (ADR 20260731-per-person-notification-locale).
-      // Email and SMS take this one value, so the channels never differ in language.
-      const locale = recipientLocale(person.locale, shop.defaultLocale);
-      const readinessUrl = links.urlFor(booking.id);
-      const phone = smsRecipient(person.phone);
-      // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
-      const meetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));
+  for (const {
+    row: { booking, person, trip, shop },
+    cadence,
+    checklist,
+    materialsDue,
+  } of sendable) {
+    const student = Boolean(trip.courseId) && isDiver(booking.participantType);
+    const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
+    // No request to negotiate `Accept-Language` from at a cron fire: this reads
+    // what the diver's past requests recorded, else the shop's stored locale,
+    // as the calendar feed does (ADR 20260731-per-person-notification-locale).
+    // Email and SMS take this one value, so the channels never differ in language.
+    const locale = recipientLocale(person.locale, shop.defaultLocale);
+    const readinessUrl = links.urlFor(booking.id);
+    const phone = smsRecipient(person.phone);
+    // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
+    const meetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));
 
-      // Name the diver's own outstanding items from that same checklist, so the
-      // reminder never diverges from the readiness engine — and so the rule above
-      // and the words below cannot be reading two different answers.
-      const { outstanding, medicalReview } = checklist
-        ? reminderReadiness(checklist)
-        : { outstanding: [], medicalReview: false };
+    // Name the diver's own outstanding items from that same checklist, so the
+    // reminder never diverges from the readiness engine — and so the rule above
+    // and the words below cannot be reading two different answers.
+    const { outstanding, medicalReview } = checklist
+      ? reminderReadiness(checklist)
+      : { outstanding: [], medicalReview: false };
 
-      // The night-before (day) lead becomes the full brief: plain-language
-      // conditions from the crew, what to bring, who to text, and a softer voice
-      // for a first-timer. The 7-day nudge carries none of it.
-      const isDay = cadence.kind === "trip_reminder_24h";
-      const forecast = isDay
-        ? reminderForecast(
-            locale,
-            {
-              conditionsSummary: trip.conditionsSummary,
-              waterTemperatureC: trip.waterTemperatureC,
-              visibilityMeters: trip.visibilityMeters,
-              surfaceConditions: trip.surfaceConditions,
-            },
-            // Written in the shop's own units, so the brief agrees with the trip
-            // page the diver opens from it (src/lib/temperature-units.ts,
-            // src/lib/depth-units.ts). Storage stays Celsius and metres.
-            { temperature: temperatureUnitFor(shop), depth: shop.depthUnit },
-          )
-        : null;
-      const whoToText = isDay ? shop.contactPhone?.trim() || null : null;
-
-      // Both bodies travel together: `sendCourtesyMessage` picks one and may fall
-      // back to SMS after a failed WhatsApp send (ADR 20260909-reply-keywords).
-      const { sms: smsBody, whatsApp: whatsAppBody } = reminderTexts(locale, {
-        shopName: shop.name,
-        tripTitle: trip.title,
-        startsAt: trip.startsAt,
-        endsAt: trip.endsAt,
-        timezone: shop.timezone,
-        lead,
-        dockCallMinutes: shop.dockCallMinutes,
-        outstanding,
-        medicalReview,
-        forecast,
-        whoToText,
-        materials: materialsDue,
-        courseSession: student,
-        diveMode: trip.diveMode,
-        meetingPoint,
-        readinessUrl,
-      });
-
-      if (person.email) {
-        emailWork.push({
-          bookingId: booking.id,
-          personId: person.id,
-          tripId: trip.id,
-          email: person.email,
-          shopId: shop.id,
-          shopName: shop.name,
-          kind: cadence.kind,
-          phone,
-          smsBody,
+    // The night-before (day) lead becomes the full brief: plain-language
+    // conditions from the crew, what to bring, who to text, and a softer voice
+    // for a first-timer. The 7-day nudge carries none of it.
+    const isDay = cadence.kind === "trip_reminder_24h";
+    const forecast = isDay
+      ? reminderForecast(
           locale,
-          whatsAppBody,
-          notification: {
-            kind: cadence.kind,
-            bookingId: booking.id,
-            shopId: shop.id,
-            to: person.email,
-            locale,
-            shopName: shop.name,
-            tripTitle: trip.title,
-            startsAt: trip.startsAt,
-            timezone: shop.timezone,
-            // What the sentence says is left: the checklist and
-            // unfinished course materials; the medical review has its own sentence. The thread lists them.
-            open: outstanding.length + (materialsDue.length > 0 ? 1 : 0),
-            dockCallMinutes: shop.dockCallMinutes,
-            ...(medicalReview ? { medicalReview: true } : {}),
-            readinessUrl,
-            ...(inboundEmailOn ? { replyKeywords: true } : {}),
-            ...(student ? { courseSession: true } : {}),
-            ...(await nightBeforeFlySafe(db, cadence.kind, { booking, person, trip, shop })),
+          {
+            conditionsSummary: trip.conditionsSummary,
+            waterTemperatureC: trip.waterTemperatureC,
+            visibilityMeters: trip.visibilityMeters,
+            surfaceConditions: trip.surfaceConditions,
           },
-        });
-      } else if (phone) {
-        smsWork.push({
-          bookingId: booking.id,
-          personId: person.id,
-          tripId: trip.id,
-          email: person.email,
-          shopId: shop.id,
-          shopName: shop.name,
-          kind: cadence.kind,
-          phone,
-          smsBody,
-          locale,
-          whatsAppBody,
-        });
-      } else {
-        // No reachable channel — record it so staff can see the gap.
-        await recordNotificationDelivery(db, {
-          shopId: shop.id,
-          bookingId: booking.id,
-          kind: cadence.kind,
-          delivery: { status: "not_configured" },
-        });
-        summary.failed += 1;
-      }
-    }
+          // Written in the shop's own units, so the brief agrees with the trip
+          // page the diver opens from it (src/lib/temperature-units.ts,
+          // src/lib/depth-units.ts). Storage stays Celsius and metres.
+          { temperature: temperatureUnitFor(shop), depth: shop.depthUnit },
+        )
+      : null;
+    const whoToText = isDay ? shop.contactPhone?.trim() || null : null;
 
-    await deliverReminderChannels(db, {
-      emailWork,
-      smsWork,
-      emailProvider,
-      smsProvider,
-      whatsAppProviders,
-      now,
-      links,
-      summary,
+    // Both bodies travel together: `sendCourtesyMessage` picks one and may fall
+    // back to SMS after a failed WhatsApp send (ADR 20260909-reply-keywords).
+    const { sms: smsBody, whatsApp: whatsAppBody } = reminderTexts(locale, {
+      shopName: shop.name,
+      tripTitle: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      timezone: shop.timezone,
+      lead,
+      dockCallMinutes: shop.dockCallMinutes,
+      outstanding,
+      medicalReview,
+      forecast,
+      whoToText,
+      materials: materialsDue,
+      courseSession: student,
+      diveMode: trip.diveMode,
+      meetingPoint,
+      readinessUrl,
     });
+
+    if (person.email) {
+      emailWork.push({
+        bookingId: booking.id,
+        personId: person.id,
+        tripId: trip.id,
+        email: person.email,
+        shopId: shop.id,
+        shopName: shop.name,
+        kind: cadence.kind,
+        phone,
+        smsBody,
+        locale,
+        whatsAppBody,
+        notification: {
+          kind: cadence.kind,
+          bookingId: booking.id,
+          shopId: shop.id,
+          to: person.email,
+          locale,
+          shopName: shop.name,
+          tripTitle: trip.title,
+          startsAt: trip.startsAt,
+          timezone: shop.timezone,
+          // What the sentence says is left: the checklist and
+          // unfinished course materials; the medical review has its own sentence. The thread lists them.
+          open: outstanding.length + (materialsDue.length > 0 ? 1 : 0),
+          dockCallMinutes: shop.dockCallMinutes,
+          ...(medicalReview ? { medicalReview: true } : {}),
+          readinessUrl,
+          ...(inboundEmailOn ? { replyKeywords: true } : {}),
+          ...(student ? { courseSession: true } : {}),
+          ...(await nightBeforeFlySafe(db, cadence.kind, { booking, person, trip, shop })),
+        },
+      });
+    } else if (phone) {
+      smsWork.push({
+        bookingId: booking.id,
+        personId: person.id,
+        tripId: trip.id,
+        email: person.email,
+        shopId: shop.id,
+        shopName: shop.name,
+        kind: cadence.kind,
+        phone,
+        smsBody,
+        locale,
+        whatsAppBody,
+      });
+    } else {
+      // No reachable channel — record it so staff can see the gap.
+      await recordNotificationDelivery(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        kind: cadence.kind,
+        delivery: { status: "not_configured" },
+      });
+      summary.failed += 1;
+    }
+  }
+
+  await deliverReminderChannels(db, {
+    emailWork,
+    smsWork,
+    emailProvider,
+    smsProvider,
+    whatsAppProviders,
+    now,
+    links,
+    summary,
   });
 
   return summary;

@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, gt, isNull, lte } from "drizzle-orm";
 import type { DiverLocale } from "@/i18n/settings";
-import { hashCapabilityToken } from "@/lib/booking-capabilities";
 import {
   foldKnownDiverFacts,
   HANDOFF_OFFER_COOLDOWN_MS,
@@ -15,8 +14,9 @@ import { recipientLocale } from "@/lib/notifications/kinds";
 import { publicTripPath } from "@/lib/public-routes";
 import { type LastGear, type RentableItemKind, toRentableKinds } from "@/lib/rentals";
 import {
+  consumeBookingCapability,
   issueBookingCapability,
-  revokeIssuedCapabilities,
+  revokeBookingCapabilities,
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
@@ -26,15 +26,7 @@ import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { authorizesNitroxFill } from "./nitrox";
 import { sendAndRecordNotification } from "./notifications";
 import { getRentalFit } from "./rental-fit";
-import {
-  bookingCapabilities,
-  bookings,
-  cards,
-  notificationDeliveries,
-  people,
-  shops,
-  trips,
-} from "./schema";
+import { bookings, cards, notificationDeliveries, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 import {
@@ -222,18 +214,7 @@ export async function consumeBookingHandoff(
   db: DbExecutor,
   input: { shopId: string; token: string; now?: Date },
 ): Promise<void> {
-  const now = input.now ?? nowDate();
-  await db
-    .update(bookingCapabilities)
-    .set({ revokedAt: now })
-    .where(
-      and(
-        eq(bookingCapabilities.shopId, input.shopId),
-        eq(bookingCapabilities.purpose, "handoff"),
-        eq(bookingCapabilities.tokenHash, hashCapabilityToken(input.token)),
-        isNull(bookingCapabilities.revokedAt),
-      ),
-    );
+  await consumeBookingCapability(db, { ...input, purpose: "handoff" });
 }
 
 export type HandoffOfferOutcome = "sent" | "queued" | "failed" | "skipped";
@@ -363,10 +344,14 @@ export async function offerBookingHandoffByEmail(
       );
       const queued =
         delivery.status === "failed" && "retryQueued" in delivery && delivery.retryQueued === true;
+      // A handoff is never reused (issue #2711), so the live one is the row
+      // this offer just minted and nobody holds: a send that did not go takes
+      // it back. Unlike a readiness link, no earlier mail can carry it.
       if (delivery.status !== "sent" && !queued) {
-        await revokeIssuedCapabilities(tx, {
+        await revokeBookingCapabilities(tx, {
           shopId: input.shopId,
-          tokens: [issued.token],
+          bookingId: match.bookingId,
+          purpose: "handoff",
           now,
         });
       }

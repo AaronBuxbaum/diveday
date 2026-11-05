@@ -35,8 +35,6 @@ const MUST_LEAD = [
   "staff_replies.person_id",
   "trip_change_events.actor_person_id",
   "today_read_marks.person_id",
-  "trip_desk_events.actor_person_id",
-  "trip_desk_events.subject_person_id",
   "trip_help_requests.helper_person_id",
   "waiver_records.person_id",
 ];

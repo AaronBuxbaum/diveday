@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
-import { recordDeskEvent } from "./desk-events";
+import { recordDeskLine } from "./operations";
 import { people, personRoles, trips } from "./schema";
 import {
   acknowledgeTodayCatchUp,
@@ -44,10 +44,10 @@ describe("Today catch-up", () => {
   it("starts with a first-view snapshot, then reports only new acts for each reader", async () => {
     const { db, shop, trip, reader, other, now } = await fixture();
     const input = { shopId: shop.id, personId: reader.id, now, timeZone: shop.timezone };
-    await recordDeskEvent(db, {
+    await recordDeskLine(db, {
       shopId: shop.id,
       tripId: trip.id,
-      kind: "plan_changed",
+      code: "desk_plan_changed",
       actorPersonId: other.id,
     });
     const first = await readTodayCatchUp(db, input);
@@ -55,10 +55,10 @@ describe("Today catch-up", () => {
     expect(first.events).toEqual([]);
     expect(first.snapshotIds).toHaveLength(1);
     expect(await initializeTodayCatchUp(db, { ...input, eventIds: first.snapshotIds })).toBe(true);
-    await recordDeskEvent(db, {
+    await recordDeskLine(db, {
       shopId: shop.id,
       tripId: trip.id,
-      kind: "meeting_point",
+      code: "desk_meeting_point",
       actorPersonId: other.id,
     });
     const unread = await readTodayCatchUp(db, input);
@@ -72,17 +72,17 @@ describe("Today catch-up", () => {
     const { db, shop, trip, reader, other, now } = await fixture();
     const input = { shopId: shop.id, personId: reader.id, now, timeZone: shop.timezone };
     await initializeTodayCatchUp(db, { ...input, eventIds: [] });
-    await recordDeskEvent(db, {
+    await recordDeskLine(db, {
       shopId: shop.id,
       tripId: trip.id,
-      kind: "plan_changed",
+      code: "desk_plan_changed",
       actorPersonId: other.id,
     });
     const visible = await readTodayCatchUp(db, input);
-    await recordDeskEvent(db, {
+    await recordDeskLine(db, {
       shopId: shop.id,
       tripId: trip.id,
-      kind: "meeting_point",
+      code: "desk_meeting_point",
       actorPersonId: other.id,
     });
     await acknowledgeTodayCatchUp(db, { ...input, eventIds: visible.snapshotIds });

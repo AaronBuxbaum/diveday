@@ -16,7 +16,6 @@ import {
   removeBuddyTeamMember,
 } from "@/db/buddy-teams";
 import { getDb } from "@/db/client";
-import { markTripCaughtUp } from "@/db/desk-events";
 import { type ExecutedDiveRefusal, upsertExecutedDive } from "@/db/executed-dives";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { addInternalNote } from "@/db/operations";
@@ -28,6 +27,7 @@ import {
   recordPushSubscription,
 } from "@/db/push-subscriptions";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
+import { markTripCaughtUp } from "@/db/trip-read-marks";
 import { deleteTripSighting, recordTripSighting } from "@/db/trip-sightings";
 import { recordTripStage } from "@/db/trip-stages";
 import { trackEvent } from "@/lib/analytics";

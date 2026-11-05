@@ -9,7 +9,8 @@ import {
 } from "@/lib/returning-diver";
 import { RetryReturningDiverMemory } from "./RetryReturningDiverMemory";
 
-const readinessToken = "r".repeat(48);
+// A derived booking link (issue #2711): the path match must accept its dots.
+const readinessToken = `c2.${"r".repeat(22)}.${"t".repeat(43)}`;
 let pathname = `/ready/${readinessToken}`;
 const prepare = vi.fn();
 const acknowledge = vi.fn();

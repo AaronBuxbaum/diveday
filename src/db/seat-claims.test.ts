@@ -649,12 +649,12 @@ describe("claimPartySeat", () => {
       .values({ name: "Other Shop", slug: "other-shop-claims", timezone: "UTC" })
       .returning();
     if (!other) throw new Error("shop setup failed");
-    // Nothing legitimate can cause this drift; the verify path must still refuse.
-    await db
-      .update(bookingCapabilities)
-      .set({ shopId: other.id })
-      .where(eq(bookingCapabilities.bookingId, memberOne.bookingId));
-
+    // Nothing legitimate drifts a row's shop (it is immutable, issue #2711): rewrite it.
+    const rows = await db
+      .delete(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, memberOne.bookingId))
+      .returning();
+    await db.insert(bookingCapabilities).values(rows.map((row) => ({ ...row, shopId: other.id })));
     expect(await getClaimPageData(db, token)).toBeNull();
     expect(
       await claimPartySeat(db, { token, fullName: "Milo Actual", email: "milo@example.com" }),

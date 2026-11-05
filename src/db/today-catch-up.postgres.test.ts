@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { raceShop } from "@/test/postgres-shop";
-import { recordDeskEvent } from "./desk-events";
-import { people, todayReadMarkEvents, todayReadMarks, tripDeskEvents } from "./schema";
+import { recordDeskLine } from "./operations";
+import { activityEvents, people, todayReadMarkEvents, todayReadMarks } from "./schema";
 import {
   acknowledgeTodayCatchUp,
   initializeTodayCatchUp,
@@ -62,16 +62,16 @@ describePostgres("Today catch-up on PostgreSQL", () => {
       timeZone: "UTC",
       eventIds: [],
     });
-    await recordDeskEvent(a.pg.db, {
+    await recordDeskLine(a.pg.db, {
       shopId: a.shop.id,
       tripId: a.trip.id,
-      kind: "plan_changed",
+      code: "desk_plan_changed",
       occurredAt: now,
     });
-    await recordDeskEvent(a.pg.db, {
+    await recordDeskLine(a.pg.db, {
       shopId: shopB.id,
       tripId: tripB.id,
-      kind: "plan_changed",
+      code: "desk_plan_changed",
       occurredAt: now,
     });
     const [markA] = await a.pg.db
@@ -84,12 +84,16 @@ describePostgres("Today catch-up on PostgreSQL", () => {
       .where(eq(todayReadMarks.shopId, shopB.id));
     const [eventA] = await a.pg.db
       .select()
-      .from(tripDeskEvents)
-      .where(eq(tripDeskEvents.shopId, a.shop.id));
+      .from(activityEvents)
+      .where(
+        and(eq(activityEvents.shopId, a.shop.id), eq(activityEvents.code, "desk_plan_changed")),
+      );
     const [eventB] = await a.pg.db
       .select()
-      .from(tripDeskEvents)
-      .where(eq(tripDeskEvents.shopId, shopB.id));
+      .from(activityEvents)
+      .where(
+        and(eq(activityEvents.shopId, shopB.id), eq(activityEvents.code, "desk_plan_changed")),
+      );
     if (!markA || !markB || !eventA || !eventB) throw new Error("fixture missing");
     await a.pg.db
       .insert(todayReadMarkEvents)
@@ -121,10 +125,10 @@ describePostgres("Today catch-up on PostgreSQL", () => {
       written = resolve;
     });
     const first = pg.connect().transaction(async (tx) => {
-      await recordDeskEvent(tx, {
+      await recordDeskLine(tx, {
         shopId: shop.id,
         tripId: trip.id,
-        kind: "plan_changed",
+        code: "desk_plan_changed",
         occurredAt: now,
       });
       written();
@@ -132,10 +136,10 @@ describePostgres("Today catch-up on PostgreSQL", () => {
     });
     try {
       await inserted;
-      await recordDeskEvent(pg.connect(), {
+      await recordDeskLine(pg.connect(), {
         shopId: shop.id,
         tripId: trip.id,
-        kind: "meeting_point",
+        code: "desk_meeting_point",
         occurredAt: now,
       });
       const snapshot = await readTodayCatchUp(pg.db, input);
@@ -157,16 +161,16 @@ describePostgres("Today catch-up on PostgreSQL", () => {
       initializeTodayCatchUp(pg.connect(), { ...input, eventIds: [] }),
     ]);
     expect(init.sort()).toEqual([false, true]);
-    await recordDeskEvent(pg.db, {
+    await recordDeskLine(pg.db, {
       shopId: shop.id,
       tripId: trip.id,
-      kind: "plan_changed",
+      code: "desk_plan_changed",
       occurredAt: now,
     });
-    await recordDeskEvent(pg.db, {
+    await recordDeskLine(pg.db, {
       shopId: shop.id,
       tripId: trip.id,
-      kind: "meeting_point",
+      code: "desk_meeting_point",
       occurredAt: now,
     });
     const snapshot = await readTodayCatchUp(pg.db, input);
@@ -182,10 +186,10 @@ describePostgres("Today catch-up on PostgreSQL", () => {
   it("survives an event being pruned while its acknowledgement waits", async () => {
     const { pg, shop, trip, input } = await fixture();
     await initializeTodayCatchUp(pg.db, { ...input, eventIds: [] });
-    await recordDeskEvent(pg.db, {
+    await recordDeskLine(pg.db, {
       shopId: shop.id,
       tripId: trip.id,
-      kind: "plan_changed",
+      code: "desk_plan_changed",
       occurredAt: now,
     });
     const snapshot = await readTodayCatchUp(pg.db, input);
@@ -200,7 +204,7 @@ describePostgres("Today catch-up on PostgreSQL", () => {
       removed = resolve;
     });
     const prune = pg.connect().transaction(async (tx) => {
-      await tx.delete(tripDeskEvents).where(eq(tripDeskEvents.id, id));
+      await tx.delete(activityEvents).where(eq(activityEvents.id, id));
       removed();
       await holding;
     });

@@ -279,6 +279,21 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
 }
 
 /**
+ * **A booking confirmation is never a shared cache's** (issue #2711). The
+ * embed's `?booking=<confirm token>` page renders the booking's live browser
+ * readiness link into its HTML, so the response carries a bearer credential:
+ * `private, no-store` on every `/s/` response that names one, the way the
+ * exchange route this replaced sent it on its redirect. Keyed on the query
+ * parameter rather than the token's validity, so an attempt with a dead token
+ * is not cached either.
+ */
+function keepBookingConfirmationPrivate(req: NextRequest, res: Response): void {
+  if (!shopSlugFromPublicPath(req.nextUrl.pathname)) return;
+  if (!req.nextUrl.searchParams.has("booking")) return;
+  res.headers.set("Cache-Control", "private, no-store");
+}
+
+/**
  * **The pricing arm** (ADR 20261022-pricing-ab-test): while `PRICING_TEST=on`,
  * a page view (GET or HEAD) of a page that states a price
  * (`isPricingMarketingPath`) without a valid `dd_pricing` cookie is given an
@@ -754,6 +769,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   rememberPartnerReferral(req, res);
   rememberBuddyReferral(req, res);
   rememberPricingArm(res, pricingDecision);
+  keepBookingConfirmationPrivate(req, res);
   // Deny framing everywhere by default (clickjacking on staff/sign-in surfaces);
   // an actual embed request is the one deliberate exception, so a shop can
   // embed its booking calendar on its own website (docs ADR 20260726-schedule-embed).

@@ -1,7 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { hasReturned } from "@/lib/trips";
-import { issueCourseFormsCapability } from "./booking-capabilities";
+import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { getCourseFormsForBooking, lockCourseFormSeatRows } from "./course-forms";
 import { bookings, trips } from "./schema";
@@ -49,9 +49,10 @@ export async function issueCounterCourseForms(
       !forms.outstanding.length
     )
       return null;
-    return issueCourseFormsCapability(tx, {
+    return issueBookingCapability(tx, {
       shopId: input.shopId,
       bookingId: seat.id,
+      purpose: "course_forms",
       expectedPersonId: lockedSeat.personId,
       now,
     });

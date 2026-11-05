@@ -1,4 +1,6 @@
 import { activityParams, isActivityCode } from "@/lib/activity";
+import type { CatchUpGroup, CatchUpKind } from "@/lib/catch-up";
+import { cachedListFormat } from "@/lib/intl-cache";
 import type {
   ReviewModerationLineCode,
   ShopActivityKind,
@@ -86,3 +88,55 @@ export const SHOP_ACTIVITY_KIND_KEYS: Record<ShopActivityKind, StaffMessageKey> 
   records: "activity.log.kind.records",
   reviews: "activity.log.kind.reviews",
 };
+
+/**
+ * The catch-up strip's words (issues #1202 and #1187, delight report D42):
+ * one key per sentence a desk line feeds (`src/lib/catch-up.ts`), in the
+ * `manifest` namespace the strip renders in.
+ */
+const CATCH_UP_KEYS = {
+  arrival: "manifest.catchUp.arrival",
+  running_late: "manifest.catchUp.runningLate",
+  seat_taken: "manifest.catchUp.seatTaken",
+  seat_released: "manifest.catchUp.seatReleased",
+  seat_turned_away: "manifest.catchUp.seatTurnedAway",
+  now_diving: "manifest.catchUp.nowDiving",
+  now_snorkeling: "manifest.catchUp.nowSnorkeling",
+  now_riding: "manifest.catchUp.nowRiding",
+  balance_owed: "manifest.catchUp.balanceOwed",
+  gear_changed: "manifest.catchUp.gearChanged",
+  pickup_set: "manifest.catchUp.pickupSet",
+  help_request: "manifest.catchUp.helpRequest",
+  meeting_point: "manifest.catchUp.meetingPoint",
+  plan_changed: "manifest.catchUp.planChanged",
+} as const satisfies Record<CatchUpKind, StaffMessageKey>;
+
+/**
+ * **The catch-up strip, put into words**: one sentence per group, in the
+ * order `groupCatchUp` put them.
+ *
+ * The two trip-wide kinds take no names and say the fact plainly; every other
+ * kind interpolates its names through `Intl.ListFormat` in the reader's own
+ * locale — never a hand-rolled `", "`, which puts an English "and" into a
+ * Spanish sentence.
+ *
+ * A group whose names all resolved to null — every diver on it erased — is
+ * dropped rather than rendered as an empty list. That is the honest outcome of
+ * joining the name live: an erasure takes the line with it.
+ */
+export function catchUpSentences(
+  t: StaffTranslator,
+  locale: string,
+  groups: readonly CatchUpGroup[],
+): string[] {
+  const list = cachedListFormat(locale, { type: "conjunction" });
+  return groups.flatMap((group) => {
+    if (group.kind === "meeting_point" || group.kind === "plan_changed") {
+      return [t(CATCH_UP_KEYS[group.kind])];
+    }
+    if (group.names.length === 0) return [];
+    return [
+      t(CATCH_UP_KEYS[group.kind], { count: group.names.length, names: list.format(group.names) }),
+    ];
+  });
+}

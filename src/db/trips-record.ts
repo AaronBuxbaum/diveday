@@ -36,13 +36,14 @@ import {
   departureBoatSafetySnapshot,
   rebindDepartureBoatSafetyTime,
 } from "./boat-safety";
+import { realignTripLinkExpiry } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
-import { recordDeskEvent } from "./desk-events";
 import { correctFlySafeForTripChange, type FlySafeCorrectionOutcome } from "./fly-safe-correction";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
+import { recordDeskLine } from "./operations";
 import { rearmTripReminders } from "./reminder-rearm";
 import { recordedRollCallRows } from "./roll-call-history";
 import type { Trip } from "./schema";
@@ -591,6 +592,30 @@ export type UpdateTripOutcome =
  * already recorded a roll call against (CR-006). Both invariants fail
  * closed with a typed reason instead of silently discarding data.
  */
+/**
+ * What a saved edit's new times move with it, under the same trip lock: the
+ * boat's safety record follows a new start, and the departure's live booking
+ * links follow a new end (issue #2711).
+ */
+async function followScheduleEdit(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    tripId: string;
+    before: Pick<Trip, "startsAt" | "endsAt">;
+    after: Pick<Trip, "startsAt" | "endsAt">;
+    now: Date;
+  },
+): Promise<void> {
+  const { shopId, tripId, before, after, now } = input;
+  if (after.startsAt.getTime() !== before.startsAt.getTime()) {
+    await rebindDepartureBoatSafetyTime(tx, shopId, tripId, before.startsAt, after.startsAt, now);
+  }
+  if (after.endsAt.getTime() !== before.endsAt.getTime()) {
+    await realignTripLinkExpiry(tx, { shopId, tripId, endsAt: after.endsAt, now });
+  }
+}
+
 /** Replaces a departure's meeting days; `true` when any day's window changed. */
 async function replaceScheduleDays(
   tx: DbExecutor,
@@ -985,16 +1010,7 @@ async function updateTripRecord(
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
     if (!trip) return { ok: false, reason: "not_found" };
-    if (startMoved) {
-      await rebindDepartureBoatSafetyTime(
-        tx,
-        shopId,
-        tripId,
-        existing.startsAt,
-        trip.startsAt,
-        changedAt,
-      );
-    }
+    await followScheduleEdit(tx, { shopId, tripId, before: existing, after: trip, now: changedAt });
     // The existing snapshot is mutable until sailing. Keep the replacement
     // hull under the same trip lock as the swap, without deleting evidence.
     // Clearing the boat retains its named record; the log labels the mismatch.
@@ -1066,12 +1082,12 @@ async function updateTripRecord(
       // The crew-facing twin of the line above, written in the same
       // transaction so the diver's ledger and the manifest's catch-up strip
       // cannot disagree about whether the dock moved (#1202: "the dock point
-      // moved"). The two tables are separate on purpose — one is publicly safe,
-      // one is internal — and this is the only fact written to both.
-      await recordDeskEvent(tx, {
+      // moved"). The diver's ledger is publicly safe and the desk line is
+      // staff-only, and this is the only fact written to both.
+      await recordDeskLine(tx, {
         shopId,
         tripId,
-        kind: "meeting_point",
+        code: "desk_meeting_point",
         actorPersonId: patch.changeActorPersonId,
         occurredAt: changedAt,
       });

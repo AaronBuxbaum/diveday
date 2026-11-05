@@ -37,10 +37,11 @@ import { type CalendarDate, calendarDaysBetween } from "./calendar-date";
 
 /**
  * How a request was closed (third UX review, item 13): a booking was made from
- * it, or a staffer marked it done. These are the date-interest outcomes of
+ * it, a staffer marked it done, or a reply from the Requests page went
+ * (`sendInterestReply`, issue #2555). These are the date-interest outcomes of
  * `interest_closed_as`.
  */
-export type DateRequestOutcome = "booked" | "done";
+export type DateRequestOutcome = "booked" | "done" | "replied";
 
 /** How near a named date a flexible request will still travel. */
 export const FLEXIBLE_WINDOW_DAYS = 3;

@@ -67,7 +67,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { type AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
-import { ACTIVITY_REDACTED } from "@/lib/activity";
+import { ACTIVITY_REDACTED, DESK_ONLY_CODES } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -82,6 +82,7 @@ import {
   computeWaiverIntegrityHash,
   verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_ERASED,
+  waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
@@ -130,6 +131,7 @@ import {
   importedPaymentHistory,
   inboundMessages,
   incidentReportPeople,
+  interestReplies,
   interests,
   notificationDeliveries,
   notificationSendQueue,
@@ -915,16 +917,24 @@ async function scrubWaiverRecords(
     // would manufacture assurance the original signing never had. A record whose
     // seal already fails keeps its hash and version, so it goes on reading as
     // tampered rather than having the edit laundered by a fresh seal — the same
-    // rule `refileWaiverRecords` follows.
-    if (verifyWaiverIntegrity(record) === "valid") {
-      await tx
-        .update(waiverRecords)
-        .set({
-          integrityHash: computeWaiverIntegrityHash(stripped, WAIVER_INTEGRITY_VERSION_ERASED),
-          integrityVersion: WAIVER_INTEGRITY_VERSION_ERASED,
-        })
-        .where(eq(waiverRecords.id, stripped.id));
-    }
+    // rule `refileWaiverRecords` follows. Either way the row's cached verdict
+    // is re-written from the row as it now stands (issue #2562).
+    const sealed =
+      verifyWaiverIntegrity(record) === "valid"
+        ? {
+            ...stripped,
+            integrityHash: computeWaiverIntegrityHash(stripped, WAIVER_INTEGRITY_VERSION_ERASED),
+            integrityVersion: WAIVER_INTEGRITY_VERSION_ERASED,
+          }
+        : stripped;
+    await tx
+      .update(waiverRecords)
+      .set({
+        integrityHash: sealed.integrityHash,
+        integrityVersion: sealed.integrityVersion,
+        ...waiverIntegrityVerdict(sealed, now),
+      })
+      .where(eq(waiverRecords.id, stripped.id));
   }
 
   // The per-channel mechanics behind the column above (ADR
@@ -1507,6 +1517,25 @@ async function scrubActivityEvents(
   // name, so "who refunded this order?" survives. It runs first so the
   // whole-line statement below no longer finds it by subject. A line the erased
   // person wrote, or one hanging off a seat, is left to that statement.
+  // A desk-only line (issue #2701) is the crew's same-day handoff, not the
+  // shop's history: it is deleted rather than redacted, so an erasure never
+  // turns one into a `[redacted]` line on a trail it was never part of. By the
+  // same three handles as the redaction below; it carries no names, so the
+  // name match has nothing to find in one.
+  await tx
+    .delete(activityEvents)
+    .where(
+      and(
+        eq(activityEvents.shopId, shopId),
+        inArray(activityEvents.code, [...DESK_ONLY_CODES]),
+        or(
+          owned ? inArray(activityEvents.bookingId, bookingIds) : undefined,
+          eq(activityEvents.actorPersonId, personId),
+          eq(activityEvents.subjectPersonId, personId),
+        ),
+      ),
+    );
+
   await tx
     .update(activityEvents)
     .set({
@@ -2590,6 +2619,17 @@ async function scrubInterests(
       .returning({ id: interests.id });
     logFuzzyMatch(ctx, "date_interest_phone", byPhone.length);
     reached.push(...byPhone.map((row) => row.id));
+  }
+
+  // A reply the shop sent from the Requests page (issue #2555) holds the same
+  // stranger's address and a sentence written to them. The row keeps that a
+  // reply went, when and by whom; the address, the words and the provider's id
+  // (a WhatsApp one spells the number) go.
+  if (reached.length > 0) {
+    await tx
+      .update(interestReplies)
+      .set({ toAddress: null, body: null, providerMessageId: null })
+      .where(and(eq(interestReplies.shopId, shopId), inArray(interestReplies.interestId, reached)));
   }
 
   // A date interest attached to a departure left a person-less child that copied the

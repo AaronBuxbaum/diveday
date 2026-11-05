@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-20
+- **Amended by:** [20261104-derived-booking-link-tokens](20261104-derived-booking-link-tokens.md) — the confirmation reads the live undelivered readiness link (it never creates one on GET), so the `./ready` exchange route and the cap it worked around are gone.
 
 ## Context
 

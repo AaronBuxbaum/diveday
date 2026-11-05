@@ -1441,7 +1441,7 @@ describe("diver erasure", () => {
       shopId: shop.id,
       bookingId,
       purpose: "readiness",
-      tokenHash: "elena-readiness-hash",
+      keyVersion: 1,
       expiresAt: new Date(erasureNow.getTime() + 86_400_000),
     });
     await db

@@ -7,6 +7,7 @@ import {
   WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
   WAIVER_INTEGRITY_VERSION_MOVED,
   WAIVER_INTEGRITY_VERSION_SIGNED,
+  waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
 import { importedSignaturesOverHold } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
@@ -77,6 +78,13 @@ export async function refileWaiverRecords(
       movedAt: now,
       movedByPersonId: input.actorPersonId,
     };
+    const written = resealable
+      ? {
+          ...moved,
+          integrityHash: computeWaiverIntegrityHash(moved, signedIntegrityVersionFor(moved)),
+          integrityVersion: signedIntegrityVersionFor(moved),
+        }
+      : moved;
     await tx
       .update(waiverRecords)
       .set({
@@ -84,12 +92,11 @@ export async function refileWaiverRecords(
         movedFromPersonId: moved.movedFromPersonId,
         movedAt: moved.movedAt,
         movedByPersonId: moved.movedByPersonId,
-        ...(resealable
-          ? {
-              integrityHash: computeWaiverIntegrityHash(moved, signedIntegrityVersionFor(moved)),
-              integrityVersion: signedIntegrityVersionFor(moved),
-            }
-          : {}),
+        integrityHash: written.integrityHash,
+        integrityVersion: written.integrityVersion,
+        // The row as written, re-checked: a refile never launders a failed
+        // seal, and the cache says so (issue #2562).
+        ...waiverIntegrityVerdict(written, now),
       })
       .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, input.shopId)));
   }
