@@ -18,7 +18,7 @@ export function helpRequestCopy(t: StaffTranslator): HelpRequestCopy {
     failed: t("today.helpRequest.failed"),
     undoRefused: t("today.helpRequest.undoRefused"),
     undo: t("today.helpRequest.undo"),
-    undoPending: t("today.helpRequest.undoPending"),
+    undoPending: t("words.busy.restoring"),
     dismiss: t("today.helpRequest.dismiss"),
   };
 }

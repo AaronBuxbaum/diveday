@@ -86,7 +86,6 @@
   "disconnect": {
     "heading": "Quitar destino",
     "description": "Borra la credencial guardada y detiene las entregas semanales. El historial de abajo y todo lo que ya está en tu bucket se conservan.",
-    "submit": "Quitar destino de respaldo",
-    "submitting": "Quitando…"
+    "submit": "Quitar destino de respaldo"
   }
 }

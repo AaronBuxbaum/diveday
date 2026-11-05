@@ -1,8 +1,9 @@
-import { and, asc, count, eq, inArray, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, getColumnTable, getTableName, inArray, type SQL } from "drizzle-orm";
 import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { CsvValue, ExportTable } from "@/lib/export";
 import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
+import { assertDiverExportColumn } from "./person-columns";
 import { oldestMarkFirst } from "./roll-call-order";
 import {
   activityEvents,
@@ -620,6 +621,20 @@ export type DiverExportScope = Extract<ExportScope, { kind: "diver" }>;
 export type DiverScopedExportTable = PersonScopedExportTable | BookingScopedExportTable;
 
 /**
+ * **The one way a diver's own bundle reads by their person id**: `column =
+ * personId`, once the person-column registry (`./person-columns`) calls
+ * `column` theirs, and a throw otherwise. `readScoped` and every read the
+ * loader writes out by hand (`./export`) go through it, so neither can widen a
+ * diver's bundle past the registry. The registry governs reads by person id
+ * only: a read by the diver's own booking ids is scoped by those ids and is
+ * outside it.
+ */
+export function diverOwnRows(column: AnyPgColumn, personId: string): SQL {
+  assertDiverExportColumn(getTableName(getColumnTable(column)), column.name);
+  return eq(column, personId);
+}
+
+/**
  * **The one scoped read** both bundles go through: every row of one table
  * inside the scope, in the entry's order.
  *
@@ -648,10 +663,11 @@ export async function readScoped<K extends ExportTableKey>(
   if (scope.kind === "shop") {
     return readWhere(db, key, (columns) => eq(columns.shopColumn, scope.shopId));
   }
-  const { personColumn, bookingColumn } = (EXPORT_TABLES[key] as ExportTableRead).scope;
+  const { scope: by } = EXPORT_TABLES[key] as ExportTableRead;
+  const { personColumn, bookingColumn } = by;
   if (personColumn) {
     return readWhere(db, key, (columns) =>
-      and(eq(columns.shopColumn, scope.shopId), eq(personColumn, scope.personId)),
+      and(eq(columns.shopColumn, scope.shopId), diverOwnRows(personColumn, scope.personId)),
     );
   }
   if (bookingColumn) {

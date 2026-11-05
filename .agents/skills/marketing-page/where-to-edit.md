@@ -9,8 +9,8 @@ Part of the **marketing-page** skill ([SKILL.md](SKILL.md)). Read it before chan
 | A shipped capability line | `src/lib/marketing.ts` → `productCapabilityIndex`, under the group of the feature page a shop would look for it on |
 | The list of feature pages on `/` and `/product` | `FeatureDirectory` in `src/components/MarketingSections.tsx`, which reads the registry `src/lib/feature-pages.ts`; never a page-by-page list |
 | Price / plan / included list | `src/lib/marketing.ts` → `earlyAccessPrice` — the ONLY place the number exists |
-| Page narrative copy | `src/app/page.tsx`, `src/app/product/page.tsx`, `src/app/pricing/page.tsx`, `src/app/onboard/page.tsx` |
-| A feature page (`/product/<feature>`) | the registry `src/lib/feature-pages.ts`, the one template `src/app/product/_components/FeaturePageBody.tsx`, words in `marketing.featurePages.<page>`; its checklist is that page's group of `productCapabilityIndex` |
+| Page narrative copy | `src/app/(marketing)/page.tsx`, `src/app/(marketing)/product/page.tsx`, `src/app/(marketing)/pricing/page.tsx`, `src/app/onboard/page.tsx` |
+| A feature page (`/product/<feature>`) | the registry `src/lib/feature-pages.ts`, the one template `src/app/(marketing)/product/_components/FeaturePageBody.tsx`, words in `marketing.featurePages.<page>`; its checklist is that page's group of `productCapabilityIndex` |
 | Illustrated mockup copy | `src/components/MarketingScreenFallbacks.tsx`; a feature page's screen in `src/components/MarketingFeatureScreens.tsx` |
 | Nav / footer | `src/components/MarketingNavView.tsx`, `src/components/MarketingFooter.tsx` |
 

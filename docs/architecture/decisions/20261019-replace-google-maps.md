@@ -34,7 +34,7 @@ This required:
    - Probe OpenStreetMap tile/asset reachability in `MAP_REACHABILITY_PROBES` instead of Google probe pixels.
 
 4. **Privacy and Sub-Processors:**
-   - Remove Google as an embedded map sub-processor in `src/app/privacy/page.tsx`, `diver.json` (en-US, es-ES), and `e2e/marketing.spec.ts`. FCM push references remain untouched.
+   - Remove Google as an embedded map sub-processor in `src/app/(marketing)/privacy/page.tsx`, `diver.json` (en-US, es-ES), and `e2e/marketing.spec.ts`. FCM push references remain untouched.
 
 ## Alternatives considered
 

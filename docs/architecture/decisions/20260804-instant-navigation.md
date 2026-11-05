@@ -24,7 +24,7 @@
   everything under it* — `src/app/loading.tsx` would become the boundary for `/switching/**`,
   `/sign-in`, `/about` and `/offline-manifest` as well. That is not special to the root: any
   segment with children has it. `/switching` is the second instance and took the same treatment,
-  because a `src/app/switching/loading.tsx` would also be what a client navigation into
+  because a `src/app/(marketing)/switching/loading.tsx` would also be what a client navigation into
   `/switching/[competitor]` paints — a guide's hero-and-rail body wearing the hub's
   index-of-rows bars. **The rule: a segment whose children render a different shape puts its
   skeleton in an in-page `<Suspense>`, not in `loading.tsx`.** The regression guard is the

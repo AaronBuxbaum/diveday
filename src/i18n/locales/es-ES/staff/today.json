@@ -59,7 +59,6 @@
     "failed": "No se pudo guardar el cambio. Vuelve a intentarlo.",
     "undoRefused": "No se pudo deshacer: cambió la solicitud, su reserva o su salida. Sigue marcada como completada.",
     "undo": "Deshacer",
-    "undoPending": "Restaurando…",
     "dismiss": "Cerrar",
     "handled": {
       "summary": "{count, plural, one {# solicitud de ayuda atendida} other {# solicitudes de ayuda atendidas}}",

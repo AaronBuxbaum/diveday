@@ -2,6 +2,7 @@ import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildCsv,
+  buildDiverExportBundle,
   buildExportBundle,
   csvCell,
   exportFileName,
@@ -136,6 +137,36 @@ describe("export bundle", () => {
     expect(readme).toContain("people.csv (2 rows): Every person the shop knows.");
     expect(readme).toContain("trips.csv (0 rows)");
     expect(readme).toContain("Not included in this bundle:");
+  });
+
+  /**
+   * Each family the person-column registry withholds from a diver's own
+   * bundle (`exportWhy` in src/db/person-columns.ts) that a diver could ask
+   * for gets a README line, so "everything" is not claimed over a gap.
+   */
+  it("names in the diver README each record family it leaves out", () => {
+    const [readme] = buildDiverExportBundle(
+      {
+        shopName: "Blue Mantis Dive Co.",
+        shopSlug: "blue-mantis",
+        timezone: "America/New_York",
+        diverName: "Priya Sharma",
+        tables: [],
+        photoUrls: [],
+      },
+      now,
+    );
+    const notIncluded = String(readme?.content).split("Not included in this bundle:")[1] ?? "";
+    for (const family of [
+      "medical answers",
+      "medical alert",
+      "messages",
+      "lost-and-found",
+      "recap pulses",
+      "rebooking offers",
+    ]) {
+      expect(notIncluded.toLowerCase()).toContain(family);
+    }
   });
 
   it("round-trips through the zip byte-for-byte", () => {

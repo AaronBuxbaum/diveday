@@ -1,5 +1,8 @@
+import type { PGlite } from "@electric-sql/pglite";
 import { and, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/pglite";
 import { describe, expect, it } from "vitest";
+import type { AppDb } from "@/db/client";
 import { tripAssignments, trips as tripRows } from "@/db/schema";
 import {
   DEMO_MEDICAL_ALERT,
@@ -8,7 +11,8 @@ import {
 } from "@/db/seed-medical-alert";
 import { listStaff, upcomingTripsWithCounts } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
@@ -42,6 +46,30 @@ describe("readManifestPage (in-memory PGlite)", () => {
     for (const siteId of reads.fieldGuides.keys()) {
       expect(reads.liveDiveSites.map((site) => site.id)).toContain(siteId);
     }
+  });
+
+  it("costs a fixed number of statements, not one per diver, and reads the manifest once", async () => {
+    // Its own database: the file-scoped one is a transaction handle with no
+    // driver of its own to put the counting logger on.
+    const { db, shop } = await seededShopContext();
+    const counted = drizzle({
+      client: db.$client as PGlite,
+      logger: queryTimingLogger,
+    }) as unknown as AppDb;
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("demo staff missing");
+
+    const { stats } = await withQueryStats(() =>
+      readManifestPage(counted, shop.id, reef.id, staff.person.id),
+    );
+
+    // 76 today (115 in production before the page stopped reading the manifest
+    // twice and the roll call stopped reading once per checkpoint, issue #3857).
+    // A tripwire: a change that adds a statement should say so here.
+    expect(stats.queries).toBeLessThanOrEqual(80);
   });
 
   it("reads nothing for a departure that is not this shop's", async () => {

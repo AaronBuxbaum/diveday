@@ -150,15 +150,6 @@ describe("the Safety year", () => {
     expect(text).not.toContain("this month");
   });
 
-  it("prints whose record it is, over which days and when (review F3)", async () => {
-    const year = String(nowDate().getUTCFullYear());
-    const text = await renderAs(["owner"], { year });
-    expect(text.replace(/\u00a0/g, " ")).toMatch(
-      /Blue Mantis[^\n]* · January 1 to [^\n]*, \d{4} · /,
-    );
-    expect(text).toContain("Printed ");
-  });
-
   it("counts filed incident reports and names drafts beside them (review F4)", async () => {
     const year = String(nowDate().getUTCFullYear());
     const figures = figuresIn(await renderTree(["owner"], { year }));

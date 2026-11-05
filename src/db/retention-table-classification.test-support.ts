@@ -33,7 +33,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "dive_site_creatures",
   "waiver_templates",
   "deals",
-  "shop_promo_codes",
   "dive_packages",
   "pre_departure_checklist_items",
   "trip_requirements",
@@ -94,7 +93,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "interests",
   // Seat-level links are removed with either referenced record; they need no independent clock.
   "date_request_offer_bookings",
-  "trip_last_minute_promos",
   "trip_blowouts",
   "trip_blowout_divers",
   // One row per departure, read as part of its departure log (#2300).

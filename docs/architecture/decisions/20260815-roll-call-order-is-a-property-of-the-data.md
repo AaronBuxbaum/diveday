@@ -50,7 +50,7 @@ Two places the offline device and the server answered one question differently, 
    anywhere on the copy still falls back to whatever the snapshot holds, so a copy missing its
    departure manifest is no worse off than before.
 2. **`roll_call_events` and `roll_call_crew_events` carry `seq bigserial not null`, and every
-   roll-call read ends `desc(seq)`** — `listLatestRollCallByBooking`, `listLatestCrewRollCalls`,
+   roll-call read ends `desc(seq)`** — `listLatestRollCallsByCheckpoint`, `listLatestCrewRollCalls`,
    `listDepartureBoardedByTrip`, the newest-event lookups inside `recordRollCall`/`recordCrewRollCall`,
    and `updateLatestRollCallNote`. `activity_events.seq` is the same column for the same reason. The
    migration is additive (`ALTER TABLE … ADD COLUMN seq bigserial`, which in Postgres implies NOT

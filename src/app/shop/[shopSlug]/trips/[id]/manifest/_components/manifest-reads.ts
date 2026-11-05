@@ -9,7 +9,7 @@ import { diveIntentTallyForTrip } from "@/db/dive-intent";
 import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { mayStartTripIncidentReport, openMissingAlerts } from "@/db/incident-reports";
-import { getTripManifests, rollCallOpenOnTrip } from "@/db/manifests";
+import { rollCallOpenOnTrip } from "@/db/manifests";
 import { issueOfflineManifestSnapshot } from "@/db/offline-manifest-snapshots";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
@@ -38,7 +38,6 @@ export async function readManifestPage(
   // The manifest rows, the raw team membership, and the desk's own notes don't
   // depend on one another — resolve them together instead of serially.
   const [
-    completeManifests,
     offlineSnapshot,
     buddyTeamsList,
     bookingNotes,
@@ -62,7 +61,9 @@ export async function readManifestPage(
     mayReadMedicalAlerts,
     emergencyStanding,
   ] = await Promise.all([
-    getTripManifests(db, shopId, tripId),
+    // The snapshot reads the manifests itself, under the erasure fence, and the
+    // page shows those same rows: one read, so the screen and the copy a
+    // device saves cannot differ (this page used to read them twice).
     issueOfflineManifestSnapshot(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
     // a team whose seat was cancelled (it still blocks re-teaming the survivors
@@ -120,6 +121,7 @@ export async function readManifestPage(
     // any active staffer, on the days of the trip in the shop's zone.
     emergencyMedicalAlertStanding(db, shopId, personId, tripId),
   ]);
+  const completeManifests = offlineSnapshot?.manifests ?? null;
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
   // their ids, and the species a crew may claim to have seen are exactly the

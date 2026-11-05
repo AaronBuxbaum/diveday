@@ -49,7 +49,7 @@ export function MarketingFooterView({
             {t("nav.about")}
           </Link>
           {/* The status page shipped on 2026-09-07 with nothing pointing at
-              it, and it is `noindex` by design (src/app/status/page.tsx), so
+              it, and it is `noindex` by design (src/app/(marketing)/status/page.tsx), so
               the only way in was already knowing the URL — which the shop whose
               bookings just broke does not (issue #1475). Beside About, and not
               in the staff chrome: `staff-destinations.ts` is places inside a

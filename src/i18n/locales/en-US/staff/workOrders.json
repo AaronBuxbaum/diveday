@@ -37,7 +37,6 @@
     "deletedTitle": "Deleted",
     "deletedOn": "Deleted {date}",
     "restore": "Restore",
-    "restoring": "Restoring…",
     "restoreOrder": "Restore {name}"
   },
   "empty": {
@@ -58,8 +57,7 @@
     "addPieceHeading": "Add a piece",
     "addPiece": "Add to the record",
     "jobHeading": "The job",
-    "submit": "Open the work order",
-    "pending": "Opening…"
+    "submit": "Open the work order"
   },
   "form": {
     "kind": "Kind",
@@ -101,7 +99,6 @@
     "deletedBadge": "Deleted",
     "delete": "Delete work order",
     "restore": "Restore",
-    "restoring": "Restoring…",
     "claimTag": "Print claim tag",
     "jobHeading": "The job",
     "inspectionDue": "Visual inspection due {date}",

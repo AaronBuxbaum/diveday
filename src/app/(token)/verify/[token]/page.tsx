@@ -89,7 +89,7 @@ export default async function VerifyAccountPage({
   return (
     <EntryShell wordmark panel={false} title={t("account.verify.title")}>
       <form action={confirmEmailVerification.bind(null, token)}>
-        <SubmitButton pendingLabel={t("account.verify.confirming")} className={buttonClass()}>
+        <SubmitButton pendingLabel={t("words.busy.confirming")} className={buttonClass()}>
           {t("account.verify.submit")}
         </SubmitButton>
       </form>

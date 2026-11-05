@@ -65,7 +65,7 @@ export {
  * inserts a new row, it never replaces the boarded/not_boarded row it
  * undoes — `recordRollCall`, src/db/manifests.ts), so "does history include
  * a cleared event" is the wrong question; the right one, mirroring
- * `listLatestRollCallByBooking`'s own "clear undoes to awaiting" semantics,
+ * `listLatestRollCallsByCheckpoint`'s own "clear undoes to awaiting" semantics,
  * is "for this diver at this checkpoint, does their *latest* event still
  * stand." Without reducing to latest-per-booking-per-checkpoint first, a
  * crew member's mis-tap-then-clear (wet hands, glare — the exact failure

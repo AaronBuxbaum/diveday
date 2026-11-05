@@ -1,0 +1,83 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "4290a842-0ae0-41e0-8fd5-8a44382668b4",
+  "prevIds": [
+    "bff716a7-2131-4743-a246-0ef5a73840a3"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "deals"
+      ],
+      "writes": [
+        "s|fk|public.deals.deals_trip_id_trips_id_fkey",
+        "n|fk|public.deals.deals_trip_id_trips_id_fkey",
+        "e|fk|public.deals.deals_trip_id_trips_id_fkey",
+        "n|con|public.deals.deals_trip_id_trips_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.deals",
+        "n|sch|public",
+        "e|col|public.deals.trip_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "deals"
+      ],
+      "writes": [
+        "s|fk|public.deals.deals_shop_trip_fk",
+        "n|fk|public.deals.deals_shop_trip_fk",
+        "e|fk|public.deals.deals_shop_trip_fk",
+        "n|con|public.deals.deals_shop_trip_fk"
+      ],
+      "reads": [
+        "n|tbl|public.deals",
+        "n|sch|public",
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.deals.shop_id",
+        "n|col|public.deals.trip_id",
+        "n|col|public.trips.shop_id",
+        "n|col|public.trips.id",
+        "e|uniqueness|public.trips.id.shop_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "deals",
+        "name": "deals_shop_trip_fk",
+        "nameExplicit": true,
+        "columns": [
+          "shop_id",
+          "trip_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "trips",
+        "columnsTo": [
+          "shop_id",
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"deals\",\"deals_trip_id_trips_id_fkey\"]"
+    }
+  ]
+}

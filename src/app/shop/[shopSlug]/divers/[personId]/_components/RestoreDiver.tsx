@@ -71,7 +71,7 @@ export function RestoreDiver({
           ).map(([name, value]) => (
             <input key={name} type="hidden" name={name} value={value} />
           ))}
-          <SubmitButton pendingLabel={t("divers.removed.restoring")} className={buttonClass()}>
+          <SubmitButton pendingLabel={t("words.busy.restoring")} className={buttonClass()}>
             {t("divers.removed.restore")}
           </SubmitButton>
           <DiverFormStatus status={status} />

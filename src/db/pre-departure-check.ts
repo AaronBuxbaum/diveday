@@ -230,7 +230,7 @@ export type PreDepartureCheckState = {
 
 /**
  * The newest event per item on this trip — server truth for the manifest and
- * the departure log alike, exactly the role `listLatestRollCallByBooking`
+ * the departure log alike, exactly the role `listLatestRollCallsByCheckpoint`
  * plays for roll call. A `cleared` newest event collapses to no entry, the
  * same reduction `latestPreDepartureCheck` performs for a single item's
  * history. With `asOf`, only taps made at or before that instant count: the

@@ -1,0 +1,431 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "bff716a7-2131-4743-a246-0ef5a73840a3",
+  "prevIds": [
+    "1117301c-2bd5-4416-832a-9e12b5ef0a61"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_checkouts"
+      ],
+      "writes": [
+        "s|fk|public.booking_checkouts.booking_checkouts_promo_code_id_shop_promo_codes_id_fkey",
+        "n|fk|public.booking_checkouts.booking_checkouts_promo_code_id_shop_promo_codes_id_fkey",
+        "e|fk|public.booking_checkouts.booking_checkouts_promo_code_id_shop_promo_codes_id_fkey",
+        "n|con|public.booking_checkouts.booking_checkouts_promo_code_id_shop_promo_codes_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.booking_checkouts",
+        "n|sch|public",
+        "e|col|public.booking_checkouts.promo_code_id"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_checkouts"
+      ],
+      "writes": [
+        "s|fk|public.booking_checkouts.booking_checkouts_trip_promo_id_trip_last_minute_promos_id_fkey",
+        "n|fk|public.booking_checkouts.booking_checkouts_trip_promo_id_trip_last_minute_promos_id_fkey",
+        "e|fk|public.booking_checkouts.booking_checkouts_trip_promo_id_trip_last_minute_promos_id_fkey",
+        "n|con|public.booking_checkouts.booking_checkouts_trip_promo_id_trip_last_minute_promos_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.booking_checkouts",
+        "n|sch|public",
+        "e|col|public.booking_checkouts.trip_promo_id"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "payment_operation_intents"
+      ],
+      "writes": [
+        "s|fk|public.payment_operation_intents.payment_operation_intents_wOv22MgfdNda_fkey",
+        "n|fk|public.payment_operation_intents.payment_operation_intents_wOv22MgfdNda_fkey",
+        "e|fk|public.payment_operation_intents.payment_operation_intents_wOv22MgfdNda_fkey",
+        "n|con|public.payment_operation_intents.payment_operation_intents_wOv22MgfdNda_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.payment_operation_intents",
+        "n|sch|public",
+        "e|col|public.payment_operation_intents.promo_code_id"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "payment_operation_intents"
+      ],
+      "writes": [
+        "s|fk|public.payment_operation_intents.payment_operation_intents_Ykz0XvNLTW0j_fkey",
+        "n|fk|public.payment_operation_intents.payment_operation_intents_Ykz0XvNLTW0j_fkey",
+        "e|fk|public.payment_operation_intents.payment_operation_intents_Ykz0XvNLTW0j_fkey",
+        "n|con|public.payment_operation_intents.payment_operation_intents_Ykz0XvNLTW0j_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.payment_operation_intents",
+        "n|sch|public",
+        "e|col|public.payment_operation_intents.trip_promo_id"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "shop_promo_codes"
+      ],
+      "writes": [
+        "s|tbl|public.shop_promo_codes",
+        "n|tbl|public.shop_promo_codes",
+        "e|tbl|public.shop_promo_codes",
+        "n|rel|public.shop_promo_codes",
+        "n|type|public.shop_promo_codes"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_last_minute_promos"
+      ],
+      "writes": [
+        "s|tbl|public.trip_last_minute_promos",
+        "n|tbl|public.trip_last_minute_promos",
+        "e|tbl|public.trip_last_minute_promos",
+        "n|rel|public.trip_last_minute_promos",
+        "n|type|public.trip_last_minute_promos"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_checkouts"
+      ],
+      "writes": [
+        "s|ck|public.booking_checkouts.booking_checkouts_single_promo_source",
+        "n|ck|public.booking_checkouts.booking_checkouts_single_promo_source",
+        "e|ck|public.booking_checkouts.booking_checkouts_single_promo_source",
+        "n|con|public.booking_checkouts.booking_checkouts_single_promo_source"
+      ],
+      "reads": [
+        "n|tbl|public.booking_checkouts",
+        "n|sch|public",
+        "e|col|public.booking_checkouts.promo_code_id",
+        "e|col|public.booking_checkouts.trip_promo_id"
+      ]
+    },
+    {
+      "statementType": "drop_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "payment_operation_intents"
+      ],
+      "writes": [
+        "s|ck|public.payment_operation_intents.payment_operation_intents_single_promo",
+        "n|ck|public.payment_operation_intents.payment_operation_intents_single_promo",
+        "e|ck|public.payment_operation_intents.payment_operation_intents_single_promo",
+        "n|con|public.payment_operation_intents.payment_operation_intents_single_promo"
+      ],
+      "reads": [
+        "n|tbl|public.payment_operation_intents",
+        "n|sch|public",
+        "e|col|public.payment_operation_intents.promo_code_id",
+        "e|col|public.payment_operation_intents.trip_promo_id"
+      ]
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "shop_promo_status"
+      ],
+      "writes": [
+        "s|enum|public.shop_promo_status",
+        "n|enum|public.shop_promo_status",
+        "e|enum|public.shop_promo_status",
+        "n|type|public.shop_promo_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "trip_last_minute_promo_status"
+      ],
+      "writes": [
+        "s|enum|public.trip_last_minute_promo_status",
+        "n|enum|public.trip_last_minute_promo_status",
+        "e|enum|public.trip_last_minute_promo_status",
+        "n|type|public.trip_last_minute_promo_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"shop_promo_codes\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"trip_last_minute_promos\"]"
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"shop_promo_status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"trip_last_minute_promo_status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"code\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"description\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"discount_percent\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"scope\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"starts_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"expires_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"max_redemptions\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"stripe_coupon_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"stripe_promotion_code_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"created_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"trip_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"discount_percent\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"code\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"stripe_coupon_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"stripe_promotion_code_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"expires_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"recipient_count\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"created_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"discount_amount_cents\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_promo_codes\",\"discount_amount_cents\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promos\",\"max_redemptions\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"shop_promo_codes_shop_created_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"shop_promo_codes_shop_code_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_last_minute_promos_trip_created_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_last_minute_promos_shop_code_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"booking_checkouts\",\"booking_checkouts_promo_code_id_shop_promo_codes_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"booking_checkouts\",\"booking_checkouts_trip_promo_id_trip_last_minute_promos_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"shop_promo_codes\",\"shop_promo_codes_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"shop_promo_codes\",\"shop_promo_codes_created_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_last_minute_promos\",\"trip_last_minute_promos_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_last_minute_promos\",\"trip_last_minute_promos_trip_id_trips_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_last_minute_promos\",\"trip_last_minute_promos_created_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"payment_operation_intents\",\"payment_operation_intents_wOv22MgfdNda_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"payment_operation_intents\",\"payment_operation_intents_Ykz0XvNLTW0j_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"shop_promo_codes\",\"shop_promo_codes_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"trip_last_minute_promos\",\"trip_last_minute_promos_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"booking_checkouts\",\"booking_checkouts_single_promo_source\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"shop_promo_codes\",\"shop_promo_codes_discount_range\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"shop_promo_codes\",\"shop_promo_codes_max_redemptions_positive\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"shop_promo_codes\",\"shop_promo_codes_window\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"trip_last_minute_promos\",\"trip_last_minute_promos_discount_range\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"trip_last_minute_promos\",\"trip_last_minute_promos_discount_amount_positive\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"trip_last_minute_promos\",\"trip_last_minute_promos_one_discount\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"shop_promo_codes\",\"shop_promo_codes_discount_amount_positive\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"shop_promo_codes\",\"shop_promo_codes_one_discount\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"payment_operation_intents\",\"payment_operation_intents_single_promo\"]"
+    }
+  ]
+}

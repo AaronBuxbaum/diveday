@@ -4,7 +4,13 @@
     "sending": "Enviando…",
     "adding": "Agregando…",
     "deleting": "Eliminando…",
-    "recording": "Registrando…"
+    "recording": "Registrando…",
+    "confirming": "Confirmando…",
+    "removing": "Quitando…",
+    "restoring": "Restaurando…",
+    "opening": "Abriendo…",
+    "undoing": "Deshaciendo…",
+    "importing": "Importando…"
   },
   "dismiss": {
     "neverMind": "Mejor no"

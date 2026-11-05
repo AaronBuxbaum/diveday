@@ -17,9 +17,8 @@ import type { Environment } from "./seam";
  *
  * Not named "rehearsal": that word is taken by rehearsal departures (ADR
  * 20261012-rehearsal-departures). The first modules on it are `clock.ts`,
- * `e2e-test-routes.ts` and `marine-life-tiles.ts`; the rest (`rate-limit.ts`,
- * the tide modules, `proxy.ts`, the cookie sites) still read the variables
- * themselves and move over under the same issue.
+ * `e2e-test-routes.ts` and `marine-life-tiles.ts`; `scripts/check-harness-env.mjs`
+ * lists the one file left that still reads a harness variable (the clock writer).
  *
  * Takes the environment as a parameter, defaulted to the live one, because the
  * answers must follow a test's stubbed variables; the record is frozen.
@@ -27,6 +26,12 @@ import type { Environment } from "./seam";
 export type RuntimeMode = Readonly<{
   /** `DATABASE_URL` is set: a real deployment, every harness field off. */
   realDatabase: boolean;
+  /**
+   * This process is the e2e fleet's own server: `DIVEDAY_E2E=1` with no database. The one
+   * question the sign-in challenge cookie, the dev-only CSP relaxation, the API timing log and
+   * the Claude assist fixtures each used to answer with their own `DIVEDAY_E2E` read.
+   */
+  e2eHarness: boolean;
   /** The instant `DIVEDAY_CLOCK` freezes the application clock at, or null for the live clock. */
   frozenClockMs: number | null;
   /** `/api/test/*` may be reached at all (the bearer secret is still required on top). */
@@ -57,6 +62,7 @@ export function runtimeMode(env: Environment = process.env): RuntimeMode {
   if (realDatabase) {
     return Object.freeze({
       realDatabase,
+      e2eHarness: false,
       frozenClockMs: null,
       testRoutesOpen: false,
       capturePhotos: false,
@@ -71,6 +77,7 @@ export function runtimeMode(env: Environment = process.env): RuntimeMode {
   const clock = env.DIVEDAY_CLOCK ? Date.parse(env.DIVEDAY_CLOCK) : Number.NaN;
   return Object.freeze({
     realDatabase,
+    e2eHarness: harness,
     frozenClockMs: Number.isNaN(clock) ? null : clock,
     // The e2e fleet serves a production build on purpose, so `DIVEDAY_E2E` is
     // what opens it there; outside a production runtime it is open by default.

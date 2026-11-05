@@ -7,8 +7,8 @@
  * (`person-columns.test.ts`: every foreign key to `people`, and every column
  * named `%person_id`, has a row; every row names a live column). `kind` says who
  * the column names, and `merge` says what `mergeDiverRecords` does with it. The
- * erasure follows in `erase` below; the export and the reap keep their own
- * lists for now and follow into this registry one at a time.
+ * erasure follows in `erase` below and a diver's own export in `export`; the
+ * reap keeps its own list for now and follows into this registry.
  *
  * ## `kind`
  *
@@ -63,13 +63,40 @@
  * `erasure-registry.test.ts` holds every fate to the code: a named sweep must
  * exist and write the table, and a `keep` table the erasure writes must say why.
  *
- * Export- and reap-shaped fates stay in their own modules until their slices
- * land; adding one here before then would be a second list nobody reads.
+ * ## `export` (the third slice)
+ *
+ * What one diver's own bundle (`loadDiverExportBundleInput`, ADR
+ * 20260824-diver-record-export) does with the rows *this column* names them on.
+ *
+ * - `own`: the bundle reads them as the diver's, by this column. Only a
+ *   `subject` or a `crew` column (their own membership of a buddy team) may say
+ *   so; an actor or a login names rows about other people.
+ * - `withheld`: the bundle does not read them by this column, and `exportWhy`
+ *   says why on a `subject`. Any other kind is `withheld` unless it says
+ *   otherwise: a staffer who recorded a row appears by name on the diver's own
+ *   rows, never as the owner of the rows they wrote.
+ *
+ * `diverOwnRows` (`./export-tables`), the one way the diver's bundle reads by
+ * their person id (under `readScoped` and in the loader alike), refuses a
+ * column this registry does not call `own`, and `export-registry.test.ts`
+ * holds both directions to the loader: every `own` column is read, and nothing
+ * is read by the diver's id that is not `own`. **This governs reads by person
+ * id only.** A read by the diver's own booking ids (roll call, deliveries,
+ * payments, recap photos, tips) is scoped by those ids and is outside the
+ * registry; what it ships is decided per file. The shop's whole bundle is a
+ * per-table decision (`export.test.ts`), not a per-person one, and stays there.
+ *
+ * `exportWhy` is required on every withheld `subject` and `crew` row: a
+ * staffer asking for their own data reads the same reasons.
+ *
+ * The reap's fates stay in its own module until its slice lands; adding one
+ * here before then would be a second list nobody reads.
  */
 
 export type PersonColumnKind = "subject" | "actor" | "crew" | "login";
 export type PersonColumnMerge = "move" | "refuse" | "leave" | "delete";
 export type PersonColumnErase = "delete" | "scrub" | "null" | "keep";
+export type PersonColumnExport = "own" | "withheld";
 
 export type PersonColumn = {
   table: string;
@@ -90,6 +117,10 @@ export type PersonColumn = {
   eraseBy?: string;
   /** `keep` only, when the table's entry in the erasure keep-list does not already say why. */
   eraseWhy?: string;
+  /** What the diver's own bundle does with the rows this column names them on; `withheld` when absent off a `subject`. */
+  export?: PersonColumnExport;
+  /** `withheld` on a `subject`: why the diver's own bundle leaves these rows out. */
+  exportWhy?: string;
 };
 
 const rows = [
@@ -101,6 +132,9 @@ const rows = [
   {
     table: "customer_gear_notices",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "delivery plumbing: a kind, a channel and a status; the ticket and the piece it was about are in the bundle",
     kind: "subject",
     merge: "move",
     erase: "keep",
@@ -109,15 +143,25 @@ const rows = [
   {
     table: "bookings",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
     eraseIn: "scrubBookingRows",
   },
-  { table: "internal_notes", column: "person_id", kind: "subject", merge: "move", erase: "delete" },
+  {
+    table: "internal_notes",
+    column: "person_id",
+    export: "withheld",
+    exportWhy: "staff notes, never shown to a diver, whose free text can name another diver",
+    kind: "subject",
+    merge: "move",
+    erase: "delete",
+  },
   {
     table: "interests",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -129,6 +173,8 @@ const rows = [
   {
     table: "capabilities",
     column: "person_id",
+    export: "withheld",
+    exportWhy: "a bearer credential; carrying it out would hand on what it grants",
     kind: "subject",
     merge: "move",
     erase: "delete",
@@ -137,6 +183,7 @@ const rows = [
   {
     table: "dive_package_entitlements",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "keep",
@@ -145,6 +192,7 @@ const rows = [
   {
     table: "orders",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -153,6 +201,7 @@ const rows = [
   {
     table: "waiver_records",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -166,6 +215,7 @@ const rows = [
   {
     table: "course_form_records",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -174,6 +224,7 @@ const rows = [
   {
     table: "cards",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -182,6 +233,7 @@ const rows = [
   {
     table: "certification_junior_reviews",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "delete",
@@ -190,6 +242,7 @@ const rows = [
   {
     table: "prior_visits",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -198,6 +251,7 @@ const rows = [
   {
     table: "imported_payment_history",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -206,6 +260,7 @@ const rows = [
   {
     table: "rental_fit_profiles",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "delete",
@@ -218,6 +273,7 @@ const rows = [
   {
     table: "gear_reservations",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -231,6 +287,7 @@ const rows = [
   {
     table: "customer_gear_items",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -239,6 +296,7 @@ const rows = [
   {
     table: "work_orders",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -247,6 +305,8 @@ const rows = [
   {
     table: "prior_gear_assignments",
     column: "person_id",
+    export: "withheld",
+    exportWhy: "the gear-history import's source evidence; neither bundle has a file for it yet",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -255,6 +315,7 @@ const rows = [
   {
     table: "trip_reviews",
     column: "person_id",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -268,6 +329,9 @@ const rows = [
   {
     table: "recap_pulses",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "not yet: the shop's bundle carries it as recap_pulses.csv, and the diver's own bundle has no file for it (#3862)",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -276,6 +340,9 @@ const rows = [
   {
     table: "trip_blowout_divers",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a weather cancel's message and rebooking state; the canceled seat is in bookings.csv",
     kind: "subject",
     merge: "move",
     erase: "keep",
@@ -290,6 +357,8 @@ const rows = [
   {
     table: "inbound_messages",
     column: "person_id",
+    export: "withheld",
+    exportWhy: "neither bundle has a file for a conversation yet (#3862)",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -298,6 +367,8 @@ const rows = [
   {
     table: "staff_replies",
     column: "person_id",
+    export: "withheld",
+    exportWhy: "neither bundle has a file for a conversation yet (#3862)",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -305,11 +376,23 @@ const rows = [
   },
   // Something the crew found aboard with this diver's name on it (batch 4,
   // J2). It is the diver's, so it follows them: the survivor is who gets told.
-  { table: "lost_items", column: "person_id", kind: "subject", merge: "move", erase: "delete" },
+  {
+    table: "lost_items",
+    column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a shelf the shop holds for somebody, pruned 90 days after it goes home; neither bundle carries it",
+    kind: "subject",
+    merge: "move",
+    erase: "delete",
+  },
   // ---- Refused: a staff record on either side stops the merge.
   {
     table: "staff_shifts",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -318,6 +401,9 @@ const rows = [
   {
     table: "staff_credentials",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own pro cards: a staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -343,6 +429,9 @@ const rows = [
   {
     table: "roll_call_events",
     column: "crew_person_id",
+    export: "withheld",
+    exportWhy:
+      "a crew member's own boarding marks, a staff record; a diver's marks are read by their seat",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -363,6 +452,9 @@ const rows = [
   {
     table: "crew_availability_blocks",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -371,6 +463,9 @@ const rows = [
   {
     table: "crew_assignment_requests",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "keep",
@@ -380,6 +475,9 @@ const rows = [
   {
     table: "crew_away_acknowledgements",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "keep",
@@ -388,14 +486,32 @@ const rows = [
   // #1202, #1187). Same shape as `push_subscriptions` above it: written by, and
   // about, somebody who works the boats, so either side of a merge holding one
   // is a staff record and the merge is refused rather than carried across.
-  { table: "trip_read_marks", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
-  { table: "today_read_marks", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
+  {
+    table: "trip_read_marks",
+    column: "person_id",
+    export: "withheld",
+    exportWhy: "where a staffer had read up to in a shift catch-up; app state, not a record",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
+  {
+    table: "today_read_marks",
+    column: "person_id",
+    export: "withheld",
+    exportWhy: "where a staffer had read up to in the day's catch-up; app state, not a record",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
   // The Monday email's claims (`src/db/weekly-digest.ts`). Only somebody with
   // a staff login is ever sent one, so a record holding one is a staff record
   // and the merge is refused, like the calendar feed above.
   {
     table: "weekly_digest_sends",
     column: "person_id",
+    export: "withheld",
+    exportWhy: "that the Monday staff email went out; delivery plumbing, not a record",
     kind: "crew",
     merge: "refuse",
     erase: "keep",
@@ -403,13 +519,24 @@ const rows = [
   // Crew news waiting to be told (ADR 20261009-crew-hear-about-their-boats).
   // Only somebody on a crew is ever its subject, so either side of a merge
   // holding one is a staff record and the merge is refused.
-  { table: "crew_notices", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
+  {
+    table: "crew_notices",
+    column: "person_id",
+    export: "withheld",
+    exportWhy: "crew news waiting to be told; delivery plumbing, not a record",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
   // A staffer named in an incident report (ADR 20261012-incident-reports). A
   // diver is named there by booking, which moves with the seat; only staff are
   // named by person, so a record holding one is a staff record.
   {
     table: "incident_report_people",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer named in an incident report, the shop's liability record; whether a diver's own report ships is a human decision (ADR 20261012-incident-reports)",
     kind: "crew",
     merge: "refuse",
     erase: "keep",
@@ -418,10 +545,22 @@ const rows = [
   },
   // A repeating trip's standing crew (`trip_series_crew`): only staff sail on
   // it, so a record holding one is a staff record and the merge is refused.
-  { table: "trip_series_crew", column: "person_id", kind: "crew", merge: "refuse", erase: "keep" },
+  {
+    table: "trip_series_crew",
+    column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
+    kind: "crew",
+    merge: "refuse",
+    erase: "keep",
+  },
   {
     table: "trip_assignments",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "a staffer's own staff record, not a diving one; whether a staff request for it gets a file is a human decision",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -441,6 +580,9 @@ const rows = [
   {
     table: "person_roles",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "the account's access level at this shop; a staffer's role is part of their staff record, not their diving record",
     kind: "subject",
     merge: "leave",
     erase: "delete",
@@ -458,6 +600,9 @@ const rows = [
   {
     table: "processor_erasure_obligations",
     column: "person_id",
+    export: "withheld",
+    exportWhy:
+      "what an erasure still owes at Stripe: the shop's compliance state, pointers into one Stripe account",
     kind: "subject",
     merge: "leave",
     erase: "keep",
@@ -499,6 +644,9 @@ const rows = [
   {
     table: "activity_events",
     column: "subject_person_id",
+    export: "withheld",
+    exportWhy:
+      "prose written at the time that routinely names other people, on a shared booking or a roll-call line",
     kind: "subject",
     merge: "leave",
     erase: "scrub",
@@ -588,6 +736,7 @@ const rows = [
   {
     table: "buddy_team_members",
     column: "crew_person_id",
+    export: "own",
     kind: "crew",
     merge: "leave",
     erase: "keep",
@@ -855,6 +1004,8 @@ const rows = [
   {
     table: "people",
     column: "merged_into_person_id",
+    export: "withheld",
+    exportWhy: "a record merged away; its history moved to the survivor, whose bundle carries it",
     kind: "subject",
     merge: "leave",
     erase: "scrub",
@@ -974,13 +1125,6 @@ const rows = [
     why: "who wrote the code or sent the deal",
   },
   {
-    table: "shop_promo_codes",
-    column: "created_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who wrote the code",
-  },
-  {
     table: "staff_credentials",
     column: "deleted_by_person_id",
     kind: "actor",
@@ -1025,6 +1169,9 @@ const rows = [
   {
     table: "trip_desk_events",
     column: "subject_person_id",
+    export: "withheld",
+    exportWhy:
+      "a same-day shift handoff kept thirty days; #1202 rules out a downloadable per-person account of who did what",
     kind: "subject",
     merge: "leave",
     erase: "keep",
@@ -1034,6 +1181,9 @@ const rows = [
   {
     table: "trip_help_requests",
     column: "helper_person_id",
+    export: "withheld",
+    exportWhy:
+      "the crew member who said they would help; the ask is about a departure, not about them",
     kind: "crew",
     merge: "leave",
     erase: "keep",
@@ -1052,13 +1202,6 @@ const rows = [
     kind: "actor",
     merge: "leave",
     why: "who raised the interest or sent the offer",
-  },
-  {
-    table: "trip_last_minute_promos",
-    column: "created_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who wrote the deal",
   },
   {
     table: "trip_recap_photos",
@@ -1119,6 +1262,9 @@ const rows = [
   {
     table: "work_order_events",
     column: "technician_person_id",
+    export: "withheld",
+    exportWhy:
+      "the technician a ticket was handed to; the diver's tickets are read by their own id",
     kind: "crew",
     merge: "leave",
     erase: "keep",
@@ -1141,6 +1287,8 @@ const rows = [
   {
     table: "work_orders",
     column: "technician_person_id",
+    export: "withheld",
+    exportWhy: "the technician working a ticket; the diver's tickets are read by their own id",
     kind: "crew",
     merge: "leave",
     erase: "keep",
@@ -1264,6 +1412,8 @@ const rows = [
   {
     table: "notification_send_queue",
     column: "recipient_person_id",
+    export: "withheld",
+    exportWhy: "sealed retry state; what was delivered is in notification_deliveries.csv",
     kind: "subject",
     merge: "delete",
     erase: "delete",
@@ -1327,6 +1477,36 @@ export function erasedPersonRowDeletes(): { table: string; column: string }[] {
     }
     return { table: row.table, column: row.column };
   });
+}
+
+/**
+ * What one diver's own bundle does with the rows a column names them on. A
+ * `subject` states it; any other kind is `withheld` unless it says otherwise,
+ * and only a `crew` column may say `own` (a staffer's own membership of a
+ * team): the rows an actor or a login names are about other people.
+ */
+export function exportFate(row: PersonColumn): PersonColumnExport {
+  if (row.export === "own" && (row.kind === "actor" || row.kind === "login")) {
+    throw new Error(`person-columns: ${personColumnKey(row)} calls a ${row.kind} column own`);
+  }
+  if (row.export) return row.export;
+  if (row.kind === "subject") {
+    throw new Error(`person-columns: ${personColumnKey(row)} states no export fate`);
+  }
+  return "withheld";
+}
+
+/**
+ * Throws unless the registry says the diver's own bundle reads `table` by
+ * `column` as theirs. `diverOwnRows` (`./export-tables`) calls it before every
+ * read by a diver's person id, so neither the read list nor a hand-written
+ * read can widen a diver's bundle past what this registry decided. Reads by
+ * the diver's booking ids do not pass through it.
+ */
+export function assertDiverExportColumn(table: string, column: string): void {
+  const row = PERSON_COLUMNS.find((found) => found.table === table && found.column === column);
+  if (!row) throw new Error(`export: ${table}.${column} has no registry row`);
+  if (exportFate(row) !== "own") throw new Error(`export: ${table}.${column} is withheld`);
 }
 
 /** `table.column` for every row, the key the guards and the docs use. */

@@ -113,7 +113,7 @@ export function SeatFootActions({
               confirmLabel={t("trips.roster.removeBookingConfirmButton")}
               cancelLabel={t("words.dismiss.neverMind")}
               evidence={carriedChartersNote}
-              pendingLabel={t("trips.roster.removing")}
+              pendingLabel={t("words.busy.removing")}
               // `danger-ghost`, which is this variant's own stated case: a
               // destructive choice among quiet siblings. On `ghost` the
               // trigger rendered as muted body text at the foot of the

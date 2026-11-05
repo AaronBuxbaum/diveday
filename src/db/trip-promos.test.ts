@@ -414,7 +414,7 @@ describe("listOutstandingLastMinutePromos", () => {
     );
   });
 
-  it("never joins a deal to a trip of another shop (the schema does not tie them, issue #3782)", async () => {
+  it("refuses a deal that names a trip of another shop (deals_shop_trip_fk, issue #3782)", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
     await askAnytime(db, { shopId: shop.id, ...visitor });
@@ -430,11 +430,9 @@ describe("listOutstandingLastMinutePromos", () => {
       .returning();
     if (!other) throw new Error("setup: shop missing");
     // A row no writer produces: one shop's deal pointing at another shop's trip.
-    await db.update(deals).set({ shopId: other.id }).where(eq(deals.id, outcome.promoId));
-
-    const page = await listOutstandingLastMinutePromos(db, other.id);
-    expect(page.deals).toEqual([]);
-    expect(page.total).toBe(0);
+    await expect(
+      db.update(deals).set({ shopId: other.id }).where(eq(deals.id, outcome.promoId)),
+    ).rejects.toMatchObject({ cause: { constraint: "deals_shop_trip_fk" } });
   });
 
   it("excludes a failed send — it never discounted anything and has nothing to list", async () => {
