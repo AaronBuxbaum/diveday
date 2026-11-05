@@ -669,7 +669,11 @@
   construction — a site entry never carries a date, because *dated* conditions (water
   temperature, visibility, surface state) belong to the charter that sailed, not to the reef.
   A shop's library is at Dive sites; DiveDay's published starting points are the **common-site
-  catalog**, and importing one makes an independent copy the shop then owns.
+  catalog**, and importing one makes an independent copy the shop then owns. Its **admission
+  fields** (the level it asks for, its required specialties, its nitrox requirement and its max
+  depth) change only by an owner or manager (`canEditDiveSiteAdmission`, issue #3706): every other
+  staff role sees them read-only and edits the rest of the briefing, a save that would change one
+  is refused whole, and a template pull or its undo, which rewrite them, is refused too.
 - **Snorkel-suitable** — the shop's yes, no or not-said about whether a **dive site** is any good
   for a snorkeler (`dive_sites.snorkel_suitable`, issue #2214), set beside difficulty and copied
   from a common-site template where the template knows; an import sets it only from an explicit

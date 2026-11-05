@@ -8,6 +8,7 @@ import {
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
+  canEditDiveSiteAdmission,
   canEmergencyReadMedicalAlert,
   canErasePersonalData,
   canExportDisputeSheet,
@@ -100,6 +101,8 @@ describe("accountable-role gates (export/import/reports)", () => {
     ["canManageBoats", canManageBoats],
     ["canManageTripTags", canManageTripTags],
     ["canManageSafetyChecklist", canManageSafetyChecklist],
+    // #3706: a dive site's level, specialties, nitrox and max depth.
+    ["canEditDiveSiteAdmission", canEditDiveSiteAdmission],
   ] as const;
 
   for (const [name, gate] of gates) {

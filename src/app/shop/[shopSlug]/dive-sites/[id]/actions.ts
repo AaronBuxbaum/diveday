@@ -1,6 +1,7 @@
 "use server";
 
 import { notFound } from "next/navigation";
+import { canPersonEditDiveSiteAdmission } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { recordDiveSiteClosure } from "@/db/dive-site-closures";
 import { planDiveSitePhotoRelease } from "@/db/dive-site-photos";
@@ -17,7 +18,12 @@ import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { readRequiredSpecialties } from "@/db/requirement-form";
 import { getShopById } from "@/db/shops";
 import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
-import { parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
+import {
+  changedAdmissionFields,
+  type DiveSiteAdmission,
+  parseDiveSiteForm,
+  submittedValues,
+} from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { parseServiceWindow } from "@/lib/service-window";
 import { requireStaffSession } from "@/lib/session";
@@ -71,6 +77,35 @@ export async function saveDiveSiteAction(
   // only ever tighten the write.
   const extras = siteFormExtras(formData);
   if (!extras) return refuse("invalid");
+  // **The admission fields are owner/manager work** (issue #3706). Everyone
+  // else's form shows them read-only and posts them back as shown; a post
+  // that would change one is refused whole, and an unchanged one keeps the
+  // stored values exactly, so a feet-to-metres round trip never moves them.
+  const submittedAdmission: DiveSiteAdmission = {
+    minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
+    requiredSpecialties: specialties,
+    requiresNitrox: extras.requiresNitrox,
+    maxDepthMeters: parsed.maxDepthMeters,
+  };
+  const mayEditAdmission = await canPersonEditDiveSiteAdmission(
+    activeDb,
+    activeSession.user.shopId,
+    activeSession.user.personId,
+  );
+  const storedAdmission: DiveSiteAdmission = {
+    minimumCertificationLevel: stored.minimumCertificationLevel,
+    requiredSpecialties: stored.requiredSpecialties,
+    requiresNitrox: stored.requiresNitrox,
+    maxDepthMeters: stored.maxDepthMeters,
+  };
+  if (
+    !mayEditAdmission &&
+    changedAdmissionFields(storedAdmission, submittedAdmission, activeShop?.depthUnit ?? "meters")
+      .length > 0
+  ) {
+    return refuse("admissionManagersOnly");
+  }
+  const admission = mayEditAdmission ? submittedAdmission : storedAdmission;
   // **Checked before a single byte is uploaded.** `dive-site-photos.ts` says
   // why in its own words — refusing after storing four photos leaves objects
   // nothing references, and a refusal never gets far enough to persist their
@@ -137,13 +172,13 @@ export async function saveDiveSiteAction(
         words: planningNoteWords,
         byPersonId: activeSession.user.personId,
       },
-      minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
-      requiredSpecialties: specialties,
-      requiresNitrox: extras.requiresNitrox,
+      minimumCertificationLevel: admission.minimumCertificationLevel,
+      requiredSpecialties: [...admission.requiredSpecialties],
+      requiresNitrox: admission.requiresNitrox,
       difficultyLevel: parsed.difficultyLevel,
       snorkelSuitable: parsed.snorkelSuitable,
       depthRange: parsed.fields.depthRange,
-      maxDepthMeters: parsed.maxDepthMeters,
+      maxDepthMeters: admission.maxDepthMeters,
       depthMinMeters: parsed.depthMinMeters,
       expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
       currentNote: parsed.fields.currentNote,
@@ -232,11 +267,29 @@ export async function closeDiveSiteAction(siteId: string, formData: FormData) {
   revalidateAndRedirect(page, `${noticeUrl(page, "closure-saved")}#site-closure-heading`);
 }
 
+/**
+ * A template pull or its undo rewrites the briefing wholesale, admission
+ * fields included, so both are owner/manager work (issue #3706): everyone else
+ * is sent back to the site with the reason.
+ */
+async function refuseTemplateWithoutAdmission(
+  session: Awaited<ReturnType<typeof requireStaffSession>>,
+  page: string,
+) {
+  const allowed = await canPersonEditDiveSiteAdmission(
+    await getDb(),
+    session.user.shopId,
+    session.user.personId,
+  );
+  if (!allowed) revalidateAndRedirect(page, noticeUrl(page, "admission-managers-only"));
+}
+
 export async function pullDiveSiteTemplateAction(siteId: string, formData: FormData) {
   const activeSession = await requireStaffSession();
   const id = uuidParam(siteId);
   if (!id) notFound();
   const back = shopPath(activeSession.user.shopSlug, "dive-sites");
+  await refuseTemplateWithoutAdmission(activeSession, `${back}/${id}`);
   const mode = templatePullMode(formData);
   if (mode !== "preserve-shop-edits" && mode !== "replace-template-copy") {
     revalidateAndRedirect(
@@ -269,6 +322,7 @@ export async function undoDiveSiteTemplateAction(siteId: string) {
   const id = uuidParam(siteId);
   if (!id) notFound();
   const back = shopPath(activeSession.user.shopSlug, "dive-sites");
+  await refuseTemplateWithoutAdmission(activeSession, `${back}/${id}`);
   const result = await undoDiveSiteTemplateUpdate(await getDb(), activeSession.user.shopId, id);
   revalidateAndRedirect(
     `${back}/${id}`,

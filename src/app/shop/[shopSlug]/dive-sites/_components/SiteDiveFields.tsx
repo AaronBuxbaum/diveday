@@ -14,10 +14,13 @@ export function SiteDiveFields({
   t,
   depthUnit,
   values,
+  maxDepthLocked,
 }: {
   t: StaffTranslator;
   depthUnit: DepthUnit;
   values?: SiteFieldValues;
+  /** Why the max depth is read-only to this reader (issue #3706); absent, it is editable. */
+  maxDepthLocked?: string;
 }) {
   const unitKey = depthUnit === "feet" ? "Feet" : "Meters";
   // The folded section's preview reads these off the two depth inputs, in
@@ -131,10 +134,13 @@ export function SiteDiveFields({
               : "diveSites.form.maxDepthMetersLabel",
           )}
           hint={t("diveSites.form.optionalHint")}
-          description={t("diveSites.form.maxDepthHint")}
+          description={maxDepthLocked ?? t("diveSites.form.maxDepthHint")}
         >
           <input
             name="maxDepth"
+            // Read-only, not disabled: it still posts, as shown, and the save
+            // refuses it if it changed (issue #3706).
+            readOnly={maxDepthLocked !== undefined}
             {...depthPreview}
             type="number"
             inputMode="numeric"

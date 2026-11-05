@@ -21,6 +21,7 @@ const MESSAGES: Record<SiteSaveRefusal, string> = {
   nameTaken: "Another dive site here already goes by that name.",
   spanishStale: "The English changed since this Spanish was written.",
   spanishRefused: "That Spanish didn’t save.",
+  admissionManagersOnly: "Only an owner or manager can change these, so nothing was saved.",
 };
 
 /** Stands in for the server action: refuses, and hands the submission back. */
