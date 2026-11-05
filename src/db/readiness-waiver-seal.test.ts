@@ -235,6 +235,23 @@ describe("readiness over a physician's answer", () => {
     expect((await seatCodes(ctx)).codes).toContain("waiver_seal_failed");
   });
 
+  // A row from before the seal existed would look like this: a real answer
+  // and no seal. There is no such legacy row (H-20260815-no-legacy), so it
+  // reads as stripped, and fails closed.
+  it("holds a diver whose real clearance had its seal stripped", async () => {
+    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
+    await clearAtTheDesk(ctx);
+    await ctx.db
+      .update(waiverRecords)
+      .set({ medicalAnswerSeal: null })
+      .where(eq(waiverRecords.id, ctx.recordId));
+    const summary = await recheckWaiverSeals(ctx.db, { now: nightly });
+    expect(summary.newlyInvalid).toBeGreaterThanOrEqual(1);
+    const seat = await seatCodes(ctx);
+    expect(seat.status).toBe("blocked");
+    expect(seat.codes).toContain("waiver_seal_failed");
+  });
+
   it("holds a diver whose physician's no was turned into a yes", async () => {
     const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
     const owner = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_OWNER_EMAIL);

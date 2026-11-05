@@ -779,7 +779,10 @@ describe("the physician's answer seal", () => {
     vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
     const elsewhere = { ...cleared, id: "00000000-0000-4000-8000-0000000000ff" };
     expect(
-      verifyWaiverIntegrity({ ...sealed(cleared), medicalAnswerSeal: medicalAnswerSealFor(elsewhere) }),
+      verifyWaiverIntegrity({
+        ...sealed(cleared),
+        medicalAnswerSeal: medicalAnswerSealFor(elsewhere),
+      }),
     ).toBe("invalid");
     vi.unstubAllEnvs();
   });

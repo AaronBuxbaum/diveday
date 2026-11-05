@@ -33,12 +33,6 @@ export const WAIVER_INTEGRITY_PAGE_SIZE = PAGE_SIZE.list;
 type WaiverAuditJoinRow = {
   /** Sealed columns only: never the bearer token or an unsigned draft. */
   record: WaiverSealedFields;
-  /**
-   * The physician's answer, if one was recorded: the shop's later act on the
-   * row, so outside the seal and selected beside it (`AUDIT_CLEARANCE_COLUMNS`).
-   */
-  medicalClearedAt: Date | null;
-  medicalClearanceDeclinedAt: Date | null;
   personName: string;
   signatureMethod: string | null;
   recorderName: string | null;
@@ -46,16 +40,6 @@ type WaiverAuditJoinRow = {
   tripId: string | null;
   tripTitle: string | null;
   tripStartsAt: Date | null;
-};
-
-/**
- * Where a medical hold stands. A clearance leaves the record `medical_review`
- * (`isCleanCompletion`), so without these the log could not tell a cleared
- * diver from one nobody has heard back about.
- */
-const AUDIT_CLEARANCE_COLUMNS = {
-  medicalClearedAt: waiverRecords.medicalClearedAt,
-  medicalClearanceDeclinedAt: waiverRecords.medicalClearanceDeclinedAt,
 };
 
 /**
@@ -90,8 +74,15 @@ function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
     /** Who co-signed a minor's release, or null (ADR 20260907-guardian-co-signature). */
     guardian: guardianSignatureOf(row.record),
     integrity: verifyWaiverIntegrity(row.record),
-    medicalClearedAt: row.medicalClearedAt,
-    medicalClearanceDeclinedAt: row.medicalClearanceDeclinedAt,
+    /**
+     * Where a medical hold stands. A clearance leaves the record
+     * `medical_review` (`isCleanCompletion`), so without these the log could
+     * not tell a cleared diver from one nobody has heard back about. Read from
+     * the sealed columns: the physician's answer has a seal of its own
+     * (`medical_answer_seal`, issue #3949), checked by `integrity` above.
+     */
+    medicalClearedAt: row.record.medicalClearedAt,
+    medicalClearanceDeclinedAt: row.record.medicalClearanceDeclinedAt,
     flaggedPrompts:
       row.record.status === "medical_review" && row.record.medicalAnswers
         ? flaggedMedicalPrompts(row.record.medicalAnswers)
@@ -193,7 +184,6 @@ export async function listWaiverIntegrityAudit(
       db
         .select({
           record: WAIVER_SEALED_COLUMNS,
-          ...AUDIT_CLEARANCE_COLUMNS,
           personName: people.fullName,
           signatureMethod: waiverRecords.signatureMethod,
           recorderName: recorder.fullName,
@@ -254,7 +244,6 @@ export async function getSignedWaiverRecordForShop(
   const [row] = await db
     .select({
       record: WAIVER_SEALED_COLUMNS,
-      ...AUDIT_CLEARANCE_COLUMNS,
       personName: people.fullName,
       signatureMethod: waiverRecords.signatureMethod,
       recorderName: recorder.fullName,
