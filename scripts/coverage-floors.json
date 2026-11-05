@@ -93,6 +93,7 @@
   "src/db/waiver-issue.ts": 70.77,
   "src/db/waiver-record-columns.ts": 100,
   "src/db/waiver-refile.ts": 100,
+  "src/db/waiver-seal-checks.ts": 93.75,
   "src/db/waiver-signing.ts": 100,
   "src/db/waivers-audit.ts": 85.45,
   "src/db/waivers-completion.ts": 86.66,
