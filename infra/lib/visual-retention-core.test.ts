@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  BLOB_RETENTION_MS,
+  blobHashesFromReport,
   CANDIDATE_PAGE_SIZE,
   chainCoversMainBaselineFloors,
   KEEP_MAIN_BASELINE_AGE_MS,
@@ -10,6 +12,8 @@ import {
   mainBaselineProbeOrder,
   mainFirstParentChain,
   outsideMainBaselineAgeWindow,
+  planBlobPrune,
+  pruneBlobs,
   shouldFetchAnotherCandidatePage,
   shouldStopMainBaselineProbes,
 } from "./visual-retention-core.mjs";
@@ -63,5 +67,137 @@ describe("visual retention core", () => {
     expect(shouldStopMainBaselineProbes(KEEP_MAIN_BASELINES, aged, NOW)).toBe(true);
     const rows = [commit(1, -1, 0), commit(2, -1, 0)];
     expect(mainBaselineProbeOrder(rows)).toEqual({ chain: [rows[0]], fallback: rows });
+  });
+});
+
+describe("blob keep set", () => {
+  const DAYMS = 24 * 60 * 60 * 1000;
+  const hash = (c: string) => c.repeat(64);
+  const blob = (c: string, ageMs: number | null) => ({
+    key: `blobs/${hash(c)}.png`,
+    size: 100,
+    etag: '"e"',
+    lastModifiedMs: ageMs === null ? null : NOW - ageMs,
+  });
+  const report = (...cs: string[]) => ({
+    actualBlobs: Object.fromEntries(cs.map((c, i) => [`shot-${i}`, hash(c)])),
+  });
+
+  it("deletes only old blobs that no kept manifest names", () => {
+    const plan = planBlobPrune({
+      manifests: [report("a"), report("b")],
+      blobs: [
+        blob("a", 90 * DAYMS),
+        blob("b", 90 * DAYMS),
+        blob("c", 90 * DAYMS),
+        blob("d", DAYMS),
+      ],
+      now: NOW,
+    });
+    expect(plan.safe).toBe(true);
+    expect(plan.remove.map((b) => b.key)).toEqual([`blobs/${hash("c")}.png`]);
+    expect(plan.keep).toHaveLength(3);
+  });
+
+  it("keeps a referenced blob at any age and an unreferenced one inside the retention window", () => {
+    const plan = planBlobPrune({
+      manifests: [report("a")],
+      blobs: [
+        blob("a", 400 * DAYMS),
+        blob("b", BLOB_RETENTION_MS - 1),
+        blob("c", BLOB_RETENTION_MS),
+      ],
+      now: NOW,
+    });
+    expect(plan.remove.map((b) => b.key)).toEqual([`blobs/${hash("c")}.png`]);
+  });
+
+  it("treats an unknown write time as new and leaves non-blob keys alone", () => {
+    const plan = planBlobPrune({
+      manifests: [report("a")],
+      blobs: [blob("b", null), { key: "blobs/notes.txt", lastModifiedMs: NOW - 400 * DAYMS }],
+      now: NOW,
+    });
+    expect(plan.remove).toEqual([]);
+  });
+
+  it("never lets a caller shrink the window below the publication grace", () => {
+    const plan = planBlobPrune({
+      manifests: [report("a")],
+      blobs: [blob("b", 60_000)],
+      now: NOW,
+      retentionMs: 0,
+    });
+    expect(plan.remove).toEqual([]);
+  });
+
+  it.each([
+    ["no manifests", []],
+    ["an unreadable manifest", [report("a"), null]],
+    ["a manifest that is not an object", [report("a"), "oops"]],
+    ["a malformed actualBlobs map", [report("a"), { actualBlobs: { x: "nothex" } }]],
+    ["manifests that name no blobs", [{}, { actualBlobs: {} }]],
+  ])("fails closed with %s", (_name, manifests) => {
+    const plan = planBlobPrune({ manifests, blobs: [blob("z", 400 * DAYMS)], now: NOW });
+    expect(plan.safe).toBe(false);
+    expect(plan.remove).toEqual([]);
+  });
+
+  it("reads a pre-blob report as referencing nothing, not as malformed", () => {
+    expect(blobHashesFromReport({ items: [] })).toEqual(new Set());
+    expect(blobHashesFromReport(null)).toBeNull();
+    expect(blobHashesFromReport([])).toBeNull();
+  });
+
+  describe("pruneBlobs", () => {
+    const base = () => ({
+      keepShas: [sha(1)],
+      readManifest: async () => report("a"),
+      listBlobs: async () => [blob("a", 90 * DAYMS), blob("c", 90 * DAYMS)],
+      deleteBlobs: vi.fn(async (rows: { key: string }[]) => ({
+        deleted: rows.map((r) => r.key),
+        errors: [] as string[],
+      })),
+      now: NOW,
+    });
+
+    it("dry run reports the plan and deletes nothing", async () => {
+      const input = base();
+      const result = await pruneBlobs({ ...input, dryRun: true });
+      expect(result.wouldDeleteCount).toBe(1);
+      expect(result.deletedCount).toBe(0);
+      expect(input.deleteBlobs).not.toHaveBeenCalled();
+    });
+
+    it("deletes the unreferenced old blob and reports bytes", async () => {
+      const input = base();
+      const result = await pruneBlobs(input);
+      expect(input.deleteBlobs).toHaveBeenCalledWith([
+        expect.objectContaining({ key: `blobs/${hash("c")}.png` }),
+      ]);
+      expect(result).toMatchObject({ deletedCount: 1, deletedBytes: 100, skipped: null });
+    });
+
+    it("fails closed, deleting nothing, when a manifest read throws", async () => {
+      const input = base();
+      const result = await pruneBlobs({
+        ...input,
+        readManifest: async () => {
+          throw new Error("AccessDenied");
+        },
+      });
+      expect(result.skipped).toMatch(/unreadable/);
+      expect(input.deleteBlobs).not.toHaveBeenCalled();
+    });
+
+    it("fails closed when the manifest names nothing", async () => {
+      const input = base();
+      const result = await pruneBlobs({
+        ...input,
+        readManifest: async () => ({ actualBlobs: {} }),
+      });
+      expect(result.skipped).toMatch(/no blobs/);
+      expect(input.deleteBlobs).not.toHaveBeenCalled();
+    });
   });
 });

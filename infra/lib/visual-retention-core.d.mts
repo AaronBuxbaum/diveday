@@ -41,3 +41,39 @@ export function shouldStopMainBaselineProbes(
 export function mainBaselineProbeOrder<T extends RetentionCommit>(
   candidates: readonly T[],
 ): { chain: T[]; fallback: readonly T[] };
+
+export const BLOB_RETENTION_MS: number;
+export interface BlobRow {
+  key: string;
+  size?: number;
+  etag?: string | null;
+  lastModifiedMs?: number | null;
+}
+export function blobHashFromKey(key: string): string | null;
+export function blobHashesFromReport(report: unknown): Set<string> | null;
+export function planBlobPrune(input: {
+  manifests: readonly unknown[];
+  blobs: readonly BlobRow[];
+  now: number;
+  retentionMs?: number;
+}): { safe: boolean; reason: string; referenced: number; keep: BlobRow[]; remove: BlobRow[] };
+export interface BlobPruneResult {
+  skipped: string | null;
+  referenced: number;
+  keptCount: number;
+  wouldDeleteCount: number;
+  deletedCount: number;
+  deletedBytes: number;
+  wouldDeleteBytes: number;
+  errors: string[];
+  dryRun: boolean;
+}
+export function pruneBlobs(input: {
+  keepShas: readonly string[];
+  readManifest: (sha: string) => Promise<unknown>;
+  listBlobs: () => Promise<BlobRow[]>;
+  deleteBlobs: (rows: BlobRow[]) => Promise<{ deleted: string[]; errors: string[] }>;
+  now?: number;
+  retentionMs?: number;
+  dryRun?: boolean;
+}): Promise<BlobPruneResult>;

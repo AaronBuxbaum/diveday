@@ -1,16 +1,24 @@
-import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 import {
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import {
+  BLOB_RETENTION_MS,
   CANDIDATE_PAGE_SIZE,
   KEEP_MAIN_BASELINES,
   MAX_CANDIDATE_PAGES,
   MIN_PRUNE_AGE_MS,
   MIN_PUBLICATION_GRACE_MS,
   mainBaselineProbeOrder,
+  pruneBlobs,
   shouldFetchAnotherCandidatePage,
   shouldStopMainBaselineProbes,
 } from "./visual-retention-core.mjs";
 
 export {
+  BLOB_RETENTION_MS,
   CANDIDATE_PAGE_SIZE,
   KEEP_MAIN_BASELINE_AGE_MS,
   KEEP_MAIN_BASELINES,
@@ -26,6 +34,8 @@ const COMMIT_SHA = /^[0-9a-f]{40}$/i;
 
 export interface PrunerEvent {
   keep?: string;
+  /** Report what would be deleted from `blobs/` without deleting it. */
+  dryRunBlobs?: boolean;
 }
 
 export interface PrunerSummary {
@@ -38,6 +48,11 @@ export interface PrunerSummary {
   deletedPrefixesCount: number;
   deletedObjectsCount: number;
   deleteErrorCount: number;
+  blobsReferenced?: number;
+  blobsDeleted?: number;
+  blobsWouldDelete?: number;
+  blobsSkipped?: string | null;
+  blobDeleteErrorCount?: number;
 }
 
 export async function listPrefixes(client: S3Client, bucket: string): Promise<string[]> {
@@ -342,6 +357,63 @@ export async function pruneBucket(
   };
 }
 
+/**
+ * Garbage-collects `blobs/` against the kept main manifests. Deletes a blob only
+ * when no kept main report names it and it is older than the retention window;
+ * skips (deleting nothing) when a manifest cannot be read, parsed, or names
+ * nothing. See `planBlobPrune` in visual-retention-core.mjs.
+ */
+export async function pruneBlobsInBucket(
+  client: S3Client,
+  bucket: string,
+  keepShas: readonly string[],
+  options: { now?: number; dryRun?: boolean; retentionMs?: number } = {},
+) {
+  return pruneBlobs({
+    keepShas,
+    dryRun: options.dryRun ?? false,
+    now: options.now,
+    retentionMs: options.retentionMs ?? BLOB_RETENTION_MS,
+    readManifest: async (sha) => {
+      const res = await client.send(
+        new GetObjectCommand({ Bucket: bucket, Key: `${sha}/out.json` }),
+      );
+      return JSON.parse((await res.Body?.transformToString()) ?? "");
+    },
+    listBlobs: async () =>
+      (await listObjects(client, bucket, "blobs/")).map((object) => ({
+        key: object.key,
+        etag: object.etag,
+        lastModifiedMs: object.lastModifiedMs,
+        size: 0,
+      })),
+    deleteBlobs: async (rows) => {
+      const deleted: string[] = [];
+      const errors: string[] = [];
+      for (let i = 0; i < rows.length; i += 1000) {
+        const eligible = rows.slice(i, i + 1000);
+        for (const row of eligible) if (!row.etag) errors.push(`${row.key}: MissingETag`);
+        const chunk = eligible.flatMap((row) =>
+          row.etag ? [{ Key: row.key, ETag: row.etag }] : [],
+        );
+        if (chunk.length === 0) continue;
+        const res = await client.send(
+          new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: chunk, Quiet: false } }),
+        );
+        for (const error of res.Errors ?? []) {
+          errors.push(`${error.Key ?? "(unknown key)"}: ${error.Code ?? "unknown"}`);
+        }
+        const failed = new Set((res.Errors ?? []).map((error) => error.Key));
+        deleted.push(
+          ...(res.Deleted?.flatMap((object) => (object.Key ? [object.Key] : [])) ??
+            chunk.filter((object) => !failed.has(object.Key)).map((object) => object.Key)),
+        );
+      }
+      return { deleted, errors };
+    },
+  });
+}
+
 export async function handler(event?: PrunerEvent): Promise<PrunerSummary> {
   const bucket = process.env.BUCKET;
   if (!bucket) {
@@ -398,6 +470,16 @@ export async function handler(event?: PrunerEvent): Promise<PrunerSummary> {
   );
 
   const pruneResult = await pruneBucket(s3, bucket, keepShas);
+  // A failed blob pass must not hide the snapshot prune that already happened.
+  const blobResult = await pruneBlobsInBucket(s3, bucket, keepShas, {
+    dryRun: event?.dryRunBlobs === true,
+  }).catch((error: unknown) => ({
+    skipped: `blob pass failed: ${error instanceof Error ? error.message : String(error)}`,
+    referenced: 0,
+    deletedCount: 0,
+    wouldDeleteCount: 0,
+    errors: [] as string[],
+  }));
 
   const summary: PrunerSummary = {
     event: "visual_pruner.summary",
@@ -409,6 +491,11 @@ export async function handler(event?: PrunerEvent): Promise<PrunerSummary> {
     deletedPrefixesCount: pruneResult.deletedPrefixesCount,
     deletedObjectsCount: pruneResult.deletedObjectsCount,
     deleteErrorCount: pruneResult.deleteErrors.length,
+    blobsReferenced: blobResult.referenced,
+    blobsDeleted: blobResult.deletedCount,
+    blobsWouldDelete: blobResult.wouldDeleteCount,
+    blobsSkipped: blobResult.skipped,
+    blobDeleteErrorCount: blobResult.errors.length,
   };
 
   console.log(JSON.stringify(summary));

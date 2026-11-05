@@ -4,8 +4,9 @@
 // Consumed by:
 //   - `scripts/prune-visual-bucket.mjs` (CLI tool / local / CI)
 //   - Unit tests (`scripts/prune-visual-bucket-lib.test.mjs`)
-import { DeleteObjectsCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import {
+  BLOB_RETENTION_MS,
   CANDIDATE_PAGE_SIZE,
   KEEP_MAIN_BASELINE_AGE_MS,
   KEEP_MAIN_BASELINES,
@@ -14,11 +15,13 @@ import {
   MIN_PUBLICATION_GRACE_MS,
   mainBaselineProbeOrder,
   mainFirstParentChain,
+  pruneBlobs,
   shouldFetchAnotherCandidatePage,
   shouldStopMainBaselineProbes,
 } from "../infra/lib/visual-retention-core.mjs";
 
 export {
+  BLOB_RETENTION_MS,
   CANDIDATE_PAGE_SIZE,
   KEEP_MAIN_BASELINE_AGE_MS,
   KEEP_MAIN_BASELINES,
@@ -483,4 +486,64 @@ export async function pruneVisualBucket({
     deleteErrors,
     dryRun,
   };
+}
+
+/**
+ * Garbage-collects `blobs/` against the kept main manifests: a blob goes only
+ * when no kept main report names it and it is older than `retentionMs`. Refuses
+ * (returns `skipped`) when a manifest cannot be read, parsed, or names nothing;
+ * see `planBlobPrune`. Rides the same authenticated client as everything else.
+ */
+export async function pruneBlobsInBucket({
+  s3Client,
+  bucket = DEFAULT_BUCKET,
+  keepShas,
+  dryRun = false,
+  retentionMs = BLOB_RETENTION_MS,
+  now = Date.now(),
+  batchSize = 1000,
+} = {}) {
+  return pruneBlobs({
+    keepShas,
+    dryRun,
+    retentionMs,
+    now,
+    readManifest: async (sha) => {
+      const res = await s3Client.send(
+        new GetObjectCommand({ Bucket: bucket, Key: `${sha}/out.json` }),
+      );
+      return JSON.parse(await res.Body.transformToString());
+    },
+    listBlobs: async () =>
+      (await listPrefixObjects({ s3Client, bucket, prefix: "blobs/" })).map((object) => ({
+        key: object.Key,
+        size: object.Size,
+        etag: object.ETag,
+        lastModifiedMs: object.LastModified ? +object.LastModified : null,
+      })),
+    deleteBlobs: async (rows) => {
+      const deleted = [];
+      const errors = [];
+      for (let i = 0; i < rows.length; i += batchSize) {
+        const eligible = rows.slice(i, i + batchSize);
+        for (const row of eligible) if (!row.etag) errors.push(`${row.key}: MissingETag`);
+        const chunk = eligible
+          .filter((row) => row.etag)
+          .map((row) => ({ Key: row.key, ETag: row.etag }));
+        if (chunk.length === 0) continue;
+        const res = await s3Client.send(
+          new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: chunk, Quiet: false } }),
+        );
+        for (const error of res?.Errors ?? []) {
+          errors.push(`${error.Key ?? "(unknown key)"}: ${error.Code ?? "unknown"}`);
+        }
+        const failed = new Set((res?.Errors ?? []).map((error) => error.Key));
+        deleted.push(
+          ...(res?.Deleted?.map((object) => object.Key) ??
+            chunk.filter((object) => !failed.has(object.Key)).map((object) => object.Key)),
+        );
+      }
+      return { deleted, errors };
+    },
+  });
 }
