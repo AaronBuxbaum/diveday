@@ -1,5 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { bookings, people, personRoles } from "./schema";
@@ -75,7 +76,7 @@ describe("anonymizeDiver refusals", () => {
         confirmation: { name: before?.fullName ?? "", requireDeleted: true },
       }),
     ).toEqual({ ok: false, reason: "requires_delete" });
-    await db.update(people).set({ deletedAt: new Date() }).where(eq(people.id, diver));
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, diver));
     expect(
       await anonymizeDiver(db, {
         shopId: shop.id,
