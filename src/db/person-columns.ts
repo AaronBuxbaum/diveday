@@ -1239,6 +1239,13 @@ const rows = [
     why: "who logged the drill",
   },
   {
+    table: "safety_drills",
+    column: "deleted_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who deleted the drill",
+  },
+  {
     table: "safety_drill_participants",
     column: "person_id",
     export: "withheld",

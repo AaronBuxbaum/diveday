@@ -194,7 +194,7 @@
     "drills": {
       "title": "Drills",
       "kinds": {
-        "oxygen": "Oxygen",
+        "oxygen": "Emergency oxygen",
         "missing_diver": "Missing diver",
         "overboard": "Person overboard",
         "fire": "Fire"
@@ -213,6 +213,7 @@
       "deleteConfirm": "Delete drill",
       "logged": "Drill logged.",
       "deleted": "Drill deleted.",
+      "loggedBy": "Logged by {name}, {date}",
       "invalid": "That drill didn’t save. Check the date and who took part."
     },
     "figuresLabel": "This month’s safety record",

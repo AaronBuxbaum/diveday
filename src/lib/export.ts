@@ -52,7 +52,7 @@ export const EXPORT_FILE_NOTES = {
   "deck_counts.csv":
     "The heads the captain counted on deck at each roll-call checkpoint, with who counted and when. A recount is a new row; the newest per checkpoint is the one the manifest held against its marks.",
   "safety_drills.csv":
-    "The drill log: each safety drill the shop held (emergency oxygen, missing diver, person overboard, fire), the date, a note and who logged it. A deleted drill carries its deleted_at.",
+    "The drill log: each safety drill the shop held (emergency oxygen, missing diver, person overboard, fire), the date, a note and who logged it. A deleted drill carries its deleted_at and who deleted it (deleted_by_person_id).",
   "safety_drill_participants.csv":
     "Who took part in each drill in safety_drills.csv, one row per person.",
   "trip_series.csv":

@@ -9,6 +9,12 @@
 export const DRILL_KINDS = ["oxygen", "missing_diver", "overboard", "fire"] as const;
 export type DrillKind = (typeof DRILL_KINDS)[number];
 
+/**
+ * How far back a drill may be logged: a year, so a missed entry can still be
+ * caught up but a renewal-day entry cannot invent last decade's drills.
+ */
+export const DRILL_BACKDATE_MONTHS = 12;
+
 /** The longest note a drill keeps. */
 export const DRILL_NOTE_MAX = 500;
 

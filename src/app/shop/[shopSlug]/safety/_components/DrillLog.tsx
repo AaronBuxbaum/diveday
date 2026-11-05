@@ -49,6 +49,7 @@ export function DrillLog({ view, paper = false }: { view: DrillLogView; paper?: 
                   <p className="font-medium">{drill.line}</p>
                   {drill.people ? <p className="text-sm">{drill.people}</p> : null}
                   {drill.note ? <p className="text-sm text-muted">{drill.note}</p> : null}
+                  <p className="text-xs text-muted">{drill.logged}</p>
                 </li>
               ))}
             </ul>
@@ -65,6 +66,7 @@ export function DrillLog({ view, paper = false }: { view: DrillLogView; paper?: 
                     <p className="font-medium">{drill.line}</p>
                     {drill.people ? <p className="text-sm">{drill.people}</p> : null}
                     {drill.note ? <p className="text-sm text-muted">{drill.note}</p> : null}
+                    <p className="text-xs text-muted">{drill.logged}</p>
                   </div>
                   <form action={deleteSafetyDrillAction}>
                     <input type="hidden" name="drillId" value={drill.id} />
@@ -106,6 +108,7 @@ export function DrillLog({ view, paper = false }: { view: DrillLogView; paper?: 
                   name="heldOn"
                   type="date"
                   required
+                  min={form.earliest}
                   max={form.today}
                   defaultValue={form.today}
                   className={controlClass}

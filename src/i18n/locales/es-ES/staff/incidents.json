@@ -194,7 +194,7 @@
     "drills": {
       "title": "Simulacros",
       "kinds": {
-        "oxygen": "Oxígeno",
+        "oxygen": "Oxígeno de emergencia",
         "missing_diver": "Buzo desaparecido",
         "overboard": "Persona al agua",
         "fire": "Incendio"
@@ -213,6 +213,7 @@
       "deleteConfirm": "Eliminar simulacro",
       "logged": "Simulacro registrado.",
       "deleted": "Simulacro eliminado.",
+      "loggedBy": "Registrado por {name}, {date}",
       "invalid": "El simulacro no se guardó. Revisa la fecha y quién participó."
     },
     "figuresLabel": "Registro de seguridad del mes",

@@ -205,11 +205,12 @@
   recorded in 9 of 12 months").
 - **Drill log** — the dated safety drills a shop held (`safety_drills`: emergency oxygen, missing
   diver, person overboard, fire; loop 5 row 2, roadmap E3/N-09), each with a date in the shop's
-  calendar (never a future one), who took part (the shop's staff, `safety_drill_participants`) and
+  calendar (never a future one, nor more than a year back), who took part (the shop's staff, `safety_drill_participants`) and
   a note. On the **Safety** tab and its printed sheet, one line per kind says how long since the
-  last one ("Oxygen: last drill 94 days ago", or "no drill on record") and a month lists the drills
-  held in it; the Safety tab's own gate (Reports) is the gate to log or delete one. A wrong entry
-  is deleted softly. A record for an insurer renewal; it informs and never gates. Rule in
+  last one ("Emergency oxygen: last drill 94 days ago", or "no drill on record") and a month lists the
+  drills held in it, each with who logged it and when; the Safety tab's own gate (Reports) is the
+  gate to log or delete one. A wrong entry is deleted softly, and the row keeps who deleted it
+  (`deleted_by_person_id`). A record for an insurer renewal; it informs and never gates. Rule in
   `src/lib/safety-drills.ts`, writer and readers in `src/db/safety-drills.ts`.
 - **Safety year** — the Safety report over a whole year (`/shop/<slug>/safety?year=`; fifth loop,
   item 33), the one page an insurer or broker is handed at renewal instead of twelve. Figures only,
