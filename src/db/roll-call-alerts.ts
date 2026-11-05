@@ -103,7 +103,7 @@ async function claimAlert(
   const [before] = await db
     .select({ at: column })
     .from(trips)
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()));
   if (!before) return false;
   const replaced = before.at;
   // Conditional on the value just read: two passes cannot both take it.
