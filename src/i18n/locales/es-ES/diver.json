@@ -951,6 +951,7 @@
       "waiverLapsed": "Tu exención firmada caducó. Vuelve a firmarla aquí; solo lleva unos dos minutos.",
       "waiverRunsOut": "Tu exención firmada caduca antes del viaje. Vuelve a firmarla aquí; solo lleva unos dos minutos.",
       "medicalReview": "Gracias por firmar. Una respuesta médica necesita una revisión más de cerca. Puede requerirse el visto bueno de un médico, y tu centro se pondrá en contacto sobre los siguientes pasos.",
+      "waiverSealCheck": "Tu centro necesita revisar tu exención firmada antes de darte luz verde. Se pondrán en contacto contigo.",
       "guardianSignatureMissing": "Tu madre, padre o tutor legal también tiene que firmar la exención. Ábrela aquí y fírmenla juntos.",
       "certificationMissing": "Comparte tus datos de certificación con el centro (añádelos abajo o ponte en contacto) para que puedan registrarlos en tu ficha.",
       "certificationPending": "Tus datos de certificación están con el centro para verificarlos.",

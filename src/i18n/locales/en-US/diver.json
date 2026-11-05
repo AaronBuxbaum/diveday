@@ -951,6 +951,7 @@
       "waiverLapsed": "Your signed waiver has lapsed. Sign it again here; it only takes about two minutes.",
       "waiverRunsOut": "Your signed waiver runs out before the trip. Sign it again here; it only takes about two minutes.",
       "medicalReview": "Thanks for signing. One medical answer needs a closer look. A doctor’s sign-off may be required, and your shop will be in touch about next steps.",
+      "waiverSealCheck": "Your shop needs to check your signed waiver before you’re cleared. They’ll be in touch.",
       "guardianSignatureMissing": "A parent or legal guardian also has to sign the waiver. Open it here and sign it together.",
       "certificationMissing": "Add your certification details to your record.",
       "certificationPending": "Your certification details are being verified.",

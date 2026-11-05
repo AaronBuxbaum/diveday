@@ -99,6 +99,7 @@ export const FINDING_STRICTNESS: { readonly [C in ReadinessBlockerCode]: "blocks
   waiver_expired: "blocks",
   medical_review: "blocks",
   medical_not_cleared: "blocks",
+  waiver_seal_failed: "blocks",
   guardian_signature_missing: "blocks",
   course_form_unsigned: "blocks",
   course_form_guardian_missing: "blocks",

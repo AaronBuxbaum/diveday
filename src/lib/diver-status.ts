@@ -250,6 +250,7 @@ const CERTIFICATION_FIX: Record<
     waiver_expired: null,
     medical_review: null,
     medical_not_cleared: null,
+    waiver_seal_failed: null,
     guardian_signature_missing: null,
     course_form_unsigned: null,
     course_form_guardian_missing: null,

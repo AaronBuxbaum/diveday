@@ -86,6 +86,7 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   // is a conversation about a seat this diver can no longer take, and the
   // label stops there rather than choosing refund or rebook for the shop.
   medical_not_cleared: "today.blockerAction.contactDiver",
+  waiver_seal_failed: "today.blockerAction.checkWaiver",
   // The same tap as an expired link: a fresh link goes out, and this time it
   // asks the guardian to sign too (ADR 20260907-guardian-co-signature).
   guardian_signature_missing: "today.blockerAction.reissueWaiver",
@@ -155,6 +156,7 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   waiver_expired: "today.blockerRow.waiverExpired",
   medical_review: "today.blockerRow.medicalReview",
   medical_not_cleared: "today.blockerRow.medicalNotCleared",
+  waiver_seal_failed: "today.blockerRow.waiverSealFailed",
   guardian_signature_missing: "today.blockerRow.guardianSignatureMissing",
   course_form_unsigned: "today.blockerRow.courseFormUnsigned",
   course_form_guardian_missing: "today.blockerRow.courseFormUnsigned",
@@ -219,6 +221,7 @@ const BLOCKER_ITEM_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   waiver_runs_out: "today.diverItem.waiver",
   waiver_pending: "today.diverItem.waiver",
   waiver_expired: "today.diverItem.waiver",
+  waiver_seal_failed: "today.diverItem.waiver",
   guardian_signature_missing: "today.diverItem.guardianSignature",
   course_form_unsigned: "today.diverItem.courseForm",
   course_form_guardian_missing: "today.diverItem.courseForm",

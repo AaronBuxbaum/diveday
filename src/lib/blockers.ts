@@ -70,6 +70,10 @@ export const BLOCKER_ACTIONS: Record<
   // refusal creates is entirely about the person — tell them, move them, refund
   // them — and none of it happens on the departure they can no longer join.
   medical_not_cleared: { kind: "medical_not_cleared", target: "diver" },
+  // A release changed after signing (issue #3885) is investigated on the
+  // diver's own record, where their signed releases are; a one-tap send is no
+  // fix while a signed one stands, so it is not in WAIVER_CODES.
+  waiver_seal_failed: { kind: "waiver", target: "diver" },
   guardian_signature_missing: { kind: "waiver", target: "trip" },
   // The roster is where a paper copy is recorded and the link is sent.
   course_form_unsigned: { kind: "waiver", target: "trip" },

@@ -123,6 +123,9 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // the diver to do, and a refusal is the one state where that is most
   // emphatically true.
   medical_not_cleared: "waiting",
+  // "waiting": a release changed after signing is the shop's to investigate
+  // (issue #3885); nothing on the diver's page fixes it.
+  waiver_seal_failed: "waiting",
   // "action", like `waiver_expired`: the fix is a fresh release the readiness
   // page opens in place, and the parent holding this page is the person
   // who has to sign it (ADR 20260907-guardian-co-signature).

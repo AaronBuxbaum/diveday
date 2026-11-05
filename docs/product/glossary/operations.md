@@ -470,6 +470,9 @@
   lists the `unsealed` ones and every one whose **seal verdict** is `invalid`, the `invalid` ones first: the cached result
   (`integrity_valid`, `integrity_checked_at`) written beside each seal and re-checked nightly by
   `/api/cron/waiver-seals`, so a release edited after signing reaches the view by the next night.
+  An `invalid` verdict also holds the diver: readiness raises `waiver_seal_failed` ("Waiver changed
+  after signing") on every departure, the ones that ask no waiver included, because the seal covers
+  the medical answers; a never-sealed release is unchanged (issue #3885).
   A seal removed rather than broken (a verdict with no hash, or a non-imported release signed
   since sealing shipped with none) is written `invalid` too, and every `invalid` release keeps
   the nightly check unhealthy until someone deals with it;
