@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -117,6 +117,7 @@ export function EmbedGenerator({
   // that is there to see (visual review 2026-10-24, A45): an empty rounded
   // rectangle while the iframe loads read as a broken preview.
   const [loadedFrame, setLoadedFrame] = useState<string | null>(null);
+  const previewFrameRef = useRef<HTMLIFrameElement>(null);
   const ids = { kind: useId(), look: useId(), platform: useId(), language: useId() };
 
   const options = { look, lang, show: show || null };
@@ -162,6 +163,31 @@ export function EmbedGenerator({
   const frameLoaded = loadedFrame === frameKey;
   // Every other preview is drawn at once; a framed widget waits for its load.
   const previewDrawn = !FRAMED.has(kind) || frameLoaded;
+
+  // A same-origin frame can finish before this Client Component hydrates,
+  // before React has attached its onLoad handler. Check once after hydration
+  // and listen natively for loads that finish after the effect runs.
+  useEffect(() => {
+    const frame = previewFrameRef.current;
+    if (!frame || !frameUrl) return;
+    const expectedPath = new URL(frameUrl, window.location.href).pathname;
+    const markLoaded = () => {
+      try {
+        const document = frame.contentDocument;
+        if (
+          document?.readyState === "complete" &&
+          new URL(document.URL).pathname === expectedPath
+        ) {
+          setLoadedFrame(frameKey);
+        }
+      } catch {
+        // Cross-origin frames keep using the onLoad event below.
+      }
+    };
+    markLoaded();
+    frame.addEventListener("load", markLoaded);
+    return () => frame.removeEventListener("load", markLoaded);
+  }, [frameKey, frameUrl]);
 
   useEffect(() => {
     if (kind !== "qr") return;
@@ -315,6 +341,7 @@ export function EmbedGenerator({
                     // opens at full size in a tab of its own instead.
                     <>
                       <iframe
+                        ref={previewFrameRef}
                         key={frameKey}
                         title={copy.preview}
                         src={frameUrl ?? undefined}
