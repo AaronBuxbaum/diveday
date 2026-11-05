@@ -9,7 +9,7 @@ import { schemaTableNames } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
 import { canPersonExportShopData, loadShopExportBundleInput } from "./export";
-import { EXCLUDED_TABLES } from "./export-table-classification.test-support";
+import { EXCLUDED_TABLES, GLOBAL_SEQ_TABLES } from "./export-table-classification.test-support";
 import { EXPECTED_FILES, EXPORTED_TABLES, ROLL_CALL_SPLIT } from "./export-test-fixtures";
 import * as schema from "./schema";
 import {
@@ -44,7 +44,7 @@ const FOLDED_TABLES = [
  */
 const SHOP_SCOPED = "shop_id";
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
-  roll_call_events: ROLL_CALL_SPLIT,
+  roll_call_events: [...ROLL_CALL_SPLIT, "seq"], // seq: as GLOBAL_SEQ_TABLES
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: [
     "jurisdiction",
@@ -115,8 +115,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "is_rehearsal",
   ],
   trip_series_skips: ["id", "shop_id"],
-  deck_counts: ["seq"], // a global tiebreak that counts other shops' writes (#3898)
-  trip_stage_events: ["seq"],
+  ...Object.fromEntries(GLOBAL_SEQ_TABLES.map((table) => [table, ["seq"]])),
   trip_dives: [],
   trip_assignments: [],
   bookings: [
@@ -178,7 +177,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
   // money actually moved, and that is the one a reader replays.
-  booking_payment_events: ["shop_id", "created_at"],
+  booking_payment_events: ["shop_id", "created_at", "seq"], // seq: as GLOBAL_SEQ_TABLES
   booking_checkouts: [
     "shop_id",
     "deal_id", // written as promo_code_id or trip_promo_id by its deal's kind (#2720)

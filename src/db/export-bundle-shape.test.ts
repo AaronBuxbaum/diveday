@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { loadShopExportBundleInput } from "./export";
+import { GLOBAL_SEQ_TABLES } from "./export-table-classification.test-support";
 
 // The bundle's shape guards: split from export.test.ts, which holds the column decisions.
 const ctx = fileScopedShopContext();
@@ -61,15 +62,19 @@ describe("export bundle shape", () => {
     expect(repeated).toEqual([]);
   });
 
-  it("leaves the global seq tiebreak out of deck_counts.csv and trip_stage_events.csv (#3898)", async () => {
+  it("leaves the global seq tiebreak out of every file (#3898)", async () => {
     // `seq` is a database-wide identity: its gaps count every other shop's
     // rows written in between. It still orders the rows server-side.
     const { db, shop } = ctx;
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("seeded shop failed to load");
-    for (const file of ["deck_counts.csv", "trip_stage_events.csv"]) {
-      const table = input.tables.find((candidate) => candidate.file === file);
-      expect(table?.header, file).not.toContain("seq");
+    // No file of the shop's bundle carries one (layer-2 security S3).
+    for (const table of input.tables) expect(table.header, table.file).not.toContain("seq");
+    for (const table of GLOBAL_SEQ_TABLES) {
+      expect(
+        input.tables.some((candidate) => candidate.file === `${table}.csv`),
+        table,
+      ).toBe(true);
     }
   });
 });

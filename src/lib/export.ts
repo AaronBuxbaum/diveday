@@ -141,7 +141,7 @@ export const EXPORT_FILE_NOTES = {
   "work_order_care.csv":
     "The Work done record: one row per check a technician performed on a ticket — which care (the same codes as gear_service_events.csv, with note meaning other work and no clock), on which customer piece (empty on a shop unit's ticket), whether it passed, the day it was performed, and the next due date and dive interval they confirmed. Only a passed check ever moved a clock; a failed one is kept as the record of the failure.",
   "work_order_events.csv":
-    "Each ticket's own history, oldest first (seq is the order things actually happened in): the row that opened it, every status move with where it came from and went to, and every hand-over to a technician, each with the staff member who did it. This is what 'who had it, and for how long' is read out of.",
+    "Each ticket's own history, oldest first, in the order things actually happened: the row that opened it, every status move with where it came from and went to, and every hand-over to a technician, each with the staff member who did it. This is what 'who had it, and for how long' is read out of.",
   "pre_departure_checklist_items.csv":
     "The shop's own pre-departure safety line, in the shop's own reading order (sort_order). DiveDay writes only the oxygen line a new shop starts with, and the shop may change it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
   "pre_departure_check_events.csv":

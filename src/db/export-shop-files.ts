@@ -767,7 +767,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "actor_person_id",
       "actor_name",
       "occurred_at",
-      "seq",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, tripChangeEventRows }) =>
       tripChangeEventRows.map((row) => [
@@ -782,7 +781,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.actorPersonId,
         row.actorPersonId ? personName.get(row.actorPersonId) : null,
         row.occurredAt,
-        row.seq,
       ]),
     note: EXPORT_FILE_NOTES["trip_change_events.csv"],
   },
@@ -1171,19 +1169,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
   shopFile(STAFF_CREDENTIALS_CSV),
   {
     file: "staff_credential_history.csv",
-    header: [
-      "seq",
-      "credential_id",
-      "event",
-      "kind",
-      "issued_at",
-      "renews_at",
-      "active",
-      "recorded_at",
-    ],
+    header: ["credential_id", "event", "kind", "issued_at", "renews_at", "active", "recorded_at"],
     rows: ({ staffCredentialHistoryRows }) =>
       staffCredentialHistoryRows.map((row) => [
-        row.seq,
         row.credentialId,
         row.event,
         row.kind,
@@ -1486,7 +1474,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "actor_person_id",
       "actor_name",
       "decided_at",
-      "seq",
     ],
     rows: ({ personName, templateRows, waiverMaterialityRows }) =>
       waiverMaterialityRows.map((row) => [
@@ -1497,7 +1484,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.actorPersonId,
         row.actorPersonId ? personName.get(row.actorPersonId) : null,
         row.decidedAt,
-        row.seq,
       ]),
     note: EXPORT_FILE_NOTES["waiver_materiality_decisions.csv"],
   },
@@ -1684,7 +1670,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     file: "work_order_events.csv",
     header: [
       "id",
-      "seq",
       "work_order_id",
       "kind",
       "from_status",
@@ -1698,7 +1683,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     rows: ({ personName, workOrderEventRows }) =>
       workOrderEventRows.map((row) => [
         row.id,
-        row.seq,
         row.workOrderId,
         row.kind,
         row.fromStatus,
@@ -2014,7 +1998,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     file: "activity_events.csv",
     header: [
       "id",
-      "seq",
       "trip_id",
       "trip_title",
       "booking_id",
@@ -2031,7 +2014,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     rows: ({ personName, tripTitle, activityRows }) =>
       activityRows.map((row) => [
         row.id,
-        row.seq,
         row.tripId,
         row.tripId ? tripTitle.get(row.tripId) : null,
         row.bookingId,

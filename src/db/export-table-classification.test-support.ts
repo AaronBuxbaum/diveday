@@ -171,3 +171,23 @@ export const EXCLUDED_TABLES = [
   "demo_entries",
   "shop_milestones",
 ];
+
+/**
+ * Tables whose `seq` is a database-wide identity, used only as a
+ * same-instant tiebreak: its gaps count every other shop's rows written in
+ * between, so no export carries it (#3898; layer-2 security review S3). Every
+ * file still orders its rows by it server-side.
+ */
+export const GLOBAL_SEQ_TABLES = [
+  "deck_counts",
+  "trip_stage_events",
+  "trip_change_events",
+  "staff_credential_history",
+  "waiver_materiality_decisions",
+  "work_order_events",
+  "activity_events",
+  "booking_arrival_events",
+  "booking_payment_events",
+  "pre_departure_check_events",
+  "work_order_bills",
+] as const;
