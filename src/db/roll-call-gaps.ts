@@ -661,8 +661,9 @@ function dayGaps(input: {
   const latestMarkAt =
     latestMarkedDive > 0 ? input.latestEventAt(checkpoints[latestMarkedDive] as string) : null;
 
-  // An owners' alert sent before this day began was about an earlier day.
-  const sinceDay = (at: Date | null) => (at && at >= window.startsAt ? at : null);
+  // An owners' alert is only due once a day ends: one sent before this day
+  // ended was about an earlier day (#2557 review).
+  const sinceDay = (at: Date | null) => (at && at >= window.endsAt ? at : null);
   const base = {
     tripId: trip.id,
     title: trip.title,

@@ -85,11 +85,12 @@ const CLAIMS = {
 type Claim = keyof typeof CLAIMS;
 
 /**
- * Take one of the departure's alerts for the meeting day that began at
- * `dayStartsAt`, or learn another pass already has. A course alerts once per
- * meeting day (#2557): a claim taken before this day began was about an
- * earlier day, so it does not hold this one. Returns the claim it replaced
- * (`null` when there was none), or `false` when another pass holds it.
+ * Take one of the departure's alerts for the meeting day that ended at
+ * `dayEndsAt`, or learn another pass already has. A course alerts once per
+ * meeting day (#2557): this day's alert is only ever due after it ends, so a
+ * claim taken before then was about an earlier day, even one sent late, once
+ * this day had begun (#2557 review). Returns the claim it replaced (`null`
+ * when there was none), or `false` when another pass holds it.
  */
 async function claimAlert(
   db: DbExecutor,
@@ -97,7 +98,7 @@ async function claimAlert(
   shopId: string,
   tripId: string,
   now: Date,
-  dayStartsAt: Date,
+  dayEndsAt: Date,
 ): Promise<{ replaced: Date | null } | false> {
   const column = CLAIMS[claim];
   const [before] = await db
@@ -110,7 +111,7 @@ async function claimAlert(
   const where = and(
     eq(trips.id, tripId),
     eq(trips.shopId, shopId),
-    replaced === null ? isNull(column) : and(eq(column, replaced), lt(column, dayStartsAt)),
+    replaced === null ? isNull(column) : and(eq(column, replaced), lt(column, dayEndsAt)),
   );
   const claimed =
     claim === "owners"
@@ -145,8 +146,7 @@ async function releaseAlert(
 /** What one departure's alert says: the dive it leads with and both counts. */
 type AlertingGap = {
   title: string;
-  /** The meeting day the alert is about (#2557); a one-day trip's own window. */
-  startsAt: Date;
+  /** The end of the meeting day the alert is about (#2557); a one-day trip's own. */
   endsAt: Date;
   diveNumber: number;
   notBackAboard: number;
@@ -180,7 +180,6 @@ function alertingGap(gaps: readonly OpenRollCall[]): AlertingGap | null {
   }
   return {
     title: lead.title,
-    startsAt: lead.startsAt,
     endsAt: lead.endsAt,
     diveNumber: lead.diveNumber,
     notBackAboard,
@@ -255,15 +254,19 @@ export async function sendStaleRollCallAlerts(
     const open = new Map<string, AlertingGap>();
     for (const tripId of tripIds) {
       // Only a meeting day that is itself due: a course's day two still out
-      // is Today's to show, not this pass's to send.
-      const gap = alertingGap(
-        gaps.filter(
-          (row) =>
-            row.tripId === tripId &&
-            row.endsAt.getTime() <= dueTo.getTime() &&
-            row.endsAt.getTime() >= dueFrom.getTime(),
-        ),
+      // is Today's to show, not this pass's to send. Of the due days, the
+      // newest speaks (#2557 review): an earlier day's row, already alerted,
+      // must not take the claim that this day's alert needs. It stays on Today.
+      const dueRows = gaps.filter(
+        (row) =>
+          row.tripId === tripId &&
+          row.endsAt.getTime() <= dueTo.getTime() &&
+          row.endsAt.getTime() >= dueFrom.getTime() &&
+          isStaleRollCallReason(row.reason) &&
+          !row.stale,
       );
+      const newestDay = Math.max(0, ...dueRows.map((row) => row.dayNumber ?? 1));
+      const gap = alertingGap(dueRows.filter((row) => (row.dayNumber ?? 1) === newestDay));
       if (gap) open.set(tripId, gap);
     }
     if (open.size === 0) continue;
@@ -289,9 +292,9 @@ export async function sendStaleRollCallAlerts(
       confirmedAt: shop.shoreAlertConfirmedAt,
     });
     for (const [tripId, gap] of open) {
-      const ownersClaim = await claimAlert(db, "owners", shopId, tripId, now, gap.startsAt);
+      const ownersClaim = await claimAlert(db, "owners", shopId, tripId, now, gap.endsAt);
       const shoreClaim =
-        shore !== null && (await claimAlert(db, "shore", shopId, tripId, now, gap.startsAt));
+        shore !== null && (await claimAlert(db, "shore", shopId, tripId, now, gap.endsAt));
       const ownersClaimed = ownersClaim !== false;
       const shoreClaimed = shoreClaim !== false;
       if (!ownersClaimed && !shoreClaimed) continue;
