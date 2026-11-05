@@ -11,7 +11,6 @@ import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction, saveWaiverDraftAction } from "./actions";
 import { completedMedicalState } from "./completed-medical-state";
-import { waiverReturnForReceipt } from "./return-path";
 import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
 import { ExpiredLink, HeldWaiverCard, UnavailableWaiverLink } from "./WaiverDoorCards";
 import { waiverSigningForm } from "./WaiverSigningForm";
@@ -107,12 +106,6 @@ export default async function WaiverPage({
 
     const diveSitesList = bookingTripId ? await getTripDiveSitesPeek(db, bookingTripId) : [];
 
-    // A referred signer needs the physician instructions on this receipt first.
-    // A return door exists only for a separately held, still-valid readiness link.
-    const readyPath = needsReview
-      ? await waiverReturnForReceipt(db, { shopId: state.record.shopId, bookingId, token })
-      : null;
-
     // The same gate the doctor's page opens on, so the door never leads to a redirect.
     const doctorDoor = needsReview && (await doctorPageOpen(db, state.record));
     const signedRail = completedWaiverRail(needsReview, !!state.record.shopAnswers);
@@ -123,8 +116,10 @@ export default async function WaiverPage({
         locale={locale}
         waiverOnly={isCounterWaiverToken(token)}
         medicalState={completedMedicalState(state.record)}
-        showPrepHelp={!readyPath && Boolean(bookingTripId) && !isCounterWaiverToken(token)}
-        readyPath={readyPath}
+        showPrepHelp={Boolean(bookingTripId) && !isCounterWaiverToken(token)}
+        // A waiver link opens no thread: a parent signing a child's seat signs
+        // on their own link (`/ready/<token>/party/<seat>/waiver`, issue #2743).
+        readyPath={null}
         doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
         signedRail={signedRail}
         diveSitesList={diveSitesList}

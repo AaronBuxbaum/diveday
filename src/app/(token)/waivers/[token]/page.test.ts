@@ -119,7 +119,7 @@ describe("the actual completed waiver branch", () => {
     expect(html).not.toContain(t("waiver.medicalReferralNext"));
     expect(html).not.toContain(t("waiver.doctor.open"));
   });
-  it("offers a parent their independently held party link after the referral instructions", async () => {
+  it("offers no readiness link on a waiver link's referral receipt (issue #2743)", async () => {
     const { db, shop, booking, render } = await signed();
     const [lead] = await db
       .select({ id: bookings.id })
@@ -147,7 +147,7 @@ describe("the actual completed waiver branch", () => {
     const html = await render();
     expect(html).toContain(t("waiver.medicalReferralNext"));
     expect(html).toContain(t("waiver.doctor.open"));
-    expect(html.includes(`/ready/${readiness.token}#party-seats`)).toBe(true);
+    expect(html.includes(`/ready/${readiness.token}`)).toBe(false);
   });
   it.each([
     null,

@@ -15,8 +15,8 @@ everything else. Issue #2743 asks for one credential per seat, and `waiver_recor
 
 **A seat's release is handed over as the holder's thread link**, `readinessWaiverLinkPath` on the
 seat's delivered readiness capability, only ever to the holder's contact on file. A waiver link
-remains only where no thread exists or the signer is not the holder: a release with no seat, a
-counter tablet, a party lead signing a minor's seat, and a bookingless release's doctor.
+remains only where no thread exists: a release with no seat, a counter tablet, and a bookingless
+release's doctor.
 
 **Layer 1 (built): the booking confirmation** (online booking, staff seating, staff resend) carries
 the Sign step on its own readiness link; `openJoinSignStep` opens the record with
@@ -29,8 +29,11 @@ not land returns no link, only the reason and "Send by text": a copied thread li
 holder's whole readiness credential in a staff clipboard. A party member's seat goes to that
 member as their own thread link, never the lead's.
 
-**Next, in order:** a party lead signs a minor's seat on a lead-authorised page of their own
-thread; counter tablets get a home; `/waivers/<token>` refuses a seat's release; the remaining
+**Layer 3 (built): a party lead signs a minor's seat on their own link**,
+`/ready/<token>/party/<seat>/waiver`, keyed by `partySeatWaiverKey` (the panel's door, re-read on
+every act); `party-return.ts` and its cookie are deleted.
+
+**Next, in order:** counter tablets get a home; `/waivers/<token>` refuses a seat's release; the remaining
 waiver link becomes a `capabilities` purpose and `waiver_records` drops `token_hash` and
 `expires_at`.
 
