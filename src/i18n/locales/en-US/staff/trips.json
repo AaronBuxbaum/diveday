@@ -228,6 +228,8 @@
     "lastMinuteStripeFailed": "Stripe couldn’t create the discount code. Try again in a moment.",
     "plannedDivesBelowHistory": "Can’t drop the dive count below one staff already recorded a roll call against, because that history has to stay reachable.",
     "plannedDivesBelowHistoryCount": "Can’t drop the dive count below {count}. Staff already recorded a roll call after dive {count} on this trip, and that history has to stay reachable.",
+    "meetingDayHasRollCall": "Can’t move or remove a meeting day staff already took a roll call on, because that count has to stay with its day.",
+    "meetingDayHasRollCallCount": "Can’t move or remove day {count}. Staff already took a roll call on it, and that count has to stay with its day.",
     "undo": "Undo",
     "priceRequiredByGate": "This departure requires payment, so it needs a price. Without one nothing asks a diver for money and every booking stays blocked.",
     "requirementsNeedPrice": "Add a price before requiring payment. Without one nothing asks a diver for money and every booking stays blocked.",

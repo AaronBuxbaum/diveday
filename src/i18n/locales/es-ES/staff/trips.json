@@ -228,6 +228,8 @@
     "lastMinuteStripeFailed": "Stripe no pudo crear el código de descuento. Vuelve a intentarlo en un momento.",
     "plannedDivesBelowHistory": "No se puede bajar el número de inmersiones por debajo de una para la que el personal ya registró un pase de lista, porque ese historial tiene que seguir siendo accesible.",
     "plannedDivesBelowHistoryCount": "No se puede bajar el número de inmersiones por debajo de {count}. El personal ya registró un pase de lista tras la inmersión {count} de esta salida, y ese historial tiene que seguir siendo accesible.",
+    "meetingDayHasRollCall": "No se puede mover ni quitar un día de encuentro en el que el personal ya registró un pase de lista, porque ese recuento tiene que quedarse con su día.",
+    "meetingDayHasRollCallCount": "No se puede mover ni quitar el día {count}. El personal ya registró un pase de lista ese día, y ese recuento tiene que quedarse con su día.",
     "undo": "Deshacer",
     "priceRequiredByGate": "Esta salida exige pago, así que necesita un precio. Sin él no se le pide dinero a nadie y todas las reservas quedan bloqueadas.",
     "requirementsNeedPrice": "Agrega un precio antes de exigir el pago. Sin él no se le pide dinero a nadie y todas las reservas quedan bloqueadas.",

@@ -27,6 +27,7 @@ import {
   tripChangeSnapshotsEqual,
   tripConditionsSnapshot,
 } from "@/lib/trip-change-events";
+import { meetingDayWindows, rollCallDayOf, rollCallDayStarts } from "@/lib/trip-days";
 import type { TripDiveMode } from "@/lib/trip-details";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { hasSailed } from "@/lib/trips";
@@ -578,7 +579,8 @@ export type UpdateTripOutcome =
   | { ok: false; reason: "capacity_below_booked"; detail: { bookedCount: number } }
   | { ok: false; reason: "boat_not_found" }
   | { ok: false; reason: "capacity_above_certificate"; detail: { limit: number } }
-  | { ok: false; reason: "planned_dives_below_history"; detail: { recordedDiveCount: number } };
+  | { ok: false; reason: "planned_dives_below_history"; detail: { recordedDiveCount: number } }
+  | { ok: false; reason: "meeting_day_has_roll_call"; detail: { dayNumber: number } };
 
 /**
  * Edits a trip's own details/schedule/dives. Locks the trip row (mirroring
@@ -589,6 +591,37 @@ export type UpdateTripOutcome =
  * already recorded a roll call against (CR-006). Both invariants fail
  * closed with a typed reason instead of silently discarding data.
  */
+/**
+ * **The first counted meeting day an edit would move or remove** (#2557
+ * review), 1-based, or `null`. A roll-call result belongs to the meeting day
+ * it was taken on (`rollCallDayOf`), so an edit may not change the window of
+ * a day with a result on it, drop that day, or file any result under another
+ * day. A one-day trip's own times are not meeting days and stay editable.
+ */
+function movedCountedMeetingDay(
+  before: readonly { startsAt: Date; endsAt: Date }[],
+  after: readonly { startsAt: Date; endsAt: Date }[],
+  marks: readonly Date[],
+): number | null {
+  if (marks.length === 0 || (before.length <= 1 && after.length <= 1)) return null;
+  const beforeStarts = rollCallDayStarts(before);
+  const afterStarts = rollCallDayStarts(after);
+  let moved: number | null = null;
+  for (const at of marks) {
+    const day = rollCallDayOf(beforeStarts, at);
+    const was = before[day];
+    const now = after[day];
+    const same =
+      was !== undefined &&
+      now !== undefined &&
+      was.startsAt.getTime() === now.startsAt.getTime() &&
+      was.endsAt.getTime() === now.endsAt.getTime() &&
+      rollCallDayOf(afterStarts, at) === day;
+    if (!same && (moved === null || day + 1 < moved)) moved = day + 1;
+  }
+  return moved;
+}
+
 /** An integer column's new value, or null on a rehearsal (ADR 20261012-rehearsal-departures). */
 function unlessRehearsal(value: number | null) {
   return sql<number | null>`case when ${trips.isRehearsal} then null else ${value}::integer end`;
@@ -759,6 +792,21 @@ async function updateTripRecord(
     );
     if (plannedDives < recordedDiveCount) {
       return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };
+    }
+    if (patch.scheduleDays) {
+      const current = await tx
+        .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+        .from(tripScheduleDays)
+        .where(eq(tripScheduleDays.tripId, tripId))
+        .orderBy(asc(tripScheduleDays.dayNumber));
+      const dayNumber = movedCountedMeetingDay(
+        meetingDayWindows(existing, current),
+        patch.scheduleDays,
+        checkpointRows.map((row) => row.occurredAt),
+      );
+      if (dayNumber !== null) {
+        return { ok: false, reason: "meeting_day_has_roll_call", detail: { dayNumber } };
+      }
     }
 
     const drafts = patch.dives ? normalizedDiveDrafts(plannedDives, patch.dives) : undefined;

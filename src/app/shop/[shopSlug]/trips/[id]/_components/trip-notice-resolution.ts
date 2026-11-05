@@ -796,6 +796,12 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.plannedDivesBelowHistory",
     countKey: "trips.notices.plannedDivesBelowHistoryCount",
   },
+  "meeting-day-has-roll-call": {
+    form: "details",
+    tone: "danger",
+    key: "trips.notices.meetingDayHasRollCall",
+    countKey: "trips.notices.meetingDayHasRollCallCount",
+  },
 };
 
 /** Every form name `NOTICE_KEYS` (or an action's `?form=`) may point at. */
