@@ -29,10 +29,7 @@ the e2e baselines depend on it.
 - **Kept from 20260803:** one clock and one counter (`seed-clock.ts`); a new scenario is a new
   module; byte-identical output is proven by fingerprinting the seeded database, not by review.
 
-This change was proven with that harness: canonical `history` shop, a `lean` and a default mint, a
-`history` reset, and the `lean` template, dumped with ids and seals masked and rows sorted. The
-output matched the old code, except two course-form signature dates in the visitor mint that differ
-between runs of the old code too.
+The fingerprint proof for this change is in its PR (#3879).
 
 ## Alternatives considered
 
