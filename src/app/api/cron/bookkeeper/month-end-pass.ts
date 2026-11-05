@@ -1,4 +1,5 @@
 import {
+  bookkeeperClaimStands,
   claimBookkeeperMonth,
   keepOnlyNewestBookkeeperStop,
   listBookkeeperShops,
@@ -19,6 +20,8 @@ export type MonthEndPassSummary = {
   sent: number;
   alreadySent: number;
   failed: number;
+  /** Claimed, then not sent: the address was cleared or changed while the files were built. */
+  skipped: number;
   /** Held because whoever set the address can no longer export the shop's data. */
   setterLapsed: number;
 };
@@ -44,6 +47,12 @@ export type MonthEndPassSummary = {
  * error is given back too, so the bookkeeper may get that month twice (review
  * N1): a duplicate to the right inbox is the cheaper failure. Logs carry the
  * shop and the month, never the address or the files.
+ *
+ * Building the files takes seconds, and the bookkeeper or an owner can stop
+ * the address in them. So the claim is checked once more just before the send
+ * (`bookkeeperClaimStands`), and an address that no longer stands is sent
+ * nothing and counted as skipped, never failed: the clear or the change has
+ * already taken its links and the month with it (issue #3952).
  */
 export async function sendDueMonthEndEmails(
   db: AppDb,
@@ -54,6 +63,7 @@ export async function sendDueMonthEndEmails(
     sent: 0,
     alreadySent: 0,
     failed: 0,
+    skipped: 0,
     setterLapsed: 0,
   };
   const origin = options.origin === undefined ? publicAppUrl() : options.origin;
@@ -95,6 +105,18 @@ export async function sendDueMonthEndEmails(
     try {
       const locale = recipientLocale(null, shop.defaultLocale);
       const files = await monthEndFiles(db, shop, due, options.now, locale);
+      if (
+        !(await bookkeeperClaimStands(db, {
+          shopId: shop.id,
+          month,
+          email: claimedEmail,
+          confirmedAt: claim.confirmedAt,
+        }))
+      ) {
+        summary.skipped += 1;
+        log("bookkeeper.address_changed", "info", { shopId: shop.id, month });
+        continue;
+      }
       const delivery = await sendNotification(
         db,
         {

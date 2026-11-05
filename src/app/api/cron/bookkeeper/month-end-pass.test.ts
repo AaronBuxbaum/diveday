@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   consumeBookkeeperConfirmation,
   issueBookkeeperConfirmation,
@@ -14,6 +14,28 @@ import { messageFor } from "@/lib/notifications/render";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { sendDueMonthEndEmails } from "./month-end-pass";
+
+// The window between the claim and the send is the files being built, so a
+// test reaches into it there: the real builder runs, then the hook does what an
+// owner or the bookkeeper does in those seconds.
+const afterFilesBuilt = vi.hoisted(() => ({ run: null as null | (() => Promise<void>) }));
+vi.mock("../../../shop/[shopSlug]/reports/download/month-end-files", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("../../../shop/[shopSlug]/reports/download/month-end-files")
+    >();
+  return {
+    ...actual,
+    monthEndFiles: async (...args: Parameters<typeof actual.monthEndFiles>) => {
+      const files = await actual.monthEndFiles(...args);
+      await afterFilesBuilt.run?.();
+      return files;
+    },
+  };
+});
+beforeEach(() => {
+  afterFilesBuilt.run = null;
+});
 
 /**
  * The month-end pass (fifth loop, item 35): one email per shop per month, with
@@ -167,6 +189,46 @@ describe("sendDueMonthEndEmails", () => {
       origin: ORIGIN,
     });
     expect(retry.sent).toBe(1);
+  });
+
+  it("sends nothing when the address is cleared between the claim and the send (issue #3952)", async () => {
+    const { db, shopId, owner } = await shopWithBookkeeper();
+    const { sent, provider } = capturing();
+    afterFilesBuilt.run = async () => {
+      await setBookkeeper(db, {
+        shopId,
+        timeZone: "America/New_York",
+        email: null,
+        personId: owner,
+        now: SECOND,
+      });
+    };
+    const summary = await sendDueMonthEndEmails(db, { now: SECOND, provider, origin: ORIGIN });
+    expect(summary).toMatchObject({ due: 1, sent: 0, failed: 0, skipped: 1 });
+    expect(sent).toEqual([]);
+    const [row] = await db.select().from(shops).where(eq(shops.id, shopId));
+    expect(row?.bookkeeperEmail).toBeNull();
+  });
+
+  it("sends nothing to the old address when it is changed between the claim and the send", async () => {
+    const { db, shopId, owner } = await shopWithBookkeeper();
+    const { sent, provider } = capturing();
+    afterFilesBuilt.run = async () => {
+      await setBookkeeper(db, {
+        shopId,
+        timeZone: "America/New_York",
+        email: "new@example.com",
+        personId: owner,
+        now: SECOND,
+      });
+    };
+    expect(
+      await sendDueMonthEndEmails(db, { now: SECOND, provider, origin: ORIGIN }),
+    ).toMatchObject({ sent: 0, failed: 0, skipped: 1 });
+    expect(sent).toEqual([]);
+    // The new address keeps what it was given: unconfirmed, month counted.
+    const [row] = await db.select().from(shops).where(eq(shops.id, shopId));
+    expect(row?.bookkeeperEmail).toBe("new@example.com");
   });
 
   it("sends nothing, and claims nothing, without an origin to build the stop link from", async () => {
