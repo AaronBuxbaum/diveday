@@ -388,7 +388,9 @@ describe("a queued tap cannot outrank what the desk said since", () => {
         recordedByPersonId: staff.id,
         ...queued(tappedAt),
       }),
-    ).toMatchObject({ ok: false, reason: "newer_event_exists" });
+      // The copy predates the restore, so the seat's new life refuses it first
+      // (issue #3830); the desk's later word would refuse it too.
+    ).toMatchObject({ ok: false, reason: "snapshot_invalid" });
   });
 
   it("offers no move to a diver the desk has seen on a called-off boat", async () => {
@@ -522,6 +524,52 @@ describe("a queued tap is about the seat and the morning the tablet saw (issue #
       .update(trips)
       .set({ startsAt: new Date(nowDate().getTime() + 2 * HOUR) })
       .where(eq(trips.id, seat.booking.tripId));
+    expect(
+      await checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(new Date(nowDate().getTime() - 5 * MINUTE)),
+      }),
+    ).toMatchObject({ ok: true });
+  });
+  it("refuses a tap from a copy saved before the seat was removed and restored, undo included", async () => {
+    const { db, shop, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    // The tablet saved its copy 15 minutes ago and tapped 5 minutes ago; the
+    // desk removed the seat and put it back since: a new life the tap never saw.
+    const tapped = new Date(nowDate().getTime() - 5 * MINUTE);
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, seat.booking.id));
+    expect(await restoreBooking(db, shop.id, seat.booking.id)).toBe("restored");
+
+    expect(
+      await checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(tapped),
+      }),
+    ).toEqual({ ok: false, reason: "snapshot_invalid" });
+    expect((await checkedIn(db, seat.booking.id))?.checkedIn).toBe(false);
+
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
+    expect(
+      await undoCheckInBooking(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(tapped),
+      }),
+    ).toEqual({ ok: false, reason: "snapshot_invalid" });
+  });
+
+  it("still applies a tap from a copy saved after the seat was restored", async () => {
+    const { db, shop, staff, seat } = await context();
+    await clear(db, shop.id, seat.booking.id, seat.person.fullName);
+    await db
+      .update(bookings)
+      .set({ seatReopenedAt: new Date(nowDate().getTime() - HOUR) })
+      .where(eq(bookings.id, seat.booking.id));
     expect(
       await checkInBooking(db, {
         shopId: shop.id,

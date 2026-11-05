@@ -11,6 +11,7 @@ import { listTripsReadiness } from "./readiness";
 import { newestMarkFirst } from "./roll-call-order";
 import { markBookingId, seatMarks } from "./roll-call-subject";
 import { bookings, rollCallEvents, trips } from "./schema";
+import { currentMeetingDayMarks } from "./trip-meeting-windows";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 
@@ -148,7 +149,13 @@ export async function departureCounts(
         .from(rollCallEvents)
         .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
         .where(
-          and(eq(rollCallEvents.shopId, shopId), seatMarks(), inArray(rollCallEvents.tripId, ids)),
+          and(
+            eq(rollCallEvents.shopId, shopId),
+            seatMarks(),
+            inArray(rollCallEvents.tripId, ids),
+            // The meeting day being counted, as the manifest shows it (#2557).
+            currentMeetingDayMarks(options.now),
+          ),
         )
         .orderBy(...newestMarkFirst()),
   ]);

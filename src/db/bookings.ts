@@ -1267,6 +1267,7 @@ async function writeSeat(
         // A new life for the seat: the desk's trail is read from here on
         // (ADR 20261104-arrival-is-a-trail, decision 5).
         arrivalTrailAfterSeq: arrivalTrailHighWater,
+        seatReopenedAt: nowDate(),
         // A new booking, so no turn-away from the row's last life.
         turnedAwayReason: null,
         turnedAwayAt: null,
@@ -1953,6 +1954,7 @@ export async function restoreBooking(
       .set({
         status: "booked",
         arrivalTrailAfterSeq: arrivalTrailHighWater,
+        seatReopenedAt: nowDate(),
         turnedAwayReason: null,
         turnedAwayAt: null,
       })
@@ -2297,6 +2299,7 @@ async function moveBookingIn(
       // seat moved away and back (ADR 20261104-arrival-is-a-trail, decision 5).
       status: "booked",
       arrivalTrailAfterSeq: arrivalTrailHighWater,
+      seatReopenedAt: now,
       turnedAwayReason: null,
       turnedAwayAt: null,
     })
@@ -4096,6 +4099,9 @@ export async function splitBookingIdentity(
         .update(bookings)
         .set({
           personId: person.id,
+          // A queued offline arrival saved before this was about another
+          // person (issue #3830).
+          seatReopenedAt: now,
           identityUnconfirmedAt: null,
           identityBookedAs: null,
           identityMatchedBy: null,

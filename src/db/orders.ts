@@ -1,4 +1,19 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lt,
+  or,
+  sql,
+  sum,
+} from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { isStaff } from "@/lib/authz";
@@ -48,6 +63,7 @@ import {
   people,
   personRoles,
   shops,
+  stripeRefundFailures,
   trips,
 } from "./schema";
 import { type SeatPaymentRow, seatLedgerEntries, seatPaymentsByIds } from "./seat-payments";
@@ -2054,6 +2070,13 @@ async function applyOrderUpdate(
      * than a reversal of a reversal. Exclusive with `reverseCents`.
      */
     refundedTotalCents?: number;
+    /**
+     * The instant Stripe's `refundedTotalCents` was taken. Each refund failure
+     * this order recorded after it comes off the total, read under the
+     * order's lock so a failure written concurrently is never undone (issue
+     * #3835).
+     */
+    refundedTotalAsOf?: Date;
     /** The trail code for the booking cascade of a refund; `order_refunded` when unsaid. */
     refundOperation?: PaymentEventOperation;
     hostedInvoiceUrl?: string | null;
@@ -2078,9 +2101,17 @@ async function applyOrderUpdate(
     // Resolved against `current`, inside the lock. Clamped so a provider
     // reporting more than the order still holds cannot drive
     // `amount_paid_cents` through its non-negative check constraint.
+    const refundedTotalCents =
+      patch.refundedTotalCents !== undefined && patch.refundedTotalAsOf
+        ? Math.max(
+            0,
+            patch.refundedTotalCents -
+              (await refundFailuresSince(tx, current.id, patch.refundedTotalAsOf)),
+          )
+        : patch.refundedTotalCents;
     const requestedReverseCents =
-      patch.refundedTotalCents !== undefined
-        ? Math.max(0, patch.refundedTotalCents - current.refundedCents)
+      refundedTotalCents !== undefined
+        ? Math.max(0, refundedTotalCents - current.refundedCents)
         : patch.reverseCents;
     const reversedCents =
       requestedReverseCents === undefined
@@ -2427,10 +2458,21 @@ export type ExternalOrderRefundOutcome =
  * `order.refunded` event all move together (ADR
  * 20261009-stripe-reversals-reach-diveday).
  */
+/** Refund failures this order recorded after `asOf`, in cents (issue #3835). */
+async function refundFailuresSince(tx: DbExecutor, orderId: string, asOf: Date): Promise<number> {
+  const [row] = await tx
+    .select({ failed: sum(stripeRefundFailures.amountCents) })
+    .from(stripeRefundFailures)
+    .where(and(eq(stripeRefundFailures.orderId, orderId), gt(stripeRefundFailures.failedAt, asOf)));
+  return Number(row?.failed ?? 0);
+}
+
 export async function applyStripeRefundedTotalToOrder(
   db: AppDb,
   order: Order,
   refundedTotalCents: number,
+  /** When Stripe's figure was taken: failures recorded since come off it. */
+  asOf?: Date,
 ): Promise<ExternalOrderRefundOutcome> {
   if (order.status === "open" || order.status === "uncollectible") return { status: "not_settled" };
   if (order.status === "void") return { status: "not_paid" };
@@ -2442,6 +2484,7 @@ export async function applyStripeRefundedTotalToOrder(
       // Overridden inside the lock once the delta is resolved.
       status: "refunded",
       refundedTotalCents,
+      refundedTotalAsOf: asOf,
       refundOperation: "stripe_dashboard_refund",
     },
     result,

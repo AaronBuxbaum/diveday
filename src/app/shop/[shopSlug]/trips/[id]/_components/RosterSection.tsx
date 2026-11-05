@@ -213,6 +213,12 @@ export function RosterSection({
               {sailedMeta ? <span className="text-xs text-muted">{sailedMeta}</span> : null}
             </RosterSeatGroup>
             <RosterSeatGroup
+              label={t("trips.roster.groupJoinedAtSite")}
+              entries={groups.joinedAtSite}
+              settled
+              context={context}
+            />
+            <RosterSeatGroup
               label={t("trips.roster.groupDidNotSail")}
               entries={groups.didNotSail}
               settled={false}

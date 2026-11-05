@@ -46,7 +46,7 @@ import {
 import { signScheduleMoveResult } from "@/lib/schedule-move-result";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
-import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
+import { laterHoursFromForm, MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
 import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";
@@ -451,6 +451,12 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   // rest, so a list that disagrees with the count is refused there.
   const laterDates = z.array(z.string()).safeParse(formData.getAll("meetingDate"));
   if (!laterDates.success) return await invalid();
+  // Each later day's own hours (#2558); none is day one's on every day.
+  const laterHours = laterHoursFromForm(
+    formData.getAll("meetingStart"),
+    formData.getAll("meetingEnd"),
+  );
+  if (!laterHours) return await invalid();
 
   // The same tenant rule the hull obeys: a lens id arriving on this form has to
   // be one of *this* shop's live words.
@@ -466,6 +472,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       endTime,
       dayCount,
       laterDates: laterDates.data,
+      laterHours,
       priceDollars,
       depositDollars,
       cancellationWindowHours,

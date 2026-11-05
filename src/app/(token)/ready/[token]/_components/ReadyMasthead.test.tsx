@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
 import {
+  MastheadDays,
   type MastheadFacts,
   MastheadWhen,
   mastheadArrivalLine,
@@ -281,4 +282,40 @@ describe("date-adjacent next actions in both openings", () => {
       expect(action).toHaveAttribute("href", "#move-ask");
     },
   );
+});
+
+/**
+ * **A course's days, each with its own hours** (#2558): a Wednesday pool night
+ * and the Saturday on the water are one departure, and the masthead lists both.
+ */
+describe("a departure that meets on several days", () => {
+  const course: MastheadFacts = {
+    ...FACTS,
+    trip: {
+      ...FACTS.trip,
+      startsAt: new Date("2026-10-14T22:00:00Z"),
+      endsAt: new Date("2026-10-17T20:00:00Z"),
+    },
+    days: [
+      { startsAt: new Date("2026-10-14T22:00:00Z"), endsAt: new Date("2026-10-15T01:00:00Z") },
+      { startsAt: new Date("2026-10-17T12:00:00Z"), endsAt: new Date("2026-10-17T20:00:00Z") },
+    ],
+  };
+
+  it("states day one's own hours on the when line, not the whole run's", () => {
+    const { hours } = mastheadWhenParts(course, "en-US", NIGHT_BEFORE);
+    expect(hours).toMatch(/^6:00\sPM\s–\s9:00\sPM/);
+  });
+
+  it("lists each day with its own hours, and nothing for a one-day departure", () => {
+    const t = diverTranslator("en-US");
+    render(<MastheadDays facts={course} locale="en-US" t={t} />);
+    const items = screen.getAllByRole("listitem").map((item) => item.textContent ?? "");
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatch(/^Day 1 · .*Oct.*14 · 6:00\sPM\s–\s9:00\sPM/);
+    expect(items[1]).toMatch(/^Day 2 · .*Oct.*17 · 8:00\sAM\s–\s4:00\sPM/);
+    cleanup();
+    const { container } = render(<MastheadDays facts={FACTS} locale="en-US" t={t} />);
+    expect(container.innerHTML).toBe("");
+  });
 });

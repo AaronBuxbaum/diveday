@@ -401,9 +401,7 @@ const rows = [
   {
     table: "staff_credentials",
     column: "person_id",
-    export: "withheld",
-    exportWhy:
-      "a staffer's own pro cards: a staff record, not a diving one; whether a staff request for it gets a file is a human decision",
+    export: "own",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -580,9 +578,7 @@ const rows = [
   {
     table: "person_roles",
     column: "person_id",
-    export: "withheld",
-    exportWhy:
-      "the account's access level at this shop; a staffer's role is part of their staff record, not their diving record",
+    export: "own",
     kind: "subject",
     merge: "leave",
     erase: "delete",
@@ -1230,6 +1226,37 @@ const rows = [
     kind: "actor",
     merge: "leave",
     why: "who said where the boat was",
+  },
+  {
+    table: "safety_drills",
+    column: "recorded_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who logged the drill",
+  },
+  {
+    table: "safety_drills",
+    column: "deleted_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who deleted the drill",
+  },
+  {
+    table: "safety_drill_participants",
+    column: "person_id",
+    export: "withheld",
+    exportWhy: "a staffer's drill attendance, a staff record, not a diving one",
+    kind: "crew",
+    merge: "leave",
+    erase: "keep",
+    why: "a crew member who took part in a drill; the insurer's record keeps who drilled",
+  },
+  {
+    table: "deck_counts",
+    column: "recorded_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who counted the heads on deck",
   },
   {
     table: "customer_gear_notices",

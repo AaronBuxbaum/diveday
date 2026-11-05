@@ -293,6 +293,18 @@ export const bookings = pgTable(
      */
     arrivalTrailAfterSeq: bigint("arrival_trail_after_seq", { mode: "number" }),
     /**
+     * **When this seat last began a new life**, for the offline counter (issue
+     * #3830): stamped beside `arrival_trail_after_seq` (a rebook, a restore, a
+     * move, a departure moved to another day) and when a held seat is
+     * re-pointed at another person (an identity repoint or split). A tap
+     * queued on a copy saved before it is about a seat that has changed since,
+     * and the sync refuses it (`offlineTapAboutAnotherSeatOrDay`,
+     * src/db/check-in.ts). An instant beside the sequence, because the device
+     * knows only when it saved its copy. Null on a row that has only ever been
+     * one seat.
+     */
+    seatReopenedAt: timestamp("seat_reopened_at", { withTimezone: true }),
+    /**
      * **The desk saw this diver and turned them away**, and why: one category
      * from the seat's own blockers (`turnAwayReasons`, src/lib/turn-away.ts).
      * Set with `status = 'no_show'` by `turnBookingAway` (src/db/turn-away.ts),
