@@ -57,7 +57,7 @@ cites an invoice.
 
 | Line | $/month | What it buys |
 | --- | ---: | --- |
-| AWS Business Support+ | 25 | A support plan with a case path and response times. Fixed, and now the single largest line on the whole bill |
+| AWS Basic Support | 0 | Dropped from Business Support+ ($25) on 2026-11-02. Basic can still raise account-and-billing cases |
 | Vercel Pro, one seat | 20 | Hosting, previews, crons, Analytics, Speed Insights |
 | AWS S3, four buckets | 12 | Visual-regression baselines, database dumps, backups, media. **See the warning below — this is not yet attributed** |
 | AWS Route 53 health check | 2.75 | The one check that runs outside the thing it checks (`infra/lib/global-stack.ts`); 30-second interval with string matching, against a non-AWS endpoint |
@@ -67,8 +67,8 @@ cites an invoice.
 | Sentry, Meta, Stripe | 0 | Free tiers and per-transaction |
 | GitHub Actions | 0 | The repository is public, so runner minutes are free. They cost **wall-clock**: one run of the workflow is 24 to 26 jobs (four unit shards and the Playwright and visual shards), more than the twenty-concurrent-job cap on its own, and a run that starts while another is in flight queues behind it — a green main run on 2026-08-31 waited ten minutes for a runner before its first job started |
 
-So the bill is about **$64 a month**, of which $45 is AWS and $25 of that is a support plan. It was
-described here as $22–24 until 2026-09-10.
+So the bill is about **$39 a month**, of which $20 is AWS. It was described here as $22–24 until
+2026-09-10, and was about $64 while the $25 Business Support+ plan lasted (dropped 2026-11-02).
 
 > **The $12 of S3 is a finding, not a baseline.** This table used to carry the reg-suit bucket at
 > "<1" and the entire AWS floor at "2–3". The August bill says S3 alone was $11.998, on an account
@@ -111,12 +111,11 @@ What moving would and would not do:
   and buys durability the free tier lacks. The right move is the one `pnpm cost:report` already
   names: Neon Launch at $19/month before the first pilot shop, because the free tier's ceiling
   suspends the endpoint rather than billing.
-- **AWS Business Support+ → Basic.** Saves the largest single AWS line, and costs the case path.
-  Worth a deliberate decision rather than a drift: the one thing on the checklist that *required* a
+- **AWS Business Support+ → Basic.** **Done 2026-11-02.** It saved $25 a month, the largest single
+  AWS line, and costs the response-time case path. The one thing on the checklist that *required* a
   support case, `cloudfront-account-verification` in
   [manual-actions.md](manual-actions.md), is an account-and-billing case, which Basic Support can
-  raise for free. Keep the plan for the response times if a pilot is imminent; drop it if the case
-  path is not being used.
+  raise for free. Re-buy the plan for the response times if a pilot is imminent.
 - **AWS trimming.** Real but small, and now **done** (issue #3652). Every Lambda writes to a
   managed log group that expires after a month (the last implicit one was the GitHub OIDC provider's
   handler); RUM samples one session in ten (`sessionSampleRate` in the stack and the client's
@@ -127,8 +126,8 @@ What moving would and would not do:
   $0.30 per distinct label — about $9/month across thirty-odd server actions — and is now one
   aggregate metric, with the per-action ranking left to the Logs Insights widget (issue #1241).
   Still a human's: confirm in the IAM console that the two `diveday-mcp-readonly-*` users no longer
-  exist in the account, and whether Business Support+ ($25/month in the floor above) is really
-  cancelled — until that is read off a bill the floor stays $43.55.
+  exist in the account, and read the first bill after 2026-11-02 to confirm the $25 line is
+  gone; the floor is $18.55 on that assumption.
 
 The cost worth engineering against is therefore **CI wall-clock**, not dollars — see
 `.github/workflows/ci.yml`'s `changes` gate (a docs-only change skips the build, the unit, Playwright

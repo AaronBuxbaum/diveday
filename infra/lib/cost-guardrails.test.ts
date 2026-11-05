@@ -13,7 +13,9 @@ import { InfraStack } from "./infra-stack";
  * **a threshold that fires every month on cost that never changes**, which
  * teaches its only reader to filter the sender. That is what happened when the
  * fixed floor grew past $5, then past a useful fraction of $30, and finally
- * past $30 altogether when Business Support+ landed at ~$25/month.
+ * past $30 altogether when Business Support+ landed at ~$25/month. (That
+ * subscription is gone since 2026-11-02, and the first notification moved
+ * back down with the floor.)
  *
  * So the thing pinned here is the relationship between the floor and the first
  * notification, not the numbers for their own sake. Move the floor, and this
@@ -22,11 +24,12 @@ import { InfraStack } from "./infra-stack";
 
 /**
  * What this account costs with nobody using DiveDay, read off the August and
- * early-September 2026 bills. Kept here rather than imported because it is a
+ * early-September 2026 bills, less the $25 Business Support+
+ * line that went away when the account dropped to Basic on 2026-11-02. Kept here rather than imported because it is a
  * *measurement*, and the stack must not be able to silently agree with a wrong
  * one: if these two drift apart, that is the finding.
  */
-const MONTHLY_FIXED_FLOOR_USD = 43.55;
+const MONTHLY_FIXED_FLOOR_USD = 18.55;
 
 type Notification = {
   Notification: {

@@ -42,16 +42,17 @@ export const PROVIDER_INVENTORY = [
   },
   {
     provider: "AWS",
-    tier: "CDK Stack (22 subsystems) + Business Support+",
+    tier: "CDK Stack (22 subsystems), Basic Support",
     // Read off the August and early-September 2026 bills rather than estimated
     // from the stack, which is why this number moved from 2.40 to 43.55 on
-    // 2026-09-10 without any resource being added: Business Support+ ($25.00),
-    // S3 across the four buckets ($12.00), the Route 53 health check ($2.75),
+    // 2026-09-10 without any resource being added, then to 18.55 on 2026-11-05
+    // when the Business Support+ line ($25.00) went away with the drop to Basic
+    // on 2026-11-02: S3 across the four buckets ($12.00), the Route 53 health check ($2.75),
     // CloudWatch metrics and alarms past the free ten ($2.50), three Secrets
     // Manager secrets ($1.20) and tax ($0.10). The S3 line is unattributed and
     // is a finding, not a baseline -- the runbook's "Where the money actually
     // goes" section carries the warning and the reasoning.
-    monthlyBaseUsd: 43.55,
+    monthlyBaseUsd: 18.55,
     variableElements:
       "SES ($0.10/k), SNS SMS ($0.0075/ea), CloudWatch Logs/RUM, CloudFront media egress, S3 requests, CodeBuild",
     overflowBehavior: "alert_only",

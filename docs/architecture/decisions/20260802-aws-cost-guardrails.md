@@ -135,7 +135,7 @@ notification email, and stays put when the cap moves.
 
 | Notification | What it means |
 | --- | --- |
-| `ACTUAL` > $55 | About $11 above the floor: something is running that was not running before. The one the guardrail exists for |
+| `ACTUAL` > $55 (now $30, see the 2026-11-05 amendment) | About $11 above the floor: something is running that was not running before. The one the guardrail exists for |
 | `ACTUAL` > $70 | Growth that did not stop |
 | `FORECASTED` > $90 | Trending past the cap before the month ends |
 | `ACTUAL` > $90 | At the cap |
@@ -156,3 +156,15 @@ rather than a baseline. This repository had been documenting the entire AWS floo
 the reg-suit bucket as "<$1"; the bill says otherwise, and raising a cap explains nothing about where
 it goes. That is tracked separately in issue #1651 — see
 [cost-guardrails-runbook.md](../../engineering/cost-guardrails-runbook.md).
+
+## Amendment 2026-11-05 — Business Support+ is gone, the floor is $18.55, and the first alert moves to $30
+
+Aaron dropped the account from Business Support+ to Basic Support on 2026-11-02, so the $25/month
+line in the 2026-09-10 table no longer exists. The fixed floor is now about $18.55 (S3 $12.00, Route 53
+health check $2.75, CloudWatch $2.50, Secrets Manager $1.20, tax $0.10), until the first bill after the
+change confirms it.
+
+The first `ACTUAL` notification moves from $55 to $30, still about $11 above the floor, so it keeps
+meaning "something is running that was not running before". At $55 it would sit $36 above the floor
+and stop being early. The cap ($90), the other four notifications and the alert-only posture are
+unchanged. The 2026-09-10 amendment above is history and stays as written.
