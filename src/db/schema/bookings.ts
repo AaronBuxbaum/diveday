@@ -10,6 +10,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -292,6 +293,18 @@ export const bookings = pgTable(
      * (`reclaimReleasedSeat`) continue the same life and leave it alone.
      */
     arrivalTrailAfterSeq: bigint("arrival_trail_after_seq", { mode: "number" }),
+    /**
+     * **When this seat last began a new life**, for the offline counter (issue
+     * #3830): stamped beside `arrival_trail_after_seq` (a rebook, a restore, a
+     * move, a departure moved to another day) and when a held seat is
+     * re-pointed at another person (an identity repoint or split). A tap
+     * queued on a copy saved before it is about a seat that has changed since,
+     * and the sync refuses it (`offlineTapAboutAnotherSeatOrDay`,
+     * src/db/check-in.ts). An instant beside the sequence, because the device
+     * knows only when it saved its copy. Null on a row that has only ever been
+     * one seat.
+     */
+    seatReopenedAt: timestamp("seat_reopened_at", { withTimezone: true }),
     /**
      * **The desk saw this diver and turned them away**, and why: one category
      * from the seat's own blockers (`turnAwayReasons`, src/lib/turn-away.ts).
@@ -760,14 +773,16 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
 
 /**
  * A revocable, expiring bearer credential over one booking (CR-002/CR-003).
- * Unlike a waiver link, issuing a new capability does not supersede an
- * earlier still-valid one for the same booking+purpose — a diver may be
- * holding an earlier email's link and a later reminder's link at once, and
- * both should keep working until they individually expire or are revoked.
- * Only the hash is stored; the raw bearer token exists solely in the
- * response that issued it — except a live `course_forms` link, which is also
- * kept sealed (`token_sealed`) so a second send hands back the link the diver
- * already holds, the waiver link's rule (ADR 20260820-waiver-links-are-reused-not-reissued).
+ * Its link is computed from the row, never stored (ADR
+ * 20261104-derived-booking-link-tokens): `c<key_version>.<id>.<HMAC>`, so a
+ * dump yields ids and nothing a browser can present, and every send for the
+ * same booking, purpose and `delivered` hands out the same URL. At most one
+ * such row is live (unrevoked) at a time, apart from the one-use
+ * `returning_diver_receipt` rows, which carry no link at all. Retiring a link
+ * is revoking its row; the next send mints a new id. A row's identity
+ * (`id`, `shop_id`, `booking_id`, `purpose`, `delivered`, `key_version`) never
+ * changes after insert: a trigger refuses it, because the token binds only the
+ * id and the purpose and everything else it opens is read from the row.
  */
 export const bookingCapabilities = pgTable(
   "booking_capabilities",
@@ -786,15 +801,24 @@ export const bookingCapabilities = pgTable(
     returningDeviceHash: text("returning_device_hash"),
     /** Per-shop clear generation captured when the diver opted in. */
     returningDeviceGeneration: text("returning_device_generation"),
-    tokenHash: text("token_hash").notNull().unique(),
+    /**
+     * **Retired (#2711); nothing reads or writes it.** Kept declared for one
+     * release because the previous one still names it in whole-row selects
+     * (the destructive-migration guard); the next release drops the
+     * declaration and the column together.
+     */
+    tokenHash: text("token_hash").unique(),
+    /**
+     * Which key signs this row's link (`src/lib/booking-link-token.ts`): 1 is
+     * derived from `AUTH_SECRET`, 2 and up from `BOOKING_LINK_SECRET`. A token
+     * whose version differs from its row's is refused. Null only on a
+     * `returning_diver_receipt`, which has no link.
+     */
+    keyVersion: smallint("key_version"),
     issuedAt: appNowTimestamp("issued_at").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    /**
-     * The token sealed under `SECRET_ENCRYPTION_KEY`, for a live `course_forms`
-     * row only; null for every other purpose, and nulled when the row is
-     * revoked. `token_hash` is still what every lookup matches.
-     */
+    /** **Retired (#2711)** with `token_hash`, for the same reason; nothing reads or writes it. */
     tokenSealed: text("token_sealed"),
     /**
      * True when the token left only inside a message to the contact on file
@@ -816,6 +840,16 @@ export const bookingCapabilities = pgTable(
       table.purpose,
       table.revokedAt,
     ),
+    // One live link per booking, purpose and audience (issue #2711). `delivered`
+    // stays in the key: the browser's undelivered readiness link must never
+    // gain the emailed one's reach (security review r5-4, F1). Issuing races
+    // resolve with ON CONFLICT on exactly this predicate. A receipt is the one
+    // row with a source (`booking_capabilities_returning_diver_source`), so the
+    // predicate leaves receipts out without naming an enum label, which is not
+    // immutable as text and cannot be used in the transaction that added it.
+    uniqueIndex("booking_capabilities_live_link_idx")
+      .on(table.bookingId, table.purpose, table.delivered)
+      .where(sql`${table.revokedAt} is null and ${table.sourceCapabilityId} is null`),
     index("booking_capabilities_returning_device_idx")
       .on(table.returningDeviceHash, table.purpose, table.returningOrder)
       .where(sql`${table.returningDeviceHash} is not null`),
@@ -828,6 +862,14 @@ export const bookingCapabilities = pgTable(
       // avoids using a newly-added enum value before PostgreSQL commits it.
       sql`(${table.purpose}::text = 'returning_diver_receipt') = (${table.sourceCapabilityId} is not null)`,
     ),
+    // A link row carries the key version its token is signed under; a receipt
+    // has no token and no version (issue #2711, code security review finding 3).
+    check(
+      "booking_capabilities_key_version_iff_link",
+      sql`(${table.sourceCapabilityId} is null) = (${table.keyVersion} is not null)`,
+    ),
+    // The token spells the version as one digit.
+    check("booking_capabilities_key_version_range", sql`${table.keyVersion} between 1 and 9`),
   ],
 );
 

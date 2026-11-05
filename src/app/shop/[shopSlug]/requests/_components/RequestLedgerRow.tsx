@@ -12,6 +12,7 @@ import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { formatShortDate } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import { callPanelHref } from "@/lib/took-a-call";
+import { type RequestReplyCopy, RequestReplyForm } from "./RequestReplyForm";
 
 /**
  * Where a diver is up to, in staff words. `src/db` returns the code and this
@@ -91,9 +92,20 @@ export function RequestLedgerRow({
   shopName,
   markDoneAction,
   openDeparture,
+  reply,
   t,
 }: {
   request: DateInterestRow;
+  /**
+   * The reply form (issue #2555), when a reply can go from DiveDay: the request
+   * left an email, or a number that reads as a phone. Absent, the row keeps
+   * only its `mailto:`/`tel:` link in the menu, which stays either way.
+   */
+  reply?: {
+    action: (formData: FormData) => void;
+    copy: RequestReplyCopy;
+    error?: string;
+  };
   /**
    * The day's one act, on each request it answers (visual review A23): the
    * group header no longer carries it. A text link at the row's quiet
@@ -244,6 +256,14 @@ export function RequestLedgerRow({
             </p>
           ) : null}
           {request.message ? <p className="mt-1 text-sm text-pretty">{request.message}</p> : null}
+          {reply ? (
+            <RequestReplyForm
+              requestId={request.id}
+              action={reply.action}
+              copy={reply.copy}
+              error={reply.error}
+            />
+          ) : null}
           {openDeparture ? (
             <Link
               href={openDeparture.href}

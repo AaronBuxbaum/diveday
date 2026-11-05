@@ -13,8 +13,8 @@ afterEach(() => {
 });
 
 const ORIGIN = "https://dive.day";
-const TOKEN = "A".repeat(43);
-const OTHER = "B".repeat(43);
+const TOKEN = `c1.${"A".repeat(22)}.${"A".repeat(43)}`;
+const OTHER = `c1.${"B".repeat(22)}.${"B".repeat(43)}`;
 
 function fakeStorage() {
   const caches = new Map<string, Map<string, Response>>();

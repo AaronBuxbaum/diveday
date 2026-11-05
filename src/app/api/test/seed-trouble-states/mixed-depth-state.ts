@@ -25,9 +25,14 @@ export async function mixedDepthStateResponse(request: Request, db: AppDb) {
   const intro = catalog
     .filter((course) => course.isIntroCourse)
     .sort((a, b) => a.title.localeCompare(b.title, "en"))[0];
-  const other = catalog.find(
-    (course) => !course.isIntroCourse && course.certifiesLevel === "open_water",
-  );
+  // The same for the Open Water course, and seeded rows first: a course an
+  // earlier test added (with its own forms and limits) must not take its place.
+  const other = catalog
+    .filter((course) => !course.isIntroCourse && course.certifiesLevel === "open_water")
+    .sort(
+      (a, b) =>
+        a.createdAt.getTime() - b.createdAt.getTime() || a.title.localeCompare(b.title, "en"),
+    )[0];
   const owner = (await listStaff(db, shop.id)).find((person) => person.roles.includes("owner"));
   if (!intro || !other || !owner) throw new Error("mixed depth fixture needs courses and owner");
   const startsAt = new Date(nowDate().getTime() + 48 * HOUR_MS);

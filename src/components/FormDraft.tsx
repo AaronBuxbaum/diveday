@@ -66,6 +66,9 @@ function snapshot(element: HTMLFormElement): Array<[string, string]> {
 export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
   const anchor = useRef<HTMLSpanElement>(null);
   const [applied, setApplied] = useState(false);
+  // Drawn as `data-hydrated` on the anchor so a spec can wait for React to own this form before
+  // it submits; a submit sent earlier posts natively and seats nobody (#3828, #3759).
+  const [hydrated, setHydrated] = useState(false);
   const submitted = useRef(false);
   const dispatchedSubmit = useRef(false);
   const discarding = useRef(false);
@@ -94,6 +97,7 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, on mount — the whole point of this effect (see above).
   useEffect(() => {
     key.current = formDraftMemoryKey(form);
+    setHydrated(true);
     const element = anchor.current?.closest("form");
     if (!element) return;
     const remembered = recallFormDraft(key.current);
@@ -259,7 +263,12 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
   }
 
   return (
-    <span ref={anchor} className="contents">
+    <span
+      ref={anchor}
+      className="contents"
+      data-form-draft={form}
+      data-hydrated={hydrated ? "true" : undefined}
+    >
       {applied && openingDraft ? (
         <p
           role="status"

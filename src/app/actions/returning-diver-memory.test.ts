@@ -33,7 +33,8 @@ const GENERATION = "11111111-1111-4111-8111-111111111111";
 const SHOP_SCOPE = { kind: "shop" as const, shopSlug: "blue-mantis" };
 const READY_SCOPE = {
   kind: "readiness" as const,
-  readinessToken: "ready-token-1234567890123456789012345678901234567890",
+  // A derived booking link (issue #2711); the old dotless shape is refused.
+  readinessToken: `c1.${"A".repeat(22)}.${"B".repeat(43)}`,
 };
 
 beforeEach(() => {

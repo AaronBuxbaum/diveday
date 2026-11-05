@@ -49,6 +49,12 @@ export const EXPORT_FILE_NOTES = {
     "The public-safe change ledger for departures: what meeting point or conditions snapshot changed, the before and after values, broad source, and timestamp. No readiness, waiver, contact, or capability state is included.",
   "trip_stage_events.csv":
     "Where each departure was, in the crew's own word, with the time they said it and who said it. Five stages, appended and never edited; the newest row is what the shop's website and each diver's link showed. No position of any kind is recorded.",
+  "safety_drills.csv":
+    "The drill log: each safety drill the shop held (emergency oxygen, missing diver, person overboard, fire), the date, a note and who logged it. A deleted drill carries its deleted_at and who deleted it (deleted_by_person_id).",
+  "safety_drill_participants.csv":
+    "Who took part in each drill in safety_drills.csv, one row per person.",
+  "deck_counts.csv":
+    "The heads the captain counted on deck at each roll-call checkpoint, with who counted and when. A recount is a new row; the newest per checkpoint is the one the manifest held against its marks.",
   "trip_series.csv":
     "Recurring-trip cadences; every materialized instance is its own row in trips.csv carrying series_id. A blank ends_on means the trip simply keeps repeating.",
   "trip_series_crew.csv":
@@ -155,7 +161,7 @@ export const EXPORT_FILE_NOTES = {
   "incident_report_addenda.csv":
     "What was added to a filed incident report afterwards, oldest first, with who wrote it and when. A filed report is never edited; this is how it grows.",
   "activity_events.csv":
-    "The staff activity trail: who did what, to which trip or booking or about which diver, and when. Append-only and never edited, so reading it in order reconstructs how a departure got to the state the other files describe. Each row names the kind of event in `code` and the names its sentence uses in `params`; the words themselves are DiveDay's and are written fresh in whichever language the reader has chosen, so they are not carried here.",
+    "The staff activity trail: who did what, to which trip or booking or about which diver, and when. Append-only and never edited, so reading it in order reconstructs how a departure got to the state the other files describe. Each row names the kind of event in `code` and the names its sentence uses in `params`; the words themselves are DiveDay's and are written fresh in whichever language the reader has chosen, so they are not carried here. `audience` says who may read the line (staff, or a diver). The crew's same-day catch-up lines are not part of the trail and are not here.",
   "notification_deliveries.csv":
     'Whether each diver actually got each message the shop sent them — booking confirmation, waiver request, trip reminder, conditions hold, recap — with what the email or SMS provider said came of it and, when something went wrong, why. One row per booking and message kind: a resend overwrites in place rather than appending, so this is the latest outcome per message, not a send history. It is here because "did this diver ever get their waiver request" is a question a shop has to be able to answer about its own past, sometimes years later, and no other file in this bundle can. The retry queue and rate-limit state behind it are not included — those are plumbing.',
   "orders.csv":

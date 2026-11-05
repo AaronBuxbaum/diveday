@@ -40,7 +40,7 @@ const SHOP_ONLY_CHILDREN = new Set([
 ]);
 
 /** Trip child routes that resolve through the departure row. */
-const TRIP_CHILDREN = new Set(["calendar", "arrival-card", "ready"]);
+const TRIP_CHILDREN = new Set(["calendar", "arrival-card"]);
 
 export function publicRouteShape(pathname: string): PublicRouteShape | null {
   let segments: string[];

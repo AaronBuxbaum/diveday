@@ -3,8 +3,7 @@ import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { seatCheckedIn } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
-import { recordDeskEvent } from "./desk-events";
-import { recordDiverActivity } from "./operations";
+import { recordDeskLine, recordDiverActivity } from "./operations";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -103,13 +102,13 @@ async function stamp(
         personId: bookings.personId,
       });
     if (updated?.at) {
-      await recordDeskEvent(tx, {
+      await recordDeskLine(tx, {
         shopId,
         tripId: updated.tripId,
         bookingId,
         subjectPersonId: updated.personId,
         actorPersonId,
-        kind: "running_late",
+        code: "desk_running_late",
         occurredAt: now,
       });
       return { status: "marked", bookingId, at: updated.at };

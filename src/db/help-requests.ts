@@ -4,8 +4,8 @@ import { isStaff, STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
-import { recordDeskEvent } from "./desk-events";
 import { lockHelpRequestDeparture } from "./help-request-lock";
+import { recordDeskLine } from "./operations";
 import {
   bookings,
   people,
@@ -383,13 +383,13 @@ export async function recordHelpRequest(
     // "Ben Okafor wants a hand from the crew." — the fourth of the arrival
     // facts #1187 names, and the one that most often reaches the boat as
     // nothing at all. **Which of the three kinds it was is deliberately not in
-    // the event**: the strip carries the fact that a diver asked, and the ask
+    // the line**: the strip carries the fact that a diver asked, and the ask
     // itself is one tap away on Today. No actor either — the diver asked on
     // their own link, so this is news to every staffer including the desk.
-    await recordDeskEvent(tx, {
+    await recordDeskLine(tx, {
       shopId: input.shopId,
       tripId: booking.tripId,
-      kind: "help_request",
+      code: "desk_help_request",
       bookingId: input.bookingId,
       subjectPersonId: booking.personId,
       occurredAt: now,

@@ -1,5 +1,11 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
-import type { SystemReason } from "@/lib/activity";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, notInArray, or } from "drizzle-orm";
+import {
+  activityAudience,
+  catchUpKind,
+  DESK_ONLY_CODES,
+  type DeskOnlyCode,
+  type SystemReason,
+} from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
 import type { RosterChangeCode } from "@/lib/incident-export";
@@ -9,7 +15,80 @@ import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { writeTargetPersonId } from "./people";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
+import { advanceReadMark } from "./trip-read-marks";
 import { livePerson, liveTrip } from "./trips-live";
+
+/**
+ * **A line of the shop's trail**, as opposed to a desk-only line (issue
+ * #2701): every staff trail, log and export reads through this, because a
+ * desk-only line is the crew's same-day handoff, kept thirty days, and #1202
+ * rules out a durable per-person account of it. Desk-flagged *trail* codes (a
+ * check-in, a seat added) are trail lines and stay.
+ */
+export function onTheTrail() {
+  return notInArray(activityEvents.code, [...DESK_ONLY_CODES]);
+}
+
+/**
+ * **The one recorder for a line that may be a desk line** (issue #2701).
+ * Inserts the row with the audience its code has (`activityAudience`) and,
+ * when the strip reads the code (`catchUpKind`) and a person did it, moves
+ * that person's read mark past it in the same executor, so nobody is told
+ * about their own act. Takes a {@link DbExecutor} so a caller inside a
+ * transaction writes the line with the act that caused it.
+ */
+export async function recordActivityRow(
+  db: DbExecutor,
+  values: Omit<typeof activityEvents.$inferInsert, "audience">,
+): Promise<typeof activityEvents.$inferSelect | null> {
+  const occurredAt = values.occurredAt ?? nowDate();
+  const [row] = await db
+    .insert(activityEvents)
+    .values({ ...values, occurredAt, audience: activityAudience(values.code) })
+    .returning();
+  if (!row) return null;
+  if (row.tripId && row.actorPersonId && catchUpKind(row.code, row.params)) {
+    await advanceReadMark(db, {
+      shopId: row.shopId,
+      tripId: row.tripId,
+      personId: row.actorPersonId,
+      seq: row.seq,
+      now: occurredAt,
+    });
+  }
+  return row;
+}
+
+/**
+ * **A desk-only line** (issue #2701): what the crew coming back to a
+ * departure reads on the catch-up strip and the shop's trail does not record
+ * — a pickup set, a unit swapped, a diver asking for a hand. Codes only and no
+ * names: the diver is `subjectPersonId`, joined live at read.
+ */
+export async function recordDeskLine(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    tripId: string;
+    code: DeskOnlyCode;
+    bookingId?: string | null;
+    /** The diver the line is about; null for the two trip-wide codes. */
+    subjectPersonId?: string | null;
+    /** Who did it, when a person did — null for a diver acting on their own link. */
+    actorPersonId?: string | null;
+    occurredAt?: Date;
+  },
+): Promise<void> {
+  await recordActivityRow(db, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    code: input.code,
+    bookingId: input.bookingId ?? null,
+    subjectPersonId: input.subjectPersonId ?? null,
+    actorPersonId: input.actorPersonId ?? null,
+    occurredAt: input.occurredAt,
+  });
+}
 
 export async function addInternalNote(
   db: AppDb,
@@ -598,7 +677,7 @@ export async function listTripActivity(db: AppDb, shopId: string, tripId: string
   return db
     .select()
     .from(activityEvents)
-    .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.tripId, tripId)))
+    .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.tripId, tripId), onTheTrail()))
     .orderBy(desc(activityEvents.occurredAt), desc(activityEvents.seq))
     .limit(50);
 }
@@ -622,6 +701,8 @@ export const DIVER_ACTIVITY_PAGE_SIZE = PAGE_SIZE.section;
  *   record, which hangs off no seat at all.
  *
  * A clause added here is added to that sweep in the same change or not at all.
+ * The one narrowing is {@link onTheTrail}: a desk-only line is the crew's
+ * handoff, not the diver's history, and the erasure deletes it outright.
  * Widening the reader alone would leave lines readable on a record *after* an
  * erasure had run, which is the exact failure the pairing exists to prevent.
  *
@@ -653,6 +734,7 @@ export async function pagedDiverActivity(
   const usable = isUuid(shopId) && isUuid(personId);
   const theirs = and(
     eq(activityEvents.shopId, shopId),
+    onTheTrail(),
     or(
       inArray(
         activityEvents.bookingId,
@@ -709,10 +791,15 @@ export type RosterTripActivityEntry =
   | {
       code: Exclude<
         RosterChangeCode,
-        CrewChangeCode | "seat_self_cancelled" | "seat_self_refunded" | "booking_turned_away"
+        | CrewChangeCode
+        | "seat_self_cancelled"
+        | "seat_self_refunded"
+        | "booking_turned_away"
+        | "seat_moved_away"
       >;
       diver: string;
     }
+  | { code: "seat_moved_away"; diver: string; turnedAway?: "yes" }
   | { code: "booking_turned_away"; diver: string; reason: TurnAwayReason }
   | { code: CrewChangeCode; crew: string }
   | { code: "seat_self_cancelled" | "seat_self_refunded" };
@@ -802,20 +889,16 @@ export async function recordTripActivity(db: DbExecutor, input: TripActivityInpu
     .limit(1);
   if (!scope) return null;
   const { code: _code, ...names } = entry;
-  const [event] = await db
-    .insert(activityEvents)
-    .values({
-      shopId: input.shopId,
-      tripId: input.tripId,
-      actorPersonId: input.actorPersonId,
-      bookingId: input.bookingId ?? null,
-      subjectPersonId: input.subjectPersonId ?? null,
-      code: entry.code,
-      params: { actor: scope.actorName, ...names },
-      occurredAt: nowDate(),
-    })
-    .returning();
-  return event ?? null;
+  return recordActivityRow(db, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    actorPersonId: input.actorPersonId,
+    bookingId: input.bookingId ?? null,
+    subjectPersonId: input.subjectPersonId ?? null,
+    code: entry.code,
+    params: { actor: scope.actorName, ...names },
+    occurredAt: nowDate(),
+  });
 }
 
 /**
@@ -833,6 +916,8 @@ export async function recordSeatChange(
     actorPersonId: string;
     bookingId: string;
     code: SeatChangeCode;
+    /** A seat moved away after the desk turned it away here (`seat_moved_away` only). */
+    turnedAway?: boolean;
   },
 ) {
   const [seat] = await db
@@ -854,7 +939,11 @@ export async function recordSeatChange(
     actorPersonId: input.actorPersonId,
     bookingId: input.bookingId,
     subjectPersonId: seat.personId,
-    entry: { code: input.code, diver: seatName(seat.fullName, seat) },
+    entry: {
+      code: input.code,
+      diver: seatName(seat.fullName, seat),
+      ...(input.code === "seat_moved_away" && input.turnedAway ? { turnedAway: "yes" } : {}),
+    } as RosterTripActivityEntry,
   });
 }
 

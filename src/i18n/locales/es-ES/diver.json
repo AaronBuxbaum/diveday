@@ -968,6 +968,7 @@
       "trainingMarkInvalid": "Tu centro necesita revisar los datos de tu curso antes de darte luz verde. Se pondrán en contacto si hace falta algo."
     },
     "gearAndSetup": "Equipo y ajuste",
+    "meetingDayLine": "Día {number} · {date} · {hours}",
     "dockCallLine": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
     "flySafePlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN, y más si haces paradas de descompresión.",
     "flySafePlannedDivesPlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN, y más si haces paradas de descompresión.",
@@ -4261,6 +4262,9 @@
     },
     "smsLostItem": {
       "body": "{shopName}: la tripulación encontró esto a bordo después de {tripTitle}: {item}. Lo guardamos para ti."
+    },
+    "smsInterestReply": {
+      "body": "{shopName}: {body}"
     },
     "courseCertified": {
       "subject": "Ya tienes tu certificación {code, select, open_water {Open Water} advanced_open_water {Advanced Open Water} rescue {Rescue Diver} divemaster {Divemaster} other {Instructor}}, {firstName}",

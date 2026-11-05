@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createCapabilityToken } from "./booking-capabilities";
+import { createBearerToken } from "./bearer-tokens";
 import { recapLinkPath, signRecapToken, verifyRecapToken } from "./recap-links";
 
 const BOOKING = "11111111-2222-3333-4444-555555555555";
@@ -47,7 +47,7 @@ describe("recap tokens", () => {
   it("refuses a readiness capability token — the two links are not interchangeable", () => {
     // A readiness link (src/db/booking-capabilities.ts) is an unrelated opaque
     // bearer token with no HMAC structure at all, so it must not verify here.
-    expect(verifyRecapToken(createCapabilityToken())).toBeNull();
+    expect(verifyRecapToken(createBearerToken())).toBeNull();
   });
 
   it("builds an absolute recap path", () => {

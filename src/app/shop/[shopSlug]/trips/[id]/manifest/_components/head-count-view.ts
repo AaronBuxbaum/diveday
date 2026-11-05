@@ -4,11 +4,16 @@ import {
 } from "@/lib/boat-safety";
 import {
   blockedAtDock,
+  isTurnedAwayOffBoat,
   type RollCallCheckpoint,
   rollCallRowState,
   splitBuddyTeamIds,
   type TripManifest,
 } from "@/lib/manifests";
+import {
+  inAfterDivePopulation,
+  type RollCallState as PopulationState,
+} from "@/lib/roll-call-population";
 
 /**
  * **What the count panel says beside its number**: how many buddy teams are
@@ -67,5 +72,72 @@ export function headCountView({
           .length,
       manifest.trip.certifiedTotalPersons,
     ),
+  };
+}
+
+/**
+ * **What the deck count is held against** (loop 5, row 1;
+ * `src/lib/deck-count.ts`): the passengers this checkpoint expects aboard,
+ * how many carry an aboard mark, who carries no mark at all, who is recorded
+ * not back aboard, and when the newest mark here was made.
+ *
+ * `expected` is the head count's own denominator, read off the rows rather
+ * than the summary so the names and the number come from one pass: every seat
+ * the boat counts (`isTurnedAwayOffBoat` aside), less whoever is settled
+ * ashore (a dock "not boarded", or one carried forward after a dive) and a
+ * seat the desk released that nobody at the boat has spoken for. A diver
+ * recorded not back aboard stays expected: that is the head the deck is
+ * missing.
+ *
+ * **After a dive the population is who boarded** (dock review S3): a no-show
+ * the crew never tapped at the dock, and never named since, is an unfinished
+ * dock count and not a head at sea (`inAfterDivePopulation`, the predicate
+ * Today and the gap reader use). `manifests` is every checkpoint's manifest,
+ * departure first; without it the after-dive population cannot be read and
+ * the dock's rule stands.
+ */
+export function deckCountFacts(
+  manifest: TripManifest,
+  checkpoint: RollCallCheckpoint,
+  manifests: readonly TripManifest[] = [],
+) {
+  const afterDive = checkpoint !== "departure" && manifests.length > 0;
+  const statesBySeat = new Map<string, PopulationState[]>();
+  for (const [index, sheet] of manifests.entries()) {
+    for (const diver of sheet.divers) {
+      const states = statesBySeat.get(diver.bookingId) ?? [];
+      // A carried-forward result is nobody's word at that checkpoint: a hole.
+      const word = diver.rollCall && diver.rollCall.implied !== true ? diver.rollCall.state : null;
+      if (word === "boarded" || word === "not_boarded") states[index] = word;
+      statesBySeat.set(diver.bookingId, states);
+    }
+  }
+  const counted = manifest.divers.filter(
+    (diver) =>
+      !isTurnedAwayOffBoat(diver) &&
+      (!afterDive || inAfterDivePopulation(statesBySeat.get(diver.bookingId) ?? [])),
+  );
+  const expected = counted.filter((diver) => {
+    const state = rollCallRowState(checkpoint, diver.rollCall);
+    if (state.explicitNotBoarded || state.impliedNotBoarded) return false;
+    return !(diver.notHere && !diver.rollCall);
+  });
+  // The newest word anybody said at this checkpoint, diver or crew: a count
+  // older than it is stale (dock review M2).
+  const markTimes = [...manifest.divers, ...manifest.crew]
+    .flatMap((person) =>
+      person.rollCall && person.rollCall.implied !== true ? [person.rollCall.occurredAt] : [],
+    )
+    .map((at) => new Date(at).getTime());
+  return {
+    expected: expected.length,
+    markedAboard: counted.filter((diver) => diver.rollCall?.state === "boarded").length,
+    unmarked: counted
+      .filter((diver) => !diver.rollCall && !diver.notHere)
+      .map((diver) => diver.fullName),
+    notBackAboard: counted
+      .filter((diver) => rollCallRowState(checkpoint, diver.rollCall).notBackAboard)
+      .map((diver) => diver.fullName),
+    latestMarkAt: markTimes.length > 0 ? new Date(Math.max(...markTimes)) : null,
   };
 }

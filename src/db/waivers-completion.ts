@@ -17,7 +17,11 @@ import { calculateMedicalResult, validateMedicalAnswers } from "@/lib/medical";
 import { readDraftMedicalAlert, readMedicalAlert } from "@/lib/medical-alert";
 import { personNamesMatch } from "@/lib/person-name";
 import { localTypedConsentProvider } from "@/lib/signatures";
-import { computeWaiverIntegrityHash } from "@/lib/waiver-integrity";
+import {
+  computeWaiverIntegrityHash,
+  WAIVER_INTEGRITY_VERSION_SIGNED,
+  waiverIntegrityVerdict,
+} from "@/lib/waiver-integrity";
 import { buildShopAnswers, draftShopAnswersFrom } from "@/lib/waiver-questions";
 import { hashWaiverToken } from "@/lib/waiver-tokens";
 import { isUnresolvedMedicalHold, needsMedicalReview } from "@/lib/waivers";
@@ -894,11 +898,17 @@ async function completeWaiverLocked(
       .where(eq(waiverRecords.id, saved.id))
       .limit(1);
     if (signedRecord) {
+      const sealed = {
+        ...signedRecord,
+        integrityHash: computeWaiverIntegrityHash(signedRecord),
+        integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+      };
       await db
         .update(waiverRecords)
         .set({
-          integrityHash: computeWaiverIntegrityHash(signedRecord),
-          integrityVersion: 1,
+          integrityHash: sealed.integrityHash,
+          integrityVersion: sealed.integrityVersion,
+          ...waiverIntegrityVerdict(sealed, now),
         })
         .where(eq(waiverRecords.id, signedRecord.id));
     }

@@ -240,6 +240,49 @@ test("staff mark a request done, and reopen it", async ({ page }) => {
   ).toBeVisible();
 });
 
+/**
+ * **Answering from DiveDay** (issue #2555): each open lead with a way back
+ * carries a short reply form naming where the reply goes; the mailto/tel door
+ * stays in the row menu. The e2e server has no SES or SMS credentials, so a
+ * send here records the attempt and comes back as not sent, with the reason
+ * under that row's own box and the request still open: the honest answer when
+ * a channel is not switched on, and the path a staffer must be able to read.
+ */
+test("staff write a reply on a request, and are told under it when it does not go", async ({
+  page,
+}) => {
+  await page.goto("/s/blue-mantis");
+  await requestRow(page).click();
+  await openMoreDetails(page);
+  await page.getByLabel("What would you like to dive?").fill("A sunrise reef, any weekend");
+  await page.getByLabel("Your email").fill("sun.e2e@example.com");
+  await page.getByLabel("Your diving experience").selectOption("certified");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByText("Sent", { exact: true })).toBeVisible();
+
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/requests");
+  const open = page.getByRole("region", { name: /^No date named/i });
+  const row = open.locator("li").filter({ hasText: "Wants to dive: A sunrise reef, any weekend" });
+  await row.locator("summary").filter({ hasText: "Write a reply" }).click();
+  await expect(row.getByText("Goes to sun.e2e@example.com by email.")).toBeVisible();
+  await row.getByLabel(/Your reply/).fill("We run sunrise reefs most Saturdays. Want the 6th?");
+  await row.getByRole("button", { name: "Send reply" }).click();
+
+  await page.waitForURL(/notice=reply-failed/);
+  const after = page
+    .getByRole("region", { name: /^No date named/i })
+    .locator("li")
+    .filter({ hasText: "Wants to dive: A sunrise reef, any weekend" });
+  await expect(after.getByRole("alert")).toContainText("That reply didn’t send.");
+  // Still open, and the menu's own door to the diver is still there.
+  await after.getByRole("button", { name: /^Actions for/ }).click();
+  await expect(after.getByRole("link", { name: "Reply" })).toHaveAttribute(
+    "href",
+    /^mailto:sun\.e2e@example\.com\?subject=/,
+  );
+});
+
 test("request actions stay in the row menu until opened", async ({ page }) => {
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/requests");

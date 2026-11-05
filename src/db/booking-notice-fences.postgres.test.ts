@@ -174,40 +174,45 @@ describePostgres("reschedule and handoff notice fences", () => {
   it.each([
     ["permanent provider failure", false],
     ["retryable failure when queue sealing is unavailable", true],
-  ])("revokes the readiness link on %s", async (_label, queueUnavailable) => {
-    const { pg, shop, booking, now, payload } = await fixture();
-    const provider: NotificationProvider = {
-      async send() {
-        return queueUnavailable
-          ? { status: "failed", retryable: true, errorCode: "temporary_failure" }
-          : { status: "failed", retryable: false, errorCode: "permanent_failure" };
-      },
-    };
-    if (queueUnavailable) vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
-    try {
-      await expect(
-        sendRescheduleNotices(pg.db, shop.id, payload, sendOptions(provider, now)),
-      ).resolves.toMatchObject({ told: 0, failed: 1 });
-      expect(
-        await pg.db
-          .select()
-          .from(notificationSendQueue)
-          .where(eq(notificationSendQueue.bookingId, booking.id)),
-      ).toEqual([]);
-      const [capability] = await pg.db
-        .select({ revokedAt: bookingCapabilities.revokedAt })
-        .from(bookingCapabilities)
-        .where(
-          and(
-            eq(bookingCapabilities.bookingId, booking.id),
-            eq(bookingCapabilities.purpose, "readiness"),
-          ),
-        );
-      expect(capability?.revokedAt).not.toBeNull();
-    } finally {
-      if (queueUnavailable) vi.unstubAllEnvs();
-    }
-  });
+  ])(
+    "keeps the booking's readiness link live on %s (issue #2711)",
+    async (_label, queueUnavailable) => {
+      const { pg, shop, booking, now, payload } = await fixture();
+      const provider: NotificationProvider = {
+        async send() {
+          return queueUnavailable
+            ? { status: "failed", retryable: true, errorCode: "temporary_failure" }
+            : { status: "failed", retryable: false, errorCode: "permanent_failure" };
+        },
+      };
+      if (queueUnavailable) vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+      try {
+        await expect(
+          sendRescheduleNotices(pg.db, shop.id, payload, sendOptions(provider, now)),
+        ).resolves.toMatchObject({ told: 0, failed: 1 });
+        expect(
+          await pg.db
+            .select()
+            .from(notificationSendQueue)
+            .where(eq(notificationSendQueue.bookingId, booking.id)),
+        ).toEqual([]);
+        const [capability] = await pg.db
+          .select({ revokedAt: bookingCapabilities.revokedAt })
+          .from(bookingCapabilities)
+          .where(
+            and(
+              eq(bookingCapabilities.bookingId, booking.id),
+              eq(bookingCapabilities.purpose, "readiness"),
+            ),
+          );
+        // The link is the booking's one live delivered link, which an earlier
+        // mail may carry: a failed notice takes nothing back.
+        expect(capability?.revokedAt).toBeNull();
+      } finally {
+        if (queueUnavailable) vi.unstubAllEnvs();
+      }
+    },
+  );
 
   it("does not queue a ten-minute handoff link for a next-day retry", async () => {
     const { pg, shop, handoffTrip, booking, person, now } = await fixture();

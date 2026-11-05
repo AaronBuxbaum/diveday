@@ -1,5 +1,4 @@
 import { DAY_MS } from "@/lib/clock";
-import { createBearerToken, hashBearerToken } from "./bearer-tokens";
 
 /**
  * A booking capability (CR-002/CR-003) is anchored to the **trip**, not to the
@@ -21,10 +20,6 @@ import { createBearerToken, hashBearerToken } from "./bearer-tokens";
 export const CAPABILITY_MAX_TTL_MS = 2 * 365 * DAY_MS;
 export const CAPABILITY_TRIP_GRACE_MS = 30 * DAY_MS;
 export const CAPABILITY_MIN_TTL_MS = DAY_MS;
-
-export const createCapabilityToken = createBearerToken;
-
-export const hashCapabilityToken = hashBearerToken;
 
 /**
  * `tripEndsAt + grace`, floored at `now + min` so it's never issued

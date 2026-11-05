@@ -6,6 +6,7 @@ import {
   WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
   WAIVER_INTEGRITY_VERSION_MOVED,
   WAIVER_INTEGRITY_VERSION_SIGNED,
+  waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
 import { canPersonErasePersonalData } from "./authz";
 import { forgetClaudeCallContent } from "./claude-call-content";
@@ -103,6 +104,16 @@ export async function eraseGuardianEmail(
         guardianEmailErasedAt: now,
         guardianEmailErasedByPersonId: input.actorPersonId,
       };
+      const written: WaiverRecord = resealable
+        ? {
+            ...redacted,
+            integrityHash: computeWaiverIntegrityHash(
+              redacted,
+              WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
+            ),
+            integrityVersion: WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
+          }
+        : redacted;
       await tx
         .update(waiverRecords)
         .set({
@@ -110,15 +121,11 @@ export async function eraseGuardianEmail(
           draftGuardian: redacted.draftGuardian,
           guardianEmailErasedAt: now,
           guardianEmailErasedByPersonId: input.actorPersonId,
-          ...(resealable
-            ? {
-                integrityHash: computeWaiverIntegrityHash(
-                  redacted,
-                  WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
-                ),
-                integrityVersion: WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
-              }
-            : {}),
+          integrityHash: written.integrityHash,
+          integrityVersion: written.integrityVersion,
+          // The row as written, re-checked: a seal that failed before the
+          // redaction still fails, and says so in the cache (issue #2562).
+          ...waiverIntegrityVerdict(written, now),
         })
         .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, input.shopId)));
     }

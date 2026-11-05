@@ -31,7 +31,7 @@
  *   of the list. **Attribution**: who did a thing is evidence about the shop, and a
  *   merge involving somebody who has any of it is refused by the `refuse` rows
  *   long before it matters. **Subject on an event trail**
- *   (`activity_events.subject_person_id`, `trip_desk_events.subject_person_id`):
+ *   (`activity_events.subject_person_id`):
  *   a trail records what happened, not what is true now, and repointing the
  *   subject would make the shop's history claim the survivor was the subject of an
  *   act performed against a record that had a different name at the time.
@@ -401,9 +401,7 @@ const rows = [
   {
     table: "staff_credentials",
     column: "person_id",
-    export: "withheld",
-    exportWhy:
-      "a staffer's own pro cards: a staff record, not a diving one; whether a staff request for it gets a file is a human decision",
+    export: "own",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -483,7 +481,7 @@ const rows = [
     erase: "keep",
   },
   // Where a *staffer* had read up to in a departure's shift catch-up (issues
-  // #1202, #1187). Same shape as `push_subscriptions` above it: written by, and
+  // #1202, #1187): a position in `activity_events.seq` (#2701). Same shape as `push_subscriptions` above it: written by, and
   // about, somebody who works the boats, so either side of a merge holding one
   // is a staff record and the merge is refused rather than carried across.
   {
@@ -580,9 +578,7 @@ const rows = [
   {
     table: "person_roles",
     column: "person_id",
-    export: "withheld",
-    exportWhy:
-      "the account's access level at this shop; a staffer's role is part of their staff record, not their diving record",
+    export: "own",
     kind: "subject",
     merge: "leave",
     erase: "delete",
@@ -1090,6 +1086,13 @@ const rows = [
     why: "which staffer wrote the reply",
   },
   {
+    table: "interest_replies",
+    column: "sent_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer answered the date request (issue #2555)",
+  },
+  {
     table: "email_bounces",
     column: "sent_by_person_id",
     kind: "actor",
@@ -1160,25 +1163,6 @@ const rows = [
     why: "who changed the departure",
   },
   {
-    table: "trip_desk_events",
-    column: "actor_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who did it at the desk",
-  },
-  {
-    table: "trip_desk_events",
-    column: "subject_person_id",
-    export: "withheld",
-    exportWhy:
-      "a same-day shift handoff kept thirty days; #1202 rules out a downloadable per-person account of who did what",
-    kind: "subject",
-    merge: "leave",
-    erase: "keep",
-    eraseWhy: "a pointer joined at read, which resolves to the anonymized name",
-    why: "an event trail records who it happened to at the time",
-  },
-  {
     table: "trip_help_requests",
     column: "helper_person_id",
     export: "withheld",
@@ -1230,6 +1214,37 @@ const rows = [
     kind: "actor",
     merge: "leave",
     why: "who said where the boat was",
+  },
+  {
+    table: "safety_drills",
+    column: "recorded_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who logged the drill",
+  },
+  {
+    table: "safety_drills",
+    column: "deleted_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who deleted the drill",
+  },
+  {
+    table: "safety_drill_participants",
+    column: "person_id",
+    export: "withheld",
+    exportWhy: "a staffer's drill attendance, a staff record, not a diving one",
+    kind: "crew",
+    merge: "leave",
+    erase: "keep",
+    why: "a crew member who took part in a drill; the insurer's record keeps who drilled",
+  },
+  {
+    table: "deck_counts",
+    column: "recorded_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who counted the heads on deck",
   },
   {
     table: "customer_gear_notices",

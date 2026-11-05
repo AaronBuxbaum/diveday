@@ -8,6 +8,7 @@ import {
   type ReturningDiverMemoryScope,
   revokeClearedReturningDiverReceipt,
 } from "@/app/actions/returning-diver-memory";
+import { looksLikeBookingLinkToken } from "@/lib/booking-link-shape";
 import {
   getReturningDiverDeviceSlots,
   saveReturningDiver,
@@ -19,8 +20,10 @@ function scopeForPublicPath(pathname: string | null): ReturningDiverMemoryScope 
   if (!pathname) return null;
   const shopMatch = /^\/s\/([a-z0-9]+(?:-[a-z0-9]+)*)(?:\/|$)/.exec(pathname);
   if (shopMatch?.[1]) return { kind: "shop", shopSlug: shopMatch[1] };
-  const readyMatch = /^\/ready\/([A-Za-z0-9_-]{40,128})\/?$/.exec(pathname);
-  if (readyMatch?.[1]) return { kind: "readiness", readinessToken: readyMatch[1] };
+  const readyMatch = /^\/ready\/([^/]+)\/?$/.exec(pathname);
+  if (looksLikeBookingLinkToken(readyMatch?.[1])) {
+    return { kind: "readiness", readinessToken: readyMatch[1] };
+  }
   return null;
 }
 

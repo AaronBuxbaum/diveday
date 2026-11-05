@@ -199,16 +199,28 @@ export const ENV_GROUPS = [
   {
     seam: null,
     doc: [
-      "Reserved for the booking-capability signing change tracked in issue #2711.",
-      "The current booking-capability implementation does not read this value yet,",
-      "so setting it before that consumer lands has no runtime effect.",
+      "Booking links (readiness, confirm, claim, handoff, course forms) are the row",
+      "id plus an HMAC tag (src/lib/booking-link-token.ts, ADR",
+      "20261104-derived-booking-link-tokens). Each value is v<n>:<secret>, n from 2 to 9,",
+      "the secret at least 32 bytes and never AUTH_SECRET itself; unset, links sign as",
+      "version 1 under a key derived from AUTH_SECRET. To rotate, move the current value",
+      "into BOOKING_LINK_SECRET_PREVIOUS (verify only) and set a new one with n one higher;",
+      "links under any version dropped from both stop working. Version 1 verifies only",
+      "while BOOKING_LINK_SECRET_PREVIOUS is unset, so the first rotation retires it",
+      "without rotating AUTH_SECRET.",
     ],
     keys: [
       {
         key: "BOOKING_LINK_SECRET",
         from: "manual",
         targets: VERCEL,
-        absent: "the current booking-capability implementation is unchanged",
+        absent: "booking links sign as version 1, with a key derived from AUTH_SECRET",
+      },
+      {
+        key: "BOOKING_LINK_SECRET_PREVIOUS",
+        from: "manual",
+        targets: VERCEL,
+        absent: "the current key and version 1 verify",
       },
     ],
   },
@@ -1393,6 +1405,12 @@ export const ENV_GROUPS = [
       },
       {
         key: "SENTRY_USAGE_CRON_MONITOR_SLUG",
+        from: "override",
+        targets: NOWHERE,
+        absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",
+      },
+      {
+        key: "SENTRY_WAIVER_SEALS_CRON_MONITOR_SLUG",
         from: "override",
         targets: NOWHERE,
         absent: "the cron route checks in under its compiled-in `diveday-<id>` monitor",

@@ -9,12 +9,12 @@ import { cancelBooking, createBooking, createBookingParty, selfCancelBooking } f
 import type { AppDb } from "./client";
 import { crewSubject } from "./roll-call-subject";
 import {
+  activityEvents,
   bookingCapabilities,
   bookings,
   rollCallEvents,
   shops,
   tripAssignments,
-  tripDeskEvents,
   tripStageEvents,
   trips,
 } from "./schema";
@@ -115,10 +115,10 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-20261015-aboard-
       .where(eq(bookingCapabilities.bookingId, bookingId));
     expect(capability?.revokedAt).toBeNull();
     const released = await db
-      .select({ id: tripDeskEvents.id })
-      .from(tripDeskEvents)
+      .select({ id: activityEvents.id })
+      .from(activityEvents)
       .where(
-        and(eq(tripDeskEvents.bookingId, bookingId), eq(tripDeskEvents.kind, "seat_released")),
+        and(eq(activityEvents.bookingId, bookingId), eq(activityEvents.code, "desk_seat_released")),
       );
     expect(released).toEqual([]);
   }

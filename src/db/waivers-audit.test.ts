@@ -6,6 +6,7 @@ import { verifyWaiverIntegrity, WAIVER_INTEGRITY_VERSION_ERASED } from "@/lib/wa
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { bookings, people, shops, waiverRecords, waiverTemplates } from "./schema";
+import { recheckWaiverSeals } from "./waiver-seal-checks";
 import {
   getSignedWaiverRecordForShop,
   listSignedWaiversByPerson,
@@ -171,7 +172,43 @@ describe("listWaiverIntegrityAudit search and views", () => {
       limit: 1000,
     });
     expect(page.entries.map((entry) => entry.id)).toContain(unsealed);
-    expect(page.entries.every((entry) => entry.integrity === "unsealed")).toBe(true);
+    expect(page.entries.every((entry) => entry.integrity !== "valid")).toBe(true);
+    expect(page.total).toBe(page.entries.length);
+  });
+
+  /**
+   * **A tampered release is the one a reviewer goes looking for** (issue
+   * #2562). Its seal is present, so the view's nulls never found it; the
+   * cached verdict the nightly re-check writes does.
+   */
+  it("shows a release edited after it was sealed under that view, once its seal is re-checked", async () => {
+    const ctx = await waiverContext();
+    const { db, shop, booking, person } = ctx;
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    const done = await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now,
+    });
+    if (!done.ok) throw new Error("completion failed");
+    const unchecked = async () =>
+      (await listWaiverIntegrityAudit(db, shop.id, { view: "unchecked", limit: 1000 })).entries;
+
+    // Sealed and checked when signed: valid, and not in the view.
+    expect((await unchecked()).map((entry) => entry.id)).not.toContain(issued.recordId);
+
+    // An edit straight in the database, after the seal.
+    await db
+      .update(waiverRecords)
+      .set({ templateBody: "A release nobody agreed to." })
+      .where(eq(waiverRecords.id, issued.recordId));
+    await recheckWaiverSeals(db, { now: new Date(now.getTime() + 86_400_000) });
+
+    const found = (await unchecked()).find((entry) => entry.id === issued.recordId);
+    expect(found).toMatchObject({ id: issued.recordId, integrity: "invalid" });
+    const page = await listWaiverIntegrityAudit(db, shop.id, { view: "unchecked", limit: 1000 });
     expect(page.total).toBe(page.entries.length);
   });
 

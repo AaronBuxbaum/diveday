@@ -272,6 +272,8 @@ const SENDERS: Record<string, string> = {
   "src/db/recap.ts": "the candidate scan carries `notRehearsal()`, so no email or text",
   "src/db/waiver-issue.ts": "a rehearsal's link is hand-over only, never texted or emailed",
   "src/db/crew-notices.ts": "a rehearsal's crew news is never recorded",
+  "src/db/interest-replies.ts":
+    "a reply answers a date request, which names no departure, so no rehearsal reaches it",
   "src/db/interest-offers.ts":
     "`offerSeats` offers nobody on a rehearsal, deal or not; the email is also held at the chokepoint",
   "src/db/blowouts.ts": HELD_AT_CHOKEPOINT,

@@ -1,0 +1,567 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2f0d0ebd-c9bc-40c0-8a73-9701ca208c25",
+  "prevIds": [
+    "8b577ece-9cbd-4412-bfda-b3ba305b6a4c"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "interest_reply_channel"
+      ],
+      "writes": [
+        "s|enum|public.interest_reply_channel",
+        "n|enum|public.interest_reply_channel",
+        "e|enum|public.interest_reply_channel",
+        "n|type|public.interest_reply_channel"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "interest_closed_as"
+      ],
+      "writes": [
+        "s|enum|public.interest_closed_as"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "interest_replies"
+      ],
+      "writes": [
+        "s|tbl|public.interest_replies",
+        "n|tbl|public.interest_replies",
+        "e|tbl|public.interest_replies",
+        "n|rel|public.interest_replies",
+        "n|type|public.interest_replies",
+        "n|rel|public.interest_replies_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.interest_reply_channel",
+        "n|enum|public.notification_delivery_status"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "interest_replies",
+        "interest_replies_shop_interest_idx"
+      ],
+      "writes": [
+        "s|idx|public.interest_replies_shop_interest_idx",
+        "n|idx|public.interest_replies_shop_interest_idx",
+        "e|idx|public.interest_replies_shop_interest_idx",
+        "n|rel|public.interest_replies_shop_interest_idx"
+      ],
+      "reads": [
+        "n|tbl|public.interest_replies",
+        "n|sch|public",
+        "n|col|public.interest_replies.shop_id",
+        "n|col|public.interest_replies.interest_id",
+        "n|col|public.interest_replies.sent_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "interest_replies",
+        "interest_replies_sent_by_person_idx"
+      ],
+      "writes": [
+        "s|idx|public.interest_replies_sent_by_person_idx",
+        "n|idx|public.interest_replies_sent_by_person_idx",
+        "e|idx|public.interest_replies_sent_by_person_idx",
+        "n|rel|public.interest_replies_sent_by_person_idx"
+      ],
+      "reads": [
+        "n|tbl|public.interest_replies",
+        "n|sch|public",
+        "n|col|public.interest_replies.sent_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "interest_replies"
+      ],
+      "writes": [
+        "s|fk|public.interest_replies.interest_replies_shop_id_shops_id_fkey",
+        "n|fk|public.interest_replies.interest_replies_shop_id_shops_id_fkey",
+        "e|fk|public.interest_replies.interest_replies_shop_id_shops_id_fkey",
+        "n|con|public.interest_replies.interest_replies_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.interest_replies",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.interest_replies.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "interest_replies"
+      ],
+      "writes": [
+        "s|fk|public.interest_replies.interest_replies_sent_by_person_id_people_id_fkey",
+        "n|fk|public.interest_replies.interest_replies_sent_by_person_id_people_id_fkey",
+        "e|fk|public.interest_replies.interest_replies_sent_by_person_id_people_id_fkey",
+        "n|con|public.interest_replies.interest_replies_sent_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.interest_replies",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.interest_replies.sent_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "interest_replies"
+      ],
+      "writes": [
+        "s|fk|public.interest_replies.interest_replies_shop_interest_fk",
+        "n|fk|public.interest_replies.interest_replies_shop_interest_fk",
+        "e|fk|public.interest_replies.interest_replies_shop_interest_fk",
+        "n|con|public.interest_replies.interest_replies_shop_interest_fk"
+      ],
+      "reads": [
+        "n|tbl|public.interest_replies",
+        "n|sch|public",
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|col|public.interest_replies.shop_id",
+        "n|col|public.interest_replies.interest_id",
+        "n|col|public.interests.shop_id",
+        "n|col|public.interests.id",
+        "e|uniqueness|public.interests.id.shop_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "interest_replies",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "interest_reply_channel",
+        "values": [
+          "email",
+          "sms",
+          "whatsapp"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "interest_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "channel",
+        "type": "interest_reply_channel",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "to_address",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "body",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "locale",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "sent_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "status",
+        "type": "notification_delivery_status",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "provider_message_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "send_error_code",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "sent_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "interest_replies_shop_interest_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "interest_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "sent_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "interest_replies_sent_by_person_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "sent_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "interest_replies_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "interest_replies_sent_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "sent_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "interest_replies_shop_interest_fk",
+        "nameExplicit": true,
+        "columns": [
+          "shop_id",
+          "interest_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "interests",
+        "columnsTo": [
+          "shop_id",
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "interest_replies_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interest_replies",
+        "name": "interest_replies_body_bounded",
+        "value": "\"body\" is null or (length(btrim(\"body\")) > 0 and length(\"body\") <= 1000)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"interest_closed_as\"]",
+      "set": {
+        "values": [
+          "booked",
+          "done",
+          "unsubscribed",
+          "replied"
+        ]
+      }
+    }
+  ]
+}

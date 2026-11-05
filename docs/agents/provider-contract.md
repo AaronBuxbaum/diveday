@@ -22,6 +22,13 @@ live PID is not proof of ownership; inspect the command before stopping anything
 | Push verification | Same repository gate | Same repository gate |
 | Handoff | Same task-state schema | Same task-state schema |
 
+[Codex supports project hooks](https://learn.chatgpt.com/docs/hooks), but requires trust for both
+the project and each hook before they run. Hook commands receive the session working directory;
+this session did not set `CLAUDE_PROJECT_DIR`. On 2026-11-04, `codex-cli 0.166.0-alpha.6` allowed
+a safe Bash-guard probe in this untrusted worktree through (the sentinel file was absent). The
+repository cannot rely on this adapter to enforce its checks, so Codex workflows stay explicit.
+Claude's `.claude/settings.json` remains the configured lifecycle adapter.
+
 Configuration is not observed execution. The bootstrap intentionally reports hooks as unverified;
 it cannot inspect global host configuration. Repository checks and CI enforce correctness across
 providers. Host convenience adapters must never create unique product policy.

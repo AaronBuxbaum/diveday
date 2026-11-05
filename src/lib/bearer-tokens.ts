@@ -1,15 +1,19 @@
 import { createHash, randomBytes } from "node:crypto";
 
 /**
- * The shared primitive behind every URL-is-the-credential surface: waiver
- * links, booking capabilities, and calendar feeds. Extracted so a new bearer
+ * The shared primitive behind the stored-digest URL credentials, such as waiver links,
+ * calendar feeds, and the returning-diver device value. Booking links are not
+ * among them: they are derived from their row and an HMAC tag
+ * (`src/lib/booking-link-token.ts`, ADR 20261104-derived-booking-link-tokens),
+ * because a booking link has to be handed back the same every time it is
+ * asked for, and a digest cannot be read back. Extracted so a new bearer
  * surface reuses the same generation and storage discipline rather than
  * re-deriving it (and quietly picking a shorter token or a reversible digest).
  *
  * ## Use this for
  *
  * A machine-generated credential carried in a URL, where possession *is* the
- * authorization: `/waivers/[token]`, `/ready/[token]`, `/calendar/[token]`.
+ * authorization: `/waivers/[token]`, `/calendar/[token]`.
  *
  * ## Do not use this for
  *
@@ -21,10 +25,9 @@ import { createHash, randomBytes } from "node:crypto";
  *
  * ## What this deliberately does not decide
  *
- * Lifetime is the caller's, and the three current callers disagree sharply for
- * good reasons — so do not copy one's policy into a new surface without
- * re-deriving it. A booking capability expires on a schedule tied to its trip;
- * a waiver link lives seven days and is *reused* while it lasts, superseded
+ * Lifetime is the caller's, and the callers disagree sharply for good reasons
+ * — so do not copy one's policy into a new surface without re-deriving it. A
+ * waiver link lives seven days and is *reused* while it lasts, superseded
  * only when it cannot be (ADR 20260820-waiver-links-are-reused-not-reissued);
  * a calendar feed never
  * expires at all, because a lapsed one would stop a captain's calendar updating
@@ -41,8 +44,9 @@ import { createHash, randomBytes } from "node:crypto";
  * matches, the sealed copy is nulled the moment the link is spent, and opening
  * it needs a key that is not in the database — so a reader of a dump still
  * comes away with nothing replayable. If you add a bearer surface, start from
- * hash-only; reach for a sealed copy only when the surface genuinely has to
- * hand the *same* credential over twice, and write down why.
+ * hash-only; when the surface genuinely has to hand the *same* credential over
+ * twice, derive it from the row as booking links do rather than seal a copy,
+ * and write down why.
  *
  * 256 bits from a CSPRNG, base64url so it survives a URL path segment
  * untouched. The digest is all this module ever asks you to store (the one
