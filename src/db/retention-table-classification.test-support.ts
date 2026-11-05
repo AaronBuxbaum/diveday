@@ -171,7 +171,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "account_step_ups",
   "auth_provider_accounts",
   "auth_verifications",
-  "calendar_feeds",
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.
   "notification_rate_limit_state",

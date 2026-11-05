@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, isNull, ne, or, type SQL } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, ne, notInArray, or, type SQL } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import {
   CAPABILITY_POLICY,
@@ -6,6 +6,8 @@ import {
   type CapabilityPurpose,
   capabilityExpiry,
   capabilitySubject,
+  onePerPersonPurposes,
+  reusablePurposes,
 } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
@@ -244,6 +246,7 @@ export async function mintCapability<P extends CapabilityPurpose>(
       tokenHash: hashBearerToken(token),
       issuedAt: now,
       expiresAt,
+      oneLive: onePerPersonPurposes().includes(input.purpose),
     })
     .returning({ id: capabilities.id });
   if (!row) throw new Error(`Failed to issue a ${input.purpose} capability`);
@@ -321,6 +324,118 @@ export async function openCapability<P extends CapabilityPurpose>(
     )
     .limit(1);
   return row ? verified(input.purpose, row) : null;
+}
+
+/**
+ * `openCapability` over several purposes that name the same kind of subject
+ * (the two calendar feeds), for a token whose purpose the holder does not say:
+ * the live row it names under any of them, with that purpose, or null.
+ */
+export async function openCapabilityAmong<P extends CapabilityPurpose>(
+  db: DbExecutor,
+  input: { purposes: readonly P[]; token: string; now?: Date },
+): Promise<(VerifiedCapability<P> & { purpose: P }) | null> {
+  if (input.purposes.length === 0) return null;
+  const [row] = await db
+    .select({ ...ROW, purpose: capabilities.purpose })
+    .from(capabilities)
+    .where(
+      and(
+        inArray(capabilities.purpose, [...input.purposes]),
+        eq(capabilities.tokenHash, hashBearerToken(input.token)),
+        isNull(capabilities.usedAt),
+        unrevokedAndUnexpired(input.now ?? nowDate()),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+  const purpose = row.purpose as P;
+  const live = verified(purpose, row);
+  return live ? { ...live, purpose } : null;
+}
+
+/**
+ * Stamps a reusable capability's last successful use (`last_accessed_at`).
+ * Only a `use: "reusable"` purpose carries the column, so any other row is
+ * left alone.
+ */
+export async function touchCapability(
+  db: DbExecutor,
+  input: { id: string; now?: Date },
+): Promise<void> {
+  await db
+    .update(capabilities)
+    .set({ lastAccessedAt: input.now ?? nowDate() })
+    .where(and(eq(capabilities.id, input.id), inArray(capabilities.purpose, reusablePurposes())));
+}
+
+export type LiveCapability<P extends CapabilityPurpose> = {
+  id: string;
+  purpose: P;
+  issuedAt: Date;
+  lastAccessedAt: Date | null;
+};
+
+/** The live (unspent, unrevoked, unexpired) links of these purposes one person holds in a shop. */
+export async function livePersonCapabilities<P extends CapabilityPurpose>(
+  db: DbExecutor,
+  input: { purposes: readonly P[]; shopId: string; personId: string; now?: Date },
+): Promise<LiveCapability<P>[]> {
+  if (input.purposes.length === 0) return [];
+  const rows = await db
+    .select({
+      id: capabilities.id,
+      purpose: capabilities.purpose,
+      issuedAt: capabilities.issuedAt,
+      lastAccessedAt: capabilities.lastAccessedAt,
+    })
+    .from(capabilities)
+    .where(
+      and(
+        inArray(capabilities.purpose, [...input.purposes]),
+        eq(capabilities.shopId, input.shopId),
+        eq(capabilities.personId, input.personId),
+        isNull(capabilities.usedAt),
+        unrevokedAndUnexpired(input.now ?? nowDate()),
+      ),
+    );
+  return rows.map((row) => ({ ...row, purpose: row.purpose as P }));
+}
+
+/**
+ * Turns off the live links of these purposes in one shop (`revoked_at`),
+ * without minting replacements: one person's (`personId`), or everybody's but
+ * the people named in `keepPersonIds`. A revoked row stays, so the fact that it
+ * was turned off stays on record. A `person` purpose's rows only.
+ */
+export async function revokePersonCapabilities(
+  db: DbExecutor,
+  input: {
+    purposes: readonly CapabilityPurpose[];
+    shopId: string;
+    personId?: string;
+    keepPersonIds?: readonly string[];
+    now?: Date;
+  },
+): Promise<void> {
+  if (input.purposes.length === 0) return;
+  for (const purpose of input.purposes) {
+    if (capabilitySubject(purpose) !== "person") throw new Error(`${purpose} names no person`);
+  }
+  await db
+    .update(capabilities)
+    .set({ revokedAt: input.now ?? nowDate() })
+    .where(
+      and(
+        inArray(capabilities.purpose, [...input.purposes]),
+        eq(capabilities.shopId, input.shopId),
+        isNull(capabilities.revokedAt),
+        input.personId ? eq(capabilities.personId, input.personId) : undefined,
+        input.keepPersonIds && input.keepPersonIds.length > 0
+          ? notInArray(capabilities.personId, [...input.keepPersonIds])
+          : undefined,
+      ),
+    );
 }
 
 /**

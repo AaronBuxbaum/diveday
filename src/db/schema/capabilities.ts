@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   foreignKey,
   index,
@@ -15,8 +16,10 @@ import {
   type CapabilityPurpose,
   type CapabilitySubject,
   expiringPurposes,
+  onePerPersonPurposes,
   platformPurposes,
   purposesNaming,
+  reusablePurposes,
   spentPurposes,
 } from "@/lib/capabilities";
 import { appNowTimestamp } from "./columns";
@@ -58,8 +61,9 @@ const naming = (subject: CapabilitySubject) => sqlList(purposesNaming(subject));
  * token itself is never stored. `used_at` is set only on a purpose a use
  * spends (`use: "once"`). `expires_at` is set on exactly the purposes that
  * expire (`lifetime: "expires"`). `revoked_at` marks a link a newer mint
- * superseded (`reissue: "supersedes"`); a revoked row opens nothing but stays,
- * so its page can still say the link is no longer available.
+ * superseded (`reissue: "supersedes"`) or that was turned off; a revoked row
+ * opens nothing but stays, so its page can still say the link is no longer
+ * available.
  */
 export const capabilities = pgTable(
   "capabilities",
@@ -92,12 +96,33 @@ export const capabilities = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     /** A newer link of the same purpose superseded this one; it opens nothing. */
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    /**
+     * A reusable purpose's last successful use (a calendar client's fetch), so
+     * staff can tell a live subscription from a URL nobody pasted anywhere.
+     * Coarse on purpose: a client polls often. Only on `use: "reusable"`.
+     */
+    lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
+    /**
+     * True exactly on a `person` purpose of which a person holds one live link
+     * (`per: "subject"`: the calendar feeds), as `capabilities_one_live_by_purpose`
+     * holds. It exists for the partial unique index below: an index predicate
+     * must be immutable, which an enum-to-text cast is not, and a purpose added
+     * in a migration cannot be named as an enum literal in the transaction that
+     * adds it, so the index names these rows by this column instead.
+     */
+    oneLive: boolean("one_live").notNull().default(false),
   },
   (table) => [
     index("capabilities_person_idx").on(table.personId),
     index("capabilities_interest_idx").on(table.interestId),
     index("capabilities_user_account_idx").on(table.userAccountId),
     index("capabilities_setup_request_idx").on(table.setupRequestId),
+    // One live link per person and purpose where the policy says so (the
+    // calendar feeds): the mint's revoke under the person-row lock is the rule,
+    // this is its backstop.
+    uniqueIndex("capabilities_live_person_purpose_idx")
+      .on(table.personId, table.purpose)
+      .where(sql`${table.oneLive} and ${table.usedAt} is null and ${table.revokedAt} is null`),
     index("capabilities_spent_by_shop_idx").on(table.spentByShopId),
     // One live account token per account and purpose: the mint's revoke under
     // the account-row lock is the rule, this is its backstop.
@@ -135,6 +160,16 @@ export const capabilities = pgTable(
     check(
       "capabilities_expiry_by_purpose",
       sql`(${table.expiresAt} is not null) = (${table.purpose}::text in (${sqlList(expiringPurposes())}))`,
+    ),
+    // `one_live` mirrors the purpose's policy, so the index above cannot miss a row.
+    check(
+      "capabilities_one_live_by_purpose",
+      sql`${table.oneLive} = (${table.purpose}::text in (${sqlList(onePerPersonPurposes())}))`,
+    ),
+    // Only a reusable purpose records its last use.
+    check(
+      "capabilities_accessed_only_when_reusable",
+      sql`${table.lastAccessedAt} is null or ${table.purpose}::text in (${sqlList(reusablePurposes())})`,
     ),
     // Only a setup link records the shop it opened.
     check(

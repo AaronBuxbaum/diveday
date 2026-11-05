@@ -1470,12 +1470,6 @@
           "src/db/seat-claims.test.ts": "1525 -> 1529",
           "src/db/self-declared-cards.test.ts": "1849 -> 1869"
         }
-      },
-      {
-        "why": "Merge of main and the lower stack layers; no branch added by hand",
-        "files": {
-          "src/db/divers.test.ts": "3060 -> 3064"
-        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 952,
@@ -1500,7 +1494,7 @@
     "src/db/courses.test.ts": 1713,
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1162,
-    "src/db/divers.test.ts": 3064,
+    "src/db/divers.test.ts": 3061,
     "src/db/executed-dives.test.ts": 1085,
     "src/db/export.test.ts": 1181,
     "src/db/import.test.ts": 1076,

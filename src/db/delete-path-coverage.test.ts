@@ -320,7 +320,6 @@ const RESET_KEEPS: Record<string, string> = {
  */
 const RESET_PERSON_SCOPED: Record<string, string> = {
   staff_shifts: "seeded once with the permanent staff; a purged person’s shifts go with them",
-  calendar_feeds: "a stable staffer's subscription must survive a schedule reset",
   account_sessions:
     "a purged person’s session goes with their login; stable staff sessions survive",
   processor_erasure_obligations: "names the erased person and whoever discharged it",

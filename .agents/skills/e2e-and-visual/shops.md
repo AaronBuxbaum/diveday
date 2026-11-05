@@ -20,8 +20,8 @@ What it does not restore is the shop's **configuration**. The list is `RESET_KEE
   `media_deletion_attempts`;
 - every `shops` column but `review_url`, `depth_unit` and `temperature_unit` — currency, timezone,
   rental catalog, dock-day minutes, search listing, locale, contact details, all of it;
-- `staff_shifts`, `calendar_feeds` and `processor_erasure_obligations` for the **permanent** staff,
-  which the reset clears by purged-person id rather than shop-wide, on purpose.
+- `staff_shifts`, the calendar feed `capabilities` and `processor_erasure_obligations` for the
+  **permanent** staff, which the reset clears by purged-person id rather than shop-wide, on purpose.
 
 **A test that writes any of those takes a shop of its own.** Ask for the `privateShop` fixture
 (`e2e/fixtures.ts`): it mints a fully seeded shop through the same `createDemoShop` the live-demo

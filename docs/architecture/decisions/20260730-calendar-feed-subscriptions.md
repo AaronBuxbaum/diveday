@@ -1,6 +1,6 @@
 # 20260730-calendar-feed-subscriptions — Sync staff departures out as subscribable iCalendar feeds
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-11-05** by [20261105-capabilities-shop-id-nullable](20261105-capabilities-shop-id-nullable.md)
 - **Date:** 2026-07-30
 
 ## Context
@@ -92,3 +92,7 @@ larger one.
 - **Revisit if** shops ask to *write* from their calendar back into DiveDay (a captain marking
   themselves unavailable). That is genuinely two-way and would need the OAuth path above — a new
   ADR, and a much larger surface.
+
+## Amendment 2026-11-05 (#3721)
+
+A feed is a `capabilities` row now, one purpose per scope (`calendar_assignments`, `calendar_shop_trips`), naming the staffer by `person_id`, and `calendar_feeds` is dropped. It never expires, is never spent (`use: "reusable"`), and minting one revokes that person's live feed of that scope, with a partial unique index on live rows as the backstop; `last_accessed_at` moved with it. Roles are still re-derived on every fetch, erasure still revokes rather than deletes, and a feed on either record still refuses a diver merge (`merge: "refuse"`). See [20261105-capabilities-shop-id-nullable](20261105-capabilities-shop-id-nullable.md).

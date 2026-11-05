@@ -187,10 +187,15 @@ const rows = [
     erase: "scrub",
     eraseIn: "scrubInterests",
   },
-  // A person's unsubscribe link (`courtesy_email_unsubscribe`,
-  // `weekly_digest_unsubscribe`) follows the person, so a link the source was
-  // mailed still opts the kept record out; stopping mail grants nothing.
-  // Rows of other purposes leave `person_id` null.
+  // What a merge does is the purpose's `merge` in `CAPABILITY_POLICY`. A
+  // person's unsubscribe link (`courtesy_email_unsubscribe`,
+  // `weekly_digest_unsubscribe`, `merge: "follows"`) follows the person, so a
+  // link the source was mailed still opts the kept record out; stopping mail
+  // grants nothing. A staff calendar feed (`calendar_assignments`,
+  // `calendar_shop_trips`, `merge: "refuse"`) refuses the merge as
+  // `staff_record` (`mergeDiverRecords`), and the erasure revokes it rather
+  // than deleting it (`scrubStandingCredentials`). Rows of other purposes
+  // leave `person_id` null.
   {
     table: "capabilities",
     column: "person_id",
@@ -464,14 +469,6 @@ const rows = [
     eraseBy: "user_account_id",
   },
   {
-    table: "calendar_feeds",
-    column: "person_id",
-    kind: "login",
-    merge: "refuse",
-    erase: "scrub",
-    eraseIn: "scrubStandingCredentials",
-  },
-  {
     table: "roll_call_events",
     column: "crew_person_id",
     export: "withheld",
@@ -551,7 +548,7 @@ const rows = [
   },
   // The Monday email's claims (`src/db/weekly-digest.ts`). Only somebody with
   // a staff login is ever sent one, so a record holding one is a staff record
-  // and the merge is refused, like the calendar feed above.
+  // and the merge is refused, like a calendar feed capability.
   {
     table: "weekly_digest_sends",
     column: "person_id",

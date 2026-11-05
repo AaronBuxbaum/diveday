@@ -6,8 +6,8 @@ const calendarSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/me/calendar
 const MY_DEPARTURES = "My departures";
 
 /**
- * A subscription is per-person shop state, and `calendar_feeds` is one of the
- * tables `resetDemoSchedule` deliberately leaves standing — it clears a feed
+ * A subscription is per-person shop state, and a calendar feed capability is
+ * one of the rows `resetDemoSchedule` deliberately leaves standing — it clears a feed
  * only when it purges the person who owns it, so the four permanent staff keep
  * theirs across the reset by design. Every test here that mints, rotates or
  * turns off a link therefore takes a shop of its own (`privateShop`, ADR
@@ -104,7 +104,7 @@ test.describe("staff calendar subscriptions", () => {
 });
 
 /**
- * The half that writes a `calendar_feeds` row — each on a shop of its own, so
+ * The half that writes a calendar feed capability — each on a shop of its own, so
  * the subscription it leaves behind belongs to a shop nothing else reads. No
  * `signedInAsOwner()`: the fixture signs in as the minted shop's own owner.
  */

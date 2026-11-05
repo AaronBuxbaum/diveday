@@ -24,7 +24,8 @@ make it nullable, move all three, delete the old tables and modules.
   `calendar_assignments`, `calendar_shop_trips` (shop, never expire).
 - **Supersede granularity**: `reissue: "supersedes"` names `per: "shop"` or `per: "subject"`
   (account and purpose, person and purpose). The mint locks that row; a partial unique index on
-  live rows backs the account tokens and the feeds.
+  live rows backs the account tokens and the feeds (keyed on a `one_live` flag a check ties to the
+  purpose, since an index predicate cannot cast the enum).
 - **`use: "reusable"`**: a calendar feed is opened many times, never spent; `open` refuses a
   revoked row, and `last_accessed_at` is stamped only on these purposes.
 - **`merge: "follows" | "refuse"`** on every `person` purpose. Unsubscribe links follow a diver
