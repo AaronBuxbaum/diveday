@@ -39,6 +39,7 @@ import {
   listShopPromoCodes,
   setShopPromoEnabled,
 } from "./shop-promos";
+import { issueShoreAlertStopToken } from "./shore-alert-tokens";
 import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
@@ -269,10 +270,12 @@ describe("resetDemoSchedule", () => {
       .where(eq(shops.id, shop.id));
     await db.insert(shopShoreAlertTokens).values({
       shopId: shop.id,
-      purpose: "stop",
+      purpose: "confirm",
       email: "leaked@example.com",
       tokenHash: "leaked-shore-token-hash",
+      expiresAt: new Date("2026-10-16T12:00:00Z"),
     });
+    await issueShoreAlertStopToken(db, { shopId: shop.id, email: "leaked@example.com" });
     const account = await upsertShopStripeAccount(db, shop.id, "acct_leaked_test");
     await setShopStripeAccountStatus(db, account.stripeAccountId, {
       chargesEnabled: true,
@@ -293,6 +296,9 @@ describe("resetDemoSchedule", () => {
     });
     expect(
       await db.select().from(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shop.id)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(capabilities).where(eq(capabilities.shopId, shop.id)),
     ).toHaveLength(0);
     const [stripeRow] = await db
       .select()

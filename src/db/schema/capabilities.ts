@@ -1,6 +1,21 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, index, pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
-import { CAPABILITY_POLICY, CAPABILITY_PURPOSES, type CapabilitySubject } from "@/lib/capabilities";
+import {
+  check,
+  foreignKey,
+  index,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
+import {
+  CAPABILITY_PURPOSES,
+  type CapabilityPurpose,
+  type CapabilitySubject,
+  purposesNaming,
+  spentPurposes,
+} from "@/lib/capabilities";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { interests } from "./interests";
@@ -11,17 +26,12 @@ import { interests } from "./interests";
  */
 export const capabilityPurpose = pgEnum("capability_purpose", CAPABILITY_PURPOSES);
 
-/**
- * The purposes whose rows name `subject`, as a SQL list, read from
- * `CAPABILITY_POLICY` so the check below cannot disagree with it.
- */
-function purposesNaming(subject: CapabilitySubject) {
-  return sql.raw(
-    CAPABILITY_PURPOSES.filter((purpose) => CAPABILITY_POLICY[purpose].subject === subject)
-      .map((purpose) => `'${purpose}'`)
-      .join(", "),
-  );
+/** A SQL list of purposes, read from `CAPABILITY_POLICY` so a check cannot disagree with it. */
+function sqlList(purposes: CapabilityPurpose[]) {
+  return sql.raw(purposes.map((purpose) => `'${purpose}'`).join(", "));
 }
+
+const naming = (subject: CapabilitySubject) => sqlList(purposesNaming(subject));
 
 /**
  * **Every bearer capability that has moved off its own table** (issue #2710).
@@ -37,10 +47,10 @@ function purposesNaming(subject: CapabilitySubject) {
  * purpose names. Facts about the thing a capability opens stay on that thing.
  *
  * `token_hash` is the SHA-256 of the token (`src/lib/bearer-tokens.ts`); the
- * token itself is never stored. The purposes here never expire and are
- * never spent (`lifetime: "never"`, `use: "idempotent"`), so the table has no
- * `expires_at` or `revoked_at` yet: those arrive with the first purpose that
- * needs them.
+ * token itself is never stored. `used_at` is set only on a purpose a use
+ * spends (`use: "once"`). The purposes here never expire
+ * (`lifetime: "never"`), so the table has no `expires_at` or `revoked_at` yet:
+ * those arrive with the first purpose that needs them.
  */
 export const capabilities = pgTable(
   "capabilities",
@@ -53,8 +63,11 @@ export const capabilities = pgTable(
     personId: uuid("person_id").references(() => people.id),
     // Bound to the row's own shop by the composite key below, not a bare id.
     interestId: uuid("interest_id"),
+    /** A `shop_address` purpose's subject: the lower-cased address the link was mailed to. */
+    sentTo: text("sent_to"),
     tokenHash: text("token_hash").notNull().unique(),
     issuedAt: appNowTimestamp("issued_at").notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
   },
   (table) => [
     index("capabilities_person_idx").on(table.personId),
@@ -68,9 +81,17 @@ export const capabilities = pgTable(
     }),
     check(
       "capabilities_subject_by_purpose",
-      sql`(${table.purpose}::text in (${purposesNaming("interest")}) and ${table.interestId} is not null and ${table.personId} is null)
-        or (${table.purpose}::text in (${purposesNaming("person")}) and ${table.personId} is not null and ${table.interestId} is null)`,
+      sql`(${table.purpose}::text in (${naming("interest")}) and ${table.interestId} is not null and ${table.personId} is null and ${table.sentTo} is null)
+        or (${table.purpose}::text in (${naming("person")}) and ${table.personId} is not null and ${table.interestId} is null and ${table.sentTo} is null)
+        or (${table.purpose}::text in (${naming("shop_address")}) and ${table.sentTo} is not null and ${table.sentTo} = lower(${table.sentTo}) and ${table.personId} is null and ${table.interestId} is null)`,
     ),
+    // Only a purpose a use spends is ever marked used.
+    check(
+      "capabilities_used_only_when_spent",
+      sql`${table.usedAt} is null or ${table.purpose}::text in (${sqlList(spentPurposes())})`,
+    ),
+    // An erasure sweeps a shop's links by the address they went to.
+    index("capabilities_sent_to_idx").on(table.shopId, table.sentTo),
   ],
 );
 

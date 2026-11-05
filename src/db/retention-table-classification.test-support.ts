@@ -175,10 +175,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds",
-  // The two unsubscribe purposes never expire and are never spent; a row goes
-  // with its interest or person (erasure, demo teardown). A purpose with an
-  // expiry brings `capabilities` a window when it moves here (issue #2710).
-  "capabilities",
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.
   "notification_rate_limit_state",

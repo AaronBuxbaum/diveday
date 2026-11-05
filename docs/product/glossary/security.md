@@ -23,11 +23,12 @@
   Stored as a SHA-256 hash at rest, expiring and single-use upon consumption. A token issued for one
   purpose cannot be resolved or redeemed under another.
 - **Capability** — a bearer link whose URL is the credential, stored as a row of `capabilities`
-  under one purpose (issue #2710). The purpose decides what the row opens (an interest or a
-  person), how long it lives and whether a use spends it, one record per purpose in
-  `src/lib/capabilities.ts`. A token minted for one purpose never verifies under another. The
-  purposes so far are the email-unsubscribe links: `interest_unsubscribe`,
-  `courtesy_email_unsubscribe` and `weekly_digest_unsubscribe` (issue #3721). Booking
+  under one purpose (issue #2710). The purpose decides what the row opens (an interest, a
+  person, or one of the shop's own addresses named by the address the link was mailed to), how
+  long it lives and whether a use spends it, one record per purpose in `src/lib/capabilities.ts`.
+  A token minted for one purpose never verifies under another. The purposes so far are the
+  email-unsubscribe and stop links: `interest_unsubscribe`, `courtesy_email_unsubscribe`,
+  `weekly_digest_unsubscribe` and `shore_alert_stop` (spent by one use; issue #3721). Booking
   capabilities, account tokens and the other link tables move onto it later.
 - **Booking link** — a bearer link to one booking under one purpose (`readiness`, `confirm`,
   `claim`, `handoff`, `course_forms`), a row of `booking_capabilities` whose URL is derived, not

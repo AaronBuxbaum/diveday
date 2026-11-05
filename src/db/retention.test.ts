@@ -29,7 +29,7 @@ import {
   tripReadMarks,
   userAccounts,
 } from "./schema";
-import { insertShoreAlertToken } from "./shore-alert-test-fixtures";
+import { insertShoreAlertStop, insertShoreAlertToken } from "./shore-alert-test-fixtures";
 import { writeTodayReadMark } from "./today-catch-up-retention-fixture";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
@@ -657,6 +657,8 @@ const STALE_AND_FRESH = {
     ),
   shop_shore_alert_tokens: async ({ db, shop }, at) =>
     insertShoreAlertToken(db, { shopId: shop.id, tokenHash: token(), createdAt: at }),
+  capabilities: async ({ db, shop }, at) =>
+    insertShoreAlertStop(db, { shopId: shop.id, tokenHash: token(), issuedAt: at }),
   booking_capabilities: async ({ db, shop, entry }, at, n) =>
     idOf(
       await db
@@ -810,12 +812,7 @@ const STALE_AND_FRESH = {
     idOf(
       await db
         .insert(schema.weeklyDigestSends)
-        .values({
-          shopId: shop.id,
-          personId: people[n],
-          weekOf: "2026-01-05",
-          createdAt: at,
-        })
+        .values({ shopId: shop.id, personId: people[n], weekOf: "2026-01-05", createdAt: at })
         .returning({ id: schema.weeklyDigestSends.id }),
     ),
   shop_backup_delivery_claims: async ({ db, shop }, at, n) =>

@@ -2478,6 +2478,10 @@ async function scrubPiiBlob(
     await tx
       .delete(shopShoreAlertTokens)
       .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));
+    // The stop links mailed to that address (issue #3721): each names it.
+    await tx
+      .delete(capabilities)
+      .where(and(eq(capabilities.shopId, shopId), eq(capabilities.sentTo, address)));
   }
   // The number, for the interest that gave one and no address. Runs after the
   // address sweep so the count is the rows the number reached that the address

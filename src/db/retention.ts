@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNotNull, isNull, lt, or, SQL, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { DESK_ONLY_CODES } from "@/lib/activity";
+import { purposesNaming } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -22,6 +23,7 @@ import {
   bookingCapabilities,
   bookingPaymentEvents,
   bookings,
+  capabilities,
   claudeCallContent,
   claudeUsage,
   crewNotices,
@@ -354,12 +356,20 @@ export const PRUNE_ARMS = {
     id: shopContactEmailConfirmationTokens.id,
     clock: shopContactEmailConfirmationTokens.expiresAt,
   },
-  // The shore contact's links (H-20261014-stale-roll-call-recipients): from `created_at`, since a stop link
-  // has no `expires_at` of its own.
+  // The shore contact's confirm links (H-20261014-stale-roll-call-recipients), from `created_at`.
   shop_shore_alert_tokens: {
     from: shopShoreAlertTokens,
     id: shopShoreAlertTokens.id,
     clock: shopShoreAlertTokens.createdAt,
+  },
+  // The stop links mailed to a shop's own addresses (issue #3721), from
+  // `issued_at`: they never expire, and they hold the address. Only those:
+  // an unsubscribe link of an interest or a person goes with its subject.
+  capabilities: {
+    from: capabilities,
+    id: capabilities.id,
+    clock: capabilities.issuedAt,
+    extraWhere: inArray(capabilities.purpose, purposesNaming("shop_address")),
   },
   // Booking links (H-20260916-far-deletion-promise-reach, issue #1726), on the same clock as the two token
   // arms above. `expires_at` only, never `revoked_at`: a revoked link can still
