@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
+import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { AutoPrint } from "@/components/paper/AutoPrint";
 import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
@@ -5,12 +8,14 @@ import { buttonClass } from "@/components/ui/button";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
+import { nowDate } from "@/lib/clock";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { formatDateTimeTz } from "@/lib/format";
-import { rollCallLabel } from "@/lib/manifests";
+import { rollCallCheckpointOrdinal, rollCallLabel } from "@/lib/manifests";
+import { isOfflineManifestExpired } from "@/lib/offline-manifests";
 import { PACKET_PAPER, storefrontAddress } from "@/lib/print-sheets";
 import type { OfflineTripControls } from "./controls";
-import { offlineDiverRowFacts } from "./diver-row-facts";
+import { offlineDiverFactLines, offlineDiverRowFacts } from "./diver-row-facts";
 import { buddyNamesList } from "./shared";
 import type { OfflineTripView } from "./trip-view";
 
@@ -21,6 +26,23 @@ import type { OfflineTripView } from "./trip-view";
 const THEME = deriveBrandTheme(DIVEDAY_BRAND_COLOR);
 const TONE = { band: THEME.primary, bandInk: THEME.primaryForeground };
 
+/** How often an open sheet asks whether its copy has expired under it. */
+export const SHEET_EXPIRY_CHECK_MS = 15_000;
+
+/** One empty box to tick per checkpoint: paper outlives the phone it came from. */
+function CheckpointBoxes({ labels }: { labels: readonly string[] }) {
+  return (
+    <p data-sheet-boxes="" className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+      {labels.map((label) => (
+        <span key={label} className="inline-flex items-center gap-1.5">
+          <span aria-hidden="true" className="inline-block size-4 border border-border-strong" />
+          {label}
+        </span>
+      ))}
+    </p>
+  );
+}
+
 /**
  * **The saved copy's paper face** (issue #2745): the offline manifest at the
  * checkpoint on screen, as one sheet, the paper a crew boards from when the
@@ -30,7 +52,16 @@ const TONE = { band: THEME.primary, bandInk: THEME.primaryForeground };
  * decrypted copy and the same view, with no network, and the screen is gone
  * while it shows, so nothing that taps prints and nothing printed taps. Every
  * row's words are the roll-call row's own (`offlineDiverRowFacts`), so the
- * sheet cannot say something the phone does not.
+ * sheet cannot say something the phone does not, and it restates what the
+ * live printed manifest restates: gear and nitrox, every medical sentence,
+ * the lunch note, persons on board, the boat's safety lines, and a box to
+ * tick per checkpoint.
+ *
+ * **Expiry holds at print time, not at the door** (layer 7 review D1): every
+ * print, the door's or the browser's, asks the clock first, and an open
+ * sheet asks on a timer; a copy that has expired drops back to the screen,
+ * which never prints. The sheet says when it stops being a boarding source,
+ * and the fold line says when it was printed, read as it prints.
  *
  * **What it never prints**: a medical alert's words, whatever this phone
  * holds. Paper with them on it is the medical-alerts packet's job, which a
@@ -42,14 +73,15 @@ const TONE = { band: THEME.primary, bandInk: THEME.primaryForeground };
 export function OfflineManifestSheet({
   view,
   controls,
-  printedAt,
+  origin,
   onBack,
   autoPrint = true,
 }: {
   view: OfflineTripView;
   controls: Pick<OfflineTripControls, "t" | "locale" | "copyCaveat">;
-  /** When the door was pressed: the fold line's time. */
-  printedAt: Date;
+  /** The app's origin, read by the door, for the fold's storefront address. */
+  origin: string | null;
+  /** Back to the screen: the crew's door, and where an expired copy goes. */
   onBack: () => void;
   /** Opens the print dialog on arrival; the door that opened this said Print. */
   autoPrint?: boolean;
@@ -57,10 +89,36 @@ export function OfflineManifestSheet({
   const { t, locale } = controls;
   const { envelope, manifest, checkpoint } = view;
   const { shop } = envelope.snapshot;
-  const anyMedicalAlert = manifest.divers.some(
-    (diver, index) =>
-      diver.medicalAlert && !offlineDiverRowFacts(diver, index, view, controls).withheld,
-  );
+  const [printedAt, setPrintedAt] = useState(() => nowDate());
+
+  useEffect(() => {
+    const expired = () => isOfflineManifestExpired(envelope.snapshot, nowDate());
+    // `flushSync`: the browser takes its picture of the page as soon as this
+    // returns, so the screen (or the new time) must already be drawn.
+    const beforePrint = () => {
+      if (expired()) flushSync(onBack);
+      else flushSync(() => setPrintedAt(nowDate()));
+    };
+    window.addEventListener("beforeprint", beforePrint);
+    const timer = window.setInterval(() => {
+      if (expired()) onBack();
+    }, SHEET_EXPIRY_CHECK_MS);
+    return () => {
+      window.removeEventListener("beforeprint", beforePrint);
+      window.clearInterval(timer);
+    };
+  }, [envelope.snapshot, onBack]);
+
+  const rows = manifest.divers.map((diver, index) => {
+    const facts = offlineDiverRowFacts(diver, index, view, controls);
+    return { diver, facts, lines: offlineDiverFactLines(diver, facts, controls) };
+  });
+  const anyMedicalAlert = rows.some(({ diver, facts }) => diver.medicalAlert && !facts.withheld);
+  const boxLabels = envelope.snapshot.manifests
+    .map((entry) => entry.checkpoint)
+    .sort((a, b) => rollCallCheckpointOrdinal(a) - rollCallCheckpointOrdinal(b))
+    .map((entry) => rollCallCheckpointText(t, entry));
+
   return (
     <main className="w-full flex-1 bg-background">
       {autoPrint ? <AutoPrint /> : null}
@@ -74,7 +132,13 @@ export function OfflineManifestSheet({
         </button>
         <button
           type="button"
-          onClick={() => window.print()}
+          onClick={() => {
+            if (isOfflineManifestExpired(envelope.snapshot, nowDate())) {
+              onBack();
+              return;
+            }
+            window.print();
+          }}
           className={buttonClass({ variant: "secondary" })}
         >
           {t("shared.offlineManifest.sheet.print")}
@@ -98,7 +162,7 @@ export function OfflineManifestSheet({
             foldLeft={t("shared.offlineManifest.sheet.printed", {
               date: formatDateTimeTz(printedAt, locale, shop.timezone),
             })}
-            foldRight={storefrontAddress(shop.slug, window.location.origin)}
+            foldRight={storefrontAddress(shop.slug, origin)}
           >
             <div data-offline-manifest-sheet="" className="grid gap-4 text-sm">
               <header>
@@ -121,18 +185,34 @@ export function OfflineManifestSheet({
                     { when: view.savedAtZoned },
                   )}
                 </p>
-                {view.expired ? (
-                  <p className="mt-1 font-bold text-danger">
-                    {t("shared.offlineManifest.single.expiredBanner")}
-                  </p>
-                ) : null}
-                <p className="mt-1 tabular-nums">
+                {/* And when it stops being one: paper outlives the copy. */}
+                <p data-sheet-expires="" className="mt-1 font-bold">
+                  {t("shared.offlineManifest.sheet.expires", {
+                    when: formatDateTimeTz(
+                      new Date(envelope.snapshot.expiresAt),
+                      locale,
+                      shop.timezone,
+                    ),
+                  })}
+                </p>
+                <p data-sheet-souls="" className="mt-1 font-semibold tabular-nums">
+                  {t("manifest.soulsOnBoardLine", {
+                    passengers: view.totalDivers,
+                    crew: view.crewAssigned,
+                    souls: view.totalDivers + view.crewAssigned,
+                  })}
+                </p>
+                <p className="tabular-nums">
                   {[
-                    `${t("shared.offlineManifest.single.statsDivers")} ${view.totalDivers}`,
                     `${t("shared.offlineManifest.single.statsBoarded")} ${view.boarded}`,
                     `${t("shared.offlineManifest.single.statsAwaiting")} ${view.awaiting}`,
                   ].join(" · ")}
                 </p>
+                {view.overTotalPersons ? (
+                  <p data-sheet-over-capacity="" className="mt-1 font-bold text-danger">
+                    {t("manifest.headCountOverTotalPersonsAboard", view.overTotalPersons)}
+                  </p>
+                ) : null}
               </header>
 
               <EmergencyReferenceCard
@@ -150,6 +230,10 @@ export function OfflineManifestSheet({
                 }}
               />
 
+              {envelope.snapshot.boatSafety ? (
+                <BoatSafetyNotices {...envelope.snapshot.boatSafety} />
+              ) : null}
+
               {anyMedicalAlert ? (
                 <p className="font-semibold">
                   {t("shared.offlineManifest.sheet.medicalAlertWords")}
@@ -157,68 +241,72 @@ export function OfflineManifestSheet({
               ) : null}
 
               <ol data-sheet-roster="" className="divide-y divide-border border-y border-border">
-                {manifest.divers.map((diver, index) => {
-                  const facts = offlineDiverRowFacts(diver, index, view, controls);
-                  return (
-                    <li
-                      key={diver.bookingId}
-                      data-sheet-row={diver.bookingId}
-                      className="break-inside-avoid py-2"
+                {rows.map(({ diver, facts, lines }, index) => (
+                  <li
+                    key={diver.bookingId}
+                    data-sheet-row={diver.bookingId}
+                    className="break-inside-avoid py-2"
+                  >
+                    <p className="text-base font-bold">
+                      <span className="me-2 tabular-nums">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      {diver.fullName}
+                    </p>
+                    <p
+                      className={`font-semibold ${
+                        facts.missing || facts.blockedAtDock ? "text-danger" : ""
+                      }`}
                     >
-                      <p className="text-base font-bold">
-                        <span className="me-2 tabular-nums">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        {diver.fullName}
+                      {facts.statusLine}
+                    </p>
+                    {!facts.withheld && diver.safetyAdvisoryText ? (
+                      <p className="text-warning-strong">{diver.safetyAdvisoryText}</p>
+                    ) : null}
+                    {lines.medical.map((line) => (
+                      <p key={line} className="font-medium text-warning-strong">
+                        {line}
                       </p>
-                      <p
-                        className={`font-semibold ${
-                          facts.missing || facts.blockedAtDock ? "text-danger" : ""
-                        }`}
-                      >
-                        {facts.statusLine}
+                    ))}
+                    {facts.state?.note ? <p className="break-words">{facts.state.note}</p> : null}
+                    {diver.buddyTeamNames && diver.buddyTeamNames.length > 0 ? (
+                      <p>
+                        {t("shared.buddyTeam.with", {
+                          names: buddyNamesList(locale, diver.buddyTeamNames),
+                        })}
                       </p>
-                      {!facts.withheld && diver.safetyAdvisoryText ? (
-                        <p className="text-warning-strong">{diver.safetyAdvisoryText}</p>
-                      ) : null}
-                      {facts.state?.note ? <p className="break-words">{facts.state.note}</p> : null}
-                      {diver.buddyTeamNames && diver.buddyTeamNames.length > 0 ? (
-                        <p>
-                          {t("shared.buddyTeam.with", {
-                            names: buddyNamesList(locale, diver.buddyTeamNames),
-                          })}
-                        </p>
-                      ) : null}
-                      {facts.withheld ? (
-                        <>
-                          <p className="paper-sheet-muted">
-                            {t("manifest.identityWithheldDetails")}
-                          </p>
-                          {diver.identityWithheld && diver.heldEmergencyContact ? (
-                            <p>
-                              {`${t("manifest.heldEmergencyContactLabel")}: ${diver.heldEmergencyContact.name} · ${diver.heldEmergencyContact.phone}`}
-                            </p>
-                          ) : null}
-                        </>
-                      ) : (
-                        <>
+                    ) : null}
+                    {lines.gear.map((line) => (
+                      <p key={line} className="font-semibold">
+                        {line}
+                      </p>
+                    ))}
+                    {facts.withheld ? (
+                      <>
+                        <p className="paper-sheet-muted">{t("manifest.identityWithheldDetails")}</p>
+                        {diver.identityWithheld && diver.heldEmergencyContact ? (
                           <p>
-                            {`${t("shared.offlineManifest.single.emergencyContact")}: ${
-                              diver.emergencyContactName && diver.emergencyContactPhone
-                                ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
-                                : t("shared.offlineManifest.single.notOnFile")
-                            }`}
+                            {`${t("manifest.heldEmergencyContactLabel")}: ${diver.heldEmergencyContact.name} · ${diver.heldEmergencyContact.phone}`}
                           </p>
-                          {facts.training.warnings.map((line) => (
-                            <p key={line} className="font-medium text-warning-strong">
-                              {line}
-                            </p>
-                          ))}
-                        </>
-                      )}
-                    </li>
-                  );
-                })}
+                        ) : null}
+                      </>
+                    ) : (
+                      <p>
+                        {`${t("shared.offlineManifest.single.emergencyContact")}: ${
+                          diver.emergencyContactName && diver.emergencyContactPhone
+                            ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+                            : t("shared.offlineManifest.single.notOnFile")
+                        }`}
+                      </p>
+                    )}
+                    {lines.other.map((line) => (
+                      <p key={line} className="break-words">
+                        {line}
+                      </p>
+                    ))}
+                    <CheckpointBoxes labels={boxLabels} />
+                  </li>
+                ))}
               </ol>
 
               <section>
@@ -226,15 +314,16 @@ export function OfflineManifestSheet({
                   {t("shared.offlineManifest.single.crewHeading")}
                 </h2>
                 {view.crewWithKeys.length > 0 ? (
-                  <ul data-sheet-crew="" className="mt-1 grid gap-1">
+                  <ul data-sheet-crew="" className="mt-1 grid gap-2">
                     {view.crewWithKeys.map((member) => (
-                      <li key={member.key}>
+                      <li key={member.key} className="break-inside-avoid">
                         <span className="font-bold">{member.fullName}</span>
                         {" · "}
                         {rollCallLabelText(t, rollCallLabel(checkpoint, member.state))}
                         {member.state?.pending
                           ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
                           : ""}
+                        <CheckpointBoxes labels={boxLabels} />
                       </li>
                     ))}
                   </ul>

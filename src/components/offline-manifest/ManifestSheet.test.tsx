@@ -1,14 +1,22 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
-import { OfflineManifestSheet } from "./ManifestSheet";
+import { OfflineManifestSheet, SHEET_EXPIRY_CHECK_MS } from "./ManifestSheet";
 import { controls, diver, savedCopy } from "./section-fixtures";
 import { OfflineTripScreen } from "./TripScreen";
 import { offlineTripView } from "./trip-view";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
   getActiveOfflineShellVersion: vi.fn().mockResolvedValue(null),
+}));
+
+/** The clock every reader here asks, moved by a test to make a copy expire under an open sheet. */
+const clock = vi.hoisted(() => ({ now: new Date("2026-08-01T12:30:00.000Z") }));
+vi.mock("@/lib/clock", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/clock")>()),
+  nowDate: () => new Date(clock.now),
+  nowMs: () => clock.now.getTime(),
 }));
 
 /**
@@ -18,12 +26,18 @@ vi.mock("@/lib/offline-manifest-store", () => ({
  * and never the words a medical alert or a held seat keeps off a printed page.
  */
 
-afterEach(() => {
-  cleanup();
-  vi.clearAllMocks();
+const OPENED_AT = new Date("2026-08-01T12:30:00.000Z");
+
+beforeEach(() => {
+  clock.now = OPENED_AT;
+  vi.spyOn(window, "print").mockImplementation(() => {});
 });
 
-const PRINTED_AT = new Date("2026-08-01T12:30:00.000Z");
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 const ALERT_WORDS = "Type 1 diabetic, insulin pump; glucose gel in the blue bag";
 
 function copyWith(mutate: (copy: OfflineManifestEnvelope) => void): OfflineManifestEnvelope {
@@ -46,7 +60,7 @@ function renderSheet(copy: OfflineManifestEnvelope = savedCopy()) {
     <OfflineManifestSheet
       view={view}
       controls={controls()}
-      printedAt={PRINTED_AT}
+      origin="https://app.diveday.test"
       onBack={onBack}
       autoPrint={false}
     />,
@@ -78,6 +92,10 @@ describe("OfflineManifestSheet", () => {
     expect(text.indexOf("Saved")).toBeLessThan(text.indexOf("Priya Shah"));
     // The fold line: when this paper came out of the printer, zone named.
     expect(sheet.querySelector(".paper-sheet-fold")?.textContent).toMatch(/Printed .*8:30.*EDT/);
+    // And when it stops being a boarding source, zone named.
+    expect(sheet.querySelector("[data-sheet-expires]")?.textContent).toMatch(
+      /Not a boarding source after .*EST/,
+    );
   });
 
   it("carries no control anyone could try to fill in", () => {
@@ -155,6 +173,159 @@ describe("OfflineManifestSheet", () => {
     expect(sheet.textContent).toContain("+1 305 555 0142");
   });
 
+  it("restates every fact the screen tucks behind Contact & gear, nitrox and riding-only first", () => {
+    const copy = copyWith((c) => {
+      const [priya, marcus] = rosterOf(c).divers;
+      if (!priya || !marcus) throw new Error("fixture");
+      priya.nitroxRequested = true;
+      priya.dietaryNote = "No shellfish";
+      marcus.participantType = "rider";
+      marcus.medicalWarnings = { ridingNotClearedOn: "2026-07-30", referredOn: "2026-07-29" };
+    });
+    const { sheet } = renderSheet(copy);
+    const priya = sheet.querySelector('[data-sheet-row="b-priya"]')?.textContent ?? "";
+    expect(priya).toContain("Nitrox requested");
+    expect(priya).toContain("Rental fit");
+    expect(priya).toContain("No shellfish");
+    const marcus = sheet.querySelector('[data-sheet-row="b-marcus"]')?.textContent ?? "";
+    expect(marcus).toMatch(/not clear this person on Jul\s30/);
+    expect(marcus).toMatch(/Referred to a physician on Jul\s29/);
+  });
+
+  it("keeps the riding-only sentence on paper after a dive, when a hold takes the status slot", () => {
+    const copy = copyWith((c) => {
+      const manifest = rosterOf(c);
+      const marcus = manifest.divers[1];
+      if (!marcus) throw new Error("fixture");
+      marcus.participantType = "rider";
+      marcus.medicalWarnings = { ridingNotClearedOn: "2026-07-30" };
+      marcus.readiness = {
+        status: "blocked",
+        blockers: [{ code: "medical_review", text: "Medical review open" }],
+      };
+      marcus.rollCall = {
+        state: "boarded",
+        occurredAt: "2026-08-01T12:10:00.000Z",
+      } as typeof marcus.rollCall;
+      c.snapshot.manifests.push({ ...manifest, checkpoint: "after_dive_1" });
+    });
+    const view = offlineTripView(copy, "after_dive_1");
+    if (!view) throw new Error("fixture");
+    render(
+      <OfflineManifestSheet
+        view={view}
+        controls={controls()}
+        origin={null}
+        onBack={() => {}}
+        autoPrint={false}
+      />,
+    );
+    const row = document.querySelector('[data-sheet-row="b-marcus"]')?.textContent ?? "";
+    expect(row).toMatch(/not clear this person on Jul\s30/);
+  });
+
+  it("prints a held seat's gear and medical lines as nothing at all", () => {
+    const copy = copyWith((c) => {
+      const priya = rosterOf(c).divers[0];
+      if (!priya) throw new Error("fixture");
+      priya.identityWithheld = true;
+      priya.nitroxRequested = true;
+      priya.dietaryNote = "No shellfish";
+      priya.medicalWarnings = { referredOn: "2026-07-29" };
+    });
+    const { sheet } = renderSheet(copy);
+    const row = sheet.querySelector('[data-sheet-row="b-priya"]')?.textContent ?? "";
+    expect(row).not.toContain("Nitrox");
+    expect(row).not.toContain("No shellfish");
+    expect(row).not.toContain("physician");
+  });
+
+  it("prints persons on board, the over-capacity line, and the boat's safety notices", () => {
+    const copy = copyWith((c) => {
+      const manifest = rosterOf(c);
+      manifest.trip.certifiedTotalPersons = 1;
+      manifest.divers.forEach((d) => {
+        d.rollCall = {
+          state: "boarded",
+          occurredAt: "2026-08-01T12:10:00.000Z",
+        } as typeof d.rollCall;
+      });
+      c.snapshot.boatSafety = {
+        heading: "Boat papers and safety kit",
+        lines: [{ text: "Flares expired on Jul 1", tone: "danger" }],
+      } as unknown as NonNullable<typeof c.snapshot.boatSafety>;
+    });
+    const { sheet } = renderSheet(copy);
+    expect(sheet.querySelector("[data-sheet-souls]")?.textContent).toBe(
+      "Passengers 2 · Crew 1 · Souls on board 3",
+    );
+    expect(sheet.querySelector("[data-sheet-over-capacity]")).not.toBeNull();
+    expect(sheet.textContent).toContain("Flares expired on Jul 1");
+  });
+
+  it("gives every person a box to tick at every checkpoint the copy carries", () => {
+    const copy = copyWith((c) => {
+      const manifest = rosterOf(c);
+      c.snapshot.manifests.push({ ...manifest, checkpoint: "after_dive_1" });
+    });
+    const { sheet } = renderSheet(copy);
+    const people = sheet.querySelectorAll("[data-sheet-row], [data-sheet-crew] > li");
+    expect(people).toHaveLength(3);
+    for (const person of people) {
+      const boxes = person.querySelector("[data-sheet-boxes]")?.textContent ?? "";
+      expect(boxes).toContain("Before departure");
+      expect(boxes).toMatch(/dive 1/i);
+    }
+  });
+
+  it("drops back to the screen when the copy expires under an open sheet, on a timer", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const { onBack } = renderSheet(
+      copyWith((c) => {
+        c.snapshot.expiresAt = "2026-08-01T12:31:00.000Z";
+      }),
+    );
+    clock.now = new Date("2026-08-01T12:32:00.000Z");
+    act(() => {
+      vi.advanceTimersByTime(SHEET_EXPIRY_CHECK_MS);
+    });
+    expect(onBack).toHaveBeenCalled();
+  });
+
+  it("refuses the sheet's own Print once the copy has expired", () => {
+    const { onBack } = renderSheet(
+      copyWith((c) => {
+        c.snapshot.expiresAt = "2026-08-01T12:31:00.000Z";
+      }),
+    );
+    clock.now = new Date("2026-08-01T12:32:00.000Z");
+    fireEvent.click(screen.getByRole("button", { name: "Print" }));
+    expect(window.print).not.toHaveBeenCalled();
+    expect(onBack).toHaveBeenCalled();
+  });
+
+  it("leaves the sheet at the browser's own print once the copy has expired", () => {
+    const { onBack } = renderSheet(
+      copyWith((c) => {
+        c.snapshot.expiresAt = "2026-08-01T12:31:00.000Z";
+      }),
+    );
+    clock.now = new Date("2026-08-01T12:32:00.000Z");
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"));
+    });
+    expect(onBack).toHaveBeenCalled();
+  });
+
+  it("stamps the fold with the time it printed, not the time the door was pressed", () => {
+    const { sheet } = renderSheet();
+    clock.now = new Date("2026-08-01T15:05:00.000Z");
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"));
+    });
+    expect(sheet.querySelector(".paper-sheet-fold")?.textContent).toMatch(/Printed .*11:05.*EDT/);
+  });
+
   it("goes back to the roll call from its own door, which is off the sheet", () => {
     const { sheet, onBack } = renderSheet();
     const back = screen.getByRole("button", { name: "Back to the roll call" });
@@ -168,7 +339,6 @@ describe("OfflineTripScreen's paper door", () => {
   function renderScreen(copy: OfflineManifestEnvelope) {
     const view = offlineTripView(copy, "departure");
     if (!view) throw new Error("the fixture carries a manifest");
-    vi.spyOn(window, "print").mockImplementation(() => {});
     render(
       <OfflineTripScreen
         view={view}
@@ -197,5 +367,31 @@ describe("OfflineTripScreen's paper door", () => {
       }),
     );
     expect(screen.queryByRole("button", { name: "Print this saved copy" })).toBeNull();
+    // Ctrl+P on it prints one line, never the expired roster.
+    expect(document.querySelector("[data-roll-call-surface]")?.className).toContain("print:hidden");
+    expect(document.querySelector("[data-offline-screen-on-paper]")?.textContent).toContain(
+      "has no paper manifest",
+    );
+  });
+
+  it("never prints the screen, so an opened panel's medical alert words cannot reach paper", () => {
+    renderScreen(
+      copyWith((c) => {
+        const priya = rosterOf(c).divers[0];
+        if (!priya) throw new Error("fixture");
+        priya.medicalAlert = { text: ALERT_WORDS };
+      }),
+    );
+    for (const details of document.querySelectorAll("details")) details.open = true;
+    const words = screen.getByText(ALERT_WORDS);
+    // The whole roll-call surface is off paper, so the words are too.
+    expect(words.closest(".print\\:hidden")).toBe(
+      document.querySelector("[data-roll-call-surface]"),
+    );
+    // And paper says where the paper manifest is instead.
+    const onPaper = document.querySelector("[data-offline-screen-on-paper]");
+    expect(onPaper?.className).toContain("print:block");
+    expect(onPaper?.textContent).toContain("Print this saved copy");
+    expect(onPaper?.contains(words)).toBe(false);
   });
 });

@@ -492,7 +492,11 @@
       "print": "Print",
       "name": "Saved manifest",
       "printed": "Printed {date}",
-      "medicalAlertWords": "A row marked Medical alert has words for the crew that this sheet leaves off. Read them on the live manifest, or on this phone if its copy has them."
+      "medicalAlertWords": "A row marked Medical alert has words for the crew that this sheet leaves off. Read them on the live manifest, or on this phone if its copy has them.",
+      "expires": "Not a boarding source after {when}. Destroy this sheet then.",
+      "nitroxRequested": "Nitrox requested",
+      "screenOnPaper": "This screen doesn’t print. Use “Print this saved copy” on the phone for the paper manifest.",
+      "screenOnPaperExpired": "This screen doesn’t print, and this saved copy has expired, so it has no paper manifest. Record roll call on the live manifest."
     },
     "shellVersion": {
       "staleBanner": "This saved copy is from an older version of DiveDay. Refresh with signal to update it before boarding divers.",

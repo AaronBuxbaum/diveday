@@ -1,9 +1,12 @@
 import {
   medicalHoldChip,
   medicalWarningChips,
+  ridingOnlyMedicalSentences,
   rollCallLabelText,
   trainingDiveLines,
 } from "@/i18n/manifest-labels";
+import { rentalFitLineText } from "@/i18n/rental-labels";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatTime } from "@/lib/format";
 import { isHeldSeat } from "@/lib/held-seat";
 import { rollCallLabel, rollCallRecordedTone, rollCallRowState } from "@/lib/manifests";
@@ -132,6 +135,57 @@ export function offlineDiverRowFacts(
     training,
     statusLine,
   };
+}
+
+/**
+ * **The facts the screen keeps behind "Contact & gear", as paper restates
+ * them** (issue #2745, layer 7 review D2): the live printed manifest prints
+ * every one unconditionally (`DiverRowPrint.tsx`), so the saved copy's sheet
+ * does too. Nitrox first among the gear, because the rack is handed out from
+ * this paper; every riding-only, refusal and referral sentence, because the
+ * status line carries only the strongest capsule and after a dive a hold
+ * takes that slot. A held seat prints none of them, and a medical alert's
+ * words are never a fact here.
+ */
+export function offlineDiverFactLines(
+  diver: OfflineDiver,
+  facts: Pick<ReturnType<typeof offlineDiverRowFacts>, "withheld" | "medicalWarnings" | "training">,
+  { t, locale }: Pick<OfflineTripControls, "t" | "locale">,
+): { gear: string[]; medical: string[]; other: string[] } {
+  if (facts.withheld) return { gear: [], medical: [], other: [] };
+  const warningDate = (day: string) => formatCalendarDate(day, locale);
+  const gear: string[] = [];
+  if (diver.nitroxRequested) gear.push(t("shared.offlineManifest.sheet.nitroxRequested"));
+  // The screen's own rule: a rider, or nothing recorded and no nitrox asked
+  // for, has no fit line — a fact not recorded is never shown as one.
+  if (
+    !(
+      diver.participantType === "rider" ||
+      (diver.rentalFit.state === "not_recorded" && !diver.nitroxRequested)
+    )
+  ) {
+    gear.push(
+      `${t("shared.offlineManifest.single.rentalFit")}: ${rentalFitLineText(t, locale, diver.rentalFit)}`,
+    );
+  }
+  const warnings = facts.medicalWarnings;
+  const medical = warnings
+    ? [
+        ...ridingOnlyMedicalSentences(t, warnings, warningDate),
+        ...(warnings.refusedOn
+          ? [t("manifest.medicalEarlierRefusal", { date: warningDate(warnings.refusedOn) })]
+          : []),
+        ...(warnings.referredOn
+          ? [t("manifest.medicalReferralUnresolved", { date: warningDate(warnings.referredOn) })]
+          : []),
+      ]
+    : [];
+  const other = [
+    ...(facts.training.fact ? [facts.training.fact] : []),
+    ...facts.training.warnings,
+    ...(diver.dietaryNote ? [`${t("manifest.dietaryNoteLabel")}: ${diver.dietaryNote}`] : []),
+  ];
+  return { gear, medical, other };
 }
 
 /**
