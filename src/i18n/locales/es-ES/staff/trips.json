@@ -209,7 +209,7 @@
     "conditionsCleared": "Previsión de la tripulación borrada. Los buceadores verán el pronóstico automático cuando esté disponible.",
     "notAuthorized": "La configuración de la salida está limitada a propietarios, gerentes e instructores: pídeselo a uno de ellos.",
     "invalid": "Eso no se guardó. Revisa la fecha, los horarios y la capacidad, y vuelve a intentarlo.",
-    "endBeforeStart": "La salida tiene que terminar después de empezar.",
+    "endBeforeStart": "La salida tiene que terminar después de empezar, y como mucho 12 horas después si pasa de medianoche.",
     "daysOutOfOrder": "La fecha de cada día tiene que ir después de la del día anterior y dentro de las seis semanas siguientes al primer día.",
     "capacityBelowBooked": "Esa capacidad está por debajo de los buceadores que ya tienen reserva en esta salida. Cancela reservas primero, o fija una capacidad mayor.",
     "capacityBelowBookedCount": "{count, plural, one {La capacidad es menor que el # buceador ya reservado: cancela reservas primero o súbela.} other {La capacidad es menor que los # buceadores ya reservados: cancela reservas primero o súbela.}}",

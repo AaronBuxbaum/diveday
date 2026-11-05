@@ -290,7 +290,24 @@ describe("meetingDaysFor with a later day's own hours", () => {
     });
   });
 
+  it("keeps a night window that crosses midnight when the later day's hours are day one's", () => {
+    const night = { start: wall(2026, 10, 24, 20, 0), end: wall(2026, 10, 25, 1, 0) };
+    const result = meetingDaysFor(night, 2, ["2026-10-25"], [{ start: "20:00", end: "01:00" }]);
+    expect(result.ok && result.days[1]).toEqual({
+      start: wall(2026, 10, 25, 20, 0),
+      end: wall(2026, 10, 26, 1, 0),
+    });
+    // A later day's own night out, too.
+    expect(
+      meetingDaysFor(poolNight, 2, ["2026-10-24"], [{ start: "21:00", end: "00:30" }]),
+    ).toEqual({
+      ok: true,
+      days: [poolNight, { start: wall(2026, 10, 24, 21, 0), end: wall(2026, 10, 25, 0, 30) }],
+    });
+  });
+
   it("refuses a later day that ends before it starts, with its own sentence", () => {
+    // Past midnight is the next morning only up to twelve hours on.
     expect(
       meetingDaysFor(poolNight, 2, ["2026-10-24"], [{ start: "16:00", end: "08:00" }]),
     ).toEqual({ ok: false, reason: "end_before_start" });

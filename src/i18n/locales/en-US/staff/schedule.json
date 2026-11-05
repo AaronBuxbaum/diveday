@@ -16,7 +16,7 @@
     "copiedNoCrew": "Copied, without the crew: one of them is on another boat then, or the course needs an instructor. Add them on the Crew schedule.",
     "removed": "Taken off the board",
     "invalid": "That didn’t save. Check the date, times, and seats, then try again.",
-    "endBeforeStart": "The trip has to end after it starts. Check the times.",
+    "endBeforeStart": "The trip has to end after it starts, and within 12 hours when it runs past midnight. Check the times.",
     "daysOutOfOrder": "Each day’s date has to come after the one before it, within six weeks of day one.",
     "daysSpanRepeat": "A repeating departure has to finish before the next one starts. Shorten its days or repeat it less often.",
     "notAuthorized": "Building the board is limited to owners, managers, and instructors.",

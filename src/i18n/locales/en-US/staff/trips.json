@@ -209,7 +209,7 @@
     "conditionsCleared": "Crew prediction cleared. Divers will see the automated outlook when it is available.",
     "notAuthorized": "Trip setup is limited to owners, managers, and instructors. Ask one of them to make this change.",
     "invalid": "That didn’t save. Check the date, times, and capacity, then try again.",
-    "endBeforeStart": "The trip has to end after it starts.",
+    "endBeforeStart": "The trip has to end after it starts, and within 12 hours when it runs past midnight.",
     "daysOutOfOrder": "Each day’s date has to come after the one before it, within six weeks of day one.",
     "capacityBelowBooked": "That capacity is below how many divers are already booked on this trip. Cancel bookings first, or set a higher capacity.",
     "capacityBelowBookedCount": "{count, plural, one {Capacity is below the # diver already booked. Cancel bookings first, or set it higher.} other {Capacity is below the # divers already booked. Cancel bookings first, or set it higher.}}",
