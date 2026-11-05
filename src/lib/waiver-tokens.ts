@@ -73,11 +73,12 @@ export function hashWaiverToken(token: string): string {
  * still matches that digest, so a database reader holds nothing replayable.
  *
  * Re-sending a live link (ADR 20260820-waiver-links-are-reused-not-reissued)
- * recomputes this and reuses the record only when its digest still matches:
- * a record whose digest was rotated (erasure, an identity repoint), minted
- * under an older key, or minted at the counter or by an import gets a fresh
- * link instead. Throws when the deployment holds no signing key, as issuing a
- * booking link does.
+ * recomputes it under every key the deployment still holds
+ * ({@link liveWaiverLinkToken}) and reuses the record only when one matches
+ * its digest: a record whose digest was rotated (erasure, an identity
+ * repoint), minted under a key no longer held, or minted at the counter or by
+ * an import gets a fresh link instead. Throws when the deployment holds no
+ * signing key, as issuing a booking link does.
  */
 export function waiverLinkToken(
   recordId: string,
@@ -87,4 +88,29 @@ export function waiverLinkToken(
   const key = keyring.keyFor(version);
   if (!key) throw new Error(`No booking-link key for version ${version}`);
   return signPayload(key, `waiver-link\0${version}\0${recordId}`);
+}
+
+/** Booking-link key versions run 1 to 9 (`v2:`…`v9:`, with v1 the AUTH_SECRET-derived default). */
+const KEY_VERSIONS = [9, 8, 7, 6, 5, 4, 3, 2, 1] as const;
+
+/**
+ * The link a live record was handed out under, if this deployment can still
+ * derive it: tried under every key the keyring holds, current and previous,
+ * and matched against the stored digest (layer-2 dock review S3). Rotating
+ * `BOOKING_LINK_SECRET` with the old one kept as `_PREVIOUS` therefore keeps
+ * every live waiver link reusable, so a re-send the morning after a rotation
+ * does not supersede the link a party already shared and lose its draft.
+ */
+export function liveWaiverLinkToken(
+  recordId: string,
+  tokenHash: string,
+  keyring: BookingLinkKeyring = deploymentKeyring(),
+): string | null {
+  for (const version of KEY_VERSIONS) {
+    const key = keyring.keyFor(version);
+    if (!key) continue;
+    const token = signPayload(key, `waiver-link\0${version}\0${recordId}`);
+    if (hashWaiverToken(token) === tokenHash) return token;
+  }
+  return null;
 }

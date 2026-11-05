@@ -7,7 +7,7 @@ import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type GuardianSigner, guardianSignatureMissing } from "@/lib/guardian";
 import { isHeldToMedical } from "@/lib/participant-types";
-import { hashWaiverToken, waiverLinkToken } from "@/lib/waiver-tokens";
+import { hashWaiverToken, liveWaiverLinkToken, waiverLinkToken } from "@/lib/waiver-tokens";
 import {
   bookingRecordLapsed,
   isCompletedWaiverCurrent,
@@ -364,9 +364,7 @@ async function issueWaiverRecord(
         record.templateVersion === template.version &&
         record.templateGeneration === template.materialGeneration,
     );
-    const derived = live ? waiverLinkToken(live.id) : null;
-    const reusedToken =
-      live && derived && hashWaiverToken(derived) === live.tokenHash ? derived : null;
+    const reusedToken = live ? liveWaiverLinkToken(live.id, live.tokenHash) : null;
     if (live && keepLiveRecord) {
       const refreshedExpiry = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
       await tx

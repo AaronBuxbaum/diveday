@@ -194,11 +194,36 @@ describe("waiver records (in-memory PGlite)", () => {
     expect(await getWaiverForToken(db, first.token, now)).toEqual({ state: "unavailable" });
   });
 
-  it("never re-sends a link signed under a key this deployment no longer signs with", async () => {
+  /**
+   * **A rotation keeps live links** (layer-2 dock review S3). The operator
+   * runbook keeps the old secret as `_PREVIOUS`; a re-send the morning after
+   * must hand back the link the party already shared, draft and all.
+   */
+  it("hands back a live link signed under the previous key after a rotation", async () => {
+    vi.stubEnv("BOOKING_LINK_SECRET", `v2:${"p".repeat(40)}`);
     const { db, shop, booking } = await waiverContext();
     const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!first.ok) throw new Error("expected a link");
-    vi.stubEnv("BOOKING_LINK_SECRET", `v2:${"r".repeat(40)}`);
+    vi.stubEnv("BOOKING_LINK_SECRET", `v3:${"r".repeat(40)}`);
+    vi.stubEnv("BOOKING_LINK_SECRET_PREVIOUS", `v2:${"p".repeat(40)}`);
+    const second = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: new Date(now.getTime() + 60_000),
+    });
+    if (!second.ok) throw new Error("expected the link back");
+    expect(second.reused).toBe(true);
+    expect(second.token).toBe(first.token);
+  });
+
+  it("never re-sends a link signed under a key this deployment no longer holds", async () => {
+    vi.stubEnv("BOOKING_LINK_SECRET", `v2:${"p".repeat(40)}`);
+    const { db, shop, booking } = await waiverContext();
+    const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!first.ok) throw new Error("expected a link");
+    // Two rotations on: v2 is neither current nor previous any more.
+    vi.stubEnv("BOOKING_LINK_SECRET", `v4:${"s".repeat(40)}`);
+    vi.stubEnv("BOOKING_LINK_SECRET_PREVIOUS", `v3:${"r".repeat(40)}`);
     const second = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.id,
