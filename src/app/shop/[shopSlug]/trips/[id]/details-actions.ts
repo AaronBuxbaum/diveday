@@ -40,7 +40,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { deleteStoredImage, storeArrivalImage } from "@/lib/storage";
-import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
+import { laterHoursFromForm, MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { firstOfferedDiveMode, shopOffersDiveMode, tripDetailsPatch } from "@/lib/trip-details";
 import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
@@ -323,6 +323,12 @@ async function saveDepartureDetails(
   // item 10); empty is the consecutive run.
   const laterDates = z.array(z.string()).safeParse(formData.getAll("meetingDate"));
   if (!laterDates.success) redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
+  // Each later day's own hours (#2558); none is day one's on every day.
+  const laterHours = laterHoursFromForm(
+    formData.getAll("meetingStart"),
+    formData.getAll("meetingEnd"),
+  );
+  if (!laterHours) redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
   const courseOwnsPrice = tripNow.course !== null && tripNow.course.priceCents !== null;
   const details = tripDetailsPatch(
     {
@@ -331,6 +337,7 @@ async function saveDepartureDetails(
       endTime,
       dayCount,
       laterDates: laterDates.data,
+      laterHours,
       // A catalog-priced course owns its full enrollment amount. Ignore any
       // stale or forged trip fee and clear it from this departure on save.
       priceDollars: courseOwnsPrice ? undefined : priceDollars,

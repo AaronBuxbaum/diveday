@@ -27,25 +27,29 @@
  * within {@link MAX_TRIP_SPAN_DAYS} of day one; anything else is refused,
  * never reordered, because a reordered course is not the one the shop typed.
  *
- * **For now, no gaps** ({@link MAX_MEETING_DAY_GAP_DAYS}). Today, the open roll
- * call, check-in and boarding read a departure's day as its one
- * `startsAt`..`endsAt` window, not its `trip_schedule_days`, so a course on
- * Saturday and the Saturday after would read as a boat on the water with an
- * open roll call all week, and would not be today's departure on day two.
- * Gaps open when those read the meeting days.
+ * **Gaps read as days ashore** (#2557, ADR 20261104-roll-call-by-meeting-day).
+ * Today's departure is one with a meeting day on the shop's date
+ * (`meetsOnShopDay`); the boat is out only inside a day's window and its
+ * return hour (`onTheWaterDay`, `tripPhaseOf`); every roll-call result belongs
+ * to the meeting day it was taken on (`rollCallDayOf`), so the open-count
+ * detector, the stale-count alert and the manifest count each day on its own.
+ * **Still the run's one window**: the counter's check-in queue, running late,
+ * `/ready`'s recap state, help requests and the fly-safe line, none of which
+ * raise a safety signal between days.
  *
- * **Read from the meeting days so far** (#2557): today's departure (the
- * boarding door, ⌘K, the shop-day cards, the print sheet), Today's own cards,
- * the blocked-divers badge and the horizon that feeds them
- * (`meetsOnShopDay`, `byMeetingDay`). **Still the one window**: the open roll
- * call and "the boat is out" (`listRollCallGaps`, `blockedAboardOnBoatsOut`),
- * check-in, readiness, `/ready`, closeout and help requests; the cap stays
- * until they move.
+ * **Hours per day** (#2558). A later day may name its own start and end time
+ * (`laterHours`), defaulting to day one's.
  */
 
 import { type CalendarDate, calendarDaysBetween, isValidCalendarDate } from "./calendar-date";
 import { hasReturned } from "./trips";
-import { addCalendarDays, type WallTime } from "./zoned";
+import {
+  addCalendarDays,
+  parseWallTime,
+  toTimeInputValue,
+  utcToWallTime,
+  type WallTime,
+} from "./zoned";
 
 /** A departure meets on at least one day, by definition. */
 export const MIN_TRIP_DAYS = 1;
@@ -65,14 +69,14 @@ export const MAX_TRIP_DAYS = 14;
 export const MAX_TRIP_SPAN_DAYS = 42;
 
 /**
- * The most calendar days one meeting day may come after the one before it.
- * One, so a departure's days run back to back, until every reader of "the
- * boat is out" and "today's departure" reads `trip_schedule_days` rather than
- * the departure's one window (see the module comment). The builder and the
- * edit form offer a date per later day only once this is more than one.
- * Typed `number`, so raising it is the one change.
+ * The most calendar days one meeting day may come after the one before it:
+ * the whole span (#2557). Today, the roll call, "the boat is out" and the
+ * stale-count alert read a departure's meeting days, so a course on Saturday
+ * and the Saturday two weeks on is today's on both and on the water on
+ * neither day between. The builder and the edit form offer a date per later
+ * day.
  */
-export const MAX_MEETING_DAY_GAP_DAYS: number = 1;
+export const MAX_MEETING_DAY_GAP_DAYS: number = MAX_TRIP_SPAN_DAYS;
 
 /** One meeting day as wall time in the shop's own zone. */
 export type MeetingDayWall = { start: WallTime; end: WallTime };
@@ -102,56 +106,115 @@ export function tripMeetingDays(day: MeetingDayWall, dayCount: number): MeetingD
 
 export type MeetingDaysResult =
   | { ok: true; days: MeetingDayWall[] }
-  | { ok: false; reason: "invalid" | "days_out_of_order" };
+  | { ok: false; reason: "invalid" | "days_out_of_order" | "end_before_start" };
+
+/** One later day's own hours as the form sends them (`HH:MM`); empty is day one's. */
+export type MeetingDayHours = { start: string; end: string };
 
 const dateOf = (wall: WallTime): CalendarDate =>
   `${String(wall.year).padStart(4, "0")}-${String(wall.month).padStart(2, "0")}-${String(wall.day).padStart(2, "0")}`;
 
+const minuteOfDay = (wall: WallTime) => wall.hour * 60 + wall.minute;
+
 /**
  * The meeting days a submission asks for: `dayCount` consecutive days when
  * `laterDates` is empty, otherwise day one plus one named date for each later
- * day. Every day keeps day one's wall-clock window; a window that ends after
- * midnight ends on the morning after its own date, as day one's does.
+ * day. Each later day keeps day one's wall-clock window unless `laterHours`
+ * names its own (#2558): a pool night at 18:00 and an open-water Saturday at
+ * 08:00 are one course. A window that ends after midnight ends on the morning
+ * after its own date, as day one's does; a later day's own hours must end
+ * after they start on the same date.
  *
- * `invalid` is a count out of range, a date that does not exist, or a list
- * whose length disagrees with the count (a forged or stale form).
+ * `invalid` is a count out of range, a date or time that does not exist, or a
+ * list whose length disagrees with the count (a forged or stale form).
  * `days_out_of_order` is a later date on or before the day before it, more
  * than {@link MAX_MEETING_DAY_GAP_DAYS} after it, or more than
  * {@link MAX_TRIP_SPAN_DAYS} after day one: something the staffer can fix by
- * looking at the dates, so it gets its own sentence.
+ * looking at the dates, so it gets its own sentence. `end_before_start` is a
+ * later day whose own hours end before they start.
  */
 export function meetingDaysFor(
   day: MeetingDayWall,
   dayCount: number,
   laterDates: readonly string[] = [],
+  laterHours: readonly MeetingDayHours[] = [],
 ): MeetingDaysResult {
-  if (laterDates.length === 0) {
-    const days = tripMeetingDays(day, dayCount);
-    return days ? { ok: true, days } : { ok: false, reason: "invalid" };
+  if (!isTripDayCount(dayCount)) return { ok: false, reason: "invalid" };
+  if (laterHours.length > 0 && laterHours.length !== dayCount - 1) {
+    return { ok: false, reason: "invalid" };
   }
-  if (!isTripDayCount(dayCount) || laterDates.length !== dayCount - 1) {
+  if (laterDates.length > 0 && laterDates.length !== dayCount - 1) {
     return { ok: false, reason: "invalid" };
   }
   if (!laterDates.every((date) => isValidCalendarDate(date))) {
     return { ok: false, reason: "invalid" };
   }
   const first = dateOf(day.start);
+  // No named dates is the consecutive run.
+  const dates =
+    laterDates.length > 0
+      ? laterDates
+      : Array.from({ length: dayCount - 1 }, (_, index) =>
+          dateOf(addCalendarDays(day.start, index + 1)),
+        );
   let previous = first;
   const days: MeetingDayWall[] = [day];
-  for (const date of laterDates) {
+  for (const [index, date] of dates.entries()) {
     const step = calendarDaysBetween(previous, date);
     if (step < 1 || step > MAX_MEETING_DAY_GAP_DAYS) {
       return { ok: false, reason: "days_out_of_order" };
     }
     const offset = calendarDaysBetween(first, date);
     if (offset > MAX_TRIP_SPAN_DAYS) return { ok: false, reason: "days_out_of_order" };
-    days.push({
-      start: addCalendarDays(day.start, offset),
-      end: addCalendarDays(day.end, offset),
-    });
+    const hours = laterHours[index];
+    if (hours && (hours.start !== "" || hours.end !== "")) {
+      const start = parseWallTime(date, hours.start || toTimeInputValue(day.start));
+      const end = parseWallTime(date, hours.end || toTimeInputValue(day.end));
+      if (!start || !end) return { ok: false, reason: "invalid" };
+      if (minuteOfDay(end) <= minuteOfDay(start)) return { ok: false, reason: "end_before_start" };
+      days.push({ start, end });
+    } else {
+      days.push({
+        start: addCalendarDays(day.start, offset),
+        end: addCalendarDays(day.end, offset),
+      });
+    }
     previous = date;
   }
   return { ok: true, days };
+}
+
+/**
+ * The later days' hours a form sent (`meetingStart`, `meetingEnd`, one pair
+ * per later day), or `null` for a forged shape: a value that is not a string,
+ * or two lists of different lengths. Neither list is the consecutive run with
+ * day one's hours.
+ */
+export function laterHoursFromForm(
+  starts: readonly unknown[],
+  ends: readonly unknown[],
+): MeetingDayHours[] | null {
+  if (starts.length !== ends.length) return null;
+  const hours: MeetingDayHours[] = [];
+  for (const [index, start] of starts.entries()) {
+    const end = ends[index];
+    if (typeof start !== "string" || typeof end !== "string") return null;
+    hours.push({ start, end });
+  }
+  return hours;
+}
+
+/**
+ * The later days' own hours of a stored departure, for the edit form (#2558):
+ * one `HH:MM` pair per day after the first, read in the shop's zone. A day
+ * that keeps day one's hours is sent back with them, which saves to the same
+ * window.
+ */
+export function laterMeetingHours(days: readonly DayWindow[], timeZone: string): MeetingDayHours[] {
+  return days.slice(1).map((day) => ({
+    start: toTimeInputValue(utcToWallTime(day.startsAt, timeZone)),
+    end: toTimeInputValue(utcToWallTime(day.endsAt, timeZone)),
+  }));
 }
 
 /**
