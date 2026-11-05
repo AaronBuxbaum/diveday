@@ -171,7 +171,9 @@ describe("runShopBackup scheduled medical-answers audit (issue 3871)", () => {
     const shopLines = afterFirst.filter((l) => l.code === "scheduled_backup_medical_answers");
     expect(shopLines).toHaveLength(1);
     expect(shopLines[0]).toMatchObject({ subject: null, actor: null, reason: "scheduled_backup" });
-    expect(Number((shopLines[0]?.params as { count: string }).count)).toBeGreaterThan(0);
+    expect(Number((shopLines[0]?.params as { count?: string } | undefined)?.count)).toBeGreaterThan(
+      0,
+    );
     expect(
       afterFirst.filter(
         (l) => l.code === "scheduled_backup_holds_medical_answers" && l.subject === diverId,
