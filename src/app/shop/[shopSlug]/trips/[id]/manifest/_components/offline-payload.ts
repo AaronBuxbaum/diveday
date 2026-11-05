@@ -67,6 +67,9 @@ export function offlineManifestPayload({
           ? t("shared.offlineManifest.juniorCheckRequired")
           : depthWarningText(t, advisory),
     ),
+    ...(snapshot.rollCallDayBoundaries
+      ? { rollCallDayBoundaries: snapshot.rollCallDayBoundaries }
+      : {}),
     snapshotId: snapshot.snapshotId,
     erasureEpochToken: snapshot.erasureEpochToken,
   };

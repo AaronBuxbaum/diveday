@@ -1,9 +1,9 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { tripScheduleDays } from "./schema";
-import { meetingWindowsByTrip } from "./trip-meeting-windows";
+import { meetingWindowsByTrip, rollCallDayBoundariesByTrip } from "./trip-meeting-windows";
 import { createTrip } from "./trips";
 
 const ctx = fileScopedShopContext();
@@ -51,5 +51,37 @@ describe("meetingWindowsByTrip", () => {
     await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, bare.id));
     expect((await meetingWindowsByTrip(db, [bare])).size).toBe(0);
     expect((await meetingWindowsByTrip(db, [])).size).toBe(0);
+  });
+});
+
+describe("rollCallDayBoundariesByTrip", () => {
+  it("names each later day's boundary, halfway between the day before's end and its start, never after that start", async () => {
+    const { db } = ctx;
+    const run = await runOf("Two-day course", 2);
+    const single = await runOf("One sailing", 1);
+    const dayTwoStart = new Date(run.startsAt.getTime() + DAY_MS);
+    await db.insert(tripScheduleDays).values({
+      tripId: run.id,
+      dayNumber: 2,
+      startsAt: dayTwoStart,
+      endsAt: new Date(dayTwoStart.getTime() + 4 * HOUR_MS),
+    });
+    const [dayOne] = await db
+      .select({ endsAt: tripScheduleDays.endsAt })
+      .from(tripScheduleDays)
+      .where(and(eq(tripScheduleDays.tripId, run.id), eq(tripScheduleDays.dayNumber, 1)));
+    if (!dayOne) throw new Error("day one window missing");
+    const dayOneEnd = dayOne.endsAt;
+
+    const boundaries = await rollCallDayBoundariesByTrip(db, [run.id, single.id]);
+
+    expect(boundaries.get(run.id)).toEqual([
+      new Date(
+        Math.min(dayTwoStart.getTime(), (dayOneEnd.getTime() + dayTwoStart.getTime()) / 2),
+      ).toISOString(),
+    ]);
+    // A one-day departure has no boundary, and asking for none asks nothing.
+    expect(boundaries.has(single.id)).toBe(false);
+    expect((await rollCallDayBoundariesByTrip(db, [])).size).toBe(0);
   });
 });

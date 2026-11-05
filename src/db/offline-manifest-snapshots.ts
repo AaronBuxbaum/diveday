@@ -6,6 +6,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { getTripManifests } from "./manifests";
 import { offlineManifestSnapshotRevisions, trips } from "./schema";
 import { getShopOfflineErasureEpoch } from "./shops";
+import { rollCallDayBoundariesByTrip } from "./trip-meeting-windows";
 import { liveTrip } from "./trips-live";
 
 export async function nextOfflineManifestSnapshotRevision(
@@ -54,6 +55,7 @@ export async function issueOfflineManifestSnapshot(db: AppDb, shopId: string, tr
     const snapshotId = randomUUID();
     return {
       manifests,
+      rollCallDayBoundaries: (await rollCallDayBoundariesByTrip(tx, [tripId])).get(tripId),
       snapshotId,
       erasureEpochToken: signOfflineErasureEpoch({
         shopId,

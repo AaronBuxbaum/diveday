@@ -14,6 +14,7 @@ describe("offlineManifestPayload", () => {
         snapshotId: "11111111-1111-4111-8111-111111111111",
         erasureEpochToken: "authenticated-epoch",
         snapshotRevision: 1,
+        rollCallDayBoundaries: undefined,
       },
       shop: {
         slug: "blue-mantis",
@@ -45,6 +46,7 @@ describe("offlineManifestPayload", () => {
         snapshotId: "22222222-2222-4222-8222-222222222222",
         erasureEpochToken: "authenticated-epoch",
         snapshotRevision: 1,
+        rollCallDayBoundaries: undefined,
       },
       shop: {
         slug: "blue-mantis",
@@ -92,5 +94,41 @@ describe("offlineManifestPayload", () => {
         notedBy: expect.stringContaining("Noted by Ana Ruiz"),
       },
     ]);
+  });
+
+  it("carries a course's meeting-day boundaries, and nothing for a one-day departure", () => {
+    const base = {
+      shop: {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: null as never,
+      },
+      checklistItems: [] as never,
+      checklistChecks: new Map() as never,
+      boatSafety: null,
+      snags: [],
+      locale: "en-US",
+      t,
+    };
+    const snapshot = {
+      manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
+      snapshotId: "33333333-3333-4333-8333-333333333333" as const,
+      erasureEpochToken: "authenticated-epoch",
+      snapshotRevision: 1,
+    };
+    expect(
+      offlineManifestPayload({
+        ...base,
+        snapshot: { ...snapshot, rollCallDayBoundaries: ["2026-07-21T00:00:00.000Z"] },
+      }).rollCallDayBoundaries,
+    ).toEqual(["2026-07-21T00:00:00.000Z"]);
+    expect(
+      "rollCallDayBoundaries" in
+        offlineManifestPayload({
+          ...base,
+          snapshot: { ...snapshot, rollCallDayBoundaries: undefined },
+        }),
+    ).toBe(false);
   });
 });

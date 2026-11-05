@@ -12,6 +12,7 @@ import { getTripManifests } from "@/db/manifests";
 import { nextOfflineManifestSnapshotRevision } from "@/db/offline-manifest-snapshots";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { getShopOfflineErasureEpoch } from "@/db/shops";
+import { rollCallDayBoundariesByTrip } from "@/db/trip-meeting-windows";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
 import { boatSafetySection } from "@/i18n/boat-safety-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -81,6 +82,7 @@ async function getUpcomingManifests() {
     // the device when the signal goes (issue #688).
     emergencyReference: shop.emergencyReference,
   };
+  const dayBoundaries = await rollCallDayBoundariesByTrip(db, tripIds);
   const payloads = await Promise.all(
     tripIds.map(
       async (tripId): Promise<OfflineManifestPayload | null> =>
@@ -145,8 +147,10 @@ async function getUpcomingManifests() {
                 ? t("shared.offlineManifest.juniorCheckRequired")
                 : depthWarningText(t, advisory),
           );
+          const boundaries = dayBoundaries.get(tripId);
           return {
             ...payload,
+            ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
             snapshotId,
             erasureEpochToken: signOfflineErasureEpoch({
               shopId: shop.id,
