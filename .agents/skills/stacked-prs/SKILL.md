@@ -19,9 +19,11 @@ message bundle) and conflicts later, by hand. Only two cases go off `main`: **no
 (`git fetch origin main` first, every time), or **a fix that must merge now**. There is no maximum
 depth.
 
-**Fix CI from the top.** Only the top layer has to pass. A red lower layer is not a blocker, its
-runs may be cancelled, and the more of the bottom that passes the better, since Aaron can merge up
-to any layer. Do not hold a push for the layer below.
+**CI runs on the top layer only** (ADR [20261105-ci-runs-on-the-top-of-the-stack](../../../docs/architecture/decisions/20261105-ci-runs-on-the-top-of-the-stack.md)):
+the account has a fixed number of runners and Aaron merges the whole stack from the top, so
+`stack-gate` in `ci.yml` skips every lower layer, and a slice of CI across layers never happens.
+A lower layer shows skipped checks, which are not green. Fix a red top from the top; do not hold a
+push for the layer below.
 
 ## Commands
 

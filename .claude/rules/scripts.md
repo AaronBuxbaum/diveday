@@ -35,8 +35,8 @@ names what enforces it; the reasoning and incidents are in
 - **A skill linked in from `.agents/skills/`** has its source there and an entry in
   `skills-lock.json`; adding or removing one touches all three.
 - **CI** (`.github/workflows/ci.yml`) runs the whole suites; read the CI-change-detection write-up
-  before touching `scripts/check-ci-change-detection.mjs`. Every stack layer runs the whole gate
-  (ADR 20261003-every-stack-layer-runs-ci).
+  before touching `scripts/check-ci-change-detection.mjs`. Only the top stack layer runs the gate
+  (ADR 20261105-ci-runs-on-the-top-of-the-stack).
 - **Skills state how, docs state what and why**; a skill that contradicts an ADR or the code is
   fixed in the same change. A reviewer agent lists only the tools it needs.
 - **Text a human will copy is written unwrapped**, in a script's output as in a doc.

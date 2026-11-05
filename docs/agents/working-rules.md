@@ -93,9 +93,9 @@ runs. Pass args directly. The shell guard refuses the bare form.
   `gh stack submit --auto` pushes, opens the draft PRs with the right bases and registers the
   stack; always pass `-m` and `--auto` and read stdin from `/dev/null`, because without them
   `gh stack` opens an editor. Give each body its position line afterwards (`gh pr edit`). Aaron
-  clicks Merge on the top PR and the whole stack lands, all or nothing. **Fix CI from the top**:
-  only the top layer has to pass, a red lower layer is not a blocker and its runs may be
-  cancelled, and the more of the bottom that passes the better. Bring a layer forward with
+  clicks Merge on the top PR and the whole stack lands, all or nothing. **CI runs on the top layer
+  only** (`stack-gate` in `ci.yml` skips the layers below; never run a slice across layers), and a
+  red top is fixed from the top. Bring a layer forward with
   `gh stack rebase`, then `gh stack push` (force-with-lease; plain `git push` is refused after a
   rebase). Never `gh pr edit --base` on a stacked PR. Never close a layer with `--delete-branch`:
   it closes the layer above. Only two cases go off `main`: no stack is open, or a fix that must

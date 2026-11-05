@@ -1222,8 +1222,8 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
 - **CI** (`.github/workflows/ci.yml`) shards the unit suite four ways and runs the whole e2e and
   visual suites; a local session runs the focused forms only. `scripts/check-ci-change-detection.mjs`
   pins how CI decides what to run — read
-  [docs/agents/repo-checks.md](repo-checks.md) before touching it. Every layer of
-  a stack runs the whole gate (ADR 20261003-every-stack-layer-runs-ci).
+  [docs/agents/repo-checks.md](repo-checks.md) before touching it. Only the top layer
+  of a stack runs the gate (ADR 20261105-ci-runs-on-the-top-of-the-stack).
 - **Skills** state *how*, docs state *what and why*; a skill that contradicts an ADR or the code is
   stale and is fixed in the same change. Keep a `description:` specific about its trigger, then
   short — the body is where length belongs. A reviewer agent lists only the tools it needs.
