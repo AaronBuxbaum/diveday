@@ -2,6 +2,10 @@
 -- (#3901) and waiver_records.token_sealed (#3903) in this release; the
 -- destructive-migration guard refuses their drop while main still declares
 -- them, so drizzle's generated drops are left out here and follow next release.
+-- Nothing writes them any more, so nothing would null them either: clear every
+-- stored copy now, so a dump taken before the drop holds no openable link.
+UPDATE "waiver_records" SET "token_sealed" = NULL WHERE "token_sealed" IS NOT NULL;--> statement-breakpoint
+UPDATE "booking_capabilities" SET "token_sealed" = NULL, "token_hash" = NULL WHERE "token_sealed" IS NOT NULL OR "token_hash" IS NOT NULL;--> statement-breakpoint
 CREATE TABLE "waiver_seal_acknowledgements" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"shop_id" uuid NOT NULL,
