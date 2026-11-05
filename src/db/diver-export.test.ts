@@ -146,7 +146,7 @@ describe("one diver's own record export (issue #726)", () => {
     expect(serialize(leadInput)).not.toContain(follower.personName);
   });
 
-  it("withholds medical answers from a signed waiver, and the scanned medical document that came with an import, but keeps every other field", async () => {
+  it("carries medical answers from a signed waiver, and the scanned medical document that came with an import, like every other field", async () => {
     const { db, shop } = ctx;
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
     const { follower } = await partyOfTwo(shop, db);
@@ -177,11 +177,8 @@ describe("one diver's own record export (issue #726)", () => {
       },
       recordedByPersonId: owner,
       // An imported record's re-stored source documents (ADR
-      // 20260724-import-waiver-acceptance). The general document is fine to
-      // hand back — it's the same signed release either way — but the medical
-      // one is a scanned copy of the exact thing medical_answers withholds,
-      // and it is what security review found this test did not yet cover:
-      // it went out through photoUrls even while the JSON column stayed home.
+      // 20260724-import-waiver-acceptance): the general release and the
+      // scanned medical form both go back to the diver (Aaron, 2026-11-05).
       importSourceDocumentUrl:
         "https://diveday-media.s3.us-east-1.amazonaws.com/waivers/signed-release.pdf",
       importSourceMedicalDocumentUrl:
@@ -193,16 +190,17 @@ describe("one diver's own record export (issue #726)", () => {
     const records = input.tables.find((t) => t.file === "waiver_records.csv");
     if (!records) throw new Error("waiver_records.csv missing");
 
-    expect(records.header).not.toContain("medical_answers");
-    expect(serialize(input)).not.toContain("secret-clinic-referral");
+    // Medical text is not treated specially in an export (Aaron, 2026-11-05).
+    expect(records.header).toContain("medical_answers");
+    expect(serialize(input)).toContain("secret-clinic-referral");
 
-    // The general document is bundled; the medical scan is not — checked
-    // against the photo manifest this loader hands the download route, not
-    // against the CSV, since a URL bundles as a *file* rather than a cell.
+    // Both documents are bundled — checked against the photo manifest this
+    // loader hands the download route, not against the CSV, since a URL
+    // bundles as a *file* rather than a cell.
     expect(input.photoUrls).toContain(
       "https://diveday-media.s3.us-east-1.amazonaws.com/waivers/signed-release.pdf",
     );
-    expect(input.photoUrls).not.toContain(
+    expect(input.photoUrls).toContain(
       "https://diveday-media.s3.us-east-1.amazonaws.com/waivers/medical-questionnaire-scan.pdf",
     );
 

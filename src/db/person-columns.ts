@@ -409,8 +409,7 @@ const rows = [
   {
     table: "inbound_messages",
     column: "person_id",
-    export: "withheld",
-    exportWhy: "neither bundle has a file for a conversation yet (#3862)",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -419,8 +418,7 @@ const rows = [
   {
     table: "staff_replies",
     column: "person_id",
-    export: "withheld",
-    exportWhy: "neither bundle has a file for a conversation yet (#3862)",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -431,9 +429,7 @@ const rows = [
   {
     table: "lost_items",
     column: "person_id",
-    export: "withheld",
-    exportWhy:
-      "a shelf the shop holds for somebody, pruned 90 days after it goes home; neither bundle carries it",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "delete",
