@@ -53,7 +53,7 @@ afterEach(() => {
 describe("prepareVisualBaseline", () => {
   it("reads a main snapshot's images from the content-addressed blobs its report names", async () => {
     const { outputDir } = fixture();
-    const hash = "c".repeat(64);
+    const hash = createHash("sha256").update(PNG).digest("hex");
     const calls = [];
     const fetchImpl = async (url) => {
       calls.push(String(url));
@@ -325,7 +325,7 @@ describe("prepareVisualBaseline", () => {
       writeFileSync(path.join(actualDir, "moved.png"), moved);
       writeFileSync(path.join(actualDir, "new.png"), moved);
       const calls = [];
-      const movedHash = "d".repeat(64);
+      const movedHash = sha(PNG);
 
       const result = await prepareVisualBaseline({
         bucket: BUCKET,
@@ -351,7 +351,7 @@ describe("prepareVisualBaseline", () => {
     });
 
     it("never fetches what a selective run did not capture, and fetches it on a full one", async () => {
-      const blobs = { "kept.png": "e".repeat(64), "other.png": "f".repeat(64) };
+      const blobs = { "kept.png": sha(PNG), "other.png": sha(PNG) };
       for (const [selective, fetched, filled] of [
         [true, [], ["other.png"]],
         [false, ["other.png"], []],
@@ -397,6 +397,20 @@ describe("prepareVisualBaseline", () => {
       ).resolves.toMatchObject({ count: 1, plan: null });
       expect(existsSync(planFile)).toBe(false);
     });
+  });
+
+  it("refuses a blob whose bytes do not hash to the address the report gave it", async () => {
+    const { outputDir } = fixture();
+    const fetchImpl = async (url) =>
+      String(url).endsWith(`${KEY}/out.json`)
+        ? new Response(
+            JSON.stringify({ ...report(["a.png"]), actualBlobs: { "a.png": "9".repeat(64) } }),
+            { status: 200 },
+          )
+        : new Response(PNG, { status: 200 });
+    await expect(
+      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version: VERSION, outputDir, fetchImpl }),
+    ).rejects.toThrow(/content hash/u);
   });
 
   it("creates an empty baseline when there is no expected key", async () => {

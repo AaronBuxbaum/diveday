@@ -313,6 +313,10 @@ async function validateBundle({
     if (keys.has(key)) throw new Error(`publisher manifest contains a duplicate key: ${key}`);
     keys.add(key);
     const kind = classifyKey(key, contentType, snapshotVersion);
+    // Only a push to main stores content-addressed images; a pull request bundle never may.
+    if (kind === "blob" && prNumber) {
+      throw new Error(`a pull request cannot publish a blob: ${key}`);
+    }
     if (fields.length === 3) {
       // A reference carries no payload: it asks the publisher to confirm that a blob this
       // publisher already wrote under that content address is still in the bucket.
@@ -774,7 +778,7 @@ async function publishBlobRef(args, onEvent) {
     if (!isMissing(error)) throw error;
     throw new Error(
       `referenced blob is missing from the bucket: ${entry.key}. The bundle carries no bytes ` +
-        "for it; re-run the capture so the bundle is built without references.",
+        "for it, and the prepare job saw it a moment ago, so it was deleted in between: re-run the workflow.",
     );
   }
   if (
@@ -788,6 +792,33 @@ async function publishBlobRef(args, onEvent) {
   if (Date.now() - written < BLOB_REFRESH_MS) {
     onEvent("reused", entry.key);
     return;
+  }
+  // Refreshing keeps an object alive for another 60 days, so first see that it is the image
+  // its address names (anything that could write the bucket could have left something else).
+  if (!head.ETag || !(head.ContentLength > 0 && head.ContentLength <= MAX_BLOB_BYTES)) {
+    throw new Error(`referenced blob has no ETag or an unexpected size: ${entry.key}`);
+  }
+  const body = await send(
+    client,
+    new commands.GetObjectCommand({ Bucket: bucket, Key: entry.key, IfMatch: head.ETag }),
+    signal,
+    timeoutMs,
+  );
+  const chunks = [];
+  let received = 0;
+  for await (const chunk of body.Body) {
+    received += chunk.length;
+    if (received > MAX_BLOB_BYTES) throw new Error(`referenced blob is too large: ${entry.key}`);
+    chunks.push(chunk);
+  }
+  let png;
+  try {
+    png = gunzipSync(Buffer.concat(chunks), { maxOutputLength: MAX_BLOB_BYTES });
+  } catch {
+    throw new Error(`referenced blob is not a bounded gzip image: ${entry.key}`);
+  }
+  if (createHash("sha256").update(png).digest("hex") !== entry.blobSha256) {
+    throw new Error(`referenced blob does not match its content address: ${entry.key}`);
   }
   await send(
     client,

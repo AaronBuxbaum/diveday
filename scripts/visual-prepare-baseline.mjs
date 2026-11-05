@@ -2,6 +2,7 @@
 // Restore the expected screenshots without AWS credentials. Public S3 objects are treated as
 // image input and re-encoded before reg-suit, and only the ones this run's captures could differ
 // from are fetched at all (scripts/visual-baseline-plan.mjs).
+import { createHash } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -95,6 +96,11 @@ async function fetchBaseline({ bucket, key, version, fetchImpl, actualDir, selec
       });
       if (!result.ok) {
         throw new Error(`could not fetch baseline screenshot ${name} (HTTP ${result.status})`);
+      }
+      // A content address is a claim until the bytes agree with it.
+      const claimed = report.actualBlobs?.[name];
+      if (claimed && createHash("sha256").update(result.body).digest("hex") !== claimed) {
+        throw new Error(`baseline screenshot ${name} does not match its content hash`);
       }
       const canonical = await reencodePng(result.body, `baseline ${name}`);
       totalBytes += canonical.length;

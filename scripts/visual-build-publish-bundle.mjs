@@ -16,8 +16,9 @@ import path from "node:path";
 import process from "node:process";
 import { gzipSync } from "node:zlib";
 
-import { readPlan } from "./visual-baseline-plan.mjs";
+import { hashScreenshots, readPlan } from "./visual-baseline-plan.mjs";
 import { isPublicationId, publicationIdFromEnv } from "./visual-publication-id.mjs";
+import { DEFAULT_BUCKET } from "./visual-report-lib.mjs";
 
 const MAX_FILES = 10_000;
 const MAX_FILE_BYTES = 100_000_000;
@@ -282,16 +283,55 @@ export function buildVisualPublishBundle({
   };
 }
 
+/**
+ * The unchanged names whose blob the public bucket still serves. A reference is only safe to
+ * emit for one: the publisher has no bytes to fall back on, and the pruner can race a stale
+ * baseline. Anything that cannot be confirmed is carried instead.
+ */
+export async function heldNames({ names, hashes, bucket, fetchImpl = fetch, limit = 32 }) {
+  const held = [];
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < names.length) {
+      const name = names[cursor++];
+      const hash = hashes[name];
+      if (!hash) continue;
+      try {
+        const response = await fetchImpl(`https://${bucket}.s3.amazonaws.com/blobs/${hash}.png`, {
+          method: "HEAD",
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (response.status === 200) held.push(name);
+      } catch {
+        // Unconfirmed: carry the bytes.
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, names.length) }, worker));
+  return held;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
+    const onMain = process.env.GITHUB_EVENT_NAME !== "pull_request";
+    const unchanged = onMain ? (readPlan()?.unchanged ?? []) : [];
+    const referencedActual =
+      unchanged.length > 0
+        ? await heldNames({
+            names: unchanged,
+            hashes: hashScreenshots(
+              path.join(path.resolve(process.env.VISUAL_PUBLISH_SOURCE ?? ".reg"), "actual"),
+            ),
+            bucket: process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET,
+          })
+        : [];
     const result = buildVisualPublishBundle({
       sourceDir: path.resolve(process.env.VISUAL_PUBLISH_SOURCE ?? ".reg"),
       bundleDir: path.resolve(process.env.VISUAL_PUBLISH_BUNDLE ?? ".reg-publish-bundle"),
       publicationId: publicationIdFromEnv(),
       skipPassedActual: process.env.GITHUB_EVENT_NAME === "pull_request",
       contentAddressedActual: process.env.GITHUB_EVENT_NAME !== "pull_request",
-      referencedActual:
-        process.env.GITHUB_EVENT_NAME !== "pull_request" ? (readPlan()?.unchanged ?? []) : [],
+      referencedActual,
     });
     console.log(
       `visual-build-publish-bundle: prepared ${result.count} files (${result.totalBytes} bytes) for snapshot ${result.snapshotVersion}`,

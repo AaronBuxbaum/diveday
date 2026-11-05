@@ -173,9 +173,13 @@ if (fill || expectedReady) {
     }
     const setAside = stage === "compare" && plan !== null;
     if (setAside) setAsideUnchanged({ plan, actualDir });
-    const step = regSuit(stage, ...args);
-    // Back in place whether or not the compare passed: the capture directory is evidence.
-    if (setAside) restoreUnchanged({ plan, actualDir, workingDir: path.join(repoRoot, ".reg") });
+    let step;
+    try {
+      step = regSuit(stage, ...args);
+    } finally {
+      // Back in place whether or not the compare ran: the capture directory is evidence.
+      if (setAside) restoreUnchanged({ plan, actualDir, workingDir: path.join(repoRoot, ".reg") });
+    }
     if (step.status !== 0) process.exit(step.status ?? 1);
   }
   process.exit(0);

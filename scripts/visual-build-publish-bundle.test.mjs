@@ -4,7 +4,7 @@ import path from "node:path";
 import { gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { buildVisualPublishBundle } from "./visual-build-publish-bundle.mjs";
+import { buildVisualPublishBundle, heldNames } from "./visual-build-publish-bundle.mjs";
 
 const temps = [];
 
@@ -411,5 +411,24 @@ describe("content-addressed actual images", () => {
     const key = referenced.split("\t")[0];
     expect(key).toBe(`blobs/${report.actualBlobs["held.png"]}.png`);
     expect(() => readFileSync(path.join(bundleDir, "payload", `${key}.gz`))).toThrow();
+  });
+});
+
+describe("heldNames", () => {
+  it("keeps only the names whose blob the bucket confirms, and carries the rest", async () => {
+    const calls = [];
+    const fetchImpl = async (url, init) => {
+      calls.push([String(url), init.method]);
+      if (String(url).includes("boom")) throw new Error("network");
+      return { status: String(url).includes("gone") ? 404 : 200 };
+    };
+    const held = await heldNames({
+      names: ["a.png", "b.png", "c.png", "d.png"],
+      hashes: { "a.png": "aaa", "b.png": "gone", "c.png": "boom", "d.png": "" },
+      bucket: "diveday-vrt",
+      fetchImpl,
+    });
+    expect(held).toEqual(["a.png"]);
+    expect(calls.every(([, method]) => method === "HEAD")).toBe(true);
   });
 });

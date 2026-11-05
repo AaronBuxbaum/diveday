@@ -1306,3 +1306,45 @@ test("a reference must be a blob, and nothing else may take a third field", asyn
     f.cleanup();
   }
 });
+
+test("a pull request bundle may not publish a blob", async () => {
+  const f = blobFixture({
+    version: VERSION_1,
+    publicationId: "4101-1",
+    images: { "one.png": "x" },
+  });
+  try {
+    await assert.rejects(
+      publishBundle(args(f, fakeS3(), { prNumber: PR })),
+      /pull request cannot publish a blob/u,
+    );
+  } finally {
+    f.cleanup();
+  }
+});
+
+test("a stale referenced blob whose body is not its address is not refreshed", async () => {
+  const images = { "one.png": "pixels" };
+  const first = blobFixture({ version: VERSION_1, publicationId: "4101-1", images });
+  const next = blobFixture({ version: VERSION_2, publicationId: "4102-1", images });
+  try {
+    const s3 = fakeS3();
+    await publishBundle(args(first, s3, { prNumber: "" }));
+    const [blobKey] = [...s3.objects.keys()].filter((key) => key.includes("/blobs/"));
+    const stored = s3.objects.get(blobKey);
+    stored.head.LastModified = new Date(Date.now() - 15 * 86_400_000);
+    stored.bytes = gzipSync(Buffer.concat([PNG_HEAD, Buffer.from("forged")]));
+    withReferences(next, ["one.png"]);
+    s3.events.length = 0;
+    await assert.rejects(
+      publishBundle(
+        args(next, s3, { prNumber: "", actualKey: "e".repeat(40), snapshotVersion: VERSION_2 }),
+      ),
+      /content address/u,
+    );
+    assert.ok(!s3.events.some(([event]) => event === "COPY"));
+  } finally {
+    first.cleanup();
+    next.cleanup();
+  }
+});
