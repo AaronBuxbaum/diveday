@@ -46,9 +46,6 @@ the first Saturday's "back aboard" closed the second's count (#2557). It amends
   queue, running late, `/ready`'s recap, help requests and the fly-safe line read the run's window;
   none raises a safety signal between days.
 - A late count past the halfway point of two same-day windows belongs to the later day.
-- An offline mark's newest-wins check compares only marks on the meeting day of its own
-  `occurred_at` (`onSameMeetingDayAs`), so Saturday's queued tap is not refused by Sunday's count.
-- The offline copy carries each later day's boundary (`rollCallDayBoundaries`, additive, no record
-  version bump). Past a boundary the device reads the new day empty, keeps an earlier day's stated
-  missing person at its checkpoint (not offered for undo here), and takes only what was queued
-  since as the new day's (`offlineRollCallAt`).
+- Offline: a queued mark is compared only with marks on its own meeting day
+  (`onSameMeetingDayAs`). The copy carries each later day's boundary (`rollCallDayBoundaries`,
+  additive); past one, the device reads the new day empty and keeps an earlier day's missing person.
