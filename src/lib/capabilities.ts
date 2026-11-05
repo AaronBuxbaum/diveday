@@ -20,7 +20,8 @@ import { SETUP_LINK_TTL_MS } from "./setup-links";
  * `/unsubscribe/[token]`, the stop and confirm links mailed to a shop's own
  * addresses, and the account tokens (verify, reset, invite), which name a
  * sign-in account and no shop, and the setup link, which names a set-up
- * request and no shop (ADR 20261105-capabilities-shop-id-nullable).
+ * request and no shop, and the staff calendar feeds, which are opened on every
+ * poll and never spent (ADR 20261105-capabilities-shop-id-nullable).
  * Purposes still on their own tables (the front desk's confirm link) are the
  * rest of #2710.
  * Booking links stay on `booking_capabilities`: they are derived from their
@@ -43,6 +44,8 @@ export const CAPABILITY_PURPOSES = [
   "password_reset",
   "invite",
   "shop_setup",
+  "calendar_assignments",
+  "calendar_shop_trips",
 ] as const;
 
 export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
@@ -120,8 +123,13 @@ type CapabilityPolicyFields = SubjectFields & {
    * `once`: opening it is spent (`capabilities.used_at`), so after the shop
    * names the same address again an old link cannot take it off a second
    * time. A spent link still verifies, and reads as "already done".
+   *
+   * `reusable`: the link is a standing credential, opened on every use and
+   * never spent (a calendar client polls its feed for ever). `openCapability`
+   * is its gate, and refuses it once revoked; each use may stamp
+   * `capabilities.last_accessed_at`, which only these purposes carry.
    */
-  use: "idempotent" | "once";
+  use: "idempotent" | "once" | "reusable";
 };
 
 /**
@@ -139,7 +147,8 @@ type CapabilityPolicyFields = SubjectFields & {
 export type CapabilityPolicy =
   | (CapabilityPolicyFields & ReissueFields & { use: "once"; lifetime: "never" })
   | (CapabilityPolicyFields & ReissueFields & { use: "once"; lifetime: "expires"; ttlMs: number })
-  | (CapabilityPolicyFields & { use: "idempotent"; lifetime: "never"; reissue: "adds" });
+  | (CapabilityPolicyFields & { use: "idempotent"; lifetime: "never"; reissue: "adds" })
+  | (CapabilityPolicyFields & ReissueFields & { use: "reusable"; lifetime: "never" });
 
 export const CAPABILITY_POLICY = {
   // One anytime interest (the last-minute list). Opening it closes that
@@ -262,6 +271,31 @@ export const CAPABILITY_POLICY = {
     reissue: "adds",
     use: "once",
   },
+  // A staff member's calendar subscription (ADR
+  // 20260730-calendar-feed-subscriptions): their own crewed departures, or
+  // (owner and manager) every departure at the shop. Polled by a calendar
+  // client for as long as it is subscribed, so it never expires and is never
+  // spent; rotating it revokes the live one for that person, and the feed
+  // re-derives the person's roles on every fetch. A staff credential, so it
+  // never follows a diver merge: a feed on either record refuses it.
+  calendar_assignments: {
+    subject: "person",
+    merge: "refuse",
+    scope: "shop",
+    lifetime: "never",
+    reissue: "supersedes",
+    per: "subject",
+    use: "reusable",
+  },
+  calendar_shop_trips: {
+    subject: "person",
+    merge: "refuse",
+    scope: "shop",
+    lifetime: "never",
+    reissue: "supersedes",
+    per: "subject",
+    use: "reusable",
+  },
 } as const satisfies Record<CapabilityPurpose, CapabilityPolicy>;
 
 /** The subject a purpose's rows name. */
@@ -293,6 +327,23 @@ export function personPurposesThatMerge(merge: "follows" | "refuse"): Capability
 /** The purposes whose rows carry `expires_at`. */
 export function expiringPurposes(): CapabilityPurpose[] {
   return CAPABILITY_PURPOSES.filter((purpose) => CAPABILITY_POLICY[purpose].lifetime === "expires");
+}
+
+/** The purposes opened on every use and never spent (`use: "reusable"`). */
+export function reusablePurposes(): CapabilityPurpose[] {
+  return purposesWhere((policy) => policy.use === "reusable");
+}
+
+/** The `person` purposes of which a person holds at most one live link (`per: "subject"`). */
+export function onePerPersonPurposes(): CapabilityPurpose[] {
+  return purposesWhere(
+    (policy) =>
+      policy.subject === "person" && policy.reissue === "supersedes" && policy.per === "subject",
+  );
+}
+
+function purposesWhere(test: (policy: CapabilityPolicy) => boolean): CapabilityPurpose[] {
+  return CAPABILITY_PURPOSES.filter((purpose) => test(CAPABILITY_POLICY[purpose]));
 }
 
 /** The purposes a use spends. */

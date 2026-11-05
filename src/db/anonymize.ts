@@ -70,6 +70,7 @@ import { type AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import { ACTIVITY_REDACTED, DESK_ONLY_CODES } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
+import { personPurposesThatMerge } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import {
   COURSE_FORM_INTEGRITY_VERSION_ERASED,
@@ -117,7 +118,6 @@ import {
   bookingPaymentEvents,
   bookings,
   buddyTeamEvents,
-  calendarFeeds,
   capabilities,
   cards,
   certificationJuniorReviews,
@@ -1173,9 +1173,14 @@ async function scrubPersonOnlyRows(
   // 23503 and roll back every other redaction with it.
   // The person branch is not shop-filtered: whatever shop a row names, a link
   // that opens this person goes with them (security review of #2710, F1).
+  // A staff credential naming them (a calendar feed, `merge: "refuse"`) is
+  // revoked by `scrubStandingCredentials` instead, so the record of it stays.
   await tx.delete(capabilities).where(
     or(
-      eq(capabilities.personId, personId),
+      and(
+        eq(capabilities.personId, personId),
+        notInArray(capabilities.purpose, personPurposesThatMerge("refuse")),
+      ),
       and(
         eq(capabilities.shopId, shopId),
         inArray(
@@ -1233,16 +1238,18 @@ async function scrubStandingCredentials(
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId, now } = ctx;
-  // A live feed URL is a read credential; revoked rather than deleted so the
-  // fact that it was revoked stays on record.
+  // A live feed URL (a staff credential capability, `merge: "refuse"`) is a
+  // read credential; revoked rather than deleted so the fact that it was
+  // revoked stays on record.
   await tx
-    .update(calendarFeeds)
+    .update(capabilities)
     .set({ revokedAt: now })
     .where(
       and(
-        eq(calendarFeeds.shopId, shopId),
-        eq(calendarFeeds.personId, personId),
-        isNull(calendarFeeds.revokedAt),
+        eq(capabilities.shopId, shopId),
+        eq(capabilities.personId, personId),
+        inArray(capabilities.purpose, personPurposesThatMerge("refuse")),
+        isNull(capabilities.revokedAt),
       ),
     );
   return [];

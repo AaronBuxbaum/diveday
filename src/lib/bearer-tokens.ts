@@ -31,9 +31,10 @@ import { createHash, randomBytes } from "node:crypto";
  * only when it cannot be (ADR 20260820-waiver-links-are-reused-not-reissued);
  * a calendar feed never
  * expires at all, because a lapsed one would stop a captain's calendar updating
- * silently (20260730-calendar-feed-subscriptions). Each owns its own
- * `expiresAt`/`revokedAt` columns and its own verify-time checks. All this
- * module promises is: enough entropy that the token cannot be guessed, and a
+ * silently (20260730-calendar-feed-subscriptions). A stored link's lifetime is
+ * its purpose's record in `CAPABILITY_POLICY` (`src/lib/capabilities.ts`),
+ * which `src/db/capabilities.ts` checks at verify time. All this module
+ * promises is: enough entropy that the token cannot be guessed, and a
  * stored form that cannot be replayed by whoever reads the database.
  *
  * A waiver link has to be handed over the same twice (a shop that copies a

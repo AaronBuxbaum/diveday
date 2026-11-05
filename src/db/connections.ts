@@ -1,9 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
+import { reusablePurposes } from "@/lib/capabilities";
 import { type Connection, shopConnections } from "@/lib/connections";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import {
-  calendarFeeds,
+  capabilities,
   shopBackupDestinations,
   shopIntegrations,
   shopStripeAccounts,
@@ -59,12 +60,15 @@ export async function readShopConnections(db: DbExecutor, shopId: string): Promi
         .where(eq(shopBackupDestinations.shopId, shopId)),
     () =>
       db
+        // The staff calendar feeds: the shop's reusable capabilities.
         .select({
-          lastAccessedAt: calendarFeeds.lastAccessedAt,
-          revokedAt: calendarFeeds.revokedAt,
+          lastAccessedAt: capabilities.lastAccessedAt,
+          revokedAt: capabilities.revokedAt,
         })
-        .from(calendarFeeds)
-        .where(eq(calendarFeeds.shopId, shopId)),
+        .from(capabilities)
+        .where(
+          and(eq(capabilities.shopId, shopId), inArray(capabilities.purpose, reusablePurposes())),
+        ),
   ]);
   return shopConnections({
     stripe: stripe[0] ?? null,

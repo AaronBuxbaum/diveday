@@ -21,7 +21,6 @@ import {
   bookings,
   buddyTeamEvents,
   buddyTeamMembers,
-  calendarFeeds,
   capabilities,
   cards,
   courseFormRecords,
@@ -366,7 +365,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(staffShifts).where(eq(staffShifts.shopId, shopId));
   // Requests were cleared before their departures; availability still names people.
   await db.delete(crewAvailabilityBlocks).where(eq(crewAvailabilityBlocks.shopId, shopId));
-  await db.delete(calendarFeeds).where(eq(calendarFeeds.shopId, shopId));
   // Deliveries reference the destination they were sent to, so they go first.
   await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shopId));
   await db.delete(shopBackupDeliveryClaims).where(eq(shopBackupDeliveryClaims.shopId, shopId));

@@ -32,7 +32,9 @@
   (`interest_unsubscribe`, `courtesy_email_unsubscribe`, `weekly_digest_unsubscribe`,
   `shore_alert_stop`, `bookkeeper_stop`), the shore contact's `shore_alert_confirm`, and the
   account tokens `email_verification`, `password_reset` and `invite`, which name the account and
-  no shop, and the setup link `shop_setup`, which names a set-up request and no shop (ADR
+  no shop, the setup link `shop_setup`, which names a set-up request and no shop, and the staff
+  calendar feeds `calendar_assignments` and `calendar_shop_trips`, reusable (opened on every
+  poll, never spent) and never expiring, which refuse a diver merge rather than follow it (ADR
   [20261105-capabilities-shop-id-nullable](../../architecture/decisions/20261105-capabilities-shop-id-nullable.md)).
   Booking links stay on `booking_capabilities`, because they are derived from their row rather
   than stored as a digest.
