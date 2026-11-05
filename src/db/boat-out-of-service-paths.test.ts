@@ -4,7 +4,7 @@ import { weekdaySetFrom } from "@/lib/recurrence";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "./boats";
-import { boats, trips } from "./schema";
+import { boats, tripSeriesSkips, trips } from "./schema";
 import {
   createTrip,
   createTripSeriesOrRefusal,
@@ -298,6 +298,26 @@ describe("rollSeriesForward on a hull booked into the yard later", () => {
     expect(onHull).not.toContain(morning2031(1, 11).toISOString());
     expect(onHull).toContain(morning2031(1, 4).toISOString());
     expect(onHull).toContain(morning2031(1, 18).toISOString());
+  });
+
+  it("writes no skip row, so the week returns and is no longer named once the window moves", async () => {
+    const { db, shop, seriesId, yard, departures } = await openEndedOn([WED]);
+    await yard("2031-01-07", "2031-01-09");
+    expect((await rollSeriesForward(db, shop.id, seriesId, morning(12, 4, 3)))?.inTheYard).toEqual([
+      "2031-01-08",
+    ]);
+    // A skip row would close the slot for good; the roll must not write one.
+    expect(
+      await db.select().from(tripSeriesSkips).where(eq(tripSeriesSkips.seriesId, seriesId)),
+    ).toEqual([]);
+    // The survey moves to June, past the horizon: the next pass puts the
+    // week on and names nothing.
+    await yard("2031-06-03", "2031-06-05");
+    await expect(rollSeriesForward(db, shop.id, seriesId, morning(12, 5, 3))).resolves.toEqual({
+      created: 1,
+      inTheYard: [],
+    });
+    expect(await departures()).toContain(morning2031(1, 8).toISOString());
   });
 
   it("names nothing for a hull with no yard window", async () => {

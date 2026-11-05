@@ -192,9 +192,6 @@ describe("GET /api/cron/trip-series — reporting", () => {
     expect(summaryLine()).toEqual(expect.objectContaining({ reopensCleared: 3 }));
   });
 
-  // A pass with nothing to add is the *normal* case — the horizon only needs
-  // widening on the days a cadence crosses its far edge. It must still be
-  // distinguishable from a pass that stopped running.
   it("counts the dates a hull in the yard kept off the board", async () => {
     vi.mocked(rollAllSeriesForward).mockResolvedValue({
       seriesConsidered: 2,
@@ -209,6 +206,9 @@ describe("GET /api/cron/trip-series — reporting", () => {
     expect(summaryLine()).toEqual(expect.objectContaining({ yardDatesLeftOff: 2 }));
   });
 
+  // A pass with nothing to add is the *normal* case — the horizon only needs
+  // widening on the days a cadence crosses its far edge. It must still be
+  // distinguishable from a pass that stopped running.
   it("still emits a summary line on a night with nothing to add", async () => {
     vi.mocked(rollAllSeriesForward).mockResolvedValue({
       seriesConsidered: 4,
