@@ -198,6 +198,14 @@ for (const scheme of ["light", "dark"] as const) {
           .getByText(/^Running late, said /)
           .first()
           .waitFor();
+        // Today's catch-up line shows only when an earlier test in this worker
+        // already opened Today (its first visit sets the mark), so it depends on
+        // test order. This capture is the lookup row: clear the line if it is up.
+        const gotIt = page.getByRole("button", { name: "Got it" });
+        if (await gotIt.isVisible()) {
+          await gotIt.click();
+          await expect(gotIt).toHaveCount(0);
+        }
         await capture(page, "today-arrival-lookup-running-late", scheme);
       });
 
