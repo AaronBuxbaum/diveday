@@ -141,6 +141,8 @@ export const COPY: BuilderCopy = {
   daysLabel: "How many days",
   daysDescription: "Most departures are one day.",
   meetingDayLabel: "Day {number}",
+  meetingDayStartLabel: "Day {number} departs",
+  meetingDayEndLabel: "Day {number} returns",
   payAtBookingLegend: "Pay at booking",
   payAtBookingDescription: "Optional.",
   depositLabel: "Deposit per diver",

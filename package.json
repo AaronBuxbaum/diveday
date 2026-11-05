@@ -99,6 +99,7 @@
     "cost:report": "node scripts/cost-report.mjs",
     "check": "node scripts/check-all.mjs",
     "gates": "node scripts/gate-freshness.mjs",
+    "cancel:actions": "node scripts/cancel-actions.mjs",
     "regen": "node scripts/regenerate.mjs",
     "perf:budget": "node scripts/perf-budget.mjs",
     "db:generate": "drizzle-kit generate",

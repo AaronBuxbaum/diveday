@@ -9,6 +9,8 @@ import { SheetDocument } from "../../print/_components/SheetDocument";
 import { sheetPrinted } from "../../print/_components/ShopSheet";
 import { MonthFigures } from "../../reports/_components/MonthFigures";
 import { PacketSheet } from "../../trips/[id]/print/_components/TripPacket";
+import { DrillLog } from "../_components/DrillLog";
+import { readDrillLog } from "../_components/drill-log-read";
 import { SafetyLists } from "../_components/SafetyLists";
 import { readSafetyReport } from "../_components/safety-read";
 
@@ -44,6 +46,14 @@ export default async function SafetyPrintPage({
   });
   const report = await readSafetyReport({ shopSlug, session, db, shop, month, year: yearParam });
   const { t, locale, tz, year, current, safety, incidents, now } = report;
+  const drills = await readDrillLog({
+    db,
+    shopId: shop.id,
+    timeZone: tz,
+    month: year ? null : current,
+    locale,
+    t,
+  });
   const safetyPath = shopPath(shopSlug, "safety");
   const period = year ? `year=${year.number}` : `month=${monthKey(current)}`;
   const empty = safety.departuresBack === 0 && incidents.length === 0;
@@ -100,6 +110,9 @@ export default async function SafetyPrintPage({
             />
           </div>
         )}
+        <div className="mt-6">
+          <DrillLog view={drills} paper />
+        </div>
       </PacketSheet>
     </SheetDocument>
   );

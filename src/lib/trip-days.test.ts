@@ -2,10 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   isTripDayCount,
   laterMeetingDates,
+  laterMeetingHours,
   MAX_MEETING_DAY_GAP_DAYS,
   MAX_TRIP_DAYS,
   MAX_TRIP_SPAN_DAYS,
   meetingDaysFor,
+  meetingDayWindows,
+  onTheWaterDay,
+  rollCallDayOf,
+  rollCallDayStarts,
+  rollCallRecordSince,
   tripMeetingDays,
 } from "./trip-days";
 import type { WallTime } from "./zoned";
@@ -120,26 +126,24 @@ describe("meetingDaysFor", () => {
   });
 
   /**
-   * Today, the open roll call, check-in and boarding read a departure's day as
-   * its one `startsAt`..`endsAt` window. A course on Saturday and the Saturday
-   * two weeks on would read as a boat on the water with an open roll call for
-   * the thirteen days between, and would not be today's departure on its second
-   * day. Until those read the meeting days, a departure's days run back to back.
+   * Today, the roll call and "the boat is out" read a departure's meeting days
+   * (#2557), so a course may skip days: Saturday and the Saturday two weeks
+   * on, or Sat/Sun, Sat/Sun, Sat. Six weeks from day one stays the outer bound.
    */
-  it("refuses a gap between meeting days, a two-week one included", () => {
-    expect(MAX_MEETING_DAY_GAP_DAYS).toBe(1);
-    expect(meetingDaysFor(saturday, 2, ["2026-11-07"])).toEqual({
-      ok: false,
-      reason: "days_out_of_order",
+  it("accepts a gap between meeting days, a two-week one included", () => {
+    expect(MAX_MEETING_DAY_GAP_DAYS).toBe(MAX_TRIP_SPAN_DAYS);
+    const fortnight = meetingDaysFor(saturday, 2, ["2026-11-07"]);
+    expect(fortnight.ok && fortnight.days[1]).toEqual({
+      start: wall(2026, 11, 7, 8, 0),
+      end: wall(2026, 11, 7, 16, 0),
     });
-    expect(meetingDaysFor(saturday, 3, ["2026-10-25", "2026-10-31"])).toEqual({
-      ok: false,
-      reason: "days_out_of_order",
-    });
-    expect(meetingDaysFor(saturday, 2, ["2026-10-26"])).toEqual({
-      ok: false,
-      reason: "days_out_of_order",
-    });
+    const weekends = meetingDaysFor(saturday, 5, [
+      "2026-10-25",
+      "2026-10-31",
+      "2026-11-01",
+      "2026-11-07",
+    ]);
+    expect(weekends.ok && weekends.days.map((d) => d.start.day)).toEqual([24, 25, 31, 1, 7]);
   });
 
   it("keeps a window that ends after midnight ending the morning after its own date", () => {
@@ -164,7 +168,7 @@ describe("meetingDaysFor", () => {
       ok: false,
       reason: "days_out_of_order",
     });
-    // Six weeks stays the outer bound for the day gaps open again.
+    // Six weeks is the outer bound.
     expect(meetingDaysFor(saturday, 2, ["2026-12-06"])).toEqual({
       ok: false,
       reason: "days_out_of_order",
@@ -190,5 +194,165 @@ describe("laterMeetingDates", () => {
       "2026-10-25",
       "2026-10-31",
     ]);
+  });
+});
+
+describe("roll-call days (#2557)", () => {
+  // Saturday Aug 1 and Saturday Aug 15 2026, 09:00 to 13:00 EDT.
+  const satOne = {
+    startsAt: new Date("2026-08-01T13:00:00.000Z"),
+    endsAt: new Date("2026-08-01T17:00:00.000Z"),
+  };
+  const satTwo = {
+    startsAt: new Date("2026-08-15T13:00:00.000Z"),
+    endsAt: new Date("2026-08-15T17:00:00.000Z"),
+  };
+  const run = { startsAt: satOne.startsAt, endsAt: satTwo.endsAt };
+  const days = meetingDayWindows(run, [satTwo, satOne]);
+
+  it("orders the days, and reads a trip with none as its one window", () => {
+    expect(days).toEqual([satOne, satTwo]);
+    expect(meetingDayWindows(run, [])).toEqual([run]);
+  });
+
+  it("gives Saturday's late count to Saturday and the second Saturday's boarding to it", () => {
+    const starts = rollCallDayStarts(days);
+    expect(rollCallDayOf(starts, new Date("2026-08-01T23:00:00.000Z"))).toBe(0);
+    expect(rollCallDayOf(starts, new Date("2026-08-15T12:30:00.000Z"))).toBe(1);
+    expect(rollCallDayOf(starts, new Date("2026-08-15T16:00:00.000Z"))).toBe(1);
+  });
+
+  it("never starts a day after its own window opens, even when windows touch", () => {
+    const touching = [
+      {
+        startsAt: new Date("2026-08-01T13:00:00.000Z"),
+        endsAt: new Date("2026-08-01T15:00:00.000Z"),
+      },
+      {
+        startsAt: new Date("2026-08-01T14:00:00.000Z"),
+        endsAt: new Date("2026-08-01T17:00:00.000Z"),
+      },
+    ];
+    expect(rollCallDayStarts(touching)[1]).toBeLessThanOrEqual(
+      Date.parse("2026-08-01T14:00:00.000Z"),
+    );
+  });
+
+  it("keeps a one-day trip's whole record on its one day", () => {
+    expect(rollCallRecordSince([run], new Date("2027-01-01T00:00:00.000Z"))).toBeNull();
+    expect(rollCallDayStarts([run])).toEqual([Number.NEGATIVE_INFINITY]);
+  });
+
+  it("starts the second Saturday's record empty, halfway through the fortnight", () => {
+    expect(rollCallRecordSince(days, new Date("2026-08-02T14:00:00.000Z"))).toBeNull();
+    const since = rollCallRecordSince(days, new Date("2026-08-15T14:00:00.000Z"));
+    expect(since?.toISOString()).toBe("2026-08-08T15:00:00.000Z");
+  });
+
+  it("is on the water only inside a day and its return hour, never between", () => {
+    expect(onTheWaterDay(days, new Date("2026-08-01T14:00:00.000Z"))).toEqual(satOne);
+    expect(onTheWaterDay(days, new Date("2026-08-01T17:59:00.000Z"))).toEqual(satOne);
+    expect(onTheWaterDay(days, new Date("2026-08-01T18:00:00.000Z"))).toBeNull();
+    expect(onTheWaterDay(days, new Date("2026-08-08T14:00:00.000Z"))).toBeNull();
+    expect(onTheWaterDay(days, new Date("2026-08-15T14:00:00.000Z"))).toEqual(satTwo);
+  });
+});
+
+/**
+ * **Hours per day** (#2558): a pool night at 18:00 and an open-water Saturday
+ * at 08:00 are one course. A later day's hours default to day one's.
+ */
+describe("meetingDaysFor with a later day's own hours", () => {
+  const poolNight = { start: wall(2026, 10, 21, 18, 0), end: wall(2026, 10, 21, 21, 0) };
+
+  it("puts each later day on its own hours, and day one's where none are named", () => {
+    const result = meetingDaysFor(
+      poolNight,
+      3,
+      ["2026-10-24", "2026-10-25"],
+      [
+        { start: "08:00", end: "16:30" },
+        { start: "", end: "" },
+      ],
+    );
+    expect(result.ok && result.days).toEqual([
+      poolNight,
+      { start: wall(2026, 10, 24, 8, 0), end: wall(2026, 10, 24, 16, 30) },
+      { start: wall(2026, 10, 25, 18, 0), end: wall(2026, 10, 25, 21, 0) },
+    ]);
+  });
+
+  it("takes hours on consecutive days with no dates named", () => {
+    const result = meetingDaysFor(poolNight, 2, [], [{ start: "07:00", end: "09:00" }]);
+    expect(result.ok && result.days[1]).toEqual({
+      start: wall(2026, 10, 22, 7, 0),
+      end: wall(2026, 10, 22, 9, 0),
+    });
+  });
+
+  it("keeps a night window that crosses midnight when the later day's hours are day one's", () => {
+    const night = { start: wall(2026, 10, 24, 20, 0), end: wall(2026, 10, 25, 1, 0) };
+    const result = meetingDaysFor(night, 2, ["2026-10-25"], [{ start: "20:00", end: "01:00" }]);
+    expect(result.ok && result.days[1]).toEqual({
+      start: wall(2026, 10, 25, 20, 0),
+      end: wall(2026, 10, 26, 1, 0),
+    });
+    // A later day's own night out, too.
+    expect(
+      meetingDaysFor(poolNight, 2, ["2026-10-24"], [{ start: "21:00", end: "00:30" }]),
+    ).toEqual({
+      ok: true,
+      days: [poolNight, { start: wall(2026, 10, 24, 21, 0), end: wall(2026, 10, 25, 0, 30) }],
+    });
+  });
+
+  it("refuses a later day that ends before it starts, with its own sentence", () => {
+    // Past midnight is the next morning only up to twelve hours on.
+    expect(
+      meetingDaysFor(poolNight, 2, ["2026-10-24"], [{ start: "16:00", end: "08:00" }]),
+    ).toEqual({ ok: false, reason: "end_before_start" });
+    expect(
+      meetingDaysFor(poolNight, 2, ["2026-10-24"], [{ start: "08:00", end: "08:00" }]),
+    ).toEqual({ ok: false, reason: "end_before_start" });
+  });
+
+  it("refuses a later day that starts before the night before has ended", () => {
+    const night = { start: wall(2026, 10, 21, 20, 0), end: wall(2026, 10, 22, 2, 0) };
+    expect(meetingDaysFor(night, 2, ["2026-10-22"], [{ start: "01:00", end: "05:00" }])).toEqual({
+      ok: false,
+      reason: "days_out_of_order",
+    });
+    expect(meetingDaysFor(night, 2, ["2026-10-22"], [{ start: "02:00", end: "05:00" }]).ok).toBe(
+      true,
+    );
+  });
+
+  it("refuses a time that does not exist, or a list that disagrees with the count", () => {
+    expect(
+      meetingDaysFor(poolNight, 2, ["2026-10-24"], [{ start: "25:00", end: "26:00" }]),
+    ).toEqual({ ok: false, reason: "invalid" });
+    expect(
+      meetingDaysFor(
+        poolNight,
+        2,
+        ["2026-10-24"],
+        [
+          { start: "08:00", end: "09:00" },
+          { start: "08:00", end: "09:00" },
+        ],
+      ),
+    ).toEqual({ ok: false, reason: "invalid" });
+  });
+
+  it("reads a stored departure's later hours back in the shop's zone", () => {
+    expect(
+      laterMeetingHours(
+        [
+          { startsAt: new Date("2026-10-21T22:00:00Z"), endsAt: new Date("2026-10-22T01:00:00Z") },
+          { startsAt: new Date("2026-10-24T12:00:00Z"), endsAt: new Date("2026-10-24T20:30:00Z") },
+        ],
+        "America/New_York",
+      ),
+    ).toEqual([{ start: "08:00", end: "16:30" }]);
   });
 });

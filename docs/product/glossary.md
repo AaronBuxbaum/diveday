@@ -235,6 +235,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Days at sea
 - Days away
 - Deal
+- Deck count
 - Decompression card reminder
 - Default course page
 - Delivery receipt
@@ -286,6 +287,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Medical alert for the crew
 - Medical hold
 - Medical questionnaire
+- Meeting day
 - Meeting point
 - Milestone
 - Milestone stamp
@@ -330,6 +332,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Review request
 - Rider
 - Roll-call checkpoint
+- Roll-call day boundary
 - Roll-call event
 - Roll-call order
 - Running late
@@ -410,6 +413,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Day profile
 - Dispute sheet
 - Dive area
+- Drill log
 - Earliest flight
 - Executed dive
 - Field guide

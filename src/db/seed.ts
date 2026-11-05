@@ -44,6 +44,7 @@ import {
   crewAvailabilityBlocks,
   customerGearItems,
   deals,
+  deckCounts,
   departureBoatSafetySnapshots,
   divePackageEntitlements,
   diveSiteCreatures,
@@ -80,6 +81,8 @@ import {
   rentalFitProfiles,
   reviewModerationEvents,
   reviewReplies,
+  safetyDrillParticipants,
+  safetyDrills,
   shopBackupDeliveryClaims,
   shopShoreAlertTokens,
   shopStripeAccounts,
@@ -1486,6 +1489,9 @@ export async function clearDemoSchedule(
     .delete(departureBoatSafetySnapshots)
     .where(eq(departureBoatSafetySnapshots.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
+  await db.delete(deckCounts).where(eq(deckCounts.shopId, shopId));
+  await db.delete(safetyDrillParticipants).where(eq(safetyDrillParticipants.shopId, shopId));
+  await db.delete(safetyDrills).where(eq(safetyDrills.shopId, shopId));
   await deleteHeldSendsAndDeskRows(db, shopId);
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does

@@ -191,6 +191,31 @@
     "stillMissing": "Still marked not back aboard on the manifest. Mark them back aboard first."
   },
   "safety": {
+    "drills": {
+      "title": "Drills",
+      "kinds": {
+        "oxygen": "Emergency oxygen",
+        "missing_diver": "Missing diver",
+        "overboard": "Person overboard",
+        "fire": "Fire"
+      },
+      "lastHeld": "{kind}: last drill {days, plural, =0 {today} one {# day ago} other {# days ago}}",
+      "neverHeld": "{kind}: no drill on record",
+      "heldTitle": "Drills held",
+      "logTitle": "Log a drill",
+      "kindLabel": "Drill",
+      "dateLabel": "Held on",
+      "peopleLabel": "Who took part",
+      "noteLabel": "Note",
+      "optional": "(optional)",
+      "submit": "Log drill",
+      "delete": "Delete",
+      "deleteConfirm": "Delete drill",
+      "logged": "Drill logged.",
+      "deleted": "Drill deleted.",
+      "loggedBy": "Logged by {name}, {date}",
+      "invalid": "That drill didn’t save. Check the date and who took part."
+    },
     "figuresLabel": "This month’s safety record",
     "rollCalls": "Roll calls closed",
     "rollCallsValue": "{closed} of {back}",
