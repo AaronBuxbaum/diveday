@@ -101,17 +101,33 @@ describe("emailFreshReadinessLink", () => {
   });
 
   /**
-   * The guard that stops a *dead* URL driving a delivery on the live one. It
-   * also protects the booking's live-capability cap: issuing retires the oldest
-   * live row past `MAX_LIVE_CAPABILITIES_PER_PURPOSE`, so an unguarded rescue
-   * loop is a way to push a diver's working link out from under them.
+   * The guard that stops a *dead* URL driving a delivery on the live one: the
+   * diver's mailed link still works, so nothing is sent.
    */
-  it("refuses to reissue while the booking still holds a live link", async () => {
+  it("refuses to reissue while the booking still holds a live delivered link", async () => {
     const { db, shop, bookingId, token } = await bookingWithDeadLink();
-    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" });
+    await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+      delivered: true,
+    });
 
     expect(await emailFreshReadinessLink(db, token)).toBe("current_link_live");
     expect(sent).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Only the delivered link counts (security review of #2711, finding 1). The
+   * browser's undelivered link is not in the diver's inbox, so a booking whose
+   * mailed link died while that one lived on must still get a fresh mail.
+   */
+  it("mails a fresh link when only the browser's undelivered link is alive", async () => {
+    const { db, shop, bookingId, token } = await bookingWithDeadLink();
+    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" });
+
+    expect(await emailFreshReadinessLink(db, token)).toBe("sent");
+    expect(sent).toHaveBeenCalledTimes(1);
   });
 
   it("says unavailable for a token that was never ours", async () => {
@@ -205,7 +221,12 @@ describe("emailFreshReadinessLink", () => {
    */
   it("decides every refusal before anything is issued or spent", async () => {
     const { db, shop, bookingId, token } = await bookingWithDeadLink();
-    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" });
+    await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+      delivered: true,
+    });
 
     const plan = await planReadinessLinkRescue(db, token);
     expect(plan).toEqual({ ok: false, reason: "current_link_live" });

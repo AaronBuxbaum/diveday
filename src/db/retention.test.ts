@@ -267,43 +267,38 @@ describe("pruneExpiredRecords", () => {
     const { db, shop, entry } = await retentionContext();
     const window = RETENTION_DAYS.booking_capabilities;
     const live = new Date(NOW.getTime() + 60 * 60 * 1000);
-    const link = (tokenHash: string, expiresAt: Date, revokedAt: Date | null = null) => ({
+    // One live row per booking, purpose and audience (issue #2711), so each
+    // unrevoked row takes its own purpose; rows are told apart by id.
+    type Purpose = "readiness" | "confirm" | "claim";
+    const link = (purpose: Purpose, expiresAt: Date, revokedAt: Date | null = null) => ({
       shopId: shop.id,
       bookingId: entry.booking.id,
-      purpose: "readiness" as const,
-      tokenHash,
+      purpose,
+      keyVersion: 1,
       issuedAt: daysAgo(window * 4),
       expiresAt,
       revokedAt,
     });
-    await db.insert(schema.bookingCapabilities).values([
-      link("cap-long-dead", daysAgo(window + 1)),
-      link("cap-long-dead-revoked", daysAgo(window + 1), daysAgo(window + 30)),
-      link("cap-recently-dead", daysAgo(window - 1)),
-      link("cap-still-live", live),
+    const labelById = new Map<string, string>();
+    for (const [label, row] of [
+      ["cap-long-dead", link("readiness", daysAgo(window + 1))],
+      ["cap-long-dead-revoked", link("readiness", daysAgo(window + 1), daysAgo(window + 30))],
+      ["cap-recently-dead", link("confirm", daysAgo(window - 1))],
+      ["cap-still-live", link("claim", live)],
       // Revoked long ago, issued long ago, not yet expired: kept. Pruning on
       // `revoked_at` or on age is exactly the mistake this row is here for.
-      link("cap-revoked-unexpired", live, daysAgo(window * 2)),
-    ]);
+      ["cap-revoked-unexpired", link("readiness", live, daysAgo(window * 2))],
+    ] as const) {
+      const [inserted] = await db.insert(schema.bookingCapabilities).values(row).returning();
+      if (inserted) labelById.set(inserted.id, label);
+    }
 
     const summary = await pruneExpiredRecords(db, { now: NOW });
     // At least ours: the seed may hold links of its own that are long dead.
     expect(outcomeFor(summary, "booking_capabilities").deleted).toBeGreaterThanOrEqual(2);
 
-    const mine = new Set([
-      "cap-long-dead",
-      "cap-long-dead-revoked",
-      "cap-recently-dead",
-      "cap-still-live",
-      "cap-revoked-unexpired",
-    ]);
-    const remaining = (
-      await db
-        .select({ tokenHash: schema.bookingCapabilities.tokenHash })
-        .from(schema.bookingCapabilities)
-    )
-      .map((row) => row.tokenHash)
-      .filter((hash) => mine.has(hash))
+    const remaining = (await db.select().from(schema.bookingCapabilities))
+      .flatMap((row) => labelById.get(row.id) ?? [])
       .sort();
     expect(remaining).toEqual(["cap-recently-dead", "cap-revoked-unexpired", "cap-still-live"]);
   });

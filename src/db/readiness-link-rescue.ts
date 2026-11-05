@@ -6,7 +6,7 @@ import { notificationProviderSignal } from "@/lib/notifications";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import {
-  hasLiveReadinessCapability,
+  hasLiveDeliveredReadinessLink,
   issueBookingCapability,
   staleReadinessBookingForResend,
 } from "./booking-capabilities";
@@ -47,13 +47,12 @@ export type ReadinessLinkRescue =
  *   detail, not even the diver's name. What a bearer of a dead link can do here
  *   is *trigger a delivery to its owner*, which is what the booking's own
  *   confirmation email already did, and no more.
- * - **A live link is not replaced.** `hasLiveReadinessCapability` is the guard:
- *   if the booking already holds a working readiness capability, this reports
- *   `current_link_live` and issues nothing. Whoever holds a *dead* URL should
- *   not be able to drive a delivery on the live one, and — because issuing
- *   retires the oldest live capability past
- *   `MAX_LIVE_CAPABILITIES_PER_PURPOSE` — should not be able to push against
- *   that cap either.
+ * - **A live link is not re-sent.** `hasLiveDeliveredReadinessLink` is the
+ *   guard: if the booking's mailed readiness link still works, this reports
+ *   `current_link_live` and sends nothing, so whoever holds a *dead* URL cannot
+ *   drive a delivery on the live one. Only the delivered link counts: a
+ *   booking left with only the browser's link is mailed a fresh one (issue
+ *   #2711).
  *
  * A cancelled booking is refused by `issueBookingCapability`, which is the one
  * place that rule lives; a token that resolves to nothing is `unavailable`.
@@ -138,8 +137,8 @@ export async function planReadinessLinkRescue(
   if (!context.email) return { ok: false, reason: "no_email" };
 
   // Only now, with the booking known good, does a live capability mean a link
-  // that actually works. See `hasLiveReadinessCapability`.
-  if (await hasLiveReadinessCapability(db, { ...stale, now })) {
+  // that actually works. See `hasLiveDeliveredReadinessLink`.
+  if (await hasLiveDeliveredReadinessLink(db, { ...stale, now })) {
     return { ok: false, reason: "current_link_live" };
   }
 
@@ -190,7 +189,7 @@ export async function sendPlannedReadinessLink(
       expectedEmail: plan.email,
     },
     async (tx) => {
-      if (await hasLiveReadinessCapability(tx, { ...plan, now })) return "raced" as const;
+      if (await hasLiveDeliveredReadinessLink(tx, { ...plan, now })) return "raced" as const;
       const issued = await issueBookingCapability(tx, {
         shopId: plan.shopId,
         bookingId: plan.bookingId,

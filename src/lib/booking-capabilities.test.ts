@@ -4,8 +4,6 @@ import {
   CAPABILITY_MIN_TTL_MS,
   CAPABILITY_TRIP_GRACE_MS,
   capabilityExpiryFor,
-  createCapabilityToken,
-  hashCapabilityToken,
   readinessLinkPath,
 } from "./booking-capabilities";
 
@@ -81,32 +79,6 @@ describe("capabilityExpiryFor", () => {
     const tripEndsAt = new Date(now.getTime() + CAPABILITY_MIN_TTL_MS - CAPABILITY_TRIP_GRACE_MS);
     const expiry = capabilityExpiryFor(tripEndsAt, now);
     expect(expiry.getTime()).toBe(now.getTime() + CAPABILITY_MIN_TTL_MS);
-  });
-});
-
-describe("createCapabilityToken", () => {
-  it("generates a non-empty, URL-safe, unpredictable token each call", () => {
-    const a = createCapabilityToken();
-    const b = createCapabilityToken();
-    expect(a).not.toBe(b);
-    expect(a.length).toBeGreaterThan(20);
-    expect(a).toMatch(/^[A-Za-z0-9_-]+$/);
-  });
-});
-
-describe("hashCapabilityToken", () => {
-  it("is deterministic for the same input", () => {
-    const token = "some-example-token";
-    expect(hashCapabilityToken(token)).toBe(hashCapabilityToken(token));
-  });
-
-  it("differs for different inputs", () => {
-    expect(hashCapabilityToken("token-a")).not.toBe(hashCapabilityToken("token-b"));
-  });
-
-  it("never stores the raw token as its own hash", () => {
-    const token = "some-example-token";
-    expect(hashCapabilityToken(token)).not.toBe(token);
   });
 });
 

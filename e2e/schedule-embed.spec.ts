@@ -107,18 +107,14 @@ test("booking through the embed keeps embed mode through the confirmation", asyn
   const backLink = page.getByRole("link", { name: "Back to the schedule" });
   await expect(backLink).toHaveAttribute("href", "/s/blue-mantis/embed/calendar");
 
-  // The one door out of the frame, followed for real. It points at a *route*
-  // rather than a `/ready/<token>` minted while this page rendered: a
-  // readiness token is stored hashed, so the page cannot read an existing one
-  // back, and minting per render wrote a row per reload and eventually
-  // retired the readiness link `bookSpot` had already emailed. The route
-  // trades this booking's confirm token for the capability at tap time.
+  // The one door out of the frame, followed for real. The page reads the
+  // booking's live browser readiness link, the one the booking action
+  // issued, and renders it; a reload writes nothing (issue #2711).
   const readinessLink = page.getByRole("link", { name: /readiness page/ });
-  await expect(readinessLink).toHaveAttribute("href", /\/ready\?booking=/);
+  await expect(readinessLink).toHaveAttribute("href", /^\/ready\/c\d\./);
   await readinessLink.click();
-  // Landed on a real capability page — the token in the path is the one the
-  // route just issued, and it opens the readiness page rather than the
-  // "this link isn't available" notice a dead capability would render.
+  // Landed on a real capability page, which opens the readiness page rather
+  // than the "this link isn't available" notice a dead capability would render.
   await expect(page).toHaveURL(/\/ready\/[^/?]+$/);
   await expect(threadStatus(page)).toBeVisible();
 });
