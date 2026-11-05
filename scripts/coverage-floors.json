@@ -58,13 +58,19 @@
         "src/db/manifests.ts": "88.88 -> 87.91",
         "src/db/roll-call-alerts.ts": "90.47 -> 89.02"
       }
+    },
+    {
+      "why": "Issue #2701 (#3882): bookings.ts dropped the covered `if (!turnedAway)` desk-event branch (the turned-away line now rides the trail entry), so the branch count fell and the ratio moved by under one branch; the realign and desk-line calls it gained are covered. Measured by CI on #3882 at 25febf9e, copied from the job log",
+      "files": {
+        "src/db/bookings.ts": "89.47 -> 89.43"
+      }
     }
   ],
   "src/db/aboard-at-sea.ts": 94.82,
   "src/db/account-security.ts": 94.2,
   "src/db/anonymize.ts": 92.12,
   "src/db/boarding-certification-snapshot.ts": 83.33,
-  "src/db/bookings.ts": 89.47,
+  "src/db/bookings.ts": 89.43,
   "src/db/certification-evidence.ts": 50,
   "src/db/certification-junior.ts": 88.23,
   "src/db/certifications-in-training.ts": 50,
