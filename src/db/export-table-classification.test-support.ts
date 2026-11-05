@@ -127,7 +127,6 @@ export const EXCLUDED_TABLES = [
   "assist_results", // what an assist answered (review chips, themes, the Monday read): derived, and asked again on demand
   "weekly_digest_sends", // the Monday email's send claims — delivery plumbing, never exported
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
-  "shop_shore_alert_tokens", // the shore contact's confirm links (H-20261014-stale-roll-call-recipients): bearer credentials, same reasoning
   // The shop's own Meta access token (sealed) plus the provider linkage around
   // it. Never exported, for both reasons already on this list: it is a live
   // credential like user_accounts, and a phone number id is provider linkage

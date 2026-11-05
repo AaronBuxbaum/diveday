@@ -1,5 +1,4 @@
-import { and, eq, exists, gt, isNotNull, isNull, sql } from "drizzle-orm";
-import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
+import { and, eq, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -7,6 +6,8 @@ import { SHORE_ALERT_CONFIRMATION_TTL_MS } from "@/lib/shore-alert-contact";
 import { shopPath } from "@/lib/staff-notices";
 import {
   issueCapability,
+  mintCapability,
+  openCapability,
   spendCapability,
   verifyCapability,
   withdrawUnspentCapabilities,
@@ -14,18 +15,19 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { sendNotification } from "./notifications";
 import { ownerLogins } from "./owner-logins";
-import { activityEvents, shopShoreAlertTokens, shops } from "./schema";
+import { activityEvents, shops } from "./schema";
 
 /**
  * **The shore contact's two links** (H-20261014-stale-roll-call-recipients
- * review): `confirm` in `shop_shore_alert_tokens`, and `stop`, a
- * `shore_alert_stop` capability (issue #3721).
+ * review), both `capabilities` rows bound to the address they were mailed to
+ * (issue #3721): `shore_alert_confirm` and `shore_alert_stop`.
  *
  * `confirm` proves the inbox is the shore contact's and that they agreed: the
  * link goes to the address the shop saved and nowhere else, and consuming it
  * sets `shops.shore_alert_confirmed_at` only while the shop still names that
  * address -- the shape `src/db/shop-contact-email.ts` gives the front desk's
- * address (issue #1288), and for the same reasons. `stop` is in every alert:
+ * address (issue #1288), and for the same reasons. It expires, works once,
+ * and a fresh one revokes the outstanding one. `stop` is in every alert:
  * using it clears the shop's shore contact, again only while the shop still
  * names the address the alert went to, so an old alert's link cannot take a
  * later, different address off the shop.
@@ -35,7 +37,7 @@ export type IssuedShoreAlertConfirmation = { token: string; tokenId: string; exp
 
 const lower = (email: string) => email.trim().toLowerCase();
 
-/** Mints a fresh confirmation link for the shop's address, superseding any outstanding one. */
+/** Mints a fresh confirmation link for the shop's address, revoking any outstanding one. */
 export async function issueShoreAlertConfirmation(
   db: AppDb,
   input: { shopId: string; email: string; now?: Date },
@@ -49,49 +51,26 @@ export async function issueShoreAlertConfirmation(
       .from(shops)
       .where(eq(shops.id, input.shopId))
       .for("no key update");
-    await tx
-      .update(shopShoreAlertTokens)
-      .set({ supersededAt: now })
-      .where(
-        and(
-          eq(shopShoreAlertTokens.shopId, input.shopId),
-          eq(shopShoreAlertTokens.purpose, "confirm"),
-          isNull(shopShoreAlertTokens.usedAt),
-          isNull(shopShoreAlertTokens.supersededAt),
-        ),
-      );
-    const token = createBearerToken();
     const expiresAt = new Date(now.getTime() + SHORE_ALERT_CONFIRMATION_TTL_MS);
-    const [row] = await tx
-      .insert(shopShoreAlertTokens)
-      .values({
-        shopId: input.shopId,
-        purpose: "confirm",
-        email: lower(input.email),
-        tokenHash: hashBearerToken(token),
-        expiresAt,
-      })
-      .returning({ id: shopShoreAlertTokens.id });
-    if (!row) throw new Error("Failed to issue shore alert confirmation token");
-    return { token, tokenId: row.id, expiresAt };
+    const { token, id } = await mintCapability(tx, {
+      purpose: "shore_alert_confirm",
+      shopId: input.shopId,
+      subjectId: input.email,
+      expiresAt,
+      now,
+    });
+    return { token, tokenId: id, expiresAt };
   });
 }
 
-function liveConfirmToken(token: string, now: Date) {
-  return and(
-    eq(shopShoreAlertTokens.tokenHash, hashBearerToken(token)),
-    eq(shopShoreAlertTokens.purpose, "confirm"),
-    isNull(shopShoreAlertTokens.usedAt),
-    isNull(shopShoreAlertTokens.supersededAt),
-    gt(shopShoreAlertTokens.expiresAt, now),
-  );
-}
-
-/** The shop still names the address this link was minted for. */
-function shopStillNamesAddress() {
-  return exists(
-    sql`(select 1 from ${shops} where ${shops.id} = ${shopShoreAlertTokens.shopId} and lower(${shops.shoreAlertEmail}) = ${shopShoreAlertTokens.email})`,
-  );
+/** The shop's name while it still names `address`, the address a link was minted for. */
+async function shopNaming(db: DbExecutor, shopId: string, address: string) {
+  const [shop] = await db
+    .select({ name: shops.name })
+    .from(shops)
+    .where(and(eq(shops.id, shopId), sql`lower(${shops.shoreAlertEmail}) = ${address}`))
+    .limit(1);
+  return shop ?? null;
 }
 
 /**
@@ -102,18 +81,14 @@ export async function checkShoreAlertConfirmation(
   db: DbExecutor,
   input: { token: string; now?: Date },
 ): Promise<{ shopId: string; shopName: string; email: string } | null> {
-  const now = input.now ?? nowDate();
-  const [row] = await db
-    .select({
-      shopId: shopShoreAlertTokens.shopId,
-      shopName: shops.name,
-      email: shopShoreAlertTokens.email,
-    })
-    .from(shopShoreAlertTokens)
-    .innerJoin(shops, eq(shops.id, shopShoreAlertTokens.shopId))
-    .where(and(liveConfirmToken(input.token, now), shopStillNamesAddress()))
-    .limit(1);
-  return row ?? null;
+  const live = await openCapability(db, {
+    purpose: "shore_alert_confirm",
+    token: input.token,
+    now: input.now,
+  });
+  if (!live) return null;
+  const shop = await shopNaming(db, live.shopId, live.subjectId);
+  return shop ? { shopId: live.shopId, shopName: shop.name, email: live.subjectId } : null;
 }
 
 /** Whether this exact confirmation link was consumed: the page's only success signal. */
@@ -121,19 +96,17 @@ export async function wasShoreAlertConfirmed(
   db: DbExecutor,
   input: { token: string },
 ): Promise<{ shopName: string; email: string } | null> {
-  const [row] = await db
-    .select({ shopName: shops.name, email: shopShoreAlertTokens.email })
-    .from(shopShoreAlertTokens)
-    .innerJoin(shops, eq(shops.id, shopShoreAlertTokens.shopId))
-    .where(
-      and(
-        eq(shopShoreAlertTokens.tokenHash, hashBearerToken(input.token)),
-        eq(shopShoreAlertTokens.purpose, "confirm"),
-        isNotNull(shopShoreAlertTokens.usedAt),
-      ),
-    )
+  const known = await verifyCapability(db, {
+    purpose: "shore_alert_confirm",
+    token: input.token,
+  });
+  if (!known?.usedAt) return null;
+  const [shop] = await db
+    .select({ name: shops.name })
+    .from(shops)
+    .where(eq(shops.id, known.shopId))
     .limit(1);
-  return row ?? null;
+  return shop ? { shopName: shop.name, email: known.subjectId } : null;
 }
 
 /**
@@ -144,69 +117,45 @@ export async function isShoreAlertToken(
   db: DbExecutor,
   input: { token: string },
 ): Promise<boolean> {
-  const [row] = await db
-    .select({ id: shopShoreAlertTokens.id })
-    .from(shopShoreAlertTokens)
-    .where(
-      and(
-        eq(shopShoreAlertTokens.tokenHash, hashBearerToken(input.token)),
-        eq(shopShoreAlertTokens.purpose, "confirm"),
-      ),
-    )
-    .limit(1);
-  return row !== undefined;
+  return (
+    (await verifyCapability(db, { purpose: "shore_alert_confirm", token: input.token })) !== null
+  );
 }
 
-/** Thrown inside the consume transaction to roll the token claim back. */
-const ADDRESS_CHANGED_UNDER_CLAIM = Symbol("diveday:shore-alert-address-changed");
-
 /**
- * Claims the link and stamps the shop confirmed in one transaction, with the
+ * Spends the link and stamps the shop confirmed in one transaction, with the
  * shop row locked first, exactly as `consumeShopContactEmailConfirmation`
- * does: a concurrent save of a new address serialises behind it, and a stamp
- * that matched nothing rolls the claim back.
+ * does: a concurrent save of a new address serialises behind it, and a link
+ * whose address the shop no longer names is left unspent and stamps nothing.
  */
 export async function consumeShoreAlertConfirmation(
   db: AppDb,
   input: { token: string; now?: Date },
 ): Promise<{ shopId: string } | null> {
   const now = input.now ?? nowDate();
-  try {
-    return await db.transaction(async (tx) => {
-      const [live] = await tx
-        .select({ shopId: shopShoreAlertTokens.shopId })
-        .from(shopShoreAlertTokens)
-        .where(liveConfirmToken(input.token, now))
-        .limit(1);
-      if (!live) return null;
-      await tx
-        .select({ id: shops.id })
-        .from(shops)
-        .where(eq(shops.id, live.shopId))
-        .for("no key update");
-      const [claimed] = await tx
-        .update(shopShoreAlertTokens)
-        .set({ usedAt: now })
-        .where(and(liveConfirmToken(input.token, now), shopStillNamesAddress()))
-        .returning({ shopId: shopShoreAlertTokens.shopId, email: shopShoreAlertTokens.email });
-      if (!claimed) return null;
-      const [stamped] = await tx
-        .update(shops)
-        .set({ shoreAlertConfirmedAt: now })
-        .where(
-          and(
-            eq(shops.id, claimed.shopId),
-            sql`lower(${shops.shoreAlertEmail}) = ${claimed.email}`,
-          ),
-        )
-        .returning({ id: shops.id });
-      if (!stamped) throw ADDRESS_CHANGED_UNDER_CLAIM;
-      return { shopId: claimed.shopId };
+  return db.transaction(async (tx) => {
+    const live = await openCapability(tx, {
+      purpose: "shore_alert_confirm",
+      token: input.token,
+      now,
     });
-  } catch (error) {
-    if (error === ADDRESS_CHANGED_UNDER_CLAIM) return null;
-    throw error;
-  }
+    if (!live) return null;
+    await tx
+      .select({ id: shops.id })
+      .from(shops)
+      .where(eq(shops.id, live.shopId))
+      .for("no key update");
+    // Checked under the lock, before the spend: a stale link stays unspent.
+    if (!(await shopNaming(tx, live.shopId, live.subjectId))) return null;
+    const claimed = await spendCapability(tx, {
+      purpose: "shore_alert_confirm",
+      token: input.token,
+      now,
+    });
+    if (!claimed) return null;
+    await tx.update(shops).set({ shoreAlertConfirmedAt: now }).where(eq(shops.id, claimed.shopId));
+    return { shopId: claimed.shopId };
+  });
 }
 
 /**

@@ -1,26 +1,5 @@
 import type { DbExecutor } from "./client";
-import { capabilities, shopShoreAlertTokens } from "./schema";
-
-/**
- * One `shop_shore_alert_tokens` row (H-20261014-stale-roll-call-recipients) for the guards that seed every
- * table: a confirm link, at the given creation time and expiring a day later.
- */
-export async function insertShoreAlertToken(
-  db: DbExecutor,
-  input: { shopId: string; tokenHash: string; createdAt: Date },
-): Promise<string> {
-  const [row] = await db
-    .insert(shopShoreAlertTokens)
-    .values({
-      ...input,
-      purpose: "confirm",
-      email: "shore@example.com",
-      expiresAt: new Date(input.createdAt.getTime() + 24 * 60 * 60 * 1000),
-    })
-    .returning({ id: shopShoreAlertTokens.id });
-  if (!row) throw new Error("fixture insert returned nothing");
-  return row.id;
-}
+import { capabilities } from "./schema";
 
 /**
  * One `shore_alert_stop` capability (issue #3721) for the retention guard: the

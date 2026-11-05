@@ -83,7 +83,6 @@ import {
   safetyDrillParticipants,
   safetyDrills,
   shopBackupDeliveryClaims,
-  shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
   shopTextTranslations,
@@ -1282,7 +1281,15 @@ export async function clearDemoSchedule(
       shoreAlertConfirmedAt: null,
     })
     .where(eq(shops.id, shopId));
-  await db.delete(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shopId));
+  // The shore contact's links go with the address (issue #3721).
+  await db
+    .delete(capabilities)
+    .where(
+      and(
+        eq(capabilities.shopId, shopId),
+        inArray(capabilities.purpose, ["shore_alert_confirm", "shore_alert_stop"]),
+      ),
+    );
   // Anything a spec connected goes here; the re-seed half puts back the one
   // connection the canonical demo is configured with.
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));

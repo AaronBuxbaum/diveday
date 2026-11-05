@@ -22,8 +22,9 @@ import { trips } from "./trips";
 /**
  * Outbound and inbound messaging: deliveries, the send queue, rate limits,
  * inbound messages and staff replies, WhatsApp senders, SMS opt-outs, push
- * subscriptions and the confirmation tokens. The email-unsubscribe links are
- * rows of `capabilities` (`./capabilities.ts`).
+ * subscriptions and the front desk's confirmation tokens. The email-unsubscribe
+ * links and the shore contact's links are rows of `capabilities`
+ * (`./capabilities.ts`).
  */
 
 /**
@@ -53,48 +54,6 @@ export const shopContactEmailConfirmationTokens = pgTable(
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("shop_contact_email_confirmation_tokens_shop_idx").on(table.shopId)],
-);
-
-/**
- * **The shore contact's confirm link** (H-20261014-stale-roll-call-recipients review): the one-time
- * link a saved address receives before any alert goes to it. The stop link
- * every alert carries is a `shore_alert_stop` capability (issue #3721); the
- * `'stop'` value the purpose check still admits is retired and nothing writes
- * it, and it leaves with the check once the previous release no longer does.
- *
- * A confirm link has the same lifecycle as the front-desk address's
- * (`shopContactEmailConfirmationTokens`): a fresh mint supersedes the
- * outstanding one, consuming is one-time, it expires, and it confirms only
- * while the shop still names the address it was minted for. Rows age out with
- * H-20260730-evidence-retention-period-deletion's retention prune.
- *
- * `email` is lower-cased: the address the link vouches for, and the handle an
- * erasure sweeps it by.
- */
-export const shopShoreAlertTokens = pgTable(
-  "shop_shore_alert_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    purpose: text("purpose").$type<"confirm">().notNull(),
-    email: text("email").notNull(),
-    tokenHash: text("token_hash").notNull().unique(),
-    /** The confirm link's deadline. */
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
-    usedAt: timestamp("used_at", { withTimezone: true }),
-    supersededAt: timestamp("superseded_at", { withTimezone: true }),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [
-    index("shop_shore_alert_tokens_shop_idx").on(table.shopId),
-    check("shop_shore_alert_tokens_purpose", sql`${table.purpose} in ('confirm', 'stop')`),
-    check(
-      "shop_shore_alert_tokens_expiry",
-      sql`(${table.purpose} = 'confirm') = (${table.expiresAt} is not null)`,
-    ),
-  ],
 );
 
 /** Which message a `notification_deliveries` row records. */

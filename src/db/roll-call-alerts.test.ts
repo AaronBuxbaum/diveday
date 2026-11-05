@@ -24,10 +24,10 @@ afterEach(() => {
 
 import {
   bookings,
+  capabilities,
   people,
   personRoles,
   rollCallEvents,
-  shopShoreAlertTokens,
   shops,
   tripAssignments,
   trips,
@@ -391,7 +391,9 @@ describe("sendStaleRollCallAlerts", () => {
       const { sent, provider } = recorder();
       await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider });
       expect(toShore(sent)).toEqual([]);
-      expect(await db.select().from(shopShoreAlertTokens)).toEqual([]);
+      expect(
+        await db.select().from(capabilities).where(eq(capabilities.purpose, "shore_alert_stop")),
+      ).toEqual([]);
     });
 
     it("cannot hold an address without its consent, or a confirmation without an address", async () => {

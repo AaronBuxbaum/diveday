@@ -1,7 +1,8 @@
 # 20261019-single-address-token-table — Address confirmations and alerts use purpose-isolated bearer tokens
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-11-05** (#3721)
 - **Date:** 2026-10-19
+- **Amended 2026-11-05 (#3721):** the "single universal capabilities table" rejected below is now the direction (#2710): one `capabilities` table with typed subject columns (real foreign keys), a purpose in every verify predicate, and a retention arm per purpose kept the three reasons it was rejected for. The shore contact's confirm link has moved there as `shore_alert_confirm`, the first expiring purpose (`expires_at`, superseded by `revoked_at`), and `shop_shore_alert_tokens` is no longer declared (its drop follows one release later). Purpose isolation, superseding and one-time consumption below are unchanged. `account_tokens` and `shop_contact_email_confirmation_tokens` are still their own tables.
 
 ## Context
 

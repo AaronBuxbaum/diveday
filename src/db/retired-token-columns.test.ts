@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 
 /**
- * **Retired token columns are gone from the database** (#3901, #3903).
+ * **Retired token columns are gone from the database** (#3901, #3903, #3721).
  * Booking and waiver links are derived from their row (ADR
  * 20261104-derived-booking-link-tokens; ADR
  * 20260820-waiver-links-are-reused-not-reissued, amended), so no table keeps a
@@ -17,6 +17,9 @@ const RETIRED: ReadonlyArray<readonly [table: string, column: string]> = [
   ["booking_capabilities", "token_hash"],
   ["booking_capabilities", "token_sealed"],
   ["waiver_records", "token_sealed"],
+  // The unsubscribe and stop links layer 8 of #3721 moved onto `capabilities`.
+  ["weekly_digest_sends", "unsubscribe_token_hash"],
+  ["shops", "bookkeeper_stop_token_hash"],
 ];
 
 describe("the retired token columns", () => {
