@@ -23,7 +23,8 @@ export function parseArgs(argv) {
     if (arg === "--dry-run") options.dryRun = true;
     else if (arg === "--help" || arg === "-h") options.help = true;
     else if (arg === "--branch") {
-      const value = argv[(i += 1)];
+      i += 1;
+      const value = argv[i];
       if (!value || value.startsWith("--")) throw new Error("--branch needs a branch name");
       options.branch = value;
     } else if (arg.startsWith("--branch=")) options.branch = arg.slice("--branch=".length);
@@ -67,7 +68,9 @@ function listRuns(status, branch) {
   for (let page = 1; ; page += 1) {
     const result = gh([listEndpoint(status, { branch, page }), "--jq", ".workflow_runs"]);
     if (result.status !== 0) {
-      throw new Error(`listing ${status} runs failed: ${(result.stderr || "").trim() || `exit ${result.status}`}`);
+      throw new Error(
+        `listing ${status} runs failed: ${(result.stderr || "").trim() || `exit ${result.status}`}`,
+      );
     }
     const batch = JSON.parse(result.stdout || "[]");
     runs.push(...batch);

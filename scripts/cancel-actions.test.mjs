@@ -1,13 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { cancelEndpoint, describeRun, listEndpoint, mergeRuns, parseArgs } from "./cancel-actions.mjs";
+import {
+  cancelEndpoint,
+  describeRun,
+  listEndpoint,
+  mergeRuns,
+  parseArgs,
+} from "./cancel-actions.mjs";
 
 describe("parseArgs", () => {
   it("defaults to a real run on every branch", () => {
     expect(parseArgs([])).toEqual({ dryRun: false, branch: null, help: false });
   });
   it("reads --dry-run and both --branch spellings", () => {
-    expect(parseArgs(["--dry-run", "--branch", "main"])).toMatchObject({ dryRun: true, branch: "main" });
+    expect(parseArgs(["--dry-run", "--branch", "main"])).toMatchObject({
+      dryRun: true,
+      branch: "main",
+    });
     expect(parseArgs(["--branch=claude/x"]).branch).toBe("claude/x");
   });
   it("refuses a missing branch name and unknown flags", () => {
@@ -31,15 +40,18 @@ describe("endpoints", () => {
 
 describe("mergeRuns", () => {
   it("keeps one entry per run id, in id order", () => {
-    const merged = mergeRuns([[{ id: 3 }, { id: 1 }], [{ id: 3 }, { id: 2 }]]);
+    const merged = mergeRuns([
+      [{ id: 3 }, { id: 1 }],
+      [{ id: 3 }, { id: 2 }],
+    ]);
     expect(merged.map((r) => r.id)).toEqual([1, 2, 3]);
   });
 });
 
 describe("describeRun", () => {
   it("names the run, status and branch", () => {
-    expect(describeRun({ id: 9, name: "CI", status: "queued", head_branch: "main", html_url: "u" })).toBe(
-      "#9 CI [queued] main u",
-    );
+    expect(
+      describeRun({ id: 9, name: "CI", status: "queued", head_branch: "main", html_url: "u" }),
+    ).toBe("#9 CI [queued] main u");
   });
 });
