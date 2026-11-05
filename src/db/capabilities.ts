@@ -1,6 +1,11 @@
 import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
-import { CAPABILITY_POLICY, type CapabilityPurpose, capabilitySubject } from "@/lib/capabilities";
+import {
+  CAPABILITY_POLICY,
+  type CapabilityPurpose,
+  capabilityExpiry,
+  capabilitySubject,
+} from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import { capabilities, shops } from "./schema";
@@ -81,8 +86,8 @@ function unrevokedAndUnexpired(now: Date) {
  * never stored: the row keeps only its digest. For a `shop_address` purpose
  * `subjectId` is the address the link is mailed to.
  *
- * A purpose that expires (`lifetime: "expires"`) needs `expiresAt`, and no
- * other purpose takes one. A purpose that `supersedes` revokes every live link
+ * A purpose that expires (`lifetime: "expires"`) gets `expires_at` from its
+ * policy's `ttlMs` at `now`; a caller cannot choose a deadline. A purpose that `supersedes` revokes every live link
  * of that purpose the shop holds before inserting, so only the newest works;
  * the mint locks the shop row first (inside the caller's transaction, if
  * it has one), so two mints in flight cannot both leave a live link. A purpose that `adds` leaves earlier links working.
@@ -98,7 +103,6 @@ export type IssueCapabilityInput = {
   purpose: CapabilityPurpose;
   shopId: string;
   subjectId: string;
-  expiresAt?: Date;
   now?: Date;
 };
 
@@ -106,11 +110,10 @@ export type IssueCapabilityInput = {
 export async function mintCapability(
   db: DbExecutor,
   input: IssueCapabilityInput,
-): Promise<{ token: string; id: string }> {
+): Promise<{ token: string; id: string; expiresAt: Date | null }> {
   const policy = CAPABILITY_POLICY[input.purpose];
-  if ((policy.lifetime === "expires") !== (input.expiresAt !== undefined)) {
-    throw new Error(`${input.purpose}: expiresAt is required exactly when the purpose expires`);
-  }
+  const now = input.now ?? nowDate();
+  const expiresAt = capabilityExpiry(input.purpose, now);
   if (policy.reissue === "supersedes") {
     // The invariant (one live link per shop per purpose) belongs to this module,
     // not to its callers: lock the shop row so two mints in flight serialise
@@ -122,7 +125,7 @@ export async function mintCapability(
       .for("no key update");
     await db
       .update(capabilities)
-      .set({ revokedAt: input.now ?? nowDate() })
+      .set({ revokedAt: now })
       .where(
         and(
           eq(capabilities.purpose, input.purpose),
@@ -140,11 +143,11 @@ export async function mintCapability(
       shopId: input.shopId,
       ...subjectColumns(input.purpose, input.subjectId),
       tokenHash: hashBearerToken(token),
-      expiresAt: input.expiresAt ?? null,
+      expiresAt,
     })
     .returning({ id: capabilities.id });
   if (!row) throw new Error(`Failed to issue a ${input.purpose} capability`);
-  return { token, id: row.id };
+  return { token, id: row.id, expiresAt };
 }
 
 export type VerifiedCapability = {

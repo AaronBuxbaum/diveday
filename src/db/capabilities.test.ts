@@ -1,11 +1,21 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
-import { CAPABILITY_POLICY, CAPABILITY_PURPOSES, type CapabilityPurpose } from "@/lib/capabilities";
-import { nowDate } from "@/lib/clock";
+import {
+  CAPABILITY_POLICY,
+  CAPABILITY_PURPOSES,
+  type CapabilityPurpose,
+  capabilityExpiry,
+} from "@/lib/capabilities";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { issueCapability, openCapability, spendCapability, verifyCapability } from "./capabilities";
+import {
+  issueCapability,
+  mintCapability,
+  openCapability,
+  spendCapability,
+  verifyCapability,
+} from "./capabilities";
 import { mergeDiverRecords } from "./diver-merge";
 import { askAnytime } from "./interests";
 import { findOrCreatePerson } from "./people";
@@ -51,13 +61,6 @@ function subjectFor(
   }
 }
 
-/** A deadline for a purpose that expires, and none for one that does not. */
-function lifetimeFor(purpose: CapabilityPurpose): { expiresAt?: Date } {
-  return CAPABILITY_POLICY[purpose].lifetime === "expires"
-    ? { expiresAt: new Date(nowDate().getTime() + 60 * 60 * 1000) }
-    : {};
-}
-
 describe("issueCapability and verifyCapability", () => {
   it.each(CAPABILITY_PURPOSES)(
     "%s: verifies under its own purpose and no other",
@@ -69,7 +72,6 @@ describe("issueCapability and verifyCapability", () => {
         purpose,
         shopId: shop.id,
         subjectId,
-        ...lifetimeFor(purpose),
       });
 
       expect(await verifyCapability(db, { purpose, token })).toMatchObject({
@@ -91,7 +93,6 @@ describe("issueCapability and verifyCapability", () => {
         purpose,
         shopId: shop.id,
         subjectId: subjectFor(purpose, ids),
-        ...lifetimeFor(purpose),
       });
       const [row] = await db
         .select()
@@ -194,21 +195,26 @@ describe("spendCapability", () => {
 describe("a purpose that expires and supersedes", () => {
   const purpose = "shore_alert_confirm" as const;
   const at = new Date("2026-10-15T12:00:00Z");
-  const later = new Date("2026-10-22T12:00:00Z");
+  const later = new Date(at.getTime() + CAPABILITY_POLICY.shore_alert_confirm.ttlMs);
 
-  it("refuses a mint without a deadline, and a deadline on a purpose that never expires", async () => {
+  it("sets the deadline from the policy's ttl, and none on a purpose that never expires", async () => {
     const { db, shop } = ctx;
-    await expect(
-      issueCapability(db, { purpose, shopId: shop.id, subjectId: ADDRESS }),
-    ).rejects.toThrow(/expiresAt/);
-    await expect(
-      issueCapability(db, {
-        purpose: "shore_alert_stop",
-        shopId: shop.id,
-        subjectId: ADDRESS,
-        expiresAt: later,
-      }),
-    ).rejects.toThrow(/expiresAt/);
+    const minted = await mintCapability(db, {
+      purpose,
+      shopId: shop.id,
+      subjectId: ADDRESS,
+      now: at,
+    });
+    expect(minted.expiresAt).toEqual(later);
+    const stop = await mintCapability(db, {
+      purpose: "shore_alert_stop",
+      shopId: shop.id,
+      subjectId: ADDRESS,
+      now: at,
+    });
+    expect(stop.expiresAt).toBeNull();
+    expect(capabilityExpiry("shore_alert_stop", at)).toBeNull();
+    expect(capabilityExpiry(purpose, at)).toEqual(later);
   });
 
   it("opens and spends before its deadline, and neither at or after it", async () => {
@@ -217,7 +223,6 @@ describe("a purpose that expires and supersedes", () => {
       purpose,
       shopId: shop.id,
       subjectId: ADDRESS,
-      expiresAt: later,
       now: at,
     });
     expect(await openCapability(db, { purpose, token, now: at })).toMatchObject({
@@ -243,7 +248,7 @@ describe("a purpose that expires and supersedes", () => {
       })
       .returning({ id: shops.id });
     if (!other) throw new Error("second shop missing");
-    const input = { purpose, subjectId: ADDRESS, expiresAt: later, now: at };
+    const input = { purpose, subjectId: ADDRESS, now: at };
     const elsewhere = await issueCapability(db, { ...input, shopId: other.id });
     const first = await issueCapability(db, { ...input, shopId: shop.id });
     const second = await issueCapability(db, { ...input, shopId: shop.id });

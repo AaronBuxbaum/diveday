@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { CAPABILITY_POLICY } from "@/lib/capabilities";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { ACTIVITY_CODE_KINDS } from "@/lib/shop-activity";
-import { SHORE_ALERT_CONFIRMATION_TTL_MS } from "@/lib/shore-alert-contact";
 import { fileScopedShopContext } from "@/test/db";
 import { activityEvents, shops } from "./schema";
 import { setShopShoreAlertContact } from "./shops";
@@ -59,7 +59,9 @@ describe("confirming a shore contact's address", () => {
       email: "Shore@Example.com",
       now: at,
     });
-    expect(issued.expiresAt).toEqual(new Date(at.getTime() + SHORE_ALERT_CONFIRMATION_TTL_MS));
+    expect(issued.expiresAt).toEqual(
+      new Date(at.getTime() + CAPABILITY_POLICY.shore_alert_confirm.ttlMs),
+    );
     expect(await checkShoreAlertConfirmation(db, { token: issued.token, now: at })).toEqual({
       shopId: shop.id,
       shopName: shop.name,

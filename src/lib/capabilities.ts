@@ -1,3 +1,5 @@
+import { DAY_MS } from "./clock";
+
 /**
  * **One table of bearer capabilities, one policy row per purpose** (issue
  * #2710, from the 2026-09-18 review's L04-1 "Nine token tables are one
@@ -56,9 +58,11 @@ type CapabilityPolicyFields = {
    * for as long as the email it rode in on can be opened, or someone is left
    * unable to stop the mail, silently.
    *
-   * `expires`: the row carries `expires_at`, set by the caller from its own
-   * rule, and the link opens nothing after it. The table's
-   * `capabilities_expiry_by_purpose` check holds every row to this field.
+   * `expires`: the row carries `expires_at`, which the mint sets from the
+   * policy's `ttlMs` (a caller never chooses it), and the link opens nothing
+   * after it: `openCapability` and `spendCapability` check it at use. The
+   * table's `capabilities_expiry_by_purpose` check holds every row to this
+   * field.
    */
   lifetime: "never" | "expires";
   /**
@@ -82,12 +86,20 @@ type CapabilityPolicyFields = {
 };
 
 /**
+ * **Two mechanisms, each with one rule** (issue #3954, ADR
+ * 20261104-derived-booking-link-tokens). A purpose here is a stored row, and
+ * one that expires names its `ttlMs` in this table. A booking link is not a
+ * purpose here: it derives from its row by HMAC and keeps its own trip-relative
+ * expiry (`src/db/booking-capabilities.ts`), so it never had a time limit to
+ * state in a policy.
+ *
  * An `idempotent` purpose acts through `verifyCapability`, which answers for a
  * revoked or expired row too, so it must be one that never expires and is
  * never superseded; the type refuses the other combinations.
  */
 export type CapabilityPolicy =
-  | (CapabilityPolicyFields & { use: "once" })
+  | (CapabilityPolicyFields & { use: "once"; lifetime: "never" })
+  | (CapabilityPolicyFields & { use: "once"; lifetime: "expires"; ttlMs: number })
   | (CapabilityPolicyFields & { use: "idempotent"; lifetime: "never"; reissue: "adds" });
 
 export const CAPABILITY_POLICY = {
@@ -131,11 +143,14 @@ export const CAPABILITY_POLICY = {
   // The one-time link a newly saved shore contact receives before any alert
   // goes to it (H-20261014-stale-roll-call-recipients review). Opening it sets
   // `shops.shore_alert_confirmed_at` while the shop still names the address it
-  // went to. Expires (`SHORE_ALERT_CONFIRMATION_TTL_MS`); a fresh mint
-  // revokes the outstanding one (issue #3721).
+  // went to. Expires after a week rather than the front desk's three days:
+  // the reader is somebody outside the shop, who may not open the mail the day
+  // the shop saves their address. A fresh mint revokes the outstanding one
+  // (issue #3721).
   shore_alert_confirm: {
     subject: "shop_address",
     lifetime: "expires",
+    ttlMs: 7 * DAY_MS,
     reissue: "supersedes",
     use: "once",
   },
@@ -159,4 +174,13 @@ export function expiringPurposes(): CapabilityPurpose[] {
 /** The purposes a use spends. */
 export function spentPurposes(): CapabilityPurpose[] {
   return CAPABILITY_PURPOSES.filter((purpose) => CAPABILITY_POLICY[purpose].use === "once");
+}
+
+/**
+ * When a link minted at `now` for `purpose` stops working, or null for a
+ * purpose that never expires. The one place a deadline is computed.
+ */
+export function capabilityExpiry(purpose: CapabilityPurpose, now: Date): Date | null {
+  const policy: CapabilityPolicy = CAPABILITY_POLICY[purpose];
+  return policy.lifetime === "expires" ? new Date(now.getTime() + policy.ttlMs) : null;
 }
