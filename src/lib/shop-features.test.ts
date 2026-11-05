@@ -34,6 +34,7 @@ const allOn = {
   publicConditionsEnabled: true,
   fieldGuideEnabled: true,
   seatSoldAlertsEnabled: true,
+  privateChartersEnabled: true,
 };
 
 describe("shopOffers", () => {

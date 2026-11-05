@@ -437,6 +437,13 @@ const NOTICE_KEYS: Record<
   // A student's learning materials ticked or un-ticked (ADR
   // 20261008-course-learning-materials), and the same LMS boundary as above.
   "materials-saved": { form: "roster", tone: "success", key: "trips.notices.materialsSaved" },
+  // A referral student (loop 5, row 10).
+  "referral-saved": { form: "roster", tone: "success", key: "trips.notices.referralSaved" },
+  "referral-not-a-course": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.materialsNotACourse",
+  },
   "materials-not-a-course": {
     form: "roster",
     tone: "danger",

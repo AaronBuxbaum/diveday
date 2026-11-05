@@ -75,6 +75,9 @@ export interface DateRequestCopy {
   sending: string;
   sentHeading: string;
   sentBody: string;
+  /** "A boat for our group": a private charter (loop 5, row 11). */
+  charterLabel: string;
+  charterHint: string;
 }
 
 export type CourseInquiry = {

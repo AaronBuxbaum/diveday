@@ -981,6 +981,11 @@
     "flySafePlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
     "flySafePlannedDivesPlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: we plan more than one dive, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
     "flySafePlannedEarlierDay": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: you have another dive day with us in the two days before this one, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
+    "nitroxPlan": {
+      "lead": "Your nitrox card is verified. The depth limit on each mix, planned at a ppO₂ of 1.4:",
+      "line": "{o2}%: stay above {meters} m / {feet} ft",
+      "notAFill": "For planning only: analyze your tank at the dock and dive the mix you measured."
+    },
     "fitUnavailable": "We couldn’t save your gear and setup just now. Try again in a moment.",
     "fitSaved": "Saved. The crew will have your sizes.",
     "certHeading": "Add your certification",
@@ -3258,6 +3263,8 @@
     "yourEmail": "Your email",
     "yourPhone": "Your phone",
     "howManyDivers": "How many divers",
+    "charterLabel": "A boat just for our group",
+    "charterHint": "A private charter. The shop sends a price for the whole boat.",
     "contactHint": "Add an email or phone number so we can reach you.",
     "dateOptionsHeading": "When would you like to dive?",
     "whenSuits": "Flexible timing",
@@ -4278,6 +4285,9 @@
     },
     "smsLostItem": {
       "body": "{shopName}: the crew found this aboard after {tripTitle}: {item}. We’re holding it for you."
+    },
+    "charterQuote": {
+      "line": "Our quote for the whole boat: {amount}"
     },
     "smsInterestReply": {
       "body": "{shopName}: {body}"

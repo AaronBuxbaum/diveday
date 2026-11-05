@@ -10,6 +10,9 @@
   "addDeparture": "Agregar una salida",
   "openDeparture": "Abrir una salida para esta fecha",
   "flexible": "Flexible",
+  "charter": "Barco entero",
+  "charterQuoted": "Presupuesto: {amount}",
+  "charterAsk": "Quiere el barco entero: {interest}. Esta salida será privada.",
   "flexibleAround": "Pidió el {date} y puede moverse unos días",
   "alternateOf": "Primera opción: {date}",
   "aboutCourse": "Sobre {course}",
@@ -38,13 +41,16 @@
     "label": "Tu respuesta",
     "toEmail": "Se envía por correo a {to}.",
     "toText": "Se envía como mensaje a {to}.",
-    "send": "Enviar respuesta"
+    "send": "Enviar respuesta",
+    "quoteLabel": "Precio por el barco entero",
+    "quoteHint": "Va al principio de la respuesta, en la moneda de tu centro. Déjalo en blanco para responder sin precio."
   },
   "replyNotice": {
     "sent": "Respuesta enviada.",
     "closed": "Esa petición ya estaba cerrada.",
     "failed": "La respuesta no se envió. La petición sigue abierta: inténtalo de nuevo o responde desde tu correo o tu teléfono.",
     "refused": "Esa respuesta no se puede enviar desde aquí. Responde desde tu correo o tu teléfono.",
+    "badQuote": "Ese precio no puede salir. Escribe el importe del barco entero como número, o déjalo en blanco.",
     "capped": "Esa petición ya ha tenido {count, plural, one {# respuesta} other {# respuestas}} en las últimas 24 horas. Responde a la siguiente desde tu correo o tu teléfono."
   },
   "done": {

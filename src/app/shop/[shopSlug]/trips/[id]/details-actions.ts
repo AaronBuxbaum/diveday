@@ -37,6 +37,7 @@ import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { minorToMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { boatServiceWindow } from "@/lib/service-window";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { deleteStoredImage, storeArrivalImage } from "@/lib/storage";
@@ -356,6 +357,8 @@ async function saveDepartureDetails(
       boatCapacity: nextBoat?.capacity ?? null,
       // And its certificate (H-20261009-certificate-caps-seats): no seat above it is sold.
       boatCertifiedPassengers: nextBoat?.certifiedPassengers ?? null,
+      // And its yard window (loop 5, row 5): a hull out of service sails nothing.
+      boatOutOfService: boatServiceWindow(nextBoat),
       diveMode: patchDiveMode,
       boatId: nextBoatId,
       requiresPayment: gate?.requiresPayment ?? false,
@@ -490,6 +493,9 @@ function redirectDetailsRefusal(
   }
   if (details.reason === "price_required_by_gate") {
     redirect(noticeUrl(back, "price-required-by-gate", { form: section ?? "details" }));
+  }
+  if (details.reason === "boat_out_of_service") {
+    redirect(noticeUrl(back, "boat-out-of-service", { form: section ?? "details" }));
   }
   if (details.reason === "capacity_above_certificate") {
     redirect(

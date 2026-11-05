@@ -209,6 +209,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Cancellation window
 - Certificate passenger limit
 - Certificate total-persons limit
+- Charter inquiry
 - Check-in
 - Close-out
 - Coming as
@@ -307,6 +308,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Operational horizon
 - Optional feature
 - Order
+- Out of service
 - Owner reporting / monthly report
 - Paper / in-person signature
 - Paper pass
@@ -323,6 +325,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Progression order
 - Radio identity
 - Reconciliation
+- Referral student
 - Rehearsal
 - Reminder cadence
 - Reply keyword
@@ -360,6 +363,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Shop tick
 - Shore alert contact
 - Sign once
+- Site closure
 - Skipped occurrence
 - SMS channel
 - Snorkel-suitable
@@ -462,6 +466,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Needs staff fit
 - Nitrox / EANx
 - Nitrox fill method
+- Nitrox planning line
 - Nitrox request
 - Nitrox-compatible course
 - Nitrox-designated regulator

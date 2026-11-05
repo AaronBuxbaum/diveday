@@ -247,6 +247,17 @@ export const boats = pgTable(
      * `normalizeWorkingChannel`, and bounded here too.
      */
     workingChannel: text("working_channel"),
+    /**
+     * **The hull in the yard** (loop 5, row 5; glossary "Out of service"): a
+     * shop-local calendar window, both ends inclusive, and the shop's one-line
+     * reason ("Hull repaint"). The builder and the trip's details refuse to put
+     * a departure on the hull for a day inside it (`tripDetailsPatch`), and the
+     * board warns about a departure already on it. One window per boat, typed
+     * over the last like the paper dates; null is in service.
+     */
+    outOfServiceFrom: date("out_of_service_from"),
+    outOfServiceUntil: date("out_of_service_until"),
+    outOfServiceReason: text("out_of_service_reason"),
     createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR
@@ -280,6 +291,17 @@ export const boats = pgTable(
     check(
       "boats_certified_total_persons_positive",
       sql`${table.certifiedTotalPersons} is null or ${table.certifiedTotalPersons} between 1 and 999`,
+    ),
+    // Both ends or neither, in order: a yard window with one end is no window.
+    check(
+      "boats_out_of_service_window",
+      sql`(${table.outOfServiceFrom} is null) = (${table.outOfServiceUntil} is null)
+        and (${table.outOfServiceFrom} is null or ${table.outOfServiceFrom} <= ${table.outOfServiceUntil})`,
+    ),
+    check(
+      "boats_out_of_service_reason",
+      sql`${table.outOfServiceReason} is null
+        or (${table.outOfServiceFrom} is not null and char_length(${table.outOfServiceReason}) between 1 and 120)`,
     ),
     // Passengers are some of the persons aboard: more passengers than persons
     // is a typo, refused at save too (`boatSeatsRefusal`).

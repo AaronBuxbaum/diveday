@@ -10,6 +10,9 @@ export const NOTICE_KEYS: Record<string, StaffMessageKey> = {
   "template-replaced": "diveSites.edit.templateUpdates.replaced",
   "template-undone": "diveSites.edit.templateUpdates.undone",
   "template-update-unavailable": "diveSites.edit.templateUpdates.unavailable",
+  // Loop 5, row 5: the closure form's outcome, said beside that form.
+  "closure-saved": "diveSites.closure.saved",
+  "closure-invalid": "diveSites.closure.invalid",
 };
 
 // Only the archive action still refuses through the URL; a rejected *save*

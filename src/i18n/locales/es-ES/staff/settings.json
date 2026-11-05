@@ -520,6 +520,11 @@
         "label": "Enviar un correo a los buceadores una semana antes",
         "description": "Un correo siete días antes de la salida."
       },
+      "privateCharters": {
+        "heading": "Chárteres privados",
+        "label": "Permitir que los buceadores pidan el barco entero para su grupo",
+        "description": "Una casilla en el formulario de petición de fecha. Presupuestas el barco desde Peticiones de fecha, y la salida que crees a partir de ella es privada."
+      },
       "seatSoldAlerts": {
         "heading": "Correo de plazas vendidas",
         "label": "Enviar un correo a propietarios y gerentes cuando se vendan plazas",

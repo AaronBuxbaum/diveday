@@ -36,6 +36,8 @@ const copy: DateRequestCopy = {
   sending: "Sending…",
   sentHeading: "Inquiry sent",
   sentBody: "We’ll be in touch.",
+  charterLabel: "A boat just for our group",
+  charterHint: "A private charter.",
 };
 
 function renderInquiry(
@@ -45,7 +47,9 @@ function renderInquiry(
     contactEmail = "hello@example.com",
     contactPhone = "+1 305 555 0134" as string | null,
     collapsible = false,
+    offerCharter = false,
   }: {
+    offerCharter?: boolean;
     askInterest?: boolean;
     contactEmail?: string | null;
     contactPhone?: string | null;
@@ -59,6 +63,7 @@ function renderInquiry(
       contactEmail={contactEmail}
       contactPhone={contactPhone}
       collapsible={collapsible}
+      offerCharter={offerCharter}
       copy={copy}
     />,
   );
@@ -589,5 +594,23 @@ describe("DateRequestForm — its place on the page", () => {
     renderSection();
     const heading = screen.getByRole("heading", { level: 2, name: "Get in touch" });
     expect(heading.className).toBe(LEAD_TITLE_CLASS);
+  });
+});
+
+// Loop 5, row 11: a private charter is one box on the same form.
+describe("DateRequestForm — a private charter", () => {
+  it("sends the charter ask only when the box is offered and ticked", async () => {
+    const submitInquiry = succeeds();
+    renderInquiry(submitInquiry, { offerCharter: true });
+    fillEmail();
+    fireEvent.click(screen.getByRole("checkbox", { name: /A boat just for our group/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    expect(submitInquiry.mock.calls[0]?.[1].get("charter")).toBe("true");
+  });
+
+  it("draws no charter box where the shop does not offer one", () => {
+    renderInquiry(vi.fn());
+    expect(screen.queryByRole("checkbox", { name: /A boat just for our group/ })).toBeNull();
   });
 });

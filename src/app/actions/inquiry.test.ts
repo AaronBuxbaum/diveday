@@ -224,3 +224,48 @@ describe("submitInquiryAction, the diver's acknowledgment", () => {
     expect(sentKinds()).not.toContain("interest_received_ack");
   });
 });
+
+// Loop 5, row 11: a private charter rides on the date request, and only where
+// the shop runs boats, keeps charters on, and the ask is not about a course.
+describe("a private charter ask", () => {
+  function charterForm(email: string): FormData {
+    const form = requestForm(email);
+    form.set("divers", "6");
+    form.set("charter", "true");
+    return form;
+  }
+
+  async function storedCharter(email: string) {
+    const { rows } = await listOpenDateInterests(db, ctx.shop.id);
+    return rows.find((row) => row.email === email)?.charter;
+  }
+
+  it("records the ask as a charter for a boat shop with charters on", async () => {
+    const email = "charter-on@example.com";
+    expect(await submit(charterForm(email))).toEqual({ success: true });
+    expect(await storedCharter(email)).toBe(true);
+  });
+
+  it("records an ordinary request when the shop switched charters off", async () => {
+    await db.update(shops).set({ privateChartersEnabled: false }).where(eq(shops.id, ctx.shop.id));
+    const email = "charter-off@example.com";
+    expect(await submit(charterForm(email))).toEqual({ success: true });
+    expect(await storedCharter(email)).toBe(false);
+  });
+
+  it("records an ordinary request at a shop that runs no boats", async () => {
+    await db
+      .update(shops)
+      .set({ hasBoatDiving: false, hasShoreDiving: true })
+      .where(eq(shops.id, ctx.shop.id));
+    const email = "charter-shore@example.com";
+    expect(await submit(charterForm(email))).toEqual({ success: true });
+    expect(await storedCharter(email)).toBe(false);
+  });
+
+  it("never makes a course page's question a charter", async () => {
+    const email = "charter-course@example.com";
+    expect(await submit(charterForm(email), "open-water-diver")).toEqual({ success: true });
+    expect(await storedCharter(email)).toBe(false);
+  });
+});

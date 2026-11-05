@@ -336,6 +336,14 @@ export const shops = pgTable(
      */
     seatSoldAlertsEnabled: boolean("seat_sold_alerts_enabled").notNull().default(false),
     /**
+     * **Private charters** (loop 5, row 11; glossary "Charter inquiry"): the
+     * shopfront's ask-for-a-day form offers "a boat for our group", and the
+     * Requests page quotes it. Rides on date requests, so it is offered only
+     * while those are on and the shop runs boats. Off, the box is gone and
+     * nothing already asked is touched.
+     */
+    privateChartersEnabled: boolean("private_charters_enabled").notNull().default(true),
+    /**
      * The instant the last seat-sold alert pass covered, the cursor that makes
      * an hour's batch exactly once: the next pass reports the seats sold after
      * it. Null until the first pass, which starts from an hour ago.

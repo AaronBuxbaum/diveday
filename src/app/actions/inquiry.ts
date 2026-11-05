@@ -32,6 +32,7 @@ const inquirySchema = z.object({
   divers: blankAsAbsent(z.coerce.number().int().min(1).max(12)),
   experience: blankAsAbsent(z.enum(COURSE_INQUIRY_EXPERIENCE)),
   message: blankAsAbsent(z.string().trim().max(1500)),
+  charter: formValue().transform((value) => value === "true"),
 });
 
 /**
@@ -108,6 +109,7 @@ export async function submitInquiryAction(
     divers,
     experience,
     message,
+    charter,
   } = parsed.data;
   // The either-or, in the diver's own words rather than as a constraint
   // violation: a request with no course in the URL and nothing typed into
@@ -128,6 +130,10 @@ export async function submitInquiryAction(
     dateFlexible,
     partySize: divers,
     message,
+    // A private charter (loop 5, row 11): only off the shopfront's own form,
+    // at a shop that runs boats and keeps charters on. Anything else is an
+    // ordinary request, whatever the form carried.
+    charter: charter && !course && shop.privateChartersEnabled && shop.hasBoatDiving,
   });
 
   // Best-effort: a stalled or failed send must never risk timing out the

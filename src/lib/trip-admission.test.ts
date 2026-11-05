@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type {
-  Certification,
   DiveSpecialty,
   NitroxCertification,
   SpecialtyCertification,
   TripRequirement,
   WaiverRecord,
 } from "@/db/schema";
+import { certification, evidence, requirement, site } from "@/test/admission-evidence";
 import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 import {
   type CertificationLevel,
@@ -14,21 +14,12 @@ import {
   type ReadinessBlocker,
   type SiteCertRequirement,
 } from "./readiness";
-import type { TripLevelRequirement } from "./training-mark";
 import {
   decideTripAdmission,
   type SelfDeclaration,
   type TripAdmissionEvidence,
 } from "./trip-admission";
 import { effectiveWaiverForBooking, releaseLapseForBooking, waiverClockInstant } from "./waivers";
-
-function certification(overrides: Partial<Certification> = {}): Certification {
-  return {
-    status: "verified",
-    level: "open_water",
-    ...overrides,
-  } as Certification;
-}
 
 function specialtyCard(overrides: Partial<SpecialtyCertification> = {}): SpecialtyCertification {
   return {
@@ -42,29 +33,6 @@ function specialtyCard(overrides: Partial<SpecialtyCertification> = {}): Special
 
 function nitroxCard(overrides: Partial<NitroxCertification> = {}): NitroxCertification {
   return { status: "verified", ...overrides } as NitroxCertification;
-}
-
-function evidence(overrides: Partial<TripAdmissionEvidence> = {}): TripAdmissionEvidence {
-  return {
-    certifications: [],
-    specialtyCertifications: [],
-    nitroxCertifications: [],
-    ...overrides,
-  };
-}
-
-function requirement(overrides: Partial<TripLevelRequirement> = {}): TripLevelRequirement {
-  return {
-    minimumCertificationIsDefault: false,
-    minimumCertificationLevel: null,
-    requiredSpecialties: [],
-    requiresNitrox: false,
-    ...overrides,
-  };
-}
-
-function site(overrides: Partial<SiteCertRequirement> = {}): SiteCertRequirement {
-  return requirement(overrides);
 }
 
 /** The common shape: a trip that demands Advanced Open Water and nothing else. */

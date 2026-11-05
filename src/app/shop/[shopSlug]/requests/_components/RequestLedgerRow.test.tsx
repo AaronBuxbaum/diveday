@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import type { DateInterestRow } from "@/db/interest-dates";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RequestLedgerRow } from "./RequestLedgerRow";
@@ -28,6 +29,10 @@ const BASE: DateInterestRow = {
   askedAt: new Date("2027-02-20T14:00:00.000Z"),
   closedAt: null,
   closedAs: null,
+  charter: false,
+  charterQuoteCents: null,
+  charterQuoteCurrency: null,
+  charterQuotedAt: null,
 };
 
 function row(request: Partial<DateInterestRow> = {}) {
@@ -289,5 +294,67 @@ describe("the door", () => {
     row({});
     const book = screen.getByRole("link", { name: "Create a booking" });
     expect(book.getAttribute("href")).toBe(`/shop/blue-mantis?call=1&request=${BASE.id}`);
+  });
+});
+
+/** Loop 5, row 11: a private charter asks for the boat, and is answered with a price. */
+describe("a private charter request", () => {
+  it("says it wants the whole boat, and what it was quoted once a quote went", () => {
+    row({ charter: true });
+    expect(screen.getByText("Whole boat")).toBeTruthy();
+    expect(screen.queryByText(/^Quoted/)).toBeNull();
+    cleanup();
+    row({
+      charter: true,
+      charterQuoteCents: 180_000,
+      charterQuoteCurrency: "usd",
+      charterQuotedAt: new Date("2027-02-21T14:00:00.000Z"),
+    });
+    expect(screen.getByText("Quoted $1,800")).toBeTruthy();
+  });
+
+  it("asks for the price above the words, in the shop's currency, only when given a quote box", () => {
+    const copy = {
+      open: "Write a reply",
+      label: "Your reply",
+      destination: "",
+      send: "Send",
+      sending: "",
+    };
+    const { container } = render(
+      <ul>
+        <RequestLedgerRow
+          request={{ ...BASE, charter: true }}
+          locale="en-US"
+          timezone="America/Cancun"
+          shopSlug="blue-mantis"
+          shopName="Blue Mantis Divers"
+          markDoneAction={() => {}}
+          reply={{
+            action: () => {},
+            copy,
+            quote: {
+              label: "Price for the whole boat",
+              hint: "Goes first.",
+              currency: "usd",
+              locale: "en-US",
+              copy: forgivingCopy(t),
+            },
+          }}
+          t={t}
+        />
+      </ul>,
+    );
+    expect(screen.getByText("Price for the whole boat")).toBeTruthy();
+    const names = [...container.querySelectorAll("form [name]")].map((el) =>
+      el.getAttribute("name"),
+    );
+    expect(names.indexOf("quote")).toBeGreaterThan(-1);
+    expect(names.indexOf("quote")).toBeLessThan(names.indexOf("body"));
+  });
+
+  it("names neither on an ordinary request", () => {
+    row();
+    expect(screen.queryByText("Whole boat")).toBeNull();
   });
 });

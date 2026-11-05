@@ -10,6 +10,9 @@
   "addDeparture": "Add a departure",
   "openDeparture": "Open a departure for this date",
   "flexible": "Flexible",
+  "charter": "Whole boat",
+  "charterQuoted": "Quoted {amount}",
+  "charterAsk": "Wants the whole boat: {interest}. This departure will be private.",
   "flexibleAround": "Asked for {date}, and can move a few days",
   "alternateOf": "First choice {date}",
   "aboutCourse": "About {course}",
@@ -38,13 +41,16 @@
     "label": "Your reply",
     "toEmail": "Goes to {to} by email.",
     "toText": "Goes to {to} as a message.",
-    "send": "Send reply"
+    "send": "Send reply",
+    "quoteLabel": "Price for the whole boat",
+    "quoteHint": "Goes first in the reply, in your shop’s currency. Leave it blank to answer without a price."
   },
   "replyNotice": {
     "sent": "Reply sent.",
     "closed": "That request was already closed.",
     "failed": "That reply didn’t send. The request is still open, so try again or answer from your own email or phone.",
     "refused": "That reply can’t go from here. Answer from your own email or phone.",
+    "badQuote": "That price can’t go. Type the whole-boat amount as a number, or leave it blank.",
     "capped": "That request has had {count, plural, one {# reply} other {# replies}} in the last 24 hours. Answer the next from your own email or phone."
   },
   "done": {

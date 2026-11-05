@@ -67,7 +67,7 @@ export function PromotedDateAsk({
   locale,
   timeZone,
   quiet,
-  dateRequestsEnabled,
+  switches,
   runningLines,
   className,
 }: {
@@ -77,13 +77,21 @@ export function PromotedDateAsk({
   timeZone: string;
   /** The off-season card is up (`src/lib/off-season.ts`). */
   quiet: boolean;
-  dateRequestsEnabled: boolean;
+  /**
+   * The shop's own switches: date requests at all, and a private charter on
+   * the form only for a shop that dives from a boat (loop 5, row 11).
+   */
+  switches: {
+    dateRequestsEnabled: boolean;
+    privateChartersEnabled: boolean;
+    hasBoatDiving: boolean;
+  };
   /** {@link seriesHorizonLines}, from the board's last month on ({@link viewsBoardsEnd}); else empty. */
   runningLines: readonly string[];
   className: string;
 }) {
   const atHorizon = runningLines.length > 0;
-  if (!dateRequestsEnabled || (!quiet && !atHorizon)) {
+  if (!switches.dateRequestsEnabled || (!quiet && !atHorizon)) {
     if (!atHorizon) return null;
     return (
       <section aria-labelledby="horizon-heading" className={className}>
@@ -107,6 +115,7 @@ export function PromotedDateAsk({
         headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}
         contactEmail={null}
         contactPhone={null}
+        offerCharter={switches.privateChartersEnabled && switches.hasBoatDiving}
         copy={
           quiet
             ? { ...copy, heading: t("schedule.offSeason.requestHeading") }

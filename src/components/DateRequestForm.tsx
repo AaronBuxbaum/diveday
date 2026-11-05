@@ -5,7 +5,14 @@ import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
-import { controlClass, DateField, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
+import {
+  ChoiceRow,
+  controlClass,
+  DateField,
+  Field,
+  FieldGrid,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { ITEM_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { telHref } from "@/lib/contact-links";
 import {
@@ -78,6 +85,7 @@ export function DateRequestForm({
   collapsible = false,
   className = "",
   headingClassName = LEAD_TITLE_CLASS,
+  offerCharter = false,
   copy,
 }: {
   submitRequest: (prevState: InquiryFormState, formData: FormData) => Promise<InquiryFormState>;
@@ -113,6 +121,11 @@ export function DateRequestForm({
    * collapsible row, whose `DisclosureRow` owns its heading.
    */
   headingClassName?: string;
+  /**
+   * Offer "a boat just for our group" (loop 5, row 11): a shop that runs boats
+   * and keeps private charters on. The server checks both again.
+   */
+  offerCharter?: boolean;
   copy: DateRequestCopy;
 }) {
   const t = useTranslations();
@@ -131,6 +144,7 @@ export function DateRequestForm({
   const [diversInput, setDiversInput] = useState("1");
   const [experience, setExperience] = useState<CourseInquiryExperience | "">("");
   const [message, setMessage] = useState("");
+  const [charter, setCharter] = useState(false);
   const [contactMissing, setContactMissing] = useState(false);
   const [interestMissing, setInterestMissing] = useState(false);
 
@@ -169,6 +183,7 @@ export function DateRequestForm({
     if (diversInput) formData.set("divers", diversInput);
     if (experience) formData.set("experience", experience);
     if (message) formData.set("message", message);
+    if (offerCharter && charter) formData.set("charter", "true");
     startTransition(async () => {
       setState(await submitRequest({}, formData));
     });
@@ -332,6 +347,18 @@ export function DateRequestForm({
             />
           </Field>
         </FieldGrid>
+        {offerCharter ? (
+          <ChoiceRow
+            type="checkbox"
+            name="charter"
+            checked={charter}
+            onChange={(event) => setCharter(event.target.checked)}
+            className="mt-5 text-sm font-medium"
+          >
+            <span className="block">{copy.charterLabel}</span>
+            <span className="block text-xs font-normal text-muted">{copy.charterHint}</span>
+          </ChoiceRow>
+        ) : null}
 
         {/* **The rare path, collapsed** (principle 8). Three answers a diver
             almost never has: a second day, their diving experience, and whatever

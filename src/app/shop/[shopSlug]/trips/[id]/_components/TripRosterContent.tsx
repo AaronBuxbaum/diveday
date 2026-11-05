@@ -74,6 +74,7 @@ export type TripRosterActions = {
   saveCourseNextStepAction?: FormAction;
   markCardProcessedAction?: FormAction;
   setCourseMaterialsDoneAction?: FormAction;
+  referralStudentAction?: FormAction;
   elearningCheckAction?: RosterActions["elearningCheckAction"];
   agencyCheckAction?: RosterActions["agencyCheckAction"];
   agencyListedAction?: RosterActions["agencyListedAction"];
@@ -376,6 +377,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           elearningCheckAction: guests.courseHasMaterials
             ? actions.elearningCheckAction
             : undefined,
+          referralStudentAction: actions.referralStudentAction,
           // A finished departure is its record: nothing on it is checked.
           agencyCheckAction: record ? undefined : actions.agencyCheckAction,
           agencyListedAction: record ? undefined : actions.agencyListedAction,

@@ -12,8 +12,9 @@
  * links, marine-life sightings, recap photos, counter QR
  * self-registration, the waitlist, past-diver invites, day-of help requests,
  * partner links, the week-out reminder, public conditions and the dive-site
- * field guide, and the hourly seat-sold email to the desk (the one feature
- * that starts off: `OFF_BY_DECISION`). Off hides the feature on every surface that offers it and deletes
+ * field guide, private charters asked for on the date-request form, and the
+ * hourly seat-sold email to the desk (the one feature that starts off:
+ * `OFF_BY_DECISION`). Off hides the feature on every surface that offers it and deletes
  * nothing, so turning it back on finds everything where it was.
  *
  * **Every feature starts on for a new shop** (Aaron, 2026-10-23). "Our year"
@@ -52,6 +53,7 @@ export const SHOP_FEATURES = [
   "publicConditions",
   "fieldGuide",
   "seatSoldAlerts",
+  "privateCharters",
 ] as const;
 
 export type ShopFeature = (typeof SHOP_FEATURES)[number];
@@ -91,6 +93,7 @@ export const SHOP_FEATURE_COLUMNS = {
   publicConditions: "publicConditionsEnabled",
   fieldGuide: "fieldGuideEnabled",
   seatSoldAlerts: "seatSoldAlertsEnabled",
+  privateCharters: "privateChartersEnabled",
 } as const satisfies Record<ShopFeature, string>;
 
 export type ShopFeatureColumn = (typeof SHOP_FEATURE_COLUMNS)[ShopFeature];

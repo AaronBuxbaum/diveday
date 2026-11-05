@@ -689,6 +689,28 @@ const rows = [
     merge: "leave",
     why: "which staffer marked the materials done",
   },
+  // Loop 5, row 10: who marked a referral student, and who collected each paper.
+  {
+    table: "bookings",
+    column: "referred_in_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer marked the seat as a referral student",
+  },
+  {
+    table: "bookings",
+    column: "referral_form_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer collected the referral form",
+  },
+  {
+    table: "bookings",
+    column: "referral_record_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer collected the eLearning record",
+  },
   {
     table: "bookings",
     column: "training_plan_by_person_id",
@@ -1203,6 +1225,14 @@ const rows = [
     kind: "actor",
     merge: "leave",
     why: "who raised the interest or sent the offer",
+  },
+  {
+    // Loop 5, row 11: the staffer who sent a charter quote.
+    table: "interests",
+    column: "charter_quoted_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer sent the charter quote",
   },
   {
     table: "trip_recap_photos",

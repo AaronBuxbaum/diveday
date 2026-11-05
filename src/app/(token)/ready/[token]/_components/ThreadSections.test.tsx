@@ -59,8 +59,11 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
         trip: { title: "Two-Tank Reef" },
         shop: { name: "Blue Mantis Divers", timezone: "America/New_York" },
       },
-      shop: { dockCallMinutes: 30 },
-      trip: { id: "trip-1" },
+      shop: { dockCallMinutes: 30, rentalItems: ["nitrox"] },
+      trip: { id: "trip-1", course: null },
+      participantType: "diver",
+      wantsNitrox: false,
+      nitroxCardVerified: false,
       pickupTime: null,
       rentalFit: null,
       canCancelBooking: true,
@@ -184,6 +187,37 @@ describe("ThreadSections", () => {
     expect(screen.getByTestId("ready-fly-safe-plan").textContent).toMatch(
       /^Flying home soon\? Blue Mantis Divers asks you to plan your flight no earlier than Fri, Oct\s16, 4:30\sAM\sEDT: we plan more than one dive, so 24 hours after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops\.$/,
     );
+  });
+
+  // Loop 5, row 9: a planning aid once a verified card backs the request,
+  // never a fill authorization, and nothing at all otherwise.
+  it("says the nitrox depths to plan with only behind a verified card on a nitrox seat", () => {
+    const with_ = (fields: Partial<ReadyPageData>) => {
+      const c = context();
+      Object.assign(c.data, fields);
+      return c;
+    };
+    // No request, no card, or a seat the shop cannot fill: nothing at all.
+    for (const fields of [
+      { wantsNitrox: false, nitroxCardVerified: true },
+      { wantsNitrox: true, nitroxCardVerified: false },
+      {
+        wantsNitrox: true,
+        nitroxCardVerified: true,
+        trip: { id: "trip-1", course: { nitroxCompatible: false } },
+      },
+      // A snorkeler's seat is never filled, whatever their card says.
+      { wantsNitrox: true, nitroxCardVerified: true, participantType: "snorkeler" },
+    ] as Partial<ReadyPageData>[]) {
+      render(<ThreadSections context={with_(fields)} />);
+      expect(screen.queryByTestId("ready-nitrox-plan")).toBeNull();
+      cleanup();
+    }
+    render(<ThreadSections context={with_({ wantsNitrox: true, nitroxCardVerified: true })} />);
+    const plan = screen.getByTestId("ready-nitrox-plan");
+    expect(plan.textContent).toContain("32%: stay above 33\u00a0m / 110\u00a0ft");
+    expect(plan.textContent).toContain("36%: stay above 28\u00a0m / 94\u00a0ft");
+    expect(plan.textContent).toContain(t("ready.nitroxPlan.notAFill"));
   });
 
   it("shows the party panel only to a party lead, with its all-set close", () => {

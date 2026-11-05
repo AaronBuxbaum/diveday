@@ -1,0 +1,1015 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "e225a702-9445-43ee-8bf4-b82918d31c2b",
+  "prevIds": [
+    "ee0b4327-79ee-408c-93ae-eb0b5f3d699c",
+    "a3f33979-69c2-452a-8aa0-0b0dff76d0d9"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "referred_in_at"
+      ],
+      "writes": [
+        "s|col|public.bookings.referred_in_at",
+        "n|col|public.bookings.referred_in_at",
+        "e|col|public.bookings.referred_in_at"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "referred_in_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.bookings.referred_in_by_person_id",
+        "n|col|public.bookings.referred_in_by_person_id",
+        "e|col|public.bookings.referred_in_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "referral_form_at"
+      ],
+      "writes": [
+        "s|col|public.bookings.referral_form_at",
+        "n|col|public.bookings.referral_form_at",
+        "e|col|public.bookings.referral_form_at"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "referral_form_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.bookings.referral_form_by_person_id",
+        "n|col|public.bookings.referral_form_by_person_id",
+        "e|col|public.bookings.referral_form_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "referral_record_at"
+      ],
+      "writes": [
+        "s|col|public.bookings.referral_record_at",
+        "n|col|public.bookings.referral_record_at",
+        "e|col|public.bookings.referral_record_at"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "referral_record_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.bookings.referral_record_by_person_id",
+        "n|col|public.bookings.referral_record_by_person_id",
+        "e|col|public.bookings.referral_record_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "private_charters_enabled"
+      ],
+      "writes": [
+        "s|col|public.shops.private_charters_enabled",
+        "n|col|public.shops.private_charters_enabled",
+        "e|col|public.shops.private_charters_enabled"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "dive_sites",
+        "closed_from"
+      ],
+      "writes": [
+        "s|col|public.dive_sites.closed_from",
+        "n|col|public.dive_sites.closed_from",
+        "e|col|public.dive_sites.closed_from"
+      ],
+      "reads": [
+        "n|tbl|public.dive_sites",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "dive_sites",
+        "closed_until"
+      ],
+      "writes": [
+        "s|col|public.dive_sites.closed_until",
+        "n|col|public.dive_sites.closed_until",
+        "e|col|public.dive_sites.closed_until"
+      ],
+      "reads": [
+        "n|tbl|public.dive_sites",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "dive_sites",
+        "closure_reason"
+      ],
+      "writes": [
+        "s|col|public.dive_sites.closure_reason",
+        "n|col|public.dive_sites.closure_reason",
+        "e|col|public.dive_sites.closure_reason"
+      ],
+      "reads": [
+        "n|tbl|public.dive_sites",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "interests",
+        "charter"
+      ],
+      "writes": [
+        "s|col|public.interests.charter",
+        "n|col|public.interests.charter",
+        "e|col|public.interests.charter"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "interests",
+        "charter_quote_cents"
+      ],
+      "writes": [
+        "s|col|public.interests.charter_quote_cents",
+        "n|col|public.interests.charter_quote_cents",
+        "e|col|public.interests.charter_quote_cents"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "interests",
+        "charter_quote_currency"
+      ],
+      "writes": [
+        "s|col|public.interests.charter_quote_currency",
+        "n|col|public.interests.charter_quote_currency",
+        "e|col|public.interests.charter_quote_currency"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "interests",
+        "charter_quoted_at"
+      ],
+      "writes": [
+        "s|col|public.interests.charter_quoted_at",
+        "n|col|public.interests.charter_quoted_at",
+        "e|col|public.interests.charter_quoted_at"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "interests",
+        "charter_quoted_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.interests.charter_quoted_by_person_id",
+        "n|col|public.interests.charter_quoted_by_person_id",
+        "e|col|public.interests.charter_quoted_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "boats",
+        "out_of_service_from"
+      ],
+      "writes": [
+        "s|col|public.boats.out_of_service_from",
+        "n|col|public.boats.out_of_service_from",
+        "e|col|public.boats.out_of_service_from"
+      ],
+      "reads": [
+        "n|tbl|public.boats",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "boats",
+        "out_of_service_until"
+      ],
+      "writes": [
+        "s|col|public.boats.out_of_service_until",
+        "n|col|public.boats.out_of_service_until",
+        "e|col|public.boats.out_of_service_until"
+      ],
+      "reads": [
+        "n|tbl|public.boats",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "boats",
+        "out_of_service_reason"
+      ],
+      "writes": [
+        "s|col|public.boats.out_of_service_reason",
+        "n|col|public.boats.out_of_service_reason",
+        "e|col|public.boats.out_of_service_reason"
+      ],
+      "reads": [
+        "n|tbl|public.boats",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "bookings"
+      ],
+      "writes": [
+        "s|fk|public.bookings.bookings_referred_in_by_person_id_people_id_fkey",
+        "n|fk|public.bookings.bookings_referred_in_by_person_id_people_id_fkey",
+        "e|fk|public.bookings.bookings_referred_in_by_person_id_people_id_fkey",
+        "n|con|public.bookings.bookings_referred_in_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.bookings.referred_in_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "bookings"
+      ],
+      "writes": [
+        "s|fk|public.bookings.bookings_referral_form_by_person_id_people_id_fkey",
+        "n|fk|public.bookings.bookings_referral_form_by_person_id_people_id_fkey",
+        "e|fk|public.bookings.bookings_referral_form_by_person_id_people_id_fkey",
+        "n|con|public.bookings.bookings_referral_form_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.bookings.referral_form_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "bookings"
+      ],
+      "writes": [
+        "s|fk|public.bookings.bookings_referral_record_by_person_id_people_id_fkey",
+        "n|fk|public.bookings.bookings_referral_record_by_person_id_people_id_fkey",
+        "e|fk|public.bookings.bookings_referral_record_by_person_id_people_id_fkey",
+        "n|con|public.bookings.bookings_referral_record_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.bookings.referral_record_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "interests"
+      ],
+      "writes": [
+        "s|fk|public.interests.interests_charter_quoted_by_person_id_people_id_fkey",
+        "n|fk|public.interests.interests_charter_quoted_by_person_id_people_id_fkey",
+        "e|fk|public.interests.interests_charter_quoted_by_person_id_people_id_fkey",
+        "n|con|public.interests.interests_charter_quoted_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.interests.charter_quoted_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "bookings"
+      ],
+      "writes": [
+        "s|ck|public.bookings.bookings_referral_attributed",
+        "n|ck|public.bookings.bookings_referral_attributed",
+        "e|ck|public.bookings.bookings_referral_attributed",
+        "n|con|public.bookings.bookings_referral_attributed"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|col|public.bookings.referred_in_at",
+        "n|col|public.bookings.referred_in_by_person_id",
+        "n|col|public.bookings.referral_form_at",
+        "n|col|public.bookings.referral_form_by_person_id",
+        "n|col|public.bookings.referral_record_at",
+        "n|col|public.bookings.referral_record_by_person_id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "dive_sites"
+      ],
+      "writes": [
+        "s|ck|public.dive_sites.dive_sites_closure_window",
+        "n|ck|public.dive_sites.dive_sites_closure_window",
+        "e|ck|public.dive_sites.dive_sites_closure_window",
+        "n|con|public.dive_sites.dive_sites_closure_window"
+      ],
+      "reads": [
+        "n|tbl|public.dive_sites",
+        "n|sch|public",
+        "n|col|public.dive_sites.closed_from",
+        "n|col|public.dive_sites.closed_until"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "dive_sites"
+      ],
+      "writes": [
+        "s|ck|public.dive_sites.dive_sites_closure_reason",
+        "n|ck|public.dive_sites.dive_sites_closure_reason",
+        "e|ck|public.dive_sites.dive_sites_closure_reason",
+        "n|con|public.dive_sites.dive_sites_closure_reason"
+      ],
+      "reads": [
+        "n|tbl|public.dive_sites",
+        "n|sch|public",
+        "n|col|public.dive_sites.closure_reason",
+        "n|col|public.dive_sites.closed_from"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "interests"
+      ],
+      "writes": [
+        "s|ck|public.interests.interests_charter_is_a_date",
+        "n|ck|public.interests.interests_charter_is_a_date",
+        "e|ck|public.interests.interests_charter_is_a_date",
+        "n|con|public.interests.interests_charter_is_a_date"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|col|public.interests.charter",
+        "n|col|public.interests.scope"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "interests"
+      ],
+      "writes": [
+        "s|ck|public.interests.interests_charter_quote",
+        "n|ck|public.interests.interests_charter_quote",
+        "e|ck|public.interests.interests_charter_quote",
+        "n|con|public.interests.interests_charter_quote"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|col|public.interests.charter_quote_cents",
+        "n|col|public.interests.charter_quoted_at",
+        "n|col|public.interests.charter_quoted_by_person_id",
+        "n|col|public.interests.charter_quote_currency",
+        "n|col|public.interests.charter"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "boats"
+      ],
+      "writes": [
+        "s|ck|public.boats.boats_out_of_service_window",
+        "n|ck|public.boats.boats_out_of_service_window",
+        "e|ck|public.boats.boats_out_of_service_window",
+        "n|con|public.boats.boats_out_of_service_window"
+      ],
+      "reads": [
+        "n|tbl|public.boats",
+        "n|sch|public",
+        "n|col|public.boats.out_of_service_from",
+        "n|col|public.boats.out_of_service_until"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "boats"
+      ],
+      "writes": [
+        "s|ck|public.boats.boats_out_of_service_reason",
+        "n|ck|public.boats.boats_out_of_service_reason",
+        "e|ck|public.boats.boats_out_of_service_reason",
+        "n|con|public.boats.boats_out_of_service_reason"
+      ],
+      "reads": [
+        "n|tbl|public.boats",
+        "n|sch|public",
+        "n|col|public.boats.out_of_service_reason",
+        "n|col|public.boats.out_of_service_from"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "referred_in_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "referred_in_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "referral_form_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "referral_form_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "referral_record_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "referral_record_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "private_charters_enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_sites",
+        "name": "closed_from",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_sites",
+        "name": "closed_until",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_sites",
+        "name": "closure_reason",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "charter",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "charter_quote_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "charter_quote_currency",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "charter_quoted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "charter_quoted_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boats",
+        "name": "out_of_service_from",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boats",
+        "name": "out_of_service_until",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boats",
+        "name": "out_of_service_reason",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_referred_in_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "referred_in_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_referral_form_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "referral_form_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_referral_record_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "referral_record_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "interests_charter_quoted_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "charter_quoted_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_referral_attributed",
+        "value": "(\"referred_in_at\" is null) = (\"referred_in_by_person_id\" is null)\n        and (\"referral_form_at\" is null) = (\"referral_form_by_person_id\" is null)\n        and (\"referral_record_at\" is null) = (\"referral_record_by_person_id\" is null)\n        and (\"referred_in_at\" is not null or (\"referral_form_at\" is null and \"referral_record_at\" is null))",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_sites",
+        "name": "dive_sites_closure_window",
+        "value": "(\"closed_from\" is null) = (\"closed_until\" is null)\n        and (\"closed_from\" is null or \"closed_from\" <= \"closed_until\")",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_sites",
+        "name": "dive_sites_closure_reason",
+        "value": "\"closure_reason\" is null\n        or (\"closed_from\" is not null and char_length(\"closure_reason\") between 1 and 120)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "interests_charter_is_a_date",
+        "value": "not \"charter\" or \"scope\" = 'date'",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "interests_charter_quote",
+        "value": "(\"charter_quote_cents\" is null) = (\"charter_quoted_at\" is null)\n        and (\"charter_quoted_at\" is null) = (\"charter_quoted_by_person_id\" is null)\n        and (\"charter_quote_cents\" is null) = (\"charter_quote_currency\" is null)\n        and (\"charter_quote_cents\" is null or (\"charter\" and \"charter_quote_cents\" > 0))",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boats",
+        "name": "boats_out_of_service_window",
+        "value": "(\"out_of_service_from\" is null) = (\"out_of_service_until\" is null)\n        and (\"out_of_service_from\" is null or \"out_of_service_from\" <= \"out_of_service_until\")",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boats",
+        "name": "boats_out_of_service_reason",
+        "value": "\"out_of_service_reason\" is null\n        or (\"out_of_service_from\" is not null and char_length(\"out_of_service_reason\") between 1 and 120)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

@@ -22,6 +22,7 @@ vi.mock("../training-mark-actions", () => ({
   },
 }));
 vi.mock("../elearning-actions", () => ({ elearningCheckAction: async () => {} }));
+vi.mock("../referral-actions", () => ({ referralStudentAction: async () => {} }));
 
 const { trainingMarkRosterActions } = await import("./course-roster-actions");
 

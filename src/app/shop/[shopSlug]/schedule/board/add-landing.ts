@@ -3,6 +3,7 @@ import { carryInterests } from "@/db/interest-roll";
 import { countShopTrips } from "@/db/trips";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import type { TripDetailsResult } from "@/lib/trip-details";
 import { uuidParam } from "@/lib/uuid";
 
 const boardPath = (shopSlug: string) => shopPath(shopSlug, "schedule", "board");
@@ -70,4 +71,31 @@ export async function landAfterAdd(
   const query = new URLSearchParams({ builder: "added", created: title });
   if (createdCount > 1) query.set("series", String(createdCount));
   revalidateAndRedirect(back, `${back}?${query.toString()}`);
+}
+
+/**
+ * Where a refused add lands: the builder notice that names the reason, and
+ * the outcome analytics counts it under. Null for a refusal with no sentence
+ * of its own, which lands on the generic "invalid".
+ */
+export function addRefusalLanding(refusal: Exclude<TripDetailsResult, { ok: true }>): {
+  builder: string;
+  outcome: "invalid" | "capacity_above_certificate" | "end_before_start";
+} | null {
+  switch (refusal.reason) {
+    case "boat_out_of_service":
+      // Loop 5, row 5: the builder refuses a hull in the yard.
+      return { builder: "boat-out-of-service", outcome: "invalid" };
+    case "capacity_above_certificate":
+      return {
+        builder: `capacity-above-certificate&count=${refusal.limit}`,
+        outcome: "capacity_above_certificate",
+      };
+    case "end_before_start":
+      return { builder: "end-before-start", outcome: "end_before_start" };
+    case "days_out_of_order":
+      return { builder: "days-out-of-order", outcome: "invalid" };
+    default:
+      return null;
+  }
 }

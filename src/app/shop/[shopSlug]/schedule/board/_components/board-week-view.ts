@@ -26,6 +26,7 @@ import {
 } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ShopCurrency } from "@/lib/money";
+import { type ServiceWindow, serviceWindowCovers } from "@/lib/service-window";
 import {
   shiftWeek,
   weekDates,
@@ -99,6 +100,59 @@ export function boatWarningFor(
 }
 
 /**
+ * **A hull in the yard, a site closed, on one day** (loop 5, row 5). The
+ * builder refuses a new departure on a hull in the yard; this is the board
+ * saying so about a departure already planned, and about one going to a site
+ * the shop has closed. It warns and changes nothing: the departure, its seats
+ * and its readiness are untouched. Asked with the column's shop-local day.
+ */
+export function closureWarningFor(
+  {
+    yardWindows,
+    boatMap,
+    locale,
+    st,
+  }: {
+    /** Each live hull's out-of-service window, by id. */
+    yardWindows: ReadonlyMap<string, ServiceWindow>;
+    boatMap: Map<string, string>;
+    locale: string;
+    st: StaffTranslator;
+  },
+  dayIso: string,
+  dayTrips: ReadonlyArray<{
+    diveMode?: "boat" | "shore" | "pool" | null;
+    boatId?: string | null;
+    diveSiteName?: string | null;
+    diveSiteClosure?: ServiceWindow | null;
+  }>,
+): string | null {
+  const list = cachedListFormat(locale, { style: "long", type: "conjunction" });
+  const boats = new Set<string>();
+  const sites = new Set<string>();
+  for (const trip of dayTrips) {
+    if ((trip.diveMode ?? "boat") === "boat" && trip.boatId) {
+      const name = boatMap.get(trip.boatId);
+      if (name && serviceWindowCovers(yardWindows.get(trip.boatId) ?? null, dayIso)) {
+        boats.add(name);
+      }
+    }
+    if (trip.diveSiteName && serviceWindowCovers(trip.diveSiteClosure ?? null, dayIso)) {
+      sites.add(trip.diveSiteName);
+    }
+  }
+  const lines = [
+    boats.size > 0
+      ? st("boats.outOfServiceWarning", { boats: list.format([...boats]), count: boats.size })
+      : null,
+    sites.size > 0
+      ? st("schedule.week.siteClosedWarning", { sites: list.format([...sites]), count: sites.size })
+      : null,
+  ].filter((line): line is string => line !== null);
+  return lines.length > 0 ? lines.join(" ") : null;
+}
+
+/**
  * **The week, for `xl` and up** (ADR 20260827-clearwater-surface-language,
  * decision 5): seven columns of departures, the multi-day spans across them,
  * the days somebody asked for, and the week's pager. Null while the board has
@@ -114,6 +168,7 @@ export function boardWeekView({
   openRollCalls,
   crewByTrip,
   boatMap,
+  yardWindows = new Map(),
   shop,
   boatCount,
   hasUpcoming,
@@ -132,6 +187,8 @@ export function boardWeekView({
   openRollCalls: Awaited<ReturnType<typeof openAfterDiveRollCalls>>;
   crewByTrip: WeekCrew;
   boatMap: Map<string, string>;
+  /** Each live hull's out-of-service window (loop 5, row 5), by id. */
+  yardWindows?: ReadonlyMap<string, ServiceWindow>;
   shop: { hasBoatDiving: boolean; crewScheduleEnabled: boolean };
   boatCount: number;
   hasUpcoming: boolean;
@@ -264,10 +321,16 @@ export function boardWeekView({
       // The board's whole question, asked of a column: more departures than
       // hulls, or one hull in two places. The stream asks the same one of the
       // same day through the same helper.
-      boatWarning: boatWarningFor(
-        { hasBoatDiving: shop.hasBoatDiving, boatCount, boatMap, locale, st },
-        weekRows.days[iso] ?? [],
-      ),
+      boatWarning:
+        [
+          boatWarningFor(
+            { hasBoatDiving: shop.hasBoatDiving, boatCount, boatMap, locale, st },
+            weekRows.days[iso] ?? [],
+          ),
+          closureWarningFor({ yardWindows, boatMap, locale, st }, iso, weekRows.days[iso] ?? []),
+        ]
+          .filter((line): line is string => line !== null)
+          .join(" ") || null,
       entries,
     };
   });

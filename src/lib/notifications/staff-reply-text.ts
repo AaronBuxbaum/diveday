@@ -1,4 +1,5 @@
 import { diverTranslator } from "@/i18n/messages";
+import { formatMoneyCents } from "@/lib/format";
 import type { WhatsAppReopenMessage } from "@/lib/inbox";
 
 // i18n-exempt-file: the terminal renderer for the words DiveDay itself puts on
@@ -61,4 +62,15 @@ export function interestReplySubject(locale: string, shopName: string): string {
  */
 export function interestReplyText(locale: string, shopName: string, body: string): string {
   return diverTranslator(locale)("notifications.smsInterestReply.body", { shopName, body });
+}
+
+/**
+ * The line a charter quote opens a reply with (loop 5, row 11): the amount in
+ * the shop's own currency, written in the diver's language. The staffer's
+ * words follow it; the amount is never theirs to type into the sentence.
+ */
+export function charterQuoteLine(locale: string, cents: number, currency: string): string {
+  return diverTranslator(locale)("notifications.charterQuote.line", {
+    amount: formatMoneyCents(cents, currency, locale),
+  });
 }

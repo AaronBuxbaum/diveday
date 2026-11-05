@@ -520,6 +520,11 @@
         "label": "Email divers a week before they dive",
         "description": "One email seven days before the departure."
       },
+      "privateCharters": {
+        "heading": "Private charters",
+        "label": "Let divers ask for the whole boat for their group",
+        "description": "A box on the date-request form. You quote the boat from Date requests, and the departure you build from it is private."
+      },
       "seatSoldAlerts": {
         "heading": "Seat-sold email",
         "label": "Email the owners and managers when seats sell",

@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   doublePrecision,
   index,
   integer,
@@ -325,6 +326,18 @@ export const diveSites = pgTable(
     planningNote: text("planning_note"),
     planningNoteAt: timestamp("planning_note_at", { withTimezone: true }),
     planningNoteByPersonId: uuid("planning_note_by_person_id").references(() => people.id),
+    /**
+     * **A site closed for a while** (loop 5, row 5; glossary "Site closure"):
+     * a shop-local calendar window, both ends inclusive, and the shop's one-line
+     * reason ("Mooring buoys out"). While it covers the shop's today the public
+     * site page is gone and no public page links to it; the board warns about a
+     * departure planned there inside it. It informs and never gates: readiness,
+     * admission and the manifest never read it. One window per site, typed over
+     * the last, like a boat's paper dates; null is open.
+     */
+    closedFrom: date("closed_from"),
+    closedUntil: date("closed_until"),
+    closureReason: text("closure_reason"),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
@@ -355,6 +368,17 @@ export const diveSites = pgTable(
         or (${table.depthMinMeters} >= 0
           and ${table.maxDepthMeters} is not null
           and ${table.depthMinMeters} <= ${table.maxDepthMeters})`,
+    ),
+    // Both ends or neither, in order: a closure with one end is no window at all.
+    check(
+      "dive_sites_closure_window",
+      sql`(${table.closedFrom} is null) = (${table.closedUntil} is null)
+        and (${table.closedFrom} is null or ${table.closedFrom} <= ${table.closedUntil})`,
+    ),
+    check(
+      "dive_sites_closure_reason",
+      sql`${table.closureReason} is null
+        or (${table.closedFrom} is not null and char_length(${table.closureReason}) between 1 and 120)`,
     ),
     check(
       "dive_sites_expected_bottom_time_positive",

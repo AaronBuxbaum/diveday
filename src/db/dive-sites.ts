@@ -35,6 +35,7 @@ import {
 } from "@/lib/dive-site-template-sync";
 import type { DiveMode } from "@/lib/diver-planning";
 import type { CertificationLevel } from "@/lib/readiness";
+import { serviceWindowCoversInstant, serviceWindowFrom } from "@/lib/service-window";
 import { briefingInUnit, SITE_PROSE_FIELDS, siteProseInUnit } from "@/lib/site-prose-units";
 import type { TidePreference } from "@/lib/tides";
 import type { AppDb, DbExecutor } from "./client";
@@ -1573,9 +1574,16 @@ export async function listUpcomingDeparturesForSite(
  */
 export async function listDiveSitesForSitemap(
   db: AppDb,
+  now: Date = nowDate(),
 ): Promise<{ shopSlug: string; siteSlug: string }[]> {
-  return db
-    .select({ shopSlug: shops.slug, siteSlug: diveSites.slug })
+  const rows = await db
+    .select({
+      shopSlug: shops.slug,
+      siteSlug: diveSites.slug,
+      timezone: shops.timezone,
+      closedFrom: diveSites.closedFrom,
+      closedUntil: diveSites.closedUntil,
+    })
     .from(diveSites)
     .innerJoin(shops, eq(shops.id, diveSites.shopId))
     .where(
@@ -1585,6 +1593,17 @@ export async function listDiveSitesForSitemap(
         isNull(shops.searchListingOptOutAt),
       ),
     );
+  // A site closed on its shop's today has no public page (loop 5, row 5).
+  return rows
+    .filter(
+      (row) =>
+        !serviceWindowCoversInstant(
+          serviceWindowFrom(row.closedFrom, row.closedUntil, null),
+          now,
+          row.timezone,
+        ),
+    )
+    .map(({ shopSlug, siteSlug }) => ({ shopSlug, siteSlug }));
 }
 
 /** How this shop reads depth, for the catalog's measures (`briefingInUnit`). */
