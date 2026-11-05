@@ -214,7 +214,9 @@ function holdsTheBoat(gap: {
  * the one detector Today and the close-out read). A night boat out past
  * midnight with a diver unmarked used to read as finished by the clock. The
  * crew's own Home still finishes it (`departureStage`): that is the
- * departure's last word, and the record then names who is unaccounted for.
+ * departure's last word. The record names a seat recorded not back aboard;
+ * a seat merely unmarked after a dive is not named there yet (#3895), and
+ * Today keeps chasing that count.
  * The gap read runs only once the departure would otherwise read finished, so
  * a boat still out costs nothing more.
  */
