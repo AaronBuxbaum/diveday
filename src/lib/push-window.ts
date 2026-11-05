@@ -16,12 +16,12 @@
  * its start, so day two of a course weekend is inside it.
  */
 
-import { HOUR_MS } from "@/lib/clock";
+import { pushIsLive, rungOffsetMs } from "@/lib/departure-clock";
 
 /** Push from six hours ahead of departure — the morning of, not the week before. */
-export const WINDOW_BEFORE_MS = 6 * HOUR_MS;
+export const WINDOW_BEFORE_MS = -rungOffsetMs("morning_of");
 /** …until twelve hours after the trip ends, so a late-running day still reaches the boat. */
-export const WINDOW_AFTER_MS = 12 * HOUR_MS;
+export const WINDOW_AFTER_MS = rungOffsetMs("past");
 
 export interface PushWindowTrip {
   startsAt: Date;
@@ -34,13 +34,7 @@ export interface PushWindowTrip {
   endsAt: Date;
 }
 
+/** The window is the departure clock's `pushIsLive` (`src/lib/departure-clock.ts`). */
 export function isInPushWindow(trip: PushWindowTrip, now: Date): boolean {
-  const opens = trip.startsAt.getTime() - WINDOW_BEFORE_MS;
-  // Guard the degenerate row (`ends_at` at or before `starts_at`, which the
-  // schema forbids for schedule days but not for trips themselves) by never
-  // letting the window close before the departure it is about.
-  const closesFrom = Math.max(trip.endsAt.getTime(), trip.startsAt.getTime());
-  const closes = closesFrom + WINDOW_AFTER_MS;
-  const instant = now.getTime();
-  return instant >= opens && instant <= closes;
+  return pushIsLive(trip, now);
 }

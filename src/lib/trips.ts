@@ -4,7 +4,9 @@
  * UI all agree on what "full" means — and on when the boat has gone.
  */
 
-import { HOUR_MS } from "@/lib/clock";
+import { DEPARTURE_BUFFER_MS, hasReached } from "@/lib/departure-clock";
+
+export { DEPARTURE_BUFFER_MS };
 
 /**
  * **The standing late-arrival buffer.** Trips run late, so every "has it
@@ -35,7 +37,6 @@ import { HOUR_MS } from "@/lib/clock";
  * depended on the difference, which is the point: it is the shape of a
  * decision nobody made. {@link hasSailed} settles it on the majority reading.
  */
-export const DEPARTURE_BUFFER_MS = HOUR_MS;
 
 /**
  * **Has the boat gone?** — true once the departure is a buffered hour past the
@@ -48,7 +49,7 @@ export const DEPARTURE_BUFFER_MS = HOUR_MS;
  * answers that.
  */
 export function hasSailed(startsAt: Date, now: Date): boolean {
-  return now.getTime() >= startsAt.getTime() + DEPARTURE_BUFFER_MS;
+  return hasReached("sailed", { startsAt }, now);
 }
 
 /**
@@ -79,7 +80,7 @@ export function acceptsNewDivers(
  * there is nothing left to watch.
  */
 export function hasReturned(endsAt: Date, now: Date): boolean {
-  return now.getTime() >= endsAt.getTime() + DEPARTURE_BUFFER_MS;
+  return hasReached("returned", { endsAt }, now);
 }
 
 /**

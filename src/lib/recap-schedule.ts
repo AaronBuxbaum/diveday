@@ -1,11 +1,12 @@
 import { HOUR_MS } from "./clock";
+import { hasPassed, rungOffsetMs, rungTime } from "./departure-clock";
 
 /**
  * Automatic recap delivery delay: 4 hours after the boat is scheduled to return.
  * Staff can manually send the recap at any time on an ended trip.
  */
-export const RECAP_AUTOMATIC_DELAY_HOURS = 4;
-export const RECAP_AUTOMATIC_DELAY_MS = RECAP_AUTOMATIC_DELAY_HOURS * HOUR_MS;
+export const RECAP_AUTOMATIC_DELAY_MS = rungOffsetMs("settled");
+export const RECAP_AUTOMATIC_DELAY_HOURS = RECAP_AUTOMATIC_DELAY_MS / HOUR_MS;
 
 /**
  * When unpausing automatic sending, delay sending until at least 1 hour from unpause
@@ -26,7 +27,7 @@ export function recapAutoSendAt(
 ): Date | null {
   if (autoSendAt) return autoSendAt;
   if (!endsAt) return null;
-  return new Date(endsAt.getTime() + RECAP_AUTOMATIC_DELAY_MS);
+  return rungTime("settled", { endsAt });
 }
 
 /**
@@ -39,7 +40,16 @@ export function unpauseRecapAutoSendAt(
   unpausedAt: Date,
 ): Date | null {
   if (!endsAt) return null;
-  const originalSendAt = endsAt.getTime() + RECAP_AUTOMATIC_DELAY_MS;
+  const originalSendAt = rungTime("settled", { endsAt }).getTime();
   const unpauseSendAt = unpausedAt.getTime() + RECAP_UNPAUSE_DELAY_MS;
   return new Date(Math.max(originalSendAt, unpauseSendAt));
+}
+
+/**
+ * **Is the automatic recap due?** Strictly past the scheduled return plus the
+ * recap's delay (the `settled` rung of the departure's clock). Staff may send
+ * one by hand before this.
+ */
+export function recapIsDue(endsAt: Date, now: Date): boolean {
+  return hasPassed("settled", { endsAt }, now);
 }

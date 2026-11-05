@@ -48,7 +48,9 @@ Today, notifications, offline manifests, auth). What they do not say:
   `new Date()` or `Date.now()`: Biome rule `clock` (`pnpm lint`). Freeze the clock at the harness, never mask
   moving text.
 - **The one-hour departure buffer is asked through `hasSailed()`/`hasReturned()`**, never a second
-  constant or a hand comparison: departure-buffer guard.
+  constant or a hand comparison: departure-buffer guard. Those and the push window and recap delay
+  are rungs on one ladder, `src/lib/departure-clock.ts`; a new window measured from a departure is
+  a rung there, not an offset of its own.
 - **`src/lib` and `src/db` return codes, not sentences**; a registry feeding the UI holds bundle
   keys: `pnpm check:domain-strings` (ADR 20260731-domain-layer-copy-leaks).
   A renderer (the page, `src/lib/notifications/**`, the file) is the only module that imports a
