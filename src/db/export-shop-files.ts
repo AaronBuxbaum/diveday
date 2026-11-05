@@ -813,6 +813,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "recorder_name",
       "recorded_at",
       "deleted_at",
+      "deleted_by_person_id",
     ],
     rows: ({ personName, safetyDrillRows }) =>
       safetyDrillRows.map((row) => [
@@ -824,6 +825,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         personName.get(row.recordedByPersonId),
         row.recordedAt,
         row.deletedAt,
+        row.deletedByPersonId,
       ]),
     note: EXPORT_FILE_NOTES["safety_drills.csv"],
   },
