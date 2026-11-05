@@ -87,7 +87,7 @@ the deployer key it just ran `cdk deploy` with cannot.
 The checkpoint records what the last sync *sent*, so it went on calling a value current after Vercel
 had stopped holding it: the platform backup's region was stale in Vercel Production for weeks while
 every deploy reported "already in sync". `import-vercel-env.mjs` now also reads Vercel's own listing
-(`vercel env ls <environment> --format json`) and pushes any key Vercel lacks, or whose readable value
+(`vercel env ls --environment <environment> --format json`) and pushes any key Vercel lacks, or whose readable value
 differs, whatever the checkpoint says. A sensitive value is still unreadable, so for those the listing
 proves presence only; `pnpm infra:deploy --resync-vercel` (`--resync` on the script) ignores the
 checkpoint and pushes every value, for when a sensitive value may be stale. In the unattended CI

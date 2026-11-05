@@ -170,7 +170,7 @@ handoff is current. Press Enter or `n` to skip any shown question; `--no-wizard`
 only creates the three files.
 
 The Vercel check reads two witnesses: the hashed checkpoint of what the last sync sent (SSM
-`/diveday/env-sync/vercel/production`) and Vercel's own listing (`vercel env ls --format json`). A
+`/diveday/env-sync/vercel/production`) and Vercel's own listing (`vercel env ls --environment production --format json`). A
 variable missing from Vercel, or one whose readable value differs, is pushed again even when the
 checkpoint calls it current; Vercel never returns a sensitive value, so for those only presence is
 proved. When Vercel may hold a stale sensitive value (a dashboard edit, a push someone declined),
@@ -756,7 +756,7 @@ keys (`src/lib/secret-box.ts`): `SECRET_ENCRYPTION_KEY` seals and opens, and
    predates the column: treat it as still on the old key until it signs in or re-enrols.
 5. To remove it, delete the line from `.env.manual` and redeploy, which drops it from `.env.local`.
    The Vercel import only uploads values that changed and never deletes one, so also run
-   `vercel env rm SECRET_ENCRYPTION_KEY_PREVIOUS production` (and for any preview environment that
+   `vercel env rm SECRET_ENCRYPTION_KEY_PREVIOUS --environment production` (and for any preview environment that
    has it); until then the deployment still holds the old key.
 
 A malformed `SECRET_ENCRYPTION_KEY_PREVIOUS` is reported as an invalid key, as a malformed current key
