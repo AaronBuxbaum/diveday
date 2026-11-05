@@ -1,3 +1,4 @@
+// i18n-exempt-file: test fixture; the readiness text is a stand-in for the resolved copy
 import { EMPTY_EMERGENCY_REFERENCE } from "./emergency-reference";
 import { OFFLINE_MANIFEST_RECORD_VERSION, type OfflineManifestSnapshot } from "./offline-manifests";
 
