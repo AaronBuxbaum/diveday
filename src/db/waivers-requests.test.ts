@@ -1,10 +1,11 @@
 import { and, eq, getTableColumns } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { createWaiverToken, hashWaiverToken, waiverLinkToken } from "@/lib/waiver-tokens";
 import { fileScopedShopContext } from "@/test/db";
-import { waiverRecords } from "./schema";
+import { waiverRecords, waiverTemplates } from "./schema";
 import { setTripStatus } from "./trips";
-import { getWaiverForToken, threadWaiverKey } from "./waivers-completion";
+import { completeWaiver, getWaiverForToken, threadWaiverKey } from "./waivers-completion";
 import { issueWaiverRequest, openWaiverInThread } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
 import { now, waiverContextFor } from "./waivers-test-fixtures";
@@ -387,5 +388,67 @@ describe("waiver records (in-memory PGlite)", () => {
     const copy = { ...minted };
     expect(await getWaiverForToken(db, copy, now)).toEqual({ state: "unavailable" });
     expect((await getWaiverForToken(db, minted, now)).state).toBe("available");
+  });
+});
+
+/**
+ * **A release changed after signing stands for nothing** (issue #3885): the
+ * door that refuses "already completed" must not count a record whose seal
+ * failed, on either scope, or the diver could never be asked to sign again.
+ */
+describe("issuing over a signed release whose seal has been checked", () => {
+  async function signed(scope: "booking" | "person") {
+    const { db, shop, booking, person } = await waiverContext();
+    const target = scope === "booking" ? { bookingId: booking.id } : { personId: booking.personId };
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, ...target, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    const done = await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+      now,
+    });
+    if (!done.ok) throw new Error("expected a signed release");
+    return { db, shop, target, recordId: issued.recordId };
+  }
+  const checked = (valid: boolean) => ({ integrityValid: valid, integrityCheckedAt: now });
+
+  for (const scope of ["booking", "person"] as const) {
+    it(`refuses a ${scope} link while the signed release's seal holds`, async () => {
+      const { db, shop, target, recordId } = await signed(scope);
+      await db.update(waiverRecords).set(checked(true)).where(eq(waiverRecords.id, recordId));
+      expect(await issueWaiverRequest(db, { shopId: shop.id, ...target, now })).toEqual({
+        ok: false,
+        reason: "already_completed",
+      });
+    });
+
+    it(`asks for a fresh ${scope} signature once the signed release's seal has failed`, async () => {
+      const { db, shop, target, recordId } = await signed(scope);
+      await db.update(waiverRecords).set(checked(false)).where(eq(waiverRecords.id, recordId));
+      const again = await issueWaiverRequest(db, { shopId: shop.id, ...target, now });
+      if (!again.ok) throw new Error(`expected a fresh link, got ${again.reason}`);
+      expect(again.recordId).not.toBe(recordId);
+      expect(again.reused).toBe(false);
+    });
+  }
+});
+
+describe("issuing for a shop with no current release", () => {
+  it("refuses with template_not_found and writes no record", async () => {
+    const { db, shop, booking } = await waiverContext();
+    await db
+      .update(waiverTemplates)
+      .set({ deletedAt: now })
+      .where(eq(waiverTemplates.shopId, shop.id));
+    expect(await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now })).toEqual({
+      ok: false,
+      reason: "template_not_found",
+    });
+    const records = await db
+      .select({ id: waiverRecords.id })
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.bookingId, booking.id)));
+    expect(records).toEqual([]);
   });
 });
