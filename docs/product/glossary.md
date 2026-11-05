@@ -276,6 +276,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Interest
 - Invite suggestion
 - Invoice
+- Joined at a dive site
 - Last-minute deal
 - Last-minute list
 - Learning materials

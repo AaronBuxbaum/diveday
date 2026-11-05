@@ -390,6 +390,9 @@ async function repointInTransaction(
     .update(bookings)
     .set({
       personId: input.toPersonId,
+      // A queued offline arrival saved before this was about another person
+      // (issue #3830).
+      seatReopenedAt: now,
       flySafeRecipientSealed: null,
       flySafeAcknowledgementFingerprint: null,
       flySafeAcknowledgedAt: null,

@@ -244,7 +244,7 @@ export async function moveTrip(
     if (before.year !== after.year || before.month !== after.month || before.day !== after.day) {
       await tx
         .update(bookings)
-        .set({ arrivalTrailAfterSeq: arrivalTrailHighWater })
+        .set({ arrivalTrailAfterSeq: arrivalTrailHighWater, seatReopenedAt: now })
         .where(and(eq(bookings.tripId, tripId), eq(bookings.shopId, shopId)));
     }
 

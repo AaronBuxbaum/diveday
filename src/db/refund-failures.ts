@@ -103,6 +103,39 @@ export async function recordStripeRefundFailure(
   return outcome;
 }
 
+/**
+ * **A failure delivered before the refund it undoes** (issue #3835): DiveDay
+ * has not counted the refund yet, so there is nothing to reverse, but the
+ * failure is written down with the refund's own amount, so the refund's own
+ * `charge.refunded`, stamped earlier and delivered later, nets it off
+ * (`refundedTotalNetOfLaterFailures`, src/db/refunds.ts) instead of putting
+ * the failed refund on the books. Owed until the figure already held, so it
+ * never shows as money owed back.
+ */
+async function recordFailureBeforeItsRefund(
+  tx: AppTransaction,
+  input: RefundFailureInput,
+  target: { shopId: string; currency: string; refundedCents: number } & (
+    | { orderId: string }
+    | { checkoutId: string }
+  ),
+): Promise<void> {
+  await tx.insert(stripeRefundFailures).values({
+    shopId: target.shopId,
+    stripeAccountId: input.stripeAccountId,
+    stripeRefundId: input.refund.id,
+    orderId: "orderId" in target ? target.orderId : null,
+    checkoutId: "checkoutId" in target ? target.checkoutId : null,
+    bookingId: null,
+    amountCents: input.refund.amountCents,
+    currency: input.refund.currency || target.currency,
+    refundStatus: input.refund.status,
+    failureReason: input.refund.failureReason,
+    owedUntilRefundedCents: target.refundedCents,
+    failedAt: input.occurredAt,
+  });
+}
+
 async function alreadyRecorded(tx: AppTransaction, refundId: string): Promise<boolean> {
   const [row] = await tx
     .select({ id: stripeRefundFailures.id })
@@ -126,11 +159,19 @@ async function reverseOnOrder(
     const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).for("update");
     if (!current) return { status: "not_found" };
     if (await alreadyRecorded(tx, input.refund.id)) return { status: "already_recorded" };
-    if (current.status !== "refunded" && current.status !== "partly_refunded") {
+    const reversed =
+      current.status === "refunded" || current.status === "partly_refunded"
+        ? Math.min(input.refund.amountCents, current.refundedCents)
+        : 0;
+    if (reversed <= 0) {
+      await recordFailureBeforeItsRefund(tx, input, {
+        shopId: current.shopId,
+        orderId: current.id,
+        currency: current.currency,
+        refundedCents: current.refundedCents,
+      });
       return { status: "not_recorded" };
     }
-    const reversed = Math.min(input.refund.amountCents, current.refundedCents);
-    if (reversed <= 0) return { status: "not_recorded" };
 
     const refundedCents = current.refundedCents - reversed;
     const amountPaidCents = current.amountPaidCents + reversed;
@@ -274,7 +315,15 @@ async function reverseOnCheckout(
     if (!current) return { status: "not_found" };
     if (await alreadyRecorded(tx, input.refund.id)) return { status: "already_recorded" };
     const reversed = Math.min(input.refund.amountCents, current.refundedCents);
-    if (reversed <= 0) return { status: "not_recorded" };
+    if (reversed <= 0) {
+      await recordFailureBeforeItsRefund(tx, input, {
+        shopId: current.shopId,
+        checkoutId: current.id,
+        currency: current.currency,
+        refundedCents: current.refundedCents,
+      });
+      return { status: "not_recorded" };
+    }
 
     await tx
       .update(bookingCheckouts)
