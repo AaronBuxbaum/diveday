@@ -472,7 +472,12 @@
   `/api/cron/waiver-seals`, so a release edited after signing reaches the view by the next night.
   An `invalid` verdict also holds the diver: readiness raises `waiver_seal_failed` ("Waiver changed
   after signing") on every departure, the ones that ask no waiver included, because the seal covers
-  the medical answers; a never-sealed release is unchanged (issue #3885).
+  the medical answers; a never-sealed release is unchanged (issue #3885). The hold is on the
+  **person**: any of their releases at the shop with an `invalid` verdict holds every seat, whatever
+  that release's status now (`peopleWithFailedSeal`), until a clean release signed after the failed
+  check replaces it. The roster's waiver word reads "Changed after signing" with a send, and a
+  fresh link can be sent over the changed release. Readiness reads the nightly verdict, not a fresh
+  hash, so a release changed since the last check is caught at the next one.
   A seal removed rather than broken (a verdict with no hash, or a non-imported release signed
   since sealing shipped with none) is written `invalid` too, and every `invalid` release keeps
   the nightly check unhealthy until someone deals with it;

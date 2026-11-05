@@ -175,3 +175,39 @@ export async function recheckWaiverSeals(
   summary.capped = Boolean(more);
   return summary;
 }
+
+/**
+ * **The people whose signed evidence is compromised** (issue #3885, attacker
+ * review B1): anyone with a release at this shop whose seal failed its last
+ * check, whatever that release's status now and whether or not it is the one
+ * a seat would read. A tampered referral flipped back to pending, or
+ * backdated behind a clean signature, stops being the effective release but
+ * stays a changed record, so readiness holds the person on it.
+ *
+ * Only a clean release **signed after** the failed check clears it: the
+ * desk's way out is to send the waiver and have the diver sign again. An
+ * older clean signature never does, so backdating cannot reach it.
+ */
+export async function peopleWithFailedSeal(
+  db: DbExecutor,
+  shopId: string,
+  personIds: readonly string[],
+): Promise<Set<string>> {
+  if (personIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ personId: waiverRecords.personId })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        inArray(waiverRecords.personId, [...personIds]),
+        eq(waiverRecords.integrityValid, false),
+        sql`not exists (select 1 from ${waiverRecords} as clean
+          where clean.shop_id = ${waiverRecords.shopId}
+          and clean.person_id = ${waiverRecords.personId}
+          and clean.integrity_valid = true
+          and clean.signed_at > ${waiverRecords.integrityCheckedAt})`,
+      ),
+    );
+  return new Set(rows.flatMap((row) => (row.personId ? [row.personId] : [])));
+}

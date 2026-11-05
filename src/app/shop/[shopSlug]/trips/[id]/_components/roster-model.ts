@@ -550,6 +550,14 @@ const WAIVER_CONTROL_KEYS: Record<WaiverStanding, WaiverControlKeys> = {
     action: "send",
     confirm: false,
   },
+  // Changed after signing (issue #3885): held, and the way out is a fresh
+  // signature, the same send the diver record offers.
+  seal_failed: {
+    labelKey: "waiversStaff.seatSealFailed",
+    variant: "danger",
+    action: "send",
+    confirm: false,
+  },
   medical_review: {
     labelKey: "trips.roster.waiverMedicalReview",
     action: null,

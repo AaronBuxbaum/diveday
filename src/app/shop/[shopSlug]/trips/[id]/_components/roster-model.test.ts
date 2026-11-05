@@ -570,3 +570,14 @@ describe("seatMoveForRow", () => {
     expect(seatMoveForRow(turnedAway, true, move(false, true))).toBeUndefined();
   });
 });
+
+// Dock review of #3885: a changed release has its own word on the roster and
+// the same send the diver record offers, never "Signed" with nothing to do.
+describe("the roster's word for a release changed after signing", () => {
+  it("names it and offers a send", () => {
+    const t = staffTranslator("en-US");
+    const control = waiverControls(t).seal_failed;
+    expect(control).toMatchObject({ label: "Changed after signing", action: "send" });
+    expect(control.label).not.toBe(waiverControls(t).signed.label);
+  });
+});

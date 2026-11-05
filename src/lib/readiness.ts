@@ -567,6 +567,12 @@ export type ReadinessInput = {
    * to the course's minimum where the course certifies it. The departure's
    * own level, specialty, and nitrox requirements always stand.
    */
+  /**
+   * Any release this person signed at the shop failed its seal check and no
+   * clean signature since has replaced it (`peopleWithFailedSeal`, issue
+   * #3885, attacker review B1), whichever release this seat reads.
+   */
+  waiverSealFailed?: boolean;
   trainingDive?: TrainingDiveCourse | null;
   /**
    * How far `trainingDive` lowers (`trainingDiveReach`, issue #3910): `site`
@@ -1206,7 +1212,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // departure, the ones that ask no waiver and the ones nobody configured,
   // because the seal covers the medical answers. A never-sealed release
   // (`null`) is unchanged: the verdict, not its absence, is the signal.
-  if (input.waiver?.integrityValid === false) {
+  if (input.waiver?.integrityValid === false || input.waiverSealFailed === true) {
     blockers.push({ code: "waiver_seal_failed" });
   }
 

@@ -323,7 +323,10 @@ async function issueWaiverRecord(
     const cleanPersonReleases = current.filter(
       (record) =>
         isCompletedWaiverCurrent(record, template.materialGeneration, clockAt) &&
-        !guardianSignatureMissing(record, signer),
+        !guardianSignatureMissing(record, signer) &&
+        // A release changed after signing stands for nothing (issue #3885):
+        // the fix is the fresh signature this link asks for.
+        record.integrityValid !== false,
     );
     // H-20261007-after-physician-says-no's amendment allows a newer person-scoped clean release to stand over
     // an open referral. An open referral may belong to this person or one of
@@ -341,7 +344,8 @@ async function issueWaiverRecord(
           (record) =>
             record.status !== "pending" &&
             !lapsed(record) &&
-            !guardianSignatureMissing(record, signer),
+            !guardianSignatureMissing(record, signer) &&
+            record.integrityValid !== false,
         )
       : cleanPersonReleaseStands;
     if (alreadyStanding) {

@@ -93,4 +93,42 @@ describe("readiness over a release whose seal failed", () => {
     await recheckWaiverSeals(ctx.db, { now: nightly });
     expect((await seatCodes(ctx)).codes).toEqual(["waiver_seal_failed"]);
   });
+
+  // Attacker review B1: the tampered referral stops being the release the seat
+  // reads (flipped back to pending), and the person is still held on it.
+  it("holds a diver whose changed referral is no longer the release the seat reads", async () => {
+    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
+    await ctx.db
+      .update(waiverRecords)
+      .set({ status: "pending" })
+      .where(eq(waiverRecords.id, ctx.recordId));
+    await recheckWaiverSeals(ctx.db, { now: nightly });
+    expect((await seatCodes(ctx)).codes).toContain("waiver_seal_failed");
+  });
+
+  it("lets a clean signature made after the failed check clear the hold", async () => {
+    const ctx = await signedOnAWaiverOnlyTrip(clearAnswers);
+    await ctx.db
+      .update(waiverRecords)
+      .set({ templateBody: "A release nobody agreed to." })
+      .where(eq(waiverRecords.id, ctx.recordId));
+    await recheckWaiverSeals(ctx.db, { now: nightly });
+    // The check ran before the diver signed again.
+    await ctx.db
+      .update(waiverRecords)
+      .set({ integrityCheckedAt: new Date("2000-01-01T00:00:00.000Z") })
+      .where(eq(waiverRecords.id, ctx.recordId));
+    const again = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.booking.id,
+    });
+    if (!again.ok) throw new Error(`issue failed: ${again.reason}`);
+    const done = await completeWaiver(ctx.db, again.token, {
+      signerName: ctx.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    if (!done.ok) throw new Error("completion failed");
+    expect(await seatCodes(ctx)).toEqual({ status: "ready", codes: [] });
+  });
 });
