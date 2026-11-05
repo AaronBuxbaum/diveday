@@ -189,11 +189,15 @@ const previous = resync ? new Map() : readCheckpoint();
 function readVercelState() {
   let output;
   try {
-    output = readBounded("pnpm", ["exec", "vercel", "env", "ls", "--environment", environment, "--format", "json"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeoutMs: SUBPROCESS_TIMEOUTS.vercelCli,
-    });
+    output = readBounded(
+      "pnpm",
+      ["exec", "vercel", "env", "ls", "--environment", environment, "--format", "json"],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeoutMs: SUBPROCESS_TIMEOUTS.vercelCli,
+      },
+    );
   } catch (error) {
     // The status and whether it timed out, never the child's stderr: that output
     // ran with the ambient environment and may carry values from it.
