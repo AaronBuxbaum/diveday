@@ -21,14 +21,22 @@ export const DIVE_RECORD_PAPER = PACKET_PAPER;
  * and no sighting (see `RecordFacts`). The rules for what a line may claim are
  * `DiveRecord`'s, and they hold here because the lines are the same.
  *
- * The fold line carries the day rather than a print time: a logbook page is
- * dated by its dive, and that date is already in the shop's zone.
+ * **What ties the page to the shop's record** (reviews of #2745): the fold
+ * carries the dive's day, then the booking's short reference and the instant
+ * this page read the record, in the shop's zone with the zone named. A tab
+ * printed after the shop corrected the record shows its old "as of", and the
+ * divemaster signing it can see that. The signature line is the instructor's
+ * on a course day (training and certification are signed by an instructor) and
+ * the divemaster's otherwise, and it is not drawn at all unless the shop has
+ * evidence the diver was aboard or at the desk (`sheet.signable`): a page for
+ * a diver who never came reads "Not yet confirmed" where a name would go.
  */
 export function DiveRecordSheet({
   t,
   shop,
   trip,
   when,
+  sheet,
   diverName,
   sites,
   diveRecord,
@@ -36,7 +44,15 @@ export function DiveRecordSheet({
   course,
 }: Pick<
   AfterStateProps,
-  "t" | "shop" | "when" | "diverName" | "sites" | "diveRecord" | "observedSpecies" | "course"
+  | "t"
+  | "shop"
+  | "when"
+  | "sheet"
+  | "diverName"
+  | "sites"
+  | "diveRecord"
+  | "observedSpecies"
+  | "course"
 > & { trip: AfterStateProps["trip"] }) {
   const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
   return (
@@ -54,7 +70,7 @@ export function DiveRecordSheet({
             <h1 className="ms-auto text-sm font-semibold">{t("recap.logbookHeading")}</h1>
           </>
         }
-        foldLeft={`${trip.title} · ${when}`}
+        foldLeft={`${trip.title} · ${when} · ${t("recap.printReference", { reference: sheet.reference })} · ${t("recap.printAsOf", { when: sheet.asOf })}`}
         foldRight={storefrontAddress(shop.slug, publicAppUrl())}
       >
         <RecordFacts
@@ -77,10 +93,21 @@ export function DiveRecordSheet({
             ))}
           </div>
         </div>
-        <div data-testid={AFTER_STATE_TEST_IDS.printSignature} className="mt-8">
-          <span aria-hidden="true" className="block border-b border-border" />
-          <p className="mt-2 text-xs font-medium text-muted">{t("recap.printSignature")}</p>
-        </div>
+        {sheet.signable ? (
+          <div data-testid={AFTER_STATE_TEST_IDS.printSignature} className="mt-8">
+            <span aria-hidden="true" className="block border-b border-border" />
+            <p className="mt-2 text-xs font-medium text-muted">
+              {t(course ? "recap.printSignatureInstructor" : "recap.printSignature")}
+            </p>
+          </div>
+        ) : (
+          <p
+            data-testid={AFTER_STATE_TEST_IDS.printUnconfirmed}
+            className="mt-8 text-sm font-medium"
+          >
+            {t("recap.printNotConfirmed", { shopName: shop.name })}
+          </p>
+        )}
         <p className="mt-6 text-xs text-muted">{t("recap.recordedBy", { shopName: shop.name })}</p>
       </PaperSheet>
     </>

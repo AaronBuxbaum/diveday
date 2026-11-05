@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
+import { standingArrivalStatus } from "@/db/arrival-provenance";
 import { issueBookingHandoff } from "@/db/booking-handoff";
 import type { AppDb } from "@/db/client";
+import { departureRollCallForBooking } from "@/db/manifests";
 import { type BookedDeparture, bookedDepartures, nextDiveForBooking } from "@/db/next-dive";
 import {
+  departureAfterLateBoarding,
   MAX_RECAP_PHOTOS_PER_BOOKING,
   type RecapPageData,
   type RecapPhotoView,
@@ -25,6 +28,7 @@ import type { DepthUnit } from "@/lib/depth-units";
 import type { DiveRecordComparison } from "@/lib/dive-record";
 import type { FlySafeAnchor, FlySafeReason } from "@/lib/fly-safe";
 import {
+  formatDateTimeTz,
   formatOrdinal,
   formatRelativeDay,
   formatShortDate,
@@ -34,6 +38,7 @@ import {
 import type { ShopCurrency } from "@/lib/money";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
+import { hasArrived } from "@/lib/presence";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { type SiteMarkCode, siteMarkFor } from "@/lib/site-mark";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
@@ -76,6 +81,17 @@ export type AfterStateProps = {
   >;
   /** The trip's date, already formatted in the shop's zone. */
   when: string;
+  /**
+   * **What ties the logbook sheet to the shop's record** (reviews of #2745).
+   * `reference` is the booking's short reference and `asOf` the instant this
+   * page read the record, in the shop's zone with the zone named, so a signer
+   * can see a page that was printed from an old tab. `signable` is whether the
+   * shop has evidence the diver was on the boat or at the desk (a roll-call
+   * `boarded`, or the desk's sighting); without it the sheet leaves the
+   * signature line out, because a clock alone says nothing about a diver who
+   * never came.
+   */
+  sheet: { reference: string; asOf: string; signable: boolean };
   diverName: string;
   sites: RecapSite[];
   /**
@@ -279,6 +295,11 @@ export function recapBuddyLinkUrl(
   return `${schedule}?${BUDDY_PARAM}=${buddyReferralId(bookingId)}`;
 }
 
+/** The short reference a printed page names its booking by: eight characters of its id. */
+export function bookingReference(bookingId: string): string {
+  return bookingId.replace(/-/g, "").slice(0, 8).toUpperCase();
+}
+
 export async function buildAfterStateProps(input: {
   db: AppDb;
   data: RecapPageData;
@@ -347,6 +368,13 @@ export async function buildAfterStateProps(input: {
   ]);
   const [firstBooked] = booked;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
+  const candidate = { booking: { id: bookingId }, shop: { id: shop.id }, trip: { id: trip.id } };
+  const [rollCall, desk] = await Promise.all([
+    departureRollCallForBooking(db, shop.id, trip.id, bookingId),
+    standingArrivalStatus(db, shop.id, trip.id, bookingId),
+  ]);
+  const boarded = await departureAfterLateBoarding(db, rollCall, candidate);
+  const asOf = nowDate();
 
   return {
     t,
@@ -382,6 +410,11 @@ export async function buildAfterStateProps(input: {
       isCourse: data.course !== null,
     }),
     when,
+    sheet: {
+      reference: bookingReference(bookingId),
+      asOf: formatDateTimeTz(asOf, locale, shop.timezone),
+      signable: boarded === "boarded" || hasArrived(desk),
+    },
     diverName: data.diverName,
     sites: data.sites,
     // Read once in `getRecapPageData`, beside the plan it is compared against,

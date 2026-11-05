@@ -102,6 +102,7 @@ export function AfterState({
     shop,
     trip,
     when,
+    sheet,
     diverName,
     sites,
     diveRecord,
@@ -174,6 +175,7 @@ export function AfterState({
           shop={shop}
           trip={trip}
           when={when}
+          sheet={sheet}
           diverName={diverName}
           sites={sites}
           diveRecord={diveRecord}

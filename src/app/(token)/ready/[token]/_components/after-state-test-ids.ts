@@ -9,6 +9,7 @@ export const AFTER_STATE_TEST_IDS = {
   visitLine: "dive-record-visit-line",
   printNotes: "dive-record-print-notes",
   printSignature: "dive-record-print-signature",
+  printUnconfirmed: "dive-record-print-unconfirmed",
   face: "dive-record-face",
   seen: "dive-record-seen",
   flySafe: "fly-safe-line",

@@ -91,7 +91,10 @@ export function RecordFacts({
         // the record instead, with the plan kept below (issue #1191). The
         // label is honest either way — on a day that went to plan the two
         // lists are the same list.
-        <Fact label={t("recap.sitesLabel")} testId={AFTER_STATE_TEST_IDS.sites}>
+        <Fact
+          label={t(paper ? "recap.printSitesOnTheDay" : "recap.sitesLabel")}
+          testId={AFTER_STATE_TEST_IDS.sites}
+        >
           <ul className="flex flex-col gap-1">
             {recordedSiteNames.map((name) => (
               <li key={name} className="font-medium">

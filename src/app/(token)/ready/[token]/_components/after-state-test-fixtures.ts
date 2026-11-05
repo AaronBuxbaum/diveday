@@ -31,6 +31,7 @@ export function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps
       crew: ["Keiko Tanaka", "Sal Moretti"],
     },
     when: "Sat, Aug 29",
+    sheet: { reference: "3F9A21BC", asOf: "Aug 29, 2:05 PM WITA", signable: true },
     diverName: "Yara Halabi",
     // A site is its name here and nothing else — see "what the record may
     // claim" below for why, and for the type assertion that now holds it.

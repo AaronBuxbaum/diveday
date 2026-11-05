@@ -41,6 +41,7 @@ function SheetOf({ context }: { context: AfterStateProps }) {
       shop={context.shop}
       trip={context.trip}
       when={context.when}
+      sheet={context.sheet}
       diverName={context.diverName}
       sites={context.sites}
       diveRecord={context.diveRecord}
@@ -162,6 +163,55 @@ describe("the logbook sheet (issue #2745)", () => {
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.sites).textContent).toContain("French Reef");
     expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.seen)).toBeNull();
     expect(screen.queryByText("recap.seenOnTheDay")).toBeNull();
+  });
+
+  it("labels the day's sites as the day's, never as the dives this diver made", () => {
+    render(<SheetOf context={props()} />);
+    const sites = screen.getByTestId(AFTER_STATE_TEST_IDS.sites);
+    expect(sites.textContent).toContain("recap.printSitesOnTheDay");
+    expect(sites.textContent).not.toContain("recap.sitesLabel");
+  });
+
+  it("names the booking and the instant the record was read, in the shop's zone", () => {
+    const { container } = render(<SheetOf context={props()} />);
+    expect(container.textContent).toContain("recap.printReference(3F9A21BC)");
+    expect(container.textContent).toContain("recap.printAsOf(Aug 29, 2:05 PM WITA)");
+  });
+
+  it("asks the instructor to sign a course day, and the divemaster any other", () => {
+    const context = props();
+    const { unmount } = render(<SheetOf context={context} />);
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.printSignature).textContent).toContain(
+      "recap.printSignature",
+    );
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.printSignature).textContent).not.toContain(
+      "Instructor",
+    );
+    unmount();
+    render(
+      <SheetOf
+        context={{
+          ...context,
+          course: {
+            title: "Open Water Diver",
+            nextStep: null,
+            certification: { level: "open_water", issuedAt: new Date(0) },
+          },
+        }}
+      />,
+    );
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.printSignature).textContent).toBe(
+      "recap.printSignatureInstructor",
+    );
+  });
+
+  it("draws no signature line without evidence the diver was aboard or at the desk", () => {
+    const context = props();
+    render(<SheetOf context={{ ...context, sheet: { ...context.sheet, signable: false } }} />);
+    expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.printSignature)).toBeNull();
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.printUnconfirmed).textContent).toContain(
+      "recap.printNotConfirmed(Blue Mantis Divers)",
+    );
   });
 
   it("leaves the screen's card without paper rows or print variants", () => {
