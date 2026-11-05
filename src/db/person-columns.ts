@@ -401,9 +401,7 @@ const rows = [
   {
     table: "staff_credentials",
     column: "person_id",
-    export: "withheld",
-    exportWhy:
-      "a staffer's own pro cards: a staff record, not a diving one; whether a staff request for it gets a file is a human decision",
+    export: "own",
     kind: "crew",
     merge: "refuse",
     erase: "scrub",
@@ -580,9 +578,7 @@ const rows = [
   {
     table: "person_roles",
     column: "person_id",
-    export: "withheld",
-    exportWhy:
-      "the account's access level at this shop; a staffer's role is part of their staff record, not their diving record",
+    export: "own",
     kind: "subject",
     merge: "leave",
     erase: "delete",
