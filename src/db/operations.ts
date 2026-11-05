@@ -15,7 +15,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { writeTargetPersonId } from "./people";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
-import { advanceReadMark } from "./trip-read-marks";
+import { startReadMark } from "./trip-read-marks";
 import { livePerson, liveTrip } from "./trips-live";
 
 /**
@@ -32,9 +32,10 @@ export function onTheTrail() {
 /**
  * **The one recorder for a line that may be a desk line** (issue #2701).
  * Inserts the row with the audience its code has (`activityAudience`) and,
- * when the strip reads the code (`catchUpKind`) and a person did it, moves
- * that person's read mark past it in the same executor, so nobody is told
- * about their own act. Takes a {@link DbExecutor} so a caller inside a
+ * when the strip reads the code (`catchUpKind`) and a person did it, gives
+ * that person a read mark at it if they had none (`startReadMark`). An
+ * existing mark never moves on an act: it would carry the actor past a
+ * teammate's line they have not read (issue #3886). Takes a {@link DbExecutor} so a caller inside a
  * transaction writes the line with the act that caused it.
  */
 export async function recordActivityRow(
@@ -48,7 +49,7 @@ export async function recordActivityRow(
     .returning();
   if (!row) return null;
   if (row.tripId && row.actorPersonId && catchUpKind(row.code, row.params)) {
-    await advanceReadMark(db, {
+    await startReadMark(db, {
       shopId: row.shopId,
       tripId: row.tripId,
       personId: row.actorPersonId,

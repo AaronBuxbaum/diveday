@@ -33,11 +33,6 @@ export function deskLine() {
  * Move a read mark forward, never back. A staffer who acted on a departure in
  * one tab and tapped *Got it* in another must not be shown the intervening
  * lines again because the older write landed second.
- *
- * Called by the activity recorder (`recordActivityRow`, `src/db/operations.ts`)
- * for every desk line with an actor, in the same executor: the person who just
- * seated a walk-in is not behind on what they just did, and that is a property
- * of the write rather than a filter somebody has to remember at every read.
  */
 export async function advanceReadMark(
   db: DbExecutor,
@@ -59,6 +54,33 @@ export async function advanceReadMark(
         lastSeenAt: input.now,
       },
     });
+}
+
+/**
+ * Give a person their first mark on a departure at their own act, and never
+ * move one they already have (issue #3886).
+ *
+ * Called by the activity recorder (`recordActivityRow`, `src/db/operations.ts`)
+ * for every desk line with an actor, in the same executor. Catching up starts
+ * once you have acted or acknowledged, so a first act opens the strip. A later
+ * act must not carry the mark forward: Ben, read up to 90, who checks in Carlos
+ * at 100 has still not read Ana's ask for a hand at 95. The reader already
+ * leaves out a person's own lines, so nobody is told about what they just did.
+ */
+export async function startReadMark(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; personId: string; seq: number; now: Date },
+): Promise<void> {
+  await db
+    .insert(tripReadMarks)
+    .values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      personId: input.personId,
+      lastSeenSeq: input.seq,
+      lastSeenAt: input.now,
+    })
+    .onConflictDoNothing({ target: [tripReadMarks.tripId, tripReadMarks.personId] });
 }
 
 export type TripCatchUp = {
