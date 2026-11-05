@@ -48,6 +48,15 @@ describe("nitroxModFor", () => {
     }
   });
 
+  it("gives a richer mix a shallower limit, so a fill that analyzes rich is never covered by the 32% line", () => {
+    // Dive-domain review, row 9, F2: a 33% fill read against "32%: 33 m" is a metre deep.
+    const richer = nitroxModFor(33);
+    const named = nitroxModFor(32);
+    if (!richer || !named) throw new Error("no MOD");
+    expect(richer.meters).toBeLessThan(named.meters);
+    expect(richer.feet).toBeLessThan(named.feet);
+  });
+
   it("plans at a ppO2 of 1.4, the recreational working ceiling", () => {
     expect(NITROX_PLANNING_PPO2_TENTHS).toBe(14);
   });

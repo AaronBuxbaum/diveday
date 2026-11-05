@@ -982,9 +982,11 @@
     "flySafePlannedDivesPlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN, y más si haces paradas de descompresión.",
     "flySafePlannedEarlierDay": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: tienes otro día de buceo con nosotros en los dos días anteriores, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN, y más si haces paradas de descompresión.",
     "nitroxPlan": {
-      "lead": "Tu tarjeta de nitrox está verificada. El límite de profundidad de cada mezcla, planificado a una ppO₂ de 1,4:",
+      "lead": "Tu tarjeta de nitrox está verificada. El límite de oxígeno (MOD) de cada mezcla, planificado a una ppO₂ de 1,4:",
       "line": "{o2} %: quédate por encima de {meters} m / {feet} ft",
-      "notAFill": "Solo para planificar: analiza tu tanque en el muelle y bucea con la mezcla que midas."
+      "notAFill": "Solo para planificar: analiza tu tanque en el muelle, configura tu computadora de buceo con la mezcla que midas y bucea con esa.",
+      "richerIsShallower": "Una mezcla más rica tiene un límite menos profundo: un tanque que marca 33 % no queda cubierto por la línea del 32 %.",
+      "stillApply": "La profundidad de tu certificación y los límites del briefing de la inmersión siguen valiendo, y suelen ser menos profundos."
     },
     "fitUnavailable": "No hemos podido guardar tu equipo y ajuste ahora mismo. Inténtalo de nuevo en un momento.",
     "fitSaved": "Guardado. La tripulación tendrá tus tallas.",

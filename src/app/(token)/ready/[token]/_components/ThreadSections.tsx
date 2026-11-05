@@ -228,7 +228,10 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
                 </li>
               ))}
             </ul>
-            <p className="mt-1 text-muted">{t("ready.nitroxPlan.notAFill")}</p>
+            <p className="mt-1">{t("ready.nitroxPlan.stillApply")}</p>
+            <p className="mt-1 text-muted">
+              {t("ready.nitroxPlan.notAFill")} {t("ready.nitroxPlan.richerIsShallower")}
+            </p>
           </section>
         ) : null}
         {/* Where the day ends up (UX review 2026-10-10, item 35): the recap's

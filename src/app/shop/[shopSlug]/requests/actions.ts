@@ -3,7 +3,6 @@
 import { z } from "zod";
 import { sendInterestReply } from "@/db/interest-replies";
 import { setDateInterestOutcome } from "@/db/interests";
-import { parseCharterQuote } from "@/lib/charter-quote";
 import { nowDate } from "@/lib/clock";
 import { parseForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -58,6 +57,7 @@ export type RequestReplyNotice =
   | "reply-refused"
   | "reply-capped"
   | "reply-bad-quote"
+  | "reply-quote-not-allowed"
   | "reply-send-limit";
 
 /**
@@ -83,18 +83,11 @@ export async function replyToRequestAction(shopSlug: string, formData: FormData)
       noticeUrl(back, "reply-send-limit", { request: parsed.data.requestId }),
     );
   }
-  const quote = parseCharterQuote(parsed.data.quote ?? "", shop.currency);
-  if (!quote.ok) {
-    revalidateAndRedirect(
-      back,
-      noticeUrl(back, "reply-bad-quote", { request: parsed.data.requestId }),
-    );
-  }
   const result = await sendInterestReply(db, {
     shopId: shop.id,
     interestId: parsed.data.requestId,
     body: parsed.data.body,
-    quoteCents: quote.ok ? quote.cents : null,
+    quote: parsed.data.quote ?? null,
     sentByPersonId: session.user.personId,
     now: nowDate(),
   });
@@ -109,7 +102,9 @@ export async function replyToRequestAction(shopSlug: string, formData: FormData)
             ? "reply-capped"
             : result.reason === "bad_quote"
               ? "reply-bad-quote"
-              : "reply-refused";
+              : result.reason === "quote_not_allowed"
+                ? "reply-quote-not-allowed"
+                : "reply-refused";
   const row = notice !== "reply-sent" && notice !== "reply-closed";
   revalidateAndRedirect(
     back,

@@ -26,6 +26,7 @@ import {
   canOverrideCertBlock,
   canOverrideGearRequest,
   canPrintMedicalAlerts,
+  canQuoteCharter,
   canReadCrewAwayNote,
   canReadEveryIncidentReport,
   canReadMedicalAlert,
@@ -68,6 +69,8 @@ describe("accountable-role gates (export/import/reports)", () => {
     ["canRefund", canRefund],
     // H-20260724-staff-role-reach extended: raising an invoice is the same money work as refunding one.
     ["canManageOrders", canManageOrders],
+    // Loop 5, row 11 (security review L2): a whole-boat price in the shop's name.
+    ["canQuoteCharter", canQuoteCharter],
     ["canManageWaiverTemplates", canManageWaiverTemplates],
     ["canDeleteDiver", canDeleteDiver],
     // 20260726-staff-invite-accounts: invite/edit-roles/disable/remove share the same gate.

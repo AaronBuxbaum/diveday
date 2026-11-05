@@ -202,6 +202,16 @@ export function canManageOrders(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);
 }
 
+/**
+ * **Quote a private charter** (loop 5, row 11; security review L2): a
+ * whole-boat price sent to a diver in the shop's name is pricing, the same
+ * owner and manager work as raising an order. Any staff may still answer the
+ * request in words.
+ */
+export function canQuoteCharter(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
 /** Create or edit the shop's waiver template — the legal instrument itself. */
 export function canManageWaiverTemplates(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);

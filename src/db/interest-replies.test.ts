@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { INTEREST_REPLY_DAILY_CAP, INTEREST_REPLY_MAX } from "@/lib/interest-reply";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
+import { SEEDED_CAPTAIN_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
@@ -395,7 +396,7 @@ describe("sendInterestReply", () => {
           shopId: shop.id,
           interestId: id,
           body: "The 3rd works.",
-          quoteCents: 180_000,
+          quote: "1800",
           sentByPersonId: staff,
           now,
         },
@@ -414,6 +415,59 @@ describe("sendInterestReply", () => {
       });
     });
 
+    it("reads the typed figure in the currency it stores and sends it in", async () => {
+      // Security review, layer 3, L3: parsed and stored from one read of the shop.
+      const { db, shop, id, staff } = await charterRequest();
+      await db.update(shops).set({ currency: "jpy" }).where(eq(shops.id, shop.id));
+      const email = fakeEmail();
+      await sendInterestReply(
+        db,
+        {
+          shopId: shop.id,
+          interestId: id,
+          body: "Yes.",
+          quote: "150000",
+          sentByPersonId: staff,
+          now,
+        },
+        { emailProvider: email.provider },
+      );
+      expect(await interestRow(db, id)).toMatchObject({
+        charterQuoteCents: 150_000,
+        charterQuoteCurrency: "jpy",
+      });
+    });
+
+    it("lets only an owner or manager put a price on the boat", async () => {
+      // Security review, layer 3, L2: a quote is pricing, as raising an order is.
+      const { db, shop, id } = await charterRequest();
+      const captain = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
+      const email = fakeEmail();
+      expect(
+        await sendInterestReply(
+          db,
+          {
+            shopId: shop.id,
+            interestId: id,
+            body: "Yes.",
+            quote: "900",
+            sentByPersonId: captain,
+            now,
+          },
+          { emailProvider: email.provider },
+        ),
+      ).toEqual({ status: "refused", reason: "quote_not_allowed" });
+      expect(email.sent).toHaveLength(0);
+      // The same captain may still answer in words.
+      expect(
+        await sendInterestReply(
+          db,
+          { shopId: shop.id, interestId: id, body: "Yes.", sentByPersonId: captain, now },
+          { emailProvider: email.provider },
+        ),
+      ).toMatchObject({ status: "sent" });
+    });
+
     it("records no quote when the reply does not go", async () => {
       const { db, shop, id, staff } = await charterRequest();
       const result = await sendInterestReply(
@@ -422,7 +476,7 @@ describe("sendInterestReply", () => {
           shopId: shop.id,
           interestId: id,
           body: "Yes.",
-          quoteCents: 90_000,
+          quote: "900",
           sentByPersonId: staff,
           now,
         },
@@ -435,6 +489,29 @@ describe("sendInterestReply", () => {
       });
     });
 
+    it("counts the quote line against the reply's length, and sends nothing when it runs over", async () => {
+      // Security review, layer 3, M1: a 1,000-character reply plus the quote
+      // line went out, then failed its own row, leaving no record and no cap.
+      const { db, shop, id, staff } = await charterRequest();
+      const email = fakeEmail();
+      const result = await sendInterestReply(
+        db,
+        {
+          shopId: shop.id,
+          interestId: id,
+          body: "x".repeat(INTEREST_REPLY_MAX),
+          quote: "1800",
+          sentByPersonId: staff,
+          now,
+        },
+        { emailProvider: email.provider },
+      );
+      expect(result).toEqual({ status: "refused", reason: "too_long" });
+      expect(email.sent).toHaveLength(0);
+      expect(await interestRow(db, id)).toMatchObject({ closedAt: null, charterQuoteCents: null });
+      expect(await repliesTo(db, id)).toEqual([]);
+    });
+
     it("refuses a quote on a request that is not a charter, or one that is not an amount", async () => {
       const plain = await openRequest({ email: "priya@example.com" });
       const email = fakeEmail();
@@ -445,7 +522,7 @@ describe("sendInterestReply", () => {
             shopId: plain.shop.id,
             interestId: plain.id,
             body: "Yes.",
-            quoteCents: 90_000,
+            quote: "900",
             sentByPersonId: plain.staff,
             now,
           },
@@ -453,7 +530,7 @@ describe("sendInterestReply", () => {
         ),
       ).toEqual({ status: "refused", reason: "quote_not_a_charter" });
       const charter = await charterRequest();
-      for (const bad of [0, -5, 1.5, Number.NaN, 10_000_001]) {
+      for (const bad of ["0", "-5", "1.555", "abc", "100001"]) {
         expect(
           await sendInterestReply(
             charter.db,
@@ -461,7 +538,7 @@ describe("sendInterestReply", () => {
               shopId: charter.shop.id,
               interestId: charter.id,
               body: "Yes.",
-              quoteCents: bad,
+              quote: bad,
               sentByPersonId: charter.staff,
               now,
             },
