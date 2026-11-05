@@ -738,6 +738,14 @@
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment. A course session can plan up to five dives; an ordinary departure
   can plan up to four. The count is a plan, not a record of underwater groups or completed dives.
+- **Meeting day** — one dated window of a departure that meets on more than one day (a course on
+  two Saturdays, a pool night then an open-water weekend), stored in `trip_schedule_days`. Each
+  has its own hours and its own roll call: a result belongs to the meeting day it was taken on,
+  by the **roll-call day boundary** (ADR 20261104-roll-call-by-meeting-day). A one-day departure
+  has one meeting day, its own window.
+- **Roll-call day boundary** — where one meeting day's roll call ends and the next one's begins:
+  the next day's start, or halfway from the day before's end to it if that is earlier. A stated
+  missing person stays on the manifest and on Today past it until counted again.
 - **Course catalog copy** — a shop's configurable copy of the PADI/SSI course list. The agency owns
   course identity, the prerequisite card (certification and minimum age), and the fact that every
   course session needs an instructor and a signed waiver; the shop controls its two prices, its
@@ -1119,6 +1127,11 @@
   trip *still underway* whose checkpoint was started and abandoned (at least one result and at least
   one person awaiting), and they never age to nothing: past the 48-hour dock-work window they drop a
   band and say plainly that the count was never closed. Kinds 5 and 6 are chased for 48 hours only.
+  Kinds 1 and 2, and kinds 3 and 4 at an after-dive checkpoint somebody **started** (at least one
+  result there), also keep a departure **live**: its trip page never reads finished by the clock
+  while one stands, only by the crew's own Home (`readDepartureStage`, loop 5 row 4, issue #2404).
+  A shop that counts only at the dock, and never starts an after-dive count, still sees its boat
+  finish by the clock; Today keeps chasing the count.
   The population an after-dive count is counting is **who boarded**, never who bought a seat or was
   rostered — a diver who never showed and was never tapped is an unfinished *dock* count, not
   somebody left in the water, and a shop that has never tapped a crew roll call raises no crew rows
@@ -1364,6 +1377,15 @@
   and never as an instructor, whatever the roster says. One definition, `countInWaterCrew` in `src/lib/crew-roles.ts`, shared by the
   booking gate, the trip page, the Today queue, and — through Today's own reader — the shift
   roster's crew-gap count.
+- **Deck count** — the heads the captain counted on deck at one **roll-call checkpoint**, typed as
+  one number on the Boat tab (`deck_counts`, newest per checkpoint stands; loop 5, row 1). The roll
+  call's own head count is the sum of per-person marks, so a mark made against the wrong name still
+  reads as a full boat; the deck count is the second, independent count that catches it. It is held
+  against the passengers that checkpoint expects aboard (never crew) and the page agrees or names
+  the gap: "You count 11. The manifest says 12.", who has no mark, and when more people are marked
+  aboard than counted, that a mark may be on the wrong person. **It informs and never gates**:
+  nothing closes, opens or refuses anything on it, and a checkpoint stays complete or open by the
+  marks alone. Rule in `src/lib/deck-count.ts`, writer and reader in `src/db/deck-counts.ts`.
 - **Roll-call checkpoint** — one independent roll call: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite

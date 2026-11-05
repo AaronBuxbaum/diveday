@@ -1,0 +1,166 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "6bea7cd5-bb32-43de-b2b0-bf68d05c30bf",
+  "prevIds": [
+    "45b8d78a-babc-4c3c-9e49-6516fee99a22",
+    "01a2c5d2-14ff-4817-b18d-c93d52bd29de",
+    "4290a842-0ae0-41e0-8fd5-8a44382668b4"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "safety_drills",
+        "deleted_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.safety_drills.deleted_by_person_id",
+        "n|col|public.safety_drills.deleted_by_person_id",
+        "e|col|public.safety_drills.deleted_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drills",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "safety_drills",
+        "safety_drills_deleted_by_person_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.safety_drills_deleted_by_person_id_idx",
+        "n|idx|public.safety_drills_deleted_by_person_id_idx",
+        "e|idx|public.safety_drills_deleted_by_person_id_idx",
+        "n|rel|public.safety_drills_deleted_by_person_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drills",
+        "n|sch|public",
+        "n|col|public.safety_drills.deleted_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "safety_drills"
+      ],
+      "writes": [
+        "s|fk|public.safety_drills.safety_drills_deleted_by_person_id_people_id_fkey",
+        "n|fk|public.safety_drills.safety_drills_deleted_by_person_id_people_id_fkey",
+        "e|fk|public.safety_drills.safety_drills_deleted_by_person_id_people_id_fkey",
+        "n|con|public.safety_drills.safety_drills_deleted_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drills",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.safety_drills.deleted_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "safety_drills"
+      ],
+      "writes": [
+        "s|ck|public.safety_drills.safety_drills_deleted_by_whom",
+        "n|ck|public.safety_drills.safety_drills_deleted_by_whom",
+        "e|ck|public.safety_drills.safety_drills_deleted_by_whom",
+        "n|con|public.safety_drills.safety_drills_deleted_by_whom"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drills",
+        "n|sch|public",
+        "n|col|public.safety_drills.deleted_at",
+        "n|col|public.safety_drills.deleted_by_person_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "deleted_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "safety_drills_deleted_by_person_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "deleted_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "safety_drills_deleted_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "deleted_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "safety_drills_deleted_by_whom",
+        "value": "(\"deleted_at\" is null) = (\"deleted_by_person_id\" is null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

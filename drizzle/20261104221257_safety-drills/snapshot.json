@@ -1,0 +1,726 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "45b8d78a-babc-4c3c-9e49-6516fee99a22",
+  "prevIds": [
+    "f3920790-3708-4f6b-b3c1-c58ffdb16812"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "safety_drill_kind"
+      ],
+      "writes": [
+        "s|enum|public.safety_drill_kind",
+        "n|enum|public.safety_drill_kind",
+        "e|enum|public.safety_drill_kind",
+        "n|type|public.safety_drill_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "safety_drill_participants"
+      ],
+      "writes": [
+        "s|tbl|public.safety_drill_participants",
+        "n|tbl|public.safety_drill_participants",
+        "e|tbl|public.safety_drill_participants",
+        "n|rel|public.safety_drill_participants",
+        "n|type|public.safety_drill_participants",
+        "n|rel|public.safety_drill_participants_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "safety_drills"
+      ],
+      "writes": [
+        "s|tbl|public.safety_drills",
+        "n|tbl|public.safety_drills",
+        "e|tbl|public.safety_drills",
+        "n|rel|public.safety_drills",
+        "n|type|public.safety_drills",
+        "n|rel|public.safety_drills_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.safety_drill_kind"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "safety_drill_participants",
+        "safety_drill_participants_drill_person_unique"
+      ],
+      "writes": [
+        "s|idx|public.safety_drill_participants_drill_person_unique",
+        "n|idx|public.safety_drill_participants_drill_person_unique",
+        "e|idx|public.safety_drill_participants_drill_person_unique",
+        "n|rel|public.safety_drill_participants_drill_person_unique"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drill_participants",
+        "n|sch|public",
+        "n|col|public.safety_drill_participants.drill_id",
+        "n|col|public.safety_drill_participants.person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "safety_drill_participants",
+        "safety_drill_participants_person_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.safety_drill_participants_person_id_idx",
+        "n|idx|public.safety_drill_participants_person_id_idx",
+        "e|idx|public.safety_drill_participants_person_id_idx",
+        "n|rel|public.safety_drill_participants_person_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drill_participants",
+        "n|sch|public",
+        "n|col|public.safety_drill_participants.person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "safety_drills",
+        "safety_drills_shop_held_live_idx"
+      ],
+      "writes": [
+        "s|idx|public.safety_drills_shop_held_live_idx",
+        "n|idx|public.safety_drills_shop_held_live_idx",
+        "e|idx|public.safety_drills_shop_held_live_idx",
+        "n|rel|public.safety_drills_shop_held_live_idx"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drills",
+        "n|sch|public",
+        "n|col|public.safety_drills.shop_id",
+        "n|col|public.safety_drills.held_on"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "safety_drills",
+        "safety_drills_recorded_by_person_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.safety_drills_recorded_by_person_id_idx",
+        "n|idx|public.safety_drills_recorded_by_person_id_idx",
+        "e|idx|public.safety_drills_recorded_by_person_id_idx",
+        "n|rel|public.safety_drills_recorded_by_person_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drills",
+        "n|sch|public",
+        "n|col|public.safety_drills.recorded_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "safety_drill_participants"
+      ],
+      "writes": [
+        "s|fk|public.safety_drill_participants.safety_drill_participants_shop_id_shops_id_fkey",
+        "n|fk|public.safety_drill_participants.safety_drill_participants_shop_id_shops_id_fkey",
+        "e|fk|public.safety_drill_participants.safety_drill_participants_shop_id_shops_id_fkey",
+        "n|con|public.safety_drill_participants.safety_drill_participants_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drill_participants",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.safety_drill_participants.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "safety_drill_participants"
+      ],
+      "writes": [
+        "s|fk|public.safety_drill_participants.safety_drill_participants_drill_id_safety_drills_id_fkey",
+        "n|fk|public.safety_drill_participants.safety_drill_participants_drill_id_safety_drills_id_fkey",
+        "e|fk|public.safety_drill_participants.safety_drill_participants_drill_id_safety_drills_id_fkey",
+        "n|con|public.safety_drill_participants.safety_drill_participants_drill_id_safety_drills_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drill_participants",
+        "n|sch|public",
+        "n|tbl|public.safety_drills",
+        "n|sch|public",
+        "n|col|public.safety_drill_participants.drill_id",
+        "n|col|public.safety_drills.id",
+        "e|uniqueness|public.safety_drills.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "safety_drill_participants"
+      ],
+      "writes": [
+        "s|fk|public.safety_drill_participants.safety_drill_participants_person_id_people_id_fkey",
+        "n|fk|public.safety_drill_participants.safety_drill_participants_person_id_people_id_fkey",
+        "e|fk|public.safety_drill_participants.safety_drill_participants_person_id_people_id_fkey",
+        "n|con|public.safety_drill_participants.safety_drill_participants_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drill_participants",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.safety_drill_participants.person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "safety_drills"
+      ],
+      "writes": [
+        "s|fk|public.safety_drills.safety_drills_shop_id_shops_id_fkey",
+        "n|fk|public.safety_drills.safety_drills_shop_id_shops_id_fkey",
+        "e|fk|public.safety_drills.safety_drills_shop_id_shops_id_fkey",
+        "n|con|public.safety_drills.safety_drills_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drills",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.safety_drills.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "safety_drills"
+      ],
+      "writes": [
+        "s|fk|public.safety_drills.safety_drills_recorded_by_person_id_people_id_fkey",
+        "n|fk|public.safety_drills.safety_drills_recorded_by_person_id_people_id_fkey",
+        "e|fk|public.safety_drills.safety_drills_recorded_by_person_id_people_id_fkey",
+        "n|con|public.safety_drills.safety_drills_recorded_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.safety_drills",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.safety_drills.recorded_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "safety_drill_participants",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "safety_drills",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "safety_drill_kind",
+        "values": [
+          "oxygen",
+          "missing_diver",
+          "overboard",
+          "fire"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drill_participants",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drill_participants",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drill_participants",
+        "name": "drill_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drill_participants",
+        "name": "person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "kind",
+        "type": "safety_drill_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "held_on",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "note",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "recorded_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "recorded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "deleted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drill_participants",
+        "name": "safety_drill_participants_drill_person_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "drill_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drill_participants",
+        "name": "safety_drill_participants_person_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "safety_drills_shop_held_live_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "held_on",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"deleted_at\" is null",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "safety_drills_recorded_by_person_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "recorded_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drill_participants",
+        "name": "safety_drill_participants_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drill_participants",
+        "name": "safety_drill_participants_drill_id_safety_drills_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "drill_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "safety_drills",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drill_participants",
+        "name": "safety_drill_participants_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "safety_drills_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "safety_drills_recorded_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "recorded_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drill_participants",
+        "name": "safety_drill_participants_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "safety_drills",
+        "name": "safety_drills_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

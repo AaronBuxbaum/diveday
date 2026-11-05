@@ -289,6 +289,15 @@ async function loadCardExportRows(tx: AppTransaction, scope: ShopExportScope | D
   return { cardRows, juniorReviewRows, ...splitCardsByKind(cardRows) };
 }
 
+/** The deck counts and the drill log: the safety records a shop keeps beside its roll call (loop 5). */
+async function readSafetyRecords(tx: AppTransaction, scope: ShopExportScope) {
+  return {
+    deckCountRows: await readScoped(tx, "deckCounts", scope),
+    safetyDrillRows: await readScoped(tx, "safetyDrills", scope),
+    safetyDrillParticipantRows: await readScoped(tx, "safetyDrillParticipants", scope),
+  };
+}
+
 async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const [shop] = await tx.select().from(shops).where(eq(shops.id, shopId)).limit(1);
   if (!shop) return null;
@@ -410,6 +419,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const tripChangeEventRows = await readScoped(tx, "tripChangeEvents", scope);
 
   const tripStageEventRows = await readScoped(tx, "tripStageEvents", scope);
+  const safetyRecords = await readSafetyRecords(tx, scope);
 
   const scheduleDayRows = await tx
     .select()
@@ -661,6 +671,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     tripStartsAt,
     tripChangeEventRows,
     tripStageEventRows,
+    ...safetyRecords,
     scheduleDayRows,
     tripDiveRows,
     orderedRequirementRows,
@@ -1227,6 +1238,9 @@ export async function loadShopExportCounts(
     ),
     "trip_change_events.csv": await countShopScoped(db, "tripChangeEvents", shopId),
     "trip_stage_events.csv": await countShopScoped(db, "tripStageEvents", shopId),
+    "deck_counts.csv": await countShopScoped(db, "deckCounts", shopId),
+    "safety_drills.csv": await countShopScoped(db, "safetyDrills", shopId),
+    "safety_drill_participants.csv": await countShopScoped(db, "safetyDrillParticipants", shopId),
     "trip_series.csv": await countShopScoped(db, "tripSeries", shopId),
     "trip_series_skips.csv": await countShopScoped(db, "tripSeriesSkips", shopId),
     "trip_series_crew.csv": await countShopScoped(db, "tripSeriesCrew", shopId),

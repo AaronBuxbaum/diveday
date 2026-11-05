@@ -4,6 +4,7 @@ import { openSnagsForTrip } from "@/db/boat-snags";
 import { departureVessels } from "@/db/boats";
 import { listTripBuddyTeams, planPartyTeams } from "@/db/buddy-teams";
 import type { AppDb } from "@/db/client";
+import { latestDeckCounts } from "@/db/deck-counts";
 import { listDeskEventsSince } from "@/db/desk-events";
 import { diveIntentTallyForTrip } from "@/db/dive-intent";
 import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
@@ -60,6 +61,7 @@ export async function readManifestPage(
     missingAlerts,
     mayReadMedicalAlerts,
     emergencyStanding,
+    deckCounts,
   ] = await Promise.all([
     // The snapshot reads the manifests itself, under the erasure fence, and the
     // page shows those same rows: one read, so the screen and the copy a
@@ -120,6 +122,8 @@ export async function readManifestPage(
     // Where they stand for opening one in an emergency instead (issue #2990):
     // any active staffer, on the days of the trip in the shop's zone.
     emergencyMedicalAlertStanding(db, shopId, personId, tripId),
+    // The heads the captain counted on deck, newest per checkpoint (loop 5, row 1).
+    latestDeckCounts(db, shopId, tripId),
   ]);
   const completeManifests = offlineSnapshot?.manifests ?? null;
   // Each live site's field guide, for the dive log's "one thing you saw"
@@ -208,5 +212,6 @@ export async function readManifestPage(
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
+    deckCounts,
   };
 }

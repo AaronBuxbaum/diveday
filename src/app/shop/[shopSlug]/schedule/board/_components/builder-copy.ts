@@ -129,6 +129,8 @@ export function scheduleBuilderCopy(st: StaffTranslator, timeZone: string): Buil
     daysLabel: st("schedule.builder.daysLabel"),
     daysDescription: st("schedule.builder.daysDescription"),
     meetingDayLabel: st.raw("schedule.builder.meetingDayLabel"),
+    meetingDayStartLabel: st.raw("schedule.builder.meetingDayStartLabel"),
+    meetingDayEndLabel: st.raw("schedule.builder.meetingDayEndLabel"),
     payAtBookingLegend: st("schedule.builder.payAtBookingLegend"),
     payAtBookingDescription: st("schedule.builder.payAtBookingDescription"),
     depositLabel: st("schedule.builder.depositLabel"),

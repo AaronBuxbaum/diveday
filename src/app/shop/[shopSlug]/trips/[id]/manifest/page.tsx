@@ -21,6 +21,7 @@ import { CancelledRollCallBanner } from "./_components/CancelledRollCallBanner";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CheckpointSwitch } from "./_components/CheckpointSwitch";
 import { CrewRollCall } from "./_components/CrewRollCall";
+import { DeckCount } from "./_components/DeckCount";
 import { DiverRollCall } from "./_components/DiverRollCall";
 import { DockDesk } from "./_components/DockDesk";
 import { ExecutedDiveLog } from "./_components/ExecutedDiveLog";
@@ -124,6 +125,7 @@ export default async function TripManifestPage({
     checklistProps,
     stage,
     dockDesk,
+    deckCount,
     paperIdentity,
   } = view;
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
@@ -217,6 +219,12 @@ export default async function TripManifestPage({
           2, Budget rule 4. Under the head count: the same question asked of
           the boat, tapped at the rail. A safety surface: no drawing, no coral,
           no motion (`StageStrip`). */}
+        {/* **The deck count** (loop 5, row 1): the heads the captain counts on
+          deck, held against the marks the panel above sums. Right under the
+          count it checks; it informs and never gates. Gone with the roll call
+          on a cancelled departure nobody was counted on. */}
+        {cancelled === "closed" ? null : <DeckCount {...deckCount} />}
+
         <StageStrip action={actions.setTripStage} {...stage} />
 
         <CheckpointSwitch

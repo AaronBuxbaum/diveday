@@ -30,6 +30,7 @@ import { currencyFractionDigits, maxPriceMajor, minorToMajor } from "@/lib/money
 import { offeredRentableItems } from "@/lib/rentals";
 import type { FormNotice } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
+import type { MeetingDayHours } from "@/lib/trip-days";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { maxPlannedDives } from "@/lib/trip-dive-limits";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
@@ -61,6 +62,8 @@ export type DetailsSectionContext = {
   dayCount: number;
   /** One date per later day when the days are not consecutive; empty otherwise. */
   laterDates: string[];
+  /** Each later day's own hours as stored (#2558), one pair per later day. */
+  laterHours: MeetingDayHours[];
   /** The shop's live fleet, for the hull select. Empty means no boat rows yet. */
   boats: { id: string; name: string; capacity: number }[];
   /** The shop's trip tags, in the order it wrote them. */
@@ -275,6 +278,7 @@ export function DetailsSection({
     endWall,
     dayCount,
     laterDates,
+    laterHours,
     locale,
     currency,
     boats,
@@ -386,19 +390,22 @@ export function DetailsSection({
             </Field>
           </FieldGrid>
           {/* The date/departs/returns boxes describe day one; this says how
-            many days repeat it, and on which dates once gaps are allowed
-            (third UX review, item 10; `MAX_MEETING_DAY_GAP_DAYS`). Saving rebuilds the whole
+            many days repeat it, on which dates, and at which hours
+            (third UX review, item 10; #2557, #2558). Saving rebuilds the whole
             meeting-day list, so a departure can grow or shrink here rather
             than being deleted and rebuilt as separate trips. */}
           <MeetingDaysField
             copy={{
               daysLabel: t("trips.details.dayCountLabel"),
               dayLabel: t.raw("schedule.builder.meetingDayLabel"),
+              dayStartLabel: t.raw("schedule.builder.meetingDayStartLabel"),
+              dayEndLabel: t.raw("schedule.builder.meetingDayEndLabel"),
             }}
             minDays={MIN_TRIP_DAYS}
             maxDays={MAX_TRIP_DAYS}
             defaultCount={dayCount}
             defaultLaterDates={laterDates}
+            defaultLaterHours={laterHours}
           />
         </>
       ) : null}

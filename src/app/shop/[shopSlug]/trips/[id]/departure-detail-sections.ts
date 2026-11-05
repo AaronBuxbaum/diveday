@@ -22,7 +22,7 @@ export const DEPARTURE_SECTION_FIELDS = {
     "arrivalPhoto",
     "removeArrivalPhoto",
   ],
-  timing: ["date", "startTime", "endTime", "dayCount", "meetingDate"],
+  timing: ["date", "startTime", "endTime", "dayCount", "meetingDate", "meetingStart", "meetingEnd"],
   booking: [
     "capacity",
     "priceDollars",
