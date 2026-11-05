@@ -7,9 +7,10 @@ import type {
   TripRequirement,
   WaiverRecord,
 } from "@/db/schema";
-import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
+import { chosenLevel, levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 import {
   type CertificationLevel,
+  type CertRequirementSource,
   calculateReadiness,
   type ReadinessBlocker,
   type SiteCertRequirement,
@@ -146,12 +147,11 @@ describe("decideTripAdmission — what the booker just typed", () => {
   it("clears a nitrox gate on the tick alone", () => {
     expect(
       decideTripAdmission({
-        requirement: {
-          minimumCertificationIsDefault: false,
+        requirement: chosenLevel({
           minimumCertificationLevel: null,
           requiredSpecialties: [],
           requiresNitrox: true,
-        },
+        }),
         siteRequirement: null,
         evidence: evidence(),
         declared: { nitrox: true },
@@ -704,14 +704,13 @@ describe("admission is monotone with respect to readiness", () => {
         for (const requiresNitrox of [false, true]) {
           for (const { name, evidence: held } of evidenceCases) {
             for (const { name: claim, declared } of declarationCases) {
-              const source = {
-                minimumCertificationIsDefault: false,
+              const source: CertRequirementSource = {
                 minimumCertificationLevel: level,
                 requiredSpecialties: specialties,
                 requiresNitrox,
               };
               const admission = decideTripAdmission({
-                requirement: source,
+                requirement: chosenLevel(source),
                 siteRequirement: null,
                 evidence: held,
                 declared,
@@ -768,15 +767,14 @@ describe("admission is monotone with respect to readiness", () => {
     // fail-open on absence of evidence. The line that stops the seat is
     // readiness, which fails closed on the same flag at the rail. If either
     // half ever moves, this fails rather than quietly opening the boat.
-    const source = {
-      minimumCertificationIsDefault: false,
-      minimumCertificationLevel: "advanced_open_water" as const,
+    const source: CertRequirementSource = {
+      minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: [],
       requiresNitrox: false,
     };
     expect(
       decideTripAdmission({
-        requirement: source,
+        requirement: chosenLevel(source),
         siteRequirement: null,
         evidence: evidence({ certifications: [certification({ level: "open_water" })] }),
         identityUnconfirmed: true,
@@ -785,11 +783,7 @@ describe("admission is monotone with respect to readiness", () => {
 
     const readiness = calculateReadiness({
       timezone: "UTC",
-      requirement: {
-        ...source,
-        requiresWaiver: false,
-        requiresPayment: false,
-      } as unknown as TripRequirement,
+      requirement: { ...source, requiresWaiver: false, requiresPayment: false } as TripRequirement,
       siteRequirement: null,
       waiver: null,
       certifications: [certification({ level: "instructor" })],
@@ -851,7 +845,7 @@ describe("decideTripAdmission — a release that lapses before the departure", (
 
     expect(
       decideTripAdmission({
-        requirement: source,
+        requirement: chosenLevel(source),
         siteRequirement: null,
         evidence: evidence({ certifications: [card] }),
       }),
