@@ -140,11 +140,11 @@ export async function settleStaffHydration(page: Page): Promise<void> {
   // page is the unselected directory and the rail's rows are still sliding: a
   // capture photographs the wrong page and a click lands on its neighbour (#3640).
   await expect(
-    page.locator(`${SETTINGS_SELECTION_PROBE}:not([data-hydrated="true"])`),
+    page.locator(`${SETTINGS_SELECTION_PROBE}:not([data-hydrated="true"]):visible`),
     `${pathname} loaded, but the settings hub never picked its selected setting`,
   ).toHaveCount(0);
   await expect(
-    page.locator(`${SETTINGS_RAIL_PROBE}:not([data-rail-settled])`),
+    page.locator(`${SETTINGS_RAIL_PROBE}:not([data-rail-settled]):visible`),
     `${pathname} loaded, but the settings rail never settled on its current row`,
   ).toHaveCount(0);
 }
