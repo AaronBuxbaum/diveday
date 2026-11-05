@@ -452,7 +452,7 @@ re-creates it between the two stacks.
 What bounds a stack now: nothing this repository chooses. Three cases still cut from `main`
 (nothing of the session's own open, a fix that must merge now, another session's branch), and one
 hard ceiling belongs to GitHub rather than to us — a registered stack holds at most 100 pull
-requests, which `scripts/stack-register.mjs` already refuses past rather than truncating
+requests, which the registrar (since removed, ADR 20261105-gh-stack-is-the-stack) refused past rather than truncating
 (`MAX_LAYERS`), because silently registering the bottom hundred of a longer chain would invent a
 merge order nobody wrote.
 

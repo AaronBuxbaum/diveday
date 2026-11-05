@@ -178,8 +178,6 @@
   "scripts/source-tree.test.mjs": 89,
   "scripts/stack-map.test.mjs": 96,
   "scripts/stack-orphans.test.mjs": 78,
-  "scripts/stack-register.test.mjs": 103,
-  "scripts/stack-sync.test.mjs": 95,
   "scripts/stray-processes.test.mjs": 117,
   "scripts/subprocess.test.mjs": 1010,
   "scripts/symbol-reach.test.mjs": 100,

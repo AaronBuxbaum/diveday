@@ -280,8 +280,8 @@ cannot wait; either way, nothing is pushed red on purpose.
 
 **Loud, with the layer's name.** When the base is red on test files this branch does not edit,
 `verify:push` prints a `THE LAYER BELOW IS RED` banner naming that layer's branch and pull request
-before it runs them (`scripts/red-below.mjs`). Fix the bottom first, then
-`pnpm stack:sync` merges it up one layer at a time (the **stacked-prs** skill).
+before it runs them (`scripts/red-below.mjs`). Fix it where it broke, then
+`gh stack rebase` and `gh stack push` bring the layers above forward (the **stacked-prs** skill).
 
 The PR body rows are a separate gate: `scripts/guard-pr-body.mjs` runs `check-pr-body.mjs`
 before the GitHub MCP creates or edits a pull request.

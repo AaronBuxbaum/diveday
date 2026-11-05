@@ -53,7 +53,7 @@ export function redBelowMessage({ base, pull = null, red, when }) {
   const fix =
     base === "main"
       ? "Fix main first (whoever broke it, through the coordinator), then merge it up"
-      : `Fix it in ${layer} first, where it broke (its owner, through the coordinator), merge that layer up once its CI is green (\`pnpm stack:sync\`)`;
+      : `Fix it in ${layer} first, where it broke (its owner, through the coordinator), merge that layer up once its CI is green (\`gh stack rebase\`, then \`gh stack push\`)`;
   const tail =
     when === "push"
       ? `This commit's stamp did not run them, so this push is a red CI run here and on every layer above. ${fix}; or, if this layer carries the fix, run \`pnpm verify:push --quick\` again, which replays them and stamps only if they pass.`

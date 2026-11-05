@@ -57,7 +57,7 @@ describe("the message", () => {
     });
     expect(text).toMatch(/^THE LAYER BELOW IS RED: `claude\/thread-1-schema` \(#2932\)/);
     expect(text).toContain("e2e/booking.spec.ts, the Build job");
-    expect(text).toContain("pnpm stack:sync");
+    expect(text).toContain("gh stack rebase");
     expect(text).toContain("pnpm verify:push --quick");
     expect(text).not.toMatch(/DIVEDAY_PUSH_UNVERIFIED/);
   });

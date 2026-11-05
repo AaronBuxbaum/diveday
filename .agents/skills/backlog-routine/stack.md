@@ -24,12 +24,9 @@ git push -u origin claude/<slug-2>
 the point; the body catches up at step 7. Every failure this routine has hit with stacks lived in the
 gap between cutting a branch and opening its pull request.
 
-**There is no registration step and nothing to wait for.** `.github/workflows/stack.yml` sees the
-pull request event and registers the chain as a stack on a runner — a session cannot reach that
-endpoint at all, which is what quietly stopped this working for nine days (ADR
-[20260907-a-runner-registers-the-stack](../../../docs/architecture/decisions/20260907-a-runner-registers-the-stack.md)).
-Anything telling you to run `gh stack link` or `gh api --method POST .../stacks` yourself is written
-for a workstation.
+**Registration is `gh stack submit --auto` (and `gh stack add -Am "<msg>" <branch>` for a layer),
+always non-interactive** — see the **stacked-prs** skill and ADR
+[20261105-gh-stack-is-the-stack](../../../docs/architecture/decisions/20261105-gh-stack-is-the-stack.md).
 
 **Why, concretely.** Thirteen branches cut from one `main` in a single session all edited
 `AGENTS.md`'s `check:repo` row, a `docs/design/*.md` section, and a section of `scripts/ratchets.json`. Every

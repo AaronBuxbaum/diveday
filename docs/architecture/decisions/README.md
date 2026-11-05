@@ -342,7 +342,7 @@ script again.
 | 20260904-reef-all-the-way-down | Take Reef to the bottom… |
 | 20260904-squash-migration-baseline | One baseline migration, and its… |
 | 20260906-before-you-ask | DiveDay fills in what it… |
-| 20260907-a-runner-registers-the-stack | A runner registers the stack,… |
+| 20260907-a-runner-registers-the-stack | ~~A runner registers the stack,…~~ → 20261105-gh-stack-is-the-stack |
 | 20260907-external-uptime-monitor | Watch DiveDay with a Route… |
 | 20260907-guardian-co-signature | A minor's release is signed… |
 | 20260907-in-your-hands | Where the device already knows… |
@@ -451,5 +451,6 @@ script again.
 | 20261104-move-a-party-as-one | A party moves between departures… |
 | 20261104-roll-call-by-meeting-day | Roll call and "the boat… |
 | 20261104-seed-is-one-context-and-named-sets | Seed the demo from one… |
+| 20261105-gh-stack-is-the-stack | Stacks are made and moved… |
 
 <!-- adr-index:end -->
