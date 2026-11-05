@@ -44,7 +44,8 @@
     "sent": "Reply sent.",
     "closed": "That request was already closed.",
     "failed": "That reply didn’t send. The request is still open, so try again or answer from your own email or phone.",
-    "refused": "That reply can’t go from here. Answer from your own email or phone."
+    "refused": "That reply can’t go from here. Answer from your own email or phone.",
+    "capped": "That request has had {count, plural, one {# reply} other {# replies}} in the last 24 hours. Answer the next from your own email or phone."
   },
   "done": {
     "heading": "Done: {count, plural, one {# request} other {# requests}}",

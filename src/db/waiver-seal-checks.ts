@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { waiverIntegrityVerdict } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
 import { waiverRecords } from "./schema";
@@ -56,7 +56,13 @@ export async function recheckWaiverSeals(
   const due = and(
     isNotNull(waiverRecords.integrityHash),
     isNotNull(waiverRecords.integrityVersion),
-    or(isNull(waiverRecords.integrityCheckedAt), lt(waiverRecords.integrityCheckedAt, options.now)),
+    // A verdict dated after now is due too: a forged far-future time would
+    // otherwise keep a row out of every pass.
+    or(
+      isNull(waiverRecords.integrityCheckedAt),
+      lt(waiverRecords.integrityCheckedAt, options.now),
+      gt(waiverRecords.integrityCheckedAt, options.now),
+    ),
   );
 
   while (summary.checked < limit) {
@@ -71,7 +77,12 @@ export async function recheckWaiverSeals(
       .from(waiverRecords)
       .where(due)
       // diveday:allow-time-id-order: a drain nobody is shown; the id only keeps a batch stable.
-      .orderBy(sql`${waiverRecords.integrityCheckedAt} asc nulls first`, waiverRecords.id)
+      .orderBy(
+        // Future-dated verdicts first, so a cap cannot leave them for last.
+        sql`coalesce(${waiverRecords.integrityCheckedAt} > ${options.now}, false) desc`,
+        sql`${waiverRecords.integrityCheckedAt} asc nulls first`,
+        waiverRecords.id,
+      )
       .limit(Math.min(batchSize, limit - summary.checked));
     if (rows.length === 0) return summary;
 

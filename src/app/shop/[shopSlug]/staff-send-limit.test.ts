@@ -14,8 +14,8 @@ import {
 /**
  * **A staff member past the hourly send bound** (`RATE_LIMITS.staffSendByActor`)
  * on each of the one-tap sends to someone outside the shop: a fresh waiver
- * link, a reply to a diver, a staff invite and its resend, an invoice resend,
- * a departure's recaps and a note to everyone on a departure.
+ * link, a reply to a diver or to a date request, a staff invite and its resend,
+ * an invoice resend, a departure's recaps and a note to everyone on a departure.
  *
  * Each is refused with words before anything is written or sent. The real gate
  * runs behind a mocked `auth()`; only the bucket's answer is forced.
@@ -52,6 +52,10 @@ vi.mock("@/db/staff-reply", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/staff-reply")>();
   return { ...actual, sendStaffReply: vi.fn() };
 });
+vi.mock("@/db/interest-replies", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/interest-replies")>();
+  return { ...actual, sendInterestReply: vi.fn() };
+});
 vi.mock("@/db/orders", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/orders")>();
   return { ...actual, resendOrderInvoice: vi.fn() };
@@ -78,6 +82,7 @@ const { auth } = await import("@/lib/auth");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { sendNotification } = await import("@/db/notifications");
 const { sendStaffReply } = await import("@/db/staff-reply");
+const { sendInterestReply } = await import("@/db/interest-replies");
 const { resendOrderInvoice } = await import("@/db/orders");
 const { deliverWaiverBatch } = await import("@/db/waiver-issue");
 const { retireMedicalRefusal } = await import("@/db/waivers");
@@ -88,6 +93,7 @@ const { resendInvoiceAction } = await import("@/app/actions/invoices");
 const { sendTripRecaps } = await import("@/db/recap");
 const { holdSend } = await import("@/db/held-sends");
 const { sendRecapAction } = await import("./actions");
+const { replyToRequestAction } = await import("./requests/actions");
 const { holdDepartureNoteAction } = await import("./trips/[id]/departure-note-actions");
 
 const ctx = fileScopedShopContext();
@@ -146,6 +152,17 @@ describe("a staff member past the hourly send bound", () => {
     expect(to).toContain("notice=reply-send-limit");
     expect(lastBucketPolicy()).toBe(RATE_LIMITS.staffSendByActor);
     expect(sendStaffReply).not.toHaveBeenCalled();
+  });
+
+  it("a reply to a date request is refused before it is sent", async () => {
+    const requestId = randomUUID();
+    const to = await redirectedTo(() =>
+      replyToRequestAction(ctx.shop.slug, form({ requestId, body: "The 3rd works." })),
+    );
+    expect(to).toContain("notice=reply-send-limit");
+    expect(to).toContain(`request=${requestId}`);
+    expect(lastBucketPolicy()).toBe(RATE_LIMITS.staffSendByActor);
+    expect(sendInterestReply).not.toHaveBeenCalled();
   });
 
   it("an invite is refused before the account is made or the email sent", async () => {

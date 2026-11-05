@@ -15,6 +15,14 @@ const DIALABLE = /^\+[1-9]\d{6,14}$/;
 /** The longest reply, in characters, once trimmed. A reply, not a letter. */
 export const INTEREST_REPLY_MAX = 1_000;
 
+/**
+ * The most replies one request takes in a day, whether they went or not. A
+ * reply closes the lead and Reopen opens it again, so without this one lead
+ * could be texted without end; past it, the staffer answers from their own
+ * email or phone.
+ */
+export const INTEREST_REPLY_DAILY_CAP = 3;
+
 /** How a reply reaches the diver: their email, or a text to the number they left. */
 export type InterestReplyRoute = { channel: "email"; to: string } | { channel: "text"; to: string };
 

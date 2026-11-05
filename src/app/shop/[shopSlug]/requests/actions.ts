@@ -6,6 +6,7 @@ import { setDateInterestOutcome } from "@/db/interests";
 import { nowDate } from "@/lib/clock";
 import { parseForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
@@ -47,7 +48,13 @@ const replyForm = z.object({
  * `closed` are the page's (the row has moved under Done, or was there
  * already); the rest name the row they belong to with `?request=`.
  */
-export type RequestReplyNotice = "reply-sent" | "reply-closed" | "reply-failed" | "reply-refused";
+export type RequestReplyNotice =
+  | "reply-sent"
+  | "reply-closed"
+  | "reply-failed"
+  | "reply-refused"
+  | "reply-capped"
+  | "reply-send-limit";
 
 /**
  * **Reply to a request from DiveDay** (issue #2555). Every live staff role
@@ -61,6 +68,17 @@ export async function replyToRequestAction(shopSlug: string, formData: FormData)
   const back = shopPath(shopSlug, "requests");
   const parsed = parseForm(replyForm, formData);
   if (!parsed.ok) revalidateAndRedirect(back, noticeUrl(back, "reply-refused"));
+  // Bounded per staffer like every other one-tap send outside the shop.
+  const sendAllowed = await checkRateLimit(
+    rateLimitKey("staff-send", "interest-reply", session.user.personId),
+    RATE_LIMITS.staffSendByActor,
+  );
+  if (!sendAllowed.allowed) {
+    revalidateAndRedirect(
+      back,
+      noticeUrl(back, "reply-send-limit", { request: parsed.data.requestId }),
+    );
+  }
   const result = await sendInterestReply(db, {
     shopId: shop.id,
     interestId: parsed.data.requestId,
@@ -75,8 +93,10 @@ export async function replyToRequestAction(shopSlug: string, formData: FormData)
         ? "reply-failed"
         : result.reason === "not_open"
           ? "reply-closed"
-          : "reply-refused";
-  const row = notice === "reply-failed" || notice === "reply-refused";
+          : result.reason === "capped"
+            ? "reply-capped"
+            : "reply-refused";
+  const row = notice !== "reply-sent" && notice !== "reply-closed";
   revalidateAndRedirect(
     back,
     noticeUrl(back, notice, row ? { request: parsed.data.requestId } : undefined),

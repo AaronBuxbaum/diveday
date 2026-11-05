@@ -99,6 +99,22 @@ describe("recheckWaiverSeals", () => {
     expect(await inUncheckedView(db, shop.id, recordId)).toBe(true);
   });
 
+  it("re-checks a verdict dated in the future, which would otherwise never come due", async () => {
+    const { db, shop, recordId } = await signedRelease();
+    await tamper(db, recordId);
+    // A forged "valid" stamped far ahead (security review of #2562).
+    await db
+      .update(waiverRecords)
+      .set({ integrityValid: true, integrityCheckedAt: new Date("9999-01-01T00:00:00.000Z") })
+      .where(eq(waiverRecords.id, recordId));
+    const summary = await recheckWaiverSeals(db, { now: later });
+    expect(await verdictOf(db, recordId)).toMatchObject({ valid: false, checkedAt: later });
+    expect(summary.newlyInvalid).toBeGreaterThanOrEqual(1);
+    expect(await inUncheckedView(db, shop.id, recordId)).toBe(true);
+    // Checked now, it is not due again in the same pass's instant.
+    expect((await recheckWaiverSeals(db, { now: later })).checked).toBe(0);
+  });
+
   it("leaves an untouched release valid and out of the view, with a fresh check time", async () => {
     const { db, shop, recordId } = await signedRelease();
     await recheckWaiverSeals(db, { now: later });

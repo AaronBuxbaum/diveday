@@ -12,7 +12,7 @@ import { formatCalendarDate } from "@/lib/calendar-date";
 import { addDepartureHref } from "@/lib/date-requests";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { formatShortDate } from "@/lib/format";
-import { interestReplyRoute } from "@/lib/interest-reply";
+import { INTEREST_REPLY_DAILY_CAP, interestReplyRoute } from "@/lib/interest-reply";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -138,12 +138,16 @@ export default async function RequestsPage({
     "reply-closed": { tone: "danger", row: false },
     "reply-failed": { tone: "danger", row: true },
     "reply-refused": { tone: "danger", row: true },
+    "reply-capped": { tone: "danger", row: true },
+    "reply-send-limit": { tone: "danger", row: true },
   } satisfies Record<RequestReplyNotice, { tone: "success" | "danger"; row: boolean }>);
   const replyWords: Record<RequestReplyNotice, string> = {
     "reply-sent": t("requests.replyNotice.sent"),
     "reply-closed": t("requests.replyNotice.closed"),
     "reply-failed": t("requests.replyNotice.failed"),
     "reply-refused": t("requests.replyNotice.refused"),
+    "reply-capped": t("requests.replyNotice.capped", { count: INTEREST_REPLY_DAILY_CAP }),
+    "reply-send-limit": t("shared.limits.sendLimit", { thing: "replies" }),
   };
   const replyAction = replyToRequestAction.bind(null, shopSlug);
   // The form, for a request a reply can reach (`interestReplyRoute`); the
