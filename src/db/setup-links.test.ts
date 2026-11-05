@@ -1,9 +1,11 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { SETUP_LINK_TTL_MS, setupLinkPath } from "@/lib/setup-links";
 import { unseededTestDb } from "@/test/db";
+import { issueCapability, verifyCapability } from "./capabilities";
 import { deleteSetupRequestsByEmail, recordSetupRequest } from "./funnel";
-import { shopSetupLinks, shops } from "./schema";
+import { capabilities, people, shops, userAccounts } from "./schema";
 import { issueSetupLink, openSetupLink, recordSetupLinkShop, spendSetupLink } from "./setup-links";
 
 const NOW = new Date("2026-10-09T12:00:00Z");
@@ -27,8 +29,13 @@ describe("a setup link (ADR 20261009-single-use-setup-links)", () => {
   it("is stored only as a hash, and expires two weeks after it is minted", async () => {
     const db = await unseededTestDb();
     const { link } = await requestedLink(db);
-    const [row] = await db.select().from(shopSetupLinks);
-    expect(row?.tokenHash).toBe(hashBearerToken(link.token));
+    const [row] = await db.select().from(capabilities);
+    expect(row).toMatchObject({
+      purpose: "shop_setup",
+      shopId: null,
+      tokenHash: hashBearerToken(link.token),
+      expiresAt: link.expiresAt,
+    });
     expect(JSON.stringify(row)).not.toContain(link.token);
     expect(link.expiresAt.getTime() - NOW.getTime()).toBe(SETUP_LINK_TTL_MS);
     expect(setupLinkPath(link.token)).toBe(`/onboard?setup=${link.token}`);
@@ -103,7 +110,7 @@ describe("a setup link (ADR 20261009-single-use-setup-links)", () => {
     const db = await unseededTestDb();
     const { link } = await requestedLink(db);
     await deleteSetupRequestsByEmail(db, "ana@reefline.example");
-    expect(await db.select().from(shopSetupLinks)).toEqual([]);
+    expect(await db.select().from(capabilities)).toEqual([]);
     expect(await openSetupLink(db, link.token, NOW)).toBeNull();
   });
 
@@ -117,13 +124,96 @@ describe("a setup link (ADR 20261009-single-use-setup-links)", () => {
     if (!shop) throw new Error("expected a shop");
     expect(await spendSetupLink(db, link.token, NOW)).toBe(true);
     await recordSetupLinkShop(db, link.token, shop.id);
-    const [row] = await db.select().from(shopSetupLinks);
+    const [row] = await db.select().from(capabilities);
     expect(row?.spentByShopId).toBe(shop.id);
 
-    const { eq } = await import("drizzle-orm");
     await db.delete(shops).where(eq(shops.id, shop.id));
-    const [after] = await db.select().from(shopSetupLinks);
+    const [after] = await db.select().from(capabilities);
     expect(after?.spentByShopId).toBeNull();
-    expect(after?.spentAt).not.toBeNull();
+    expect(after?.usedAt).not.toBeNull();
+  });
+
+  /**
+   * Adversarial, since the link moved onto `capabilities` (ADR
+   * 20261105-capabilities-shop-id-nullable): a token of another purpose never
+   * opens the form, a setup link opens nothing else, an unspent link records
+   * no shop, and only this purpose may carry one.
+   */
+  it("never resolves across purposes: an account token opens no form, and a setup link nothing else", async () => {
+    const db = await unseededTestDb();
+    const { link } = await requestedLink(db);
+    expect(await verifyCapability(db, { purpose: "password_reset", token: link.token })).toBeNull();
+    expect(await verifyCapability(db, { purpose: "invite", token: link.token })).toBeNull();
+    const [owner] = await db
+      .insert(shops)
+      .values({ name: "Other", slug: "other-setup-links", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!owner) throw new Error("expected a shop");
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: owner.id, fullName: "Owner", email: "owner-setup@example.com" })
+      .returning({ id: people.id });
+    if (!person) throw new Error("expected a person");
+    const [account] = await db
+      .insert(userAccounts)
+      .values({
+        personId: person.id,
+        email: "owner-setup@example.com",
+        hashedPassword: "x",
+        status: "active",
+      })
+      .returning({ id: userAccounts.id });
+    if (!account) throw new Error("expected an account");
+    const reset = await issueCapability(db, {
+      purpose: "password_reset",
+      shopId: null,
+      subjectId: account.id,
+      now: NOW,
+    });
+    expect(await openSetupLink(db, reset, NOW)).toBeNull();
+    expect(await spendSetupLink(db, reset, NOW)).toBe(false);
+    expect(await openSetupLink(db, link.token, NOW)).not.toBeNull();
+  });
+
+  it("records a shop only on a link that was spent", async () => {
+    const db = await unseededTestDb();
+    const { link } = await requestedLink(db);
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Early", slug: "early-setup-link", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!shop) throw new Error("expected a shop");
+    expect(await recordSetupLinkShop(db, link.token, shop.id)).toBeNull();
+    const [row] = await db.select().from(capabilities);
+    expect(row?.spentByShopId).toBeNull();
+  });
+
+  it("the table refuses a setup link with a shop, with no request, or a spent-by shop on another purpose", async () => {
+    const db = await unseededTestDb();
+    const { request } = await requestedLink(db);
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Scoped", slug: "scoped-setup-link", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!shop) throw new Error("expected a shop");
+    const expiresAt = new Date(NOW.getTime() + SETUP_LINK_TTL_MS);
+    const bad = [
+      { purpose: "shop_setup" as const, shopId: shop.id, setupRequestId: request.id, expiresAt },
+      { purpose: "shop_setup" as const, expiresAt },
+      { purpose: "shop_setup" as const, setupRequestId: request.id },
+      {
+        purpose: "shore_alert_stop" as const,
+        shopId: shop.id,
+        sentTo: "shore@example.com",
+        spentByShopId: shop.id,
+      },
+    ];
+    for (const [index, row] of bad.entries()) {
+      await expect(
+        db.transaction(async (tx) => {
+          await tx.insert(capabilities).values({ ...row, tokenHash: `bad-setup-${index}` });
+        }),
+      ).rejects.toThrow();
+    }
   });
 });

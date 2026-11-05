@@ -1,0 +1,506 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2762930d-7458-4d9a-9d3c-8458901a699a",
+  "prevIds": [
+    "a6f820ca-faa8-4ad8-a3ba-63ba6bf44569"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "capability_purpose"
+      ],
+      "writes": [
+        "s|enum|public.capability_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "shop_setup_links"
+      ],
+      "writes": [
+        "s|tbl|public.shop_setup_links",
+        "n|tbl|public.shop_setup_links",
+        "e|tbl|public.shop_setup_links",
+        "n|rel|public.shop_setup_links",
+        "n|type|public.shop_setup_links"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "capabilities",
+        "setup_request_id"
+      ],
+      "writes": [
+        "s|col|public.capabilities.setup_request_id",
+        "n|col|public.capabilities.setup_request_id",
+        "e|col|public.capabilities.setup_request_id"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "capabilities",
+        "spent_by_shop_id"
+      ],
+      "writes": [
+        "s|col|public.capabilities.spent_by_shop_id",
+        "n|col|public.capabilities.spent_by_shop_id",
+        "e|col|public.capabilities.spent_by_shop_id"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "capabilities",
+        "capabilities_setup_request_idx"
+      ],
+      "writes": [
+        "s|idx|public.capabilities_setup_request_idx",
+        "n|idx|public.capabilities_setup_request_idx",
+        "e|idx|public.capabilities_setup_request_idx",
+        "n|rel|public.capabilities_setup_request_idx"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.setup_request_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "capabilities",
+        "capabilities_spent_by_shop_idx"
+      ],
+      "writes": [
+        "s|idx|public.capabilities_spent_by_shop_idx",
+        "n|idx|public.capabilities_spent_by_shop_idx",
+        "e|idx|public.capabilities_spent_by_shop_idx",
+        "n|rel|public.capabilities_spent_by_shop_idx"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.spent_by_shop_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|fk|public.capabilities.capabilities_setup_request_id_setup_requests_id_fkey",
+        "n|fk|public.capabilities.capabilities_setup_request_id_setup_requests_id_fkey",
+        "e|fk|public.capabilities.capabilities_setup_request_id_setup_requests_id_fkey",
+        "n|con|public.capabilities.capabilities_setup_request_id_setup_requests_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|tbl|public.setup_requests",
+        "n|sch|public",
+        "n|col|public.capabilities.setup_request_id",
+        "n|col|public.setup_requests.id",
+        "e|uniqueness|public.setup_requests.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|fk|public.capabilities.capabilities_spent_by_shop_id_shops_id_fkey",
+        "n|fk|public.capabilities.capabilities_spent_by_shop_id_shops_id_fkey",
+        "e|fk|public.capabilities.capabilities_spent_by_shop_id_shops_id_fkey",
+        "n|con|public.capabilities.capabilities_spent_by_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.capabilities.spent_by_shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_spent_by_shop_only_setup",
+        "n|ck|public.capabilities.capabilities_spent_by_shop_only_setup",
+        "e|ck|public.capabilities.capabilities_spent_by_shop_only_setup",
+        "n|con|public.capabilities.capabilities_spent_by_shop_only_setup"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.spent_by_shop_id",
+        "n|col|public.capabilities.purpose"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_subject_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.purpose",
+        "n|col|public.capabilities.interest_id",
+        "n|col|public.capabilities.person_id",
+        "n|col|public.capabilities.sent_to",
+        "n|col|public.capabilities.user_account_id",
+        "n|col|public.capabilities.setup_request_id",
+        "e|col|public.capabilities.purpose",
+        "e|col|public.capabilities.interest_id",
+        "e|col|public.capabilities.person_id",
+        "e|col|public.capabilities.sent_to",
+        "e|col|public.capabilities.user_account_id"
+      ],
+      "sqlHash": "a2b7e7da56d2cca2"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_used_only_when_spent"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.used_at",
+        "n|col|public.capabilities.purpose",
+        "e|col|public.capabilities.used_at",
+        "e|col|public.capabilities.purpose"
+      ],
+      "sqlHash": "0e3e8376598dba07"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_expiry_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.expires_at",
+        "n|col|public.capabilities.purpose",
+        "e|col|public.capabilities.expires_at",
+        "e|col|public.capabilities.purpose"
+      ],
+      "sqlHash": "3fc54132ff0a749a"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_scope_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.shop_id",
+        "n|col|public.capabilities.purpose",
+        "e|col|public.capabilities.shop_id",
+        "e|col|public.capabilities.purpose"
+      ],
+      "sqlHash": "22ef0a67d0c919bf"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "setup_request_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "spent_by_shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_setup_request_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "setup_request_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_spent_by_shop_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "spent_by_shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_setup_request_id_setup_requests_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "setup_request_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "setup_requests",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_spent_by_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "spent_by_shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_spent_by_shop_only_setup",
+        "value": "\"spent_by_shop_id\" is null or \"purpose\"::text in ('shop_setup')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"shop_setup_links\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_setup_links\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_setup_links\",\"token_hash\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_setup_links\",\"setup_request_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_setup_links\",\"expires_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_setup_links\",\"spent_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_setup_links\",\"spent_by_shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"shop_setup_links\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"shop_setup_links_token_hash_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"shop_setup_links_request_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"shop_setup_links_spent_by_shop_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"shop_setup_links\",\"shop_setup_links_setup_request_id_setup_requests_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"shop_setup_links\",\"shop_setup_links_spent_by_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"shop_setup_links\",\"shop_setup_links_pkey\"]"
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"capability_purpose\"]",
+      "set": {
+        "values": [
+          "interest_unsubscribe",
+          "courtesy_email_unsubscribe",
+          "weekly_digest_unsubscribe",
+          "shore_alert_stop",
+          "bookkeeper_stop",
+          "shore_alert_confirm",
+          "email_verification",
+          "password_reset",
+          "invite",
+          "shop_setup"
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_subject_by_purpose\"]",
+      "set": {
+        "value": "(\"purpose\"::text in ('interest_unsubscribe') and \"interest_id\" is not null and \"person_id\" is null and \"sent_to\" is null and \"user_account_id\" is null and \"setup_request_id\" is null)\n        or (\"purpose\"::text in ('courtesy_email_unsubscribe', 'weekly_digest_unsubscribe') and \"person_id\" is not null and \"interest_id\" is null and \"sent_to\" is null and \"user_account_id\" is null and \"setup_request_id\" is null)\n        or (\"purpose\"::text in ('shore_alert_stop', 'bookkeeper_stop', 'shore_alert_confirm') and \"sent_to\" is not null and \"sent_to\" = lower(\"sent_to\") and \"person_id\" is null and \"interest_id\" is null and \"user_account_id\" is null and \"setup_request_id\" is null)\n        or (\"purpose\"::text in ('email_verification', 'password_reset', 'invite') and \"user_account_id\" is not null and \"person_id\" is null and \"interest_id\" is null and \"sent_to\" is null and \"setup_request_id\" is null)\n        or (\"purpose\"::text in ('shop_setup') and \"setup_request_id\" is not null and \"person_id\" is null and \"interest_id\" is null and \"sent_to\" is null and \"user_account_id\" is null)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_used_only_when_spent\"]",
+      "set": {
+        "value": "\"used_at\" is null or \"purpose\"::text in ('shore_alert_stop', 'bookkeeper_stop', 'shore_alert_confirm', 'email_verification', 'password_reset', 'invite', 'shop_setup')"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_expiry_by_purpose\"]",
+      "set": {
+        "value": "(\"expires_at\" is not null) = (\"purpose\"::text in ('shore_alert_confirm', 'email_verification', 'password_reset', 'invite', 'shop_setup'))"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_scope_by_purpose\"]",
+      "set": {
+        "value": "(\"shop_id\" is null) = (\"purpose\"::text in ('email_verification', 'password_reset', 'invite', 'shop_setup'))"
+      }
+    }
+  ]
+}

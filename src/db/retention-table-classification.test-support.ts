@@ -61,10 +61,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "prior_visits",
   "prior_gear_assignments",
   "imported_payment_history",
-  // The request's single-use setup link (ADR 20261009-single-use-setup-links):
-  // a hash, an expiry and a spent instant, one per request, deleted with it.
-  // Its own clock is the expiry, which closes it; there is nothing left in it to age out.
-  "shop_setup_links",
   "internal_notes",
   "staff_credentials",
   "staff_credential_history", // credential change history is retained with the staff credential, not age-pruned

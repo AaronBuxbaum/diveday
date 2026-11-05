@@ -1,6 +1,6 @@
 # 20261009-single-use-setup-links — `/onboard` opens with a single-use link per request, not a standing key
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-11-05** by [20261105-capabilities-shop-id-nullable](20261105-capabilities-shop-id-nullable.md)
 - **Date:** 2026-10-09
 - **Amends:** [20260925-shops-are-set-up-by-hand](20260925-shops-are-set-up-by-hand.md) (its setup key), [20261007-setup-request-form](20261007-setup-request-form.md) (the onboarding mail now carries the link), [20260805-demo-try-alerts](20260805-demo-try-alerts.md) (its 2026-10-06 amendment's proof)
 
@@ -85,3 +85,7 @@ not alert him (`/api/demo/quiet?setup=<key>`).
 - The production deployment needs `DEMO_QUIET_KEY` set for the quiet browser to work, and
   `ONBOARD_SETUP_KEY` can be removed from it; a browser marked under the old key is unmarked.
 - `shop_setup_links` sits outside retention: one row per request, deleted with it.
+
+## Amendment 2026-11-05 (#3721)
+
+A link is a `shop_setup` capability now: `setup_request_id` (cascading with the request), no `shop_id`, `spent_by_shop_id` set only on this purpose, and `shop_setup_links` is dropped. The hash, the 14 days, the shape check, the spend in the shop's transaction and the cookie are unchanged; it stays outside retention's clock and goes with its request. See [20261105-capabilities-shop-id-nullable](20261105-capabilities-shop-id-nullable.md).

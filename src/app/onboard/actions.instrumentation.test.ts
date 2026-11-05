@@ -161,11 +161,14 @@ describe("onboardAction instrumentation", () => {
   it("records which shop the link opened, in the same transaction", async () => {
     const db = await useDb();
     expect(await signUp()).toBe("/shop/reef-runners");
-    const { shopSetupLinks, shops: shopTable } = await import("@/db/schema");
+    const { capabilities, shops: shopTable } = await import("@/db/schema");
     const { eq } = await import("drizzle-orm");
     const [shop] = await db.select().from(shopTable).where(eq(shopTable.slug, "reef-runners"));
-    const [link] = await db.select().from(shopSetupLinks);
-    expect(link?.spentAt).not.toBeNull();
+    const [link] = await db
+      .select()
+      .from(capabilities)
+      .where(eq(capabilities.purpose, "shop_setup"));
+    expect(link?.usedAt).not.toBeNull();
     expect(link?.spentByShopId).toBe(shop?.id);
   });
 

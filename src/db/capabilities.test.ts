@@ -18,6 +18,7 @@ import {
 } from "./capabilities";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { mergeDiverRecords } from "./diver-merge";
+import { recordSetupRequest } from "./funnel";
 import { askAnytime } from "./interests";
 import { findOrCreatePerson } from "./people";
 import { capabilities, people, personRoles, shops, userAccounts } from "./schema";
@@ -49,7 +50,23 @@ async function subjects() {
     .where(eq(userAccounts.email, DEV_STAFF_LOGINS.owner.email))
     .limit(1);
   if (!account) throw new Error("seeded owner account missing");
-  return { personId: person.id, interestId: joined.interestId, userAccountId: account.id };
+  const request = await recordSetupRequest(db, {
+    shopName: "Capability Divers",
+    region: "Key Largo",
+    runsBoat: true,
+    currentSystem: "paper",
+    contactName: "Ana Ruiz",
+    email: `ana-capability-${crypto.randomUUID().slice(0, 8)}@example.com`,
+    phone: null,
+    source: "pricing",
+    locale: "en-US",
+  });
+  return {
+    personId: person.id,
+    interestId: joined.interestId,
+    userAccountId: account.id,
+    setupRequestId: request.id,
+  };
 }
 
 type Subjects = Awaited<ReturnType<typeof subjects>>;
@@ -71,6 +88,8 @@ function subjectFor(purpose: CapabilityPurpose, ids: Subjects): string {
       return ADDRESS;
     case "user_account":
       return ids.userAccountId;
+    case "setup_request":
+      return ids.setupRequestId;
   }
 }
 
@@ -111,12 +130,19 @@ describe("issueCapability and verifyCapability", () => {
         .select()
         .from(capabilities)
         .where(eq(capabilities.tokenHash, hashBearerToken(token)));
-      const none = { interestId: null, personId: null, sentTo: null, userAccountId: null };
+      const none = {
+        interestId: null,
+        personId: null,
+        sentTo: null,
+        userAccountId: null,
+        setupRequestId: null,
+      };
       const expected = {
         interest: { ...none, interestId: ids.interestId },
         person: { ...none, personId: ids.personId },
         shop_address: { ...none, sentTo: ADDRESS },
         user_account: { ...none, userAccountId: ids.userAccountId },
+        setup_request: { ...none, setupRequestId: ids.setupRequestId },
       }[CAPABILITY_POLICY[purpose].subject];
       expect(row).toMatchObject({ ...expected, shopId: shopFor(purpose), usedAt: null });
     },
@@ -303,13 +329,20 @@ describe("capabilities_subject_by_purpose", () => {
   it("refuses a row naming the other purpose's subject, both subjects, or none", async () => {
     const { db } = ctx;
     const ids = await subjects();
-    const none = { personId: null, interestId: null, sentTo: null, userAccountId: null };
+    const none = {
+      personId: null,
+      interestId: null,
+      sentTo: null,
+      userAccountId: null,
+      setupRequestId: null,
+    };
     const bad: {
       purpose: CapabilityPurpose;
       personId: string | null;
       interestId: string | null;
       sentTo: string | null;
       userAccountId?: string | null;
+      setupRequestId?: string | null;
       usedAt?: Date;
     }[] = [
       { purpose: "interest_unsubscribe", ...none, personId: ids.personId },
@@ -343,6 +376,15 @@ describe("capabilities_subject_by_purpose", () => {
         personId: ids.personId,
       },
       { purpose: "courtesy_email_unsubscribe", ...none, userAccountId: ids.userAccountId },
+      // A setup link names its request and nothing else.
+      { purpose: "shop_setup", ...none },
+      {
+        purpose: "shop_setup",
+        ...none,
+        setupRequestId: ids.setupRequestId,
+        personId: ids.personId,
+      },
+      { purpose: "password_reset", ...none, setupRequestId: ids.setupRequestId },
       // Only a purpose a use spends is ever marked used.
       {
         purpose: "courtesy_email_unsubscribe",
