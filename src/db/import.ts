@@ -48,6 +48,7 @@ import { isCompletedWaiverCurrent, isUnclearedReferral } from "@/lib/waivers";
 import { readActiveStaffRoles } from "./authz";
 import { specialtyCardSpecialty } from "./card-columns";
 import type { AppDb } from "./client";
+import { revokeLinksSentToOldContact } from "./contact-change";
 import { createPerson } from "./people";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
@@ -473,8 +474,15 @@ export async function commitContactImport(
 
       // Non-destructive update: identity name refreshes, contact fields only
       // fill in where the import actually carries a value.
-      const applyUpdate = (id: string) =>
-        tx
+      const applyUpdate = async (id: string) => {
+        const [before] = phone
+          ? await tx
+              .select({ phone: people.phone })
+              .from(people)
+              .where(and(eq(people.id, id), eq(people.shopId, shopId)))
+              .limit(1)
+          : [];
+        await tx
           .update(people)
           .set({
             fullName: row.fullName,
@@ -497,6 +505,12 @@ export async function commitContactImport(
             ...(row.diveInsurance ? { diveInsurance: row.diveInsurance } : {}),
           })
           .where(and(eq(people.id, id), eq(people.shopId, shopId)));
+        // A file that changes a diver's phone takes the links texted to the
+        // old number with it, as a staff edit does (#3902).
+        if (before && before.phone !== phone) {
+          await revokeLinksSentToOldContact(tx, { shopId, personId: id, now });
+        }
+      };
 
       if (personId) {
         await applyUpdate(personId);

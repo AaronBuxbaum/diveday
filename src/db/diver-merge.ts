@@ -38,6 +38,7 @@ import {
   lockBoardingCertificationEvidence,
   rewriteBoardingSnapshotReviewer,
 } from "./boarding-certification-snapshot";
+import { contactChanged, revokeLinksSentToOldContact } from "./contact-change";
 import { refileCourseFormRecords } from "./course-forms";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -1021,12 +1022,15 @@ export async function mergeDiverRecords(input: {
           ? source
           : survivor;
 
+      const mergedContact = {
+        email: chosen(choices.email, survivor.email, source.email),
+        phone: chosen(choices.phone, survivor.phone, source.phone),
+      };
       await tx
         .update(people)
         .set({
           fullName,
-          email: chosen(choices.email, survivor.email, source.email),
-          phone: chosen(choices.phone, survivor.phone, source.phone),
+          ...mergedContact,
           emergencyContactName: contactFrom.emergencyContactName,
           emergencyContactPhone: contactFrom.emergencyContactPhone,
           dateOfBirth,
@@ -1238,6 +1242,16 @@ export async function mergeDiverRecords(input: {
         params: { actor: actor?.name ?? "", diver: fullName, merged: source.fullName },
         occurredAt: mergedAt,
       });
+
+      // Links sent to an address the merged record no longer holds, the
+      // survivor's or the source's (now the survivor's), go with it (#3902).
+      if (contactChanged(survivor, mergedContact) || contactChanged(source, mergedContact)) {
+        await revokeLinksSentToOldContact(tx, {
+          shopId: input.shopId,
+          personId: survivor.id,
+          now: mergedAt,
+        });
+      }
 
       return { ok: true, survivorId: survivor.id, mergedPersonId: source.id };
     });
