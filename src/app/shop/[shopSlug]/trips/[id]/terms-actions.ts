@@ -47,6 +47,9 @@ const participantTermsForm = z.object({
 const requirementSwitchesForm = z.object({
   requiresNitrox: checkbox(),
   requiresPayment: checkbox(),
+  // "Keep Open Water even for marked training dives", shown only while the
+  // level is still the default (issue #3911).
+  keepLevelAsChosen: checkbox(),
 });
 
 export async function saveParticipantTermsAction(
@@ -109,6 +112,7 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
     requiredSpecialties: specialties,
     requiresNitrox: switches.requiresNitrox,
     requiresPayment: switches.requiresPayment,
+    keepLevelAsChosen: switches.keepLevelAsChosen,
   });
   if (!saved) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   // **Who this just blocked.** Readiness is computed live from the trip's

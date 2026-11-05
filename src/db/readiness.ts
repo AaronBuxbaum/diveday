@@ -108,8 +108,14 @@ export async function upsertTripRequirements(
     requiredSpecialties: DiveSpecialty[];
     requiresNitrox: boolean;
     requiresPayment: boolean;
+    /**
+     * Staff ticked "keep Open Water" on a level that is still the default: the
+     * level stands as chosen without being changed (issue #3911).
+     */
+    keepLevelAsChosen?: boolean;
   },
 ) {
+  const { keepLevelAsChosen = false, ...requirementInput } = input;
   const [trip] = await db
     .select({ id: trips.id })
     .from(trips)
@@ -122,13 +128,15 @@ export async function upsertTripRequirements(
   // Read against the stored row, inside the one statement.
   const [requirement] = await db
     .insert(tripRequirements)
-    .values({ ...input, minimumCertificationIsDefault: false })
+    .values({ ...requirementInput, minimumCertificationIsDefault: false })
     .onConflictDoUpdate({
       target: tripRequirements.tripId,
       set: {
         requiresWaiver: input.requiresWaiver,
         minimumCertificationLevel: input.minimumCertificationLevel,
-        minimumCertificationIsDefault: sql`${tripRequirements.minimumCertificationIsDefault} and ${tripRequirements.minimumCertificationLevel} is not distinct from ${input.minimumCertificationLevel}::certification_level`,
+        minimumCertificationIsDefault: keepLevelAsChosen
+          ? false
+          : sql`${tripRequirements.minimumCertificationIsDefault} and ${tripRequirements.minimumCertificationLevel} is not distinct from ${input.minimumCertificationLevel}::certification_level`,
         requiredSpecialties: input.requiredSpecialties,
         requiresNitrox: input.requiresNitrox,
         requiresPayment: input.requiresPayment,

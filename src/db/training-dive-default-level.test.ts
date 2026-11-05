@@ -142,6 +142,29 @@ describe("a default trip level a training mark may lower (issue #3872, in-memory
     expect(await levelCodes(ctx)).toEqual([]);
   });
 
+  // Issue #3911: "Open Water, and no training mark goes below it", said directly.
+  it("makes the level chosen when staff keep Open Water without changing it", async () => {
+    const ctx = await defaultLevelCharter();
+    const current = await getTripRequirements(ctx.db, ctx.shop.id, ctx.charter.id);
+    if (!current) throw new Error("requirement missing");
+    const saved = await upsertTripRequirements(ctx.db, {
+      shopId: ctx.shop.id,
+      tripId: ctx.charter.id,
+      requiresWaiver: current.requiresWaiver,
+      minimumCertificationLevel: current.minimumCertificationLevel,
+      requiredSpecialties: current.requiredSpecialties,
+      requiresNitrox: current.requiresNitrox,
+      requiresPayment: current.requiresPayment,
+      keepLevelAsChosen: true,
+    });
+    expect(saved).toMatchObject({
+      minimumCertificationLevel: "open_water",
+      minimumCertificationIsDefault: false,
+    });
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+  });
+
   it("makes the level chosen once a person changes it, even back to Open Water", async () => {
     const ctx = await defaultLevelCharter();
     expect(
