@@ -91,7 +91,7 @@ describe("the paper face", () => {
       expect(element.matches(bar?.selector ?? "x"), element.outerHTML).toBe(true);
     }
     const critical = rules.find((rule) => rule.selector === "[data-print-critical]");
-    expect(critical?.body).toMatch(/border:\s*1\.5px solid/);
+    expect(critical?.body).toMatch(/border:\s*2px solid/);
     expect(critical?.body).not.toMatch(/background/);
   });
 
