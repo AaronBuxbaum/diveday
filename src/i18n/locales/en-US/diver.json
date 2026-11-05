@@ -983,7 +983,7 @@
     "flySafePlannedDivesPlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: we plan more than one dive, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
     "flySafePlannedEarlierDay": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: you have another dive day with us in the two days before this one, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
     "nitroxPlan": {
-      "lead": "Your nitrox card is verified. The oxygen limit (MOD) for each mix, planned at a ppO₂ of 1.4:",
+      "lead": "Your nitrox card is verified. The oxygen limit (MOD), planned at a ppO₂ of 1.4:",
       "line": "{o2}%: stay above {meters} m / {feet} ft",
       "notAFill": "For planning only: analyze your tank at the dock, set your computer to the mix you measured, and dive that.",
       "richerIsShallower": "A richer mix has a shallower limit: a tank that reads 33% is not covered by the 32% line.",

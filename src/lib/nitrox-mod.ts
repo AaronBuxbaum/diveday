@@ -1,6 +1,6 @@
 /**
  * **The nitrox MOD line on `/ready`** (loop 5, row 9; glossary "Nitrox planning
- * line"): "32%: stay above 33 m / 110 ft", for a diver whose verified nitrox
+ * line"): "32%: stay above 33 m / 110 ft", and only 32% (#3916), for a diver whose verified nitrox
  * card backs their nitrox request. A planning aid for the dive briefing and the
  * diver's own computer, **never a fill authorization**: the fill gate is
  * `authorizesNitroxFill` (`src/db/nitrox.ts`), the mix the diver breathes is the
@@ -25,12 +25,13 @@
 export const NITROX_PLANNING_PPO2_TENTHS = 14;
 
 /**
- * The two mixes a shop most often fills, and the two the line names. A card
- * records no oxygen range, so a diver trained to EAN32 only still sees 36%
- * (dock review F2; #3916 decides between a card range, the shop's own fills
- * and 32% alone).
+ * The one mix the line names: 32%, the mix every nitrox card covers (#3916).
+ * A card records no oxygen range and the shop records no fill mixes, so naming
+ * 36% beside "Your nitrox card is verified" would read as permission to a
+ * diver trained to EAN32 only. A richer mix comes back only with a card's
+ * oxygen range or the shop's own fills, never inferred from the agency.
  */
-export const NITROX_PLANNING_MIXES = [32, 36] as const;
+export const NITROX_PLANNING_MIXES = [32] as const;
 
 /** The mixes a shop may fill at all (the counter's own 22 to 40, `TANK_FILL_O2_PERCENT`). */
 const MIN_O2 = 22;

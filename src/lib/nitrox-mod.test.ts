@@ -65,12 +65,22 @@ describe("nitroxModFor", () => {
 describe("nitroxPlanningLines", () => {
   const verified = { wantsNitrox: true, cardVerified: true, offered: true };
 
-  it("shows the two common mixes once a verified card backs the request", () => {
-    expect(nitroxPlanningLines(verified)).toEqual([
-      { o2Percent: 32, meters: 33, feet: 110 },
-      { o2Percent: 36, meters: 28, feet: 94 },
-    ]);
-    expect(NITROX_PLANNING_MIXES).toEqual([32, 36]);
+  // #3916: a card records no oxygen range, so a diver trained to EAN32 only
+  // must never read a 36% line beside "Your nitrox card is verified".
+  it("names 32% alone once a verified card backs the request", () => {
+    expect(nitroxPlanningLines(verified)).toEqual([{ o2Percent: 32, meters: 33, feet: 110 }]);
+    expect(NITROX_PLANNING_MIXES).toEqual([32]);
+  });
+
+  it("never names a mix richer than 32%, whatever the request", () => {
+    for (const wantsNitrox of [true, false]) {
+      for (const cardVerified of [true, false]) {
+        for (const offered of [true, false]) {
+          const lines = nitroxPlanningLines({ wantsNitrox, cardVerified, offered });
+          expect(lines.every((line) => line.o2Percent <= 32)).toBe(true);
+        }
+      }
+    }
   });
 
   it("shows nothing on an unverified, pending or self-declared card", () => {
