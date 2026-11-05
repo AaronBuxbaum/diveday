@@ -134,6 +134,9 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // never an argument for expiring one on a clock.
   "waiver_records",
   "waiver_materiality_decisions",
+  // A manager's note that a broken seal was looked into (#3891): it speaks for
+  // the release it names and goes the way that release goes.
+  "waiver_seal_acknowledgements",
   // Course forms (ADR 20261008-course-forms): the same signed evidence as the
   // release, on the same footing. The forms, their versions and a course's
   // list of them are the shop's own configuration; a signed record is erased

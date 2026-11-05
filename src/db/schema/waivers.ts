@@ -615,6 +615,49 @@ export const waiverRecords = pgTable(
   ],
 );
 
+/** The longest note a staffer can leave when acknowledging a broken seal. */
+export const MAX_WAIVER_SEAL_ACKNOWLEDGEMENT_NOTE = 1000;
+
+/**
+ * **A broken seal someone looked into** (#3891): who, when and what they
+ * found, one row per acknowledgement, appended and never edited. It lives
+ * outside `waiver_records` on purpose: a row edited straight in the database
+ * must not be able to write its own all-clear.
+ *
+ * `state_digest` pins the release as it stood when it was acknowledged
+ * (`waiverSealStateDigest`, `src/db/waiver-seal-acknowledgements.ts`): the
+ * nightly check (`recheckWaiverSeals`) stops counting a broken release only
+ * while an acknowledgement matches its current state, so an edit made after
+ * the acknowledgement rings again. Nothing here repairs the seal or changes
+ * the cached verdict; the signature log still shows the release as changed.
+ */
+export const waiverSealAcknowledgements = pgTable(
+  "waiver_seal_acknowledgements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    waiverRecordId: uuid("waiver_record_id")
+      .notNull()
+      .references(() => waiverRecords.id),
+    stateDigest: text("state_digest").notNull(),
+    note: text("note").notNull(),
+    acknowledgedByPersonId: uuid("acknowledged_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    acknowledgedAt: appNowTimestamp("acknowledged_at").notNull(),
+  },
+  (table) => [
+    index("waiver_seal_acknowledgements_record_idx").on(table.shopId, table.waiverRecordId),
+    index("waiver_seal_acknowledgements_by_idx").on(table.acknowledgedByPersonId),
+    check(
+      "waiver_seal_acknowledgements_note_length",
+      sql`length(btrim(${table.note})) > 0 and length(${table.note}) <= ${sql.raw(String(MAX_WAIVER_SEAL_ACKNOWLEDGEMENT_NOTE))}`,
+    ),
+  ],
+);
+
 /**
  * What we know about each *way* a waiver link was handed over — one row per
  * record per channel, holding the current state of that channel.

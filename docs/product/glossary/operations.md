@@ -480,7 +480,11 @@
   hash, so a release changed since the last check is caught at the next one.
   A seal removed rather than broken (a verdict with no hash, or a non-imported release signed
   since sealing shipped with none) is written `invalid` too, and every `invalid` release keeps
-  the nightly check unhealthy until someone deals with it;
+  the nightly check unhealthy until someone deals with it. Dealing with it is a **seal
+  acknowledgement** (`waiver_seal_acknowledgements`, issue #3891): an owner or manager records who
+  looked, when and a note, appended outside the release so the edited row cannot write it. It
+  covers the release as it stood when it was made (a keyed digest of every sealed column), so a
+  further edit rings again; the verdict stays `invalid`, because an acknowledgement is not a repair;
   the row's own badge always recomputes the seal (issue #2562). A release that asked **shop questions** seals the diver's answers too:
   the snapshot joins the sealed set only when it is there, so a release signed before shops could
   ask anything keeps the digest it was sealed with, and an erasure's re-seal leaves the answers out

@@ -114,6 +114,7 @@ import {
   waiverDeliveries,
   waiverMaterialityDecisions,
   waiverRecords,
+  waiverSealAcknowledgements,
   waiverTemplates,
   workOrderBills,
   workOrderCare,
@@ -244,6 +245,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(courseForms).where(eq(courseForms.shopId, shopId));
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
+  // So does an acknowledgement of a broken seal (#3891).
+  await db.delete(waiverSealAcknowledgements).where(eq(waiverSealAcknowledgements.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));

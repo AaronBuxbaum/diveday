@@ -310,7 +310,7 @@ describe("recheckWaiverSeals", () => {
   });
 
   it("calls a pass unhealthy while any release it checked is broken, capped or not", () => {
-    const quiet = { checked: 10, invalid: 0, newlyInvalid: 0, capped: true };
+    const quiet = { checked: 10, invalid: 0, acknowledged: 0, newlyInvalid: 0, capped: true };
     expect(waiverSealPassHealthy(quiet)).toBe(true);
     expect(waiverSealPassHealthy({ ...quiet, invalid: 1 })).toBe(false);
   });

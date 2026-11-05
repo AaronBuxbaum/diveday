@@ -112,6 +112,7 @@ import {
   waiverDeliveries,
   waiverMaterialityDecisions,
   waiverRecords,
+  waiverSealAcknowledgements,
   waiverTemplates,
   workOrderCare,
   workOrderEvents,
@@ -1000,6 +1001,8 @@ export async function clearDemoSchedule(
   await db.delete(courseForms).where(eq(courseForms.shopId, shopId));
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
+  // So does an acknowledgement of a broken seal (#3891).
+  await db.delete(waiverSealAcknowledgements).where(eq(waiverSealAcknowledgements.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));

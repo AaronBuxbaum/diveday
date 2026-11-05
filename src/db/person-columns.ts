@@ -1385,6 +1385,13 @@ const rows = [
     why: "who judged the answer material",
   },
   {
+    table: "waiver_seal_acknowledgements",
+    column: "acknowledged_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who looked into a broken waiver seal (#3891)",
+  },
+  {
     table: "waiver_records",
     column: "anonymized_by_person_id",
     kind: "actor",

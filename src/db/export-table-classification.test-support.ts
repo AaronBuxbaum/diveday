@@ -52,6 +52,11 @@ export const EXCLUDED_TABLES = [
   // these rows are the per-channel mechanics behind it, so they are out as
   // plumbing, not a shop record.
   "waiver_deliveries",
+  // A broken seal someone looked into (#3891). The seal and its verdict are
+  // this installation's key at work (`integrity_valid` is excluded for the
+  // same reason), and the state digest is keyed with it, so nothing here means
+  // anything in another system.
+  "waiver_seal_acknowledgements",
   "notification_send_queue", // operational retry state, not shop records
   "email_bounces", // DiveDay's own record of mail SES bounced, for debugging delivery; not a shop record
   // Batch 4's two desk records. A note sent to a whole departure is
