@@ -50,14 +50,13 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // URL unattended for as long as the subscription exists, so one leaked copy
   // in telemetry replays the whole shop's schedule indefinitely.
   "calendar",
-  // Email unsubscribe tokens (the `interest_unsubscribe` and
-  // `courtesy_email_unsubscribe` capabilities, both resolved by
-  // /unsubscribe/[token]). Found missing by the OPS-L1 review: the tenth
-  // capability route, and the only one this list had never covered. The
-  // capability it grants is the narrowest of the set — stop these emails, and
-  // the page reveals only a shop name — but neither purpose expires or is
-  // revocable (`CAPABILITY_POLICY`), so an exposed token works forever, which
-  // is a longer life than anything else here.
+  // Email unsubscribe and stop tokens (the five unsubscribe purposes of
+  // `capabilities`, all resolved by /unsubscribe/[token]). Found missing by
+  // the OPS-L1 review: the tenth capability route, and the only one this list
+  // had never covered. The capability it grants is the narrowest of the set —
+  // stop these emails, and the page reveals only a shop name — but no purpose
+  // expires (`CAPABILITY_POLICY`), so an exposed token works until it is used
+  // or its subject goes, which is a longer life than anything else here.
   "unsubscribe",
 ] as const;
 

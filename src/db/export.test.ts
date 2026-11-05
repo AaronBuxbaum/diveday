@@ -72,7 +72,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "bookkeeper_confirmed_at",
     "bookkeeper_confirm_token_hash",
     "bookkeeper_confirm_expires_at",
-    "bookkeeper_stop_token_hash",
     "bookkeeper_bounced_at",
     // #2450 name review flags and the offline erasure cutoff are DiveDay-only shop state.
     "name_flagged_at",

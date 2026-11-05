@@ -28,7 +28,8 @@
   long it lives and whether a use spends it, one record per purpose in `src/lib/capabilities.ts`.
   A token minted for one purpose never verifies under another. The purposes so far are the
   email-unsubscribe and stop links: `interest_unsubscribe`, `courtesy_email_unsubscribe`,
-  `weekly_digest_unsubscribe` and `shore_alert_stop` (spent by one use; issue #3721). Booking
+  `weekly_digest_unsubscribe`, and `shore_alert_stop` and `bookkeeper_stop` (each spent by one
+  use; issue #3721). Booking
   capabilities, account tokens and the other link tables move onto it later.
 - **Booking link** — a bearer link to one booking under one purpose (`readiness`, `confirm`,
   `claim`, `handoff`, `course_forms`), a row of `booking_capabilities` whose URL is derived, not

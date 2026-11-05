@@ -18,6 +18,7 @@ import {
 } from "./bookkeeper";
 import type { AppDb } from "./client";
 import { activityEvents, people, personRoles, shops, userAccounts } from "./schema";
+import { issueShoreAlertStopToken } from "./shore-alert-tokens";
 
 /**
  * The bookkeeper's address, its confirmation and the month-end claim (fifth
@@ -102,6 +103,8 @@ describe("setBookkeeper", () => {
     const db = await unseededTestDb();
     const shopId = await shopRow(db, "books-clear");
     await confirmed(db, shopId);
+    const won = await claim(db, shopId, "2026-10");
+    if (!won) throw new Error("no claim");
     expect(await set(db, shopId, null)).toEqual({ change: "cleared", confirmed: false });
     expect(await readBookkeeper(db, shopId)).toBeNull();
     expect(await rowOf(db, shopId)).toMatchObject({
@@ -109,8 +112,9 @@ describe("setBookkeeper", () => {
       bookkeeperConfirmedAt: null,
       bookkeeperConfirmTokenHash: null,
       bookkeeperConfirmExpiresAt: null,
-      bookkeeperStopTokenHash: null,
     });
+    // The month-end link is withdrawn with the address (issue #3721).
+    expect(await resolveBookkeeperStopToken(db, won.stopToken)).toBeNull();
     expect(await set(db, shopId, null)).toEqual({ change: "none", confirmed: false });
   });
 
@@ -237,9 +241,8 @@ describe("the month-end claim", () => {
       shopId,
       month: "2026-10",
       email: BOOKS,
-      stopToken: won.stopToken,
+      confirmedAt: won.confirmedAt,
       previous: "2026-09",
-      previousStopTokenHash: null,
     });
     expect((await rowOf(db, shopId))?.bookkeeperSentMonth).toBe("2026-09");
     expect(await claim(db, shopId, "2026-10")).not.toBeNull();
@@ -267,11 +270,10 @@ describe("the month-end claim", () => {
     await confirmed(db, shopId);
     const november = await claim(db, shopId, "2026-11");
     if (!november) throw new Error("no claim");
-    const previousHash = (await rowOf(db, shopId))?.bookkeeperStopTokenHash ?? null;
     const december = await claim(db, shopId, "2026-12");
     if (!december) throw new Error("no claim");
     // While December's send to BOOKS is out, a manager points it at a new
-    // address, landing on the same month with no stop link; then the send fails.
+    // address, landing on the same month; then the send fails.
     await set(db, shopId, "new@example.com");
     await db.update(shops).set({ bookkeeperSentMonth: "2026-12" }).where(eq(shops.id, shopId));
     const before = await rowOf(db, shopId);
@@ -279,17 +281,35 @@ describe("the month-end claim", () => {
       shopId,
       month: "2026-12",
       email: BOOKS,
-      stopToken: december.stopToken,
+      confirmedAt: december.confirmedAt,
       previous: "2026-11",
-      previousStopTokenHash: previousHash,
     });
     const after = await rowOf(db, shopId);
     expect(after?.bookkeeperEmail).toBe("new@example.com");
     expect(after?.bookkeeperSentMonth).toBe(before?.bookkeeperSentMonth);
-    expect(after?.bookkeeperStopTokenHash).toBe(before?.bookkeeperStopTokenHash);
     // So the old recipient's November link stops nothing on the new address.
     expect(await stopBookkeeperByToken(db, { token: november.stopToken, origin: null })).toBeNull();
     expect((await readBookkeeper(db, shopId))?.email).toBe("new@example.com");
+  });
+
+  it("never gives a month back onto the same address confirmed again since (issue #3721)", async () => {
+    const db = await unseededTestDb();
+    const shopId = await shopRow(db, "books-reconfirmed");
+    await confirmed(db, shopId);
+    const december = await claim(db, shopId, "2026-12");
+    if (!december) throw new Error("no claim");
+    // Away and back to the same address, confirmed afresh, mid-send.
+    await set(db, shopId, "new@example.com");
+    await confirmed(db, shopId, BOOKS, new Date("2026-10-21T15:00:00Z"));
+    await db.update(shops).set({ bookkeeperSentMonth: "2026-12" }).where(eq(shops.id, shopId));
+    await releaseBookkeeperMonth(db, {
+      shopId,
+      month: "2026-12",
+      email: BOOKS,
+      confirmedAt: december.confirmedAt,
+      previous: "2026-11",
+    });
+    expect((await rowOf(db, shopId))?.bookkeeperSentMonth).toBe("2026-12");
   });
 
   it("lists real shops with a confirmed address, never a demo shop or an unconfirmed one", async () => {
@@ -339,31 +359,67 @@ describe("the stop link (second-pass N1)", () => {
     expect(await resolveBookkeeperStopToken(db, "not-a-token")).toBeNull();
   });
 
-  it("works only from the newest email, and never on an address set after it", async () => {
+  it("works from any email to the address on file, and never on an address set after it", async () => {
     const db = await unseededTestDb();
     const shopId = await shopRow(db, "books-stop-old");
     await confirmed(db, shopId);
     const october = await claim(db, shopId, "2026-10");
     const november = await claim(db, shopId, "2026-11");
     if (!october || !november) throw new Error("no claim");
-    expect(await resolveBookkeeperStopToken(db, october.stopToken)).toBeNull();
-    // A send that failed hands the previous email's link back with the month.
-    const previous = (await rowOf(db, shopId))?.bookkeeperStopTokenHash ?? null;
+    // Both went to the same inbox: an older email's link still stops it.
+    expect(await resolveBookkeeperStopToken(db, october.stopToken)).toEqual({
+      shopName: "books-stop-old",
+      alreadyStopped: false,
+    });
+    // A failed send keeps its link: the email may still have arrived.
     const december = await claim(db, shopId, "2026-12");
     if (!december) throw new Error("no claim");
     await releaseBookkeeperMonth(db, {
       shopId,
       month: "2026-12",
       email: BOOKS,
-      stopToken: december.stopToken,
+      confirmedAt: december.confirmedAt,
       previous: "2026-11",
-      previousStopTokenHash: previous,
     });
-    expect(await resolveBookkeeperStopToken(db, november.stopToken)).not.toBeNull();
-    // A new address clears the link: the old bookkeeper cannot stop the new one.
+    expect(await resolveBookkeeperStopToken(db, december.stopToken)).not.toBeNull();
+    // A new address withdraws the links: the old bookkeeper cannot stop the new one.
     await set(db, shopId, "new@example.com");
-    expect(await stopBookkeeperByToken(db, { token: november.stopToken, origin: null })).toBeNull();
+    for (const link of [october, november, december]) {
+      expect(await resolveBookkeeperStopToken(db, link.stopToken)).toBeNull();
+      expect(await stopBookkeeperByToken(db, { token: link.stopToken, origin: null })).toBeNull();
+    }
     expect((await readBookkeeper(db, shopId))?.email).toBe("new@example.com");
+  });
+
+  it("works once: after a stop and the same address confirmed again, no old link stops it", async () => {
+    const db = await unseededTestDb();
+    const shopId = await shopRow(db, "books-stop-again");
+    await confirmed(db, shopId);
+    const october = await claim(db, shopId, "2026-10");
+    const november = await claim(db, shopId, "2026-11");
+    if (!october || !november) throw new Error("no claim");
+    await stopBookkeeperByToken(db, { token: november.stopToken, now: OCT_20, origin: null });
+    expect(await readBookkeeper(db, shopId)).toBeNull();
+    await confirmed(db, shopId, BOOKS, new Date("2026-10-21T15:00:00Z"));
+
+    expect(
+      await stopBookkeeperByToken(db, { token: november.stopToken, now: OCT_20, origin: null }),
+    ).toEqual({ shopName: "books-stop-again", alreadyStopped: true });
+    // The other unspent link was withdrawn with the stop.
+    expect(
+      await stopBookkeeperByToken(db, { token: october.stopToken, now: OCT_20, origin: null }),
+    ).toBeNull();
+    expect((await readBookkeeper(db, shopId))?.email).toBe(BOOKS);
+  });
+
+  it("is never a shore-alert stop, and a shore-alert stop never stops the bookkeeper", async () => {
+    const db = await unseededTestDb();
+    const shopId = await shopRow(db, "books-cross");
+    await confirmed(db, shopId);
+    const shore = await issueShoreAlertStopToken(db, { shopId, email: BOOKS });
+    expect(await resolveBookkeeperStopToken(db, shore)).toBeNull();
+    expect(await stopBookkeeperByToken(db, { token: shore, origin: null })).toBeNull();
+    expect((await readBookkeeper(db, shopId))?.email).toBe(BOOKS);
   });
 });
 

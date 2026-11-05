@@ -36,8 +36,8 @@ someone outside its staff, every month with nobody pressing Send.
 
 ## Alternatives considered
 
-- **A token table for the links**, as the shore contact has. One live link of each kind at a
-  time, so columns on the shop row do the job.
+- **A token table for the links**, as the shore contact has. The confirm link stays a column;
+  the stop links moved onto `capabilities` (#3721).
 - **Email a link instead of the files.** A bearer token to the shop's money, live for days, in a
   mailbox DiveDay does not control.
 
@@ -45,7 +45,7 @@ someone outside its staff, every month with nobody pressing Send.
 
 - A stranger who confirms a typo starts the send, and every owner is told the address on each.
 - A departed manager's address stops by itself until someone else vouches for it.
-- Only the newest email's stop link works.
+- Each email's stop link works once, while its address stands.
 - A send accepted but answered with an error is retried, so a month can arrive twice (N1).
 - A bounced address is told once to each owner, without a month, and warned on the field until
   saved again or a send is delivered (N2, #2798). The pass keeps sending.

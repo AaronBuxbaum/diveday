@@ -143,3 +143,26 @@ export async function spendCapability(
     .returning(ROW);
   return row ? verified(input.purpose, row) : null;
 }
+
+/**
+ * Withdraws every unspent link of one purpose a shop holds: for a
+ * `shop_address` purpose whose address the shop just changed or cleared, so a
+ * link mailed to the old address opens nothing (it reads as unknown). A spent
+ * link stays, so it still reads as "already done". Returns how many went.
+ */
+export async function withdrawUnspentCapabilities(
+  db: DbExecutor,
+  input: { purpose: CapabilityPurpose; shopId: string },
+): Promise<number> {
+  const withdrawn = await db
+    .delete(capabilities)
+    .where(
+      and(
+        eq(capabilities.purpose, input.purpose),
+        eq(capabilities.shopId, input.shopId),
+        isNull(capabilities.usedAt),
+      ),
+    )
+    .returning({ id: capabilities.id });
+  return withdrawn.length;
+}

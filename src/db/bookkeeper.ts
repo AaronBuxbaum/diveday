@@ -5,6 +5,12 @@ import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { shopPath } from "@/lib/staff-notices";
+import {
+  issueCapability,
+  spendCapability,
+  verifyCapability,
+  withdrawUnspentCapabilities,
+} from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { sendNotification } from "./notifications";
 import { ownerLogins, roleLogins } from "./owner-logins";
@@ -17,7 +23,8 @@ import { activityEvents, people, shops } from "./schema";
  * confirm link it receives (`bookkeeper_confirmed_at`, security review B1, on
  * the shore contact's model, H-20261014-stale-roll-call-recipients); `bookkeeper_sent_month` is the claim the
  * daily pass moves forward before it sends, minting the stop link that
- * month's email carries (second-pass N1).
+ * month's email carries (second-pass N1), a `bookkeeper_stop` capability
+ * bound to the address (issue #3721).
  */
 
 export type BookkeeperSetting = {
@@ -71,8 +78,12 @@ export async function readBookkeeper(
  */
 export type BookkeeperChange = "set" | "changed" | "cleared" | "vouched" | "resaved" | "none";
 
-/** The address, its provenance, its confirmation and its claim, empty; the stop link's hash stays. */
-const BOOKKEEPER_ADDRESS_CLEARED = {
+/**
+ * Every bookkeeper column empty: the address, its provenance, its
+ * confirmation and its claim. The stop links are capabilities; whoever clears
+ * the address withdraws them too (`withdrawUnspentCapabilities`).
+ */
+export const BOOKKEEPER_CLEARED = {
   bookkeeperEmail: null,
   bookkeeperEmailSetAt: null,
   bookkeeperEmailSetByPersonId: null,
@@ -81,12 +92,6 @@ const BOOKKEEPER_ADDRESS_CLEARED = {
   bookkeeperConfirmTokenHash: null,
   bookkeeperConfirmExpiresAt: null,
   bookkeeperBouncedAt: null,
-} as const;
-
-/** Every bookkeeper column empty, the last email's stop link included. */
-export const BOOKKEEPER_CLEARED = {
-  ...BOOKKEEPER_ADDRESS_CLEARED,
-  bookkeeperStopTokenHash: null,
 } as const;
 
 /**
@@ -122,6 +127,7 @@ export async function setBookkeeper(
     if (input.email === null) {
       if (current.email === null) return none;
       await tx.update(shops).set(BOOKKEEPER_CLEARED).where(eq(shops.id, input.shopId));
+      await withdrawUnspentCapabilities(tx, { purpose: "bookkeeper_stop", shopId: input.shopId });
       return { change: "cleared" as const, confirmed: false };
     }
     if (current.email === input.email) {
@@ -148,6 +154,8 @@ export async function setBookkeeper(
         bookkeeperSentMonth: bookkeeperMonthOnSet(input.now, input.timeZone),
       })
       .where(eq(shops.id, input.shopId));
+    // The old address's month-end links stop nothing on the new one.
+    await withdrawUnspentCapabilities(tx, { purpose: "bookkeeper_stop", shopId: input.shopId });
     const change: BookkeeperChange = current.email === null ? "set" : "changed";
     return { change, confirmed: false };
   });
@@ -304,7 +312,6 @@ export async function listBookkeeperShops(db: DbExecutor) {
       email: shops.bookkeeperEmail,
       setByPersonId: shops.bookkeeperEmailSetByPersonId,
       sentMonth: shops.bookkeeperSentMonth,
-      stopTokenHash: shops.bookkeeperStopTokenHash,
     })
     .from(shops)
     .where(
@@ -321,37 +328,47 @@ export async function listBookkeeperShops(db: DbExecutor) {
  * still names `email`, confirmed, set by the person the caller checked
  * (second-pass N4), and has not sent that month, in one statement, so two
  * passes at once send it once and an address changed mid-pass is never
- * mailed the old one's files. The winner gets that month's stop link, whose
- * hash replaces the last email's; null when this caller lost.
+ * mailed the old one's files. The winner gets that month's stop link, a
+ * `bookkeeper_stop` capability bound to the address, minted in the same
+ * transaction, and the confirmation it claimed under; null when this caller
+ * lost. Earlier emails' links to the same address keep working.
  */
 export async function claimBookkeeperMonth(
-  db: DbExecutor,
+  db: AppDb,
   input: { shopId: string; email: string; setByPersonId: string; month: string },
-): Promise<{ stopToken: string } | null> {
-  const stopToken = createBearerToken();
-  const claimed = await db
-    .update(shops)
-    .set({ bookkeeperSentMonth: input.month, bookkeeperStopTokenHash: hashBearerToken(stopToken) })
-    .where(
-      and(
-        eq(shops.id, input.shopId),
-        eq(shops.bookkeeperEmail, input.email),
-        eq(shops.bookkeeperEmailSetByPersonId, input.setByPersonId),
-        isNotNull(shops.bookkeeperConfirmedAt),
-        or(isNull(shops.bookkeeperSentMonth), lt(shops.bookkeeperSentMonth, input.month)),
-      ),
-    )
-    .returning({ id: shops.id });
-  return claimed.length > 0 ? { stopToken } : null;
+): Promise<{ stopToken: string; confirmedAt: Date } | null> {
+  return db.transaction(async (tx) => {
+    const [claimed] = await tx
+      .update(shops)
+      .set({ bookkeeperSentMonth: input.month })
+      .where(
+        and(
+          eq(shops.id, input.shopId),
+          eq(shops.bookkeeperEmail, input.email),
+          eq(shops.bookkeeperEmailSetByPersonId, input.setByPersonId),
+          isNotNull(shops.bookkeeperConfirmedAt),
+          or(isNull(shops.bookkeeperSentMonth), lt(shops.bookkeeperSentMonth, input.month)),
+        ),
+      )
+      .returning({ confirmedAt: shops.bookkeeperConfirmedAt });
+    if (!claimed?.confirmedAt) return null;
+    const stopToken = await issueCapability(tx, {
+      purpose: "bookkeeper_stop",
+      shopId: input.shopId,
+      subjectId: input.email,
+    });
+    return { stopToken, confirmedAt: claimed.confirmedAt };
+  });
 }
 
 /**
  * Gives a claimed month back after a send that failed, so the next day's pass
- * tries again, with the stop link of the last email that did go; only while
- * the claim is still this one: the same month, the same address and this
- * claim's own stop link. An address changed mid-send clears the link and may
- * land on the same month, so the month alone would match the new address's
- * row and hand it the old recipient's stop link (third-pass security N1).
+ * tries again; only while the claim is still this one: the same month, the
+ * same address and the same confirmation it was claimed under. An address
+ * changed mid-send clears the confirmation and may land on the same month, so
+ * the month alone would match the new address's row (third-pass security
+ * N1). The claim's stop link stays: a send the provider answered with an
+ * error may still have arrived, and its link must work.
  */
 export async function releaseBookkeeperMonth(
   db: DbExecutor,
@@ -360,24 +377,20 @@ export async function releaseBookkeeperMonth(
     month: string;
     /** The address the claim was won for. */
     email: string;
-    /** The claim's own stop token, from {@link claimBookkeeperMonth}. */
-    stopToken: string;
+    /** The confirmation the claim was won under, from {@link claimBookkeeperMonth}. */
+    confirmedAt: Date;
     previous: string | null;
-    previousStopTokenHash: string | null;
   },
 ): Promise<void> {
   await db
     .update(shops)
-    .set({
-      bookkeeperSentMonth: input.previous,
-      bookkeeperStopTokenHash: input.previousStopTokenHash,
-    })
+    .set({ bookkeeperSentMonth: input.previous })
     .where(
       and(
         eq(shops.id, input.shopId),
         eq(shops.bookkeeperSentMonth, input.month),
         eq(shops.bookkeeperEmail, input.email),
-        eq(shops.bookkeeperStopTokenHash, hashBearerToken(input.stopToken)),
+        eq(shops.bookkeeperConfirmedAt, input.confirmedAt),
       ),
     );
 }
@@ -440,32 +453,40 @@ export async function recordBookkeeperDeliveryOutcome(
 
 export type BookkeeperStopContext = {
   shopName: string;
-  /** The address this link went to is no longer on file. */
+  /** The address this link went to is no longer on file, or the link was used. */
   alreadyStopped: boolean;
 };
 
 /**
  * Resolves a month-end email's stop link, or null for a token that is not
- * the newest one's (an older email's, or one whose address was changed since).
+ * one (or one withdrawn when the address changed). A used link, or one whose
+ * address the shop no longer names, reads as already stopped.
  */
 export async function resolveBookkeeperStopToken(
   db: DbExecutor,
   token: string,
 ): Promise<BookkeeperStopContext | null> {
+  const capability = await verifyCapability(db, { purpose: "bookkeeper_stop", token });
+  if (!capability) return null;
   const [row] = await db
     .select({ shopName: shops.name, email: shops.bookkeeperEmail })
     .from(shops)
-    .where(eq(shops.bookkeeperStopTokenHash, hashBearerToken(token)))
+    .where(eq(shops.id, capability.shopId))
     .limit(1);
-  return row ? { shopName: row.shopName, alreadyStopped: row.email === null } : null;
+  if (!row) return null;
+  const named = row.email !== null && row.email.toLowerCase() === capability.subjectId;
+  return { shopName: row.shopName, alreadyStopped: capability.usedAt !== null || !named };
 }
 
 /**
- * **The bookkeeper's own stop** (second-pass N1): clears the address with
- * everything that vouches for it and writes the log's line with no actor, in
- * one transaction, then tells the owners, as the shore contact's stop does
- * (H-20261014-stale-roll-call-recipients). The hash stays, so a second click reads as stopped. A stale or
- * unknown link changes nothing and sends nothing.
+ * **The bookkeeper's own stop** (second-pass N1): spends the link (it works
+ * once), clears the address with everything that vouches for it while the
+ * shop still names the address the link went to, withdraws that address's
+ * other links and writes the log's line with no actor, in one transaction,
+ * then tells the owners, as the shore contact's stop does
+ * (H-20261014-stale-roll-call-recipients). The spent link stays, so a second
+ * click reads as stopped. A stale or unknown link changes nothing and sends
+ * nothing.
  */
 export async function stopBookkeeperByToken(
   db: AppDb,
@@ -473,18 +494,22 @@ export async function stopBookkeeperByToken(
 ): Promise<BookkeeperStopContext | null> {
   const now = input.now ?? nowDate();
   const stopped = await db.transaction(async (tx) => {
+    const spent = await spendCapability(tx, {
+      purpose: "bookkeeper_stop",
+      token: input.token,
+      now,
+    });
+    if (!spent) return null;
     const [row] = await tx
       .select({ id: shops.id, name: shops.name, email: shops.bookkeeperEmail })
       .from(shops)
       .where(
-        and(
-          eq(shops.bookkeeperStopTokenHash, hashBearerToken(input.token)),
-          isNotNull(shops.bookkeeperEmail),
-        ),
+        and(eq(shops.id, spent.shopId), sql`lower(${shops.bookkeeperEmail}) = ${spent.subjectId}`),
       )
       .for("no key update");
     if (!row?.email) return null;
-    await tx.update(shops).set(BOOKKEEPER_ADDRESS_CLEARED).where(eq(shops.id, row.id));
+    await tx.update(shops).set(BOOKKEEPER_CLEARED).where(eq(shops.id, row.id));
+    await withdrawUnspentCapabilities(tx, { purpose: "bookkeeper_stop", shopId: row.id });
     await tx.insert(activityEvents).values({
       shopId: row.id,
       actorPersonId: null,

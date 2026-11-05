@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { fileScopedShopContext } from "@/test/db";
+import { claimBookkeeperMonth, setBookkeeper } from "./bookkeeper";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { askAnytime, issueInterestUnsubscribeToken } from "./interests";
 import { findOrCreatePerson } from "./people";
@@ -64,16 +65,23 @@ async function fixture() {
   });
   const shoreToken = await issueShoreAlertStopToken(db, { shopId: shop.id, email: SHORE });
 
-  const bookkeeperToken = createBearerToken();
   await db
     .update(shops)
     .set({
       bookkeeperEmail: BOOKS,
       bookkeeperEmailSetAt: at,
       bookkeeperEmailSetByPersonId: staff.person.id,
-      bookkeeperStopTokenHash: hashBearerToken(bookkeeperToken),
+      bookkeeperConfirmedAt: at,
     })
     .where(eq(shops.id, shop.id));
+  const claimed = await claimBookkeeperMonth(db, {
+    shopId: shop.id,
+    email: BOOKS,
+    setByPersonId: staff.person.id,
+    month: "2026-10",
+  });
+  if (!claimed) throw new Error("fixture bookkeeper claim missing");
+  const bookkeeperToken = claimed.stopToken;
 
   /** Every piece of state any of the five kinds can move. */
   async function state() {
@@ -244,20 +252,21 @@ describe("the one unsubscribe resolver", () => {
       expect((await state()).digestOn).toBe(true);
     });
 
-    it("a replaced bookkeeper link is dead: only the newest stop token works", async () => {
+    it("a bookkeeper link for an address since replaced is dead and stops nothing", async () => {
       const { db, shop, tokens, state } = await fixture();
-      const newer = createBearerToken();
-      await db
-        .update(shops)
-        .set({ bookkeeperStopTokenHash: hashBearerToken(newer) })
-        .where(eq(shops.id, shop.id));
-
-      expect(await unsubscribeByToken(db, { token: tokens.bookkeeper, now: at })).toBeNull();
-      expect((await state()).books).toBe(BOOKS);
-      expect(await unsubscribeByToken(db, { token: newer, now: at })).toMatchObject({
-        kind: "bookkeeper",
+      const [staff] = await listStaff(db, shop.id);
+      if (!staff) throw new Error("fixture staff missing");
+      await setBookkeeper(db, {
+        shopId: shop.id,
+        timeZone: shop.timezone,
+        email: "new-books@example.com",
+        personId: staff.person.id,
+        now: at,
       });
-      expect((await state()).books).toBeNull();
+
+      expect(await resolveUnsubscribeToken(db, tokens.bookkeeper)).toBeNull();
+      expect(await unsubscribeByToken(db, { token: tokens.bookkeeper, now: at })).toBeNull();
+      expect((await state()).books).toBe("new-books@example.com");
     });
   });
 });

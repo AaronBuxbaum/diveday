@@ -88,9 +88,8 @@ export async function sendDueMonthEndEmails(
         shopId: shop.id,
         month,
         email: claimedEmail,
-        stopToken: claim.stopToken,
+        confirmedAt: claim.confirmedAt,
         previous: shop.sentMonth,
-        previousStopTokenHash: shop.stopTokenHash,
       });
     try {
       const locale = recipientLocale(null, shop.defaultLocale);

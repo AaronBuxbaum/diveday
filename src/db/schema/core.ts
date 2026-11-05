@@ -571,13 +571,6 @@ export const shops = pgTable(
       withTimezone: true,
     }),
     /**
-     * **The stop link in the latest month-end email** (security review N1),
-     * as a hash: minted with each month's claim, so only the newest email's
-     * link works, and it stops only the address it went to, since any change
-     * of address clears it. Kept after a stop so the page can say "stopped".
-     */
-    bookkeeperStopTokenHash: text("bookkeeper_stop_token_hash"),
-    /**
      * **The last month-end files to this address bounced** (issue #2798,
      * security review N2): SES answered a `bookkeeper_month_end` send with a
      * permanent bounce, which is also how it answers an address on its
@@ -763,7 +756,6 @@ export const shops = pgTable(
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
     uniqueIndex("shops_bookkeeper_confirm_token_hash_unique").on(table.bookkeeperConfirmTokenHash),
-    uniqueIndex("shops_bookkeeper_stop_token_hash_unique").on(table.bookkeeperStopTokenHash),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
     check("shops_offline_erasure_epoch_nonnegative", sql`${table.offlineErasureEpoch} >= 0`),
     // H-20261014-stale-roll-call-recipients: an address DiveDay sends to exists only with its recorded consent.

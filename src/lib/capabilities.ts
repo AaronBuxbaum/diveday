@@ -28,6 +28,7 @@ export const CAPABILITY_PURPOSES = [
   "courtesy_email_unsubscribe",
   "weekly_digest_unsubscribe",
   "shore_alert_stop",
+  "bookkeeper_stop",
 ] as const;
 
 export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
@@ -83,6 +84,12 @@ export const CAPABILITY_POLICY = {
   // shop's shore contact while the shop still names the address it went to.
   // Minted once per alert (issue #3721).
   shore_alert_stop: { subject: "shop_address", lifetime: "never", use: "once" },
+  // The stop link each month-end email carries to the shop's bookkeeper (ADR
+  // 20261016-bookkeeper-month-end-email, second-pass N1). Opening it clears
+  // the bookkeeper's address while the shop still names the address it went
+  // to. Minted with each month's claim; a new or cleared address withdraws
+  // the unspent ones (issue #3721).
+  bookkeeper_stop: { subject: "shop_address", lifetime: "never", use: "once" },
 } as const satisfies Record<CapabilityPurpose, CapabilityPolicy>;
 
 /** The subject a purpose's rows name. */
