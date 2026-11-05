@@ -495,7 +495,9 @@
   ask anything keeps the digest it was sealed with, and an erasure's re-seal leaves the answers out
   (ADR 20260729-staffing-waiver-audit-and-localized-copy, amendment of 2026-10-23). A **medical
   alert for the crew** joins the sealed set the same way, only when there is one; the version 2
-  (erased) seal leaves it out, so a version 2 record carrying an alert reads `invalid`.
+  (erased) seal leaves it out, so a version 2 record carrying an alert reads `invalid`. The
+  physician's answer on a referral is outside this seal and inside its own, the **physician answer
+  seal**, which the same check reads: a forged clearance is `invalid` too.
 
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, prep needs,
@@ -1803,6 +1805,19 @@
   did, evaluated no earlier than the day it was signed. A booking whose own release is the open
   referral still waits for a physician, and a referral a seat's fresh link superseded can still be
   cleared: superseding moves a hold off a seat and answers nothing.
+- **Physician answer seal** — the keyed digest (`waiver_records.medical_answer_seal`, issue #3949)
+  over a **physician clearance** or refusal as the desk recorded it: which stamp, who recorded it
+  and when, the evaluation date, the physician's name and whether the form came from the diver,
+  bound to the record's id and shop. `recordMedicalEvaluation` writes it once, in the same guarded
+  update as the answer, and nothing re-seals it, because a recorded answer is final. It is separate
+  from the **integrity-sealed waiver**'s seal on purpose: the answer is the shop's later act, not
+  what the diver signed, so recording one never re-seals the signature, and a refile, a guardian
+  redaction or an erasure re-seals the signature without touching it (every field it covers
+  survives all three; the evaluation's document link does not, so it is outside). The clearance
+  stamp is what lifts a referral, so the check fails closed: a stamp with no matching seal, a seal
+  with no answer, or a seal copied from another record reads `invalid`, and the nightly check holds
+  the diver with `waiver_seal_failed` like any other changed release. `superseded_at` stays outside
+  both seals: superseding answers nothing, and a superseded referral still holds by time.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded
