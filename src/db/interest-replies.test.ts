@@ -180,6 +180,53 @@ describe("sendInterestReply", () => {
     expect((await repliesTo(db, id)).map((row) => row.status).sort()).toEqual(["failed", "sent"]);
   });
 
+  it("has the reply on record, pending, before the provider is called: a crash then leaves no orphan close", async () => {
+    const { db, shop, id, staff } = await openRequest({ phone: "+13055550134" });
+    let seenAtSend: { closedAs: string | null; statuses: string[] } | null = null;
+    const watching = {
+      async send() {
+        seenAtSend = {
+          closedAs: (await interestRow(db, id)).closedAs,
+          statuses: (await repliesTo(db, id)).map((row) => row.status),
+        };
+        throw new Error("the process died here");
+      },
+    };
+    await expect(
+      sendInterestReply(
+        db,
+        { shopId: shop.id, interestId: id, body: "Hello", sentByPersonId: staff, now },
+        { smsProvider: watching, whatsAppProviders: new Map() },
+      ),
+    ).rejects.toThrow("the process died here");
+
+    // Closed as replied and the reply already on record, while the send ran.
+    expect(seenAtSend).toEqual({ closedAs: "replied", statuses: ["pending"] });
+    // A provider that threw may have delivered: the attempt stays, failed, and
+    // the request is back open.
+    expect(await interestRow(db, id)).toMatchObject({ closedAt: null, closedAs: null });
+    expect(await repliesTo(db, id)).toEqual([
+      expect.objectContaining({ status: "failed", sendErrorCode: "provider_error" }),
+    ]);
+  });
+
+  it("settles the pending reply as sent, on the channel that took it", async () => {
+    const { db, shop, id, staff } = await openRequest({ phone: "+13055550134" });
+    const sms = fakeSms();
+    await sendInterestReply(
+      db,
+      { shopId: shop.id, interestId: id, body: "Hello", sentByPersonId: staff, now },
+      { smsProvider: sms.provider, whatsAppProviders: new Map() },
+    );
+    expect(await repliesTo(db, id)).toEqual([
+      expect.objectContaining({
+        status: "sent",
+        channel: "sms",
+        providerMessageId: expect.any(String),
+      }),
+    ]);
+  });
+
   it("names a channel that is not switched on as not configured", async () => {
     const { db, shop, id, staff } = await openRequest({ email: "priya@example.com" });
     const off = fakeEmail({ status: "not_configured" });

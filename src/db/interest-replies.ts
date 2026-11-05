@@ -186,22 +186,43 @@ export async function sendInterestReply(
     eq(interests.shopId, input.shopId),
     eq(interests.scope, "date"),
   );
-  const [claim] = await db
-    .update(interests)
-    .set({ closedAt: now, closedAs: "replied" })
-    .where(and(scope, isNull(interests.closedAt)))
-    .returning({ id: interests.id });
-  if (!claim) return { status: "refused", reason: "not_open" };
+  const replyId = crypto.randomUUID();
+  const sentBody = route.channel === "email" ? body : foldInterestReplyForText(body);
+  // The claim and the reply's row are one write: a crash after it leaves a
+  // request closed as replied *with* a reply on record, still `pending` until
+  // the provider has answered (issue #3892). Nothing is sent inside it.
+  const claimed = await db.transaction(async (tx) => {
+    const [claim] = await tx
+      .update(interests)
+      .set({ closedAt: now, closedAs: "replied" })
+      .where(and(scope, isNull(interests.closedAt)))
+      .returning({ id: interests.id });
+    if (!claim) return false;
+    await tx.insert(interestReplies).values({
+      id: replyId,
+      shopId: input.shopId,
+      interestId: input.interestId,
+      // A text may still go on either channel; the settle below says which.
+      channel: route.channel === "email" ? "email" : "sms",
+      toAddress: route.to,
+      body: sentBody,
+      locale,
+      sentByPersonId: input.sentByPersonId,
+      status: "pending",
+      sentAt: now,
+    });
+    return true;
+  });
+  if (!claimed) return { status: "refused", reason: "not_open" };
   const release = () =>
     db
       .update(interests)
       .set({ closedAt: null, closedAs: null })
       .where(and(scope, eq(interests.closedAs, "replied"), eq(interests.closedAt, now)));
+  const thisReply = and(eq(interestReplies.id, replyId), eq(interestReplies.shopId, input.shopId));
 
-  const replyId = crypto.randomUUID();
   let channel: "email" | "sms" | "whatsapp";
   let delivery: Delivery;
-  let sentBody = body;
   try {
     if (route.channel === "email") {
       channel = "email";
@@ -221,6 +242,8 @@ export async function sendInterestReply(
         { retryPolicy: "disabled" },
       );
       if (sent.status === "failed" && sent.errorCode === "invalid_notification") {
+        // Nothing reached a provider, so there is no attempt to record.
+        await db.delete(interestReplies).where(thisReply);
         await release();
         return { status: "refused", reason: "cannot_be_sent" };
       }
@@ -231,7 +254,6 @@ export async function sendInterestReply(
             ? { status: "not_configured" }
             : { status: "failed", errorCode: sent.errorCode };
     } else {
-      sentBody = foldInterestReplyForText(body);
       const senders =
         providers.whatsAppProviders ?? (await whatsAppProvidersForShops(db, [input.shopId]));
       const sms = stopListedSmsProvider(db, providers.smsProvider ?? smsProviderFromEnvironment());
@@ -253,25 +275,26 @@ export async function sendInterestReply(
             : { status: "failed", errorCode: sent.delivery.errorCode };
     }
   } catch (error) {
+    // A provider that threw may still have delivered: the attempt stays on
+    // record, failed, and the request is given back as before.
+    await db
+      .update(interestReplies)
+      .set({ status: "failed", sendErrorCode: "provider_error" })
+      .where(thisReply);
     await release();
     throw error;
   }
 
   if (delivery.status !== "sent") await release();
-  await db.insert(interestReplies).values({
-    id: replyId,
-    shopId: input.shopId,
-    interestId: input.interestId,
-    channel,
-    toAddress: route.to,
-    body: sentBody,
-    locale,
-    sentByPersonId: input.sentByPersonId,
-    status: delivery.status,
-    providerMessageId: delivery.status === "sent" ? delivery.providerMessageId : null,
-    sendErrorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,
-    sentAt: now,
-  });
+  await db
+    .update(interestReplies)
+    .set({
+      channel,
+      status: delivery.status,
+      providerMessageId: delivery.status === "sent" ? delivery.providerMessageId : null,
+      sendErrorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,
+    })
+    .where(thisReply);
   if (delivery.status === "sent") {
     // The quote is the shop's word only once the diver has it.
     if (quoteCents !== null) {

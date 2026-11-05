@@ -1,0 +1,2 @@
+CREATE TYPE "interest_reply_status" AS ENUM('pending', 'sent', 'failed', 'not_configured');--> statement-breakpoint
+ALTER TABLE "interest_replies" ALTER COLUMN "status" SET DATA TYPE "interest_reply_status" USING "status"::text::"interest_reply_status";
