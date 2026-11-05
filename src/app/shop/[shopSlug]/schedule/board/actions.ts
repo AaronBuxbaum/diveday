@@ -15,9 +15,9 @@ import { getTripLens, listTripLenses } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
   createTrip,
-  createTripSeries,
+  createTripSeriesOrRefusal,
   deleteTrip,
-  duplicateTrip,
+  duplicateTripOrRefusal,
   listStaff,
   moveTrip,
   setTripCrew,
@@ -550,7 +550,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     // The query layer places that shape on every cadence date inside the
     // horizon and keeps doing so (ADR 20260810-open-ended-recurring-trips) —
     // `repeatEndsOn` left blank is a run with no end at all.
-    const series = await createTripSeries(db, {
+    const series = await createTripSeriesOrRefusal(db, {
       ...common,
       frequency: "weekly",
       intervalWeeks: repeatIntervalWeeks,
@@ -560,6 +560,11 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       timeZone: shop.timezone,
       template: { startsAt, endsAt, scheduleDays },
     });
+    // Issue #3915: a later week on a hull in the yard refuses the whole run.
+    if (series === "boat_out_of_service") {
+      await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
+      redirect(`${back}&builder=boat-out-of-service${returnWeek}`);
+    }
     if (!series) return await invalid();
     const firstTrip = series.trips[0];
     if (!firstTrip) return await invalid();
@@ -676,6 +681,10 @@ async function addPatternDeparture(
       boatCapacity: boatId ? (boats?.find((boat) => boat.id === boatId)?.capacity ?? null) : null,
       boatCertifiedPassengers: boatId
         ? (boats?.find((boat) => boat.id === boatId)?.certifiedPassengers ?? null)
+        : null,
+      // Issue #3915: the second departure refuses a hull in the yard as the first does.
+      boatOutOfService: boatId
+        ? boatServiceWindow(boats?.find((boat) => boat.id === boatId))
         : null,
     },
     shop,
@@ -838,12 +847,21 @@ export async function duplicateDepartureAction(shopSlug: string, formData: FormD
     await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
     redirect(`${back}?builder=invalid`);
   }
-  const copy = await duplicateTrip(
+  const copy = await duplicateTripOrRefusal(
     db,
     shop.id,
     parsed.data.tripId,
     wallTimeToUtc(wall, shop.timezone),
   );
+  // Issue #3915: the copy's hull is in the yard that day.
+  if (copy === "boat_out_of_service") {
+    await trackEvent({
+      name: "schedule_builder_action",
+      action: "copy",
+      outcome: "boat_out_of_service",
+    });
+    redirect(`${back}?builder=boat-out-of-service`);
+  }
   if (!copy) {
     await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
     redirect(`${back}?builder=invalid`);

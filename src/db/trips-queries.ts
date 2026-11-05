@@ -23,7 +23,12 @@ import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import type { SeatCounts } from "@/lib/participant-types";
-import { type ServiceWindow, serviceWindowFrom } from "@/lib/service-window";
+import {
+  boatServiceWindow,
+  type ServiceWindow,
+  serviceWindowFrom,
+  serviceWindowTouches,
+} from "@/lib/service-window";
 import {
   summarizeTripDiveSites,
   type TripDiveSiteRef,
@@ -572,6 +577,35 @@ export async function sellableCapacity(
     boat?.certifiedPassengers ?? null,
     boat?.capacity ?? null,
     crew?.total ?? 0,
+  );
+}
+
+/**
+ * **Whether a hull is in the yard on any of these instants' shop-local days**
+ * (loop 5, row 5; issue #3915). The one question every door that puts a
+ * departure on a boat asks before it writes: a move, a copy, every week of a
+ * series. False for no boat, a boat with no window, or another shop's boat.
+ */
+export async function boatOutOfServiceOn(
+  tx: DbExecutor,
+  shopId: string,
+  boatId: string | null,
+  instants: readonly Date[],
+  timeZone: string,
+): Promise<boolean> {
+  if (!boatId) return false;
+  const [boat] = await tx
+    .select({
+      outOfServiceFrom: boats.outOfServiceFrom,
+      outOfServiceUntil: boats.outOfServiceUntil,
+      outOfServiceReason: boats.outOfServiceReason,
+    })
+    .from(boats)
+    .where(and(eq(boats.id, boatId), eq(boats.shopId, shopId)))
+    .limit(1);
+  return serviceWindowTouches(
+    boatServiceWindow(boat),
+    instants.map((instant) => calendarDateInTimezone(instant, timeZone)),
   );
 }
 

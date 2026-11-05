@@ -67,7 +67,12 @@ import {
   setTripCrew,
 } from "./trips-crew";
 import { liveTrip } from "./trips-live";
-import { boatCertifiedPassengers, liveBookingJoin, seatNotCancelled } from "./trips-queries";
+import {
+  boatCertifiedPassengers,
+  boatOutOfServiceOn,
+  liveBookingJoin,
+  seatNotCancelled,
+} from "./trips-queries";
 
 /**
  * Recurring series: a `trip_series` row plus one fully-formed, independent trip
@@ -391,6 +396,9 @@ export type NewTripSeries = Omit<NewTrip, "startsAt" | "endsAt" | "scheduleDays"
   template: { startsAt: Date; endsAt: Date; scheduleDays?: TripScheduleDayInput[] };
 };
 
+/** {@link createTripSeries}'s refusal: its hull is in the yard on a week it would put on the board. */
+export const SERIES_BOAT_OUT_OF_SERVICE = "boat_out_of_service" as const;
+
 /**
  * Materialize a recurring series: one `trip_series` row plus one fully-formed,
  * independent trip for every cadence date inside the horizon, all in a single
@@ -401,9 +409,19 @@ export type NewTripSeries = Omit<NewTrip, "startsAt" | "endsAt" | "scheduleDays"
  * series with `endsOn: null` keeps rolling forward for as long as the shop runs
  * it (20260810-open-ended-recurring-trips). Returns null on the same validation
  * failures as `createTrip`, plus an unusable cadence or a window that yields no
- * dates at all.
+ * dates at all. Refuses the whole series (null here, {@link
+ * SERIES_BOAT_OUT_OF_SERVICE} from {@link createTripSeriesOrRefusal}) when its
+ * hull is in the yard on any meeting day of any week it would put on the board
+ * (issue #3915): skipping those weeks in silence would leave the shop believing
+ * the run is whole.
  */
 export async function createTripSeries(db: AppDb, input: NewTripSeries) {
+  const result = await createTripSeriesOrRefusal(db, input);
+  return result === SERIES_BOAT_OUT_OF_SERVICE ? null : result;
+}
+
+/** {@link createTripSeries}, naming the hull-in-the-yard refusal rather than folding it into null. */
+export async function createTripSeriesOrRefusal(db: AppDb, input: NewTripSeries) {
   return db.transaction(async (tx) => {
     if (!isValidWeeklyPattern({ intervalWeeks: input.intervalWeeks, weekdays: input.weekdays })) {
       return null;
@@ -446,6 +464,28 @@ export async function createTripSeries(db: AppDb, input: NewTripSeries) {
         endsOn: input.endsOn,
       }) ?? [];
     if (!seedDate) return null;
+
+    const templateDays = input.template.scheduleDays?.length
+      ? input.template.scheduleDays
+      : [{ startsAt: input.template.startsAt, endsAt: input.template.endsAt }];
+    if (input.boatId) {
+      const everyMeeting = seriesOccurrenceDates({
+        anchorDate: input.anchorDate,
+        pattern: { intervalWeeks: input.intervalWeeks, weekdays: input.weekdays },
+        from: seedDate,
+        through: shiftCalendarDate(seedDate, SERIES_HORIZON_DAYS),
+        endsOn: input.endsOn,
+      })?.flatMap((date) =>
+        daysOnOccurrence(templateDays, date, input.timeZone).map((day) => day.startsAt),
+      );
+      // No dates at all is the refusal below, not a pass: the seed already had one.
+      if (
+        !everyMeeting ||
+        (await boatOutOfServiceOn(tx, input.shopId, input.boatId, everyMeeting, input.timeZone))
+      ) {
+        return SERIES_BOAT_OUT_OF_SERVICE;
+      }
+    }
 
     const seedDays = daysOnOccurrence(
       input.template.scheduleDays?.length
