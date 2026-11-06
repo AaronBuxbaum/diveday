@@ -8,12 +8,13 @@ import { notificationProviderSignal } from "@/lib/notifications";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { diveDayOrdinal } from "@/lib/prior-visits";
-import { RECAP_TOKEN_MAX_AGE_MS, recapLinkPath } from "@/lib/recap-links";
+import { RECAP_TOKEN_MAX_AGE_MS } from "@/lib/recap-links";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { diveDay, numberedDiveDay } from "./dive-days";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { sendAndRecordNotification } from "./notifications";
+import { recapTokenFor } from "./recap-links";
 import { bookings, people, priorVisits, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -267,7 +268,10 @@ export async function sendYourDayLink(
         url = readinessLinkPath(issued.token);
         expiresAt = issued.expiresAt;
       } else {
-        url = recapLinkPath(plan.bookingId);
+        // At the booking's current recap epoch (issue #3982).
+        const recapToken = await recapTokenFor(tx, plan.bookingId);
+        if (!recapToken) return null;
+        url = `/recap/${recapToken}`;
         expiresAt = new Date(now.getTime() + RECAP_TOKEN_MAX_AGE_MS);
       }
       return sendAndRecordNotification(

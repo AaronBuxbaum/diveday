@@ -2,10 +2,10 @@ import { ImageResponse } from "next/og";
 import { CARD_STYLE, OG_COLORS, OG_WORDMARK, ogFooter } from "@/app/_og/card";
 import { getDb } from "@/db/client";
 import { getRecapPageData } from "@/db/recap";
+import { openRecapLink } from "@/db/recap-links";
 import { formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { allowSvgRasterization } from "@/lib/og-rasterizer";
-import { verifyRecapToken } from "@/lib/recap-links";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
 // locale context, the same carve-out as `src/app/link-card/route.tsx`.
@@ -53,7 +53,7 @@ export default async function RecapOpenGraphImage({
   // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
   // socket, not an error page.
   await allowSvgRasterization();
-  const bookingId = verifyRecapToken(token);
+  const bookingId = await openRecapLink(await getDb(), token);
   if (!bookingId) return genericCard();
 
   const db = await getDb();

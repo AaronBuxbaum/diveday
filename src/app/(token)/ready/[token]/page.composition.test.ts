@@ -248,8 +248,8 @@ describe("after the dive", () => {
     // are domain-separated on purpose (src/lib/recap-links.ts). Widening
     // either side would hand a review form the power to release a seat.
     expect(SOURCE).toContain("readyAfterStateProps({");
-    expect(AFTER_STATE_ACTIONS).toContain("actions: afterStateActions(token, input.bookingId)");
-    expect(AFTER_STATE_ACTIONS).toContain("signRecapToken(bookingId)");
+    expect(AFTER_STATE_ACTIONS).toContain("actions: afterStateActions(token, recapToken)");
+    expect(AFTER_STATE_ACTIONS).toContain("recapTokenFor(input.db, input.bookingId)");
     for (const action of ["submitReviewAction", "uploadRecapPhotoAction", "startTipAction"]) {
       expect(AFTER_STATE_ACTIONS).not.toContain(`${action}.bind(null, token)`);
     }

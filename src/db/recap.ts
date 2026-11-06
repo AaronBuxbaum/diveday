@@ -372,7 +372,7 @@ export type RecapPageState =
  * booking capabilities there is no row to look up and no revocation — which is
  * exactly why the page used to collapse every dead cause into one bare notice
  * that named nobody. What that collapse was protecting against is a forged
- * token, and `verifyRecapToken` already rejects one before this function is
+ * token, and `openRecapLink` already rejects one before this function is
  * reachable: everything that gets here carries a signature DiveDay itself
  * wrote. So the split is the same one the other three booking tokens make (ADR
  * 20260827-first-light, decision 3) — a *verified* holder is a real diver on a
@@ -1958,7 +1958,9 @@ async function sendRecaps(
       continue;
     }
 
-    const recapUrl = origin ? new URL(recapLinkPath(booking.id), `${origin}/`).toString() : null;
+    const recapUrl = origin
+      ? new URL(recapLinkPath(booking.id, booking.recapLinkEpoch), `${origin}/`).toString()
+      : null;
     const phone = smsRecipient(person.phone);
     // No request to negotiate Accept-Language from at a cron fire — but this
     // diver may have told us first-hand on a request of their own, and that

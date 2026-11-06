@@ -26,7 +26,7 @@ test("a tampered recap token reveals nothing", async ({ page }) => {
 test("an oversize recap photo is rejected client-side before it ever reaches the server (CR-011)", async ({
   page,
 }) => {
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
 
   await openRecapDoor(page, "photos");
@@ -59,7 +59,7 @@ test.describe("as owner", () => {
 
     // A review link is configured, but nothing was just submitted — no second
     // ask stacked underneath the on-page form.
-    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
     await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
 
@@ -82,7 +82,7 @@ test.describe("as owner", () => {
 
     // Reloading the page (nothing "just submitted" on this request) drops the
     // ask again — it is a one-time follow-up, not a durable section.
-    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
     await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
   });
 });
@@ -91,7 +91,7 @@ test("the recap link hands out no share affordance, and its unfurl card reveals 
   page,
   request,
 }) => {
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
   // **No share-this-page button, deliberately** (slice 7d). This surface also
   // answers on `/ready`, whose URL is a bearer capability that can cancel the
@@ -159,7 +159,7 @@ test("the recap link hands out no share affordance, and its unfurl card reveals 
 test("comment moderation is disclosed when the words land, not as a standing hint (task 54)", async ({
   page,
 }) => {
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   // Nothing explains the rule before there is anything to apply it to.
   await expect(
     page.getByText("Ratings post right away; the shop reads written words first."),
@@ -185,7 +185,7 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
 }) => {
   // The diver's page loads while the booking is still active — the review
   // and photo forms render normally.
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
 
   // Staff cancel the booking from a second, separately-authenticated
@@ -241,7 +241,7 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   // is signed rather than stored and has deliberately no self-serve rescue
   // (issue #850), and for a booking that was cancelled or not boarded there is
   // no recap for the shop to send either (issue #1334).
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`, {
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`, {
     waitUntil: "domcontentloaded",
   });
   await expect(page.getByText("There’s no recap for this booking.")).toBeVisible();
@@ -254,7 +254,7 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
 test("a whole pick of photos submits in one request, not one page reload per photo (task 55)", async ({
   page,
 }) => {
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await openRecapDoor(page, "photos");
   const photoInput = page.locator('input[name="photo"]').filter({ visible: true });
   await expect(photoInput).toHaveAttribute("multiple", "");
@@ -289,7 +289,7 @@ test("a whole pick of photos submits in one request, not one page reload per pho
 });
 
 test("the day's facts render once, inside the one record a diver keeps", async ({ page }) => {
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   const record = page.getByTestId("dive-record");
   await expect(record.getByRole("heading", { name: "Dive log entry" })).toBeVisible();
   await expect(record.getByRole("button", { name: /Print log entry/i })).toBeVisible();
@@ -351,7 +351,7 @@ test("the after-state names the earliest flight, once the crew has logged the da
   page,
   request,
 }) => {
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await expect(page.getByRole("heading", { name: "Dive log entry" })).toBeVisible();
   await expect(page.getByTestId(AFTER_STATE_TEST_IDS.flySafe)).toHaveCount(0);
 
@@ -385,7 +385,7 @@ test("the line a diver writes for themselves never reaches the network (D33)", a
     if (body) seen.push(body);
   });
 
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
   await page.getByLabel("A line for yourself").fill(SENTINEL);
 
@@ -437,7 +437,7 @@ test("a private pulse reaches the shop, appears nowhere public, and can be taken
   const staff = makeActivitySafe(await staffContext.newPage());
 
   try {
-    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
     await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
     // Shut at rest since 2026-09-17: a complaint is a minority act at a
     // minority moment, so it is the first quiet door under the review rather
@@ -483,7 +483,7 @@ test("a private pulse reaches the shop, appears nowhere public, and can be taken
     }
 
     // The diver's way back, and the panel goes with it.
-    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
     await page.getByRole("button", { name: "Take it back" }).click();
     await expect(page.getByText(/Taken back/)).toBeVisible();
     // And the confirmation says only what is true. It used to read "{shop}
