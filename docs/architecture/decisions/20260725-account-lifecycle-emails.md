@@ -29,8 +29,8 @@ strong shape.
 is never stored), `expires_at`, and `used_at`/`superseded_at` for one-time use. Issuing a fresh
 token for the same account+purpose supersedes any prior outstanding one (mirrors
 `issueWaiverRequest`). `email_verification` gets a 3-day TTL (low stakes, just confirming an
-address); `password_reset` gets 1 hour (an active credential over the account, matched to
-industry norms). `user_accounts` gains a nullable `email_verified_at`.
+address); `password_reset` gets 24 hours (an active credential over the account, but single-use and
+superseded by a resend; was 1 hour until #4065, approved 2026-11-06). `user_accounts` gains a nullable `email_verified_at`.
 
 **Verification does not gate sign-in.** Enforcing it would lock out every seeded/demo/existing
 account with no migration path in this change. It's tracked and shown; whether to require it is
