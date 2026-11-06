@@ -544,6 +544,7 @@ named, and all picked up by that glob rather than by a list anyone has to rememb
 | `promo-caps.postgres.test.ts` | The last use of a capped code goes to exactly one of two checkouts |
 | `waitlist.postgres.test.ts` | One diver joining a full departure's wait list twice at once leaves one person and one entry |
 | `tips.postgres.test.ts` | One booking tipping twice at once asks Stripe for one session |
+| `src/features/calendar-sync/feed-leaving.postgres.test.ts` | A calendar feed issued while its holder is removed or demoted: either order leaves no live feed the holder no longer earns, because all three take the staffer's `people` row lock (#3996, #4012) |
 | `postgres-harness.postgres.test.ts` | The harness itself: finishing a test never terminates a connection that is still alive, and an unreleased `holdRowLock` gate does not hang teardown |
 
 A new suite needs no wiring beyond the name: write `src/db/<thing>.postgres.test.ts` against
