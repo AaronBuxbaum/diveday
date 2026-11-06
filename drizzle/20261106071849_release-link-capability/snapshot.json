@@ -2,7 +2,7 @@
   "type": "diff",
   "version": "9",
   "dialect": "postgres",
-  "id": "5f4aef0c-55f9-4201-987b-fd7a519c9e71",
+  "id": "714b9880-0a63-4ccf-b857-ea9c70b5e5ba",
   "prevIds": [
     "a85254e1-7f6c-4bdb-943c-489c4804195d",
     "a41c37d3-6aa2-4598-883c-9c248da7ddbd",
@@ -24,7 +24,30 @@
       ]
     },
     {
-      "statementType": "alter_column",
+      "statementType": "drop_unique",
+      "statementTarget": [
+        "table",
+        "public",
+        "waiver_records"
+      ],
+      "writes": [
+        "s|uq|public.waiver_records.waiver_records_token_hash_key",
+        "n|uq|public.waiver_records.waiver_records_token_hash_key",
+        "e|uq|public.waiver_records.waiver_records_token_hash_key",
+        "n|con|public.waiver_records.waiver_records_token_hash_key",
+        "n|rel|public.waiver_records_token_hash_key"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public",
+        "e|col|public.waiver_records.token_hash"
+      ],
+      "sharedWrites": [
+        "e|uniqueness|public.waiver_records.token_hash"
+      ]
+    },
+    {
+      "statementType": "drop_column",
       "statementTarget": [
         "column",
         "public",
@@ -32,17 +55,17 @@
         "token_hash"
       ],
       "writes": [
-        "s|colprop|public.waiver_records.token_hash.notNull"
+        "s|col|public.waiver_records.token_hash",
+        "n|col|public.waiver_records.token_hash",
+        "e|col|public.waiver_records.token_hash"
       ],
       "reads": [
         "n|tbl|public.waiver_records",
-        "n|sch|public",
-        "n|col|public.waiver_records.token_hash"
-      ],
-      "sqlHash": "8e8384c0b875751a"
+        "n|sch|public"
+      ]
     },
     {
-      "statementType": "alter_column",
+      "statementType": "drop_column",
       "statementTarget": [
         "column",
         "public",
@@ -50,14 +73,14 @@
         "expires_at"
       ],
       "writes": [
-        "s|colprop|public.waiver_records.expires_at.notNull"
+        "s|col|public.waiver_records.expires_at",
+        "n|col|public.waiver_records.expires_at",
+        "e|col|public.waiver_records.expires_at"
       ],
       "reads": [
         "n|tbl|public.waiver_records",
-        "n|sch|public",
-        "n|col|public.waiver_records.expires_at"
-      ],
-      "sqlHash": "3c3bd2b569cee773"
+        "n|sch|public"
+      ]
     },
     {
       "statementType": "alter_check",
@@ -132,6 +155,18 @@
   ],
   "deltas": [
     {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"token_hash\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"expires_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "uniques\u0000[\"public\",\"waiver_records\",\"waiver_records_token_hash_key\"]"
+    },
+    {
       "op": "alter",
       "key": "enums\u0000[\"public\",\"capability_purpose\"]",
       "set": {
@@ -151,20 +186,6 @@
           "waiver_link",
           "release_link"
         ]
-      }
-    },
-    {
-      "op": "alter",
-      "key": "columns\u0000[\"public\",\"waiver_records\",\"token_hash\"]",
-      "set": {
-        "notNull": false
-      }
-    },
-    {
-      "op": "alter",
-      "key": "columns\u0000[\"public\",\"waiver_records\",\"expires_at\"]",
-      "set": {
-        "notNull": false
       }
     },
     {

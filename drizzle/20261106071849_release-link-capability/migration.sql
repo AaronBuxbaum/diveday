@@ -1,4 +1,5 @@
 ALTER TYPE "capability_purpose" ADD VALUE 'release_link';--> statement-breakpoint
+-- waiver_records.token_hash and expires_at leave the schema in this release and stay in the table, nullable, for the release still serving; the drop is issue #4006.
 ALTER TABLE "waiver_records" ALTER COLUMN "token_hash" DROP NOT NULL;--> statement-breakpoint
 ALTER TABLE "waiver_records" ALTER COLUMN "expires_at" DROP NOT NULL;--> statement-breakpoint
 -- diveday:allow-destructive drop-constraint capabilities.capabilities_subject_by_purpose: replaced in the same statement by a check that admits every row the old one did and the release link (issue #3983); the previous release writes only purposes the old check named
