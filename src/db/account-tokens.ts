@@ -1,4 +1,4 @@
-import { and, eq, exists, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, exists, inArray, isNull, ne, type SQL, sql } from "drizzle-orm";
 import type { AccountTokenPurpose } from "@/lib/account-tokens";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -102,15 +102,25 @@ export async function wasAccountTokenConsumed(
 }
 
 /**
+ * The account status each purpose is spent on. An invite and a reset both set a password, so an
+ * invite is spent only while the account waits to accept it (issue #3997) and a reset only on an
+ * active account: an invitee has none to reset, their way in is the invite (issue #4013). A
+ * verification link harms nobody on an invited account, so it only refuses a disabled one.
+ */
+const ACCOUNT_STATUS_SPENDING = {
+  invite: eq(userAccounts.status, "invited"),
+  password_reset: eq(userAccounts.status, "active"),
+  email_verification: ne(userAccounts.status, "disabled"),
+} as const satisfies Record<AccountTokenPurpose, SQL>;
+
+/**
  * Atomically claims a token for one-time use: the one conditional update
  * re-checks every validity condition — including that the account isn't
  * disabled, not just that it wasn't disabled when the token was requested —
  * so two concurrent submits of the same link can never both succeed, and a
  * disabled account's outstanding tokens stop working immediately.
- * Deliberately "not disabled" rather than "active" for a reset or verification link, and
- * "invited" for an invite (20260726-staff-invite-accounts): an invite is the only token that
- * sets a password for someone who has none, so it is refused on any account that already
- * accepted or was disabled. The sole gate a mutating action may rely
+ * Which account statuses each purpose is spent on is `ACCOUNT_STATUS_SPENDING`
+ * (20260726-staff-invite-accounts). The sole gate a mutating action may rely
  * on. Accepts a transaction so the caller can claim the token and perform its
  * protected mutation (marking an account verified, setting a new password)
  * atomically — a failure between the two must not burn a one-time link for
@@ -129,11 +139,7 @@ export async function consumeAccountToken(
         .where(
           and(
             eq(userAccounts.id, capabilities.userAccountId),
-            // An invite sets a password, so it is spent only on the account it was mailed for
-            // while that account still waits to accept it (issue #3997).
-            input.purpose === "invite"
-              ? eq(userAccounts.status, "invited")
-              : ne(userAccounts.status, "disabled"),
+            ACCOUNT_STATUS_SPENDING[input.purpose],
           ),
         ),
     ),

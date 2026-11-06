@@ -13,6 +13,7 @@ import {
   inviteStaffMember,
   listShopStaff,
   removeStaffMember,
+  restoreStaffMember,
   setStaffAccountStatus,
   setStaffEmergencyContact,
   setStaffLanguages,
@@ -467,14 +468,17 @@ export async function restoreStaffAction(formData: FormData) {
   if (!personId || !userAccountId || roles.length === 0) redirect(path);
 
   const db = await getDb();
-  const rolesResult = await setStaffRoles(db, { shopId: session.user.shopId, personId, roles });
-  const statusResult = await setStaffAccountStatus(db, {
+  const result = await restoreStaffMember(db, {
     shopId: session.user.shopId,
     personId,
     userAccountId,
-    status: "active",
+    roles,
   });
-  const notice = rolesResult.ok && statusResult.ok ? "restored" : "restore-failed";
+  const notice = !result.ok
+    ? "restore-failed"
+    : result.resendInvite
+      ? "restored-resend-invite"
+      : "restored";
   revalidateAndRedirect(path, noticeUrl(path, notice));
 }
 
