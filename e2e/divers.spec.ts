@@ -504,7 +504,8 @@ test("staff delete a diver, find them again in the Deleted view, and restore the
   const recordUrl = page.url().split("?")[0] ?? "";
 
   // Delete them from their own record.
-  await page.getByText(`Delete ${diverName}`).click();
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "Record actions" }).click();
   await page.getByRole("button", { name: "Delete diver" }).click();
   // The land-then-undo toast, the app's one undo affordance — deliberately
   // left alone from here: the point of this spec is the path that still works
@@ -568,7 +569,8 @@ test("erase is absent on a live diver's record and appears once they are deleted
   await expect(page.getByText(`Delete ${diverName}`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Erase personal data" })).toBeHidden();
 
-  await page.getByText(`Delete ${diverName}`).click();
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "Record actions" }).click();
   await page.getByRole("button", { name: "Delete diver" }).click();
   await expect(page.getByText("Diver deleted")).toBeVisible();
 

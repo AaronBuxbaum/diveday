@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DownloadAcknowledgmentLink } from "./DownloadAcknowledgmentLink";
-import { buttonClass } from "./ui/button";
+import { buttonClass } from "@/components/ui/button";
 
 afterEach(() => {
   cleanup();
