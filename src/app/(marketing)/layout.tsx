@@ -13,8 +13,8 @@ import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingN
  * almost every visitor gets anyway). The fallback is the same `ChromeBar`, at
  * the same `--chrome-h`, so nothing below it moves when the real one lands.
  *
- * The funnel's own doors (`/onboard`, `/get-set-up`, `/find-your-booking`)
- * stay outside the group: they keep the wordmark-only phone header.
+ * The funnel's own doors (`/onboard`, `/get-set-up`) stay outside the group as
+ * `EntryShell` wordmark doors: the wordmark and the form, no bar.
  */
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (

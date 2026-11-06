@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MarketingNav } from "@/app/_components/MarketingNav";
 import { EntryShell } from "@/components/account/EntryShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { diverTranslator } from "@/i18n/messages";
@@ -72,8 +71,9 @@ export default async function GetSetUpPage({
 
   return (
     <div className="flex flex-1 flex-col print:block">
-      <MarketingNav compactMobile />
       <EntryShell
+        wordmark
+        homeLink
         title={t("marketing.setUp.title")}
         description={t("marketing.setUp.description")}
         footer={

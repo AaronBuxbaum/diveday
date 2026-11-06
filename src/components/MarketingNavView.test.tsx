@@ -88,8 +88,8 @@ describe("MarketingNavView", () => {
     expect(screen.queryByRole("button", { name: /sign out/i })).not.toBeInTheDocument();
   });
 
-  it("keeps the compact onboarding header and localized menu words", () => {
-    renderNav({ compactMobile: true, locale: "es-ES" });
+  it("speaks the reader's language in the menu and the demo door", () => {
+    renderNav({ locale: "es-ES" });
     expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Probar la demo en vivo" })).toBeInTheDocument();
   });

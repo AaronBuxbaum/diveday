@@ -24,7 +24,6 @@ import { staffShopRoot } from "@/lib/staff-destinations";
 export function MarketingNavView({
   shopSlug,
   locale,
-  compactMobile = false,
   pending = false,
   demoAction,
 }: {
@@ -35,12 +34,6 @@ export function MarketingNavView({
    */
   shopSlug: string | null;
   locale: DiverLocale;
-  /**
-   * The onboard artboard keeps only the wordmark in the phone header (below
-   * lg). The bar is one row at every width, so this hides the links and the CTA
-   * and nothing else.
-   */
-  compactMobile?: boolean;
   /** Static navigation placeholder: the menu must wait for the resolved header. */
   pending?: boolean;
   // i18n-exempt: type annotation, not copy.
@@ -54,8 +47,6 @@ export function MarketingNavView({
     { href: "/about", label: t("nav.about") },
   ];
 
-  const phoneHidden = compactMobile ? "max-lg:hidden" : "";
-
   return (
     <ChromeBar
       wide
@@ -68,7 +59,6 @@ export function MarketingNavView({
           <MarketingNavLinks
             links={shopSlug ? links : [...links, { href: "/sign-in", label: t("nav.signIn") }]}
             menuLabel={t("nav.menu")}
-            compactMobile={compactMobile}
             pending={pending}
           />
           {/* One CTA slot, two audiences. Somebody already signed in cannot try
@@ -80,7 +70,7 @@ export function MarketingNavView({
               href={staffShopRoot(shopSlug)}
               className={buttonClass({
                 variant: "outline",
-                className: `whitespace-nowrap print:hidden ${phoneHidden}`,
+                className: "whitespace-nowrap print:hidden",
               })}
             >
               {t("nav.goToShop")}
@@ -91,7 +81,7 @@ export function MarketingNavView({
             // not the pair `FunnelCtas` renders. Secondary weight: each marketing
             // page carries its own primary CTA, and two competing primaries on
             // first paint was a real "what do I click?" cost (design review).
-            <form action={demoAction} className={`print:hidden ${phoneHidden}`}>
+            <form action={demoAction} className="print:hidden">
               <FunnelTag source="nav" />
               <SubmitButton
                 pendingLabel={t("nav.gettingReady")}
