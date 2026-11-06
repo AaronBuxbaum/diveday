@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { revokeDeliveredBookingLinksForPerson } from "./booking-capabilities";
+import { revokeBookingLinksSentToPerson } from "./booking-capabilities";
 import type { DbExecutor } from "./client";
 import { waiverRecords } from "./schema";
 
@@ -11,7 +11,11 @@ import { waiverRecords } from "./schema";
  * contact, and a contacts import overwriting one.
  *
  * Two kinds of link went to the address on file:
- *  - a delivered booking link, which is revoked;
+ *  - a booking link: a delivered one, and a course's forms link, which is
+ *    mailed undelivered (#3950); both are revoked
+ *    (`revokeBookingLinksSentToPerson`). A seat's release is signed on the
+ *    holder's thread link (ADR 20261105-waiver-folds-into-the-thread), so this
+ *    is what closes its Sign step;
  *  - an unsigned waiver link. Since #3903 a re-send hands back the same
  *    derived URL, so whoever holds the old address could still read the draft
  *    and sign as the diver. The pending record is superseded instead, and the
@@ -24,7 +28,7 @@ export async function revokeLinksSentToOldContact(
   input: { shopId: string; personId: string; now?: Date },
 ): Promise<void> {
   const now = input.now ?? nowDate();
-  await revokeDeliveredBookingLinksForPerson(tx, { ...input, now });
+  await revokeBookingLinksSentToPerson(tx, { ...input, now });
   await tx
     .update(waiverRecords)
     .set({ supersededAt: now })

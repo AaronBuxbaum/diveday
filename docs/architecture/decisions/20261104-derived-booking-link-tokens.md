@@ -45,7 +45,7 @@ audience, with the tag checked before any row is read.
   guard); #3901 dropped them. Waiver links are #3903.
 - In the deploy window an old instance's link inserts fail the new CHECK and index.
 - Dropping a version from both variables kills its links. Versions stop at 9.
-- Delivered links are not yet revoked on a contact change (#3902).
+- A contact change revokes the person's delivered links and their course forms links, which are mailed undelivered, and supersedes their unsigned waiver records (#3902, #3950; `revokeLinksSentToOldContact`).
 
 ## Amendment 2026-11-05 (#3954)
 
