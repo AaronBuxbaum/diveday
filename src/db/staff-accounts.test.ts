@@ -4,6 +4,7 @@ import { upcomingTripsWithCounts } from "@/db/trips";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { consumeAccountToken, issueAccountToken } from "./account-tokens";
 import type { AppDb } from "./client";
 import { recordPushSubscription } from "./push-subscriptions";
 import { people, personRoles, pushSubscriptions, shops, userAccounts } from "./schema";
@@ -442,6 +443,54 @@ describe("removeStaffMember", () => {
       .from(userAccounts)
       .where(eq(userAccounts.id, staff.userAccountId));
     expect(account?.status).toBe("disabled");
+  });
+
+  it("leaves a never-accepted invitee invited, so an Undo cannot skip the invite (issue #3997)", async () => {
+    const { db, shop } = ctx;
+    const invitee = await makeStaff(db, shop.id, ["crew"], { status: "invited" });
+
+    expect(
+      await removeStaffMember(db, {
+        shopId: shop.id,
+        personId: invitee.personId,
+        userAccountId: invitee.userAccountId,
+      }),
+    ).toEqual({ ok: true });
+    // The Undo banner's re-enable is refused: nobody chose a password for this account.
+    expect(
+      await setStaffAccountStatus(db, {
+        shopId: shop.id,
+        personId: invitee.personId,
+        userAccountId: invitee.userAccountId,
+        status: "active",
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+
+    const [account] = await db
+      .select({ status: userAccounts.status })
+      .from(userAccounts)
+      .where(eq(userAccounts.id, invitee.userAccountId));
+    expect(account?.status).toBe("invited");
+  });
+
+  it("leaves a removed invitee no live invite, and mints none afterwards (issue #3997)", async () => {
+    const { db, shop } = ctx;
+    const invitee = await makeStaff(db, shop.id, ["crew"], { status: "invited" });
+    const issued = await issueAccountToken(db, {
+      userAccountId: invitee.userAccountId,
+      purpose: "invite",
+    });
+
+    await removeStaffMember(db, {
+      shopId: shop.id,
+      personId: invitee.personId,
+      userAccountId: invitee.userAccountId,
+    });
+
+    expect(await consumeAccountToken(db, { token: issued.token, purpose: "invite" })).toBeNull();
+    await expect(
+      issueAccountToken(db, { userAccountId: invitee.userAccountId, purpose: "invite" }),
+    ).rejects.toThrow();
   });
 
   it("refuses to remove the shop's last owner", async () => {

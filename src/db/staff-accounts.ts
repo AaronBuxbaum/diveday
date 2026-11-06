@@ -519,10 +519,15 @@ export async function setStaffAccountStatus(
     if (input.status === "disabled" && (await isLastOwner(tx, input.shopId, input.personId))) {
       return { ok: false, reason: "last_owner" };
     }
-    await tx
+    // Only between `active` and `disabled`: an invitee who never accepted has no password of
+    // their own, so a re-enable (the Undo after a removal included) would hand them an active
+    // account the invite never opened (issue #3997). Their way in is a resent invite.
+    const changed = await tx
       .update(userAccounts)
       .set({ status: input.status })
-      .where(eq(userAccounts.id, input.userAccountId));
+      .where(and(eq(userAccounts.id, input.userAccountId), ne(userAccounts.status, "invited")))
+      .returning({ id: userAccounts.id });
+    if (changed.length === 0) return { ok: false, reason: "not_found" };
     await tx
       .delete(accountSignInChallenges)
       .where(eq(accountSignInChallenges.userAccountId, input.userAccountId));
@@ -575,10 +580,12 @@ export async function removeStaffMember(
       .where(
         and(eq(personRoles.personId, input.personId), inArray(personRoles.role, [...STAFF_ROLES])),
       );
+    // An invitee who never accepted stays `invited`: disabling it would let the Undo's re-enable
+    // skip the invite (issue #3997). Its links are withdrawn below and it holds no role.
     await tx
       .update(userAccounts)
       .set({ status: "disabled" })
-      .where(eq(userAccounts.id, input.userAccountId));
+      .where(and(eq(userAccounts.id, input.userAccountId), ne(userAccounts.status, "invited")));
     await tx
       .delete(accountSignInChallenges)
       .where(eq(accountSignInChallenges.userAccountId, input.userAccountId));

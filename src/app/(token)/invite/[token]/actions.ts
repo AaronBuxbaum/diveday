@@ -12,6 +12,8 @@ import { hashPassword } from "@/lib/password-hashing";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
+class InviteNotOpen extends Error {}
+
 /**
  * Consumes the invite token and activates the account atomically — a
  * failure between the two must not burn a one-time link while leaving the
@@ -40,12 +42,20 @@ export async function acceptStaffInvite(token: string, formData: FormData) {
   // slow, and there's no reason to hold the transaction (and its row locks)
   // open for it.
   const hashedPassword = await hashPassword(parsed.data.password);
-  const claimed = await db.transaction(async (tx) => {
-    const claim = await consumeAccountToken(tx, { token, purpose: "invite" });
-    if (!claim) return null;
-    await activateStaffAccount(tx, claim.userAccountId, hashedPassword);
-    return claim;
-  });
+  const claimed = await db
+    .transaction(async (tx) => {
+      const claim = await consumeAccountToken(tx, { token, purpose: "invite" });
+      if (!claim) return null;
+      // Not invited any more: roll the claim back with it rather than burn a link for nothing.
+      if (!(await activateStaffAccount(tx, claim.userAccountId, hashedPassword))) {
+        throw new InviteNotOpen();
+      }
+      return claim;
+    })
+    .catch((error: unknown) => {
+      if (error instanceof InviteNotOpen) return null;
+      throw error;
+    });
   if (!claimed) redirect(base);
 
   const account = await getAccountContact(db, claimed.userAccountId);
